@@ -17,6 +17,5 @@ ta
 xgboost
 git+https://github.com/Vaquum/Binancial
 python-dotenv
-sqlite3
 scipy
 tslearn
