@@ -17,7 +17,7 @@ setup(
         "dash>=2.11.0",
         "dash-bootstrap-components>=1.4.0",
     ],
-    python_requires='>=3.12',
+    python_requires='>=3.10',
     author='Mikko Kotila',
     author_email='mikko@empiricalusa.com',
     description='ML trading system for crypto markets',
