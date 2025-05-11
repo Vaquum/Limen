@@ -1,5 +1,5 @@
 from loop.account import Account
-from loop.data import HistoricalKlinesData
+from loop.data import HistoricalData
 from loop.features import Features
 from loop.experiment import Experiment
 from loop.predict import Predict
