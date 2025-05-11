@@ -11,29 +11,37 @@ import polars as pl
 class HistoricalData:
     
     def __init__(self):
-        None
+
+        pass
 
     def get_historical_klines(self,
-                              data_start_date: str, # YYYY-MM-DD
-                              data_end_date: str, # YYYY-MM-DD
-                              data_interval: str) -> None: # '1h' or '1d'
+                              data_start_date: str,
+                              data_end_date: str,
+                              data_interval: str) -> None:
+        
+        '''Get historical klines data from Binance API
 
+        Args:
+            data_start_date (str): e.g. '2025-01-01'
+            data_end_date (str): e.g. '2025-01-31'
+            data_interval (str): Either '1h' or '1d'
+
+        Returns:
+            self.data (pl.DataFrame)
+    
+        '''
 
         self.data = get_klines_historical(data_interval,
                                             data_start_date,
                                             data_end_date)
 
-        # All the int columns
         self._int_cols = ['open_time', 'close_time', 'num_trades']
 
-        # All the float columns
         self._float_cols = ['open', 'high', 'low', 'close', 'volume', 
                            'qav', 'taker_base_vol', 'taker_quote_vol', 'ignore']
 
-        # All the datetime columns
         self.data['open_time'] = pd.to_datetime(self.data['open_time'])
 
-        # Ensure that column lists and self.data have the same columns
         all_cols = self._int_cols + self._float_cols + ['open_time']
         assert set(self.data.columns) == set(all_cols), 'Input data columns do not match the expectation.'
         
@@ -46,16 +54,13 @@ class HistoricalData:
 
         '''Get historical trades data from `tdw.binance_trades`
 
-        If data is DataFrame, then data_file_path, data_start_date,
-        data_end_date, and data_interval must be None. 
-
         Args:
-            month_year (Tuple): The month of data to be pulled
+            month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
             n_rows (int): Number of rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
 
         Returns:
-            self.input_data dictionary
+            self.data (pl.DataFrame)
     
         '''
         
@@ -64,7 +69,16 @@ class HistoricalData:
                                         include_datetime_col=include_datetime_col)
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
-    
+
+        '''Split the data into sequential chunks
+
+        Args:
+            ratios (Sequence[int]): The ratios of the data to be split
+
+        Returns:
+            List[pl.DataFrame]
+        '''
+
         total = self.data.height
         total_ratio = sum(ratios)
         bounds = [int(total * c / total_ratio) for c in accumulate(ratios)]
@@ -73,7 +87,17 @@ class HistoricalData:
         return [self.data.slice(start, end - start) for start, end in zip(starts, bounds)]
     
     def split_random(self, ratios: Sequence[int], seed: int = None) -> List[pl.DataFrame]:
-        
+
+        '''Split the data into random chunks
+
+        Args:
+            ratios (Sequence[int]): The ratios of the data to be split
+            seed (int): The seed for the random number generator
+
+        Returns:
+            List[pl.DataFrame]    
+        '''
+
         total = self.data.height
         total_ratio = sum(ratios)
         bounds = [int(total * c / total_ratio) for c in accumulate(ratios)]
