@@ -31,6 +31,8 @@ class HistoricalData:
 
         self.data = get_klines_data(month_year=month_year, n_rows=n_rows)
 
+        self.data_columns = self.data.columns
+
     def get_historical_trades(self,
                               month_year: Tuple = None,
                               n_rows: int = None,
@@ -59,6 +61,8 @@ class HistoricalData:
             .cast(pl.UInt64) 
             .alias("timestamp")
         ])
+
+        self.data_columns = self.data.columns
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
