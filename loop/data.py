@@ -2,9 +2,8 @@ from typing import Sequence, Dict, List, Tuple
 from itertools import accumulate
 
 from .utils.get_raw_trades_data import get_raw_trades_data
-from loop.utils.get_klines_historical import get_klines_historical
+from .utils.get_klines_data import get_klines_data
 
-import pandas as pd
 import polars as pl
 
 
@@ -15,9 +14,8 @@ class HistoricalData:
         pass
 
     def get_historical_klines(self,
-                              data_start_date: str,
-                              data_end_date: str,
-                              data_interval: str) -> None:
+                              month_year: Tuple = None,
+                              n_rows: int = None) -> None:
         
         '''Get historical klines data from Binance API
 
@@ -31,21 +29,7 @@ class HistoricalData:
     
         '''
 
-        self.data = get_klines_historical(data_interval,
-                                            data_start_date,
-                                            data_end_date)
-
-        self._int_cols = ['open_time', 'close_time', 'num_trades']
-
-        self._float_cols = ['open', 'high', 'low', 'close', 'volume', 
-                           'qav', 'taker_base_vol', 'taker_quote_vol', 'ignore']
-
-        self.data['open_time'] = pd.to_datetime(self.data['open_time'])
-
-        all_cols = self._int_cols + self._float_cols + ['open_time']
-        assert set(self.data.columns) == set(all_cols), 'Input data columns do not match the expectation.'
-        
-        self.data = pl.from_pandas(self.data)
+        self.data = get_klines_data(month_year=month_year, n_rows=n_rows)
 
     def get_historical_trades(self,
                               month_year: Tuple = None,
@@ -75,7 +59,6 @@ class HistoricalData:
             .cast(pl.UInt64) 
             .alias("timestamp")
         ])
-
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
