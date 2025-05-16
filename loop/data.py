@@ -13,23 +13,19 @@ class HistoricalData:
 
         pass
 
-    def get_historical_klines(self,
-                              month_year: Tuple = None,
-                              n_rows: int = None) -> None:
+    def get_historical_klines(self, n_rows: int = None) -> None:
         
         '''Get historical klines data from Binance API
 
         Args:
-            data_start_date (str): e.g. '2025-01-01'
-            data_end_date (str): e.g. '2025-01-31'
-            data_interval (str): Either '1h' or '1d'
+            n_rows (int): Number of rows to be pulled
 
         Returns:
             self.data (pl.DataFrame)
     
         '''
 
-        self.data = get_klines_data(month_year=month_year, n_rows=n_rows)
+        self.data = get_klines_data(n_rows=n_rows)
 
         self.data_columns = self.data.columns
 
