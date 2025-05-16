@@ -29,7 +29,7 @@ def get_raw_trades_data(month_year: Optional[Tuple[int,int]] = None,
     )
 
     select_cols = [
-        'trade_id', 'price', 'quantity', 'quote_quantity', 'is_buyer_maker'
+        'trade_id', 'timestamp', 'price', 'quantity', 'quote_quantity', 'is_buyer_maker'
     ]
     if include_datetime_col:
         select_cols.append('datetime')
