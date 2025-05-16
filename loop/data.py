@@ -1,7 +1,7 @@
 from typing import Sequence, Dict, List, Tuple
 from itertools import accumulate
 
-from vaquum_tools import get_raw_trades_data
+from .utils.get_raw_trades_data import get_raw_trades_data
 from loop.utils.get_klines_historical import get_klines_historical
 
 import pandas as pd
