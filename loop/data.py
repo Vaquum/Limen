@@ -1,7 +1,7 @@
 from typing import Sequence, Dict, List, Tuple
 from itertools import accumulate
 
-from .utils.get_raw_trades_data import get_raw_trades_data
+from .utils.get_trades_data import get_trades_data
 from .utils.get_klines_data import get_klines_data
 
 import polars as pl
@@ -50,7 +50,7 @@ class HistoricalData:
     
         '''
         
-        self.data = get_raw_trades_data(month_year=month_year,
+        self.data = get_trades_data(month_year=month_year,
                                         n_rows=n_rows,
                                         include_datetime_col=include_datetime_col)
         

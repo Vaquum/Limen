@@ -3,10 +3,10 @@ import polars as pl
 import time
 from typing import Optional, Tuple
 
-def get_raw_trades_data(month_year: Optional[Tuple[int,int]] = None,
-                        n_rows: Optional[int] = None,
-                        include_datetime_col: bool = True,
-                        show_summary: bool = False) -> pl.DataFrame:
+def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
+                    n_rows: Optional[int] = None,
+                    include_datetime_col: bool = True,
+                    show_summary: bool = False) -> pl.DataFrame:
     
     '''Get Binance raw trades data.
 
