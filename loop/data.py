@@ -67,6 +67,15 @@ class HistoricalData:
         self.data = get_raw_trades_data(month_year=month_year,
                                         n_rows=n_rows,
                                         include_datetime_col=include_datetime_col)
+        
+        self.data = self.data.with_columns([
+            pl.when(pl.col("timestamp") < 10**13)
+            .then(pl.col("timestamp"))
+            .otherwise(pl.col("timestamp") // 1000)
+            .cast(pl.UInt64) 
+            .alias("timestamp")
+        ])
+
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
