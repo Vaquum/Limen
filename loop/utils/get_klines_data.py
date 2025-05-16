@@ -3,21 +3,19 @@ import polars as pl
 import time
 from typing import Optional, Tuple
 
-def get_raw_trades_data(month_year: Optional[Tuple[int,int]] = None,
-                        n_rows: Optional[int] = None,
-                        include_datetime_col: bool = True,
-                        show_summary: bool = False) -> pl.DataFrame:
+def get_klines_data(n_rows: Optional[int] = None,
+                    show_summary: bool = False) -> pl.DataFrame:
     
-    '''Get Binance raw trades data.
+    '''Get 1 second klines data based on Binance raw trades data. Returns either 
+       everything or n_rows. Everything is 
 
     Args:
         month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
-        n_rows (int | None): if set, fetch this many latest rows instead.
-        include_datetime_col (bool): whether to include `datetime` in the result.
-        show_summary (bool): if a summary for data is printed out
+        n_rows (int | None): if not None, fetch this many latest rows instead.
+        show_summary (bool): if a summary for data is printed out.
 
     Returns:
-        pl.DataFrame: the requested trades.
+        pl.DataFrame: the requested klines data.
     '''
     
     client = get_client(
@@ -28,37 +26,33 @@ def get_raw_trades_data(month_year: Optional[Tuple[int,int]] = None,
         compression=True
     )
 
-    select_cols = [
-        'trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker'
-    ]
-    if include_datetime_col:
-        select_cols.append('datetime')
-
-    if month_year is not None and n_rows is None:
-        month, year = month_year
-        where = (
-            f"WHERE datetime >= toDateTime('{year:04d}-{month:02d}-01 00:00:00') "
-            f"AND datetime <  addMonths(toDateTime('{year:04d}-{month:02d}-01 00:00:00'),1)"
-        )
-    elif n_rows is not None and month_year is None:
-        where = f"ORDER BY toStartOfDay(datetime) DESC, trade_id DESC LIMIT {n_rows}"
+    if n_rows is not None:
+        limit = f"LIMIT {n_rows}"
     else:
-        raise AttributeError('Either month_year or n_rows must be set, not both.')
+        limit = ''
 
     query = (
-        f"SELECT {', '.join(select_cols)} "
-        f"FROM tdw.binance_trades {where}"
+        f"SELECT datetime AS datetime, \
+            argMin(price, datetime) AS open, \
+            max(price) AS high, \
+            min(price) AS low, \
+            argMax(price, datetime) AS close, \
+            sum(quantity) AS volume, \
+            avg(is_buyer_maker) AS maker_ratio "
+        f"FROM tdw.binance_trades "
+        f"GROUP BY datetime ORDER BY datetime DESC {limit}"   
     )
 
     start = time.time()
     arrow_table = client.query_arrow(query)
     polars_df = pl.from_arrow(arrow_table)
-    polars_df = polars_df.sort("trade_id")
     
     polars_df = polars_df.with_columns([
         (pl.col('datetime').cast(pl.Int64) * 1000)
           .cast(pl.Datetime("ms", time_zone="UTC"))
           .alias("datetime")])
+
+    polars_df = polars_df.sort("datetime")
 
     elapsed = time.time() - start
 
