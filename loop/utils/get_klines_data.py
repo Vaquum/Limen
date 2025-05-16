@@ -10,7 +10,6 @@ def get_klines_data(n_rows: Optional[int] = None,
        everything or n_rows. Everything is 
 
     Args:
-        month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
         n_rows (int | None): if not None, fetch this many latest rows instead.
         show_summary (bool): if a summary for data is printed out.
 
