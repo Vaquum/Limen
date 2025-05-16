@@ -1,10 +1,9 @@
 from typing import Sequence, Dict, List, Tuple
 from itertools import accumulate
 
-from .utils.get_raw_trades_data import get_raw_trades_data
-from loop.utils.get_klines_historical import get_klines_historical
+from .utils.get_trades_data import get_trades_data
+from .utils.get_klines_data import get_klines_data
 
-import pandas as pd
 import polars as pl
 
 
@@ -14,38 +13,21 @@ class HistoricalData:
 
         pass
 
-    def get_historical_klines(self,
-                              data_start_date: str,
-                              data_end_date: str,
-                              data_interval: str) -> None:
+    def get_historical_klines(self, n_rows: int = None) -> None:
         
         '''Get historical klines data from Binance API
 
         Args:
-            data_start_date (str): e.g. '2025-01-01'
-            data_end_date (str): e.g. '2025-01-31'
-            data_interval (str): Either '1h' or '1d'
+            n_rows (int): Number of rows to be pulled
 
         Returns:
             self.data (pl.DataFrame)
     
         '''
 
-        self.data = get_klines_historical(data_interval,
-                                            data_start_date,
-                                            data_end_date)
+        self.data = get_klines_data(n_rows=n_rows)
 
-        self._int_cols = ['open_time', 'close_time', 'num_trades']
-
-        self._float_cols = ['open', 'high', 'low', 'close', 'volume', 
-                           'qav', 'taker_base_vol', 'taker_quote_vol', 'ignore']
-
-        self.data['open_time'] = pd.to_datetime(self.data['open_time'])
-
-        all_cols = self._int_cols + self._float_cols + ['open_time']
-        assert set(self.data.columns) == set(all_cols), 'Input data columns do not match the expectation.'
-        
-        self.data = pl.from_pandas(self.data)
+        self.data_columns = self.data.columns
 
     def get_historical_trades(self,
                               month_year: Tuple = None,
@@ -64,7 +46,7 @@ class HistoricalData:
     
         '''
         
-        self.data = get_raw_trades_data(month_year=month_year,
+        self.data = get_trades_data(month_year=month_year,
                                         n_rows=n_rows,
                                         include_datetime_col=include_datetime_col)
         
@@ -76,6 +58,7 @@ class HistoricalData:
             .alias("timestamp")
         ])
 
+        self.data_columns = self.data.columns
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
