@@ -91,27 +91,6 @@ class HistoricalData:
         ])
 
         self.data_columns = self.data.columns
-
-    def get_historical_futures_trades(self,
-                                      month_year: Tuple = None,
-                                      n_rows: int = None,
-                                      include_datetime_col: bool = True) -> None:
-
-        '''Get futures trades data from `tdw.binance_futures_trades`
-
-        Args:
-            month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
-            n_rows (int): Number of rows to be pulled
-            include_datetime_col (bool): If datetime column is to be included
-
-        Returns:
-            self.data (pl.DataFrame)
-    
-        '''
-        
-        self.data = get_agg_trades_data(month_year=month_year,
-                                        n_rows=n_rows,
-                                        include_datetime_col=include_datetime_col)
         
     def get_futures_trades_data(month_year: Optional[Tuple[int,int]] = None,
                                 n_rows: Optional[int] = None,
