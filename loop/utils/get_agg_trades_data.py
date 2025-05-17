@@ -43,7 +43,7 @@ def get_agg_trades_data(month_year: Optional[Tuple[int,int]] = None,
     elif n_rows is not None and month_year is None:
         where = f"ORDER BY toStartOfDay(datetime) DESC, agg_trade_id DESC LIMIT {n_rows}"
     else:
-        raise AttributeError('Either month_year or n_rows must be set, not both.')
+        raise ValueError('Either month_year or n_rows must be set, not both.')
 
     query = (
         f"SELECT {', '.join(select_cols)} "
