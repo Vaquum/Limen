@@ -1,10 +1,10 @@
-from typing import Sequence, Dict, List, Tuple
+from typing import Sequence, Dict, List, Tuple, Optional
 from itertools import accumulate
 
 from .utils.get_klines_data import get_klines_data
 from .utils.get_trades_data import get_trades_data
 from .utils.get_agg_trades_data import get_agg_trades_data
-
+from .utils.generic_endpoint_for_tdw import generic_endpoint_for_tdw
 import polars as pl
 
 
@@ -92,6 +92,55 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
+    def get_historical_futures_trades(self,
+                                      month_year: Tuple = None,
+                                      n_rows: int = None,
+                                      include_datetime_col: bool = True) -> None:
+
+        '''Get futures trades data from `tdw.binance_futures_trades`
+
+        Args:
+            month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
+            n_rows (int): Number of rows to be pulled
+            include_datetime_col (bool): If datetime column is to be included
+
+        Returns:
+            self.data (pl.DataFrame)
+    
+        '''
+        
+        self.data = get_agg_trades_data(month_year=month_year,
+                                        n_rows=n_rows,
+                                        include_datetime_col=include_datetime_col)
+        
+    def get_futures_trades_data(month_year: Optional[Tuple[int,int]] = None,
+                                n_rows: Optional[int] = None,
+                                include_datetime_col: bool = True,
+                                show_summary: bool = False) -> pl.DataFrame:
+        
+        '''Get Binance futures trades data.
+
+        Args:
+            month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
+            n_rows (int | None): if set, fetch this many latest rows instead.
+            include_datetime_col (bool): whether to include `datetime` in the result.
+            show_summary (bool): if a summary for data is printed out
+
+        Returns:
+            pl.DataFrame: the requested trades.
+        '''
+
+        select_cols = ['futures_trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker']
+        table_name = 'binance_futures_trades'
+        sort_by = 'futures_trade_id'
+
+        return generic_endpoint_for_tdw(month_year,
+                                        n_rows,
+                                        include_datetime_col,
+                                        show_summary,
+                                        select_cols,
+                                        table_name,
+                                        sort_by)
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
