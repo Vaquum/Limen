@@ -37,7 +37,8 @@ def get_klines_data(n_rows: Optional[int] = None,
             min(price) AS low, \
             argMax(price, datetime) AS close, \
             sum(quantity) AS volume, \
-            avg(is_buyer_maker) AS maker_ratio "
+            avg(is_buyer_maker) AS maker_ratio \
+            count() AS no_of_trades"
         f"FROM tdw.binance_trades "
         f"GROUP BY datetime ORDER BY datetime DESC {limit}"   
     )
