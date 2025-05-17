@@ -34,7 +34,7 @@ def generic_endpoint_for_tdw(month_year: Optional[Tuple[int,int]] = None,
         where = f"ORDER BY toStartOfDay(datetime) DESC, futures_trade_id DESC LIMIT {n_rows}"
     
     else:
-        raise AttributeError('Either month_year or n_rows must be set, not both.')
+        raise ValueError('Exactly one of month_year or n_rows must be provided, not both or neither.')
 
     query = (
         f"SELECT {', '.join(select_cols)} "
