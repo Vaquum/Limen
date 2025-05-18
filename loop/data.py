@@ -92,10 +92,11 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
         
-    def get_futures_trades_data(month_year: Optional[Tuple[int,int]] = None,
-                                n_rows: Optional[int] = None,
-                                include_datetime_col: bool = True,
-                                show_summary: bool = False) -> pl.DataFrame:
+    def get_historical_futures_trades(self,
+                                      month_year: Optional[Tuple[int,int]] = None,
+                                      n_rows: Optional[int] = None,
+                                      include_datetime_col: bool = True,
+                                      show_summary: bool = False) -> pl.DataFrame:
         
         '''Get Binance futures trades data.
 
@@ -113,13 +114,13 @@ class HistoricalData:
         table_name = 'binance_futures_trades'
         sort_by = 'futures_trade_id'
 
-        return generic_endpoint_for_tdw(month_year,
-                                        n_rows,
-                                        include_datetime_col,
-                                        show_summary,
-                                        select_cols,
-                                        table_name,
-                                        sort_by)
+        return generic_endpoint_for_tdw(month_year=month_year,
+                                        n_rows=n_rows,
+                                        include_datetime_col=include_datetime_col,
+                                        select_cols=select_cols,
+                                        table_name=table_name,
+                                        sort_by=sort_by,
+                                        show_summary=show_summary)
 
     def split_sequential(self, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
