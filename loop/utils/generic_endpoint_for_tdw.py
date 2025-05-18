@@ -7,10 +7,10 @@ from typing import Optional, Tuple
 def generic_endpoint_for_tdw(month_year: Optional[Tuple[int,int]] = None,
                              n_rows: Optional[int] = None,
                              include_datetime_col: bool = True,
-                             show_summary: bool = False,
                              select_cols: list = None,
                              table_name: str = None,
-                             sort_by: str = None) -> pl.DataFrame:
+                             sort_by: str = None,
+                             show_summary: bool = False) -> pl.DataFrame:
 
     '''For using as the base functionality for all tdw endpoints.'''
 
