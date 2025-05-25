@@ -4,59 +4,59 @@ from tqdm import tqdm
 import polars as pl
 import sqlite3
 
+from loop import data
+
 
 class UniversalExperimentLoop:
 
     def __init__(self,
                  data,
-                 model,
-                 params):
+                 single_file_model):
 
         self.data = data
-        self.model = model
-        self.params = params()
+        self.model = single_file_model.model
+        self.params = single_file_model.params()
+        self.prep = single_file_model.prep
 
         self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
-
-    def params(self):
-        return self.params()    
-
-    def prep(self):
-        return self.prep(self.data)
-    
-    def model(self):
-        return self.model(self.data, params=self.params)
 
     def run(self,
             experiment_name,
             n_permutations=10):
-        
+            
         for i in tqdm(range(n_permutations)):
+            
+            if i == 0:
+                data = self.prep(self.data)
             
             start_time = time.time()
 
-            permutation = self._generate_permutation()
+            round_params = self._generate_permutation()
+    
+            round_results = self.model(data=data, round_params=round_params)
 
-            # First, add the measurement results            
-            results_dict, metric_col_names = self.model(data=self.data, params=permutation)
+            round_results['id'] = i
+            round_results['execution_time'] = round(time.time() - start_time, 2)
 
-            # Then, add id and execution time to demark end of of measurement result cols
-            results_dict['id'] = i
-            results_dict['execution_time'] = time.time() - start_time
+            for key in round_params.keys():
+                round_results[key] = round_params[key]
 
-            # Then, add the permutation parameters
-            for key in permutation.keys():
-                results_dict[key] = permutation[key]
-
+            # Handle writing to the DataFrame
             if i == 0:
-                self.log_df = pl.DataFrame(results_dict)
+                self.log_df = pl.DataFrame(round_results)
             else:
-                self.log_df = self.log_df.vstack(pl.DataFrame([results_dict]))
+                self.log_df = self.log_df.vstack(pl.DataFrame([round_results]))
 
+            # Handle writing to the database
             self.log_df.to_pandas().tail(1).to_sql(experiment_name,
                                                    self.conn,
                                                    if_exists="append",
                                                    index=False)
+            # Handle writing to the file
+            if i == 0:
+                header_colnames = ','.join(list(round_results.keys()))
+                with open(experiment_name + '.csv', 'a') as f:
+                    f.write(f"{header_colnames}\n")
 
             log_string = f"{', '.join(map(str, self.log_df.row(i)))}\n"
             with open(experiment_name + '.csv', 'a') as f:

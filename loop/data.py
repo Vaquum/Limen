@@ -1,5 +1,7 @@
-from typing import Sequence, Dict, List, Tuple, Optional
+from typing import Sequence, List, Tuple, Optional
 from itertools import accumulate
+
+from vaquum_tools.binance_file_to_polars import binance_file_to_polars
 
 from .utils.get_klines_data import get_klines_data
 from .utils.get_trades_data import get_trades_data
@@ -13,6 +15,30 @@ class HistoricalData:
     def __init__(self):
 
         pass
+
+    def get_binance_file(self,
+                         file_url: str,
+                         has_header: bool = False,
+                         columns: List[str] = None):
+
+        self.data = binance_file_to_polars(file_url, has_header=has_header)
+        self.data.columns = columns
+
+        self.data = self.data.with_columns([
+            pl.when(pl.col("timestamp") < 10**13)
+            .then(pl.col("timestamp"))
+            .otherwise(pl.col("timestamp") // 1000)
+            .cast(pl.UInt64) 
+            .alias("timestamp")
+        ])
+
+        self.data = self.data.with_columns([
+            pl.col("timestamp")
+            .cast(pl.Datetime("ms"))
+            .alias("datetime")
+        ])
+
+        self.data_columns = self.data.columns
 
     def get_historical_klines(self, n_rows: int = None) -> None:
         
