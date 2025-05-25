@@ -4,6 +4,7 @@ import time
 from typing import Optional, Tuple
 
 def get_klines_data(n_rows: Optional[int] = None,
+                    kline_size: int = 1,
                     show_summary: bool = False) -> pl.DataFrame:
     
     '''Get 1 second klines data based on Binance raw trades data. Returns either 
@@ -11,6 +12,7 @@ def get_klines_data(n_rows: Optional[int] = None,
 
     Args:
         n_rows (int | None): if not None, fetch this many latest rows instead.
+        kline_size (int): the size of the kline in seconds.
         show_summary (bool): if a summary for data is printed out.
 
     Returns:
@@ -31,7 +33,7 @@ def get_klines_data(n_rows: Optional[int] = None,
         limit = ''
 
     query = (
-        f"SELECT datetime AS datetime, \
+        f"SELECT toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, \
             argMin(price, datetime) AS open, \
             max(price) AS high, \
             min(price) AS low, \

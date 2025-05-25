@@ -1,7 +1,5 @@
 # Changelog
 
-## 15:50 UTC on 14-04-2025
+## 18th of May, 2025
 
-- Major refactor of `Account`
-- New report: `reports.compare_prediction_with_actual`
-- Tests for main classes
+- Add `klines_size` as input argument to [`get_client_data`](utils/get_clines_data.py)
