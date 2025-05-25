@@ -46,6 +46,7 @@ class HistoricalData:
 
         Args:
             n_rows (int): Number of rows to be pulled
+            kline_size (int): Size of the kline in seconds
 
         Returns:
             self.data (pl.DataFrame)
@@ -66,7 +67,8 @@ class HistoricalData:
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
-            n_rows (int): Number of rows to be pulled
+            n_latest (int): Number of latest rows to be pulled
+            n_random (int): Number of random rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
 
         Returns:
