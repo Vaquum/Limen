@@ -1,5 +1,7 @@
 # Changelog
 
-## 18th of May, 2025
+## 25th of May, 2025
 
-- Add `klines_size` as input argument to [`get_client_data`](utils/get_clines_data.py)
+- Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
+- Rename `n_rows` input parameter to `n_latest` in [`get_trades_data`](utils/get_trades_data.py) for getting latest rows
+- Add `n_sample` input parameter to [`get_trades_data`](utils/get_trades_data.py) for random sampling
