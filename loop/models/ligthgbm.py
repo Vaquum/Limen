@@ -14,6 +14,7 @@ TARGET_COLUMN = 'quote_quantity'
 LOOKBACK_WINDOW_SIZE = 100
 PREDICTION_HORIZON = 3
 NUM_SLICES = 10
+TARGET_COLUMN_CLASS = "breakout_ema"
 
 
 def params():
@@ -21,22 +22,23 @@ def params():
     p = {
         'objective': ['binary'],
         'metric': ['auc'],
-        'learning_rate': [0.03],
-        'num_leaves': [31],
-        'max_depth': [-1],
-        'min_data_in_leaf': [200],
-        'feature_fraction': [0.8],
-        'bagging_fraction': [0.8],
-        'bagging_freq': [1],
-        'lambda_l1': [1.0],
-        'lambda_l2': [1.0],
+        'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
+        'num_leaves': [15, 31, 63, 127, 255],
+        'max_depth': [3, 5, 7, 9, -1],
+        'min_data_in_leaf': [20, 50, 100, 200, 500],
+        'feature_fraction': [0.6, 0.7, 0.8, 0.9, 1.0],
+        'bagging_fraction': [0.6, 0.7, 0.8, 0.9, 1.0],
+        'bagging_freq': [0, 1, 5, 10, 20],
+        'lambda_l1': [0.0, 0.1, 1.0, 10.0, 100.0],
+        'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
         'verbose': [-1],
+        'feature_pre_filter': ['false']
     }
 
     return p
 
 
-def prep(data, round_params):
+def prep(data):
 
     feature_cols = ["quote_quantity",
                     "hour",
@@ -95,8 +97,6 @@ def prep(data, round_params):
     df_train = add_breakout_ema(df_train, TARGET_COLUMN)
     df_val = add_breakout_ema(df_val, TARGET_COLUMN)
     df_test = add_breakout_ema(df_test, TARGET_COLUMN)
-    
-    TARGET_COLUMN_CLASS = "breakout_ema"
 
     train_X, train_y = create_vectorized_sliding_window(df_train,
                                  feature_cols,
@@ -135,35 +135,35 @@ def prep(data, round_params):
     val_X = np.nan_to_num(val_X, nan=0.0, copy=False).astype(np.float32, copy=False)
     test_X = np.nan_to_num(test_X, nan=0.0, copy=False).astype(np.float32, copy=False)
 
-    pos_cnt = train_y.sum()
-    neg_cnt = len(train_y) - pos_cnt
-    round_params["scale_pos_weight"] = (neg_cnt / pos_cnt) if pos_cnt > 0 else 1.0
-
-    return {
-        'dtrain': dtrain,
-        'dval': dval,
-        'train_X': train_X,
-        'val_X': val_X,
-        'test_X': test_X,
-        'train_y': train_y,
-        'val_y': val_y,
-        'test_y': test_y
-    }, round_params
+    return {'dtrain': dtrain,
+            'dval': dval,
+            'train_X': train_X,
+            'val_X': val_X,
+            'test_X': test_X,
+            'train_y': train_y,
+            'val_y': val_y,
+            'test_y': test_y}
 
 
 def model(data, round_params):
 
+    model = None
+
+    pos_cnt = data['train_y'].sum()
+    neg_cnt = len(data['train_y']) - pos_cnt
+    round_params["scale_pos_weight"] = round((neg_cnt / pos_cnt) if pos_cnt > 0 else 1.0, 4)
+
     model = lgb.train(
-        round_params,
-        data['dtrain'],
+        params=round_params,
+        train_set=data['dtrain'],
         num_boost_round=4000,
         valid_sets=[data['dtrain'], data['dval']],
         valid_names=["train", "valid"],
-        callbacks=[early_stopping(stopping_rounds=200),
-                   log_evaluation(period=50)])
+        callbacks=[early_stopping(stopping_rounds=200, verbose=False),
+                   log_evaluation(period=0)])
     
     pred_prob = model.predict(data['test_X'], num_iteration=model.best_iteration)
-    pred_bin  = (pred_prob >= 0.5).astype(int)
+    pred_bin = (pred_prob >= 0.5).astype(int)
 
     round_results = {'recall': round(recall_score(data['test_y'], pred_bin), 2),
                      'precision': round(precision_score(data['test_y'], pred_bin), 2),
@@ -171,4 +171,4 @@ def model(data, round_params):
                      'auc': round(roc_auc_score(data['test_y'], pred_bin), 2),
                      'accuracy': round(accuracy_score(data['test_y'], pred_bin), 2)}
 
-    return model, round_results
+    return round_results

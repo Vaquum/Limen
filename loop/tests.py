@@ -8,4 +8,4 @@ cols = ['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buye
 historical.get_binance_file(file_url, False, cols)
 
 uel = loop.UniversalExperimentLoop(historical.data, ligthgbm)
-uel.run(experiment_name='test_x0', n_permutations=2)
+uel.run(experiment_name='test_xx', n_permutations=100)

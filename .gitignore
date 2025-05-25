@@ -16,4 +16,4 @@ dist/
 build/
 *.egg
 *.pyc
-test_x0.csv
+test_x*.csv
