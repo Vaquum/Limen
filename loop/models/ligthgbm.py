@@ -131,10 +131,6 @@ def prep(data):
     dtrain = lgb.Dataset(train_X, label=train_y, feature_name=feature_names)
     dval = lgb.Dataset(val_X, label=val_y, reference=dtrain, feature_name=feature_names)
 
-    train_X = np.nan_to_num(train_X, nan=0.0, copy=False).astype(np.float32, copy=False)
-    val_X = np.nan_to_num(val_X, nan=0.0, copy=False).astype(np.float32, copy=False)
-    test_X = np.nan_to_num(test_X, nan=0.0, copy=False).astype(np.float32, copy=False)
-
     return {'dtrain': dtrain,
             'dval': dval,
             'train_X': train_X,
