@@ -54,7 +54,7 @@ class UniversalExperimentLoop:
                                                    index=False)
             # Handle writing to the file
             if i == 0:
-                header_colnames = ','.join(list(round_results.keys()) + list(round_params.keys()))
+                header_colnames = ','.join(list(round_results.keys()))
                 with open(experiment_name + '.csv', 'a') as f:
                     f.write(f"{header_colnames}\n")
 
