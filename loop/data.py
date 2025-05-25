@@ -40,7 +40,7 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
-    def get_historical_klines(self, n_rows: int = None) -> None:
+    def get_historical_klines(self, n_rows: int = None, kline_size: int = 1) -> None:
         
         '''Get historical klines data from Binance API
 
@@ -52,13 +52,14 @@ class HistoricalData:
     
         '''
 
-        self.data = get_klines_data(n_rows=n_rows)
+        self.data = get_klines_data(n_rows=n_rows, kline_size=kline_size)
 
         self.data_columns = self.data.columns
 
     def get_historical_trades(self,
                               month_year: Tuple = None,
-                              n_rows: int = None,
+                              n_latest: int = None,
+                              n_random: int = None,
                               include_datetime_col: bool = True) -> None:
 
         '''Get historical trades data from `tdw.binance_trades`
@@ -74,7 +75,8 @@ class HistoricalData:
         '''
         
         self.data = get_trades_data(month_year=month_year,
-                                        n_rows=n_rows,
+                                        n_latest=n_latest,
+                                        n_random=n_random,
                                         include_datetime_col=include_datetime_col)
         
         self.data = self.data.with_columns([
