@@ -4,7 +4,8 @@ import time
 from typing import Optional, Tuple
 
 def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
-                    n_rows: Optional[int] = None,
+                    n_latest: Optional[int] = None,
+                    n_random: Optional[int] = None,
                     include_datetime_col: bool = True,
                     show_summary: bool = False) -> pl.DataFrame:
     
@@ -12,7 +13,8 @@ def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
 
     Args:
         month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
-        n_rows (int | None): if set, fetch this many latest rows instead.
+        n_latest (int | None): if set, fetch this many latest rows instead.
+        n_random (int | None): if set, fetch this n_random of random samples.
         include_datetime_col (bool): whether to include `datetime` in the result.
         show_summary (bool): if a summary for data is printed out
 
@@ -20,35 +22,33 @@ def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
         pl.DataFrame: the requested trades.
     '''
     
-    client = get_client(
-        host='localhost',
-        port=8123,
-        username='default',
-        password='password123',
-        compression=True
-    )
+    client = get_client(host='localhost',
+                        port=8123,
+                        username='default',
+                        password='password123',
+                        compression=True)
 
-    select_cols = [
-        'trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker'
-    ]
+    select_cols = ['trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker']
+    
     if include_datetime_col:
         select_cols.append('datetime')
 
-    if month_year is not None and n_rows is None:
+    if month_year and n_latest is None and n_random is None:
         month, year = month_year
-        where = (
-            f"WHERE datetime >= toDateTime('{year:04d}-{month:02d}-01 00:00:00') "
-            f"AND datetime <  addMonths(toDateTime('{year:04d}-{month:02d}-01 00:00:00'),1)"
-        )
-    elif n_rows is not None and month_year is None:
-        where = f"ORDER BY toStartOfDay(datetime) DESC, trade_id DESC LIMIT {n_rows}"
-    else:
-        raise AttributeError('Either month_year or n_rows must be set, not both.')
+        where = (f"WHERE datetime >= toDateTime('{year:04d}-{month:02d}-01 00:00:00') "
+                 f"AND datetime <  addMonths(toDateTime('{year:04d}-{month:02d}-01 00:00:00'),1)")
 
-    query = (
-        f"SELECT {', '.join(select_cols)} "
-        f"FROM tdw.binance_trades {where}"
-    )
+    elif n_latest and n_random is None:
+        where = f"ORDER BY toStartOfDay(datetime) DESC, trade_id DESC LIMIT {n_latest}"
+
+    elif n_random:        
+        where = f"ORDER BY sipHash64(tuple(trade_id, timestamp)) LIMIT {n_random}"
+    
+    else:
+        raise AttributeError("Invalid parameter combination: Exactly one of 'month_year', 'n_latest', or 'n_random' must be set. "
+                             "Ensure that only one of these parameters is provided and the others are None.")
+    query = (f"SELECT {', '.join(select_cols)} "
+             f"FROM tdw.binance_trades {where}")
 
     start = time.time()
     arrow_table = client.query_arrow(query)
