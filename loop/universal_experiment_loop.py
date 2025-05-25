@@ -44,7 +44,7 @@ class UniversalExperimentLoop:
         '''
 
         if params is not None:
-            self.params = params
+            self.params = params()
         
         if prep is not None:
             self.prep = prep
