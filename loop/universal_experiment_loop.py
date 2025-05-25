@@ -22,7 +22,35 @@ class UniversalExperimentLoop:
 
     def run(self,
             experiment_name,
-            n_permutations=10):
+            n_permutations=10,
+            params=None,
+            prep=None,
+            model=None):
+        
+        '''
+        Runs the experiment `n_permutations` times. 
+
+        NOTE: If you want to use a custom `params` or `prep` or `model`
+        function, you can pass them as arguments and permanently change
+        `single_file_model` for that part. Make sure that the inputs and
+        returns are same as the ones outlined in `docs/Single-File-Model.md`.
+
+        Args:
+            experiment_name (str): The name of the experiment
+            n_permutations (int): The number of permutations to run
+            params (dict): The parameters to use for the experiment
+            prep (function): The function to use to prepare the data
+            model (function): The function to use to run the model
+        '''
+
+        if params is not None:
+            self.params = params()
+        
+        if prep is not None:
+            self.prep = prep
+        
+        if model is not None:
+            self.model = model
             
         for i in tqdm(range(n_permutations)):
             
