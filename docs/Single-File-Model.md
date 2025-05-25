@@ -6,8 +6,13 @@ There are few things to note about an SFM:
 
 1) An SFM has three functions: `params`, `prep`, and `model`
 2) `params` takes no input and returns a dictionary with keys as parameter names, and lists as parameter values.
-3) `prep` takes as input data from `Loop.HistoricalData` and  and returns a dictionary with data assets
-4) `model` takes as input dictionary with data assets and `round_params` and returns `round_results` dictionary
+3) `prep` takes as input data from `Loop.HistoricalData` and  and returns a dictionary with data assets.
+4) `model` takes as input dictionary with data assets and `round_params` and returns `round_results` dictionary.
 
 As long as the SFM in question adheres to points 2 through 4, `Loop.UniversalExperimentLoop` will accept the SFM as input. 
 
+# Notes on Usage
+
+- Paramater values returned by `params` have to always be in a list, even if it is a single value
+- Consequently, if you want to use a constant value but have it in `params` for reference, just have a single value in a list for that key
+- If you want to perform per-permutation transformations to parameters, handle them inside `model`
