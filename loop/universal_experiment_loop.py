@@ -18,9 +18,6 @@ class UniversalExperimentLoop:
         self.params = single_file_model.params()
         self.prep = single_file_model.prep
 
-        # TODO: Move this inside self.run()
-        self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
-
     def run(self,
             experiment_name,
             n_permutations=10,
@@ -43,6 +40,8 @@ class UniversalExperimentLoop:
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
         '''
+
+        self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
         if params is not None:
             self.params = params()
