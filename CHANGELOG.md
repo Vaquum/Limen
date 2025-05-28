@@ -9,6 +9,7 @@
 
 ## 28th of May, 2025
 
+- Move database connection init to inside `uel.run`
 - Add `utils.metrics` with classification metrics an experimental regression metrics
 - Add `uel.extras` for storing any arbitrary artefacts in `round_results` in `uel.run`
 - Add `uel.models` for storing model as part of each permutation
