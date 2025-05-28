@@ -1,7 +1,4 @@
-import sys
-sys.path.insert(0, '.')
-
-from metrics import metrics_for_regression
+from loop.utils.metrics import metrics_for_regression
 import xgboost as xgb
 import numpy as np
 import polars as pl
