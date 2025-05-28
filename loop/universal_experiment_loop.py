@@ -17,6 +17,8 @@ class UniversalExperimentLoop:
         self.model = single_file_model.model
         self.params = single_file_model.params()
         self.prep = single_file_model.prep
+        self.extras = []
+        self.models = []
 
     def run(self,
             experiment_name,
@@ -62,6 +64,14 @@ class UniversalExperimentLoop:
             round_params = self._generate_permutation()
     
             round_results = self.model(data=data, round_params=round_params)
+
+            if 'extras' in round_results.keys():
+                self.extras.append(round_results['extras'])
+                round_results.pop('extras')
+
+            if 'models' in round_results.keys():
+                self.models.append(round_results['models'])
+                round_results.pop('models')
 
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
