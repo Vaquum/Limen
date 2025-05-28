@@ -18,6 +18,7 @@ class UniversalExperimentLoop:
         self.params = single_file_model.params()
         self.prep = single_file_model.prep
 
+        # TODO: Move this inside self.run()
         self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
     def run(self,

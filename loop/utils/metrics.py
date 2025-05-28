@@ -1,64 +1,27 @@
-import tensorflow as tf
-from tensorflow.keras.metrics import Metric
-from tensorflow.keras.saving import register_keras_serializable
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score
+import numpy as np
 
 
-@register_keras_serializable(package='loop.utils.metrics')
-class DirectionalAccuracy(Metric):
-    '''Measures accuracy of predicted direction changes in time series.
+def metrics_for_regression(data, pred):
+
+    bias = np.mean(pred - data['y_test'])
     
-    This metric is particularly useful for financial time series where predicting
-    the direction of change (up/down) is as important as the magnitude.
-    
-    Attributes:
-        correct_predictions: Counter for correct directional predictions
-        total_predictions: Counter for total predictions made
-        threshold: Minimum change to consider as a direction change
-    '''
-    
-    def __init__(self, name='directional_accuracy', threshold=0.0, **kwargs):
-        super().__init__(name=name, **kwargs)
-        self.correct_predictions = self.add_weight(
-            name='correct_predictions',
-            initializer='zeros'
-        )
-        self.total_predictions = self.add_weight(
-            name='total_predictions',
-            initializer='zeros'
-        )
-        self.threshold = threshold
+    round_results = {'mae': round(mean_absolute_error(data['y_test'], pred), 4),
+                     'rmse': round(np.sqrt(mean_squared_error(data['y_test'], pred)), 4),
+                     'r2': round(r2_score(data['y_test'], pred), 4),
+                     'bias': round(bias, 4),
+                     'mape': round(np.mean(np.abs((data['y_test'] - pred) / data['y_test'])) * 100, 4)}
 
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        # Calculate directions (1 for up, 0 for down)
-        y_true = tf.cast(y_true, tf.float32)
-        y_pred = tf.cast(y_pred, tf.float32)
-        
-        # Get changes
-        true_changes = y_true[1:] - y_true[:-1]
-        pred_changes = y_pred[1:] - y_pred[:-1]
-        
-        # Apply threshold to changes
-        true_dirs = tf.cast(true_changes > self.threshold, tf.float32)
-        pred_dirs = tf.cast(pred_changes > self.threshold, tf.float32)
-        
-        # Calculate correct predictions
-        correct = tf.cast(true_dirs == pred_dirs, tf.float32)
-        
-        if sample_weight is not None:
-            sample_weight = tf.cast(sample_weight[1:], tf.float32)
-            correct = correct * sample_weight
-        
-        self.correct_predictions.assign_add(tf.reduce_sum(correct))
-        self.total_predictions.assign_add(tf.cast(tf.size(correct), tf.float32))
+    return round_results
 
-    def result(self):
-        return self.correct_predictions / (self.total_predictions + tf.keras.backend.epsilon())
 
-    def reset_state(self):
-        self.correct_predictions.assign(0.0)
-        self.total_predictions.assign(0.0)
+def metrics_for_classification(data, pred_bin):
 
-    def get_config(self):
-        config = super().get_config()
-        config.update({'threshold': self.threshold})
-        return config 
+    round_results = {'recall': round(recall_score(data['y_test'], pred_bin), 2),
+                     'precision': round(precision_score(data['y_test'], pred_bin), 2),
+                     'f1score': round(f1_score(data['y_test'], pred_bin), 2),
+                     'auc': round(roc_auc_score(data['y_test'], pred_bin), 2),
+                     'accuracy': round(accuracy_score(data['y_test'], pred_bin), 2)}
+
+    return round_results
