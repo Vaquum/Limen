@@ -4,7 +4,7 @@ from tqdm import tqdm
 import polars as pl
 import sqlite3
 
-from loop import data
+from loop.utils.param_space import ParamSpace
 
 
 class UniversalExperimentLoop:
@@ -23,6 +23,8 @@ class UniversalExperimentLoop:
     def run(self,
             experiment_name,
             n_permutations=10,
+            prep_each_round=False,
+            random_search=True,
             params=None,
             prep=None,
             model=None):
@@ -38,6 +40,8 @@ class UniversalExperimentLoop:
         Args:
             experiment_name (str): The name of the experiment
             n_permutations (int): The number of permutations to run
+            prep_each_round (bool): Whether to use `prep` for each round or just first
+            random_search (bool): Whether to use random search or not
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
@@ -53,26 +57,40 @@ class UniversalExperimentLoop:
         
         if model is not None:
             self.model = model
+
+        self.param_space = ParamSpace(params=self.params)
             
         for i in tqdm(range(n_permutations)):
-            
-            if i == 0:
-                data = self.prep(self.data)
-            
+
+            # Start counting execution_time            
             start_time = time.time()
 
-            round_params = self._generate_permutation()
-    
+            # Generate the parameter values for the current round
+            round_params = self.param_space.generate(random_search=random_search)
+
+            # Always prep data with round_params passed in
+            if prep_each_round is True:
+                data = self.prep(self.data, round_params=round_params)
+
+            # Otherwise, only for the first round, prep data without round_params passed in
+            else:
+                if i == 0:
+                    data = self.prep(self.data)
+
+            # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
 
+            # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
                 self.extras.append(round_results['extras'])
                 round_results.pop('extras')
 
+            # Handle any models that are returned from the model
             if 'models' in round_results.keys():
                 self.models.append(round_results['models'])
                 round_results.pop('models')
 
+            # Add the round number and execution time to the results
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
 
@@ -101,12 +119,3 @@ class UniversalExperimentLoop:
                 f.write(log_string)
 
         self.conn.close()
-            
-    def _generate_permutation(self):
-        
-        out_dict = {}
-
-        for key in self.params.keys():
-            out_dict[key] = np.random.choice(list(self.params[key]))
-
-        return out_dict

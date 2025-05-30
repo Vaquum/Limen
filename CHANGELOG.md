@@ -15,3 +15,11 @@
 - Add `uel.models` for storing model as part of each permutation
 - Add `models.xgboost` as a placeholder for further XGBoost explorations
 - Modularize testing suite in `tests.py`
+
+## 30th of May, 2025
+- Add `prep_each_round` to `uel.run` for executing `sfm.prep` for each round individually
+- Add `random_search` to `uel.run` for turning random search on or off (with off being grid search)
+- Separated parameter space handling into pure polars based utility in `utils.param_space`
+- Move data splitters out from `loop.HistoricalData` and into `utils.splits`
+- Add `splits.split_data_to_prep_output` for a clean way to get the classic 6-fold split data dictionary
+- Add reference model `models.random`
