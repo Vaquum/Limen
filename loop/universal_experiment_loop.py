@@ -65,7 +65,7 @@ class UniversalExperimentLoop:
             # Start counting execution_time            
             start_time = time.time()
 
-            # Generate the paramater values for the current round
+            # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
 
             # Always prep data with round_params passed in

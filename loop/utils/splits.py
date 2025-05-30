@@ -41,3 +41,15 @@ def split_random(data, ratios: Sequence[int], seed: int = None) -> List[pl.DataF
     starts = [0] + bounds[:-1]
     
     return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds)]
+
+
+def split_data_to_prep_output(split_data, cols):
+
+    return {
+        'x_train': split_data[0][cols[:-1]],
+        'y_train': split_data[0][cols[-1]],
+        'x_val': split_data[1][cols[:-1]],
+        'y_val': split_data[1][cols[-1]],
+        'x_test': split_data[2][cols[:-1]],
+        'y_test': split_data[2][cols[-1]],
+    }

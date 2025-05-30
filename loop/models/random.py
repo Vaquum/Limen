@@ -3,6 +3,7 @@ import polars as pl
 
 from loop.utils.metrics import metrics_for_classification
 from loop.utils.splits import split_sequential
+from loop.utils.splits import split_data_to_prep_output
 
 def params(): 
 
@@ -26,14 +27,7 @@ def prep(data, round_params=None):
     
     split_data = split_sequential(data, (3, 1, 1))
 
-    return {
-        'x_train': split_data[0][cols[:-1]],
-        'y_train': split_data[0][cols[-1]],
-        'x_val': split_data[1][cols[:-1]],
-        'y_val': split_data[1][cols[-1]],
-        'x_test': split_data[2][cols[:-1]],
-        'y_test': split_data[2][cols[-1]],
-    }
+    return split_data_to_prep_output(split_data=split_data, cols=cols)
 
 
 def model(data, round_params):

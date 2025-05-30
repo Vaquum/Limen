@@ -9,5 +9,7 @@ __all__ = [
     'format_report_header',
     'format_report_section',
     'format_report_footer',
-    'generate_permutation'
+    'generate_permutation',
+    'split_sequential',
+    'split_random'
 ] 
