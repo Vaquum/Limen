@@ -57,30 +57,40 @@ class UniversalExperimentLoop:
             self.model = model
             
         for i in tqdm(range(n_permutations)):
-            
-            if i == 0:
-                data = self.prep(self.data)
- 
+
+            # Start counting execution_time            
             start_time = time.time()
 
+            # Generate the paramater values for the current round
             round_params = self._generate_permutation()
 
+            # Always prep data with round_params passed in
             if prep_each_round is True:
                 data = self.prep(self.data, round_params=round_params)
 
+            # Otherwise, only for the first round, prep data without round_params passed in
+            else:
+                if i == 0:
+                    data = self.prep(self.data)
+
+            # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
 
+            # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
                 self.extras.append(round_results['extras'])
                 round_results.pop('extras')
 
+            # Handle any models that are returned from the model
             if 'models' in round_results.keys():
                 self.models.append(round_results['models'])
                 round_results.pop('models')
 
+            # Add the round number and execution time to the results
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
 
+            # Add the round parameters to the results
             for key in round_params.keys():
                 round_results[key] = round_params[key]
 
