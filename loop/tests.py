@@ -23,7 +23,7 @@ def _get_trades_data():
 
     return historical.data
 
-# sfm, data, per_round_prep
+# sfm, data, prep_each_round
 tests = [(random, _get_klines_data, True),
          (xgboost, _get_klines_data, False), 
          (lightgbm, _get_trades_data, False)]
@@ -37,4 +37,4 @@ for test in tests:
     
     uel.run(experiment_name=test_name,
             n_permutations=3,
-            per_round_prep=test[2])
+            prep_each_round=test[2])

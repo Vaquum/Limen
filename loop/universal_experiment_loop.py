@@ -23,7 +23,7 @@ class UniversalExperimentLoop:
     def run(self,
             experiment_name,
             n_permutations=10,
-            per_round_prep=False,
+            prep_each_round=False,
             params=None,
             prep=None,
             model=None):
@@ -39,7 +39,7 @@ class UniversalExperimentLoop:
         Args:
             experiment_name (str): The name of the experiment
             n_permutations (int): The number of permutations to run
-            per_round_prep (bool): Whether to use `prep` for each round or just first
+            prep_each_round (bool): Whether to use `prep` for each round or just first
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
@@ -65,7 +65,7 @@ class UniversalExperimentLoop:
 
             round_params = self._generate_permutation()
 
-            if per_round_prep is True:
+            if prep_each_round is True:
                 data = self.prep(self.data, round_params=round_params)
 
             round_results = self.model(data=data, round_params=round_params)
