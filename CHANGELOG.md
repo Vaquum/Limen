@@ -18,4 +18,7 @@
 
 ## 30th of May, 2025
 - Add `per_round_params` to `uel.run` for executing `sfm.prep` for each round individually
-
+- Add `random_search` to `uel.run` for turning random search on or off (with off being grid search)
+- Separated parameter space handling into pure polars based utility in `utils.param_space`
+- Move data splitters out from `loop.HistoricalData` and into `utils.splits`
+- Add reference model `models.random`
