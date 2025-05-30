@@ -1,5 +1,5 @@
 import loop
-from loop.models import xgboost, lightgbm
+from loop.models import random, xgboost, lightgbm
 import uuid
 
 
@@ -23,13 +23,18 @@ def _get_trades_data():
 
     return historical.data
 
-tests = [(xgboost, _get_klines_data), 
-          (lightgbm, _get_trades_data)]
+# sfm, data, per_round_prep
+tests = [(random, _get_klines_data, True),
+         (xgboost, _get_klines_data, False), 
+         (lightgbm, _get_trades_data, False)]
 
 for test in tests:
 
     test_name = uuid.uuid4().hex[:8]
-    data = test[1]()
     
-    uel = loop.UniversalExperimentLoop(data, test[0])
-    uel.run(experiment_name=test_name, n_permutations=3)
+    uel = loop.UniversalExperimentLoop(data=test[1](),
+                                       single_file_model=test[0])
+    
+    uel.run(experiment_name=test_name,
+            n_permutations=3,
+            per_round_prep=test[2])

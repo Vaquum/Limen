@@ -15,3 +15,7 @@
 - Add `uel.models` for storing model as part of each permutation
 - Add `models.xgboost` as a placeholder for further XGBoost explorations
 - Modularize testing suite in `tests.py`
+
+## 30th of May, 2025
+- Add `per_round_params` to `uel.run` for executing `sfm.prep` for each round individually
+
