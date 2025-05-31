@@ -25,6 +25,7 @@ class UniversalExperimentLoop:
             n_permutations=None,
             prep_each_round=False,
             random_search=True,
+            maintain_details_in_params=False,
             params=None,
             prep=None,
             model=None):
@@ -42,6 +43,7 @@ class UniversalExperimentLoop:
             n_permutations (int): The number of permutations to run
             prep_each_round (bool): Whether to use `prep` for each round or just first
             random_search (bool): Whether to use random search or not
+            maintain_details_in_params (bool): Whether to maintain experiment details in params
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
