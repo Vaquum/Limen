@@ -10,7 +10,7 @@ def wilder_rsi(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
         period (int) : Number of klines to use as window
 
     Returns:
-        pd.DataFrame
+        pl.DataFrame
         
     '''
     
