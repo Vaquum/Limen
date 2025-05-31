@@ -22,7 +22,7 @@ class UniversalExperimentLoop:
 
     def run(self,
             experiment_name,
-            n_permutations=10,
+            n_permutations=None,
             prep_each_round=False,
             random_search=True,
             params=None,
@@ -60,6 +60,9 @@ class UniversalExperimentLoop:
 
         self.param_space = ParamSpace(params=self.params)
             
+        if n_permutations is None:
+            n_permutations = self.param_space.n_permutations
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time            
