@@ -33,4 +33,4 @@ def log_to_optuna_study(log_df, params, objective):
         
         new_study.add_trial(trial)
 
-        return new_study
+    return new_study
