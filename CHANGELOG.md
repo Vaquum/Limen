@@ -23,3 +23,10 @@
 - Move data splitters out from `loop.HistoricalData` and into `utils.splits`
 - Add `splits.split_data_to_prep_output` for a clean way to get the classic 6-fold split data dictionary
 - Add reference model `models.random`
+
+## 31st of May, 2025
+- Improve `n_permutations` handling in `uel.run` so that if `None` the whole space is searched
+- Add `reports.quantiles` for getting quantile ranges for a column
+- Add `log_to_optuna_study` for unlocking Optuna reporting for `uel.log_df`
+- Add several indicators including RSI
+- Add `generators.generate_parameter_range` for convenient params management 
