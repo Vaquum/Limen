@@ -91,6 +91,10 @@ class UniversalExperimentLoop:
             # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
 
+            # Remove the experiment details from the results
+            if maintain_details_in_params is True:
+                round_results.pop('_experiment_details')
+
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
                 self.extras.append(round_results['extras'])
