@@ -29,4 +29,5 @@
 - Add `reports.quantiles` for getting quantile ranges for a column
 - Add `log_to_optuna_study` for unlocking Optuna reporting for `uel.log_df`
 - Add several indicators including RSI
-- Add `generators.generate_parameter_range` for convenient params management 
+- Add `generators.generate_parameter_range` for convenient params management
+- Add `maintain_details_in_params` as input argument to `uel.run` for keeping experiment info in `sfm.params`

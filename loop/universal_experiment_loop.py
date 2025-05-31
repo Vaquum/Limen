@@ -73,6 +73,12 @@ class UniversalExperimentLoop:
             # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
 
+            # Add experiment details to round_params
+            if maintain_details_in_params is True:
+                round_params['_experiment_details'] = {
+                    'current_index': i,
+                }
+
             # Always prep data with round_params passed in
             if prep_each_round is True:
                 data = self.prep(self.data, round_params=round_params)
