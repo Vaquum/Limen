@@ -9,6 +9,7 @@ class ParamSpace:
         keys = list(params)
         combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
         self.df_params = pl.DataFrame(combos)
+        self.n_permutations = self.df_params.height
 
     def generate(self, random_search=True):
         

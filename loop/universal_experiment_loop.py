@@ -22,9 +22,10 @@ class UniversalExperimentLoop:
 
     def run(self,
             experiment_name,
-            n_permutations=10,
+            n_permutations=None,
             prep_each_round=False,
             random_search=True,
+            maintain_details_in_params=False,
             params=None,
             prep=None,
             model=None):
@@ -42,6 +43,7 @@ class UniversalExperimentLoop:
             n_permutations (int): The number of permutations to run
             prep_each_round (bool): Whether to use `prep` for each round or just first
             random_search (bool): Whether to use random search or not
+            maintain_details_in_params (bool): Whether to maintain experiment details in params
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
@@ -60,6 +62,9 @@ class UniversalExperimentLoop:
 
         self.param_space = ParamSpace(params=self.params)
             
+        if n_permutations is None:
+            n_permutations = self.param_space.n_permutations
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time            
@@ -67,6 +72,12 @@ class UniversalExperimentLoop:
 
             # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
+
+            # Add experiment details to round_params
+            if maintain_details_in_params is True:
+                round_params['_experiment_details'] = {
+                    'current_index': i,
+                }
 
             # Always prep data with round_params passed in
             if prep_each_round is True:
@@ -79,6 +90,10 @@ class UniversalExperimentLoop:
 
             # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
+
+            # Remove the experiment details from the results
+            if maintain_details_in_params is True:
+                round_results.pop('_experiment_details')
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():

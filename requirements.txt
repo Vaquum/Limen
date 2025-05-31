@@ -19,3 +19,4 @@ git+https://github.com/Vaquum/Binancial
 python-dotenv
 scipy
 tslearn
+optuna
