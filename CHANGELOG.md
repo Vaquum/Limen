@@ -31,3 +31,4 @@
 - Add several indicators including RSI
 - Add `generators.generate_parameter_range` for convenient params management
 - Add `maintain_details_in_params` as input argument to `uel.run` for keeping experiment info in `sfm.params`
+- Add `quantile_flag`, `atr`, `rsi`, `ema_breakout`, `ppo`, `wilder_rsi`, `kline_imbalance`, `vwap`, and `macd`
