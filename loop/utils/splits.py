@@ -4,23 +4,56 @@ from itertools import accumulate
 import polars as pl
 
 
-def split_sequential(data, ratios: Sequence[int]) -> List[pl.DataFrame]:
+from typing import Sequence, List
+from itertools import accumulate
 
-    '''Split the data into sequential chunks
+import polars as pl
+
+
+def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> List[pl.DataFrame]:
+    """
+    Split `data` into sequential chunks whose lengths are proportional to `ratios`,
+    without ever losing or duplicating rows.
+
+    Example:
+        If data.height = 11 and ratios = [2, 3, 5], then
+          total_ratio = 10,
+          sizes = [ int(11*2/10)=2, int(11*3/10)=3, last = 11-(2+3)=6 ],
+        so you return slices of lengths [2, 3, 6] in order.
 
     Args:
-        ratios (Sequence[int]): The ratios of the data to be split
+        data: a Polars DataFrame of length N = data.height
+        ratios: a sequence of positive integers (or floats) whose sum is total_ratio
 
     Returns:
-        List[pl.DataFrame]
-    '''
-
+        A list of len(ratios) DataFrames, partitioned sequentially.
+    """
     total = data.height
+    if total == 0:
+        return [pl.DataFrame() for _ in ratios]
+
     total_ratio = sum(ratios)
-    bounds = [int(total * c / total_ratio) for c in accumulate(ratios)]
-    starts = [0] + bounds[:-1]
-    
-    return [data.slice(start, end - start) for start, end in zip(starts, bounds)]
+    # Compute the size of each chunk, except the last one “takes whatever is left.”
+    sizes: List[int] = []
+    cumulative = 0
+    # For each ratio except the last, do a floor; the final one is total - sum(others).
+    for r in ratios[:-1]:
+        chunk_size = int(total * r / total_ratio)
+        sizes.append(chunk_size)
+        cumulative += chunk_size
+
+    # Last chunk absorbs any leftover
+    sizes.append(total - cumulative)
+
+    # Now build the actual slices:
+    out: List[pl.DataFrame] = []
+    start = 0
+    for size in sizes:
+        # If size is zero, slice(…, 0) returns an empty DataFrame.
+        out.append(data.slice(start, size))
+        start += size
+
+    return out
 
 
 def split_random(data, ratios: Sequence[int], seed: int = None) -> List[pl.DataFrame]:
