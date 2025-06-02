@@ -1,7 +1,7 @@
 import polars as pl
 
 
-def get_quantiles(data: pl.DataFrame, column: str):
+def quantiles(data: pl.DataFrame, column: str):
 
     '''
     Get the quantiles of column values in a dataframe.
