@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='loop',
-    version='0.8.1',
+    version='0.8.2',
     packages=find_packages(),
     install_requires=[
         "pandas>=2.0.0",
@@ -20,5 +20,5 @@ setup(
     python_requires='>=3.10',
     author='Mikko Kotila',
     author_email='mikko@empiricalusa.com',
-    description='Bitcoin-first research and trading platform',
+    description='Bitcoin-first research and trading platform.',
 ) 

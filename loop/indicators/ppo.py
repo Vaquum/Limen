@@ -4,7 +4,7 @@ def ppo(data: pl.DataFrame,
         price_col: str = "close",
         span_short: int = 12,
         span_long: int = 26,
-        ppo_name: str = "PPO") -> pl.DataFrame:
+        ppo_name: str = "ppo") -> pl.DataFrame:
     
     '''
     Compute the Percentage Price Oscillator (PPO) in pure Polars and append it.

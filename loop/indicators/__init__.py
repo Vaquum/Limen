@@ -6,6 +6,7 @@ from loop.indicators.ppo import ppo
 from loop.indicators.quantile_flag import quantile_flag
 from loop.indicators.vwap import vwap
 from loop.indicators.wilder_rsi import wilder_rsi
+from loop.indicators.roc import roc
 
 __all__ = [
     'atr',
@@ -15,5 +16,6 @@ __all__ = [
     'ppo',
     'quantile_flag',
     'vwap',
-    'wilder_rsi'
+    'wilder_rsi',
+    'roc'
 ]
