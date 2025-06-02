@@ -20,5 +20,5 @@ setup(
     python_requires='>=3.10',
     author='Mikko Kotila',
     author_email='mikko@empiricalusa.com',
-    description='Bitcoin-first research and trading platform',
+    description='Bitcoin-first research and trading platform.',
 ) 
