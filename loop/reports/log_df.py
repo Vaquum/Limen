@@ -6,6 +6,17 @@ import wrangle
 
 def read_from_file(file_path):
 
+    '''
+    Takes in a file path and returns a dataframe. Use this
+    for reading experiment logs saved as csv. Great for 
+    during experiment analysis.
+
+    Args:
+        file_path (str): path to the file
+
+    Returns:
+        pl.DataFrame: dataframe
+    '''
     with open(file_path, 'r') as f:
         
         lines = f.readlines()
@@ -23,24 +34,61 @@ def read_from_file(file_path):
 
     return data
 
-def outcome_df(log_df):
 
-    log_df['outcome'] = ((log_df['recall'] + log_df['precision'] + log_df['auc'] + log_df['accuracy']) / 4).round(2)
+def outcome_df(log_df,
+               cols_to_drop,
+               cols_to_multilabel=None,
+               type='categorical'):
+
+    '''
+    Takes in output of read_from_file and returns
+    a outcome based dataframe.
+
+    Args:
+        log_df (pl.DataFrame): output of read_from_file
+        cols_to_drop (list): columns to drop from the dataframe
+        cols_to_multilabel (list): columns to convert to multilabel. 
+        type (str): type of outcome, has to be 'categorical' or 'regression'
+
+    Returns:
+        pl.DataFrame: outcome based dataframe
+    '''
+
+    if type == 'categorical':
+        log_df['outcome'] = ((log_df['recall'] + log_df['precision'] + log_df['auc'] + log_df['accuracy']) / 4).round(2)
+
+    elif type == 'regression':
+        assert False, f"Regression not implemented"
+
+    else:
+        assert False, f"Invalid type, has to be regression or categorical."
     
-    log_df = wrangle.col_to_multilabel(log_df, 'solver')
-    log_df = wrangle.col_to_multilabel(log_df, 'feature_to_drop')
-    
-    log_df.drop(['recall', 'precision', 'f1score', 'auc', 'accuracy', 'id', 'execution_time', 'penalty', 'shift', 'q'], axis=1, inplace=True)
+    if cols_to_multilabel is not None:
+        for col in cols_to_multilabel:
+            log_df = wrangle.col_to_multilabel(log_df, col)
+
+    log_df.drop(cols_to_drop, axis=1, inplace=True)
     
     return log_df.sort_values('outcome', ascending=False)
 
-def corr_df(outcome_log_df):
 
+def corr_df(outcome_df):
+
+    '''
+    Takes in output of outcome_df and returns a feature correlation dataframe.
+
+    Args:
+        outcome_df (pl.DataFrame): output of outcome_df
+
+    Returns:
+        pl.DataFrame: feature correlation dataframe
+    '''
+    
     corr_dict = OrderedDict()
     
-    for head in [len(outcome_log_df), len(outcome_log_df) // 5, 100, 50, 10, 5, 1]:
-        corr_dict[f"top_{head}_corr"] = outcome_log_df.head(head).corr()["outcome"]
+    for head in [len(outcome_df), len(outcome_df) // 5, 100, 50, 10, 5, 1]:
+        corr_dict[f"top_{head}_corr"] = outcome_df.head(head).corr()["outcome"]
     
     df_corr = pd.DataFrame(corr_dict)
 
-    return df_corr.transpose()
+    return df_corr
