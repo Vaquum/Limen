@@ -63,8 +63,9 @@ def outcome_df(log_df,
     else:
         assert False, f"Invalid type, has to be regression or categorical."
     
-    for col in cols_to_multilabel:
-        log_df = wrangle.col_to_multilabel(log_df, col)
+    if cols_to_multilabel is not None:
+        for col in cols_to_multilabel:
+            log_df = wrangle.col_to_multilabel(log_df, col)
 
     log_df.drop(cols_to_drop, axis=1, inplace=True)
     

@@ -3,6 +3,13 @@ from loop.models import random, xgboost, lightgbm
 import uuid
 
 
+from loop.reports.log_df import read_from_file, outcome_df, corr_df
+
+data = read_from_file('logreg_broad_2_3600.csv')
+outcome_df = outcome_df(data, ['solver', 'feature_to_drop', 'penalty'], type='categorical')
+corr_df = corr_df(outcome_df)
+
+
 def _get_klines_data():
 
     file_url = 'https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-04.zip'
