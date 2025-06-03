@@ -86,7 +86,7 @@ class UniversalExperimentLoop:
             # Otherwise, only for the first round, prep data without round_params passed in
             else:
                 if i == 0:
-                    data = self.prep(self.data)
+                    data = self.prep(self.data, round_params=round_params)
 
             # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
