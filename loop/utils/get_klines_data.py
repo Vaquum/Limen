@@ -1,7 +1,7 @@
 from clickhouse_connect import get_client
 import polars as pl
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
 def get_klines_data(n_rows: Optional[int] = None,
                     kline_size: int = 1,
@@ -33,16 +33,16 @@ def get_klines_data(n_rows: Optional[int] = None,
         limit = ''
 
     query = (
-        f"SELECT toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, \
-            argMin(price, datetime) AS open, \
-            max(price) AS high, \
-            min(price) AS low, \
-            argMax(price, datetime) AS close, \
-            sum(quantity) AS volume, \
-            avg(is_buyer_maker) AS maker_ratio, \
-            count() AS no_of_trades "
+        f"SELECT toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, "
+        f"first_value(price) AS open, "
+        f"max(price) AS high, "
+        f"min(price) AS low, "
+        f"last_value(price) AS close, "
+        f"sum(quantity) AS volume, "
+        f"avg(is_buyer_maker) AS maker_ratio, "
+        f"count() AS no_of_trades "
         f"FROM tdw.binance_trades "
-        f"GROUP BY datetime ORDER BY datetime DESC {limit}"   
+        f"GROUP BY datetime ORDER BY datetime ASC {limit}"
     )
 
     start = time.time()
