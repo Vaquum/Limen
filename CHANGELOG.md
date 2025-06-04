@@ -37,3 +37,7 @@
 - Remove data splitting corner cases from `utils.splits.split_sequential`
 - Generalize `reports.log_df.corr_df` and add several improvements to it
 - Fix the issue in `utils.get_klines_data` which caused open and close being always same
+
+# 4th of June, 2025
+- Added `fpr`, `positive_rate`, and `negative_rate` to `utils.metrics.metrics_for_classification`
+- Removed `f1score` from `utils.metrics.metrics_for_classification`
