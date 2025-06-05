@@ -47,4 +47,5 @@
 - Add `reports.experiment_benchmarking` as an experimental post-experiment model comparison loop
 
 ## v0.8.5 on 5th of June, 2025
-- Fix `transforms.logreg_transform.inverse_transform` use in `reports.experiment_benchmarking` 
+- Fix `transforms.logreg_transform.inverse_transform` use in `reports.experiment_benchmarking`
+- Eliminate tensorflow import warnings from `import loop`
