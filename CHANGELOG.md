@@ -36,7 +36,7 @@
 - Generalize `reports.log_df.corr_df` and add several improvements to it
 - Fix the issue in `utils.get_klines_data` which caused open and close being always same
 
-## v0.8.4 on 4th of June, 2025 
+## v0.8.4 on 5th of June, 2025 
 - Make `uel` move `round_params['_scaler']` to `uel.scaler` for post run descaling
 - Added `fpr`, `positive_rate`, and `negative_rate` to `utils.metrics.metrics_for_classification`
 - Removed `f1score` from `utils.metrics.metrics_for_classification`
@@ -45,3 +45,6 @@
 - Add `reports.confusion_matrix_plus` for post-experiment benchmarking
 - Add `reports.results_df`for post-experiment analysis (e.g. input for `reports.confusion_matrix_plus`)
 - Add `reports.experiment_benchmarking` as an experimental post-experiment model comparison loop
+
+## v0.8.5 on 5th of June, 2025
+- Fix `transforms.logreg_transform.inverse_transform` use in `reports.experiment_benchmarking` 
