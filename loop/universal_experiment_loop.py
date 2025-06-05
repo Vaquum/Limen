@@ -105,6 +105,10 @@ class UniversalExperimentLoop:
                 self.models.append(round_results['models'])
                 round_results.pop('models')
 
+            if '_scaler' in round_results.keys():
+                self.scaler = round_results['_scaler']
+                round_results.pop('_scaler')
+
             # Add the round number and execution time to the results
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)

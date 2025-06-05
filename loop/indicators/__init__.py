@@ -7,6 +7,7 @@ from loop.indicators.quantile_flag import quantile_flag
 from loop.indicators.vwap import vwap
 from loop.indicators.wilder_rsi import wilder_rsi
 from loop.indicators.roc import roc
+from loop.indicators.simple_rates import gap_high, returns, close_position, body_pct, range_pct
 
 __all__ = [
     'atr',
@@ -17,5 +18,10 @@ __all__ = [
     'quantile_flag',
     'vwap',
     'wilder_rsi',
-    'roc'
+    'roc',
+    'gap_high',
+    'returns',
+    'close_position',
+    'body_pct',
+    'range_pct'
 ]
