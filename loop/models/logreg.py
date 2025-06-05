@@ -123,5 +123,6 @@ def model(data: dict, round_params):
     preds = clf.predict(data['x_test'])
 
     round_results = metrics_for_classification(data, preds)
+    round_results['_preds'] = preds
 
     return round_results

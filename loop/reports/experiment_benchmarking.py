@@ -58,11 +58,11 @@ def experiment_benchmarking(file_path,
         df_prep = model.prep(historical.data, params)
         
         # Run the model
-        preds = model.model(df_prep, params)
+        round_results = model.model(df_prep, params)
     
         # Visualize if required columns are present
         try:
-            df_result = results_df(df_prep, preds)
+            df_result = results_df(df_prep, round_results['_preds'])
             confusion_matrix_plus(df_result, x)
             
         except KeyError:

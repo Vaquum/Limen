@@ -49,3 +49,4 @@
 ## v0.8.5 on 5th of June, 2025
 - Fix `transforms.logreg_transform.inverse_transform` use in `reports.experiment_benchmarking`
 - Eliminate tensorflow import warnings from `import loop`
+- Allow `uel` uel to move `round_results[_preds]` from `sfm.model` to `uel.preds` for post run use
