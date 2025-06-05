@@ -1,4 +1,7 @@
-def results_df(df_prep, preds, inverse_transform):
+from loop.transforms.logreg_transform import inverse_transform
+
+
+def results_df(df_prep, preds):
 
     '''
     Takes in the data dictionary and the predictions and returns a dataframe with the results.

@@ -93,7 +93,7 @@ class UniversalExperimentLoop:
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
-                round_results.pop('_experiment_details')
+                round_params.pop('_experiment_details')
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
@@ -108,6 +108,10 @@ class UniversalExperimentLoop:
             if '_scaler' in round_results.keys():
                 self.scaler = round_results['_scaler']
                 round_results.pop('_scaler')
+
+            if '_preds' in round_results.keys():
+                self.preds = round_results['_preds']
+                round_results.pop('_preds')
 
             # Add the round number and execution time to the results
             round_results['id'] = i

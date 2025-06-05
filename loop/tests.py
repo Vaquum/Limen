@@ -3,6 +3,14 @@ from loop.models import random, xgboost, lightgbm, logreg
 import uuid
 
 
+from loop.reports.experiment_benchmarking import experiment_benchmarking
+
+experiment_benchmarking(file_path='logreg_broad_3_3600.csv',
+                        x='price_change',
+                        model=loop.models.logreg,
+                        col_sort_order=['auc', 'precision', 'accuracy'],
+                        n_top_results=2)
+
 from loop.reports.log_df import read_from_file, outcome_df, corr_df
 
 data = read_from_file('logreg_broad_2_3600.csv')
