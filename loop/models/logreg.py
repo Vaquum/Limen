@@ -79,10 +79,13 @@ def prep(data, round_params):
     # TODO: Make every nth round skip this and keep all colls
         cols = [col for col in cols if col != round_params['feature_to_drop']]
         data = data[cols]
-    
-    split_data = split_sequential(data, (round_params['train_size'],
-                                         round_params['val_size'],
-                                         round_params['test_size']))
+
+    if 'train_size' not in round_params:
+        split_data = split_sequential(data, (8, 1, 2))
+    else:
+        split_data = split_sequential(data, (round_params['train_size'],
+                                             round_params['val_size'],
+                                             round_params['test_size']))
     
     data_dict = split_data_to_prep_output(split_data, cols)
     
