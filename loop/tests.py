@@ -1,5 +1,5 @@
 import loop
-from loop.models import random, xgboost, lightgbm
+from loop.models import random, xgboost, lightgbm, logreg
 import uuid
 
 
@@ -50,7 +50,8 @@ print(test_metrics_for_classification())
 # sfm, data, prep_each_round
 tests = [(random, get_klines_data, True),
          (xgboost, get_klines_data, False), 
-         (lightgbm, get_trades_data, False)]
+         (lightgbm, get_trades_data, False),
+         (logreg, get_klines_data, True)]
 
 for test in tests:
 
@@ -60,5 +61,5 @@ for test in tests:
                                        single_file_model=test[0])
     
     uel.run(experiment_name=test_name,
-            n_permutations=3,
+            n_permutations=2,
             prep_each_round=test[2])
