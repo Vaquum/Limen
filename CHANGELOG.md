@@ -37,6 +37,11 @@
 - Fix the issue in `utils.get_klines_data` which caused open and close being always same
 
 ## v0.8.4 on 4th of June, 2025 
+- Make `uel` move `round_params['_scaler']` to `uel.scaler` for post run descaling
 - Added `fpr`, `positive_rate`, and `negative_rate` to `utils.metrics.metrics_for_classification`
 - Removed `f1score` from `utils.metrics.metrics_for_classification`
-
+- Add `models.logreg` as a base model for logistic regression modelling
+- Add `transforms.logreg_transform` for bespoke data scaling for `models.logreg`
+- Add `reports.confusion_matrix_plus` for post-experiment benchmarking
+- Add `reports.results_df`for post-experiment analysis (e.g. input for `reports.confusion_matrix_plus`)
+- Add `reports.experiment_benchmarking` as an experimental post-experiment model comparison loop
