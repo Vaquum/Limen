@@ -8,6 +8,7 @@ def experiment_benchmarking(file_path,
                             x,
                             model,
                             col_sort_order,
+                            inverse_transform,
                             n_top_results=10):
 
     '''
@@ -23,6 +24,7 @@ def experiment_benchmarking(file_path,
         x (str): The column to be used for comparing distributions
         model (func): The `model` function used in the experiment
         col_sort_order (list): The columns in order to be used for sorting
+        inverse_transform (function): inverse transform function
         n_top_results (int): The number of top results to include 
 
 
@@ -62,7 +64,7 @@ def experiment_benchmarking(file_path,
     
         # Visualize if required columns are present
         try:
-            df_result = results_df(df_prep, round_results['_preds'])
+            df_result = results_df(df_prep, round_results['_preds'], inverse_transform)
             confusion_matrix_plus(df_result, x)
             
         except KeyError:

@@ -3,16 +3,17 @@ from loop.models import random, xgboost, lightgbm, logreg
 import uuid
 
 
+print(f"Running experiment benchmarking")
 from loop.reports.experiment_benchmarking import experiment_benchmarking
-
 experiment_benchmarking(file_path='logreg_broad_3_3600.csv',
                         x='price_change',
                         model=loop.models.logreg,
                         col_sort_order=['auc', 'precision', 'accuracy'],
+                        inverse_transform=loop.transforms.logreg_transform.inverse_transform,
                         n_top_results=2)
 
+print(f"Running log_df")
 from loop.reports.log_df import read_from_file, outcome_df, corr_df
-
 data = read_from_file('logreg_broad_2_3600.csv')
 outcome_df = outcome_df(data, ['solver', 'feature_to_drop', 'penalty'], type='categorical')
 corr_df = corr_df(outcome_df)
@@ -62,6 +63,8 @@ tests = [(random, get_klines_data, True),
          (logreg, get_klines_data, True)]
 
 for test in tests:
+
+    print(f"Running {test[0].__name__} with {test[1].__name__}")
 
     test_name = uuid.uuid4().hex[:8]
     
