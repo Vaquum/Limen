@@ -39,7 +39,7 @@ def confusion_matrix_plus(df_results, x, y_lim_correction=6.5, outlier_quantiles
         ax.text(0.7, 0.84, f'M = ${median_val:.0f}', transform=ax.transAxes, fontsize=12, color='#666666')
         ax.text(0.7, 0.78, f'W = {win_rate:.0f}%', transform=ax.transAxes, fontsize=12, color='#666666')
         ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
-        ax.set_xlabel('Price Change ($)', fontsize=12)
+        ax.set_xlabel(x, fontsize=12)
         ax.set_ylabel('Frequency', fontsize=12)
         ax.set_xlim(xlim)
         ax.set_ylim(0, max_freq*y_lim_correction)
