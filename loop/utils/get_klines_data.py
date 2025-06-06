@@ -5,7 +5,7 @@ from typing import Optional
 
 def get_klines_data(n_rows: Optional[int] = None,
                     kline_size: int = 1,
-                    start_date: str = None,
+                    start_date_limit: str = None,
                     show_summary: bool = False) -> pl.DataFrame:
     
     '''Get 1 second klines data based on Binance raw trades data. Returns either 
@@ -14,7 +14,7 @@ def get_klines_data(n_rows: Optional[int] = None,
     Args:
         n_rows (int | None): if not None, fetch this many latest rows instead.
         kline_size (int): the size of the kline in seconds.
-        start_date (str): the start date of the klines data.
+        start_date_limit (str): the start date of the klines data.
         show_summary (bool): if a summary for data is printed out.
 
     Returns:
@@ -34,8 +34,8 @@ def get_klines_data(n_rows: Optional[int] = None,
     else:
         limit = ''
 
-    if start_date is not None:
-        start_date_limit = f"WHERE datetime >= toDateTime('{start_date}') "
+    if start_date_limit is not None:
+        start_date_limit = f"WHERE datetime >= toDateTime('{start_date_limit}') "
     else:
         start_date_limit = ''
 

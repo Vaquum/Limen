@@ -51,8 +51,11 @@
 - Eliminate tensorflow import warnings from `import loop`
 - Allow `uel` uel to move `round_results[_preds]` from `sfm.model` to `uel.preds` for post run use
 
-## v0.8.6 on 5th of June, 2025
+## v0.8.6 on 6th of June, 2025
 - Generalize `reports.results_df` to work with any experiment using `get_historical_klines`
 - Use `x` for axis label in `reports.confusion_matrix_plus`
 - Add liquidity-based signals to `get_historical_klines`
 - Add `start_date_limit` to `get_historical_klines` for limiting the start date of the data
+
+## v0.8.7 on 6th of June, 2025
+- Add `start_date_limit` as an input parameter to `historical.get_historical_klines`
