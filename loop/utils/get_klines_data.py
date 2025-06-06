@@ -5,6 +5,7 @@ from typing import Optional
 
 def get_klines_data(n_rows: Optional[int] = None,
                     kline_size: int = 1,
+                    start_date: str = None,
                     show_summary: bool = False) -> pl.DataFrame:
     
     '''Get 1 second klines data based on Binance raw trades data. Returns either 
@@ -13,6 +14,7 @@ def get_klines_data(n_rows: Optional[int] = None,
     Args:
         n_rows (int | None): if not None, fetch this many latest rows instead.
         kline_size (int): the size of the kline in seconds.
+        start_date (str): the start date of the klines data.
         show_summary (bool): if a summary for data is printed out.
 
     Returns:
@@ -32,17 +34,30 @@ def get_klines_data(n_rows: Optional[int] = None,
     else:
         limit = ''
 
+    if start_date is not None:
+        start_date_limit = f"WHERE datetime >= toDateTime('{start_date}') "
+    else:
+        start_date_limit = ''
+
     query = (
-        f"SELECT toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, "
-        f"first_value(price) AS open, "
-        f"max(price) AS high, "
-        f"min(price) AS low, "
-        f"last_value(price) AS close, "
-        f"sum(quantity) AS volume, "
-        f"avg(is_buyer_maker) AS maker_ratio, "
-        f"count() AS no_of_trades "
+        f"SELECT "
+        f"    toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, "
+        f"    first_value(price)            AS open, "
+        f"    max(price)                    AS high, "
+        f"    min(price)                    AS low, "
+        f"    last_value(price)             AS close, "
+        f"    sum(quantity)                 AS volume, "
+        f"    avg(is_buyer_maker)           AS maker_ratio, "
+        f"    count()                       AS no_of_trades, "
+        f"    first_value(price * quantity) AS open_liquidity, "
+        f"    max(price * quantity)         AS high_liquidity, "
+        f"    min(price * quantity)         AS low_liquidity, "
+        f"    last_value(price * quantity)  AS close_liquidity, "
+        f"    sum(price * quantity)         AS liquidity_sum "
         f"FROM tdw.binance_trades "
-        f"GROUP BY datetime ORDER BY datetime ASC {limit}"
+        f"{start_date_limit}"
+        f"GROUP BY datetime "
+        f"ORDER BY datetime ASC {limit}"
     )
 
     start = time.time()
