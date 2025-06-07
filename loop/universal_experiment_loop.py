@@ -77,8 +77,7 @@ class UniversalExperimentLoop:
 
             # Add context parameters to round_params
             if context_params is not None:
-                for key, value in context_params.items():
-                    round_params[key] = value
+                round_params.update(context_params)
 
             # Add experiment details to round_params
             if maintain_details_in_params is True:
