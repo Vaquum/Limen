@@ -6,7 +6,8 @@ from typing import Optional
 def get_klines_data(n_rows: Optional[int] = None,
                     kline_size: int = 1,
                     start_date_limit: str = None,
-                    show_summary: bool = False) -> pl.DataFrame:
+                    futures: bool = False,
+                    show_summary: bool = False,) -> pl.DataFrame:
     
     '''Get 1 second klines data based on Binance raw trades data. Returns either 
        everything or n_rows. Everything is 
@@ -15,6 +16,7 @@ def get_klines_data(n_rows: Optional[int] = None,
         n_rows (int | None): if not None, fetch this many latest rows instead.
         kline_size (int): the size of the kline in seconds.
         start_date_limit (str): the start date of the klines data.
+        futures (bool): if the data is from futures.
         show_summary (bool): if a summary for data is printed out.
 
     Returns:
@@ -39,6 +41,11 @@ def get_klines_data(n_rows: Optional[int] = None,
     else:
         start_date_limit = ''
 
+    if futures is True:
+        db_table = f"FROM tdw.binance_futures_trades "
+    else:
+        db_table = f"FROM tdw.binance_trades "
+
     query = (
         f"SELECT "
         f"    toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, "
@@ -54,7 +61,7 @@ def get_klines_data(n_rows: Optional[int] = None,
         f"    min(price * quantity)         AS low_liquidity, "
         f"    last_value(price * quantity)  AS close_liquidity, "
         f"    sum(price * quantity)         AS liquidity_sum "
-        f"FROM tdw.binance_trades "
+        f"{db_table}"
         f"{start_date_limit}"
         f"GROUP BY datetime "
         f"ORDER BY datetime ASC {limit}"
