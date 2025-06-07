@@ -59,3 +59,9 @@
 
 ## v0.8.7 on 6th of June, 2025
 - Add `start_date_limit` as an input parameter to `historical.get_historical_klines`
+
+## v0.8.8 on 7th of June, 2025
+- Add `futures=False` input argument to `HistoricalData.get_klines_historical` for getting futures data klines
+
+# v0.8.9 on 7th of June, 2025
+- Add `context_params` dictionary input in `uel.run` for passing context parameters through `round_params` for logging

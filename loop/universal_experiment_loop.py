@@ -26,6 +26,7 @@ class UniversalExperimentLoop:
             prep_each_round=False,
             random_search=True,
             maintain_details_in_params=False,
+            context_params=None,
             params=None,
             prep=None,
             model=None):
@@ -44,6 +45,7 @@ class UniversalExperimentLoop:
             prep_each_round (bool): Whether to use `prep` for each round or just first
             random_search (bool): Whether to use random search or not
             maintain_details_in_params (bool): Whether to maintain experiment details in params
+            context_params (dict): The context parameters to use for the experiment
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
@@ -72,6 +74,10 @@ class UniversalExperimentLoop:
 
             # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
+
+            # Add context parameters to round_params
+            if context_params is not None:
+                round_params.update(context_params)
 
             # Add experiment details to round_params
             if maintain_details_in_params is True:
