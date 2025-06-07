@@ -2,6 +2,20 @@ import loop
 from loop.models import random, xgboost, lightgbm, logreg
 import uuid
 
+from loop.data import HistoricalData
+
+print(f"Getting historical data")
+historical = HistoricalData()
+historical.get_historical_klines(n_rows=100000,
+                                  kline_size=1,
+                                  start_date_limit='2025-04-01',
+                                  futures=True)
+
+print(f"Getting historical trades data")
+historical.get_historical_trades(n_latest=100)
+
+#print(f"Getting historical futures trades data")
+#historical.get_historical_futures_trades(month_year=(2025, 3))
 
 print(f"Running experiment benchmarking")
 from loop.reports.experiment_benchmarking import experiment_benchmarking

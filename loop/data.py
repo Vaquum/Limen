@@ -43,7 +43,8 @@ class HistoricalData:
     def get_historical_klines(self,
                               n_rows: int = None,
                               kline_size: int = 1,
-                              start_date_limit: str = None) -> None:
+                              start_date_limit: str = None,
+                              futures: bool = False) -> None:
         
         '''Get historical klines data from Binance API
 
@@ -51,6 +52,7 @@ class HistoricalData:
             n_rows (int): Number of rows to be pulled
             kline_size (int): Size of the kline in seconds
             start_date_limit (str): The start date of the klines data
+            futures (bool): if the data is from futures.
 
         Returns:
             self.data (pl.DataFrame)
@@ -59,7 +61,8 @@ class HistoricalData:
 
         self.data = get_klines_data(n_rows=n_rows,
                                     kline_size=kline_size,
-                                    start_date_limit=start_date_limit)
+                                    start_date_limit=start_date_limit,
+                                    futures=futures)
 
         self.data_columns = self.data.columns
 
