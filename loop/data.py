@@ -64,6 +64,14 @@ class HistoricalData:
                                     start_date_limit=start_date_limit,
                                     futures=futures)
 
+        # Add descriptive statistics columns based on close price
+        self.data = self.data.with_columns([
+            pl.col('close').mean().alias('mean_price'),
+            pl.col('close').std().alias('std_price'),
+            pl.col('close').median().alias('median_price'),
+            (pl.col('close').quantile(0.75) - pl.col('close').quantile(0.25)).alias('iqr_price')
+        ])
+
         self.data_columns = self.data.columns
 
     def get_historical_trades(self,

@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.8.10 on 11th of June, 2025
+- Add descriptive statistics columns (`mean_price`, `std_price`, `median_price`, `iqr_price`) to `data.HistoricalData.get_historical_klines` based on close price
+
 ## 25th of May, 2025
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
 - Rename `n_rows` input parameter to `n_latest` in [`get_trades_data`](utils/get_trades_data.py) for getting latest rows
