@@ -4,6 +4,7 @@ import uuid
 
 from loop.data import HistoricalData
 
+
 print(f"Getting historical data")
 historical = HistoricalData()
 historical.get_historical_klines(n_rows=100000,

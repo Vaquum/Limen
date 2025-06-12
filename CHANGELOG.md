@@ -65,3 +65,6 @@
 
 # v0.8.9 on 7th of June, 2025
 - Add `context_params` dictionary input in `uel.run` for passing context parameters through `round_params` for logging
+
+# v0.9.0 on 12th of June, 2025
+- Add statistical metrics (`mean`, `std`, `median`, and `iqr`) to `data.HistoricalData.get_historical_klines` endpoint for richer data analysis
