@@ -22,7 +22,13 @@
 
 ## Motivation
 
+The motivation behind Vaquum Loop is to bring together all aspects of research and trading into a single parametric optimization loop.
 
+The reason to bring everything into a single parametric optimization loop, is to unlock the ability to treat everything as part of a single never-ending experiment loop. 
+
+Within this experiment loop, the hypothesis is always that "x paramater value for y parameter will yield z profit and loss in live trading". 
+
+Since all parts, from data ingestion to actual trading results is inseparably tied together, through parameters and parameter value ranges, the system knows all of its previous states, and is able to always adapt to the current prevailing market conditions.
 
 ## An Experiment
 
