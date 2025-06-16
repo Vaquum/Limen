@@ -17,7 +17,7 @@ There are in total five distinct data endpoints:
 All of these endpoints are available through: 
 
 ```
-# Initiatilize the API
+# Initialize the API
 import loop
 historical = loop.HistoricalData()
 
