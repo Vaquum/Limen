@@ -20,6 +20,18 @@ class HistoricalData:
                          file_url: str,
                          has_header: bool = False,
                          columns: List[str] = None):
+        
+        '''Get data from a Binance file based on the file URL.
+
+        Args:
+            file_url (str): The URL of the Binance file
+            has_header (bool): Whether the file has a header
+            columns (List[str]): The columns to be included in the data
+
+        Returns:
+            self.data (pl.DataFrame)
+    
+        '''
 
         self.data = binance_file_to_polars(file_url, has_header=has_header)
         self.data.columns = columns
@@ -46,7 +58,7 @@ class HistoricalData:
                               start_date_limit: str = None,
                               futures: bool = False) -> None:
         
-        '''Get historical klines data from Binance API
+        '''Get historical klines data from Binance trades data.
 
         Args:
             n_rows (int): Number of rows to be pulled
@@ -73,6 +85,7 @@ class HistoricalData:
                               include_datetime_col: bool = True) -> None:
 
         '''Get historical trades data from `tdw.binance_trades`
+        table in Clickhouse.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
@@ -106,6 +119,7 @@ class HistoricalData:
                                   include_datetime_col: bool = True) -> None:
 
         '''Get historical aggTrades data from `tdw.binance_agg_trades`
+        table in Clickhouse.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
@@ -137,7 +151,8 @@ class HistoricalData:
                                       include_datetime_col: bool = True,
                                       show_summary: bool = False) -> pl.DataFrame:
         
-        '''Get Binance futures trades data.
+        '''Get Binance futures trades data from `tdw.binance_futures_trades`
+        table in Clickhouse.
 
         Args:
             month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
