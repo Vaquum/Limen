@@ -48,7 +48,7 @@ Just-enough trading profits mindset skillfully avoids the sense of nothing ever 
 
 Currently, `Loop` brings together the following capabilities: 
 
-1) Data
+1) [Data](Data.md)
 2) Aggregates
 3) Indicators
 4) Models (and their respective data `prep` and `params`)
