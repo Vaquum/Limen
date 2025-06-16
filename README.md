@@ -14,23 +14,18 @@
 </p>
 <hr>
 
-## Description
+# Description
 
-Loop brings together data extraction, feature engineering, model training experiments, model validation, and backtesting into streamlined workflow. 
+Vaquum Loop is a Bitcoin-first research and trading platform for quantitative traders, bringing together a comprehensive set of capabilities into a single closed-loop optimization cycle. Vaquum Loop reduces complex and mostly out-of-reach DataOps, research, model development, and trading workflows into one cohesive API and a set of single-file templates. Vaquum Loop powers quants with unparalleled ergonomics and productivity.
 
-To get started, see [Workflow: Train to Validate](https://github.com/Vaquum/Loop/blob/main/examples/Train-Validate-Workflow.ipynb)
-
-**NOTE**: The `Backtest` module and the `Account` module that it depends on are currently not well tested.
-
-## Owner
+# Owner
 
 - [@mikkokotila](https://github.com/mikkokotila)
 
+# Integrations
 
-## Integrations
+NA
 
-- Intgrates upstream with [Binancial](https://github.com/vaquum/binancial).
+# Docs
 
-## Docs
-
-No documentation.
+[docs](docs/README.md)
