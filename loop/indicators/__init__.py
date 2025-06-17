@@ -8,6 +8,7 @@ from loop.indicators.vwap import vwap
 from loop.indicators.wilder_rsi import wilder_rsi
 from loop.indicators.roc import roc
 from loop.indicators.simple_rates import gap_high, returns, close_position, body_pct, range_pct
+from loop.indicators.simple_lags import lag_column, lag_columns, lag_range
 
 __all__ = [
     'atr',
@@ -23,5 +24,8 @@ __all__ = [
     'returns',
     'close_position',
     'body_pct',
-    'range_pct'
+    'range_pct',
+    'lag_column',
+    'lag_columns',
+    'lag_range'
 ]

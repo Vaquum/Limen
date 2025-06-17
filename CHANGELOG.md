@@ -68,3 +68,6 @@
 
 # v0.9.0 on 12th of June, 2025
 - Add statistical metrics (`mean`, `std`, `median`, and `iqr`) to `data.HistoricalData.get_historical_klines` endpoint for richer data analysis
+
+# v0.9.1 on 13th of June, 2025
+- Add simple lag based indicators `lag_column`, `lag_columns` and `lag_range`
