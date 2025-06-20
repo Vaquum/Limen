@@ -92,18 +92,30 @@ def _breakout_roc(data: pl.DataFrame,
     Returns:
         pl.DataFrame: Original DataFrame with new ROC columns
     '''
+    # Extract lag values from column names for descriptive suffixes
+    # Assuming column names follow pattern like "long_t-13", "long_t-12"
+    try:
+        current_lag = int(long_col.split('-')[-1])
+        next_lag = int(next_long_col.split('-')[-1])
+        base_lag = min(current_lag, next_lag)  # Use the smaller lag as base
+        lag_diff = abs(current_lag - next_lag)
+        suffix = f"_{base_lag}_{lag_diff}"
+    except (ValueError, IndexError):
+        # Fallback if column names don't follow expected pattern
+        suffix = ''
+
     return data.with_columns([
         # ROC for long breakouts
         pl.when(pl.col(long_col) != 0)
           .then(((pl.col(next_long_col) - pl.col(long_col)) / pl.col(long_col)) * 100)
           .otherwise(0)
-          .alias('roc_long_1'),
+          .alias(f"roc_long{suffix}"),
         
         # ROC for short breakouts
         pl.when(pl.col(short_col) != 0)
           .then(((pl.col(next_short_col) - pl.col(short_col)) / pl.col(short_col)) * 100)
           .otherwise(0)
-          .alias('roc_short_1')
+          .alias(f"roc_short{suffix}")
     ])
 
 def breakout_features(data: pl.DataFrame,
@@ -142,8 +154,18 @@ def breakout_features(data: pl.DataFrame,
     df = _breakout_roc(df, current_long_col, current_short_col, next_long_col, next_short_col)
     
     # Drop rows with nulls in any feature or the target (matching original behavior)
+    # Calculate the suffix for ROC columns
+    try:
+        current_lag = int(current_long_col.split('-')[-1])
+        next_lag = int(next_long_col.split('-')[-1])
+        base_lag = min(current_lag, next_lag)  # Use the smaller lag as base
+        lag_diff = abs(current_lag - next_lag)
+        roc_suffix = f"_{base_lag}_{lag_diff}"
+    except (ValueError, IndexError):
+        roc_suffix = ""
+
     cols = [f"long_t-{i}"  for i in range(horizon, horizon + lookback)] \
          + [f"short_t-{i}" for i in range(horizon, horizon + lookback)] \
-         + ['long_roll_mean','long_roll_std', 'short_roll_mean', 'short_roll_std', 'roc_long_1', 'roc_short_1', target]
+         + ['long_roll_mean','long_roll_std', 'short_roll_mean', 'short_roll_std', f"roc_long{roc_suffix}", f"roc_short{roc_suffix}", target]
     
     return df.drop_nulls(subset=cols) 
