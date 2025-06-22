@@ -27,5 +27,6 @@ __all__ = [
     'range_pct',
     'lag_column',
     'lag_columns',
-    'lag_range'
+    'lag_range',
+    'breakout_features'
 ]

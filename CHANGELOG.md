@@ -71,3 +71,6 @@
 
 # v0.9.1 on 13th of June, 2025
 - Add simple lag based indicators `lag_column`, `lag_columns` and `lag_range`
+
+# v0.9.2 on 14th of June, 2025
+- Add `breakout_features` indicators for   comprehensive breakout signal generation.
