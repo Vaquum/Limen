@@ -73,4 +73,10 @@
 - Add simple lag based indicators `lag_column`, `lag_columns` and `lag_range`
 
 # v0.9.2 on 14th of June, 2025
-- Add `breakout_features` indicators for   comprehensive breakout signal generation.
+- Add `breakout_features` indicators for comprehensive breakout signal generation.
+
+# v0.9.3 on 25th of June, 2025
+- Fix datetime bucketing logic in `get_klines_data` to use epoch-based intervals instead of minute-boundary resets, ensuring continuous kline intervals across time boundaries
+- Add several updates to `models.logreg`
+- Reduce pulled datasizes in tests
+- Disabled test for `reports.experiment_benchmarking` due to the requirement to manually close the opening plot window

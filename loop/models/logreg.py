@@ -6,6 +6,7 @@ from loop.indicators import quantile_flag, wilder_rsi, atr, ppo, vwap, kline_imb
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.utils.generators import generate_parameter_range
 from loop.transforms.logreg_transform import LogRegTransform
+from loop.utils.scale_data_dict import scale_data_dict
 
 
 def params(): 
@@ -18,14 +19,14 @@ def params():
         'val_size': [20, 10, 1],
         'test_size': [30, 20, 10],
         'roc_period': [3, 6, 12, 24],
+        'penalty': ['l2'],
         # these are for the classifier
         'class_weight': [0.5, 0.6, 0.7, 0.8, 0.9],
-        'penalty': ['l2'],
         'C': [0.1, 0.5, 1, 2.5, 5],
         'max_iter': generate_parameter_range(30, 150, 20, 3),
-        # TODO: Remove the params for sag that make it slow 
         'solver': ['lbfgs', 'liblinear', 'sag'],
         'tol': [0.005, 0.01, 0.05, 0.1],
+        
         # this is for doing feature testing
         'feature_to_drop': ['high',
                             'low',
@@ -101,6 +102,10 @@ def prep(data, round_params):
 
 
 def model(data: dict, round_params):
+
+    if round_params['solver'] == 'sag':
+        if round_params['tol'] < 0.05:
+            round_params['tol'] == 0.05
     
     clf = LogisticRegression(
         solver=round_params['solver'],

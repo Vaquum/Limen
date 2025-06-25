@@ -48,7 +48,7 @@ def get_klines_data(n_rows: Optional[int] = None,
 
     query = (
         f"SELECT "
-        f"    toDateTime(toStartOfMinute(datetime) + {kline_size} * intDiv(toSecond(datetime), {kline_size})) AS datetime, "
+        f"    toDateTime({kline_size} * intDiv(toUnixTimestamp(datetime), {kline_size})) AS datetime, "
         f"    first_value(price)            AS open, "
         f"    max(price)                    AS high, "
         f"    min(price)                    AS low, "
@@ -68,7 +68,8 @@ def get_klines_data(n_rows: Optional[int] = None,
         f"{db_table}"
         f"{start_date_limit}"
         f"GROUP BY datetime "
-        f"ORDER BY datetime ASC {limit}"
+        f"ORDER BY datetime ASC "
+        f"{limit}"
     )
 
     start = time.time()
