@@ -8,9 +8,9 @@ from loop.data import HistoricalData
 print(f"Getting historical data")
 historical = HistoricalData()
 historical.get_historical_klines(n_rows=100000,
-                                  kline_size=1,
-                                  start_date_limit='2025-04-01',
-                                  futures=True)
+                                 kline_size=600,
+                                 start_date_limit='2025-04-01',
+                                 futures=True)
 
 print(f"Getting historical trades data")
 historical.get_historical_trades(n_latest=100)
@@ -18,6 +18,7 @@ historical.get_historical_trades(n_latest=100)
 #print(f"Getting historical futures trades data")
 #historical.get_historical_futures_trades(month_year=(2025, 3))
 
+'''
 print(f"Running experiment benchmarking")
 from loop.reports.experiment_benchmarking import experiment_benchmarking
 experiment_benchmarking(file_path='logreg_broad_3_3600.csv',
@@ -26,7 +27,7 @@ experiment_benchmarking(file_path='logreg_broad_3_3600.csv',
                         col_sort_order=['auc', 'precision', 'accuracy'],
                         inverse_transform=loop.transforms.logreg_transform.inverse_transform,
                         n_top_results=2)
-
+'''
 print(f"Running log_df")
 from loop.reports.log_df import read_from_file, outcome_df, corr_df
 data = read_from_file('logreg_broad_2_3600.csv')
@@ -60,7 +61,6 @@ def get_trades_data():
 def test_metrics_for_classification():
 
     data = get_klines_data()
-    data = data.head(100000)
 
     uel = loop.UniversalExperimentLoop(data=data,
                                        single_file_model=random)
