@@ -8,6 +8,7 @@ from loop.utils.param_space import ParamSpace
 from loop.utils.reporting import format_report_header, format_report_section, format_report_footer
 from loop.utils.scale_data_dict import scale_data_dict
 from loop.utils.splits import split_data_to_prep_output, split_sequential, split_random
+from loop.utils.breakout_labeling import to_average_price_klines, compute_htf_features, build_breakout_flags
 
 __all__ = [
     'generic_endpoint_for_tdw',
@@ -25,5 +26,8 @@ __all__ = [
     'generate_permutation',
     'generate_parameter_range',
     'split_sequential',
-    'split_random'
+    'split_random',
+    'to_average_price_klines',
+    'compute_htf_features',
+    'build_breakout_flags'
 ] 
