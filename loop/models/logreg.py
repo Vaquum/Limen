@@ -105,7 +105,7 @@ def model(data: dict, round_params):
 
     if round_params['solver'] == 'sag':
         if round_params['tol'] < 0.05:
-            round_params['tol'] == 0.05
+            round_params['tol'] = 0.05
     
     clf = LogisticRegression(
         solver=round_params['solver'],
