@@ -69,10 +69,10 @@
 # v0.9.0 on 12th of June, 2025
 - Add statistical metrics (`mean`, `std`, `median`, and `iqr`) to `data.HistoricalData.get_historical_klines` endpoint for richer data analysis
 
-# v0.9.1 on 13th of June, 2025
+# v0.9.1 on 17th of June, 2025
 - Add simple lag based indicators `lag_column`, `lag_columns` and `lag_range`
 
-# v0.9.2 on 14th of June, 2025
+# v0.9.2 on 22nd of June, 2025
 - Add `breakout_features` indicators for comprehensive breakout signal generation.
 
 # v0.9.3 on 25th of June, 2025
@@ -80,3 +80,6 @@
 - Add several updates to `models.logreg`
 - Reduce pulled datasizes in tests
 - Disabled test for `reports.experiment_benchmarking` due to the requirement to manually close the opening plot window
+
+# v0.9.4 on 26th of June, 2025
+- Added `utils` for breakout labeling.
