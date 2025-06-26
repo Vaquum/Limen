@@ -97,7 +97,12 @@ def compute_htf_features(
 
     # 5) compute future_max and future_min
     # infer the lower‐TF bar size in seconds
-    secs = int((df_htf[datetime_col][1] - df_htf[datetime_col][0]).total_seconds())
+    if df_htf.shape[0] < 2:
+        raise ValueError("Dataframe must have at least two rows to compute intervals.")
+    interval_diffs = df_htf[datetime_col].diff().drop_nulls()
+    if interval_diffs.is_empty():
+        raise ValueError("No valid intervals found in datetime column.")
+    secs = int(interval_diffs[0].total_seconds())
     window = int(lookahead.total_seconds() // secs)
 
     prices = df_htf[target_col].to_list()
