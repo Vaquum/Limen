@@ -9,7 +9,7 @@ def experiment_benchmarking(file_path,
                             model,
                             col_sort_order,
                             inverse_transform,
-                            n_top_results=10):
+                            n_top_results=2):
 
     '''
     Based on experiment results, uses parameters from the best 
