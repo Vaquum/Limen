@@ -116,7 +116,7 @@ class MegaModelDataSampler:
         for i in range(n_samples):
             rng = np.random.default_rng(seed=42 + i)  # Fixed seed for reproducibility
             indices = rng.choice(self.total_rows, size=sample_size, replace=True)
-            datasets.append(self.df_orig[sorted(indices)])
+            datasets.append(self.df_orig.take(sorted(indices)))
             
         return datasets
     
