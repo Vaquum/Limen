@@ -205,11 +205,12 @@ class MegaModelDataSampler:
                 if len(stratum) > 0:
                     if replace:
                         # With replacement: can oversample small strata
-                        stratum_size = sample_size // 3
+                        total = sum(len(s) for s in strata)
+                        stratum_size = round(sample_size * len(stratum) / total)
                         indices = rng.choice(len(stratum), size=stratum_size, replace=True)
                     else:
-                        # Without replacement: limited by stratum size
-                        stratum_size = min(len(stratum), sample_size // 3)
+                        total = sum(len(s) for s in strata)
+                        stratum_size = min(len(stratum), round(sample_size * len(stratum) / total))
                         if stratum_size > 0:
                             indices = rng.choice(len(stratum), size=stratum_size, replace=False)
                         else:
