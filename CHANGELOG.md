@@ -85,4 +85,4 @@
 - Added `utils` for breakout labeling.
 
 # v0.9.5 on 28th of June, 2025
-- Add `MegaModelDataSampler` class @ lightgbm `utils` for megamodels via data sampling
+- Added `MegaModelDataSampler` class in lightgbm `utils` for megamodels via data sampling
