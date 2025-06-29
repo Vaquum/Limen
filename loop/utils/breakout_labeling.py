@@ -48,11 +48,15 @@ def compute_htf_features(
     ema_span: int,
 ) -> pl.DataFrame:
     """
-    From a 2 h-bar DataFrame, compute and attach:
-      • `_bucket`     : each datetime truncated to the HTF grid
-      • `ema_htf`     : EMA(span=ema_span) of the last price_col in each bucket
-      • `future_max`  : max price_col in (t, t+lookahead]
-      • `future_min`  : min price_col in (t, t+lookahead]
+    For each 2 h row label = 1 if **any** price within the next `lookahead`
+    window exceeds EMA of 2H bars · (1 + breakout_delta), else 0.
+
+    Added columns
+    -------------
+    ema_2h        : float  — EMA on 2H average_price bars
+    future_max    : float  — max price in (t, t + lookahead]
+    future_min    : float  - min price in (t, t + lookahead]
+    breakout_ema  : int8   — 1 = breakout somewhere in window, 0 otherwise
 
     Args:
         df (pl.DataFrame): Input DataFrame
@@ -66,46 +70,22 @@ def compute_htf_features(
             [ datetime_col, target_col, _bucket, ema_htf, future_max, future_min ]
             sorted by datetime_col.
     """
-    # 1) bucket into HTF
-    df_htf = (
-        df.sort(datetime_col)
-          .with_columns(
-             pl.col(datetime_col)
-               .dt.truncate(every=lookahead)
-               .alias('_bucket')
-          )
-    )
+    # 1) sort data by datetime
+    df.sort('datetime')
 
-    # 2) extract one close per bucket → daily closes
-    htf = (
-        df_htf
-        .group_by('_bucket', maintain_order=True)
-        .agg(pl.col(target_col).last().alias('close'))
-        .sort('_bucket')
-    )
+    #2) Compute EMA on the 2H average price directly
+    df = df.with_columns(pl.col(target_col).ewm_mean(span=ema_span, adjust=False).alias('ema_2h'))
 
-    # 3) compute EMA over those closes using polars
-    htf = htf.with_columns(
-        pl.col('close').ewm_mean(span=ema_span, adjust=False).alias('ema_htf')
-    )
-
-    # 4) join EMA back
-    df_htf = df_htf.join(
-        htf.select(['_bucket', 'ema_htf']),
-        on='_bucket', how='left'
-    )
-
-    # 5) compute future_max and future_min
-    # infer the lower‐TF bar size in seconds
-    if df_htf.shape[0] < 2:
+    # 3) compute future_max and future_min
+    if df.shape[0] < 2:
         raise ValueError("Dataframe must have at least two rows to compute intervals.")
-    interval_diffs = df_htf[datetime_col].diff().drop_nulls()
+    interval_diffs = df[datetime_col].diff().drop_nulls()
     if interval_diffs.is_empty():
         raise ValueError("No valid intervals found in datetime column.")
     secs = int(interval_diffs[0].total_seconds())
     window = int(lookahead.total_seconds() // secs)
 
-    prices = df_htf[target_col].to_list()
+    prices = df[target_col].to_list()
     rev = prices[::-1]
 
     fut_max = (
@@ -121,7 +101,7 @@ def compute_htf_features(
           .to_list()[::-1]
     )
 
-    return df_htf.with_columns([
+    return df.with_columns([
         pl.Series('future_max', fut_max),
         pl.Series('future_min', fut_min),
     ])
@@ -155,16 +135,16 @@ def build_breakout_flags(
     exprs = []
     for delta in deltas:
         exprs.append(
-            (pl.col('future_max') >= pl.col('ema_htf') * (1 + delta))
+            (pl.col('future_max') >= pl.col('ema_2h') * (1 + delta))
             .cast(pl.Int8)
             .fill_null(0)
-            .alias(f"long_{delta:.2f}")
+            .alias(f"long_{delta:.2f}".replace('.', '_'))
         )
         exprs.append(
-            (pl.col('future_min') <= pl.col('ema_htf') * (1 - delta))
+            (pl.col('future_min') <= pl.col('ema_2h') * (1 - delta))
             .cast(pl.Int8)
             .fill_null(0)
-            .alias(f"short_{delta:.2f}")
+            .alias(f"short_{delta:.2f}".replace('.', '_'))
         )
 
     return df_feats.select([datetime_col] + exprs).sort(datetime_col)
