@@ -1,9 +1,10 @@
 import loop
 from loop.models import random, xgboost, lightgbm, logreg
 import uuid
-
 from loop.data import HistoricalData
 
+# Import your mega model test
+from mega_model_test import test_mega_model_with_live_labeling
 
 print(f"Getting historical data")
 historical = HistoricalData()
@@ -15,77 +16,65 @@ historical.get_historical_klines(n_rows=100000,
 print(f"Getting historical trades data")
 historical.get_historical_trades(n_latest=100)
 
-#print(f"Getting historical futures trades data")
-#historical.get_historical_futures_trades(month_year=(2025, 3))
+print("="*80)
+print("STARTING ALL TESTS")
+print("="*80)
 
-'''
-print(f"Running experiment benchmarking")
-from loop.reports.experiment_benchmarking import experiment_benchmarking
-experiment_benchmarking(file_path='logreg_broad_3_3600.csv',
-                        x='price_change',
-                        model=loop.models.logreg,
-                        col_sort_order=['auc', 'precision', 'accuracy'],
-                        inverse_transform=loop.transforms.logreg_transform.inverse_transform,
-                        n_top_results=2)
-'''
-print(f"Running log_df")
+# 1. RUN MEGA MODEL TEST FIRST
+print("\n1. MEGA MODEL TEST (with live labeling)")
+print("-" * 50)
+mega_results = test_mega_model_with_live_labeling()
+
+print(f"2. Running log_df")
 from loop.reports.log_df import read_from_file, outcome_df, corr_df
 data = read_from_file('logreg_broad_2_3600.csv')
 outcome_df = outcome_df(data, ['solver', 'feature_to_drop', 'penalty'], type='categorical')
 corr_df = corr_df(outcome_df)
 
-
 def _get_historical_data(file_url, cols):
-    
     historical = loop.HistoricalData()
     historical.get_binance_file(file_url, False, cols)
-    
     return historical.data
 
-
 def get_klines_data():
-
     file_url = 'https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2025-04.zip'
     cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'no_of_trades', 'maker_ratio', 'taker_buy_quote_asset_volume', '_null']
-
     return _get_historical_data(file_url, cols)
 
-
 def get_trades_data():
-
     file_url = 'https://data.binance.vision/data/spot/daily/trades/BTCUSDT/BTCUSDT-trades-2025-05-23.zip'
-    cols = ['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker',  '_null']
-
+    cols = ['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker', '_null']
     return _get_historical_data(file_url, cols)
 
 def test_metrics_for_classification():
-
     data = get_klines_data()
-
     uel = loop.UniversalExperimentLoop(data=data,
-                                       single_file_model=random)
-
+                                      single_file_model=random)
     uel.run(experiment_name=uuid.uuid4().hex[:8],
-            n_permutations=2,
-            prep_each_round=True)
+           n_permutations=2,
+           prep_each_round=True)
 
 print(test_metrics_for_classification())
 
-# sfm, data, prep_each_round
 tests = [(random, get_klines_data, True),
-         (xgboost, get_klines_data, False), 
+         (xgboost, get_klines_data, False),
          (lightgbm, get_trades_data, False),
          (logreg, get_klines_data, True)]
 
-for test in tests:
-
-    print(f"Running {test[0].__name__} with {test[1].__name__}")
-
+for i, test in enumerate(tests, 1):
+    print(f"\n  3.{i} Running {test[0].__name__} with {test[1].__name__}")
     test_name = uuid.uuid4().hex[:8]
     
-    uel = loop.UniversalExperimentLoop(data=test[1](),
-                                       single_file_model=test[0])
-    
-    uel.run(experiment_name=test_name,
-            n_permutations=2,
-            prep_each_round=test[2])
+    try:
+        uel = loop.UniversalExperimentLoop(data=test[1](),
+                                         single_file_model=test[0])
+        uel.run(experiment_name=test_name,
+               n_permutations=2,
+               prep_each_round=test[2])
+        print(f"    ✅ {test[0].__name__}: PASSED")
+    except Exception as e:
+        print(f"    ❌ {test[0].__name__}: FAILED - {e}")
+
+print("\n" + "="*80)
+print("ALL TESTS COMPLETE")
+print("="*80)
