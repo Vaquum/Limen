@@ -1,13 +1,18 @@
-# Enhanced UEL-Compatible Megamodel with Mega Model Integration
+# Enhanced UEL-Compatible Megamodel with Mega Model Integration - FIXED VERSION
 import loop
 import numpy as np
 import polars as pl
 from typing import Dict, List, Tuple, Any, Optional
 import pandas as pd
-from loop.models import lightgbm
+from loop.models import lightgbm_example as lightgbm
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
+
+
+def root_mean_squared_error(y_true, y_pred):
+    """Helper function for RMSE calculation"""
+    return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
 class MegaModelDataSampler:
@@ -39,8 +44,13 @@ class MegaModelDataSampler:
         df_orig : pl.DataFrame
             The complete dataset to create sampling variations from
         """
-        self.df_orig = df_orig
-        self.total_rows = len(df_orig)
+        # Ensure we have a Polars DataFrame
+        if hasattr(df_orig, 'to_pandas'):
+            self.df_orig = df_orig
+        else:
+            self.df_orig = pl.from_pandas(df_orig)
+        
+        self.total_rows = len(self.df_orig)
         
     def temporal_windows(self, window_size: int = 15000, overlap: float = 0.2) -> List[pl.DataFrame]:
         """
@@ -124,7 +134,9 @@ class MegaModelDataSampler:
                 rng = np.random.default_rng()  # No seed - truly random
             
             indices = rng.choice(self.total_rows, size=sample_size, replace=True)
-            datasets.append(self.df_orig.take(sorted(indices)))
+            # Sort indices to maintain order and use slice notation
+            sorted_indices = sorted(indices)
+            datasets.append(self.df_orig[sorted_indices])
             
         return datasets
     
@@ -190,28 +202,36 @@ class MegaModelDataSampler:
                                   replace: bool, random_state: Optional[int] = None) -> List[pl.DataFrame]:
         """
         Internal method to create stratified samples with or without replacement.
+        FIXED VERSION - handles Polars properly
         """
         datasets = []
         
-        # Create strata based on target values
+        # Create strata based on target values - ensure we're working with Polars
         target_values = self.df_orig[target_col].to_numpy()
-        non_zero_values = target_values[target_values > 0]
+        non_zero_mask = target_values > 0
+        non_zero_values = target_values[non_zero_mask]
         
         if len(non_zero_values) > 0:
             percentiles = np.percentile(non_zero_values, [33, 66])
         else:
             percentiles = [0, 0]
         
-        # Define strata
-        low_mask = self.df_orig[target_col] <= percentiles[0]
-        med_mask = (self.df_orig[target_col] > percentiles[0]) & (self.df_orig[target_col] <= percentiles[1])
-        high_mask = self.df_orig[target_col] > percentiles[1]
+        # Define strata using Polars filtering
+        low_mask = pl.col(target_col) <= percentiles[0]
+        med_mask = (pl.col(target_col) > percentiles[0]) & (pl.col(target_col) <= percentiles[1])
+        high_mask = pl.col(target_col) > percentiles[1]
         
-        strata = [
+        strata_dfs = [
             self.df_orig.filter(low_mask),
             self.df_orig.filter(med_mask), 
             self.df_orig.filter(high_mask)
         ]
+        
+        # Remove empty strata
+        strata_dfs = [s for s in strata_dfs if len(s) > 0]
+        
+        if not strata_dfs:
+            return []
         
         for i in range(n_samples):
             if random_state is not None:
@@ -219,28 +239,41 @@ class MegaModelDataSampler:
             else:
                 rng = np.random.default_rng()
             
-            combined_sample = []
+            combined_samples = []
+            total_size = sum(len(s) for s in strata_dfs)
             
             # Sample from each stratum proportionally
-            for j, stratum in enumerate(strata):
-                if len(stratum) > 0:
-                    if replace:
-                        # With replacement: can oversample small strata
-                        total = sum(len(s) for s in strata)
-                        stratum_size = round(sample_size * len(stratum) / total)
-                        indices = rng.choice(len(stratum), size=stratum_size, replace=True)
+            for stratum_df in strata_dfs:
+                stratum_size = len(stratum_df)
+                if stratum_size == 0:
+                    continue
+                
+                # Calculate proportional sample size for this stratum
+                target_stratum_size = max(1, round(sample_size * stratum_size / total_size))
+                
+                if replace:
+                    # With replacement: can oversample small strata
+                    actual_sample_size = min(target_stratum_size, sample_size)
+                    indices = rng.choice(stratum_size, size=actual_sample_size, replace=True)
+                else:
+                    # Without replacement: limited by stratum size
+                    actual_sample_size = min(target_stratum_size, stratum_size)
+                    if actual_sample_size > 0:
+                        indices = rng.choice(stratum_size, size=actual_sample_size, replace=False)
                     else:
-                        total = sum(len(s) for s in strata)
-                        stratum_size = min(len(stratum), round(sample_size * len(stratum) / total))
-                        if stratum_size > 0:
-                            indices = rng.choice(len(stratum), size=stratum_size, replace=False)
-                        else:
-                            continue
-                    
-                    combined_sample.append(stratum[sorted(indices)])
-            
-            if combined_sample:
-                datasets.append(pl.concat(combined_sample).sort('datetime'))
+                        continue
+                
+                # Use Polars indexing - convert indices to list and slice
+                indices_list = sorted(indices.tolist()) if hasattr(indices, 'tolist') else sorted(list(indices))
+                sampled_stratum = stratum_df[indices_list]
+                combined_samples.append(sampled_stratum)
+                                  
+            if combined_samples:
+                # Concatenate all samples and sort by datetime if it exists
+                combined_df = pl.concat(combined_samples)
+                if 'datetime' in combined_df.columns:
+                    combined_df = combined_df.sort('datetime')
+                datasets.append(combined_df)
             
         return datasets
     
@@ -407,7 +440,7 @@ class MegaModelDataSampler:
         
         # Calculate mega model metrics
         mega_model_mae = mean_absolute_error(test_data['y_test'], mega_model_preds)
-        mega_model_rmse = np.sqrt(mean_squared_error(test_data['y_test'], mega_model_preds))
+        mega_model_rmse = root_mean_squared_error(test_data['y_test'], mega_model_preds)
         mega_model_r2 = r2_score(test_data['y_test'], mega_model_preds)
         
         return {
@@ -511,11 +544,11 @@ class MegaModelDataSampler:
         
         # Calculate metrics
         mega_model_mae = mean_absolute_error(y_test, mega_model_preds)
-        mega_model_rmse = np.sqrt(mean_squared_error(y_test, mega_model_preds))
+        mega_model_rmse = root_mean_squared_error(y_test, mega_model_preds)
         mega_model_r2 = r2_score(y_test, mega_model_preds)
         
         base_mae = mean_absolute_error(y_test, base_preds)
-        base_rmse = np.sqrt(mean_squared_error(y_test, base_preds))
+        base_rmse = root_mean_squared_error(y_test, base_preds)
         base_r2 = r2_score(y_test, base_preds)
         
         improvement = (base_mae - mega_model_mae) / base_mae * 100
@@ -533,7 +566,7 @@ class MegaModelDataSampler:
             'base_model_r2': base_r2,
             'improvement_mae': improvement,
             'improvement_rmse': (base_rmse - mega_model_rmse) / base_rmse * 100,
-            'improvement_r2': (mega_model_r2 - base_r2) / abs(base_r2) * 100,
+            'improvement_r2': (mega_model_r2 - base_r2) / abs(base_r2) * 100 if base_r2 != 0 else 0,
             'test_data': {'x_test': x_test, 'y_test': y_test}
         }
 
@@ -543,7 +576,9 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                                   experiment_base_name: str = "enhanced_megamodel",
                                   enable_mega_models: bool = True,
                                   mega_model_size: int = 3,
-                                  random_state: Optional[int] = None) -> Dict[str, Any]:
+                                  random_state: Optional[int] = None,
+                                  sample_size=15000, 
+                                  n_samples=5) -> Dict[str, Any]:
     """
     Execute comprehensive enhanced megamodel experiment with mega model integration.
     
@@ -581,11 +616,11 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
     # Define strategies and their datasets - pass random_state to sampling methods
     strategies = {
         'full_dataset': sampler.full_dataset(),
-        'random_subsets': sampler.random_subsets(sample_size=15000, n_samples=5, random_state=random_state),
-        'bootstrap_samples': sampler.bootstrap_samples(sample_size=15000, n_samples=5, random_state=random_state),
+        'random_subsets': sampler.random_subsets(sample_size=sample_size, n_samples=n_samples, random_state=random_state),
+        'bootstrap_samples': sampler.bootstrap_samples(sample_size=sample_size, n_samples=n_samples, random_state=random_state),
         'temporal_windows': sampler.temporal_windows(window_size=15000, overlap=0.2),
-        'stratified_samples': sampler.stratified_samples(target, sample_size=15000, n_samples=5, random_state=random_state),
-        'stratified_samples_with_replacement': sampler.stratified_samples_with_replacement(target, sample_size=15000, n_samples=5, random_state=random_state),
+        'stratified_samples': sampler.stratified_samples(target, sample_size=sample_size, n_samples=n_samples, random_state=random_state),
+        'stratified_samples_with_replacement': sampler.stratified_samples_with_replacement(target, sample_size=sample_size, n_samples=5, random_state=random_state),
         'kfold_datasets': sampler.kfold_datasets(k=5)
     }
     
@@ -678,7 +713,7 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                         print(f"    ✅ Data-split mega model created successfully")
                     else:
                         print(f"    ❌ Failed to create data-split mega model")
-                
+
             except Exception as e:
                 print(f"    Error in dataset {i+1}: {e}")
                 continue
@@ -846,7 +881,9 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
                                              target: str = 'breakout_long',
                                              enable_mega_models: bool = True,
                                              mega_model_size: int = 3,
-                                             random_state: Optional[int] = None) -> Dict[str, Any]:
+                                             random_state: Optional[int] = None,
+                                             sample_size: int = 100,
+                                             n_samples: int = 3) -> Dict[str, Any]:
     """
     Integration wrapper for the enhanced megamodel experiment with mega model capabilities.
     
@@ -907,7 +944,9 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
         experiment_base_name=f"enhanced_megamodel_{target}",
         enable_mega_models=enable_mega_models,
         mega_model_size=mega_model_size,
-        random_state=random_state
+        random_state=random_state,
+        sample_size=sample_size,
+        n_samples=n_samples
     )
     
     # Print summary of what was tested
@@ -1075,11 +1114,6 @@ def save_experiment_results(results: Dict[str, Any], base_filename: str = "enhan
     print(f"✅ Summary info saved to {base_filename}_summary.json")
 
 
-# Note: The original create_partitioned_dataset_mega_model_predictions functionality
-# is now built into run_mega_model_experiment() via create_data_split_mega_model()
-# No separate function needed - everything is integrated into the main workflow
-
-
 # =============================================================================
 # MAIN ENTRY POINT - Use this function for everything
 # =============================================================================
@@ -1088,7 +1122,10 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
                              target: str = 'breakout_long',
                              enable_mega_models: bool = True,
                              mega_model_size: int = 3,
-                             random_state: Optional[int] = None) -> Dict[str, Any]:
+                             random_state: Optional[int] = None,
+                             # NEW PARAMETERS:
+                             sample_size: int = 15000,
+                             n_samples: int = 5) -> Dict[str, Any]:
     """
     THE MAIN FUNCTION - Run complete mega model experiment to find optimal approach.
     
@@ -1139,7 +1176,9 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
         target=target,
         enable_mega_models=enable_mega_models,
         mega_model_size=mega_model_size,
-        random_state=random_state
+        random_state=random_state,
+        sample_size=sample_size,
+        n_samples=n_samples
     )
     
     # Extract the best model for easy use
@@ -1171,42 +1210,3 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
     print(f"   {simple_results['how_to_use']['to_predict']}")
     
     return simple_results
-
-
-# Simple example - this is all you need:
-"""
-import polars as pl
-
-# Your data and functions (same as you use with UEL)
-df = pl.read_csv("data.csv")
-
-def my_prep(dataset):
-    # Your prep logic
-    return preprocessed_data
-
-def my_model(params):
-    # Your model logic  
-    return model
-
-# For development/testing with reproducible results:
-results = run_mega_model_experiment(
-    df_orig=df,
-    prep_func=my_prep,
-    model_func=my_model,
-    target='your_target',
-    random_state=42  # Use fixed seed for reproducible experiments
-)
-
-# For production with true randomness (RECOMMENDED):
-results = run_mega_model_experiment(
-    df_orig=df,
-    prep_func=my_prep,
-    model_func=my_model,
-    target='your_target'
-    # random_state=None is the default - omit for random seeding
-)
-
-# Use best model
-predictions = results['make_predictions'](new_data)
-print(f"Best approach: {results['how_to_use']['best_approach']}")
-"""
