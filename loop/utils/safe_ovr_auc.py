@@ -15,12 +15,13 @@ def safe_ovr_auc(y_true, proba):
             AUC calculations can be made (e.g., when only one class is present).
     '''
     present = np.unique(y_true)  # classes that exist in this fold
+    class_to_index = {label: idx for idx, label in enumerate(present)}  # map class labels to column indices
     aucs = []
     for c in present:
         pos = (y_true == c)
         neg = ~pos
         if pos.any() and neg.any():  # need both to draw an ROC curve
             aucs.append(
-                roc_auc_score(pos, proba[:, c])  # column c corresponds to class c
+                roc_auc_score(pos, proba[:, class_to_index[c]])  # use mapped index for class c
             )
     return float('nan') if not aucs else np.mean(aucs)
