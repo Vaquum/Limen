@@ -71,7 +71,7 @@ def compute_htf_features(
             sorted by datetime_col.
     """
     # 1) sort data by datetime
-    df.sort('datetime')
+    df = df.sort(datetime_col)
 
     #2) Compute EMA on the 2H average price directly
     df = df.with_columns(pl.col(target_col).ewm_mean(span=ema_span, adjust=False).alias('ema_2h'))
