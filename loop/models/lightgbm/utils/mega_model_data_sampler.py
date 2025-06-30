@@ -2,7 +2,7 @@
 import loop
 import numpy as np
 import polars as pl
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 import pandas as pd
 from loop.models import lightgbm
 import lightgbm as lgb
@@ -91,7 +91,8 @@ class MegaModelDataSampler:
             
         return datasets
     
-    def bootstrap_samples(self, sample_size: int = 15000, n_samples: int = 5) -> List[pl.DataFrame]:
+    def bootstrap_samples(self, sample_size: int = 15000, n_samples: int = 5, 
+                         random_state: Optional[int] = None) -> List[pl.DataFrame]:
         """
         Create bootstrap samples with replacement from the original dataset.
         
@@ -105,6 +106,9 @@ class MegaModelDataSampler:
             Number of rows in each bootstrap sample
         n_samples : int, default=5
             Number of bootstrap samples to create
+        random_state : Optional[int], default=None
+            Random seed for reproducibility. If None, uses random seeding.
+            Pass an int for reproducible output across multiple function calls.
         
         Returns:
         --------
@@ -114,14 +118,19 @@ class MegaModelDataSampler:
         datasets = []
         
         for i in range(n_samples):
-            rng = np.random.default_rng(seed=42 + i)  # Fixed seed for reproducibility
+            if random_state is not None:
+                rng = np.random.default_rng(seed=random_state + i)
+            else:
+                rng = np.random.default_rng()  # No seed - truly random
+            
             indices = rng.choice(self.total_rows, size=sample_size, replace=True)
             datasets.append(self.df_orig.take(sorted(indices)))
             
         return datasets
     
     def stratified_samples(self, target_col: str = 'breakout_long', 
-                          sample_size: int = 15000, n_samples: int = 5) -> List[pl.DataFrame]:
+                          sample_size: int = 15000, n_samples: int = 5,
+                          random_state: Optional[int] = None) -> List[pl.DataFrame]:
         """
         Create stratified samples based on target value distributions (without replacement).
         
@@ -137,16 +146,20 @@ class MegaModelDataSampler:
             Total size of each stratified sample
         n_samples : int, default=5
             Number of stratified samples to create
+        random_state : Optional[int], default=None
+            Random seed for reproducibility. If None, uses random seeding.
         
         Returns:
         --------
         List[pl.DataFrame]
             List of stratified sampled datasets maintaining target distribution
         """
-        return self._create_stratified_samples(target_col, sample_size, n_samples, replace=False)
+        return self._create_stratified_samples(target_col, sample_size, n_samples, 
+                                             replace=False, random_state=random_state)
     
     def stratified_samples_with_replacement(self, target_col: str = 'breakout_long', 
-                                          sample_size: int = 15000, n_samples: int = 5) -> List[pl.DataFrame]:
+                                          sample_size: int = 15000, n_samples: int = 5,
+                                          random_state: Optional[int] = None) -> List[pl.DataFrame]:
         """
         Create stratified samples based on target value distributions (with replacement).
         
@@ -162,15 +175,19 @@ class MegaModelDataSampler:
             Total size of each stratified sample
         n_samples : int, default=5
             Number of stratified samples to create
+        random_state : Optional[int], default=None
+            Random seed for reproducibility. If None, uses random seeding.
         
         Returns:
         --------
         List[pl.DataFrame]
             List of stratified sampled datasets maintaining target distribution
         """
-        return self._create_stratified_samples(target_col, sample_size, n_samples, replace=True)
+        return self._create_stratified_samples(target_col, sample_size, n_samples, 
+                                             replace=True, random_state=random_state)
     
-    def _create_stratified_samples(self, target_col: str, sample_size: int, n_samples: int, replace: bool) -> List[pl.DataFrame]:
+    def _create_stratified_samples(self, target_col: str, sample_size: int, n_samples: int, 
+                                  replace: bool, random_state: Optional[int] = None) -> List[pl.DataFrame]:
         """
         Internal method to create stratified samples with or without replacement.
         """
@@ -197,7 +214,11 @@ class MegaModelDataSampler:
         ]
         
         for i in range(n_samples):
-            rng = np.random.default_rng(seed=42 + i)
+            if random_state is not None:
+                rng = np.random.default_rng(seed=random_state + i)
+            else:
+                rng = np.random.default_rng()
+            
             combined_sample = []
             
             # Sample from each stratum proportionally
@@ -223,7 +244,8 @@ class MegaModelDataSampler:
             
         return datasets
     
-    def random_subsets(self, sample_size: int = 15000, n_samples: int = 5) -> List[pl.DataFrame]:
+    def random_subsets(self, sample_size: int = 15000, n_samples: int = 5,
+                      random_state: Optional[int] = None) -> List[pl.DataFrame]:
         """
         Create random contiguous subsets from the dataset.
         
@@ -237,6 +259,8 @@ class MegaModelDataSampler:
             Size of each contiguous subset
         n_samples : int, default=5
             Number of random subsets to create
+        random_state : Optional[int], default=None
+            Random seed for reproducibility. If None, uses random seeding.
         
         Returns:
         --------
@@ -246,7 +270,11 @@ class MegaModelDataSampler:
         datasets = []
         
         for i in range(n_samples):
-            rng = np.random.default_rng(seed=42 + i)
+            if random_state is not None:
+                rng = np.random.default_rng(seed=random_state + i)
+            else:
+                rng = np.random.default_rng()
+            
             n = len(self.df_orig)
             lo = int(n * 0.05)
             hi = int(n * 0.95) - sample_size
@@ -392,7 +420,8 @@ class MegaModelDataSampler:
             'individual_predictions': mega_model_preds_list
         }
 
-    def create_data_split_mega_model(self, uel_instance, prep_func, n_models: int = 3) -> Dict[str, Any]:
+    def create_data_split_mega_model(self, uel_instance, prep_func, n_models: int = 3,
+                                   random_state: Optional[int] = None) -> Dict[str, Any]:
         """
         Create mega model from different train/val splits using UEL's data and best model.
         
@@ -408,6 +437,8 @@ class MegaModelDataSampler:
             The preprocessing function used in the original UEL run
         n_models : int, default=3
             Number of models to create in mega model
+        random_state : Optional[int], default=None
+            Random seed for reproducibility. If None, uses random seeding.
         
         Returns:
         --------
@@ -443,11 +474,16 @@ class MegaModelDataSampler:
                 X_combined = base_processed['x_train']
                 y_combined = base_processed['y_train']
             
-            # Create different train/val split
+            # Create different train/val split with controllable randomness
+            if random_state is not None:
+                split_random_state = random_state + i
+            else:
+                split_random_state = None
+            
             X_train_mega, X_val_mega, y_train_mega, y_val_mega = train_test_split(
                 X_combined, y_combined,
                 test_size=0.2,
-                random_state=42 + i
+                random_state=split_random_state
             )
             
             # Train model with same parameters as best model
@@ -506,7 +542,8 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                                   target: str = 'breakout_long', 
                                   experiment_base_name: str = "enhanced_megamodel",
                                   enable_mega_models: bool = True,
-                                  mega_model_size: int = 3) -> Dict[str, Any]:
+                                  mega_model_size: int = 3,
+                                  random_state: Optional[int] = None) -> Dict[str, Any]:
     """
     Execute comprehensive enhanced megamodel experiment with mega model integration.
     
@@ -530,6 +567,8 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
         Whether to create and test mega models
     mega_model_size : int, default=3
         Number of models to include in mega models
+    random_state : Optional[int], default=None
+        Random seed for reproducibility. If None, uses random seeding.
     
     Returns:
     --------
@@ -539,14 +578,14 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
     # Initialize sampler
     sampler = MegaModelDataSampler(df_orig)
     
-    # Define strategies and their datasets
+    # Define strategies and their datasets - pass random_state to sampling methods
     strategies = {
         'full_dataset': sampler.full_dataset(),
-        'random_subsets': sampler.random_subsets(sample_size=15000, n_samples=5),
-        'bootstrap_samples': sampler.bootstrap_samples(sample_size=15000, n_samples=5),
+        'random_subsets': sampler.random_subsets(sample_size=15000, n_samples=5, random_state=random_state),
+        'bootstrap_samples': sampler.bootstrap_samples(sample_size=15000, n_samples=5, random_state=random_state),
         'temporal_windows': sampler.temporal_windows(window_size=15000, overlap=0.2),
-        'stratified_samples': sampler.stratified_samples(target, sample_size=15000, n_samples=5),
-        'stratified_samples_with_replacement': sampler.stratified_samples_with_replacement(target, sample_size=15000, n_samples=5),
+        'stratified_samples': sampler.stratified_samples(target, sample_size=15000, n_samples=5, random_state=random_state),
+        'stratified_samples_with_replacement': sampler.stratified_samples_with_replacement(target, sample_size=15000, n_samples=5, random_state=random_state),
         'kfold_datasets': sampler.kfold_datasets(k=5)
     }
     
@@ -555,6 +594,7 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
     
     print("="*100)
     print("RUNNING ENHANCED MEGAMODEL EXPERIMENT WITH UEL INTEGRATION")
+    print(f"Random state: {'Fixed' if random_state is not None else 'Random'}")
     print("="*100)
     
     for strategy_name, datasets in strategies.items():
@@ -628,7 +668,8 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                     data_split_mega_model = sampler.create_data_split_mega_model(
                         uel_instance=uel,
                         prep_func=prep_func,
-                        n_models=mega_model_size
+                        n_models=mega_model_size,
+                        random_state=random_state
                     )
                     
                     if data_split_mega_model:
@@ -804,7 +845,8 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
 def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, model, 
                                              target: str = 'breakout_long',
                                              enable_mega_models: bool = True,
-                                             mega_model_size: int = 3) -> Dict[str, Any]:
+                                             mega_model_size: int = 3,
+                                             random_state: Optional[int] = None) -> Dict[str, Any]:
     """
     Integration wrapper for the enhanced megamodel experiment with mega model capabilities.
     
@@ -826,6 +868,8 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
         Whether to create and test mega models alongside single models
     mega_model_size : int, default=3
         Number of models to include in mega model approaches
+    random_state : Optional[int], default=None
+        Random seed for reproducibility. If None, uses random seeding.
     
     Returns:
     --------
@@ -851,6 +895,7 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
     print(f"Mega model methods enabled: {enable_mega_models}")
     if enable_mega_models:
         print(f"Mega model size: {mega_model_size} models")
+    print(f"Random state: {'Fixed' if random_state is not None else 'Random'}")
     print("-" * 80)
     
     # Run the enhanced megamodel experiment
@@ -861,7 +906,8 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
         target=target,
         experiment_base_name=f"enhanced_megamodel_{target}",
         enable_mega_models=enable_mega_models,
-        mega_model_size=mega_model_size
+        mega_model_size=mega_model_size,
+        random_state=random_state
     )
     
     # Print summary of what was tested
@@ -1041,7 +1087,8 @@ def save_experiment_results(results: Dict[str, Any], base_filename: str = "enhan
 def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func, 
                              target: str = 'breakout_long',
                              enable_mega_models: bool = True,
-                             mega_model_size: int = 3) -> Dict[str, Any]:
+                             mega_model_size: int = 3,
+                             random_state: Optional[int] = None) -> Dict[str, Any]:
     """
     THE MAIN FUNCTION - Run complete mega model experiment to find optimal approach.
     
@@ -1066,6 +1113,9 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
         Whether to test mega models (recommended: True)
     mega_model_size : int, default=3
         Number of models in each mega model
+    random_state : Optional[int], default=None
+        Random seed for reproducibility. If None, uses random seeding.
+        Pass an int for reproducible output across multiple function calls.
     
     Returns:
     --------
@@ -1078,6 +1128,7 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
     print("🚀 Starting Complete Mega Model Experiment")
     print(f"   Dataset: {len(df_orig)} rows, Target: {target}")
     print(f"   Mega models: {'Enabled' if enable_mega_models else 'Disabled'}")
+    print(f"   Random state: {'Fixed' if random_state is not None else 'Random'}")
     print("=" * 80)
     
     # Run the comprehensive experiment
@@ -1087,7 +1138,8 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
         model=model_func,
         target=target,
         enable_mega_models=enable_mega_models,
-        mega_model_size=mega_model_size
+        mega_model_size=mega_model_size,
+        random_state=random_state
     )
     
     # Extract the best model for easy use
@@ -1136,12 +1188,22 @@ def my_model(params):
     # Your model logic  
     return model
 
-# Run experiment - this does everything
+# For development/testing with reproducible results:
+results = run_mega_model_experiment(
+    df_orig=df,
+    prep_func=my_prep,
+    model_func=my_model,
+    target='your_target',
+    random_state=42  # Use fixed seed for reproducible experiments
+)
+
+# For production with true randomness (RECOMMENDED):
 results = run_mega_model_experiment(
     df_orig=df,
     prep_func=my_prep,
     model_func=my_model,
     target='your_target'
+    # random_state=None is the default - omit for random seeding
 )
 
 # Use best model
