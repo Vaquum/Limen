@@ -154,7 +154,6 @@ def model(data, round_params):
         num_boost_round=4000,
         valid_sets=[data['dtrain'], data['dval']],
         valid_names=["train", "valid"],
-        verbose= -1,
         callbacks=[early_stopping(stopping_rounds=200, verbose=False),
                    log_evaluation(period=0)])
     
