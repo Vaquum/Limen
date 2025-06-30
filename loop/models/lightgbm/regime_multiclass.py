@@ -42,6 +42,7 @@ def params():
         'objective': ['multiclass'],
         'metric': ['multi_logloss'],
         'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
+        'num_boost_round': [1500],
         'num_leaves': [15, 31, 63, 127, 255],
         'max_depth': [3, 5, 7, 9, -1],
         'min_data_in_leaf': [20, 50, 100, 200, 500],
@@ -50,13 +51,15 @@ def params():
         'bagging_freq': [0, 1, 5, 10, 20],
         'lambda_l1': [0.0, 0.1, 1.0, 10.0, 100.0],
         'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
-        'verbose': [-1],
-        'feature_pre_filter': ['false']
+        'feature_pre_filter': ['false'],
+        'stopping_round': [100],
+        'logging_step':[100],
+        'predict_probability_cutoff': [0.5],
     }
     return p
 
 
-def prep(data, round_params=None):
+def prep(data):
     '''Prepare data for training - follows template signature.'''
     # Random sequential sample
     df = build_sample_dataset_for_regime_multiclass(
@@ -122,6 +125,7 @@ def model(data, round_params):
     round_params = round_params.copy()
     round_params.update({
         'num_class': 3,  # 0 = flat, 1 = bullish, 2 = bearish
+        'verbose': -1,
     })
 
     # Validate all classes present in splits
@@ -134,12 +138,12 @@ def model(data, round_params):
     model = lgb.train(
         params=round_params,
         train_set=data['dtrain'],
-        num_boost_round=1500,
+        num_boost_round=round_params['num_boost_round'],
         valid_sets=[data['dtrain'], data['dval']],
         valid_names=['train', 'valid'],
         callbacks=[
-            lgb.early_stopping(100, verbose=False),
-            lgb.log_evaluation(100)
+            lgb.early_stopping(round_params['stopping_round'], verbose=False),
+            lgb.log_evaluation(round_params['logging_step'])
         ]
     )
 
@@ -147,7 +151,7 @@ def model(data, round_params):
 
     if proba.ndim == 1:  # no axis-1
         conf = proba  # already 1-D
-        regime = (proba >= 0.5).astype(int)
+        regime = (proba >= round_params['predict_probability_cutoff']).astype(int)
     else:  # proper 3-class probs
         conf = proba.max(axis=1)
         regime = proba.argmax(axis=1)
