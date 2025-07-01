@@ -1,4 +1,7 @@
-# Make lightgbm a Python package - only for mega model utilities
+# Make lightgbm a Python package
+
+import loop.models.lightgbm.regime_multiclass as regime_multiclass
+import loop.models.lightgbm.utils as utils
 
 # Import mega model utilities
 from .utils import (
@@ -18,5 +21,8 @@ __all__ = [
     'integrate_enhanced_megamodel_into_workflow',
     'get_best_model_from_results',
     'predict_with_best_model',
-    'save_experiment_results'
+    'save_experiment_results',
+    'regime_multiclass',
+    'utils'
 ]
+

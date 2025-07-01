@@ -86,3 +86,6 @@
 
 # v0.9.5 on 28th of June, 2025
 - Added `MegaModelDataSampler` class in lightgbm `utils` for megamodels via data sampling
+
+# v0.9.6 on 30th of June, 2025
+- Added lightgbm based `regime_multiclass` SFM for breakout regime classification

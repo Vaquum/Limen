@@ -31,7 +31,6 @@ def params():
         'bagging_freq': [0, 1, 5, 10, 20],
         'lambda_l1': [0.0, 0.1, 1.0, 10.0, 100.0],
         'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
-        'verbose': [-1],
         'feature_pre_filter': ['false']
     }
 
