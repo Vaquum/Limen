@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 import lightgbm as lgb
 
 def create_megamodel_predictions(best_model, data, n_models: int = 5):
-    """
+    '''
     Create megamodel predictions from different train/val splits.
     
     This creates multiple lightgbm sub-models by re-splitting the train+validation data
@@ -27,17 +27,17 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
     tuple
         - megamodel_preds (np.array): Average predictions across all models
         - models (list): List of trained models
-    """
+    '''
     
     # Get base parameters from best model
     base_params = best_model.params.copy() if hasattr(best_model, 'params') else {}
     
     # Combine train and validation data
     if 'x_val' in data and 'y_val' in data:
-        X_combined = np.vstack([data['x_train'], data['x_val']])
+        x_combined = np.vstack([data['x_train'], data['x_val']])
         y_combined = np.hstack([data['y_train'], data['y_val']])
     else:
-        X_combined = data['x_train']
+        x_combined = data['x_train']
         y_combined = data['y_train']
     
     models = []
@@ -48,15 +48,15 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
     # Create megamodel models with different train/val splits
     for i in range(n_models):
         # Create different train/val split
-        X_train_megamodel, X_val_megamodel, y_train_megamodel, y_val_megamodel = train_test_split(
-            X_combined, y_combined,
+        x_train_megamodel, x_val_megamodel, y_train_megamodel, y_val_megamodel = train_test_split(
+            x_combined, y_combined,
             test_size=0.2,
             random_state=42 + i
         )
         
         # Train model with same parameters as best model
-        train_dataset = lgb.Dataset(X_train_megamodel, label=y_train_megamodel)
-        val_dataset = lgb.Dataset(X_val_megamodel, label=y_val_megamodel, reference=train_dataset)
+        train_dataset = lgb.Dataset(x_train_megamodel, label=y_train_megamodel)
+        val_dataset = lgb.Dataset(x_val_megamodel, label=y_val_megamodel, reference=train_dataset)
         
         model = lgb.train(
             params=base_params,

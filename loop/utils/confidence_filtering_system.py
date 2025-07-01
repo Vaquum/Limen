@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, r2_score
 
-def calibrate_confidence_threshold(models, X_val, y_val, target_confidence=0.8):
-    """
+def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
+    '''
     Calibrate confidence threshold using validation data.
     
     This function determines the optimal confidence threshold by analyzing model
@@ -14,7 +14,7 @@ def calibrate_confidence_threshold(models, X_val, y_val, target_confidence=0.8):
     -----------
     models : list
         List of trained models
-    X_val : array-like
+    x_val : array-like
         Validation features for threshold calibration
     y_val : array-like
         Validation targets for performance evaluation
@@ -26,13 +26,13 @@ def calibrate_confidence_threshold(models, X_val, y_val, target_confidence=0.8):
     tuple
         - confidence_threshold (float): The standard deviation threshold for confidence filtering
         - calibration_stats (dict): Statistics about the calibration process
-    """
+    '''
     print(f"🔧 Calibrating confidence threshold on validation data")
     
     # Get model predictions on validation data
     val_preds = []
     for model in models:
-        preds = model.predict(X_val)
+        preds = model.predict(x_val)
         val_preds.append(preds)
     
     val_preds = np.array(val_preds)
@@ -89,15 +89,15 @@ def calibrate_confidence_threshold(models, X_val, y_val, target_confidence=0.8):
     return confidence_threshold, calibration_stats
 
 
-def apply_confidence_filtering(models, X_test, y_test, confidence_threshold):
-    """
+def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
+    '''
     Apply confidence filtering using pre-calibrated threshold.
     
     Parameters:
     -----------
     models : list
         List of trained models
-    X_test : array-like
+    x_test : array-like
         Test features for prediction and confidence assessment
     y_test : array-like
         Test targets for performance evaluation
@@ -108,14 +108,14 @@ def apply_confidence_filtering(models, X_test, y_test, confidence_threshold):
     --------
     dict
         Results dictionary containing predictions, uncertainty, masks, and metrics
-    """
+    '''
     print(f"\n🚀 Applying confidence filtering")
     print(f"Using threshold: {confidence_threshold:.4f}")
     
     # Get model predictions on test data
     test_preds = []
     for model in models:
-        preds = model.predict(X_test)
+        preds = model.predict(x_test)
         test_preds.append(preds)
     
     test_preds = np.array(test_preds)
@@ -178,7 +178,7 @@ def apply_confidence_filtering(models, X_test, y_test, confidence_threshold):
 
 
 def confidence_filtering_system(models, data, target_confidence=0.8):
-    """
+    '''
     Complete confidence filtering system with validation-based calibration.
     
     Parameters:
@@ -201,7 +201,7 @@ def confidence_filtering_system(models, data, target_confidence=0.8):
         - results (dict): Complete results from confidence system
         - df_results (pd.DataFrame): Detailed prediction results with confidence scores
         - calibration_stats (dict): Statistics from the calibration process
-    """
+    '''
     print("=" * 70)
     print("CONFIDENCE FILTERING SYSTEM")
     print("=" * 70)
