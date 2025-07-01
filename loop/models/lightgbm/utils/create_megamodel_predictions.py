@@ -53,7 +53,6 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
         x_train_megamodel, x_val_megamodel, y_train_megamodel, y_val_megamodel = train_test_split(
             x_combined, y_combined,
             test_size=0.2,
-            random_state=42 + i
         )
         
         # Train model with same parameters as best model
