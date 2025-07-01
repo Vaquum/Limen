@@ -3,6 +3,8 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 import lightgbm as lgb
 
+EARLY_STOPPING = 50
+
 def create_megamodel_predictions(best_model, data, n_models: int = 5):
     '''
     Create megamodel predictions from different train/val splits.
@@ -63,7 +65,7 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
             train_set=train_dataset,
             num_boost_round=best_model.num_trees(),
             valid_sets=[val_dataset],
-            callbacks=[lgb.early_stopping(50, verbose=False)]
+            callbacks=[lgb.early_stopping(EARLY_STOPPING, verbose=False)]
         )
         
         models.append(model)
