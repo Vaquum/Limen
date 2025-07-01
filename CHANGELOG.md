@@ -89,3 +89,6 @@
 
 # v0.9.6 on 30th of June, 2025
 - Added lightgbm based `regime_multiclass` SFM for breakout regime classification
+
+# v0.9.7 on 1st of July, 2025
+- Added confidence filter utils for all models; megamodel preds for lightgbm base model
