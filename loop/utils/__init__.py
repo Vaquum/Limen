@@ -11,6 +11,7 @@ from loop.utils.safe_ovr_auc import safe_ovr_auc
 from loop.utils.scale_data_dict import scale_data_dict
 from loop.utils.splits import split_data_to_prep_output, split_sequential, split_random
 from loop.utils.breakout_labeling import to_average_price_klines, compute_htf_features, build_breakout_flags
+from loop.utils.confidence_filtering_system import confidence_filtering_system
 
 __all__ = [
     'generic_endpoint_for_tdw',
@@ -33,5 +34,6 @@ __all__ = [
     'split_random',
     'to_average_price_klines',
     'compute_htf_features',
-    'build_breakout_flags'
+    'build_breakout_flags',
+    'confidence_filtering_system'
 ] 
