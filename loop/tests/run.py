@@ -15,6 +15,9 @@ from test_confidence_filtering_system import (
     test_edge_cases
 )
 
+from test_quantile_model import test_quantile_model
+from test_moving_average_correction_model import test_moving_average_correction
+
 
 print(f"Getting historical data")
 historical = HistoricalData()
@@ -31,15 +34,15 @@ print("STARTING ALL TESTS")
 print("="*80)
 
 # 1. RUN MEGA MODEL TEST FIRST
-print("\n1. MEGA MODEL TEST (with live labeling)")
+print("\nA1. MEGA MODEL TEST (with live labeling)")
 print("-" * 50)
 mega_results = test_mega_model_with_live_labeling()
 
-print("\n2. MEGAMODEL PREDICTIONS TEST")
+print("\nA2. MEGAMODEL PREDICTIONS TEST")
 print("-" * 50)
 test_create_megamodel_predictions()
 
-print("\n3. CONFIDENCE FILTERING SYSTEM TEST")
+print("\nA3. CONFIDENCE FILTERING SYSTEM TEST")
 print("-" * 50)
 confidence_tests = [
     ("calibrate_confidence_threshold", test_calibrate_confidence_threshold),
@@ -51,7 +54,17 @@ confidence_tests = [
 for test_name, test_func in confidence_tests:
     test_func()
 
-print(f"3. Running log_df")
+print("\nA4. QUANTILE MODEL TEST")
+print("-" * 50)
+test_quantile_model()
+
+print("\nA5. MOVING AVERAGE CORRECTION MODEL TEST")
+print("-" * 50)
+test_moving_average_correction()
+
+
+print(f"B1. Running log_df")
+print("-" * 50)
 from loop.reports.log_df import read_from_file, outcome_df, corr_df
 data = read_from_file('logreg_broad_2_3600.csv')
 outcome_df = outcome_df(data, ['solver', 'feature_to_drop', 'penalty'], type='categorical')
@@ -88,7 +101,7 @@ tests = [(random, get_klines_data, True),
          (logreg, get_klines_data, True)]
 
 for i, test in enumerate(tests, 1):
-    print(f"\n  4.{i} Running {test[0].__name__} with {test[1].__name__}")
+    print(f"\n  B2.{i} Running {test[0].__name__} with {test[1].__name__}")
     test_name = uuid.uuid4().hex[:8]
     
     try:

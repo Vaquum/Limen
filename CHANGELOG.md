@@ -92,3 +92,6 @@
 
 # v0.9.7 on 1st of July, 2025
 - Added confidence filter utils for all models; megamodel preds for lightgbm base model
+
+# v0.9.8 on 2nd of July, 2025
+- Added quantile model and moving average correction for lightgbm base model
