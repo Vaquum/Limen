@@ -24,11 +24,11 @@ def build_sample_dataset_for_breakout_regressor(
 ) -> pl.DataFrame:
     '''
     Build sample dataset with average price klines and breakout features for breakout regressor model.
-    
+
     This function processes raw trade data to create a dataset suitable for breakout regression modeling.
     It aggregates trades into klines, computes breakout flags for multiple delta thresholds,
     creates regression targets from the maximum breakout percentages, and applies random slicing.
-    
+
     Args:
         df (pl.DataFrame): Raw trade data containing columns
             - datetime_col (datetime, UTC ms)
@@ -46,7 +46,7 @@ def build_sample_dataset_for_breakout_regressor(
         random_slice_size (int): Size of the random sequential slice to return
         long_target_col (str): Name of the long breakout target column (e.g., 'breakout_long')
         short_target_col (str): Name of the short breakout target column (e.g., 'breakout_short')
-    
+
     Returns:
         pl.DataFrame: Processed dataset with columns
             - datetime_col: Original datetime
@@ -57,7 +57,7 @@ def build_sample_dataset_for_breakout_regressor(
     '''
     # 1. Aggregate raw trades into average price klines
     df_avg_price = to_average_price_klines(df, interval_sec)
-    
+
     # 2. Compute high-timeframe features (EMA, future max/min)
     df_feat = compute_htf_features(
         df_avg_price,
@@ -66,20 +66,20 @@ def build_sample_dataset_for_breakout_regressor(
         lookahead=lookahead,
         ema_span=ema_span
     )
-    
+
     # 3. Build breakout flags for all delta values
     df_label = build_breakout_flags(df_feat, deltas)
-    
+
     # 4. Find all long_* and short_* columns
     long_cols = [c for c in df_label.columns if c.startswith(long_col_prefix)]
     short_cols = [c for c in df_label.columns if c.startswith(short_col_prefix)]
-    
+
     # 5. Add breakout_long / breakout_short as max % breakout hit
     df_label = df_label.with_columns([
         (pl.max_horizontal([pl.when(pl.col(c) == 1).then(float(c.split('_')[-1])).otherwise(0) for c in long_cols])
          .shift(shift_bars)
          .alias(long_target_col)),
-    
+
         (pl.max_horizontal([pl.when(pl.col(c) == 1).then(float(c.split('_')[-1])).otherwise(0) for c in short_cols])
          .shift(shift_bars)
          .alias(short_target_col))
@@ -101,13 +101,13 @@ def build_sample_dataset_for_breakout_regressor(
 def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tuple:
     '''
     Extract feature matrix X and target vector y from a DataFrame for breakout regression.
-    
+
     Args:
         df (pl.DataFrame): Input DataFrame containing breakout features and targets
         target (str): Name of the target column (e.g., 'breakout_long' or 'breakout_short')
         horizon (int): Number of periods to look ahead (prediction horizon)
         lookback (int): Number of historical periods to include as features
-    
+
     Returns:
         tuple: A tuple containing:
             - x (np.ndarray): Feature matrix with shape (n_samples, n_features)
@@ -122,7 +122,7 @@ def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tu
     # Combine lagged features with additional features
     extra_cols = df.columns
     feat_cols = list(set(lag_cols + extra_cols))
-    
+
     # Extract feature matrix and target vector
     x = df.select(feat_cols).to_numpy()
     y = df[target].to_numpy()

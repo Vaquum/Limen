@@ -59,7 +59,7 @@ def params():
     }
     return p
 
-def prep(data): 
+def prep(data):
     df = build_sample_dataset_for_breakout_regressor(
         data,
         datetime_col=DATETIME_COL,
@@ -75,7 +75,7 @@ def prep(data):
         long_target_col=BREAKOUT_LONG_COL,
         short_target_col=BREAKOUT_SHORT_COL,
     )
-    
+
     # Generate full lagged feature DataFrame
     df_feat = breakout_features(
         df,
@@ -85,7 +85,7 @@ def prep(data):
         horizon=PREDICTION_HORIZON,
         target=TARGET
     )
-    
+
     # Split into train, validate, test dataset
     train, val, test = split_sequential(df_feat, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
     dt_test = test[DATETIME_COL].to_list()
@@ -98,11 +98,11 @@ def prep(data):
     # debug debug debug
     # build the exact same feat_cols as extract_xy (INCLUDING extra features)
     lag_indices = range(PREDICTION_HORIZON, PREDICTION_HORIZON + LOOKBACK_BARS)
-    
+
     # lagged flag features
     lag_cols = [f"long_t-{i}" for i in lag_indices] + \
                [f"short_t-{i}" for i in lag_indices]
-    
+
     # additional features from build_lagged_flags
     # extra_cols = ['long_roll_mean','long_roll_std', 'short_roll_mean', 'short_roll_std', 'roc_long_1', 'roc_short_1']
     extra_cols = df_feat.columns
@@ -117,7 +117,7 @@ def prep(data):
     # 4. LightGBM
     dtrain = lgb.Dataset(x_train, label=y_train)
     dval = lgb.Dataset(x_val, label=y_val, reference=dtrain)
-    
+
     return {
         'dtrain':  dtrain,
         'dval':    dval,
@@ -131,12 +131,12 @@ def prep(data):
     }
 
 def model(data, round_params):
-    
+
     round_params = round_params.copy()
     round_params.update({
         'verbose': -1,
     })
-    
+
     model = lgb.train(
         params=round_params,
         train_set=data['dtrain'],
@@ -148,12 +148,12 @@ def model(data, round_params):
 
     # Predict on test set
     y_pred = model.predict(data['x_test'])
-    
+
     # Metrics
     mae = mean_absolute_error(data['y_test'], y_pred)
     rmse = mean_squared_error(data['y_test'], y_pred, squared=False)
     r2 = r2_score(data['y_test'], y_pred)
-    
+
     round_results = {
         'models': [model],
         'extras': {'rmse': rmse, 'mae': mae, 'r2': r2}
@@ -165,7 +165,7 @@ def model(data, round_params):
 --- Example usage ---
 
 import loop
-from loop.models.lightgbm import breakout_regressor     
+from loop.models.lightgbm import breakout_regressor
 
 context_params = {
     'kline_size': [7200],
@@ -180,7 +180,7 @@ p = context_params_loop.generate()
 
 historical = loop.HistoricalData()
 historical.get_historical_klines(
-    kline_size=p['kline_size'], 
+    kline_size=p['kline_size'],
     start_date_limit=p['start_date_limit']
 )
 

@@ -8,15 +8,15 @@ def create_vectorized_sliding_window(df: pl.DataFrame,
                                      target_col: str,
                                      window_size: int,
                                      prediction_horizon: int) -> Tuple[np.ndarray, np.ndarray]:
-    
+
     '''Vectorised sliding-window builder (no Python loop).
-    
+
     X shape  : (M, window_size * F)
     Y shape  : (M, prediction_horizon)
     M = N - window_size - prediction_horizon + 1
-    
+
     '''
-    
+
     X_mat = df.select(feature_cols).to_numpy().astype(np.float32)
     y_vec = df[target_col].to_numpy().astype(np.float32)
     N, F  = X_mat.shape
@@ -34,5 +34,5 @@ def create_vectorized_sliding_window(df: pl.DataFrame,
 
     if Y.ndim > 1:
         Y = (Y.max(axis=1) > 0).astype(int)
-    
+
     return X, Y
