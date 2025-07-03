@@ -13,8 +13,10 @@ from loop.models.lightgbm.utils.mega_model_data_sampler import (
     predict_with_best_model,
     save_experiment_results
 )
-
 from loop.models.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
+
+from loop.models.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
+from loop.models.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
 
 __all__ = [
     'MegaModelDataSampler',
@@ -26,5 +28,7 @@ __all__ = [
     'save_experiment_results',
     'build_sample_dataset_for_regime_multiclass',
     'add_features_to_regime_multiclass_dataset',
-    'create_megamodel_predictions'
+    'create_megamodel_predictions',
+    'quantile_model_with_confidence',
+    'moving_average_correction_model'
 ]
