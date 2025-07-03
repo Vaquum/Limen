@@ -97,4 +97,4 @@
 - Added quantile model and moving average correction for lightgbm base model
 
 # v0.9.9 on 3rd of July, 2025
-- Added lightgbm based `breakout_regressor` SFM for predicting of breakout magnitude
+- Added lightgbm based `breakout_regressor` SFM for predicting breakout magnitude
