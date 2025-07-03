@@ -4,16 +4,12 @@ SFM Label Model for Breakout regime regressor
 
 import loop
 import polars as pl
-import pandas as pd
-import numpy as np
 import lightgbm as lgb
-from lightgbm import early_stopping, log_evaluation, LGBMClassifier
+from lightgbm import early_stopping, log_evaluation
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from datetime import date, timedelta
+from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.utils.create_vectorized_sliding_window import create_vectorized_sliding_window
-from loop.utils.metrics import metrics_for_classification
 from loop.models.lightgbm.utils  import build_sample_dataset_for_breakout_regressor, extract_xy
 from loop.indicators.breakout_features import breakout_features
 

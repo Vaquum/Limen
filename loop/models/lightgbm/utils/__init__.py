@@ -18,6 +18,11 @@ from loop.models.lightgbm.utils.create_megamodel_predictions import create_megam
 from loop.models.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
 from loop.models.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
 
+from loop.models.lightgbm.utils.breakout_regressor import (
+    build_sample_dataset_for_breakout_regressor,
+    extract_xy
+)
+
 __all__ = [
     'MegaModelDataSampler',
     'run_mega_model_experiment',
@@ -30,5 +35,7 @@ __all__ = [
     'add_features_to_regime_multiclass_dataset',
     'create_megamodel_predictions',
     'quantile_model_with_confidence',
-    'moving_average_correction_model'
+    'moving_average_correction_model',
+    'build_sample_dataset_for_breakout_regressor',
+    'extract_xy'
 ]
