@@ -26,7 +26,7 @@ __all__ = [
     'save_experiment_results',
     'regime_multiclass',
     'breakout_regressor',
-    'regime_stability'
+    'regime_stability',
     'utils'
 ]
 
