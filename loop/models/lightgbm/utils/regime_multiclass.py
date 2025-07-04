@@ -24,6 +24,8 @@ def build_sample_dataset_for_regime_multiclass(
     short_col: str,
     leakage_shift_bars: int,
     random_slice_size: int,
+    random_slice_min_pct: float = 0.25,
+    random_slice_max_pct: float = 0.75,
 ) -> pl.DataFrame:
     '''
     Build sample dataset with average price klines and breakout features for regime multiclass model.
@@ -43,6 +45,8 @@ def build_sample_dataset_for_regime_multiclass(
         short_col (str): Name of the short breakout column
         leakage_shift_bars (int): Number of bars to shift labels to prevent data leakage
         random_slice_size (int): Size of the random sequential slice to return
+        random_slice_min_pct (float): Minimum percentage for random slice range (default: 0.05)
+        random_slice_max_pct (float): Maximum percentage for random slice range (default: 0.95)
     
     Returns:
         pl.DataFrame: Processed dataset with columns
@@ -65,8 +69,10 @@ def build_sample_dataset_for_regime_multiclass(
     df_label = lag_column(df_label, long_col, leakage_shift_bars, 'long_base')
     df_label = lag_column(df_label, short_col, leakage_shift_bars, 'short_base')
 
-    # Select random sequential dataset
-    df_random = random_slice(df_label, random_slice_size)
+    # Select random sequential dataset with configurable range
+    df_random = random_slice(df_label, random_slice_size, 
+                            min_pct=random_slice_min_pct, 
+                            max_pct=random_slice_max_pct)
     return df_random
 
 
