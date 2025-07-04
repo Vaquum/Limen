@@ -98,3 +98,6 @@
 
 # v0.9.9 on 3rd of July, 2025
 - Added lightgbm based `breakout_regressor` SFM for predicting breakout magnitude
+
+# v1.0.0 on 5th of July, 2025
+- Added lightgbm based `regime stability` SFM - better regime prediction via regime stability
