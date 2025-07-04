@@ -1,6 +1,6 @@
 import polars as pl
 from typing import List, Union
-from simple_lags import lag_range
+from .simple_lags import lag_range
 
 def _breakout_lags(data: pl.DataFrame,
                  long_col: str = 'breakout_long',
