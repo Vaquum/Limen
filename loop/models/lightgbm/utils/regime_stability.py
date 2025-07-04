@@ -36,8 +36,14 @@ def add_stability_features(df, leakage_shift=12):
                 pl.col('close').alias('long_close'),
                 pl.col('close').alias('short_close'),
             ])
+        elif 'average_price' in df.columns:
+            # Use average_price if close is not available
+            df = df.with_columns([
+                pl.col('average_price').alias('long_close'),
+                pl.col('average_price').alias('short_close'),
+            ])
         else:
-            raise ValueError("Need 'close' or 'long_close' column for stability features")
+            raise ValueError("Need 'close', 'long_close', or 'average_price' column for stability features")
     
     # Add EMA if not present
     if 'long_ema_5' not in df.columns:
@@ -107,7 +113,8 @@ def get_stability_features(df):
         list: List of stability feature column names
     '''
     stability_feature_patterns = ['vol_', 'range_', 'activity_', 'bias_vol_', 'slope_', 
-                                 'consistency_', 'alignment', 'regime_age', 'min_regime_age']
+                                 'consistency_', 'alignment', 'regime_age', 'min_regime_age',
+                                 'price_above_ema', 'regime_age_ratio']
     
     return [c for c in df.columns if any(pattern in c for pattern in stability_feature_patterns)]
 
