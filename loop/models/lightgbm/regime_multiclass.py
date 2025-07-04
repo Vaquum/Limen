@@ -1,7 +1,6 @@
 '''
 SFM Label Model for Breakout Regime Classification
 '''
-
 import numpy as np
 import polars as pl
 import lightgbm as lgb
@@ -15,7 +14,10 @@ from datetime import timedelta
 
 from loop.utils.splits import split_sequential
 from loop.utils.safe_ovr_auc import safe_ovr_auc
-from loop.models.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass, add_features_to_regime_multiclass_dataset
+from loop.models.lightgbm.utils.regime_multiclass import (
+    build_sample_dataset_for_regime_multiclass,
+    add_features_to_regime_multiclass_dataset
+)
 
 # Configuration constants
 PERCENTAGE = 5

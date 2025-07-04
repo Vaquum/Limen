@@ -1,6 +1,7 @@
 # Make lightgbm a Python package
 
 import loop.models.lightgbm.regime_multiclass as regime_multiclass
+import loop.models.lightgbm.breakout_regressor as breakout_regressor
 import loop.models.lightgbm.utils as utils
 
 # Import mega model utilities
@@ -23,6 +24,7 @@ __all__ = [
     'predict_with_best_model',
     'save_experiment_results',
     'regime_multiclass',
+    'breakout_regressor',
     'utils'
 ]
 
