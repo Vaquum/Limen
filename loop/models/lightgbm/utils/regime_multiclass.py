@@ -45,8 +45,8 @@ def build_sample_dataset_for_regime_multiclass(
         short_col (str): Name of the short breakout column
         leakage_shift_bars (int): Number of bars to shift labels to prevent data leakage
         random_slice_size (int): Size of the random sequential slice to return
-        random_slice_min_pct (float): Minimum percentage for random slice range (default: 0.05)
-        random_slice_max_pct (float): Maximum percentage for random slice range (default: 0.95)
+        random_slice_min_pct (float): Minimum percentage for random slice range (default: 0.25)
+        random_slice_max_pct (float): Maximum percentage for random slice range (default: 0.75)
     
     Returns:
         pl.DataFrame: Processed dataset with columns
