@@ -23,10 +23,6 @@ def random_slice(
             Defaults to 0.75 (75%).
         seed (int | None, optional): Random seed for reproducible results. 
             Defaults to None for non-deterministic behavior.
-        min_pct (float, optional): Minimum percentage of DataFrame to start slice from.
-            Defaults to 0.25 (25%).
-        max_pct (float, optional): Maximum percentage of DataFrame to end slice selection.
-            Defaults to 0.75 (75%).
     
     Returns:
         pl.DataFrame: A contiguous slice of the original DataFrame with 'rows' number of rows,

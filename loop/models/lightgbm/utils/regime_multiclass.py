@@ -71,8 +71,8 @@ def build_sample_dataset_for_regime_multiclass(
 
     # Select random sequential dataset with configurable range
     df_random = random_slice(df_label, random_slice_size, 
-                            min_pct=random_slice_min_pct, 
-                            max_pct=random_slice_max_pct)
+                            safe_range_low=random_slice_min_pct, 
+                            safe_range_high=random_slice_max_pct)
     return df_random
 
 
