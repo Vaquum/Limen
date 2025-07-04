@@ -8,8 +8,8 @@ from loop.models.lightgbm import regime_stability
 from loop.data import HistoricalData
 
 # Test configuration constants
-TEST_NUM_ROWS = 3000  # Number of rows to sample in tests
-TEST_DATA_SIZE = 5000  # Total test data size
+TEST_NUM_ROWS = 6000  # Number of rows to sample in tests
+TEST_DATA_SIZE = 10000  # Total test data size
 TEST_KLINE_SIZE = 7200  # 2 hour klines to match the model's interval
 TEST_START_DATE = '2019-01-01'  # Start date matches notebook context
 
