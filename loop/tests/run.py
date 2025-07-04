@@ -17,6 +17,7 @@ from test_confidence_filtering_system import (
 
 from test_quantile_model import test_quantile_model
 from test_moving_average_correction_model import test_moving_average_correction
+from test_regime_stability import test_regime_stability
 
 
 print(f"Getting historical data")
@@ -62,6 +63,9 @@ print("\nA5. MOVING AVERAGE CORRECTION MODEL TEST")
 print("-" * 50)
 test_moving_average_correction()
 
+print("\nA6. REGIME STABILITY MODEL TEST")
+print("-" * 50)
+test_regime_stability()
 
 print(f"B1. Running log_df")
 print("-" * 50)
