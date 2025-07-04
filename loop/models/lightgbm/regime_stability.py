@@ -183,8 +183,9 @@ def prep(data):
     
     # Stability features (stability predictors only)
     stability_feature_patterns = ['vol_', 'range_', 'activity_', 'bias_vol_', 'slope_', 
-                                 'consistency_', 'alignment', 'regime_age', 'min_regime_age']
-    
+                                 'consistency_', 'alignment', 'regime_age', 'min_regime_age',
+                                 'price_above_ema', 'regime_age_ratio']
+        
     stability_features = [c for c in df.columns if any(pattern in c for pattern in stability_feature_patterns)]
     
     # Split data
