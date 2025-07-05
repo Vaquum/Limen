@@ -1,5 +1,5 @@
 import loop
-from loop.models import random, xgboost, lightgbm, logreg
+from loop.models import random, xgboost, lightgbm_example, logreg
 import uuid
 from loop.data import HistoricalData
 
@@ -19,6 +19,13 @@ from test_quantile_model import test_quantile_model
 from test_moving_average_correction_model import test_moving_average_correction
 from test_regime_stability import test_regime_stability
 
+from test_account_conviction import test_account_conviction
+from test_backtest_conviction import test_backtest_conviction
+
+print("Running Account conviction tests")
+test_account_conviction()
+print("Running Backtest conviction tests")
+test_backtest_conviction()
 
 print(f"Getting historical data")
 historical = HistoricalData()
@@ -101,7 +108,7 @@ print(test_metrics_for_classification())
 
 tests = [(random, get_klines_data, True),
          (xgboost, get_klines_data, False),
-         (lightgbm, get_trades_data, False),
+         (lightgbm_example, get_trades_data, False),
          (logreg, get_klines_data, True)]
 
 for i, test in enumerate(tests, 1):

@@ -1,4 +1,5 @@
 from datetime import datetime
+import math
 
 class Account:
         
@@ -10,6 +11,10 @@ class Account:
         start_usdt | int | starting usdt balance
         '''
         self.position_id = 0
+        
+        # PERFORMANCE FIX: Cached running totals for O(1) property access
+        self._cached_long_position = 0.0
+        self._cached_short_position = 0.0
         
         self.account = self._init_account(credit_usdt=start_usdt)
         
@@ -36,7 +41,6 @@ class Account:
         return account
     
     def update_account(self,
-                      timestamp,
                       action,
                       amount,
                       price_usdt):
@@ -59,9 +63,26 @@ class Account:
         buy_price_usdt = 0
         sell_price_usdt = 0
 
-        assert action in ['buy', 'sell', 'short', 'cover', 'hold'], "ERROR: " + action + " not suported."
-        assert amount >= 0, "ERROR: amount can't be negative."
-        assert price_usdt > 0, "ERROR: price_usdt has to be positive."
+        if action not in ['buy', 'sell', 'short', 'cover', 'hold']:
+            raise ValueError("ERROR: " + action + " not suported.")
+        if not (amount > 0 or action == 'hold'):
+            raise ValueError("ERROR: amount must be positive for all actions except hold.")
+        if price_usdt <= 0:
+            raise ValueError("ERROR: price_usdt has to be positive.")
+        
+        # OVERFLOW PROTECTION: Check for numerical overflow conditions
+        MAX_USDT = 1e12  # 1 trillion USDT limit
+        MAX_BTC = 1e9    # 1 billion BTC limit
+        
+        current_total_usdt = self.account['total_usdt'][-1]
+        current_long_btc = self._cached_long_position  # PERFORMANCE FIX: use cached value
+        
+        if current_total_usdt > MAX_USDT:
+            raise ValueError("ERROR: Total USDT exceeds maximum limit")
+        if current_long_btc > MAX_BTC:
+            raise ValueError("ERROR: Long position exceeds maximum limit")
+        if amount > MAX_USDT:
+            raise ValueError("ERROR: Transaction amount exceeds maximum limit")
         
         if action == 'buy':
 
@@ -69,40 +90,46 @@ class Account:
                 raise ValueError("ERROR: amount can't be larger than total_usdt.")
                 
             debit_usdt = amount
-            amount_bought_btc = round(debit_usdt / price_usdt, 7)
+            amount_bought_btc = round(debit_usdt / price_usdt, 15)  # PRECISION FIX: 15 decimals instead of 7
             buy_price_usdt = price_usdt
         
         elif action == 'sell':
-
-            if (amount / price_usdt) > self.account['total_btc'][-1]:
-                raise ValueError("ERROR: amount / price_usdt can't be more than total_btc")
+            
+            current_long_position = self._cached_long_position  # PERFORMANCE FIX: use cached value
+            btc_to_sell = round(amount / price_usdt, 15)
+            if btc_to_sell > current_long_position + 1e-14:
+                raise ValueError("ERROR: Trying to sell more BTC than available")
 
             credit_usdt = amount
-            amount_sold_btc = round(credit_usdt / price_usdt, 7)
+            amount_sold_btc = btc_to_sell
             sell_price_usdt = price_usdt
             
         elif action == 'short':
 
-            if amount > self.account['total_usdt'][-1]:
-                raise ValueError("ERROR: amount can't be larger than total_usdt.")
-
-            amount_borrowed_btc = round(amount / price_usdt, 7)
-            debit_usdt = amount
-            buy_price_usdt = price_usdt
+            amount_borrowed_btc = round(amount / price_usdt, 15)  # PRECISION FIX: 15 decimals instead of 7
+            credit_usdt = amount
+            sell_price_usdt = price_usdt
             
         elif action == 'cover':
 
-            if (amount / price_usdt) != self.account['amount_borrowed_btc'][-1]:
-                raise ValueError("ERROR: To cover, amount / price_usdt has to equal amount_borrowed_btc")
+            net_borrowed_btc = self._cached_short_position  # PERFORMANCE FIX: use cached value
+            
+            if net_borrowed_btc == 0:
+                raise ValueError("ERROR: No borrowed BTC to cover")
+                
+            btc_to_cover = round(amount / price_usdt, 15)  # PRECISION FIX: 15 decimals instead of 7
+            if btc_to_cover > net_borrowed_btc + 1e-10:
+                raise ValueError("ERROR: Trying to cover more BTC than borrowed")
 
-            amount_covered_btc = (amount / price_usdt)
-            credit_usdt = self.account['buy_price_usdt'][-1] + (self.account['buy_price_usdt'][-1] - price_usdt)
-            sell_price_usdt = price_usdt
+            amount_covered_btc = btc_to_cover
+            debit_usdt = amount
+            buy_price_usdt = price_usdt
 
         # Update the account
+        self.position_id += 1
         self.account['position_id'].append(self.position_id)
         self.account['action'].append(action)
-        self.account['timestamp'].append(timestamp)
+        self.account['timestamp'].append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.account['credit_usdt'].append(credit_usdt)
         self.account['debit_usdt'].append(debit_usdt)
         self.account['amount_bought_btc'].append(amount_bought_btc)
@@ -112,16 +139,39 @@ class Account:
         self.account['buy_price_usdt'].append(buy_price_usdt)
         self.account['sell_price_usdt'].append(sell_price_usdt)
     
-        # Calculate totals
-        total_btc = sum(self.account['amount_bought_btc']) - sum(self.account['amount_sold_btc'])
-        total_usdt = sum(self.account['credit_usdt']) - sum(self.account['debit_usdt'])
+        # PERFORMANCE FIX: Calculate sums once and cache for O(1) property access
+        calculated_long = sum(self.account['amount_bought_btc']) - sum(self.account['amount_sold_btc'])
+        calculated_short = sum(self.account['amount_borrowed_btc']) - sum(self.account['amount_covered_btc'])
+        calculated_usdt = sum(self.account['credit_usdt']) - sum(self.account['debit_usdt'])
         
-        self.account['total_btc'].append(round(total_btc, 7))        
+        # Update cached values with exact calculated values for perfect consistency
+        self._cached_long_position = calculated_long
+        self._cached_short_position = calculated_short
+        
+        # Calculate totals - total_btc represents actual BTC owned (long position only)
+        total_btc = calculated_long
+        total_usdt = calculated_usdt
+        
+        # OVERFLOW PROTECTION: Check calculated totals before storing
+        if not math.isfinite(total_btc) or not math.isfinite(total_usdt):
+            raise ValueError("ERROR: Calculated totals are not finite")
+        if total_btc > MAX_BTC or total_usdt > MAX_USDT:
+            raise ValueError("ERROR: Calculated totals exceed maximum limits")
+        
+        self.account['total_btc'].append(round(total_btc, 15))  # PRECISION FIX: 15 decimals instead of 7      
         self.account['total_usdt'].append(round(total_usdt, 2))
         
-    def update_id(self):
-        
-        '''Will increment id by one. This has to be run always before
-        updating account or book.'''
-        
-        self.position_id += 1
+    @property
+    def long_position(self):
+        '''BTC owned from regular buys/sells'''
+        return self._cached_long_position  # PERFORMANCE FIX: O(1) instead of O(n)
+    
+    @property
+    def short_position(self):
+        '''BTC owed from shorts'''
+        return self._cached_short_position  # PERFORMANCE FIX: O(1) instead of O(n)
+    
+    @property
+    def net_position(self):
+        '''Net BTC exposure (positive=long, negative=short)'''
+        return self._cached_long_position - self._cached_short_position  # PERFORMANCE FIX: O(1) instead of O(n)
