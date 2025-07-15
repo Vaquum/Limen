@@ -1,5 +1,5 @@
 import loop
-from loop.models import random, xgboost, lightgbm, logreg
+from loop.models import random, xgboost, lightgbm, logreg_example
 import uuid
 from loop.data import HistoricalData
 
@@ -102,7 +102,7 @@ print(test_metrics_for_classification())
 tests = [(random, get_klines_data, True),
          (xgboost, get_klines_data, False),
          (lightgbm, get_trades_data, False),
-         (logreg, get_klines_data, True)]
+         (logreg_example, get_klines_data, True)]
 
 for i, test in enumerate(tests, 1):
     print(f"\n  B2.{i} Running {test[0].__name__} with {test[1].__name__}")
