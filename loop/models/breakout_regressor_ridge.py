@@ -9,7 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.models.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy
+from loop.models.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy_polars
 from loop.indicators.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
 
@@ -86,22 +86,17 @@ def prep(data):
     train, val, test = split_sequential(df_feat, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
     dt_test = test[DATETIME_COL].to_list()
 
-    # Extract x/y
-    x_train, y_train = extract_xy(train, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
-    x_val, y_val = extract_xy(val, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
-    x_test, y_test = extract_xy(test, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
+    # Extract x/y as Polars DataFrames
+    x_train_df, y_train = extract_xy_polars(train, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
+    x_val_df, y_val = extract_xy_polars(val, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
+    x_test_df, y_test = extract_xy_polars(test, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
 
-    # Get feature columns (same logic as in LightGBM version)
+    # Get feature columns for tracking (same logic as in extract_xy)
     lag_indices = range(PREDICTION_HORIZON, PREDICTION_HORIZON + LOOKBACK_BARS)
     lag_cols = [f"long_t-{i}" for i in lag_indices] + \
                [f"short_t-{i}" for i in lag_indices]
     extra_cols = df_feat.columns
     feat_cols = list(set(lag_cols + extra_cols))
-
-    # Convert numpy arrays to Polars DataFrames for scaling
-    x_train_df = pl.DataFrame(x_train, schema=feat_cols[:x_train.shape[1]])
-    x_val_df = pl.DataFrame(x_val, schema=feat_cols[:x_val.shape[1]])
-    x_test_df = pl.DataFrame(x_test, schema=feat_cols[:x_test.shape[1]])
 
     # Scale features using LogRegTransform
     scaler = LogRegTransform(x_train_df)
@@ -116,13 +111,13 @@ def prep(data):
         'x_train': x_train_scaled,
         'x_val': x_val_scaled,
         'x_test': x_test_scaled,
-        'y_train': y_train,
-        'y_val': y_val,
-        'y_test': y_test,
+        'y_train': y_train.to_numpy(),
+        'y_val': y_val.to_numpy(),
+        'y_test': y_test.to_numpy(),
         'dt_test': dt_test,
         'dt_train': dt_train,
         '_scaler': scaler,
-        '_feature_names': feat_cols[:x_train.shape[1]],
+        '_feature_names': feat_cols[:x_train_df.shape[1]],
     }
 
 

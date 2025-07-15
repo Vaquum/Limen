@@ -113,6 +113,27 @@ def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tu
             - x (np.ndarray): Feature matrix with shape (n_samples, n_features)
             - y (np.ndarray): Target vector with shape (n_samples,)
     '''
+    # Use extract_xy_polars and convert to numpy
+    x_df, y_series = extract_xy_polars(df, target, horizon, lookback)
+    return x_df.to_numpy(), y_series.to_numpy()
+
+
+def extract_xy_polars(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tuple:
+    '''
+    Extract feature matrix X and target vector y from a DataFrame for breakout regression,
+    returning Polars DataFrames instead of numpy arrays.
+
+    Args:
+        df (pl.DataFrame): Input DataFrame containing breakout features and targets
+        target (str): Name of the target column (e.g., 'breakout_long' or 'breakout_short')
+        horizon (int): Number of periods to look ahead (prediction horizon)
+        lookback (int): Number of historical periods to include as features
+
+    Returns:
+        tuple: A tuple containing:
+            - x (pl.DataFrame): Feature matrix as Polars DataFrame
+            - y (pl.Series): Target vector as Polars Series
+    '''
     lag_indices = range(horizon, horizon + lookback)
 
     # Create lagged flag features
@@ -123,8 +144,8 @@ def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tu
     extra_cols = df.columns
     feat_cols = list(set(lag_cols + extra_cols))
 
-    # Extract feature matrix and target vector
-    x = df.select(feat_cols).to_numpy()
-    y = df[target].to_numpy()
+    # Extract feature matrix and target vector as Polars objects
+    x = df.select(feat_cols)
+    y = df[target]
 
     return x, y
