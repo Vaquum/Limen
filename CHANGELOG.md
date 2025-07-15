@@ -117,4 +117,3 @@
 - Reorganize logreg models to match lightgbm structure with dedicated folder
 - Add breakout_regressor_ridge.py model for ridge regression breakout prediction
 - Add regime_multiclass.py and breakout_regressor_ridge.py in logreg folder
-
