@@ -101,3 +101,10 @@
 
 # v1.0.0 on 5th of July, 2025
 - Added lightgbm based `regime stability` SFM - better regime prediction via regime stability
+
+# v1.0.1 on 15th of July, 2025
+- Fix data leakage in quantile flag calculation by adding cutoff parameter
+- Rename logreg.py to logreg_example.py for clarity
+- Reorganize logreg models to match lightgbm structure with dedicated folder
+- Add breakout_regressor_ridge.py model for ridge regression breakout prediction
+- Add regime_multiclass.py in logreg folder (logistic regression version)
