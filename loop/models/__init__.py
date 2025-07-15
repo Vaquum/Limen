@@ -5,6 +5,7 @@ import loop.models.lightgbm as lightgbm
 import loop.models.random as random
 import loop.models.xgboost as xgboost
 import loop.models.logreg_example as logreg_example
+import loop.models.logreg as logreg
 
 __all__ = [
     'decomposition',
@@ -13,5 +14,6 @@ __all__ = [
     'random',
     'xgboost',
     'logreg_example',
+    'logreg',
     'lightgbm'
 ]
