@@ -163,7 +163,7 @@ def model(data, round_params):
         multi_class=params['multi_class'],
         fit_intercept=params['fit_intercept'],
         random_state=params['random_state'],
-        l1_ratio=params.get('l1_ratio', None) if params['penalty'] == 'elasticnet' else None,
+        l1_ratio=params.get('l1_ratio'),
         verbose=0,
         n_jobs=-1  # Use all cores
     )

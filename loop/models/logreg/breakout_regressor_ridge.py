@@ -43,13 +43,11 @@ def params():
     p = {
         # Ridge specific parameters
         'alpha': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0],
-        'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'],
+        'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga', 'lbfgs'],
         'max_iter': [100, 500, 1000, 2000, 5000],
         'tol': [0.0001, 0.001, 0.01, 0.1],
         'fit_intercept': [True, False],
         'random_state': [42],
-        # For sag/saga solvers
-        'positive': [True, False],  # Forces coefficients to be positive
     }
     return p
 
@@ -127,25 +125,22 @@ def model(data, round_params):
     # Handle solver compatibility
     params = round_params.copy()
     
-    # Handle positive parameter compatibility
-    # Actually, most Ridge solvers don't support positive - only 'lbfgs' does
+    # Build Ridge parameters
+    ridge_params = {
+        'alpha': params['alpha'],
+        'solver': params['solver'],
+        'max_iter': params['max_iter'],
+        'tol': params['tol'],
+        'fit_intercept': params['fit_intercept'],
+        'random_state': params['random_state'],
+    }
+    
+    # lbfgs solver requires positive=True
     if params['solver'] == 'lbfgs':
-        # lbfgs supports positive, keep the parameter
-        pass
-    else:
-        # All other solvers don't support positive
-        params['positive'] = False
+        ridge_params['positive'] = True
     
     # Create and train the model
-    ridge = Ridge(
-        alpha=params['alpha'],
-        solver=params['solver'],
-        max_iter=params['max_iter'],
-        tol=params['tol'],
-        fit_intercept=params['fit_intercept'],
-        random_state=params['random_state'],
-        positive=params.get('positive', False) if 'positive' in params else False,
-    )
+    ridge = Ridge(**ridge_params)
     
     # Train the model
     ridge.fit(data['x_train'], data['y_train'])
