@@ -183,7 +183,7 @@ def model(data, round_params):
 --- Example usage ---
 
 import loop
-from loop.models import breakout_regressor_ridge
+from loop.models.logreg import breakout_regressor_ridge
 
 context_params = {
     'kline_size': [7200],
