@@ -13,6 +13,8 @@ from loop.account import Account
 import csv
 import os
 
+BTC_PRECISION = 15
+
 def generate_random_sequence(n_transactions: int = 10000, seed: int = 42) -> dict:
     random.seed(seed)
     
