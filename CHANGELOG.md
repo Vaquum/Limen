@@ -100,4 +100,12 @@
 - Added lightgbm based `breakout_regressor` SFM for predicting breakout magnitude
 
 # v1.0.0 on 5th of July, 2025
-- Added lightgbm based `regime stability` SFM - better regime prediction via regime stability
+
+# v1.1.0 on 5th of July, 2025
+- Add a plotting function for visualizing decile means in datasets.
+- Introduce detailed performance metrics and trade simulation in backtesting
+- Add standard backtesting library `Bactest.py`
+- Add standard book keeping library `Account.py`
+- Improve input validation and overflow protection in `Account`
+- Add conviction tests for `Account` and `Backtest`
+- Updated `loop.reports` namespace

@@ -10,11 +10,11 @@ import loop.utils as utils
 
 __all__ = [
     'Account',
-    'HistoricalData',
     'Backtest',
+    'HistoricalData',
     'UniversalExperimentLoop',
-    'models',
     'indicators',
+    'models',
     'reports',
     'utils'
 ]
