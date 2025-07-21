@@ -90,22 +90,22 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
     
     for i, (action, price, amount) in enumerate(zip(actions, prices, amounts)):
         if action == 'buy':
-            btc_bought = round(amount / price, 15)  # Updated to match Account's 15-decimal precision
+            btc_bought = round(amount / price, BTC_PRECISION)  # Updated to match Account's 15-decimal precision
             manual_long_btc += btc_bought
             manual_usdt -= amount
         
         elif action == 'sell':
-            btc_sold = round(amount / price, 15)  # Updated to match Account's 15-decimal precision
+            btc_sold = round(amount / price, BTC_PRECISION)  # Updated to match Account's 15-decimal precision
             manual_long_btc -= btc_sold
             manual_usdt += amount
         
         elif action == 'short':
-            btc_borrowed = round(amount / price, 15)  # Updated to match Account's 15-decimal precision
+            btc_borrowed = round(amount / price, BTC_PRECISION)  # Updated to match Account's 15-decimal precision
             manual_short_btc += btc_borrowed
             manual_usdt += amount
         
         elif action == 'cover':
-            btc_covered = round(amount / price, 15)  # Updated to match Account's 15-decimal precision
+            btc_covered = round(amount / price, BTC_PRECISION)  # Updated to match Account's 15-decimal precision
             manual_short_btc -= btc_covered
             manual_usdt -= amount
     
