@@ -28,14 +28,14 @@ class Backtest:
             
             if pred == 1:
                 if current_usdt > 1:
-                    buy_fee = current_usdt * 0.001
+                    buy_fee = current_usdt * self.fee_rate
                     usdt_after_buy_fee = current_usdt - buy_fee
                     if usdt_after_buy_fee <= 0:
                         continue
                     self.account.update_account('buy', usdt_after_buy_fee, open_price)
                     btc_held = self.account.long_position
                     gross_sell_amount = btc_held * close_price
-                    sell_fee = gross_sell_amount * 0.001
+                    sell_fee = gross_sell_amount * self.fee_rate
                     net_sell_amount = gross_sell_amount - sell_fee
                     self.account.update_account('sell', net_sell_amount, close_price)
                     final_usdt = self.account.account['total_usdt'][-1]
