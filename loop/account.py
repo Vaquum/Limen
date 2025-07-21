@@ -97,7 +97,7 @@ class Account:
             
             current_long_position = self._cached_long_position  # PERFORMANCE FIX: use cached value
             btc_to_sell = round(amount / price_usdt, 15)
-            if btc_to_sell > current_long_position + 1e-14:
+            if btc_to_sell > current_long_position + self.TOLERANCE_BTC:
                 raise ValueError("ERROR: Trying to sell more BTC than available")
 
             credit_usdt = amount
