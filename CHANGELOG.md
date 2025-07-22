@@ -100,6 +100,7 @@
 - Added lightgbm based `breakout_regressor` SFM for predicting breakout magnitude
 
 # v1.0.0 on 5th of July, 2025
+- Added lightgbm based `regime stability` SFM - better regime prediction via regime stability
 
 # v1.1.0 on 5th of July, 2025
 - Add a plotting function for visualizing decile means in datasets.
@@ -109,3 +110,10 @@
 - Improve input validation and overflow protection in `Account`
 - Add conviction tests for `Account` and `Backtest`
 - Updated `loop.reports` namespace
+
+# v1.1.1 on 21st of July, 2025
+- Fix data leakage in quantile flag calculation by adding cutoff parameter
+- Rename logreg.py to logreg_example.py for clarity
+- Reorganize logreg models to match lightgbm structure with dedicated folder
+- Add breakout_regressor_ridge.py model for ridge regression breakout prediction
+- Add regime_multiclass.py and breakout_regressor_ridge.py in logreg folder

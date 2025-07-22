@@ -4,6 +4,7 @@ import loop.models.lightgbm_example as lightgbm_example
 import loop.models.lightgbm as lightgbm
 import loop.models.random as random
 import loop.models.xgboost as xgboost
+import loop.models.logreg_example as logreg_example
 import loop.models.logreg as logreg
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
     'lightgbm_example',
     'random',
     'xgboost',
+    'logreg_example',
     'logreg',
     'lightgbm'
 ]

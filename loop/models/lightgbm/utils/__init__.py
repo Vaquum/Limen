@@ -24,7 +24,8 @@ from loop.models.lightgbm.utils.regime_stability import (
 
 from loop.models.lightgbm.utils.breakout_regressor import (
     build_sample_dataset_for_breakout_regressor,
-    extract_xy
+    extract_xy,
+    extract_xy_polars
 )
 
 __all__ = [
@@ -41,7 +42,8 @@ __all__ = [
     'quantile_model_with_confidence',
     'moving_average_correction_model',
     'build_sample_dataset_for_breakout_regressor',
-    'extract_xy'
+    'extract_xy',
+    'extract_xy_polars',
     'add_stability_features',
     'get_stability_features'
 ]

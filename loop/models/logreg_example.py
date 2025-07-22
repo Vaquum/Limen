@@ -44,24 +44,49 @@ def params():
 
 def prep(data, round_params):
     
+    # Calculate ROC and filter NaN values
     data = roc(data, period=12).filter(~pl.col("roc").is_nan())
-    # TODO: Fix the leakage issue
-    data = quantile_flag(data=data,
-                         col='roc',
-                         q=round_params['q'])
     
-    data = data.with_columns(
-        pl.col("quantile_flag")
-          .shift(round_params['shift'])
-          .alias("quantile_flag")).drop_nulls("quantile_flag")
-
+    # Calculate other technical indicators
     data = atr(data)
     data = ppo(data)[1:]
     data = wilder_rsi(data).filter(~pl.col("wilder_rsi").is_nan())[1:]
-
     data = vwap(data)
     data = kline_imbalance(data)
-        
+    
+    # Split data BEFORE calculating quantile flags to prevent data leakage
+    if 'train_size' not in round_params:
+        split_data = split_sequential(data, (8, 1, 2))
+    else:
+        split_data = split_sequential(data, (round_params['train_size'],
+                                             round_params['val_size'],
+                                             round_params['test_size']))
+    
+    # Calculate quantile flag on training data and get the cutoff
+    split_data[0], train_cutoff = quantile_flag(
+        data=split_data[0],
+        col='roc',
+        q=round_params['q'],
+        return_cutoff=True
+    )
+    
+    # Apply the same cutoff to validation and test sets
+    for i in range(1, len(split_data)):
+        split_data[i] = quantile_flag(
+            data=split_data[i],
+            col='roc',
+            q=round_params['q'],
+            cutoff=train_cutoff
+        )
+    
+    # Shift the quantile flag to create the target (predicting future quantile)
+    for i in range(len(split_data)):
+        split_data[i] = split_data[i].with_columns(
+            pl.col("quantile_flag")
+              .shift(round_params['shift'])
+              .alias("quantile_flag")).drop_nulls("quantile_flag")
+    
+    # Define columns for the model
     cols = ['high',
             'low',
             'open',
@@ -79,17 +104,11 @@ def prep(data, round_params):
     if 'feature_to_drop' in round_params:
     # TODO: Make every nth round skip this and keep all colls
         cols = [col for col in cols if col != round_params['feature_to_drop']]
-        data = data[cols]
 
-    if 'train_size' not in round_params:
-        split_data = split_sequential(data, (8, 1, 2))
-    else:
-        split_data = split_sequential(data, (round_params['train_size'],
-                                             round_params['val_size'],
-                                             round_params['test_size']))
-    
+    # Create data dictionary from splits
     data_dict = split_data_to_prep_output(split_data, cols)
     
+    # Scale features using training data statistics
     scaler = LogRegTransform(data_dict['x_train'])
 
     for col in data_dict.keys():
