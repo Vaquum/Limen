@@ -6,12 +6,7 @@ Predicts regime (flat/bullish/bearish) with additional stability analysis to fil
 import numpy as np
 import polars as pl
 import lightgbm as lgb
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score
-)
+from sklearn.metrics import accuracy_score
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
@@ -21,6 +16,8 @@ from loop.models.lightgbm.utils.regime_multiclass import (
     add_features_to_regime_multiclass_dataset
 )
 from loop.models.lightgbm.utils.regime_stability import add_stability_features
+
+from loop.utils.metrics import multiclass_metrics
 
 # Configuration constants
 PERCENTAGE = 5
@@ -327,33 +324,28 @@ def model(data, round_params):
     persistence_proba = stability_model.predict(data['test_X_stability'], num_iteration=stability_model.best_iteration)
     
     # Get regime predictions and confidence
-    regime_pred = regime_proba.argmax(axis=1)
-    regime_conf = regime_proba.max(axis=1)
+    preds = regime_proba.argmax(axis=1)
+    probs = regime_proba.max(axis=1)
     
     # Apply dual filtering: confidence + stability
-    filtered_pred = regime_pred.copy()
+    filtered_pred = preds.copy()
     confidence_threshold = round_params.get('predict_probability_cutoff', CONFIDENCE_THRESHOLD)
-    low_confidence = (regime_conf < confidence_threshold) | (persistence_proba < PERSISTENCE_THRESHOLD)
+    low_confidence = (probs < confidence_threshold) | (persistence_proba < PERSISTENCE_THRESHOLD)
     filtered_pred[low_confidence] = 0  # Set to flat when uncertain
     
     # Calculate metrics
     filter_rate = low_confidence.mean()
-    unfiltered_acc = accuracy_score(data['test_y'], regime_pred)
+    unfiltered_acc = accuracy_score(data['test_y'], preds)
     
+    round_results = multiclass_metrics(data, preds, preds)
+
     # Calculate final metrics
-    round_results = {
-        'precision': round(precision_score(data['test_y'], filtered_pred, average='macro', zero_division=0), FLOAT_PRECISION),
-        'recall': round(recall_score(data['test_y'], filtered_pred, average='macro', zero_division=0), FLOAT_PRECISION),
-        'f1score': round(f1_score(data['test_y'], filtered_pred, average='macro', zero_division=0), FLOAT_PRECISION),
-        'auc': round(safe_ovr_auc(data['test_y'], regime_proba), FLOAT_PRECISION),
-        'accuracy': round(accuracy_score(data['test_y'], filtered_pred), FLOAT_PRECISION),
-        'extras': {
+    round_results['extras'] = {
             'filter_rate': round(filter_rate, FLOAT_PRECISION),
             'unfiltered_accuracy': round(unfiltered_acc, FLOAT_PRECISION),
             'num_main_features': data['num_main_features'],
-            'num_stability_features': data['num_stability_features'],
-        }
-    }
+            'num_stability_features': data['num_stability_features']
+            }
     
     return round_results
 

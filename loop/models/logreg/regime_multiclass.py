@@ -19,6 +19,7 @@ from loop.models.lightgbm.utils.regime_multiclass import (
     add_features_to_regime_multiclass_dataset
 )
 from loop.transforms.logreg_transform import LogRegTransform
+from loop.utils.metrics import multiclass_metrics
 
 # Configuration constants (same as LightGBM version)
 BREAKOUT_PERCENTAGE = 5
@@ -182,14 +183,7 @@ def model(data, round_params):
     # This helps reduce false positives and focuses on high-confidence predictions
     regime[conf < CONFIDENCE_THRESHOLD] = 0
     
-    # Calculate metrics
-    round_results = {
-        'precision': round(precision_score(data['y_test'], regime, average='macro', zero_division=0), 2),
-        'recall': round(recall_score(data['y_test'], regime, average='macro', zero_division=0), 2),
-        'f1score': round(f1_score(data['y_test'], regime, average='macro', zero_division=0), 2),
-        'auc': round(safe_ovr_auc(data['y_test'], proba), 2),
-        'accuracy': round(accuracy_score(data['y_test'], regime), 2),
-    }
+    round_results = multiclass_metrics(data, regime, proba)
     
     return round_results
 

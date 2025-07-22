@@ -36,4 +36,4 @@ def model(data, round_params):
 
     preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
 
-    return binary_metrics(data, preds)
+    return binary_metrics(data, preds, preds)

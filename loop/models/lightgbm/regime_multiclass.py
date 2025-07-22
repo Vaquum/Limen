@@ -19,6 +19,8 @@ from loop.models.lightgbm.utils.regime_multiclass import (
     add_features_to_regime_multiclass_dataset
 )
 
+from loop.utils.metrics import multiclass_metrics
+
 # Configuration constants
 PERCENTAGE = 5
 LONG_COL = f'long_0_0{PERCENTAGE}'
@@ -163,13 +165,7 @@ def model(data, round_params):
     # This helps reduce false positives and focuses on high-confidence predictions
     regime[conf < CONFIDENCE_THRESHOLD] = 0
 
-    round_results = {
-        'precision': round(precision_score(data['test_y'], regime, average='macro'), 2),
-        'recall': round(recall_score(data['test_y'], regime, average='macro'), 2),
-        'f1score': round(f1_score(data['test_y'], regime, average='macro'), 2),
-        'auc': round(safe_ovr_auc(data['test_y'], proba), 2),
-        'accuracy': round(accuracy_score(data['test_y'], regime), 2),
-    }
+    round_results = multiclass_metrics(data, regime, proba)
 
     return round_results
 

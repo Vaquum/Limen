@@ -12,6 +12,7 @@ from datetime import timedelta
 from loop.utils.splits import split_sequential
 from loop.models.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy
 from loop.indicators.breakout_features import breakout_features
+from loop.utils.metrics import continuous_metrics
 
 
 # Configuration constants
@@ -149,15 +150,7 @@ def model(data, round_params):
     # Predict on test set
     y_pred = model.predict(data['x_test'])
 
-    # Metrics
-    mae = mean_absolute_error(data['y_test'], y_pred)
-    rmse = mean_squared_error(data['y_test'], y_pred, squared=False)
-    r2 = r2_score(data['y_test'], y_pred)
-
-    round_results = {
-        'models': [model],
-        'extras': {'rmse': rmse, 'mae': mae, 'r2': r2}
-    }
+    round_results = continuous_metrics(data, y_pred)
 
     return round_results
 

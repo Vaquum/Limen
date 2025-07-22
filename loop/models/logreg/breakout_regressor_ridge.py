@@ -13,6 +13,8 @@ from loop.models.lightgbm.utils import build_sample_dataset_for_breakout_regress
 from loop.indicators.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
 
+from loop.utils.metrics import continuous_metrics
+
 
 # Configuration constants (same as LightGBM version)
 INTERVAL_SEC = 7200  # 2 hour intervals
@@ -120,6 +122,7 @@ def prep(data):
 
 
 def model(data, round_params):
+    
     '''Train Ridge Regression model and evaluate.'''
     
     # Handle solver compatibility
@@ -148,29 +151,8 @@ def model(data, round_params):
     # Predict on test set
     y_pred = ridge.predict(data['x_test'])
     
-    # Calculate metrics
-    mae = mean_absolute_error(data['y_test'], y_pred)
-    rmse = np.sqrt(mean_squared_error(data['y_test'], y_pred))
-    r2 = r2_score(data['y_test'], y_pred)
-    
-    # Calculate validation metrics for model selection
-    y_val_pred = ridge.predict(data['x_val'])
-    val_mae = mean_absolute_error(data['y_val'], y_val_pred)
-    val_rmse = np.sqrt(mean_squared_error(data['y_val'], y_val_pred))
-    val_r2 = r2_score(data['y_val'], y_val_pred)
-    
-    round_results = {
-        'models': [ridge],
-        'extras': {
-            'rmse': round(rmse, 4),
-            'mae': round(mae, 4),
-            'r2': round(r2, 4),
-            'val_rmse': round(val_rmse, 4),
-            'val_mae': round(val_mae, 4),
-            'val_r2': round(val_r2, 4),
-        }
-    }
-    
+    round_results = continuous_metrics(data, y_pred)
+        
     return round_results
 
 

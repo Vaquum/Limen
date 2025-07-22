@@ -145,8 +145,9 @@ def model(data: dict, round_params):
     clf.fit(data['x_train'], data['y_train'])
 
     preds = clf.predict(data['x_test'])
+    probs = clf.predict_proba(data['x_test'])[:, 1]
 
-    round_results = binary_metrics(data, preds)
+    round_results = binary_metrics(data, preds, probs)
     round_results['_preds'] = preds
 
     return round_results
