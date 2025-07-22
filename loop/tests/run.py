@@ -96,7 +96,7 @@ def get_trades_data():
     cols = ['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker', '_null']
     return _get_historical_data(file_url, cols)
 
-def test_metrics_for_classification():
+def test_binary_metrics():
     data = get_klines_data()
     uel = loop.UniversalExperimentLoop(data=data,
                                       single_file_model=random)
@@ -104,7 +104,7 @@ def test_metrics_for_classification():
            n_permutations=2,
            prep_each_round=True)
 
-print(test_metrics_for_classification())
+print(test_binary_metrics())
 
 tests = [(random, get_klines_data, True),
          (xgboost, get_klines_data, False),

@@ -3,7 +3,7 @@ from loop.utils.generic_endpoint_for_tdw import generic_endpoint_for_tdw
 from loop.utils.get_klines_data import get_klines_data
 from loop.utils.get_trades_data import get_trades_data
 from loop.utils.log_to_optuna_study import log_to_optuna_study
-from loop.utils.metrics import metrics_for_regression, metrics_for_classification
+from loop.utils.metrics import continuous_metrics, binary_metrics
 from loop.utils.param_space import ParamSpace
 from loop.utils.random_slice import random_slice
 from loop.utils.reporting import format_report_header, format_report_section, format_report_footer
@@ -19,8 +19,8 @@ __all__ = [
     'get_klines_data',
     'get_trades_data',
     'log_to_optuna_study',
-    'metrics_for_regression',
-    'metrics_for_classification',
+    'continuous_metrics',
+    'binary_metrics',
     'ParamSpace',
     'random_slice',
     'format_report_header',

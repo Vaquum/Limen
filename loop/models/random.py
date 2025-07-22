@@ -1,7 +1,7 @@
 import numpy as np
 import polars as pl
 
-from loop.utils.metrics import metrics_for_classification
+from loop.utils.metrics import binary_metrics
 from loop.utils.splits import split_sequential
 from loop.utils.splits import split_data_to_prep_output
 
@@ -36,4 +36,4 @@ def model(data, round_params):
 
     preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
 
-    return metrics_for_classification(data, preds)
+    return binary_metrics(data, preds)

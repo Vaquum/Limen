@@ -1,4 +1,4 @@
-from loop.utils.metrics import metrics_for_regression
+from loop.utils.metrics import continuous_metrics
 import xgboost as xgb
 import numpy as np
 import polars as pl
@@ -115,4 +115,4 @@ def model(data: dict, round_params: dict):
 
     preds_ret = model.predict(data['x_test'])
 
-    return metrics_for_regression(data, preds_ret)
+    return continuous_metrics(data, preds_ret)

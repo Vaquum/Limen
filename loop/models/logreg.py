@@ -1,7 +1,7 @@
 import polars as pl
 
 from sklearn.linear_model import LogisticRegression
-from loop.utils.metrics import metrics_for_classification
+from loop.utils.metrics import binary_metrics
 from loop.indicators import quantile_flag, wilder_rsi, atr, ppo, vwap, kline_imbalance, roc
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.utils.generators import generate_parameter_range
@@ -127,7 +127,7 @@ def model(data: dict, round_params):
 
     preds = clf.predict(data['x_test'])
 
-    round_results = metrics_for_classification(data, preds)
+    round_results = binary_metrics(data, preds)
     round_results['_preds'] = preds
 
     return round_results
