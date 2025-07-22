@@ -21,9 +21,9 @@ from loop.models.lightgbm.utils.regime_multiclass import (
 from loop.transforms.logreg_transform import LogRegTransform
 
 # Configuration constants (same as LightGBM version)
-PERCENTAGE = 5
-LONG_COL = f'long_0_0{PERCENTAGE}'
-SHORT_COL = f'short_0_0{PERCENTAGE}'
+BREAKOUT_PERCENTAGE = 5
+LONG_COL = f'long_0_0{BREAKOUT_PERCENTAGE}'
+SHORT_COL = f'short_0_0{BREAKOUT_PERCENTAGE}'
 NUM_ROWS = 10000
 TARGET_COLUMN = 'average_price'
 EMA_SPAN = 6  # 6 x (12 x 2h kline)
