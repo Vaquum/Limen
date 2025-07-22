@@ -5,6 +5,8 @@ class Backtest:
     
     def __init__(self, start_usdt=30000):
 
+        self.fee_rate = 0.001
+
         self.account = Account(start_usdt)
         self.start_usdt = start_usdt
         self.trades = []

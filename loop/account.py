@@ -11,6 +11,7 @@ class Account:
         start_usdt | int | starting usdt balance
         '''
         self.position_id = 0
+        self.TOLERANCE_BTC = 1e-14
         
         # PERFORMANCE FIX: Cached running totals for O(1) property access
         self._cached_long_position = 0.0
