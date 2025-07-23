@@ -14,8 +14,14 @@ from loop.utils.splits import split_data_to_prep_output, split_sequential, split
 from loop.utils.breakout_labeling import to_average_price_klines, compute_htf_features, build_breakout_flags
 from loop.utils.confidence_filtering_system import confidence_filtering_system
 from loop.utils.create_vectorized_sliding_window import create_vectorized_sliding_window
+from loop.utils.add_breakout_ema import add_breakout_ema
+from loop.utils.binance_file_to_polars import binance_file_to_polars
+from loop.utils.slice_time_series import slice_time_series
 
 __all__ = [
+    'add_breakout_ema',
+    'binance_file_to_polars',
+    'slice_time_series',
     'generic_endpoint_for_tdw',
     'get_klines_data',
     'get_trades_data',
