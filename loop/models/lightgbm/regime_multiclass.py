@@ -168,38 +168,3 @@ def model(data, round_params):
     round_results = multiclass_metrics(data, regime, proba)
 
     return round_results
-
-
-'''
---- Example usage ---
-
-import loop
-from loop.models.lightgbm import regime_multiclass
-
-context_params = {
-    'kline_size': [7200],
-    'start_date_limit': ['2019-01-01 00:00:00'],
-    'breakout_percentage': [5],
-    'n_permutations': [48],
-    'random_sample_size': [10000]
-}
-
-context_params = loop.utils.ParamSpace(context_params)
-p = context_params.generate()
-
-historical = loop.HistoricalData()
-historical.get_historical_klines(
-    kline_size=p['kline_size'],
-    start_date_limit=p['start_date_limit']
-)
-
-uel = loop.UniversalExperimentLoop(historical.data, regime_multiclass)
-uel.run(
-    experiment_name=f"test_label_model_regime_random_{p['random_sample_size']}_2H_breakout{p['breakout_percentage']}%",
-    n_permutations=p['n_permutations'],
-    prep_each_round=False,
-    random_search=True,
-)
-
-print(uel.log_df.head())
-'''

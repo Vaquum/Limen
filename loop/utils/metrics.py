@@ -55,7 +55,7 @@ def binary_metrics(data, preds, probs):
     return round_results
 
 
-def multiclass_metrics(data, pred_bin, probs, average='macro'):
+def multiclass_metrics(data, preds, probs, average='macro'):
 
     '''
     Takes in data dictionary and predicted values and returns a dictionary of metrics.
@@ -69,9 +69,9 @@ def multiclass_metrics(data, pred_bin, probs, average='macro'):
         probs (array): predicted probabilities
     '''
 
-    round_results = {'precision': round(precision_score(data['test_y'], pred_bin, average=average), 3),
-                     'recall': round(recall_score(data['test_y'], pred_bin, average=average), 3),
+    round_results = {'precision': round(precision_score(data['test_y'], preds, average=average), 3),
+                     'recall': round(recall_score(data['test_y'], preds, average=average), 3),
                      'auc': round(safe_ovr_auc(data['test_y'], probs), 3),
-                     'accuracy': round(accuracy_score(data['test_y'], pred_bin), 3)}
+                     'accuracy': round(accuracy_score(data['test_y'], preds), 3)}
 
     return round_results

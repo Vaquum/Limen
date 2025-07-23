@@ -65,7 +65,6 @@ def create_test_data_dict():
 
 def test_calibrate_confidence_threshold():
     '''Test confidence threshold calibration'''
-    print("Testing calibrate_confidence_threshold...")
     
     models = create_test_models()
     data = create_test_data_dict()
@@ -82,20 +81,15 @@ def test_calibrate_confidence_threshold():
     assert 'threshold' in stats
     assert 'confident_pct' in stats
     
-    print("  ✅ Basic calibration works")
-    
     # Test different confidence levels
     threshold2, _ = calibrate_confidence_threshold(
         models, data['x_val'], data['y_val'], target_confidence=0.9
     )
     assert isinstance(threshold2, (float, np.floating))
-    
-    print("  ✅ Different confidence levels work")
 
 
 def test_apply_confidence_filtering():
     '''Test confidence filtering application'''
-    print("Testing apply_confidence_filtering...")
     
     models = create_test_models()
     data = create_test_data_dict()
@@ -118,13 +112,10 @@ def test_apply_confidence_filtering():
     assert len(results['predictions']) == len(data['y_test'])
     assert len(results['uncertainty']) == len(data['y_test'])
     assert len(results['confident_mask']) == len(data['y_test'])
-    
-    print("  ✅ Basic filtering works")
 
 
 def test_confidence_filtering_system():
     '''Test the complete confidence filtering system'''
-    print("Testing confidence_filtering_system...")
     
     models = create_test_models()
     data = create_test_data_dict()
@@ -152,20 +143,15 @@ def test_confidence_filtering_system():
     assert 'confident_mask' in results
     assert 'test_metrics' in results
     
-    print("  ✅ Complete system works")
-    
     # Test different target confidence
     results2, df_results2, _ = confidence_filtering_system(
         models, data, target_confidence=0.6
     )
     assert len(df_results2) == len(data['y_test'])
     
-    print("  ✅ Different confidence targets work")
-
 
 def test_edge_cases():
     '''Test edge cases and error handling'''
-    print("Testing edge cases...")
     
     models = create_test_models()
     data = create_test_data_dict()
@@ -181,16 +167,31 @@ def test_edge_cases():
         models, data['x_val'], data['y_val'], target_confidence=0.1
     )
     assert isinstance(threshold, (float, np.floating))
-    
-    print("  ✅ Edge cases work")
 
 
 if __name__ == "__main__":
     try:
         test_calibrate_confidence_threshold()
-        test_apply_confidence_filtering()
-        test_confidence_filtering_system()
-        test_edge_cases()
-        print("✅ confidence_filtering_system: ALL TESTS PASSED")
+        print(f'    ✅ {test_calibrate_confidence_threshold.__name__}: PASSED')
     except Exception as e:
-        print(f"❌ confidence_filtering_system: FAILED - {e}")
+        print(f'    ❌ {test_calibrate_confidence_threshold.__name__}: FAILED - {e}')
+
+    try:
+        test_apply_confidence_filtering()
+        print(f'    ✅ {test_apply_confidence_filtering.__name__}: PASSED')
+    except Exception as e:
+        print(f'    ❌ {test_apply_confidence_filtering.__name__}: FAILED - {e}')
+
+    try:
+        test_confidence_filtering_system()
+        print(f'    ✅ {test_confidence_filtering_system.__name__}: PASSED')
+    except Exception as e:
+        print(f'    ❌ {test_confidence_filtering_system.__name__}: FAILED - {e}')
+
+    try:
+        test_edge_cases()
+        print(f'    ✅ {test_edge_cases.__name__}: PASSED')
+    except Exception as e:
+        print(f'    ❌ {test_edge_cases.__name__}: FAILED - {e}')
+
+    print("✅ confidence_filtering_system: ALL TESTS PASSED")

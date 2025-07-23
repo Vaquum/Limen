@@ -10,7 +10,6 @@ from sklearn.metrics import accuracy_score
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.utils.safe_ovr_auc import safe_ovr_auc
 from loop.models.lightgbm.utils.regime_multiclass import (
     build_sample_dataset_for_regime_multiclass, 
     add_features_to_regime_multiclass_dataset
@@ -337,7 +336,7 @@ def model(data, round_params):
     filter_rate = low_confidence.mean()
     unfiltered_acc = accuracy_score(data['test_y'], preds)
     
-    round_results = multiclass_metrics(data, preds, preds)
+    round_results = multiclass_metrics(data, preds, regime_proba)
 
     # Calculate final metrics
     round_results['extras'] = {
@@ -348,42 +347,3 @@ def model(data, round_params):
             }
     
     return round_results
-
-
-'''
---- Example usage ---
-
-import loop
-from loop.models.lightgbm import regime_stability
-
-context_params = {
-    'kline_size': [7200],
-    'start_date_limit': ['2019-01-01 00:00:00'],
-    'breakout_percentage': [5],
-    'n_permutations': [48],
-    'random_sample_size': [10000]
-}
-
-context_params = loop.utils.ParamSpace(context_params)
-p = context_params.generate()
-
-historical = loop.HistoricalData()
-historical.get_historical_klines(
-    kline_size=p['kline_size'],
-    start_date_limit=p['start_date_limit']
-)
-
-uel = loop.UniversalExperimentLoop(historical.data, regime_stability)
-uel.run(
-    experiment_name=f"regime_stability_random_{p['random_sample_size']}_2H_breakout{p['breakout_percentage']}%",
-    n_permutations=p['n_permutations'],
-    prep_each_round=False,
-    random_search=True,
-)
-
-# Analysis of results
-print("Results Summary:")
-print(uel.log_df.head())
-print(f"\nAverage filter rate: {uel.log_df['filter_rate'].mean():.2%}")
-print(f"Accuracy improvement: {(uel.log_df['accuracy'] - uel.log_df['unfiltered_accuracy']).mean():.2%}")
-'''

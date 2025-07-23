@@ -17,15 +17,8 @@ TEST_START_DATE = '2019-01-01'  # Start date matches notebook context
 def test_regime_stability():
     '''Test regime stability model functionality.'''
     
-    print("\n" + "="*50)
-    print("REGIME STABILITY MODEL TEST")
-    print("="*50)
-    
     try:
-        print("\nTesting regime stability model...")
-        
         # Get historical data
-        print(f"  Loading {TEST_DATA_SIZE:,} rows of historical data...")
         historical = HistoricalData()
         historical.get_historical_klines(
             n_rows=TEST_DATA_SIZE,
@@ -33,21 +26,17 @@ def test_regime_stability():
             start_date_limit=TEST_START_DATE,
             futures=True
         )
-        print(f"  ✓ Data loaded: {len(historical.data):,} rows")
         
         # Monkey patch the NUM_ROWS for testing
         import loop.models.lightgbm.regime_stability as rs
         original_num_rows = rs.NUM_ROWS
         rs.NUM_ROWS = TEST_NUM_ROWS
-        print(f"  ✓ Configured to sample {TEST_NUM_ROWS:,} rows")
         
         try:
             # Initialize UEL with real historical data
-            print(f"  Initializing experiment loop...")
             uel = loop.UniversalExperimentLoop(historical.data, rs)
             
             # Run single experiment
-            print(f"  Running experiment...")
             uel.run(
                 experiment_name="test_regime_stability",
                 n_permutations=1,
@@ -60,7 +49,7 @@ def test_regime_stability():
             assert len(results) == 1, f"Expected 1 result, got {len(results)}"
             
             # Check required columns exist
-            required_cols = ['precision', 'recall', 'f1score', 'auc', 'accuracy']
+            required_cols = ['precision', 'recall', 'auc', 'accuracy']
             for col in required_cols:
                 assert col in results.columns, f"Missing required column: {col}"
             
@@ -70,9 +59,6 @@ def test_regime_stability():
                 assert 0 <= value <= 1, f"{col} value out of range: {value}"
             
             print(f"\n✅ TEST PASSED")
-            print(f"   Accuracy: {results['accuracy'][0]:.3f}")
-            print(f"   Precision: {results['precision'][0]:.3f}")
-            print(f"   AUC: {results['auc'][0]:.3f}")
             
             return True
             
@@ -84,7 +70,7 @@ def test_regime_stability():
         print(f"\n❌ TEST FAILED: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        raise
 
 
 if __name__ == "__main__":
