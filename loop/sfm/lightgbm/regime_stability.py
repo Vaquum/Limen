@@ -16,7 +16,7 @@ from loop.sfm.lightgbm.utils.regime_multiclass import (
 )
 from loop.sfm.lightgbm.utils.regime_stability import add_stability_features
 
-from loop.utils.metrics import multiclass_metrics
+from loop.metrics.multiclass_metrics import multiclass_metrics
 
 # Configuration constants
 PERCENTAGE = 5

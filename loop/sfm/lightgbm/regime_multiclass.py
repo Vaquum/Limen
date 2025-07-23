@@ -13,13 +13,13 @@ from sklearn.metrics import (
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.utils.safe_ovr_auc import safe_ovr_auc
+from loop.metrics.safe_ovr_auc import safe_ovr_auc
 from loop.sfm.lightgbm.utils.regime_multiclass import (
     build_sample_dataset_for_regime_multiclass,
     add_features_to_regime_multiclass_dataset
 )
 
-from loop.utils.metrics import multiclass_metrics
+from loop.metrics.multiclass_metrics import multiclass_metrics
 
 # Configuration constants
 PERCENTAGE = 5

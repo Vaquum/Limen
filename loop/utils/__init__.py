@@ -3,11 +3,12 @@ from loop.utils.generic_endpoint_for_tdw import generic_endpoint_for_tdw
 from loop.utils.get_klines_data import get_klines_data
 from loop.utils.get_trades_data import get_trades_data
 from loop.utils.log_to_optuna_study import log_to_optuna_study
-from loop.utils.metrics import continuous_metrics, binary_metrics
+from loop.metrics.continuous_metrics import continuous_metrics
+from loop.metrics.binary_metrics import binary_metrics
 from loop.utils.param_space import ParamSpace
 from loop.utils.random_slice import random_slice
 from loop.utils.reporting import format_report_header, format_report_section, format_report_footer
-from loop.utils.safe_ovr_auc import safe_ovr_auc
+from loop.metrics.safe_ovr_auc import safe_ovr_auc
 from loop.utils.scale_data_dict import scale_data_dict
 from loop.utils.splits import split_data_to_prep_output, split_sequential, split_random
 from loop.utils.breakout_labeling import to_average_price_klines, compute_htf_features, build_breakout_flags

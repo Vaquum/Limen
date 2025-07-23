@@ -12,7 +12,7 @@ from loop.sfm.lightgbm.utils.regime_multiclass import (
     add_features_to_regime_multiclass_dataset
 )
 from loop.transforms.logreg_transform import LogRegTransform
-from loop.utils.metrics import multiclass_metrics
+from loop.metrics.multiclass_metrics import multiclass_metrics
 
 # Configuration constants (same as LightGBM version)
 BREAKOUT_PERCENTAGE = 5

@@ -119,7 +119,18 @@
 - Add regime_multiclass.py and breakout_regressor_ridge.py in logreg folder
 
 # v1.2.0 on 23rd of July, 2025
+
+## Metrics
+- Add `loop.metrics` as a standard metrics sub-module
+- Move `utils.safe_ovr_auc.py` to `loop.metrics`
+- Move `utils.metrics` to `loop.metrics.metrics`
+- Refactor `loop.metrics.metrics` functions to separate files in `loop.metrics`
+
+# SFM
+- Rename `loop.models` to `loop.sfm`
+- Refactor `loop.sfm`
+
+# Tests
 - Refactor the test suite
 - Make tests fail hard
 - Remove all printouts (except PASSED/FAILED)
--

@@ -12,7 +12,7 @@ from datetime import timedelta
 from loop.utils.splits import split_sequential
 from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy
 from loop.indicators.breakout_features import breakout_features
-from loop.utils.metrics import continuous_metrics
+from loop.metrics.continuous_metrics import continuous_metrics
 
 
 # Configuration constants

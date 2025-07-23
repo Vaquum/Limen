@@ -13,7 +13,7 @@ from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor,
 from loop.indicators.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
 
-from loop.utils.metrics import continuous_metrics
+from loop.metrics.continuous_metrics import continuous_metrics
 
 
 # Configuration constants (same as LightGBM version)

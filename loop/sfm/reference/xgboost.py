@@ -1,4 +1,4 @@
-from loop.utils.metrics import continuous_metrics
+from loop.metrics.continuous_metrics import continuous_metrics
 import xgboost as xgb
 import numpy as np
 import polars as pl
