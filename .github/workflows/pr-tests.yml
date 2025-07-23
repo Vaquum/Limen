@@ -9,22 +9,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) check out the PR’s code
       - uses: actions/checkout@v3
 
-      # 2) set up Python (adjust the version as needed)
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # 3) install your deps (if you have a requirements.txt)
-      - name: Install dependencies
+      # 3) install your package _and_ any requirements
+      - name: Install loop package (and deps)
         run: |
+          pip install -e .
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      # 4) run your PR test script
+      # 4) run your tests via -m so Python sees the installed package
       - name: Run loop tests
-        run: python loop/tests/run.py
+        run: python -m loop.tests.run
