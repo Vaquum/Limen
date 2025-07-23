@@ -2,8 +2,8 @@ import loop
 import uuid
 
 import loop.sfm as sfm
-from utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
-from utils.get_data import get_klines_data, get_trades_data
+from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
+from loop.tests.utils.get_data import get_klines_data, get_trades_data
 
 from mega_model_test import test_mega_model_with_live_labeling
 

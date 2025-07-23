@@ -1,6 +1,5 @@
 import loop
 from loop.sfm.reference import lightgbm
-import numpy as np
 import polars as pl
 import lightgbm as lgb
 
