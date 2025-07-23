@@ -1,20 +1,18 @@
 import loop
-from loop.models import lightgbm_example as lightgbm
+from loop.sfm.reference import lightgbm
 import numpy as np
 import polars as pl
 import lightgbm as lgb
 
 # Import your moving average correction function
-from loop.models.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
+from loop.sfm.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
 
 def test_moving_average_correction():
     '''
     Quick test for moving average correction model
     '''
-    print("📈 Running Moving Average Correction Test")
     
     # Step 1: Get small amount of historical data
-    print("📊 Fetching historical data...")
     historical = loop.HistoricalData()
     historical.get_historical_klines(
         n_rows=300,  # Slightly larger for correction testing
@@ -24,7 +22,6 @@ def test_moving_average_correction():
     )
     
     # Step 2: Create labels with some trend/pattern
-    print("🏷️ Creating labels with patterns...")
     df_labeled = create_trending_regression_labels(historical.data)
     
     # Step 3: Convert to Polars if needed
@@ -32,7 +29,6 @@ def test_moving_average_correction():
         df_labeled = pl.from_pandas(df_labeled)
     
     # Step 4: Run UEL with moving average correction
-    print("🔬 Running UEL with MA correction...")
     uel = loop.UniversalExperimentLoop(df_labeled, lightgbm)
     uel.run(
         experiment_name="ma_correction_test",
@@ -41,18 +37,6 @@ def test_moving_average_correction():
         prep=prep_for_ma_test,
         model=model_with_ma_correction
     )
-    
-    print("✅ Moving Average Correction Test Complete!")
-    
-    # Show results
-    mae_values = [d['mae'] for d in uel.extras]
-    improvements = [d.get('improvement_pct', 0) for d in uel.extras]
-    significant_corrections = [d.get('significant_corrections', 0) for d in uel.extras]
-    
-    print(f"   Best MAE: {min(mae_values):.4f}")
-    print(f"   Avg improvement: {np.mean(improvements):.1f}%")
-    print(f"   Avg significant corrections: {np.mean(significant_corrections):.0f}")
-    print(f"   Models tested: {len(uel.models)}")
     
     return uel
 
@@ -186,8 +170,10 @@ def model_with_ma_correction(data, round_params):
     )
 
 if __name__ == "__main__":
+    
     try:
         test_moving_average_correction()
         print("✅ moving average correction: ALL TESTS PASSED")
+    
     except Exception as e:
         print(f"❌ moving average correction: FAILED - {e}")

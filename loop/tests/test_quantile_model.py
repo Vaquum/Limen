@@ -1,20 +1,17 @@
 import loop
-from loop.models import lightgbm_example as lightgbm
-import numpy as np
+from loop.sfm.reference import lightgbm
 import polars as pl
 import lightgbm as lgb
 
 # Import your quantile model function
-from loop.models.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
+from loop.sfm.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
 
 def test_quantile_model():
     '''
     Quick test for quantile model with confidence filtering
     '''
-    print("🎯 Running Quantile Model Test")
     
     # Step 1: Get small amount of historical data
-    print("📊 Fetching historical data...")
     historical = loop.HistoricalData()
     historical.get_historical_klines(
         n_rows=200,  # Small for fast testing
@@ -24,7 +21,6 @@ def test_quantile_model():
     )
     
     # Step 2: Create simple labels
-    print("🏷️ Creating labels...")
     df_labeled = create_simple_regression_labels(historical.data)
     
     # Step 3: Convert to Polars if needed
@@ -32,7 +28,6 @@ def test_quantile_model():
         df_labeled = pl.from_pandas(df_labeled)
     
     # Step 4: Run UEL with quantile model
-    print("🔬 Running UEL with quantile model...")
     uel = loop.UniversalExperimentLoop(df_labeled, lightgbm)
     uel.run(
         experiment_name="quantile_model_test",
@@ -41,16 +36,6 @@ def test_quantile_model():
         prep=prep_for_quantile_test,
         model=model_with_quantile
     )
-    
-    print("✅ Quantile Model Test Complete!")
-    
-    # Show results
-    mae_values = [d['mae'] for d in uel.extras]
-    confidence_rates = [d.get('confidence_rate', 0) for d in uel.extras]
-    
-    print(f"   Best MAE: {min(mae_values):.4f}")
-    print(f"   Avg confidence rate: {np.mean(confidence_rates):.1%}")
-    print(f"   Models tested: {len(uel.models)}")
     
     return uel
 

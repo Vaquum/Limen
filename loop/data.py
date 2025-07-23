@@ -1,13 +1,13 @@
-from typing import Sequence, List, Tuple, Optional
-from itertools import accumulate
-
-from vaquum_tools.binance_file_to_polars import binance_file_to_polars
-
-from .utils.get_klines_data import get_klines_data
-from .utils.get_trades_data import get_trades_data
-from .utils.get_agg_trades_data import get_agg_trades_data
-from .utils.generic_endpoint_for_tdw import generic_endpoint_for_tdw
 import polars as pl
+
+from typing import List, Tuple, Optional
+
+from loop.utils.binance_file_to_polars import binance_file_to_polars
+
+from loop.utils.get_klines_data import get_klines_data
+from loop.utils.get_trades_data import get_trades_data
+from loop.utils.get_agg_trades_data import get_agg_trades_data
+from loop.utils.generic_endpoint_for_tdw import generic_endpoint_for_tdw
 
 
 class HistoricalData:

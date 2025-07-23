@@ -1,5 +1,5 @@
 import loop
-from loop.models import lightgbm
+from loop.sfm import lightgbm
 import uuid
 import numpy as np
 import polars as pl
@@ -8,7 +8,7 @@ from datetime import timedelta
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Import your mega model class from the correct path
-from loop.models.lightgbm.utils.mega_model_data_sampler import run_mega_model_experiment
+from loop.sfm.lightgbm.utils.mega_model_data_sampler import run_mega_model_experiment
 
 def test_mega_model_with_live_labeling():
     """
@@ -17,10 +17,9 @@ def test_mega_model_with_live_labeling():
     2. MegaModelDataSampler testing
     3. Reduced data size for fast testing
     """
-    print("🚀 Running Mega Model Test with Live Data Labeling")
+
     
     # Step 1: Get historical data (reduced size for testing)
-    print("📊 Fetching historical data...")
     historical = loop.HistoricalData()
     historical.get_historical_klines(
         n_rows=200,  # Very small for fast testing
@@ -30,17 +29,15 @@ def test_mega_model_with_live_labeling():
     )
     
     # Step 2: Convert to average price klines and add labeling
-    print("🏷️ Creating labels...")
     df_labeled = create_breakout_labels(historical.data)
     
     # Step 3: CONVERT TO POLARS - This is the key fix!
-    print("🔄 Converting to Polars format...")
     if not hasattr(df_labeled, 'with_columns'):
         # It's pandas, convert to Polars
         df_labeled = pl.from_pandas(df_labeled)
     
     # Step 4: Run mega model experiment with reduced sample size
-    print("🔬 Running mega model experiment...")
+
     results = run_mega_model_experiment(
         df_orig=df_labeled,
         prep_func=prep_for_mega_model,
@@ -52,9 +49,6 @@ def test_mega_model_with_live_labeling():
         sample_size=100,
         n_samples=3  
     )    
-    print("✅ Mega Model Test Complete!")
-    print(f"   Best approach: {results['how_to_use']['best_approach']}")
-    print(f"   Performance: {results['how_to_use']['performance']}")
     
     return results
 

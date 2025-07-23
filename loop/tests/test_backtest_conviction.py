@@ -26,8 +26,6 @@ def test_basic_functionality():
     assert 'net_short_volume' in results
     assert 'net_trade_volume' in results
     assert len(backtest.trades) == 3
-    
-    print('✓ Basic functionality test passed')
 
 def test_perfect_predictions():
     backtest = Backtest(100000)
@@ -43,10 +41,9 @@ def test_perfect_predictions():
     assert results['PnL'] > 0
     assert results['win_rate'] == 1.0
     assert results['max_drawdown'] == 0
-    
-    print('✓ Perfect predictions test passed')
 
 def test_terrible_predictions():
+    
     backtest = Backtest(100000)
     
     actual = [1, 1, 1, 1, 1]
@@ -59,10 +56,10 @@ def test_terrible_predictions():
     
     assert results['PnL'] == 0
     assert len(backtest.trades) == 0
-    
-    print('✓ Terrible predictions test passed')
+
 
 def test_mixed_signals():
+    
     backtest = Backtest(100000)
     
     actual = [1, 0, 1, 0, 1, 0]
@@ -76,10 +73,9 @@ def test_mixed_signals():
     assert isinstance(results['PnL'], (int, float))
     assert 0 <= results['win_rate'] <= 1
     assert results['max_drawdown'] >= 0
-    
-    print('✓ Mixed signals test passed')
 
 def test_no_valid_trades():
+    
     backtest = Backtest(100000)
     
     actual = [1, 0, 1, 0, 1]
@@ -95,10 +91,10 @@ def test_no_valid_trades():
     assert results['max_drawdown'] == 0
     assert results['expected_value'] == 0
     assert results['sharpe_ratio'] == 0
-    
-    print('✓ No valid trades test passed')
+
 
 def test_zero_price_changes():
+    
     backtest = Backtest(100000)
     
     actual = [1, 0, 1, 0, 1]
@@ -111,10 +107,10 @@ def test_zero_price_changes():
     
     assert results['PnL'] < 0  # Negative due to trading fees
     assert results['win_rate'] == 0
-    
-    print('✓ Zero price changes test passed')
+
 
 def test_array_length_mismatch():
+    
     backtest = Backtest(100000)
     
     actual = [1, 0, 1]
@@ -128,10 +124,10 @@ def test_array_length_mismatch():
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert "Arrays must have same length" in str(e)
-        
-    print('✓ Array length mismatch test passed')
+
 
 def test_large_sequence():
+    
     backtest = Backtest(1000000)
     
     np.random.seed(42)
@@ -148,10 +144,10 @@ def test_large_sequence():
     assert 0 <= results['win_rate'] <= 1
     assert results['max_drawdown'] >= 0
     assert math.isfinite(results['sharpe_ratio'])
-    
-    print('✓ Large sequence test passed')
+
 
 def test_metrics_calculation():
+    
     backtest = Backtest(100000)
     
     actual = [1, 0, 1, 0]
@@ -167,9 +163,9 @@ def test_metrics_calculation():
     assert results['expected_value'] > 0
     assert isinstance(results['sharpe_ratio'], (int, float))
     
-    print('✓ Metrics calculation test passed')
 
 def test_account_integration():
+    
     backtest = Backtest(100000)
     
     initial_usdt = backtest.account.account['total_usdt'][-1]
@@ -186,10 +182,10 @@ def test_account_integration():
     final_usdt = backtest.account.account['total_usdt'][-1]
     assert final_usdt != initial_usdt
     assert len(backtest.trades) == 2
-    
-    print('✓ Account integration test passed')
+
 
 def test_volume_calculations():
+    
     backtest = Backtest(100000)
     
     actual = [1, 0, 1]
@@ -209,10 +205,10 @@ def test_volume_calculations():
         expected_volume += trade['volume']
     
     assert abs(results['net_trade_volume'] - expected_volume) < 0.01
-    
-    print('✓ Volume calculations test passed')
+
 
 def log_conviction_results(results_list):
+    
     log_file = 'backtest-conviction-tests.csv'
     
     if not os.path.exists(log_file):
@@ -229,48 +225,88 @@ def log_conviction_results(results_list):
 
 def test_backtest_conviction():
     
-    print('Starting Backtest conviction tests...')
-    
     test_results = []
     
     try:
-        test_basic_functionality()
+        try:
+            test_basic_functionality()
+            print(f'    ✅ {test_basic_functionality.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_basic_functionality.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'basic_functionality', 'status': 'PASSED'})
         
-        test_perfect_predictions()
+        try:
+            test_perfect_predictions()
+            print(f'    ✅ {test_perfect_predictions.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_perfect_predictions.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'perfect_predictions', 'status': 'PASSED'})
         
-        test_terrible_predictions()
+        try:
+            test_terrible_predictions()
+            print(f'    ✅ {test_terrible_predictions.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_terrible_predictions.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'terrible_predictions', 'status': 'PASSED'})
         
-        test_mixed_signals()
+        try:
+            test_mixed_signals()
+            print(f'    ✅ {test_mixed_signals.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_mixed_signals.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'mixed_signals', 'status': 'PASSED'})
         
-        test_no_valid_trades()
+        try:
+            test_no_valid_trades()
+            print(f'    ✅ {test_no_valid_trades.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_no_valid_trades.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'no_valid_trades', 'status': 'PASSED'})
         
-        test_zero_price_changes()
+        try:
+            test_zero_price_changes()
+            print(f'    ✅ {test_zero_price_changes.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_zero_price_changes.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'zero_price_changes', 'status': 'PASSED'})
         
-        test_array_length_mismatch()
+        try:
+            test_array_length_mismatch()
+            print(f'    ✅ {test_array_length_mismatch.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_array_length_mismatch.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'array_length_mismatch', 'status': 'PASSED'})
         
-        test_large_sequence()
+        try:
+            test_large_sequence()
+            print(f'    ✅ {test_large_sequence.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_large_sequence.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'large_sequence', 'status': 'PASSED'})
         
-        test_metrics_calculation()
+        try:
+            test_metrics_calculation()
+            print(f'    ✅ {test_metrics_calculation.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_metrics_calculation.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'metrics_calculation', 'status': 'PASSED'})
         
-        test_account_integration()
+        try:
+            test_account_integration()
+            print(f'    ✅ {test_account_integration.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_account_integration.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'account_integration', 'status': 'PASSED'})
         
-        test_volume_calculations()
+        try:
+            test_volume_calculations()
+            print(f'    ✅ {test_volume_calculations.__name__}: PASSED')
+        except Exception as e:
+            print(f'    ❌ {test_volume_calculations.__name__}: FAILED - {e}')
         test_results.append({'test_name': 'volume_calculations', 'status': 'PASSED'})
         
         log_conviction_results(test_results)
-        
-        print('\n✅ ALL BACKTEST CONVICTION TESTS PASSED - SYSTEM READY FOR INTEGRATION')
-        
+
     except Exception as e:
         test_results.append({'test_name': 'FAILED', 'status': 'ERROR', 'details': str(e)})
         log_conviction_results(test_results)

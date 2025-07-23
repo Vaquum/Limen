@@ -2,7 +2,7 @@ import numpy as np
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 
-from loop.models.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
+from loop.sfm.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
 
 def create_test_data():
     '''Create small synthetic test data'''
@@ -50,7 +50,6 @@ def create_test_data_dict():
 
 def test_create_megamodel_predictions():
     '''Test that create_megamodel_predictions runs without errors'''
-    print("Testing create_megamodel_predictions...")
     
     data = create_test_data_dict()
     best_model = create_mock_best_model()
@@ -64,23 +63,17 @@ def test_create_megamodel_predictions():
     assert len(models) == 3
     assert len(megamodel_preds) == len(data['y_test'])
     assert not np.isnan(megamodel_preds).any()
-    
-    print("  ✅ Basic functionality works")
-    
+
     # Test with different n_models
     megamodel_preds, models = create_megamodel_predictions(best_model, data, n_models=1)
     assert len(models) == 1
     
-    print("  ✅ Different n_models works")
-    
+
     # Test without validation data
     data_no_val = {k: v for k, v in data.items() if 'val' not in k}
     megamodel_preds, models = create_megamodel_predictions(best_model, data_no_val, n_models=2)
     assert len(models) == 2
     
-    print("  ✅ Works without validation data")
-
-
 if __name__ == "__main__":
     try:
         test_create_megamodel_predictions()
