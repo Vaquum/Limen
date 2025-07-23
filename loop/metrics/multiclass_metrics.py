@@ -17,9 +17,9 @@ def multiclass_metrics(data, preds, probs, average='macro'):
         probs (array): predicted probabilities
     '''
 
-    round_results = {'precision': round(precision_score(data['test_y'], preds, average=average), 3),
-                     'recall': round(recall_score(data['test_y'], preds, average=average), 3),
-                     'auc': round(safe_ovr_auc(data['test_y'], probs), 3),
-                     'accuracy': round(accuracy_score(data['test_y'], preds), 3)}
+    round_results = {'precision': round(precision_score(data['y_test'], preds, average=average), 3),
+                     'recall': round(recall_score(data['y_test'], preds, average=average), 3),
+                     'auc': round(safe_ovr_auc(data['y_test'], probs), 3),
+                     'accuracy': round(accuracy_score(data['y_test'], preds), 3)}
 
     return round_results 
