@@ -1,5 +1,5 @@
 import loop
-from loop.models import lightgbm
+from loop.sfm import lightgbm
 import uuid
 import numpy as np
 import polars as pl
@@ -8,7 +8,7 @@ from datetime import timedelta
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Import your mega model class from the correct path
-from loop.models.lightgbm.utils.mega_model_data_sampler import run_mega_model_experiment
+from loop.sfm.lightgbm.utils.mega_model_data_sampler import run_mega_model_experiment
 
 def test_mega_model_with_live_labeling():
     """

@@ -1,9 +1,9 @@
 # Make lightgbm a Python package
 
-import loop.models.lightgbm.regime_multiclass as regime_multiclass
-import loop.models.lightgbm.breakout_regressor as breakout_regressor
-import loop.models.lightgbm.regime_stability as regime_stability
-import loop.models.lightgbm.utils as utils
+import loop.sfm.lightgbm.regime_multiclass as regime_multiclass
+import loop.sfm.lightgbm.breakout_regressor as breakout_regressor
+import loop.sfm.lightgbm.regime_stability as regime_stability
+import loop.sfm.lightgbm.utils as utils
 
 # Import mega model utilities
 from .utils import (

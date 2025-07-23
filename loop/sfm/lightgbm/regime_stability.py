@@ -10,11 +10,11 @@ from sklearn.metrics import accuracy_score
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.models.lightgbm.utils.regime_multiclass import (
+from loop.sfm.lightgbm.utils.regime_multiclass import (
     build_sample_dataset_for_regime_multiclass, 
     add_features_to_regime_multiclass_dataset
 )
-from loop.models.lightgbm.utils.regime_stability import add_stability_features
+from loop.sfm.lightgbm.utils.regime_stability import add_stability_features
 
 from loop.utils.metrics import multiclass_metrics
 

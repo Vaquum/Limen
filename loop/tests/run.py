@@ -1,12 +1,7 @@
 import loop
 import uuid
 
-from loop.models import (
-    random,
-    xgboost,
-    lightgbm_example,
-    logreg_example)
-
+import loop.sfm as sfm
 from utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
 from utils.get_data import get_klines_data, get_trades_data
 
@@ -93,10 +88,10 @@ try:
     corr_df = corr_df(outcome_df)
 
 
-    tests = [(random, get_klines_data, True),
-             (xgboost, get_klines_data, False),
-             (lightgbm_example, get_trades_data, False),
-             (logreg_example, get_klines_data, True)]
+    tests = [(sfm.random, get_klines_data, True),
+             (sfm.xgboost, get_klines_data, False),
+             (sfm.lightgbm_reference, get_trades_data, False),
+             (sfm.logreg_reference, get_klines_data, True)]
 
     for i, test in enumerate(tests, 1):
         print(f'\n  B2.{i} Running {test[0].__name__} with {test[1].__name__}')

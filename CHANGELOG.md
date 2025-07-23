@@ -1,6 +1,6 @@
 # Changelog
 
-## 25th of May, 2025
+## v0.7.9 on 25th of May, 2025
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
 - Rename `n_rows` input parameter to `n_latest` in [`get_trades_data`](utils/get_trades_data.py) for getting latest rows
 - Add `n_sample` input parameter to [`get_trades_data`](utils/get_trades_data.py) for random sampling
@@ -117,3 +117,9 @@
 - Reorganize logreg models to match lightgbm structure with dedicated folder
 - Add breakout_regressor_ridge.py model for ridge regression breakout prediction
 - Add regime_multiclass.py and breakout_regressor_ridge.py in logreg folder
+
+# v1.2.0 on 23rd of July, 2025
+- Refactor the test suite
+- Make tests fail hard
+- Remove all printouts (except PASSED/FAILED)
+-

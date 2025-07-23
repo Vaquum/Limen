@@ -2,7 +2,7 @@ import numpy as np
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 
-from loop.models.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
+from loop.sfm.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
 
 def create_test_data():
     '''Create small synthetic test data'''

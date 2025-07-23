@@ -1,11 +1,11 @@
 import loop
-from loop.models import lightgbm_example as lightgbm
+from loop.sfm.reference import lightgbm
 import numpy as np
 import polars as pl
 import lightgbm as lgb
 
 # Import your moving average correction function
-from loop.models.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
+from loop.sfm.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
 
 def test_moving_average_correction():
     '''

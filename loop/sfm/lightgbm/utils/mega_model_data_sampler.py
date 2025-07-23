@@ -4,7 +4,7 @@ import numpy as np
 import polars as pl
 from typing import Dict, List, Tuple, Any, Optional
 import pandas as pd
-from loop.models import lightgbm_example as lightgbm
+from loop.sfm.reference import lightgbm
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error

@@ -1,10 +1,10 @@
 # Make utils a Python package
-from loop.models.lightgbm.utils.regime_multiclass import (
+from loop.sfm.lightgbm.utils.regime_multiclass import (
     build_sample_dataset_for_regime_multiclass,
     add_features_to_regime_multiclass_dataset
 )
 
-from loop.models.lightgbm.utils.mega_model_data_sampler import (
+from loop.sfm.lightgbm.utils.mega_model_data_sampler import (
     MegaModelDataSampler,
     run_mega_model_experiment,
     run_enhanced_megamodel_with_uel,
@@ -13,16 +13,16 @@ from loop.models.lightgbm.utils.mega_model_data_sampler import (
     predict_with_best_model,
     save_experiment_results
 )
-from loop.models.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
+from loop.sfm.lightgbm.utils.create_megamodel_predictions import create_megamodel_predictions
 
-from loop.models.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
-from loop.models.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
-from loop.models.lightgbm.utils.regime_stability import (
+from loop.sfm.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
+from loop.sfm.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
+from loop.sfm.lightgbm.utils.regime_stability import (
     add_stability_features,
     get_stability_features
 )   
 
-from loop.models.lightgbm.utils.breakout_regressor import (
+from loop.sfm.lightgbm.utils.breakout_regressor import (
     build_sample_dataset_for_breakout_regressor,
     extract_xy,
     extract_xy_polars

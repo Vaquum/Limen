@@ -1,11 +1,11 @@
 import loop
-from loop.models import lightgbm_example as lightgbm
+from loop.sfm.reference import lightgbm
 import numpy as np
 import polars as pl
 import lightgbm as lgb
 
 # Import your quantile model function
-from loop.models.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
+from loop.sfm.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
 
 def test_quantile_model():
     '''

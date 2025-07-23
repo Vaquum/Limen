@@ -1,7 +1,6 @@
 Here is a few guidelines to ensure that our tests are as readable and maintainable as possible
 
 - Keep comments to minimum
-- Keep printouts to minimum
 - Make sure that everything fails hard (if one thing fails all tests fail)
 - Always use the standard modular setup in `tests/run.py`
 - Add common utils to `tests/utils`
@@ -15,3 +14,5 @@ try:
 except Exception as e:
     print(f'    ❌ {some_test_function.__name__}: FAILED - {e}')
 ```
+
+**NOTE:** No other printouts.

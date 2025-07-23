@@ -9,7 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.models.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy_polars
+from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy_polars
 from loop.indicators.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
 

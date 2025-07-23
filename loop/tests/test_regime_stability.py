@@ -4,7 +4,7 @@ Location: test_regime_stability.py
 '''
 
 import loop
-from loop.models.lightgbm import regime_stability
+from loop.sfm.lightgbm import regime_stability
 from loop.data import HistoricalData
 
 # Test configuration constants
@@ -28,7 +28,7 @@ def test_regime_stability():
         )
         
         # Monkey patch the NUM_ROWS for testing
-        import loop.models.lightgbm.regime_stability as rs
+        import loop.sfm.lightgbm.regime_stability as rs
         original_num_rows = rs.NUM_ROWS
         rs.NUM_ROWS = TEST_NUM_ROWS
         

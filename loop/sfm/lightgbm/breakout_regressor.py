@@ -10,7 +10,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential
-from loop.models.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy
+from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy
 from loop.indicators.breakout_features import breakout_features
 from loop.utils.metrics import continuous_metrics
 
