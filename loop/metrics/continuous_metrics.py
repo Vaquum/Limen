@@ -21,7 +21,7 @@ def continuous_metrics(data, preds):
     bias = np.mean(preds - data['y_test'])
     
     round_results = {'mae': round(mean_absolute_error(data['y_test'], preds), 3),
-                     'rmse': round(np.sqrt(mean_squared_error(data['y_test'], preds, squared=False)), 3),
+                     'rmse': round(mean_squared_error(data['y_test'], preds, squared=False), 3),
                      'r2': round(r2_score(data['y_test'], preds), 3),
                      'bias': round(bias, 3),
                      'mape': round(np.mean(np.abs((data['y_test'] - preds) / data['y_test'])) * 100, 3)}
