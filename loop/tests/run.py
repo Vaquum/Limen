@@ -87,12 +87,12 @@ try:
     outcome_df = outcome_df(data, ['solver', 'feature_to_drop', 'penalty'], type='categorical')
     corr_df = corr_df(outcome_df)
 
-
     tests = [(sfm.random, get_klines_data, True),
              (sfm.xgboost, get_klines_data, False),
              (sfm.lightgbm_reference, get_trades_data, False),
              (sfm.logreg_reference, get_klines_data, True),
-             (sfm.logreg.regime_multiclass, get_klines_data, False)]
+             (sfm.logreg.regime_multiclass, get_klines_data, True),
+             (sfm.logreg.breakout_regressor_ridge, get_klines_data, True)]
 
     for i, test in enumerate(tests, 1):
         print(f'\n  B2.{i} Running {test[0].__name__} with {test[1].__name__}')
