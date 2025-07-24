@@ -1,59 +1,66 @@
-'''
-SFM Label Model for Breakout Regime Classification using Logistic Regression
-'''
+# General Guidelines
+# - Keep comments to minimum in SFMs
+# - No docstrings for SFMs
+# - Constants all capital
+# - All other variables lowercase
+
+# Start the SFM with a title wrapped in single quotes
+'SFM Label Model for Breakout Regime Classification using Logistic Regression'
+
+# Import whole 3rd-party libraries
 import numpy as np
 import polars as pl
+
+# Import parts of 3rd-party libraries (leave empty line above)
 from sklearn.linear_model import LogisticRegression
 from datetime import timedelta
 
-from loop.utils.splits import split_sequential
-from loop.sfm.lightgbm.utils.regime_multiclass import (
-    build_sample_dataset_for_regime_multiclass,
-    add_features_to_regime_multiclass_dataset
-)
+# Import parts of our own libraries (leave empty line above)
+from loop.utils.splits import split_sequential, split_data_to_prep_output
+from loop.sfm.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
+from loop.sfm.lightgbm.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.metrics.multiclass_metrics import multiclass_metrics
 
-# Configuration constants (same as LightGBM version)
+# Add configuration constants (leave empty line above)
 BREAKOUT_PERCENTAGE = 5
 LONG_COL = f'long_0_0{BREAKOUT_PERCENTAGE}'
 SHORT_COL = f'short_0_0{BREAKOUT_PERCENTAGE}'
 NUM_ROWS = 10000
 TARGET_COLUMN = 'average_price'
-EMA_SPAN = 6  # 6 x (12 x 2h kline)
-INTERVAL_SEC = 7200  # 2 hour intervals
-LOOKAHEAD_HOURS = 24  # 24 hour lookahead
-LOOKBACK_BARS = 12  # look-back bars (12×2h = 1 day)
-LEAKAGE_SHIFT = 12  # shift to prevent leakage (12×2h = 1 day)
+EMA_SPAN = 6
+INTERVAL_SEC = 7200
+LOOKAHEAD_HOURS = 24
+LOOKBACK_BARS = 12
+LEAKAGE_SHIFT = 12 
 TRAIN_SPLIT = 5
 VAL_SPLIT = 3
 TEST_SPLIT = 2
-CONFIDENCE_THRESHOLD = 0.40  # Minimum confidence to make a prediction (otherwise classify as flat)
-
-# All breakout % thresholds we track
+CONFIDENCE_THRESHOLD = 0.40
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
+# Add sfm.params function (leave two empty lines above)
 def params():
-    '''Return hyperparameter search space for Logistic Regression.'''
+
+    # Leave one empty line above
     p = {
-        # Logistic Regression specific parameters
         'penalty': ['l1', 'l2', 'elasticnet'],
         'C': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
         'solver': ['lbfgs', 'liblinear', 'newton-cg', 'sag', 'saga'],
         'max_iter': [100, 200, 500, 1000, 2000],
         'tol': [0.0001, 0.001, 0.01, 0.1],
         'class_weight': [None, 'balanced'],
-        'l1_ratio': [0.15, 0.5, 0.85],  # Only used when penalty='elasticnet'
-        'multi_class': ['ovr', 'multinomial'],  # ovr = one-vs-rest, multinomial = softmax
+        'l1_ratio': [0.15, 0.5, 0.85],
+        'multi_class': ['ovr', 'multinomial'],
         'fit_intercept': [True],
         'random_state': [42],
     }
     return p
 
-
+# Add sfm.prep function (leave two empty lines above)
 def prep(data):
-    '''Prepare data for training - follows template signature.'''
-    # Random sequential sample (same as LightGBM version)
+
+    # Leave one empty line above
     df = build_sample_dataset_for_regime_multiclass(
         data,
         datetime_col='datetime',
@@ -74,79 +81,73 @@ def prep(data):
         short_col=SHORT_COL,
     )
 
-    # Feature selection - exclude leak columns and target
+    # This is an example for SFM where column names can change for permutations 
     LEAK_PREFIXES = ('long_0_', 'short_0_')
-    X_cols = [
+    cols = [
         c for c in df.columns
         if not c.startswith(LEAK_PREFIXES)
            and c not in ('datetime', 'regime')
     ]
 
-    train, val, test = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
+    df = df.select(cols)
 
-    # Convert to numpy arrays for sklearn
-    x_train = train.select(X_cols).to_numpy()
-    y_train = train.select('regime').to_numpy().ravel()
-    x_val = val.select(X_cols).to_numpy()
+    # Always use split_sequential for data splitting
+    split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
+    
+    # Always use split_data_to_prep_output for getting the standard data_dict
+    data_dict = split_data_to_prep_output(split_data, cols)
+
+    '''
+    x_train = train.select(cols).to_numpy()
+    y_train = train.select.to_numpy().ravel()
+    x_val = val.select(cols).to_numpy()
     y_val = val.select('regime').to_numpy().ravel()
-    x_test = test.select(X_cols).to_numpy()
-    y_test = test.select('regime').to_numpy().ravel()
+    x_test = test.select(cols).to_numpy()
+    y_test = test.to_numpy().ravel()
 
-    # Create Polars DataFrames for scaling
-    x_train_df = pl.DataFrame(x_train, schema=X_cols)
-    x_val_df = pl.DataFrame(x_val, schema=X_cols)
-    x_test_df = pl.DataFrame(x_test, schema=X_cols)
+    x_train_df = pl.DataFrame(x_train, schema=cols)
+    x_val_df = pl.DataFrame(x_val, schema=cols)
+    x_test_df = pl.DataFrame(x_test, schema=cols)
 
-    # Scale features using LogRegTransform
-    scaler = LogRegTransform(x_train_df)
+    
     x_train_scaled = scaler.transform(x_train_df).to_numpy()
     x_val_scaled = scaler.transform(x_val_df).to_numpy()
     x_test_scaled = scaler.transform(x_test_df).to_numpy()
 
-    return {
-        'x_train': x_train_scaled,
-        'x_val': x_val_scaled,
-        'x_test': x_test_scaled,
-        'y_train': y_train,
-        'y_val': y_val,
-        'y_test': y_test,
-        '_scaler': scaler,
-        '_feature_names': X_cols,
-    }
+    '''
+    # 
+    scaler = LogRegTransform(data_dict['x_train'])
+    for col in data_dict.keys():
+        if col.startswith('x_'):
+            data_dict[col] = scaler.transform(data_dict[col])
 
+    data_dict['_scaler'] = scaler
+    data_dict['_feature_names'] = cols
 
+    return data_dict
+
+# Add sfm.model function (leave two empty lines above)
 def model(data, round_params):
-    '''Train Logistic Regression multiclass model and evaluate.'''
-    # Validate all classes present in splits
-    for split_name, y_data in [('train', data['y_train']),
-                               ('val', data['y_val']),
-                               ('test', data['y_test'])]:
-        if len(np.unique(y_data)) < 3:
-            raise ValueError(f'{split_name} split missing one of the classes 0/1/2')
-
-    # Handle solver compatibility
-    params = round_params.copy()
     
-    # Solver compatibility checks
+    params = round_params.copy()
+
     if params['solver'] == 'liblinear':
-        params['multi_class'] = 'ovr'  # liblinear only supports ovr
+        params['multi_class'] = 'ovr'
         if params['penalty'] == 'elasticnet':
-            params['penalty'] = 'l2'  # liblinear doesn't support elasticnet
+            params['penalty'] = 'l2'
     
     if params['penalty'] == 'elasticnet' and params['solver'] not in ['saga']:
-        params['solver'] = 'saga'  # Only saga supports elasticnet
+        params['solver'] = 'saga'
     
     if params['penalty'] == 'l1' and params['solver'] not in ['liblinear', 'saga']:
-        params['solver'] = 'saga'  # Use saga for l1
+        params['solver'] = 'saga'
     
     if params['multi_class'] == 'multinomial' and params['solver'] == 'liblinear':
-        params['solver'] = 'lbfgs'  # liblinear doesn't support multinomial
+        params['solver'] = 'lbfgs'
     
-    # Remove l1_ratio if not using elasticnet
     if params['penalty'] != 'elasticnet':
         params.pop('l1_ratio', None)
     
-    # Create and train the model
     clf = LogisticRegression(
         penalty=params['penalty'],
         C=params['C'],
@@ -159,23 +160,18 @@ def model(data, round_params):
         random_state=params['random_state'],
         l1_ratio=params.get('l1_ratio'),
         verbose=0,
-        n_jobs=-1  # Use all cores
+        n_jobs=-1
     )
     
-    # Train the model
     clf.fit(data['x_train'], data['y_train'])
     
-    # Get prediction probabilities
-    proba = clf.predict_proba(data['x_test'])
+    prediction_probs = clf.predict_proba(data['x_test'])
     
-    # Get predicted classes and confidence
-    conf = proba.max(axis=1)
-    regime = proba.argmax(axis=1)
+    preds = prediction_probs.argmax(axis=1)
+    probs = prediction_probs.max(axis=1)
     
-    # Confidence gate: If confidence is below threshold, classify as flat (regime 0)
-    # This helps reduce false positives and focuses on high-confidence predictions
-    regime[conf < CONFIDENCE_THRESHOLD] = 0
+    preds[probs < CONFIDENCE_THRESHOLD] = 0
     
-    round_results = multiclass_metrics(data, regime, proba)
+    round_results = multiclass_metrics(data, preds, probs)
     
     return round_results
