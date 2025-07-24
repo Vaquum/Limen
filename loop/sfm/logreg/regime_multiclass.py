@@ -58,7 +58,7 @@ def params():
     return p
 
 # Add sfm.prep function (leave two empty lines above)
-def prep(data):
+def prep(data, round_params):
 
     # Leave one empty line above
     df = build_sample_dataset_for_regime_multiclass(
