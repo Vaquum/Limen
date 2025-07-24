@@ -61,7 +61,7 @@ def prep(data):
         short_target_col=BREAKOUT_SHORT_COL,
     )
 
-    df_feat = breakout_features(
+    df = breakout_features(
         df,
         long_col=BREAKOUT_LONG_COL,
         short_col=BREAKOUT_SHORT_COL,
@@ -75,9 +75,8 @@ def prep(data):
     lag_indices = range(PREDICTION_HORIZON, PREDICTION_HORIZON + LOOKBACK_BARS)
     lag_cols = [f"long_t-{i}" for i in lag_indices] + \
                [f"short_t-{i}" for i in lag_indices]
-    extra_cols = df_feat.columns
-    feat_cols = list(set(lag_cols + extra_cols))
-    cols = feat_cols[:data_dict['x_train'].shape[1]]
+    extra_cols = df.columns
+    cols = list(set(lag_cols + extra_cols))
 
     data_dict = split_data_to_prep_output(split_data, cols)
 
@@ -88,6 +87,8 @@ def prep(data):
 
     data_dict['_scaler'] = scaler
     data_dict['_feature_names'] = cols
+
+    return data_dict
 
 
 def model(data, round_params):

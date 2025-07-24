@@ -58,7 +58,7 @@ def params():
     return p
 
 # Add sfm.prep function (leave two empty lines above)
-def prep(data, round_params):
+def prep(data):
 
     # Leave one empty line above
     df = build_sample_dataset_for_regime_multiclass(
@@ -86,7 +86,7 @@ def prep(data, round_params):
     cols = [
         c for c in df.columns
         if not c.startswith(LEAK_PREFIXES)
-           and c not in ('datetime', 'regime')
+           and c not in ('datetime')
     ]
 
     df = df.select(cols)
@@ -155,6 +155,6 @@ def model(data, round_params):
     
     preds[probs < CONFIDENCE_THRESHOLD] = 0
     
-    round_results = multiclass_metrics(data, preds, probs)
+    round_results = multiclass_metrics(data, preds, prediction_probs)
     
     return round_results

@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
 
@@ -41,6 +42,7 @@ for test in tests:
     except Exception as e:
         print(f'    ❌ {test.__name__}: FAILED - {e}')
         cleanup_csv_files()
+        traceback.print_exc()
         sys.exit(1)
 
 cleanup_csv_files()
