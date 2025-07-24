@@ -1,47 +1,35 @@
-'''
-SFM Label Model for Breakout Regime Classification
-'''
+'SFM Label Model for Breakout Regime Classification'
+
 import numpy as np
 import polars as pl
 import lightgbm as lgb
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score
-)
+
 from datetime import timedelta
 
-from loop.utils.splits import split_sequential
-from loop.metrics.safe_ovr_auc import safe_ovr_auc
-from loop.sfm.lightgbm.utils.regime_multiclass import (
-    build_sample_dataset_for_regime_multiclass,
-    add_features_to_regime_multiclass_dataset
-)
+from loop.utils.splits import split_sequential, split_data_to_prep_output
+from loop.sfm.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
+from loop.sfm.lightgbm.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
 
 from loop.metrics.multiclass_metrics import multiclass_metrics
 
-# Configuration constants
 PERCENTAGE = 5
 LONG_COL = f'long_0_0{PERCENTAGE}'
 SHORT_COL = f'short_0_0{PERCENTAGE}'
 NUM_ROWS = 10000
 TARGET_COLUMN = 'average_price'
-EMA_SPAN = 6  # 6 x (12 x 2h kline)
-INTERVAL_SEC = 7200  # 2 hour intervals
-LOOKAHEAD_HOURS = 24  # 24 hour lookahead
-LOOKBACK_BARS = 12  # look-back bars (12×2h = 1 day)
-LEAKAGE_SHIFT = 12  # shift to prevent leakage (12×2h = 1 day)
+EMA_SPAN = 6
+INTERVAL_SEC = 7200
+LOOKAHEAD_HOURS = 24
+LOOKBACK_BARS = 12
+LEAKAGE_SHIFT = 12
 TRAIN_SPLIT = 5
 VAL_SPLIT = 3
 TEST_SPLIT = 2
-CONFIDENCE_THRESHOLD = 0.40  # Minimum confidence to make a prediction (otherwise classify as flat)
-
-# All breakout % thresholds we track
+CONFIDENCE_THRESHOLD = 0.40
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 def params():
-    '''Return hyperparameter search space.'''
+
     p = {
         'objective': ['multiclass'],
         'metric': ['multi_logloss'],
@@ -64,8 +52,7 @@ def params():
 
 
 def prep(data):
-    '''Prepare data for training - follows template signature.'''
-    # Random sequential sample
+
     df = build_sample_dataset_for_regime_multiclass(
         data,
         datetime_col='datetime',
@@ -79,6 +66,7 @@ def prep(data):
         leakage_shift_bars=LEAKAGE_SHIFT,
         random_slice_size=NUM_ROWS,
     )
+    
     df = add_features_to_regime_multiclass_dataset(
         df,
         lookback_bars=LOOKBACK_BARS,
@@ -86,56 +74,40 @@ def prep(data):
         short_col=SHORT_COL,
     )
 
-    # Feature selection - exclude leak columns and target
     LEAK_PREFIXES = ('long_0_', 'short_0_')
-    X_cols = [
+    cols = [
         c for c in df.columns
         if not c.startswith(LEAK_PREFIXES)
            and c not in ('datetime', 'regime')
     ]
 
-    train, val, test = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
+    df = df.with_columns([
+        pl.col(cols).cast(pl.Float32)
+    ])
 
-    train_pd = train.to_pandas()
-    val_pd = val.to_pandas()
-    test_pd = test.to_pandas()
+    cols += ['regime']
 
-    # Cast features to float32
-    for _df in (train_pd, val_pd, test_pd):
-        _df[X_cols] = _df[X_cols].astype('float32')
+    split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
+    
+    data_dict = split_data_to_prep_output(split_data, cols)
 
-    x_train, y_train = train_pd[X_cols], train_pd['regime']
-    x_val, y_val = val_pd[X_cols], val_pd['regime']
-    x_test, y_test = test_pd[X_cols], test_pd['regime']
+    data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'])
+    data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'], reference=data_dict['dtrain'])
 
-    dtrain = lgb.Dataset(x_train, label=y_train)
-    dval = lgb.Dataset(x_val, label=y_val, reference=dtrain)
-
-    return {
-        'dtrain': dtrain,
-        'dval': dval,
-        'train_X': x_train,
-        'val_X': x_val,
-        'test_X': x_test,
-        'train_y': y_train,
-        'val_y': y_val,
-        'test_y': y_test,
-    }
+    return data_dict
 
 
 def model(data, round_params):
-    '''Train LightGBM multiclass model and evaluate.'''
-    # Make LightGBM multiclass
+
     round_params = round_params.copy()
     round_params.update({
-        'num_class': 3,  # 0 = flat, 1 = bullish, 2 = bearish
+        'num_class': 3,
         'verbose': -1,
     })
 
-    # Validate all classes present in splits
-    for split_name, y_data in [('train', data['train_y']),
-                               ('val', data['val_y']),
-                               ('test', data['test_y'])]:
+    for split_name, y_data in [('train', data['y_train']),
+                               ('val', data['y_val']),
+                               ('test', data['y_test'])]:
         if len(np.unique(y_data)) < 3:
             raise ValueError(f'{split_name} split missing one of the classes 0/1/2')
 
@@ -148,23 +120,19 @@ def model(data, round_params):
         callbacks=[
             lgb.early_stopping(round_params['stopping_round'], verbose=False),
             lgb.log_evaluation(round_params['logging_step'])
-        ]
-    )
+        ])
 
-    proba = model.predict(data['test_X'], num_iteration=model.best_iteration)
+    prediction_probs = model.predict(data['x_test'], num_iteration=model.best_iteration)
 
-    if proba.ndim == 1:  # no axis-1
-        conf = proba  # already 1-D
-        regime = (proba >= round_params['predict_probability_cutoff']).astype(int)
-    else:  # proper 3-class probs
-        conf = proba.max(axis=1)
-        regime = proba.argmax(axis=1)
+    if prediction_probs.ndim == 1:
+        probs = prediction_probs
+        preds = (prediction_probs >= round_params['predict_probability_cutoff']).astype(int)
+    else:
+        probs = prediction_probs.max(axis=1)
+        preds = prediction_probs.argmax(axis=1)
 
-    # Confidence gate (works for both shapes)
-    # If confidence is below threshold, classify as flat (regime 0)
-    # This helps reduce false positives and focuses on high-confidence predictions
-    regime[conf < CONFIDENCE_THRESHOLD] = 0
+    preds[probs < CONFIDENCE_THRESHOLD] = 0
 
-    round_results = multiclass_metrics(data, regime, proba)
+    round_results = multiclass_metrics(data, preds, probs)
 
     return round_results
