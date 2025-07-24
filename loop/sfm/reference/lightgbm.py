@@ -6,7 +6,7 @@ from lightgbm import early_stopping, log_evaluation
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score
 
 from loop.utils.slice_time_series import slice_time_series
-from loop.utils.split_sequential import split_sequential
+from loop.utils.splits import split_sequential
 from loop.utils.add_breakout_ema import add_breakout_ema
 from loop.utils.create_vectorized_sliding_window import create_vectorized_sliding_window
 
