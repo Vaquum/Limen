@@ -97,30 +97,13 @@ def prep(data, round_params):
     # Always use split_data_to_prep_output for getting the standard data_dict
     data_dict = split_data_to_prep_output(split_data, cols)
 
-    '''
-    x_train = train.select(cols).to_numpy()
-    y_train = train.select.to_numpy().ravel()
-    x_val = val.select(cols).to_numpy()
-    y_val = val.select('regime').to_numpy().ravel()
-    x_test = test.select(cols).to_numpy()
-    y_test = test.to_numpy().ravel()
-
-    x_train_df = pl.DataFrame(x_train, schema=cols)
-    x_val_df = pl.DataFrame(x_val, schema=cols)
-    x_test_df = pl.DataFrame(x_test, schema=cols)
-
-    
-    x_train_scaled = scaler.transform(x_train_df).to_numpy()
-    x_val_scaled = scaler.transform(x_val_df).to_numpy()
-    x_test_scaled = scaler.transform(x_test_df).to_numpy()
-
-    '''
-    # 
+    # Always follow this pattern for handling scaling, just replace the scaler class
     scaler = LogRegTransform(data_dict['x_train'])
     for col in data_dict.keys():
         if col.startswith('x_'):
             data_dict[col] = scaler.transform(data_dict[col])
 
+    # Remember to add the scaler to data_dict for descaling later
     data_dict['_scaler'] = scaler
     data_dict['_feature_names'] = cols
 
