@@ -1,46 +1,37 @@
-'''
-SFM Label Model for Breakout regressor
-'''
+'SFM Label Model for Breakout regressor'
 
-import loop
-import polars as pl
 import lightgbm as lgb
-from lightgbm import early_stopping, log_evaluation
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from datetime import timedelta
 
-from loop.utils.splits import split_sequential
+from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor, extract_xy
 from loop.indicators.breakout_features import breakout_features
 from loop.metrics.continuous_metrics import continuous_metrics
 
-
-# Configuration constants
-INTERVAL_SEC = 7200  # 2 hour intervals
+INTERVAL_SEC = 7200
 DATETIME_COL = 'datetime'
 NUM_PERMUTATIONS = 48
 NUM_ROWS = 15000
-PREDICTION_HORIZON = 12  # number of 2h bars to look back → e.g. 36 ≙ 3 days
+PREDICTION_HORIZON = 12
 PRICE_COLUMN='average_price'
-EMA_SPAN = 6  # 6 x (12 x 2h kline)
-LOOKAHEAD_HOURS = 24  # 24 hour lookahead
-LOOKBACK_BARS = 12  # look-back bars (12×2h = 1 day)
+EMA_SPAN = 6
+LOOKAHEAD_HOURS = 24
+LOOKBACK_BARS = 12
 TRAIN_SPLIT = 5
 VAL_SPLIT = 3
 TEST_SPLIT = 2
-CONFIDENCE_THRESHOLD = 0.40  # Minimum confidence to make a prediction (otherwise classify as flat)
+CONFIDENCE_THRESHOLD = 0.40
 LONG_COL_PREFIX = 'long_0_'
 SHORT_COL_PREFIX = 'short_0_'
 BREAKOUT_COL_PREFIX = 'breakout'
 BREAKOUT_LONG_COL= f"{BREAKOUT_COL_PREFIX}_long"
 BREAKOUT_SHORT_COL=f"{BREAKOUT_COL_PREFIX}_short"
-TARGET = BREAKOUT_LONG_COL # or BREAKOUT_SHORT_COL
+TARGET = BREAKOUT_LONG_COL
 
-# All breakout % thresholds we track
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 def params():
-    '''Return hyperparameter search space.'''
+
     p = {
         'objective': ['regression'],
         'metric': ['mae'],
@@ -58,9 +49,12 @@ def params():
         'stopping_round': [100],
         'logging_step':[100],
     }
+
     return p
 
+
 def prep(data):
+
     df = build_sample_dataset_for_breakout_regressor(
         data,
         datetime_col=DATETIME_COL,
@@ -77,8 +71,7 @@ def prep(data):
         short_target_col=BREAKOUT_SHORT_COL,
     )
 
-    # Generate full lagged feature DataFrame
-    df_feat = breakout_features(
+    df = breakout_features(
         df,
         long_col=BREAKOUT_LONG_COL,
         short_col=BREAKOUT_SHORT_COL,
@@ -87,49 +80,25 @@ def prep(data):
         target=TARGET
     )
 
-    # Split into train, validate, test dataset
-    train, val, test = split_sequential(df_feat, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
-    dt_test = test[DATETIME_COL].to_list()
+    split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
 
-    #3 x/y setup
-    x_train, y_train = extract_xy(train, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
-    x_val, y_val = extract_xy(val, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
-    x_test, y_test = extract_xy(test, TARGET, PREDICTION_HORIZON, LOOKBACK_BARS)
-
-    # debug debug debug
-    # build the exact same feat_cols as extract_xy (INCLUDING extra features)
     lag_indices = range(PREDICTION_HORIZON, PREDICTION_HORIZON + LOOKBACK_BARS)
 
-    # lagged flag features
     lag_cols = [f"long_t-{i}" for i in lag_indices] + \
                [f"short_t-{i}" for i in lag_indices]
 
-    # additional features from build_lagged_flags
-    # extra_cols = ['long_roll_mean','long_roll_std', 'short_roll_mean', 'short_roll_std', 'roc_long_1', 'roc_short_1']
-    extra_cols = df_feat.columns
-    feat_cols = list(set(lag_cols + extra_cols))
+    extra_cols = df.columns
+    cols = list(set(lag_cols + extra_cols))
 
-    assert x_train.shape[1] == len(feat_cols), \
-        f"x_train has {x_train.shape[1]} cols but feat_cols is {len(feat_cols)}"
+    data_dict = split_data_to_prep_output(split_data, cols)
 
-    # Extract datetime for training rows (after dropping nulls)
-    dt_train = train[DATETIME_COL].to_list()
+    assert data_dict['x_train'].shape[1] == len(cols) - 1, \
+        f"x_train has {data_dict['x_train'].shape[1]} cols but feat_cols is {len(cols) - 1}"
 
-    # 4. LightGBM
-    dtrain = lgb.Dataset(x_train, label=y_train)
-    dval = lgb.Dataset(x_val, label=y_val, reference=dtrain)
+    data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'].to_numpy())
+    data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'].to_numpy(), reference=data_dict['dtrain'])
 
-    return {
-        'dtrain':  dtrain,
-        'dval':    dval,
-        'x_train': x_train,
-        'x_val':   x_val,
-        'x_test':  x_test,
-        'y_train': y_train,
-        'y_val':   y_val,
-        'y_test':  y_test,
-        'dt_test': dt_test
-    }
+    return data_dict
 
 def model(data, round_params):
 
@@ -147,7 +116,6 @@ def model(data, round_params):
         callbacks=[lgb.early_stopping(round_params['stopping_round'], verbose=False),
                    lgb.log_evaluation(round_params['logging_step'])])
 
-    # Predict on test set
     y_pred = model.predict(data['x_test'])
 
     round_results = continuous_metrics(data, y_pred)

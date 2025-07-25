@@ -19,6 +19,7 @@ def test_sfm():
         (sfm.logreg.breakout_regressor_ridge, get_klines_data, False),
         (sfm.reference.lightgbm, get_trades_data, False),
         (sfm.lightgbm.regime_multiclass, get_klines_data, False),
+        (sfm.lightgbm.breakout_regressor, get_klines_data, False),
         ]
 
     for test in tests:
