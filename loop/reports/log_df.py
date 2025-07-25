@@ -14,7 +14,7 @@ def read_from_file(file_path):
         file_path (str): path to the file
 
     Returns:
-        pd.DataFrame: dataframe
+        pl.DataFrame: dataframe
     '''
     with open(file_path, 'r') as f:
 
