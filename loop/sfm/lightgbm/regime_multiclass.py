@@ -91,8 +91,8 @@ def prep(data):
     
     data_dict = split_data_to_prep_output(split_data, cols)
 
-    data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'])
-    data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'], reference=data_dict['dtrain'])
+    data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'].to_numpy())
+    data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'].to_numpy(), reference=data_dict['dtrain'])
 
     return data_dict
 
@@ -133,6 +133,6 @@ def model(data, round_params):
 
     preds[probs < CONFIDENCE_THRESHOLD] = 0
 
-    round_results = multiclass_metrics(data, preds, probs)
+    round_results = multiclass_metrics(data, preds, prediction_probs)
 
     return round_results
