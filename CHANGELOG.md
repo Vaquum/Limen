@@ -135,5 +135,5 @@
 - Make tests fail hard
 - Remove all printouts (except PASSED/FAILED)
 
-# v1.2.1 on 25th of July, 2025
+# v1.3.1 on 25th of July, 2025
 - Fix CSV reading issue where string values had leading spaces in `reports.log_df.read_from_file`

@@ -34,7 +34,8 @@ def read_from_file(file_path):
     # Trim leading/trailing spaces from all string values in the dataframe
     for col in data.columns:
         if data[col].dtype == object:
-            data[col] = data[col].astype(str).str.strip()
+            mask = data[col].notnull()
+            data[col] = data[col].mask(mask, data[col].astype(str).str.strip())
 
     return data
 
