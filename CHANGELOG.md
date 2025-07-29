@@ -36,7 +36,7 @@
 - Generalize `reports.log_df.corr_df` and add several improvements to it
 - Fix the issue in `utils.get_klines_data` which caused open and close being always same
 
-## v0.8.4 on 5th of June, 2025 
+## v0.8.4 on 5th of June, 2025
 - Make `uel` move `round_params['_scaler']` to `uel.scaler` for post run descaling
 - Added `fpr`, `positive_rate`, and `negative_rate` to `utils.metrics.metrics_for_classification`
 - Removed `f1score` from `utils.metrics.metrics_for_classification`
@@ -144,3 +144,7 @@
 - Refactor test suite to fully modular
 - Add all of the above into `tests.test_sfm`
 - Add guideline/template comments in `logreg.regime_multiclass`
+
+# v1.3.1 on 25th of July, 2025
+- Fix CSV reading issue where string values had leading spaces in `reports.log_df.read_from_file`
+
