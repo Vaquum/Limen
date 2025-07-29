@@ -134,3 +134,13 @@
 - Refactor the test suite
 - Make tests fail hard
 - Remove all printouts (except PASSED/FAILED)
+
+# v1.3.0 on 25th of July, 2025
+- Update `sfm.reference.lightgbm` to data scaling and output standard
+- Update `sfm.lightgbm.breakout_regressor` to data scaling and output standard
+- Update `sfm.lightgbm.regime_multiclass` to data scaling and output standard
+- Update `sfm.logreg.breakout_regressor_ridge` to data scaling and output standard
+- Update `sfm.logreg.regime_multiclass` to data scaling and output standard
+- Refactor test suite to fully modular
+- Add all of the above into `tests.test_sfm`
+- Add guideline/template comments in `logreg.regime_multiclass`

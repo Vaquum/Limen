@@ -12,18 +12,13 @@ def params():
             'shift': [-1, -2, -3]}
 
 
-def prep(data, round_params=None):
+def prep(data, round_params):
 
-    data = data.with_columns([
-        (
-            ((pl.col("high") - pl.col("low")) / pl.col("open") * 100) 
-            .gt(round_params['breakout_threshold'])
-        ).cast(pl.UInt8)
-         .shift(round_params['shift'])
-         .alias("high_max_delta")
-    ]).drop_nulls("high_max_delta")
+    data = data.with_columns(
+        pl.Series("outcome", np.random.randint(0, 2, size=data.height))
+    )
 
-    cols = ['high', 'low', 'close', 'volume', 'maker_ratio', 'no_of_trades', 'high_max_delta']
+    cols = ['high', 'low', 'close', 'volume', 'maker_ratio', 'no_of_trades', 'outcome']
     
     split_data = split_sequential(data, (3, 1, 1))
 
@@ -35,5 +30,6 @@ def model(data, round_params):
     weights = [round_params['random_weights'], 1 - round_params['random_weights']]
 
     preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
+    probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
 
-    return binary_metrics(data, preds, preds)
+    return binary_metrics(data, preds, probs)
