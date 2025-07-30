@@ -6,25 +6,23 @@ on:
 
 jobs:
   run-tests:
-    if: false
+    name: Run tests on remote server
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      # 3) install your package _and_ any requirements
-      - name: Install loop package (and deps)
+      - name: Set up SSH
         run: |
-          pip install -e .
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      # 4) run your tests via -m so Python sees the installed package
-      - name: Run loop tests
-        run: python -m loop.tests.run
+      - name: Run tests remotely
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd /home/github/loop &&
+            git pull &&
+            pip install -e . &&
+            pip install -r requirements.txt &&
+            python -m loop.tests.run
+          "
