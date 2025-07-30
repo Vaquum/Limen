@@ -23,9 +23,8 @@ jobs:
 
       - name: Create SSH tunnel
         run: |
-          nohup ssh -o StrictHostKeyChecking=no \
-            -L 12345:localhost:REMOTE_PORT \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -N &
+          nohup ssh -N -L 8123:127.0.0.1:8123 \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} &
 
       - name: Set up Python
         uses: actions/setup-python@v4
