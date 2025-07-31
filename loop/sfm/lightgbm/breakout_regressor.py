@@ -80,15 +80,12 @@ def prep(data):
         target=TARGET
     )
 
+    feature_cols = [col for col in df.columns if col != TARGET and not col.startswith('breakout_')]
+    df = df.select(feature_cols + [TARGET])
+
     split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
 
-    lag_indices = range(PREDICTION_HORIZON, PREDICTION_HORIZON + LOOKBACK_BARS)
-
-    lag_cols = [f"long_t-{i}" for i in lag_indices] + \
-               [f"short_t-{i}" for i in lag_indices]
-
-    extra_cols = df.columns
-    cols = list(set(lag_cols + extra_cols))
+    cols = df.columns
 
     data_dict = split_data_to_prep_output(split_data, cols)
 
