@@ -29,6 +29,7 @@ def test_sfm():
             data = pl.read_csv('datasets/klines_2h_2020_2025.csv').with_columns(
                 pl.col('datetime').str.to_datetime()
             )
+            print("data loaded")
             uel = loop.UniversalExperimentLoop(data=data,
                                                 single_file_model=test[0])
             uel.run(experiment_name=uuid.uuid4().hex[:8],
