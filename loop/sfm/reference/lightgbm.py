@@ -142,7 +142,10 @@ def prep(data):
 
 def model(data, round_params):
 
-    model = None
+    round_params = round_params.copy()
+    round_params.update({
+      'verbose': -1,
+    })
 
     pos_cnt = data['train_y'].sum()
     neg_cnt = len(data['train_y']) - pos_cnt
