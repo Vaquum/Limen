@@ -27,6 +27,7 @@ class UniversalExperimentLoop:
             random_search=True,
             maintain_details_in_params=False,
             context_params=None,
+            save_to_sqlite=False,
             params=None,
             prep=None,
             model=None):
@@ -46,12 +47,14 @@ class UniversalExperimentLoop:
             random_search (bool): Whether to use random search or not
             maintain_details_in_params (bool): Whether to maintain experiment details in params
             context_params (dict): The context parameters to use for the experiment
+            save_to_sqlite (bool): Whether to save the results to a SQLite database
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
         '''
 
-        self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
+        if save_to_sqlite is True:
+            self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
         if params is not None:
             self.params = params()
@@ -132,11 +135,12 @@ class UniversalExperimentLoop:
             else:
                 self.log_df = self.log_df.vstack(pl.DataFrame([round_results]))
 
-            # Handle writing to the database
-            self.log_df.to_pandas().tail(1).to_sql(experiment_name,
-                                                   self.conn,
-                                                   if_exists="append",
-                                                   index=False)
+            if save_to_sqlite is True:
+                # Handle writing to the database
+                self.log_df.to_pandas().tail(1).to_sql(experiment_name,
+                                                    self.conn,
+                                                    if_exists="append",
+                                                    index=False)
             # Handle writing to the file
             if i == 0:
                 header_colnames = ','.join(list(round_results.keys()))
@@ -147,4 +151,5 @@ class UniversalExperimentLoop:
             with open(experiment_name + '.csv', 'a') as f:
                 f.write(log_string)
 
-        self.conn.close()
+        if save_to_sqlite is True:
+            self.conn.close()
