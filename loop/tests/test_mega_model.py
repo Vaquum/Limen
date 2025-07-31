@@ -1,4 +1,3 @@
-import loop
 from loop.sfm import lightgbm
 import uuid
 import numpy as np
@@ -13,31 +12,25 @@ from loop.sfm.lightgbm.utils.mega_model_data_sampler import run_mega_model_exper
 def test_mega_model_with_live_labeling():
     """
     Custom test that combines:
-    1. Live data fetching + labeling (from SFM approach)
+    1. Read klines data from csv + labeling (from SFM approach)
     2. MegaModelDataSampler testing
     3. Reduced data size for fast testing
     """
 
     
-    # Step 1: Get historical data (reduced size for testing)
-    historical = loop.HistoricalData()
-    historical.get_historical_klines(
-        n_rows=200,  # Very small for fast testing
-        kline_size=7200,  # 2h klines like in SFM
-        start_date_limit='2024-01-01',
-        futures=True
+    df = pl.read_csv('/home/pro/projects/vaquum/Loop/datasets/klines_2h_2020_2025.csv')
+
+    # Filter to match test requirements
+    df_filtered = df.filter(
+        pl.col('datetime') >= '2024-01-01'  # Same date filter as API
     )
+
+    df_labeled = create_breakout_labels(df_filtered)
     
-    # Step 2: Convert to average price klines and add labeling
-    df_labeled = create_breakout_labels(historical.data)
-    
-    # Step 3: CONVERT TO POLARS - This is the key fix!
     if not hasattr(df_labeled, 'with_columns'):
         # It's pandas, convert to Polars
         df_labeled = pl.from_pandas(df_labeled)
     
-    # Step 4: Run mega model experiment with reduced sample size
-
     results = run_mega_model_experiment(
         df_orig=df_labeled,
         prep_func=prep_for_mega_model,
