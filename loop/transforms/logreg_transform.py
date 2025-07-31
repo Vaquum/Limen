@@ -21,6 +21,10 @@ SCALING_RULES = {
     'close_position': 'standard',
     'body_pct': 'standard',
     'gap_high': 'standard',
+    'open_liquidity':  'log_standard',
+    'high_liquidity':  'log_standard',
+    'low_liquidity':   'log_standard',
+    'close_liquidity': 'log_standard',
 }
 
 class LogRegTransform:

@@ -154,3 +154,9 @@
 - Add `n_permutations` as input argument to `utils.ParamSpace`
 - Make writing to sqlite optional in `uel.run` with `save_to_sqlite` having `False` as default
 - Disable `test_regime_stability`
+
+# v1.4.1 on 31st of July, 2025
+- Update `params` in `sfm.reference.logreg`
+- Remove redundant code from `model` in `sfm.reference.logreg`
+- Remove redundant logic/code from `prep` in `sfm.reference.logreg`
+- Refactor `sfm.reference.logreg` to work with standard data handling

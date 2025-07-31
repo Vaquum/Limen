@@ -5,48 +5,30 @@ from sklearn.linear_model import LogisticRegression
 from loop.metrics.binary_metrics import binary_metrics
 from loop.indicators import quantile_flag, wilder_rsi, atr, ppo, vwap, kline_imbalance, roc
 from loop.utils.splits import split_sequential, split_data_to_prep_output
-from loop.utils.generators import generate_parameter_range
 from loop.transforms.logreg_transform import LogRegTransform
-from loop.utils.scale_data_dict import scale_data_dict
 
 
 def params(): 
     
     return {
         # these are for data prep
-        'shift': [-1],
-        'q': [0.38, 0.39, 0.40, 0.41],
-        'train_size': [70, 80, 90],
-        'val_size': [20, 10, 1],
-        'test_size': [30, 20, 10],
-        'roc_period': [3, 6, 12, 24],
+        'shift': [-1, -2, -3, -4, -5],
+        'q': [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53],
+        'roc_period': [1, 4, 12, 24, 144],
         'penalty': ['l2'],
         # these are for the classifier
-        'class_weight': [0.5, 0.6, 0.7, 0.8, 0.9],
-        'C': [0.1, 0.5, 1, 2.5, 5],
-        'max_iter': generate_parameter_range(30, 150, 20, 3),
-        'solver': ['lbfgs', 'liblinear', 'sag'],
-        'tol': [0.005, 0.01, 0.05, 0.1],
-        
-        # this is for doing feature testing
-        'feature_to_drop': ['high',
-                            'low',
-                            'close',
-                            'volume',
-                            'maker_ratio',
-                            'no_of_trades',
-                            'atr',
-                            'ppo',
-                            'wilder_rsi',
-                            'vwap',
-                            'imbalance'],
+        'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
+        'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+        'max_iter': [30, 60, 90, 120, 180, 240],
+        'solver': ['lbfgs', 'newton-cg', 'liblinear', 'sag', 'newton-cholesky'],
+        'tol': [0.001, 0.01, 0.03, 0.1, 0.3],
     }
 
 
 def prep(data, round_params):
     
     # Calculate ROC and filter NaN values
-    data = roc(data, period=12).filter(~pl.col("roc").is_nan())
+    data = roc(data, period=round_params['roc_period']).filter(~pl.col("roc").is_nan())
     
     # Calculate other technical indicators
     data = atr(data)
@@ -55,13 +37,7 @@ def prep(data, round_params):
     data = vwap(data)
     data = kline_imbalance(data)
     
-    # Split data BEFORE calculating quantile flags to prevent data leakage
-    if 'train_size' not in round_params:
-        split_data = split_sequential(data, (8, 1, 2))
-    else:
-        split_data = split_sequential(data, (round_params['train_size'],
-                                             round_params['val_size'],
-                                             round_params['test_size']))
+    split_data = split_sequential(data, (8, 1, 2))
     
     # Calculate quantile flag on training data and get the cutoff
     split_data[0], train_cutoff = quantile_flag(
@@ -92,6 +68,10 @@ def prep(data, round_params):
             'low',
             'open',
             'close',
+            'mean',
+            'std',
+            'median',
+            'iqr',
             'volume',
             'maker_ratio',
             'no_of_trades',
@@ -101,10 +81,6 @@ def prep(data, round_params):
             'vwap',
             'imbalance',
             'quantile_flag']
-
-    if 'feature_to_drop' in round_params:
-    # TODO: Make every nth round skip this and keep all colls
-        cols = [col for col in cols if col != round_params['feature_to_drop']]
 
     # Create data dictionary from splits
     data_dict = split_data_to_prep_output(split_data, cols)
@@ -123,10 +99,6 @@ def prep(data, round_params):
 
 def model(data: dict, round_params):
 
-    if round_params['solver'] == 'sag':
-        if round_params['tol'] < 0.05:
-            round_params['tol'] = 0.05
-    
     clf = LogisticRegression(
         solver=round_params['solver'],
         penalty=round_params['penalty'],
