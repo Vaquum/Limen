@@ -78,6 +78,8 @@ class UniversalExperimentLoop:
             # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
 
+            print("round_params generated")
+
             # Add context parameters to round_params
             if context_params is not None:
                 round_params.update(context_params)
@@ -97,8 +99,12 @@ class UniversalExperimentLoop:
                 if i == 0:
                     data = self.prep(self.data)
 
+            print("data prepped")
+
             # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
+
+            print("round_results generated")
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:

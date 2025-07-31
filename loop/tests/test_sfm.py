@@ -24,7 +24,7 @@ def test_sfm():
         ]
 
     for test in tests:
-        
+        print(f"Starting test iteration for {test[0].__name__}")
         try:
             data = pl.read_csv('datasets/klines_2h_2020_2025.csv').with_columns(
                 pl.col('datetime').str.to_datetime()
