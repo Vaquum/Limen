@@ -25,12 +25,12 @@ def test_sfm():
     for test in tests:
         
         try:
+            print(f"About to call get_klines_data for {test[0].__name__}")
             uel = loop.UniversalExperimentLoop(data=test[1](),
                                                 single_file_model=test[0])
             uel.run(experiment_name=uuid.uuid4().hex[:8],
                     n_permutations=2,
                     prep_each_round=test[2])
-            print("hello")
             print(f'    ✅ {test[0].__name__}: PASSED')
         
         except Exception as e:
