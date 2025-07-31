@@ -151,5 +151,6 @@
 # v1.4.0 on 31st of July, 2025
 - Add tests to CI
 - Set `n_permutations` to `10000` in `uel.run` by default, and require an int as input
+- Add `n_permutations` as input argument to `utils.ParamSpace`
 - Make writing to sqlite optional in `uel.run` with `save_to_sqlite` having `False` as default
 - Disable `test_regime_stability`
