@@ -22,7 +22,7 @@ class UniversalExperimentLoop:
 
     def run(self,
             experiment_name,
-            n_permutations=None,
+            n_permutations=10000,
             prep_each_round=False,
             random_search=True,
             maintain_details_in_params=False,
@@ -71,11 +71,10 @@ class UniversalExperimentLoop:
             self.model = model
             print("model updated")
 
-        self.param_space = ParamSpace(params=self.params)
+        self.param_space = ParamSpace(params=self.params,
+                                      n_permutations=n_permutations)
+        
         print("param_space initialized")
-            
-        if n_permutations is None:
-            n_permutations = self.param_space.n_permutations
 
         for i in tqdm(range(n_permutations)):
 

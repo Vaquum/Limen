@@ -4,7 +4,7 @@ from itertools import product
 
 class ParamSpace:
     
-    def __init__(self, params):
+    def __init__(self, params, n_permutations):
 
         print("params", params)
         
@@ -12,8 +12,9 @@ class ParamSpace:
         keys = list(params)
         print("keys generated")
         combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
+        combos = random.sample(combos, k=n_permutations)
         print("combos generated")
-        self.df_params = pl.DataFrame(combos[:10])
+        self.df_params = pl.DataFrame(combos)
         print("df_params generated")
         self.n_permutations = self.df_params.height
 
