@@ -68,7 +68,7 @@ class HistoricalData:
             n_rows (int): Number of rows to be pulled
             kline_size (int): Size of the kline in seconds
             start_date_limit (str): The start date of the klines data
-            futures (bool): if the data is from futures.
+            futures (bool): If the data is from futures.
 
         Returns:
             self.data (pl.DataFrame)

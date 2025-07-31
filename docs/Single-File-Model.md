@@ -1,5 +1,11 @@
 # Single-File Model
 
+## Data
+
+A key point here is that all individual contirbutors work based on the same underlying data. We achieve this by always calling data from these provided endpoints. If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need. 
+
+## SFM Overview
+
 The Single-File Model (SFM) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/models`]('loop/models'). Once an SFM is added to the package, it becomes available to be used as input for `Loop.UniversalExperimentLoop`. 
 
 There are few things to note about an SFM: 
