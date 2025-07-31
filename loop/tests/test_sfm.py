@@ -2,7 +2,7 @@ import uuid
 import sys
 import loop
 import traceback
-import pandas as pd
+import polars as pl
 
 from loop import sfm
 
@@ -26,7 +26,9 @@ def test_sfm():
     for test in tests:
         
         try:
-            data = pd.read_csv('datasets/klines_2h_2020_2025.csv')
+            data = pl.read_csv('datasets/klines_2h_2020_2025.csv').with_columns(
+                pl.col('datetime').str.to_datetime()
+            )
             uel = loop.UniversalExperimentLoop(data=data,
                                                 single_file_model=test[0])
             uel.run(experiment_name=uuid.uuid4().hex[:8],
