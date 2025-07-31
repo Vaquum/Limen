@@ -21,12 +21,16 @@ class ParamSpace:
         else:
             row_no = 0
 
+        print("Starting to generate round_params")
         round_params = dict(zip(self.df_params.columns, self.df_params.row(row_no)))
+        print("round_params generated")
 
+        print("Starting to filter df_params")
         self.df_params = (
             self.df_params
               .with_row_index("__idx")
               .filter(pl.col("__idx") != row_no)
               .drop("__idx")
         )
+        print("df_params filtered")
         return round_params
