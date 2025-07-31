@@ -38,5 +38,7 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      - name: Run loop tests
-        run: python -m loop.tests.run
+      - name: Run loop tests (verbose)
+        run: |
+          set -x
+          python -u -m loop.tests.run
