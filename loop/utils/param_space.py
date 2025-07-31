@@ -6,9 +6,13 @@ class ParamSpace:
     
     def __init__(self, params):
         
+        print("Starting to initialize ParamSpace")
         keys = list(params)
+        print("keys generated")
         combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
+        print("combos generated")
         self.df_params = pl.DataFrame(combos)
+        print("df_params generated")
         self.n_permutations = self.df_params.height
 
     def generate(self, random_search=True):
