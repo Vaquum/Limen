@@ -13,7 +13,7 @@ class ParamSpace:
         print("keys generated")
         combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
         print("combos generated")
-        self.df_params = pl.DataFrame(combos)
+        self.df_params = pl.DataFrame(combos[:10])
         print("df_params generated")
         self.n_permutations = self.df_params.height
 
