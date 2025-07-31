@@ -160,3 +160,9 @@
 - Remove redundant code from `model` in `sfm.reference.logreg`
 - Remove redundant logic/code from `prep` in `sfm.reference.logreg`
 - Refactor `sfm.reference.logreg` to work with standard data handling
+
+# v1.4.2 on 1st of August, 2025
+- Fix dataframe column orders in `sfm.logreg.breakout_regressor_ridge` and `sfm.lightgbm.breakout_regressor`
+- Update  `sfm.lightgbm.breakout_regressor` and `sfm.lightgbm.regime_multiclass` to data scaling
+- Fix reference models verbosity configuration
+- Refactor `test_mega_model` to use CSV data instead of live data fetching.
