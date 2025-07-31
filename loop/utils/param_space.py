@@ -5,6 +5,8 @@ from itertools import product
 class ParamSpace:
     
     def __init__(self, params):
+
+        print("params", params)
         
         print("Starting to initialize ParamSpace")
         keys = list(params)
