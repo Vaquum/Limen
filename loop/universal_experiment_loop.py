@@ -94,12 +94,14 @@ class UniversalExperimentLoop:
             if prep_each_round is True:
                 data = self.prep(self.data, round_params=round_params)
 
+                print("data prepped")
+
             # Otherwise, only for the first round, prep data without round_params passed in
             else:
                 if i == 0:
                     data = self.prep(self.data)
 
-            print("data prepped")
+                print("data prepped")
 
             # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
