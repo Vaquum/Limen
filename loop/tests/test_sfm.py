@@ -2,6 +2,7 @@ import uuid
 import sys
 import loop
 import traceback
+import pandas as pd
 
 from loop import sfm
 
@@ -25,7 +26,7 @@ def test_sfm():
     for test in tests:
         
         try:
-            print(f"About to call get_klines_data for {test[0].__name__}")
+            print(pd.read_csv('datasets/klines_2h_2020_2025.csv'))
             uel = loop.UniversalExperimentLoop(data=test[1](),
                                                 single_file_model=test[0])
             uel.run(experiment_name=uuid.uuid4().hex[:8],
