@@ -4,10 +4,11 @@ from itertools import product
 
 class ParamSpace:
     
-    def __init__(self, params):
-        
+    def __init__(self, params, n_permutations):
+
         keys = list(params)
         combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
+        combos = random.sample(combos, k=n_permutations)
         self.df_params = pl.DataFrame(combos)
         self.n_permutations = self.df_params.height
 
@@ -29,4 +30,5 @@ class ParamSpace:
               .filter(pl.col("__idx") != row_no)
               .drop("__idx")
         )
+
         return round_params
