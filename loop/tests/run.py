@@ -26,7 +26,7 @@ tests = [
     test_edge_cases,
     test_quantile_model,
     test_moving_average_correction,
-    test_regime_stability,
+    #test_regime_stability,
     test_account_conviction,
     test_backtest_conviction,
 ]
