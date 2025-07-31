@@ -26,8 +26,8 @@ def test_sfm():
     for test in tests:
         
         try:
-            print(pd.read_csv('datasets/klines_2h_2020_2025.csv'))
-            uel = loop.UniversalExperimentLoop(data=test[1](),
+            data = pd.read_csv('datasets/klines_2h_2020_2025.csv')
+            uel = loop.UniversalExperimentLoop(data=data,
                                                 single_file_model=test[0])
             uel.run(experiment_name=uuid.uuid4().hex[:8],
                     n_permutations=2,
