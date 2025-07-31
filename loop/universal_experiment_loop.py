@@ -53,19 +53,26 @@ class UniversalExperimentLoop:
             model (function): The function to use to run the model
         '''
 
+        print("UniversalExperimentLoop initialized")
+
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
+            print("SQLite connection established")
 
         if params is not None:
             self.params = params()
+            print("params updated")
         
         if prep is not None:
             self.prep = prep
+            print("prep updated")
         
         if model is not None:
             self.model = model
+            print("model updated")
 
         self.param_space = ParamSpace(params=self.params)
+        print("param_space initialized")
             
         if n_permutations is None:
             n_permutations = self.param_space.n_permutations
