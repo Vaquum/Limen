@@ -30,6 +30,7 @@ def test_sfm():
             uel.run(experiment_name=uuid.uuid4().hex[:8],
                     n_permutations=2,
                     prep_each_round=test[2])
+            print("hello")
             print(f'    ✅ {test[0].__name__}: PASSED')
         
         except Exception as e:
