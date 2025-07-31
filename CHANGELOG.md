@@ -148,3 +148,8 @@
 # v1.3.1 on 25th of July, 2025
 - Fix CSV reading issue where string values had leading spaces in `reports.log_df.read_from_file`
 
+# v1.4.0 on 31st of July, 2025
+- Add tests to CI
+- Set `n_permutations` to `10000` in `uel.run` by default, and require an int as input
+- Make writing to sqlite optional in `uel.run` with `save_to_sqlite` having `False` as default
+- Disable `test_regime_stability`

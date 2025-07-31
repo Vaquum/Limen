@@ -53,29 +53,21 @@ class UniversalExperimentLoop:
             model (function): The function to use to run the model
         '''
 
-        print("UniversalExperimentLoop initialized")
-
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
-            print("SQLite connection established")
 
         if params is not None:
             self.params = params()
-            print("params updated")
         
         if prep is not None:
             self.prep = prep
-            print("prep updated")
         
         if model is not None:
             self.model = model
-            print("model updated")
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
         
-        print("param_space initialized")
-
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time            
@@ -83,8 +75,6 @@ class UniversalExperimentLoop:
 
             # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
-
-            print("round_params generated")
 
             # Add context parameters to round_params
             if context_params is not None:
@@ -100,19 +90,13 @@ class UniversalExperimentLoop:
             if prep_each_round is True:
                 data = self.prep(self.data, round_params=round_params)
 
-                print("data prepped")
-
             # Otherwise, only for the first round, prep data without round_params passed in
             else:
                 if i == 0:
                     data = self.prep(self.data)
 
-                print("data prepped")
-
             # Perform the model training and evaluation
             round_results = self.model(data=data, round_params=round_params)
-
-            print("round_results generated")
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
