@@ -7,7 +7,7 @@ import lightgbm as lgb
 from sklearn.metrics import accuracy_score
 from datetime import timedelta
 
-from loop.utils.splits import split_sequential
+from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.sfm.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
 from loop.sfm.lightgbm.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
 from loop.sfm.lightgbm.utils.regime_stability import add_stability_features
@@ -136,55 +136,45 @@ def prep(data):
         
     stability_features = [c for c in df.columns if any(pattern in c for pattern in stability_feature_patterns)]
     
-    train, val, test = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
-    
-    train_pd = train.to_pandas()
-    val_pd = val.to_pandas()
-    test_pd = test.to_pandas()
-    
-    for _df in (train_pd, val_pd, test_pd):
-        _df[all_features] = _df[all_features].astype('float32')
-        _df[stability_features] = _df[stability_features].astype('float32')
-    
-    x_train = train_pd[all_features]
-    y_train = train_pd['regime']
-    x_val = val_pd[all_features]
-    y_val = val_pd['regime']
-    x_test = test_pd[all_features]
-    y_test = test_pd['regime']
-    
-    dtrain = lgb.Dataset(x_train, label=y_train)
-    dval = lgb.Dataset(x_val, label=y_val, reference=dtrain)
-    
-    x_train_stability = train_pd[stability_features]
-    y_train_stability = train_pd['regime_persists']
-    x_val_stability = val_pd[stability_features]
-    y_val_stability = val_pd['regime_persists']
-    x_test_stability = test_pd[stability_features]
-    y_test_stability = test_pd['regime_persists']
-    
-    dtrain_stability = lgb.Dataset(x_train_stability, label=y_train_stability)
-    dval_stability = lgb.Dataset(x_val_stability, label=y_val_stability, reference=dtrain_stability)
-    
+    primary_model_cols = all_features + ['regime']
+    df_primary_model = df.select(primary_model_cols)
+    primary_model_split_data = split_sequential(
+        data=df_primary_model,
+        ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
+    )
+    primary_model_data_dict = split_data_to_prep_output(primary_model_split_data, primary_model_cols)
+
+    primary_model_data_dict['dtrain'] = lgb.Dataset(
+        primary_model_data_dict['x_train'],
+        label=primary_model_data_dict['y_train'].to_numpy()
+    )
+    primary_model_data_dict['dval'] = lgb.Dataset(
+        primary_model_data_dict['x_val'],
+        label=primary_model_data_dict['y_val'].to_numpy(),
+        reference=primary_model_data_dict['dtrain']
+    )
+
+    stability_model_cols = stability_features + ['regime_persists']
+    df_stability_model = df.select(stability_model_cols)
+    stability_model_split_data = split_sequential(
+        data=df_stability_model,
+        ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
+    )
+    stability_model_data_dict = split_data_to_prep_output(stability_model_split_data, stability_model_cols)
+
+    stability_model_data_dict['dtrain'] = lgb.Dataset(
+        stability_model_data_dict['x_train'],
+        label=stability_model_data_dict['y_train'].to_numpy()
+    )
+    stability_model_data_dict['dval'] = lgb.Dataset(
+        stability_model_data_dict['x_val'],
+        label=stability_model_data_dict['y_val'].to_numpy(),
+        reference=stability_model_data_dict['dtrain']
+    )
+
     return {
-        'dtrain': dtrain,
-        'dval': dval,
-        'train_X': x_train,
-        'val_X': x_val,
-        'test_X': x_test,
-        'train_y': y_train,
-        'val_y': y_val,
-        'test_y': y_test,
-        
-        'dtrain_stability': dtrain_stability,
-        'dval_stability': dval_stability,
-        'train_X_stability': x_train_stability,
-        'val_X_stability': x_val_stability,
-        'test_X_stability': x_test_stability,
-        'train_y_stability': y_train_stability,
-        'val_y_stability': y_val_stability,
-        'test_y_stability': y_test_stability,
-        
+        'primary_model_data_dict': primary_model_data_dict,
+        'stability_model_data_dict': stability_model_data_dict,
         'num_main_features': len(all_features),
         'num_stability_features': len(stability_features),
     }
@@ -192,28 +182,30 @@ def prep(data):
 
 def model(data, round_params):
 
-    if 'train_X_stability' not in data or data['num_stability_features'] == 0:
+    primary_data, stability_data = (data['primary_model_data_dict'], data['stability_model_data_dict'])
+
+    if 'x_train' not in  stability_data or data['num_stability_features'] == 0:
         raise ValueError("No stability features found in data - check prep() function")
     
-    main_params = round_params.copy()
-    main_params.update({
+    primary_params = round_params.copy()
+    primary_params.update({
         'num_class': NUM_CLASSES,
         'verbose': TRAIN_VERBOSE,
     })
     
-    for split_name, y_data in [('train', data['train_y']),
-                               ('val', data['val_y']),
-                               ('test', data['test_y'])]:
+    for split_name, y_data in [('train', primary_data['y_train']),
+                               ('val', primary_data['y_val']),
+                               ('test', primary_data['y_test'])]:
         unique_classes = np.unique(y_data)
         if len(unique_classes) < MIN_CLASSES_REQUIRED:
             print(f"Warning: {split_name} split has only classes {unique_classes}")
             raise ValueError(f'{split_name} split missing one of the classes 0/1/2. Try increasing data size.')
     
-    main_model = lgb.train(
-        params=main_params,
-        train_set=data['dtrain'],
+    primary_model = lgb.train(
+        params=primary_params,
+        train_set=primary_data['dtrain'],
         num_boost_round=round_params['num_boost_round'],
-        valid_sets=[data['dtrain'], data['dval']],
+        valid_sets=[primary_data['dtrain'], primary_data['dval']],
         valid_names=['train', 'valid'],
         callbacks=[
             lgb.early_stopping(round_params['stopping_round'], verbose=False),
@@ -231,17 +223,17 @@ def model(data, round_params):
     
     stability_model = lgb.train(
         params=stability_params,
-        train_set=data['dtrain_stability'],
+        train_set=stability_data['dtrain'],
         num_boost_round=round_params.get('stability_num_boost_round', STABILITY_NUM_BOOST_ROUND),
-        valid_sets=[data['dtrain_stability'], data['dval_stability']],
+        valid_sets=[stability_data['dtrain'], stability_data['dval']],
         valid_names=['train_stability', 'valid_stability'],
         callbacks=[
             lgb.early_stopping(round_params.get('stability_stopping_round', STABILITY_STOPPING_ROUND), verbose=False)
         ]
     )
     
-    regime_proba = main_model.predict(data['test_X'], num_iteration=main_model.best_iteration)
-    persistence_proba = stability_model.predict(data['test_X_stability'], num_iteration=stability_model.best_iteration)
+    regime_proba = primary_model.predict(primary_data['x_test'], num_iteration=primary_model.best_iteration)
+    persistence_proba = stability_model.predict(stability_data['x_test'], num_iteration=stability_model.best_iteration)
     
     preds = regime_proba.argmax(axis=1)
     probs = regime_proba.max(axis=1)
@@ -252,9 +244,9 @@ def model(data, round_params):
     filtered_pred[low_confidence] = 0
     
     filter_rate = low_confidence.mean()
-    unfiltered_acc = accuracy_score(data['test_y'], preds)
+    unfiltered_acc = accuracy_score(primary_data['y_test'], preds)
     
-    round_results = multiclass_metrics(data, preds, regime_proba)
+    round_results = multiclass_metrics(primary_data, preds, regime_proba)
 
     round_results['extras'] = {
             'filter_rate': round(filter_rate, FLOAT_PRECISION),
