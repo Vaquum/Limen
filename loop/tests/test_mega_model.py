@@ -1,12 +1,10 @@
-from loop.sfm import lightgbm
-import uuid
 import numpy as np
 import polars as pl
 import lightgbm as lgb
-from datetime import timedelta
+
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# Import your mega model class from the correct path
+from loop.tests.utils.get_data import get_klines_data
 from loop.sfm.lightgbm.utils.mega_model_data_sampler import run_mega_model_experiment
 
 def test_mega_model_with_live_labeling():
@@ -18,11 +16,11 @@ def test_mega_model_with_live_labeling():
     """
 
     
-    df = pl.read_csv('/home/pro/projects/vaquum/Loop/datasets/klines_2h_2020_2025.csv')
+    df = get_klines_data()
 
     # Filter to match test requirements
     df_filtered = df.filter(
-        pl.col('datetime') >= '2024-01-01'  # Same date filter as API
+        pl.col('datetime') >= pl.datetime(2024, 1, 1, time_zone='UTC')  # Same date filter as API
     )
 
     df_labeled = create_breakout_labels(df_filtered)
