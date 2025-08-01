@@ -14,6 +14,8 @@ class HistoricalData:
     
     def __init__(self):
 
+        '''Set of endpoints to get historical Binance data.'''
+
         pass
 
     def get_binance_file(self,
@@ -21,7 +23,9 @@ class HistoricalData:
                          has_header: bool = False,
                          columns: List[str] = None):
         
-        '''Get data from a Binance file based on the file URL.
+        '''Get historical data from a Binance file based on the file URL. 
+
+        Data can be found here: https://data.binance.vision/
 
         Args:
             file_url (str): The URL of the Binance file
@@ -58,13 +62,13 @@ class HistoricalData:
                               start_date_limit: str = None,
                               futures: bool = False) -> None:
         
-        '''Get historical klines data from Binance trades data.
+        '''Get historical klines data for Binance spot or futures.
 
         Args:
             n_rows (int): Number of rows to be pulled
             kline_size (int): Size of the kline in seconds
             start_date_limit (str): The start date of the klines data
-            futures (bool): if the data is from futures.
+            futures (bool): If the data is from futures.
 
         Returns:
             self.data (pl.DataFrame)
@@ -84,8 +88,7 @@ class HistoricalData:
                               n_random: int = None,
                               include_datetime_col: bool = True) -> None:
 
-        '''Get historical trades data from `tdw.binance_trades`
-        table in Clickhouse.
+        '''Get historical trades data for Binance spot.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
@@ -118,8 +121,7 @@ class HistoricalData:
                                   n_rows: int = None,
                                   include_datetime_col: bool = True) -> None:
 
-        '''Get historical aggTrades data from `tdw.binance_agg_trades`
-        table in Clickhouse.
+        '''Get historical aggTrades data for Binance spot.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
@@ -151,8 +153,7 @@ class HistoricalData:
                                       include_datetime_col: bool = True,
                                       show_summary: bool = False) -> pl.DataFrame:
         
-        '''Get Binance futures trades data from `tdw.binance_futures_trades`
-        table in Clickhouse.
+        '''Get historical trades data for Binance futures.
 
         Args:
             month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
