@@ -12,6 +12,13 @@ class UniversalExperimentLoop:
     def __init__(self,
                  data,
                  single_file_model):
+        
+        '''Initializes the UniversalExperimentLoop.
+        
+        Args:
+            data (pl.DataFrame): The data to use for the experiment.
+            single_file_model (SingleFileModel): The single file model to use for the experiment.
+        '''
 
         self.data = data
         self.model = single_file_model.model
