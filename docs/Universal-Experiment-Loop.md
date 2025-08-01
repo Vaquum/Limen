@@ -4,7 +4,7 @@ Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its in
 
 ## Data
 
-A key point here is that all individual contirbutors work based on the same underlying data. We achieve this by always calling data from these provided endpoints. If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need. 
+A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from these provided endpoints. If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need. 
 
 Read more in [HistoricalData](Historical-Data.md)
 
