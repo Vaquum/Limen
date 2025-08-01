@@ -7,6 +7,7 @@ from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor
 from loop.indicators.breakout_features import breakout_features
 from loop.metrics.continuous_metrics import continuous_metrics
+from loop.transforms.logreg_transform import LogRegTransform
 
 INTERVAL_SEC = 7200
 DATETIME_COL = 'datetime'
@@ -80,17 +81,22 @@ def prep(data):
         target=TARGET
     )
 
+    feature_cols = [col for col in df.columns if col != TARGET and not col.startswith('breakout_')]
+    df = df.select(feature_cols + [TARGET])
+
     split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
 
-    lag_indices = range(PREDICTION_HORIZON, PREDICTION_HORIZON + LOOKBACK_BARS)
-
-    lag_cols = [f"long_t-{i}" for i in lag_indices] + \
-               [f"short_t-{i}" for i in lag_indices]
-
-    extra_cols = df.columns
-    cols = list(set(lag_cols + extra_cols))
+    cols = df.columns
 
     data_dict = split_data_to_prep_output(split_data, cols)
+
+    scaler = LogRegTransform(data_dict['x_train'])
+    for col in data_dict.keys():
+        if col.startswith('x_'):
+            data_dict[col] = scaler.transform(data_dict[col])
+
+    data_dict['_scaler'] = scaler
+    data_dict['_feature_names'] = cols
 
     assert data_dict['x_train'].shape[1] == len(cols) - 1, \
         f"x_train has {data_dict['x_train'].shape[1]} cols but feat_cols is {len(cols) - 1}"

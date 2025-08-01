@@ -9,8 +9,8 @@ from datetime import timedelta
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.sfm.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
 from loop.sfm.lightgbm.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
-
 from loop.metrics.multiclass_metrics import multiclass_metrics
+from loop.transforms.logreg_transform import LogRegTransform
 
 PERCENTAGE = 5
 LONG_COL = f'long_0_0{PERCENTAGE}'
@@ -90,6 +90,14 @@ def prep(data):
     split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
     
     data_dict = split_data_to_prep_output(split_data, cols)
+
+    scaler = LogRegTransform(data_dict['x_train'])
+    for col in data_dict.keys():
+        if col.startswith('x_'):
+            data_dict[col] = scaler.transform(data_dict[col])
+
+    data_dict['_scaler'] = scaler
+    data_dict['_feature_names'] = cols
 
     data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'].to_numpy())
     data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'].to_numpy(), reference=data_dict['dtrain'])
