@@ -20,6 +20,7 @@ def test_sfm():
         (sfm.reference.lightgbm, get_trades_data, False),
         (sfm.lightgbm.regime_multiclass, get_klines_data, False),
         (sfm.lightgbm.breakout_regressor, get_klines_data, False),
+        (sfm.lightgbm.regime_stability, get_klines_data, False),
         ]
 
     for test in tests:

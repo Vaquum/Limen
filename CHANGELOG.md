@@ -166,3 +166,8 @@
 - Update  `sfm.lightgbm.breakout_regressor` and `sfm.lightgbm.regime_multiclass` to data scaling
 - Fix reference models verbosity configuration
 - Refactor `test_mega_model` to use CSV data instead of live data fetching.
+
+# v.1.4.3 on 2nd of August, 2025
+- Update `sfm.lightgbm.regime_stability` to output standard
+- Add `sfm.lightgbm.regime_stability` to test suite
+
