@@ -17,13 +17,9 @@ There are hundreds of well-known indicators, but they all fall under eight diffe
 | **7** | **Sentiment & Flow** | How are humans (and bots) feeling and positioning? | Fear & Greed Index, Social-media volume, Exchange net inflows/outflows[^3], CEX/DEX positioning trackers, Google-Trends hits for “buy bitcoin” | – |
 | **8** | **Macro & Liquidity** | What outside forces could push Bitcoin around? | DXY (U.S.-Dollar Index), Fed balance-sheet or global M2 growth, Treasury-yield curve shifts, Stable-coin supply expansion/contraction, BTC dominance, ETH/BTC ratio, Altcoin breadth metrics | Captures *relative-value / breadth* and cross-asset correlations |
 
----
-
-[^1]: **VWAP** is both a trend-following anchor and a volume-weighted flow metric. We park it in **Volume-Flow & Microstructure** to keep all order-flow tools together, but many chartists also treat it as a trend indicator.  
-[^2]: **Implied Volatility (IV)** lives in **Derivatives** because the data source is options markets—even though it doubles as a forward-looking volatility gauge.  
-[^3]: **Exchange flows** originate on-chain, yet we place them under **Sentiment & Flow** because traders mainly interpret net inflows/outflows as fear-vs-complacency signals.
-
 ## Indicators and SFMs
+
+Read more about SFMs in: [Single File Model](Single-File-Model.md)
 
 There can be an infinite number of distinct model architectures, but they all belong to one of 13 model families. Since model archicture and Indicators both give energy to SFMs, it is important to think about in a tightly coupled way. The below table provides an indication of how such thinking may appear.
 
@@ -146,3 +142,9 @@ Compute Wilder's RSI over `period` based on column 'close'.
 #### Returns
 
 `pl.DataFrame`: The input data with the RSI column appended.
+
+---
+
+[^1]: **VWAP** is both a trend-following anchor and a volume-weighted flow metric. We park it in **Volume-Flow & Microstructure** to keep all order-flow tools together, but many chartists also treat it as a trend indicator.  
+[^2]: **Implied Volatility (IV)** lives in **Derivatives** because the data source is options markets—even though it doubles as a forward-looking volatility gauge.  
+[^3]: **Exchange flows** originate on-chain, yet we place them under **Sentiment & Flow** because traders mainly interpret net inflows/outflows as fear-vs-complacency signals.
