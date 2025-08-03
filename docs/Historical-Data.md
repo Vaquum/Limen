@@ -30,7 +30,7 @@ historical.data
 
 All of the endpoints return `pl.DataFrame`. 
 
-**NOTE:** There is an important performance cost that one suffers from moving the data out of the `pl.DataFrame` (e.g. to `pd.DataFrame`). 
+**NOTE:** There is an important performance cost that one suffers from moving the data out of the `pl.DataFrame` (e.g. to `pd.DataFrame`). This performance cost matters more for trades data, and for kline data data where `kline_size` is seconds and not minutes or longer.
 
 ## `HistoricalData.get_binance_file`
 
@@ -103,6 +103,16 @@ Get historical trades data for Binance spot.
 
 `self.data` (pl.DataFrame)
 
+| Column Name        | Type        | Description                                        |
+|--------------------|-------------|----------------------------------------------------|
+| `trade_id`         | `int`       | Unique ID of the individual trade.                 |
+| `timestamp`        | `int`       | Unix timestamp (ms) when the trade was executed.   |
+| `price`            | `float`     | Price at which the trade occurred.                 |
+| `quantity`         | `float`     | Quantity of the asset that was traded.             |
+| `is_buyer_maker`   | `bool`      | `True` if the buyer was the market maker.          |
+| `datetime`         | `datetime`  | Human-readable date/time derived from `timestamp`. |
+
+
 ## `HistoricalData.get_historical_agg_trades`
 
 Get historical aggTrades data for Binance spot.
@@ -133,7 +143,7 @@ Get historical aggTrades data for Binance spot.
 
 ## `HistoricalData.get_historical_futures_trades`
 
-Get historical trades data for Binance futures.
+Get historical trades data for Binance futures. 
 
 ### Args
 
@@ -146,4 +156,13 @@ Get historical trades data for Binance futures.
 
 ### Returns
 
-`self.data` (pl.DataFrame)
+**NOTE:** In contrast to the other data endpoints, this one returns `pl.DataFrame` directly.
+
+| Column Name        | Type        | Description                                        |
+|--------------------|-------------|----------------------------------------------------|
+| `futures_trade_id` | `int`       | Unique ID of the individual trade.                 |
+| `timestamp`        | `int`       | Unix timestamp (ms) when the trade was executed.   |
+| `price`            | `float`     | Price at which the trade occurred.                 |
+| `quantity`         | `float`     | Quantity of the asset that was traded.             |
+| `is_buyer_maker`   | `bool`      | `True` if the buyer was the market maker.          |
+| `datetime`         | `datetime`  | Human-readable date/time derived from `timestamp`. |
