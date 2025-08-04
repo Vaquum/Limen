@@ -10,7 +10,7 @@ import numpy as np
 import logging
 
 # Import Loop utilities for splitting
-from loop.utils.split_sequential import split_sequential
+from loop.utils.splits import split_sequential, split_data_to_prep_output
 
 # Import feature engineering functions
 from loop.sfm.lightgbm.utils.tradeable_regressor import (
@@ -115,43 +115,21 @@ def prep(data, round_params=None):
     df = calculate_microstructure_features(df, CONFIG)
     df = calculate_simple_momentum_confirmation(df, CONFIG)
     
-    # Split data sequentially
-    splits = split_sequential(df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
-    train_df, val_df, test_df = splits
+    # Apply exit reality simulation to entire dataset
+    logging.debug("Simulating exit reality for entire dataset...")
+    df = simulate_exit_reality(df, CONFIG)
+    df = calculate_time_decay_factor(df, CONFIG)
+    df = create_tradeable_labels(df, CONFIG)
     
-    logging.debug(f"Sequential split: {len(train_df)} train, {len(val_df)} val, {len(test_df)} test")
-    
-    # For exit reality simulation, we need to combine train and val
-    train_val_df = pl.concat([train_df, val_df])
-    
-    # Simulate exit reality and create labels for training data only
-    logging.debug("Simulating exit reality for training data...")
-    train_df = simulate_exit_reality(train_df, CONFIG)
-    train_df = calculate_time_decay_factor(train_df, CONFIG)
-    train_df = create_tradeable_labels(train_df, CONFIG)
-    
-    # Do the same for validation data
-    val_df = simulate_exit_reality(val_df, CONFIG)
-    val_df = calculate_time_decay_factor(val_df, CONFIG)
-    val_df = create_tradeable_labels(val_df, CONFIG)
-    
-    # Prepare final features for all splits
-    train_df = prepare_features_5m(train_df)
-    val_df = prepare_features_5m(val_df)
-    test_df = prepare_features_5m(test_df)
+    # Prepare final features
+    df = prepare_features_5m(df)
     
     # Clean data
-    train_clean = train_df.drop_nulls()
-    val_clean = val_df.drop_nulls()
-    test_clean = test_df.drop_nulls()
+    df_clean = df.drop_nulls()
     
-    # Check for empty dataframes
-    if len(train_clean) == 0:
-        raise ValueError("No training data left after cleaning (dropna)")
-    if len(val_clean) == 0:
-        raise ValueError("No validation data left after cleaning (dropna)")
-    if len(test_clean) == 0:
-        raise ValueError("No test data left after cleaning (dropna)")
+    # Check for empty dataframe
+    if len(df_clean) == 0:
+        raise ValueError("No data left after cleaning (dropna)")
     
     # Feature selection
     exclude_cols = ['datetime', 'open', 'high', 'low', 'close', 'volume',
@@ -172,45 +150,60 @@ def prep(data, round_params=None):
                     'exit_on_prediction_drop', 'vol_60h', 'vol_percentile',
                     'spread', 'position_in_range', 'close_to_high', 'close_to_low']
     
-    feature_cols = [col for col in train_clean.columns if col not in exclude_cols]
+    feature_cols = [col for col in df_clean.columns if col not in exclude_cols]
     # In Polars, check numeric types differently
     numeric_features = [col for col in feature_cols 
-                       if train_clean.schema[col] in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.UInt32, pl.UInt64]]
+                       if df_clean.schema[col] in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.UInt32, pl.UInt64]]
     
     logging.debug(f"Using {len(numeric_features)} features")
     
-    # Extract features and labels from already split data
-    X_train = train_clean.select(numeric_features).to_numpy()
-    y_train = train_clean.select('tradeable_score').to_numpy().flatten()
-    X_val = val_clean.select(numeric_features).to_numpy()
-    y_val = val_clean.select('tradeable_score').to_numpy().flatten()
-    X_test = test_clean.select(numeric_features).to_numpy()
+    # Create column list with target as LAST column
+    cols = numeric_features + ['tradeable_score']
+    
+    # Split data sequentially
+    split_data = split_sequential(df_clean, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
+    
+    # Preserve tradeable_scores before wiping for backtest threshold calculation
+    test_tradeable_scores = split_data[2].select('tradeable_score').to_numpy().flatten()
+    
+    # Wipe exit reality columns from test data
+    exit_reality_cols = ['exit_gross_return', 'exit_net_return', 'exit_reason', 
+                        'exit_bars', 'exit_max_return', 'exit_min_return',
+                        'time_decay_factor', 'exit_reality_score', 'exit_quality',
+                        'exit_reality_time_decayed', 'achieves_dynamic_target', 'tradeable_score']
+    
+    # Create test data for backtest - drop exit reality but keep all other columns
+    test_clean_for_backtest = split_data[2].drop([col for col in exit_reality_cols if col in split_data[2].columns])
+    test_clean_for_backtest = test_clean_for_backtest.with_columns(pl.lit(0.0).alias('tradeable_score'))
+    
+    # Debug: Check columns
+    logging.debug(f"Test data columns before backtest: {test_clean_for_backtest.columns[:15]}...")
+    logging.debug(f"Test data shape: {test_clean_for_backtest.shape}")
+    
+    # Drop these columns from test split for model
+    split_data[2] = split_data[2].drop([col for col in exit_reality_cols if col in split_data[2].columns])
+    
+    # Add dummy tradeable_score to test split (needed for split_data_to_prep_output)
+    split_data[2] = split_data[2].with_columns(pl.lit(0.0).alias('tradeable_score'))
+    
+    # Use split_data_to_prep_output
+    data_dict = split_data_to_prep_output(split_data, cols)
+    
+    # Add extra fields needed by model()
+    data_dict['_feature_names'] = numeric_features
+    data_dict['_numeric_features'] = numeric_features
+    data_dict['_train_clean'] = split_data[0]  # Full DataFrame for regime-specific training
+    data_dict['_val_clean'] = split_data[1]    # Full DataFrame for regime-specific validation
+    data_dict['_test_clean'] = test_clean_for_backtest  # Full DataFrame for backtesting (exit reality wiped)
+    data_dict['_test_tradeable_scores'] = test_tradeable_scores  # Preserved scores for threshold calculation
     
     # Store regime information for regime-specific training
-    train_regimes = train_clean.select('volatility_regime').to_numpy().flatten()
-    val_regimes = val_clean.select('volatility_regime').to_numpy().flatten()
+    data_dict['_train_regimes'] = split_data[0].select('volatility_regime').to_numpy().flatten()
+    data_dict['_val_regimes'] = split_data[1].select('volatility_regime').to_numpy().flatten()
     
     # Create LightGBM datasets
-    dtrain = lgb.Dataset(X_train, label=y_train)
-    dval = lgb.Dataset(X_val, label=y_val, reference=dtrain)
-    
-    # Return data dictionary in UEL format
-    data_dict = {
-        'x_train': X_train,
-        'y_train': y_train,
-        'x_val': X_val,
-        'y_val': y_val,
-        'x_test': X_test,
-        'dtrain': dtrain,
-        'dval': dval,
-        '_feature_names': numeric_features,
-        '_train_clean': train_clean,  # For regime-specific training
-        '_val_clean': val_clean,       # For regime-specific validation
-        '_test_clean': test_clean,     # For backtesting
-        '_numeric_features': numeric_features,
-        '_train_regimes': train_regimes,
-        '_val_regimes': val_regimes,
-    }
+    data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'])
+    data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'], reference=data_dict['dtrain'])
     
     return data_dict
 
@@ -493,6 +486,7 @@ def model(data, round_params):
         'regime_models': models if train_regime_models else {'universal': model},  # Store actual models dict
         'test_predictions': y_pred,
         'test_clean': data['_test_clean'],
+        'test_tradeable_scores': data.get('_test_tradeable_scores', None),  # Preserved scores
         'numeric_features': data['_numeric_features'],
         'regime_metrics': regime_metrics
     }
@@ -510,10 +504,15 @@ def model(data, round_params):
                 # Get indices where this regime occurs
                 regime_mask = test_clean.get_column('volatility_regime') == regime
                 indices = [i for i, val in enumerate(regime_mask) if val]
+                # Get scores for this regime's indices
+                regime_scores = None
+                if data.get('_test_tradeable_scores') is not None:
+                    regime_scores = np.array([data['_test_tradeable_scores'][i] for i in indices])
+                
                 regime_predictions[regime] = {
                     'predictions': regime_preds,
                     'indices': indices,
-                    'scores': regime_test.select('tradeable_score').to_numpy().flatten() if 'tradeable_score' in regime_test.columns else None
+                    'scores': regime_scores
                 }
             elif len(regime_test) > 0 and 'universal' in models:
                 # Use universal model for missing regime
@@ -522,10 +521,15 @@ def model(data, round_params):
                 # Get indices where this regime occurs
                 regime_mask = test_clean.get_column('volatility_regime') == regime
                 indices = [i for i, val in enumerate(regime_mask) if val]
+                # Get scores for this regime's indices
+                regime_scores = None
+                if data.get('_test_tradeable_scores') is not None:
+                    regime_scores = np.array([data['_test_tradeable_scores'][i] for i in indices])
+                
                 regime_predictions[regime] = {
                     'predictions': regime_preds,
                     'indices': indices,
-                    'scores': regime_test.select('tradeable_score').to_numpy().flatten() if 'tradeable_score' in regime_test.columns else None
+                    'scores': regime_scores
                 }
         
         round_results['extras']['regime_predictions'] = regime_predictions
