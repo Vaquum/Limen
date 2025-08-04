@@ -1,0 +1,533 @@
+#!/usr/bin/env python3
+"""
+LightGBM Tradeable Regressor - UEL Single File Model format
+Implements regime-aware LightGBM with tradeable label creation
+"""
+
+import lightgbm as lgb
+import polars as pl
+import numpy as np
+import logging
+
+# Import Loop utilities for splitting
+from loop.utils.split_sequential import split_sequential
+
+# Import feature engineering functions
+from loop.sfm.lightgbm.utils.tradeable_regressor import (
+    calculate_volatility_regime,
+    calculate_market_regime,
+    calculate_dynamic_parameters,
+    calculate_microstructure_features,
+    calculate_simple_momentum_confirmation,
+    simulate_exit_reality,
+    calculate_time_decay_factor,
+    create_tradeable_labels,
+    prepare_features_5m
+)
+
+# Split ratios for train/val/test
+TRAIN_SPLIT = 0.7
+VAL_SPLIT = 0.15
+TEST_SPLIT = 0.15
+
+# Model Configuration
+CONFIG = {
+    'kline_size': 300,  # 5 minutes
+    'lookahead_minutes': 90,
+    'base_min_breakout': 0.005,
+    'max_positions': 1,
+    'min_position_size': 20000,
+    'prediction_threshold_percentile': 97,
+    'ema_weight_power': 2.0,
+    'volume_weight_enabled': True,
+    'exit_on_target': True,
+    'base_stop_loss': 0.0035,
+    'trailing_stop': True,
+    'trailing_stop_distance': 0.0025,
+    'market_regime_filter': True,
+    'position_sizing': 0.95,
+    'dynamic_targets': True,
+    'volatility_adjusted_stops': True,
+    'microstructure_timing': True,
+    'volatility_lookback': 48,
+    'target_volatility_multiplier': 2.5,
+    'stop_volatility_multiplier': 1.5,
+    'simple_momentum_confirmation': True,
+    'exit_reality_blend': 0.3,
+    'time_decay_blend': 0.3,
+    'time_decay_halflife': 30,
+    'volatility_regime_enabled': True,
+    'vol_regime_lookback': 720,
+    'vol_low_percentile': 20,
+    'vol_high_percentile': 80,
+}
+
+def params():
+    """
+    Parameter space for model
+    Using optimal values with slight variations for testing
+    """
+    p = {
+        'objective': ['regression'],
+        'metric': ['rmse'],
+        'boosting_type': ['gbdt'],
+        'num_leaves': [31, 35],  # Add variation for testing
+        'learning_rate': [0.05],
+        'feature_fraction': [0.8],
+        'bagging_fraction': [0.8],
+        'bagging_freq': [5],
+        'verbose': [-1],
+        'num_iterations': [100],
+        'force_col_wise': [True],
+        # Model specific params passed through round_params
+        'train_regime_models': [True],  # Whether to train separate regime models
+    }
+    return p
+
+
+def prep(data, round_params=None):
+    """
+    Prepare data following methodology
+    Process entire dataframe through pipeline BEFORE splitting
+    """
+    # Ensure we're working with Polars
+    if not isinstance(data, pl.DataFrame):
+        raise ValueError("Data must be a Polars DataFrame")
+    
+    df = data.clone()
+    
+    # Rename columns to match expectations
+    if 'Date' in df.columns:
+        df = df.rename({'Date': 'datetime'})
+    
+    # Ensure datetime is proper type
+    if df.schema['datetime'] != pl.Datetime:
+        df = df.with_columns(pl.col('datetime').str.to_datetime())
+    
+    logging.debug(f"Processing full dataset: {len(df)} bars")
+    
+    # Process ENTIRE dataset through pipeline BEFORE splitting
+    # This ensures proper historical context for all rolling calculations
+    logging.debug("Processing full data through pipeline...")
+    df = calculate_volatility_regime(df, CONFIG)
+    df = calculate_market_regime(df)
+    df = calculate_dynamic_parameters(df, CONFIG)
+    df = calculate_microstructure_features(df, CONFIG)
+    df = calculate_simple_momentum_confirmation(df, CONFIG)
+    
+    # Split data sequentially
+    splits = split_sequential(df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
+    train_df, val_df, test_df = splits
+    
+    logging.debug(f"Sequential split: {len(train_df)} train, {len(val_df)} val, {len(test_df)} test")
+    
+    # For exit reality simulation, we need to combine train and val
+    train_val_df = pl.concat([train_df, val_df])
+    
+    # Simulate exit reality and create labels for training data only
+    logging.debug("Simulating exit reality for training data...")
+    train_df = simulate_exit_reality(train_df, CONFIG)
+    train_df = calculate_time_decay_factor(train_df, CONFIG)
+    train_df = create_tradeable_labels(train_df, CONFIG)
+    
+    # Do the same for validation data
+    val_df = simulate_exit_reality(val_df, CONFIG)
+    val_df = calculate_time_decay_factor(val_df, CONFIG)
+    val_df = create_tradeable_labels(val_df, CONFIG)
+    
+    # Prepare final features for all splits
+    train_df = prepare_features_5m(train_df)
+    val_df = prepare_features_5m(val_df)
+    test_df = prepare_features_5m(test_df)
+    
+    # Clean data
+    train_clean = train_df.drop_nulls()
+    val_clean = val_df.drop_nulls()
+    test_clean = test_df.drop_nulls()
+    
+    # Check for empty dataframes
+    if len(train_clean) == 0:
+        raise ValueError("No training data left after cleaning (dropna)")
+    if len(val_clean) == 0:
+        raise ValueError("No validation data left after cleaning (dropna)")
+    if len(test_clean) == 0:
+        raise ValueError("No test data left after cleaning (dropna)")
+    
+    # Feature selection
+    exclude_cols = ['datetime', 'open', 'high', 'low', 'close', 'volume',
+                    'tradeable_breakout', 'tradeable_score', 'tradeable_score_v6',
+                    'tradeable_score_base', 'capturable_breakout', 'max_drawdown', 'ema', 'future_high', 'future_low',
+                    'ema_alignment', 'volume_weight', 'volatility_weight',
+                    'momentum_weight', 'market_favorable', 'risk_reward_ratio',
+                    'sma_20', 'sma_50', 'trend_strength', 'volatility_ratio',
+                    'volume_sma', 'volume_regime', 'dynamic_target',
+                    'dynamic_stop_loss', 'entry_score', 'position_in_candle',
+                    'micro_momentum', 'volume_spike', 'spread_pct', 'rolling_volatility',
+                    'atr', 'atr_pct', 'volatility_measure', 'achieves_dynamic_target',
+                    'high_low', 'high_close', 'low_close', 'true_range',
+                    'momentum_1', 'momentum_3', 'momentum_score', 'volume_ma', 'volatility',
+                    'exit_gross_return', 'exit_net_return', 'exit_reason', 'exit_bars',
+                    'exit_max_return', 'exit_min_return', 'time_decay_factor',
+                    'exit_reality_score', 'exit_quality', 'exit_reality_time_decayed',
+                    'exit_on_prediction_drop', 'vol_60h', 'vol_percentile',
+                    'spread', 'position_in_range', 'close_to_high', 'close_to_low']
+    
+    feature_cols = [col for col in train_clean.columns if col not in exclude_cols]
+    # In Polars, check numeric types differently
+    numeric_features = [col for col in feature_cols 
+                       if train_clean.schema[col] in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.UInt32, pl.UInt64]]
+    
+    logging.debug(f"Using {len(numeric_features)} features")
+    
+    # Extract features and labels from already split data
+    X_train = train_clean.select(numeric_features).to_numpy()
+    y_train = train_clean.select('tradeable_score').to_numpy().flatten()
+    X_val = val_clean.select(numeric_features).to_numpy()
+    y_val = val_clean.select('tradeable_score').to_numpy().flatten()
+    X_test = test_clean.select(numeric_features).to_numpy()
+    
+    # Store regime information for regime-specific training
+    train_regimes = train_clean.select('volatility_regime').to_numpy().flatten()
+    val_regimes = val_clean.select('volatility_regime').to_numpy().flatten()
+    
+    # Create LightGBM datasets
+    dtrain = lgb.Dataset(X_train, label=y_train)
+    dval = lgb.Dataset(X_val, label=y_val, reference=dtrain)
+    
+    # Return data dictionary in UEL format
+    data_dict = {
+        'x_train': X_train,
+        'y_train': y_train,
+        'x_val': X_val,
+        'y_val': y_val,
+        'x_test': X_test,
+        'dtrain': dtrain,
+        'dval': dval,
+        '_feature_names': numeric_features,
+        '_train_clean': train_clean,  # For regime-specific training
+        '_val_clean': val_clean,       # For regime-specific validation
+        '_test_clean': test_clean,     # For backtesting
+        '_numeric_features': numeric_features,
+        '_train_regimes': train_regimes,
+        '_val_regimes': val_regimes,
+    }
+    
+    return data_dict
+
+
+def model(data, round_params):
+    """
+    Train model with regime-specific models
+    """
+    round_params = round_params.copy()
+    
+    # Extract non-LightGBM parameters
+    train_regime_models = round_params.pop('train_regime_models', True)
+    
+    # Remove any UEL-specific parameters
+    round_params.pop('_experiment_details', None)
+    
+    # Ensure all LightGBM parameters are valid
+    lgb_params = {k: v for k, v in round_params.items() 
+                  if k in ['objective', 'metric', 'boosting_type', 'num_leaves',
+                          'learning_rate', 'feature_fraction', 'bagging_fraction',
+                          'bagging_freq', 'verbose', 'num_iterations', 'force_col_wise']}
+    
+    # Train regime-specific models if enabled
+    if train_regime_models:
+        models = {}
+        regime_metrics = {}
+        
+        # Get full training data for regime splitting
+        train_clean = data['_train_clean']
+        val_clean = data['_val_clean']
+        numeric_features = data['_numeric_features']
+        
+        logging.debug("Training regime-specific models...")
+        
+        # Train models for each regime
+        for regime in ['low', 'normal', 'high']:
+            regime_data = train_clean.filter(pl.col('volatility_regime') == regime)
+            
+            regime_val_data = val_clean.filter(pl.col('volatility_regime') == regime)
+            
+            if len(regime_data) > 1000 and len(regime_val_data) > 100:
+                logging.debug(f"Training {regime} volatility model ({len(regime_data)} train, {len(regime_val_data)} val)...")
+                
+                regime_train_set = regime_data
+                regime_val_set = regime_val_data
+                
+                X_train = regime_train_set.select(numeric_features).to_numpy()
+                y_train = regime_train_set.select('tradeable_score').to_numpy().flatten()
+                X_val = regime_val_set.select(numeric_features).to_numpy()
+                y_val = regime_val_set.select('tradeable_score').to_numpy().flatten()
+                
+                # Create weights
+                weights_train = np.ones(len(y_train))
+                
+                # Extra weight for trades that achieved target in reality
+                achieved_target = regime_train_set.select('achieves_dynamic_target').to_numpy().flatten()
+                weights_train[achieved_target] = 20
+                
+                # Extra weight for quick targets
+                exit_bars = regime_train_set.select('exit_bars').to_numpy().flatten()
+                quick_targets = achieved_target & (exit_bars <= 6)
+                weights_train[quick_targets] = 30
+                
+                # Standard weighting for high-value predictions
+                weights_train[y_train > np.percentile(y_train, 90)] = 20
+                weights_train[y_train > np.percentile(y_train, 95)] = 50
+                weights_train[y_train > np.percentile(y_train, 99)] = 100
+                
+                # Extra weight for profitable exits
+                profitable_exits = (regime_train_set.select('exit_net_return').to_numpy().flatten() > 0.001)
+                weights_train[profitable_exits] *= 1.5
+                
+                train_data = lgb.Dataset(X_train, label=y_train, weight=weights_train)
+                val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+                
+                # Train model
+                evals_result = {}
+                model = lgb.train(
+                    params=lgb_params,
+                    train_set=train_data,
+                    num_boost_round=300,
+                    valid_sets=[train_data, val_data],
+                    valid_names=['train', 'val'],
+                    callbacks=[lgb.early_stopping(stopping_rounds=30), lgb.record_evaluation(evals_result)]
+                )
+                
+                models[regime] = model
+                # Get the metric name from evals_result
+                metric_name = list(evals_result['train'].keys())[0] if evals_result['train'] else 'rmse'
+                regime_metrics[regime] = {
+                    'samples': len(regime_data),
+                    'final_train_rmse': float(evals_result['train'][metric_name][-1]),
+                    'final_val_rmse': float(evals_result['val'][metric_name][-1])
+                }
+            else:
+                logging.debug(f"Skipping {regime} volatility model ({len(regime_data)} train, {len(regime_val_data)} val samples)")
+        
+        # Train universal model
+        logging.debug("Training universal model...")
+        
+        # Use pre-split data for universal model
+        train_set = train_clean
+        val_set = val_clean
+        
+        # Add weights for universal model
+        weights_train_universal = np.ones(len(train_set))
+        
+        # Extra weight for trades that achieved target in reality
+        achieved_target_universal = train_set.select('achieves_dynamic_target').to_numpy().flatten()
+        weights_train_universal[achieved_target_universal] = 20
+        
+        # Extra weight for quick targets
+        exit_bars = train_set.select('exit_bars').to_numpy().flatten()
+        quick_targets = achieved_target_universal & (exit_bars <= 6)
+        weights_train_universal[quick_targets] = 30
+        
+        # Standard weighting for high-value predictions
+        y_train_universal = train_set.select('tradeable_score').to_numpy().flatten()
+        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 90)] = 20
+        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 95)] = 50
+        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 99)] = 100
+        
+        # Extra weight for profitable exits
+        profitable_exits = (train_set.select('exit_net_return').to_numpy().flatten() > 0.001)
+        weights_train_universal[profitable_exits] *= 1.5
+        
+        # Create datasets
+        X_train_universal = train_set.select(numeric_features).to_numpy()
+        y_train_universal = train_set.select('tradeable_score').to_numpy().flatten()
+        X_val_universal = val_set.select(numeric_features).to_numpy()
+        y_val_universal = val_set.select('tradeable_score').to_numpy().flatten()
+        
+        dtrain_universal = lgb.Dataset(X_train_universal, label=y_train_universal, weight=weights_train_universal)
+        dval_universal = lgb.Dataset(X_val_universal, label=y_val_universal, reference=dtrain_universal)
+        
+        evals_result_universal = {}
+        universal_model = lgb.train(
+            params=lgb_params,
+            train_set=dtrain_universal,
+            num_boost_round=300,
+            valid_sets=[dtrain_universal, dval_universal],
+            valid_names=['train', 'val'],
+            callbacks=[lgb.early_stopping(stopping_rounds=30), lgb.record_evaluation(evals_result_universal)]
+        )
+        
+        models['universal'] = universal_model
+        # Get the metric name from evals_result
+        metric_name_universal = list(evals_result_universal['train'].keys())[0] if evals_result_universal['train'] else 'rmse'
+        regime_metrics['universal'] = {
+            'samples': len(train_set),
+            'final_train_rmse': float(evals_result_universal['train'][metric_name_universal][-1]),
+            'final_val_rmse': float(evals_result_universal['val'][metric_name_universal][-1])
+        }
+        
+        # Make predictions on test set using appropriate models
+        test_clean = data['_test_clean']
+        predictions = []
+        
+        for i in range(len(test_clean)):
+            current_regime = test_clean.row(i, named=True)['volatility_regime']
+            # Use universal model as fallback if regime model doesn't exist
+            if current_regime in models:
+                model = models[current_regime]
+            elif 'universal' in models:
+                model = models['universal']
+            else:
+                # This shouldn't happen, but handle it gracefully
+                raise ValueError(f"No model available for regime '{current_regime}' and no universal model")
+            
+            row_data = test_clean.row(i, named=True)
+            X = np.array([row_data[feat] for feat in numeric_features]).reshape(1, -1)
+            pred = model.predict(X)[0]
+            predictions.append(pred)
+        
+        y_pred = np.array(predictions)
+        
+    else:
+        # Train single universal model
+        logging.debug("Training single universal model...")
+        
+        # Get numeric features from data
+        numeric_features = data['_numeric_features']
+        
+        # Use pre-split data
+        train_clean = data['_train_clean']
+        train_set = train_clean
+        
+        # Add weights
+        weights_train = np.ones(len(train_set))
+        
+        # Extra weight for trades that achieved target in reality
+        achieved_target = train_set.select('achieves_dynamic_target').to_numpy().flatten()
+        weights_train[achieved_target] = 20
+        
+        # Extra weight for quick targets
+        exit_bars = train_set.select('exit_bars').to_numpy().flatten()
+        quick_targets = achieved_target & (exit_bars <= 6)
+        weights_train[quick_targets] = 30
+        
+        # Standard weighting for high-value predictions
+        y_train = train_set.select('tradeable_score').to_numpy().flatten()
+        weights_train[y_train > np.percentile(y_train, 90)] = 20
+        weights_train[y_train > np.percentile(y_train, 95)] = 50
+        weights_train[y_train > np.percentile(y_train, 99)] = 100
+        
+        # Extra weight for profitable exits
+        profitable_exits = (train_set.select('exit_net_return').to_numpy().flatten() > 0.001)
+        weights_train[profitable_exits] *= 1.5
+        
+        # Recreate dataset with weights
+        data['dtrain'] = lgb.Dataset(data['x_train'], label=data['y_train'], weight=weights_train)
+        data['dval'] = lgb.Dataset(data['x_val'], label=data['y_val'], reference=data['dtrain'])
+        
+        evals_result = {}
+        model = lgb.train(
+            params=lgb_params,
+            train_set=data['dtrain'],
+            num_boost_round=300,
+            valid_sets=[data['dtrain'], data['dval']],
+            valid_names=['train', 'val'],
+            callbacks=[lgb.early_stopping(stopping_rounds=30), lgb.record_evaluation(evals_result)]
+        )
+        
+        # Predict on test set - use consistent approach
+        if '_test_clean' in data and 'volatility_regime' in data['_test_clean'].columns:
+            # If we have regime info, iterate for consistency (even though all use universal)
+            test_clean = data['_test_clean']
+            predictions = []
+            for i in range(len(test_clean)):
+                row_data = test_clean.row(i, named=True)
+                X = np.array([row_data[feat] for feat in numeric_features]).reshape(1, -1)
+                pred = model.predict(X)[0]
+                predictions.append(pred)
+            y_pred = np.array(predictions)
+        else:
+            # Fallback to direct prediction
+            y_pred = model.predict(data['x_test'])
+        
+        # Get the metric name from evals_result
+        metric_name = list(evals_result['train'].keys())[0] if evals_result['train'] else 'rmse'
+        regime_metrics = {
+            'universal': {
+                'samples': len(data['x_train']),
+                'final_train_rmse': float(evals_result['train'][metric_name][-1]),
+                'final_val_rmse': float(evals_result['val'][metric_name][-1])
+            }
+        }
+    
+    # Store predictions and models for analysis
+    data['_preds'] = y_pred
+    
+    # Return results in UEL format
+    # Get val_rmse safely
+    if 'universal' in regime_metrics:
+        val_rmse = regime_metrics['universal']['final_val_rmse']
+    elif regime_metrics:  # Has at least one regime
+        val_rmse = list(regime_metrics.values())[0]['final_val_rmse']
+    else:
+        raise ValueError("No models were trained - regime_metrics is empty")
+    
+    # UEL compatibility - models must be at top level
+    round_results = {
+        'models': [models if train_regime_models else model],  # Wrap in list for UEL compatibility
+        'val_rmse': val_rmse,
+        'n_regimes_trained': len([r for r in regime_metrics if r != 'universal']),
+    }
+    
+    # Add flattened regime metrics - always include all columns for consistency
+    for regime in ['low', 'normal', 'high', 'universal']:
+        if regime in regime_metrics:
+            round_results[f'{regime}_val_rmse'] = regime_metrics[regime]['final_val_rmse']
+            round_results[f'{regime}_samples'] = regime_metrics[regime]['samples']
+        else:
+            # Add None/NaN for missing regimes to maintain consistent schema
+            round_results[f'{regime}_val_rmse'] = None
+            round_results[f'{regime}_samples'] = 0
+    
+    # Store complex objects in extras
+    round_results['extras'] = {
+        'regime_models': models if train_regime_models else {'universal': model},  # Store actual models dict
+        'test_predictions': y_pred,
+        'test_clean': data['_test_clean'],
+        'numeric_features': data['_numeric_features'],
+        'regime_metrics': regime_metrics
+    }
+    
+    # Generate regime-specific predictions for proper threshold calculation
+    if train_regime_models:
+        regime_predictions = {}
+        test_clean = data['_test_clean']
+        
+        for regime in ['low', 'normal', 'high']:
+            regime_test = test_clean.filter(pl.col('volatility_regime') == regime)
+            if len(regime_test) > 0 and regime in models:
+                X_regime = regime_test.select(numeric_features).to_numpy()
+                regime_preds = models[regime].predict(X_regime)
+                # Get indices where this regime occurs
+                regime_mask = test_clean.get_column('volatility_regime') == regime
+                indices = [i for i, val in enumerate(regime_mask) if val]
+                regime_predictions[regime] = {
+                    'predictions': regime_preds,
+                    'indices': indices,
+                    'scores': regime_test.select('tradeable_score').to_numpy().flatten() if 'tradeable_score' in regime_test.columns else None
+                }
+            elif len(regime_test) > 0 and 'universal' in models:
+                # Use universal model for missing regime
+                X_regime = regime_test.select(numeric_features).to_numpy()
+                regime_preds = models['universal'].predict(X_regime)
+                # Get indices where this regime occurs
+                regime_mask = test_clean.get_column('volatility_regime') == regime
+                indices = [i for i, val in enumerate(regime_mask) if val]
+                regime_predictions[regime] = {
+                    'predictions': regime_preds,
+                    'indices': indices,
+                    'scores': regime_test.select('tradeable_score').to_numpy().flatten() if 'tradeable_score' in regime_test.columns else None
+                }
+        
+        round_results['extras']['regime_predictions'] = regime_predictions
+    
+    return round_results

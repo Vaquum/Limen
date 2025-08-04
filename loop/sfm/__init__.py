@@ -6,6 +6,7 @@ import loop.sfm.reference.random as random
 import loop.sfm.reference.xgboost as xgboost
 import loop.sfm.reference.logreg as logreg_reference
 import loop.sfm.logreg as logreg
+import loop.sfm.reference as reference
 
 __all__ = [
     'decomposition',
@@ -15,5 +16,6 @@ __all__ = [
     'random',
     'xgboost',
     'logreg_reference', 
-    'logreg'
+    'logreg',
+    'reference'
 ]

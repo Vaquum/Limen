@@ -4,10 +4,11 @@ import loop
 import traceback
 
 from loop import sfm
-
 from loop.tests.utils.cleanup import cleanup_csv_files
 from loop.tests.utils.get_data import get_klines_data, get_trades_data
 
+# Import tradeable_regressor directly
+from loop.sfm.lightgbm import tradeable_regressor
 
 def test_sfm():
     
@@ -21,6 +22,7 @@ def test_sfm():
         (sfm.lightgbm.regime_multiclass, get_klines_data, False),
         (sfm.lightgbm.breakout_regressor, get_klines_data, False),
         (sfm.lightgbm.regime_stability, get_klines_data, False),
+        (tradeable_regressor, get_klines_data, False),
         ]
 
     for test in tests:
@@ -38,3 +40,7 @@ def test_sfm():
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)
+
+
+if __name__ == "__main__":
+    test_sfm()
