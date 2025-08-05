@@ -1,7 +1,7 @@
 import polars as pl
 
 
-def calculate_volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
+def volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     '''
     Calculate volume regime (current vs average volume).
     

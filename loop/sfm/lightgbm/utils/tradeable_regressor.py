@@ -6,8 +6,8 @@ Feature Engineering Functions for LightGBM Tradeable Regressor
 import polars as pl
 from loop.indicators.rsi_sma import rsi_sma
 from loop.indicators.sma import sma
-from loop.indicators.trend_strength import calculate_trend_strength
-from loop.indicators.volume_regime import calculate_volume_regime
+from loop.indicators.trend_strength import trend_strength
+from loop.indicators.volume_regime import volume_regime
 from loop.indicators.rolling_volatility import rolling_volatility
 from loop.indicators.atr_sma import atr_sma
 from loop.indicators.atr_percent_sma import atr_percent_sma
@@ -82,7 +82,7 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
     # Trend strength using existing indicators
     df = sma(df, 'close', 20)
     df = sma(df, 'close', 50)
-    df = calculate_trend_strength(df, 20, 50)
+    df = trend_strength(df, 20, 50)
     
     # Rename the SMA columns to expected names
     df = df.rename({
@@ -103,7 +103,7 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
     # Volume regime
     df = sma(df, 'volume', 48)
     df = df.rename({'volume_sma_48': 'volume_sma'})
-    df = calculate_volume_regime(df, 48)
+    df = volume_regime(df, 48)
     
     # Market favorability score
     df = df.with_columns([
