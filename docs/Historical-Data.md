@@ -12,7 +12,7 @@ There are in total five distinct data endpoints:
 - `HistoricalData.get_spot_klines` (for both spot and futures)
 - `HistoricalData.get_spot_trades`
 - `HistoricalData.get_spot_agg_trades`
-- `HistoricalData.get_future_klines`
+- `HistoricalData.get_futures_klines`
 - `HistoricalData.get_futures_trades`
 
 All of these endpoints are available in the following manner: 
