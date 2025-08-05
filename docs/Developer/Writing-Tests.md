@@ -15,4 +15,4 @@ Here is a few guidelines to ensure that our tests are as readable and maintainab
 - Never add any fallbacks to tests
 - Never add any printouts to tests
 
-**NOTE:** Simply by adding test to [`loop/tests/run.py`]('../loop/tests/run.py'), and additional to [`loop/tests/test_sfm.py`]('../loop/tests/test_sfm.py').
+**NOTE:** Simply add tests to [`loop/tests/run.py`]('../loop/tests/run.py') and additional SFM tests to [`loop/tests/test_sfm.py`]('../loop/tests/test_sfm.py').
