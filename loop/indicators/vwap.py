@@ -13,7 +13,7 @@ def vwap(data: pl.DataFrame,
         volume_col (str): Name of the volume column.
 
     Returns:
-        pl.DataFrame: The input data with the ROC column appended.
+        pl.DataFrame: The input data with the VWAP column appended.
     '''
 
     return (
