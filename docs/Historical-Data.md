@@ -95,7 +95,7 @@ Get historical trades data for Binance spot.
 | Parameter               | Type     | Description                                         |
 |-------------------------|----------|-----------------------------------------------------|
 | `month_year`            | `Tuple`  | The month of data to be pulled, e.g. `(3, 2025)`.   |
-| `n_latest`              | `int`    | Number of latest rows to be pulled.                 |
+| `n_rows`                | `int`    | Number of latest rows to be pulled.                 |
 | `n_random`              | `int`    | Number of random rows to be pulled.                 |
 | `include_datetime_col`  | `bool`   | If the datetime column is to be included.           |
 

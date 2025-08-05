@@ -84,7 +84,7 @@ class HistoricalData:
 
     def get_historical_trades(self,
                               month_year: Tuple = None,
-                              n_latest: int = None,
+                              n_rows: int = None,
                               n_random: int = None,
                               include_datetime_col: bool = True) -> None:
 
@@ -92,7 +92,7 @@ class HistoricalData:
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
-            n_latest (int): Number of latest rows to be pulled
+            n_rows (int): Number of latest rows to be pulled
             n_random (int): Number of random rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
 
@@ -102,9 +102,9 @@ class HistoricalData:
         '''
         
         self.data = get_trades_data(month_year=month_year,
-                                        n_latest=n_latest,
-                                        n_random=n_random,
-                                        include_datetime_col=include_datetime_col)
+                                    n_latest=n_rows,
+                                    n_random=n_random,
+                                    include_datetime_col=include_datetime_col)
         
         self.data = self.data.with_columns([
             pl.when(pl.col("timestamp") < 10**13)
