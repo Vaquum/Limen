@@ -171,5 +171,5 @@
 - Update `sfm.lightgbm.regime_stability` to output standard
 - Add `sfm.lightgbm.regime_stability` to test suite
 
-# v1.4.5 on 5th of Augest, 2025
+# v1.4.4 on 5th of Augest, 2025
 - Fix Polars schema error in regime_multiclass SFM by handling None values in round_params
