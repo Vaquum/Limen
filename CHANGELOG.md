@@ -181,4 +181,4 @@
 - Rename `get_historical_trades` to `get_spot_trades`
 - Rename `get_historical_agg_trades` to `get_agg_trades`
 - Rename `get_historical_futures_trades` to `get_futures_trades`
-- Make `get_futures_trades` create `uel.data` instead of returning `pl.DataFrame`
+- Make `get_futures_trades` create `self.data` instead of returning `pl.DataFrame`
