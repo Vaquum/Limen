@@ -59,16 +59,14 @@ class HistoricalData:
     def get_spot_klines(self,
                         n_rows: int = None,
                         kline_size: int = 1,
-                        start_date_limit: str = None,
-                        futures: bool = False) -> None:
+                        start_date_limit: str = None) -> None:
         
-        '''Get historical klines data for Binance spot or futures.
+        '''Get historical klines data for Binance spot.
 
         Args:
             n_rows (int): Number of rows to be pulled
             kline_size (int): Size of the kline in seconds
             start_date_limit (str): The start date of the klines data
-            futures (bool): If the data is from futures.
 
         Returns:
             self.data (pl.DataFrame)
@@ -78,7 +76,31 @@ class HistoricalData:
         self.data = get_klines_data(n_rows=n_rows,
                                     kline_size=kline_size,
                                     start_date_limit=start_date_limit,
-                                    futures=futures)
+                                    futures=False)
+
+        self.data_columns = self.data.columns
+
+    def get_futures_klines(self,
+                           n_rows: int = None,
+                           kline_size: int = 1,
+                           start_date_limit: str = None) -> None:
+        
+        '''Get historical klines data for Binance futures.
+
+        Args:
+            n_rows (int): Number of rows to be pulled
+            kline_size (int): Size of the kline in seconds
+            start_date_limit (str): The start date of the klines data
+
+        Returns:
+            self.data (pl.DataFrame)
+    
+        '''
+
+        self.data = get_klines_data(n_rows=n_rows,
+                                    kline_size=kline_size,
+                                    start_date_limit=start_date_limit,
+                                    futures=True)
 
         self.data_columns = self.data.columns
 

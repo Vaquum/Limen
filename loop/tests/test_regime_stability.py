@@ -20,11 +20,10 @@ def test_regime_stability():
     try:
         # Get historical data
         historical = HistoricalData()
-        historical.get_historical_klines(
+        historical.get_futures_klines(
             n_rows=TEST_DATA_SIZE,
             kline_size=TEST_KLINE_SIZE,
-            start_date_limit=TEST_START_DATE,
-            futures=True
+            start_date_limit=TEST_START_DATE
         )
         
         # Monkey patch the NUM_ROWS for testing

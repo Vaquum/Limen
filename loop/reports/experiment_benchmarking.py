@@ -16,7 +16,7 @@ def experiment_benchmarking(file_path,
     rounds to train models for bencmarking.
 
     NOTE: This currently only works with SFMs that take data from
-    historical.get_historical_klines.
+    historical.get_spot_klines.
 
     
     Args:
@@ -53,7 +53,7 @@ def experiment_benchmarking(file_path,
         else:
             n_rows = None
         
-        historical.get_historical_klines(n_rows=n_rows,
+        historical.get_spot_klines(n_rows=n_rows,
                                          kline_size=params['kline_size'])
     
         # Prep the data for the model
