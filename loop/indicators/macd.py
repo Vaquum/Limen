@@ -9,25 +9,15 @@ def macd(data: pl.DataFrame,
     '''
     Compute MACD (Moving Average Convergence Divergence) from kline close prices.
 
-    MACD line = EMA(fast_period) – EMA(slow_period)
-    Signal line = EMA(signal_period) of MACD line
-    Histogram = MACD line – Signal line
-
-    Uses exponential moving averages (Wilder’s style).
-
     Args:
-        data (pl.DataFrame): The input kline DataFrame. Must contain:
-            • close_col (Float/Float64) – closing price of the kline
-        close_col (str):       Name of the close price column (default: "close")
-        fast_period (int):     Lookback for the fast EMA (default: 12)
-        slow_period (int):     Lookback for the slow EMA (default: 26)
-        signal_period (int):   Lookback for the signal‐line EMA (default: 9)
+        data (pl.DataFrame): The input kline DataFrame.
+        close_col (str): Name of the close price column.
+        fast_period (int): Lookback for the fast EMA.
+        slow_period (int): Lookback for the slow EMA.
+        signal_period (int): Lookback for the signal‐line EMA.
 
     Returns:
-        pl.DataFrame: Original DataFrame, with three new columns:
-            • "macd"        = EMA(fast_period) – EMA(slow_period)
-            • "macd_signal" = EMA(signal_period) of the "macd" column
-            • "macd_hist"   = "macd" – "macd_signal"
+        pl.DataFrame: The input data with three macd columns added.
     '''
 
     alpha_fast = 2.0 / (fast_period + 1)

@@ -11,13 +11,13 @@ def atr(data: pl.DataFrame,
 
     Args:
         data (pl.DataFrame): The input data
-        high_col (str): The column name for the high prices
-        low_col (str): The column name for the low prices
-        close_col (str): The column name for the closing prices
-        period (int): The period for the ATR calculation
+        high_col (str): The column name for the high prices.
+        low_col (str): The column name for the low prices.
+        close_col (str): The column name for the closing prices.
+        period (int): The period for the ATR calculation.
 
     Returns:
-        pl.DataFrame: The input data with the ATR column appended
+        pl.DataFrame: The input data with the ATR column appended.
 
     '''
     
