@@ -171,3 +171,6 @@
 - Update `sfm.lightgbm.regime_stability` to output standard
 - Add `sfm.lightgbm.regime_stability` to test suite
 
+# v1.5.0 on 4th of August, 2025
+- Create `sfm.lightgbm.tradeable_regressor` decoder
+- Add `sfm.lightgbm.tradeable_regressor` to test suite
