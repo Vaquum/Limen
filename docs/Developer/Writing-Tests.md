@@ -2,7 +2,7 @@
 
 ## When to add tests?
 
-If you are adding new code, add tests that covers that code. If you are adding an SFM, there is no requirement to write additional tests, simply drop it to the test harness in [`loop/tests/test_sfm.py`]('../loop/tests/test_sfm.py'). 
+If you are adding new code, add tests that cover that code. If you are adding an SFM, there is no requirement to write additional tests, simply drop it to the test harness in [`loop/tests/test_sfm.py`]('../loop/tests/test_sfm.py'). 
 
 ## Standards
 
