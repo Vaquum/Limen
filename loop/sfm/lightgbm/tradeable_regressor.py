@@ -69,6 +69,8 @@ CONFIG = {
     'vol_low_percentile': 20,
     'vol_high_percentile': 80,
     'commission_rate': 0.0015,  # 0.15% round-trip commission
+    'num_boost_round': 300,
+    'early_stopping_rounds': 30,
 }
 
 def params():
@@ -289,10 +291,10 @@ def model(data, round_params):
                 model = lgb.train(
                     params=lgb_params,
                     train_set=train_data,
-                    num_boost_round=300,
+                    num_boost_round=CONFIG['num_boost_round'],
                     valid_sets=[train_data, val_data],
                     valid_names=['train', 'val'],
-                    callbacks=[lgb.early_stopping(stopping_rounds=30), lgb.record_evaluation(evals_result)]
+                    callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result)]
                 )
                 
                 models[regime] = model
@@ -348,10 +350,10 @@ def model(data, round_params):
         universal_model = lgb.train(
             params=lgb_params,
             train_set=dtrain_universal,
-            num_boost_round=300,
+            num_boost_round=CONFIG['num_boost_round'],
             valid_sets=[dtrain_universal, dval_universal],
             valid_names=['train', 'val'],
-            callbacks=[lgb.early_stopping(stopping_rounds=30), lgb.record_evaluation(evals_result_universal)]
+            callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result_universal)]
         )
         
         models['universal'] = universal_model
@@ -426,10 +428,10 @@ def model(data, round_params):
         model = lgb.train(
             params=lgb_params,
             train_set=data['dtrain'],
-            num_boost_round=300,
+            num_boost_round=CONFIG['num_boost_round'],
             valid_sets=[data['dtrain'], data['dval']],
             valid_names=['train', 'val'],
-            callbacks=[lgb.early_stopping(stopping_rounds=30), lgb.record_evaluation(evals_result)]
+            callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result)]
         )
         
         # Predict on test set - use consistent approach
