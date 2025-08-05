@@ -9,10 +9,11 @@ All of the endpoints rely on [Binance Market Data](https://data.binance.vision/?
 There are in total five distinct data endpoints:
 
 - `HistoricalData.get_binance_file`
-- `HistoricalData.get_historical_klines` (for both spot and futures)
-- `HistoricalData.get_historical_trades`
-- `HistoricalData.get_historical_agg_trades`
-- `HistoricalData.get_historical_futures_trades`
+- `HistoricalData.get_spot_klines` (for both spot and futures)
+- `HistoricalData.get_spot_trades`
+- `HistoricalData.get_spot_agg_trades`
+- `HistoricalData.get_future_klines`
+- `HistoricalData.get_futures_trades`
 
 All of these endpoints are available in the following manner: 
 
@@ -22,7 +23,7 @@ import loop
 historical = loop.HistoricalData()
 
 # Call one of the endpoints:
-historical.get_historical_klines()
+historical.get_spot_klines()
 
 # Access the data
 historical.data
@@ -48,9 +49,9 @@ Get historical data from a Binance file based on the file URL.
 
 `self.data` (pl.DataFrame) with the columns being a result of the file that is read.
 
-## `HistoricalData.get_historical_klines`
+## `HistoricalData.get_spot_klines`
 
-Get historical klines data for Binance spot or futures.
+Get historical klines data for Binance spot.
 
 ### Args
 
@@ -59,7 +60,6 @@ Get historical klines data for Binance spot or futures.
 | `n_rows`           | `int`   | Number of rows to be pulled.             |
 | `kline_size`       | `int`   | Size of the kline in seconds.            |
 | `start_date_limit` | `str`   | The start date of the klines data.       |
-| `futures`          | `bool`  | If the data is from futures.             |
 
 ### Returns
 
@@ -85,8 +85,7 @@ Get historical klines data for Binance spot or futures.
 | `close_liquidity`  | `float`     | Available liquidity at the close price.                              |
 | `liquidity_sum`    | `float`     | Sum of liquidity across all price levels during the period.          |
 
-
-## `HistoricalData.get_historical_trades`
+## `HistoricalData.get_spot_trades`
 
 Get historical trades data for Binance spot.
 
@@ -113,7 +112,7 @@ Get historical trades data for Binance spot.
 | `datetime`         | `datetime`  | Human-readable date/time derived from `timestamp`. |
 
 
-## `HistoricalData.get_historical_agg_trades`
+## `HistoricalData.get_spot_agg_trades`
 
 Get historical aggTrades data for Binance spot.
 
@@ -140,8 +139,43 @@ Get historical aggTrades data for Binance spot.
 | `last_trade_id`    | `int`       | The individual order ID of the last order in this aggregate.                   |
 | `datetime`         | `datetime`  | Human-readable date/time corresponding to `timestamp`.                         |
 
+## `HistoricalData.get_futures_klines`
 
-## `HistoricalData.get_historical_futures_trades`
+Get historical klines data for Binance futures.
+
+### Args
+
+| Parameter          | Type    | Description                              |
+|--------------------|---------|------------------------------------------|
+| `n_rows`           | `int`   | Number of rows to be pulled.             |
+| `kline_size`       | `int`   | Size of the kline in seconds.            |
+| `start_date_limit` | `str`   | The start date of the klines data.       |
+
+### Returns
+
+`self.data` (pl.DataFrame)
+
+| Column Name        | Type        | Description                                                          |
+|--------------------|-------------|----------------------------------------------------------------------|
+| `datetime`         | `datetime`  | Start time of the kline period.                                      |
+| `open`             | `float`     | Opening price of the kline period.                                   |
+| `high`             | `float`     | Highest price reached during the kline period.                       |
+| `low`              | `float`     | Lowest price reached during the kline period.                        |
+| `close`            | `float`     | Closing price at the end of the kline period.                        |
+| `mean`             | `float`     | Average price over the kline period.                                 |
+| `std`              | `float`     | Standard deviation of price over the kline period.                   |
+| `median`           | `float`     | Median price over the kline period.                                  |
+| `iqr`              | `float`     | Interquartile range of prices during the kline period.               |
+| `volume`           | `float`     | Total traded volume during the kline period.                         |
+| `maker_ratio`      | `float`     | Ratio of maker-initiated volume to total volume in the period.       |
+| `no_of_trades`     | `int`       | Number of trades executed during the kline period.                   |
+| `open_liquidity`   | `float`     | Available liquidity at the open price.                               |
+| `high_liquidity`   | `float`     | Available liquidity at the highest price.                            |
+| `low_liquidity`    | `float`     | Available liquidity at the lowest price.                             |
+| `close_liquidity`  | `float`     | Available liquidity at the close price.                              |
+| `liquidity_sum`    | `float`     | Sum of liquidity across all price levels during the period.          |
+
+## `HistoricalData.get_futures_trades`
 
 Get historical trades data for Binance futures. 
 
