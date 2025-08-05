@@ -157,4 +157,9 @@ def model(data, round_params):
     
     round_results = multiclass_metrics(data, preds, prediction_probs)
     
+    # Clean up round_params to handle None values that cause Polars schema errors
+    for key, value in round_params.items():
+        if value is None:
+            round_params[key] = ""
+    
     return round_results
