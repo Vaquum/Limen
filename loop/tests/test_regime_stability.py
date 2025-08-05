@@ -5,7 +5,7 @@ Location: test_regime_stability.py
 
 import loop
 from loop.sfm.lightgbm import regime_stability
-from loop.data import HistoricalData
+from loop.historical_data import HistoricalData
 
 # Test configuration constants
 TEST_NUM_ROWS = 6000  # Number of rows to sample in tests

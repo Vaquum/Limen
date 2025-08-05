@@ -1,5 +1,5 @@
 from loop.account import Account
-from loop.data import HistoricalData
+from loop.historical_data import HistoricalData
 from loop.backtest import Backtest
 from loop.universal_experiment_loop import UniversalExperimentLoop
 
