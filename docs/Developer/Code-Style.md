@@ -1,8 +1,27 @@
 # Code Style
 
-## Flavor
+## Philohopy
 
-Loop's flavor is simplicity. Simplicity is the fundamental principle governing everything else. **Make everything as simple as possible.**
+### Radical Simplicity
+Simplicity isn’t just preferred—it’s the governing law. Choose the most straightforward design, the clearest algorithm, the leanest interface. Anything that adds complexity must earn its place.
+
+### Consistency Over Creativity
+Uniform style (PEP 8 + house rules) removes mental friction. Identical filename ↔ function name pairs, single quotes (double only in f-strings), upper-case constants, lower-case variables—these small disciplines let readers focus on logic, not format.
+
+### Self-Evident Code
+Code should explain itself. Docstrings are exhaustive; inline comments are rare and reserved for genuinely non-obvious decisions. No embedded examples—documentation and tests live elsewhere.
+
+### Type-Safe Explicitness
+Every declaration is type-hinted; magic numbers become named constants. When intent is machine-checkable, make it so.
+
+### Modular Brevity
+Functions grow past ~50 lines? They graduate into their own file. Smaller scope, smaller surface area, easier reasoning.
+
+### Test-And-Doc First-Class
+A contribution isn’t complete until it ships with thorough tests and matching docs. Quality gates are as important as the feature itself.
+
+### LLM as a Drafting Tool, Not an Autopilot
+Use language models to explore and iterate, but never drop raw output in the repo. The final pass—simplification, polish, and accountability—is always human.
 
 ## Guidelines
 
@@ -10,7 +29,7 @@ Loop's flavor is simplicity. Simplicity is the fundamental principle governing e
 
 When making code contributions to Loop, always follow these guidelines:
 
-- Always follow PEP8 for style guidance, except when stated otherwise here
+- Follow PEP8 for style guidance, except when stated otherwise here
 - Make declarations with type hints
 - Never add comments unless it is critical to have it
 - Never add examples
@@ -24,3 +43,13 @@ When making code contributions to Loop, always follow these guidelines:
 - Make magic numbers constants
 - Make constants uppercase
 - Make variables lowercase
+- Pass ruff + mypy with zero errors before every PR
+- Order imports: stdlib → third-party → local; never use * imports
+- Use logging.getLogger(__name__)—never print() in library code
+- Avoid mutable default arguments (def fn(a=[]): ... is forbidden)
+- Handle resources with context managers (with), not manual open/close
+- Catch specific exceptions only; no bare except: blocks
+- Break on exception except exceptionally
+- Use pathlib over os.path for file paths
+- Limit external dependencies; prefer the standard library or existing project deps
+- Expose public API explicitly via __all__; prefix internal names with _
