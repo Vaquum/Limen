@@ -126,7 +126,7 @@ Compute Volume Weighted Average Price (VWAP) for each kline over its trading day
 
 #### Returns
 
-`pl.DataFrame`: The input data with the ROC column appended.
+`pl.DataFrame`: The input data with the VWAP column appended.
 
 ### `wilder_rsi`
 
