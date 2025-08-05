@@ -179,6 +179,6 @@
 - Rename `loop.data` to `loop.historical_data`
 - Split `get_historical_klines` into `get_spot_klines` and `get_futures_klines`
 - Rename `get_historical_trades` to `get_spot_trades`
-- Rename `get_historical_agg_trades` to `get_agg_trades`
+- Rename `get_historical_agg_trades` to `get_spot_agg_trades`
 - Rename `get_historical_futures_trades` to `get_futures_trades`
 - Make `get_futures_trades` create `self.data` instead of returning `pl.DataFrame`
