@@ -367,10 +367,10 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
                         'exit_bars', 'exit_max_return', 'exit_min_return']
     for col in numeric_exit_cols:
         df_pd[col] = df_pd[col].astype('float64')
-    df_pd[numeric_exit_cols] = df_pd[numeric_exit_cols].ffill().bfill()
+    df_pd[numeric_exit_cols] = df_pd[numeric_exit_cols].ffill()
     
     # String column
-    df_pd['exit_reason'] = df_pd['exit_reason'].fillna('').ffill().bfill()
+    df_pd['exit_reason'] = df_pd['exit_reason'].fillna('').ffill()
     
     # Convert back to Polars
     return pl.from_pandas(df_pd)
