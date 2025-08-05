@@ -30,10 +30,8 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     ]).drop(f'returns_temp_volatility_{lookback}')
     
     # Calculate rolling percentiles of volatility
-    # For each row, find what percentile its volatility is within a rolling window
     window_size = lookback * 2
     
-    # Use rank within rolling window to get percentile
     df = df.with_columns([
         (pl.col('vol_60h')
          .rolling_quantile(window_size=window_size, quantile=0.2)
@@ -43,17 +41,15 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
          .alias('vol_p80'))
     ])
     
-    # Calculate percentile based on thresholds
     df = df.with_columns([
         pl.when(pl.col('vol_60h') <= pl.col('vol_p20'))
-        .then(10)  # Arbitrary low value
+        .then(10)
         .when(pl.col('vol_60h') >= pl.col('vol_p80'))
-        .then(90)  # Arbitrary high value
-        .otherwise(50)  # Middle value
+        .then(90)
+        .otherwise(50)
         .alias('vol_percentile')
     ])
     
-    # Drop temporary columns
     df = df.drop(['vol_p20', 'vol_p80'])
     
     # Classify into regimes

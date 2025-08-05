@@ -176,10 +176,6 @@ def prep(data, round_params=None):
     test_clean_for_backtest = split_data[2].drop([col for col in exit_reality_cols if col in split_data[2].columns])
     test_clean_for_backtest = test_clean_for_backtest.with_columns(pl.lit(0.0).alias('tradeable_score'))
     
-    # Debug: Check columns
-    logging.debug(f"Test data columns before backtest: {test_clean_for_backtest.columns[:15]}...")
-    logging.debug(f"Test data shape: {test_clean_for_backtest.shape}")
-    
     # Drop these columns from test split for model
     split_data[2] = split_data[2].drop([col for col in exit_reality_cols if col in split_data[2].columns])
     
