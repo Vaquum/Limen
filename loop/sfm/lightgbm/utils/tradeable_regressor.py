@@ -351,7 +351,7 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         
         # Calculate P&L after fees
         gross_return = exit_return
-        net_return = gross_return - 0.0015  # 0.15% round-trip fees
+        net_return = gross_return - config['commission_rate']
         
         # Update the pandas dataframe
         df_pd.at[i, 'exit_gross_return'] = gross_return

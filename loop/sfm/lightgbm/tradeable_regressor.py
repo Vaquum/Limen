@@ -68,6 +68,7 @@ CONFIG = {
     'vol_regime_lookback': 720,
     'vol_low_percentile': 20,
     'vol_high_percentile': 80,
+    'commission_rate': 0.0015,  # 0.15% round-trip commission
 }
 
 def params():
