@@ -56,11 +56,11 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
-    def get_historical_klines(self,
-                              n_rows: int = None,
-                              kline_size: int = 1,
-                              start_date_limit: str = None,
-                              futures: bool = False) -> None:
+    def get_spot_klines(self,
+                        n_rows: int = None,
+                        kline_size: int = 1,
+                        start_date_limit: str = None,
+                        futures: bool = False) -> None:
         
         '''Get historical klines data for Binance spot or futures.
 
@@ -82,11 +82,11 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
-    def get_historical_trades(self,
-                              month_year: Tuple = None,
-                              n_rows: int = None,
-                              n_random: int = None,
-                              include_datetime_col: bool = True) -> None:
+    def get_spot_trades(self,
+                        month_year: Tuple = None,
+                        n_rows: int = None,
+                        n_random: int = None,
+                        include_datetime_col: bool = True) -> None:
 
         '''Get historical trades data for Binance spot.
 
@@ -116,10 +116,10 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
-    def get_historical_agg_trades(self,
-                                  month_year: Tuple = None,
-                                  n_rows: int = None,
-                                  include_datetime_col: bool = True) -> None:
+    def get_spot_agg_trades(self,
+                            month_year: Tuple = None,
+                            n_rows: int = None,
+                            include_datetime_col: bool = True) -> None:
 
         '''Get historical aggTrades data for Binance spot.
 
@@ -147,11 +147,11 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
         
-    def get_historical_futures_trades(self,
-                                      month_year: Optional[Tuple[int,int]] = None,
-                                      n_rows: Optional[int] = None,
-                                      include_datetime_col: bool = True,
-                                      show_summary: bool = False) -> pl.DataFrame:
+    def get_futures_trades(self,
+                           month_year: Optional[Tuple[int,int]] = None,
+                           n_rows: Optional[int] = None,
+                           include_datetime_col: bool = True,
+                           show_summary: bool = False) -> pl.DataFrame:
         
         '''Get historical trades data for Binance futures.
 
@@ -169,10 +169,12 @@ class HistoricalData:
         table_name = 'binance_futures_trades'
         sort_by = 'futures_trade_id'
 
-        return generic_endpoint_for_tdw(month_year=month_year,
-                                        n_rows=n_rows,
-                                        include_datetime_col=include_datetime_col,
-                                        select_cols=select_cols,
-                                        table_name=table_name,
-                                        sort_by=sort_by,
-                                        show_summary=show_summary)
+        self.data = generic_endpoint_for_tdw(month_year=month_year,
+                                             n_rows=n_rows,
+                                             include_datetime_col=include_datetime_col,
+                                             select_cols=select_cols,
+                                             table_name=table_name,
+                                             sort_by=sort_by,
+                                             show_summary=show_summary)
+        
+        self.data_columns = self.data.columns
