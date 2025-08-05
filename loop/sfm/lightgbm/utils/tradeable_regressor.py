@@ -12,6 +12,11 @@ from loop.indicators.rolling_volatility import rolling_volatility
 from loop.indicators.atr_sma import atr_sma
 from loop.indicators.atr_percent_sma import atr_percent_sma
 
+# Constants for volatility regime values
+VOL_REGIME_LOW_VALUE = 10
+VOL_REGIME_HIGH_VALUE = 90
+VOL_REGIME_MID_VALUE = 50
+
 def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     """Calculate volatility regime for each row"""
     
@@ -43,10 +48,10 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     
     df = df.with_columns([
         pl.when(pl.col('vol_60h') <= pl.col('vol_p20'))
-        .then(10)
+        .then(VOL_REGIME_LOW_VALUE)
         .when(pl.col('vol_60h') >= pl.col('vol_p80'))
-        .then(90)
-        .otherwise(50)
+        .then(VOL_REGIME_HIGH_VALUE)
+        .otherwise(VOL_REGIME_MID_VALUE)
         .alias('vol_percentile')
     ])
     
@@ -517,7 +522,7 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     
     return df.drop('returns_temp')
 
-def prepare_features_5m(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
+def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = None) -> pl.DataFrame:
     """Prepare features for 5-minute trading"""
     
     # Price-based features
@@ -573,21 +578,19 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
             pl.col('returns').shift(lag).alias(f'returns_lag_{lag}')
         ])
     
-    # Configuration reference
-    CONFIG = {
-        'base_min_breakout': 0.005,
-        'volatility_regime_enabled': True,
-    }
+    # Use default values if config not provided
+    base_min_breakout = config.get('base_min_breakout', 0.005) if config else 0.005
+    volatility_regime_enabled = config.get('volatility_regime_enabled', True) if config else True
     
     # Add dynamic features
     df = df.with_columns([
-        pl.col('dynamic_target').fill_null(CONFIG['base_min_breakout']).alias('dynamic_target_feature'),
+        pl.col('dynamic_target').fill_null(base_min_breakout).alias('dynamic_target_feature'),
         pl.col('entry_score').fill_null(1.0).alias('entry_score_feature'),
         pl.col('momentum_score').fill_null(1.0).alias('momentum_score_feature')
     ])
     
     # Add volatility regime features
-    if CONFIG['volatility_regime_enabled']:
+    if volatility_regime_enabled:
         df = df.with_columns([
             pl.col('vol_60h').fill_null(0).alias('vol_60h_feature'),
             pl.col('vol_percentile').fill_null(50).alias('vol_percentile_feature'),

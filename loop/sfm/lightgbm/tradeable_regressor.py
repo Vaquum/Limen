@@ -30,6 +30,14 @@ TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
 
+# Training weights for different conditions
+WEIGHT_TARGET_ACHIEVED = 20
+WEIGHT_QUICK_TARGET = 30
+WEIGHT_HIGH_SCORE_P90 = 20
+WEIGHT_HIGH_SCORE_P95 = 50
+WEIGHT_HIGH_SCORE_P99 = 100
+WEIGHT_PROFITABLE_MULTIPLIER = 1.5
+
 # Model Configuration
 CONFIG = {
     'kline_size': 300,  # 5 minutes
@@ -122,7 +130,7 @@ def prep(data, round_params=None):
     df = create_tradeable_labels(df, CONFIG)
     
     # Prepare final features
-    df = prepare_features_5m(df)
+    df = prepare_features_5m(df, config=CONFIG)
     
     # Clean data
     df_clean = df.drop_nulls()
@@ -256,21 +264,21 @@ def model(data, round_params):
                 
                 # Extra weight for trades that achieved target in reality
                 achieved_target = regime_train_set.select('achieves_dynamic_target').to_numpy().flatten()
-                weights_train[achieved_target] = 20
+                weights_train[achieved_target] = WEIGHT_TARGET_ACHIEVED
                 
                 # Extra weight for quick targets
                 exit_bars = regime_train_set.select('exit_bars').to_numpy().flatten()
                 quick_targets = achieved_target & (exit_bars <= 6)
-                weights_train[quick_targets] = 30
+                weights_train[quick_targets] = WEIGHT_QUICK_TARGET
                 
                 # Standard weighting for high-value predictions
-                weights_train[y_train > np.percentile(y_train, 90)] = 20
-                weights_train[y_train > np.percentile(y_train, 95)] = 50
-                weights_train[y_train > np.percentile(y_train, 99)] = 100
+                weights_train[y_train > np.percentile(y_train, 90)] = WEIGHT_HIGH_SCORE_P90
+                weights_train[y_train > np.percentile(y_train, 95)] = WEIGHT_HIGH_SCORE_P95
+                weights_train[y_train > np.percentile(y_train, 99)] = WEIGHT_HIGH_SCORE_P99
                 
                 # Extra weight for profitable exits
                 profitable_exits = (regime_train_set.select('exit_net_return').to_numpy().flatten() > 0.001)
-                weights_train[profitable_exits] *= 1.5
+                weights_train[profitable_exits] *= WEIGHT_PROFITABLE_MULTIPLIER
                 
                 train_data = lgb.Dataset(X_train, label=y_train, weight=weights_train)
                 val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
@@ -309,22 +317,22 @@ def model(data, round_params):
         
         # Extra weight for trades that achieved target in reality
         achieved_target_universal = train_set.select('achieves_dynamic_target').to_numpy().flatten()
-        weights_train_universal[achieved_target_universal] = 20
+        weights_train_universal[achieved_target_universal] = WEIGHT_TARGET_ACHIEVED
         
         # Extra weight for quick targets
         exit_bars = train_set.select('exit_bars').to_numpy().flatten()
         quick_targets = achieved_target_universal & (exit_bars <= 6)
-        weights_train_universal[quick_targets] = 30
+        weights_train_universal[quick_targets] = WEIGHT_QUICK_TARGET
         
         # Standard weighting for high-value predictions
         y_train_universal = train_set.select('tradeable_score').to_numpy().flatten()
-        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 90)] = 20
-        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 95)] = 50
-        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 99)] = 100
+        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 90)] = WEIGHT_HIGH_SCORE_P90
+        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 95)] = WEIGHT_HIGH_SCORE_P95
+        weights_train_universal[y_train_universal > np.percentile(y_train_universal, 99)] = WEIGHT_HIGH_SCORE_P99
         
         # Extra weight for profitable exits
         profitable_exits = (train_set.select('exit_net_return').to_numpy().flatten() > 0.001)
-        weights_train_universal[profitable_exits] *= 1.5
+        weights_train_universal[profitable_exits] *= WEIGHT_PROFITABLE_MULTIPLIER
         
         # Create datasets
         X_train_universal = train_set.select(numeric_features).to_numpy()
@@ -392,22 +400,22 @@ def model(data, round_params):
         
         # Extra weight for trades that achieved target in reality
         achieved_target = train_set.select('achieves_dynamic_target').to_numpy().flatten()
-        weights_train[achieved_target] = 20
+        weights_train[achieved_target] = WEIGHT_TARGET_ACHIEVED
         
         # Extra weight for quick targets
         exit_bars = train_set.select('exit_bars').to_numpy().flatten()
         quick_targets = achieved_target & (exit_bars <= 6)
-        weights_train[quick_targets] = 30
+        weights_train[quick_targets] = WEIGHT_QUICK_TARGET
         
         # Standard weighting for high-value predictions
         y_train = train_set.select('tradeable_score').to_numpy().flatten()
-        weights_train[y_train > np.percentile(y_train, 90)] = 20
-        weights_train[y_train > np.percentile(y_train, 95)] = 50
-        weights_train[y_train > np.percentile(y_train, 99)] = 100
+        weights_train[y_train > np.percentile(y_train, 90)] = WEIGHT_HIGH_SCORE_P90
+        weights_train[y_train > np.percentile(y_train, 95)] = WEIGHT_HIGH_SCORE_P95
+        weights_train[y_train > np.percentile(y_train, 99)] = WEIGHT_HIGH_SCORE_P99
         
         # Extra weight for profitable exits
         profitable_exits = (train_set.select('exit_net_return').to_numpy().flatten() > 0.001)
-        weights_train[profitable_exits] *= 1.5
+        weights_train[profitable_exits] *= WEIGHT_PROFITABLE_MULTIPLIER
         
         # Recreate dataset with weights
         data['dtrain'] = lgb.Dataset(data['x_train'], label=data['y_train'], weight=weights_train)
