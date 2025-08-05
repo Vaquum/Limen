@@ -295,8 +295,6 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     # This is necessary because the forward-looking logic is very difficult in pure Polars
     df_pd = df.to_pandas()
     
-    exit_reality_results = []
-    
     # For each sampled potential entry point
     for i in sample_indices:
         entry_price = df_pd.iloc[i]['close']
