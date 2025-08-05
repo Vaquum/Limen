@@ -367,25 +367,40 @@ def model(data, round_params):
         
         # Make predictions on test set using appropriate models
         test_clean = data['_test_clean']
-        predictions = []
         
-        for i in range(len(test_clean)):
-            current_regime = test_clean.row(i, named=True)['volatility_regime']
-            # Use universal model as fallback if regime model doesn't exist
-            if current_regime in models:
-                model = models[current_regime]
-            elif 'universal' in models:
-                model = models['universal']
-            else:
-                # This shouldn't happen, but handle it gracefully
-                raise ValueError(f"No model available for regime '{current_regime}' and no universal model")
+        # If we have regime-specific models, predict by regime
+        if 'volatility_regime' in test_clean.columns:
+            # Initialize predictions array
+            y_pred = np.zeros(len(test_clean))
             
-            row_data = test_clean.row(i, named=True)
-            X = np.array([row_data[feat] for feat in numeric_features]).reshape(1, -1)
-            pred = model.predict(X)[0]
-            predictions.append(pred)
-        
-        y_pred = np.array(predictions)
+            # Process each regime in batch
+            for regime in ['low', 'normal', 'high']:
+                regime_mask = test_clean.get_column('volatility_regime') == regime
+                regime_indices = [i for i, mask_val in enumerate(regime_mask) if mask_val]
+                
+                if len(regime_indices) > 0:
+                    # Get the appropriate model
+                    if regime in models:
+                        model = models[regime]
+                    elif 'universal' in models:
+                        model = models['universal']
+                    else:
+                        continue
+                    
+                    # Extract features for all rows of this regime at once
+                    regime_data = test_clean.filter(pl.col('volatility_regime') == regime)
+                    X_regime = regime_data.select(numeric_features).to_numpy()
+                    
+                    # Batch prediction
+                    regime_preds = model.predict(X_regime)
+                    
+                    # Place predictions in correct positions
+                    for idx, pred in zip(regime_indices, regime_preds):
+                        y_pred[idx] = pred
+        else:
+            # No regime info - use universal model for all
+            X_test = test_clean.select(numeric_features).to_numpy()
+            y_pred = models['universal'].predict(X_test)
         
     else:
         # Train single universal model
@@ -434,17 +449,11 @@ def model(data, round_params):
             callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result)]
         )
         
-        # Predict on test set - use consistent approach
-        if '_test_clean' in data and 'volatility_regime' in data['_test_clean'].columns:
-            # If we have regime info, iterate for consistency (even though all use universal)
+        # Predict on test set
+        if '_test_clean' in data:
             test_clean = data['_test_clean']
-            predictions = []
-            for i in range(len(test_clean)):
-                row_data = test_clean.row(i, named=True)
-                X = np.array([row_data[feat] for feat in numeric_features]).reshape(1, -1)
-                pred = model.predict(X)[0]
-                predictions.append(pred)
-            y_pred = np.array(predictions)
+            X_test = test_clean.select(numeric_features).to_numpy()
+            y_pred = model.predict(X_test)
         else:
             # Fallback to direct prediction
             y_pred = model.predict(data['x_test'])
