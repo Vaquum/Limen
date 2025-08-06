@@ -177,4 +177,3 @@
 
 # v.1.5.1 on 5th of August, 2025
 - Fix Polars schema error in regime_multiclass SFM by handling None values in params
-- Fix Polars schema error in regime_multiclass SFM by handling None values in params
