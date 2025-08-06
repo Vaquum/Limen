@@ -175,5 +175,5 @@
 - Create `sfm.lightgbm.tradeable_regressor` decoder
 - Add `sfm.lightgbm.tradeable_regressor` to test suite
 
-# v.1.5.1 on 5th of August, 2025
+# v1.5.1 on 5th of August, 2025
 - Fix Polars schema error in regime_multiclass SFM by handling None values in params
