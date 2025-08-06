@@ -190,3 +190,4 @@
 - Add `loop.features` sub-module
 - Add `features.conserved_flux_renormalization`
 - Add `transform.mad_transform` for Median Absolute Deviation scaling
+- Add `utils.check_if_has_header` to check Binance Market Data files for header
