@@ -14,11 +14,10 @@ This statement captures the essential meaning of a conservation law:
 
 Conservation law is a rule saying that “stuff” (mass, charge, energy, trade value, …) cannot appear from nowhere or disappear into nothing. Because it’s conserved, whatever amount enters a region must either remain stored there or leave; in steady conditions, the incoming and outgoing flows balance exactly.
 
-## Renormalization — seeing the same flow at every zoom
+## Renormalization
 
-In physics, **renormalization** means you keep “zooming out,” folding fine-scale
-details into coarser blocks, and watch how a system’s key numbers behave at
-each zoom level.  
+In physics, **renormalization** means you keep “zooming out,” folding fine-scale details into coarser blocks, and watch how a system’s key numbers behave at each zoom level.  
+
 For market data we do the same trick along the time axis.
 
 1. **Pick a base window**  
@@ -43,9 +42,7 @@ For market data we do the same trick along the time axis.
 
 Each doubling step is an **RG (renormalization-group) step**, and the pair `(σ / μ , H)` are the scale-dependent “couplings.” CFR compresses the entire ladder into four scalars (mean + variance of each curve) so you can spot hours where the market’s flow stops looking scale-invariant.
 
-## Deviation Metrics
-
-### Deviation metrics — two quick alarms
+## Deviation metrics
 
 Once the 6-scale ladder is built, we compare it to its ideal shape  
 (flat flux curve, 1-bit-per-octave entropy drop) and store the distance in
@@ -62,3 +59,5 @@ Once the 6-scale ladder is built, we compare it to its ideal shape
 Δflux_rms    > 0.15   → bursty or thin-book hour
 Δentropy_rms > 0.60   → patchy size-mix hour
 Trip both               almost certainly anomalous
+
+Δflux_rms and Δentropy_rms are root-mean-square gaps: they take the (e.g., six) scale-by-scale errors, square them, average, and square-root, yielding one always-positive score whose size grows with anomaly strength—so a simple cut (e.g. > 0.15 or > 0.60) cleanly flags bars that break the "ideal" flux or entropy ladder.
