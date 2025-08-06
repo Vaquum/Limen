@@ -59,5 +59,6 @@ Once the 6-scale ladder is built, we compare it to its ideal shape
 Δflux_rms    > 0.15   → bursty or thin-book hour
 Δentropy_rms > 0.60   → patchy size-mix hour
 Trip both               almost certainly anomalous
+```
 
 Δflux_rms and Δentropy_rms are root-mean-square gaps: they take the (e.g., six) scale-by-scale errors, square them, average, and square-root, yielding one always-positive score whose size grows with anomaly strength—so a simple cut (e.g. > 0.15 or > 0.60) cleanly flags bars that break the "ideal" flux or entropy ladder.
