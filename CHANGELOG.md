@@ -177,3 +177,11 @@
 
 # v1.5.1 on 5th of August, 2025
 - Fix Polars schema error in regime_multiclass SFM by handling None values in params
+
+# v1.6.0 on 5th of August, 2025
+- Rename `loop.data` to `loop.historical_data`
+- Split `get_historical_klines` into `get_spot_klines` and `get_futures_klines`
+- Rename `get_historical_trades` to `get_spot_trades`
+- Rename `get_historical_agg_trades` to `get_spot_agg_trades`
+- Rename `get_historical_futures_trades` to `get_futures_trades`
+- Make `get_futures_trades` create `self.data` instead of returning `pl.DataFrame`

@@ -5,7 +5,7 @@ Location: test_regime_stability.py
 
 import loop
 from loop.sfm.lightgbm import regime_stability
-from loop.data import HistoricalData
+from loop.historical_data import HistoricalData
 
 # Test configuration constants
 TEST_NUM_ROWS = 6000  # Number of rows to sample in tests
@@ -20,11 +20,10 @@ def test_regime_stability():
     try:
         # Get historical data
         historical = HistoricalData()
-        historical.get_historical_klines(
+        historical.get_futures_klines(
             n_rows=TEST_DATA_SIZE,
             kline_size=TEST_KLINE_SIZE,
-            start_date_limit=TEST_START_DATE,
-            futures=True
+            start_date_limit=TEST_START_DATE
         )
         
         # Monkey patch the NUM_ROWS for testing

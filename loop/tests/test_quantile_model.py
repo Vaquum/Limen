@@ -13,11 +13,10 @@ def test_quantile_model():
     
     # Step 1: Get small amount of historical data
     historical = loop.HistoricalData()
-    historical.get_historical_klines(
+    historical.get_futures_klines(
         n_rows=200,  # Small for fast testing
         kline_size=7200,  # 2h klines
-        start_date_limit='2024-01-01',
-        futures=True
+        start_date_limit='2024-01-01'
     )
     
     # Step 2: Create simple labels
