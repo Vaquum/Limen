@@ -7,6 +7,22 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
                                    kline_interval: str = "1h",
                                    base_window_s: int = 60,
                                    levels: int = 6) -> pl.DataFrame:
+    
+    '''
+    Compute multi-scale, conserved-flux features and their deviation scores
+    for each k-line—turning raw trade ticks into a six-value fingerprint that
+    flags hours where the dollar flow or trade-size entropy breaks
+    scale-invariant behaviour.
+
+    Args:
+        trades_df (pl.DataFrame): The trades DataFrame.
+        kline_interval (str): The kline interval.
+        base_window_s (int): The base window size.
+        levels (int): The number of levels to compute.
+
+    Returns:
+        pl.DataFrame: A klines DataFrame with the CFR features
+    '''
 
     trades = (trades_df
               .with_columns((pl.col("price") * pl.col("quantity")).alias("value"))

@@ -185,3 +185,8 @@
 - Rename `get_historical_agg_trades` to `get_spot_agg_trades`
 - Rename `get_historical_futures_trades` to `get_futures_trades`
 - Make `get_futures_trades` create `self.data` instead of returning `pl.DataFrame`
+
+# v1.7.0 on 6th of August, 2025
+- Add `loop.features` sub-module
+- Add `features.conserved_flux_renormalization`
+- Add `transform.mad_transform` for Median Absolute Deviation scaling

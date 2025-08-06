@@ -43,3 +43,22 @@ For market data we do the same trick along the time axis.
 
 Each doubling step is an **RG (renormalization-group) step**, and the pair `(σ / μ , H)` are the scale-dependent “couplings.” CFR compresses the entire ladder into four scalars (mean + variance of each curve) so you can spot hours where the market’s flow stops looking scale-invariant.
 
+## Deviation Metrics
+
+### Deviation metrics — two quick alarms
+
+Once the 6-scale ladder is built, we compare it to its ideal shape  
+(flat flux curve, 1-bit-per-octave entropy drop) and store the distance in
+**two extra columns**:
+
+| Column | Formula | Interpretation |
+|--------|---------|----------------|
+| `Δflux_rms` | $$\sqrt{\frac1n \sum_{k=0}^{n-1}\!\bigl((\sigma/\mu)_k-\overline{\sigma/\mu}\bigr)^{2}}$$ | Root-mean-square gap between the real flux-variability ladder and a perfectly **flat** line.  \>0.15 ⇒ one time-scale dominates the dollar flow. |
+| `Δentropy_rms` | $$\sqrt{\frac1n \sum_{k=0}^{n-1}\!\bigl(H_k-(H_0-k)\bigr)^{2}}$$ | RMS gap between the real entropy ladder and the ideal **1-bit-per-octave** drop.  \>0.60 ⇒ some scales are dust-filled while others hold blocks. |
+
+*Empirical BTC-spot (1 h) flags*
+
+```text
+Δflux_rms    > 0.15   → bursty or thin-book hour
+Δentropy_rms > 0.60   → patchy size-mix hour
+Trip both               almost certainly anomalous
