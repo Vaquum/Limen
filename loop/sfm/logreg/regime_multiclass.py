@@ -49,7 +49,7 @@ def params():
         'solver': ['lbfgs', 'liblinear', 'newton-cg', 'sag', 'saga'],
         'max_iter': [100, 200, 500, 1000, 2000],
         'tol': [0.0001, 0.001, 0.01, 0.1],
-        'class_weight': [None, 'balanced'],
+        'class_weight': ['None', 'balanced'],
         'l1_ratio': [0.15, 0.5, 0.85],
         'multi_class': ['ovr', 'multinomial'],
         'fit_intercept': [True],
@@ -130,6 +130,9 @@ def model(data, round_params):
     
     if params['penalty'] != 'elasticnet':
         params.pop('l1_ratio', None)
+        
+    if params['class_weight'] == 'None':
+        params['class_weight'] = None
     
     clf = LogisticRegression(
         penalty=params['penalty'],
