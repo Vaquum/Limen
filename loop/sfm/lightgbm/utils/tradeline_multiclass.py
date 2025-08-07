@@ -22,6 +22,9 @@ from loop.indicators.price_range_position import price_range_position
 from loop.indicators.distance_from_high import distance_from_high
 from loop.indicators.distance_from_low import distance_from_low
 
+# Constants
+MIN_VOLATILITY_THRESHOLD = 1e-6  # Minimum volatility to avoid division issues
+
 
 def find_price_lines(df: pl.DataFrame, 
                      max_duration_hours: int = 48, 
@@ -73,8 +76,8 @@ def find_price_lines(df: pl.DataFrame,
                     'end_price': end_price,
                     'height_pct': height_pct,
                     'duration_hours': duration_hours,
-                    'start_time': df[start_idx, 'datetime'] if 'datetime' in df.columns else start_idx,
-                    'end_time': df[end_idx, 'datetime'] if 'datetime' in df.columns else end_idx
+                    'start_time': df.item(start_idx, 'datetime') if 'datetime' in df.columns else start_idx,
+                    'end_time': df.item(end_idx, 'datetime') if 'datetime' in df.columns else end_idx
                 }
                 
                 if height_pct > 0:
@@ -179,9 +182,9 @@ def compute_line_features(df: pl.DataFrame,
             trending_score[idx] = (recent_long_count - recent_short_count) / total_recent
             reversal_potential[idx] = min(recent_long_count, recent_short_count) / max(recent_long_count, recent_short_count)
         else:
-            # No recent lines - explicitly set neutral values
-            trending_score[idx] = 0.0  # Neutral trend
-            reversal_potential[idx] = 0.0  # No reversal potential
+            # No recent lines - no directional bias or reversal setup exists
+            trending_score[idx] = 0.0  # Neutral trend (0 = balanced between -1 and +1)
+            reversal_potential[idx] = 0.0  # No reversal setup (0 = no opposing lines to create reversal)
     
     # Add features to DataFrame
     logging.debug("Adding line features to DataFrame...")
@@ -257,7 +260,7 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     
     # Volume expansion (capped to avoid extreme values)
     df = df.with_columns(
-        pl.when(pl.col('vol_6h') < 1e-6)
+        pl.when(pl.col('vol_6h') < MIN_VOLATILITY_THRESHOLD)
         .then(1.0)  # When 6h volatility is near zero, assume no expansion
         .otherwise(pl.col('vol_24h') / pl.col('vol_6h'))
         .alias('vol_expansion')
