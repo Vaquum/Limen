@@ -45,7 +45,7 @@ def close_position(data):
 
 def body_pct(data):
 
-    '''Calculate the body percentage of the close prices.
+    '''Compute the body percentage of the close prices.
     
     Args:
         data (pl.DataFrame): The input data.
