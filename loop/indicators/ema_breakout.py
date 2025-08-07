@@ -1,21 +1,28 @@
 import polars as pl
 
-def ema_breakout(
-    data: pl.DataFrame,
-    target_col: str,
-    ema_span: int = 30,
-    breakout_delta: float = 0.2,
-    breakout_horizon: int = 3
-) -> pl.DataFrame:
-    """
-    Append a 0/1 “breakout_ema” column to `data`:
-      – compute EMA(span=ema_span) of `target_col`
-      – look ahead `breakout_horizon` rows for a price > EMA * (1 + breakout_delta)
-      – label = 1 if true, else 0
-      – drop the final `breakout_horizon` rows (which become null after shift).
-    """
+
+def ema_breakout(data: pl.DataFrame,
+                 target_col: str,
+                 ema_span: int = 30,
+                 breakout_delta: float = 0.2,
+                 breakout_horizon: int = 3) -> pl.DataFrame:
+
+    '''
+    Calculate the EMA breakout indicator.
+
+    Args:
+        data (pl.DataFrame): The input data.
+        target_col (str): The target column.
+        ema_span (int): The EMA span.
+        breakout_delta (float): The breakout delta.
+        breakout_horizon (int): The breakout horizon.
+        
+    Returns:
+        pl.DataFrame: The input data with the EMA breakout indicator.
+    '''
+
     alpha = 2.0 / (ema_span + 1)
-    # build the “breakout_ema” expression
+
     label_expr = (
         pl.col(target_col).shift(-breakout_horizon)
         > pl.col(target_col).ewm_mean(alpha=alpha, adjust=False) * (1 + breakout_delta)

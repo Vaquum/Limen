@@ -1,12 +1,13 @@
 import polars as pl
-from typing import List, Union
-from .simple_lags import lag_range
+from loop.indicators.simple_lags import lag_range
+
 
 def _breakout_lags(data: pl.DataFrame,
                  long_col: str = 'breakout_long',
                  short_col: str = 'breakout_short',
                  lookback: int = 12,
                  horizon: int = 12) -> pl.DataFrame:
+
     '''
     Create lag features for breakout signals.
     
@@ -18,15 +19,13 @@ def _breakout_lags(data: pl.DataFrame,
         horizon (int): Number of periods to shift for known data
         
     Returns:
-        pl.DataFrame: Original DataFrame with new lag columns
+        pl.DataFrame: The input data with new lag columns
     '''
-    # Create lag features for long breakouts
+    
     df = lag_range(data, long_col, horizon, horizon + lookback - 1)
-    
-    # Create lag features for short breakouts
+
     df = lag_range(df, short_col, horizon, horizon + lookback - 1)
-    
-    # Rename columns to match original naming convention
+
     rename_dict = {}
     for lag in range(horizon, horizon + lookback):
         rename_dict[f"{long_col}_lag_{lag}"] = f"long_t-{lag}"
@@ -50,20 +49,18 @@ def _breakout_stats(data: pl.DataFrame,
         horizon (int): Number of periods to shift for known data
         
     Returns:
-        pl.DataFrame: Original DataFrame with new statistical columns
+        pl.DataFrame: The input data with new statistical columns
     '''
+
     return data.with_columns([
-        # Rolling statistics for long breakouts
         pl.col(long_col)
-          .shift(horizon)  # Shift to use only "known" breakout data
+          .shift(horizon)
           .rolling_mean(window_size=lookback)
           .alias('long_roll_mean'),
         pl.col(long_col)
           .shift(horizon)
           .rolling_std(window_size=lookback)
           .alias('long_roll_std'),
-        
-        # Rolling statistics for short breakouts
         pl.col(short_col)
           .shift(horizon)
           .rolling_mean(window_size=lookback)
@@ -79,6 +76,7 @@ def _breakout_roc(data: pl.DataFrame,
                 short_col: str,
                 next_long_col: str,
                 next_short_col: str) -> pl.DataFrame:
+    
     '''
     Calculate Rate of Change (ROC) for breakout signals.
     
@@ -90,28 +88,24 @@ def _breakout_roc(data: pl.DataFrame,
         next_short_col (str): Name of next short breakout column
         
     Returns:
-        pl.DataFrame: Original DataFrame with new ROC columns
+        pl.DataFrame: The input data with new ROC columns
     '''
-    # Extract lag values from column names for descriptive suffixes
-    # Assuming column names follow pattern like "long_t-13", "long_t-12"
+    
     try:
         current_lag = int(long_col.split('-')[-1])
         next_lag = int(next_long_col.split('-')[-1])
-        base_lag = min(current_lag, next_lag)  # Use the smaller lag as base
+        base_lag = min(current_lag, next_lag)
         lag_diff = abs(current_lag - next_lag)
         suffix = f"_{base_lag}_{lag_diff}"
     except (ValueError, IndexError):
-        # Fallback if column names don't follow expected pattern
         suffix = ''
 
     return data.with_columns([
-        # ROC for long breakouts
         pl.when(pl.col(long_col) != 0)
           .then(((pl.col(next_long_col) - pl.col(long_col)) / pl.col(long_col)) * 100)
           .otherwise(0)
           .alias(f"roc_long{suffix}"),
         
-        # ROC for short breakouts
         pl.when(pl.col(short_col) != 0)
           .then(((pl.col(next_short_col) - pl.col(short_col)) / pl.col(short_col)) * 100)
           .otherwise(0)
@@ -124,6 +118,7 @@ def breakout_features(data: pl.DataFrame,
                      lookback: int = 12,
                      horizon: int = 12,
                      target: str = 'breakout_pct') -> pl.DataFrame:
+    
     '''
     Calculate all breakout-related features in one operation.
     
@@ -134,31 +129,26 @@ def breakout_features(data: pl.DataFrame,
         lookback (int): Number of periods to look back
         horizon (int): Number of periods to shift for known data
         target (str): Name of target column for null dropping
-        
+
     Returns:
-        pl.DataFrame: Original DataFrame with all breakout features
+        pl.DataFrame: The input data with all breakout features
     '''
-    # First create lag features
+    
     df = _breakout_lags(data, long_col, short_col, lookback, horizon)
     
-    # Then add rolling statistics
     df = _breakout_stats(df, long_col, short_col, lookback, horizon)
     
-    # Calculate the column names for ROC based on horizon
-    current_long_col = f"long_t-{horizon + 1}"  # e.g., long_t-13
-    current_short_col = f"short_t-{horizon + 1}"  # e.g., short_t-13
-    next_long_col = f"long_t-{horizon}"  # e.g., long_t-12
-    next_short_col = f"short_t-{horizon}"  # e.g., short_t-12
+    current_long_col = f"long_t-{horizon + 1}"
+    current_short_col = f"short_t-{horizon + 1}"
+    next_long_col = f"long_t-{horizon}"
+    next_short_col = f"short_t-{horizon}"
 
-    # Finally add ROC features with proper column names
     df = _breakout_roc(df, current_long_col, current_short_col, next_long_col, next_short_col)
     
-    # Drop rows with nulls in any feature or the target (matching original behavior)
-    # Calculate the suffix for ROC columns
     try:
         current_lag = int(current_long_col.split('-')[-1])
         next_lag = int(next_long_col.split('-')[-1])
-        base_lag = min(current_lag, next_lag)  # Use the smaller lag as base
+        base_lag = min(current_lag, next_lag)
         lag_diff = abs(current_lag - next_lag)
         roc_suffix = f"_{base_lag}_{lag_diff}"
     except (ValueError, IndexError):
@@ -168,4 +158,4 @@ def breakout_features(data: pl.DataFrame,
          + [f"short_t-{i}" for i in range(horizon, horizon + lookback)] \
          + ['long_roll_mean','long_roll_std', 'short_roll_mean', 'short_roll_std', f"roc_long{roc_suffix}", f"roc_short{roc_suffix}", target]
     
-    return df.drop_nulls(subset=cols) 
+    return df.drop_nulls(subset=cols)

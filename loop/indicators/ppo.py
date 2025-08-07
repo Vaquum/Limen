@@ -1,5 +1,6 @@
 import polars as pl
 
+
 def ppo(data: pl.DataFrame,
         price_col: str = "close",
         span_short: int = 12,
@@ -19,6 +20,7 @@ def ppo(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with the PPO column appended.
     '''
+
     alpha_short = 2.0 / (span_short + 1)
     alpha_long  = 2.0 / (span_long  + 1)
     price = pl.col(price_col)

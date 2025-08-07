@@ -34,6 +34,7 @@ When making code contributions to Loop, always follow these guidelines:
 - Never add comments unless it is critical to have it
 - Never add examples
 - Add comprehensive docstrings following the standard format (see codebase for examples)
+- Add one empty line above docstring, and one empty line below docstring
 - Add tests to new code
 - Add docs to new code
 - Use single quotes, except with f-strings where double quotes are always used

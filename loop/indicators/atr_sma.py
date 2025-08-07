@@ -2,16 +2,18 @@ import polars as pl
 
 
 def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
+    
     '''
-    Calculate Average True Range using Simple Moving Average.
-    Note: Different from standard ATR which uses Wilder's smoothing.
+    Compute Average True Range using Simple Moving Average.
+    
+    NOTE: Different from standard ATR which uses Wilder's smoothing.
     
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         period (int): Number of klines to use as window
         
     Returns:
-        pl.DataFrame: Data with 'atr_sma' column appended
+        pl.DataFrame: The input data with the ATR using Simple Moving Average.
     '''
     
     return (

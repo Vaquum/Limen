@@ -2,8 +2,9 @@ import polars as pl
 
 
 def trend_strength(data: pl.DataFrame, fast_period: int = 20, slow_period: int = 50) -> pl.DataFrame:
+    
     '''
-    Calculate trend strength based on moving average divergence.
+    Compute trend strength based on moving average divergence.
     
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
@@ -11,7 +12,7 @@ def trend_strength(data: pl.DataFrame, fast_period: int = 20, slow_period: int =
         slow_period (int): Slow SMA period
         
     Returns:
-        pl.DataFrame: Data with 'trend_strength' column appended
+        pl.DataFrame: The input data with a new column 'trend_strength'
     '''
     
     return (

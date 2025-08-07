@@ -2,16 +2,17 @@ import polars as pl
 
 
 def rsi_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
+    
     '''
-    Calculate RSI using Simple Moving Average (not Wilder's smoothing).
-    Note: Different from wilder_rsi which uses EWM.
+    Compute RSI using Simple Moving Average (not Wilder's smoothing).
+    NOTE: Different from wilder_rsi which uses EWM.
     
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of klines to use as window
         
     Returns:
-        pl.DataFrame: Data with 'rsi_sma' column appended
+        pl.DataFrame: The input data with a new column 'rsi_sma'
     '''
     
     return (
