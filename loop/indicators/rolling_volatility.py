@@ -2,8 +2,9 @@ import polars as pl
 
 
 def rolling_volatility(data: pl.DataFrame, column: str, window: int) -> pl.DataFrame:
+    
     '''
-    Calculate rolling volatility (standard deviation).
+    Compute rolling volatility (standard deviation).
     
     Args:
         data (pl.DataFrame): Klines dataset
@@ -11,7 +12,7 @@ def rolling_volatility(data: pl.DataFrame, column: str, window: int) -> pl.DataF
         window (int): Rolling window size
         
     Returns:
-        pl.DataFrame: Data with f'{column}_volatility_{window}' column appended
+        pl.DataFrame: The input data with a new column f'{column}_volatility_{window}'
     '''
     
     return data.with_columns([

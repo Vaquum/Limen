@@ -2,8 +2,9 @@ import polars as pl
 
 
 def sma(data: pl.DataFrame, column: str, period: int) -> pl.DataFrame:
+    
     '''
-    Calculate Simple Moving Average.
+    Compute Simple Moving Average.
     
     Args:
         data (pl.DataFrame): Klines dataset
@@ -11,7 +12,7 @@ def sma(data: pl.DataFrame, column: str, period: int) -> pl.DataFrame:
         period (int): Number of klines to use as window
         
     Returns:
-        pl.DataFrame: Data with f'{column}_sma_{period}' column appended
+        pl.DataFrame: The input data with a new column f'{column}_sma_{period}'
     '''
     
     return data.with_columns([
