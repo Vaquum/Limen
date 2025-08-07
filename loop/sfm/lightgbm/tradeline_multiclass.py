@@ -83,13 +83,20 @@ def prep(data, round_params=None):
     """
     Prepare data for Tradeline Multiclass model.
     
-    Process:
-    1. Compute price lines on entire dataset
-    2. Filter lines by quantile threshold
-    3. Engineer features based on lines
-    4. Create multiclass labels
-    5. Split data sequentially
-    6. Return formatted data dictionary
+    This function performs the following steps:
+        1. Computes price lines on the entire dataset.
+        2. Filters lines by quantile threshold.
+        3. Engineers features based on lines.
+        4. Creates multiclass labels.
+        5. Splits data sequentially.
+        6. Returns a formatted data dictionary.
+    
+    Args:
+        data (pl.DataFrame): Input data containing price and datetime columns.
+        round_params (dict, optional): Dictionary of parameters for line computation and feature engineering.
+        
+    Returns:
+        dict: Dictionary containing prepared training, validation, and test datasets, features, and labels.
     """
     # Ensure we're working with Polars
     if not isinstance(data, pl.DataFrame):

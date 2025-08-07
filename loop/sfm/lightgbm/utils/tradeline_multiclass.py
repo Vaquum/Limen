@@ -174,9 +174,14 @@ def compute_line_features(df: pl.DataFrame,
         line_momentum_6h[idx] = recent_long_count - recent_short_count
         
         # Calculate trending score and reversal potential
-        if recent_long_count + recent_short_count > 0:
-            trending_score[idx] = (recent_long_count - recent_short_count) / (recent_long_count + recent_short_count)
-            reversal_potential[idx] = min(recent_long_count, recent_short_count) / max(recent_long_count, recent_short_count, 1)
+        total_recent = recent_long_count + recent_short_count
+        if total_recent > 0:
+            trending_score[idx] = (recent_long_count - recent_short_count) / total_recent
+            reversal_potential[idx] = min(recent_long_count, recent_short_count) / max(recent_long_count, recent_short_count)
+        else:
+            # No recent lines - explicitly set neutral values
+            trending_score[idx] = 0.0  # Neutral trend
+            reversal_potential[idx] = 0.0  # No reversal potential
     
     # Add features to DataFrame
     logging.debug("Adding line features to DataFrame...")
@@ -250,9 +255,12 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
         df = rolling_volatility(df, 'returns_temp', period)
         df = df.rename({f'returns_temp_volatility_{period}': f'vol_{period}h'})
     
-    # Volume expansion
+    # Volume expansion (capped to avoid extreme values)
     df = df.with_columns(
-        (pl.col('vol_24h') / (pl.col('vol_6h') + 1e-8)).alias('vol_expansion')
+        pl.when(pl.col('vol_6h') < 1e-6)
+        .then(1.0)  # When 6h volatility is near zero, assume no expansion
+        .otherwise(pl.col('vol_24h') / pl.col('vol_6h'))
+        .alias('vol_expansion')
     )
     
     # Clean up temp column
@@ -378,6 +386,12 @@ def create_lgb_wrapper(lgb_model) -> LGBWrapper:
 def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     """
     Calculate sample weights to handle class imbalance.
+    
+    Args:
+        y_train (np.ndarray): Array of training labels (0, 1, or 2)
+        
+    Returns:
+        np.ndarray: Array of sample weights, same length as y_train
     """
     classes = np.unique(y_train)
     class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
