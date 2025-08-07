@@ -59,7 +59,7 @@ def body_pct(data):
 
 def range_pct(data):
 
-    '''Calculate the range percentage of the close prices.
+    '''Compute the range percentage of the close prices.
     
     Args:
         data (pl.DataFrame): The input data.
