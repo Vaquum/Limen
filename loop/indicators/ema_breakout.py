@@ -8,7 +8,7 @@ def ema_breakout(data: pl.DataFrame,
                  breakout_horizon: int = 3) -> pl.DataFrame:
 
     '''
-    Calculate the EMA breakout indicator.
+    Compute the EMA breakout indicator.
 
     Args:
         data (pl.DataFrame): The input data.
