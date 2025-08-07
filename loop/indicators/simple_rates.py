@@ -31,7 +31,7 @@ def returns(data):
 
 def close_position(data):
 
-    '''Calculate the close position of the close prices.
+    '''Compute the close position of the close prices.
     
     Args:
         data (pl.DataFrame): The input data.
