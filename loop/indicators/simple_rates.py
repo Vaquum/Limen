@@ -17,7 +17,7 @@ def gap_high(data):
 
 def returns(data):
 
-    '''Calculate the returns of the close prices.
+    '''Compute the returns of the close prices.
     
     Args:
         data (pl.DataFrame): The input data.
