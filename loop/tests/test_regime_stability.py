@@ -5,7 +5,7 @@ Location: test_regime_stability.py
 
 import loop
 from loop.sfm.lightgbm import regime_stability
-from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data
 
 # Test configuration constants
 TEST_NUM_ROWS = 6000  # Number of rows to sample in tests
@@ -15,17 +15,12 @@ TEST_START_DATE = '2019-01-01'  # Start date matches notebook context
 
 
 def test_regime_stability():
+    
     '''Test regime stability model functionality.'''
     
     try:
-        # Get historical data
-        historical = HistoricalData()
-        historical.get_futures_klines(
-            n_rows=TEST_DATA_SIZE,
-            kline_size=TEST_KLINE_SIZE,
-            start_date_limit=TEST_START_DATE
-        )
-        
+        data = get_klines_data()[:TEST_DATA_SIZE]
+
         # Monkey patch the NUM_ROWS for testing
         import loop.sfm.lightgbm.regime_stability as rs
         original_num_rows = rs.NUM_ROWS
@@ -33,7 +28,7 @@ def test_regime_stability():
         
         try:
             # Initialize UEL with real historical data
-            uel = loop.UniversalExperimentLoop(historical.data, rs)
+            uel = loop.UniversalExperimentLoop(data, rs)
             
             # Run single experiment
             uel.run(

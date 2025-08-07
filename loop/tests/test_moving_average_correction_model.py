@@ -6,22 +6,18 @@ import lightgbm as lgb
 
 # Import your moving average correction function
 from loop.sfm.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
+from loop.tests.utils.get_data import get_klines_data
 
 def test_moving_average_correction():
+    
     '''
     Quick test for moving average correction model
     '''
     
-    # Step 1: Get small amount of historical data
-    historical = loop.HistoricalData()
-    historical.get_futures_klines(
-        n_rows=300,  # Slightly larger for correction testing
-        kline_size=7200,  # 2h klines
-        start_date_limit='2024-01-01'
-    )
+    data = get_klines_data()[:300]
     
     # Step 2: Create labels with some trend/pattern
-    df_labeled = create_trending_regression_labels(historical.data)
+    df_labeled = create_trending_regression_labels(data)
     
     # Step 3: Convert to Polars if needed
     if not hasattr(df_labeled, 'with_columns'):

@@ -5,22 +5,18 @@ import lightgbm as lgb
 
 # Import your quantile model function
 from loop.sfm.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
+from loop.tests.utils.get_data import get_klines_data
 
 def test_quantile_model():
+    
     '''
     Quick test for quantile model with confidence filtering
     '''
-    
-    # Step 1: Get small amount of historical data
-    historical = loop.HistoricalData()
-    historical.get_futures_klines(
-        n_rows=200,  # Small for fast testing
-        kline_size=7200,  # 2h klines
-        start_date_limit='2024-01-01'
-    )
+
+    data = get_klines_data()[:200]
     
     # Step 2: Create simple labels
-    df_labeled = create_simple_regression_labels(historical.data)
+    df_labeled = create_simple_regression_labels(data)
     
     # Step 3: Convert to Polars if needed
     if not hasattr(df_labeled, 'with_columns'):
