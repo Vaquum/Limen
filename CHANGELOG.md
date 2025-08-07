@@ -191,3 +191,7 @@
 - Add `features.conserved_flux_renormalization`
 - Add `transform.mad_transform` for Median Absolute Deviation scaling
 - Add `utils.check_if_has_header` to check Binance Market Data files for header
+
+# v1.8.0 on 7th of August, 2025
+- Add `lightgbm.tradeline_multiclass` sfm
+- Add test for the above SFM
