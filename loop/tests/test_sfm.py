@@ -5,7 +5,7 @@ import traceback
 
 from loop import sfm
 from loop.tests.utils.cleanup import cleanup_csv_files
-from loop.tests.utils.get_data import get_klines_data, get_trades_data
+from loop.tests.utils.get_data import get_klines_data, get_trades_data, get_klines_data_small
 
 def test_sfm():
     
@@ -20,6 +20,7 @@ def test_sfm():
         (sfm.lightgbm.breakout_regressor, get_klines_data, False),
         (sfm.lightgbm.regime_stability, get_klines_data, False),
         (sfm.lightgbm.tradeable_regressor, get_klines_data, False),
+        (sfm.lightgbm.tradeline_multiclass, get_klines_data_small, True),
         ]
 
     for test in tests:

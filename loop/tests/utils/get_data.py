@@ -40,6 +40,20 @@ def get_klines_data():
     return df
 
 
+def get_klines_data_small():
+    '''
+    Get small subset of klines data for faster testing.
+    
+    Returns:
+        DataFrame: Small klines dataset (first 5000 rows)
+    '''
+    df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=5000)
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df = pl.from_pandas(df)
+    
+    return df
+
+
 def get_trades_data():
     
     '''

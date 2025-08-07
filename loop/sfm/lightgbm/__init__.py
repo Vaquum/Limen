@@ -4,6 +4,7 @@ import loop.sfm.lightgbm.regime_multiclass as regime_multiclass
 import loop.sfm.lightgbm.breakout_regressor as breakout_regressor
 import loop.sfm.lightgbm.regime_stability as regime_stability
 import loop.sfm.lightgbm.tradeable_regressor as tradeable_regressor
+import loop.sfm.lightgbm.tradeline_multiclass as tradeline_multiclass
 import loop.sfm.lightgbm.utils as utils
 
 # Import mega model utilities
@@ -29,6 +30,7 @@ __all__ = [
     'breakout_regressor',
     'regime_stability',
     'tradeable_regressor',
+    'tradeline_multiclass',
     'utils'
 ]
 
