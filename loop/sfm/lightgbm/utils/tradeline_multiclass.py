@@ -15,6 +15,13 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.utils.class_weight import compute_class_weight
 
+# Import Loop indicators
+from loop.indicators.price_change_pct import price_change_pct
+from loop.indicators.rolling_volatility import rolling_volatility
+from loop.indicators.price_range_position import price_range_position
+from loop.indicators.distance_from_high import distance_from_high
+from loop.indicators.distance_from_low import distance_from_low
+
 
 def find_price_lines(df: pl.DataFrame, 
                      max_duration_hours: int = 48, 
@@ -203,15 +210,13 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     Compute price-based features including returns, acceleration, and volatility.
     """
     logging.debug("Computing price-based features...")
-    close_prices = df.get_column('close')
     
     # Returns over different periods
     logging.debug("  Computing returns over multiple periods...")
     for period in [1, 6, 12, 24, 48]:
-        df = df.with_columns(
-            ((close_prices - close_prices.shift(period)) / close_prices.shift(period))
-            .alias(f'ret_{period}h')
-        )
+        df = price_change_pct(df, period)
+        # Rename to expected format
+        df = df.rename({f'price_change_pct_{period}': f'ret_{period}h'})
     
     # Acceleration (change in returns)
     logging.debug("  Computing acceleration features...")
@@ -222,26 +227,36 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     
     # Distance from recent high/low
     logging.debug("  Computing distance from high/low features...")
-    high_24h = close_prices.rolling_max(window_size=24)
-    low_24h = close_prices.rolling_min(window_size=24)
+    df = distance_from_high(df, period=24)
+    df = distance_from_low(df, period=24)
+    df = price_range_position(df, period=24)
     
-    df = df.with_columns([
-        ((high_24h - close_prices) / close_prices).alias('dist_from_high'),
-        ((close_prices - low_24h) / close_prices).alias('dist_from_low'),
-        ((close_prices - low_24h) / (high_24h - low_24h)).alias('position_in_range')
-    ])
+    # Rename columns to match expected names
+    df = df.rename({
+        'distance_from_high': 'dist_from_high',
+        'distance_from_low': 'dist_from_low',
+        'price_range_position': 'position_in_range'
+    })
     
     # Volatility features
     logging.debug("  Computing volatility features...")
+    # First add returns column for volatility calculation
+    df = df.with_columns([
+        pl.col('close').pct_change().alias('returns_temp')
+    ])
+    
+    # Use rolling_volatility indicator
     for period in [6, 24]:
-        returns = (close_prices - close_prices.shift(1)) / close_prices.shift(1)
-        vol = returns.rolling_std(window_size=period)
-        df = df.with_columns(vol.alias(f'vol_{period}h'))
+        df = rolling_volatility(df, 'returns_temp', period)
+        df = df.rename({f'returns_temp_volatility_{period}': f'vol_{period}h'})
     
     # Volume expansion
     df = df.with_columns(
         (pl.col('vol_24h') / (pl.col('vol_6h') + 1e-8)).alias('vol_expansion')
     )
+    
+    # Clean up temp column
+    df = df.drop('returns_temp')
     
     # Feature stats
     logging.debug("  Computing feature statistics...")
