@@ -3,7 +3,7 @@ import polars as pl
 
 def gap_high(data):
 
-    '''Calculate the gap between the high and close prices.
+    '''Compute the gap between the high and close prices.
     
     Args:
         data (pl.DataFrame): The input data.
