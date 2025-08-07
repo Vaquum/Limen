@@ -3,7 +3,8 @@ import polars as pl
 from sklearn.linear_model import LogisticRegression
 
 from loop.metrics.binary_metrics import binary_metrics
-from loop.indicators import quantile_flag, wilder_rsi, atr, ppo, vwap, kline_imbalance, roc
+from loop.features import quantile_flag, kline_imbalance, vwap
+from loop.indicators import wilder_rsi, atr, ppo, roc
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.transforms.logreg_transform import LogRegTransform
 

@@ -8,17 +8,17 @@ def macd(data: pl.DataFrame,
          signal_period: int = 9) -> pl.DataFrame:
     
     '''
-    Compute MACD (Moving Average Convergence Divergence) from kline close prices.
+    Compute MACD (Moving Average Convergence Divergence) indicator.
 
     Args:
-        data (pl.DataFrame): The input kline DataFrame.
-        close_col (str): Name of the close price column.
-        fast_period (int): Lookback for the fast EMA.
-        slow_period (int): Lookback for the slow EMA.
-        signal_period (int): Lookback for the signal‐line EMA.
+        data (pl.DataFrame): Klines dataset with 'close' column
+        close_col (str): Column name for close prices
+        fast_period (int): Period for fast EMA calculation
+        slow_period (int): Period for slow EMA calculation
+        signal_period (int): Period for signal line EMA calculation
 
     Returns:
-        pl.DataFrame: The input data with three macd columns added.
+        pl.DataFrame: The input data with three columns: 'macd', 'macd_signal', 'macd_hist'
     '''
 
     alpha_fast = 2.0 / (fast_period + 1)

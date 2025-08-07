@@ -4,14 +4,14 @@ import polars as pl
 def wilder_rsi(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     
     '''
-    Compute Wilder's RSI over `period` based on column 'close'.
+    Compute Wilder's RSI using exponential smoothing method.
 
     Args:
-        data (pl.DataFrame) : Klines dataset.
-        period (int) : Number of klines to use as window.
+        data (pl.DataFrame): Klines dataset with 'close' column
+        period (int): Number of periods for RSI calculation
 
     Returns:
-        pl.DataFrame: The input data with the RSI column appended.
+        pl.DataFrame: The input data with a new column 'wilder_rsi'
     '''
     
     return (

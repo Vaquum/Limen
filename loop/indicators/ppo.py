@@ -8,17 +8,17 @@ def ppo(data: pl.DataFrame,
         ppo_name: str = "ppo") -> pl.DataFrame:
     
     '''
-    Compute the Percentage Price Oscillator (PPO) in pure Polars and append it.
+    Compute Percentage Price Oscillator (PPO) indicator.
 
     Args:
-        data (pl.DataFrame): The input data.
-        price_col (str): The column name for the price.
-        span_short (int): The short span for the EMA.
-        span_long (int): The long span for the EMA.
-        ppo_name (str): The name of the PPO column.
+        data (pl.DataFrame): Klines dataset with price column
+        price_col (str): Column name for price data
+        span_short (int): Period for short EMA calculation
+        span_long (int): Period for long EMA calculation
+        ppo_name (str): Name for output column
 
     Returns:
-        pl.DataFrame: The input data with the PPO column appended.
+        pl.DataFrame: The input data with the PPO column appended
     '''
 
     alpha_short = 2.0 / (span_short + 1)
