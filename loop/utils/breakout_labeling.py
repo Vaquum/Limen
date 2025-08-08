@@ -1,25 +1,21 @@
-import loop
 import polars as pl
-import pandas as pd
-import numpy as np
 from datetime import timedelta
 from typing import List
 
 
 def to_average_price_klines(df: pl.DataFrame, interval_sec: int) -> pl.DataFrame:
+    
     '''
-    Aggregate trade-by-trade liquidity into K-second 'klines'.
-
+    Create average price klines from trade-by-trade liquidity data.
+    
     Args:
-        df (pl.DataFrame): Must contain columns
-            - datetime (datetime, UTC ms)
-            - volume (float)
-            - liquidity_sum (float)
-        interval_sec (int): Bucket size in seconds – e.g. 60 for 1 m, 900 for 15 m.
-
+        df (pl.DataFrame): Trades dataset with 'datetime', 'volume', 'liquidity_sum' columns
+        interval_sec (int): Bucket size in seconds for aggregation
+        
     Returns:
-        pl.DataFrame: datetime · average_price
+        pl.DataFrame: The input data aggregated with 'datetime' and 'average_price' columns
     '''
+
     return (
         df
         .with_columns(
@@ -39,37 +35,27 @@ def to_average_price_klines(df: pl.DataFrame, interval_sec: int) -> pl.DataFrame
     )
 
 
-def compute_htf_features(
-    df: pl.DataFrame,
-    *,
-    datetime_col: str,
-    target_col: str,
-    lookahead: timedelta,
-    ema_span: int,
-) -> pl.DataFrame:
-    """
-    For each 2 h row label = 1 if **any** price within the next `lookahead`
-    window exceeds EMA of 2H bars · (1 + breakout_delta), else 0.
-
-    Added columns
-    -------------
-    ema_2h        : float  — EMA on 2H average_price bars
-    future_max    : float  — max price in (t, t + lookahead]
-    future_min    : float  - min price in (t, t + lookahead]
-    breakout_ema  : int8   — 1 = breakout somewhere in window, 0 otherwise
-
+def compute_htf_features(df: pl.DataFrame,
+                         *,
+                         datetime_col: str,
+                         target_col: str,
+                         lookahead: timedelta,
+                         ema_span: int) -> pl.DataFrame:
+    
+    '''
+    Compute higher timeframe features with EMA and future price extremes.
+    
     Args:
-        df (pl.DataFrame): Input DataFrame
-        datetime_col (str): Name of datetime column
-        target_col (str): Name of target/price column
-        lookahead (timedelta): Lookahead period
-        ema_span (int): EMA span parameter
-
+        df (pl.DataFrame): Klines dataset with datetime and price columns
+        datetime_col (str): Column name for datetime values
+        target_col (str): Column name for price values
+        lookahead (timedelta): Time period to look ahead for future extremes
+        ema_span (int): Number of periods for EMA calculation
+        
     Returns:
-        pl.DataFrame: DataFrame with columns
-            [ datetime_col, target_col, _bucket, ema_htf, future_max, future_min ]
-            sorted by datetime_col.
-    """
+        pl.DataFrame: The input data with new columns 'ema_2h', 'future_max', 'future_min'
+    '''
+
     # 1) sort data by datetime
     df = df.sort(datetime_col)
 
@@ -107,31 +93,23 @@ def compute_htf_features(
     ])
 
 
-def build_breakout_flags(
-    df_feats: pl.DataFrame,
-    deltas: List[float],
-    *,
-    datetime_col: str = 'datetime'
-) -> pl.DataFrame:
-    """
-    From a DataFrame with columns
-      [datetime_col, ema_htf, future_max, future_min],
-    build and return a DataFrame:
-      [ datetime_col,
-        long_{Δ:.2f} for each Δ,
-        short_{Δ:.2f} for each Δ ]
-    where
-      long = future_max >= ema_htf*(1+Δ)
-      short = future_min <= ema_htf*(1−Δ)
-
+def build_breakout_flags(df_feats: pl.DataFrame,
+                         deltas: List[float],
+                         *,
+                         datetime_col: str = 'datetime') -> pl.DataFrame:
+    
+    '''
+    Compute breakout flags based on future price extremes versus EMA thresholds.
+    
     Args:
-        df_feats (pl.DataFrame): Input DataFrame with required columns
-        deltas (List[float]): List of delta values for breakout calculations
-        datetime_col (str): Name of datetime column, defaults to 'datetime'
-
+        df_feats (pl.DataFrame): Features dataset with 'ema_2h', 'future_max', 'future_min' columns
+        deltas (List[float]): List of delta values for breakout threshold calculations
+        datetime_col (str): Column name for datetime values
+        
     Returns:
-        pl.DataFrame: DataFrame with breakout flags
-    """
+        pl.DataFrame: The input data with new columns for long and short breakout flags
+    '''
+    
     exprs = []
     for delta in deltas:
         exprs.append(

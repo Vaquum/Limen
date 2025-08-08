@@ -4,7 +4,15 @@ from itertools import product
 
 class ParamSpace:
     
-    def __init__(self, params, n_permutations):
+    '''
+    Create parameter space manager for hyperparameter sampling.
+    
+    Args:
+        params (dict): Dictionary of parameter names and their possible values
+        n_permutations (int): Number of parameter combinations to sample
+    '''
+    
+    def __init__(self, params: dict, n_permutations: int):
 
         keys = list(params)
         combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
@@ -12,7 +20,17 @@ class ParamSpace:
         self.df_params = pl.DataFrame(combos)
         self.n_permutations = self.df_params.height
 
-    def generate(self, random_search=True):
+    def generate(self, random_search: bool = True) -> dict:
+        
+        '''
+        Compute next parameter combination from the parameter space.
+        
+        Args:
+            random_search (bool): Whether to select parameters randomly or sequentially
+            
+        Returns:
+            dict: Dictionary of parameter names and selected values, or None if space is exhausted
+        '''
         
         if self.df_params.is_empty():
             return None

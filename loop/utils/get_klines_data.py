@@ -3,14 +3,15 @@ import polars as pl
 import time
 from typing import Optional
 
+
 def get_klines_data(n_rows: Optional[int] = None,
                     kline_size: int = 1,
                     start_date_limit: str = None,
                     futures: bool = False,
                     show_summary: bool = False,) -> pl.DataFrame:
     
-    '''Get 1 second klines data based on Binance raw trades data. Returns either 
-       everything or n_rows. Everything is 
+    '''
+    Query Binance klines data from ClickHouse.
 
     Args:
         n_rows (int | None): if not None, fetch this many latest rows instead.

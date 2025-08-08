@@ -3,6 +3,16 @@ import polars as pl
 
 def scale_data_dict(data_dict: dict) -> dict:
     
+    '''
+    Compute standardized scaling of features in train, validation, and test sets.
+    
+    Args:
+        data_dict (dict): Dictionary with 'x_train', 'x_val', and 'x_test' DataFrame keys
+        
+    Returns:
+        dict: Dictionary with standardized features using training set statistics
+    '''
+    
     feature_cols = list(data_dict["x_train"].columns)
     mean_exprs = [pl.col(c).mean().alias(f"{c}__mean") for c in feature_cols]
     std_exprs = [pl.col(c).std().alias(f"{c}__std") for c in feature_cols]

@@ -1,33 +1,22 @@
-from typing import Sequence, List
-from itertools import accumulate
-
 import polars as pl
-
 
 from typing import Sequence, List
 from itertools import accumulate
-
-import polars as pl
 
 
 def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> List[pl.DataFrame]:
-    """
-    Split `data` into sequential chunks whose lengths are proportional to `ratios`,
-    without ever losing or duplicating rows.
-
-    Example:
-        If data.height = 11 and ratios = [2, 3, 5], then
-          total_ratio = 10,
-          sizes = [ int(11*2/10)=2, int(11*3/10)=3, last = 11-(2+3)=6 ],
-        so you return slices of lengths [2, 3, 6] in order.
-
+    
+    '''
+    Compute sequential data splits with proportional lengths based on ratios.
+    
     Args:
-        data: a Polars DataFrame of length N = data.height
-        ratios: a sequence of positive integers (or floats) whose sum is total_ratio
-
+        data (pl.DataFrame): Polars DataFrame to split sequentially
+        ratios (Sequence[int]): Sequence of positive integers defining split proportions
+        
     Returns:
-        A list of len(ratios) DataFrames, partitioned sequentially.
-    """
+        List[pl.DataFrame]: List of DataFrames partitioned sequentially without losing or duplicating rows
+    '''
+    
     total = data.height
     if total == 0:
         return [pl.DataFrame() for _ in ratios]
@@ -56,16 +45,18 @@ def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> List[pl.DataF
     return out
 
 
-def split_random(data, ratios: Sequence[int], seed: int = None) -> List[pl.DataFrame]:
-
-    '''Split the data into random chunks
-
+def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int = None) -> List[pl.DataFrame]:
+    
+    '''
+    Compute random data splits with proportional lengths based on ratios.
+    
     Args:
-        ratios (Sequence[int]): The ratios of the data to be split
-        seed (int): The seed for the random number generator
-
+        data (pl.DataFrame): Polars DataFrame to split randomly
+        ratios (Sequence[int]): Sequence of positive integers defining split proportions
+        seed (int): Seed for random number generator
+        
     Returns:
-        List[pl.DataFrame]    
+        List[pl.DataFrame]: List of randomly shuffled DataFrames with proportional sizes
     '''
 
     total = data.height
@@ -76,7 +67,18 @@ def split_random(data, ratios: Sequence[int], seed: int = None) -> List[pl.DataF
     return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds)]
 
 
-def split_data_to_prep_output(split_data, cols):
+def split_data_to_prep_output(split_data: list, cols: list) -> dict:
+    
+    '''
+    Compute data preparation output dictionary from split data and column names.
+    
+    Args:
+        split_data (list): List of three DataFrames representing train, validation, and test splits
+        cols (list): Column names where the last column is the target variable
+        
+    Returns:
+        dict: Dictionary with train, validation, and test features and targets
+    '''
 
     return {
         'x_train': split_data[0][cols[:-1]],

@@ -3,12 +3,14 @@ import polars as pl
 import time
 from typing import Optional, Tuple
 
+
 def get_agg_trades_data(month_year: Optional[Tuple[int,int]] = None,
                         n_rows: Optional[int] = None,
                         include_datetime_col: bool = True,
                         show_summary: bool = False) -> pl.DataFrame:
     
-    '''Get Binance aggTrades data.
+    '''
+    Query Binance aggTrades data from ClickHouse.
 
     Args:
         month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).

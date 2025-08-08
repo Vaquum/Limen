@@ -3,21 +3,23 @@ import polars as pl
 import time
 from typing import Optional, Tuple
 
+
 def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
                     n_latest: Optional[int] = None,
                     n_random: Optional[int] = None,
                     include_datetime_col: bool = True,
                     show_summary: bool = False) -> pl.DataFrame:
     
-    '''Get Binance raw trades data.
-
+    '''
+    Query Binance raw trades data from ClickHouse.
+    
     Args:
         month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
         n_latest (int | None): if set, fetch this many latest rows instead.
         n_random (int | None): if set, fetch this n_random of random samples.
         include_datetime_col (bool): whether to include `datetime` in the result.
-        show_summary (bool): if a summary for data is printed out
-
+        show_summary (bool): if a summary for data is printed out.
+        
     Returns:
         pl.DataFrame: the requested trades.
     '''
