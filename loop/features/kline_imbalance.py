@@ -7,7 +7,7 @@ def kline_imbalance(data: pl.DataFrame, window: int = 14) -> pl.DataFrame:
     Compute rolling buyer/seller imbalance over klines instead of raw trades.
     
     Args:
-        data (pl.DataFrame): Klines dataset with 'open' and 'close' columns
+        data (pl.DataFrame): Klines dataset with 'maker_ratio' and 'no_of_trades' columns
         window (int): Number of periods for rolling window calculation
         
     Returns:
