@@ -99,7 +99,7 @@ def function_name(data: pl.DataFrame, param: int) -> pl.DataFrame:
 - No full stop at the end
 
 #### Returns
-- Definition not longer than single sentence
+- Definition no longer than a single sentence
 - No full stop at the end
 
 ### Spacing
