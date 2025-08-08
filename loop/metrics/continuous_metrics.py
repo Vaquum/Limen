@@ -8,20 +8,15 @@ def continuous_metrics(data: dict, preds: list) -> dict:
     
     '''
     Compute regression metrics from continuous predictions.
-
-    Parameters
-    ----------
-    data : dict
-        Data dictionary with 'y_test' key containing true continuous values
-    preds : list
-        Predicted continuous values
-
-    Returns
-    -------
-    dict
-        Dictionary containing bias, mae, rmse, r2, and mape metrics
-
+    
     NOTE: This function is experimental and may change in future versions.
+    
+    Args:
+        data (dict): Data dictionary with 'y_test' key containing true continuous values
+        preds (list): Predicted continuous values
+        
+    Returns:
+        dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
     '''
 
     y_test = np.asarray(data['y_test'])

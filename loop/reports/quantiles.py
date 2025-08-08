@@ -1,18 +1,17 @@
 import polars as pl
 
 
-def quantiles(data: pl.DataFrame, column: str):
-
+def quantiles(data: pl.DataFrame, column: str) -> pl.DataFrame:
+    
     '''
-    Get the quantiles of column values in a dataframe.
-
+    Compute quantile distribution for specified column in dataframe.
+    
     Args:
-        data (pl.DataFrame): The dataframe to get the quantiles of.
-        column (str): The column to get the quantiles of.
-
+        data (pl.DataFrame): Polars dataframe containing the column for quantile analysis
+        column (str): Column name to compute quantiles for
+        
     Returns:
-        pl.DataFrame: A dataframe with the quantiles of the column.
-
+        pl.DataFrame: Dataframe with quantile values and corresponding column values
     '''
 
     quantiles = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999, 0.9999, 0.99999, 0.999999, 0.9999999, 0.99999999]

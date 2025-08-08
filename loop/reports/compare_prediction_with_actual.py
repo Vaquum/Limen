@@ -4,18 +4,18 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 
 
-def compare_prediction_with_actual(prep, model, validate):
-
+def compare_prediction_with_actual(prep: callable, model: object, validate: object) -> None:
+    
     '''
-    Compare predictions with actual values.
-
+    Create comprehensive visual comparison between model predictions and actual values.
+    
     Args:
-        prep (function): The prep function used in the experiment
-        model (function): The `model` function used in the experiment
-        validate (dict): The validation data
-
+        prep (callable): Data preprocessing function that prepares validation data for prediction
+        model (object): Trained model object with predict method
+        validate (object): Validation dataset containing 'close_roc' column with actual values
+        
     Returns:
-        None
+        None: Displays six-panel matplotlib figure with prediction analysis plots
     '''
 
     x_validate = prep(validate, mode='predict')

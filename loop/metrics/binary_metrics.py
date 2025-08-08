@@ -5,20 +5,14 @@ def binary_metrics(data: dict, preds: list, probs: list) -> dict:
     
     '''
     Compute binary classification metrics from predictions and probabilities.
-
-    Parameters
-    ----------
-    data : dict
-        Data dictionary with 'y_test' key containing true binary labels
-    preds : list
-        Predicted binary class labels
-    probs : list
-        Predicted class probabilities
-
-    Returns
-    -------
-    dict
-        Dictionary containing recall, precision, fpr, auc, and accuracy metrics
+    
+    Args:
+        data (dict): Data dictionary with 'y_test' key containing true binary labels
+        preds (list): Predicted binary class labels
+        probs (list): Predicted class probabilities
+        
+    Returns:
+        dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
     '''
 
     round_results = {'recall': round(recall_score(data['y_test'], preds), 3),

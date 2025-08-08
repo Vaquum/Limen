@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='loop',
-    version='1.19.0',
+    version='1.21.0',
     packages=find_packages(),
     install_requires=[
         "pandas>=2.0.0",

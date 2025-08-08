@@ -4,17 +4,16 @@ import pandas as pd
 import wrangle
 
 
-def read_from_file(file_path):
+def read_from_file(file_path: str) -> object:
+    
     '''
-    Takes in a file path and returns a dataframe. Use this
-    for reading experiment logs saved as csv. Great for
-    during experiment analysis.
-
+    Read experiment log file and return cleaned dataframe.
+    
     Args:
-        file_path (str): path to the file
-
+        file_path (str): Path to experiment log CSV file
+        
     Returns:
-        pl.DataFrame: dataframe
+        object: Cleaned pandas DataFrame with experiment log data
     '''
     with open(file_path, 'r') as f:
 
@@ -40,23 +39,22 @@ def read_from_file(file_path):
     return data
 
 
-def outcome_df(log_df,
-               cols_to_drop,
-               cols_to_multilabel=None,
-               type='categorical'):
-
+def outcome_df(log_df: object,
+               cols_to_drop: list,
+               cols_to_multilabel: list = None,
+               type: str = 'categorical') -> object:
+    
     '''
-    Takes in output of read_from_file and returns
-    a outcome based dataframe.
-
+    Create outcome-based dataframe from experiment log data.
+    
     Args:
-        log_df (pl.DataFrame): output of read_from_file
-        cols_to_drop (list): columns to drop from the dataframe
-        cols_to_multilabel (list): columns to convert to multilabel.
-        type (str): type of outcome, has to be 'categorical' or 'regression'
-
+        log_df (object): Output dataframe from read_from_file function
+        cols_to_drop (list): Column names to remove from dataframe
+        cols_to_multilabel (list): Column names to convert to multilabel format
+        type (str): Outcome type, must be 'categorical' or 'regression'
+        
     Returns:
-        pl.DataFrame: outcome based dataframe
+        object: Outcome-based dataframe sorted by performance
     '''
 
     if type == 'categorical':
@@ -77,16 +75,16 @@ def outcome_df(log_df,
     return log_df.sort_values('outcome', ascending=False)
 
 
-def corr_df(outcome_df):
-
+def corr_df(outcome_df: object) -> object:
+    
     '''
-    Takes in output of outcome_df and returns a feature correlation dataframe.
-
+    Compute feature correlation dataframe from outcome-based data.
+    
     Args:
-        outcome_df (pl.DataFrame): output of outcome_df
-
+        outcome_df (object): Output dataframe from outcome_df function
+        
     Returns:
-        pl.DataFrame: feature correlation dataframe
+        object: Feature correlation dataframe with outcome correlations
     '''
 
     corr_dict = OrderedDict()

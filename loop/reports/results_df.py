@@ -1,15 +1,15 @@
-def results_df(df_prep, preds, inverse_transform):
-
+def results_df(df_prep: dict, preds: list, inverse_transform: callable) -> object:
+    
     '''
-    Takes in the data dictionary and the predictions and returns a dataframe with the results.
-
+    Create results dataframe from prepared data and predictions.
+    
     Args:
-        df_prep (dict): data dictionary
-        preds (np.array): predictions
-        inverse_transform (function): inverse transform function
-
+        df_prep (dict): Data dictionary with test data and scaler
+        preds (list): Model predictions array
+        inverse_transform (callable): Function to reverse data transformations
+        
     Returns:
-        df_results (pd.DataFrame): dataframe with the experiment results
+        object: Dataframe with experiment results including predictions, actuals, and derived columns
     '''
 
     df_results = inverse_transform(df_prep['x_test'], df_prep['_scaler']).to_pandas()

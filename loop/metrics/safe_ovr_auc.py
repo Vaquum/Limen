@@ -6,19 +6,12 @@ def safe_ovr_auc(y_true: list, proba: list) -> float:
     '''
     Compute one-vs-rest AUC safely handling missing classes.
     
-    Parameters
-    ----------
-    y_true : list
-        True class labels
-    proba : list
-        Predicted probabilities with shape (n_samples, n_classes) where each column 
-        corresponds to the probability of that class
-    
-    Returns
-    -------
-    float
-        Mean AUC across all valid class comparisons, or NaN if no valid AUC 
-        calculations can be made
+    Args:
+        y_true (list): True class labels
+        proba (list): Predicted probabilities with shape (n_samples, n_classes) where each column corresponds to the probability of that class
+        
+    Returns:
+        float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
     '''
     
     present = np.unique(y_true)  # classes that exist in this fold
