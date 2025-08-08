@@ -9,7 +9,7 @@ def _breakout_lags(data: pl.DataFrame,
                  horizon: int = 12) -> pl.DataFrame:
 
     '''
-    Create lag features for breakout signals.
+    Compute lag features for breakout signals.
     
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
