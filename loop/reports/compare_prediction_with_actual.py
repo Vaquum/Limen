@@ -6,6 +6,18 @@ import scipy.stats as stats
 
 def compare_prediction_with_actual(prep, model, validate):
 
+    '''
+    Compare predictions with actual values.
+
+    Args:
+        prep (function): The prep function used in the experiment
+        model (function): The `model` function used in the experiment
+        validate (dict): The validation data
+
+    Returns:
+        None
+    '''
+
     x_validate = prep(validate, mode='predict')
     predictions = np.array([i for i in model.predict(x_validate)])
     actuals = validate['close_roc'].values
