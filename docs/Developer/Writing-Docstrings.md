@@ -95,7 +95,7 @@ def function_name(data: pl.DataFrame, param: int) -> pl.DataFrame:
 - Can have `NOTE` section below the heading
 
 #### Args
-- Definitions not longer than single sentence
+- Definitions no longer than a single sentence
 - No full stop at the end
 
 #### Returns
