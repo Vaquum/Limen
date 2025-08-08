@@ -2,6 +2,12 @@ import polars as pl
 import numpy as np
 from typing import Dict
 
+# Constants
+EPSILON = 1e-10  # Prevent division by zero
+TRADING_DAYS_PER_YEAR = 252
+HOURS_PER_DAY = 12  # Trading hours per day
+RETURN_THRESHOLD = 0.001  # 0.1% threshold for classifying returns
+
 def params():
     return {
         'window_size': [24, 48, 72],
@@ -35,7 +41,7 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     for i in range(len(closes)):
         if i > 1:
             # Use close[i-1] and close[i-2] for returns at position i
-            ret = (closes[i-1] - closes[i-2]) / (closes[i-2] + 1e-10)
+            ret = (closes[i-1] - closes[i-2]) / (closes[i-2] + EPSILON)
             returns_history.append(ret)
     
     # Track positions and orders
@@ -158,7 +164,7 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     # Calculate actual returns for performance
     actual_returns = []
     for i in range(len(closes) - 1):
-        actual_returns.append((closes[i+1] - closes[i]) / (closes[i] + 1e-10))
+        actual_returns.append((closes[i+1] - closes[i]) / (closes[i] + EPSILON))
     actual_returns.append(0)
     
     actual_returns_array = np.array(actual_returns)
@@ -181,10 +187,10 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
         periods_in_position = np.sum(positions_array[:-1] != 0)
         win_rate = winning_periods / periods_in_position if periods_in_position > 0 else 0
         
-        annualization_factor = np.sqrt(252 * 12)  # Assuming hourly bars, 252 trading days
+        annualization_factor = np.sqrt(TRADING_DAYS_PER_YEAR * HOURS_PER_DAY)
         if len(strategy_returns) > 1:
             returns_std = np.std(strategy_returns)
-            if returns_std > 1e-10:
+            if returns_std > EPSILON:
                 sharpe = np.mean(strategy_returns) / returns_std * annualization_factor
             else:
                 sharpe = 0
@@ -199,12 +205,10 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     short_win_rate = (short_wins / short_trades * 100) if short_trades > 0 else 0
     
     # Create ground truth labels based on actual returns
-    # Threshold for determining what "should" have been done
-    return_threshold = 0.001  # 0.1% return threshold
     
     y_true = np.zeros(len(actual_returns_array) - 1)  # Exclude last bar
-    y_true[actual_returns_array[:-1] > return_threshold] = 1  # Should be long
-    y_true[actual_returns_array[:-1] < -return_threshold] = 2  # Should be short (class 2)
+    y_true[actual_returns_array[:-1] > RETURN_THRESHOLD] = 1  # Should be long
+    y_true[actual_returns_array[:-1] < -RETURN_THRESHOLD] = 2  # Should be short (class 2)
     
     # Map predictions to sklearn format (short=-1 becomes class 2)
     y_pred = positions_array[:-1].copy()
