@@ -12,7 +12,21 @@ def generic_endpoint_for_tdw(month_year: Optional[Tuple[int,int]] = None,
                              sort_by: str = None,
                              show_summary: bool = False) -> pl.DataFrame:
 
-    '''For using as the base functionality for all tdw endpoints.'''
+    '''
+    Query ClickHouse table and return results as Polars DataFrame.
+    
+    Args:
+        month_year (tuple, optional): Month and year to filter by (year, month)
+        n_rows (int, optional): Number of rows to return
+        include_datetime_col (bool, optional): Whether to include the datetime column
+        select_cols (list, optional): Columns to select
+        table_name (str, optional): Name of the table to query
+        sort_by (str, optional): Column to sort by
+        show_summary (bool, optional): Whether to show a summary of the query
+        
+    Returns:
+        pl.DataFrame: Polars DataFrame with the query results
+    '''
 
     client = get_client(host='localhost',
                         port=8123,

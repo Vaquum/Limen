@@ -3,7 +3,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def deciles_plot(data, column):
+def deciles_plot(data: object, column: str) -> None:
+    
+    '''
+    Create deciles visualization showing average outcome across data distribution.
+    
+    Args:
+        data (object): Dataset containing the specified column for deciles analysis
+        column (str): Column name to compute deciles for
+        
+    Returns:
+        None: Displays matplotlib line plot with deciles analysis
+    '''
 
     out = data[column]
     

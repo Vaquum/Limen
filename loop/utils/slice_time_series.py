@@ -7,16 +7,17 @@ from typing import List
 def slice_time_series(df: pl.DataFrame, 
                       target_col: str,
                       k: int) -> List[pl.DataFrame]:
+    
     '''
-    Slice time series into segments based on percentile gaps in the target column.
+    Compute time series segments using K-means clustering on target column.
     
     Args:
-        df (pl.DataFrame): Input DataFrame
-        target_col (str): Column to use for slicing
-        k (int): Number of slices
+        df (pl.DataFrame): Input DataFrame with time series data
+        target_col (str): Column name to use for clustering-based slicing
+        k (int): Number of slices to create
         
     Returns:
-        List of DataFrame slices
+        List[pl.DataFrame]: List of DataFrame slices based on clustering
     '''
     
     mags = np.log1p(df[target_col].to_numpy()).reshape(-1, 1)

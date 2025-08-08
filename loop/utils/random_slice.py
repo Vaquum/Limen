@@ -1,36 +1,25 @@
 import polars as pl
 import numpy as np
 
-def random_slice(
-    df: pl.DataFrame,
-    rows: int,
-    *,
-    safe_range_low: float = 0.25,
-    safe_range_high: float = 0.75,
-    seed: int | None = None
-) -> pl.DataFrame:
+def random_slice(df: pl.DataFrame,
+                 rows: int,
+                 *,
+                 safe_range_low: float = 0.25,
+                 safe_range_high: float = 0.75,
+                 seed: int | None = None) -> pl.DataFrame:
+    
     '''
-    Grab a contiguous slice rows long.
-    Start index is uniform in [safe_range_low, safe_range_high] of the frame (inclusive) and
-    guaranteed to fit the window length.
-
+    Compute contiguous slice from DataFrame within specified safe range.
+    
     Args:
         df (pl.DataFrame): Input DataFrame to slice from
         rows (int): Number of rows to include in the slice
-        safe_range_low (float, optional): Lower bound of safe range as fraction of total rows (0.0 to 1.0).
-            Defaults to 0.25 (25%).
-        safe_range_high (float, optional): Upper bound of safe range as fraction of total rows (0.0 to 1.0).
-            Defaults to 0.75 (75%).
-        seed (int | None, optional): Random seed for reproducible results. 
-            Defaults to None for non-deterministic behavior.
-    
+        safe_range_low (float): Lower bound of safe range as fraction of total rows
+        safe_range_high (float): Upper bound of safe range as fraction of total rows
+        seed (int | None): Random seed for reproducible results
+        
     Returns:
-        pl.DataFrame: A contiguous slice of the original DataFrame with 'rows' number of rows,
-            maintaining the original order of rows.
-    
-    Raises:
-        ValueError: If the requested slice size is too large to fit within the 
-            specified safe range, or if safe range parameters are invalid.
+        pl.DataFrame: Contiguous slice of the original DataFrame maintaining row order
     '''
     # Validate safe range parameters
     if not (0.0 <= safe_range_low < safe_range_high <= 1.0):

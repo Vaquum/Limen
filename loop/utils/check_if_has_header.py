@@ -2,17 +2,18 @@ import fsspec, zipfile, io
 
 
 def check_if_has_header(url: str, encoding: str = "utf-8") -> bool:
-
-    '''Checks if a CSV file has a header or not.
+    
+    '''
+    Compute whether a CSV file contains a header row.
     
     NOTE: This is mainly intended to be used with Binance Market Data files.
     
     Args:
-        url (str): The URL of the CSV file.
-        encoding (str): The encoding of the CSV file.
-
+        url (str): URL of the CSV file to check
+        encoding (str): Text encoding of the CSV file
+        
     Returns:
-        bool: True if the CSV file has a header, False otherwise.
+        bool: True if the CSV file has a header, False otherwise
     '''
 
     with fsspec.open(url, "rb", block_size=2**20) as remote:

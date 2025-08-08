@@ -1,18 +1,18 @@
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, confusion_matrix
 
 
-def binary_metrics(data, preds, probs):
-
+def binary_metrics(data: dict, preds: list, probs: list) -> dict:
+    
     '''
-    Takes in data dictionary and predicted values and returns a dictionary of metrics.
-
-    Returns:
-        dict: dictionary of metrics
-
+    Compute binary classification metrics from predictions and probabilities.
+    
     Args:
-        data (dict): data dictionary
-        preds (array): predicted binary values
-        probs (array): predicted probabilities
+        data (dict): Data dictionary with 'y_test' key containing true binary labels
+        preds (list): Predicted binary class labels
+        probs (list): Predicted class probabilities
+        
+    Returns:
+        dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
     '''
 
     round_results = {'recall': round(recall_score(data['y_test'], preds), 3),

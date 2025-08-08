@@ -9,6 +9,10 @@ from loop.utils.param_space import ParamSpace
 
 class UniversalExperimentLoop:
 
+    '''
+    UniversalExperimentLoop class for running experiments.
+    '''
+
     def __init__(self,
                  data,
                  single_file_model):
@@ -40,7 +44,7 @@ class UniversalExperimentLoop:
             model=None):
         
         '''
-        Runs the experiment `n_permutations` times. 
+        Run the experiment `n_permutations` times. 
 
         NOTE: If you want to use a custom `params` or `prep` or `model`
         function, you can pass them as arguments and permanently change
@@ -48,16 +52,19 @@ class UniversalExperimentLoop:
         returns are same as the ones outlined in `docs/Single-File-Model.md`.
 
         Args:
-            experiment_name (str): The name of the experiment
-            n_permutations (int): The number of permutations to run
-            prep_each_round (bool): Whether to use `prep` for each round or just first
-            random_search (bool): Whether to use random search or not
-            maintain_details_in_params (bool): Whether to maintain experiment details in params
-            context_params (dict): The context parameters to use for the experiment
-            save_to_sqlite (bool): Whether to save the results to a SQLite database
-            params (dict): The parameters to use for the experiment
-            prep (function): The function to use to prepare the data
-            model (function): The function to use to run the model
+            experiment_name (str): The name of the experiment.
+            n_permutations (int): The number of permutations to run.
+            prep_each_round (bool): Whether to use `prep` for each round or just first.
+            random_search (bool): Whether to use random search or not.
+            maintain_details_in_params (bool): Whether to maintain experiment details in params.
+            context_params (dict): The context parameters to use for the experiment.
+            save_to_sqlite (bool): Whether to save the results to a SQLite database.
+            params (dict): The parameters to use for the experiment.
+            prep (function): The function to use to prepare the data.
+            model (function): The function to use to run the model.
+
+        Returns:
+            pl.DataFrame: The results of the experiment in `self.log_df`.
         '''
 
         if save_to_sqlite is True:

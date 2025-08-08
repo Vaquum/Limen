@@ -3,17 +3,18 @@ import pandas as pd
 
 def probabilities_to_classes(probs_df,
                              sideways_fraction=0.4):
-    """
-    Convert probabilities for three classes (-1, 0, 1) into discrete classes,
-    controlling the fraction of the sideways class (0).
+
+    '''
+    Compute classes from probabilities for three classes (-1, 0, 1).
     
     Args:
-        probs_df (pd.DataFrame): Columns [-1, 0, 1] with probabilities.
-        sideways_fraction (float): Fraction of points to label as sideways (0).
-    
+        probs_df (pd.DataFrame): Columns [-1, 0, 1] with probabilities
+        sideways_fraction (float): Fraction of points to label as sideways (0)
+
     Returns:
-        np.ndarray: Array of class labels (-1, 0, 1).
-    """
+        np.ndarray: Array of class labels (-1, 0, 1)
+    '''
+    
     # Assign class with highest probability initially
     initial_classes = probs_df.idxmax(axis=1).astype(int)
 

@@ -2,7 +2,20 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def confusion_matrix_plus(df_results, x, y_lim_correction=6.5, outlier_quantiles=[0.01, 0.99]):
+def confusion_matrix_plus(df_results: object, x: str, y_lim_correction: float = 6.5, outlier_quantiles: list = [0.01, 0.99]) -> None:
+    
+    '''
+    Create enhanced confusion matrix visualization with distribution analysis.
+    
+    Args:
+        df_results (object): Results dataframe with 'predictions', 'actuals', and specified x column
+        x (str): Column name for distribution comparison analysis
+        y_lim_correction (float): Y-axis limit multiplier for histogram scaling
+        outlier_quantiles (list): Lower and upper quantiles for outlier filtering
+        
+    Returns:
+        None: Displays four-panel matplotlib figure with confusion matrix analysis
+    '''
     
     plt.style.use('seaborn-v0_8-darkgrid')
     fig, axes = plt.subplots(2, 2, figsize=(12, 10), facecolor='white')
