@@ -707,12 +707,8 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                     if data_split_mega_model:
                         data_split_mega_model['dataset_idx'] = i
                         strategy_results['data_split_mega_models'].append(data_split_mega_model)
-                        print(f"    ✅ Data-split mega model created successfully")
-                    else:
-                        print(f"    ❌ Failed to create data-split mega model")
 
             except Exception as e:
-                print(f"    Error in dataset {i+1}: {e}")
                 continue
         
         # 3. Create cross-dataset mega model from best models across all datasets
@@ -740,14 +736,7 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                 
                 if cross_dataset_mega_model:
                     strategy_results['cross_dataset_mega_models'].append(cross_dataset_mega_model)
-                    print(f"  ✅ Cross-dataset mega model created successfully")
-                else:
-                    print(f"  ❌ Failed to create cross-dataset mega model")
-            else:
-                print(f"  ❌ No test data available for cross-dataset mega model")
-        elif enable_mega_models:
-            print(f"  ⚠️ Skipping cross-dataset mega model - insufficient models ({len(all_strategy_models)} models, {len(strategy_results['single_models'])} single results)")
-        
+
         all_results[strategy_name] = strategy_results
     
     # Create comprehensive comparison
@@ -833,15 +822,6 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
         best_strategy = best_strategy_row['strategy']
         best_approach = best_strategy_row['best_approach']
         best_mae = best_strategy_row['best_mae']
-        
-        # Show improvement from mega models
-        if enable_mega_models:
-            for _, row in comparison_df.iterrows():
-                strategy = row['strategy']
-                if not pd.isna(row.get('ds_mega_model_improvement_mae', np.nan)):
-                    print(f"   {strategy} - Data Split Mega Model: {row['ds_mega_model_improvement_mae']:+.2f}% MAE improvement")
-                if not pd.isna(row.get('cd_mega_model_improvement_mae', np.nan)):
-                    print(f"   {strategy} - Cross Dataset Mega Model: {row['cd_mega_model_improvement_mae']:+.2f}% MAE improvement")
         
         # Save results
         comparison_df.to_csv('enhanced_megamodel_comparison.csv', index=False)
