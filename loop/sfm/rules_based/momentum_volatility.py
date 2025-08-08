@@ -9,7 +9,8 @@ def params():
         'momentum_sell_pct': [30, 35, 40, 45, 50, 55],
         'volatility_buy_pct': [70, 75, 80, 85, 90],
         'volatility_sell_pct': [80, 85, 90, 95],
-        'lookback_window': [300, 500, 750]
+        'lookback_window': [300, 500, 750],
+        'trading_cost': [0.00075]  # 0.075% per trade
     }
 
 def prep(data, round_params):
@@ -20,15 +21,15 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     Momentum-volatility strategy using dynamic percentile thresholds.
     """
     
-    # Convert to numpy for exact matching with working implementation
+    # Convert to numpy for faster processing
     closes = data['close'].to_numpy()
     
-    # Build returns history EXACTLY like the working version
+    # Build returns history
     returns_history = []
     for i in range(len(closes)):
         if i > 1:
             # Use close[i-1] and close[i-2] for returns at position i
-            ret = (closes[i-1] - closes[i-2]) / closes[i-2] if closes[i-2] != 0 else 0
+            ret = (closes[i-1] - closes[i-2]) / (closes[i-2] + 1e-10)
             returns_history.append(ret)
     
     # Track positions and orders
@@ -118,7 +119,7 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     # Calculate actual returns for performance
     actual_returns = []
     for i in range(len(closes) - 1):
-        actual_returns.append((closes[i+1] - closes[i]) / closes[i] if closes[i] != 0 else 0)
+        actual_returns.append((closes[i+1] - closes[i]) / (closes[i] + 1e-10))
     actual_returns.append(0)
     
     actual_returns_array = np.array(actual_returns)
@@ -126,21 +127,26 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     # Strategy returns WITHOUT costs first
     strategy_returns = positions_array[:-1] * actual_returns_array[:-1]
     
-    # Apply trading costs (0.075% per trade)
-    trading_cost = 0.00075
-    cost_adjustment = num_trades * trading_cost
+    # Apply trading costs
+    cost_adjustment = num_trades * round_params.get('trading_cost', 0.00075)
     
     total_positions = np.sum(positions_array)
     total_return = np.sum(strategy_returns) - cost_adjustment
     
     if total_positions > 0:
-        avg_return_when_long = total_return / (np.sum(positions_array[:-1]) if np.sum(positions_array[:-1]) > 0 else 1)
+        positions_sum = np.sum(positions_array[:-1])
+        avg_return_when_long = total_return / (positions_sum if positions_sum > 0 else 1)
         winning_periods = np.sum(strategy_returns > 0)
         periods_in_position = np.sum(positions_array[:-1] > 0)
         win_rate = winning_periods / periods_in_position if periods_in_position > 0 else 0
         
-        if len(strategy_returns) > 1 and np.std(strategy_returns) > 0:
-            sharpe = np.mean(strategy_returns) / np.std(strategy_returns) * np.sqrt(252 * 12)
+        annualization_factor = np.sqrt(252 * 12)  # Assuming hourly bars, 252 trading days
+        if len(strategy_returns) > 1:
+            returns_std = np.std(strategy_returns)
+            if returns_std > 1e-10:
+                sharpe = np.mean(strategy_returns) / returns_std * annualization_factor
+            else:
+                sharpe = 0
         else:
             sharpe = 0
     else:
