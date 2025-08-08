@@ -20,6 +20,10 @@ Type hints are mandatory and must match docstring parameter types exactly. Descr
 ### Semantic Coherence
 Every word matters. Parameter names, descriptions, and terminology must be semantically coherent across the entire codebase. Similar concepts use identical language; different concepts use distinct language. No synonyms for the sake of variety.
 
+## Workflow
+
+It's highly advisable to work in an IDE such as Cursor, where the auto-complete already knows what we want to have in the docstring. One can then simply ask LLM to sync that with docs, and do few iterative rounds of consistency checks with the LLM. 
+
 ## Standard Format
 
 Every function docstring in Loop follows this exact structure:

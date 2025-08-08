@@ -11,7 +11,7 @@ def kline_imbalance(data: pl.DataFrame, window: int = 14) -> pl.DataFrame:
         window (int): Number of periods for rolling window calculation
         
     Returns:
-        pl.DataFrame: The input data with a new column 'kline_imbalance'
+        pl.DataFrame: The input data with a new column 'imbalance'
     '''
 
     return (
