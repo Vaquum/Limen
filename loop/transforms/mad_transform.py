@@ -4,7 +4,7 @@ import polars as pl
 def mad_transform(df: pl.DataFrame, *, time_col: str = "datetime"):
 
     '''
-    Median Absolute Deviation (MAD) Transform
+    Compute Median Absolute Deviation (MAD) Transform.  
     
     Args:
         df (pl.DataFrame): The input DataFrame.

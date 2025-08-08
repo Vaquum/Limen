@@ -7,7 +7,7 @@ import polars as pl
 def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> List[pl.DataFrame]:
 
     '''
-    Split the data into sequential chunks
+    Split the data into sequential chunks.
 
     Args:
         data (pl.DataFrame): The data to be split

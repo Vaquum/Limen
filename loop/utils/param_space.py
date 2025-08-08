@@ -8,8 +8,8 @@ class ParamSpace:
     Create parameter space manager for hyperparameter sampling.
     
     Args:
-        params (dict): Dictionary of parameter names and their possible values
-        n_permutations (int): Number of parameter combinations to sample
+        params (dict): Dictionary of parameter names and their possible values.
+        n_permutations (int): Number of parameter combinations to sample.
     '''
     
     def __init__(self, params: dict, n_permutations: int):

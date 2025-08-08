@@ -87,6 +87,21 @@ def function_name(data: pl.DataFrame, param: int) -> pl.DataFrame:
 
 ## Structure Requirements
 
+### Layout
+
+#### Title
+- Not longer than single sentence.
+- Ends with full stop
+- Can have `NOTE` section below the heading
+
+#### Args
+- Definitions not longer than single sentence
+- No full stop at the end
+
+#### Returns
+- Definition not longer than single sentence
+- No full stop at the end
+
 ### Spacing
 - One empty line above docstring opening `'''`
 - One empty line below docstring closing `'''`

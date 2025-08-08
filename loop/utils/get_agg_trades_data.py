@@ -13,13 +13,13 @@ def get_agg_trades_data(month_year: Optional[Tuple[int,int]] = None,
     Query Binance aggTrades data from ClickHouse.
 
     Args:
-        month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
-        n_rows (int | None): if set, fetch this many latest rows instead.
-        include_datetime_col (bool): whether to include `datetime` in the result.
+        month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025)
+        n_rows (int | None): if set, fetch this many latest rows instead
+        include_datetime_col (bool): whether to include `datetime` in the result
         show_summary (bool): if a summary for data is printed out
 
     Returns:
-        pl.DataFrame: the requested trades.
+        pl.DataFrame: the requested trades
     '''
     
     client = get_client(

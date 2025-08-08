@@ -28,9 +28,20 @@ SCALING_RULES = {
 }
 
 class LogRegTransform:
+
+    '''
+    LogRegTransform class for scaling and inverse scaling data.
+    '''
     
     def __init__(self, x_train: pl.DataFrame):
-       
+
+        '''
+        Initialize the LogRegTransform object.
+        
+        Args:
+            x_train (pl.DataFrame): The training data
+        '''
+        
         self.means = {}
         self.stds = {}
         
@@ -50,6 +61,16 @@ class LogRegTransform:
                 self.stds[col] = x_train[col].std(ddof=0)
     
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+
+        '''
+        Transform the data using the scaling rules.
+        
+        Args:
+            df (pl.DataFrame): The input DataFrame
+
+        Returns:
+            pl.DataFrame: The transformed DataFrame
+        '''
         
         exprs = []
         
@@ -76,6 +97,17 @@ class LogRegTransform:
 
 
 def inverse_transform(df: pl.DataFrame, scaler: LogRegTransform) -> pl.DataFrame:
+
+    '''
+    Inverse transform the data using the scaling rules.
+    
+    Args:
+        df (pl.DataFrame): The input DataFrame
+        scaler (LogRegTransform): The scaler object
+        
+    Returns:
+        pl.DataFrame: The inverse transformed DataFrame
+    '''
     
     exprs = []
     

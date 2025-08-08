@@ -14,14 +14,14 @@ def get_klines_data(n_rows: Optional[int] = None,
     Query Binance klines data from ClickHouse.
 
     Args:
-        n_rows (int | None): if not None, fetch this many latest rows instead.
-        kline_size (int): the size of the kline in seconds.
-        start_date_limit (str): the start date of the klines data.
-        futures (bool): if the data is from futures.
-        show_summary (bool): if a summary for data is printed out.
+        n_rows (int | None): if not None, fetch this many latest rows instead
+        kline_size (int): the size of the kline in seconds
+        start_date_limit (str): the start date of the klines data
+        futures (bool): if the data is from futures
+        show_summary (bool): if a summary for data is printed out
 
     Returns:
-        pl.DataFrame: the requested klines data.
+        pl.DataFrame: the requested klines data
     '''
     
     client = get_client(

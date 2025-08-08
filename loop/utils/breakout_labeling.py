@@ -109,7 +109,7 @@ def build_breakout_flags(df_feats: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with new columns for long and short breakout flags
     '''
-    
+
     exprs = []
     for delta in deltas:
         exprs.append(
