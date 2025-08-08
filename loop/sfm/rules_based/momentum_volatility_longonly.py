@@ -5,15 +5,10 @@ from typing import Dict
 def params():
     return {
         'window_size': [24, 48, 72],
-        # Long thresholds
         'momentum_buy_pct': [55, 60, 65, 70, 75, 80],
         'momentum_sell_pct': [30, 35, 40, 45, 50, 55],
-        # Short thresholds
-        'momentum_short_pct': [20, 25, 30, 35, 40, 45],
-        'momentum_cover_pct': [50, 55, 60, 65, 70],
-        # Volatility thresholds
-        'volatility_entry_pct': [70, 75, 80, 85, 90],
-        'volatility_exit_pct': [80, 85, 90, 95],
+        'volatility_buy_pct': [70, 75, 80, 85, 90],
+        'volatility_sell_pct': [80, 85, 90, 95],
         'lookback_window': [300, 500, 750],
         'trading_cost': [0.00075]  # 0.075% per trade
     }
@@ -23,8 +18,7 @@ def prep(data, round_params):
 
 def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     """
-    Bidirectional momentum-volatility strategy using dynamic percentile thresholds.
-    Supports both long and short positions.
+    Momentum-volatility strategy using dynamic percentile thresholds.
     """
     
     # Convert to numpy for faster processing
@@ -39,55 +33,37 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
             returns_history.append(ret)
     
     # Track positions and orders
-    positions = []  # -1 = short, 0 = out, 1 = long
-    position = 0  # Current position state
+    positions = []
+    position_open = False
     pending_order = None
-    
-    # Track trades for performance metrics
-    long_trades = 0
-    short_trades = 0
-    long_wins = 0
-    short_wins = 0
-    entry_price = 0
     
     for i in range(len(closes)):
         # Execute pending orders at bar open
         if pending_order is not None and i > 0:
-            if pending_order['type'] == 'buy' and position == 0:
-                position = 1
-                entry_price = closes[i]
-                long_trades += 1
-            elif pending_order['type'] == 'sell' and position == 1:
-                if closes[i] > entry_price:
-                    long_wins += 1
-                position = 0
-            elif pending_order['type'] == 'short' and position == 0:
-                position = -1
-                entry_price = closes[i]
-                short_trades += 1
-            elif pending_order['type'] == 'cover' and position == -1:
-                if closes[i] < entry_price:
-                    short_wins += 1
-                position = 0
+            if pending_order['type'] == 'buy' and not position_open:
+                position_open = True
+            elif pending_order['type'] == 'sell' and position_open:
+                position_open = False
             pending_order = None
         
         # Need enough history for calculations
         if i < 2 or len(returns_history) < round_params['window_size']:
-            positions.append(position)
+            positions.append(1 if position_open else 0)
             continue
         
         # Get the current index in returns_history
+        # At bar i, we have returns up to index i-2 (since returns_history is built with i>1)
         current_returns_idx = min(i - 2, len(returns_history) - 1)
         
         if current_returns_idx < round_params['window_size'] - 1:
-            positions.append(position)
+            positions.append(1 if position_open else 0)
             continue
         
         # Calculate momentum and volatility using available returns
         recent_returns = returns_history[max(0, current_returns_idx - round_params['window_size'] + 1):current_returns_idx + 1]
         
         if len(recent_returns) < round_params['window_size']:
-            positions.append(position)
+            positions.append(1 if position_open else 0)
             continue
             
         current_momentum = np.mean(recent_returns)
@@ -109,50 +85,35 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
             if momentums and volatilities:
                 mom_buy_thresh = np.percentile(momentums, round_params['momentum_buy_pct'])
                 mom_sell_thresh = np.percentile(momentums, round_params['momentum_sell_pct'])
-                mom_short_thresh = np.percentile(momentums, round_params['momentum_short_pct'])
-                mom_cover_thresh = np.percentile(momentums, round_params['momentum_cover_pct'])
-                vol_entry_thresh = np.percentile(volatilities, round_params['volatility_entry_pct'])
-                vol_exit_thresh = np.percentile(volatilities, round_params['volatility_exit_pct'])
+                vol_buy_thresh = np.percentile(volatilities, round_params['volatility_buy_pct'])
+                vol_sell_thresh = np.percentile(volatilities, round_params['volatility_sell_pct'])
             else:
-                positions.append(position)
+                positions.append(1 if position_open else 0)
                 continue
         else:
-            positions.append(position)
+            positions.append(1 if position_open else 0)
             continue
         
         # Generate signals for NEXT bar execution
-        if position == 1 and pending_order is None:
-            # Exit long position
-            if current_momentum < mom_sell_thresh or current_volatility > vol_exit_thresh:
+        if position_open and pending_order is None:
+            if current_momentum < mom_sell_thresh or current_volatility > vol_sell_thresh:
                 if i < len(closes) - 1:
                     pending_order = {'type': 'sell', 'bar': i}
         
-        elif position == -1 and pending_order is None:
-            # Exit short position
-            if current_momentum > mom_cover_thresh or current_volatility > vol_exit_thresh:
-                if i < len(closes) - 1:
-                    pending_order = {'type': 'cover', 'bar': i}
-        
-        elif position == 0 and pending_order is None:
-            # Enter new position
-            if current_momentum > mom_buy_thresh and current_volatility < vol_entry_thresh:
-                # Go long
+        if not position_open and pending_order is None:
+            if current_momentum > mom_buy_thresh and current_volatility < vol_buy_thresh:
                 if i < len(closes) - 1:
                     pending_order = {'type': 'buy', 'bar': i}
-            elif current_momentum < mom_short_thresh and current_volatility < vol_entry_thresh:
-                # Go short
-                if i < len(closes) - 1:
-                    pending_order = {'type': 'short', 'bar': i}
         
-        positions.append(position)
+        positions.append(1 if position_open else 0)
     
     # Calculate performance metrics
     positions_array = np.array(positions)
     
-    # Count total trades
+    # Count trades first
     num_trades = 0
     for i in range(1, len(positions)):
-        if positions[i] != positions[i-1] and positions[i-1] != 0:
+        if positions[i] != positions[i-1]:
             num_trades += 1
     
     # Calculate actual returns for performance
@@ -163,22 +124,20 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     
     actual_returns_array = np.array(actual_returns)
     
-    # Strategy returns (multiply by position: 1 for long, -1 for short, 0 for out)
+    # Strategy returns WITHOUT costs first
     strategy_returns = positions_array[:-1] * actual_returns_array[:-1]
     
     # Apply trading costs
     cost_adjustment = num_trades * round_params.get('trading_cost', 0.00075)
     
+    total_positions = np.sum(positions_array)
     total_return = np.sum(strategy_returns) - cost_adjustment
     
-    # Calculate metrics
-    long_positions = np.sum(positions_array == 1)
-    short_positions = np.sum(positions_array == -1)
-    total_positions = long_positions + short_positions
-    
     if total_positions > 0:
+        positions_sum = np.sum(positions_array[:-1])
+        avg_return_when_long = total_return / (positions_sum if positions_sum > 0 else 1)
         winning_periods = np.sum(strategy_returns > 0)
-        periods_in_position = np.sum(positions_array[:-1] != 0)
+        periods_in_position = np.sum(positions_array[:-1] > 0)
         win_rate = winning_periods / periods_in_position if periods_in_position > 0 else 0
         
         annualization_factor = np.sqrt(252 * 12)  # Assuming hourly bars, 252 trading days
@@ -191,12 +150,9 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
         else:
             sharpe = 0
     else:
+        avg_return_when_long = 0
         win_rate = 0
         sharpe = 0
-    
-    # Calculate long/short specific win rates
-    long_win_rate = (long_wins / long_trades * 100) if long_trades > 0 else 0
-    short_win_rate = (short_wins / short_trades * 100) if short_trades > 0 else 0
     
     return {
         'accuracy': win_rate,
@@ -206,22 +162,16 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
         '_preds': positions,
         'extras': {
             'total_return': round(total_return * 100, 2),
-            'num_long_positions': int(long_positions),
-            'num_short_positions': int(short_positions),
-            'long_trades': long_trades,
-            'short_trades': short_trades,
-            'long_win_rate': round(long_win_rate, 1),
-            'short_win_rate': round(short_win_rate, 1),
+            'avg_return_when_long': round(avg_return_when_long * 100, 3),
+            'num_long_positions': int(total_positions),
             'position_rate': round(total_positions / len(positions), 3) if len(positions) > 0 else 0,
             'sharpe_ratio': round(sharpe, 2),
             'num_trades': num_trades,
             'win_rate': round(win_rate * 100, 2),
             'momentum_buy_pct': round_params['momentum_buy_pct'],
             'momentum_sell_pct': round_params['momentum_sell_pct'],
-            'momentum_short_pct': round_params['momentum_short_pct'],
-            'momentum_cover_pct': round_params['momentum_cover_pct'],
-            'volatility_entry_pct': round_params['volatility_entry_pct'],
-            'volatility_exit_pct': round_params['volatility_exit_pct'],
+            'volatility_buy_pct': round_params['volatility_buy_pct'],
+            'volatility_sell_pct': round_params['volatility_sell_pct'],
             'lookback_window': round_params['lookback_window']
         }
     }
