@@ -90,7 +90,7 @@ def function_name(data: pl.DataFrame, param: int) -> pl.DataFrame:
 ### Layout
 
 #### Title
-- Not longer than single sentence.
+- No longer than a single sentence.
 - Ends with a full stop
 - Can have `NOTE` section below the heading
 
