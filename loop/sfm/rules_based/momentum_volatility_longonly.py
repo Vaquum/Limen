@@ -1,6 +1,7 @@
 import polars as pl
 import numpy as np
 from typing import Dict
+from loop.metrics.binary_metrics import binary_metrics
 
 # Constants
 EPSILON = 1e-10  # Prevent division by zero
@@ -16,16 +17,16 @@ def params():
         'volatility_buy_pct': [70, 75, 80, 85, 90],
         'volatility_sell_pct': [80, 85, 90, 95],
         'lookback_window': [300, 500, 750],
-        'trading_cost': [0.00075]  # 0.075% per trade
+        'trading_cost': [0.001]  # 0.1% per trade
     }
 
 def prep(data, round_params):
     return data
 
 def model(data: pl.DataFrame, round_params: Dict) -> Dict:
-    """
+    '''
     Momentum-volatility strategy using dynamic percentile thresholds.
-    """
+    '''
     
     # Convert to numpy for faster processing
     closes = data['close'].to_numpy()
@@ -134,7 +135,7 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     strategy_returns = positions_array[:-1] * actual_returns_array[:-1]
     
     # Apply trading costs
-    cost_adjustment = num_trades * round_params.get('trading_cost', 0.00075)
+    cost_adjustment = num_trades * round_params.get('trading_cost', 0.001)
     
     total_positions = np.sum(positions_array)
     total_return = np.sum(strategy_returns) - cost_adjustment
@@ -168,21 +169,23 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     
     y_pred = positions_array[:-1]
     
-    # Calculate binary classification metrics
-    from sklearn.metrics import accuracy_score, precision_score, recall_score
+    # Create data dict for binary_metrics
+    data_dict = {'y_test': y_true}
     
-    accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, zero_division=0)
-    recall = recall_score(y_true, y_pred, zero_division=0)
+    # Create pseudo-probabilities for binary classification
+    # For rules-based, use 0.8 confidence for predicted class
+    y_proba = np.zeros(len(y_pred))
+    y_proba[y_pred == 1] = 0.8
+    y_proba[y_pred == 0] = 0.2
     
-    # AUC would need probability scores, using 0.5 as baseline
-    auc = 0.5
+    # Calculate metrics using Loop's binary_metrics
+    metrics = binary_metrics(data_dict, y_pred, y_proba)
     
     return {
-        'accuracy': round(accuracy, 3),
-        'precision': round(precision, 3),
-        'recall': round(recall, 3),
-        'auc': auc,
+        'accuracy': metrics['accuracy'],
+        'precision': metrics['precision'],
+        'recall': metrics['recall'],
+        'auc': metrics['auc'],
         '_preds': positions,
         'extras': {
             'total_return': round(total_return * 100, 2),

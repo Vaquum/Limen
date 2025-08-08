@@ -26,7 +26,7 @@ Both strategies use dynamic percentile thresholds calculated from rolling histor
 - 48-hour window optimal for both momentum and volatility calculations
 - Dynamic threshold adaptation to market conditions  
 - No lookahead bias - signals execute at next bar's open
-- Trading costs included (0.075% per trade)
+- Trading costs included (0.1% per trade)
 
 ## Implementation
 
@@ -41,7 +41,7 @@ Both strategies use dynamic percentile thresholds calculated from rolling histor
     'volatility_buy_pct': [70, 75, 80, 85, 90],
     'volatility_sell_pct': [80, 85, 90, 95],
     'lookback_window': [300, 500, 750],
-    'trading_cost': [0.00075]
+    'trading_cost': [0.001]
 }
 ```
 
@@ -59,7 +59,7 @@ Both strategies use dynamic percentile thresholds calculated from rolling histor
     'volatility_entry_pct': [70, 75, 80, 85, 90],
     'volatility_exit_pct': [80, 85, 90, 95],
     'lookback_window': [300, 500, 750],
-    'trading_cost': [0.00075]
+    'trading_cost': [0.001]
 }
 ```
 
@@ -111,4 +111,4 @@ Both strategies use dynamic percentile thresholds calculated from rolling histor
 - **Number of Trades**: 180-300 per 6 months
 - **Sharpe Ratio**: 1.5-2.0+ range
 
-Both strategies include 0.075% trading costs per trade in all calculations.
+Both strategies include 0.1% trading costs per trade in all calculations.

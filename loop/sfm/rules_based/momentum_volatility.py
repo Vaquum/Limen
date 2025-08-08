@@ -1,6 +1,7 @@
 import polars as pl
 import numpy as np
 from typing import Dict
+from loop.metrics.multiclass_metrics import multiclass_metrics
 
 # Constants
 EPSILON = 1e-10  # Prevent division by zero
@@ -21,17 +22,17 @@ def params():
         'volatility_entry_pct': [70, 75, 80, 85, 90],
         'volatility_exit_pct': [80, 85, 90, 95],
         'lookback_window': [300, 500, 750],
-        'trading_cost': [0.00075]  # 0.075% per trade
+        'trading_cost': [0.001]  # 0.1% per trade
     }
 
 def prep(data, round_params):
     return data
 
 def model(data: pl.DataFrame, round_params: Dict) -> Dict:
-    """
+    '''
     Bidirectional momentum-volatility strategy using dynamic percentile thresholds.
     Supports both long and short positions.
-    """
+    '''
     
     # Convert to numpy for faster processing
     closes = data['close'].to_numpy()
@@ -173,7 +174,7 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     strategy_returns = positions_array[:-1] * actual_returns_array[:-1]
     
     # Apply trading costs
-    cost_adjustment = num_trades * round_params.get('trading_cost', 0.00075)
+    cost_adjustment = num_trades * round_params.get('trading_cost', 0.001)
     
     total_return = np.sum(strategy_returns) - cost_adjustment
     
@@ -214,22 +215,26 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     y_pred = positions_array[:-1].copy()
     y_pred[y_pred == -1] = 2
     
-    # Calculate multiclass metrics
-    from sklearn.metrics import accuracy_score, precision_score, recall_score
+    # Create data dict for multiclass_metrics
+    data_dict = {'y_test': y_true}
     
-    accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
-    recall = recall_score(y_true, y_pred, average='macro', zero_division=0)
+    # Create pseudo-probabilities based on position confidence
+    # For rules-based, we use 0.8 confidence for chosen class, 0.1 for others
+    y_proba = np.zeros((len(y_pred), 3))
+    for i, pred in enumerate(y_pred):
+        y_proba[i, int(pred)] = 0.8
+        for j in range(3):
+            if j != int(pred):
+                y_proba[i, j] = 0.1
     
-    # For AUC, would need probability scores which we don't have in rules-based
-    # Using 0.5 as neutral baseline
-    auc = 0.5
+    # Calculate metrics using Loop's multiclass_metrics
+    metrics = multiclass_metrics(data_dict, y_pred, y_proba)
     
     return {
-        'accuracy': round(accuracy, 3),
-        'precision': round(precision, 3),
-        'recall': round(recall, 3),
-        'auc': auc,
+        'accuracy': metrics['accuracy'],
+        'precision': metrics['precision'],
+        'recall': metrics['recall'],
+        'auc': metrics['auc'],
         '_preds': positions,
         'extras': {
             'total_return': round(total_return * 100, 2),
