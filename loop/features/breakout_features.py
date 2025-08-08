@@ -1,5 +1,5 @@
 import polars as pl
-from loop.indicators.simple_lags import lag_range
+from loop.features.lag_range import lag_range
 
 
 def _breakout_lags(data: pl.DataFrame,
@@ -9,7 +9,7 @@ def _breakout_lags(data: pl.DataFrame,
                  horizon: int = 12) -> pl.DataFrame:
 
     '''
-    Create lag features for breakout signals.
+    Compute lag features for breakout signals.
     
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
@@ -39,7 +39,7 @@ def _breakout_stats(data: pl.DataFrame,
                   lookback: int = 12,
                   horizon: int = 12) -> pl.DataFrame:
     '''
-    Calculate rolling statistics for breakout signals.
+    Compute rolling statistics for breakout signals.
     
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
@@ -78,7 +78,7 @@ def _breakout_roc(data: pl.DataFrame,
                 next_short_col: str) -> pl.DataFrame:
     
     '''
-    Calculate Rate of Change (ROC) for breakout signals.
+    Compute Rate of Change (ROC) for breakout signals.
     
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
@@ -120,18 +120,18 @@ def breakout_features(data: pl.DataFrame,
                      target: str = 'breakout_pct') -> pl.DataFrame:
     
     '''
-    Calculate all breakout-related features in one operation.
+    Compute comprehensive breakout-related features including lags, stats, and ROC.
     
     Args:
-        data (pl.DataFrame): Input DataFrame with breakout columns
-        long_col (str): Name of long breakout column
-        short_col (str): Name of short breakout column
-        lookback (int): Number of periods to look back
-        horizon (int): Number of periods to shift for known data
-        target (str): Name of target column for null dropping
+        data (pl.DataFrame): Klines dataset with breakout signal columns
+        long_col (str): Column name for long breakout signals
+        short_col (str): Column name for short breakout signals
+        lookback (int): Number of periods for feature calculation
+        horizon (int): Number of periods to shift for avoiding lookahead bias
+        target (str): Target column name for filtering null values
 
     Returns:
-        pl.DataFrame: The input data with all breakout features
+        pl.DataFrame: The input data with multiple breakout feature columns added
     '''
     
     df = _breakout_lags(data, long_col, short_col, lookback, horizon)

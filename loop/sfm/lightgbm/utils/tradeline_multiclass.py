@@ -18,9 +18,9 @@ from sklearn.utils.class_weight import compute_class_weight
 # Import Loop indicators
 from loop.indicators.price_change_pct import price_change_pct
 from loop.indicators.rolling_volatility import rolling_volatility
-from loop.indicators.price_range_position import price_range_position
-from loop.indicators.distance_from_high import distance_from_high
-from loop.indicators.distance_from_low import distance_from_low
+from loop.features.price_range_position import price_range_position
+from loop.features.distance_from_high import distance_from_high
+from loop.features.distance_from_low import distance_from_low
 
 # Constants
 MIN_VOLATILITY_THRESHOLD = 1e-6  # Minimum volatility to avoid division issues

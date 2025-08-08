@@ -2,7 +2,7 @@ import polars as pl
 
 
 def quantile_flag(data: pl.DataFrame,
-                  col: str = "close",
+                  col: str = 'close',
                   q: float = 0.1,
                   cutoff: float = None,
                   return_cutoff: bool = False) -> pl.DataFrame:
@@ -11,7 +11,7 @@ def quantile_flag(data: pl.DataFrame,
     Mark rows where `col` exceeds the (1 - q) quantile.
 
     Args:
-        data (pl.DataFrame): The input data.
+        data (pl.DataFrame): Klines dataset with specified column
         col (str): The column name on which to compute the quantile.
         q (float): A value in [0,1]; if q = 0.1, use the 90% quantile.
         cutoff (float): Optional pre-calculated cutoff value. If provided,
@@ -37,7 +37,7 @@ def quantile_flag(data: pl.DataFrame,
     result = data.with_columns([
         (pl.col(col) > cutoff)
             .cast(pl.UInt8)
-            .alias("quantile_flag")
+            .alias('quantile_flag')
     ])
     
     if return_cutoff:

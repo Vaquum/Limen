@@ -41,107 +41,180 @@ There can be an infinite number of distinct model architectures, but they all be
 
 ### `atr`
 
-Compute Average True Range (ATR) over `period` using Wilder's smoothing (EMA).
+Compute Average True Range (ATR) using Wilder's smoothing method.
 
 #### Args
 
-| Parameter   | Type            | Description                                 |
-|-------------|-----------------|---------------------------------------------|
-| `data`      | `pl.DataFrame`  | The input data.                             |
-| `high_col`  | `str`           | The column name for the high prices.        |
-| `low_col`   | `str`           | The column name for the low prices.         |
-| `close_col` | `str`           | The column name for the closing prices.     |
-| `period`    | `int`           | The period for the ATR calculation.         |
+| Parameter   | Type            | Description                                      |
+|-------------|-----------------|--------------------------------------------------|
+| `data`      | `pl.DataFrame`  | Klines dataset with 'high', 'low', 'close' columns |
+| `high_col`  | `str`           | Column name for high prices                      |
+| `low_col`   | `str`           | Column name for low prices                       |
+| `close_col` | `str`           | Column name for close prices                     |
+| `period`    | `int`           | Number of periods for ATR calculation           |
 
 #### Returns
 
-`pl.DataFrame`: The input data with the ATR column appended
+`pl.DataFrame`: The input data with a new column 'atr'
 
+### `body_pct`
 
-### `macd`
-
-Compute MACD (Moving Average Convergence Divergence) from kline close prices.
-
-#### Args
-
-| Parameter       | Type            | Description                                                                                  |
-|-----------------|-----------------|----------------------------------------------------------------------------------------------|
-| `data`          | `pl.DataFrame`  | The input kline DataFrame. Must contain: `close_col` (`Float`/`Float64`) – closing price of the kline. |
-| `close_col`     | `str`           | Name of the close price column (default: `"close"`).                                        |
-| `fast_period`   | `int`           | Lookback for the fast EMA (default: `12`).                                                   |
-| `slow_period`   | `int`           | Lookback for the slow EMA (default: `26`).                                                   |
-| `signal_period` | `int`           | Lookback for the signal‐line EMA (default: `9`).                                             |
-
-
-#### Returns
-
-`pl.DataFrame`: The input data with three macd columns added.
-
-### `ppo`
-
-Compute the Percentage Price Oscillator (PPO).
-
-#### Args
-
-| Parameter    | Type            | Description                           |
-|--------------|-----------------|---------------------------------------|
-| `data`       | `pl.DataFrame`  | The input data.                       |
-| `price_col`  | `str`           | The column name for the price.        |
-| `span_short` | `int`           | The short span for the EMA.           |
-| `span_long`  | `int`           | The long span for the EMA.            |
-| `ppo_name`   | `str`           | The name of the PPO column.           |
-
-#### Returns
-
-`pl.DataFrame`: The input data with the PPO column appended.
-
-### `roc`
-
-Compute Rate of Change (ROC) over `period` for `col` and append as 'roc'.
+Compute the body percentage (candle body size relative to open).
 
 #### Args
 
 | Parameter | Type            | Description                                      |
 |-----------|-----------------|--------------------------------------------------|
-| `data`    | `pl.DataFrame`  | The input DataFrame.                             |
-| `col`     | `str`           | The column name on which to compute ROC.         |
-| `period`  | `int`           | The look-back period for ROC calculation.        |
+| `data`    | `pl.DataFrame`  | Klines dataset with 'open' and 'close' columns  |
 
 #### Returns
 
-`pl.DataFrame`: The input data with the ROC column appended.
+`pl.DataFrame`: The input data with a new column 'body_pct'
 
-### `vwap`
+### `macd`
 
-Compute Volume Weighted Average Price (VWAP) for each kline over its trading day.
+Compute MACD (Moving Average Convergence Divergence) indicator.
 
 #### Args
 
-| Parameter     | Type            | Description                        |
-|---------------|-----------------|------------------------------------|
-| `data`        | `pl.DataFrame`  | The input kline DataFrame.         |
-| `price_col`   | `str`           | Name of the price column.          |
-| `volume_col`  | `str`           | Name of the volume column.         |
-
+| Parameter       | Type            | Description                                           |
+|-----------------|-----------------|-------------------------------------------------------|
+| `data`          | `pl.DataFrame`  | Klines dataset with 'close' column                   |
+| `close_col`     | `str`           | Column name for close prices                         |
+| `fast_period`   | `int`           | Period for fast EMA calculation                      |
+| `slow_period`   | `int`           | Period for slow EMA calculation                      |
+| `signal_period` | `int`           | Period for signal line EMA calculation               |
 
 #### Returns
 
-`pl.DataFrame`: The input data with the VWAP column appended.
+`pl.DataFrame`: The input data with three columns: 'macd', 'macd_signal', 'macd_hist'
+
+### `ppo`
+
+Compute Percentage Price Oscillator (PPO) indicator.
+
+#### Args
+
+| Parameter    | Type            | Description                                      |
+|--------------|-----------------|--------------------------------------------------|
+| `data`       | `pl.DataFrame`  | Klines dataset with price column                 |
+| `price_col`  | `str`           | Column name for price data                       |
+| `span_short` | `int`           | Period for short EMA calculation                 |
+| `span_long`  | `int`           | Period for long EMA calculation                  |
+| `ppo_name`   | `str`           | Name for output column                           |
+
+#### Returns
+
+`pl.DataFrame`: The input data with the PPO column appended
+
+### `price_change_pct`
+
+Compute price change percentage over a specific period.
+
+#### Args
+
+| Parameter | Type            | Description                            |
+|-----------|-----------------|----------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column    |
+| `period`  | `int`           | Number of periods to look back         |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'price_change_pct_{period}'
+
+### `returns`
+
+Compute period-over-period returns of close prices.
+
+#### Args
+
+| Parameter | Type            | Description                            |
+|-----------|-----------------|----------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column    |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'returns'
+
+### `roc`
+
+Compute Rate of Change (ROC) indicator as percentage change.
+
+#### Args
+
+| Parameter | Type            | Description                                      |
+|-----------|-----------------|--------------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column                 |
+| `col`     | `str`           | Column name for price data                       |
+| `period`  | `int`           | Number of periods for ROC calculation           |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'roc'
+
+### `rolling_volatility`
+
+Compute rolling volatility (standard deviation) over a specified period.
+
+#### Args
+
+| Parameter | Type            | Description                                           |
+|-----------|-----------------|-------------------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price/returns column             |
+| `column`  | `str`           | Column name to calculate volatility on (typically returns) |
+| `window`  | `int`           | Number of periods for rolling window calculation     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column '{column}_volatility_{window}'
+
+### `rsi_sma`
+
+Compute RSI using Simple Moving Average smoothing (not Wilder's method).
+
+NOTE: Different from wilder_rsi which uses exponential smoothing.
+
+#### Args
+
+| Parameter | Type            | Description                                      |
+|-----------|-----------------|--------------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column              |
+| `period`  | `int`           | Number of periods for RSI calculation           |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'rsi_sma'
+
+### `sma`
+
+Compute Simple Moving Average (SMA) indicator.
+
+#### Args
+
+| Parameter | Type            | Description                            |
+|-----------|-----------------|----------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column       |
+| `column`  | `str`           | Column name to calculate SMA on        |
+| `period`  | `int`           | Number of periods for SMA calculation  |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column '{column}_sma_{period}'
 
 ### `wilder_rsi`
 
-Compute Wilder's RSI over `period` based on column 'close'.
+Compute Wilder's RSI using exponential smoothing method.
 
 #### Args
 
-| Parameter  | Type           | Description                             |
-|------------|----------------|-----------------------------------------|
-| `data`     | `pl.DataFrame` | Klines dataset.                         |
-| `period`   | `int`          | Number of klines to use as window.      |
+| Parameter | Type            | Description                                      |
+|-----------|-----------------|--------------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column              |
+| `period`  | `int`           | Number of periods for RSI calculation           |
 
 #### Returns
 
-`pl.DataFrame`: The input data with the RSI column appended.
+`pl.DataFrame`: The input data with a new column 'wilder_rsi'
 
 ---
 

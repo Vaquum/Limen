@@ -2,12 +2,13 @@ import polars as pl
 
 
 def distance_from_high(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
+    
     '''
-    Calculate distance from rolling high as percentage.
+    Compute distance from rolling high as percentage.
     
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'close' columns
-        period (int): Number of klines to use as window
+        period (int): Number of periods for rolling high calculation
         
     Returns:
         pl.DataFrame: The input data with a new column 'distance_from_high'
@@ -15,5 +16,5 @@ def distance_from_high(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
     
     return data.with_columns([
         ((pl.col('high').rolling_max(window_size=period) - pl.col('close')) / pl.col('close'))
-        .alias("distance_from_high")
+        .alias('distance_from_high')
     ])

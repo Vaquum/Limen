@@ -195,3 +195,9 @@
 # v1.8.0 on 7th of August, 2025
 - Add `lightgbm.tradeline_multiclass` sfm
 - Add test for the above SFM
+
+# v1.9.0 on 7th of August, 2025
+- Refactor `loop.indicators` sub-module (no code changes except imports)
+- Refactor `loop.features` sub-module (no code changes except imports)
+- Make docstrings cohesive and coherent across `loop.indicators` and `loop.features`
+- Add comprehensive docs for `loop.indicators` and `loop.features`
