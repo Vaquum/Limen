@@ -154,11 +154,30 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
         win_rate = 0
         sharpe = 0
     
+    # Create ground truth labels based on actual returns
+    # Binary classification: should be long (1) or out (0)
+    return_threshold = 0.001  # 0.1% return threshold
+    
+    y_true = np.zeros(len(actual_returns_array) - 1)  # Exclude last bar
+    y_true[actual_returns_array[:-1] > return_threshold] = 1  # Should be long
+    
+    y_pred = positions_array[:-1]
+    
+    # Calculate binary classification metrics
+    from sklearn.metrics import accuracy_score, precision_score, recall_score
+    
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, zero_division=0)
+    recall = recall_score(y_true, y_pred, zero_division=0)
+    
+    # AUC would need probability scores, using 0.5 as baseline
+    auc = 0.5
+    
     return {
-        'accuracy': win_rate,
-        'precision': win_rate,
-        'recall': total_positions / len(positions) if len(positions) > 0 else 0,
-        'auc': 0.5,
+        'accuracy': round(accuracy, 3),
+        'precision': round(precision, 3),
+        'recall': round(recall, 3),
+        'auc': auc,
         '_preds': positions,
         'extras': {
             'total_return': round(total_return * 100, 2),

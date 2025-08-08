@@ -198,11 +198,34 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     long_win_rate = (long_wins / long_trades * 100) if long_trades > 0 else 0
     short_win_rate = (short_wins / short_trades * 100) if short_trades > 0 else 0
     
+    # Create ground truth labels based on actual returns
+    # Threshold for determining what "should" have been done
+    return_threshold = 0.001  # 0.1% return threshold
+    
+    y_true = np.zeros(len(actual_returns_array) - 1)  # Exclude last bar
+    y_true[actual_returns_array[:-1] > return_threshold] = 1  # Should be long
+    y_true[actual_returns_array[:-1] < -return_threshold] = 2  # Should be short (class 2)
+    
+    # Map predictions to sklearn format (short=-1 becomes class 2)
+    y_pred = positions_array[:-1].copy()
+    y_pred[y_pred == -1] = 2
+    
+    # Calculate multiclass metrics
+    from sklearn.metrics import accuracy_score, precision_score, recall_score
+    
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
+    recall = recall_score(y_true, y_pred, average='macro', zero_division=0)
+    
+    # For AUC, would need probability scores which we don't have in rules-based
+    # Using 0.5 as neutral baseline
+    auc = 0.5
+    
     return {
-        'accuracy': win_rate,
-        'precision': win_rate,
-        'recall': total_positions / len(positions) if len(positions) > 0 else 0,
-        'auc': 0.5,
+        'accuracy': round(accuracy, 3),
+        'precision': round(precision, 3),
+        'recall': round(recall, 3),
+        'auc': auc,
         '_preds': positions,
         'extras': {
             'total_return': round(total_return * 100, 2),
