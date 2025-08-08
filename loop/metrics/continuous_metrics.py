@@ -4,19 +4,19 @@ from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 
 
-def continuous_metrics(data, preds):
-
+def continuous_metrics(data: dict, preds: list) -> dict:
+    
     '''
-    WARNING: This is still experimental.
-
-    Takes in data dictionary and predicted values and returns a dictionary of metrics.
-
-    Returns:
-        dict: dictionary of metrics
-
+    Compute regression metrics from continuous predictions.
+    
+    NOTE: This function is experimental and may change in future versions.
+    
     Args:
-        data (dict): data dictionary
-        preds (array): predicted continuous values
+        data (dict): Data dictionary with 'y_test' key containing true continuous values
+        preds (list): Predicted continuous values
+        
+    Returns:
+        dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
     '''
 
     y_test = np.asarray(data['y_test'])

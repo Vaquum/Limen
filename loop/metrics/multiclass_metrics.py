@@ -3,18 +3,19 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score
 from loop.metrics.safe_ovr_auc import safe_ovr_auc
 
 
-def multiclass_metrics(data, preds, probs, average='macro'):
-
+def multiclass_metrics(data: dict, preds: list, probs: list, average: str = 'macro') -> dict:
+    
     '''
-    Takes in data dictionary and predicted values and returns a dictionary of metrics.
-
-    Returns:
-        dict: dictionary of metrics
-
+    Compute multiclass classification metrics from predictions and probabilities.
+    
     Args:
-        data (dict): data dictionary
-        preds (array): predicted binary values
-        probs (array): predicted probabilities
+        data (dict): Data dictionary with 'y_test' key containing true class labels
+        preds (list): Predicted class labels
+        probs (list): Predicted class probabilities
+        average (str): Averaging strategy for precision and recall
+        
+    Returns:
+        dict: Dictionary containing precision, recall, auc, and accuracy metrics
     '''
 
     round_results = {'precision': round(precision_score(data['y_test'], preds, average=average), 3),

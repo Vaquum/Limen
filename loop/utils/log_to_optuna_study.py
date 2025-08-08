@@ -4,15 +4,18 @@ from optuna.trial import create_trial, TrialState
 from optuna.storages import InMemoryStorage
 
 
-def log_to_optuna_study(log_df, params, objective):
+def log_to_optuna_study(log_df: object, params: object, objective: str) -> optuna.Study:
 
-    '''Creates an Optuna study from the Loop experiment artifacts.
+    '''
+    Create an Optuna study from the Loop experiment artifacts.
 
     Args:
         log_df (uel.log_df | pl.DataFrame) : The experiment result log
         params (sfm.params | func) : sfm.params function used in the experiment
         objective (str) : Target feature column name
-    
+        
+    Returns:
+        optuna.Study: The Optuna study object
     '''
 
     distributions = {name: CategoricalDistribution(values) for name, values in params.items()}

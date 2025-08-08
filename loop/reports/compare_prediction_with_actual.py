@@ -4,7 +4,19 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 
 
-def compare_prediction_with_actual(prep, model, validate):
+def compare_prediction_with_actual(prep: callable, model: object, validate: object) -> None:
+    
+    '''
+    Create comprehensive visual comparison between model predictions and actual values.
+    
+    Args:
+        prep (callable): Data preprocessing function that prepares validation data for prediction
+        model (object): Trained model object with predict method
+        validate (object): Validation dataset containing 'close_roc' column with actual values
+        
+    Returns:
+        None: Displays six-panel matplotlib figure with prediction analysis plots
+    '''
 
     x_validate = prep(validate, mode='predict')
     predictions = np.array([i for i in model.predict(x_validate)])

@@ -8,13 +8,19 @@ def create_vectorized_sliding_window(df: pl.DataFrame,
                                      target_col: str,
                                      window_size: int,
                                      prediction_horizon: int) -> Tuple[np.ndarray, np.ndarray]:
-
-    '''Vectorised sliding-window builder (no Python loop).
-
-    X shape  : (M, window_size * F)
-    Y shape  : (M, prediction_horizon)
-    M = N - window_size - prediction_horizon + 1
-
+    
+    '''
+    Compute vectorized sliding window arrays for time series modeling.
+    
+    Args:
+        df (pl.DataFrame): Input DataFrame with time series data
+        feature_cols (List[str]): Column names to use as features
+        target_col (str): Column name to use as target variable
+        window_size (int): Number of time steps in each input window
+        prediction_horizon (int): Number of time steps to predict ahead
+        
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Feature matrix (M, window_size * F) and target matrix (M, prediction_horizon)
     '''
 
     X_mat = df.select(feature_cols).to_numpy().astype(np.float32)

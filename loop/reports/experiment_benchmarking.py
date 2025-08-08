@@ -4,33 +4,28 @@ from loop.reports.confusion_matrix_plus import confusion_matrix_plus
 from loop.reports.results_df import results_df
 
 
-def experiment_benchmarking(file_path,
-                            x,
-                            model,
-                            col_sort_order,
-                            inverse_transform,
-                            n_top_results=2):
-
+def experiment_benchmarking(file_path: str,
+                            x: str,
+                            model: object,
+                            col_sort_order: list,
+                            inverse_transform: callable,
+                            n_top_results: int = 2) -> None:
+    
     '''
-    Based on experiment results, uses parameters from the best 
-    rounds to train models for bencmarking.
-
-    NOTE: This currently only works with SFMs that take data from
-    historical.get_spot_klines.
-
+    Create benchmark reports from experiment results using top-performing parameters.
+    
+    NOTE: This currently only works with SFMs that take data from historical.get_spot_klines.
     
     Args:
-        file_url (str): The file path to the experiment log
-        x (str): The column to be used for comparing distributions
-        model (func): The `model` function used in the experiment
-        col_sort_order (list): The columns in order to be used for sorting
-        inverse_transform (function): inverse transform function
-        n_top_results (int): The number of top results to include 
-
-
-    Returns:
-        n_top_results reports
+        file_path (str): Path to experiment log file
+        x (str): Column name for distribution comparison analysis
+        model (object): Model object with prep and model methods used in experiment
+        col_sort_order (list): Column names in order for sorting experiment results
+        inverse_transform (callable): Function to reverse data transformations
+        n_top_results (int): Number of top results to include in benchmarking
         
+    Returns:
+        None: Displays benchmark reports for top-performing parameter sets
     '''
 
     # Read the experiment log file into a dataframe

@@ -2,31 +2,26 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, r2_score
 
+
 def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
+    
     '''
-    Calibrate confidence threshold using validation data.
+    Compute confidence threshold using validation data.
     
     This function determines the optimal confidence threshold by analyzing model
     prediction variance on validation data. It establishes what level of prediction
     uncertainty corresponds to reliable vs unreliable predictions.
     
-    Parameters:
-    -----------
-    models : list
-        List of trained models
-    x_val : array-like
-        Validation features for threshold calibration
-    y_val : array-like
-        Validation targets for performance evaluation
-    target_confidence : float, default=0.8
-        Target percentage of predictions to classify as "confident" (0.0 to 1.0)
-    
+    Args:
+        models (list): List of trained models
+        x_val (array-like): Validation features for threshold calibration
+        y_val (array-like): Validation targets for performance evaluation
+        target_confidence (float): Target percentage of predictions to classify as "confident" (0.0 to 1.0)
+        
     Returns:
-    --------
-    tuple
-        - confidence_threshold (float): The standard deviation threshold for confidence filtering
-        - calibration_stats (dict): Statistics about the calibration process
+        tuple: Confidence threshold and calibration statistics
     '''
+    
     print(f"🔧 Calibrating confidence threshold on validation data")
     
     # Get model predictions on validation data
@@ -90,25 +85,20 @@ def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
 
 
 def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
+    
     '''
     Apply confidence filtering using pre-calibrated threshold.
     
-    Parameters:
-    -----------
-    models : list
-        List of trained models
-    x_test : array-like
-        Test features for prediction and confidence assessment
-    y_test : array-like
-        Test targets for performance evaluation
-    confidence_threshold : float
-        Pre-calibrated confidence threshold from validation data
-    
+    Args:
+        models (list): List of trained models
+        x_test (array-like): Test features for prediction and confidence assessment
+        y_test (array-like): Test targets for performance evaluation
+        confidence_threshold (float): Pre-calibrated confidence threshold from validation data
+        
     Returns:
-    --------
-    dict
-        Results dictionary containing predictions, uncertainty, masks, and metrics
+        dict: Results dictionary containing predictions, uncertainty, masks, and metrics
     '''
+    
     print(f"\n🚀 Applying confidence filtering")
     print(f"Using threshold: {confidence_threshold:.4f}")
     
@@ -177,31 +167,20 @@ def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
     return results
 
 
-def confidence_filtering_system(models, data, target_confidence=0.8):
+def confidence_filtering_system(models: list, data: dict, target_confidence: float = 0.8) -> tuple:
+    
     '''
-    Complete confidence filtering system with validation-based calibration.
+    Compute complete confidence filtering system with validation-based calibration.
     
-    Parameters:
-    -----------
-    models : list
-        List of trained models for confidence estimation
-    data : dict
-        Dictionary containing train/validation/test splits with keys:
-        - 'x_val': Validation features
-        - 'y_val': Validation targets  
-        - 'x_test': Test features
-        - 'y_test': Test targets
-        - 'dt_test': Test datetime indices
-    target_confidence : float, default=0.8
-        Target percentage of predictions to classify as confident
-    
+    Args:
+        models (list): List of trained models for confidence estimation
+        data (dict): Dictionary with validation and test data splits containing 'x_val', 'y_val', 'x_test', 'y_test', 'dt_test' keys
+        target_confidence (float): Target percentage of predictions to classify as confident
+        
     Returns:
-    --------
-    tuple
-        - results (dict): Complete results from confidence system
-        - df_results (pd.DataFrame): Detailed prediction results with confidence scores
-        - calibration_stats (dict): Statistics from the calibration process
+        tuple: Confidence threshold, filtered results, and calibration statistics
     '''
+
     print("=" * 70)
     print("CONFIDENCE FILTERING SYSTEM")
     print("=" * 70)
