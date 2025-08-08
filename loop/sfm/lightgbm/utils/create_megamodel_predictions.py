@@ -45,8 +45,6 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
     models = []
     test_predictions = []
     
-    print(f"🔄 Creating megamodel with {n_models} models...")
-    
     # Create megamodel models with different train/val splits
     for i in range(n_models):
         # Create different train/val split
@@ -58,6 +56,11 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
         # Train model with same parameters as best model
         train_dataset = lgb.Dataset(x_train_megamodel, label=y_train_megamodel)
         val_dataset = lgb.Dataset(x_val_megamodel, label=y_val_megamodel, reference=train_dataset)
+        
+        base_params = base_params.copy()
+        base_params.update({
+            'verbose': -1,
+        })
         
         model = lgb.train(
             params=base_params,
@@ -72,8 +75,6 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
         # Get predictions on test set
         preds = model.predict(data['x_test'])
         test_predictions.append(preds)
-        
-        print(f"  Model {i+1}/{n_models} trained")
     
     # Calculate megamodel predictions (average)
     megamodel_preds = np.mean(test_predictions, axis=0)
@@ -88,10 +89,5 @@ def create_megamodel_predictions(best_model, data, n_models: int = 5):
     best_model_r2 = r2_score(data['y_test'], best_model_preds)
     
     improvement = (best_model_mae - megamodel_mae) / best_model_mae * 100
-    
-    print(f"✅ Megamodel created:")
-    print(f"  Best model MAE: {best_model_mae:.4f}, R²: {best_model_r2:.4f}")
-    print(f"  Megamodel MAE: {megamodel_mae:.4f}, R²: {megamodel_r2:.4f}")
-    print(f"  Improvement: {improvement:.2f}%")
     
     return megamodel_preds, models

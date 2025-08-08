@@ -161,14 +161,9 @@ def model_with_ma_correction(data, round_params):
         correction_factor=0.3,  # Lighter correction for testing
         trend_threshold=0.1,    # More sensitive trend detection
         residual_window=25,     # Smaller residual window
-        verbose=True
+        verbose=False
     )
 
 if __name__ == "__main__":
     
-    try:
-        test_moving_average_correction()
-        print("✅ moving average correction: ALL TESTS PASSED")
-    
-    except Exception as e:
-        print(f"❌ moving average correction: FAILED - {e}")
+    test_moving_average_correction()

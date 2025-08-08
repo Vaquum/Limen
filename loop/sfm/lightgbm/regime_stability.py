@@ -57,7 +57,7 @@ def params():
         'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
         'feature_pre_filter': ['false'],
         'stopping_round': [100],
-        'logging_step': [100],
+        'logging_step': [0],
         'predict_probability_cutoff': [0.5],
         'stability_learning_rate': [0.01, 0.03, 0.05],
         'stability_num_boost_round': [500],
@@ -198,7 +198,6 @@ def model(data, round_params):
                                ('test', primary_data['y_test'])]:
         unique_classes = np.unique(y_data)
         if len(unique_classes) < MIN_CLASSES_REQUIRED:
-            print(f"Warning: {split_name} split has only classes {unique_classes}")
             raise ValueError(f'{split_name} split missing one of the classes 0/1/2. Try increasing data size.')
     
     primary_model = lgb.train(

@@ -170,28 +170,11 @@ def test_edge_cases():
 
 
 if __name__ == "__main__":
-    try:
-        test_calibrate_confidence_threshold()
-        print(f'    ✅ {test_calibrate_confidence_threshold.__name__}: PASSED')
-    except Exception as e:
-        print(f'    ❌ {test_calibrate_confidence_threshold.__name__}: FAILED - {e}')
+    
+    test_calibrate_confidence_threshold()
 
-    try:
-        test_apply_confidence_filtering()
-        print(f'    ✅ {test_apply_confidence_filtering.__name__}: PASSED')
-    except Exception as e:
-        print(f'    ❌ {test_apply_confidence_filtering.__name__}: FAILED - {e}')
+    test_apply_confidence_filtering()
 
-    try:
-        test_confidence_filtering_system()
-        print(f'    ✅ {test_confidence_filtering_system.__name__}: PASSED')
-    except Exception as e:
-        print(f'    ❌ {test_confidence_filtering_system.__name__}: FAILED - {e}')
+    test_confidence_filtering_system()
 
-    try:
-        test_edge_cases()
-        print(f'    ✅ {test_edge_cases.__name__}: PASSED')
-    except Exception as e:
-        print(f'    ❌ {test_edge_cases.__name__}: FAILED - {e}')
-
-    print("✅ confidence_filtering_system: ALL TESTS PASSED")
+    test_edge_cases()

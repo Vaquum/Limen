@@ -52,8 +52,6 @@ def test_regime_stability():
                 value = results[col][0]
                 assert 0 <= value <= 1, f"{col} value out of range: {value}"
             
-            print(f"\n✅ TEST PASSED")
-            
             return True
             
         finally:
@@ -61,10 +59,9 @@ def test_regime_stability():
             rs.NUM_ROWS = original_num_rows
             
     except Exception as e:
-        print(f"\n❌ TEST FAILED: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        raise e
 
 
 if __name__ == "__main__":

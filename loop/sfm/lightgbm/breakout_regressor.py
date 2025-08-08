@@ -48,7 +48,7 @@ def params():
         'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
         'feature_pre_filter': ['false'],
         'stopping_round': [100],
-        'logging_step':[100],
+        'logging_step':[0],
     }
 
     return p

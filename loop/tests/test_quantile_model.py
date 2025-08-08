@@ -142,12 +142,9 @@ def model_with_quantile(data, round_params):
         round_params=round_params,
         quantiles=[0.1, 0.5, 0.9],
         confidence_threshold=5.0,  # Stricter for testing
-        verbose=True
+        verbose=False
     )
 
 if __name__ == "__main__":
-    try:
-        test_quantile_model()
-        print("✅ quantile model: ALL TESTS PASSED")
-    except Exception as e:
-        print(f"❌ quantile model: FAILED - {e}")
+
+    test_quantile_model()

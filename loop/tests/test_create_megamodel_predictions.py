@@ -75,8 +75,5 @@ def test_create_megamodel_predictions():
     assert len(models) == 2
     
 if __name__ == "__main__":
-    try:
-        test_create_megamodel_predictions()
-        print("✅ create_megamodel_predictions: ALL TESTS PASSED")
-    except Exception as e:
-        print(f"❌ create_megamodel_predictions: FAILED - {e}")
+
+    test_create_megamodel_predictions()

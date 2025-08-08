@@ -286,6 +286,11 @@ def model(data, round_params):
                 train_data = lgb.Dataset(X_train, label=y_train, weight=weights_train)
                 val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
                 
+                lgb_params = lgb_params.copy()
+                lgb_params.update({
+                    'verbose': -1,
+                })
+
                 # Train model
                 evals_result = {}
                 model = lgb.train(
@@ -294,7 +299,8 @@ def model(data, round_params):
                     num_boost_round=CONFIG['num_boost_round'],
                     valid_sets=[train_data, val_data],
                     valid_names=['train', 'val'],
-                    callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result)]
+                    callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds'], verbose=False),
+                               lgb.record_evaluation(evals_result)]
                 )
                 
                 models[regime] = model
@@ -346,6 +352,11 @@ def model(data, round_params):
         dtrain_universal = lgb.Dataset(X_train_universal, label=y_train_universal, weight=weights_train_universal)
         dval_universal = lgb.Dataset(X_val_universal, label=y_val_universal, reference=dtrain_universal)
         
+        lgb_params = lgb_params.copy()
+        lgb_params.update({
+            'verbose': -1,
+        })
+        
         evals_result_universal = {}
         universal_model = lgb.train(
             params=lgb_params,
@@ -353,7 +364,8 @@ def model(data, round_params):
             num_boost_round=CONFIG['num_boost_round'],
             valid_sets=[dtrain_universal, dval_universal],
             valid_names=['train', 'val'],
-            callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result_universal)]
+            callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds'], verbose=False),
+                       lgb.record_evaluation(evals_result_universal)]
         )
         
         models['universal'] = universal_model
@@ -439,6 +451,11 @@ def model(data, round_params):
         data['dtrain'] = lgb.Dataset(data['x_train'], label=data['y_train'], weight=weights_train)
         data['dval'] = lgb.Dataset(data['x_val'], label=data['y_val'], reference=data['dtrain'])
         
+        lgb_params = lgb_params.copy()
+        lgb_params.update({
+            'verbose': -1,
+        })
+        
         evals_result = {}
         model = lgb.train(
             params=lgb_params,
@@ -446,7 +463,9 @@ def model(data, round_params):
             num_boost_round=CONFIG['num_boost_round'],
             valid_sets=[data['dtrain'], data['dval']],
             valid_names=['train', 'val'],
-            callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds']), lgb.record_evaluation(evals_result)]
+            verbose=False,
+            callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds'], verbose=False),
+                       lgb.record_evaluation(evals_result)]
         )
         
         # Predict on test set
