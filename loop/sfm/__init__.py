@@ -7,6 +7,7 @@ import loop.sfm.reference.xgboost as xgboost
 import loop.sfm.reference.logreg as logreg_reference
 import loop.sfm.logreg as logreg
 import loop.sfm.reference as reference
+import loop.sfm.rules_based as rules_based
 
 __all__ = [
     'decomposition',
@@ -17,5 +18,6 @@ __all__ = [
     'xgboost',
     'logreg_reference', 
     'logreg',
-    'reference'
+    'reference',
+    'rules_based'
 ]
