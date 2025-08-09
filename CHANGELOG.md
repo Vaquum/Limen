@@ -201,3 +201,7 @@
 - Refactor `loop.features` sub-module (no code changes except imports)
 - Make docstrings cohesive and coherent across `loop.indicators` and `loop.features`
 - Add comprehensive docs for `loop.indicators` and `loop.features`
+
+# v1.10.0 on 8th of August 2025
+- Add `rules_based.momentum_volatility` sfm
+- Add test for the above SFM
