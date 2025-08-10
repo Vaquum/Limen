@@ -227,11 +227,7 @@ def test_account_conviction():
     results = []
     
     try:
-        try:
-            test_deterministic_sequence()
-            print(f'    ✅ {test_deterministic_sequence.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_deterministic_sequence.__name__}: FAILED - {e}')
+        test_deterministic_sequence()
 
         results.append({
             'test_type': 'deterministic',

@@ -301,6 +301,12 @@ def model(data, round_params):
     logging.debug(f"Training samples: {len(y_train)}, Validation samples: {len(y_val)}")
     logging.debug(f"Class distribution - Train: {dict(zip(*np.unique(y_train, return_counts=True)))}")
     logging.debug(f"Class distribution - Val: {dict(zip(*np.unique(y_val, return_counts=True)))}")
+    
+    lgb_params = lgb_params.copy()
+    lgb_params.update({
+        'verbose': -1,
+    })
+    
     evals_result = {}
     lgb_model = lgb.train(
         params=lgb_params,
@@ -309,9 +315,9 @@ def model(data, round_params):
         valid_sets=[train_data, val_data],
         valid_names=['train', 'val'],
         callbacks=[
-            lgb.early_stopping(stopping_rounds=50),
+            lgb.early_stopping(stopping_rounds=50, verbose=False),
             lgb.record_evaluation(evals_result),
-            lgb.log_evaluation(period=50)  # Print progress every 50 rounds
+            lgb.log_evaluation(period=0)
         ]
     )
     

@@ -3,12 +3,12 @@ from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_sco
 
 NUM_BOOST_ROUNDS = 1500
 EARLY_STOPPING = 100
-LOG_EVERY_N = 100
+LOG_EVERY_N = 0
 
 def quantile_model_with_confidence(data, round_params, 
                                  quantiles=[0.1, 0.5, 0.9],
                                  confidence_threshold=8.0,
-                                 verbose=True):
+                                 verbose=False):
     '''
     Train quantile models for prediction intervals with confidence filtering.
     
@@ -37,7 +37,8 @@ def quantile_model_with_confidence(data, round_params,
         params.update({
             'objective': 'quantile',
             'alpha': q,
-            'metric': 'quantile'
+            'metric': 'quantile',
+            'verbose': -1,
         })
         
         model_q = lgb.train(

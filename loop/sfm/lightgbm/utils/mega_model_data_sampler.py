@@ -523,6 +523,11 @@ class MegaModelDataSampler:
             train_data = lgb.Dataset(X_train_mega, label=y_train_mega)
             val_data = lgb.Dataset(X_val_mega, label=y_val_mega, reference=train_data)
             
+            base_params = base_params.copy()
+            base_params.update({
+                'verbose': -1,
+            })
+            
             model = lgb.train(
                 params=base_params,
                 train_set=train_data,
@@ -574,7 +579,7 @@ class MegaModelDataSampler:
 def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func, 
                                   target: str = 'breakout_long', 
                                   experiment_base_name: str = "enhanced_megamodel",
-                                  enable_mega_models: bool = True,
+                                  enable_mega_models: bool = False,
                                   mega_model_size: int = 3,
                                   random_state: Optional[int] = None,
                                   sample_size=15000, 
@@ -627,15 +632,9 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
     # Store comprehensive results
     all_results = {}
     
-    print("="*100)
-    print("RUNNING ENHANCED MEGAMODEL EXPERIMENT WITH UEL INTEGRATION")
-    print(f"Random state: {'Fixed' if random_state is not None else 'Random'}")
-    print("="*100)
     
     for strategy_name, datasets in strategies.items():
-        print(f"\n--- Running strategy: {strategy_name} ---")
-        print(f"Number of datasets: {len(datasets)}")
-        
+
         strategy_results = {
             'single_models': [],
             'cross_dataset_mega_models': [],
@@ -646,7 +645,6 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
         all_strategy_models = []
         
         for i, dataset in enumerate(datasets):
-            print(f"  Dataset {i+1}/{len(datasets)} - Size: {len(dataset)} rows")
             
             try:
                 # 1. Run standard UEL experiment (single models) - fully UEL compatible
@@ -699,7 +697,6 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                 
                 # 2. Create data-split mega model using UEL data directly
                 if enable_mega_models:
-                    print(f"    Creating data-split mega model...")
                     data_split_mega_model = sampler.create_data_split_mega_model(
                         uel_instance=uel,
                         prep_func=prep_func,
@@ -710,17 +707,12 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                     if data_split_mega_model:
                         data_split_mega_model['dataset_idx'] = i
                         strategy_results['data_split_mega_models'].append(data_split_mega_model)
-                        print(f"    ✅ Data-split mega model created successfully")
-                    else:
-                        print(f"    ❌ Failed to create data-split mega model")
 
             except Exception as e:
-                print(f"    Error in dataset {i+1}: {e}")
                 continue
         
         # 3. Create cross-dataset mega model from best models across all datasets
         if enable_mega_models and all_strategy_models and strategy_results['single_models']:
-            print(f"  Creating cross-dataset mega model from {len(all_strategy_models)} models...")
             
             # Use test data from the first successful dataset
             test_data = None
@@ -744,14 +736,7 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
                 
                 if cross_dataset_mega_model:
                     strategy_results['cross_dataset_mega_models'].append(cross_dataset_mega_model)
-                    print(f"  ✅ Cross-dataset mega model created successfully")
-                else:
-                    print(f"  ❌ Failed to create cross-dataset mega model")
-            else:
-                print(f"  ❌ No test data available for cross-dataset mega model")
-        elif enable_mega_models:
-            print(f"  ⚠️ Skipping cross-dataset mega model - insufficient models ({len(all_strategy_models)} models, {len(strategy_results['single_models'])} single results)")
-        
+
         all_results[strategy_name] = strategy_results
     
     # Create comprehensive comparison
@@ -832,38 +817,16 @@ def run_enhanced_megamodel_with_uel(df_orig: pl.DataFrame, prep_func, model_func
         # Sort by best performance
         comparison_df = comparison_df.sort_values('best_mae')
         
-        print("\n" + "="*120)
-        print("ENHANCED MEGAMODEL COMPARISON SUMMARY")
-        print("="*120)
-        print(comparison_df.round(4))
-        
         # Find overall best
         best_strategy_row = comparison_df.iloc[0]
         best_strategy = best_strategy_row['strategy']
         best_approach = best_strategy_row['best_approach']
         best_mae = best_strategy_row['best_mae']
         
-        print(f"\n🏆 BEST OVERALL COMBINATION:")
-        print(f"   Strategy: {best_strategy}")
-        print(f"   Approach: {best_approach}")
-        print(f"   Best MAE: {best_mae:.4f}")
-        
-        # Show improvement from mega models
-        if enable_mega_models:
-            print(f"\n📈 MEGA MODEL IMPROVEMENTS:")
-            for _, row in comparison_df.iterrows():
-                strategy = row['strategy']
-                if not pd.isna(row.get('ds_mega_model_improvement_mae', np.nan)):
-                    print(f"   {strategy} - Data Split Mega Model: {row['ds_mega_model_improvement_mae']:+.2f}% MAE improvement")
-                if not pd.isna(row.get('cd_mega_model_improvement_mae', np.nan)):
-                    print(f"   {strategy} - Cross Dataset Mega Model: {row['cd_mega_model_improvement_mae']:+.2f}% MAE improvement")
-        
         # Save results
         comparison_df.to_csv('enhanced_megamodel_comparison.csv', index=False)
-        print(f"\n📊 Results saved to 'enhanced_megamodel_comparison.csv'")
         
     else:
-        print("❌ No successful results to compare")
         comparison_df = pd.DataFrame()
         best_strategy = None
         best_approach = None
@@ -926,14 +889,6 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
     4. Identify optimal combination of data strategy and modeling approach
     5. Return detailed results for further analysis or model deployment
     """
-    print(f"Starting Enhanced Megamodel Experiment with UEL Integration...")
-    print(f"Dataset size: {len(df_orig)} rows")
-    print(f"Target: {target}")
-    print(f"Mega model methods enabled: {enable_mega_models}")
-    if enable_mega_models:
-        print(f"Mega model size: {mega_model_size} models")
-    print(f"Random state: {'Fixed' if random_state is not None else 'Random'}")
-    print("-" * 80)
     
     # Run the enhanced megamodel experiment
     results = run_enhanced_megamodel_with_uel(
@@ -948,22 +903,7 @@ def integrate_enhanced_megamodel_into_workflow(df_orig: pl.DataFrame, prep, mode
         sample_size=sample_size,
         n_samples=n_samples
     )
-    
-    # Print summary of what was tested
-    print(f"\n📋 EXPERIMENT SUMMARY:")
-    print(f"   Strategies tested: {len(results['detailed_results'])}")
-    
-    total_single_models = sum(len(strategy_results['single_models']) 
-                             for strategy_results in results['detailed_results'].values())
-    print(f"   Total single models trained: {total_single_models}")
-    
-    if enable_mega_models:
-        total_ds_mega_models = sum(len(strategy_results['data_split_mega_models']) 
-                                  for strategy_results in results['detailed_results'].values())
-        total_cd_mega_models = sum(len(strategy_results['cross_dataset_mega_models']) 
-                                  for strategy_results in results['detailed_results'].values())
-        print(f"   Data-split mega models created: {total_ds_mega_models}")
-        print(f"   Cross-dataset mega models created: {total_cd_mega_models}")
+
     
     return results
 
@@ -1092,12 +1032,10 @@ def save_experiment_results(results: Dict[str, Any], base_filename: str = "enhan
     # Save comparison summary
     if not results['comparison_summary'].empty:
         results['comparison_summary'].to_csv(f"{base_filename}_comparison.csv", index=False)
-        print(f"✅ Comparison summary saved to {base_filename}_comparison.csv")
     
     # Save detailed results (pickle for full objects)
     with open(f"{base_filename}_detailed.pkl", 'wb') as f:
         pickle.dump(results['detailed_results'], f)
-    print(f"✅ Detailed results saved to {base_filename}_detailed.pkl")
     
     # Save summary info as JSON
     summary_info = {
@@ -1111,7 +1049,6 @@ def save_experiment_results(results: Dict[str, Any], base_filename: str = "enhan
     
     with open(f"{base_filename}_summary.json", 'w') as f:
         json.dump(summary_info, f, indent=2)
-    print(f"✅ Summary info saved to {base_filename}_summary.json")
 
 
 # =============================================================================
@@ -1162,11 +1099,6 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
         - 'comparison_summary': DataFrame comparing all approaches
         - 'how_to_use': Instructions for making predictions
     """
-    print("🚀 Starting Complete Mega Model Experiment")
-    print(f"   Dataset: {len(df_orig)} rows, Target: {target}")
-    print(f"   Mega models: {'Enabled' if enable_mega_models else 'Disabled'}")
-    print(f"   Random state: {'Fixed' if random_state is not None else 'Random'}")
-    print("=" * 80)
     
     # Run the comprehensive experiment
     full_results = integrate_enhanced_megamodel_into_workflow(
@@ -1202,11 +1134,5 @@ def run_mega_model_experiment(df_orig: pl.DataFrame, prep_func, model_func,
         },
         '_full_details': full_results  # Hidden full results if needed
     }
-    
-    print(f"\n🎯 BEST APPROACH FOUND:")
-    print(f"   {simple_results['how_to_use']['best_approach']}")
-    print(f"   {simple_results['how_to_use']['performance']}")
-    print(f"\n💡 TO MAKE PREDICTIONS:")
-    print(f"   {simple_results['how_to_use']['to_predict']}")
     
     return simple_results

@@ -45,7 +45,7 @@ def params():
         'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
         'feature_pre_filter': ['false'],
         'stopping_round': [100],
-        'logging_step':[100],
+        'logging_step':[0],
         'predict_probability_cutoff': [0.5],
     }
     return p
@@ -118,6 +118,11 @@ def model(data, round_params):
                                ('test', data['y_test'])]:
         if len(np.unique(y_data)) < 3:
             raise ValueError(f'{split_name} split missing one of the classes 0/1/2')
+
+    round_params = round_params.copy()
+    round_params.update({
+        'verbose': -1,
+    })
 
     model = lgb.train(
         params=round_params,

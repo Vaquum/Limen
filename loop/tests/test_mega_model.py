@@ -181,6 +181,7 @@ def model_for_mega_model(data, round_params):
         'feature_fraction': 0.8,
         'bagging_fraction': 0.8,
         'bagging_freq': 5,
+        'verbose': -1,
     })
     
     model = lgb.train(

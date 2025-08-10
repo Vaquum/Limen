@@ -22,8 +22,6 @@ def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
         tuple: Confidence threshold and calibration statistics
     '''
     
-    print(f"🔧 Calibrating confidence threshold on validation data")
-    
     # Get model predictions on validation data
     val_preds = []
     for model in models:
@@ -74,13 +72,6 @@ def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
         }
     }
     
-    print(f"📊 Calibration results:")
-    print(f"  Confidence threshold (std): {confidence_threshold:.4f}")
-    print(f"  Confident predictions: {np.sum(confident_mask)} / {len(confident_mask)} ({np.mean(confident_mask)*100:.1f}%)")
-    print(f"  Validation - Overall MAE: {overall_mae:.4f}, R²: {overall_r2:.4f}")
-    print(f"  Validation - Confident MAE: {confident_mae:.4f}, R²: {confident_r2:.4f}")
-    print(f"  Validation - Uncertain MAE: {uncertain_mae:.4f}, R²: {uncertain_r2:.4f}")
-    
     return confidence_threshold, calibration_stats
 
 
@@ -98,9 +89,6 @@ def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
     Returns:
         dict: Results dictionary containing predictions, uncertainty, masks, and metrics
     '''
-    
-    print(f"\n🚀 Applying confidence filtering")
-    print(f"Using threshold: {confidence_threshold:.4f}")
     
     # Get model predictions on test data
     test_preds = []
@@ -132,21 +120,12 @@ def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
     else:
         uncertain_mae, uncertain_r2 = np.nan, np.nan
     
-    print(f"📈 Test results:")
-    print(f"  Confident predictions: {np.sum(confident_mask)} / {len(confident_mask)} ({np.mean(confident_mask)*100:.1f}%)")
-    print(f"  Test - Overall MAE: {overall_mae:.4f}, R²: {overall_r2:.4f}")
-    print(f"  Test - Confident MAE: {confident_mae:.4f}, R²: {confident_r2:.4f}")
-    print(f"  Test - Uncertain MAE: {uncertain_mae:.4f}, R²: {uncertain_r2:.4f}")
-    
     # Calculate improvements
     if not np.isnan(confident_mae):
         mae_improvement = overall_mae - confident_mae
         r2_improvement = confident_r2 - overall_r2
         r2_improvement_pct = (r2_improvement / abs(overall_r2)) * 100 if overall_r2 != 0 else 0
         
-        print(f"  MAE improvement from confidence filtering: {mae_improvement:.4f}")
-        print(f"  R² improvement from confidence filtering: {r2_improvement:.4f} ({r2_improvement_pct:+.2f}%)")
-    
     results = {
         'predictions': test_pred_mean,
         'uncertainty': test_pred_std,
@@ -180,10 +159,6 @@ def confidence_filtering_system(models: list, data: dict, target_confidence: flo
     Returns:
         tuple: Confidence threshold, filtered results, and calibration statistics
     '''
-
-    print("=" * 70)
-    print("CONFIDENCE FILTERING SYSTEM")
-    print("=" * 70)
     
     # Step 1: Calibrate on validation data
     confidence_threshold, calibration_stats = calibrate_confidence_threshold(

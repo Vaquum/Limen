@@ -227,87 +227,37 @@ def test_backtest_conviction():
     
     test_results = []
     
-    try:
-        try:
-            test_basic_functionality()
-            print(f'    ✅ {test_basic_functionality.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_basic_functionality.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'basic_functionality', 'status': 'PASSED'})
+    test_basic_functionality()
+    test_results.append({'test_name': 'basic_functionality', 'status': 'PASSED'})
         
-        try:
-            test_perfect_predictions()
-            print(f'    ✅ {test_perfect_predictions.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_perfect_predictions.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'perfect_predictions', 'status': 'PASSED'})
+    test_perfect_predictions()
+    test_results.append({'test_name': 'perfect_predictions', 'status': 'PASSED'})
         
-        try:
-            test_terrible_predictions()
-            print(f'    ✅ {test_terrible_predictions.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_terrible_predictions.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'terrible_predictions', 'status': 'PASSED'})
+    test_terrible_predictions()
+    test_results.append({'test_name': 'terrible_predictions', 'status': 'PASSED'})
         
-        try:
-            test_mixed_signals()
-            print(f'    ✅ {test_mixed_signals.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_mixed_signals.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'mixed_signals', 'status': 'PASSED'})
+    test_mixed_signals()
+    test_results.append({'test_name': 'mixed_signals', 'status': 'PASSED'})
         
-        try:
-            test_no_valid_trades()
-            print(f'    ✅ {test_no_valid_trades.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_no_valid_trades.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'no_valid_trades', 'status': 'PASSED'})
+    test_no_valid_trades()
+    test_results.append({'test_name': 'no_valid_trades', 'status': 'PASSED'})
         
-        try:
-            test_zero_price_changes()
-            print(f'    ✅ {test_zero_price_changes.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_zero_price_changes.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'zero_price_changes', 'status': 'PASSED'})
+    test_zero_price_changes()
+    test_results.append({'test_name': 'zero_price_changes', 'status': 'PASSED'})
         
-        try:
-            test_array_length_mismatch()
-            print(f'    ✅ {test_array_length_mismatch.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_array_length_mismatch.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'array_length_mismatch', 'status': 'PASSED'})
+    test_array_length_mismatch()
+    test_results.append({'test_name': 'array_length_mismatch', 'status': 'PASSED'})
         
-        try:
-            test_large_sequence()
-            print(f'    ✅ {test_large_sequence.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_large_sequence.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'large_sequence', 'status': 'PASSED'})
+    test_large_sequence()
+    test_results.append({'test_name': 'large_sequence', 'status': 'PASSED'})
         
-        try:
-            test_metrics_calculation()
-            print(f'    ✅ {test_metrics_calculation.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_metrics_calculation.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'metrics_calculation', 'status': 'PASSED'})
+    test_metrics_calculation()
+    test_results.append({'test_name': 'metrics_calculation', 'status': 'PASSED'})
         
-        try:
-            test_account_integration()
-            print(f'    ✅ {test_account_integration.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_account_integration.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'account_integration', 'status': 'PASSED'})
+    test_account_integration()
+    test_results.append({'test_name': 'account_integration', 'status': 'PASSED'})
         
-        try:
-            test_volume_calculations()
-            print(f'    ✅ {test_volume_calculations.__name__}: PASSED')
-        except Exception as e:
-            print(f'    ❌ {test_volume_calculations.__name__}: FAILED - {e}')
-        test_results.append({'test_name': 'volume_calculations', 'status': 'PASSED'})
+    test_volume_calculations()
+    test_results.append({'test_name': 'volume_calculations', 'status': 'PASSED'})
         
-        log_conviction_results(test_results)
-
-    except Exception as e:
-        test_results.append({'test_name': 'FAILED', 'status': 'ERROR', 'details': str(e)})
-        log_conviction_results(test_results)
-        raise
+    log_conviction_results(test_results)

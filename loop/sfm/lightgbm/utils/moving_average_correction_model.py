@@ -9,7 +9,7 @@ def moving_average_correction_model(data, round_params,
                                   correction_factor=0.4,
                                   trend_threshold=0.15,
                                   residual_window=35,
-                                  verbose=True):
+                                  verbose=False):
     '''
     Train LightGBM model with moving average correction based on residual tracking.
     
@@ -43,7 +43,8 @@ def moving_average_correction_model(data, round_params,
     model_params = round_params.copy()
     model_params.update({
         'objective': 'regression',
-        'metric': 'mae'
+        'metric': 'mae', 
+        'verbose': -1,
     })
     
     # Train the model
@@ -54,7 +55,7 @@ def moving_average_correction_model(data, round_params,
         valid_sets=[data['dtrain'], data['dval']],
         valid_names=['train', 'valid'],
         callbacks=[lgb.early_stopping(100, verbose=False),
-                   lgb.log_evaluation(100)])
+                   lgb.log_evaluation(0)])
 
     # Moving average correction functions
     def calculate_ma_corrections(recent_residuals):
