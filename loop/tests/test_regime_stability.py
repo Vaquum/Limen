@@ -61,7 +61,7 @@ def test_regime_stability():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise e
+        raise
 
 
 if __name__ == "__main__":
