@@ -463,7 +463,6 @@ def model(data, round_params):
             num_boost_round=CONFIG['num_boost_round'],
             valid_sets=[data['dtrain'], data['dval']],
             valid_names=['train', 'val'],
-            verbose=False,
             callbacks=[lgb.early_stopping(stopping_rounds=CONFIG['early_stopping_rounds'], verbose=False),
                        lgb.record_evaluation(evals_result)]
         )

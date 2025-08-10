@@ -317,7 +317,7 @@ def model(data, round_params):
         callbacks=[
             lgb.early_stopping(stopping_rounds=50, verbose=False),
             lgb.record_evaluation(evals_result),
-            lgb.log_evaluation(period=0)  # Print progress every 50 rounds
+            lgb.log_evaluation(period=0)
         ]
     )
     
