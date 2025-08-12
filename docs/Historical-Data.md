@@ -2,7 +2,7 @@
 
 The endpoints available through `loop.HistoricalData` provide rich and somewhat immediate access to Binance spot and futures data from year 2019 onwards, both kline and trade level data. Kline data is available at 1 second resolution for both spot and futures, and trade data is available at order and trade level. 
 
-All of the endpoints are found in [`loop/data.py`](../loop/data.py).  
+All of the endpoints are found in [`loop/historical_data.py`](../loop/historical_data.py).  
 
 All of the endpoints rely on [Binance Market Data](https://data.binance.vision/?prefix=) as their source.
 
@@ -77,13 +77,15 @@ Get historical klines data for Binance spot.
 | `median`           | `float`     | Median price over the kline period.                                  |
 | `iqr`              | `float`     | Interquartile range of prices during the kline period.               |
 | `volume`           | `float`     | Total traded volume during the kline period.                         |
-| `maker_ratio`      | `float`     | Ratio of maker-initiated volume to total volume in the period.       |
+| `maker_ratio`      | `float`     | Ratio of maker-initiated trades to total trades in the period.       |
 | `no_of_trades`     | `int`       | Number of trades executed during the kline period.                   |
 | `open_liquidity`   | `float`     | Available liquidity at the open price.                               |
 | `high_liquidity`   | `float`     | Available liquidity at the highest price.                            |
 | `low_liquidity`    | `float`     | Available liquidity at the lowest price.                             |
 | `close_liquidity`  | `float`     | Available liquidity at the close price.                              |
 | `liquidity_sum`    | `float`     | Sum of liquidity across all price levels during the period.          |
+| `maker_volume`     | `float`     | Sum of maker initiated traded volume in the period.                  |
+| `maker_liquidity`  | `float`     | Sum of maker initiated liquidity in the period.                      |  
 
 ## `HistoricalData.get_spot_trades`
 
@@ -167,13 +169,15 @@ Get historical klines data for Binance futures.
 | `median`           | `float`     | Median price over the kline period.                                  |
 | `iqr`              | `float`     | Interquartile range of prices during the kline period.               |
 | `volume`           | `float`     | Total traded volume during the kline period.                         |
-| `maker_ratio`      | `float`     | Ratio of maker-initiated volume to total volume in the period.       |
+| `maker_ratio`      | `float`     | Ratio of maker-initiated trades to total trades in the period.       |
 | `no_of_trades`     | `int`       | Number of trades executed during the kline period.                   |
 | `open_liquidity`   | `float`     | Available liquidity at the open price.                               |
 | `high_liquidity`   | `float`     | Available liquidity at the highest price.                            |
 | `low_liquidity`    | `float`     | Available liquidity at the lowest price.                             |
 | `close_liquidity`  | `float`     | Available liquidity at the close price.                              |
 | `liquidity_sum`    | `float`     | Sum of liquidity across all price levels during the period.          |
+| `maker_volume`     | `float`     | Sum of maker initiated traded volume in the period.                  |
+| `maker_liquidity`  | `float`     | Sum of maker initiated liquidity in the period.                      |  
 
 ## `HistoricalData.get_futures_trades`
 
