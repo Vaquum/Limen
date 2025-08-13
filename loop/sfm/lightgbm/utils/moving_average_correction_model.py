@@ -1,3 +1,8 @@
+'''
+Moving Average Correction Model
+Implements LightGBM with adaptive moving average corrections based on residual tracking
+'''
+
 import numpy as np
 import lightgbm as lgb
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score
@@ -54,6 +59,15 @@ def moving_average_correction_model(data, round_params,
                    lgb.log_evaluation(0)])
 
     def calculate_ma_corrections(recent_residuals):
+        '''
+        Calculate short, medium, and long-term moving average corrections from residuals.
+        
+        Args:
+            recent_residuals (list): List of recent prediction residuals
+            
+        Returns:
+            tuple: (short_ma, medium_ma, long_ma) correction values
+        '''
         if len(recent_residuals) < 3:
             return 0.0, 0.0, 0.0
         
@@ -64,11 +78,31 @@ def moving_average_correction_model(data, round_params,
         return short_ma, medium_ma, long_ma
 
     def get_weighted_correction(short_ma, medium_ma, long_ma):
+        '''
+        Calculate weighted average correction using short, medium, and long-term moving averages.
+        
+        Args:
+            short_ma (float): Short-term moving average correction
+            medium_ma (float): Medium-term moving average correction  
+            long_ma (float): Long-term moving average correction
+            
+        Returns:
+            float: Weighted correction value
+        '''
         weights = [0.5, 0.3, 0.2]
         correction = (short_ma * weights[0] + medium_ma * weights[1] + long_ma * weights[2])
         return correction
 
     def detect_trend(recent_residuals):
+        '''
+        Detect trend direction in recent residuals and return adjustment factor.
+        
+        Args:
+            recent_residuals (list): List of recent prediction residuals
+            
+        Returns:
+            tuple: (trend_direction, adjustment_factor) where trend is 'improving', 'stable', or 'degrading'
+        '''
         if len(recent_residuals) < 10:
             return "stable", 1.0
         
