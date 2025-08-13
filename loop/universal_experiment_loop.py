@@ -1,10 +1,10 @@
-import numpy as np
 import time
 from tqdm import tqdm
 import polars as pl
 import sqlite3
 
 from loop.utils.param_space import ParamSpace
+from loop.log.log import Log
 
 
 class UniversalExperimentLoop:
@@ -67,6 +67,12 @@ class UniversalExperimentLoop:
             pl.DataFrame: The results of the experiment in `self.log_df`.
         '''
 
+        self.round_params = []
+        self.models = []
+        self.preds = []
+        self.scalers = []
+        self._alignement = []
+        
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
@@ -102,19 +108,22 @@ class UniversalExperimentLoop:
 
             # Always prep data with round_params passed in
             if prep_each_round is True:
-                data = self.prep(self.data, round_params=round_params)
+                data_dict = self.prep(self.data, round_params=round_params)
 
             # Otherwise, only for the first round, prep data without round_params passed in
             else:
                 if i == 0:
-                    data = self.prep(self.data)
+                    data_dict = self.prep(self.data)
 
             # Perform the model training and evaluation
-            round_results = self.model(data=data, round_params=round_params)
+            round_results = self.model(data=data_dict, round_params=round_params)
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
+
+            # Add alignement details
+            self._alignement.append(data_dict['_alignement'])
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
@@ -126,17 +135,19 @@ class UniversalExperimentLoop:
                 self.models.append(round_results['models'])
                 round_results.pop('models')
 
-            if '_scaler' in round_results.keys():
-                self.scaler = round_results['_scaler']
-                round_results.pop('_scaler')
-
             if '_preds' in round_results.keys():
-                self.preds = round_results['_preds']
+                self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
+
+            if '_scaler' in data_dict.keys():
+                self.scalers.append(data_dict['_scaler'])
+                data_dict.pop('_scaler')
 
             # Add the round number and execution time to the results
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
+
+            self.round_params.append(round_params)
 
             for key in round_params.keys():
                 round_results[key] = round_params[key]
@@ -165,3 +176,13 @@ class UniversalExperimentLoop:
 
         if save_to_sqlite is True:
             self.conn.close()
+
+        # Add Log and Backtest properties
+        cols_to_multilabel = self.log_df.select(pl.col(pl.Utf8)).columns
+        log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
+        
+        self.backtest_results = log._experiment_backtest_results
+        self.feature_correlation = log.experiment_feature_correlation
+        self.confusion_metrics = log.experiment_confusion_metrics
+        self.round_confusion_metrics = log.permutation_confusion_metrics
+        self.round_prediction_performance = log.permutation_prediction_performance
