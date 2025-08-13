@@ -1,7 +1,7 @@
 from loop.historical_data import HistoricalData
 from loop.log.log import Log
 from loop.account import Account
-from loop.backtest import Backtest
+from loop.backtest.backtest_sequential import BacktestSequential
 from loop.universal_experiment_loop import UniversalExperimentLoop
 
 import loop.features as features
