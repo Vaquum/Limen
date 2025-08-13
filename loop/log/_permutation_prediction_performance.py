@@ -2,7 +2,7 @@ import polars as pl
 import pandas as pd
 
 
-def permutation_prediction_performance(self,
+def _permutation_prediction_performance(self,
                                        round_id: int) -> object:
     
     '''

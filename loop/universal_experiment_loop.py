@@ -181,7 +181,7 @@ class UniversalExperimentLoop:
         cols_to_multilabel = self.log_df.select(pl.col(pl.Utf8)).columns
         log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
         
-        self.backtest_results = log._experiment_backtest_results
+        self.backtest_results = log.experiment_backtest_results
         self.feature_correlation = log.experiment_feature_correlation
         self.confusion_metrics = log.experiment_confusion_metrics
         self.round_confusion_metrics = log.permutation_confusion_metrics

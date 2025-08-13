@@ -4,13 +4,13 @@ import wrangle
 
 class Log:
 
-    from _experiment_backtest_results import _experiment_backtest_results as experiment_backtest_results
-    from _experiment_confusion_metrics import _experiment_confusion_metrics as experiment_confusion_metrics
-    from _experiment_feature_correlation import _experiment_feature_correlation as experiment_feature_correlation
-    from _permutation_confusion_metrics import _permutation_confusion_metrics as permutation_confusion_metrics
-    from _permutation_prediction_performance import _permutation_prediction_performance as permutation_prediction_performance
+    from loop.log._experiment_backtest_results import _experiment_backtest_results as experiment_backtest_results
+    from loop.log._experiment_confusion_metrics import _experiment_confusion_metrics as experiment_confusion_metrics
+    from loop.log._experiment_feature_correlation import _experiment_feature_correlation as experiment_feature_correlation
+    from loop.log._permutation_confusion_metrics import _permutation_confusion_metrics as permutation_confusion_metrics
+    from loop.log._permutation_prediction_performance import _permutation_prediction_performance as permutation_prediction_performance
     
-    from _read_from_file import _read_from_file as read_from_file
+    from loop.log._read_from_file import _read_from_file as read_from_file
 
     def __init__(self,
                  uel_object=None,

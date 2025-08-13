@@ -14,6 +14,8 @@ def params():
 
 def prep(data, round_params):
 
+    all_datetimes = data['datetime'].to_list()
+
     data = data.with_columns(
         pl.Series("outcome", np.random.randint(0, 2, size=data.height))
     )
@@ -22,7 +24,7 @@ def prep(data, round_params):
     
     split_data = split_sequential(data, (3, 1, 1))
 
-    return split_data_to_prep_output(split_data=split_data, cols=cols)
+    return split_data_to_prep_output(split_data=split_data, cols=cols, all_datetimes=all_datetimes)
 
 
 def model(data, round_params):
