@@ -327,17 +327,6 @@ class LGBWrapper(BaseEstimator, ClassifierMixin):
         return self.lgb_model.predict(X_scaled, num_iteration=self.lgb_model.best_iteration)
 
 
-def create_lgb_wrapper(lgb_model) -> LGBWrapper:
-    '''
-    Create a wrapper for LightGBM model for calibration.
-    
-    Args:
-        lgb_model: Trained LightGBM model
-    
-    Returns:
-        LGBWrapper: Wrapped LightGBM model compatible with sklearn
-    '''
-    return LGBWrapper(lgb_model)
 
 
 def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
