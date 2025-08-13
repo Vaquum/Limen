@@ -1,4 +1,7 @@
-'SFM Label Model for Breakout regressor'
+'''
+SFM Label Model for Breakout Regressor
+Implements breakout detection using LightGBM regression with feature engineering
+'''
 
 import lightgbm as lgb
 from datetime import timedelta
@@ -32,7 +35,12 @@ TARGET = BREAKOUT_LONG_COL
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 def params():
-
+    '''
+    Define hyperparameter space for LightGBM breakout regressor optimization.
+    
+    Returns:
+        dict: Dictionary containing parameter ranges for hyperparameter tuning
+    '''
     p = {
         'objective': ['regression'],
         'metric': ['mae'],
@@ -55,6 +63,15 @@ def params():
 
 
 def prep(data):
+    '''
+    Prepare data for breakout regressor training by building features and splitting data.
+    
+    Args:
+        data (pl.DataFrame): Input DataFrame with OHLCV data
+        
+    Returns:
+        dict: Processed data dictionary with train/val/test splits and LightGBM datasets
+    '''
 
     all_datetimes = data['datetime'].to_list()
 
@@ -110,7 +127,16 @@ def prep(data):
 
 
 def model(data, round_params):
-
+    '''
+    Train LightGBM breakout regressor model with early stopping and validation.
+    
+    Args:
+        data (dict): Prepared data dictionary from prep() function
+        round_params (dict): LightGBM parameters for training
+        
+    Returns:
+        dict: Model results with continuous metrics
+    '''
     round_params = round_params.copy()
     round_params.update({
         'verbose': -1,

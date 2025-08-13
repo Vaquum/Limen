@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""
+'''
 Tradeline Multiclass - UEL Single File Model format
 Implements line-based multiclass trading predictions with parameterized quantile thresholds
-"""
+'''
 
 import numpy as np
 import polars as pl
@@ -27,12 +27,12 @@ TEST_SPLIT = 0.15
 
 
 def params():
-    """
+    '''
     Define parameter space for Tradeline Multiclass model optimization.
     
     Returns:
         dict: Dictionary containing parameter ranges for line computation, LightGBM hyperparameters, and trading thresholds
-    """
+    '''
     p = {
         'quantile_threshold': [0.60, 0.70, 0.75, 0.80, 0.85],
         'min_height_pct': [0.003],
@@ -66,7 +66,7 @@ def params():
 
 
 def prep(data, round_params=None):
-    """
+    '''
     Prepare data for Tradeline Multiclass model.
     
     This function performs the following steps:
@@ -83,7 +83,7 @@ def prep(data, round_params=None):
         
     Returns:
         dict: Dictionary containing prepared training, validation, and test datasets, features, and labels.
-    """
+    '''
 
     all_datetimes = data['datetime'].to_list()
     
@@ -195,14 +195,14 @@ def prep(data, round_params=None):
 
 
 def model(data, round_params):
-    """
+    '''
     Train Tradeline Multiclass model with LightGBM and optional calibration.
     
     Returns results compatible with UEL including:
     - Multiclass metrics (precision, recall, AUC, accuracy)
     - Model stored in 'models' key
     - Additional metrics in 'extras' key
-    """
+    '''
     use_calibration = round_params.get('use_calibration', True)
     calibration_method = round_params.get('calibration_method', 'isotonic')
     calibration_cv = round_params.get('calibration_cv', 3)
