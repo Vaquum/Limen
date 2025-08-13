@@ -205,3 +205,7 @@
 # v1.10.0 on 8th of August 2025
 - Add `rules_based.momentum_volatility` sfm
 - Add test for the above SFM
+
+# v1.12.0 on 13th of August 2025
+- Add `maker_volume` and `maker_liquidity` columns to `get_klines_data` output
+- Add/Update test and doc for the above
