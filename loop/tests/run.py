@@ -16,8 +16,10 @@ from loop.tests.test_moving_average_correction_model import test_moving_average_
 from loop.tests.test_regime_stability import test_regime_stability
 from loop.tests.test_account_conviction import test_account_conviction
 from loop.tests.test_backtest_conviction import test_backtest_conviction
+from loop.tests.test_klines_data_maker_fields import test_klines_data_maker_fields
 
 tests = [
+    test_klines_data_maker_fields,
     test_sfm,
     test_conserved_flux_renormalization,
     test_mega_model_with_live_labeling,
