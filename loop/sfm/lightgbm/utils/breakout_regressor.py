@@ -55,10 +55,8 @@ def build_sample_dataset_for_breakout_regressor(
             - short_target_col: Maximum short breakout percentage (0.0 to max delta)
             - Additional features from breakout labeling
     '''
-    # 1. Aggregate raw trades into average price klines
     df_avg_price = to_average_price_klines(df, interval_sec)
 
-    # 2. Compute high-timeframe features (EMA, future max/min)
     df_feat = compute_htf_features(
         df_avg_price,
         datetime_col=datetime_col,
@@ -67,14 +65,11 @@ def build_sample_dataset_for_breakout_regressor(
         ema_span=ema_span
     )
 
-    # 3. Build breakout flags for all delta values
     df_label = build_breakout_flags(df_feat, deltas)
 
-    # 4. Find all long_* and short_* columns
     long_cols = [c for c in df_label.columns if c.startswith(long_col_prefix)]
     short_cols = [c for c in df_label.columns if c.startswith(short_col_prefix)]
 
-    # 5. Add breakout_long / breakout_short as max % breakout hit
     df_label = df_label.with_columns([
         (pl.max_horizontal([pl.when(pl.col(c) == 1).then(float(c.split('_')[-1])).otherwise(0) for c in long_cols])
          .shift(shift_bars)
@@ -85,11 +80,9 @@ def build_sample_dataset_for_breakout_regressor(
          .alias(short_target_col))
     ])
 
-    # 6. Drop the original flag columns and clean data
     df_label = df_label.drop(long_cols + short_cols)
     df_label = df_label.drop_nulls(subset=[long_target_col, short_target_col])
 
-    # 7. Select random sequential dataset
     df_random = random_slice(
         df_label,
         random_slice_size,
@@ -113,7 +106,6 @@ def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tu
             - x (np.ndarray): Feature matrix with shape (n_samples, n_features)
             - y (np.ndarray): Target vector with shape (n_samples,)
     '''
-    # Use extract_xy_polars and convert to numpy
     x_df, y_series = extract_xy_polars(df, target, horizon, lookback)
     return x_df.to_numpy(), y_series.to_numpy()
 
@@ -136,15 +128,12 @@ def extract_xy_polars(df: pl.DataFrame, target: str, horizon: int, lookback: int
     '''
     lag_indices = range(horizon, horizon + lookback)
 
-    # Create lagged flag features
     lag_cols = [f"long_t-{i}" for i in lag_indices] + \
                [f"short_t-{i}" for i in lag_indices]
 
-    # Combine lagged features with additional features
     extra_cols = df.columns
     feat_cols = list(set(lag_cols + extra_cols))
 
-    # Extract feature matrix and target vector as Polars objects
     x = df.select(feat_cols)
     y = df[target]
 
