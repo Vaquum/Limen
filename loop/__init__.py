@@ -1,5 +1,6 @@
-from loop.account import Account
 from loop.historical_data import HistoricalData
+from loop.log.log import Log
+from loop.account import Account
 from loop.backtest import Backtest
 from loop.universal_experiment_loop import UniversalExperimentLoop
 
@@ -15,6 +16,7 @@ __all__ = [
     'Account',
     'Backtest',
     'HistoricalData',
+    'Log',
     'UniversalExperimentLoop',
     'features',
     'indicators',
