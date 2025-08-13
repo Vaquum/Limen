@@ -26,7 +26,22 @@ def params():
     }
 
 
+import polars as pl
+
+from sklearn.linear_model import LogisticRegression
+
+from loop.metrics.binary_metrics import binary_metrics
+from loop.features import quantile_flag, kline_imbalance, vwap
+from loop.indicators import wilder_rsi, atr, ppo, roc
+from loop.utils.splits import split_sequential
+from loop.transforms.logreg_transform import LogRegTransform
+
+from loop.utils.splits import split_data_to_prep_output
+
+
 def prep(data, round_params):
+
+    all_datetimes = data['datetime'].to_list()
     
     # Calculate ROC and filter NaN values
     data = roc(data, period=round_params['roc_period']).filter(~pl.col("roc").is_nan())
@@ -84,7 +99,7 @@ def prep(data, round_params):
             'quantile_flag']
 
     # Create data dictionary from splits
-    data_dict = split_data_to_prep_output(split_data, cols)
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
     
     # Scale features using training data statistics
     scaler = LogRegTransform(data_dict['x_train'])
