@@ -1,6 +1,5 @@
 # Make lightgbm a Python package
 
-import loop.sfm.lightgbm.regime_multiclass as regime_multiclass
 import loop.sfm.lightgbm.breakout_regressor as breakout_regressor
 import loop.sfm.lightgbm.regime_stability as regime_stability
 import loop.sfm.lightgbm.tradeable_regressor as tradeable_regressor
@@ -26,7 +25,6 @@ __all__ = [
     'get_best_model_from_results',
     'predict_with_best_model',
     'save_experiment_results',
-    'regime_multiclass',
     'breakout_regressor',
     'regime_stability',
     'tradeable_regressor',

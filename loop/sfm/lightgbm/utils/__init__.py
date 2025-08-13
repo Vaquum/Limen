@@ -1,8 +1,4 @@
 # Make utils a Python package
-from loop.sfm.lightgbm.utils.regime_multiclass import (
-    build_sample_dataset_for_regime_multiclass,
-    add_features_to_regime_multiclass_dataset
-)
 
 from loop.sfm.lightgbm.utils.mega_model_data_sampler import (
     MegaModelDataSampler,
@@ -36,8 +32,6 @@ __all__ = [
     'get_best_model_from_results',
     'predict_with_best_model',
     'save_experiment_results',
-    'build_sample_dataset_for_regime_multiclass',
-    'add_features_to_regime_multiclass_dataset',
     'create_megamodel_predictions',
     'quantile_model_with_confidence',
     'moving_average_correction_model',
