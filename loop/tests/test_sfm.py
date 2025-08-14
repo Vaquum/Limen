@@ -37,12 +37,12 @@ def test_sfm():
             uel.run(experiment_name=uuid.uuid4().hex[:8],
                     n_permutations=2,
                     prep_each_round=test[2])
-            
+
             if test[3]:
-                _ = uel.backtest_results()
-                _ = uel.confusion_metrics(x='price_change')
-                _ = uel.round_prediction_performance(round_id=0)
-                _ = uel.round_confusion_metrics(x='price_change', round_id=0)
+                _ = uel.log.experiment_backtest_results()
+                _ = uel.log.experiment_confusion_metrics(x='price_change')
+                _ = uel.log.permutation_prediction_performance(round_id=0)
+                _ = uel.log.permutation_confusion_metrics(x='price_change', round_id=0)
 
             print(f'    ✅ {test[0].__name__}: PASSED')
         

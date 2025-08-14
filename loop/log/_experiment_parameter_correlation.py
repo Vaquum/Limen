@@ -9,7 +9,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def _experiment_feature_correlation(self,
+def _experiment_parameter_correlation(self,
                                    metric: str,
                                    *,
                                    cols_to_drop: Optional[List] = None,
@@ -22,7 +22,7 @@ def _experiment_feature_correlation(self,
                                    random_state: int = 0) -> pd.DataFrame:
     
     '''
-    Compute robust correlations between numeric features and a target `metric` across explicit cohorts.
+    Compute robust correlations between parameters and metrics across explicit cohorts.
 
     Args:
         metric (str): Target column to correlate against (e.g., 'auc')

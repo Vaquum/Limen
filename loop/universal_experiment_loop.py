@@ -64,7 +64,7 @@ class UniversalExperimentLoop:
             model (function): The function to use to run the model.
 
         Returns:
-            pl.DataFrame: The results of the experiment in `self.log_df`.
+            pl.DataFrame: The results of the experiment
         '''
 
         self.round_params = []
@@ -122,7 +122,7 @@ class UniversalExperimentLoop:
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
 
-            # Add alignement details
+            # Add alignment details
             self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
@@ -154,13 +154,13 @@ class UniversalExperimentLoop:
 
             # Handle writing to the DataFrame
             if i == 0:
-                self.log_df = pl.DataFrame(round_results)
+                self.experiment_log = pl.DataFrame(round_results)
             else:
-                self.log_df = self.log_df.vstack(pl.DataFrame([round_results]))
+                self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
 
             if save_to_sqlite is True:
                 # Handle writing to the database
-                self.log_df.to_pandas().tail(1).to_sql(experiment_name,
+                self.experiment_log.to_pandas().tail(1).to_sql(experiment_name,
                                                     self.conn,
                                                     if_exists="append",
                                                     index=False)
@@ -170,7 +170,7 @@ class UniversalExperimentLoop:
                 with open(experiment_name + '.csv', 'a') as f:
                     f.write(f"{header_colnames}\n")
 
-            log_string = f"{', '.join(map(str, self.log_df.row(i)))}\n"
+            log_string = f"{', '.join(map(str, self.experiment_log.row(i)))}\n"
             with open(experiment_name + '.csv', 'a') as f:
                 f.write(log_string)
 
@@ -178,11 +178,5 @@ class UniversalExperimentLoop:
             self.conn.close()
 
         # Add Log and Backtest properties
-        cols_to_multilabel = self.log_df.select(pl.col(pl.Utf8)).columns
-        log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
-        
-        self.backtest_results = log.experiment_backtest_results
-        self.feature_correlation = log.experiment_feature_correlation
-        self.confusion_metrics = log.experiment_confusion_metrics
-        self.round_confusion_metrics = log.permutation_confusion_metrics
-        self.round_prediction_performance = log.permutation_prediction_performance
+        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
+        self.log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)

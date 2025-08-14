@@ -9,7 +9,7 @@ class Log:
 
     from loop.log._experiment_backtest_results import _experiment_backtest_results as experiment_backtest_results
     from loop.log._experiment_confusion_metrics import _experiment_confusion_metrics as experiment_confusion_metrics
-    from loop.log._experiment_feature_correlation import _experiment_feature_correlation as experiment_feature_correlation
+    from loop.log._experiment_parameter_correlation import _experiment_parameter_correlation as experiment_parameter_correlation
     from loop.log._permutation_confusion_metrics import _permutation_confusion_metrics as permutation_confusion_metrics
     from loop.log._permutation_prediction_performance import _permutation_prediction_performance as permutation_prediction_performance
     
@@ -34,7 +34,7 @@ class Log:
         if uel_object is not None:
 
             self.data = uel_object.data
-            self.log_df = uel_object.log_df.to_pandas()
+            self.experiment_log = uel_object.experiment_log.to_pandas()
             self.prep = uel_object.prep
             self.scalers = uel_object.scalers
             self.round_params = uel_object.round_params
@@ -42,19 +42,19 @@ class Log:
             self._alignment = uel_object._alignment
 
         elif file_path is not None:
-            self.log_df = self._read_from_file(file_path)
+            self.experiment_log = self._read_from_file(file_path)
 
         else:
             raise ValueError("Both uel_object and file_path can't be None")
         
         if cols_to_multilabel is not None:
             for col in cols_to_multilabel:
-                self.log_df = wrangle.col_to_multilabel(data=self.log_df,
+                self.experiment_log = wrangle.col_to_multilabel(data=self.experiment_log,
                                                         col=col,
                                                         extended_colname=True)
             
-            for col in self.log_df.select_dtypes(include=bool):
-                self.log_df[col] = self.log_df[col].astype(int)
+            for col in self.experiment_log.select_dtypes(include=bool):
+                self.experiment_log[col] = self.experiment_log[col].astype(int)
 
         if inverse_scaler is not None:
             self.inverse_scaler = inverse_scaler

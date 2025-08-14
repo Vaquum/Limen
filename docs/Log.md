@@ -81,9 +81,9 @@ Compute confusion metrics for each round of an experiment. One way to think abou
 
 NOTE: Additional identifier columns from round parameters may be included.
 
-### `experiment_feature_correlation`
+### `experiment_parameter_correlation`
 
-Compute robust correlations between numeric features and a target metric across explicit cohorts. It measures how strongly each feature moves with your chosen metric (e.g., `auc`) within specific slices of the data, using bootstrapping to give stable estimates and confidence intervals. It helps identify features that consistently align with high or low metric values, and how stable those relationships are across the data distribution.
+Compute robust correlations between parameters and a metrics across explicit cohorts. It measures how strongly each feature moves with your chosen metric (e.g., `auc`) within specific slices of the data, using bootstrapping to give stable estimates and confidence intervals. It helps identify features that consistently align with high or low metric values, and how stable those relationships are across the data distribution.
 
 #### Args
 
