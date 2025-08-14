@@ -4,13 +4,21 @@ import pandas as pd
 from loop.backtest.backtest_snapshot import backtest_snapshot
 
 
-def _experiment_backtest_results(self, disable_progress_bar=False):
+def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd.DataFrame:
 
     '''
-    Compute confusion metrics for each round of an experiment.
+    Compute backtest results for each round of an experiment.
 
     Args:
-        disable_progress_bar (bool): Whether to disable the progress bar.
+        disable_progress_bar (bool): Whether to disable the progress bar
+
+    Returns:
+        pd.DataFrame: One-row-per-round table with columns 'trade_win_rate_pct',
+                      'trade_expectancy_pct', 'max_drawdown_pct',
+                      'total_return_gross_pct', 'total_return_net_pct',
+                      'trade_return_mean_win_pct', 'trade_return_mean_loss_pct',
+                      'bars_total', 'sharpe_per_bar', 'bars_in_market_pct',
+                      'trades_count', 'cost_round_trip_bps'
     '''
 
     all_rows = []

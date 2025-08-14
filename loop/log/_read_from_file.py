@@ -1,16 +1,17 @@
 import pandas as pd
+from typing import Any
 
 
-def _read_from_file(self, file_path: str) -> object:
+def _read_from_file(self, file_path: str) -> pd.DataFrame:
     
     '''
-    Read experiment log file and return cleaned dataframe.
+    Create cleaned experiment log DataFrame from file.
     
     Args:
         file_path (str): Path to experiment log CSV file
         
     Returns:
-        object: Cleaned pandas DataFrame with experiment log data
+        pd.DataFrame: Cleaned log data with whitespace-trimmed object columns
     '''
     
     with open(file_path, 'r') as f:

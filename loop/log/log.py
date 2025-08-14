@@ -1,8 +1,11 @@
 import polars as pl
 import wrangle
+from typing import Optional, Callable, List, Any
 
 
 class Log:
+
+    '''Log object for storing and analyzing experiment results.'''
 
     from loop.log._experiment_backtest_results import _experiment_backtest_results as experiment_backtest_results
     from loop.log._experiment_confusion_metrics import _experiment_confusion_metrics as experiment_confusion_metrics
@@ -13,10 +16,20 @@ class Log:
     from loop.log._read_from_file import _read_from_file as read_from_file
 
     def __init__(self,
-                 uel_object=None,
-                 file_path=None,
-                 inverse_scaler=None,
-                 cols_to_multilabel=None):
+                 uel_object: Optional[Any] = None,
+                 file_path: Optional[str] = None,
+                 inverse_scaler: Optional[Callable] = None,
+                 cols_to_multilabel: Optional[List[str]] = None) -> None:
+        
+        '''
+        Create Log object state from a UEL object or a log file.
+        
+        Args:
+            uel_object (object, optional): Source UEL object
+            file_path (str, optional): Path to the log file
+            inverse_scaler (Callable, optional): Inverse scaler function
+            cols_to_multilabel (list[str], optional): Columns to convert to multilabel
+        '''
 
         if uel_object is not None:
 
@@ -48,9 +61,18 @@ class Log:
         else:
             self.inverse_scaler = None
 
-
-    def _get_test_data_with_all_cols(self, round_id):
+    def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
         
+        '''
+        Compute test-period rows with all columns.
+        
+        Args:
+            round_id (int): Round ID
+        
+        Returns:
+            pl.DataFrame: Klines dataset filtered down to the permutation test window
+        '''
+
         missing_datetimes = self._alignement[round_id]['missing_datetimes']
         first_test_datetime = self._alignement[round_id]['first_test_datetime']
         last_test_datetime = self._alignement[round_id]['last_test_datetime']

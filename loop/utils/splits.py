@@ -22,23 +22,20 @@ def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> List[pl.DataF
         return [pl.DataFrame() for _ in ratios]
 
     total_ratio = sum(ratios)
-    # Compute the size of each chunk, except the last one “takes whatever is left.”
+    
     sizes: List[int] = []
     cumulative = 0
-    # For each ratio except the last, do a floor; the final one is total - sum(others).
+    
     for r in ratios[:-1]:
         chunk_size = int(total * r / total_ratio)
         sizes.append(chunk_size)
         cumulative += chunk_size
 
-    # Last chunk absorbs any leftover
     sizes.append(total - cumulative)
 
-    # Now build the actual slices:
     out: List[pl.DataFrame] = []
     start = 0
     for size in sizes:
-        # If size is zero, slice(…, 0) returns an empty DataFrame.
         out.append(data.slice(start, size))
         start += size
 
@@ -77,6 +74,7 @@ def split_data_to_prep_output(split_data: list,
     Args:
         split_data (list): List of three DataFrames representing train, validation, and test splits
         cols (list): Column names where the last column is the target variable
+        all_datetimes (list): List of all datetimes
         
     Returns:
         dict: Dictionary with train, validation, and test features and targets

@@ -1,20 +1,17 @@
-import polars as pl
 import pandas as pd
 
 
 def _permutation_prediction_performance(self,
-                                       round_id: int) -> object:
+                                       round_id: int) -> pd.DataFrame:
     
     '''
-    Create results dataframe from prepared data and predictions.
+    Create prediction performance table based on round id.
     
     Args:
-        df_prep (dict): Data dictionary with test data and scaler
-        preds (list): Model predictions array
-        inverse_transform (callable): Function to reverse data transformations
+        round_id (int): Round ID (i.e. nth permutation in an experiment)
         
     Returns:
-        object: Dataframe with experiment results including predictions, actuals, and derived columns
+        pd.DataFrame: Table with columns 'predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change'
     '''
 
     try:

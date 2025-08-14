@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -22,31 +22,25 @@ def _experiment_feature_correlation(self,
                                    random_state: int = 0) -> pd.DataFrame:
     
     '''
-    Compute robust correlations between all numeric features and a target `metric`
-    across explicit top-N cohorts of `self.data` (sorted by `sort_key`), and return
-    a grouped table with cohort percentage as the row group header.
+    Compute robust correlations between numeric features and a target `metric` across explicit cohorts.
 
     Args:
-        metric (str): Target column to correlate against (e.g., 'auc').
-        sort_key (Optional[str]): Column used to rank rows before slicing; defaults
-            to `metric`. Sorting is descending.
-        heads (Optional[Sequence[Union[float,int]]]): Cohort sizes. Fractions in
-            (0, 1] are treated as proportions; integers as fixed counts.
-            Default: (1.0, 0.2, 0.1, 0.05, 50, 10).
-        method (str): Correlation method: 'spearman', 'pearson', or 'kendall'.
-        n_boot (int): Number of bootstrap resamples per cohort.
-        min_n (int): Minimum cohort size; smaller cohorts are skipped.
-        random_state (int): RNG seed for reproducibility.
+        metric (str): Target column to correlate against (e.g., 'auc')
+        sort_key (str | None): Column used to rank rows before slicing
+        sort_ascending (bool): Whether to sort ascending when creating cohorts
+        heads (Sequence[float | int] | None): Cohort sizes; fractions (0, 1] as proportions or integers as counts
+        method (str): Correlation method: 'spearman', 'pearson', or 'kendall'
+        n_boot (int): Number of bootstrap resamples per cohort
+        min_n (int): Minimum cohort size; smaller cohorts are skipped
+        random_state (int): RNG seed for reproducibility
 
     Returns:
-        pd.DataFrame: MultiIndex rows with levels ('cohort_pct', 'feature').
-            Columns: ['n_rows', 'corr', 'corr_med', 'ci_lo', 'ci_hi', 'sign_stability'].
-            `cohort_pct` is an integer in [0, 100], ordered by the given `heads`.
+        pd.DataFrame: MultiIndex rows indexed by ('cohort_pct', 'feature') with columns
+                      'n_rows', 'corr', 'corr_med', 'ci_lo', 'ci_hi', 'sign_stability'
     
-    Notes:
-        - Non-numeric columns are coerced with errors='coerce' and ignored thereafter.
-        - Constant or all-NaN numeric columns are dropped.
-        - Rows with NaN in `metric` are dropped prior to sorting/slicing.
+    NOTE: Non-numeric columns are coerced with errors='coerce' and ignored thereafter;
+          constant or all-NaN numeric columns are dropped; rows with NaN in `metric` are
+          dropped prior to sorting and slicing
     '''
 
     if cols_to_drop is not None:
@@ -105,7 +99,6 @@ def _experiment_feature_correlation(self,
             return pd.Series(dtype=float)
         return s.drop(labels=[metric], errors='ignore')
 
-    # Build results per cohort, capturing the realized percentage for ordering/labeling
     blocks: List[pd.DataFrame] = []
     realized_pcts: List[int] = []
 
@@ -161,8 +154,6 @@ def _experiment_feature_correlation(self,
 
     res = pd.concat(blocks, ignore_index=True)
 
-    # MultiIndex rows: (cohort_pct, feature), ordered by the given heads → realized_pcts sequence
-    # Preserve order by making cohort_pct a categorical with the realized order
     order = []
     seen = set()
     for pct in realized_pcts:

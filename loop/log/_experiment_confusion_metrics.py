@@ -2,7 +2,18 @@ import tqdm
 import pandas as pd
 
 
-def _experiment_confusion_metrics(self, x, disable_progress_bar=False):
+def _experiment_confusion_metrics(self, x: str, disable_progress_bar: bool = False) -> pd.DataFrame:
+
+    '''
+    Compute confusion metrics for each round of an experiment.
+    
+    Args:
+        x (str): Column name to compute confusion metrics for
+        disable_progress_bar (bool): Whether to disable the progress bar
+
+    Returns:
+        pd.DataFrame: One-row-per-round table with confusion and long-only summary columns (see permutation_confusion_metrics)
+    '''
 
     all_rows = []
     

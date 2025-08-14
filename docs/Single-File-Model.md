@@ -14,6 +14,10 @@ Contains all parameters and their value ranges to be used in the parameter sweep
 
 Takes no input and returns a dictionary with keys as parameter names, and lists as parameter values. These set the boundaries for the parameter space to be used in the sweep.
 
+##### REQUIREMENTS
+
+- The output is `round_params` a dictionary where each key has a list as its value
+
 **NOTE**: Paramater values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
 
 #### `prep`
@@ -35,6 +39,11 @@ Takes as input data from `loop.HistoricalData.data` and `round_params` which is 
 Contains the model architecture and all model operation procedures up to predictions on test data.
 
 Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_prep_output`, together with `round_params`. It returns `round_results` dictionary yielded by `loop.metrics.binary_metrics`, `loop.metrics.multiclass_metrics`, or `loop.metrics.continuous_metrics`. 
+
+##### REQUIREMENTS
+
+- The input must accept at least `data` and optionally also `round_params`
+- The output must come from one of `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` in `loop.metrics`.
 
 **NOTE**: Additional metrics must be added to `round_result['extras']` for those additional metrics to end up in `uel.log_df`. 
 

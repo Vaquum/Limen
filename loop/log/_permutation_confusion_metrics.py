@@ -3,6 +3,7 @@ import numpy as np
 from typing import Sequence, Optional, Dict, Any, Tuple
 from math import sqrt
 
+
 def _permutation_confusion_metrics(self,
                                   x: str,
                                   round_id: int,
@@ -13,47 +14,52 @@ def _permutation_confusion_metrics(self,
                                   threshold: float = 0.5,
                                   outlier_quantiles: Sequence[float] = (0.01, 0.99),
                                   outlier_mode: str = 'filter',
-                                  n_boot: int = 0,
                                   id_cols: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
     '''
-    Compute a single-row, trimmed report for long-only evaluation:
-    precision, recall, signal rates, TP/FP counts & payoffs, TP–FP separation.
+    Compute a single-row trimmed report for long-only evaluation: precision,
+    recall, signal rates, counts and payoffs, and TP–FP separation.
 
     Args:
-        x: Column summarized within TP/FP/TN/FN (e.g., predicted_probability or P&L).
-        pred_col: Binary predictions column.
-        actual_col: Binary actuals column.
-        proba_col: Optional probabilities to binarize via `threshold` (overrides `pred_col`).
-        threshold: Decision threshold for `proba_col`.
-        outlier_quantiles: (lo, hi) for x outlier handling.
-        outlier_mode: 'filter' to drop outside bounds; 'winsor' to clip.
-        n_boot: Kept for compatibility; not used in this trimmed return.
-        id_cols: Optional identifiers to prepend (e.g., params).
+        x (str): Column summarized within TP/FP/TN/FN (e.g., predicted_probability or P&L)
+        pred_col (str): Binary predictions column
+        actual_col (str): Binary actuals column
+        proba_col (str | None): Probabilities to binarize via `threshold` (overrides `pred_col`)
+        threshold (float): Decision threshold for `proba_col`
+        outlier_quantiles (Sequence[float]): (lo, hi) for x outlier handling
+        outlier_mode (str): 'filter' to drop outside bounds or 'winsor' to clip
+        id_cols (dict[str, Any] | None): Optional identifiers to prepend (e.g., params)
 
     Returns:
-        One-row DataFrame with long-only focused columns.
+        pd.DataFrame: One-row table with columns 'x_name', 'n_kept', 'pred_pos_rate_pct',
+                      'actual_pos_rate_pct', 'precision_pct', 'recall_pct', 'pred_pos_count',
+                      'tp_count', 'fp_count', 'tp_x_mean', 'tp_x_median', 'fp_x_mean', 'fp_x_median',
+                      'pred_pos_x_mean', 'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks'
     '''
+    
     df = self.permutation_prediction_performance(round_id)
 
     # Optional: binarize from probabilities
     if proba_col is not None:
         if proba_col not in df:
             raise ValueError(f'proba_col "{proba_col}" not found')
+    
         df[pred_col] = (df[proba_col].astype(float) >= float(threshold)).astype(int)
 
     # Validate required columns
     for col in (pred_col, actual_col, x):
         if col not in df:
             raise ValueError(f'column "{col}" not found')
+    
     df[pred_col] = df[pred_col].astype(int)
     df[actual_col] = df[actual_col].astype(int)
 
-    # Outlier handling for x
     q_lo, q_hi = df[x].quantile(outlier_quantiles)
     if outlier_mode == 'filter':
         df = df[(df[x] >= q_lo) & (df[x] <= q_hi)]
+    
     elif outlier_mode == 'winsor':
         df[x] = df[x].clip(q_lo, q_hi)
+    
     else:
         raise ValueError('outlier_mode must be "filter" or "winsor"')
 
@@ -79,25 +85,21 @@ def _permutation_confusion_metrics(self,
 
     tp = _stats(m_tp)
     fp = _stats(m_fp)
-    tn = _stats(m_tn)  # kept for rates; not all stats returned
+    tn = _stats(m_tn)
     fn = _stats(m_fn)
 
-    # Global confusion metrics (core ones for long-only)
     TP, FP, TN, FN = tp['count'], fp['count'], tn['count'], fn['count']
     precision = TP / (TP + FP) if (TP + FP) else np.nan
     recall    = TP / (TP + FN) if (TP + FN) else np.nan
 
-    # Signal & opportunity rates
     pred_pos_count   = TP + FP
     actual_pos_count = TP + FN
     pred_pos_rate    = pred_pos_count / n
     actual_pos_rate  = actual_pos_count / n
 
-    # Executed (predicted-positive) payoff summaries
     pred_pos_mean_x   = ((tp['mean'] * TP + fp['mean'] * FP) / pred_pos_count) if pred_pos_count else np.nan
     pred_pos_median_x = df.loc[pred == 1, x].median() if pred_pos_count else np.nan
 
-    # TP vs FP separation on x (effect sizes)
     def _cohen_d(a: np.ndarray, b: np.ndarray) -> float:
         
         if len(a) < 2 or len(b) < 2:
