@@ -205,3 +205,24 @@
 # v1.10.0 on 8th of August 2025
 - Add `rules_based.momentum_volatility` sfm
 - Add test for the above SFM
+
+# v1.12.0 on 13th of August 2025
+- Add `maker_volume` and `maker_liquidity` columns to `get_klines_data` output
+- Add/Update test and doc for the above
+
+# v1.13.0 on 14th of August 2025
+- Improve data plumbing in `uel.run`
+- Add `loop.backtest` sub-module
+- Move `loop.backtest` to `loop.backtest.bactest_sequential`
+- Add `loop.backtest.backtest_snapshop`
+- Add `loop.log` sub-module
+- Add `loop.log._experiment_backtest_results`
+- Add `loop.log._experiment_confusion_metrics`
+- Add `loop.log._experiment_feature_correlation`
+- Add `loop.log._permutation_confusion_metrics`
+- Add `loop.log._permutation_prediction_performance`
+- At end of `uel.run` add the above `loop.log` functions as properties
+- Add test for the above SFM
+- Improve `utils.split_data_to_prep_output` to support latest end-to-end features
+- Update all the SFMs to support latest end-to-end features
+- Add the latest features to tests

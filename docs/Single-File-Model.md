@@ -14,11 +14,19 @@ Contains all parameters and their value ranges to be used in the parameter sweep
 
 Takes no input and returns a dictionary with keys as parameter names, and lists as parameter values. These set the boundaries for the parameter space to be used in the sweep.
 
+**NOTE**: Paramater values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
+
 #### `prep`
 
 Contains all data preparation procedures used in the parameter sweep.
 
-Takes as input data from `loop.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns a dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning `data_dict`. 
+Takes as input data from `loop.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns a `data_dict` dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
+
+##### REQUIREMENTS
+
+- The input must contain at least `historical.data` but can also contain `round_params` when `uel.run(prep_each_round=True)`
+- The input data must always have `datetime` when it is ingested in `prep`
+- The column `datetime` must be in data when it is passed to `split_data_to_prep_output`, where it will be automatically removed
 
 **NOTE:** If a scaler is fitted as part of `prep`, it can be added to `round_results[_scaler]` for use in subsequent folds.
 
@@ -26,17 +34,15 @@ Takes as input data from `loop.HistoricalData.data` and `round_params` which is 
 
 Contains the model architecture and all model operation procedures up to predictions on test data.
 
-Takes as input a dictionary yielded by `utils.splits.split_data_to_prep_output`, together with `round_params`. It returns `round_results` dictionary yielded by `loop.metrics.binary_metrics`, `loop.metrics.multiclass_metrics`, or `loop.metrics.continuous_metrics`. 
+Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_prep_output`, together with `round_params`. It returns `round_results` dictionary yielded by `loop.metrics.binary_metrics`, `loop.metrics.multiclass_metrics`, or `loop.metrics.continuous_metrics`. 
 
 **NOTE**: Additional metrics must be added to `round_result['extras']` for those additional metrics to end up in `uel.log_df`. 
-
-## Notes on Usage
-
-- Paramater values returned by `params` have to always be in a list, even if it is a single value
 
 # Appendix
 
 ## Model Categories
+
+The below table is provided as a guide for identifying model architecture candidates for SFMs.
 
 | **Model family** | **Data it tends to shine on** | **Bitcoin-trading sweet-spot** | **Key caveats & blind spots** |
 | --- | --- | --- | --- |

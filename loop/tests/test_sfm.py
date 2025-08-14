@@ -7,6 +7,7 @@ from loop import sfm
 from loop.tests.utils.cleanup import cleanup_csv_files
 from loop.tests.utils.get_data import get_klines_data, get_trades_data, get_klines_data_small
 
+
 def test_sfm():
     
     tests = [
@@ -29,11 +30,14 @@ def test_sfm():
     for test in tests:
         
         try:
+            
             uel = loop.UniversalExperimentLoop(data=test[1](),
                                                 single_file_model=test[0])
+            
             uel.run(experiment_name=uuid.uuid4().hex[:8],
                     n_permutations=2,
                     prep_each_round=test[2])
+            
             if test[3]:
                 _ = uel.backtest_results()
                 _ = uel.confusion_metrics(x='price_change')
@@ -43,11 +47,14 @@ def test_sfm():
             print(f'    ✅ {test[0].__name__}: PASSED')
         
         except Exception as e:
+            
             print(f'    ❌ {test[0].__name__}: FAILED - {e}')
+            
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)
 
 
 if __name__ == "__main__":
+    
     test_sfm()
