@@ -141,8 +141,7 @@ def model_with_quantile(data, round_params):
         data=data,
         round_params=round_params,
         quantiles=[0.1, 0.5, 0.9],
-        confidence_threshold=5.0,  # Stricter for testing
-        verbose=False
+        confidence_threshold=5.0  # Stricter for testing
     )
 
 if __name__ == "__main__":
