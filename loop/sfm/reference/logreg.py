@@ -80,7 +80,8 @@ def prep(data, round_params):
               .alias("quantile_flag")).drop_nulls("quantile_flag")
     
     # Define columns for the model
-    cols = ['high',
+    cols = ['datetime',
+            'high',
             'low',
             'open',
             'close',

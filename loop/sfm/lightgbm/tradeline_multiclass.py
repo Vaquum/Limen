@@ -98,6 +98,9 @@ def prep(data, round_params=None):
     Returns:
         dict: Dictionary containing prepared training, validation, and test datasets, features, and labels.
     """
+
+    all_datetimes = data['datetime'].to_list()
+    
     # Ensure we're working with Polars
     if not isinstance(data, pl.DataFrame):
         raise ValueError("Data must be a Polars DataFrame")
@@ -205,14 +208,14 @@ def prep(data, round_params=None):
     logging.debug(f"Using {len(numeric_features)} features")
     
     # Create column list with label as LAST column (required by split_data_to_prep_output)
-    cols = numeric_features + ['label']
+    cols = ['datetime'] + numeric_features + ['label']
     
     # Step 5: Split data sequentially
     logging.debug(f"Splitting data with ratios {TRAIN_SPLIT}:{VAL_SPLIT}:{TEST_SPLIT}")
     split_data = split_sequential(df_clean, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
     
     # Use split_data_to_prep_output to format properly
-    data_dict = split_data_to_prep_output(split_data, cols)
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
     
     # Convert to numpy arrays for LightGBM
     data_dict['x_train'] = data_dict['x_train'].to_numpy()

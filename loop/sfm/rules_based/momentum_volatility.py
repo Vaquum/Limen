@@ -2,6 +2,7 @@ import polars as pl
 import numpy as np
 from typing import Dict
 from loop.metrics.multiclass_metrics import multiclass_metrics
+from loop.utils.splits import split_sequential, split_data_to_prep_output
 
 # Constants
 EPSILON = 1e-10  # Prevent division by zero
@@ -26,7 +27,13 @@ def params():
     }
 
 def prep(data, round_params):
-    return data
+    
+    all_datetimes = data['datetime'].to_list()
+
+    split_data = split_sequential(data, (8, 1, 2))
+    data_dict = split_data_to_prep_output(split_data, data.columns, all_datetimes)
+
+    return data_dict
 
 def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     '''
@@ -35,7 +42,7 @@ def model(data: pl.DataFrame, round_params: Dict) -> Dict:
     '''
     
     # Convert to numpy for faster processing
-    closes = data['close'].to_numpy()
+    closes = data['x_test']['close'].to_numpy()
     
     # Build returns history
     returns_history = []

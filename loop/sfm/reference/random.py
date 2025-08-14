@@ -20,7 +20,7 @@ def prep(data, round_params):
         pl.Series("outcome", np.random.randint(0, 2, size=data.height))
     )
 
-    cols = ['high', 'low', 'close', 'volume', 'maker_ratio', 'no_of_trades', 'outcome']
+    cols = ['datetime', 'high', 'low', 'close', 'volume', 'maker_ratio', 'no_of_trades', 'outcome']
     
     split_data = split_sequential(data, (3, 1, 1))
 

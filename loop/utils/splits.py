@@ -93,6 +93,8 @@ def split_data_to_prep_output(split_data: list,
 
     if "datetime" in cols:
         cols.remove("datetime")
+    else:
+        raise ValueError("SFMs must contain `datetime` in data up to when it enters `split_data_to_prep_output` in sfm.prep")
             
     data_dict = {'x_train': split_data[0][cols[:-1]],
                  'y_train': split_data[0][cols[-1]],
