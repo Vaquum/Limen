@@ -1,7 +1,9 @@
 import polars as pl
 
 
-def rsi_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
+def rsi_sma(data: pl.DataFrame, 
+            period: int = 14,
+            name = 'rsi_sma') -> pl.DataFrame:
     
     '''
     Compute RSI using Simple Moving Average smoothing (not Wilder's method).
@@ -11,26 +13,27 @@ def rsi_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of periods for RSI calculation
+        name (str): Alias name for the SMA's RSI output column
         
     Returns:
-        pl.DataFrame: The input data with a new column 'rsi_sma'
+        pl.DataFrame: The input data with a new column '{name}'
     '''
     
     return (
         data
         .with_columns([
-            pl.col('close').diff(1).alias("delta")
+            pl.col('close').diff(1).alias('delta')
         ])
         .with_columns([
-            pl.when(pl.col("delta") > 0).then(pl.col("delta")).otherwise(0).alias("gain"),
-            pl.when(pl.col("delta") < 0).then(-pl.col("delta")).otherwise(0).alias("loss"),
+            pl.when(pl.col('delta') > 0).then(pl.col('delta')).otherwise(0).alias('gain'),
+            pl.when(pl.col('delta') < 0).then(-pl.col('delta')).otherwise(0).alias('loss'),
         ])
         .with_columns([
-            pl.col("gain").rolling_mean(window_size=period).alias("avg_gain"),
-            pl.col("loss").rolling_mean(window_size=period).alias("avg_loss"),
+            pl.col('gain').rolling_mean(window_size=period).alias('avg_gain'),
+            pl.col('loss').rolling_mean(window_size=period).alias('avg_loss'),
         ])
         .with_columns([
-            (100 - (100 / (1 + pl.col("avg_gain") / (pl.col("avg_loss") + 1e-10)))).alias("rsi_sma")
+            (100 - (100 / (1 + pl.col('avg_gain') / (pl.col('avg_loss') + 1e-10)))).alias(name)
         ])
-        .drop(["delta", "gain", "loss", "avg_gain", "avg_loss"])
+        .drop(['delta', 'gain', 'loss', 'avg_gain', 'avg_loss'])
     )

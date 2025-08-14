@@ -29,7 +29,7 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     ])
     
     # Then calculate rolling volatility
-    df = rolling_volatility(df, 'returns_temp', lookback)
+    df = rolling_volatility(df, 'returns_temp', lookback, name=f"returns_temp_volatility_{lookback}")
     df = df.with_columns([
         pl.col(f'returns_temp_volatility_{lookback}').alias('vol_60h')
     ]).drop(f'returns_temp_volatility_{lookback}')
@@ -80,8 +80,8 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
     """Calculate market regime indicators"""
     
     # Trend strength using existing indicators
-    df = sma(df, 'close', 20)
-    df = sma(df, 'close', 50)
+    df = sma(df, 'close', 20, name='close_sma_20')
+    df = sma(df, 'close', 50, name='close_sma_50')
     df = trend_strength(df, 20, 50)
     
     # Rename the SMA columns to expected names
@@ -101,7 +101,7 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
     ])
     
     # Volume regime
-    df = sma(df, 'volume', 48)
+    df = sma(df, 'volume', 48, name='volume_sma_48')
     df = df.rename({'volume_sma_48': 'volume_sma'})
     df = volume_regime(df, 48)
     
@@ -123,7 +123,7 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
         pl.col('close').pct_change().alias('returns')
     ])
     
-    df = rolling_volatility(df, 'returns', config['volatility_lookback'])
+    df = rolling_volatility(df, 'returns', config['volatility_lookback'], name=f"returns_volatility_{config['volatility_lookback']}")
     df = df.rename({f"returns_volatility_{config['volatility_lookback']}": 'rolling_volatility'})
     
     # Calculate ATR
@@ -422,7 +422,7 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     
     # Volume confirmation weight
     if config['volume_weight_enabled']:
-        df = sma(df, 'volume', 20)
+        df = sma(df, 'volume', 20, name='volume_sma_20')
         df = df.rename({'volume_sma_20': 'volume_ma'})
         
         df = df.with_columns([
@@ -437,7 +437,7 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     df = df.with_columns([
         pl.col('close').pct_change().alias('returns_temp')
     ])
-    df = rolling_volatility(df, 'returns_temp', 20)
+    df = rolling_volatility(df, 'returns_temp', 20, name='returns_temp_volatility_20')
     df = df.rename({f'returns_temp_volatility_20': 'volatility'})
     
     df = df.with_columns([
@@ -534,11 +534,11 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
         df = df.with_columns([
             pl.col('close').pct_change(period).alias(f'momentum_{period}')
         ])
-        df = rsi_sma(df, period)
-        df = df.rename({f'rsi_sma': f'rsi_{period}'})
+        df = rsi_sma(df, period, name=f"rsi_sma_{period}")
+        df = df.rename({f"rsi_sma_{period}": f"rsi_{period}"})
     
     # Volatility
-    df = rolling_volatility(df, 'returns', 12)
+    df = rolling_volatility(df, 'returns', 12, name='returns_volatility_12')
     df = df.rename({'returns_volatility_12': 'volatility_5m'})
     
     # Duplicate for 1h (same calculation for now)
@@ -547,13 +547,13 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
     ])
     
     # Volume features
-    df = sma(df, 'volume', 20)
+    df = sma(df, 'volume', 20, name='volume_sma_20')
     df = df.with_columns([
         (pl.col('volume') / pl.col('volume_sma_20')).alias('volume_ratio')
     ])
     
-    df = sma(df, 'volume', 12)
-    df = sma(df, 'volume', 48)
+    df = sma(df, 'volume', 12, name='volume_sma_12')
+    df = sma(df, 'volume', 48, name='volume_sma_48')
     df = df.with_columns([
         (pl.col('volume_sma_12') / pl.col('volume_sma_48')).alias('volume_trend')
     ])
@@ -605,7 +605,7 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
     
     # SMAs for additional features
     for period in [5, 10, 20, 50]:
-        df = sma(df, 'close', period)
+        df = sma(df, 'close', period, name=f"close_sma_{period}")
         df = df.with_columns([
             (pl.col('close') / pl.col(f'close_sma_{period}')).alias(f'sma_{period}_ratio')
         ])
