@@ -228,3 +228,8 @@
 - Update all the SFMs to support latest end-to-end features
 - Add the latest features to tests
 - **NOTE**: Temporarily disables tests `reference.lightgbm` and`lightgbm.test_regime_stability`
+
+# v1.13.1 on 16th of August 2025
+- Remove lightgbm regime_multiclass and regime_stability models
+- Remove tests for the above
+- Cleanup all lightgbm utils/sfms (except megamodel code) docstrings, comments, prints, imports
