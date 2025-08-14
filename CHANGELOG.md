@@ -209,3 +209,8 @@
 # v1.12.0 on 13th of August 2025
 - Add `maker_volume` and `maker_liquidity` columns to `get_klines_data` output
 - Add/Update test and doc for the above
+
+# v1.13.0 on 13th of August 2025
+- Remove lightgbm regime_multiclass and regime_stability models
+- Remove tests for the above
+- Cleanup all lightgbm utils/sfms (except megamodel code) docstrings, comments, prints, imports 
