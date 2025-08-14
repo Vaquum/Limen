@@ -15,7 +15,7 @@ def roc(data: pl.DataFrame,
         name (str): Alias name for the ROC output column
 
     Returns:
-        pl.DataFrame: The input data with a new column name
+        pl.DataFrame: The input data with a new column '{name}'
     '''
     
     prior = pl.col(col).shift(period)
