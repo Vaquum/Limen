@@ -226,3 +226,4 @@
 - Improve `utils.split_data_to_prep_output` to support latest end-to-end features
 - Update all the SFMs to support latest end-to-end features
 - Add the latest features to tests
+- **NOTE**: Temporarily disables tests `reference.lightgbm` and`lightgbm.test_regime_stability`

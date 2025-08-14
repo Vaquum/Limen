@@ -172,7 +172,7 @@ def prep(data, round_params=None):
     logging.debug(f"Using {len(numeric_features)} features")
     
     # Create column list with target as LAST column
-    cols = numeric_features + ['tradeable_score']
+    cols = ['datetime'] + numeric_features + ['tradeable_score']
     
     # Split data sequentially
     split_data = split_sequential(df_clean, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
