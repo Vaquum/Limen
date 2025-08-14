@@ -23,17 +23,10 @@ def build_sample_dataset_for_breakout_regressor(
     short_target_col: str,
 ) -> pl.DataFrame:
     '''
-    Build sample dataset with average price klines and breakout features for breakout regressor model.
-
-    This function processes raw trade data to create a dataset suitable for breakout regression modeling.
-    It aggregates trades into klines, computes breakout flags for multiple delta thresholds,
-    creates regression targets from the maximum breakout percentages, and applies random slicing.
+    Compute sample dataset with average price klines and breakout features for breakout regressor model.
 
     Args:
-        df (pl.DataFrame): Raw trade data containing columns
-            - datetime_col (datetime, UTC ms)
-            - volume (float)
-            - liquidity_sum (float)
+        df (pl.DataFrame): Trades dataset with 'datetime', 'volume', 'liquidity_sum' columns
         datetime_col (str): Name of the datetime column
         target_col (str): Name of the target/price column
         interval_sec (int): Bucket size in seconds for kline aggregation (e.g., 60 for 1m, 900 for 15m)
@@ -48,12 +41,7 @@ def build_sample_dataset_for_breakout_regressor(
         short_target_col (str): Name of the short breakout target column (e.g., 'breakout_short')
 
     Returns:
-        pl.DataFrame: Processed dataset with columns
-            - datetime_col: Original datetime
-            - target_col: Original target/price column
-            - long_target_col: Maximum long breakout percentage (0.0 to max delta)
-            - short_target_col: Maximum short breakout percentage (0.0 to max delta)
-            - Additional features from breakout labeling
+        pl.DataFrame: The input data with new columns 'breakout_long', 'breakout_short'
     '''
     df_avg_price = to_average_price_klines(df, interval_sec)
 
@@ -93,10 +81,10 @@ def build_sample_dataset_for_breakout_regressor(
 
 def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tuple:
     '''
-    Extract feature matrix X and target vector y from a DataFrame for breakout regression.
+    Compute feature matrix X and target vector y from a DataFrame for breakout regression.
 
     Args:
-        df (pl.DataFrame): Input DataFrame containing breakout features and targets
+        df (pl.DataFrame): Klines dataset with 'breakout_long', 'breakout_short' columns
         target (str): Name of the target column (e.g., 'breakout_long' or 'breakout_short')
         horizon (int): Number of periods to look ahead (prediction horizon)
         lookback (int): Number of historical periods to include as features
@@ -112,11 +100,10 @@ def extract_xy(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tu
 
 def extract_xy_polars(df: pl.DataFrame, target: str, horizon: int, lookback: int) -> tuple:
     '''
-    Extract feature matrix X and target vector y from a DataFrame for breakout regression,
-    returning Polars DataFrames instead of numpy arrays.
+    Compute feature matrix X and target vector y from a DataFrame for breakout regression.
 
     Args:
-        df (pl.DataFrame): Input DataFrame containing breakout features and targets
+        df (pl.DataFrame): Klines dataset with 'breakout_long', 'breakout_short' columns
         target (str): Name of the target column (e.g., 'breakout_long' or 'breakout_short')
         horizon (int): Number of periods to look ahead (prediction horizon)
         lookback (int): Number of historical periods to include as features

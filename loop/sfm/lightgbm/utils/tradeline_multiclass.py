@@ -109,7 +109,7 @@ def compute_line_features(df: pl.DataFrame,
     Compute line-based features for each row including active lines, momentum, and reversal signals.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with price data
+        df (pl.DataFrame): Klines dataset with 'close', 'datetime' columns
         long_lines (List[Dict]): List of long line dictionaries
         short_lines (List[Dict]): List of short line dictionaries
     
@@ -171,7 +171,7 @@ def compute_temporal_features(df: pl.DataFrame) -> pl.DataFrame:
     Compute temporal features from datetime column including hour and day of week.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with datetime column
+        df (pl.DataFrame): Klines dataset with 'datetime' column
     
     Returns:
         pl.DataFrame: DataFrame with temporal features added
@@ -189,7 +189,7 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     Compute comprehensive price-based features including returns, acceleration, and volatility.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
+        df (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
     
     Returns:
         pl.DataFrame: DataFrame with comprehensive price-based features
@@ -244,18 +244,16 @@ def create_multiclass_labels(df: pl.DataFrame,
                            short_threshold: float,
                            lookahead_hours: int = 48) -> pl.DataFrame:
     '''
-    Create 3-class labels based on future price movements.
-    
-    Classes:
-    - 0: No trade (neither long nor short criteria met)
-    - 1: Long (positive return exceeds long threshold)
-    - 2: Short (negative return exceeds short threshold)
+    Compute 3-class labels based on future price movements.
     
     Args:
-        df: DataFrame with price data
-        long_threshold: Threshold for long trades (positive)
-        short_threshold: Threshold for short trades (positive, will be negated)
-        lookahead_hours: Hours to look ahead for price movements
+        df (pl.DataFrame): Klines dataset with 'close' column
+        long_threshold (float): Threshold for long trades (positive)
+        short_threshold (float): Threshold for short trades (positive, will be negated)
+        lookahead_hours (int): Hours to look ahead for price movements
+        
+    Returns:
+        pl.DataFrame: The input data with new column 'label'
     '''
     close_prices = df.get_column('close')
     n_rows = len(df)
@@ -331,7 +329,7 @@ class LGBWrapper(BaseEstimator, ClassifierMixin):
 
 def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     '''
-    Calculate balanced sample weights to handle class imbalance in multiclass classification.
+    Compute balanced sample weights to handle class imbalance in multiclass classification.
     
     Args:
         y_train (np.ndarray): Array of training labels (0, 1, or 2)

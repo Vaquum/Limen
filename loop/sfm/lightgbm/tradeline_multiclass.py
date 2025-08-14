@@ -28,7 +28,7 @@ TEST_SPLIT = 0.15
 
 def params():
     '''
-    Define parameter space for Tradeline Multiclass model optimization.
+    Compute parameter space for Tradeline Multiclass model optimization.
     
     Returns:
         dict: Dictionary containing parameter ranges for line computation, LightGBM hyperparameters, and trading thresholds
@@ -67,22 +67,14 @@ def params():
 
 def prep(data, round_params=None):
     '''
-    Prepare data for Tradeline Multiclass model.
-    
-    This function performs the following steps:
-        1. Computes price lines on the entire dataset.
-        2. Filters lines by quantile threshold.
-        3. Engineers features based on lines.
-        4. Creates multiclass labels.
-        5. Splits data sequentially.
-        6. Returns a formatted data dictionary.
+    Compute data for Tradeline Multiclass model.
     
     Args:
-        data (pl.DataFrame): Input data containing price and datetime columns.
-        round_params (dict, optional): Dictionary of parameters for line computation and feature engineering.
+        data (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume', 'datetime' columns
+        round_params (dict, optional): Dictionary of parameters for line computation and feature engineering
         
     Returns:
-        dict: Dictionary containing prepared training, validation, and test datasets, features, and labels.
+        dict: The input data with prepared training, validation, and test datasets, features, and labels
     '''
 
     all_datetimes = data['datetime'].to_list()
@@ -196,12 +188,14 @@ def prep(data, round_params=None):
 
 def model(data, round_params):
     '''
-    Train Tradeline Multiclass model with LightGBM and optional calibration.
+    Compute Tradeline Multiclass model with LightGBM and optional calibration.
     
-    Returns results compatible with UEL including:
-    - Multiclass metrics (precision, recall, AUC, accuracy)
-    - Model stored in 'models' key
-    - Additional metrics in 'extras' key
+    Args:
+        data (dict): Prepared data dictionary from prep() function
+        round_params (dict): LightGBM parameters for training
+        
+    Returns:
+        dict: UEL-compatible results with multiclass metrics, models, and extras
     '''
     use_calibration = round_params.get('use_calibration', True)
     calibration_method = round_params.get('calibration_method', 'isotonic')

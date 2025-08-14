@@ -15,30 +15,20 @@ def moving_average_correction_model(data, round_params,
                                   trend_threshold=0.15,
                                   residual_window=35):
     '''
-    Train LightGBM model with moving average correction based on residual tracking.
+    Compute LightGBM model with moving average correction based on residual tracking.
     
-    Parameters:
-    -----------
-    data : dict
-        UEL data dict with 'dtrain', 'dval', 'x_test', 'y_test'
-    round_params : dict
-        Base parameters for LightGBM
-    short_window : int
-        Window size for short-term moving average
-    medium_window : int
-        Window size for medium-term moving average
-    long_window : int
-        Window size for long-term moving average
-    correction_factor : float
-        Base factor for applying corrections (conservative)
-    trend_threshold : float
-        Threshold for detecting improving/degrading trends
-    residual_window : int
-        Maximum number of residuals to keep in sliding window
+    Args:
+        data (dict): UEL data dict with 'dtrain', 'dval', 'x_test', 'y_test' keys
+        round_params (dict): Base parameters for LightGBM
+        short_window (int): Window size for short-term moving average
+        medium_window (int): Window size for medium-term moving average
+        long_window (int): Window size for long-term moving average
+        correction_factor (float): Base factor for applying corrections
+        trend_threshold (float): Threshold for detecting improving/degrading trends
+        residual_window (int): Maximum number of residuals to keep in sliding window
     
     Returns:
-    --------
-    dict : UEL-compatible results dict
+        dict: UEL-compatible results dict with corrected predictions
     '''
     
     # Set up model parameters
@@ -60,7 +50,7 @@ def moving_average_correction_model(data, round_params,
 
     def calculate_ma_corrections(recent_residuals):
         '''
-        Calculate short, medium, and long-term moving average corrections from residuals.
+        Compute short, medium, and long-term moving average corrections from residuals.
         
         Args:
             recent_residuals (list): List of recent prediction residuals
@@ -79,7 +69,7 @@ def moving_average_correction_model(data, round_params,
 
     def get_weighted_correction(short_ma, medium_ma, long_ma):
         '''
-        Calculate weighted average correction using short, medium, and long-term moving averages.
+        Compute weighted average correction using short, medium, and long-term moving averages.
         
         Args:
             short_ma (float): Short-term moving average correction

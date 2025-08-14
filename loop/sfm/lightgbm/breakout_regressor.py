@@ -36,7 +36,7 @@ DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 def params():
     '''
-    Define hyperparameter space for LightGBM breakout regressor optimization.
+    Compute hyperparameter space for LightGBM breakout regressor optimization.
     
     Returns:
         dict: Dictionary containing parameter ranges for hyperparameter tuning
@@ -64,13 +64,13 @@ def params():
 
 def prep(data):
     '''
-    Prepare data for breakout regressor training by building features and splitting data.
+    Compute data for breakout regressor training by building features and splitting data.
     
     Args:
-        data (pl.DataFrame): Input DataFrame with OHLCV data
+        data (pl.DataFrame): Trades dataset with 'datetime', 'volume', 'liquidity_sum' columns
         
     Returns:
-        dict: Processed data dictionary with train/val/test splits and LightGBM datasets
+        dict: The input data with train/val/test splits and LightGBM datasets
     '''
 
     all_datetimes = data['datetime'].to_list()
@@ -128,7 +128,7 @@ def prep(data):
 
 def model(data, round_params):
     '''
-    Train LightGBM breakout regressor model with early stopping and validation.
+    Compute LightGBM breakout regressor model with early stopping and validation.
     
     Args:
         data (dict): Prepared data dictionary from prep() function
