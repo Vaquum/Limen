@@ -213,7 +213,7 @@
 # v1.13.0 on 14th of August 2025
 - Improve data plumbing in `uel.run`
 - Add `loop.backtest` sub-module
-- Move `loop.backtest` to `loop.backtest.bactest_sequential`
+- Move `loop.backtest` to `loop.backtest.backtest_sequential`
 - Add `loop.backtest.backtest_snapshop`
 - Add `loop.log` sub-module
 - Add `loop.log._experiment_backtest_results`

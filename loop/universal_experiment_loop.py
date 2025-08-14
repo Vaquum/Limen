@@ -71,7 +71,7 @@ class UniversalExperimentLoop:
         self.models = []
         self.preds = []
         self.scalers = []
-        self._alignement = []
+        self._alignment = []
         
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
@@ -123,7 +123,7 @@ class UniversalExperimentLoop:
                 round_params.pop('_experiment_details')
 
             # Add alignement details
-            self._alignement.append(data_dict['_alignement'])
+            self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():

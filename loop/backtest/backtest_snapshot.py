@@ -27,19 +27,19 @@ def backtest_snapshot(df: pd.DataFrame,
 
     Returns a one-row DataFrame with columns (in order):
       [
-        "trade_win_rate_pct",
-        "trade_expectancy_pct",
-        "max_drawdown_pct",
-        "total_return_gross_pct",
-        "total_return_net_pct",
-        "trade_return_mean_pct",
-        "trade_return_mean_win_pct",
-        "trade_return_mean_loss_pct",
-        "bars_total",
-        "sharpe_per_bar",
-        "bars_in_market_pct",
-        "trades_count",
-        "cost_round_trip_bps",
+        'trade_win_rate_pct',
+        'trade_expectancy_pct',
+        'max_drawdown_pct',
+        'total_return_gross_pct',
+        'total_return_net_pct',
+        'trade_return_mean_pct',
+        'trade_return_mean_win_pct',
+        'trade_return_mean_loss_pct',
+        'bars_total',
+        'sharpe_per_bar',
+        'bars_in_market_pct',
+        'trades_count',
+        'cost_round_trip_bps',
       ]
     '''
     
@@ -103,18 +103,18 @@ def backtest_snapshot(df: pd.DataFrame,
     sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
 
     data = pd.DataFrame.from_records([{
-        "trade_win_rate_pct": round(trade_win_rate_pct, 1),
-        "trade_expectancy_pct": round(trade_expectancy_pct, 3),
-        "max_drawdown_pct": round(max_drawdown_pct, 1),
-        "total_return_gross_pct": round(total_return_gross_pct, 1),
-        "total_return_net_pct": round(total_return_net_pct, 1),
-        "trade_return_mean_win_pct": round(trade_return_mean_win_pct, 1),
-        "trade_return_mean_loss_pct": round(trade_return_mean_loss_pct, 1),
-        "bars_total": int(bars_total),
-        "sharpe_per_bar": round(sharpe_per_bar, 2),
-        "bars_in_market_pct": round(bars_in_market_pct, 1),
-        "trades_count": int(trades_count),
-        "cost_round_trip_bps": int(round(2 * (fee_bps + slip_bps))),
+        'trade_win_rate_pct': round(trade_win_rate_pct, 1),
+        'trade_expectancy_pct': round(trade_expectancy_pct, 3),
+        'max_drawdown_pct': round(max_drawdown_pct, 1),
+        'total_return_gross_pct': round(total_return_gross_pct, 1),
+        'total_return_net_pct': round(total_return_net_pct, 1),
+        'trade_return_mean_win_pct': round(trade_return_mean_win_pct, 1),
+        'trade_return_mean_loss_pct': round(trade_return_mean_loss_pct, 1),
+        'bars_total': int(bars_total),
+        'sharpe_per_bar': round(sharpe_per_bar, 2),
+        'bars_in_market_pct': round(bars_in_market_pct, 1),
+        'trades_count': int(trades_count),
+        'cost_round_trip_bps': int(round(2 * (fee_bps + slip_bps))),
     }])
 
     return data

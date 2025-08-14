@@ -103,10 +103,10 @@ def split_data_to_prep_output(split_data: list,
                  'x_test': split_data[2][cols[:-1]],
                  'y_test': split_data[2][cols[-1]]}
 
-    data_dict['_alignement'] = {}
+    data_dict['_alignment'] = {}
     
-    data_dict['_alignement']['missing_datetimes'] = sorted(set(all_datetimes) - set(remaining_datetimes))
-    data_dict['_alignement']['first_test_datetime'] = first_test_datetime
-    data_dict['_alignement']['last_test_datetime'] = last_test_datetime
+    data_dict['_alignment']['missing_datetimes'] = sorted(set(all_datetimes) - set(remaining_datetimes))
+    data_dict['_alignment']['first_test_datetime'] = first_test_datetime
+    data_dict['_alignment']['last_test_datetime'] = last_test_datetime
     
     return data_dict

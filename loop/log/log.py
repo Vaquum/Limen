@@ -39,7 +39,7 @@ class Log:
             self.scalers = uel_object.scalers
             self.round_params = uel_object.round_params
             self.preds = uel_object.preds
-            self._alignement = uel_object._alignement
+            self._alignment = uel_object._alignment
 
         elif file_path is not None:
             self.log_df = self._read_from_file(file_path)
@@ -73,9 +73,9 @@ class Log:
             pl.DataFrame: Klines dataset filtered down to the permutation test window
         '''
 
-        missing_datetimes = self._alignement[round_id]['missing_datetimes']
-        first_test_datetime = self._alignement[round_id]['first_test_datetime']
-        last_test_datetime = self._alignement[round_id]['last_test_datetime']
+        missing_datetimes = self._alignment[round_id]['missing_datetimes']
+        first_test_datetime = self._alignment[round_id]['first_test_datetime']
+        last_test_datetime = self._alignment[round_id]['last_test_datetime']
     
         return (
             self.data
