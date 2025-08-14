@@ -160,8 +160,7 @@ def model_with_ma_correction(data, round_params):
         long_window=15,
         correction_factor=0.3,  # Lighter correction for testing
         trend_threshold=0.1,    # More sensitive trend detection
-        residual_window=25,     # Smaller residual window
-        verbose=False
+        residual_window=25     # Smaller residual window
     )
 
 if __name__ == "__main__":
