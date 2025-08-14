@@ -5,10 +5,7 @@ def macd(data: pl.DataFrame,
          close_col: str = 'close',
          fast_period: int = 12,
          slow_period: int = 26,
-         signal_period: int = 9,
-         name: str = 'macd',
-         signal_name: str = 'macd_signal',
-         hist_name: str = 'macd_hist') -> pl.DataFrame:
+         signal_period: int = 9) -> pl.DataFrame:
     
     '''
     Compute MACD (Moving Average Convergence Divergence) indicator.
@@ -19,12 +16,9 @@ def macd(data: pl.DataFrame,
         fast_period (int): Period for fast EMA calculation
         slow_period (int): Period for slow EMA calculation
         signal_period (int): Period for signal line EMA calculation
-        name (str): Alias name for the MACD output column
-        signal_name (str): Alias name for the MACD signal output column
-        hist_name (str): Alias name for the MACD histogram output column
 
     Returns:
-        pl.DataFrame: The input data with three columns: '{name}', '{signal_name}', '{hist_name}'
+        pl.DataFrame: The input data with three columns: 'macd_{fast_period}_{slow_period}', 'macd_signal_{signal_period}', 'macd_hist'
     '''
 
     alpha_fast = 2.0 / (fast_period + 1)
@@ -43,16 +37,16 @@ def macd(data: pl.DataFrame,
         ])
         .with_columns([
             (pl.col('__ema_fast') - pl.col('__ema_slow'))
-              .alias(name)
+              .alias(f"macd_{fast_period}_{slow_period}")
         ])
         .with_columns([
-            pl.col(name)
+            pl.col(f"macd_{fast_period}_{slow_period}")
               .ewm_mean(alpha=alpha_signal, adjust=False)
-              .alias(signal_name)
+              .alias(f"macd_signal_{signal_period}")
         ])
         .with_columns([
-            (pl.col(name) - pl.col(signal_name))
-              .alias(hist_name)
+            (pl.col(f"macd_{fast_period}_{slow_period}") - pl.col(f"macd_signal_{signal_period}"))
+              .alias('macd_hist')
         ])
         .drop(['__ema_fast', '__ema_slow'])
     )

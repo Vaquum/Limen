@@ -2,8 +2,7 @@ import polars as pl
 
 
 def wilder_rsi(data: pl.DataFrame, 
-               period: int = 14,
-               name: str = 'wilder_rsi') -> pl.DataFrame:
+               period: int = 14) -> pl.DataFrame:
     
     '''
     Compute Wilder's RSI using exponential smoothing method.
@@ -14,7 +13,7 @@ def wilder_rsi(data: pl.DataFrame,
         name (str): Alias name for the Wilder's RSI output column
 
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'wilder_rsi_{period}'
     '''
     
     return (
@@ -31,7 +30,7 @@ def wilder_rsi(data: pl.DataFrame,
             pl.col('loss').ewm_mean(alpha=1/period, adjust=False).alias('avg_loss'),
         ])
         .with_columns([
-            (100 - 100 / (1 + pl.col('avg_gain') / pl.col('avg_loss'))).alias(name)
+            (100 - 100 / (1 + pl.col('avg_gain') / pl.col('avg_loss'))).alias(f"wilder_rsi_{period}")
         ])
         .drop(['delta', 'gain', 'loss', 'avg_gain', 'avg_loss'])
     )

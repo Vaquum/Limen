@@ -222,7 +222,7 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     # Returns over different periods
     logging.debug("  Computing returns over multiple periods...")
     for period in [1, 6, 12, 24, 48]:
-        df = price_change_pct(df, period, name=f"price_change_pct_{period}")
+        df = price_change_pct(df, period)
         # Rename to expected format
         df = df.rename({f'price_change_pct_{period}': f'ret_{period}h'})
     
@@ -255,7 +255,7 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     
     # Use rolling_volatility indicator
     for period in [6, 24]:
-        df = rolling_volatility(df, 'returns_temp', period, name=f"returns_temp_volatility_{period}")
+        df = rolling_volatility(df, 'returns_temp', period)
         df = df.rename({f'returns_temp_volatility_{period}': f'vol_{period}h'})
     
     # Volume expansion (capped to avoid extreme values)

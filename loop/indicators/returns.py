@@ -1,8 +1,7 @@
 import polars as pl
 
 
-def returns(data: pl.DataFrame,
-            name: str = 'returns') -> pl.DataFrame:
+def returns(data: pl.DataFrame) -> pl.DataFrame:
     
     '''
     Compute period-over-period returns of close prices.
@@ -12,7 +11,7 @@ def returns(data: pl.DataFrame,
         name (str): Alias name for the returns output column
 
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'returns'
     '''
 
-    return data.with_columns(pl.col('close').pct_change().alias(name))
+    return data.with_columns(pl.col('close').pct_change().alias('returns'))

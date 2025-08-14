@@ -3,8 +3,7 @@ import polars as pl
 
 def sma(data: pl.DataFrame, 
         column: str, 
-        period: int,
-        name: str = 'sma') -> pl.DataFrame:
+        period: int) -> pl.DataFrame:
     
     '''
     Compute Simple Moving Average (SMA) indicator.
@@ -16,9 +15,9 @@ def sma(data: pl.DataFrame,
         name (str): Alias name for the SMA output column
         
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'sma_{period}'
     '''
     
     return data.with_columns([
-        pl.col(column).rolling_mean(window_size=period).alias(name)
+        pl.col(column).rolling_mean(window_size=period).alias(f"sma_{period}")
     ])

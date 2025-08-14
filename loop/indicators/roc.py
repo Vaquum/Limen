@@ -2,8 +2,7 @@ import polars as pl
 
 def roc(data: pl.DataFrame,
         col: str = 'close',
-        period: int = 12,
-        name: str = 'roc') -> pl.DataFrame:
+        period: int = 12) -> pl.DataFrame:
     
     '''
     Compute Rate of Change (ROC) indicator as percentage change.
@@ -15,10 +14,10 @@ def roc(data: pl.DataFrame,
         name (str): Alias name for the ROC output column
 
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'roc_{period}'
     '''
     
     prior = pl.col(col).shift(period)
-    roc_expr = ((pl.col(col) - prior) / prior * 100).alias(name)
+    roc_expr = ((pl.col(col) - prior) / prior * 100).alias(f"roc_{period}")
 
     return data.with_columns([roc_expr])

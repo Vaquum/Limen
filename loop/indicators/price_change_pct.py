@@ -2,8 +2,7 @@ import polars as pl
 
 
 def price_change_pct(data: pl.DataFrame, 
-                     period: int = 1,
-                     name: str = 'price_change_pct') -> pl.DataFrame:
+                     period: int = 1) -> pl.DataFrame:
     
     '''
     Compute price change percentage over a specific period.
@@ -14,12 +13,12 @@ def price_change_pct(data: pl.DataFrame,
         name (str): Alias name for the price change percentage output column
 
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'price_change_pct_{period}'
     '''
 
     return data.with_columns([
         (
             (pl.col('close') - pl.col('close').shift(period)) /
             pl.col('close').shift(period) * 100
-        ).alias(name)
+        ).alias(f"price_change_pct_{period}")
     ])

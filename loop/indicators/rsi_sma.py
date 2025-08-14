@@ -2,8 +2,7 @@ import polars as pl
 
 
 def rsi_sma(data: pl.DataFrame, 
-            period: int = 14,
-            name = 'rsi_sma') -> pl.DataFrame:
+            period: int = 14) -> pl.DataFrame:
     
     '''
     Compute RSI using Simple Moving Average smoothing (not Wilder's method).
@@ -16,7 +15,7 @@ def rsi_sma(data: pl.DataFrame,
         name (str): Alias name for the SMA's RSI output column
         
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'rsi_sma_{period}'
     '''
     
     return (
@@ -33,7 +32,7 @@ def rsi_sma(data: pl.DataFrame,
             pl.col('loss').rolling_mean(window_size=period).alias('avg_loss'),
         ])
         .with_columns([
-            (100 - (100 / (1 + pl.col('avg_gain') / (pl.col('avg_loss') + 1e-10)))).alias(name)
+            (100 - (100 / (1 + pl.col('avg_gain') / (pl.col('avg_loss') + 1e-10)))).alias(f"rsi_sma_{period}")
         ])
         .drop(['delta', 'gain', 'loss', 'avg_gain', 'avg_loss'])
     )

@@ -4,8 +4,7 @@ def atr(data: pl.DataFrame,
         high_col: str = 'high',
         low_col: str = 'low',
         close_col: str = 'close',
-        period: int = 14,
-        name: str = 'atr') -> pl.DataFrame:
+        period: int = 14) -> pl.DataFrame:
     
     '''
     Compute Average True Range (ATR) using Wilder's smoothing method.
@@ -16,10 +15,9 @@ def atr(data: pl.DataFrame,
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
         period (int): Number of periods for ATR calculation
-        name (str): Alias name for the ATR output column
 
     Returns:
-        pl.DataFrame: The input data with a new column '{name}'
+        pl.DataFrame: The input data with a new column 'atr_{period}'
     '''
     
     prev_close = pl.col(close_col).shift(1)
@@ -32,5 +30,5 @@ def atr(data: pl.DataFrame,
     return data.with_columns([
         true_range
             .ewm_mean(alpha=1.0 / period, adjust=False)
-            .alias(name)
+            .alias(f"atr_{period}")
     ])
