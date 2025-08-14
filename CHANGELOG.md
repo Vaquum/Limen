@@ -209,3 +209,9 @@
 # v1.12.0 on 13th of August 2025
 - Add `maker_volume` and `maker_liquidity` columns to `get_klines_data` output
 - Add/Update test and doc for the above
+
+# v1.12.1 on 14th of August 2025
+- Standardize `loop.indicators` inputs and outputs
+- Fix `loop.indicators.price_change_pct` calculation
+- Format code style for `loop.indicators`
+- Update docs for `loop.indicators`
