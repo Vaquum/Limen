@@ -11,7 +11,6 @@ def rolling_volatility(data: pl.DataFrame,
         data (pl.DataFrame): Klines dataset with price/returns column
         column (str): Column name to calculate volatility on (typically returns)
         window (int): Number of periods for rolling window calculation
-        name (str): Alias name for the rolling volatility output column
 
     Returns:
         pl.DataFrame: The input data with a new column '{column}_volatility_{window}'

@@ -52,11 +52,10 @@ Compute Average True Range (ATR) using Wilder's smoothing method.
 | `low_col`   | `str`           | Column name for low prices                       |
 | `close_col` | `str`           | Column name for close prices                     |
 | `period`    | `int`           | Number of periods for ATR calculation           |
-| `name`      | `str`           | Alias name for the ATR output column           |
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'atr_{period}'
 
 ### `body_pct`
 
@@ -67,11 +66,10 @@ Compute the body percentage (candle body size relative to open).
 | Parameter | Type            | Description                                      |
 |-----------|-----------------|--------------------------------------------------|
 | `data`    | `pl.DataFrame`  | Klines dataset with 'open' and 'close' columns  |
-| `name`    | `str`  | Alias name for the body percentage output column  |
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'body_pct'
 
 ### `macd`
 
@@ -86,13 +84,10 @@ Compute MACD (Moving Average Convergence Divergence) indicator.
 | `fast_period`   | `int`           | Period for fast EMA calculation                      |
 | `slow_period`   | `int`           | Period for slow EMA calculation                      |
 | `signal_period` | `int`           | Period for signal line EMA calculation               |
-| `name` | `str`           | Alias name for the MACD output column               |
-| `signal_name` | `str`           | Alias name for the MACD signal output column               |
-| `hist_name` | `str`           | Alias name for the MACD histogram output column               |
 
 #### Returns
 
-`pl.DataFrame`: The input data with three columns: '{name}', '{signal_name}', '{hist_name}'
+`pl.DataFrame`: The input data with three columns: 'macd_{fast_period}_{slow_period}', 'macd_signal_{signal_period}', 'macd_hist'
 
 ### `ppo`
 
@@ -107,13 +102,10 @@ Compute Percentage Price Oscillator (PPO) indicator.
 | `fast_period` | `int`           | Period for short EMA calculation                 |
 | `slow_period`  | `int`           | Period for long EMA calculation                  |
 | `signal_period` | `int`           | Period for signal line EMA calculation               |
-| `name` | `str`           | Alias name for the PPO output column               |
-| `signal_name` | `str`           | Alias name for the PPO signal output column               |
-| `hist_name` | `str`           | Alias name for the PPO histogram output column               |
 
 #### Returns
 
-`pl.DataFrame`: The input data with three columns: '{name}', '{signal_name}', '{hist_name}'
+`pl.DataFrame`: The input data with three columns: 'ppo_{fast_period}_{slow_period}', 'ppo_signal_{signal_period}', 'ppo_hist'
 
 ### `price_change_pct`
 
@@ -125,11 +117,10 @@ Compute price change percentage over a specific period.
 |-----------|-----------------|----------------------------------------|
 | `data`    | `pl.DataFrame`  | Klines dataset with 'close' column    |
 | `period`  | `int`           | Number of periods to look back         |
-| `name`    | `str`           | Alias name for the price change percentage output column    
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'price_change_pct_{period}'
 
 ### `returns`
 
@@ -140,11 +131,10 @@ Compute period-over-period returns of close prices.
 | Parameter | Type            | Description                            |
 |-----------|-----------------|----------------------------------------|
 | `data`    | `pl.DataFrame`  | Klines dataset with 'close' column    |
-| `name`    | `str`           | Alias name for the returns output column   
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'returns'
 
 ### `roc`
 
@@ -157,11 +147,10 @@ Compute Rate of Change (ROC) indicator as percentage change.
 | `data`    | `pl.DataFrame`  | Klines dataset with price column                 |
 | `col`     | `str`           | Column name for price data                       |
 | `period`  | `int`           | Number of periods for ROC calculation           |
-| `name`    | `str`           | Alias name for the ROC output column  
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'roc_{period}'
 
 ### `rolling_volatility`
 
@@ -174,11 +163,10 @@ Compute rolling volatility (standard deviation) over a specified period.
 | `data`    | `pl.DataFrame`  | Klines dataset with price/returns column             |
 | `column`  | `str`           | Column name to calculate volatility on (typically returns) |
 | `window`  | `int`           | Number of periods for rolling window calculation     |
-| `name`    | `str`           | Alias name for the rolling volatility output column  
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column '{column}\_volatility_{window}'
 
 ### `rsi_sma`
 
@@ -192,11 +180,10 @@ NOTE: Different from wilder_rsi which uses exponential smoothing.
 |-----------|-----------------|--------------------------------------------------|
 | `data`    | `pl.DataFrame`  | Klines dataset with 'close' column              |
 | `period`  | `int`           | Number of periods for RSI calculation           |
-| `name`    | `str`           | Alias name for the SMA's RSI output column  
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'rsi_sma_{period}'
 
 ### `sma`
 
@@ -209,11 +196,10 @@ Compute Simple Moving Average (SMA) indicator.
 | `data`    | `pl.DataFrame`  | Klines dataset with price column       |
 | `column`  | `str`           | Column name to calculate SMA on        |
 | `period`  | `int`           | Number of periods for SMA calculation  |
-| `name`    | `str`           | Alias name for the SMA output column
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column '{column}_sma_{period}'
 
 ### `wilder_rsi`
 
@@ -225,11 +211,10 @@ Compute Wilder's RSI using exponential smoothing method.
 |-----------|-----------------|--------------------------------------------------|
 | `data`    | `pl.DataFrame`  | Klines dataset with 'close' column              |
 | `period`  | `int`           | Number of periods for RSI calculation           |
-| `name`    | `str`           | Alias name for the Wilder's RSI output column
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{name}'
+`pl.DataFrame`: The input data with a new column 'wilder_rsi_{period}'
 
 ---
 

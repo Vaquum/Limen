@@ -11,7 +11,6 @@ def roc(data: pl.DataFrame,
         data (pl.DataFrame): Klines dataset with price column
         col (str): Column name for price data
         period (int): Number of periods for ROC calculation
-        name (str): Alias name for the ROC output column
 
     Returns:
         pl.DataFrame: The input data with a new column 'roc_{period}'

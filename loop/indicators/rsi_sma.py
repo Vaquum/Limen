@@ -12,7 +12,6 @@ def rsi_sma(data: pl.DataFrame,
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of periods for RSI calculation
-        name (str): Alias name for the SMA's RSI output column
         
     Returns:
         pl.DataFrame: The input data with a new column 'rsi_sma_{period}'

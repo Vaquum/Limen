@@ -10,7 +10,6 @@ def wilder_rsi(data: pl.DataFrame,
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of periods for RSI calculation
-        name (str): Alias name for the Wilder's RSI output column
 
     Returns:
         pl.DataFrame: The input data with a new column 'wilder_rsi_{period}'

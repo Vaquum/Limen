@@ -10,7 +10,6 @@ def price_change_pct(data: pl.DataFrame,
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of periods to look back
-        name (str): Alias name for the price change percentage output column
 
     Returns:
         pl.DataFrame: The input data with a new column 'price_change_pct_{period}'

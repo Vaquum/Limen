@@ -8,7 +8,6 @@ def returns(data: pl.DataFrame) -> pl.DataFrame:
     
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
-        name (str): Alias name for the returns output column
 
     Returns:
         pl.DataFrame: The input data with a new column 'returns'

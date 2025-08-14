@@ -8,7 +8,6 @@ def body_pct(data: pl.DataFrame) -> pl.DataFrame:
     
     Args:
         data (pl.DataFrame): Klines dataset with 'open' and 'close' columns
-        name (str): Alias name for the body percentage output column
 
     Returns:
         pl.DataFrame: The input data with a new column 'body_pct'
