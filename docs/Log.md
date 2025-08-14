@@ -10,10 +10,10 @@ Create Log object state from a UEL object or a log file.
 
 | Parameter             | Type          | Description                           |
 |-----------------------|---------------|---------------------------------------|
-| `uel_object`          | `object, optional`   | Source UEL object                      |
-| `file_path`           | `str, optional`      | Path to the log file                   |
-| `inverse_scaler`      | `Callable, optional` | Inverse scaler function                |
-| `cols_to_multilabel`  | `list[str], optional`| Columns to convert to multilabel       |
+| `uel_object`          | `object | None`      | Source UEL object                      |
+| `file_path`           | `str | None`         | Path to the log file                   |
+| `inverse_scaler`      | `Callable | None`    | Inverse scaler function                |
+| `cols_to_multilabel`  | `list[str] | None`   | Columns to convert to multilabel       |
 
 ### `experiment_backtest_results`
 
@@ -46,7 +46,7 @@ Compute backtest performance metrics for each round of an experiment. It shows h
 
 ### `experiment_confusion_metrics`
 
-Compute confusion metrics for each round of an experiment. One way to think about it is that it tells you if your LONG calls are mostly right (precision), if you catch most of the real LONG cases (recall), how common LONG is, and whether the “wins” (TP) actually look better on your chosen metric x than the “fake wins” (FP). If TP and FP are well separated on x (big Cohen’s d / KS), your LONG signal is not just correct more often—it’s also meaningfully profitable/powerful on the thing you care about.
+Compute confusion metrics for each round of an experiment. One way to think about it is that it tells you if your LONG calls are mostly right (precision), if you catch most of the real LONG cases (recall), how common LONG is, and whether the "wins" (TP) actually look better on your chosen metric x than the "fake wins" (FP). If TP and FP are well separated on x (big Cohen’s d / KS), your LONG signal is not just correct more often—it’s also meaningfully profitable/powerful on the thing you care about.
 
 #### Args
 
@@ -83,7 +83,7 @@ NOTE: Additional identifier columns from round parameters may be included.
 
 ### `experiment_feature_correlation`
 
-Compute robust correlations between numeric features and a target metric across explicit cohorts. It measures how strongly each feature moves with your chosen metric (e.g., auc) within specific slices of the data, using bootstrapping to give stable estimates and confidence intervals. It helps identify features that consistently align with high or low metric values, and how stable those relationships are across the data distribution.
+Compute robust correlations between numeric features and a target metric across explicit cohorts. It measures how strongly each feature moves with your chosen metric (e.g., `auc`) within specific slices of the data, using bootstrapping to give stable estimates and confidence intervals. It helps identify features that consistently align with high or low metric values, and how stable those relationships are across the data distribution.
 
 #### Args
 
@@ -115,7 +115,7 @@ NOTE: Non-numeric columns are coerced with errors='coerce' and ignored thereafte
 
 ### `permutation_confusion_metrics`
 
-Compute confusion metrics for a single round of an experiment. One way to think about it is that it tells you if your LONG calls are mostly right (precision), if you catch most of the real LONG cases (recall), how common LONG is, and whether the “wins” (TP) actually look better on your chosen metric x than the “fake wins” (FP). If TP and FP are well separated on x (big Cohen’s d / KS), your LONG signal is not just correct more often—it’s also meaningfully profitable/powerful on the thing you care about.
+Compute confusion metrics for a single round of an experiment. One way to think about it is that it tells you if your LONG calls are mostly right (precision), if you catch most of the real LONG cases (recall), how common LONG is, and whether the "wins" (TP) actually look better on your chosen metric x than the "fake wins" (FP). If TP and FP are well separated on x (big Cohen’s d / KS), your LONG signal is not just correct more often—it’s also meaningfully profitable/powerful on the thing you care about.
 
 #### Args
 
@@ -172,8 +172,8 @@ Create a table of model predictions, actual outcomes, and basic price movement s
 |----------------|----------|-------------------------------------------|
 | `predictions`  | int64    | Binary model prediction                   |
 | `actuals`      | int64    | Binary ground truth                       |
-| `hit`          | bool     | 1 if prediction equals actual             |
-| `miss`         | bool     | 1 if prediction differs from actual       |
+| `hit`          | bool     | True if prediction equals actual          |
+| `miss`         | bool     | True if prediction differs from actual    |
 | `open`         | float64  | Open price for the bar                    |
 | `close`        | float64  | Close price for the bar                   |
 | `price_change` | float64  | `close - open`                            |
