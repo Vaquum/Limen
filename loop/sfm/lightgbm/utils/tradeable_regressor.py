@@ -18,14 +18,14 @@ VOL_REGIME_MID_VALUE = 50
 
 def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Calculate volatility regime for each row based on rolling volatility percentiles.
+    Compute volatility regime for each row based on rolling volatility percentiles.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
+        df (pl.DataFrame): Klines dataset with 'close' column
         config (dict): Configuration dictionary with volatility regime parameters
     
     Returns:
-        pl.DataFrame: DataFrame with volatility regime columns added
+        pl.DataFrame: The input data with new columns 'vol_60h', 'vol_percentile', 'volatility_regime', 'regime_low', 'regime_normal', 'regime_high'
     '''
     
     lookback = config['vol_regime_lookback']
@@ -79,14 +79,14 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
 
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     '''
-    Calculate market regime indicators including trend strength and volume regime.
+    Compute market regime indicators including trend strength and volume regime.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
-        lookback (int): Lookback period for calculations, default 48
+        df (pl.DataFrame): Klines dataset with 'close', 'volume' columns
+        lookback (int): Lookback period for calculations
     
     Returns:
-        pl.DataFrame: DataFrame with market regime indicators added
+        pl.DataFrame: The input data with new columns 'sma_20', 'sma_50', 'trend_strength', 'volatility_ratio', 'volume_sma', 'volume_regime', 'market_favorable'
     '''
     
     df = sma(df, 'close', 20)
@@ -122,14 +122,14 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
 
 def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Calculate dynamic targets and stop losses based on market volatility conditions.
+    Compute dynamic targets and stop losses based on market volatility conditions.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         config (dict): Configuration dictionary with dynamic parameter settings
     
     Returns:
-        pl.DataFrame: DataFrame with dynamic target and stop loss columns added
+        pl.DataFrame: The input data with new columns 'rolling_volatility', 'atr', 'atr_pct', 'dynamic_target', 'dynamic_stop_loss'
     '''
     
     df = df.with_columns([
@@ -198,14 +198,14 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
 
 def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Calculate microstructure features for better entry timing including position in candle and volume spikes.
+    Compute microstructure features for better entry timing including position in candle and volume spikes.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close', 'volume' columns
         config (dict): Configuration dictionary with microstructure settings
     
     Returns:
-        pl.DataFrame: DataFrame with microstructure features added
+        pl.DataFrame: The input data with new columns 'position_in_candle', 'micro_momentum', 'volume_spike', 'spread_pct', 'entry_score'
     '''
     
     if config['microstructure_timing']:
@@ -264,14 +264,14 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
 
 def calculate_simple_momentum_confirmation(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Calculate simple momentum confirmation scores based on recent price changes.
+    Compute simple momentum confirmation scores based on recent price changes.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
+        df (pl.DataFrame): Klines dataset with 'close' column
         config (dict): Configuration dictionary with momentum settings
     
     Returns:
-        pl.DataFrame: DataFrame with momentum confirmation scores added
+        pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
     '''
     
     if config['simple_momentum_confirmation']:
@@ -388,14 +388,14 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
 
 def calculate_time_decay_factor(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Calculate time decay factor for exit reality scores based on time to exit.
+    Compute time decay factor for exit reality scores based on time to exit.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with exit reality data
+        df (pl.DataFrame): Klines dataset with 'exit_bars' column
         config (dict): Configuration dictionary with time decay settings
     
     Returns:
-        pl.DataFrame: DataFrame with time decay factors added
+        pl.DataFrame: The input data with new column 'time_decay_factor'
     '''
     
     halflife_bars = config['time_decay_halflife'] / 5
@@ -411,10 +411,10 @@ def calculate_time_decay_factor(df: pl.DataFrame, config: dict) -> pl.DataFrame:
 
 def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Create comprehensive tradeable labels combining exit reality, time decay, and market conditions.
+    Compute comprehensive tradeable labels combining exit reality, time decay, and market conditions.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with all required features
+        df (pl.DataFrame): Klines dataset with required feature columns
         config (dict): Configuration dictionary with labeling settings
     
     Returns:
@@ -535,15 +535,15 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
 
 def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = None) -> pl.DataFrame:
     '''
-    Prepare comprehensive feature set for 5-minute trading including momentum, volatility, and volume features.
+    Compute comprehensive feature set for 5-minute trading including momentum, volatility, and volume features.
     
     Args:
-        df (pl.DataFrame): Input DataFrame with OHLCV data
-        lookback (int): Lookback period for feature calculations, default 48
-        config (dict): Optional configuration dictionary, uses defaults if None
+        df (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
+        lookback (int): Lookback period for feature calculations
+        config (dict): Optional configuration dictionary
     
     Returns:
-        pl.DataFrame: DataFrame with complete feature set for trading models
+        pl.DataFrame: The input data with complete feature set for trading models
     '''
     
     df = df.with_columns([

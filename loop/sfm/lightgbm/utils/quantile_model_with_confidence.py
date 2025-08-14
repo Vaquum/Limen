@@ -9,22 +9,16 @@ def quantile_model_with_confidence(data, round_params,
                                  quantiles=[0.1, 0.5, 0.9],
                                  confidence_threshold=8.0):
     '''
-    Train quantile models for prediction intervals with confidence filtering.
+    Compute quantile models for prediction intervals with confidence filtering.
     
-    Parameters:
-    -----------
-    data : dict
-        UEL data dict with 'dtrain', 'dval', 'x_test', 'y_test'
-    round_params : dict
-        Base parameters for LightGBM
-    quantiles : list
-        Quantiles to train models for
-    confidence_threshold : float
-        Threshold for interval width filtering
+    Args:
+        data (dict): UEL data dict with 'dtrain', 'dval', 'x_test', 'y_test' keys
+        round_params (dict): Base parameters for LightGBM
+        quantiles (list): Quantiles to train models for
+        confidence_threshold (float): Threshold for interval width filtering
     
     Returns:
-    --------
-    dict : UEL-compatible results dict
+        dict: UEL-compatible results dict with quantile predictions
     '''
     models = {}
     
