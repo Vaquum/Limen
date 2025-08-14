@@ -17,8 +17,8 @@ from datetime import timedelta
 
 # Import parts of our own libraries (leave empty line above)
 from loop.utils.splits import split_sequential, split_data_to_prep_output
-from loop.sfm.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
-from loop.sfm.lightgbm.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
+from loop.sfm.logreg.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
+from loop.sfm.logreg.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.metrics.multiclass_metrics import multiclass_metrics
 
