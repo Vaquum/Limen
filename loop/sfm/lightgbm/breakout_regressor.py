@@ -35,12 +35,6 @@ TARGET = BREAKOUT_LONG_COL
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 def params():
-    '''
-    Compute hyperparameter space for LightGBM breakout regressor optimization.
-    
-    Returns:
-        dict: Dictionary containing parameter ranges for hyperparameter tuning
-    '''
     p = {
         'objective': ['regression'],
         'metric': ['mae'],
@@ -63,18 +57,8 @@ def params():
 
 
 def prep(data):
-    '''
-    Compute data for breakout regressor training by building features and splitting data.
-    
-    Args:
-        data (pl.DataFrame): Trades dataset with 'datetime', 'volume', 'liquidity_sum' columns
-        
-    Returns:
-        dict: The input data with train/val/test splits and LightGBM datasets
-    '''
 
     all_datetimes = data['datetime'].to_list()
-
     df = build_sample_dataset_for_breakout_regressor(
         data,
         datetime_col=DATETIME_COL,
@@ -127,16 +111,6 @@ def prep(data):
 
 
 def model(data, round_params):
-    '''
-    Compute LightGBM breakout regressor model with early stopping and validation.
-    
-    Args:
-        data (dict): Prepared data dictionary from prep() function
-        round_params (dict): LightGBM parameters for training
-        
-    Returns:
-        dict: Model results with continuous metrics
-    '''
     round_params = round_params.copy()
     round_params.update({
         'verbose': -1,

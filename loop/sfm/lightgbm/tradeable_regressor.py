@@ -68,12 +68,6 @@ CONFIG = {
 }
 
 def params():
-    '''
-    Compute parameter space for LightGBM tradeable regressor model.
-    
-    Returns:
-        dict: Dictionary containing parameter ranges and values for hyperparameter optimization
-    '''
     p = {
         'objective': ['regression'],
         'metric': ['rmse'],
@@ -92,16 +86,6 @@ def params():
 
 
 def prep(data, round_params=None):
-    '''
-    Compute data for tradeable regressor training by processing through complete feature pipeline.
-    
-    Args:
-        data (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
-        round_params (dict, optional): Round-specific parameters
-    
-    Returns:
-        dict: Processed data dictionary with train/val/test splits and LightGBM datasets
-    '''
 
     all_datetimes = data['datetime'].to_list()
     
@@ -197,16 +181,6 @@ def prep(data, round_params=None):
 
 
 def model(data, round_params):
-    '''
-    Compute LightGBM models with regime-specific training and comprehensive sample weighting.
-    
-    Args:
-        data (dict): Prepared data dictionary from prep() function
-        round_params (dict): Model parameters including training configuration
-    
-    Returns:
-        dict: Model results containing trained models, metrics, and predictions
-    '''
     round_params = round_params.copy()
     
     train_regime_models = round_params.pop('train_regime_models', True)

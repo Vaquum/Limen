@@ -27,12 +27,6 @@ TEST_SPLIT = 0.15
 
 
 def params():
-    '''
-    Compute parameter space for Tradeline Multiclass model optimization.
-    
-    Returns:
-        dict: Dictionary containing parameter ranges for line computation, LightGBM hyperparameters, and trading thresholds
-    '''
     p = {
         'quantile_threshold': [0.60, 0.70, 0.75, 0.80, 0.85],
         'min_height_pct': [0.003],
@@ -66,16 +60,6 @@ def params():
 
 
 def prep(data, round_params=None):
-    '''
-    Compute data for Tradeline Multiclass model.
-    
-    Args:
-        data (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume', 'datetime' columns
-        round_params (dict, optional): Dictionary of parameters for line computation and feature engineering
-        
-    Returns:
-        dict: The input data with prepared training, validation, and test datasets, features, and labels
-    '''
 
     all_datetimes = data['datetime'].to_list()
     
@@ -187,16 +171,6 @@ def prep(data, round_params=None):
 
 
 def model(data, round_params):
-    '''
-    Compute Tradeline Multiclass model with LightGBM and optional calibration.
-    
-    Args:
-        data (dict): Prepared data dictionary from prep() function
-        round_params (dict): LightGBM parameters for training
-        
-    Returns:
-        dict: UEL-compatible results with multiclass metrics, models, and extras
-    '''
     use_calibration = round_params.get('use_calibration', True)
     calibration_method = round_params.get('calibration_method', 'isotonic')
     calibration_cv = round_params.get('calibration_cv', 3)
