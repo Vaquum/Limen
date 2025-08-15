@@ -4,7 +4,7 @@ from sklearn.linear_model import Ridge
 from datetime import timedelta
 
 from loop.utils.splits import split_sequential, split_data_to_prep_output
-from loop.sfm.lightgbm.utils import build_sample_dataset_for_breakout_regressor
+from loop.sfm.logreg.utils import build_sample_dataset_for_breakout_regressor
 from loop.features.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.metrics.continuous_metrics import continuous_metrics
