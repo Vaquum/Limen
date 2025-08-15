@@ -42,7 +42,7 @@ class Log:
             self._alignment = uel_object._alignment
 
         elif file_path is not None:
-            self.experiment_log = self._read_from_file(file_path)
+            self.experiment_log = self.read_from_file(file_path)
 
         else:
             raise ValueError("Both uel_object and file_path can't be None")

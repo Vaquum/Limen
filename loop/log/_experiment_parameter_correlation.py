@@ -44,11 +44,11 @@ def _experiment_parameter_correlation(self,
     '''
 
     if cols_to_drop is not None:
-        data_numeric = self.log_df.copy()
+        data_numeric = self.experiment_log.copy()
         data_numeric.drop(cols_to_drop, axis=1, inplace=True)
     
     else:
-        data_numeric = self.log_df.copy()
+        data_numeric = self.experiment_log.copy()
     
     if heads is None:
         heads = (0.99, 0.75, 0.5, 0.25, 0.01)
@@ -83,7 +83,7 @@ def _experiment_parameter_correlation(self,
         num_df = num_df.drop(columns=constant_cols, errors='ignore')
 
     if metric not in num_df.columns:
-        raise ValueError('After cleaning, metric is not numeric. Ensure it is numeric in self.log_df.')
+        raise ValueError('After cleaning, metric is not numeric. Ensure it is numeric in self.experiment_log.')
 
     features: List[str] = [c for c in num_df.columns if c != metric]
     if not features:
