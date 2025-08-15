@@ -15,7 +15,7 @@ import loop.log as log
 
 __all__ = [
     'Account',
-    'Backtest',
+    'BacktestSequential',
     'HistoricalData',
     'Log',
     'UniversalExperimentLoop',

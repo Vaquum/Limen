@@ -73,8 +73,8 @@ def prep(data: pl.DataFrame):
     cols = ['datetime', 'return_1', 'return_5', 'return_20',
             'volatility_20', 'price_range', 'volume_ratio',
             'maker_ratio_ma10', 'trade_intensity', 'period_return',
-            'order_flow_imbalance', 'stochastic_k', 'next_return',
-            'next_close']
+            'order_flow_imbalance', 'stochastic_k', 
+            'next_close', 'next_return',]
 
     split_data = split_sequential(data, (8, 1, 2))
     data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)

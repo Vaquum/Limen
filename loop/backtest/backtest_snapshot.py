@@ -90,7 +90,6 @@ def backtest_snapshot(df: pd.DataFrame,
         losses = tr[tr < 0]
         trade_win_rate_pct = float((wins.size / tr.size) * 100.0)
         trade_expectancy_pct = float(tr.mean() * 100.0)
-        trade_return_mean_pct = float(tr.mean() * 100.0)
         trade_return_mean_win_pct = float(wins.mean() * 100.0) if wins.size else np.nan
         trade_return_mean_loss_pct = float(losses.mean() * 100.0) if losses.size else np.nan
     else:
