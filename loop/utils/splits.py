@@ -11,7 +11,7 @@ def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> List[pl.DataF
     
     Args:
         data (pl.DataFrame): Polars DataFrame to split sequentially
-        ratios (Sequence[float]): Sequence of positive integers defining split proportions
+        ratios (Sequence[int]): Sequence of positive integers defining split proportions
         
     Returns:
         List[pl.DataFrame]: List of DataFrames partitioned sequentially without losing or duplicating rows
