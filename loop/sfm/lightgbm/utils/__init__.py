@@ -14,12 +14,6 @@ from loop.sfm.lightgbm.utils.create_megamodel_predictions import create_megamode
 from loop.sfm.lightgbm.utils.quantile_model_with_confidence import quantile_model_with_confidence
 from loop.sfm.lightgbm.utils.moving_average_correction_model import moving_average_correction_model
 
-from loop.sfm.lightgbm.utils.breakout_regressor import (
-    build_sample_dataset_for_breakout_regressor,
-    extract_xy,
-    extract_xy_polars
-)
-
 __all__ = [
     'MegaModelDataSampler',
     'run_mega_model_experiment',
@@ -30,8 +24,5 @@ __all__ = [
     'save_experiment_results',
     'create_megamodel_predictions',
     'quantile_model_with_confidence',
-    'moving_average_correction_model',
-    'build_sample_dataset_for_breakout_regressor',
-    'extract_xy',
-    'extract_xy_polars'
+    'moving_average_correction_model'
 ]
