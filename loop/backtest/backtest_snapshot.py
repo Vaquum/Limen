@@ -3,13 +3,13 @@ import pandas as pd
 
 def backtest_snapshot(df: pd.DataFrame,
                      *,
-                     pred_col: str = "predictions",
-                     open_col: str = "open",
-                     close_col: str = "close",
-                     price_change_col: str = "price_change",
+                     pred_col: str = 'predictions',
+                     open_col: str = 'open',
+                     close_col: str = 'close',
+                     price_change_col: str = 'price_change',
                      fee_bps: float = 5.0,
                      slip_bps: float = 5.0,
-                     trades_count_mode: str = "bars") -> pd.DataFrame:
+                     trades_count_mode: str = 'bars') -> pd.DataFrame:
     
     '''
     Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
@@ -44,17 +44,17 @@ def backtest_snapshot(df: pd.DataFrame,
     
     df = df.copy()
 
-    pred = pd.to_numeric(df[pred_col], errors="coerce").fillna(0).astype(int).clip(0, 1)
-    open_px = pd.to_numeric(df[open_col], errors="coerce")
-    close_px = pd.to_numeric(df[close_col], errors="coerce")
-    dpx = pd.to_numeric(df[price_change_col], errors="coerce")  # close - open
+    pred = pd.to_numeric(df[pred_col], errors='coerce').fillna(0).astype(int).clip(0, 1)
+    open_px = pd.to_numeric(df[open_col], errors='coerce')
+    close_px = pd.to_numeric(df[close_col], errors='coerce')
+    dpx = pd.to_numeric(df[price_change_col], errors='coerce')  # close - open
 
     pos = (pred == 1) & open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
 
     bars_total = int(len(df))
     bars_in_market_pct = float(pos.mean() * 100.0)
 
-    if trades_count_mode == "runs":
+    if trades_count_mode == 'runs':
         entries = pos & (~pos.shift(1, fill_value=False))
         trades_count = int(entries.sum())
     else:
