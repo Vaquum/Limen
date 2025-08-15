@@ -5,7 +5,7 @@ from loop.reports.deciles_plot import deciles_plot
 
 __all__ = [
     'deciles_plot',
-    'position_timeline',
+    'compare_prediction_with_actual',
     'quantiles',
     'confusion_matrix_plus'
 ]

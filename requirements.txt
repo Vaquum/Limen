@@ -11,3 +11,8 @@ clickhouse_connect
 lightgbm
 wrangle
 pyarrow
+numpy
+matplotlib
+seaborn
+
+    

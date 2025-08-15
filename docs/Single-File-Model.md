@@ -31,6 +31,7 @@ Takes as input data from `loop.HistoricalData.data` and `round_params` which is 
 - The input must contain at least `historical.data` but can also contain `round_params` when `uel.run(prep_each_round=True)`
 - The input data must always have `datetime` when it is ingested in `prep`
 - The column `datetime` must be in data when it is passed to `split_data_to_prep_output`, where it will be automatically removed
+- There must be no randomness; permutation parameters must govern all `prep` operations
 
 **NOTE:** If a scaler is fitted as part of `prep`, it can be added to `round_results[_scaler]` for use in subsequent folds.
 
