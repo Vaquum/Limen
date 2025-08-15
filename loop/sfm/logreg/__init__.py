@@ -2,8 +2,10 @@
 
 import loop.sfm.logreg.regime_multiclass as regime_multiclass
 import loop.sfm.logreg.breakout_regressor_ridge as breakout_regressor_ridge
+import loop.sfm.logreg.utils as utils
 
 __all__ = [
     'regime_multiclass',
-    'breakout_regressor_ridge'
+    'breakout_regressor_ridge',
+    'utils'
 ]
