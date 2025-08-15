@@ -32,6 +32,7 @@ Takes as input data from `loop.HistoricalData.data` and `round_params` which is 
 - The input data must always have `datetime` when it is ingested in `prep`
 - The column `datetime` must be in data when it is passed to `split_data_to_prep_output`, where it will be automatically removed
 - There must be no randomness; permutation parameters must govern all `prep` operations
+ - Prefer deterministic `prep` fully governed by `round_params`. If randomness is required (e.g., sampling), fix seeds so that per-round reconstruction in `Log` remains aligned with stored predictions.
 
 **NOTE:** If a scaler is fitted as part of `prep`, it can be added to `round_results[_scaler]` for use in subsequent folds.
 
@@ -46,7 +47,7 @@ Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_p
 - The input must accept at least `data` and optionally also `round_params`
 - The output must come from one of `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` in `loop.metrics`.
 
-**NOTE**: Additional metrics must be added to `round_result['extras']` for those additional metrics to end up in `uel.log_df`. 
+**NOTE**: Any scalar metrics you want recorded into the experiment log must be included directly in `round_results` (returned by the metrics helpers). Use `round_results['extras']` only for complex objects (models, arrays, DataFrames) that should not be flattened into the log. To persist test-set predictions for post-run analysis, set `round_results['_preds'] = ...` (UEL will collect these into `uel.preds`).
 
 # Appendix
 

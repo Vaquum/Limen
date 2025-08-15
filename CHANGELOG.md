@@ -214,11 +214,11 @@
 - Improve data plumbing in `uel.run`
 - Add `loop.backtest` sub-module
 - Move `loop.backtest` to `loop.backtest.backtest_sequential`
-- Add `loop.backtest.backtest_snapshop`
+- Add `loop.backtest.backtest_snapshot`
 - Add `loop.log` sub-module
 - Add `loop.log._experiment_backtest_results`
 - Add `loop.log._experiment_confusion_metrics`
-- Add `loop.log._experiment_feature_correlation`
+- Add `loop.log._experiment_parameter_correlation`
 - Add `loop.log._permutation_confusion_metrics`
 - Add `loop.log._permutation_prediction_performance`
 - At end of `uel.run` add the above `loop.log` functions as properties
