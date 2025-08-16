@@ -20,7 +20,6 @@ def test_sfm():
         (sfm.reference.lightgbm, get_klines_data, False, True),
         (sfm.lightgbm.regime_multiclass, get_klines_data, False, False),
         (sfm.lightgbm.breakout_regressor, get_klines_data, False, False),
-        #(sfm.lightgbm.regime_stability, get_klines_data, False, False),
         (sfm.lightgbm.tradeable_regressor, get_klines_data, False, False),
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_small, True, False),
         (sfm.rules_based.momentum_volatility_longonly, get_klines_data_small, True, False),
