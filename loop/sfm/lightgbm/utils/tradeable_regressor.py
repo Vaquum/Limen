@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
+'''
 Feature Engineering Functions for LightGBM Tradeable Regressor
-"""
+'''
 
 import polars as pl
 from loop.indicators.rsi_sma import rsi_sma
@@ -12,29 +12,33 @@ from loop.indicators.rolling_volatility import rolling_volatility
 from loop.features.atr_sma import atr_sma
 from loop.features.atr_percent_sma import atr_percent_sma
 
-# Constants for volatility regime values
 VOL_REGIME_LOW_VALUE = 10
 VOL_REGIME_HIGH_VALUE = 90
 VOL_REGIME_MID_VALUE = 50
 
 def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Calculate volatility regime for each row"""
+    '''
+    Compute volatility regime for each row based on rolling volatility percentiles.
     
-    # Calculate rolling volatility (60-hour window)
+    Args:
+        df (pl.DataFrame): Klines dataset with 'close' column
+        config (dict): Configuration dictionary with volatility regime parameters
+    
+    Returns:
+        pl.DataFrame: The input data with new columns 'vol_60h', 'vol_percentile', 'volatility_regime', 'regime_low', 'regime_normal', 'regime_high'
+    '''
+    
     lookback = config['vol_regime_lookback']
     
-    # First calculate returns
     df = df.with_columns([
         pl.col('close').pct_change().alias('returns_temp')
     ])
     
-    # Then calculate rolling volatility
     df = rolling_volatility(df, 'returns_temp', lookback)
     df = df.with_columns([
         pl.col(f'returns_temp_volatility_{lookback}').alias('vol_60h')
     ]).drop(f'returns_temp_volatility_{lookback}')
     
-    # Calculate rolling percentiles of volatility
     window_size = lookback * 2
     
     df = df.with_columns([
@@ -56,8 +60,6 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     ])
     
     df = df.drop(['vol_p20', 'vol_p80'])
-    
-    # Classify into regimes
     df = df.with_columns([
         pl.when(pl.col('vol_percentile') <= config['vol_low_percentile'])
             .then(pl.lit('low'))
@@ -67,7 +69,6 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('volatility_regime')
     ])
     
-    # Add regime-specific features
     df = df.with_columns([
         (pl.col('volatility_regime') == 'low').cast(pl.Int32).alias('regime_low'),
         (pl.col('volatility_regime') == 'normal').cast(pl.Int32).alias('regime_normal'),
@@ -77,20 +78,26 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     return df.drop('returns_temp')
 
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
-    """Calculate market regime indicators"""
+    '''
+    Compute market regime indicators including trend strength and volume regime.
     
-    # Trend strength using existing indicators
+    Args:
+        df (pl.DataFrame): Klines dataset with 'close', 'volume' columns
+        lookback (int): Lookback period for calculations
+    
+    Returns:
+        pl.DataFrame: The input data with new columns 'sma_20', 'sma_50', 'trend_strength', 'volatility_ratio', 'volume_sma', 'volume_regime', 'market_favorable'
+    '''
+    
     df = sma(df, 'close', 20)
     df = sma(df, 'close', 50)
     df = trend_strength(df, 20, 50)
     
-    # Rename the SMA columns to expected names
     df = df.rename({
         'close_sma_20': 'sma_20',
         'close_sma_50': 'sma_50'
     })
     
-    # Volatility regime (short-term)
     df = df.with_columns([
         pl.col('close').pct_change().alias('returns_temp')
     ])
@@ -100,12 +107,10 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
          pl.col('returns_temp').rolling_std(window_size=48)).alias('volatility_ratio')
     ])
     
-    # Volume regime
     df = sma(df, 'volume', 48)
     df = df.rename({'volume_sma_48': 'volume_sma'})
     df = volume_regime(df, 48)
     
-    # Market favorability score
     df = df.with_columns([
         (((pl.col('trend_strength') > -0.001).cast(pl.Int32) +
           (pl.col('volatility_ratio') < 2.0).cast(pl.Int32) +
@@ -116,9 +121,17 @@ def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFram
     return df.drop('returns_temp')
 
 def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Calculate dynamic targets and stops based on market conditions"""
+    '''
+    Compute dynamic targets and stop losses based on market volatility conditions.
     
-    # Calculate rolling volatility
+    Args:
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
+        config (dict): Configuration dictionary with dynamic parameter settings
+    
+    Returns:
+        pl.DataFrame: The input data with new columns 'rolling_volatility', 'atr', 'atr_pct', 'dynamic_target', 'dynamic_stop_loss'
+    '''
+    
     df = df.with_columns([
         pl.col('close').pct_change().alias('returns')
     ])
@@ -126,14 +139,12 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     df = rolling_volatility(df, 'returns', config['volatility_lookback'])
     df = df.rename({f"returns_volatility_{config['volatility_lookback']}": 'rolling_volatility'})
     
-    # Calculate ATR
     df = atr_sma(df, config['volatility_lookback'])
     df = df.rename({'atr_sma': 'atr'})
     
     df = atr_percent_sma(df, config['volatility_lookback'])
     df = df.rename({'atr_percent_sma': 'atr_pct'})
     
-    # Calculate true range components for other uses
     df = df.with_columns([
         pl.col('close').shift(1).alias('prev_close')
     ])
@@ -148,13 +159,11 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
         pl.max_horizontal(['high_low', 'high_close', 'low_close']).alias('true_range')
     ])
     
-    # Dynamic target - adjust based on volatility regime
     if config['dynamic_targets']:
         df = df.with_columns([
             ((pl.col('rolling_volatility') + pl.col('atr_pct')) / 2).alias('volatility_measure')
         ])
         
-        # Regime-specific adjustments
         df = df.with_columns([
             pl.when(pl.col('volatility_regime') == 'low')
                 .then(pl.lit(0.8))
@@ -174,7 +183,6 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
             pl.lit(config['base_min_breakout']).alias('dynamic_target')
         ])
     
-    # Dynamic stop loss - also regime-adjusted
     if config['volatility_adjusted_stops']:
         df = df.with_columns([
             (pl.col('volatility_measure') * config['stop_volatility_multiplier'] * pl.col('regime_multiplier'))
@@ -189,32 +197,36 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     return df.drop('prev_close')
 
 def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Calculate microstructure features for better entry timing"""
+    '''
+    Compute microstructure features for better entry timing including position in candle and volume spikes.
+    
+    Args:
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close', 'volume' columns
+        config (dict): Configuration dictionary with microstructure settings
+    
+    Returns:
+        pl.DataFrame: The input data with new columns 'position_in_candle', 'micro_momentum', 'volume_spike', 'spread_pct', 'entry_score'
+    '''
     
     if config['microstructure_timing']:
-        # Position within candle
         df = df.with_columns([
             ((pl.col('close') - pl.col('low')) / (pl.col('high') - pl.col('low') + 1e-10))
                 .alias('position_in_candle')
         ])
         
-        # Recent price momentum
         df = df.with_columns([
             pl.col('close').pct_change(3).alias('micro_momentum')
         ])
         
-        # Volume spike indicator
         df = df.with_columns([
             (pl.col('volume') / pl.col('volume').rolling_mean(window_size=20))
                 .alias('volume_spike')
         ])
         
-        # Spread tightness
         df = df.with_columns([
             ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread_pct')
         ])
         
-        # Base entry score
         df = df.with_columns([
             ((1 - pl.col('position_in_candle')) * 0.25 +
              (pl.col('micro_momentum') > 0).cast(pl.Float32) * 0.25 +
@@ -223,7 +235,6 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
             .alias('entry_score_base')
         ])
         
-        # Low vol: weight spread and position more
         df = df.with_columns([
             pl.when(pl.col('volatility_regime') == 'low')
                 .then(
@@ -252,7 +263,16 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
     return df
 
 def calculate_simple_momentum_confirmation(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Simple momentum confirmation"""
+    '''
+    Compute simple momentum confirmation scores based on recent price changes.
+    
+    Args:
+        df (pl.DataFrame): Klines dataset with 'close' column
+        config (dict): Configuration dictionary with momentum settings
+    
+    Returns:
+        pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
+    '''
     
     if config['simple_momentum_confirmation']:
         df = df.with_columns([
@@ -273,12 +293,19 @@ def calculate_simple_momentum_confirmation(df: pl.DataFrame, config: dict) -> pl
     return df
 
 def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Simulate actual trading to get real P&L outcomes"""
+    '''
+    Simulate actual trading scenarios to get realistic P&L outcomes with stops and targets.
+    
+    Args:
+        df (pl.DataFrame): Input DataFrame with OHLCV data and dynamic parameters
+        config (dict): Configuration dictionary with trading simulation settings
+    
+    Returns:
+        pl.DataFrame: DataFrame with exit reality simulation results added
+    '''
     
     lookahead_candles = config['lookahead_minutes'] // 5
     
-    # For Polars, we need to work differently than pandas
-    # We'll create the exit reality columns first
     df = df.with_columns([
         pl.lit(None).alias('exit_gross_return'),
         pl.lit(None).alias('exit_net_return'),
@@ -288,20 +315,15 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         pl.lit(None).alias('exit_min_return')
     ])
     
-    # Sample every 5th row indices
     sample_indices = list(range(0, len(df) - lookahead_candles, 5))
     
-    # Convert to pandas for the simulation (temporary)
-    # This is necessary because the forward-looking logic is very difficult in pure Polars
     df_pd = df.to_pandas()
     
-    # For each sampled potential entry point
     for i in sample_indices:
         entry_price = df_pd.iloc[i]['close']
         dynamic_target = df_pd.iloc[i]['dynamic_target']
         dynamic_stop = df_pd.iloc[i]['dynamic_stop_loss']
         
-        # Simulate the trade
         max_return = 0
         min_return = 0
         exit_return = 0
@@ -316,27 +338,23 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             high_price = df_pd.iloc[current_idx]['high']
             low_price = df_pd.iloc[current_idx]['low']
             
-            # Track extremes
             high_return = (high_price - entry_price) / entry_price
             low_return = (low_price - entry_price) / entry_price
             max_return = max(max_return, high_return)
             min_return = min(min_return, low_return)
             
-            # Check stop loss
             if low_return <= -dynamic_stop:
                 exit_return = -dynamic_stop
                 exit_reason = 'stop_loss'
                 bars_to_exit = j
                 break
             
-            # Check target
             if high_return >= dynamic_target:
                 exit_return = dynamic_target
                 exit_reason = 'target_hit'
                 bars_to_exit = j
                 break
             
-            # Trailing stop logic
             if config['trailing_stop'] and max_return > 0:
                 trailing_level = max_return - config['trailing_stop_distance']
                 if low_return <= trailing_level:
@@ -345,15 +363,12 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
                     bars_to_exit = j
                     break
         
-        # If no exit triggered, use close at timeout
         if exit_reason == 'timeout':
             exit_return = (df_pd.iloc[min(i + lookahead_candles, len(df_pd) - 1)]['close'] - entry_price) / entry_price
         
-        # Calculate P&L after fees
         gross_return = exit_return
         net_return = gross_return - config['commission_rate']
         
-        # Update the pandas dataframe
         df_pd.at[i, 'exit_gross_return'] = gross_return
         df_pd.at[i, 'exit_net_return'] = net_return
         df_pd.at[i, 'exit_reason'] = exit_reason
@@ -361,25 +376,29 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         df_pd.at[i, 'exit_max_return'] = max_return
         df_pd.at[i, 'exit_min_return'] = min_return
     
-    # Forward fill the exit reality data
-    # Convert numeric columns to float to avoid downcasting warning
     numeric_exit_cols = ['exit_gross_return', 'exit_net_return', 
                         'exit_bars', 'exit_max_return', 'exit_min_return']
     for col in numeric_exit_cols:
         df_pd[col] = df_pd[col].astype('float64')
     df_pd[numeric_exit_cols] = df_pd[numeric_exit_cols].ffill()
     
-    # String column
     df_pd['exit_reason'] = df_pd['exit_reason'].fillna('').ffill()
     
-    # Convert back to Polars
     return pl.from_pandas(df_pd)
 
 def calculate_time_decay_factor(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Calculate time decay factor for exit reality scores"""
+    '''
+    Compute time decay factor for exit reality scores based on time to exit.
     
-    # Calculate decay factor based on bars to exit
-    halflife_bars = config['time_decay_halflife'] / 5  # Convert minutes to 5-min bars
+    Args:
+        df (pl.DataFrame): Klines dataset with 'exit_bars' column
+        config (dict): Configuration dictionary with time decay settings
+    
+    Returns:
+        pl.DataFrame: The input data with new column 'time_decay_factor'
+    '''
+    
+    halflife_bars = config['time_decay_halflife'] / 5
     
     df = df.with_columns([
         pl.when(pl.col('exit_bars').is_not_null())
@@ -391,14 +410,21 @@ def calculate_time_decay_factor(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     return df
 
 def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    """Create tradeable labels with exit reality and time decay"""
+    '''
+    Compute comprehensive tradeable labels combining exit reality, time decay, and market conditions.
     
-    # Calculate EMA
+    Args:
+        df (pl.DataFrame): Klines dataset with required feature columns
+        config (dict): Configuration dictionary with labeling settings
+    
+    Returns:
+        pl.DataFrame: DataFrame with final tradeable labels and scores
+    '''
+    
     df = df.with_columns([
         pl.col('close').ewm_mean(span=21, adjust=False).alias('ema')
     ])
     
-    # Look ahead for actual high/low
     lookahead_candles = config['lookahead_minutes'] // 5
     
     df = df.with_columns([
@@ -406,13 +432,11 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         pl.col('low').rolling_min(window_size=lookahead_candles).shift(-lookahead_candles).alias('future_low')
     ])
     
-    # Calculate what's capturable from opening price
     df = df.with_columns([
         ((pl.col('future_high') - pl.col('close')) / pl.col('close')).alias('capturable_breakout'),
         ((pl.col('future_low') - pl.col('close')) / pl.col('close')).alias('max_drawdown')
     ])
     
-    # EMA alignment weight
     df = df.with_columns([
         (1 - (pl.col('close') - pl.col('ema')).abs() / pl.col('ema'))
             .clip(0, 1)
@@ -420,7 +444,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('ema_alignment')
     ])
     
-    # Volume confirmation weight
     if config['volume_weight_enabled']:
         df = sma(df, 'volume', 20)
         df = df.rename({'volume_sma_20': 'volume_ma'})
@@ -433,7 +456,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             pl.lit(1.0).alias('volume_weight')
         ])
     
-    # Volatility weight
     df = df.with_columns([
         pl.col('close').pct_change().alias('returns_temp')
     ])
@@ -444,12 +466,10 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         (2 / (1 + pl.col('volatility') * 100)).clip(0.3, 1.0).alias('volatility_weight')
     ])
     
-    # Momentum weight
     df = df.with_columns([
         ((pl.col('close').pct_change(12) > 0).cast(pl.Float32) * 0.5 + 0.5).alias('momentum_weight')
     ])
     
-    # Market regime weight
     if config['market_regime_filter']:
         regime_weight_col = 'market_favorable'
     else:
@@ -458,7 +478,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         ])
         regime_weight_col = 'market_favorable'
     
-    # Combined tradeable breakout
     df = df.with_columns([
         (pl.col('capturable_breakout') * 
          pl.col('ema_alignment') * 
@@ -471,7 +490,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         .alias('tradeable_breakout')
     ])
     
-    # Risk-adjusted score
     df = df.with_columns([
         (pl.col('capturable_breakout') / (pl.col('max_drawdown').abs() + 0.001)).alias('risk_reward_ratio')
     ])
@@ -480,7 +498,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         (pl.col('tradeable_breakout') * pl.col('risk_reward_ratio').clip(0, 3)).alias('tradeable_score_base')
     ])
     
-    # EXIT REALITY ENHANCEMENT
     df = df.with_columns([
         pl.when(pl.col('exit_net_return').is_not_null())
             .then(pl.col('exit_net_return').clip(-0.01, 0.02))
@@ -488,7 +505,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('exit_reality_score')
     ])
     
-    # Quality factor
     df = df.with_columns([
         pl.when((pl.col('exit_reason').is_in(['target_hit', 'trailing_stop'])) & (pl.col('exit_net_return') > 0))
             .then(pl.lit(1.0))
@@ -498,12 +514,10 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('exit_quality')
     ])
     
-    # TIME DECAY ENHANCEMENT
     df = df.with_columns([
         (pl.col('exit_reality_score') * pl.col('time_decay_factor')).alias('exit_reality_time_decayed')
     ])
     
-    # BLEND ALL THREE COMPONENTS
     df = df.with_columns([
         ((1 - config['exit_reality_blend'] - config['time_decay_blend']) * pl.col('tradeable_score_base') +
          config['exit_reality_blend'] * pl.col('exit_reality_score') * pl.col('exit_quality') +
@@ -511,7 +525,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         .alias('tradeable_score')
     ])
     
-    # Add flag for trades that achieve dynamic target
     df = df.with_columns([
         ((pl.col('exit_reason') == 'target_hit') | 
          (pl.col('capturable_breakout') >= pl.col('dynamic_target')))
@@ -521,15 +534,23 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     return df.drop('returns_temp')
 
 def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = None) -> pl.DataFrame:
-    """Prepare features for 5-minute trading"""
+    '''
+    Compute comprehensive feature set for 5-minute trading including momentum, volatility, and volume features.
     
-    # Price-based features
+    Args:
+        df (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
+        lookback (int): Lookback period for feature calculations
+        config (dict): Optional configuration dictionary
+    
+    Returns:
+        pl.DataFrame: The input data with complete feature set for trading models
+    '''
+    
     df = df.with_columns([
         pl.col('close').pct_change().alias('returns'),
         (pl.col('close') / pl.col('close').shift(1)).log().alias('log_returns')
     ])
     
-    # Momentum indicators
     for period in [12, 24, 48]:
         df = df.with_columns([
             pl.col('close').pct_change(period).alias(f'momentum_{period}')
@@ -537,16 +558,13 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
         df = rsi_sma(df, period)
         df = df.rename({f"rsi_sma_{period}": f"rsi_{period}"})
     
-    # Volatility
     df = rolling_volatility(df, 'returns', 12)
     df = df.rename({'returns_volatility_12': 'volatility_5m'})
     
-    # Duplicate for 1h (same calculation for now)
     df = df.with_columns([
         pl.col('volatility_5m').alias('volatility_1h')
     ])
     
-    # Volume features
     df = sma(df, 'volume', 20)
     df = df.with_columns([
         (pl.col('volume') / pl.col('volume_sma_20')).alias('volume_ratio')
@@ -558,36 +576,30 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
         (pl.col('volume_sma_12') / pl.col('volume_sma_48')).alias('volume_trend')
     ])
     
-    # Microstructure
     df = df.with_columns([
         ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread'),
         ((pl.col('close') - pl.col('low')) / (pl.col('high') - pl.col('low') + 1e-10)).alias('position_in_range')
     ])
     
-    # Time features
     df = df.with_columns([
         pl.col('datetime').dt.hour().alias('hour'),
         pl.col('datetime').dt.minute().alias('minute')
     ])
     
-    # Lagged features
     for lag in range(1, min(lookback + 1, 25)):
         df = df.with_columns([
             pl.col('returns').shift(lag).alias(f'returns_lag_{lag}')
         ])
     
-    # Use default values if config not provided
     base_min_breakout = config.get('base_min_breakout', 0.005) if config else 0.005
     volatility_regime_enabled = config.get('volatility_regime_enabled', True) if config else True
     
-    # Add dynamic features
     df = df.with_columns([
         pl.col('dynamic_target').fill_null(base_min_breakout).alias('dynamic_target_feature'),
         pl.col('entry_score').fill_null(1.0).alias('entry_score_feature'),
         pl.col('momentum_score').fill_null(1.0).alias('momentum_score_feature')
     ])
     
-    # Add volatility regime features
     if volatility_regime_enabled:
         df = df.with_columns([
             pl.col('vol_60h').fill_null(0).alias('vol_60h_feature'),
@@ -597,13 +609,11 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
             pl.col('regime_high').fill_null(0).alias('regime_high_feature')
         ])
     
-    # Additional calculated features
     df = df.with_columns([
         ((pl.col('close') - pl.col('high')) / pl.col('high')).alias('close_to_high'),
         ((pl.col('close') - pl.col('low')) / pl.col('low')).alias('close_to_low')
     ])
     
-    # SMAs for additional features
     for period in [5, 10, 20, 50]:
         df = sma(df, 'close', period)
         df = df.with_columns([
