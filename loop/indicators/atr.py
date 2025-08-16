@@ -1,9 +1,9 @@
 import polars as pl
 
 def atr(data: pl.DataFrame,
-        high_col: str = "high",
-        low_col: str = "low",
-        close_col: str = "close",
+        high_col: str = 'high',
+        low_col: str = 'low',
+        close_col: str = 'close',
         period: int = 14) -> pl.DataFrame:
     
     '''
@@ -17,7 +17,7 @@ def atr(data: pl.DataFrame,
         period (int): Number of periods for ATR calculation
 
     Returns:
-        pl.DataFrame: The input data with a new column 'atr'
+        pl.DataFrame: The input data with a new column 'atr_{period}'
     '''
     
     prev_close = pl.col(close_col).shift(1)
@@ -30,5 +30,5 @@ def atr(data: pl.DataFrame,
     return data.with_columns([
         true_range
             .ewm_mean(alpha=1.0 / period, adjust=False)
-            .alias("atr")
+            .alias(f"atr_{period}")
     ])

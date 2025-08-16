@@ -2,7 +2,7 @@ import polars as pl
 
 
 def macd(data: pl.DataFrame,
-         close_col: str = "close",
+         close_col: str = 'close',
          fast_period: int = 12,
          slow_period: int = 26,
          signal_period: int = 9) -> pl.DataFrame:
@@ -18,7 +18,7 @@ def macd(data: pl.DataFrame,
         signal_period (int): Period for signal line EMA calculation
 
     Returns:
-        pl.DataFrame: The input data with three columns: 'macd', 'macd_signal', 'macd_hist'
+        pl.DataFrame: The input data with three columns: 'macd_{fast_period}_{slow_period}', 'macd_signal_{signal_period}', 'macd_hist'
     '''
 
     alpha_fast = 2.0 / (fast_period + 1)
@@ -30,23 +30,23 @@ def macd(data: pl.DataFrame,
         .with_columns([
             pl.col(close_col)
               .ewm_mean(alpha=alpha_fast, adjust=False)
-              .alias("__ema_fast"),
+              .alias('__ema_fast'),
             pl.col(close_col)
               .ewm_mean(alpha=alpha_slow, adjust=False)
-              .alias("__ema_slow")
+              .alias('__ema_slow')
         ])
         .with_columns([
-            (pl.col("__ema_fast") - pl.col("__ema_slow"))
-              .alias("macd")
+            (pl.col('__ema_fast') - pl.col('__ema_slow'))
+              .alias(f"macd_{fast_period}_{slow_period}")
         ])
         .with_columns([
-            pl.col("macd")
+            pl.col(f"macd_{fast_period}_{slow_period}")
               .ewm_mean(alpha=alpha_signal, adjust=False)
-              .alias("macd_signal")
+              .alias(f"macd_signal_{signal_period}")
         ])
         .with_columns([
-            (pl.col("macd") - pl.col("macd_signal"))
-              .alias("macd_hist")
+            (pl.col(f"macd_{fast_period}_{slow_period}") - pl.col(f"macd_signal_{signal_period}"))
+              .alias('macd_hist')
         ])
-        .drop(["__ema_fast", "__ema_slow"])
+        .drop(['__ema_fast', '__ema_slow'])
     )

@@ -1,7 +1,9 @@
 import polars as pl
 
 
-def sma(data: pl.DataFrame, column: str, period: int) -> pl.DataFrame:
+def sma(data: pl.DataFrame, 
+        column: str, 
+        period: int) -> pl.DataFrame:
     
     '''
     Compute Simple Moving Average (SMA) indicator.

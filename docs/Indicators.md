@@ -55,7 +55,7 @@ Compute Average True Range (ATR) using Wilder's smoothing method.
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'atr'
+`pl.DataFrame`: The input data with a new column 'atr_{period}'
 
 ### `body_pct`
 
@@ -87,7 +87,7 @@ Compute MACD (Moving Average Convergence Divergence) indicator.
 
 #### Returns
 
-`pl.DataFrame`: The input data with three columns: 'macd', 'macd_signal', 'macd_hist'
+`pl.DataFrame`: The input data with three columns: 'macd_{fast_period}_{slow_period}', 'macd_signal_{signal_period}', 'macd_hist'
 
 ### `ppo`
 
@@ -98,14 +98,14 @@ Compute Percentage Price Oscillator (PPO) indicator.
 | Parameter    | Type            | Description                                      |
 |--------------|-----------------|--------------------------------------------------|
 | `data`       | `pl.DataFrame`  | Klines dataset with price column                 |
-| `price_col`  | `str`           | Column name for price data                       |
-| `span_short` | `int`           | Period for short EMA calculation                 |
-| `span_long`  | `int`           | Period for long EMA calculation                  |
-| `ppo_name`   | `str`           | Name for output column                           |
+| `close_col`  | `str`           | Column name for price data                       |
+| `fast_period` | `int`           | Period for short EMA calculation                 |
+| `slow_period`  | `int`           | Period for long EMA calculation                  |
+| `signal_period` | `int`           | Period for signal line EMA calculation               |
 
 #### Returns
 
-`pl.DataFrame`: The input data with the PPO column appended
+`pl.DataFrame`: The input data with three columns: 'ppo_{fast_period}_{slow_period}', 'ppo_signal_{signal_period}', 'ppo_hist'
 
 ### `price_change_pct`
 
@@ -150,7 +150,7 @@ Compute Rate of Change (ROC) indicator as percentage change.
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'roc'
+`pl.DataFrame`: The input data with a new column 'roc_{period}'
 
 ### `rolling_volatility`
 
@@ -166,7 +166,7 @@ Compute rolling volatility (standard deviation) over a specified period.
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column '{column}_volatility_{window}'
+`pl.DataFrame`: The input data with a new column '{column}\_volatility_{window}'
 
 ### `rsi_sma`
 
@@ -183,7 +183,7 @@ NOTE: Different from wilder_rsi which uses exponential smoothing.
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'rsi_sma'
+`pl.DataFrame`: The input data with a new column 'rsi_sma_{period}'
 
 ### `sma`
 
@@ -214,7 +214,7 @@ Compute Wilder's RSI using exponential smoothing method.
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'wilder_rsi'
+`pl.DataFrame`: The input data with a new column 'wilder_rsi_{period}'
 
 ---
 

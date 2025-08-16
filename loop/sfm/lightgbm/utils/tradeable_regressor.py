@@ -556,7 +556,7 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
             pl.col('close').pct_change(period).alias(f'momentum_{period}')
         ])
         df = rsi_sma(df, period)
-        df = df.rename({f'rsi_sma': f'rsi_{period}'})
+        df = df.rename({f"rsi_sma_{period}": f"rsi_{period}"})
     
     df = rolling_volatility(df, 'returns', 12)
     df = df.rename({'returns_volatility_12': 'volatility_5m'})

@@ -44,12 +44,19 @@ def prep(data, round_params):
     all_datetimes = data['datetime'].to_list()
     
     # Calculate ROC and filter NaN values
-    data = roc(data, period=round_params['roc_period']).filter(~pl.col("roc").is_nan())
+    roc_col = f"roc_{round_params['roc_period']}"
+    data = roc(data, period=round_params['roc_period']).filter(~pl.col(roc_col).is_nan())
     
     # Calculate other technical indicators
+    atr_col = 'atr_14'
     data = atr(data)
+
+    ppo_col = 'ppo_12_26'
     data = ppo(data)[1:]
-    data = wilder_rsi(data).filter(~pl.col("wilder_rsi").is_nan())[1:]
+    
+    wilder_rsi_col = 'wilder_rsi_14'
+    data = wilder_rsi(data).filter(~pl.col(wilder_rsi_col).is_nan())[1:]
+    
     data = vwap(data)
     data = kline_imbalance(data)
     
@@ -58,7 +65,7 @@ def prep(data, round_params):
     # Calculate quantile flag on training data and get the cutoff
     split_data[0], train_cutoff = quantile_flag(
         data=split_data[0],
-        col='roc',
+        col=roc_col,
         q=round_params['q'],
         return_cutoff=True
     )
@@ -67,7 +74,7 @@ def prep(data, round_params):
     for i in range(1, len(split_data)):
         split_data[i] = quantile_flag(
             data=split_data[i],
-            col='roc',
+            col=roc_col,
             q=round_params['q'],
             cutoff=train_cutoff
         )
@@ -92,9 +99,9 @@ def prep(data, round_params):
             'volume',
             'maker_ratio',
             'no_of_trades',
-            'atr',
-            'ppo',
-            'wilder_rsi',
+            atr_col,
+            ppo_col,
+            wilder_rsi_col,
             'vwap',
             'imbalance',
             'quantile_flag']

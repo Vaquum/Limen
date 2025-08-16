@@ -238,3 +238,9 @@
 - Port sfm.reference.lightgbm to Loop standards
 - Update `tests.test_sfm` to enable the above
 - Removed util function not in use anymore
+
+# v1.13.3 on 16th of August 2025
+- Standardize `loop.indicators` inputs and outputs
+- Fix `loop.indicators.price_change_pct` calculation
+- Format code style for `loop.indicators`
+- Update docs for `loop.indicators`
