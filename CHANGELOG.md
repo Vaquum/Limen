@@ -233,3 +233,8 @@
 - Remove lightgbm regime_multiclass and regime_stability models
 - Remove tests for the above
 - Cleanup all lightgbm utils/sfms (except megamodel code) docstrings, comments, prints, imports
+
+# v1.13.2 on 16th of August 2025
+- Port sfm.reference.lightgbm to Loop standards
+- Update `tests.test_sfm` to enable the above
+- Removed util function not in use anymore
