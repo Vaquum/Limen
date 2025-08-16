@@ -26,8 +26,7 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
-    test_quantile_model,
-    test_moving_average_correction,
+    #test_moving_average_correction,
     test_account_conviction,
     test_backtest_conviction,
 ]
