@@ -17,7 +17,7 @@ def test_sfm():
         (sfm.reference.logreg, get_klines_data, True, True),
         (sfm.logreg.regime_multiclass, get_klines_data, False, True),
         (sfm.logreg.breakout_regressor_ridge, get_klines_data, False, False),
-        #(sfm.reference.lightgbm, get_trades_data, False, False),
+        (sfm.reference.lightgbm, get_klines_data, False, True),
         (sfm.lightgbm.regime_multiclass, get_klines_data, False, False),
         (sfm.lightgbm.breakout_regressor, get_klines_data, False, False),
         #(sfm.lightgbm.regime_stability, get_klines_data, False, False),
