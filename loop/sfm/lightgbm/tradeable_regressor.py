@@ -97,6 +97,9 @@ def params():
 
 
 def prep(data, round_params=None):
+
+    all_datetimes = data['datetime'].to_list()
+    
     """
     Prepare data following methodology
     Process entire dataframe through pipeline BEFORE splitting
@@ -169,7 +172,7 @@ def prep(data, round_params=None):
     logging.debug(f"Using {len(numeric_features)} features")
     
     # Create column list with target as LAST column
-    cols = numeric_features + ['tradeable_score']
+    cols = ['datetime'] + numeric_features + ['tradeable_score']
     
     # Split data sequentially
     split_data = split_sequential(df_clean, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
@@ -194,7 +197,7 @@ def prep(data, round_params=None):
     split_data[2] = split_data[2].with_columns(pl.lit(0.0).alias('tradeable_score'))
     
     # Use split_data_to_prep_output
-    data_dict = split_data_to_prep_output(split_data, cols)
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
     
     # Add extra fields needed by model()
     data_dict['_feature_names'] = numeric_features

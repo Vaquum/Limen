@@ -1,7 +1,10 @@
-from loop.metrics.continuous_metrics import continuous_metrics
 import xgboost as xgb
-import numpy as np
 import polars as pl
+
+from loop.utils.splits import split_sequential
+from loop.utils.splits import split_data_to_prep_output
+from loop.metrics.continuous_metrics import continuous_metrics
+
 
 def params():
     return {
@@ -20,6 +23,8 @@ def params():
     }
 
 def prep(data: pl.DataFrame):
+
+    all_datetimes = data['datetime'].to_list()
 
     data = data.with_columns([
         # Original return features (must be created first)
@@ -65,29 +70,17 @@ def prep(data: pl.DataFrame):
         ])
     )
     
-    feature_cols = [
-        'return_1', 'return_5', 'return_20',
-        'volatility_20', 'price_range',
-        'volume_ratio', 'maker_ratio_ma10', 
-        'trade_intensity', 'period_return',
-        'order_flow_imbalance', 'stochastic_k'
-    ]
-    x = data.select(feature_cols).to_numpy()
-    y = data.get_column('next_return').to_numpy().ravel()
-    n = len(data)
-    train_end = int(n * 0.6)
-    val_end   = int(n * 0.8)
+    cols = ['datetime', 'return_1', 'return_5', 'return_20',
+            'volatility_20', 'price_range', 'volume_ratio',
+            'maker_ratio_ma10', 'trade_intensity', 'period_return',
+            'order_flow_imbalance', 'stochastic_k', 
+            'next_close', 'next_return',]
+
+    split_data = split_sequential(data, (8, 1, 2))
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
     
-    return {
-        'x_train': x[:train_end],
-        'x_val': x[train_end:val_end],
-        'x_test': x[val_end:],
-        'y_train': y[:train_end],
-        'y_val': y[train_end:val_end],
-        'y_test': y[val_end:],
-        'test_closes': data.get_column('close').to_numpy()[val_end:],
-        'test_y_actual': data.get_column('next_close').to_numpy()[val_end:],
-    }
+    return data_dict
+
 
 def model(data: dict, round_params: dict):
     
@@ -113,6 +106,9 @@ def model(data: dict, round_params: dict):
               eval_set=[(data['x_val'], data['y_val'])],
               verbose=False)
 
-    preds_ret = model.predict(data['x_test'])
+    preds = model.predict(data['x_test'])
 
-    return continuous_metrics(data, preds_ret)
+    round_results = continuous_metrics(data, preds)
+    round_results['_preds'] = preds
+
+    return round_results

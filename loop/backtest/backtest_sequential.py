@@ -1,7 +1,7 @@
 import math
 from loop.account import Account
 
-class Backtest:
+class BacktestSequential:
     
     def __init__(self, start_usdt=30000):
 

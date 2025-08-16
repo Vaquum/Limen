@@ -45,6 +45,8 @@ def params():
 
 def prep(data):
 
+    all_datetimes = data['datetime'].to_list()
+
     df = build_sample_dataset_for_breakout_regressor(
         data,
         datetime_col=DATETIME_COL,
@@ -77,7 +79,7 @@ def prep(data):
 
     cols = df.columns
 
-    data_dict = split_data_to_prep_output(split_data, cols)
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
 
     scaler = LogRegTransform(data_dict['x_train'])
     for col in data_dict.keys():

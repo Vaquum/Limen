@@ -1,10 +1,10 @@
-import numpy as np
 import time
 from tqdm import tqdm
 import polars as pl
 import sqlite3
 
 from loop.utils.param_space import ParamSpace
+from loop.log.log import Log
 
 
 class UniversalExperimentLoop:
@@ -64,9 +64,15 @@ class UniversalExperimentLoop:
             model (function): The function to use to run the model.
 
         Returns:
-            pl.DataFrame: The results of the experiment in `self.log_df`.
+            pl.DataFrame: The results of the experiment
         '''
 
+        self.round_params = []
+        self.models = []
+        self.preds = []
+        self.scalers = []
+        self._alignment = []
+        
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
@@ -102,19 +108,22 @@ class UniversalExperimentLoop:
 
             # Always prep data with round_params passed in
             if prep_each_round is True:
-                data = self.prep(self.data, round_params=round_params)
+                data_dict = self.prep(self.data, round_params=round_params)
 
             # Otherwise, only for the first round, prep data without round_params passed in
             else:
                 if i == 0:
-                    data = self.prep(self.data)
+                    data_dict = self.prep(self.data)
 
             # Perform the model training and evaluation
-            round_results = self.model(data=data, round_params=round_params)
+            round_results = self.model(data=data_dict, round_params=round_params)
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
+
+            # Add alignment details
+            self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
@@ -126,30 +135,32 @@ class UniversalExperimentLoop:
                 self.models.append(round_results['models'])
                 round_results.pop('models')
 
-            if '_scaler' in round_results.keys():
-                self.scaler = round_results['_scaler']
-                round_results.pop('_scaler')
-
             if '_preds' in round_results.keys():
-                self.preds = round_results['_preds']
+                self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
+
+            if '_scaler' in data_dict.keys():
+                self.scalers.append(data_dict['_scaler'])
+                data_dict.pop('_scaler')
 
             # Add the round number and execution time to the results
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
+
+            self.round_params.append(round_params)
 
             for key in round_params.keys():
                 round_results[key] = round_params[key]
 
             # Handle writing to the DataFrame
             if i == 0:
-                self.log_df = pl.DataFrame(round_results)
+                self.experiment_log = pl.DataFrame(round_results)
             else:
-                self.log_df = self.log_df.vstack(pl.DataFrame([round_results]))
+                self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
 
             if save_to_sqlite is True:
                 # Handle writing to the database
-                self.log_df.to_pandas().tail(1).to_sql(experiment_name,
+                self.experiment_log.to_pandas().tail(1).to_sql(experiment_name,
                                                     self.conn,
                                                     if_exists="append",
                                                     index=False)
@@ -159,9 +170,13 @@ class UniversalExperimentLoop:
                 with open(experiment_name + '.csv', 'a') as f:
                     f.write(f"{header_colnames}\n")
 
-            log_string = f"{', '.join(map(str, self.log_df.row(i)))}\n"
+            log_string = f"{', '.join(map(str, self.experiment_log.row(i)))}\n"
             with open(experiment_name + '.csv', 'a') as f:
                 f.write(log_string)
 
         if save_to_sqlite is True:
             self.conn.close()
+
+        # Add Log and Backtest properties
+        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
+        self.log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)

@@ -1,6 +1,7 @@
-from loop.account import Account
 from loop.historical_data import HistoricalData
-from loop.backtest import Backtest
+from loop.log.log import Log
+from loop.account import Account
+from loop.backtest.backtest_sequential import BacktestSequential
 from loop.universal_experiment_loop import UniversalExperimentLoop
 
 import loop.features as features
@@ -10,11 +11,13 @@ import loop.sfm as sfm
 import loop.reports as reports
 import loop.transforms as transforms
 import loop.utils as utils
+import loop.log as log
 
 __all__ = [
     'Account',
-    'Backtest',
+    'BacktestSequential',
     'HistoricalData',
+    'Log',
     'UniversalExperimentLoop',
     'features',
     'indicators',
@@ -22,5 +25,6 @@ __all__ = [
     'sfm',
     'reports',
     'transforms',
-    'utils'
+    'utils',
+    'log'
 ]
