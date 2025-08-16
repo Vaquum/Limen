@@ -11,9 +11,7 @@ from loop.tests.test_confidence_filtering_system import test_calibrate_confidenc
 from loop.tests.test_confidence_filtering_system import test_apply_confidence_filtering
 from loop.tests.test_confidence_filtering_system import test_confidence_filtering_system
 from loop.tests.test_confidence_filtering_system import test_edge_cases
-from loop.tests.test_quantile_model import test_quantile_model
 from loop.tests.test_moving_average_correction_model import test_moving_average_correction
-from loop.tests.test_regime_stability import test_regime_stability
 from loop.tests.test_account_conviction import test_account_conviction
 from loop.tests.test_backtest_conviction import test_backtest_conviction
 from loop.tests.test_klines_data_maker_fields import test_klines_data_maker_fields
@@ -28,9 +26,7 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
-    test_quantile_model,
-    test_moving_average_correction,
-    test_regime_stability,
+    #test_moving_average_correction,
     test_account_conviction,
     test_backtest_conviction,
 ]

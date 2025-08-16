@@ -13,14 +13,17 @@ import polars as pl
 
 # Import parts of 3rd-party libraries (leave empty line above)
 from sklearn.linear_model import LogisticRegression
+from loop.metrics.multiclass_metrics import multiclass_metrics
+
 from datetime import timedelta
 
 # Import parts of our own libraries (leave empty line above)
-from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.sfm.lightgbm.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
 from loop.sfm.lightgbm.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
+from loop.utils.splits import split_sequential
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.metrics.multiclass_metrics import multiclass_metrics
+from loop.utils.splits import split_data_to_prep_output
 
 # Add configuration constants (leave empty line above)
 BREAKOUT_PERCENTAGE = 5
@@ -60,6 +63,8 @@ def params():
 # Add sfm.prep function (leave two empty lines above)
 def prep(data):
 
+    all_datetimes = data['datetime'].to_list()
+    
     # Leave one empty line above
     df = build_sample_dataset_for_regime_multiclass(
         data,
@@ -86,16 +91,15 @@ def prep(data):
     cols = [
         c for c in df.columns
         if not c.startswith(LEAK_PREFIXES)
-           and c not in ('datetime')
     ]
-
+    
     df = df.select(cols)
 
     # Always use split_sequential for data splitting
     split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
     
     # Always use split_data_to_prep_output for getting the standard data_dict
-    data_dict = split_data_to_prep_output(split_data, cols)
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
 
     # Always follow this pattern for handling scaling, just replace the scaler class
     scaler = LogRegTransform(data_dict['x_train'])
@@ -156,8 +160,10 @@ def model(data, round_params):
     preds = prediction_probs.argmax(axis=1)
     probs = prediction_probs.max(axis=1)
     
-    preds[probs < CONFIDENCE_THRESHOLD] = 0
+    preds[probs < 0.40] = 0
     
     round_results = multiclass_metrics(data, preds, prediction_probs)
+
+    round_results['_preds'] = preds
     
     return round_results

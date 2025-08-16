@@ -1,13 +1,13 @@
 import math
 import numpy as np
 from datetime import datetime
-from loop.backtest import Backtest
+from loop.backtest.backtest_sequential import BacktestSequential
 import csv
 import os
 
 def test_basic_functionality():
 
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1, 0, 1]
     prediction = [1, 0, 1, 0, 1]
@@ -28,7 +28,7 @@ def test_basic_functionality():
     assert len(backtest.trades) == 3
 
 def test_perfect_predictions():
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 1, 1, 1, 1]
     prediction = [1, 1, 1, 1, 1]
@@ -44,7 +44,7 @@ def test_perfect_predictions():
 
 def test_terrible_predictions():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 1, 1, 1, 1]
     prediction = [0, 0, 0, 0, 0]
@@ -60,7 +60,7 @@ def test_terrible_predictions():
 
 def test_mixed_signals():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1, 0, 1, 0]
     prediction = [1, 0, 0, 1, 1, 0]
@@ -76,7 +76,7 @@ def test_mixed_signals():
 
 def test_no_valid_trades():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1, 0, 1]
     prediction = [0, 0, 0, 0, 0]
@@ -95,7 +95,7 @@ def test_no_valid_trades():
 
 def test_zero_price_changes():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1, 0, 1]
     prediction = [1, 0, 1, 0, 1]
@@ -111,7 +111,7 @@ def test_zero_price_changes():
 
 def test_array_length_mismatch():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1]
     prediction = [1, 0]
@@ -128,7 +128,7 @@ def test_array_length_mismatch():
 
 def test_large_sequence():
     
-    backtest = Backtest(1000000)
+    backtest = BacktestSequential(1000000)
     
     np.random.seed(42)
     n = 1000
@@ -148,7 +148,7 @@ def test_large_sequence():
 
 def test_metrics_calculation():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1, 0]
     prediction = [1, 0, 1, 0]
@@ -166,7 +166,7 @@ def test_metrics_calculation():
 
 def test_account_integration():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     initial_usdt = backtest.account.account['total_usdt'][-1]
     assert initial_usdt == 100000
@@ -186,7 +186,7 @@ def test_account_integration():
 
 def test_volume_calculations():
     
-    backtest = Backtest(100000)
+    backtest = BacktestSequential(100000)
     
     actual = [1, 0, 1]
     prediction = [1, 0, 1]

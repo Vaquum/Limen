@@ -44,19 +44,88 @@ Runs the experiment `n_permutations` times.
 
 ### Args
 
-| Parameter                     | Type       | Description                                                      |
-|-------------------------------|------------|------------------------------------------------------------------|
-| `experiment_name`             | `str`      | The name of the experiment.                                      |
-| `n_permutations`              | `int`      | The number of permutations to run.                               |
-| `prep_each_round`             | `bool`     | Whether to use `prep` for each round or just the first.         |
-| `random_search`               | `bool`     | Whether to use random search or not.                             |
-| `maintain_details_in_params`  | `bool`     | Whether to maintain experiment details in `params`.              |
-| `context_params`              | `dict`     | The context parameters to use for the experiment.                |
-| `save_to_sqlite`              | `bool`     | Whether to save the results to a SQLite database.               |
-| `params`                      | `dict`     | The parameters to use for the experiment.                        |
-| `prep`                        | `function` | The function to use to prepare the data.                         |
-| `model`                       | `function` | The function to use to run the model.                            |
+| Parameter                     | Type              | Description                                                                                             |
+|-------------------------------|-------------------|---------------------------------------------------------------------------------------------------------|
+| `experiment_name`             | `str`             | The experiment name. Also used as the CSV filename written in the project root (`<name>.csv`).          |
+| `n_permutations`              | `int`             | Number of permutations to run (default: 10000).                                                         |
+| `prep_each_round`             | `bool`            | If `True`, calls `sfm.prep(data, round_params=...)` on every round. If `False`, calls `sfm.prep(data)` once on the first round. |
+| `random_search`               | `bool`            | If `True`, sample the parameter space randomly; if `False`, iterate deterministically (grid-like).      |
+| `maintain_details_in_params`  | `bool`            | If `True`, injects `_experiment_details` (e.g., current index) into `round_params` for logging, then removes it before writing results. |
+| `context_params`              | `dict`            | Extra context passed into `round_params` for every round (useful for identifiers like symbol, horizon). |
+| `save_to_sqlite`              | `bool`            | If `True`, appends results to SQLite at `/opt/experiments/experiments.sqlite` under table `experiment_name`. |
+| `params`                      | `Callable`        | Optional override for the SFM `params` function. Must return a parameter space dictionary.              |
+| `prep`                        | `Callable`        | Optional override for the SFM `prep` function. Must follow the standard input/output contract.          |
+| `model`                       | `Callable`        | Optional override for the SFM `model` function. Must follow the standard input/output contract.         |
 
 ### Returns
 
-Adds various artifacts into `UniversalExperimentLoop` class object. 
+Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming logs:
+
+- CSV logging: On the first round, writes a header row to `<experiment_name>.csv`, then appends one result row per round.
+- Optional SQLite logging: If `save_to_sqlite=True`, appends the last written row to `/opt/experiments/experiments.sqlite` under table `experiment_name`.
+
+#### Artifacts on the `UniversalExperimentLoop` instance
+
+- `data`: The original `pl.DataFrame` passed to the loop
+- `params`: The parameter space in use (from SFM or `params` override)
+- `prep`, `model`: The callable functions in use (from SFM or overrides)
+- `round_params`: `list[dict]` of the actual parameter sets used in each permutation
+- `experiment_log`: `pl.DataFrame` containing accumulated round results (first row created on round 0, then vstacked)
+- `extras`: `list[Any]` of any extra artifacts returned by the SFM (when `round_results` contained an `extras` key)
+- `models`: `list[Any]` of models returned by the SFM (when `round_results` contained a `models` key)
+- `preds`: `list[Any]` predictions captured from the SFM when `round_results['_preds']` is present
+- `scalers`: `list[Any]` scalers captured from SFM `prep` when the data dict includes `_scaler`
+- `_alignment`: `list[dict]` alignment metadata per round, as produced by `utils.splits.split_data_to_prep_output`:
+  - `missing_datetimes`: list of datetimes dropped during prep
+  - `first_test_datetime` / `last_test_datetime`: inclusive test window bounds
+
+#### Parameter space
+
+UEL uses `utils.param_space.ParamSpace` to generate `round_params` either via random sampling or deterministic iteration, depending on `random_search`.
+
+#### Log integration
+
+At the end of `run`, UEL attaches a `Log` object to `self.log`:
+
+- `self.log = loop.Log(uel_object=self, cols_to_multilabel=<all string columns>)`
+- `Log` consumes the in-memory UEL state:
+  - `experiment_log` (converted to `pd.DataFrame`)
+  - `preds`, `scalers`, `round_params`, and `_alignment`
+- Key `Log` evaluation methods (see [Log](Log.md)):
+  - `experiment_backtest_results(disable_progress_bar: bool = False) -> pd.DataFrame`
+  - `experiment_confusion_metrics(x: str, disable_progress_bar: bool = False) -> pd.DataFrame`
+  - `permutation_prediction_performance(round_id: int) -> pd.DataFrame`
+  - `permutation_confusion_metrics(x: str, round_id: int, ...) -> pd.DataFrame`
+  - `experiment_parameter_correlation(metric: str, ...) -> pd.DataFrame`
+  - `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
+
+Notes on determinism: some SFMs use random sampling or time-window subsampling in `prep`. For fully reproducible per-round analysis with `Log`, prefer:
+- Using `prep_each_round=True` so the same `round_params` applies to data prep deterministically, or
+- Ensuring your `prep` path is deterministic for the given inputs (fixed seeds) so `Log`’s per-round reconstruction aligns with stored predictions.
+
+### Example
+
+```python
+import loop
+from loop import sfm
+
+uel = loop.UniversalExperimentLoop(
+    data=your_polars_dataframe,
+    single_file_model=sfm.lightgbm.breakout_regressor,
+)
+
+uel.run(
+    experiment_name='exp_breakout',
+    n_permutations=10,
+    prep_each_round=False,          # prep once for baseline runs
+    random_search=True,
+    maintain_details_in_params=True,
+    context_params={'symbol': 'BTCUSDT'},
+    save_to_sqlite=False,
+)
+
+# Post-run analysis via Log
+backtest_df = uel.log.experiment_backtest_results()
+confusion_df = uel.log.experiment_confusion_metrics(x='price_change')
+round0_perf = uel.log.permutation_prediction_performance(round_id=0)
+```

@@ -4,13 +4,13 @@ from optuna.trial import create_trial, TrialState
 from optuna.storages import InMemoryStorage
 
 
-def log_to_optuna_study(log_df: object, params: object, objective: str) -> optuna.Study:
+def log_to_optuna_study(experiment_log: object, params: object, objective: str) -> optuna.Study:
 
     '''
     Create an Optuna study from the Loop experiment artifacts.
 
     Args:
-        log_df (uel.log_df | pl.DataFrame) : The experiment result log
+        experiment_log (uel.experiment_log | pl.DataFrame) : The experiment result log
         params (sfm.params | func) : sfm.params function used in the experiment
         objective (str) : Target feature column name
         
@@ -25,7 +25,7 @@ def log_to_optuna_study(log_df: object, params: object, objective: str) -> optun
     
     param_cols = list(params.keys())
     
-    for _, row in log_df.to_pandas().iterrows():
+    for _, row in experiment_log.to_pandas().iterrows():
         
         params_dict = {c: row[c] for c in param_cols}
         
