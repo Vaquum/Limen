@@ -6,7 +6,6 @@ Implements line detection, feature engineering, and labeling for multiclass trad
 
 import numpy as np
 import polars as pl
-import logging
 from typing import List, Dict, Tuple, Union
 from datetime import datetime
 import lightgbm as lgb
@@ -92,10 +91,6 @@ def filter_lines_by_quantile(lines: List[Dict], quantile: float) -> List[Dict]:
     heights = [abs(line['height_pct']) for line in lines]
     threshold = np.quantile(heights, quantile)
     
-    logging.debug(f"Filtering lines by Q{int(quantile*100)}:")
-    logging.debug(f"  Total lines: {len(lines)}")
-    logging.debug(f"  Height percentiles - P25: {np.percentile(heights, 25):.3%}, P50: {np.percentile(heights, 50):.3%}, P75: {np.percentile(heights, 75):.3%}")
-    logging.debug(f"  Q{int(quantile*100)} threshold: {threshold:.3%}")
     
     filtered = [line for line in lines if abs(line['height_pct']) >= threshold]
     
