@@ -38,7 +38,7 @@ def params():
 
 
 def prep(data):
-    
+
     all_datetimes = data['datetime'].to_list()
 
     slices = slice_time_series(data, TARGET_COLUMN, NUM_SLICES)
@@ -79,7 +79,7 @@ def prep(data):
             'delta_t_s',
             'liq_prev_1',
             'liq_prev_2',
-            'liq_rolling_3', 
+            'liq_rolling_3',
             'liq_ewm_5',
             'liq_ewm_10',
             'delta_liq']
@@ -101,7 +101,7 @@ def prep(data):
 
     return data_dict
 
-def model(data, round_params):
+def model(data: dict, round_params):
 
     round_params = round_params.copy()
     round_params.update({
@@ -126,5 +126,5 @@ def model(data, round_params):
 
     round_results = binary_metrics(data, pred_bin, pred_prob)
     round_results['_preds'] = pred_prob
-    
+
     return round_results 
