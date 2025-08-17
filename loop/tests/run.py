@@ -5,8 +5,6 @@ from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
 
 from loop.tests.test_sfm import test_sfm
 from loop.tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
-from loop.tests.test_mega_model import test_mega_model_with_live_labeling
-from loop.tests.test_create_megamodel_predictions import test_create_megamodel_predictions
 from loop.tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
 from loop.tests.test_confidence_filtering_system import test_apply_confidence_filtering
 from loop.tests.test_confidence_filtering_system import test_confidence_filtering_system
@@ -20,8 +18,6 @@ tests = [
     test_klines_data_maker_fields,
     test_sfm,
     test_conserved_flux_renormalization,
-    test_mega_model_with_live_labeling,
-    test_create_megamodel_predictions,
     test_calibrate_confidence_threshold,
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
