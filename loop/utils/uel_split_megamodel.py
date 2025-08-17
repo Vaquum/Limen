@@ -79,8 +79,8 @@ def _extract_predictions(models: List[Any], test_features: Any) -> List[Any]:
     return all_predictions
 
 
-def _calculate_ensemble_metrics(all_predictions: List[Any], test_targets: Any) -> Dict[str, Any]:
-    '''Compute ensemble performance metrics.'''
+def _calculate_megamodel_metrics(all_predictions: List[Any], test_targets: Any) -> Dict[str, Any]:
+    '''Compute megamodel performance metrics.'''
     if not all_predictions:
         return {}
     
@@ -88,9 +88,9 @@ def _calculate_ensemble_metrics(all_predictions: List[Any], test_targets: Any) -
     
     from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
     
-    ensemble_mae = mean_absolute_error(test_targets, megamodel_predictions)
-    ensemble_r2 = r2_score(test_targets, megamodel_predictions)
-    ensemble_rmse = np.sqrt(mean_squared_error(test_targets, megamodel_predictions))
+    megamodel_mae = mean_absolute_error(test_targets, megamodel_predictions)
+    megamodel_r2 = r2_score(test_targets, megamodel_predictions)
+    megamodel_rmse = np.sqrt(mean_squared_error(test_targets, megamodel_predictions))
     
     individual_metrics = []
     for i, preds in enumerate(all_predictions):
@@ -105,16 +105,16 @@ def _calculate_ensemble_metrics(all_predictions: List[Any], test_targets: Any) -
         })
     
     best_individual_mae = min(m['mae'] for m in individual_metrics)
-    mae_improvement = (best_individual_mae - ensemble_mae) / best_individual_mae * 100
+    mae_improvement = (best_individual_mae - megamodel_mae) / best_individual_mae * 100
     
     return {
         'megamodel_predictions': megamodel_predictions,
         'individual_predictions': all_predictions,
         'prediction_std': np.std(all_predictions, axis=0),
         'prediction_count': len(all_predictions),
-        'ensemble_mae': ensemble_mae,
-        'ensemble_r2': ensemble_r2,
-        'ensemble_rmse': ensemble_rmse,
+        'megamodel_mae': megamodel_mae,
+        'megamodel_r2': megamodel_r2,
+        'megamodel_rmse': megamodel_rmse,
         'individual_metrics': individual_metrics,
         'test_targets': test_targets,
         'mae_improvement_pct': mae_improvement
@@ -142,7 +142,7 @@ def uel_split_megamodel(original_data: pl.DataFrame,
         seed (Optional[int]): Random seed for reproducible splits
         
     Returns:
-        Dict[str, Any]: Dictionary with 'megamodel_predictions', 'uel_results', 'ensemble_mae', 'mae_improvement_pct' keys
+        Dict[str, Any]: Dictionary with 'megamodel_predictions', 'uel_results', 'megamodel_mae', 'mae_improvement_pct' keys
     '''
 
     if not isinstance(original_data, pl.DataFrame):
@@ -215,7 +215,7 @@ def uel_split_megamodel(original_data: pl.DataFrame,
     
     if all_predictions and hasattr(first_uel, 'data') and 'y_test' in first_uel.data:
         test_targets = first_uel.data['y_test']
-        ensemble_metrics = _calculate_ensemble_metrics(all_predictions, test_targets)
-        results.update(ensemble_metrics)
+        megamodel_metrics = _calculate_megamodel_metrics(all_predictions, test_targets)
+        results.update(megamodel_metrics)
     
     return results

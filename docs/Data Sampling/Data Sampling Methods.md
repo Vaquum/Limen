@@ -1,6 +1,6 @@
 # Data Sampling
 
-Data sampling utilities for creating multiple dataset variations to improve model performance through ensemble approaches.
+Data sampling utilities for creating multiple dataset variations to improve model performance through megamodel approaches.
 
 ## Overview
 
@@ -100,7 +100,7 @@ Based on comprehensive trading backtests using tradeable_regressor SFM:
 
 ### Split-Based Megamodel Approach
 
-Loop also provides split-based megamodels that create ensembles using different train/validation splits on the same dataset. This is a complementary approach to data sampling.
+Loop also provides split-based megamodels that create megamodels using different train/validation splits on the same dataset. This is a complementary approach to data sampling.
 
 **See:** [Split-Based Megamodels.md](Split-Based%20Megamodels.md) for complete documentation.
 
@@ -120,7 +120,7 @@ megamodel_results = uel_split_megamodel(
 You can combine both data sampling and split-based megamodels for maximum performance:
 
 ```python
-# Double ensemble: data sampling + split-based megamodels
+# Double megamodel: data sampling + split-based megamodels
 datasets = random_subsets_sampling(data, n_samples=3, seed=42)
 
 all_megamodel_results = []
@@ -134,7 +134,7 @@ for i, dataset in enumerate(datasets):
     )
     all_megamodel_results.append(megamodel_result)
 
-# Now you have 3 datasets × 3 models = 9 models in your super-ensemble
+# Now you have 3 datasets × 3 models = 9 models in your super-megamodel
 ```
 
 ## Best Practices
@@ -160,7 +160,7 @@ datasets = random_subsets_sampling(data, seed=42)
 - **Medium datasets** (50k-500k rows): Use `sample_size=10000-25000`  
 - **Large datasets** (>500k rows): Use `sample_size=25000-50000`
 
-### Ensemble Creation
+### Megamodel Creation
 
 Combine multiple sampling strategies for maximum performance:
 

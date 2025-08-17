@@ -1,10 +1,10 @@
 # Split-Based Megamodels
 
-UEL-compatible ensemble creation using multiple train/validation splits on the same dataset.
+UEL-compatible megamodel creation using multiple train/validation splits on the same dataset.
 
 ## Overview
 
-Split-based megamodels create ensemble predictions by training multiple models on different train/validation splits of the same dataset. This approach is complementary to data sampling strategies and provides model stability through split diversity rather than data diversity.
+Split-based megamodels create megamodel predictions by training multiple models on different train/validation splits of the same dataset. This approach is complementary to data sampling strategies and provides model stability through split diversity rather than data diversity.
 
 ## Core Concept
 
@@ -12,7 +12,7 @@ While data sampling strategies create different datasets to train on, split-base
 - Keep the same overall dataset
 - Create different train/validation boundaries  
 - Train separate models on each split configuration
-- Average predictions for ensemble results
+- Average predictions for megamodel results
 
 ## uel_split_megamodel
 
@@ -31,8 +31,8 @@ results = uel_split_megamodel(
     seed=42
 )
 
-# Access ensemble predictions
-ensemble_predictions = results['megamodel_predictions']
+# Access megamodel predictions
+megamodel_predictions = results['megamodel_predictions']
 mae_improvement = results['mae_improvement_pct']
 ```
 
@@ -58,9 +58,9 @@ The function returns a dictionary containing:
 | `individual_predictions` | `list[np.ndarray]` | Predictions from each individual model |
 | `uel_results` | `list[dict]` | Complete UEL results from each run |
 | `best_models` | `list` | Best model from each UEL run |
-| `ensemble_mae` | `float` | Mean Absolute Error of ensemble predictions |
-| `ensemble_r2` | `float` | R² score of ensemble predictions |
-| `ensemble_rmse` | `float` | Root Mean Square Error of ensemble predictions |
+| `megamodel_mae` | `float` | Mean Absolute Error of megamodel predictions |
+| `megamodel_r2` | `float` | R² score of megamodel predictions |
+| `megamodel_rmse` | `float` | Root Mean Square Error of megamodel predictions |
 | `mae_improvement_pct` | `float` | Percentage improvement over best individual model |
 | `individual_metrics` | `list[dict]` | Performance metrics for each model |
 
@@ -129,7 +129,7 @@ results = uel_split_megamodel(
 ```python
 from loop.utils import random_subsets_sampling, uel_split_megamodel
 
-# Double ensemble: data diversity + split diversity
+# Double megamodel: data diversity + split diversity
 datasets = random_subsets_sampling(data, n_samples=3, seed=42)
 
 all_results = []
@@ -143,7 +143,7 @@ for i, dataset in enumerate(datasets):
     )
     all_results.append(split_megamodel)
 
-# Super ensemble: 3 datasets × 3 split models = 9 total models
+# Super megamodel: 3 datasets × 3 split models = 9 total models
 ```
 
 ## Performance Considerations
@@ -158,7 +158,7 @@ Split-based megamodels are computationally expensive because:
 ### Memory Usage
 
 - Stores all UEL instances and models in memory
-- Individual predictions arrays for ensemble calculation
+- Individual predictions arrays for megamodel calculation
 - Consider memory constraints for large datasets or many models
 
 ### Optimization Tips
@@ -182,9 +182,9 @@ The function handles common issues gracefully:
 ### When to Use Split-Based Megamodels
 
 - **Model stability testing**: Verify performance across different splits
-- **Ensemble improvement**: When single models show high variance
+- **Megamodel improvement**: When single models show high variance
 - **SFM evaluation**: Test how well SFM generalizes to different boundaries
-- **Production ensembles**: When computational cost is acceptable
+- **Production megamodels**: When computational cost is acceptable
 
 ### When to Prefer Data Sampling
 
