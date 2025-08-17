@@ -203,7 +203,7 @@ def uel_split_megamodel(original_data: pl.DataFrame,
     first_uel = uel_results[0]['uel_instance']
     
     all_predictions = []
-    if hasattr(first_uel, 'data') and '_test_clean' in first_uel.data:
+    if hasattr(first_uel, 'data') and 'x_test' in first_uel.data:
         test_features = first_uel.data['x_test']
         all_predictions = _extract_predictions(best_models, test_features)
     
