@@ -4,7 +4,7 @@ Data sampling utilities for creating multiple dataset variations to improve mode
 
 ## Overview
 
-These utilities implement proven data sampling strategies that can significantly improve trading model performance. Based on comprehensive backtesting, the `random_subsets_sampling` strategy achieved 7.74% returns compared to 2.83% for full dataset approaches.
+These utilities implement proven data sampling strategies that can significantly improve trading model performance. Based on comprehensive backtesting, the `random_subsets_sampling` strategy achieved superior performance compared to full dataset approaches.
 
 ## Available Strategies
 
@@ -23,7 +23,7 @@ datasets = full_dataset_sampling(data)
 
 ### random_subsets_sampling ⭐ **Winner**
 
-Creates random contiguous subsets avoiding edge effects. This strategy won comprehensive trading backtests with 7.74% total return.
+Creates random contiguous subsets avoiding edge effects. This strategy won comprehensive trading backtests.
 
 ```python
 from loop.utils import random_subsets_sampling
@@ -91,12 +91,12 @@ for i, dataset in enumerate(datasets):
 
 Based on comprehensive trading backtests using tradeable_regressor SFM:
 
-| Strategy | Total Return | Sharpe Ratio | Max Drawdown | Trades |
-|----------|-------------|--------------|--------------|---------|
-| **random_subsets** | **7.74%** | **2.156** | **-1.89%** | **127** |
-| bootstrap_samples | 6.12% | 1.834 | -2.34% | 98 |
-| temporal_windows | 4.87% | 1.623 | -2.78% | 112 |
-| full_dataset | 2.83% | 1.234 | -3.45% | 156 |
+| Strategy | Performance Rank | Notes |
+|----------|------------------|-------|
+| **random_subsets** | **1st** | **Best overall performance** |
+| bootstrap_samples | 2nd | Strong performance |
+| temporal_windows | 3rd | Good performance |
+| full_dataset | 4th | Baseline comparison |
 
 ### Split-Based Megamodel Approach
 
