@@ -1,6 +1,6 @@
 import polars as pl
 import numpy as np
-from typing import List
+from typing import List, Optional
 
 
 DEFAULT_SAMPLE_SIZE = 10000
@@ -13,7 +13,7 @@ def random_subsets_sampling(data: pl.DataFrame,
                            *,
                            safe_range_low: float = 0.25,
                            safe_range_high: float = 0.75,
-                           seed: int | None = None) -> List[pl.DataFrame]:
+                           seed: Optional[int] = None) -> List[pl.DataFrame]:
 
     '''
     Compute random contiguous subsets from dataset avoiding edge effects.

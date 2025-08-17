@@ -1,6 +1,6 @@
 import polars as pl
 import numpy as np
-from typing import List
+from typing import List, Optional
 
 
 DEFAULT_SAMPLE_SIZE = 10000
@@ -10,7 +10,7 @@ DEFAULT_N_SAMPLES = 3
 def bootstrap_sampling(data: pl.DataFrame,
                       sample_size: int = DEFAULT_SAMPLE_SIZE, 
                       n_samples: int = DEFAULT_N_SAMPLES,
-                      seed: int | None = None) -> List[pl.DataFrame]:
+                      seed: Optional[int] = None) -> List[pl.DataFrame]:
 
     '''
     Compute bootstrap samples with replacement from dataset.

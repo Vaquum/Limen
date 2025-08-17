@@ -3,11 +3,13 @@ import numpy as np
 import loop
 from loop.utils.splits import split_sequential
 from typing import List, Dict, Optional, Union, Any
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 
 
 DEFAULT_N_MODELS = 5
 DEFAULT_SPLIT_RATIOS = (0.7, 0.15, 0.15)
 DEFAULT_N_PERMUTATIONS = 2
+SPLIT_RATIO_TOLERANCE = 1e-6
 
 
 def _run_single_uel(data: pl.DataFrame, sfm_module: Any, experiment_name: str, 
@@ -85,8 +87,6 @@ def _calculate_megamodel_metrics(all_predictions: List[Any], test_targets: Any) 
         return {}
     
     megamodel_predictions = np.mean(all_predictions, axis=0)
-    
-    from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
     
     megamodel_mae = mean_absolute_error(test_targets, megamodel_predictions)
     megamodel_r2 = r2_score(test_targets, megamodel_predictions)
@@ -166,7 +166,7 @@ def uel_split_megamodel(original_data: pl.DataFrame,
     if len(split_ratios) != 3:
         raise ValueError('split_ratios must contain exactly 3 values for train/val/test')
     
-    if abs(sum(split_ratios) - 1.0) > 1e-6:
+    if abs(sum(split_ratios) - 1.0) > SPLIT_RATIO_TOLERANCE:
         raise ValueError('split_ratios must sum to 1.0')
 
     uel_results = []
