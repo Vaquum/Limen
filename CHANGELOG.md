@@ -245,9 +245,13 @@
 - Format code style for `loop.indicators`
 - Update docs for `loop.indicators`
 
-# v1.14.0 on 17h of august 2025
+# v1.14.0 on 17h of August 2025
 - Refactor data sampler code to generic form in loop.utils.data_sampler
 - Remove data sampler class from lightgbm.utils
 - Refactor mega model code to generic form in loop.utils
 - Remove mega model code from lightgbm.utils, tests
 - Add docs for data sampler, mega model
+
+# v1.15.0 on 18th of August 2025
+- Follow the column naming pattern from `experiment_backtest_results` in `experiment_confusion_metrics`
+- Organize `experiment_confusion_metrics` columns based on actual use pattern
