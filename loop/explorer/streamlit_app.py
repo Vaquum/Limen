@@ -1,6 +1,4 @@
-# streamlit_v3.py
-
-import os
+import os, sys, argparse
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -13,11 +11,11 @@ from loop.explorer.streamlit_pivot import render_pivot_table
 from loop.explorer.streamlit_heatmap import render_corr_heatmap
 from loop.explorer.streamlit_table import prepare_table_data, render_table
 from loop.explorer.streamlit_details import render_details_view
+from loop.explorer.streamlit_utils import pretty_label, format_value, quantile_bins_fixed
 
-import os, sys, argparse
 
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument("--data", default=os.environ.get("DATA_PARQUET", "data.parquet"))
+parser.add_argument('--data', default=os.environ.get('DATA_PARQUET', 'data.parquet'))
 args, _ = parser.parse_known_args()
 
 parquet_path = args.data
@@ -25,16 +23,8 @@ print(f"[streamlit] Using parquet: {parquet_path}", file=sys.stderr)
 if not os.path.exists(parquet_path):
     raise FileNotFoundError(f"Parquet not found: {parquet_path}")
 
-
-# NEW: shared helpers
-from streamlit_utils import (
-    pretty_label,
-    format_value,
-    quantile_bins_fixed,
-)
-
-st.set_page_config(page_title="Loop Explorer", layout="wide")
-pd.set_option("styler.render.max_elements", 10_000_000)
+st.set_page_config(page_title='Loop Explorer', layout='wide')
+pd.set_option('styler.render.max_elements', 10_000_000)
 
 # --------------------------------------------------------
 # ---------- Global CSS (cards + compact sidebar dividers)
@@ -42,7 +32,6 @@ pd.set_option("styler.render.max_elements", 10_000_000)
 sidebar_container_gap_rem = 0.45
 sidebar_divider_gap_rem   = 0.30
 
-# Inject styles from the helper
 st.markdown(
     streamlit_styles(sidebar_container_gap_rem, sidebar_divider_gap_rem),
     unsafe_allow_html=True,
@@ -51,8 +40,6 @@ st.markdown(
 # --------------
 # ---- Load data
 # --------------
-#df = pd.read_parquet(os.environ.get("DATA_PARQUET", "data.parquet"))
-# NEW
 df = pd.read_parquet(parquet_path)
 
 # ----------------
@@ -68,20 +55,20 @@ render_details_view(
 # Base view + custom columns
 # -----------------------------
 df_base = df.copy()
-df_base.insert(0, "rid", range(len(df_base)))
+df_base.insert(0, 'rid', range(len(df_base)))
 
-if "custom_cols" not in st.session_state:
-    st.session_state["custom_cols"] = []
+if 'custom_cols' not in st.session_state:
+    st.session_state['custom_cols'] = []
 
-if st.session_state["custom_cols"]:
-    for _name, _expr in st.session_state["custom_cols"]:
+if st.session_state['custom_cols']:
+    for _name, _expr in st.session_state['custom_cols']:
         try:
-            df_base[_name] = pd.eval(_expr, engine="python", local_dict=df_base.to_dict("series"))
+            df_base[_name] = pd.eval(_expr, engine='python', local_dict=df_base.to_dict('series'))
         except Exception:
             pass
 
-num_cols = df_base.select_dtypes("number").columns.tolist()
-cat_cols = df_base.select_dtypes(exclude="number").columns.tolist()
+num_cols = df_base.select_dtypes('number').columns.tolist()
+cat_cols = df_base.select_dtypes(exclude='number').columns.tolist()
 
 # -----------------
 # ---- Sidebar UI
@@ -96,41 +83,41 @@ sidebar_state = build_sidebar(
 # ----------
 # Show Table
 # ----------
-show_table         = sidebar_state["show_table"]
-numeric_filter_col = sidebar_state["numeric_filter_col"]
-num_range          = sidebar_state["num_range"]
-fmt_mode           = sidebar_state["fmt_mode"]
+show_table         = sidebar_state['show_table']
+numeric_filter_col = sidebar_state['numeric_filter_col']
+num_range          = sidebar_state['num_range']
+fmt_mode           = sidebar_state['fmt_mode']
 
 # ----------
 # Show Chart
 # ----------
-show_chart       = sidebar_state["show_chart"]
-chart_type       = sidebar_state["chart_type"]
-xcol             = sidebar_state["xcol"]
-ycol             = sidebar_state["ycol"]
-ycols            = sidebar_state["ycols"]
-hue_col          = sidebar_state["hue_col"]
-size_col         = sidebar_state["size_col"]
-normalize_line   = sidebar_state["normalize_line"]
-smoothing_window = sidebar_state["smoothing_window"]
-area_normalize_100 = sidebar_state.get("area_normalize_100", True)
+show_chart       = sidebar_state['show_chart']
+chart_type       = sidebar_state['chart_type']
+xcol             = sidebar_state['xcol']
+ycol             = sidebar_state['ycol']
+ycols            = sidebar_state['ycols']
+hue_col          = sidebar_state['hue_col']
+size_col         = sidebar_state['size_col']
+normalize_line   = sidebar_state['normalize_line']
+smoothing_window = sidebar_state['smoothing_window']
+area_normalize_100 = sidebar_state.get('area_normalize_100', True)
 
 # ------------------------
 # Show Correlation Heatmap
 # ------------------------
-show_corr = sidebar_state["show_corr"]
-filter_outliers  = sidebar_state.get("filter_outliers", False)
+show_corr = sidebar_state['show_corr']
+filter_outliers  = sidebar_state.get('filter_outliers', False)
 
 # ----------------
 # Show Pivot Table
 # ----------------
-show_pivot     = sidebar_state["show_pivot"]
-pivot_rows     = sidebar_state["pivot_rows"]
-pivot_cols     = sidebar_state["pivot_cols"]
-pivot_val      = sidebar_state["pivot_val"]
-agg            = sidebar_state["agg"]
-quantile_rows  = sidebar_state["quantile_rows"]
-quantile_cols  = sidebar_state["quantile_cols"]
+show_pivot     = sidebar_state['show_pivot']
+pivot_rows     = sidebar_state['pivot_rows']
+pivot_cols     = sidebar_state['pivot_cols']
+pivot_val      = sidebar_state['pivot_val']
+agg            = sidebar_state['agg']
+quantile_rows  = sidebar_state['quantile_rows']
+quantile_cols  = sidebar_state['quantile_cols']
 
 # ---------------------------
 # ---- Table data & render
@@ -150,7 +137,7 @@ if show_table:
 # ---- Charts
 # -----------
 if show_chart:
-    if chart_type == "Line" and xcol and ycols:
+    if chart_type == 'Line' and xcol and ycols:
         charts.plot_line(
             df_filt,
             xcol=xcol,
@@ -161,7 +148,7 @@ if show_chart:
             size_col=size_col,
         )
 
-    elif chart_type == "Area" and xcol and ycols:
+    elif chart_type == 'Area' and xcol and ycols:
         charts.plot_area(
             df_filt,
             xcol=xcol,
@@ -170,7 +157,7 @@ if show_chart:
             normalize_100=area_normalize_100,
         )
 
-    elif chart_type == "Scatter" and xcol and ycol:
+    elif chart_type == 'Scatter' and xcol and ycol:
         charts.plot_scatter(
             df_filt,
             xcol=xcol,
@@ -179,7 +166,7 @@ if show_chart:
             size_col=size_col,
         )
 
-    elif chart_type == "Box" and xcol and ycol:
+    elif chart_type == 'Box' and xcol and ycol:
         charts.plot_box(
             df_filt,
             xcol=xcol,
@@ -213,5 +200,5 @@ if show_pivot and pivot_val:
         agg=agg,
         quantile_rows=quantile_rows,
         quantile_cols=quantile_cols,
-        quantile_bins_fn=quantile_bins_fixed,  # <-- from utils
+        quantile_bins_fn=quantile_bins_fixed,
     )
