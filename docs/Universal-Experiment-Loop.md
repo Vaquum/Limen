@@ -11,7 +11,7 @@ Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its in
 - `Benchmark`
 - `Backtest`
 
-The operation of of `uel.run` can be thought of as an advanced parameter sweep, which automatically integrates the parameter sweep results (i.e. `uel.experiment_log`) with benchmarks (i.e. `uel.experiment_confusion_metrics`) and backtest (i.e. `uel.experiment_backtest_results`).
+The operation of `uel.run` can be thought of as an advanced parameter sweep, which automatically integrates the parameter sweep results (i.e. `uel.experiment_log`) with benchmarks (i.e. `uel.experiment_confusion_metrics`) and backtest (i.e. `uel.experiment_backtest_results`).
 
 ## On Parameters
 
