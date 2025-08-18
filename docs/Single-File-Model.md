@@ -20,7 +20,7 @@ Takes no input and returns a dictionary with keys as parameter names, and lists 
 
 - The output is `round_params` a dictionary where each key has a list as its value
 - Individual parameter values can be any scalar values; integers, floats, strings, functions, etc. 
-- Individual parameter can not be aggregate types; lists, tuples, arrays, or objects
+- Individual parameter cannot be aggregate types; lists, tuples, arrays, or objects
 - Parameter values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
 
 **NOTE**: Parameters can be used to parametrize other parameters, for example, where one parameter is a function, and another parameter is an input argument to that function. Such higher-order parameters can be an extremely powerful way to make Loop play the song of Bitcoin.
