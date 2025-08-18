@@ -255,3 +255,5 @@
 # v1.15.0 on 18th of August 2025
 - Follow the column naming pattern from `experiment_backtest_results` in `experiment_confusion_metrics`
 - Organize `experiment_confusion_metrics` columns based on actual use pattern
+- Pre-compute `experiment_confusion_metrics` and `experiment_backtest_results` (**NOTE**: `experiment_parameter_correlation` remains callable)
+- Clean `uel` object namespace
