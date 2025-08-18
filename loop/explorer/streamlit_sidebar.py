@@ -1,10 +1,10 @@
-# streamlit_sidebar.py
 from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
 
 def _tight_divider(gap_rem: float) -> None:
+
     st.markdown(
         f"<hr style='margin:{gap_rem}rem 0; border:0; border-top:1px solid rgba(0,0,0,.12);' />",
         unsafe_allow_html=True,
@@ -17,11 +17,6 @@ def build_sidebar(
     cat_cols: list[str],
     sidebar_divider_gap_rem: float = 0.30,
 ):
-    """
-    Renders the sidebar and returns all sidebar selections.
-    This preserves the exact UI, labels, defaults, and behavior you had.
-    It may update df_base when creating a custom column (and trigger st.rerun()).
-    """
 
     with st.sidebar:
 
@@ -170,7 +165,6 @@ def build_sidebar(
         numeric_filter_col=numeric_filter_col,
         num_range=num_range,
         fmt_mode=fmt_mode,
-
         show_chart=show_chart,
         chart_type=chart_type,
         xcol=xcol,
@@ -181,10 +175,8 @@ def build_sidebar(
         normalize_line=normalize_line,
         smoothing_window=smoothing_window,
         area_normalize_100=area_normalize_100,
-
         show_corr=show_corr,
         filter_outliers=filter_outliers,
-
         show_pivot=show_pivot,
         pivot_rows=pivot_rows,
         pivot_cols=pivot_cols,
