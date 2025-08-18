@@ -24,7 +24,7 @@ def random_subsets_sampling(data: pl.DataFrame,
         n_samples (int): Number of random subsets to create
         safe_range_low (float): Lower bound of safe range as fraction of total rows
         safe_range_high (float): Upper bound of safe range as fraction of total rows
-        seed (int | None): Random seed for reproducible results
+        seed (Optional[int]): Random seed for reproducible results
         
     Returns:
         List[pl.DataFrame]: List of random contiguous subsets from original data

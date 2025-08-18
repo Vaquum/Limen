@@ -19,7 +19,7 @@ def bootstrap_sampling(data: pl.DataFrame,
         data (pl.DataFrame): Klines dataset with 'datetime' and numeric columns
         sample_size (int): Number of rows in each bootstrap sample
         n_samples (int): Number of bootstrap samples to create
-        seed (int | None): Random seed for reproducible results
+        seed (Optional[int]): Random seed for reproducible results
         
     Returns:
         List[pl.DataFrame]: List of bootstrap sampled datasets with replacement
