@@ -27,16 +27,16 @@ def loop_explorer(data, host='37.27.112.167'):
     except AttributeError:
         data.to_parquet(tmp_parquet)
 
-    script_path="loop/explorer/streamlit_app.py"
+    script_path='loop/explorer/streamlit_app.py'
     script_path = str(Path(script_path).resolve())
     workdir = str(Path(script_path).parent.resolve())
 
     cmd = [
-        sys.executable, "-m", "streamlit", "run", script_path,
-        "--server.address", "0.0.0.0",
-        "--server.port", str(port),
-        "--server.headless", "true",
-        "--", "--data", tmp_parquet,
+        sys.executable, '-m', 'streamlit', 'run', script_path,
+        '--server.address', '0.0.0.0',
+        '--server.port', str(port),
+        '--server.headless', 'true',
+        '--', '--data', tmp_parquet,
     ]
 
     env = os.environ.copy()
@@ -54,22 +54,22 @@ def loop_explorer(data, host='37.27.112.167'):
         
         if not line:
             if proc.poll() is not None:
-                raise RuntimeError("Streamlit exited before starting. Check logs above.")
+                raise RuntimeError('Streamlit exited before starting. Check logs above.')
             if time.time() - t0 > 20:
-                raise TimeoutError("Streamlit did not start within 20s.")
+                raise TimeoutError('Streamlit did not start within 20s.')
             continue
         
         print(line, end="")
         
-        if "You can now view your Streamlit app in your browser." in line:
+        if 'You can now view your Streamlit app in your browser.' in line:
             started = True
             break
-        if "Traceback (most recent call last)" in line:
+        if 'Traceback (most recent call last)' in line:
             pass
 
     if not started:
-        raise RuntimeError("Streamlit failed to announce startup.")
+        raise RuntimeError('Streamlit failed to announce startup.')
 
     url = f"http://{host}:{port}"
     display(Javascript(f"window.open('{url}', '_blank');"))
-    print("Open:", url)
+    print(f"Open:{url}")
