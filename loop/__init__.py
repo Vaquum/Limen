@@ -3,7 +3,9 @@ from loop.log.log import Log
 from loop.account import Account
 from loop.backtest.backtest_sequential import BacktestSequential
 from loop.universal_experiment_loop import UniversalExperimentLoop
+from loop.explorer.explorer import Explorer
 
+import loop.explorer as explorer
 import loop.features as features
 import loop.indicators as indicators
 import loop.metrics as metrics
@@ -19,6 +21,8 @@ __all__ = [
     'HistoricalData',
     'Log',
     'UniversalExperimentLoop',
+    'Explorer',
+    'explorer',
     'features',
     'indicators',
     'metrics',

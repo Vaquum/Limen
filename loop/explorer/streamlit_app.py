@@ -4,15 +4,15 @@ import os
 import pandas as pd
 import numpy as np
 import streamlit as st
-import plotly.express as px  # keep if other modules rely on px; safe to leave
+import plotly.express as px
 
-from streamlit_styles import streamlit_styles
-import streamlit_charts as charts
-from streamlit_sidebar import build_sidebar
-from streamlit_pivot import render_pivot_table
-from streamlit_heatmap import render_corr_heatmap
-from streamlit_table import prepare_table_data, render_table
-from streamlit_details import render_details_view
+from loop.explorer.streamlit_styles import streamlit_styles
+import loop.explorer.streamlit_charts as charts
+from loop.explorer.streamlit_sidebar import build_sidebar
+from loop.explorer.streamlit_pivot import render_pivot_table
+from loop.explorer.streamlit_heatmap import render_corr_heatmap
+from loop.explorer.streamlit_table import prepare_table_data, render_table
+from loop.explorer.streamlit_details import render_details_view
 
 import os, sys, argparse
 
