@@ -19,7 +19,7 @@ Takes no input and returns a dictionary with keys as parameter names, and lists 
 ##### REQUIREMENTS
 
 - The output is `round_params` a dictionary where each key has a list as its value
-- Individual parameter values can be any scalar values; integers, floats, integers, functions, etc. 
+- Individual parameter values can be any scalar values; integers, floats, strings, functions, etc. 
 - Individual parameter can not be aggregate types; lists, tuples, arrays, or objects
 - Paramater values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
 
