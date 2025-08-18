@@ -14,5 +14,7 @@ pyarrow
 numpy
 matplotlib
 seaborn
+streamlit
+plotly
 
     
