@@ -244,3 +244,10 @@
 - Fix `loop.indicators.price_change_pct` calculation
 - Format code style for `loop.indicators`
 - Update docs for `loop.indicators`
+
+# v1.14.0 on 17h of august 2025
+- Refactor data sampler code to generic form in loop.utils.data_sampler
+- Remove data sampler class from lightgbm.utils
+- Refactor mega model code to generic form in loop.utils
+- Remove mega model code from lightgbm.utils, tests
+- Add docs for data sampler, mega model

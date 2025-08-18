@@ -16,31 +16,41 @@ from loop.utils.confidence_filtering_system import confidence_filtering_system
 from loop.utils.add_breakout_ema import add_breakout_ema
 from loop.utils.binance_file_to_polars import binance_file_to_polars
 from loop.utils.slice_time_series import slice_time_series
+from loop.utils.data_sampling.full_dataset_sampling import full_dataset_sampling
+from loop.utils.data_sampling.random_subsets_sampling import random_subsets_sampling
+from loop.utils.data_sampling.bootstrap_sampling import bootstrap_sampling
+from loop.utils.data_sampling.temporal_windows_sampling import temporal_windows_sampling
+from loop.utils.uel_split_megamodel import uel_split_megamodel
 
 __all__ = [
     'add_breakout_ema',
     'binance_file_to_polars',
-    'slice_time_series',
+    'bootstrap_sampling',
+    'build_breakout_flags',
+    'compute_htf_features',
+    'confidence_filtering_system',
+    'continuous_metrics',
+    'binary_metrics',
+    'format_report_footer',
+    'format_report_header',
+    'format_report_section',
+    'full_dataset_sampling',
+    'generate_parameter_range',
+    'generate_permutation',
     'generic_endpoint_for_tdw',
     'get_klines_data',
     'get_trades_data',
     'log_to_optuna_study',
-    'continuous_metrics',
-    'binary_metrics',
     'ParamSpace',
     'random_slice',
-    'format_report_header',
-    'format_report_section',
-    'format_report_footer',
+    'random_subsets_sampling',
     'safe_ovr_auc',
     'scale_data_dict',
+    'slice_time_series',
     'split_data_to_prep_output',
-    'generate_permutation',
-    'generate_parameter_range',
-    'split_sequential',
     'split_random',
+    'split_sequential',
+    'temporal_windows_sampling',
     'to_average_price_klines',
-    'compute_htf_features',
-    'build_breakout_flags',
-    'confidence_filtering_system'
+    'uel_split_megamodel'
 ] 
