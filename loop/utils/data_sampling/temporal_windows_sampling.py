@@ -8,8 +8,8 @@ MAX_WINDOWS = 10
 
 
 def temporal_windows_sampling(data: pl.DataFrame,
-                             window_size: int = DEFAULT_WINDOW_SIZE,
-                             overlap: float = DEFAULT_OVERLAP) -> List[pl.DataFrame]:
+                              window_size: int = DEFAULT_WINDOW_SIZE,
+                              overlap: float = DEFAULT_OVERLAP) -> List[pl.DataFrame]:
 
     '''
     Compute overlapping temporal windows from chronologically ordered dataset.

@@ -1,8 +1,7 @@
 import polars as pl
 import numpy as np
 import loop
-from loop.utils.splits import split_sequential
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Any
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 
 
@@ -12,9 +11,25 @@ DEFAULT_N_PERMUTATIONS = 2
 SPLIT_RATIO_TOLERANCE = 1e-6
 
 
-def _run_single_uel(data: pl.DataFrame, sfm_module: Any, experiment_name: str, 
-                   n_permutations: int, model_idx: int) -> Optional[Dict[str, Any]]:
-    '''Compute single UEL experiment and extract best model.'''
+def _run_single_uel(data: pl.DataFrame, 
+                    sfm_module: Any, 
+                    experiment_name: str, 
+                    n_permutations: int, 
+                    model_idx: int) -> Optional[Dict[str, Any]]:
+    
+    '''
+    Compute single UEL experiment and extract best model.
+    
+    Args:
+        data (pl.DataFrame): Dataset for UEL experiment
+        sfm_module (Any): Single File Model module
+        experiment_name (str): Name for UEL experiment
+        n_permutations (int): Number of parameter permutations
+        model_idx (int): Index of this model in sequence
+        
+    Returns:
+        Optional[Dict[str, Any]]: Dictionary with UEL results or None if failed
+    '''
     try:
         uel = loop.UniversalExperimentLoop(data, sfm_module)
         uel.run(
@@ -49,7 +64,17 @@ def _run_single_uel(data: pl.DataFrame, sfm_module: Any, experiment_name: str,
 
 
 def _extract_predictions(models: List[Any], test_features: Any) -> List[Any]:
-    '''Compute predictions from all models.'''
+    
+    '''
+    Compute predictions from all models.
+    
+    Args:
+        models (List[Any]): List of trained models
+        test_features (Any): Test features for prediction
+        
+    Returns:
+        List[Any]: List of prediction arrays from all models
+    '''
     all_predictions = []
     
     for i, model in enumerate(models):
@@ -81,8 +106,19 @@ def _extract_predictions(models: List[Any], test_features: Any) -> List[Any]:
     return all_predictions
 
 
-def _calculate_megamodel_metrics(all_predictions: List[Any], test_targets: Any) -> Dict[str, Any]:
-    '''Compute megamodel performance metrics.'''
+def _calculate_megamodel_metrics(all_predictions: List[Any], 
+                                 test_targets: Any) -> Dict[str, Any]:
+    
+    '''
+    Compute megamodel performance metrics.
+    
+    Args:
+        all_predictions (List[Any]): List of prediction arrays from all models
+        test_targets (Any): True target values for evaluation
+        
+    Returns:
+        Dict[str, Any]: Dictionary with megamodel metrics and individual model metrics
+    '''
     if not all_predictions:
         return {}
     
@@ -122,12 +158,12 @@ def _calculate_megamodel_metrics(all_predictions: List[Any], test_targets: Any) 
 
 
 def uel_split_megamodel(original_data: pl.DataFrame,
-                             sfm_module: Any,
-                             n_models: int = DEFAULT_N_MODELS,
-                             split_ratios: tuple = DEFAULT_SPLIT_RATIOS,
-                             n_permutations: int = DEFAULT_N_PERMUTATIONS,
-                             experiment_base_name: str = 'split_megamodel',
-                             seed: Optional[int] = None) -> Dict[str, Any]:
+                        sfm_module: Any,
+                        n_models: int = DEFAULT_N_MODELS,
+                        split_ratios: tuple = DEFAULT_SPLIT_RATIOS,
+                        n_permutations: int = DEFAULT_N_PERMUTATIONS,
+                        experiment_base_name: str = 'split_megamodel',
+                        seed: Optional[int] = None) -> Dict[str, Any]:
 
     '''
     Compute megamodel using multiple UEL runs with different data splits.

@@ -8,9 +8,9 @@ DEFAULT_N_SAMPLES = 3
 
 
 def bootstrap_sampling(data: pl.DataFrame,
-                      sample_size: int = DEFAULT_SAMPLE_SIZE, 
-                      n_samples: int = DEFAULT_N_SAMPLES,
-                      seed: Optional[int] = None) -> List[pl.DataFrame]:
+                       sample_size: int = DEFAULT_SAMPLE_SIZE,
+                       n_samples: int = DEFAULT_N_SAMPLES,
+                       seed: Optional[int] = None) -> List[pl.DataFrame]:
 
     '''
     Compute bootstrap samples with replacement from dataset.

@@ -8,12 +8,12 @@ DEFAULT_N_SAMPLES = 3
 
 
 def random_subsets_sampling(data: pl.DataFrame, 
-                           sample_size: int = DEFAULT_SAMPLE_SIZE,
-                           n_samples: int = DEFAULT_N_SAMPLES,
-                           *,
-                           safe_range_low: float = 0.25,
-                           safe_range_high: float = 0.75,
-                           seed: Optional[int] = None) -> List[pl.DataFrame]:
+                            sample_size: int = DEFAULT_SAMPLE_SIZE,
+                            n_samples: int = DEFAULT_N_SAMPLES,
+                            *,
+                            safe_range_low: float = 0.25,
+                            safe_range_high: float = 0.75,
+                            seed: Optional[int] = None) -> List[pl.DataFrame]:
 
     '''
     Compute random contiguous subsets from dataset avoiding edge effects.
