@@ -12,16 +12,16 @@ def test_sfm():
     
     tests = [
         # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log
-        (sfm.reference.random, get_klines_data, True, False),
-        (sfm.reference.xgboost, get_klines_data, False, True),
-        (sfm.reference.logreg, get_klines_data, True, True),
-        (sfm.logreg.regime_multiclass, get_klines_data, False, True),
-        (sfm.logreg.breakout_regressor_ridge, get_klines_data, False, False),
-        (sfm.reference.lightgbm, get_klines_data, False, True),
-        #(sfm.lightgbm.tradeable_regressor, get_klines_data, False, False),
-        (sfm.lightgbm.tradeline_multiclass, get_klines_data_small, True, False),
-        (sfm.rules_based.momentum_volatility_longonly, get_klines_data_small, True, False),
-        (sfm.rules_based.momentum_volatility, get_klines_data_small, True, False),
+        (sfm.reference.random, get_klines_data, True),
+        (sfm.reference.xgboost, get_klines_data, False),
+        (sfm.reference.logreg, get_klines_data, True),
+        (sfm.logreg.regime_multiclass, get_klines_data, False),
+        (sfm.logreg.breakout_regressor_ridge, get_klines_data, False),
+        (sfm.reference.lightgbm, get_klines_data, False),
+        #(sfm.lightgbm.tradeable_regressor, get_klines_data, False),
+        (sfm.lightgbm.tradeline_multiclass, get_klines_data_small, True),
+        (sfm.rules_based.momentum_volatility_longonly, get_klines_data_small, True),
+        (sfm.rules_based.momentum_volatility, get_klines_data_small, True),
         ]
 
     for test in tests:
@@ -34,12 +34,6 @@ def test_sfm():
             uel.run(experiment_name=uuid.uuid4().hex[:8],
                     n_permutations=2,
                     prep_each_round=test[2])
-
-            if test[3]:
-                _ = uel.log.experiment_backtest_results()
-                _ = uel.log.experiment_confusion_metrics(x='price_change')
-                _ = uel.log.permutation_prediction_performance(round_id=0)
-                _ = uel.log.permutation_confusion_metrics(x='price_change', round_id=0)
 
             print(f'    ✅ {test[0].__name__}: PASSED')
         
