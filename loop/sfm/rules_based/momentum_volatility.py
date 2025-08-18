@@ -30,6 +30,9 @@ def prep(data, round_params):
     
     all_datetimes = data['datetime'].to_list()
 
+    # NOTE: This is to avoid the issue that comes from not dropping any rows in prep. 
+    data = data[:-1]
+
     split_data = split_sequential(data, (8, 1, 2))
     data_dict = split_data_to_prep_output(split_data, data.columns, all_datetimes)
 
