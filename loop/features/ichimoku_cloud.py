@@ -4,13 +4,13 @@ import polars as pl
 def ichimoku_cloud(data: pl.DataFrame) -> pl.DataFrame:
 
     '''
-    Compute Ichimoku Cloud components for a given OHLC dataset.
-
+    Compute Ichimoku Cloud components for trend and momentum analysis.
+    
     Args:
-        data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
 
     Returns:
-        pl.DataFrame: Input DataFrame with additional columns:
+        pl.DataFrame: The input data with new columns:
             'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
     '''
     
