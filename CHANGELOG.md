@@ -251,3 +251,6 @@
 - Refactor mega model code to generic form in loop.utils
 - Remove mega model code from lightgbm.utils, tests
 - Add docs for data sampler, mega model
+
+# v1.14.1 on 17h of august 2025
+- Add Ichimoku Cloud feature to `loop.features`
