@@ -33,7 +33,7 @@ The meaning of the term experiment is encapsulated by the below workflow.
 
 `Choose Data` -> `Choose Indicators` -> `Choose Features` -> `Develop SFM` -> `Run UEL` -> `Analyze Experiment Log` -> `Analyze Experiment Confusion Metrics` -> `Analyze Backtest Results` -> `Refine Parameters` -> `Run UEL` -> `...`
 
-For an SFM to become mature and ready for trading, one must iterate between running `UEL` and refining paramenters many times. Generally speaking, even a relatively small parameter space requires thousands or tens of thousands of permutation rounds before meaningful analytical power is unlocked.
+For an SFM to become mature and ready for trading, one must iterate between running `UEL` and refining parameters many times. Generally speaking, even a relatively small parameter space requires thousands or tens of thousands of permutation rounds before meaningful analytical power is unlocked.
 
 ## Refining Parameters
 
