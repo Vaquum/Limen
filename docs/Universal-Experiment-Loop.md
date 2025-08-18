@@ -27,6 +27,18 @@ In short, the point of parameter sweeping is that since such a practice is possi
 
 In other words, the idea of performing a parameter sweep is equally relevant to all of Loop's folds. This is a crucial key point, and our success depends on undertanding it, putting it into practice, and realizing its unrestrained power to yield the most meaningful probabilities for live trading at any given point in time, regardless of the prevailing circumstances.
 
+## Performing an Experiment
+
+The meaning of the term experiment is encapsulated by the below workflow. 
+
+`Choose Data` -> `Choose Indicators` -> `Choose Features` -> `Develop SFM` -> `Run UEL` -> `Analyze Experiment Log` -> `Analyze Experiment Confusion Metrics` -> `Analyze Backtest Results` -> `Refine Parameters` -> `Run UEL` -> `...`
+
+For an SFM to become mature and ready for trading, one must iterate between running `UEL` and refining paramenters many times. Generally speaking, even a relatively small parameter space requires thousands or tens of thousands of permutation rounds before meaningful analytical power is unlocked.
+
+## Refining Parameters
+
+Refining parameters can be understood through expanding or contracting parameters or parameter value ranges. 
+
 ## Data
 
 A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from the provided (klines) endpoints available through [HistoricalData](Historical-Data.md). If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need, or make a PR that commits the proposed change. 
@@ -113,8 +125,7 @@ At the end of `run`, UEL attaches a `Log` object to `self.log`:
   - `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
 
 
-
-**NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfm.prep` is not any random operations
+**NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfm.prep` is not any random operations, or if you must have random operations, use parametric seeds for round-by-round reproducibility.
 
 ### Example
 

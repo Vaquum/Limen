@@ -1,6 +1,6 @@
 # Single-File Model
 
-The Single-File Model (SFM) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfm`](../loop/sfm). Once an SFM is added to the package, it becomes available to be used as input for [`Loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md). 
+The Single-File Model (SFM) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfm`](../loop/sfm). Once an SFM is added to the package, it becomes available to be used as input for [`loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md). 
 
 ## Requirements
 
@@ -12,27 +12,33 @@ SFM is a standardized format so certain requirements must be met. For example, t
 
 Contains all parameters and their value ranges to be used in the parameter sweep.
 
-Takes no input and returns a dictionary with keys as parameter names, and lists as parameter values. These set the boundaries for the parameter space to be used in the sweep.
+Takes no input and returns a dictionary with keys as parameter names, and lists as parameter values. These set the boundaries for the parameter space to be used in the sweep. The success of your experiment greatly depends on the parameters and their respective parameter value ranges, so choose them well. 
+
+**NOTE**: Generally speaking, it's best to start with as many parameters, with as broad parameter value ranges as possible.
 
 ##### REQUIREMENTS
 
 - The output is `round_params` a dictionary where each key has a list as its value
+- Individual parameter values can be any scalar values; integers, floats, integers, functions, etc. 
+- Individual parameter can not be aggregate types; lists, tuples, arrays, or objects
+- Paramater values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
 
-**NOTE**: Paramater values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
+**NOTE**: Parameters can be used to parametrize other parameters, for example, where one parameter is a function, and another parameter is an input argument to that function. Such higher-order parameters can be an exteremely powerful way to make Loop play the song of Bitcoin.
 
 #### `prep`
 
 Contains all data preparation procedures used in the parameter sweep.
 
-Takes as input data from `loop.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns a `data_dict` dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
+Takes as input data from `loop.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns `data_dict`, a  dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
 
 ##### REQUIREMENTS
 
-- The input must contain at least `historical.data` but can also contain `round_params` when `uel.run(prep_each_round=True)`
+- The input must contain at least `historical.data` but must also contain `round_params` when `uel.run(prep_each_round=True)`
 - The input data must always have `datetime` when it is ingested in `prep`
+- The function must start with `all_datetimes = data['datetime'].to_list()` immediate after declaration
 - The column `datetime` must be in data when it is passed to `split_data_to_prep_output`, where it will be automatically removed
 - There must be no randomness; permutation parameters must govern all `prep` operations
- - Prefer deterministic `prep` fully governed by `round_params`. If randomness is required (e.g., sampling), fix seeds so that per-round reconstruction in `Log` remains aligned with stored predictions.
+ - Prefer deterministic `prep` fully governed by `round_params`. If randomness is required (e.g., sampling), fix seeds parametrically so that per-round reconstruction in `Log` remains aligned with stored predictions.
 
 **NOTE:** If a scaler is fitted as part of `prep`, it can be added to `round_results[_scaler]` for use in subsequent folds.
 
