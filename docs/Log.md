@@ -57,29 +57,27 @@ Compute confusion metrics for each round of an experiment. One way to think abou
 
 #### Returns
 
-`pd.DataFrame`: One-row-per-round table with confusion and long-only summary with the following columns.
+`pd.DataFrame`: One-row-per-round table with confusion and long-only summary with the following columns (identifier columns from round parameters may appear first when present).
 
 | Column                   | Type     | Brief description (1-line)                                          |
 |--------------------------|----------|---------------------------------------------------------------------|
-| `x_name`                 | object   | Name of the summarized column                                       |
-| `n_kept`                 | int64    | Rows kept after outlier handling                                    |
 | `pred_pos_rate_pct`      | float64  | Share of predicted positives                                        |
 | `actual_pos_rate_pct`    | float64  | Share of actual positives                                           |
 | `precision_pct`          | float64  | TP / (TP + FP)                                                      |
 | `recall_pct`             | float64  | TP / (TP + FN)                                                      |
-| `pred_pos_count`         | int64    | Count of predicted positives                                        |
-| `tp_count`               | int64    | True positive count                                                 |
-| `fp_count`               | int64    | False positive count                                                |
 | `tp_x_mean`              | float64  | Mean of `x` within TP rows                                          |
-| `tp_x_median`            | float64  | Median of `x` within TP rows                                        |
 | `fp_x_mean`              | float64  | Mean of `x` within FP rows                                          |
+| `tp_x_median`            | float64  | Median of `x` within TP rows                                        |
 | `fp_x_median`            | float64  | Median of `x` within FP rows                                        |
+| `pred_pos_count`         | int64    | Count of predicted positives                                        |
 | `pred_pos_x_mean`        | float64  | Mean of `x` within predicted positives                              |
 | `pred_pos_x_median`      | float64  | Median of `x` within predicted positives                            |
+| `tp_count`               | int64    | True positive count                                                 |
+| `fp_count`               | int64    | False positive count                                                |
 | `tp_fp_cohen_d`          | float64  | Cohen's d effect size between TP and FP `x` distributions           |
 | `tp_fp_ks`               | float64  | KS statistic between TP and FP `x` distributions                    |
-
-NOTE: Additional identifier columns from round parameters may be included.
+| `x_name`                 | object   | Name of the summarized column                                       |
+| `n_kept`                 | int64    | Rows kept after outlier handling                                    |
 
 ### `experiment_parameter_correlation`
 
@@ -136,23 +134,23 @@ Compute confusion metrics for a single round of an experiment. One way to think 
 
 | Column                | Type     | Brief description (1-line)                                          |
 |-----------------------|----------|---------------------------------------------------------------------|
-| `x_name`              | object   | Name of the summarized column                                       |
-| `n_kept`              | int64    | Rows kept after outlier handling                                    |
 | `pred_pos_rate_pct`   | float64  | Share of predicted positives                                        |
 | `actual_pos_rate_pct` | float64  | Share of actual positives                                           |
 | `precision_pct`       | float64  | TP / (TP + FP)                                                      |
 | `recall_pct`          | float64  | TP / (TP + FN)                                                      |
-| `pred_pos_count`      | int64    | Count of predicted positives                                        |
-| `tp_count`            | int64    | True positive count                                                 |
-| `fp_count`            | int64    | False positive count                                                |
 | `tp_x_mean`           | float64  | Mean of `x` within TP rows                                          |
-| `tp_x_median`         | float64  | Median of `x` within TP rows                                        |
 | `fp_x_mean`           | float64  | Mean of `x` within FP rows                                          |
+| `tp_x_median`         | float64  | Median of `x` within TP rows                                        |
 | `fp_x_median`         | float64  | Median of `x` within FP rows                                        |
+| `pred_pos_count`      | int64    | Count of predicted positives                                        |
 | `pred_pos_x_mean`     | float64  | Mean of `x` within predicted positives                              |
 | `pred_pos_x_median`   | float64  | Median of `x` within predicted positives                            |
+| `tp_count`            | int64    | True positive count                                                 |
+| `fp_count`            | int64    | False positive count                                                |
 | `tp_fp_cohen_d`       | float64  | Cohen's d effect size between TP and FP `x` distributions           |
 | `tp_fp_ks`            | float64  | KS statistic between TP and FP `x` distributions                    |
+| `x_name`              | object   | Name of the summarized column                                       |
+| `n_kept`              | int64    | Rows kept after outlier handling                                    |
 
 ### `permutation_prediction_performance`
 
