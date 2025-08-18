@@ -1,22 +1,35 @@
 # Universal Experiment Loop
 
-Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its input data and a Single-File Model (SFM). For the time being, `UEL` can be thought of as an advanced parameter sweep. 
+Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its input data and a Single-File Model (SFM). `UEL` currently wraps onto itself (i.e. the object `uel.run` yields) all the folds from `Data` to `Backtest`. In other words, all the following folds are wrapped into one workflow `uel.run`:
 
-## The Meaning of Parameter Sweep (the action)
+- [`Data`](HistoricalData.md)
+- [`Indicator`](Indicators.md)
+- [`Feature`](Features.md)
+- [`SFM`](Single-File-Model.md)
+- [`UEL`](Universal-Experiment-Loop.md) 
+- [`Log`](Log.md) 
+- `Benchmark`
+- `Backtest`
 
-It is typically thought that the focus of the sweep is specifically the model hyperparameters, and only these. This led to the bastardized term "hyperparameter optimization". This perspective is extremely limiting and entirely misses the point of parameter sweeping. 
+The operation of of `uel.run` can be thought of as an advanced parameter sweep, which automatically integrates the parameter sweep results (i.e. `uel.experiment_log`) with benchmarks (i.e. `uel.experiment_confusion_metrics`) and backtest (i.e. `uel.experiment_backtest_results`).
+
+## On Parameters
+
+Parameters can be thought of as "knobs", as a means to control the direction of the experiment. Therefore, parameters play a crucial role in determining how successful an experiment is. Therefore, it is wise to start with a rich set of parameters, and broad parameter ranges for each parameter. The parameter sweep method is extremely powerful this way; in terms of its potential, it can be imagined as having infinite number of hands, turning an infinite number of knobs at the same time.
+
+## The True Meaning of Parameter Sweep
+
+It is typically thought that the focus of the parameter sweep is specifically the model hyperparameters, and only these. This led to the bastardized term "hyperparameter optimization". This perspective is extremely limiting and entirely misses the point of parameter sweeping. 
 
 In short, the point of parameter sweeping is that since such a practice is possible, and since more or less anything and everything can be readily parametrized, there should be no limit to where this approach can be applied. 
 
 **Not only the idea of sweeping through parameters can be extended beyond the model and its hyperparameters, to data fetching, data pre-processing, feature engineering, and all other aspects of classifier development lifecycle, but it can also be extended well beyond input arguments. For example, conditional logic can be handled as parameters, and even individual fragments of code can be fully parametric, and therefore a subject of a parameter sweep.**
 
-In other words, the idea of performing a parameter sweep is equally relevant to all of the above-mentioned ten steps. This is a crucial key point, and our success depends on undertanding it, putting it into practice, and realizing its unrestrained power to yield the most meaningful probabilities for live trading at any given point in time, regardless of the prevailing circumstances.
+In other words, the idea of performing a parameter sweep is equally relevant to all of Loop's folds. This is a crucial key point, and our success depends on undertanding it, putting it into practice, and realizing its unrestrained power to yield the most meaningful probabilities for live trading at any given point in time, regardless of the prevailing circumstances.
 
 ## Data
 
-A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from these provided endpoints. If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need. 
-
-Read more in [HistoricalData](Historical-Data.md)
+A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from the provided (klines) endpoints available through [HistoricalData](Historical-Data.md). If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need, or make a PR that commits the proposed change. 
 
 ## SFM
 
@@ -99,9 +112,9 @@ At the end of `run`, UEL attaches a `Log` object to `self.log`:
   - `experiment_parameter_correlation(metric: str, ...) -> pd.DataFrame`
   - `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
 
-Notes on determinism: some SFMs use random sampling or time-window subsampling in `prep`. For fully reproducible per-round analysis with `Log`, prefer:
-- Using `prep_each_round=True` so the same `round_params` applies to data prep deterministically, or
-- Ensuring your `prep` path is deterministic for the given inputs (fixed seeds) so `Log`’s per-round reconstruction aligns with stored predictions.
+
+
+**NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfm.prep` is not any random operations
 
 ### Example
 
