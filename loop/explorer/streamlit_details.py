@@ -1,0 +1,52 @@
+# streamlit_details.py
+from __future__ import annotations
+import pandas as pd
+import streamlit as st
+
+def render_details_view(
+    df: pd.DataFrame,
+    pretty_label_fn,
+    format_value_fn,
+) -> None:
+    """
+    If the URL has ?row=<rid>, renders the detail cards and stops execution.
+    Mirrors the original inline logic exactly.
+    """
+    params = st.query_params
+    if "row" not in params:
+        return
+
+    try:
+        rid = int(params["row"][0])
+        row = df.iloc[rid]
+    except Exception:
+        st.error("Invalid row id.")
+        st.stop()
+
+    st.markdown(f"<div class='lux-title'>Row {rid} details</div>", unsafe_allow_html=True)
+    st.markdown("<div class='lux-back'><a href='/'>← Back to table</a></div>", unsafe_allow_html=True)
+    st.markdown("<div class='lux-subtle' style='margin:6px 0 14px;'>All values formatted for readability</div>", unsafe_allow_html=True)
+
+    cols = st.columns(3)
+    for i, (k, v) in enumerate(row.items()):
+        dtype = df.dtypes[k]
+        label = pretty_label_fn(k)
+        val   = format_value_fn(v, dtype)
+        with cols[i % 3]:
+            st.markdown(
+                f"""
+                <div class="lux-card">
+                  <div class="split-card">
+                    <div class="split-left">
+                      <div class="lux-label">{label}</div>
+                      <div class="lux-value">{val}</div>
+                    </div>
+                    <div class="split-right">
+                      <!-- reserved -->
+                    </div>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+    st.stop()
