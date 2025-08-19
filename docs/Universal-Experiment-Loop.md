@@ -103,6 +103,13 @@ Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming 
 - `_alignment`: `list[dict]` alignment metadata per round, as produced by `utils.splits.split_data_to_prep_output`:
   - `missing_datetimes`: list of datetimes dropped during prep
   - `first_test_datetime` / `last_test_datetime`: inclusive test window bounds
+  
+  In addition, UEL now exposes precomputed analysis artifacts and a convenience handle to the internal logger:
+  
+  - `experiment_confusion_metrics`: `pd.DataFrame` produced via `Log.experiment_confusion_metrics('price_change')`
+  - `experiment_backtest_results`: `pd.DataFrame` produced via `Log.experiment_backtest_results()`
+  - `experiment_parameter_correlation`: Convenience reference to `Log.experiment_parameter_correlation`
+  - `_log`: Internal `Log` instance used to compute the above artifacts
 
 #### Parameter space
 
@@ -110,19 +117,18 @@ UEL uses `utils.param_space.ParamSpace` to generate `round_params` either via ra
 
 #### Log integration
 
-At the end of `run`, UEL attaches a `Log` object to `self.log`:
+At the end of `run`, UEL constructs an internal `Log` instance and exposes key analysis artifacts directly on the UEL object:
 
-- `self.log = loop.Log(uel_object=self, cols_to_multilabel=<all string columns>)`
-- `Log` consumes the in-memory UEL state:
-  - `experiment_log` (converted to `pd.DataFrame`)
-  - `preds`, `scalers`, `round_params`, and `_alignment`
-- Key `Log` evaluation methods (see [Log](Log.md)):
-  - `experiment_backtest_results(disable_progress_bar: bool = False) -> pd.DataFrame`
-  - `experiment_confusion_metrics(x: str, disable_progress_bar: bool = False) -> pd.DataFrame`
-  - `permutation_prediction_performance(round_id: int) -> pd.DataFrame`
-  - `permutation_confusion_metrics(x: str, round_id: int, ...) -> pd.DataFrame`
-  - `experiment_parameter_correlation(metric: str, ...) -> pd.DataFrame`
-  - `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
+- `self._log = loop.Log(uel_object=self, cols_to_multilabel=<all string columns>)`
+- Precomputed properties set on UEL:
+  - `self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')`
+  - `self.experiment_backtest_results = self._log.experiment_backtest_results()`
+  - `self.experiment_parameter_correlation = self._log.experiment_parameter_correlation`
+
+If you need additional methods, access the internal `Log` via `uel._log` (see [Log](Log.md)):
+- `permutation_prediction_performance(round_id: int) -> pd.DataFrame`
+- `permutation_confusion_metrics(x: str, round_id: int, ...) -> pd.DataFrame`
+- `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
 
 
 **NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfm.prep` is not any random operations, or if you must have random operations, use parametric seeds for round-by-round reproducibility.
@@ -148,8 +154,8 @@ uel.run(
     save_to_sqlite=False,
 )
 
-# Post-run analysis via Log
-backtest_df = uel.log.experiment_backtest_results()
-confusion_df = uel.log.experiment_confusion_metrics(x='price_change')
-round0_perf = uel.log.permutation_prediction_performance(round_id=0)
+# Post-run analysis via precomputed artifacts and internal Log
+backtest_df = uel.experiment_backtest_results
+confusion_df = uel.experiment_confusion_metrics
+round0_perf = uel._log.permutation_prediction_performance(round_id=0)
 ```

@@ -20,6 +20,8 @@ def prep(data, round_params):
         pl.Series("outcome", np.random.randint(0, 2, size=data.height))
     )
 
+    data = data[:-100]
+
     cols = ['datetime', 'high', 'low', 'close', 'volume', 'maker_ratio', 'no_of_trades', 'outcome']
     
     split_data = split_sequential(data, (3, 1, 1))
@@ -34,4 +36,7 @@ def model(data, round_params):
     preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
     probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
 
-    return binary_metrics(data, preds, probs)
+    round_results = binary_metrics(data, preds, probs)
+    round_results['_preds'] = preds
+
+    return round_results

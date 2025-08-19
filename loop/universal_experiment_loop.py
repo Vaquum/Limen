@@ -177,6 +177,12 @@ class UniversalExperimentLoop:
         if save_to_sqlite is True:
             self.conn.close()
 
-        # Add Log and Backtest properties
+        # Add Log, Benchmark, and Backtest properties
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
-        self.log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
+        
+        self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
+
+        self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')
+        self.experiment_backtest_results = self._log.experiment_backtest_results()
+        self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
+        

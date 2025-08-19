@@ -115,5 +115,6 @@ def model(data, round_params):
     preds = ridge.predict(data['x_test'])
     
     round_results = continuous_metrics(data, preds)
+    round_results['_preds'] = preds
         
     return round_results
