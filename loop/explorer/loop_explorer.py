@@ -4,7 +4,7 @@ from IPython.display import Javascript, display
 from pathlib import Path
 
 
-def loop_explorer(data, host='37.27.112.167'):
+def loop_explorer(uel, host='37.27.112.167'):
 
     '''
     Visualize the data using Streamlit.
@@ -20,12 +20,21 @@ def loop_explorer(data, host='37.27.112.167'):
     port = random.randint(5001, 5500)
     
     tmp_parquet = '/tmp/historical_data.parquet'
+
+    datasets = {}
+
+    datasets['historical_data'] = uel.data
+    datasets['experiment_log'] = uel.experiment_log
+    datasets['confusion_metrics'] = uel.experiment_confusion_metrics
+    datasets['backtest_results'] = uel.experiment_backtest_results
     
-    try:
-        data.to_pandas().to_parquet(tmp_parquet)
-    
-    except AttributeError:
-        data.to_parquet(tmp_parquet)
+    for key in datasets.keys():
+        
+        try:
+            datasets[key].to_pandas().to_parquet(f'/tmp/{key}.parquet')
+        
+        except AttributeError:
+            datasets[key].to_parquet(f'/tmp/{key}.parquet')
 
     script_path='loop/explorer/streamlit_app.py'
     script_path = str(Path(script_path).resolve())
