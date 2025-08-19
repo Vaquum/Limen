@@ -18,6 +18,16 @@ def build_sidebar(
     cat_cols: list[str],
     sidebar_divider_gap_rem: float = 0.30,
 ):
+    '''
+    Render sidebar controls and return the collected UI state.
+    Args:
+        df_base (pd.DataFrame): Klines dataset with base columns for selection and preview
+        num_cols (list[str]): Numeric column names
+        cat_cols (list[str]): Categorical column names
+        sidebar_divider_gap_rem (float): Vertical spacing between sections (rem)
+    Returns:
+        dict: Sidebar state dictionary consumed by the main app
+    '''
 
     with st.sidebar:
 
@@ -36,32 +46,32 @@ def build_sidebar(
             _tight_divider(sidebar_divider_gap_rem)
 
         # --- Show Table + its options
-        show_table = st.checkbox("**Show Table**", value=False)
+        show_table = st.checkbox('**Show Table**', value=False)
 
         numeric_filter_col = None
         num_range = None
-        fmt_mode = "Normal"
+        fmt_mode = 'Normal'
         if show_table:
-            numeric_filter_col = st.selectbox("Filter by Column Value", [""] + num_cols, index=0)
+            numeric_filter_col = st.selectbox('Filter by Column Value', [''] + num_cols, index=0)
             if numeric_filter_col:
                 col_min = float(df_base[numeric_filter_col].min())
                 col_max = float(df_base[numeric_filter_col].max())
                 num_range = st.slider(
-                    f"{numeric_filter_col} range",
+                    f'{numeric_filter_col} range',
                     min_value=col_min,
                     max_value=col_max,
                     value=(col_min, col_max),
                 )
-            fmt_mode = st.radio("Table Type", ["Normal", "Inline Bars"], horizontal=False)
+            fmt_mode = st.radio('Table Type', ['Normal', 'Inline Bars'], horizontal=False)
 
         _tight_divider(sidebar_divider_gap_rem)
 
         # --- Show Chart + its options
-        show_chart = st.checkbox("**Show Chart**", value=False)
+        show_chart = st.checkbox('**Show Chart**', value=False)
 
-        chart_type = "Histogram"
-        xcol = ""
-        ycol = ""
+        chart_type = 'Histogram'
+        xcol = ''
+        ycol = ''
         ycols = None
         hue_col = None
         size_col = None
@@ -70,32 +80,32 @@ def build_sidebar(
         area_normalize_100 = True
 
         # Initialize persistent Y selections in session state
-        if "selected_ycol" not in st.session_state:
-            st.session_state["selected_ycol"] = ""
-        if "selected_ycols" not in st.session_state:
-            st.session_state["selected_ycols"] = []
+        if 'selected_ycol' not in st.session_state:
+            st.session_state['selected_ycol'] = ''
+        if 'selected_ycols' not in st.session_state:
+            st.session_state['selected_ycols'] = []
 
         if show_chart:
-            chart_type = st.radio('Chart Type', ["Histogram", "Line", "Area", "Scatter", "Box"], horizontal=True)
-            if chart_type != "Histogram":
-                xcol = st.selectbox("X-axis", [""] + df_base.columns.tolist(), index=0)
+            chart_type = st.radio('Chart Type', ['Histogram', 'Line', 'Area', 'Scatter', 'Box'], horizontal=True)
+            if chart_type != 'Histogram':
+                xcol = st.selectbox('X-axis', [''] + df_base.columns.tolist(), index=0)
 
-            if chart_type in ("Line", "Area"):
+            if chart_type in ('Line', 'Area'):
                 # Multi-select persists via key; no default to avoid selection flicker
-                ycols = st.multiselect("Y-axis", num_cols, key="ycols_line_area")
+                ycols = st.multiselect('Y-axis', num_cols, key='ycols_line_area')
                 # Persist selection and sync single to first of multi if available
-                st.session_state["selected_ycols"] = ycols
+                st.session_state['selected_ycols'] = ycols
                 if ycols:
-                    st.session_state["selected_ycol"] = ycols[0]
+                    st.session_state['selected_ycol'] = ycols[0]
                 smoothing_window = st.slider(
-                    "Smoothing Window",
+                    'Smoothing Window',
                     min_value=1, max_value=200, value=1, step=1,
-                    help="Rolling mean window; 1 = no smoothing"
+                    help='Rolling mean window; 1 = no smoothing'
                 )
-                if chart_type == "Line":
-                    normalize_line = st.checkbox("*Normalize Data*", value=False)
-                elif chart_type == "Area":
-                    area_normalize_100 = st.checkbox("*Normalize to 100%*", value=True)
+                if chart_type == 'Line':
+                    normalize_line = st.checkbox('*Normalize Data*', value=False)
+                elif chart_type == 'Area':
+                    area_normalize_100 = st.checkbox('*Normalize to 100%*', value=True)
             elif chart_type == 'Histogram':
                 # Histogram: multi-select Y columns; persist via key only
                 ycols = st.multiselect('Y-axis', num_cols, key='ycols_hist')
@@ -106,53 +116,53 @@ def build_sidebar(
                     key='normalize_data_hist',
                     help='Scale each selected series to [-1, 1] using per-series min–max (same behavior as Line).'
                 )
-                st.session_state["selected_ycols"] = ycols
+                st.session_state['selected_ycols'] = ycols
                 if ycols:
-                    st.session_state["selected_ycol"] = ycols[0]
+                    st.session_state['selected_ycol'] = ycols[0]
             else:
                 # Scatter/Box: single Y select
-                default_single = st.session_state["selected_ycol"]
-                if not default_single and st.session_state["selected_ycols"]:
-                    default_single = st.session_state["selected_ycols"][0]
-                options = [""] + num_cols
+                default_single = st.session_state['selected_ycol']
+                if not default_single and st.session_state['selected_ycols']:
+                    default_single = st.session_state['selected_ycols'][0]
+                options = [''] + num_cols
                 default_index = options.index(default_single) if default_single in options else 0
-                ycol = st.selectbox("Y-axis", options, index=default_index)
-                st.session_state["selected_ycol"] = ycol
+                ycol = st.selectbox('Y-axis', options, index=default_index)
+                st.session_state['selected_ycol'] = ycol
 
-            if chart_type == "Scatter":
-                hue_col = st.selectbox("Hue", [""] + df_base.columns.tolist(), index=0)
-                size_col = st.selectbox("Size", [""] + num_cols, index=0)
+            if chart_type == 'Scatter':
+                hue_col = st.selectbox('Hue', [''] + df_base.columns.tolist(), index=0)
+                size_col = st.selectbox('Size', [''] + num_cols, index=0)
 
         _tight_divider(sidebar_divider_gap_rem)
 
         # --- Correlation heatmap toggle
-        show_corr = st.checkbox("**Show Correlation Heatmap**", value=False)
+        show_corr = st.checkbox('**Show Correlation Heatmap**', value=False)
 
         _tight_divider(sidebar_divider_gap_rem)
 
         # --- Pivot controls
-        show_pivot = st.checkbox("**Show Pivot Table**", value=False)
+        show_pivot = st.checkbox('**Show Pivot Table**', value=False)
         pivot_rows = pivot_cols = pivot_val = agg = None
         quantile_rows = False
         quantile_cols = False
 
         if show_pivot:
-            pivot_rows = st.selectbox("Pivot Rows", [""] + cat_cols + num_cols, index=0)
+            pivot_rows = st.selectbox('Pivot Rows', [''] + cat_cols + num_cols, index=0)
             if pivot_rows:
                 quantile_rows = st.checkbox(
-                    "*Transform to Quantiles*",
+                    '*Transform to Quantiles*',
                     value=False,
-                    key="q_rows",
-                    help="Bin the selected pivot row into fixed quantile buckets at 1%, 25%, 50%, 75%, 99% (tails included)."
+                    key='q_rows',
+                    help='Bin the selected pivot row into fixed quantile buckets at 1%, 25%, 50%, 75%, 99% (tails included).'
                 )
 
-            pivot_cols = st.selectbox("Pivot Columns", [""] + cat_cols + num_cols, index=0)
+            pivot_cols = st.selectbox('Pivot Columns', [''] + cat_cols + num_cols, index=0)
             if pivot_cols:
                 quantile_cols = st.checkbox(
-                    "*Transform to Quantiles*",
+                    '*Transform to Quantiles*',
                     value=False,
-                    key="q_cols",
-                    help="Bin the selected pivot column into fixed quantile buckets at 1%, 25%, 50%, 75%, 99% (tails included)."
+                    key='q_cols',
+                    help='Bin the selected pivot column into fixed quantile buckets at 1%, 25%, 50%, 75%, 99% (tails included).'
                 )
 
             pivot_val  = st.selectbox('Pivot Value', num_cols)
@@ -161,21 +171,21 @@ def build_sidebar(
         _tight_divider(sidebar_divider_gap_rem)
 
         # --- Custom column (MVP) ---
-        enable_custom = st.checkbox("**Create Custom Column**", value=False, key="enable_custom_col")
-        new_col_name = ""
-        new_expr = ""
+        enable_custom = st.checkbox('**Create Custom Column**', value=False, key='enable_custom_col')
+        new_col_name = ''
+        new_expr = ''
         if enable_custom:
-            new_col_name = st.text_input("New Column Name", placeholder="e.g. pct_change")
-            new_expr = st.text_input("Expression", placeholder="(close - open) / open * 100")
+            new_col_name = st.text_input('New Column Name', placeholder='e.g. pct_change')
+            new_expr = st.text_input('Expression', placeholder='(close - open) / open * 100')
             if new_col_name and new_expr:
                 try:
-                    test_series = pd.eval(new_expr, engine="python", local_dict=df_base.to_dict("series"))
+                    test_series = pd.eval(new_expr, engine='python', local_dict=df_base.to_dict('series'))
                     df_base[new_col_name] = test_series
-                    if "custom_cols" not in st.session_state:
-                        st.session_state["custom_cols"] = []
-                    if (new_col_name, new_expr) not in st.session_state["custom_cols"]:
-                        st.session_state["custom_cols"].append((new_col_name, new_expr))
-                    st.success(f"Created column: {new_col_name}")
+                    if 'custom_cols' not in st.session_state:
+                        st.session_state['custom_cols'] = []
+                    if (new_col_name, new_expr) not in st.session_state['custom_cols']:
+                        st.session_state['custom_cols'].append((new_col_name, new_expr))
+                    st.success(f'Created column: {new_col_name}')
                     st.rerun()
                 except Exception as e:
                     st.error(f"Could not create '{new_col_name}': {e}")

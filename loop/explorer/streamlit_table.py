@@ -11,10 +11,20 @@ def prepare_table_data(
     numeric_filter_col: str | None,
     num_range: tuple[float, float] | None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Applies the numeric range filter (if any) and inserts the drill-down link column.
-    Returns (df_filt, df_display).
-    """
+    
+    '''
+    Compute filtered table data and add a drill-down link column.
+    
+    Args:
+        df_base (pd.DataFrame): Klines dataset with 'rid' column for drill-down
+        show_table (bool): Whether to apply table-specific filters
+        numeric_filter_col (str | None): Numeric column to filter by range
+        num_range (tuple[float, float] | None): Inclusive range for the numeric filter
+    
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: The filtered DataFrame and the display DataFrame
+    '''
+    
     df_filt = df_base
     if show_table and numeric_filter_col and num_range:
         lo, hi = num_range
@@ -22,14 +32,14 @@ def prepare_table_data(
 
     # Add drill-down link
     df_view = df_filt.copy()
-    df_view.insert(1, "view", [f"/?row={i}" for i in df_view["rid"]])
+    df_view.insert(1, 'view', [f"/?row={i}" for i in df_view["rid"]])
 
     # Pretty-print datetime to second resolution for display only
-    if "datetime" in df_view.columns:
+    if 'datetime' in df_view.columns:
         try:
-            s = pd.to_datetime(df_view["datetime"], utc=True, errors="coerce")
+            s = pd.to_datetime(df_view['datetime'], utc=True, errors='coerce')
             # Render as naive UTC to seconds
-            df_view["datetime"] = s.dt.tz_convert("UTC").dt.tz_localize(None).dt.strftime("%Y-%m-%d %H:%M:%S")
+            df_view['datetime'] = s.dt.tz_convert('UTC').dt.tz_localize(None).dt.strftime('%Y-%m-%d %H:%M:%S')
         except Exception:
             # If conversion fails, leave original values
             pass
@@ -41,15 +51,24 @@ def render_table(
     df_display: pd.DataFrame,
     fmt_mode: str,
 ) -> None:
-    """
-    Renders the table in either "Inline Bars" or "Normal" mode.
-    """
-    numeric_visible = df_display.select_dtypes("number").columns.tolist()
+    
+    '''
+    Render the table in either inline bar or normal mode.
+    
+    Args:
+        df_display (pd.DataFrame): Klines dataset with a 'rid' column for drill-down
+        fmt_mode (str): Display mode selector ('Inline Bars' or 'Normal')
+    
+    Returns:
+        None: None
+    '''
+    
+    numeric_visible = df_display.select_dtypes('number').columns.tolist()
 
-    if fmt_mode == "Inline Bars":
+    if fmt_mode == 'Inline Bars':
         colcfg = {
-            "view": st.column_config.LinkColumn("", help="Open row details", display_text="view"),
-            "rid": st.column_config.NumberColumn("rid", help="Row id", width="small"),
+            'view': st.column_config.LinkColumn('', help='Open row details', display_text='view'),
+            'rid': st.column_config.NumberColumn('rid', help='Row id', width='small'),
         }
         for c in numeric_visible:
             cmin = float(df_display[c].min())
@@ -62,7 +81,7 @@ def render_table(
                 help=f"{c} (min={cmin:.3g}, max={cmax:.3g})",
                 min_value=cmin,
                 max_value=cmax,
-                format="%.4g",
+                format='%.4g',
             )
         st.dataframe(df_display, use_container_width=True, hide_index=True, column_config=colcfg)
     else:
@@ -71,7 +90,7 @@ def render_table(
             use_container_width=True,
             hide_index=True,
             column_config={
-                "view": st.column_config.LinkColumn("", help="Open row details", display_text="view"),
-                "rid": st.column_config.NumberColumn("rid", help="Row id", width="small"),
+                'view': st.column_config.LinkColumn('', help='Open row details', display_text='view'),
+                'rid': st.column_config.NumberColumn('rid', help='Row id', width='small'),
             },
         )

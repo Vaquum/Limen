@@ -8,10 +8,19 @@ def render_details_view(
     pretty_label_fn,
     format_value_fn,
 ) -> None:
-    """
-    If the URL has ?row=<rid>, renders the detail cards and stops execution.
-    Mirrors the original inline logic exactly.
-    """
+    
+    '''
+    Render the detail cards when the URL contains the row query parameter.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with selected row accessible by 'rid'
+        pretty_label_fn (callable): Function to convert column keys to labels
+        format_value_fn (callable): Function to format values for display
+    
+    Returns:
+        None: None
+    '''
+    
     params = st.query_params
     if "row" not in params:
         return

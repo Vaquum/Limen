@@ -7,8 +7,24 @@ import streamlit as st
 # -----------------------------
 # Internal helpers (module-local)
 # -----------------------------
-def _rolling_mean_per_series(df_long: pd.DataFrame, series_col: str, value_col: str, window: int) -> pd.Series:
-    """Apply rolling mean per series; window=1 -> passthrough."""
+def _rolling_mean_per_series(df_long: pd.DataFrame,
+                             series_col: str,
+                             value_col: str,
+                             window: int) -> pd.Series:
+    
+    '''
+    Compute rolling mean per series with min_periods=1.
+    
+    Args:
+        df_long (pd.DataFrame): Long-form DataFrame containing series and values
+        series_col (str): Column name for series grouping
+        value_col (str): Column name for values to smooth
+        window (int): Rolling window size; 1 returns original values
+    
+    Returns:
+        pd.Series: Series aligned with df_long[value_col]
+    '''
+    
     if window <= 1:
         return df_long[value_col]
     return (
@@ -37,46 +53,57 @@ def plot_line(
     hue_col: str | None = None,
     size_col: str | None = None,
 ) -> None:
-    """
-    Line chart.
-    - If normalize_line=True: per-series min-max scaling to [-1, 1] in long form,
-      smoothing applied to the scaled series.
-    - Else: wide form, smoothing per column before plotting.
-    """
+    
+    '''
+    Create a line chart with optional smoothing and normalization.
+    
+    Args:
+        df_filt (pd.DataFrame): Klines dataset with numeric columns to plot
+        xcol (str): X-axis column name
+        ycols (list[str]): Y-axis column names
+        smoothing_window (int): Rolling window for smoothing
+        normalize_line (bool): Whether to min-max scale each series to [-1, 1]
+        hue_col (str | None): Optional categorical column for color grouping
+        size_col (str | None): Optional numeric column for point size
+    
+    Returns:
+        None: None
+    '''
+    
     common_args = {}
     if hue_col:
-        common_args["color"] = hue_col
+        common_args['color'] = hue_col
     if size_col:
-        common_args["size"] = size_col
+        common_args['size'] = size_col
 
     if normalize_line:
         # Long form
         plot_long = df_filt[[xcol] + ycols].melt(
             id_vars=[xcol],
             value_vars=ycols,
-            var_name="Series",
-            value_name="Value"
+            var_name='Series',
+            value_name='Value'
         )
-        plot_long["Value"] = pd.to_numeric(plot_long["Value"], errors="coerce")
+        plot_long['Value'] = pd.to_numeric(plot_long['Value'], errors='coerce')
 
         # Per-series min/max
-        stats = plot_long.groupby("Series")["Value"].agg(vmin="min", vmax="max").reset_index()
-        plot_long = plot_long.merge(stats, on="Series", how="left")
+        stats = plot_long.groupby('Series')['Value'].agg(vmin='min', vmax='max').reset_index()
+        plot_long = plot_long.merge(stats, on='Series', how='left')
 
         # Scale to [-1, 1]; constants -> 0
-        denom = (plot_long["vmax"] - plot_long["vmin"]).to_numpy()
-        num   = (plot_long["Value"] - plot_long["vmin"]).to_numpy()
+        denom = (plot_long['vmax'] - plot_long['vmin']).to_numpy()
+        num   = (plot_long['Value'] - plot_long['vmin']).to_numpy()
         with np.errstate(invalid="ignore", divide="ignore"):
             scaled01 = np.where(denom == 0, 0.5, num / denom)
-            plot_long["minmax_scaled"] = -1.0 + 2.0 * scaled01
+            plot_long['minmax_scaled'] = -1.0 + 2.0 * scaled01
 
         # Sort + optional smoothing on the scaled series
-        plot_long = plot_long.sort_values(["Series", xcol])
-        plot_long["minmax_scaled"] = _rolling_mean_per_series(
-            plot_long, "Series", "minmax_scaled", smoothing_window
+        plot_long = plot_long.sort_values(['Series', xcol])
+        plot_long['minmax_scaled'] = _rolling_mean_per_series(
+            plot_long, 'Series', 'minmax_scaled', smoothing_window
         )
 
-        fig = px.line(plot_long, x=xcol, y="minmax_scaled", color="Series")
+        fig = px.line(plot_long, x=xcol, y='minmax_scaled', color='Series')
         _apply_plot_theme(fig)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -100,40 +127,49 @@ def plot_area(
     smoothing_window: int = 1,
     normalize_100: bool = True,
 ) -> None:
-    """
-    100% stacked area chart (aka normalized stacked area):
-    - Uses groupnorm="fraction" to normalize each x-slice.
-    - Formats y-axis as percent.
-    - Keeps legend order stable by sorting ycols.
-    """
+    
+    '''
+    Create a stacked area chart with optional 100% normalization.
+    
+    Args:
+        df_filt (pd.DataFrame): Klines dataset with numeric columns to plot
+        xcol (str): X-axis column name
+        ycols (list[str]): Y-axis column names (stacked)
+        smoothing_window (int): Rolling window for smoothing
+        normalize_100 (bool): Whether to normalize each x-slice to 100%
+    
+    Returns:
+        None: None
+    '''
+    
     ycols_sorted = sorted(ycols)
 
     # Long form
     plot_long = df_filt[[xcol] + ycols_sorted].melt(
         id_vars=[xcol],
         value_vars=ycols_sorted,
-        var_name="Series",
-        value_name="Value"
+        var_name='Series',
+        value_name='Value'
     )
-    plot_long["Value"] = pd.to_numeric(plot_long["Value"], errors="coerce")
+    plot_long['Value'] = pd.to_numeric(plot_long['Value'], errors='coerce')
 
     # Sort + optional smoothing
-    plot_long = plot_long.sort_values(["Series", xcol])
-    plot_long["Value"] = _rolling_mean_per_series(plot_long, "Series", "Value", smoothing_window)
+    plot_long = plot_long.sort_values(['Series', xcol])
+    plot_long['Value'] = _rolling_mean_per_series(plot_long, 'Series', 'Value', smoothing_window)
 
     if normalize_100:
         fig = px.area(
             plot_long,
-            x=xcol, y="Value", color="Series",
-            groupnorm="fraction",
-            category_orders={"Series": ycols_sorted},
+            x=xcol, y='Value', color='Series',
+            groupnorm='fraction',
+            category_orders={'Series': ycols_sorted},
         )
-        fig.update_layout(yaxis=dict(tickformat=".0%"))
+        fig.update_layout(yaxis=dict(tickformat='.0%'))
     else:
         fig = px.area(
             plot_long,
-            x=xcol, y="Value", color="Series",
-            category_orders={"Series": ycols_sorted},
+            x=xcol, y='Value', color='Series',
+            category_orders={'Series': ycols_sorted},
         )
     _apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
@@ -147,6 +183,21 @@ def plot_scatter(
     hue_col: str | None = None,
     size_col: str | None = None,
 ) -> None:
+    
+    '''
+    Create a scatter plot with optional hue and size encodings.
+    
+    Args:
+        df_filt (pd.DataFrame): Klines dataset with numeric/categorical columns to plot
+        xcol (str): X-axis column name
+        ycol (str): Y-axis column name
+        hue_col (str | None): Optional categorical column for color
+        size_col (str | None): Optional numeric column for point size
+    
+    Returns:
+        None: None
+    '''
+    
     common_args = {}
     if hue_col:
         common_args["color"] = hue_col
@@ -164,6 +215,20 @@ def plot_box(
     ycol: str,
     hue_col: str | None = None,
 ) -> None:
+    
+    '''
+    Create a box plot grouped by a categorical column.
+    
+    Args:
+        df_filt (pd.DataFrame): Klines dataset to plot
+        xcol (str): X-axis categorical column name
+        ycol (str): Y-axis numeric column name
+        hue_col (str | None): Optional categorical column for color grouping
+    
+    Returns:
+        None: None
+    '''
+    
     fig = px.box(df_filt, x=xcol, y=ycol, color=hue_col if hue_col else None)
     _apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
@@ -178,6 +243,22 @@ def plot_histogram(
     normalize_counts: bool = False,
     hue_col: str | None = None,
 ) -> None:
+    
+    '''
+    Create a histogram for one or multiple series with optional normalization.
+    
+    Args:
+        df_filt (pd.DataFrame): Klines dataset with numeric columns to plot
+        ycol (str | None): Single series to plot
+        ycols (list[str] | None): Multiple series to overlay
+        normalize_data (bool): Whether to min-max scale each series to [-1, 1]
+        normalize_counts (bool): Whether to normalize histogram counts to probability
+        hue_col (str | None): Optional categorical column for color
+    
+    Returns:
+        None: None
+    '''
+    
     args = {"color": hue_col} if hue_col else {}
     if ycols:
         # Build a long-form DataFrame to overlay multiple series in one histogram
@@ -217,3 +298,4 @@ def plot_histogram(
         fig = px.histogram(df_filt, x=ycol, histnorm='probability' if normalize_counts else None, **args)
     _apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True, key=f"hist_single_{ycol}_{int(normalize_counts)}_{int(normalize_data)}")
+    

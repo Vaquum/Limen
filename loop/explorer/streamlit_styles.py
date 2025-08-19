@@ -1,12 +1,18 @@
-# streamlit_styles.py
+# IMPORTANT! -> Leave double quotes in this file exceptionally! 
+
 
 def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
                      sidebar_divider_gap_rem: float = 0.30) -> str:
-    """
-    Return the global CSS for the app. Call with:
-        st.markdown(streamlit_styles(sidebar_container_gap_rem, sidebar_divider_gap_rem),
-                    unsafe_allow_html=True)
-    """
+    
+    '''
+    Compute CSS string for global Streamlit styles.
+    Args:
+        sidebar_container_gap_rem (float): Vertical spacing at the top of sidebar content
+        sidebar_divider_gap_rem (float): Vertical spacing for sidebar dividers
+    Returns:
+        str: CSS string for use with st.markdown(..., unsafe_allow_html=True)
+    '''
+    
     return f"""
     <style>
       /* Global font scaling (~20%) */

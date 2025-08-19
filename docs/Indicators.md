@@ -216,6 +216,37 @@ Compute Wilder's RSI using exponential smoothing method.
 
 `pl.DataFrame`: The input data with a new column 'wilder_rsi_{period}'
 
+### `sma_deviation_std`
+
+Compute rolling standard deviation of the detrended price relative to SMA(period).
+
+#### Args
+
+| Parameter | Type           | Description                                       |
+|-----------|----------------|---------------------------------------------------|
+| `data`    | `pl.DataFrame` | Klines dataset with 'close' column                |
+| `period`  | `int`          | Period for the SMA                                |
+| `window`  | `int`          | Rolling window for std of (close - SMA(period))   |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'sma{period}_dev_std'
+
+### `window_return`
+
+Compute windowed return close/close.shift(period) - 1 for a given period.
+
+#### Args
+
+| Parameter | Type           | Description                            |
+|-----------|----------------|----------------------------------------|
+| `data`    | `pl.DataFrame` | Klines dataset with 'close' column     |
+| `period`  | `int`          | Window length for the return           |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'ret_{period}'
+
 ---
 
 [^1]: **VWAP** is both a trend-following anchor and a volume-weighted flow metric. We park it in **Volume-Flow & Microstructure** to keep all order-flow tools together, but many chartists also treat it as a trend indicator.  

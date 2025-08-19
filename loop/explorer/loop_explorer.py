@@ -2,19 +2,23 @@ import random
 import os, sys, subprocess, time
 from IPython.display import Javascript, display
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from loop.universal_experiment_loop import UniversalExperimentLoop
 
 
-def loop_explorer(uel, host='37.27.112.167'):
+def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -> None:
 
     '''
-    Visualize the data using Streamlit.
+    Create a Streamlit explorer for datasets produced by the Universal Experiment Loop.
 
     Args:
-        data (pd.DataFrame): The data to visualize.
-        host (str): The host to run the Streamlit server on.
+        uel (UniversalExperimentLoop): The experiment loop object providing datasets
+        host (str): Hostname or IP address for the Streamlit server
 
     Returns:
-        None
+        None: None
     '''
 
     port = random.randint(5001, 5500)
@@ -68,7 +72,7 @@ def loop_explorer(uel, host='37.27.112.167'):
                 raise TimeoutError('Streamlit did not start within 20s.')
             continue
         
-        print(line, end="")
+        print(line, end='')
         
         if 'You can now view your Streamlit app in your browser.' in line:
             started = True

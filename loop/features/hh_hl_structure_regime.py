@@ -1,18 +1,20 @@
 import polars as pl
 
 
-def hh_hl_structure_regime(df: pl.DataFrame, window: int = 24, score_threshold: int = 4) -> pl.DataFrame:
+def hh_hl_structure_regime(df: pl.DataFrame,
+                           window: int = 24,
+                           score_threshold: int = 4) -> pl.DataFrame:
 
     '''
-    Classify regime by higher-high / higher-low market structure over a rolling window.
+    Compute regime by higher-high / higher-low market structure within a rolling window.
 
     Args:
-        df (pl.DataFrame): Input with 'high','low'
-        window (int): Rolling window for structure count
-        score_threshold (int): Threshold for Up/Down classification
+        df (pl.DataFrame): Klines dataset with 'high', 'low' columns
+        window (int): Rolling window size for structure count
+        score_threshold (int): Absolute score threshold for Up/Down classification
 
     Returns:
-        pl.DataFrame: With 'regime_hh_hl' in {"Up","Flat","Down"}
+        pl.DataFrame: The input data with a new column 'regime_hh_hl'
     '''
 
     hh = (pl.col('high') > pl.col('high').shift(1)).cast(pl.Int8)
@@ -27,5 +29,3 @@ def hh_hl_structure_regime(df: pl.DataFrame, window: int = 24, score_threshold: 
          .when(score <= -score_threshold).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_hh_hl')
     ])
-
-

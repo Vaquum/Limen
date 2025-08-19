@@ -11,10 +11,18 @@ from loop.transforms import (
 
 
 def render_outlier_controls(df: pd.DataFrame) -> str:
-    """
-    Render a compact icon toolbar and, when Outliers icon is active, a dropdown to select
-    the outlier method. Returns the selected method name.
-    """
+    
+    '''
+    Render outlier controls and return the selected method name.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with numeric columns for outlier handling
+    
+    Returns:
+        str: Selected outlier method name
+    
+    '''
+    
     if "_show_outliers" not in st.session_state:
         st.session_state["_show_outliers"] = False  # default collapsed
     if "_show_time" not in st.session_state:
@@ -35,10 +43,19 @@ def render_outlier_controls(df: pd.DataFrame) -> str:
 
 
 def apply_outlier_transform(df: pd.DataFrame, method: str) -> pd.DataFrame:
-    """
-    Apply the selected outlier method to all numeric columns (polars-backed),
-    returning a pandas DataFrame.
-    """
+    
+    '''
+    Compute outlier transformation for numeric columns and return a pandas DataFrame.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with numeric columns for outlier handling
+        method (str): Outlier method identifier
+    
+    Returns:
+        pd.DataFrame: The input data with transformed numeric columns
+    
+    '''
+    
     if method == "None":
         return df
 

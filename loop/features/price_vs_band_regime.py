@@ -1,23 +1,26 @@
 import polars as pl
 
 
-def price_vs_band_regime(df: pl.DataFrame, period: int = 24, band: str = 'std', k: float = 0.75) -> pl.DataFrame:
+def price_vs_band_regime(df: pl.DataFrame,
+                         period: int = 24,
+                         band: str = 'std',
+                         k: float = 0.75) -> pl.DataFrame:
 
     '''
-    Classify regime by comparing close to center +/- k*band_width.
-    Band width can be rolling std(period) or deviation std around SMA(period).
+    Compute regime by comparing 'close' to center ± k × band width over a rolling window.
 
     Args:
-        df (pl.DataFrame): Input with 'close' (and optionally 'mean','std','iqr')
-        period (int): Rolling period
-        band (str): 'std' or 'dev_std'
-        k (float): Band multiplier
+        df (pl.DataFrame): Klines dataset with 'close' column
+        period (int): Rolling period for center and band width
+        band (str): Band width type: 'std' or 'dev_std'
+        k (float): Band multiplier applied to the width
 
     Returns:
-        pl.DataFrame: With 'regime_price_band' in {"Up","Flat","Down"}
+        pl.DataFrame: The input data with a new column 'regime_price_band'
     '''
 
     center = pl.col('close').rolling_mean(window_size=period)
+    
     if band == 'dev_std':
         dev = pl.col('close') - center
         width = dev.rolling_std(window_size=period)
@@ -32,5 +35,3 @@ def price_vs_band_regime(df: pl.DataFrame, period: int = 24, band: str = 'std', 
          .when(pl.col('close') < lower).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_price_band')
     ])
-
-

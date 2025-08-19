@@ -1,18 +1,18 @@
 import polars as pl
 
 
-def zscore_transform(df: pl.DataFrame, *, time_col: str = 'datetime'):
+def zscore_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.DataFrame:
 
     '''
-    Standard Z-score scaling for numeric columns.
-    Rows remain unchanged; values are centered and scaled by col-wise mean/std.
+    Compute standard Z-score scaling for numeric columns.
+    Rows remain unchanged; values are centered and scaled by per-column mean/std.
 
     Args:
-        df (pl.DataFrame): The input DataFrame.
-        time_col (str): The name of the time column to exclude from numeric transforms.
+        df (pl.DataFrame): Klines dataset with numeric columns to scale
+        time_col (str): Column name to exclude from numeric transforms
 
     Returns:
-        pl.DataFrame: The transformed DataFrame with Z-scored numeric columns.
+        pl.DataFrame: The input data with Z-scored numeric columns
     '''
 
     num_cols = [c for c, dt in zip(df.columns, df.dtypes)
@@ -37,5 +37,3 @@ def zscore_transform(df: pl.DataFrame, *, time_col: str = 'datetime'):
     other_exprs = [pl.col(c) for c in df.columns if c not in num_cols]
 
     return df.select(other_exprs + scaled_exprs)
-
-

@@ -5,19 +5,39 @@ import streamlit as st
 
 
 def _detect_datetime_columns(df: pd.DataFrame) -> list[str]:
-    # Only accept a column literally named 'datetime'
+    
+    '''
+    Compute list of datetime columns to use for time filtering.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with possible 'datetime' column
+    
+    Returns:
+        list[str]: Column names eligible for time filtering
+    '''
+    
     return ['datetime'] if 'datetime' in df.columns else []
 
 
 def render_time_controls(df: pd.DataFrame) -> dict:
-    """Render time controls if a datetime column exists. Returns settings dict."""
+    
+    '''
+    Render time window controls when a 'datetime' column exists.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with 'datetime' column
+    
+    Returns:
+        dict: Settings dictionary containing selected time window
+    '''
+    
     dt_cols = _detect_datetime_columns(df)
-    if not st.session_state.get("_show_time", False):
-        return {"enabled": False}
+    if not st.session_state.get('_show_time', False):
+        return {'enabled': False}
     if not dt_cols:
         with st.sidebar:
-            st.info("No datetime column detected.")
-        return {"enabled": False}
+            st.info('No datetime column detected.')
+        return {'enabled': False}
 
     with st.sidebar:
         raw = df['datetime'].dropna()
@@ -55,6 +75,18 @@ def render_time_controls(df: pd.DataFrame) -> dict:
 
 
 def apply_time_filter(df: pd.DataFrame, settings: dict) -> pd.DataFrame:
+    
+    '''
+    Compute filtered DataFrame using the provided time settings.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with 'datetime' column
+        settings (dict): Time filter settings returned by render_time_controls
+    
+    Returns:
+        pd.DataFrame: The input data constrained to the selected time window
+    '''
+    
     if not settings.get('enabled'):
         return df
     # Parse entire column uniformly to UTC-naive for masking

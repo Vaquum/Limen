@@ -1,17 +1,17 @@
 import polars as pl
 
 
-def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime'):
+def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.DataFrame:
 
     '''
-    Winsorize numeric columns by clipping values to fixed quantile bounds.
+    Compute winsorization by clipping numeric columns to fixed quantile bounds.
 
     Args:
-        df (pl.DataFrame): The input DataFrame.
-        time_col (str): The name of the time column to exclude from numeric transforms.
+        df (pl.DataFrame): Klines dataset with numeric columns to clip
+        time_col (str): Column name to exclude from numeric transforms
 
     Returns:
-        pl.DataFrame: The transformed DataFrame with winsorized numeric columns.
+        pl.DataFrame: The input data with winsorized numeric columns
     '''
 
     # Numeric columns excluding the time column
@@ -40,5 +40,3 @@ def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime'):
     other_exprs = [pl.col(c) for c in df.columns if c not in num_cols]
 
     return df.select(other_exprs + clipped_exprs)
-
-

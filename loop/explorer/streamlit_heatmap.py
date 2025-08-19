@@ -5,7 +5,18 @@ import plotly.express as px
 import streamlit as st
 
 def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
-    """Render the correlation heatmap exactly like in the main file (no logic changes)."""
+    
+    '''
+    Compute and render a correlation heatmap for numeric columns.
+    
+    Args:
+        df_filt (pd.DataFrame): Klines dataset with numeric columns to correlate
+        num_cols (list[str]): Column names to include in the correlation matrix
+    
+    Returns:
+        None: None
+    '''
+    
     if len(num_cols) < 2:
         st.info("Not enough numeric columns for correlation heatmap.")
         return

@@ -1,18 +1,17 @@
 import polars as pl
 
 
-def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime'):
+def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.DataFrame:
 
     '''
-    Trim outliers by removing rows outside fixed quantile bounds
-    across all numeric columns (AND condition).
+    Compute outlier trimming by removing rows outside fixed quantile bounds across numeric columns.
 
     Args:
-        df (pl.DataFrame): The input DataFrame.
-        time_col (str): The name of the time column to exclude from numeric transforms.
+        df (pl.DataFrame): Klines dataset with numeric columns to trim
+        time_col (str): Column name to exclude from numeric transforms
 
     Returns:
-        pl.DataFrame: The DataFrame filtered to rows within bounds for all numeric columns.
+        pl.DataFrame: The input data filtered within bounds for all numeric columns
     '''
 
     num_cols = [c for c, dt in zip(df.columns, df.dtypes)
@@ -40,5 +39,3 @@ def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime'):
         mask = cond if mask is None else (mask & cond)
 
     return df.filter(mask) if mask is not None else df
-
-

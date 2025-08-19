@@ -1,79 +1,93 @@
 from loop.explorer.loop_explorer import loop_explorer
 
+from typing import TYPE_CHECKING
 import random
+
+if TYPE_CHECKING:
+    from loop.universal_experiment_loop import UniversalExperimentLoop
 
 
 class Explorer:
 
-    '''Visual data exploration for the Universal Experiment Loop'''
+    '''Render visual data exploration interface for the Universal Experiment Loop.'''
 
-    def __init__(self, uel):
+    def __init__(self, uel: 'UniversalExperimentLoop') -> None:
         
         '''
         Initialize the Explorer object.
 
-        uel (UniversalExperimentLoop): Universal Experiment Loop object
+        Args:
+            uel (UniversalExperimentLoop): Universal Experiment Loop object
 
         Returns:
-            None
+            None: None
         '''
 
         self._port = random.randint(5001, 5500)
         self._uel = uel
 
-    def input_data(self):
+    def input_data(self) -> None:
         
         '''
-        Visualize the input data.
+        Render the input dataset in the Explorer.
 
+        Args:
+            
         Returns:
-            None
+            None: None
         '''
 
         loop_explorer(data=self._uel.data, port=self._port)
 
-    def experiment_log(self):
+    def experiment_log(self) -> None:
         
         '''
-        Visualize the experiment log.
+        Render the experiment log in the Explorer.
 
+        Args:
+            
         Returns:
-            None
+            None: None
         '''
 
         loop_explorer(data=self._uel.experiment_log)
 
-    def experiment_parameter_correlation(self, x):
+    def experiment_parameter_correlation(self, x: str) -> None:
 
         '''
-        Visualize the experiment parameter correlation.
+        Render the experiment parameter correlation view.
 
-        x (str): The column to visualize the correlation of.
+        Args:
+            x (str): Column name used for correlation analysis
 
         Returns:
-            None
+            None: None
         '''
 
         loop_explorer(data=self._uel.experiment_parameter_correlation(x))
 
-    def experiment_confusion_metrics(self):
+    def experiment_confusion_metrics(self) -> None:
 
         '''
-        Visualize the confusion metrics.
+        Render the confusion metrics in the Explorer.
 
+        Args:
+            
         Returns:
-            None
+            None: None
         '''
     
         loop_explorer(data=self._uel.experiment_confusion_metrics)
 
-    def experimentbacktest_results(self):
+    def experimentbacktest_results(self) -> None:
         
         '''
-        Visualize the backtest results.
+        Render the backtest results in the Explorer.
 
+        Args:
+            
         Returns:
-            None
+            None: None
         '''
 
         loop_explorer(data=self._uel.experiment_backtest_results)

@@ -15,10 +15,20 @@ def render_pivot_table(
     quantile_cols: bool,
     quantile_bins_fn,
 ) -> None:
-    """
-    Renders the pivot table exactly as in the main file.
-    No behavior changes. Quantile binning uses the passed quantile_bins_fn.
-    """
+    '''
+    Compute and render a pivot table with optional quantile binning.
+    Args:
+        df_filt (pd.DataFrame): Klines dataset with categorical and numeric columns
+        pivot_rows (str | None): Row dimension column name
+        pivot_cols (str | None): Column dimension column name
+        pivot_val (str): Value column to aggregate
+        agg (str): Aggregation function name
+        quantile_rows (bool): Whether to quantile-bin the row dimension
+        quantile_cols (bool): Whether to quantile-bin the column dimension
+        quantile_bins_fn (callable): Function that returns fixed quantile bin edges and labels
+    Returns:
+        None: None
+    '''
     if not (pivot_rows or pivot_cols):
         st.warning("Select at least one pivot row or column to build the pivot table.")
         return

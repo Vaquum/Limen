@@ -11,6 +11,17 @@ from loop.features.hh_hl_structure_regime import hh_hl_structure_regime
 
 
 def render_trend_controls(df: pd.DataFrame) -> dict:
+    
+    '''
+    Render trend regime control panel and return selected settings.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with 'datetime' and price columns
+    
+    Returns:
+        dict: Trend configuration settings for downstream application
+    '''
+    
     if 'datetime' not in df.columns or not st.session_state.get('_show_time', False):
         # Only enable when datetime exists; tie visibility to toolbar use-case if needed
         pass
@@ -59,6 +70,18 @@ def render_trend_controls(df: pd.DataFrame) -> dict:
 
 
 def apply_trend_regime(df: pd.DataFrame, settings: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    
+    '''
+    Compute trend regime according to settings and return annotated and filtered DataFrames.
+    
+    Args:
+        df (pd.DataFrame): Klines dataset with price columns used by regime features
+        settings (dict): Trend configuration produced by render_trend_controls
+    
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: DataFrame with 'regime' and filtered DataFrame by regime
+    '''
+    
     if not settings.get('enabled'):
         return df, df
 
@@ -83,6 +106,7 @@ def apply_trend_regime(df: pd.DataFrame, settings: dict) -> tuple[pd.DataFrame, 
         regime_col = 'regime_hh_hl'
 
     out_df = pl_out.with_columns(pl.col(regime_col).alias('regime')).to_pandas()
+    
     if settings.get('up_only', True):
         filt_df = out_df.loc[out_df['regime'] == 'Up']
     else:

@@ -1,19 +1,20 @@
 import polars as pl
 
 
-def sma_deviation_std(data: pl.DataFrame, period: int = 30, window: int = 30) -> pl.DataFrame:
+def sma_deviation_std(data: pl.DataFrame,
+                      period: int = 30,
+                      window: int = 30) -> pl.DataFrame:
 
     '''
-    Rolling standard deviation of the detrended price relative to SMA(period):
-    std( close - SMA(period) ) over a rolling 'window'.
+    Compute rolling standard deviation of the detrended price relative to SMA(period).
 
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Period for the SMA
-        window (int): Rolling window for the std of deviations
+        window (int): Rolling window for std of (close - SMA(period))
 
     Returns:
-        pl.DataFrame: The input data with a new column f'sma{period}_dev_std'
+        pl.DataFrame: The input data with a new column 'sma{period}_dev_std'
     '''
 
     sma_col = f'sma_{period}'
@@ -33,5 +34,3 @@ def sma_deviation_std(data: pl.DataFrame, period: int = 30, window: int = 30) ->
         ])
         .drop([sma_col, dev_col])
     )
-
-
