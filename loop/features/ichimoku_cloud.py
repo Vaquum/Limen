@@ -13,7 +13,7 @@ def ichimoku_cloud(
     Compute Ichimoku Cloud components for trend and momentum analysis.
 
     Args:
-        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
+        data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         tenkan_period (int): Lookback period for Tenkan-sen
         kijun_period (int): Lookback period for Kijun-sen
         senkou_b_period (int): Lookback period for Senkou Span B
