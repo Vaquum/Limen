@@ -46,4 +46,5 @@ node_modules/
 
 # Task files
 tasks.json
-tasks/ 
+tasks/
+x_spec.txt 

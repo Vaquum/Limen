@@ -18,13 +18,14 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
         origin="lower",
         aspect="auto",
     )
-    fig_corr.update_traces(textfont=dict(size=14), selector=dict(type="heatmap"))
+    # Match table text scale (~20% above global) -> use ~1.2em equivalent
+    fig_corr.update_traces(textfont=dict(size=16), selector=dict(type="heatmap"))
     fig_corr.update_xaxes(side="top")
     fig_corr.update_layout(
         height=800,
         margin=dict(l=60, r=40, t=60, b=60),
-        yaxis=dict(tickfont=dict(size=12), tickangle=0),
-        xaxis=dict(tickfont=dict(size=12)),
+        yaxis=dict(tickfont=dict(size=16), tickangle=0),
+        xaxis=dict(tickfont=dict(size=16)),
         xaxis_showgrid=False,
         yaxis_showgrid=False,
         shapes=[

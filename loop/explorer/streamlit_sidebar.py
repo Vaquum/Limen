@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 import streamlit as st
+from loop.explorer.streamlit_toolbar import render_toolbar
 
 
 def _tight_divider(gap_rem: float) -> None:
@@ -20,9 +21,8 @@ def build_sidebar(
 
     with st.sidebar:
 
-        # --- Global data filters
-        filter_outliers = st.checkbox('Filter Outliers', value=False)
-        _tight_divider(sidebar_divider_gap_rem)
+        # Top toolbar icons
+        render_toolbar()
 
         # --- Show Table + its options
         show_table = st.checkbox("**Show Table**", value=False)
@@ -66,20 +66,18 @@ def build_sidebar(
 
         if show_chart:
             chart_type = st.radio('Chart Type', ["Histogram", "Line", "Area", "Scatter", "Box"], horizontal=True)
-            xcol = st.selectbox("X-axis", [""] + df_base.columns.tolist(), index=0)
+            if chart_type != "Histogram":
+                xcol = st.selectbox("X-axis", [""] + df_base.columns.tolist(), index=0)
 
             if chart_type in ("Line", "Area"):
-                # Default for multi-select follows prior single or multi selection
-                prev_multi = [c for c in st.session_state["selected_ycols"] if c in num_cols]
-                prev_single = st.session_state["selected_ycol"]
-                default_multi = prev_multi if prev_multi else ([prev_single] if prev_single in num_cols else [])
-                ycols = st.multiselect("Y-axis (numeric, multi)", num_cols, default=default_multi)
+                # Multi-select persists via key; no default to avoid selection flicker
+                ycols = st.multiselect("Y-axis", num_cols, key="ycols_line_area")
                 # Persist selection and sync single to first of multi if available
                 st.session_state["selected_ycols"] = ycols
                 if ycols:
                     st.session_state["selected_ycol"] = ycols[0]
                 smoothing_window = st.slider(
-                    "Smoothing window (points)",
+                    "Smoothing Window",
                     min_value=1, max_value=200, value=1, step=1,
                     help="Rolling mean window; 1 = no smoothing"
                 )
@@ -87,20 +85,32 @@ def build_sidebar(
                     normalize_line = st.checkbox("*Normalize Data*", value=False)
                 elif chart_type == "Area":
                     area_normalize_100 = st.checkbox("*Normalize to 100%*", value=True)
+            elif chart_type == 'Histogram':
+                # Histogram: multi-select Y columns; persist via key only
+                ycols = st.multiselect('Y-axis', num_cols, key='ycols_hist')
+                normalize_counts = st.checkbox('*Normalize Counts*', value=False, key='normalize_counts_hist')
+                normalize_data_hist = st.checkbox(
+                    '*Normalize Data*',
+                    value=False,
+                    key='normalize_data_hist',
+                    help='Scale each selected series to [-1, 1] using per-series min–max (same behavior as Line).'
+                )
+                st.session_state["selected_ycols"] = ycols
+                if ycols:
+                    st.session_state["selected_ycol"] = ycols[0]
             else:
-                # Default for single select follows prior single or first of multi
+                # Scatter/Box: single Y select
                 default_single = st.session_state["selected_ycol"]
                 if not default_single and st.session_state["selected_ycols"]:
                     default_single = st.session_state["selected_ycols"][0]
                 options = [""] + num_cols
                 default_index = options.index(default_single) if default_single in options else 0
-                ycol = st.selectbox("Y-axis (numeric)", options, index=default_index)
-                # Persist single selection (empty allowed)
+                ycol = st.selectbox("Y-axis", options, index=default_index)
                 st.session_state["selected_ycol"] = ycol
 
             if chart_type == "Scatter":
-                hue_col = st.selectbox("Hue (color)", [""] + df_base.columns.tolist(), index=0)
-                size_col = st.selectbox("Size (numeric)", [""] + num_cols, index=0)
+                hue_col = st.selectbox("Hue", [""] + df_base.columns.tolist(), index=0)
+                size_col = st.selectbox("Size", [""] + num_cols, index=0)
 
         _tight_divider(sidebar_divider_gap_rem)
 
@@ -134,7 +144,7 @@ def build_sidebar(
                     help="Bin the selected pivot column into fixed quantile buckets at 1%, 25%, 50%, 75%, 99% (tails included)."
                 )
 
-            pivot_val  = st.selectbox('Pivot Value (numeric)', num_cols)
+            pivot_val  = st.selectbox('Pivot Value', num_cols)
             agg = st.selectbox('Aggregation', ['min', 'max', 'sum', 'mean', 'std', 'median', 'iqr', 'count'])
 
         _tight_divider(sidebar_divider_gap_rem)
@@ -176,7 +186,8 @@ def build_sidebar(
         smoothing_window=smoothing_window,
         area_normalize_100=area_normalize_100,
         show_corr=show_corr,
-        filter_outliers=filter_outliers,
+        normalize_counts_hist=locals().get('normalize_counts', False),
+        normalize_data_hist=locals().get('normalize_data_hist', False),
         show_pivot=show_pivot,
         pivot_rows=pivot_rows,
         pivot_cols=pivot_cols,

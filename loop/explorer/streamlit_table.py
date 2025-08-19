@@ -10,28 +10,12 @@ def prepare_table_data(
     show_table: bool,
     numeric_filter_col: str | None,
     num_range: tuple[float, float] | None,
-    filter_outliers: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Applies the numeric range filter (if any) and inserts the drill-down link column.
     Returns (df_filt, df_display).
     """
     df_filt = df_base
-    if filter_outliers:
-        num_cols = df_filt.select_dtypes("number").columns.tolist()
-        if num_cols:
-            mask = pd.Series(True, index=df_filt.index)
-            for c in num_cols:
-                series = pd.to_numeric(df_filt[c], errors="coerce")
-                q = series.quantile([0.25, 0.75])
-                q1, q3 = float(q.iloc[0]), float(q.iloc[1])
-                iqr = q3 - q1
-                if not np.isfinite(iqr) or iqr == 0:
-                    continue
-                lo = q1 - 1.5 * iqr
-                hi = q3 + 1.5 * iqr
-                mask &= series.between(lo, hi) | series.isna()
-            df_filt = df_filt[mask]
     if show_table and numeric_filter_col and num_range:
         lo, hi = num_range
         df_filt = df_filt[(df_filt[numeric_filter_col] >= lo) & (df_filt[numeric_filter_col] <= hi)]
@@ -39,6 +23,16 @@ def prepare_table_data(
     # Add drill-down link
     df_view = df_filt.copy()
     df_view.insert(1, "view", [f"/?row={i}" for i in df_view["rid"]])
+
+    # Pretty-print datetime to second resolution for display only
+    if "datetime" in df_view.columns:
+        try:
+            s = pd.to_datetime(df_view["datetime"], utc=True, errors="coerce")
+            # Render as naive UTC to seconds
+            df_view["datetime"] = s.dt.tz_convert("UTC").dt.tz_localize(None).dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            # If conversion fails, leave original values
+            pass
 
     return df_filt, df_view
 
@@ -54,7 +48,7 @@ def render_table(
 
     if fmt_mode == "Inline Bars":
         colcfg = {
-            "view": st.column_config.LinkColumn("", help="Open row details", display_text="🔎 view"),
+            "view": st.column_config.LinkColumn("", help="Open row details", display_text="view"),
             "rid": st.column_config.NumberColumn("rid", help="Row id", width="small"),
         }
         for c in numeric_visible:
@@ -77,7 +71,7 @@ def render_table(
             use_container_width=True,
             hide_index=True,
             column_config={
-                "view": st.column_config.LinkColumn("", help="Open row details", display_text="🔎 view"),
+                "view": st.column_config.LinkColumn("", help="Open row details", display_text="view"),
                 "rid": st.column_config.NumberColumn("rid", help="Row id", width="small"),
             },
         )

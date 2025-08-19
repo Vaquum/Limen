@@ -4,7 +4,6 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-
 # -----------------------------
 # Internal helpers (module-local)
 # -----------------------------
@@ -17,6 +16,13 @@ def _rolling_mean_per_series(df_long: pd.DataFrame, series_col: str, value_col: 
         .transform(lambda s: s.rolling(window=window, min_periods=1).mean())
     )
 
+
+def _apply_plot_theme(fig):
+    fig.update_layout(font=dict(size=16))
+    fig.update_xaxes(title_font=dict(size=18), tickfont=dict(size=15))
+    fig.update_yaxes(title_font=dict(size=18), tickfont=dict(size=15))
+    fig.update_layout(legend=dict(font=dict(size=15)))
+    return fig
 
 # -----------------------------
 # Public chart renderers
@@ -70,7 +76,9 @@ def plot_line(
             plot_long, "Series", "minmax_scaled", smoothing_window
         )
 
-        st.plotly_chart(px.line(plot_long, x=xcol, y="minmax_scaled", color="Series"), use_container_width=True)
+        fig = px.line(plot_long, x=xcol, y="minmax_scaled", color="Series")
+        _apply_plot_theme(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
     else:
         # Wide form; sort then smooth each y
@@ -79,7 +87,9 @@ def plot_line(
             for col in ycols:
                 plot_df[col] = plot_df[col].rolling(window=smoothing_window, min_periods=1).mean()
 
-        st.plotly_chart(px.line(plot_df, x=xcol, y=ycols, **common_args), use_container_width=True)
+        fig = px.line(plot_df, x=xcol, y=ycols, **common_args)
+        _apply_plot_theme(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_area(
@@ -125,6 +135,7 @@ def plot_area(
             x=xcol, y="Value", color="Series",
             category_orders={"Series": ycols_sorted},
         )
+    _apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -141,7 +152,9 @@ def plot_scatter(
         common_args["color"] = hue_col
     if size_col:
         common_args["size"] = size_col
-    st.plotly_chart(px.scatter(df_filt, x=xcol, y=ycol, **common_args), use_container_width=True)
+    fig = px.scatter(df_filt, x=xcol, y=ycol, **common_args)
+    _apply_plot_theme(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_box(
@@ -151,14 +164,56 @@ def plot_box(
     ycol: str,
     hue_col: str | None = None,
 ) -> None:
-    st.plotly_chart(px.box(df_filt, x=xcol, y=ycol, color=hue_col if hue_col else None), use_container_width=True)
+    fig = px.box(df_filt, x=xcol, y=ycol, color=hue_col if hue_col else None)
+    _apply_plot_theme(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_histogram(
     df_filt: pd.DataFrame,
     *,
-    ycol: str,
+    ycol: str | None = None,
+    ycols: list[str] | None = None,
+    normalize_data: bool = False,
+    normalize_counts: bool = False,
     hue_col: str | None = None,
 ) -> None:
     args = {"color": hue_col} if hue_col else {}
-    st.plotly_chart(px.histogram(df_filt, x=ycol, **args), use_container_width=True)
+    if ycols:
+        # Build a long-form DataFrame to overlay multiple series in one histogram
+        # Ensure consistent order and avoid duplicate keys on rapid changes
+        cols = list(dict.fromkeys(ycols))
+        long_df = df_filt[cols].copy().melt(value_vars=cols, var_name="Series", value_name="Value")
+        if normalize_data:
+            # Per-series min-max scaling to [-1, 1] like Line normalize
+            def minmax_scale(s: pd.Series) -> pd.Series:
+                s = pd.to_numeric(s, errors='coerce')
+                vmin, vmax = np.nanmin(s.values), np.nanmax(s.values)
+                if not np.isfinite(vmin) or not np.isfinite(vmax) or vmax == vmin:
+                    return pd.Series(np.zeros(len(s)), index=s.index)
+                scaled01 = (s - vmin) / (vmax - vmin)
+                return -1.0 + 2.0 * scaled01
+
+            long_df['Value'] = (
+                long_df.groupby('Series')['Value']
+                .transform(minmax_scale)
+            )
+        # Default overlay (native numeric bins)
+        fig = px.histogram(long_df, x='Value', color='Series', opacity=0.6, histnorm='probability' if normalize_counts else None)
+        fig.update_layout(barmode='overlay')
+        _apply_plot_theme(fig)
+        key = f"hist_multi_{'_'.join(cols)}_{int(normalize_counts)}_{int(normalize_data)}"
+        st.plotly_chart(fig, use_container_width=True, key=key)
+        return
+    if not ycol:
+        return
+    if normalize_data:
+        s = pd.to_numeric(df_filt[ycol], errors='coerce')
+        vmin, vmax = np.nanmin(s.values), np.nanmax(s.values)
+        if np.isfinite(vmin) and np.isfinite(vmax) and vmax != vmin:
+            s = -1.0 + 2.0 * ((s - vmin) / (vmax - vmin))
+        fig = px.histogram(x=s, histnorm='probability' if normalize_counts else None, **args)
+    else:
+        fig = px.histogram(df_filt, x=ycol, histnorm='probability' if normalize_counts else None, **args)
+    _apply_plot_theme(fig)
+    st.plotly_chart(fig, use_container_width=True, key=f"hist_single_{ycol}_{int(normalize_counts)}_{int(normalize_data)}")

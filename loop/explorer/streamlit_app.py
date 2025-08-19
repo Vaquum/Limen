@@ -12,6 +12,9 @@ from loop.explorer.streamlit_heatmap import render_corr_heatmap
 from loop.explorer.streamlit_table import prepare_table_data, render_table
 from loop.explorer.streamlit_details import render_details_view
 from loop.explorer.streamlit_utils import pretty_label, format_value, quantile_bins_fixed
+from loop.explorer.streamlit_outliers import render_outlier_controls, apply_outlier_transform
+from loop.explorer.streamlit_time import render_time_controls, apply_time_filter
+from loop.explorer.streamlit_trend import render_trend_controls, apply_trend_regime
 
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -24,12 +27,53 @@ if not os.path.exists(parquet_path):
     raise FileNotFoundError(f"Parquet not found: {parquet_path}")
 
 st.set_page_config(page_title='Loop Explorer', layout='wide')
+
+# -----------------------------
+# Handle toolbar toggle via query param (?toggle=...)
+# Compatible with both new and experimental query param APIs
+# -----------------------------
+def _get_query_params() -> dict:
+    try:
+        qp = st.query_params
+        return dict(qp) if isinstance(qp, dict) else {}
+    except Exception:
+        try:
+            return {k: v[0] if isinstance(v, list) and v else v for k, v in st.experimental_get_query_params().items()}
+        except Exception:
+            return {}
+
+def _set_query_params(params: dict) -> None:
+    try:
+        st.query_params.update(params)
+    except Exception:
+        try:
+            st.experimental_set_query_params(**params)
+        except Exception:
+            pass
+
+qp = _get_query_params()
+_toggle = qp.get('toggle')
+if _toggle:
+    # Map toggle names to session flags
+    mapping = {
+        'outliers': '_show_outliers',
+        'time': '_show_time',
+        'trend': '_show_trend',
+        'dataset': '_show_dataset',
+    }
+    flag = mapping.get(_toggle)
+    if flag:
+        st.session_state[flag] = not st.session_state.get(flag, False)
+    # Clear the query param to keep URL clean
+    qp.pop('toggle', None)
+    _set_query_params(qp)
+    st.rerun()
 pd.set_option('styler.render.max_elements', 10_000_000)
 
 # --------------------------------------------------------
 # ---------- Global CSS (cards + compact sidebar dividers)
 # --------------------------------------------------------
-sidebar_container_gap_rem = 0.45
+sidebar_container_gap_rem = 0.0
 sidebar_divider_gap_rem   = 0.30
 
 st.markdown(
@@ -101,33 +145,41 @@ size_col         = sidebar_state['size_col']
 normalize_line   = sidebar_state['normalize_line']
 smoothing_window = sidebar_state['smoothing_window']
 area_normalize_100 = sidebar_state.get('area_normalize_100', True)
+normalize_counts_hist = sidebar_state.get('normalize_counts_hist', False)
+normalize_data_hist = sidebar_state.get('normalize_data_hist', False)
 
 # ------------------------
 # Show Correlation Heatmap
 # ------------------------
 show_corr = sidebar_state['show_corr']
-filter_outliers  = sidebar_state.get('filter_outliers', False)
 
 # ----------------
-# Show Pivot Table
+# Global Outlier Control
 # ----------------
-show_pivot     = sidebar_state['show_pivot']
-pivot_rows     = sidebar_state['pivot_rows']
-pivot_cols     = sidebar_state['pivot_cols']
-pivot_val      = sidebar_state['pivot_val']
-agg            = sidebar_state['agg']
-quantile_rows  = sidebar_state['quantile_rows']
-quantile_cols  = sidebar_state['quantile_cols']
+outlier_method = render_outlier_controls(df_base)
+df_out = apply_outlier_transform(df_base, outlier_method)
+
+# ----------------
+# Global Time Control
+# ----------------
+time_settings = render_time_controls(df_out)
+df_out2 = apply_time_filter(df_out, time_settings)
+
+# ----------------
+# Global Trend Control
+# ----------------
+# Toggle is in the toolbar; controls render only when active
+trend_settings = render_trend_controls(df_out2)
+df_with_regime, df_out3 = apply_trend_regime(df_out2, trend_settings)
 
 # ---------------------------
 # ---- Table data & render
 # ---------------------------
 df_filt, df_display = prepare_table_data(
-    df_base=df_base,
+    df_base=df_out3,
     show_table=show_table,
     numeric_filter_col=numeric_filter_col,
     num_range=num_range,
-    filter_outliers=filter_outliers,
 )
 
 if show_table:
@@ -175,10 +227,21 @@ if show_chart:
         )
 
     else:
-        if ycol:
+        # Histogram supports multi y
+        if ycols:
+            charts.plot_histogram(
+                df_filt,
+                ycols=ycols,
+                normalize_data=normalize_data_hist,
+                normalize_counts=normalize_counts_hist,
+                hue_col=hue_col,
+            )
+        elif ycol:
             charts.plot_histogram(
                 df_filt,
                 ycol=ycol,
+                normalize_data=normalize_data_hist,
+                normalize_counts=normalize_counts_hist,
                 hue_col=hue_col,
             )
 
@@ -191,14 +254,16 @@ if show_corr:
 # ----------------
 # ---- Pivot Table
 # ----------------
+show_pivot     = sidebar_state['show_pivot']
+pivot_val      = sidebar_state['pivot_val']
 if show_pivot and pivot_val:
     render_pivot_table(
         df_filt,
-        pivot_rows=pivot_rows,
-        pivot_cols=pivot_cols,
+        pivot_rows=sidebar_state['pivot_rows'],
+        pivot_cols=sidebar_state['pivot_cols'],
         pivot_val=pivot_val,
-        agg=agg,
-        quantile_rows=quantile_rows,
-        quantile_cols=quantile_cols,
+        agg=sidebar_state['agg'],
+        quantile_rows=sidebar_state['quantile_rows'],
+        quantile_cols=sidebar_state['quantile_cols'],
         quantile_bins_fn=quantile_bins_fixed,
     )
