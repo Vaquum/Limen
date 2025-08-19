@@ -9,7 +9,7 @@ def _icon_button(col, glyph: str, tooltip: str, toggle_flag: str, idx: int) -> N
         st.session_state[toggle_flag] = not st.session_state.get(toggle_flag, False)
 
     # Use a simple glyph/emoji label directly
-    col.button(glyph, help=tooltip, on_click=_toggle, key=f"tb_{toggle_flag}")
+    col.button(glyph, on_click=_toggle, key=f"tb_{toggle_flag}")
 
     # Style the nth column's first button inside the current horizontal block of the sidebar.
     base_selector = (
@@ -55,6 +55,7 @@ def render_toolbar() -> None:
     st.session_state.setdefault("_show_outliers", False)
     st.session_state.setdefault("_show_time", False)
     st.session_state.setdefault("_show_trend", False)
+    st.session_state.setdefault("_show_dataset", False)
 
 
     c1, c2, c3, c4 = st.sidebar.columns(4)

@@ -25,8 +25,8 @@ def loop_explorer(uel, host='37.27.112.167'):
 
     datasets['historical_data'] = uel.data
     datasets['experiment_log'] = uel.experiment_log
-    datasets['confusion_metrics'] = uel.experiment_confusion_metrics
-    datasets['backtest_results'] = uel.experiment_backtest_results
+    datasets['experiment_confusion_metrics'] = uel.experiment_confusion_metrics
+    datasets['experiment_backtest_results'] = uel.experiment_backtest_results
     
     for key in datasets.keys():
         

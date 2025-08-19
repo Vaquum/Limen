@@ -24,6 +24,17 @@ def build_sidebar(
         # Top toolbar icons
         render_toolbar()
 
+        # Dataset selector
+        if st.session_state.get('_show_dataset', False):
+            ds = st.selectbox(
+                'Dataset',
+                ['Historical Data', 'Experiment Log', 'Confusion Metrics', 'Backtest Results'],
+                index=0,
+                key='dataset_select'
+            )
+            st.session_state['dataset_name'] = ds
+            _tight_divider(sidebar_divider_gap_rem)
+
         # --- Show Table + its options
         show_table = st.checkbox("**Show Table**", value=False)
 

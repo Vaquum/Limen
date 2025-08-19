@@ -84,7 +84,29 @@ st.markdown(
 # --------------
 # ---- Load data
 # --------------
-df = pd.read_parquet(parquet_path)
+@st.cache_data(show_spinner=False)
+def _load_parquet(path: str, mtime: float | None) -> pd.DataFrame:
+    # mtime is unused beyond caching; included to bust cache when file changes
+    return pd.read_parquet(path)
+
+def _mtime(path: str) -> float | None:
+    try:
+        return os.path.getmtime(path)
+    except Exception:
+        return None
+
+dataset_name = st.session_state.get('dataset_select', 'Historical Data')
+name_to_path = {
+    'Historical Data': parquet_path,
+    'Experiment Log': '/tmp/experiment_log.parquet',
+    'Confusion Metrics': '/tmp/confusion_metrics.parquet',
+    'Backtest Results': '/tmp/backtest_results.parquet',
+}
+selected_path = name_to_path.get(dataset_name, parquet_path)
+try:
+    df = _load_parquet(selected_path, _mtime(selected_path))
+except Exception:
+    df = _load_parquet(parquet_path, _mtime(parquet_path))
 
 # ----------------
 # ---- Detail view
