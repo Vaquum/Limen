@@ -245,7 +245,7 @@
 - Format code style for `loop.indicators`
 - Update docs for `loop.indicators`
 
-# v1.14.0 on 17h of August 2025
+# v1.14.0 on 17th of August 2025
 - Refactor data sampler code to generic form in loop.utils.data_sampler
 - Remove data sampler class from lightgbm.utils
 - Refactor mega model code to generic form in loop.utils
@@ -257,3 +257,6 @@
 - Organize `experiment_confusion_metrics` columns based on actual use pattern
 - Pre-compute `experiment_confusion_metrics` and `experiment_backtest_results` (**NOTE**: `experiment_parameter_correlation` remains callable)
 - Clean `uel` object namespace
+
+# v1.15.1 on 19th of august 2025
+- Add Ichimoku Cloud feature to `loop.features`
