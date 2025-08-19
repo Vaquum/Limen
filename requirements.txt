@@ -16,5 +16,4 @@ matplotlib
 seaborn
 streamlit
 plotly
-
-    
+ipython
