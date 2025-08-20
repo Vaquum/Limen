@@ -13,3 +13,4 @@ _(A short description of the change)_
 - [ ] I've added tests (if applicable)
 - [ ] I've used an LLM to validate changes 
 - [ ] I have removed examples, and other extranous comments added by LLMs
+- [ ] I've added "Closes #x" where x is underlying ticket id
