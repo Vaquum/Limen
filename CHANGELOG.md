@@ -308,4 +308,4 @@ data mismatch
 - Add `loop.data` module.
 - Add fixed threshold trade, volume and liquidity bars to `loop.data.bars`
 - Add test cases for the above
-- Add documentation `docs/Bars.md`
+- Add documentation `docs/Data-Bars.md`
