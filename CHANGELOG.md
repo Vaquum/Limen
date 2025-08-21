@@ -303,3 +303,9 @@ data mismatch
 - Update `sfm.reference.logreg` to use new manifest API
 - Add comprehensive docs for `loop.manifest` including integration examples
 - Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support 
+
+# V1.19.1 on 22nd of September 2025
+- Add `loop.data` module.
+- Add fixed threshold trade, volume and liquidity bars to `loop.data.bars`
+- Add test cases for the above
+- Add documentation `docs/Bars.md`
