@@ -43,7 +43,7 @@ def validate_bars_output(
         assert (
             avg_klines_per_bar > 1.0,
             f'No aggregation detected: {avg_klines_per_bar:.1f} klines per bar'
-        )
+        assert avg_klines_per_bar > 1.0, f'No aggregation detected: {avg_klines_per_bar:.1f} klines per bar'
 
 
 def test_volume_bars_basic():
