@@ -32,7 +32,7 @@ All standard bar functions return a `pl.DataFrame` with the following structure:
 | `maker_volume` | `float` | Total volume executed by makers |
 | `maker_liquidity` | `float` | Total liquidity provided by makers |
 | `bar_count` | `int` | Number of base klines aggregated into this bar |
-| `base_interval` | `str` | Original kline interval (e.g., '1h') |
+| `base_interval` | `float` | Original kline interval in seconds (e.g., 7200.0 for 2h) |
 
 ## `loop.data.bars`
 
