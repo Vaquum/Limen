@@ -1,5 +1,6 @@
 .env
 venv
+.venv/
 loop.egg-info
 .cursor
 __pycache__
@@ -47,3 +48,8 @@ node_modules/
 # Task files
 tasks.json
 tasks/ 
+
+# Python / uv local files
+.python-version
+uv.lock
+pyproject.toml
