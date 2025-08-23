@@ -2,39 +2,6 @@ import polars as pl
 from typing import Union
 
 
-def _validate_data(data: pl.DataFrame, column_name: str) -> None:
-
-    '''
-    Validate required columns in klines data.
-
-    Args:
-        data (pl.DataFrame): Klines dataframe
-        column_name (str): Column name to validate for threshold detection
-
-    Raises:
-        ValueError: If required columns are missing from data
-        KeyError: If specified column_name is missing from data
-    '''
-    required_cols = [
-        'datetime',
-        'open',
-        'high',
-        'low',
-        'close',
-        'volume',
-        'no_of_trades',
-        'liquidity_sum',
-        'maker_ratio',
-        'maker_volume',
-        'maker_liquidity'
-    ]
-
-    missing_cols = set(required_cols) - set(data.columns)
-    if missing_cols:
-        raise ValueError(f'Missing required columns: {missing_cols}')
-    
-    if column_name not in data.columns:
-        raise KeyError(f"Threshold column '{column_name}' not found in data")
 
 def _standard_bars(data: pl.DataFrame, 
                    threshold: Union[int, float],
@@ -55,12 +22,7 @@ def _standard_bars(data: pl.DataFrame,
                       'maker_ratio', 'maker_volume', 'maker_liquidity',
                       'bar_count', 'base_interval'
 
-    Raises:
-        ValueError: If required columns are missing from data
-        KeyError: If specified column_name is missing from data
     '''
-
-    _validate_data(data, column_name)
 
     base_interval = (
           (data['datetime'][1] - data['datetime'][0]).total_seconds()
