@@ -260,3 +260,6 @@
 
 # v1.15.1 on 19th of august 2025
 - Add Ichimoku Cloud feature to `loop.features`
+
+# v1.15.2 on 24th of august 2025
+- Simplify `lightgbm.tradeable_regressor`
