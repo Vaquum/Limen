@@ -11,6 +11,9 @@ from loop.features.volume_regime import volume_regime
 from loop.indicators.rolling_volatility import rolling_volatility
 from loop.features.atr_sma import atr_sma
 from loop.features.atr_percent_sma import atr_percent_sma
+from loop.features.market_regime import market_regime
+from loop.features.momentum_confirmation import momentum_confirmation
+from loop.utils.time_decay import time_decay
 
 VOL_REGIME_LOW_VALUE = 10
 VOL_REGIME_HIGH_VALUE = 90
@@ -78,47 +81,7 @@ def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     return df.drop('returns_temp')
 
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
-    '''
-    Compute market regime indicators including trend strength and volume regime.
-    
-    Args:
-        df (pl.DataFrame): Klines dataset with 'close', 'volume' columns
-        lookback (int): Lookback period for calculations
-    
-    Returns:
-        pl.DataFrame: The input data with new columns 'sma_20', 'sma_50', 'trend_strength', 'volatility_ratio', 'volume_sma', 'volume_regime', 'market_favorable'
-    '''
-    
-    df = sma(df, 'close', 20)
-    df = sma(df, 'close', 50)
-    df = trend_strength(df, 20, 50)
-    
-    df = df.rename({
-        'close_sma_20': 'sma_20',
-        'close_sma_50': 'sma_50'
-    })
-    
-    df = df.with_columns([
-        pl.col('close').pct_change().alias('returns_temp')
-    ])
-    
-    df = df.with_columns([
-        (pl.col('returns_temp').rolling_std(window_size=12) / 
-         pl.col('returns_temp').rolling_std(window_size=48)).alias('volatility_ratio')
-    ])
-    
-    df = sma(df, 'volume', 48)
-    df = df.rename({'volume_sma_48': 'volume_sma'})
-    df = volume_regime(df, 48)
-    
-    df = df.with_columns([
-        (((pl.col('trend_strength') > -0.001).cast(pl.Int32) +
-          (pl.col('volatility_ratio') < 2.0).cast(pl.Int32) +
-          (pl.col('volume_regime') > 0.7).cast(pl.Int32)) / 3.0)
-        .alias('market_favorable')
-    ])
-    
-    return df.drop('returns_temp')
+    return market_regime(df, lookback)
 
 def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
@@ -263,34 +226,10 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
     return df
 
 def calculate_simple_momentum_confirmation(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    '''
-    Compute simple momentum confirmation scores based on recent price changes.
-    
-    Args:
-        df (pl.DataFrame): Klines dataset with 'close' column
-        config (dict): Configuration dictionary with momentum settings
-    
-    Returns:
-        pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
-    '''
-    
     if config['simple_momentum_confirmation']:
-        df = df.with_columns([
-            pl.col('close').pct_change(1).alias('momentum_1'),
-            pl.col('close').pct_change(3).alias('momentum_3')
-        ])
-        
-        df = df.with_columns([
-            ((pl.col('momentum_1') > 0).cast(pl.Float32) * 0.5 +
-             (pl.col('momentum_3') > 0).cast(pl.Float32) * 0.5)
-            .alias('momentum_score')
-        ])
+        return momentum_confirmation(df, short_period=1, long_period=3, short_weight=0.5)
     else:
-        df = df.with_columns([
-            pl.lit(1.0).alias('momentum_score')
-        ])
-    
-    return df
+        return df.with_columns([pl.lit(1.0).alias('momentum_score')])
 
 def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
@@ -387,27 +326,7 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     return pl.from_pandas(df_pd)
 
 def calculate_time_decay_factor(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    '''
-    Compute time decay factor for exit reality scores based on time to exit.
-    
-    Args:
-        df (pl.DataFrame): Klines dataset with 'exit_bars' column
-        config (dict): Configuration dictionary with time decay settings
-    
-    Returns:
-        pl.DataFrame: The input data with new column 'time_decay_factor'
-    '''
-    
-    halflife_bars = config['time_decay_halflife'] / 5
-    
-    df = df.with_columns([
-        pl.when(pl.col('exit_bars').is_not_null())
-            .then(pl.lit(-0.693).mul(pl.col('exit_bars')).truediv(halflife_bars).exp())
-            .otherwise(pl.lit(0.5))
-            .alias('time_decay_factor')
-    ])
-    
-    return df
+    return time_decay(df, 'exit_bars', config['time_decay_halflife'], time_units=5, output_column='time_decay_factor')
 
 def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
