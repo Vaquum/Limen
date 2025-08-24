@@ -31,6 +31,13 @@ TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
 
+# Default volatility regime placeholder values
+DEFAULT_VOL_PERCENTILE = 50.0
+DEFAULT_VOLATILITY_REGIME = 'normal'
+DEFAULT_REGIME_LOW = 0
+DEFAULT_REGIME_NORMAL = 1  
+DEFAULT_REGIME_HIGH = 0
+
 WEIGHT_TARGET_ACHIEVED = 20
 WEIGHT_QUICK_TARGET = 30
 WEIGHT_HIGH_SCORE_P90 = 20
@@ -101,11 +108,11 @@ def prep(data, round_params=None):
     lookback = 720
     df = df.with_columns([
         pl.col('returns').rolling_std(lookback, min_periods=1).alias('vol_60h'),
-        pl.lit(50.0).alias('vol_percentile'),
-        pl.lit('normal').alias('volatility_regime'),
-        pl.lit(0).alias('regime_low'),
-        pl.lit(1).alias('regime_normal'),
-        pl.lit(0).alias('regime_high')
+        pl.lit(DEFAULT_VOL_PERCENTILE).alias('vol_percentile'),
+        pl.lit(DEFAULT_VOLATILITY_REGIME).alias('volatility_regime'),
+        pl.lit(DEFAULT_REGIME_LOW).alias('regime_low'),
+        pl.lit(DEFAULT_REGIME_NORMAL).alias('regime_normal'),
+        pl.lit(DEFAULT_REGIME_HIGH).alias('regime_high')
     ])
     
     df = calculate_market_regime(df)

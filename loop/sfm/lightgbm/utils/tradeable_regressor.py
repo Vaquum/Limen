@@ -54,10 +54,6 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     df = atr_percent_sma(df, config['volatility_lookback'])
     df = df.rename({'atr_percent_sma': 'atr_pct'})
     
-    df = df.with_columns([
-        pl.col('close').shift(1).alias('prev_close')
-    ])
-    
     if config['dynamic_targets']:
         df = volatility_measure(df)
         df = regime_multiplier(df)
@@ -78,7 +74,7 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
             pl.lit(config['base_stop_loss']).alias('dynamic_stop_loss')
         ])
     
-    return df.drop('prev_close')
+    return df
 
 def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
