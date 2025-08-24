@@ -9,6 +9,9 @@ import polars as pl
 import numpy as np
 
 from loop.utils.splits import split_sequential, split_data_to_prep_output
+from loop.utils.calculate_returns import calculate_returns_if_missing
+from loop.utils.standardize_datetime import standardize_datetime_column
+from loop.utils.numeric_features import get_numeric_feature_columns
 
 from loop.sfm.lightgbm.utils.tradeable_regressor import (
     calculate_market_regime,
@@ -20,22 +23,8 @@ from loop.sfm.lightgbm.utils.tradeable_regressor import (
     create_tradeable_labels,
     prepare_features_5m
 )
+from loop.sfm.lightgbm.utils.param_filtering import filter_lgb_params
 
-def calculate_returns_if_missing(df: pl.DataFrame) -> pl.DataFrame:
-    '''
-    Compute returns column if missing from the dataset.
-    
-    Args:
-        df (pl.DataFrame): Klines dataset with 'close' column
-        
-    Returns:
-        pl.DataFrame: The input data with a new column 'returns'
-    '''
-    if 'returns' not in df.columns:
-        df = df.with_columns([
-            (pl.col('close') / pl.col('close').shift(1) - 1).alias('returns')
-        ])
-    return df
 
 
 TRAIN_SPLIT = 0.7
@@ -105,11 +94,7 @@ def prep(data, round_params=None):
     
     df = data.clone()
     
-    if 'Date' in df.columns:
-        df = df.rename({'Date': 'datetime'})
-    
-    if df.schema['datetime'] != pl.Datetime:
-        df = df.with_columns(pl.col('datetime').str.to_datetime())
+    df = standardize_datetime_column(df)
     
     df = calculate_returns_if_missing(df)
     
@@ -155,9 +140,7 @@ def prep(data, round_params=None):
     }
     exclude_cols = [col for category in exclude_categories.values() for col in category]
     
-    feature_cols = [col for col in df_clean.columns if col not in exclude_cols]
-    numeric_features = [col for col in feature_cols 
-                       if df_clean.schema[col] in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.UInt32, pl.UInt64]]
+    numeric_features = get_numeric_feature_columns(df_clean, exclude_cols)
     
     cols = ['datetime'] + numeric_features + ['tradeable_score']
     
@@ -189,10 +172,7 @@ def prep(data, round_params=None):
 
 
 def model(data, round_params):
-    lgb_params = {k: v for k, v in round_params.items() 
-                  if k in ['objective', 'metric', 'boosting_type', 'num_leaves',
-                          'learning_rate', 'feature_fraction', 'bagging_fraction',
-                          'bagging_freq', 'verbose', 'num_iterations', 'force_col_wise']}
+    lgb_params = filter_lgb_params(round_params)
     lgb_params['verbose'] = -1
     
     train_data = data['_train_clean']
