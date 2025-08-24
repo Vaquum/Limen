@@ -22,7 +22,6 @@ from loop.sfm.lightgbm.utils.tradeable_regressor import (
 )
 
 def calculate_returns_if_missing(df: pl.DataFrame) -> pl.DataFrame:
-    
     '''
     Compute returns column if missing from the dataset.
     
@@ -32,7 +31,6 @@ def calculate_returns_if_missing(df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'returns'
     '''
-    
     if 'returns' not in df.columns:
         df = df.with_columns([
             (pl.col('close') / pl.col('close').shift(1) - 1).alias('returns')
