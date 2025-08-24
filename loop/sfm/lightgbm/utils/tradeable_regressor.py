@@ -13,6 +13,19 @@ from loop.features.market_regime import market_regime
 from loop.features.momentum_confirmation import momentum_confirmation
 from loop.utils.time_decay import time_decay
 
+# New Loop features for microstructure and dynamic parameters
+from loop.features.volatility_measure import volatility_measure
+from loop.features.regime_multiplier import regime_multiplier
+from loop.features.dynamic_target import dynamic_target
+from loop.features.dynamic_stop_loss import dynamic_stop_loss
+from loop.features.entry_score_microstructure import entry_score_microstructure
+from loop.features.ema_alignment import ema_alignment
+from loop.features.volume_weight import volume_weight
+from loop.features.volatility_weight import volatility_weight
+from loop.features.momentum_weight import momentum_weight
+from loop.features.risk_reward_ratio import risk_reward_ratio
+from loop.features.exit_quality import exit_quality
+
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     return market_regime(df, lookback)
 
@@ -46,35 +59,20 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     ])
     
     if config['dynamic_targets']:
-        df = df.with_columns([
-            ((pl.col('rolling_volatility') + pl.col('atr_pct')) / 2).alias('volatility_measure')
-        ])
-        
-        df = df.with_columns([
-            pl.when(pl.col('volatility_regime') == 'low')
-                .then(pl.lit(0.8))
-                .when(pl.col('volatility_regime') == 'high')
-                .then(pl.lit(1.2))
-                .otherwise(pl.lit(1.0))
-                .alias('regime_multiplier')
-        ])
-        
-        df = df.with_columns([
-            (pl.col('volatility_measure') * config['target_volatility_multiplier'] * pl.col('regime_multiplier'))
-                .clip(config['base_min_breakout'] * 0.6, config['base_min_breakout'] * 1.4)
-                .alias('dynamic_target')
-        ])
+        df = volatility_measure(df)
+        df = regime_multiplier(df)
+        df = dynamic_target(df, config['base_min_breakout'], config['target_volatility_multiplier'])
     else:
         df = df.with_columns([
             pl.lit(config['base_min_breakout']).alias('dynamic_target')
         ])
     
     if config['volatility_adjusted_stops']:
-        df = df.with_columns([
-            (pl.col('volatility_measure') * config['stop_volatility_multiplier'] * pl.col('regime_multiplier'))
-                .clip(config['base_stop_loss'] * 0.7, config['base_stop_loss'] * 1.4)
-                .alias('dynamic_stop_loss')
-        ])
+        if 'volatility_measure' not in df.columns:
+            df = volatility_measure(df)
+        if 'regime_multiplier' not in df.columns:
+            df = regime_multiplier(df)
+        df = dynamic_stop_loss(df, config['base_stop_loss'], config['stop_volatility_multiplier'])
     else:
         df = df.with_columns([
             pl.lit(config['base_stop_loss']).alias('dynamic_stop_loss')
@@ -84,63 +82,21 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
 
 def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
-    Compute microstructure features for better entry timing including position in candle and volume spikes.
+    Compute microstructure features for better entry timing using Loop feature patterns.
     
     Args:
-        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close', 'volume' columns
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close', 'volume', 'volatility_regime' columns
         config (dict): Configuration dictionary with microstructure settings
     
     Returns:
-        pl.DataFrame: The input data with new columns 'position_in_candle', 'micro_momentum', 'volume_spike', 'spread_pct', 'entry_score'
+        pl.DataFrame: The input data with new columns including 'entry_score'
     '''
     
     if config['microstructure_timing']:
-        df = df.with_columns([
-            ((pl.col('close') - pl.col('low')) / (pl.col('high') - pl.col('low') + 1e-10))
-                .alias('position_in_candle')
-        ])
-        
-        df = df.with_columns([
-            pl.col('close').pct_change(3).alias('micro_momentum')
-        ])
-        
-        df = df.with_columns([
-            (pl.col('volume') / pl.col('volume').rolling_mean(window_size=20))
-                .alias('volume_spike')
-        ])
-        
-        df = df.with_columns([
-            ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread_pct')
-        ])
-        
-        df = df.with_columns([
-            ((1 - pl.col('position_in_candle')) * 0.25 +
-             (pl.col('micro_momentum') > 0).cast(pl.Float32) * 0.25 +
-             pl.col('volume_spike').clip(0.5, 1.5) / 1.5 * 0.25 +
-             (1 - (pl.col('spread_pct') / pl.col('spread_pct').rolling_mean(window_size=48)).clip(0, 2)) * 0.25)
-            .alias('entry_score_base')
-        ])
-        
-        df = df.with_columns([
-            pl.when(pl.col('volatility_regime') == 'low')
-                .then(
-                    (1 - pl.col('position_in_candle')) * 0.35 +
-                    (pl.col('micro_momentum') > 0).cast(pl.Float32) * 0.15 +
-                    pl.col('volume_spike').clip(0.5, 1.5) / 1.5 * 0.15 +
-                    (1 - (pl.col('spread_pct') / pl.col('spread_pct').rolling_mean(window_size=48)).clip(0, 2)) * 0.35
-                )
-                .when(pl.col('volatility_regime') == 'high')
-                .then(
-                    (1 - pl.col('position_in_candle')) * 0.15 +
-                    (pl.col('micro_momentum') > 0).cast(pl.Float32) * 0.35 +
-                    pl.col('volume_spike').clip(0.5, 1.5) / 1.5 * 0.35 +
-                    (1 - (pl.col('spread_pct') / pl.col('spread_pct').rolling_mean(window_size=48)).clip(0, 2)) * 0.15
-                )
-                .otherwise(pl.col('entry_score_base'))
-                .alias('entry_score')
-        ])
-        
-        df = df.drop('entry_score_base')
+        df = entry_score_microstructure(df, 
+                                       micro_momentum_period=3,
+                                       volume_spike_period=20, 
+                                       spread_mean_period=48)
     else:
         df = df.with_columns([
             pl.lit(1.0).alias('entry_score')
@@ -263,9 +219,8 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         pl.DataFrame: DataFrame with final tradeable labels and scores
     '''
     
-    df = df.with_columns([
-        pl.col('close').ewm_mean(span=21, adjust=False).alias('ema')
-    ])
+    # Calculate EMA alignment using Loop feature
+    df = ema_alignment(df, ema_span=21, power=config['ema_weight_power'])
     
     lookahead_candles = config['lookahead_minutes'] // 5
     
@@ -279,38 +234,19 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         ((pl.col('future_low') - pl.col('close')) / pl.col('close')).alias('max_drawdown')
     ])
     
-    df = df.with_columns([
-        (1 - (pl.col('close') - pl.col('ema')).abs() / pl.col('ema'))
-            .clip(0, 1)
-            .pow(config['ema_weight_power'])
-            .alias('ema_alignment')
-    ])
-    
+    # Calculate volume weight using Loop feature
     if config['volume_weight_enabled']:
-        df = sma(df, 'volume', 20)
-        df = df.rename({'volume_sma_20': 'volume_ma'})
-        
-        df = df.with_columns([
-            (pl.col('volume') / pl.col('volume_ma')).clip(0.5, 2.0).alias('volume_weight')
-        ])
+        df = volume_weight(df, period=20)
     else:
         df = df.with_columns([
             pl.lit(1.0).alias('volume_weight')
         ])
     
-    df = df.with_columns([
-        pl.col('close').pct_change().alias('returns_temp')
-    ])
-    df = rolling_volatility(df, 'returns_temp', 20)
-    df = df.rename({f'returns_temp_volatility_20': 'volatility'})
+    # Calculate volatility weight using Loop feature
+    df = volatility_weight(df, period=20)
     
-    df = df.with_columns([
-        (2 / (1 + pl.col('volatility') * 100)).clip(0.3, 1.0).alias('volatility_weight')
-    ])
-    
-    df = df.with_columns([
-        ((pl.col('close').pct_change(12) > 0).cast(pl.Float32) * 0.5 + 0.5).alias('momentum_weight')
-    ])
+    # Calculate momentum weight using Loop feature
+    df = momentum_weight(df, period=12)
     
     if config['market_regime_filter']:
         regime_weight_col = 'market_favorable'
@@ -332,9 +268,8 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         .alias('tradeable_breakout')
     ])
     
-    df = df.with_columns([
-        (pl.col('capturable_breakout') / (pl.col('max_drawdown').abs() + 0.001)).alias('risk_reward_ratio')
-    ])
+    # Calculate risk reward ratio using Loop feature
+    df = risk_reward_ratio(df)
     
     df = df.with_columns([
         (pl.col('tradeable_breakout') * pl.col('risk_reward_ratio').clip(0, 3)).alias('tradeable_score_base')
@@ -347,14 +282,8 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('exit_reality_score')
     ])
     
-    df = df.with_columns([
-        pl.when((pl.col('exit_reason').is_in(['target_hit', 'trailing_stop'])) & (pl.col('exit_net_return') > 0))
-            .then(pl.lit(1.0))
-            .when((pl.col('exit_reason') == 'stop_loss') | ((pl.col('exit_reason') == 'timeout') & (pl.col('exit_net_return') < 0)))
-            .then(pl.lit(0.2))
-            .otherwise(pl.lit(0.5))
-            .alias('exit_quality')
-    ])
+    # Calculate exit quality using Loop feature
+    df = exit_quality(df)
     
     df = df.with_columns([
         (pl.col('exit_reality_score') * pl.col('time_decay_factor')).alias('exit_reality_time_decayed')
@@ -373,7 +302,7 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         .alias('achieves_dynamic_target')
     ])
     
-    return df.drop('returns_temp')
+    return df
 
 def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = None) -> pl.DataFrame:
     '''
