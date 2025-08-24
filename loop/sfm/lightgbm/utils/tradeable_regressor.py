@@ -15,71 +15,6 @@ from loop.features.market_regime import market_regime
 from loop.features.momentum_confirmation import momentum_confirmation
 from loop.utils.time_decay import time_decay
 
-VOL_REGIME_LOW_VALUE = 10
-VOL_REGIME_HIGH_VALUE = 90
-VOL_REGIME_MID_VALUE = 50
-
-def calculate_volatility_regime(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    '''
-    Compute volatility regime for each row based on rolling volatility percentiles.
-    
-    Args:
-        df (pl.DataFrame): Klines dataset with 'close' column
-        config (dict): Configuration dictionary with volatility regime parameters
-    
-    Returns:
-        pl.DataFrame: The input data with new columns 'vol_60h', 'vol_percentile', 'volatility_regime', 'regime_low', 'regime_normal', 'regime_high'
-    '''
-    
-    lookback = config['vol_regime_lookback']
-    
-    df = df.with_columns([
-        pl.col('close').pct_change().alias('returns_temp')
-    ])
-    
-    df = rolling_volatility(df, 'returns_temp', lookback)
-    df = df.with_columns([
-        pl.col(f'returns_temp_volatility_{lookback}').alias('vol_60h')
-    ]).drop(f'returns_temp_volatility_{lookback}')
-    
-    window_size = lookback * 2
-    
-    df = df.with_columns([
-        (pl.col('vol_60h')
-         .rolling_quantile(window_size=window_size, quantile=0.2)
-         .alias('vol_p20')),
-        (pl.col('vol_60h')
-         .rolling_quantile(window_size=window_size, quantile=0.8)
-         .alias('vol_p80'))
-    ])
-    
-    df = df.with_columns([
-        pl.when(pl.col('vol_60h') <= pl.col('vol_p20'))
-        .then(VOL_REGIME_LOW_VALUE)
-        .when(pl.col('vol_60h') >= pl.col('vol_p80'))
-        .then(VOL_REGIME_HIGH_VALUE)
-        .otherwise(VOL_REGIME_MID_VALUE)
-        .alias('vol_percentile')
-    ])
-    
-    df = df.drop(['vol_p20', 'vol_p80'])
-    df = df.with_columns([
-        pl.when(pl.col('vol_percentile') <= config['vol_low_percentile'])
-            .then(pl.lit('low'))
-            .when(pl.col('vol_percentile') >= config['vol_high_percentile'])
-            .then(pl.lit('high'))
-            .otherwise(pl.lit('normal'))
-            .alias('volatility_regime')
-    ])
-    
-    df = df.with_columns([
-        (pl.col('volatility_regime') == 'low').cast(pl.Int32).alias('regime_low'),
-        (pl.col('volatility_regime') == 'normal').cast(pl.Int32).alias('regime_normal'),
-        (pl.col('volatility_regime') == 'high').cast(pl.Int32).alias('regime_high')
-    ])
-    
-    return df.drop('returns_temp')
-
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     return market_regime(df, lookback)
 
@@ -110,16 +45,6 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     
     df = df.with_columns([
         pl.col('close').shift(1).alias('prev_close')
-    ])
-    
-    df = df.with_columns([
-        (pl.col('high') - pl.col('low')).alias('high_low'),
-        (pl.col('high') - pl.col('prev_close')).abs().alias('high_close'),
-        (pl.col('low') - pl.col('prev_close')).abs().alias('low_close')
-    ])
-    
-    df = df.with_columns([
-        pl.max_horizontal(['high_low', 'high_close', 'low_close']).alias('true_range')
     ])
     
     if config['dynamic_targets']:
