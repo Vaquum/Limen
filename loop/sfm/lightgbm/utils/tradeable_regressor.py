@@ -38,7 +38,7 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
         config (dict): Configuration dictionary with dynamic parameter settings
     
     Returns:
-        pl.DataFrame: The input data with new columns 'rolling_volatility', 'atr', 'atr_pct', 'dynamic_target', 'dynamic_stop_loss'
+        pl.DataFrame: The input data with new columns 'rolling_volatility', 'atr_sma', 'atr_percent_sma', 'dynamic_target', 'dynamic_stop_loss'
     '''
     
     df = df.with_columns([
@@ -49,10 +49,7 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     df = df.rename({f"returns_volatility_{config['volatility_lookback']}": 'rolling_volatility'})
     
     df = atr_sma(df, config['volatility_lookback'])
-    df = df.rename({'atr_sma': 'atr'})
-    
     df = atr_percent_sma(df, config['volatility_lookback'])
-    df = df.rename({'atr_percent_sma': 'atr_pct'})
     
     if config['dynamic_targets']:
         df = volatility_measure(df)
@@ -323,13 +320,11 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
             pl.col('close').pct_change(period).alias(f'momentum_{period}')
         ])
         df = rsi_sma(df, period)
-        df = df.rename({f"rsi_sma_{period}": f"rsi_{period}"})
     
     df = rolling_volatility(df, 'returns', 12)
-    df = df.rename({'returns_volatility_12': 'volatility_5m'})
     
     df = df.with_columns([
-        pl.col('volatility_5m').alias('volatility_1h')
+        pl.col('returns_volatility_12').alias('volatility_1h')
     ])
     
     df = sma(df, 'volume', 20)
