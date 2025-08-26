@@ -143,7 +143,7 @@ def prep(data, round_params=None):
         'momentum': ['momentum_1', 'momentum_3', 'momentum_score', 'volume_ma', 'volatility'],
         'exit': ['exit_gross_return', 'exit_net_return', 'exit_reason', 'exit_bars', 'exit_max_return', 'exit_min_return'],
         'reality': ['time_decay_factor', 'exit_reality_score', 'exit_quality', 'exit_reality_time_decayed', 'exit_on_prediction_drop'],
-        'position': ['spread', 'position_in_range', 'close_to_high', 'close_to_low']
+        'position': ['close_to_high', 'close_to_low']
     }
     exclude_cols = [col for category in exclude_categories.values() for col in category]
     

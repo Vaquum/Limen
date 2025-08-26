@@ -33,6 +33,11 @@ from loop.features.volume_trend import volume_trend
 from loop.features.returns_lags import returns_lags
 from loop.features.close_to_extremes import close_to_extremes
 from loop.features.sma_ratios import sma_ratios
+from loop.features.spread import spread
+from loop.features.time_features import time_features
+from loop.features.volatility_1h import volatility_1h
+from loop.features.feature_aliases import feature_aliases
+from loop.features.position_in_range import position_in_range
 
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     return market_regime(df, lookback)
@@ -321,50 +326,29 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
     df = returns(df)
     df = log_returns(df)
     
+    df = momentum_periods(df, periods=[12, 24, 48])
+    
     for period in [12, 24, 48]:
-        df = df.with_columns([
-            pl.col('close').pct_change(period).alias(f'momentum_{period}')
-        ])
         df = rsi_sma(df, period)
     
     df = rolling_volatility(df, 'returns', 12)
-    
-    df = df.with_columns([
-        pl.col('returns_volatility_12').alias('volatility_1h')
-    ])
+    df = volatility_1h(df, volatility_column='returns_volatility_12')
     
     df = volume_ratio(df, period=20)
     df = volume_trend(df, short_period=12, long_period=48)
     
-    df = df.with_columns([
-        ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread'),
-        ((pl.col('close') - pl.col('low')) / (pl.col('high') - pl.col('low') + 1e-10)).alias('position_in_range')
-    ])
+    df = spread(df)
+    df = position_in_range(df)
     
-    df = df.with_columns([
-        pl.col('datetime').dt.hour().alias('hour'),
-        pl.col('datetime').dt.minute().alias('minute')
-    ])
+    df = time_features(df)
     
     df = returns_lags(df, max_lag=min(lookback, 24))
     
     base_min_breakout = config.get('base_min_breakout', 0.005) if config else 0.005
     volatility_regime_enabled = config.get('volatility_regime_enabled', True) if config else True
     
-    df = df.with_columns([
-        pl.col('dynamic_target').fill_null(base_min_breakout).alias('dynamic_target_feature'),
-        pl.col('entry_score').fill_null(1.0).alias('entry_score_feature'),
-        pl.col('momentum_score').fill_null(1.0).alias('momentum_score_feature')
-    ])
-    
-    if volatility_regime_enabled:
-        df = df.with_columns([
-            pl.col('vol_60h').fill_null(0).alias('vol_60h_feature'),
-            pl.col('vol_percentile').fill_null(50).alias('vol_percentile_feature'),
-            pl.col('regime_low').fill_null(0).alias('regime_low_feature'),
-            pl.col('regime_normal').fill_null(1).alias('regime_normal_feature'),
-            pl.col('regime_high').fill_null(0).alias('regime_high_feature')
-        ])
+    df = feature_aliases(df, base_min_breakout=base_min_breakout, 
+                         volatility_regime_enabled=volatility_regime_enabled)
     
     df = close_to_extremes(df)
     
