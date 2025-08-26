@@ -70,7 +70,7 @@ CONFIG = {
     'exit_reality_blend': 0.25,
     'time_decay_blend': 0.25,
     'time_decay_halflife': 30,
-    'commission_rate': 0.0015,
+    'commission_rate': 0.002,
     'num_boost_round': 300,
     'early_stopping_rounds': 30,
 }
