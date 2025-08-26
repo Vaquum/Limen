@@ -31,12 +31,31 @@ TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
 
+# Volatility calculation parameters
+VOLATILITY_LOOKBACK_CANDLES = 720  # 60 hours for 5-minute candles (720 * 5min = 3600min = 60h)
+
 # Default volatility regime placeholder values
 DEFAULT_VOL_PERCENTILE = 50.0
 DEFAULT_VOLATILITY_REGIME = 'normal'
 DEFAULT_REGIME_LOW = 0
 DEFAULT_REGIME_NORMAL = 1  
 DEFAULT_REGIME_HIGH = 0
+
+# Feature exclusion categories for model training
+EXCLUDE_CATEGORIES = {
+    'basic': ['datetime', 'open', 'high', 'low', 'close', 'volume'],
+    'targets': ['tradeable_breakout', 'tradeable_score', 'tradeable_score_base', 'capturable_breakout'],
+    'indicators': ['max_drawdown', 'ema', 'future_high', 'future_low', 'ema_alignment', 'volume_weight', 'volatility_weight'],
+    'features': ['momentum_weight', 'market_favorable', 'risk_reward_ratio', 'sma_20', 'sma_50', 'trend_strength'],
+    'volatility': ['volatility_ratio', 'volume_sma', 'volume_regime', 'rolling_volatility', 'atr', 'atr_pct', 'volatility_measure'],
+    'dynamics': ['dynamic_target', 'dynamic_stop_loss', 'entry_score', 'position_in_candle'],
+    'micro': ['micro_momentum', 'volume_spike', 'spread_pct', 'achieves_dynamic_target'],
+    'range': ['high_low', 'high_close', 'low_close', 'true_range'],
+    'momentum': ['momentum_1', 'momentum_3', 'momentum_score', 'volume_ma', 'volatility'],
+    'exit': ['exit_gross_return', 'exit_net_return', 'exit_reason', 'exit_bars', 'exit_max_return', 'exit_min_return'],
+    'reality': ['time_decay_factor', 'exit_reality_score', 'exit_quality', 'exit_reality_time_decayed', 'exit_on_prediction_drop'],
+    'position': ['close_to_high', 'close_to_low']
+}
 
 WEIGHT_TARGET_ACHIEVED = 20
 WEIGHT_QUICK_TARGET = 30
@@ -105,9 +124,8 @@ def prep(data, round_params=None):
     
     df = calculate_returns_if_missing(df)
     
-    lookback = 720
     df = df.with_columns([
-        pl.col('returns').rolling_std(lookback, min_periods=1).alias('vol_60h'),
+        pl.col('returns').rolling_std(VOLATILITY_LOOKBACK_CANDLES, min_periods=1).alias('vol_60h'),
         pl.lit(DEFAULT_VOL_PERCENTILE).alias('vol_percentile'),
         pl.lit(DEFAULT_VOLATILITY_REGIME).alias('volatility_regime'),
         pl.lit(DEFAULT_REGIME_LOW).alias('regime_low'),
@@ -131,21 +149,7 @@ def prep(data, round_params=None):
     if len(df_clean) == 0:
         raise ValueError("No data left after cleaning (dropna)")
     
-    exclude_categories = {
-        'basic': ['datetime', 'open', 'high', 'low', 'close', 'volume'],
-        'targets': ['tradeable_breakout', 'tradeable_score', 'tradeable_score_base', 'capturable_breakout'],
-        'indicators': ['max_drawdown', 'ema', 'future_high', 'future_low', 'ema_alignment', 'volume_weight', 'volatility_weight'],
-        'features': ['momentum_weight', 'market_favorable', 'risk_reward_ratio', 'sma_20', 'sma_50', 'trend_strength'],
-        'volatility': ['volatility_ratio', 'volume_sma', 'volume_regime', 'rolling_volatility', 'atr', 'atr_pct', 'volatility_measure'],
-        'dynamics': ['dynamic_target', 'dynamic_stop_loss', 'entry_score', 'position_in_candle'],
-        'micro': ['micro_momentum', 'volume_spike', 'spread_pct', 'achieves_dynamic_target'],
-        'range': ['high_low', 'high_close', 'low_close', 'true_range'],
-        'momentum': ['momentum_1', 'momentum_3', 'momentum_score', 'volume_ma', 'volatility'],
-        'exit': ['exit_gross_return', 'exit_net_return', 'exit_reason', 'exit_bars', 'exit_max_return', 'exit_min_return'],
-        'reality': ['time_decay_factor', 'exit_reality_score', 'exit_quality', 'exit_reality_time_decayed', 'exit_on_prediction_drop'],
-        'position': ['close_to_high', 'close_to_low']
-    }
-    exclude_cols = [col for category in exclude_categories.values() for col in category]
+    exclude_cols = [col for category in EXCLUDE_CATEGORIES.values() for col in category]
     
     numeric_features = get_numeric_feature_columns(df_clean, exclude_cols)
     
