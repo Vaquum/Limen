@@ -25,6 +25,14 @@ from loop.features.volatility_weight import volatility_weight
 from loop.features.momentum_weight import momentum_weight
 from loop.features.risk_reward_ratio import risk_reward_ratio
 from loop.features.exit_quality import exit_quality
+from loop.indicators.returns import returns
+from loop.features.log_returns import log_returns
+from loop.features.momentum_periods import momentum_periods
+from loop.features.volume_ratio import volume_ratio
+from loop.features.volume_trend import volume_trend
+from loop.features.returns_lags import returns_lags
+from loop.features.close_to_extremes import close_to_extremes
+from loop.features.sma_ratios import sma_ratios
 
 def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     return market_regime(df, lookback)
@@ -310,10 +318,8 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
         pl.DataFrame: The input data with complete feature set for trading models
     '''
     
-    df = df.with_columns([
-        pl.col('close').pct_change().alias('returns'),
-        (pl.col('close') / pl.col('close').shift(1)).log().alias('log_returns')
-    ])
+    df = returns(df)
+    df = log_returns(df)
     
     for period in [12, 24, 48]:
         df = df.with_columns([
@@ -327,16 +333,8 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
         pl.col('returns_volatility_12').alias('volatility_1h')
     ])
     
-    df = sma(df, 'volume', 20)
-    df = df.with_columns([
-        (pl.col('volume') / pl.col('volume_sma_20')).alias('volume_ratio')
-    ])
-    
-    df = sma(df, 'volume', 12)
-    df = sma(df, 'volume', 48)
-    df = df.with_columns([
-        (pl.col('volume_sma_12') / pl.col('volume_sma_48')).alias('volume_trend')
-    ])
+    df = volume_ratio(df, period=20)
+    df = volume_trend(df, short_period=12, long_period=48)
     
     df = df.with_columns([
         ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread'),
@@ -348,10 +346,7 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
         pl.col('datetime').dt.minute().alias('minute')
     ])
     
-    for lag in range(1, min(lookback + 1, 25)):
-        df = df.with_columns([
-            pl.col('returns').shift(lag).alias(f'returns_lag_{lag}')
-        ])
+    df = returns_lags(df, max_lag=min(lookback, 24))
     
     base_min_breakout = config.get('base_min_breakout', 0.005) if config else 0.005
     volatility_regime_enabled = config.get('volatility_regime_enabled', True) if config else True
@@ -371,15 +366,8 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = Non
             pl.col('regime_high').fill_null(0).alias('regime_high_feature')
         ])
     
-    df = df.with_columns([
-        ((pl.col('close') - pl.col('high')) / pl.col('high')).alias('close_to_high'),
-        ((pl.col('close') - pl.col('low')) / pl.col('low')).alias('close_to_low')
-    ])
+    df = close_to_extremes(df)
     
-    for period in [5, 10, 20, 50]:
-        df = sma(df, 'close', period)
-        df = df.with_columns([
-            (pl.col('close') / pl.col(f'close_sma_{period}')).alias(f'sma_{period}_ratio')
-        ])
+    df = sma_ratios(df, periods=[5, 10, 20, 50])
     
     return df
