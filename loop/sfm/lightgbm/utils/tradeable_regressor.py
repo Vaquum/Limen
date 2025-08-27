@@ -9,9 +9,7 @@ from loop.indicators.sma import sma
 from loop.indicators.rolling_volatility import rolling_volatility
 from loop.features.atr_sma import atr_sma
 from loop.features.atr_percent_sma import atr_percent_sma
-from loop.features.market_regime import market_regime
-from loop.features.momentum_confirmation import momentum_confirmation
-from loop.utils.time_decay import time_decay
+# Removed unused imports for wrapper functions
 
 # New Loop features for microstructure and dynamic parameters
 from loop.features.volatility_measure import volatility_measure
@@ -38,9 +36,6 @@ from loop.features.time_features import time_features
 from loop.features.volatility_1h import volatility_1h
 from loop.features.feature_aliases import feature_aliases
 from loop.features.position_in_range import position_in_range
-
-def calculate_market_regime(df: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
-    return market_regime(df, lookback)
 
 def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
@@ -109,12 +104,6 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
         ])
     
     return df
-
-def calculate_simple_momentum_confirmation(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    if config['simple_momentum_confirmation']:
-        return momentum_confirmation(df, short_period=1, long_period=3, short_weight=0.5)
-    else:
-        return df.with_columns([pl.lit(1.0).alias('momentum_score')])
 
 def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
@@ -209,9 +198,6 @@ def simulate_exit_reality(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     df_pd['exit_reason'] = df_pd['exit_reason'].fillna('').ffill()
     
     return pl.from_pandas(df_pd)
-
-def calculate_time_decay_factor(df: pl.DataFrame, config: dict) -> pl.DataFrame:
-    return time_decay(df, 'exit_bars', config['time_decay_halflife'], time_units=5, output_column='time_decay_factor')
 
 def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''

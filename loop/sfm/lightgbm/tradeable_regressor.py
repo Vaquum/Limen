@@ -13,13 +13,13 @@ from loop.utils.calculate_returns import calculate_returns_if_missing
 from loop.utils.standardize_datetime import standardize_datetime_column
 from loop.utils.numeric_features import get_numeric_feature_columns
 
+from loop.features.market_regime import market_regime
+from loop.features.momentum_confirmation import momentum_confirmation
+from loop.utils.time_decay import time_decay
 from loop.sfm.lightgbm.utils.tradeable_regressor import (
-    calculate_market_regime,
     calculate_dynamic_parameters,
     calculate_microstructure_features,
-    calculate_simple_momentum_confirmation,
     simulate_exit_reality,
-    calculate_time_decay_factor,
     create_tradeable_labels,
     prepare_features_5m
 )
@@ -133,13 +133,18 @@ def prep(data, round_params=None):
         pl.lit(DEFAULT_REGIME_HIGH).alias('regime_high')
     ])
     
-    df = calculate_market_regime(df)
+    df = market_regime(df, 48)
     df = calculate_dynamic_parameters(df, CONFIG)
     df = calculate_microstructure_features(df, CONFIG)
-    df = calculate_simple_momentum_confirmation(df, CONFIG)
+    
+    # Inline simple momentum confirmation
+    if CONFIG['simple_momentum_confirmation']:
+        df = momentum_confirmation(df, short_period=1, long_period=3, short_weight=0.5)
+    else:
+        df = df.with_columns([pl.lit(1.0).alias('momentum_score')])
     
     df = simulate_exit_reality(df, CONFIG)
-    df = calculate_time_decay_factor(df, CONFIG)
+    df = time_decay(df, 'exit_bars', CONFIG['time_decay_halflife'], time_units=5, output_column='time_decay_factor')
     df = create_tradeable_labels(df, CONFIG)
     
     df = prepare_features_5m(df, config=CONFIG)
