@@ -19,6 +19,9 @@ def momentum_confirmation(df: pl.DataFrame,
         pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
     '''
     
+    if short_period >= long_period:
+        raise ValueError(f"short_period ({short_period}) must be less than long_period ({long_period})")
+    
     long_weight = 1.0 - short_weight
     
     df = df.with_columns([

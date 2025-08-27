@@ -1,4 +1,5 @@
 import polars as pl
+from loop.features.lag_range import lag_range
 
 
 def returns_lags(data: pl.DataFrame, max_lag: int = 24, returns_col: str = 'returns') -> pl.DataFrame:
@@ -21,11 +22,5 @@ def returns_lags(data: pl.DataFrame, max_lag: int = 24, returns_col: str = 'retu
             pl.col('close').pct_change().alias(returns_col)
         ])
     
-    # Generate lag features
-    lag_expressions = []
-    for lag in range(1, max_lag + 1):
-        lag_expressions.append(
-            pl.col(returns_col).shift(lag).alias(f'returns_lag_{lag}')
-        )
-    
-    return data.with_columns(lag_expressions)
+    # Use lag_range to generate all lag features at once
+    return lag_range(data, returns_col, 1, max_lag)

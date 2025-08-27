@@ -27,7 +27,7 @@ def time_decay(df: pl.DataFrame,
     
     df = df.with_columns([
         pl.when(pl.col(time_column).is_not_null())
-            .then(pl.lit(-0.693).mul(pl.col(time_column)).truediv(adjusted_halflife).exp())
+            .then((pl.lit(2).log() * pl.lit(-1)).mul(pl.col(time_column)).truediv(adjusted_halflife).exp())
             .otherwise(pl.lit(default_value))
             .alias(output_column)
     ])
