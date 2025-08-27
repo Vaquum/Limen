@@ -1,6 +1,11 @@
 import polars as pl
 from loop.indicators.rolling_volatility import rolling_volatility
 
+# Volatility weight calculation constants
+VOLATILITY_SCALING_FACTOR = 100  # Scale volatility for weight calculation
+VOLATILITY_WEIGHT_MIN = 0.3      # Minimum weight to prevent over-penalizing high volatility
+VOLATILITY_WEIGHT_MAX = 1.0      # Maximum weight (low volatility gets full weight)
+
 
 def volatility_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     
@@ -23,7 +28,7 @@ def volatility_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     df = df.rename({f'returns_temp_volatility_{period}': 'volatility'})
     
     df = df.with_columns([
-        (2 / (1 + pl.col('volatility') * 100)).clip(0.3, 1.0).alias('volatility_weight')
+        (2 / (1 + pl.col('volatility') * VOLATILITY_SCALING_FACTOR)).clip(VOLATILITY_WEIGHT_MIN, VOLATILITY_WEIGHT_MAX).alias('volatility_weight')
     ])
     
     return df.drop('returns_temp')

@@ -1,6 +1,10 @@
 import polars as pl
 from loop.indicators.sma import sma
 
+# Volume weight clipping bounds
+VOLUME_WEIGHT_MIN = 0.5  # Minimum volume weight to prevent over-penalizing low volume
+VOLUME_WEIGHT_MAX = 2.0  # Maximum volume weight to prevent over-rewarding high volume
+
 
 def volume_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     
@@ -19,7 +23,7 @@ def volume_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     df = df.rename({f'volume_sma_{period}': 'volume_ma'})
     
     df = df.with_columns([
-        (pl.col('volume') / pl.col('volume_ma')).clip(0.5, 2.0).alias('volume_weight')
+        (pl.col('volume') / pl.col('volume_ma')).clip(VOLUME_WEIGHT_MIN, VOLUME_WEIGHT_MAX).alias('volume_weight')
     ])
     
     return df
