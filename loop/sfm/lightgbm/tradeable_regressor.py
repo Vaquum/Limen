@@ -31,17 +31,14 @@ TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
 
-# Volatility calculation parameters
-VOLATILITY_LOOKBACK_CANDLES = 720  # 60 hours for 5-minute candles (720 * 5min = 3600min = 60h)
+VOLATILITY_LOOKBACK_CANDLES = 720
 
-# Default volatility regime placeholder values
 DEFAULT_VOL_PERCENTILE = 50.0
 DEFAULT_VOLATILITY_REGIME = 'normal'
 DEFAULT_REGIME_LOW = 0
 DEFAULT_REGIME_NORMAL = 1  
 DEFAULT_REGIME_HIGH = 0
 
-# Feature exclusion categories for model training
 EXCLUDE_CATEGORIES = {
     'basic': ['datetime', 'open', 'high', 'low', 'close', 'volume'],
     'targets': ['tradeable_breakout', 'tradeable_score', 'tradeable_score_base', 'capturable_breakout'],
@@ -137,7 +134,6 @@ def prep(data, round_params=None):
     df = calculate_dynamic_parameters(df, CONFIG)
     df = calculate_microstructure_features(df, CONFIG)
     
-    # Inline simple momentum confirmation
     if CONFIG['simple_momentum_confirmation']:
         df = momentum_confirmation(df, short_period=1, long_period=3, short_weight=0.5)
     else:

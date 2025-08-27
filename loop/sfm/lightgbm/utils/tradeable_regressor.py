@@ -9,9 +9,6 @@ from loop.indicators.sma import sma
 from loop.indicators.rolling_volatility import rolling_volatility
 from loop.features.atr_sma import atr_sma
 from loop.features.atr_percent_sma import atr_percent_sma
-# Removed unused imports for wrapper functions
-
-# New Loop features for microstructure and dynamic parameters
 from loop.features.volatility_measure import volatility_measure
 from loop.features.regime_multiplier import regime_multiplier
 from loop.features.dynamic_target import dynamic_target
@@ -211,7 +208,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         pl.DataFrame: DataFrame with final tradeable labels and scores
     '''
     
-    # Calculate EMA alignment using Loop feature
     df = ema_alignment(df, ema_span=21, power=config['ema_weight_power'])
     
     lookahead_candles = config['lookahead_minutes'] // 5
@@ -226,7 +222,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         ((pl.col('future_low') - pl.col('close')) / pl.col('close')).alias('max_drawdown')
     ])
     
-    # Calculate volume weight using Loop feature
     if config['volume_weight_enabled']:
         df = volume_weight(df, period=20)
     else:
@@ -234,10 +229,9 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             pl.lit(1.0).alias('volume_weight')
         ])
     
-    # Calculate volatility weight using Loop feature
     df = volatility_weight(df, period=20)
     
-    # Calculate momentum weight using Loop feature
+    df = momentum_weight(df, period=12)
     df = momentum_weight(df, period=12)
     
     if config['market_regime_filter']:
@@ -260,7 +254,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
         .alias('tradeable_breakout')
     ])
     
-    # Calculate risk reward ratio using Loop feature
     df = risk_reward_ratio(df)
     
     df = df.with_columns([
@@ -274,7 +267,6 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('exit_reality_score')
     ])
     
-    # Calculate exit quality using Loop feature
     df = exit_quality(df)
     
     df = df.with_columns([

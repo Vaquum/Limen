@@ -1,9 +1,8 @@
 import polars as pl
 from loop.indicators.sma import sma
 
-# Volume weight clipping bounds
-VOLUME_WEIGHT_MIN = 0.5  # Minimum volume weight to prevent over-penalizing low volume
-VOLUME_WEIGHT_MAX = 2.0  # Maximum volume weight to prevent over-rewarding high volume
+VOLUME_WEIGHT_MIN = 0.5
+VOLUME_WEIGHT_MAX = 2.0
 
 
 def volume_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:

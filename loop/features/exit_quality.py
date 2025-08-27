@@ -1,9 +1,8 @@
 import polars as pl
 
-# Exit quality score constants
-QUALITY_HIGH = 1.0    # Perfect exits: target hit or trailing stop with profit
-QUALITY_LOW = 0.2     # Poor exits: stop loss or unprofitable timeout
-QUALITY_MEDIUM = 0.5  # Neutral exits: other scenarios
+QUALITY_HIGH = 1.0
+QUALITY_LOW = 0.2
+QUALITY_MEDIUM = 0.5
 
 
 def exit_quality(data: pl.DataFrame) -> pl.DataFrame:

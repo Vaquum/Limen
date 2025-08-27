@@ -4,30 +4,25 @@ from loop.features.micro_momentum import micro_momentum
 from loop.features.volume_spike import volume_spike
 from loop.features.spread_percent import spread_percent
 
-# Base entry score weights (equal weighting)
 POSITION_WEIGHT_BASE = 0.25
 MOMENTUM_WEIGHT_BASE = 0.25
 VOLUME_WEIGHT_BASE = 0.25
 SPREAD_WEIGHT_BASE = 0.25
 
-# Low volatility regime weights (favor position and spread)
 POSITION_WEIGHT_LOW_VOL = 0.35
 MOMENTUM_WEIGHT_LOW_VOL = 0.15
 VOLUME_WEIGHT_LOW_VOL = 0.15
 SPREAD_WEIGHT_LOW_VOL = 0.35
 
-# High volatility regime weights (favor momentum and volume)
 POSITION_WEIGHT_HIGH_VOL = 0.15
 MOMENTUM_WEIGHT_HIGH_VOL = 0.35
 VOLUME_WEIGHT_HIGH_VOL = 0.35
 SPREAD_WEIGHT_HIGH_VOL = 0.15
 
-# Volume spike clipping bounds
 VOLUME_SPIKE_MIN = 0.5
 VOLUME_SPIKE_MAX = 1.5
 VOLUME_SPIKE_NORMALIZER = 1.5
 
-# Spread ratio clipping bounds
 SPREAD_RATIO_MIN = 0
 SPREAD_RATIO_MAX = 2
 
@@ -50,13 +45,12 @@ def entry_score_microstructure(data: pl.DataFrame,
         pl.DataFrame: The input data with a new column 'entry_score'
     '''
     
-    # Calculate component microstructure features
     df = position_in_candle(data)
     df = micro_momentum(df, micro_momentum_period)
     df = volume_spike(df, volume_spike_period)
     df = spread_percent(df)
     
-    # Calculate base entry score with equal weights
+    
     df = df.with_columns([
         ((1 - pl.col('position_in_candle')) * POSITION_WEIGHT_BASE +
          (pl.col('micro_momentum') > 0).cast(pl.Float32) * MOMENTUM_WEIGHT_BASE +
@@ -65,7 +59,7 @@ def entry_score_microstructure(data: pl.DataFrame,
         .alias('entry_score_base')
     ])
     
-    # Calculate regime-aware entry score
+    
     df = df.with_columns([
         pl.when(pl.col('volatility_regime') == 'low')
             .then(
@@ -85,6 +79,4 @@ def entry_score_microstructure(data: pl.DataFrame,
             .alias('entry_score')
     ])
     
-    # Keep intermediate microstructure features for potential use
-    # Drop only the intermediate entry_score_base
     return df.drop(['entry_score_base'])

@@ -1,9 +1,8 @@
 import polars as pl
 
-# Volatility regime multiplier constants
-LOW_VOLATILITY_MULTIPLIER = 0.8    # Reduce targets/stops in low volatility
-NORMAL_VOLATILITY_MULTIPLIER = 1.0  # Baseline multiplier for normal volatility
-HIGH_VOLATILITY_MULTIPLIER = 1.2   # Increase targets/stops in high volatility
+LOW_VOLATILITY_MULTIPLIER = 0.8
+NORMAL_VOLATILITY_MULTIPLIER = 1.0
+HIGH_VOLATILITY_MULTIPLIER = 1.2
 
 
 def regime_multiplier(data: pl.DataFrame) -> pl.DataFrame:
