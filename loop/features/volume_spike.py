@@ -1,7 +1,7 @@
 import polars as pl
 
 
-def volume_spike(data: pl.DataFrame, period: int = 20, use_zscore: bool = True) -> pl.DataFrame:
+def volume_spike(data: pl.DataFrame, period: int = 20, use_zscore: bool = False) -> pl.DataFrame:
     
     '''
     Compute volume spike relative to rolling statistics baseline.
