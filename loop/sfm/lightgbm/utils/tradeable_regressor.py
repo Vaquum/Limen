@@ -58,8 +58,11 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
     
     if config['dynamic_targets']:
         df = volatility_measure(df)
-        df = regime_multiplier(df)
-        df = dynamic_target(df, config['base_min_breakout'], config['target_volatility_multiplier'])
+        df = regime_multiplier(df, config['regime_low_volatility_multiplier'], 
+                              config['regime_normal_volatility_multiplier'], 
+                              config['regime_high_volatility_multiplier'])
+        df = dynamic_target(df, config['base_min_breakout'], config['target_volatility_multiplier'], 
+                           config['target_clip_lower'], config['target_clip_upper'])
     else:
         df = df.with_columns([
             pl.lit(config['base_min_breakout']).alias('dynamic_target')
@@ -69,8 +72,11 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
         if 'volatility_measure' not in df.columns:
             df = volatility_measure(df)
         if 'regime_multiplier' not in df.columns:
-            df = regime_multiplier(df)
-        df = dynamic_stop_loss(df, config['base_stop_loss'], config['stop_volatility_multiplier'])
+            df = regime_multiplier(df, config['regime_low_volatility_multiplier'], 
+                                  config['regime_normal_volatility_multiplier'], 
+                                  config['regime_high_volatility_multiplier'])
+        df = dynamic_stop_loss(df, config['base_stop_loss'], config['stop_volatility_multiplier'],
+                              config['stop_loss_clip_lower'], config['stop_loss_clip_upper'])
     else:
         df = df.with_columns([
             pl.lit(config['base_stop_loss']).alias('dynamic_stop_loss')
@@ -94,7 +100,24 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
         df = entry_score_microstructure(df, 
                                        micro_momentum_period=3,
                                        volume_spike_period=20, 
-                                       spread_mean_period=48)
+                                       spread_mean_period=48,
+                                       entry_position_weight_base=config['entry_position_weight_base'],
+                                       entry_momentum_weight_base=config['entry_momentum_weight_base'],
+                                       entry_volume_weight_base=config['entry_volume_weight_base'],
+                                       entry_spread_weight_base=config['entry_spread_weight_base'],
+                                       entry_position_weight_low_vol=config['entry_position_weight_low_vol'],
+                                       entry_momentum_weight_low_vol=config['entry_momentum_weight_low_vol'],
+                                       entry_volume_weight_low_vol=config['entry_volume_weight_low_vol'],
+                                       entry_spread_weight_low_vol=config['entry_spread_weight_low_vol'],
+                                       entry_position_weight_high_vol=config['entry_position_weight_high_vol'],
+                                       entry_momentum_weight_high_vol=config['entry_momentum_weight_high_vol'],
+                                       entry_volume_weight_high_vol=config['entry_volume_weight_high_vol'],
+                                       entry_spread_weight_high_vol=config['entry_spread_weight_high_vol'],
+                                       entry_volume_spike_min=config['entry_volume_spike_min'],
+                                       entry_volume_spike_max=config['entry_volume_spike_max'],
+                                       entry_volume_spike_normalizer=config['entry_volume_spike_normalizer'],
+                                       entry_spread_ratio_min=config['entry_spread_ratio_min'],
+                                       entry_spread_ratio_max=config['entry_spread_ratio_max'])
     else:
         df = df.with_columns([
             pl.lit(1.0).alias('entry_score')
@@ -223,13 +246,18 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     ])
     
     if config['volume_weight_enabled']:
-        df = volume_weight(df, period=20)
+        df = volume_weight(df, period=20, 
+                          volume_weight_min=config['volume_weight_min'],
+                          volume_weight_max=config['volume_weight_max'])
     else:
         df = df.with_columns([
             pl.lit(1.0).alias('volume_weight')
         ])
     
-    df = volatility_weight(df, period=20)
+    df = volatility_weight(df, period=20,
+                          volatility_scaling_factor=config['volatility_scaling_factor'],
+                          volatility_weight_min=config['volatility_weight_min'],
+                          volatility_weight_max=config['volatility_weight_max'])
     
     df = momentum_weight(df, period=12)
     df = momentum_weight(df, period=12)
@@ -267,7 +295,8 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             .alias('exit_reality_score')
     ])
     
-    df = exit_quality(df)
+    df = exit_quality(df, config['exit_quality_high'], 
+                     config['exit_quality_low'], config['exit_quality_medium'])
     
     df = df.with_columns([
         (pl.col('exit_reality_score') * pl.col('time_decay_factor')).alias('exit_reality_time_decayed')

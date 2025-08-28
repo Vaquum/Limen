@@ -5,7 +5,10 @@ VOLUME_WEIGHT_MIN = 0.5
 VOLUME_WEIGHT_MAX = 2.0
 
 
-def volume_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
+def volume_weight(data: pl.DataFrame, 
+                 period: int = 20,
+                 volume_weight_min: float = 0.5,
+                 volume_weight_max: float = 2.0) -> pl.DataFrame:
     
     '''
     Compute volume-based weighting factor with clipping.
@@ -13,6 +16,8 @@ def volume_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     Args:
         data (pl.DataFrame): Klines dataset with 'volume' column
         period (int): Period for volume moving average
+        volume_weight_min (float): Minimum volume weight value
+        volume_weight_max (float): Maximum volume weight value
         
     Returns:
         pl.DataFrame: The input data with new columns 'volume_ma', 'volume_weight'
@@ -22,7 +27,7 @@ def volume_weight(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     df = df.rename({f'volume_sma_{period}': 'volume_ma'})
     
     df = df.with_columns([
-        (pl.col('volume') / pl.col('volume_ma')).clip(VOLUME_WEIGHT_MIN, VOLUME_WEIGHT_MAX).alias('volume_weight')
+        (pl.col('volume') / pl.col('volume_ma')).clip(volume_weight_min, volume_weight_max).alias('volume_weight')
     ])
     
     return df
