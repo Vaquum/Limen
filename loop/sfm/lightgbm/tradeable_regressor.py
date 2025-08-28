@@ -26,7 +26,6 @@ from loop.sfm.lightgbm.utils.tradeable_regressor import (
 from loop.sfm.lightgbm.utils.param_filtering import filter_lgb_params
 
 
-
 TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
