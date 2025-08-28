@@ -1,8 +1,6 @@
 import polars as pl
 from loop.indicators.sma import sma
 
-VOLUME_WEIGHT_MIN = 0.5
-VOLUME_WEIGHT_MAX = 2.0
 
 
 def volume_weight(data: pl.DataFrame, 

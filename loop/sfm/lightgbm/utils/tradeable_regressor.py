@@ -99,8 +99,8 @@ def calculate_microstructure_features(df: pl.DataFrame, config: dict) -> pl.Data
     if config['microstructure_timing']:
         df = entry_score_microstructure(df, 
                                        micro_momentum_period=3,
-                                       volume_spike_period=20, 
-                                       spread_mean_period=48,
+                                       volume_spike_period=config['microstructure_volume_spike_period'], 
+                                       spread_mean_period=config['microstructure_spread_mean_period'],
                                        entry_position_weight_base=config['entry_position_weight_base'],
                                        entry_momentum_weight_base=config['entry_momentum_weight_base'],
                                        entry_volume_weight_base=config['entry_volume_weight_base'],
@@ -246,7 +246,7 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     ])
     
     if config['volume_weight_enabled']:
-        df = volume_weight(df, period=20, 
+        df = volume_weight(df, period=config['volume_weight_period'], 
                           volume_weight_min=config['volume_weight_min'],
                           volume_weight_max=config['volume_weight_max'])
     else:
@@ -254,13 +254,13 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
             pl.lit(1.0).alias('volume_weight')
         ])
     
-    df = volatility_weight(df, period=20,
+    df = volatility_weight(df, period=config['volatility_weight_period'],
                           volatility_scaling_factor=config['volatility_scaling_factor'],
                           volatility_weight_min=config['volatility_weight_min'],
                           volatility_weight_max=config['volatility_weight_max'])
     
-    df = momentum_weight(df, period=12)
-    df = momentum_weight(df, period=12)
+    df = momentum_weight(df, period=config['momentum_weight_period'])
+    df = momentum_weight(df, period=config['momentum_weight_period'])
     
     if config['market_regime_filter']:
         regime_weight_col = 'market_favorable'
@@ -290,7 +290,7 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     
     df = df.with_columns([
         pl.when(pl.col('exit_net_return').is_not_null())
-            .then(pl.col('exit_net_return').clip(-0.01, 0.02))
+            .then(pl.col('exit_net_return').clip(config['exit_reality_score_clip_min'], config['exit_reality_score_clip_max']))
             .otherwise(pl.lit(0))
             .alias('exit_reality_score')
     ])
@@ -317,32 +317,36 @@ def create_tradeable_labels(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     
     return df
 
-def prepare_features_5m(df: pl.DataFrame, lookback: int = 48, config: dict = None) -> pl.DataFrame:
+def prepare_features_5m(df: pl.DataFrame, lookback: int = None, config: dict = None) -> pl.DataFrame:
     '''
     Compute comprehensive feature set for 5-minute trading including momentum, volatility, and volume features.
     
     Args:
         df (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
-        lookback (int): Lookback period for feature calculations
-        config (dict): Optional configuration dictionary
+        lookback (int): Lookback period for feature calculations (deprecated, use config)
+        config (dict): Configuration dictionary with feature parameters
     
     Returns:
         pl.DataFrame: The input data with complete feature set for trading models
     '''
     
+    if lookback is None:
+        lookback = config['feature_lookback_period'] if config else 48
+    
     df = returns(df)
     df = log_returns(df)
     
-    df = momentum_periods(df, periods=[12, 24, 48])
+    df = momentum_periods(df, periods=config['momentum_periods'] if config else [12, 24, 48])
     
-    for period in [12, 24, 48]:
+    rsi_periods = config['rsi_periods'] if config else [12, 24, 48]
+    for period in rsi_periods:
         df = rsi_sma(df, period)
     
     df = rolling_volatility(df, 'returns', 12)
     df = volatility_1h(df, volatility_column='returns_volatility_12')
     
-    df = volume_ratio(df, period=20)
-    df = volume_trend(df, short_period=12, long_period=48)
+    df = volume_ratio(df, period=config['volume_ratio_period'])
+    df = volume_trend(df, short_period=config['volume_trend_short_period'], long_period=config['volume_trend_long_period'])
     
     df = spread(df)
     df = position_in_range(df)

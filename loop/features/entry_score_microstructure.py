@@ -4,28 +4,6 @@ from loop.features.micro_momentum import micro_momentum
 from loop.features.volume_spike import volume_spike
 from loop.features.spread_percent import spread_percent
 
-POSITION_WEIGHT_BASE = 0.25
-MOMENTUM_WEIGHT_BASE = 0.25
-VOLUME_WEIGHT_BASE = 0.25
-SPREAD_WEIGHT_BASE = 0.25
-
-POSITION_WEIGHT_LOW_VOL = 0.35
-MOMENTUM_WEIGHT_LOW_VOL = 0.15
-VOLUME_WEIGHT_LOW_VOL = 0.15
-SPREAD_WEIGHT_LOW_VOL = 0.35
-
-POSITION_WEIGHT_HIGH_VOL = 0.15
-MOMENTUM_WEIGHT_HIGH_VOL = 0.35
-VOLUME_WEIGHT_HIGH_VOL = 0.35
-SPREAD_WEIGHT_HIGH_VOL = 0.15
-
-VOLUME_SPIKE_MIN = 0.5
-VOLUME_SPIKE_MAX = 1.5
-VOLUME_SPIKE_NORMALIZER = 1.5
-
-SPREAD_RATIO_MIN = 0
-SPREAD_RATIO_MAX = 2
-
 
 def entry_score_microstructure(data: pl.DataFrame, 
                               micro_momentum_period: int = 3,

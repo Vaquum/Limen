@@ -1,8 +1,5 @@
 import polars as pl
 
-LOW_VOLATILITY_MULTIPLIER = 0.8
-NORMAL_VOLATILITY_MULTIPLIER = 1.0
-HIGH_VOLATILITY_MULTIPLIER = 1.2
 
 
 def regime_multiplier(data: pl.DataFrame,

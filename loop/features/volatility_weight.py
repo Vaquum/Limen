@@ -1,9 +1,6 @@
 import polars as pl
 from loop.indicators.rolling_volatility import rolling_volatility
 
-VOLATILITY_SCALING_FACTOR = 100
-VOLATILITY_WEIGHT_MIN = 0.3
-VOLATILITY_WEIGHT_MAX = 1.0
 
 
 def volatility_weight(data: pl.DataFrame, 

@@ -31,13 +31,6 @@ TRAIN_SPLIT = 0.7
 VAL_SPLIT = 0.15
 TEST_SPLIT = 0.15
 
-VOLATILITY_LOOKBACK_CANDLES = 720
-
-DEFAULT_VOL_PERCENTILE = 50.0
-DEFAULT_VOLATILITY_REGIME = 'normal'
-DEFAULT_REGIME_LOW = 0
-DEFAULT_REGIME_NORMAL = 1  
-DEFAULT_REGIME_HIGH = 0
 
 EXCLUDE_CATEGORIES = {
     'basic': ['datetime', 'open', 'high', 'low', 'close', 'volume'],
@@ -53,13 +46,6 @@ EXCLUDE_CATEGORIES = {
     'reality': ['time_decay_factor', 'exit_reality_score', 'exit_quality', 'exit_reality_time_decayed', 'exit_on_prediction_drop'],
     'position': ['close_to_high', 'close_to_low']
 }
-
-WEIGHT_TARGET_ACHIEVED = 20
-WEIGHT_QUICK_TARGET = 30
-WEIGHT_HIGH_SCORE_P90 = 20
-WEIGHT_HIGH_SCORE_P95 = 50
-WEIGHT_HIGH_SCORE_P99 = 100
-WEIGHT_PROFITABLE_MULTIPLIER = 1.5
 
 CONFIG = {
     'kline_size': 300,
@@ -86,7 +72,6 @@ CONFIG = {
     'target_clip_upper': 1.4,
     'stop_loss_clip_lower': 0.7,
     'stop_loss_clip_upper': 1.4,
-    # Entry score microstructure weights
     'entry_position_weight_base': 0.25,
     'entry_momentum_weight_base': 0.25,
     'entry_volume_weight_base': 0.25,
@@ -104,20 +89,42 @@ CONFIG = {
     'entry_volume_spike_normalizer': 1.5,
     'entry_spread_ratio_min': 0,
     'entry_spread_ratio_max': 2,
-    # Regime multiplier settings
     'regime_low_volatility_multiplier': 0.8,
     'regime_normal_volatility_multiplier': 1.0,
     'regime_high_volatility_multiplier': 1.2,
-    # Exit quality scoring
     'exit_quality_high': 1.0,
     'exit_quality_low': 0.2,
     'exit_quality_medium': 0.5,
-    # Weight bounds
     'volatility_scaling_factor': 100,
     'volatility_weight_min': 0.3,
     'volatility_weight_max': 1.0,
     'volume_weight_min': 0.5,
     'volume_weight_max': 2.0,
+    'weight_target_achieved': 20,
+    'weight_quick_target': 30,
+    'weight_high_score_p90': 20,
+    'weight_high_score_p95': 50,
+    'weight_high_score_p99': 100,
+    'weight_profitable_multiplier': 1.5,
+    'volatility_lookback_candles': 720,
+    'default_vol_percentile': 50.0,
+    'default_volatility_regime': 'normal',
+    'default_regime_low': 0,
+    'default_regime_normal': 1,
+    'default_regime_high': 0,
+    'microstructure_volume_spike_period': 20,
+    'microstructure_spread_mean_period': 48,
+    'volume_weight_period': 20,
+    'volatility_weight_period': 20,
+    'momentum_weight_period': 12,
+    'exit_reality_score_clip_min': -0.01,
+    'exit_reality_score_clip_max': 0.02,
+    'volume_ratio_period': 20,
+    'volume_trend_short_period': 12,
+    'volume_trend_long_period': 48,
+    'feature_lookback_period': 48,
+    'momentum_periods': [12, 24, 48],
+    'rsi_periods': [12, 24, 48],
     'simple_momentum_confirmation': True,
     'exit_reality_blend': 0.25,
     'time_decay_blend': 0.25,
@@ -158,12 +165,12 @@ def prep(data, round_params=None):
     df = calculate_returns_if_missing(df)
     
     df = df.with_columns([
-        pl.col('returns').rolling_std(VOLATILITY_LOOKBACK_CANDLES, min_periods=1).alias('vol_60h'),
-        pl.lit(DEFAULT_VOL_PERCENTILE).alias('vol_percentile'),
-        pl.lit(DEFAULT_VOLATILITY_REGIME).alias('volatility_regime'),
-        pl.lit(DEFAULT_REGIME_LOW).alias('regime_low'),
-        pl.lit(DEFAULT_REGIME_NORMAL).alias('regime_normal'),
-        pl.lit(DEFAULT_REGIME_HIGH).alias('regime_high')
+        pl.col('returns').rolling_std(CONFIG['volatility_lookback_candles'], min_periods=1).alias('vol_60h'),
+        pl.lit(CONFIG['default_vol_percentile']).alias('vol_percentile'),
+        pl.lit(CONFIG['default_volatility_regime']).alias('volatility_regime'),
+        pl.lit(CONFIG['default_regime_low']).alias('regime_low'),
+        pl.lit(CONFIG['default_regime_normal']).alias('regime_normal'),
+        pl.lit(CONFIG['default_regime_high']).alias('regime_high')
     ])
     
     df = market_regime(df, 48)
@@ -231,12 +238,12 @@ def model(data, round_params):
     weights = np.ones(len(train_data))
     p90, p95, p99 = np.percentile(y_values, [90, 95, 99])
     
-    weights[achieved] = WEIGHT_TARGET_ACHIEVED
-    weights[achieved & (exit_bars <= 6)] = WEIGHT_QUICK_TARGET
-    weights[y_values > p90] = WEIGHT_HIGH_SCORE_P90
-    weights[y_values > p95] = WEIGHT_HIGH_SCORE_P95
-    weights[y_values > p99] = WEIGHT_HIGH_SCORE_P99
-    weights[profitable] *= WEIGHT_PROFITABLE_MULTIPLIER
+    weights[achieved] = CONFIG['weight_target_achieved']
+    weights[achieved & (exit_bars <= 6)] = CONFIG['weight_quick_target']
+    weights[y_values > p90] = CONFIG['weight_high_score_p90']
+    weights[y_values > p95] = CONFIG['weight_high_score_p95']
+    weights[y_values > p99] = CONFIG['weight_high_score_p99']
+    weights[profitable] *= CONFIG['weight_profitable_multiplier']
     
     numeric_features = data['_numeric_features']
     X_train = train_data.select(numeric_features).to_numpy()

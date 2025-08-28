@@ -1,8 +1,5 @@
 import polars as pl
 
-QUALITY_HIGH = 1.0
-QUALITY_LOW = 0.2
-QUALITY_MEDIUM = 0.5
 
 
 def exit_quality(data: pl.DataFrame,
