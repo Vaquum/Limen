@@ -11,9 +11,9 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
     
     Args:
         df (pl.DataFrame): Klines dataset with 'close', 'volume' columns
-        lookback (int): Lookback period for calculations (used for volatility ratio and volume regime)
-        short_sma (int): Period for short SMA calculation (default: 20)
-        long_sma (int): Period for long SMA calculation (default: 50)
+        lookback (int): Lookback period for calculations used for volatility ratio and volume regime
+        short_sma (int): Period for short SMA calculation
+        long_sma (int): Period for long SMA calculation
         
     Returns:
         pl.DataFrame: The input data with new columns 'sma_20', 'sma_50', 'trend_strength', 'volatility_ratio', 'volume_sma', 'volume_regime', 'market_favorable'

@@ -1,23 +1,15 @@
-#!/usr/bin/env python3
-'''
-Time Features - Extract hour and minute from datetime
-
-Extracts intraday time features that can capture patterns
-related to market sessions and trading hours.
-'''
-
 import polars as pl
 
 
 def time_features(df: pl.DataFrame) -> pl.DataFrame:
     '''
-    Extract hour and minute features from datetime column.
+    Compute hour and minute features from datetime column.
     
     Args:
-        df (pl.DataFrame): DataFrame with 'datetime' column
+        df (pl.DataFrame): Klines dataset with 'datetime' column
         
     Returns:
-        pl.DataFrame: DataFrame with added 'hour' and 'minute' columns
+        pl.DataFrame: The input data with new columns 'hour', 'minute'
     '''
     
     return df.with_columns([

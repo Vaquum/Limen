@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-'''
-Feature Aliases - Create feature aliases with null filling
-
-Creates aliased versions of dynamic features with appropriate default values
-for cases where the original features might have null values.
-'''
-
 import polars as pl
 
 
@@ -13,15 +5,15 @@ def feature_aliases(df: pl.DataFrame,
                    base_min_breakout: float = 0.005,
                    volatility_regime_enabled: bool = True) -> pl.DataFrame:
     '''
-    Create feature aliases with null filling for dynamic and regime features.
+    Compute feature aliases with null filling for dynamic and regime features.
     
     Args:
-        df (pl.DataFrame): DataFrame with dynamic features
+        df (pl.DataFrame): Klines dataset with dynamic features
         base_min_breakout (float): Default value for dynamic_target
         volatility_regime_enabled (bool): Whether to create regime feature aliases
         
     Returns:
-        pl.DataFrame: DataFrame with feature aliases
+        pl.DataFrame: The input data with new columns 'dynamic_target_feature', 'entry_score_feature', 'momentum_score_feature' and optional regime columns
     '''
     
     # Create basic feature aliases

@@ -1,23 +1,15 @@
-#!/usr/bin/env python3
-'''
-Spread Feature - Price spread as percentage of close price
-
-Calculates the high-low spread normalized by close price, representing
-the intrabar volatility relative to the closing price.
-'''
-
 import polars as pl
 
 
 def spread(df: pl.DataFrame) -> pl.DataFrame:
     '''
-    Calculate price spread as percentage of close price.
+    Compute price spread as percentage of close price.
     
     Args:
-        df (pl.DataFrame): DataFrame with 'high', 'low', 'close' columns
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         
     Returns:
-        pl.DataFrame: DataFrame with added 'spread' column
+        pl.DataFrame: The input data with a new column 'spread'
     '''
     
     return df.with_columns([
