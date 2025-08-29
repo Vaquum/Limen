@@ -5,7 +5,7 @@ import traceback
 
 from loop import sfm
 from loop.tests.utils.cleanup import cleanup_csv_files
-from loop.tests.utils.get_data import get_klines_data, get_trades_data, get_klines_data_small
+from loop.tests.utils.get_data import get_klines_data, get_klines_data_small
 
 
 def test_sfm():
