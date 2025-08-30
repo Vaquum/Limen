@@ -11,7 +11,7 @@ from loop.tests.utils.get_data import get_klines_data, get_klines_data_small
 def test_sfm():
     
     tests = [
-        # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log, uses_manifest
+        # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log
         (sfm.reference.random, get_klines_data, True, False),
         (sfm.reference.xgboost, get_klines_data, False, False),
         (sfm.reference.logreg, get_klines_data, True, True),
@@ -19,7 +19,7 @@ def test_sfm():
         (sfm.logreg.breakout_regressor_ridge, get_klines_data, False, False),
         (sfm.reference.lightgbm, get_klines_data, False, False),
         (sfm.lightgbm.tradeable_regressor, get_klines_data, False, False),
-        (sfm.lightgbm.tradeline_multiclass, get_klines_data_small, True, False),
+        (sfm.lightgbm.tradeline_multiclass, get_klines_data, True, False),
         (sfm.rules_based.momentum_volatility_longonly, get_klines_data_small, True, False),
         (sfm.rules_based.momentum_volatility, get_klines_data_small, True, False),
         (sfm.ridge.ridge_classifier, get_klines_data, True, False)
