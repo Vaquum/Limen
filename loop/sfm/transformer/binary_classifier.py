@@ -5,278 +5,398 @@ Bitcoin long-only trading strategy with transformer-based sequence modeling
 
 import numpy as np
 import polars as pl
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
 from sklearn.metrics import classification_report, confusion_matrix
 
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.metrics.binary_metrics import binary_metrics
+import numpy as np
+import polars as pl
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+import keras
+from keras.layers import (
+    Input, Dense, Dropout, LayerNormalization,
+    MultiHeadAttention, GlobalAveragePooling1D, Add, Embedding
+)
+from keras.models import Model
+from keras.optimizers import Adam, AdamW
+from keras.callbacks import EarlyStopping
 
 
 def params():
     """
-    Focused parameter space for transformer-based binary classifier
-    Optimized for high-throughput sweeps with practical ranges
+    Defines the parameter space for the Transformer binary classifier experiment.
+    Every parameter is a "knob" we can turn.
     """
-    p = {
-        # === DATA & PREP ===
-        "feature_set": ["ohlcv", "ohlcv+indicators"],
-        "sampling_interval": [1, 5],  # minutes
-        "lookback_window": [32, 64, 128],  # sequence length (candles, not hours)
-        "prediction_horizon": [1, 2, 4],  # hours ahead
-        "min_return_threshold": [1.0, 1.5, 2.0],  # % move for long class
-        "normalization": ["standard", "robust"],
-
-        # === TRANSFORMER ARCHITECTURE ===
-        "d_model": [64, 128],
-        "n_heads": [2, 4],
-        "n_layers": [2, 3],
-        "dropout": [0.1, 0.3],
-
-        # === TRAINING ===
-        "learning_rate": [1e-4, 5e-4],
-        "batch_size": [32, 64],
-        "weight_decay": [0, 1e-5],
-
-        # === DECISION / STRATEGY ===
-        "decision_threshold": [0.5, 0.6, 0.7],
-        "confidence_margin": [0.05, 0.1],  # margin between long vs no-trade
-        "trade_horizon": [30, 60],  # minutes holding period
-
-        # === REGULARIZATION (light) ===
-        "label_smoothing": [0.0, 0.1],
-    }
-    return p
+    return {
+        # ---------------- Prep Knobs ----------------
+        'lookback_window': [24, 72],
+        'target_horizon': [6, 24],
+        'target_threshold': [0.002, 0.005], # % price change for a "bullish" event
+        'scaler_type': ['standard', 'minmax', 'robust'], # Use strings for serialization
         
+        # ---------------- Feature Selection Knobs ----------------
+        'use_cyclical_features': [True, False],
+        'use_sequential_features': [True, False],
+        
+        # ---------------- Transformer Architecture Knobs ----------------
+        # Coupled tuples: (name, d_model, num_heads) to ensure d_model % num_heads == 0
+        'd_model': [32, 64], # The embedding dimension
+        'num_heads': [2, 4, 8],
 
-def prep(data: pl.DataFrame, round_params: dict):
+        'num_encoder_layers': [2, 4],
+        'dropout_rate': [0.1, 0.2],
+        'positional_encoding_type': ['sinusoidal', 'rotary'],
+        
+        # ---------------- Training & Optimization Knobs ----------------
+        'learning_rate': [1e-4, 5e-4, 1e-3],
+        'batch_size': [32, 64, 128],
+        'weight_decay': [0.0, 0.01, 0.1], 
+        'early_stopping_patience': [5, 10], 
+        # 'traininng_split_ratio': []
+    }
+
+# Helper function remains the same and is correct
+def _create_sequences(data_df, feature_cols, target_col, lookback):
     """
-    Prepares OHLCV + optional temporal/indicator features
-    for a Transformer-based binary classifier.
-    
-    Args:
-        data (pl.DataFrame): Input dataframe with at least ['datetime','open','high','low','close','volume'].
-        round_params (dict): Parameters dict from params().
-    
-    Returns:
-        dict: Preprocessed data in SFM-compatible format:
-              x_train, y_train, x_val, y_val, x_test, y_test,
-              plus feature names and scalers.
+    Helper to transform a 2D time-series DataFrame into 3D sequences.
     """
+    X, y = [], []
+    features_np = data_df[feature_cols].to_numpy()
+    target_np = data_df[target_col].to_numpy()
+    
+    for i in range(len(data_df) - lookback):
+        X.append(features_np[i:(i + lookback)])
+        y.append(target_np[i + lookback - 1]) # Target corresponds to the last step of the window
+    
+    return np.array(X), np.array(y)
 
-    # Ensure datetime is parsed correctly
-    if data.schema["datetime"] != pl.Datetime:
-        try:
-            data = data.with_columns(pl.col("datetime").str.to_datetime())
-        except:
-            data = data.with_columns(pl.from_epoch(pl.col("datetime"), time_unit="s").alias("datetime"))
 
-    # --- Core Params ---
-    lookback = round_params.get("sequence_length", 32)  # window size for transformer input
-    horizon = round_params.get("prediction_horizon", 1) # how far ahead to predict
-    ret_thresh = round_params.get("min_return_threshold", 2.0) / 100.0 # % return threshold for binary labeling
-    norm_method = round_params.get("normalization", "standard") # scaler choice
+def prep(data, round_params):
+    """
+    A deterministic data preparation pipeline (Final Version).
+    """
+    # ------------------ 1. Fulfill SFM Contract & Unpack Params ------------------
+    all_datetimes = data['datetime'].to_list() # Strict SFM requirement
 
-    # --- Temporal Features ---
-    time_feat = round_params.get("time_features", "intraday+weekly")
-    if "intraday" in time_feat:
-        data = data.with_columns([
-            (np.sin(2 * np.pi * pl.col("datetime").dt.hour() / 24)).alias("sin_hour"),
-            (np.cos(2 * np.pi * pl.col("datetime").dt.hour() / 24)).alias("cos_hour")
-        ])
-    if "weekly" in time_feat:
-        data = data.with_columns([
-            (np.sin(2 * np.pi * pl.col("datetime").dt.weekday() / 7)).alias("sin_weekday"),
-            (np.cos(2 * np.pi * pl.col("datetime").dt.weekday() / 7)).alias("cos_weekday")
-        ])
-    if "flags" in time_feat:  # optional month start/end flags
-        data = data.with_columns([
-            (pl.col("datetime").dt.day() <= 2).alias("is_month_start"),
-            (pl.col("datetime").dt.day() >= 28).alias("is_month_end"),
-            (pl.col("datetime").dt.weekday() >= 5).alias("is_weekend")
-        ])
+    # Unpack knobs
+    lookback = round_params['lookback_window']
+    horizon = round_params['target_horizon']
+    price_thresh = round_params['target_threshold']
+    scaler_type = round_params['scaler_type']
+    
+    processed_df = data.clone()
 
-    # --- Price Returns Feature (always include) ---
-    data = data.with_columns([
-        (pl.col("close") / pl.col("close").shift(1) - 1).alias("return_1"),
-        (pl.col("close") / pl.col("close").shift(5) - 1).alias("return_5")
+    # ------------------ 2. Target Engineering ------------------
+    future_close = processed_df['close'].shift(-horizon)
+    price_change = (future_close - processed_df['close']) / processed_df['close']
+    
+    processed_df = processed_df.with_columns([
+        price_change.alias('price_change'),
+        (pl.when(price_change > price_thresh).then(1).otherwise(0)).alias('target')
     ])
 
-    # --- Label Creation (Binary) ---
-    # Label = 1 if forward return over horizon >= threshold, else 0
-    data = data.with_columns([
-        (pl.col("close").shift(-horizon) / pl.col("close") - 1).alias("future_return")
-    ])
-    data = data.with_columns([
-        (pl.col("future_return") >= ret_thresh).cast(pl.Int8).alias("label")
-    ])
+    # ------------------ 3. Feature Engineering ------------------
+    feature_cols = [
+        'open', 'high', 'low', 'close',
+        'volume', 'no_of_trades', 'maker_ratio',
+        'mean', 'std', 'median', 'iqr'
+    ]
 
-    # Drop NaNs (from shifting operations)
-    data = data.drop_nulls()
+    # Cyclical features
+    if round_params['use_cyclical_features']:
+        cyc_feature_exprs = []
+        cyc_feature_names = []
+        kline_duration = (processed_df['datetime'][1] - processed_df['datetime'][0]).total_seconds()
 
-    # --- Feature Selection ---
-    exclude_cols = ["datetime", "label", "future_return"]
-    feature_cols = [c for c in data.columns if c not in exclude_cols]
+        if kline_duration < 3600:
+            cyc_feature_exprs.extend([
+                (np.sin(2 * np.pi * processed_df['datetime'].dt.minute() / 60)).alias('minute_sin'),
+                (np.cos(2 * np.pi * processed_df['datetime'].dt.minute() / 60)).alias('minute_cos')
+            ])
+            cyc_feature_names.extend(['minute_sin', 'minute_cos'])
 
-    # --- Normalization ---
-    if norm_method == "standard":
-        scaler = StandardScaler()
-    elif norm_method == "robust":
-        scaler = RobustScaler()
-    elif norm_method == "minmax":
-        scaler = MinMaxScaler()
-    else:
-        raise ValueError(f"Unknown normalization: {norm_method}")
+        cyc_feature_exprs.extend([
+            (np.sin(2 * np.pi * processed_df['datetime'].dt.hour() / 24)).alias('hour_sin'),
+            (np.cos(2 * np.pi * processed_df['datetime'].dt.hour() / 24)).alias('hour_cos'),
+            (np.sin(2 * np.pi * processed_df['datetime'].dt.weekday() / 7)).alias('day_of_week_sin'),
+            (np.cos(2 * np.pi * processed_df['datetime'].dt.weekday() / 7)).alias('day_of_week_cos')
+        ])
+        cyc_feature_names.extend(['hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos'])
 
-    X = scaler.fit_transform(data[feature_cols].to_numpy())
-    y = data["label"].to_numpy()
+        processed_df = processed_df.with_columns(cyc_feature_exprs)
+        feature_cols.extend(cyc_feature_names)
 
-    # --- Sequence Building (Transformer expects [seq_len, features]) ---
-    sequences = []
-    targets = []
-    for i in range(len(X) - lookback - horizon):
-        seq_x = X[i:i+lookback]               # input window
-        seq_y = y[i+lookback + horizon - 1]   # label aligned with prediction horizon
-        sequences.append(seq_x)
-        targets.append(seq_y)
+    # Sequential features
+    if round_params['use_sequential_features']:
+        first_datetime = processed_df['datetime'][0]
+        processed_df = processed_df.with_columns([
+            (processed_df['datetime'] - first_datetime).dt.days().alias('nth_day'),
+            (processed_df['datetime'] - first_datetime).dt.days().floordiv(7).alias('nth_week'),
+            ((processed_df['datetime'].dt.year() - first_datetime.year) * 12 + \
+             (processed_df['datetime'].dt.month() - first_datetime.month)).alias('nth_month')
+        ])
+        feature_cols.extend(['nth_day', 'nth_week', 'nth_month'])
 
-    X = np.array(sequences)
-    y = np.array(targets)
+    processed_df = processed_df.filter(~processed_df['target'].is_null())
 
-    # --- Train/Val/Test Split (simple sequential split for now) ---
-    n = len(X)
-    train_end = int(n * 0.7)
-    val_end = int(n * 0.85)
+    # ------------------ 4. Chronological Split ------------------
+    n = len(processed_df)
+    train_end, val_end = int(n * 0.7), int(n * 0.85)
+
+    train_df = processed_df[:train_end]
+    val_df = processed_df[train_end:val_end]
+    test_df = processed_df[val_end:]
+
+    # ------------------ 5. Sequence Creation ------------------
+    X_train, y_train = _create_sequences(train_df, feature_cols, 'target', lookback)
+    X_val, y_val = _create_sequences(val_df, feature_cols, 'target', lookback)
+    X_test, y_test = _create_sequences(test_df, feature_cols, 'target', lookback)
+
+    # ------------------ 6. Scaling ------------------
+    scaler_map = {'standard': StandardScaler, 'minmax': MinMaxScaler, 'robust': RobustScaler}
+    scaler = scaler_map[scaler_type]()
+
+    n_features = X_train.shape[2]
+    scaler.fit(X_train.reshape(-1, n_features))
+
+    def scale(X):
+        return scaler.transform(X.reshape(-1, n_features)).reshape(X.shape)
 
     data_dict = {
-        "x_train": X[:train_end],
-        "y_train": y[:train_end],
-        "x_val": X[train_end:val_end],
-        "y_val": y[train_end:val_end],
-        "x_test": X[val_end:],
-        "y_test": y[val_end:],
-        "_feature_names": feature_cols,
-        "_scaler": scaler,
+        'X_train': scale(X_train), 'y_train': y_train,
+        'X_val': scale(X_val), 'y_val': y_val,
+        'X_test': scale(X_test), 'y_test': y_test,
+        '_scaler': scaler,
+        '_alignment': {
+            'missing_datetimes': sorted(set(all_datetimes) - set(processed_df['datetime'].to_list())),
+            'first_test_datetime': test_df['datetime'][lookback - 1], # CORRECTED
+            'last_test_datetime': test_df['datetime'][-1]
+        }
     }
 
     return data_dict
 
-def model(data, round_params):
+# =============================================================================
+# 3. MODEL TRAINING & EVALUATION (CORRECTED VERSION)
+# =============================================================================
+
+def _positional_encoding(seq_len, d_model):
+    """Generates sinusoidal positional encoding."""
+    pos = keras.ops.arange(0, seq_len, dtype="float32")[:, None]
+    i = keras.ops.arange(0, d_model, 2, dtype="float32")
+    
+    # --- FIX 1: Replaced `1 / ...` with a type-safe Keras operation ---
+    d_model_float = keras.ops.cast(d_model, dtype="float32")
+    exponent = -((2.0 * i) / d_model_float)
+    angle_rates = keras.ops.power(10000.0, exponent)
+    angle_rads = pos * angle_rates
+    
+    sines = keras.ops.sin(angle_rads)
+    cosines = keras.ops.cos(angle_rads)
+    
+    pos_encoding = keras.ops.concatenate([sines, cosines], axis=-1)
+    if d_model % 2 != 0:
+        pos_encoding = keras.ops.pad(pos_encoding, [[0,0], [0,1]])
+        
+    return keras.ops.expand_dims(pos_encoding, axis=0)
+
+def _transformer_encoder_block(inputs, d_model, num_heads, dropout_rate):
+    """A single Transformer Encoder block using Keras 3.x layers."""
+    attn_output = MultiHeadAttention(
+        num_heads=num_heads,
+        key_dim=d_model // num_heads
+    )(query=inputs, value=inputs, key=inputs)
+    attn_output = Dropout(dropout_rate)(attn_output)
+    x = LayerNormalization(epsilon=1e-6)(Add()([inputs, attn_output]))
+    
+    ffn_output = Dense(units=d_model * 4, activation="relu")(x)
+    ffn_output = Dense(units=d_model)(ffn_output)
+    ffn_output = Dropout(dropout_rate)(ffn_output)
+    return LayerNormalization(epsilon=1e-6)(Add()([x, ffn_output]))
+# --- ADD THIS HELPER LAYER TO YOUR SFM FILE ---
+# --- ADD THIS HELPER LAYER TO YOUR SFM FILE ---
+
+class RotaryEmbedding(keras.layers.Layer):
     """
-    Train and evaluate a bare-bones Transformer-based binary classifier.
-    Compatible with UEL expectations (returns dict with models + extras).
+    Rotary Positional Embedding (RoPE) layer, implemented in pure Keras 3.0.
+
+    This layer rotates input embeddings based on their relative position, offering
+    a modern alternative to sinusoidal positional encoding.
     
     Args:
-        data (dict): Output from prep(), containing train/val/test splits
-        round_params (dict): Parameters for current permutation
-    
-    Returns:
-        dict: UEL-compatible results with trained model and metrics
+        dim (int): The dimension of the feature space, which must be even.
     """
+    def __init__(self, dim, **kwargs):
+        super().__init__(**kwargs)
+        if dim % 2 != 0:
+            raise ValueError(f"The feature dimension must be even for RotaryEmbedding, but got {dim}")
+        self.dim = dim
+        
+        # Calculate inverse frequencies for the sinusoidal basis
+        inv_freq = 1.0 / (10000 ** (keras.ops.arange(0, dim, 2, dtype="float32") / dim))
+        self.inv_freq = inv_freq
 
-    # --- Extract Data ---
-    X_train = torch.tensor(data["x_train"], dtype=torch.float32)
-    y_train = torch.tensor(data["y_train"], dtype=torch.long)
-    X_val = torch.tensor(data["x_val"], dtype=torch.float32)
-    y_val = torch.tensor(data["y_val"], dtype=torch.long)
-    X_test = torch.tensor(data["x_test"], dtype=torch.float32)
-    y_test = torch.tensor(data["y_test"], dtype=torch.long)
+    def call(self, inputs):
+        """Applies rotary embedding to the input tensor."""
+        # inputs shape: (batch_size, sequence_length, feature_dimension)
+        seq_len = keras.ops.shape(inputs)[1]
+        t = keras.ops.arange(seq_len, dtype="float32")
+        
+        # Calculate frequency components
+        freqs = keras.ops.einsum("i,j->ij", t, self.inv_freq)
+        # freqs shape: (sequence_length, dim / 2)
+        
+        # Duplicate for both sine and cosine components
+        emb = keras.ops.concatenate([freqs, freqs], axis=-1)
+        # emb shape: (sequence_length, dim)
 
-    # --- Build Transformer Model ---
-    class SimpleTransformer(nn.Module):
-        def __init__(self, d_model, n_heads, n_layers, dropout, seq_len, n_features):
-            super().__init__()
-            self.embedding = nn.Linear(n_features, d_model)
-            encoder_layer = nn.TransformerEncoderLayer(
-                d_model=d_model, nhead=n_heads, dropout=dropout, batch_first=True
-            )
-            self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
-            self.fc = nn.Linear(d_model * seq_len, 2)  # binary classifier
+        # Create cosine and sine embeddings for rotation
+        cos_emb = keras.ops.cos(emb)
+        sin_emb = keras.ops.sin(emb)
 
-        def forward(self, x):
-            x = self.embedding(x)              # [B, seq_len, d_model]
-            x = self.encoder(x)                # [B, seq_len, d_model]
-            x = x.reshape(x.size(0), -1)       # flatten
-            return self.fc(x)                  # [B, 2]
+        # Split the input into two halves for rotation
+        x1, x2 = keras.ops.split(inputs, 2, axis=-1)
+        
+        # Apply the rotation matrix properties
+        # rotated_x = x * cos - flip(x) * sin
+        rotated_x1 = (x1 * cos_emb) - (x2 * sin_emb)
+        rotated_x2 = (x1 * sin_emb) + (x2 * cos_emb)
+        
+        # Concatenate the rotated halves back together
+        return keras.ops.concatenate([rotated_x1, rotated_x2], axis=-1)
 
-    # --- Model Init ---
-    seq_len = round_params.get("lookback_window", 32)
-    d_model = round_params.get("d_model", 64)
-    n_heads = round_params.get("n_heads", 2)
-    n_layers = round_params.get("n_layers", 2)
-    dropout = round_params.get("dropout", 0.1)
-    n_features = X_train.shape[-1]
+    def get_config(self):
+        config = super().get_config()
+        config.update({"dim": self.dim})
+        return config
 
-    net = SimpleTransformer(d_model, n_heads, n_layers, dropout, seq_len, n_features)
+def _build_transformer_model(input_shape, round_params):
+    """Builds the complete Transformer classifier using pure Keras 3.0."""
+    d_model = round_params['d_model']
+    num_heads = round_params['num_heads']
+    
+    inputs = Input(shape=input_shape)
+    
+    # Project input features into the Transformer's dimensional space (d_model)
+    x = Dense(units=d_model, activation="relu")(inputs)
+    
+    # --- MODIFIED SECTION: Apply Positional Encoding ---
+    encoding_type = round_params['positional_encoding_type']
+    
+    if encoding_type == 'sinusoidal':
+        # Additive sinusoidal encoding
+        x += _positional_encoding(input_shape[0], d_model)
+    elif encoding_type == 'rotary':
+        # Rotational encoding
+        x = RotaryEmbedding(dim=d_model)(x)
+    
+    for _ in range(round_params['num_encoder_layers']):
+        x = _transformer_encoder_block(
+            x, d_model, round_params['num_heads'], round_params['dropout_rate']
+        )
+        
+    x = GlobalAveragePooling1D()(x)
+    x = Dropout(0.2)(x)
+    x = Dense(units=d_model // 2, activation="relu")(x)
+    outputs = Dense(units=1, activation="sigmoid")(x)
+    
+    return Model(inputs=inputs, outputs=outputs)
 
-    # --- Training Setup ---
-    criterion = nn.CrossEntropyLoss(label_smoothing=round_params.get("label_smoothing", 0.0))
-    optimizer = optim.Adam(
-        net.parameters(),
-        lr=round_params.get("learning_rate", 1e-4),
-        weight_decay=round_params.get("weight_decay", 0.0),
+def model(data_dict, round_params):
+    """
+    Builds, trains, and evaluates the model with all corrections applied.
+    """
+    # ------------------ 1. SFM Rule Adherence: Validity Check ------------------
+    d_model = round_params['d_model']
+    num_heads = round_params['num_heads']
+    encoding_type = round_params['positional_encoding_type']
+
+    if d_model % num_heads != 0:
+        return {
+            'recall': None, 'precision': None, 'fpr': None, 'auc': None,
+            'accuracy': None, '_preds': np.array([]),
+            'extras': {'status': f'Skipped invalid arch: d_model={d_model}, num_heads={num_heads}'}
+        }
+    # Check 1: d_model must be divisible by num_heads for MultiHeadAttention
+    if d_model % num_heads != 0:
+        return {
+            'recall': None, 'precision': None, 'fpr': None, 'auc': None,
+            'accuracy': None, '_preds': np.array([]),
+            'extras': {'status': f'Skipped invalid arch: d_model={d_model}, num_heads={num_heads}'}
+        }
+        
+    # Check 2: d_model must be even for RotaryEmbedding
+    if encoding_type == 'rotary' and d_model % 2 != 0:
+        return {
+            'recall': None, 'precision': None, 'fpr': None, 'auc': None,
+            'accuracy': None, '_preds': np.array([]),
+            'extras': {'status': f'Skipped invalid arch: RoPE requires even d_model, got {d_model}'}
+        }
+    
+
+    # ------------------ 2. Unpack Data and Params ------------------
+    X_train, y_train = data_dict['X_train'], data_dict['y_train']
+    X_val, y_val = data_dict['X_val'], data_dict['y_val']
+    X_test, y_test = data_dict['X_test'], data_dict['y_test']
+
+    # ------------------ 3. Build and Compile the Model ------------------
+    input_shape = (X_train.shape[1], X_train.shape[2])
+    transformer_model = _build_transformer_model(input_shape, round_params)
+    
+    optimizer = AdamW(
+        learning_rate=round_params['learning_rate'],
+        weight_decay=round_params['weight_decay']
+    )
+    
+    transformer_model.compile(
+        optimizer=optimizer, # --- FIX 2: Ignore incorrect linter error --- # type: ignore
+        loss='binary_crossentropy',
+        metrics=['accuracy', keras.metrics.AUC(name='auc')]
     )
 
-    batch_size = round_params.get("batch_size", 32)
-    n_epochs = round_params.get("n_epochs", 20)  # short for sweeps
-
-    train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=batch_size, shuffle=False)
-
-    # --- Train Loop ---
-    best_val_loss = float("inf")
-    for epoch in range(n_epochs):
-        net.train()
-        for xb, yb in train_loader:
-            optimizer.zero_grad()
-            out = net(xb)
-            loss = criterion(out, yb)
-            loss.backward()
-            optimizer.step()
-
-        # validation loss
-        net.eval()
-        val_loss = 0.0
-        with torch.no_grad():
-            for xb, yb in val_loader:
-                out = net(xb)
-                val_loss += criterion(out, yb).item()
-        val_loss /= len(val_loader)
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-
-    # --- Final Evaluation on Test ---
-    net.eval()
-    with torch.no_grad():
-        logits = net(X_test)
-        probs = F.softmax(logits, dim=1).numpy()
-        preds = np.argmax(probs, axis=1)
-
-    # --- Metrics ---
-    report = classification_report(y_test.numpy(), preds, output_dict=True)
-    confmat = confusion_matrix(y_test.numpy(), preds)
-
-    # Fix: Convert numpy arrays to lists and extract positive class probabilities
-    metrics = binary_metrics(
-        {**data, 'y_test': y_test.numpy().tolist()}, 
-        preds.tolist(), 
-        probs[:, 1].tolist()  # Extract probabilities for positive class (class 1)
+    # ------------------ 4. Train the Model ------------------
+    early_stopping = EarlyStopping(
+        monitor='val_loss',
+        patience=round_params['early_stopping_patience'],
+        restore_best_weights=True,
+        verbose=0
+    )
+    
+    history = transformer_model.fit(
+        X_train, y_train,
+        validation_data=(X_val, y_val),
+        batch_size=round_params['batch_size'],
+        epochs=150,
+        callbacks=[early_stopping],
+        verbose=0 #type: ignore
     )
 
-    # --- Return in UEL format ---
-    return {
-        "models": [net],
-        "extras": {
-            "classification_report": report,
-            "confusion_matrix": confmat.tolist(),
-            "val_loss": best_val_loss,
-            "params_used": round_params,
-        },
-        **metrics,  # merge UEL binary metrics
+    # ------------------ 5. Evaluate and Return Results (Corrected Signature) ------------------
+    test_preds_proba = transformer_model.predict(X_test, verbose=0).flatten() #type: ignore
+    
+    # --- FIX 3: Prepare arguments exactly as `binary_metrics` expects ---
+    # a. Create binary predictions from probabilities
+    binary_preds = (test_preds_proba > 0.5).astype(int)
+    
+    # b. Prepare the data dictionary argument
+    data_for_metrics = {'y_test': y_test}
+    
+    # c. Call the function with the correct arguments
+    round_results = binary_metrics(
+        data=data_for_metrics,
+        preds=binary_preds.tolist(),
+        probs=test_preds_proba.tolist()
+    )
+
+    # d. Manually add extras to the results dictionary
+    round_results['extras'] = {
+        'val_loss': min(history.history['val_loss']),
+        'stopped_epoch': early_stopping.stopped_epoch
     }
-
+    
+    # Add artifacts for UEL collection
+    round_results['_preds'] = test_preds_proba
+    # round_results['models'] = transformer_model # Optional
+    
+    return round_results
