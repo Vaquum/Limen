@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 '''
-Utility functions for Tradeline Multiclass SFM
+Optimized Utility functions for Tradeline Multiclass SFM
 Implements line detection, feature engineering, and labeling for multiclass trading predictions
+OPTIMIZED VERSION: Uses sliding window event-driven algorithm for O(m log m + n) complexity
 '''
 
 import numpy as np
@@ -29,6 +30,7 @@ def find_price_lines(df: pl.DataFrame,
                      min_height_pct: float = 0.003) -> Tuple[List[Dict], List[Dict]]:
     '''
     Find linear price movements (lines) in the data.
+    UNCHANGED - this function is already reasonably efficient
     
     Args:
         df: DataFrame with 'close' price column
@@ -77,6 +79,7 @@ def find_price_lines(df: pl.DataFrame,
 def filter_lines_by_quantile(lines: List[Dict], quantile: float) -> List[Dict]:
     '''
     Filter lines to keep only those above the specified quantile by height.
+    UNCHANGED - already efficient
     
     Args:
         lines: List of line dictionaries
@@ -91,7 +94,6 @@ def filter_lines_by_quantile(lines: List[Dict], quantile: float) -> List[Dict]:
     heights = [abs(line['height_pct']) for line in lines]
     threshold = np.quantile(heights, quantile)
     
-    
     filtered = [line for line in lines if abs(line['height_pct']) >= threshold]
     
     return filtered
@@ -101,7 +103,8 @@ def compute_line_features(df: pl.DataFrame,
                          long_lines: List[Dict], 
                          short_lines: List[Dict]) -> pl.DataFrame:
     '''
-    Compute line-based features for each row including active lines, momentum, and reversal signals.
+    OPTIMIZED: Compute line-based features using sliding window event-driven algorithm.
+    Complexity: O(m log m + n) instead of O(n * m)
     
     Args:
         df (pl.DataFrame): Klines dataset with 'close', 'datetime' columns
@@ -112,34 +115,71 @@ def compute_line_features(df: pl.DataFrame,
         pl.DataFrame: DataFrame with line-based features added
     '''
     n_rows = len(df)
+    all_lines = [(line, 1) for line in long_lines] + [(line, -1) for line in short_lines]
+    
+    # Initialize output arrays
     active_lines = np.zeros(n_rows)
     hours_since_big_move = np.full(n_rows, 168.0)  # Default to 1 week
     line_momentum_6h = np.zeros(n_rows)
     trending_score = np.zeros(n_rows)
     reversal_potential = np.zeros(n_rows)
     
-    all_lines = [(line, 1) for line in long_lines] + [(line, -1) for line in short_lines]
+    if not all_lines:
+        # Early return if no lines
+        return df.with_columns([
+            pl.Series('active_lines', active_lines),
+            pl.Series('hours_since_big_move', hours_since_big_move),
+            pl.Series('line_momentum_6h', line_momentum_6h),
+            pl.Series('trending_score', trending_score),
+            pl.Series('reversal_potential', reversal_potential)
+        ])
     
+    # Step 1: Create sorted event list - O(m log m)
+    events = []
+    for i, (line, direction) in enumerate(all_lines):
+        events.append((line['start_idx'], 'enter', i, line, direction))
+        events.append((line['end_idx'] + 1, 'exit', i, line, direction))  # +1 for exclusive end
+    
+    events.sort()  # O(2m log 2m) = O(m log m)
+    
+    # Step 2: Sliding window state
+    active_set = set()
+    recent_long_ends = []  # List of (end_idx, line) tuples
+    recent_short_ends = []  # List of (end_idx, line) tuples
+    event_idx = 0
+    
+    # Step 3: Single pass through timestamps - O(n + 2m)
     for idx in range(n_rows):
-        active_count = 0
-        recent_long_count = 0
-        recent_short_count = 0
         
-        for line, direction in all_lines:
-            if line['start_idx'] <= idx <= line['end_idx']:
-                active_count += 1
+        # Process all events at current timestamp
+        while event_idx < len(events) and events[event_idx][0] <= idx:
+            timestamp, event_type, line_idx, line, direction = events[event_idx]
             
-            if line['end_idx'] < idx and (idx - line['end_idx']) < 168:
-                hours_since = idx - line['end_idx']
-                hours_since_big_move[idx] = min(hours_since_big_move[idx], hours_since)
+            if event_type == 'enter':
+                active_set.add(line_idx)
+            else:  # 'exit'
+                active_set.discard(line_idx)
+                
+                # Track recent endings for momentum (within 6 hours)
+                if line['end_idx'] >= idx - 6 and line['end_idx'] < idx:
+                    if direction > 0:
+                        recent_long_ends.append((line['end_idx'], line))
+                    else:
+                        recent_short_ends.append((line['end_idx'], line))
             
-            if line['end_idx'] >= idx - 6 and line['end_idx'] < idx:
-                if direction > 0:
-                    recent_long_count += 1
-                else:
-                    recent_short_count += 1
+            event_idx += 1
         
-        active_lines[idx] = active_count
+        # Compute active lines count - O(1)
+        active_lines[idx] = len(active_set)
+        
+        # Clean old momentum data (keep only within 6 hours)
+        recent_long_ends = [(end_idx, line) for end_idx, line in recent_long_ends if end_idx >= idx - 6]
+        recent_short_ends = [(end_idx, line) for end_idx, line in recent_short_ends if end_idx >= idx - 6]
+        
+        # Compute momentum features
+        recent_long_count = len(recent_long_ends)
+        recent_short_count = len(recent_short_ends)
+        
         line_momentum_6h[idx] = recent_long_count - recent_short_count
         
         total_recent = recent_long_count + recent_short_count
@@ -147,9 +187,16 @@ def compute_line_features(df: pl.DataFrame,
             trending_score[idx] = (recent_long_count - recent_short_count) / total_recent
             reversal_potential[idx] = min(recent_long_count, recent_short_count) / max(recent_long_count, recent_short_count)
         else:
-            trending_score[idx] = 0.0  # Neutral trend (0 = balanced between -1 and +1)
-            reversal_potential[idx] = 0.0  # No reversal setup (0 = no opposing lines to create reversal)
+            trending_score[idx] = 0.0  # Neutral trend
+            reversal_potential[idx] = 0.0  # No reversal setup
+        
+        # Compute hours since big move
+        for end_idx, line in recent_long_ends + recent_short_ends:
+            if end_idx < idx and (idx - end_idx) < 168:
+                hours_since = idx - end_idx
+                hours_since_big_move[idx] = min(hours_since_big_move[idx], hours_since)
     
+    # Add columns to dataframe
     df = df.with_columns([
         pl.Series('active_lines', active_lines),
         pl.Series('hours_since_big_move', hours_since_big_move),
@@ -164,6 +211,7 @@ def compute_line_features(df: pl.DataFrame,
 def compute_temporal_features(df: pl.DataFrame) -> pl.DataFrame:
     '''
     Compute temporal features from datetime column including hour and day of week.
+    UNCHANGED - already efficient
     
     Args:
         df (pl.DataFrame): Klines dataset with 'datetime' column
@@ -182,6 +230,7 @@ def compute_temporal_features(df: pl.DataFrame) -> pl.DataFrame:
 def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     '''
     Compute comprehensive price-based features including returns, acceleration, and volatility.
+    UNCHANGED - already efficient
     
     Args:
         df (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
@@ -240,6 +289,7 @@ def create_multiclass_labels(df: pl.DataFrame,
                            lookahead_hours: int = 48) -> pl.DataFrame:
     '''
     Compute 3-class labels based on future price movements.
+    UNCHANGED - already efficient
     
     Args:
         df (pl.DataFrame): Klines dataset with 'close' column
@@ -282,7 +332,6 @@ def create_multiclass_labels(df: pl.DataFrame,
                 labels[idx] = 2  # SHORT
                 short_count += 1
     
-    
     df = df.with_columns(pl.Series('label', labels))
     
     return df
@@ -291,6 +340,7 @@ def create_multiclass_labels(df: pl.DataFrame,
 class LGBWrapper(BaseEstimator, ClassifierMixin):
     '''
     Wrapper for LightGBM to work with scikit-learn calibration and provide standardized interface.
+    UNCHANGED - no optimization needed
     
     Args:
         lgb_model: Trained LightGBM model
@@ -320,11 +370,10 @@ class LGBWrapper(BaseEstimator, ClassifierMixin):
         return self.lgb_model.predict(X_scaled, num_iteration=self.lgb_model.best_iteration)
 
 
-
-
 def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     '''
     Compute balanced sample weights to handle class imbalance in multiclass classification.
+    UNCHANGED - already efficient
     
     Args:
         y_train (np.ndarray): Array of training labels (0, 1, or 2)

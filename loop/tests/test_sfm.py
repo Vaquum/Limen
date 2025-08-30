@@ -15,7 +15,7 @@ def get_klines_data_fast():
     '''
     df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=8000)
     df['datetime'] = pd.to_datetime(df['datetime'])
-    df = df.iloc[::4].reset_index(drop=True)  # Every 4th row (8h intervals)
+    df = df.iloc[::4].reset_index(drop=True)
     df = pl.from_pandas(df)
     return df
 
@@ -25,9 +25,8 @@ def get_klines_data_medium():
     Get medium-sized optimized klines data for models requiring larger datasets.
     Uses full dataset with 6h intervals to ensure sufficient data for regime models.
     '''
-    df = pd.read_csv('datasets/klines_2h_2020_2025.csv')  # Use full dataset
+    df = pd.read_csv('datasets/klines_2h_2020_2025.csv')
     df['datetime'] = pd.to_datetime(df['datetime'])
-    # Every 3rd row (6h intervals) -> ~7.8k rows
     df = df.iloc[::3].reset_index(drop=True)
     df = pl.from_pandas(df)
     return df
@@ -39,7 +38,7 @@ def get_klines_data_large():
     Uses full dataset to ensure sufficient data.
     '''
     df = pd.read_csv(
-        'datasets/klines_2h_2020_2025.csv')  # Use full dataset (~23k rows)
+        'datasets/klines_2h_2020_2025.csv')
     df['datetime'] = pd.to_datetime(df['datetime'])
     df = pl.from_pandas(df)
     return df
@@ -52,7 +51,7 @@ def get_klines_data_small_fast():
     '''
     df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=3000)
     df['datetime'] = pd.to_datetime(df['datetime'])
-    df = df.iloc[::6].reset_index(drop=True)  # Every 6th row (12h intervals)
+    df = df.iloc[::6].reset_index(drop=True)
     df = pl.from_pandas(df)
     return df
 
