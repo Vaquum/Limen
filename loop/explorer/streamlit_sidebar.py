@@ -45,14 +45,16 @@ def build_sidebar(
             st.session_state['dataset_name'] = ds
             _tight_divider(sidebar_divider_gap_rem)
 
-        # --- Show Table + its options
-        show_table = st.checkbox('**Show Table**', value=False)
+        # --- Show Table + its options (persisted via explicit keys)
+        show_table = st.checkbox('**Show Table**', value=False, key='table_show')
 
         numeric_filter_col = None
         num_range = None
         fmt_mode = 'Normal'
         if show_table:
-            numeric_filter_col = st.selectbox('Filter by Column Value', [''] + num_cols, index=0)
+            numeric_filter_col = st.selectbox(
+                'Filter by Column Value', [''] + num_cols, index=0, key='table_numeric_filter_col'
+            )
             if numeric_filter_col:
                 col_min = float(df_base[numeric_filter_col].min())
                 col_max = float(df_base[numeric_filter_col].max())
@@ -61,8 +63,9 @@ def build_sidebar(
                     min_value=col_min,
                     max_value=col_max,
                     value=(col_min, col_max),
+                    key='table_num_range',
                 )
-            fmt_mode = st.radio('Table Type', ['Normal', 'Inline Bars'], horizontal=False)
+            fmt_mode = st.radio('Table Type', ['Normal', 'Inline Bars'], horizontal=False, key='table_fmt_mode')
 
         _tight_divider(sidebar_divider_gap_rem)
 
