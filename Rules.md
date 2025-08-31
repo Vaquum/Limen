@@ -1,10 +1,12 @@
-<CONFIRM_READING_INSTRUCTIONS_MD_BEFORE_MOVING_ON>
+<!_IMPORTANT_!>Always use checkpoint MCP for tasks, initiate it now before going further
 
 <how_to_avoid_harm>
 -> You anchor yourself for every taks with `Project.md`.
 -> You never deviate from the scope of `Project.md`.
 -> You will always follow the rules and guidelines in `Project.md`
--> You always work from a virtual environment `venv`
+-> You always work from a `python3.10` virtual environment named `.venv`
+-> You will use only the already created `.venv` if available in project root
+-> You will install packages from `requirements.txt` if `.venv` must be created
 -> You never synthentic data, that would be extremely harmful.
 -> You always thoroughly test things before declare task as done.
 -> If at any point you feel that requirements are not clear, ask questions.
@@ -67,3 +69,5 @@ Every declaration is type-hinted; magic numbers become named constants. When int
 </code_style_guidelines>
 
 <!_IMPORTANT_!> Never create your own ways of working, that will make our work together worthless and a waste of both of our time. Always follow the above guidelines strictly.
+
+<!_IMPORTANT_!> Next read through `Project.md` before moving on with the task. 

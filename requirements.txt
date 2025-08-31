@@ -17,3 +17,4 @@ seaborn
 streamlit
 plotly
 ipython
+mcp>=0.1.0

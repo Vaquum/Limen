@@ -6,3 +6,4 @@
 
 - I will give you tasks which involve either investigating or improving Loop
 - All of the work we will do in small tasks iteratively
+- All of our work will exclusively focus on `loop.explorer` sub-module improvements
