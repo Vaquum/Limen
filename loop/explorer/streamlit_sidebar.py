@@ -31,6 +31,12 @@ def build_sidebar(
 
     with st.sidebar:
 
+        # One-shot reset for the custom column creator. This sets the widget
+        # value before instantiation, avoiding Streamlit's constraint about
+        # modifying a widget key after it has been created.
+        if st.session_state.pop('_reset_enable_custom_col', False):
+            st.session_state['enable_custom_col'] = False
+
         # Top toolbar icons
         render_toolbar()
 
@@ -191,8 +197,18 @@ def build_sidebar(
         new_col_name = ''
         new_expr = ''
         if enable_custom:
-            new_col_name = st.text_input('New Column Name', placeholder='e.g. pct_change')
-            new_expr = st.text_input('Expression', placeholder='(close - open) / open * 100')
+            new_col_name = st.text_input(
+                'New Column Name',
+                placeholder='e.g. pct_change',
+                key='custom_col_name',
+                autocomplete='off',
+            )
+            new_expr = st.text_input(
+                'Expression',
+                placeholder='(close - open) / open * 100',
+                key='custom_col_expr',
+                autocomplete='off',
+            )
             if new_col_name and new_expr:
                 try:
                     test_series = pd.eval(new_expr, engine='python', local_dict=df_base.to_dict('series'))
@@ -201,10 +217,25 @@ def build_sidebar(
                         st.session_state['custom_cols'] = []
                     if (new_col_name, new_expr) not in st.session_state['custom_cols']:
                         st.session_state['custom_cols'].append((new_col_name, new_expr))
-                    st.success(f'Created column: {new_col_name}')
-                    st.rerun()
+                    # Mark for one-shot success note just below the Expression field
+                    st.session_state['_custom_added_name'] = new_col_name
+                    # Keep the creator open so the success message is visible below the input
+                    # The table below is updated in this same render via df_base mutation
                 except Exception as e:
                     st.error(f"Could not create '{new_col_name}': {e}")
+
+        # One-shot transient success note with soft fade directly under the Expression field
+        _added_once = st.session_state.pop('_custom_added_name', None)
+        if _added_once:
+            st.markdown(
+                (
+                    '<div style="margin-top:6px; color:#FCE2EB; animation:fadeMsg 2.5s ease-in-out forwards;">'
+                    f'Column {_added_once} added.'
+                    '</div>'
+                    '<style>@keyframes fadeMsg {0%{opacity:0;} 15%{opacity:1;} 85%{opacity:1;} 100%{opacity:0;}}</style>'
+                ),
+                unsafe_allow_html=True,
+            )
 
     # Return everything the main script needs
     return dict(

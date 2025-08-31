@@ -85,11 +85,7 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
       [data-testid="stDataFrame"] * {{
         font-size: 1.2em !important;
       }}
-      /* Remove built-in column visibility eye to avoid conflict with sidebar control */
-      [data-testid="stDataFrame"] button[aria-label="Columns"],
-      [data-testid="stDataFrame"] button[title="Columns"] {{
-        display: none !important;
-      }}
+      /* Keep built-in column visibility menu visible (avoid Popper warnings) */
       /* Inline Bars (ProgressColumn) color override */
       [data-testid="stDataFrame"] [role="progressbar"] > div {{
         background-color: #B5AAD7 !important;
