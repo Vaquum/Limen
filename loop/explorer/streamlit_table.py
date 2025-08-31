@@ -50,6 +50,7 @@ def prepare_table_data(
 def render_table(
     df_display: pd.DataFrame,
     fmt_mode: str,
+    column_order: list[str] | None = None,
 ) -> None:
     
     '''
@@ -83,7 +84,13 @@ def render_table(
                 max_value=cmax,
                 format='%.4g',
             )
-        st.dataframe(df_display, use_container_width=True, hide_index=True, column_config=colcfg)
+        st.dataframe(
+            df_display,
+            use_container_width=True,
+            hide_index=True,
+            column_config=colcfg,
+            column_order=column_order or list(df_display.columns),
+        )
     else:
         st.dataframe(
             df_display,
@@ -93,4 +100,5 @@ def render_table(
                 'view': st.column_config.LinkColumn('', help='Open row details', display_text='view'),
                 'rid': st.column_config.NumberColumn('rid', help='Row id', width='small'),
             },
+            column_order=column_order or list(df_display.columns),
         )

@@ -7,6 +7,7 @@
 -> You always work from a `python3.10` virtual environment named `.venv`
 -> You will use only the already created `.venv` if available in project root
 -> You will install packages from `requirements.txt` if `.venv` must be created
+-> You will never create or touch other files than the one strictly necessary for the task
 -> You never synthentic data, that would be extremely harmful.
 -> You always thoroughly test things before declare task as done.
 -> If at any point you feel that requirements are not clear, ask questions.
@@ -70,4 +71,4 @@ Every declaration is type-hinted; magic numbers become named constants. When int
 
 <!_IMPORTANT_!> Never create your own ways of working, that will make our work together worthless and a waste of both of our time. Always follow the above guidelines strictly.
 
-<!_IMPORTANT_!> Next read through `Project.md` before moving on with the task. 
+<!_IMPORTANT_!> Next read through `Project.md` before moving on with the task.

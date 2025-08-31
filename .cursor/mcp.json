@@ -20,12 +20,20 @@
       "workingDirectory": "."
     },
 
-    "Playwrite": {
+    "Playwright": {
       "command": "npx",
       "args": ["-y", "@agentdeskai/browser-tools-mcp@1.1.0"],
       "env": {
         "PLAYWRIGHT_BROWSERS_PATH": "0"
       }
+    },
+
+    "Playwright-Driver": {
+      "command": ".venv/bin/python",
+      "args": ["-u", "mcp/playwright_driver/server.py"],
+      "env": { "PYTHONUNBUFFERED": "1", "PYTHONPATH": "." },
+      "workingDirectory": "."
     }
+    
   }
 }

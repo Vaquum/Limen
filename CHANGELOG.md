@@ -260,3 +260,6 @@
 
 # v1.15.1 on 19th of august 2025
 - Add Ichimoku Cloud feature to `loop.features`
+
+## v1.16.2 on 31st of August, 2025
+- Fix Streamlit explorer launch path by injecting project root into `PYTHONPATH` for the subprocess in `loop.explorer.loop_explorer`, ensuring `loop` is importable when started via tools/Playwright

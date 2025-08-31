@@ -51,6 +51,7 @@ def build_sidebar(
         numeric_filter_col = None
         num_range = None
         fmt_mode = 'Normal'
+        selected_columns: list[str] = []
         if show_table:
             numeric_filter_col = st.selectbox(
                 'Filter by Column Value', [''] + num_cols, index=0, key='table_numeric_filter_col'
@@ -66,6 +67,18 @@ def build_sidebar(
                     key='table_num_range',
                 )
             fmt_mode = st.radio('Table Type', ['Normal', 'Inline Bars'], horizontal=False, key='table_fmt_mode')
+
+            # Column visibility control with select/unselect all toggle
+            all_columns = df_base.columns.tolist()
+            # Toggle controls default only; we avoid setting widget state programmatically
+            select_all = st.checkbox('Select/Unselect All Columns', value=True, key='table_select_all_toggle')
+            seed_default = all_columns if select_all else []
+
+            selected_columns = st.multiselect(
+                'Columns',
+                options=all_columns,
+                default=seed_default,
+            )
 
         _tight_divider(sidebar_divider_gap_rem)
 
@@ -199,6 +212,7 @@ def build_sidebar(
         numeric_filter_col=numeric_filter_col,
         num_range=num_range,
         fmt_mode=fmt_mode,
+        selected_columns=selected_columns,
         show_chart=show_chart,
         chart_type=chart_type,
         xcol=xcol,

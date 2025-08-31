@@ -53,6 +53,12 @@ def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -
     ]
 
     env = os.environ.copy()
+    # Ensure the launched Streamlit process can import the editable 'loop' package
+    # by explicitly injecting the project root into PYTHONPATH. This avoids
+    # environment/path discrepancies when subprocess resolves the interpreter.
+    project_root = str(Path(__file__).resolve().parents[2])
+    existing_pythonpath = env.get('PYTHONPATH', '')
+    env['PYTHONPATH'] = f"{project_root}:{existing_pythonpath}" if existing_pythonpath else project_root
     proc = subprocess.Popen(
         cmd, cwd=workdir, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
@@ -86,3 +92,5 @@ def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -
     url = f"http://{host}:{port}"
     display(Javascript(f"window.open('{url}', '_blank');"))
     print(f"Open:{url}")
+
+    return {'url': host, 'port': port}

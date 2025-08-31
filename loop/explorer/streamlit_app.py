@@ -22,7 +22,8 @@ parser.add_argument('--data', default=os.environ.get('DATA_PARQUET', 'data.parqu
 args, _ = parser.parse_known_args()
 
 parquet_path = args.data
-print(f"[streamlit] Using parquet: {parquet_path}", file=sys.stderr)
+# Avoid writing to stderr during Streamlit boot to prevent BrokenPipeError in
+# certain headless environments. The information is not critical for runtime.
 if not os.path.exists(parquet_path):
     raise FileNotFoundError(f"Parquet not found: {parquet_path}")
 
@@ -153,6 +154,7 @@ show_table         = sidebar_state['show_table']
 numeric_filter_col = sidebar_state['numeric_filter_col']
 num_range          = sidebar_state['num_range']
 fmt_mode           = sidebar_state['fmt_mode']
+selected_columns   = sidebar_state.get('selected_columns', [])
 
 # ----------
 # Show Chart
@@ -204,8 +206,11 @@ df_filt, df_display = prepare_table_data(
     num_range=num_range,
 )
 
-if show_table:
-    render_table(df_display, fmt_mode)
+if show_table and selected_columns:
+    # Respect user selection fully. If empty, do not render the table.
+    keep = [c for c in selected_columns if c in df_display.columns]
+    if keep:
+        render_table(df_display[keep], fmt_mode, column_order=keep)
 
 # -----------
 # ---- Charts
