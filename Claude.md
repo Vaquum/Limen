@@ -1,0 +1,1 @@
+<IMPORTANT>Always start a task by reading `Rules.md` in the project root</IMPORTANT>
