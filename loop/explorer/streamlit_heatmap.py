@@ -24,14 +24,20 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
     corr = df_filt[num_cols].corr()
     fig_corr = px.imshow(
         corr,
-        text_auto=".2f",
+        text_auto=False,
         # Custom low→high scale: C4E8F4 (low) to DC65A6 (high)
         color_continuous_scale=["#C4E8F4", "#DC65A6"],
         origin="lower",
         aspect="auto",
     )
     # Match table text scale (~20% above global) -> use ~1.2em equivalent
-    fig_corr.update_traces(textfont=dict(size=16), selector=dict(type="heatmap"))
+    # Semi-bold effect via HTML <b> and larger font size
+    fig_corr.update_traces(
+        text=corr.round(2).astype(str).values,
+        texttemplate="<b>%{text}</b>",
+        textfont=dict(size=16),
+        selector=dict(type="heatmap"),
+    )
     fig_corr.update_xaxes(side="top")
     fig_corr.update_layout(
         height=800,
