@@ -41,16 +41,16 @@ Every declaration is type-hinted; magic numbers become named constants. When int
 
 <IMPORTANT_ALWAYS_REMIND_YOURSELF>
 
-- Follow PEP8 for style guidance, except when stated otherwise here
-- Make declarations with type hints
-- Never add comments unless it is critical to have it
-- Never add examples
-- Add comprehensive docstrings following the standard format (see codebase for examples)
-- Add tests to new code
-- Add docs to new code
-- Use single quotes, except with f-strings where double quotes are always used
-- Choose empty line (over no empty line) when in doubt
-- Make functions over 50 lines its own file, except when there is good reason for not to
+- You follow PEP8 for style guidance, except when stated otherwise in house rules
+- You make declarations with type hints
+- You never add comments unless it is critical to have it
+- You never add examples
+- You always add comprehensive docstrings following the standard format
+- You always add docs to new code
+- You always run `ruff` for linting
+- You always use single quotes, except with f-strings where double quotes are always used except when it violates ruff
+- You always add empty line when in doubt between adding or not
+- You make functions over 50 lines its own file, except when there is good reason for not to
 - Make the filename and the function name identical
 - Make magic numbers constants
 - Make constants uppercase
