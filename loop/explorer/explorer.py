@@ -23,7 +23,6 @@ class Explorer:
             None: None
         '''
 
-        self._port = random.randint(5001, 5500)
         self._uel = uel
 
     def input_data(self) -> None:
@@ -37,7 +36,7 @@ class Explorer:
             None: None
         '''
 
-        loop_explorer(data=self._uel.data, port=self._port)
+        loop_explorer(data=self._uel.data)
 
     def experiment_log(self) -> None:
         
@@ -79,7 +78,7 @@ class Explorer:
     
         loop_explorer(data=self._uel.experiment_confusion_metrics)
 
-    def experimentbacktest_results(self) -> None:
+    def experiment_backtest_results(self) -> None:
         
         '''
         Render the backtest results in the Explorer.
