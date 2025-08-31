@@ -25,7 +25,8 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
     fig_corr = px.imshow(
         corr,
         text_auto=".2f",
-        color_continuous_scale="RdBu_r",
+        # Custom low→high scale: C4E8F4 (low) to DC65A6 (high)
+        color_continuous_scale=["#C4E8F4", "#DC65A6"],
         origin="lower",
         aspect="auto",
     )
