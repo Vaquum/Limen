@@ -36,6 +36,7 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
         text=corr.round(2).astype(str).values,
         texttemplate="<b>%{text}</b>",
         textfont=dict(size=16),
+        opacity=0.85,
         selector=dict(type="heatmap"),
     )
     fig_corr.update_xaxes(side="top")
