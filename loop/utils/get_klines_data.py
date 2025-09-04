@@ -50,10 +50,10 @@ def get_klines_data(n_rows: Optional[int] = None,
     query = (
         f"SELECT "
         f"    toDateTime({kline_size} * intDiv(toUnixTimestamp(datetime), {kline_size})) AS datetime, "
-        f"    argMin(price, trade_id)            AS open, "
+        f"    argMin(price, trade_id)       AS open, "
         f"    max(price)                    AS high, "
         f"    min(price)                    AS low, "
-        f"    argMax(price, trade_id)             AS close, "
+        f"    argMax(price, trade_id)       AS close, "
         f"    avg(price)                    AS mean, "
         f"    stddevPopStable(price)        AS std, "
         f"    quantileExact(0.5)(price)     AS median, "
@@ -61,12 +61,12 @@ def get_klines_data(n_rows: Optional[int] = None,
         f"    sumKahan(quantity)            AS volume, "
         f"    avg(is_buyer_maker)           AS maker_ratio, "
         f"    count()                       AS no_of_trades, "
-        f"    argMin(price * quantity, trade_id) AS open_liquidity, "
+        f"    argMin(price * quantity, trade_id)    AS open_liquidity, "
         f"    max(price * quantity)         AS high_liquidity, "
         f"    min(price * quantity)         AS low_liquidity, "
-        f"    argMax(price * quantity, trade_id)  AS close_liquidity, "
+        f"    argMax(price * quantity, trade_id)    AS close_liquidity, "
         f"    sum(price * quantity)         AS liquidity_sum, "
-        f"    sumKahan(is_buyer_maker * quantity) AS maker_volume, "
+        f"    sumKahan(is_buyer_maker * quantity)   AS maker_volume, "
         f"    sum(is_buyer_maker * price * quantity) AS maker_liquidity "
         f"{db_table}"
         f"{start_date_limit}"
@@ -81,19 +81,18 @@ def get_klines_data(n_rows: Optional[int] = None,
     
     polars_df = polars_df.with_columns([
         (pl.col('datetime').cast(pl.Int64) * 1000)
-          .cast(pl.Datetime("ms", time_zone="UTC"))
-          .alias("datetime")])
+          .cast(pl.Datetime('ms', time_zone='UTC'))
+          .alias('datetime')])
 
-    # Apply minimal precision rounding for remaining edge-case differences
     polars_df = polars_df.with_columns([
-        pl.col("mean").round(5),           
-        pl.col("std").round(6),         
-        pl.col("volume").round(9),
-        pl.col("liquidity_sum").round(1),
-        pl.col("maker_liquidity").round(1),
+        pl.col('mean').round(5),
+        pl.col('std').round(6),
+        pl.col('volume').round(9),
+        pl.col('liquidity_sum').round(1),
+        pl.col('maker_liquidity').round(1),
     ])
 
-    polars_df = polars_df.sort("datetime")
+    polars_df = polars_df.sort('datetime')
 
     elapsed = time.time() - start
 
