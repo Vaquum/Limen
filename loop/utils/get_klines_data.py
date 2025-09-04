@@ -50,23 +50,23 @@ def get_klines_data(n_rows: Optional[int] = None,
     query = (
         f"SELECT "
         f"    toDateTime({kline_size} * intDiv(toUnixTimestamp(datetime), {kline_size})) AS datetime, "
-        f"    first_value(price)            AS open, "
+        f"    argMin(price, trade_id)            AS open, "
         f"    max(price)                    AS high, "
         f"    min(price)                    AS low, "
-        f"    last_value(price)             AS close, "
+        f"    argMax(price, trade_id)             AS close, "
         f"    avg(price)                    AS mean, "
-        f"    stddevPop(price)              AS std, "
-        f"    median(price)                 AS median, "
-        f"    quantile(0.75)(price) - quantile(0.25)(price) AS iqr, "
-        f"    sum(quantity)                 AS volume, "
+        f"    stddevPopStable(price)        AS std, "
+        f"    quantileExact(0.5)(price)     AS median, "
+        f"    quantileExact(0.75)(price) - quantileExact(0.25)(price) AS iqr, "
+        f"    sumKahan(quantity)            AS volume, "
         f"    avg(is_buyer_maker)           AS maker_ratio, "
         f"    count()                       AS no_of_trades, "
-        f"    first_value(price * quantity) AS open_liquidity, "
+        f"    argMin(price * quantity, trade_id) AS open_liquidity, "
         f"    max(price * quantity)         AS high_liquidity, "
         f"    min(price * quantity)         AS low_liquidity, "
-        f"    last_value(price * quantity)  AS close_liquidity, "
+        f"    argMax(price * quantity, trade_id)  AS close_liquidity, "
         f"    sum(price * quantity)         AS liquidity_sum, "
-        f"    sum(is_buyer_maker * quantity) AS maker_volume, "
+        f"    sumKahan(is_buyer_maker * quantity) AS maker_volume, "
         f"    sum(is_buyer_maker * price * quantity) AS maker_liquidity "
         f"{db_table}"
         f"{start_date_limit}"
@@ -83,6 +83,15 @@ def get_klines_data(n_rows: Optional[int] = None,
         (pl.col('datetime').cast(pl.Int64) * 1000)
           .cast(pl.Datetime("ms", time_zone="UTC"))
           .alias("datetime")])
+
+    # Apply minimal precision rounding for remaining edge-case differences
+    polars_df = polars_df.with_columns([
+        pl.col("mean").round(5),           
+        pl.col("std").round(6),         
+        pl.col("volume").round(9),
+        pl.col("liquidity_sum").round(1),
+        pl.col("maker_liquidity").round(1),
+    ])
 
     polars_df = polars_df.sort("datetime")
 
