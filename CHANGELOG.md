@@ -263,3 +263,8 @@
 
 # v1.16.0 on 24th of August 2025
 - Simplify `lightgbm.tradeable_regressor` - remove deadwood, genericize, etc
+
+# v1.16.1 on 4th of September 2025
+- Use deterministic and stable SQL fuctions in `get_klines_data()` to minimize
+data mismatch
+- Update datasets for test data
