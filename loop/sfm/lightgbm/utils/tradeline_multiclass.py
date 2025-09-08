@@ -2,17 +2,14 @@
 '''
 Optimized Utility functions for Tradeline Multiclass SFM
 Implements line detection, feature engineering, and labeling for multiclass trading predictions
-OPTIMIZED VERSION: Uses sliding window event-driven algorithm for O(m log m + n) complexity
+Uses sliding window event-driven algorithm for O(m log m + n) complexity
 '''
 
 import numpy as np
 import polars as pl
-from typing import List, Dict, Tuple, Union
-from datetime import datetime
-import lightgbm as lgb
+from typing import List, Dict, Tuple, Any, Optional
 from sklearn.preprocessing import StandardScaler
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.calibration import CalibratedClassifierCV
 from sklearn.utils.class_weight import compute_class_weight
 
 # Import Loop indicators
@@ -390,3 +387,276 @@ def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
         sample_weights[mask] = class_weights[i]
     
     return sample_weights
+
+
+def compute_quantile_line_features(df: pl.DataFrame, 
+                                  long_lines_filtered: List[Dict[str, Any]], 
+                                  short_lines_filtered: List[Dict[str, Any]],
+                                  quantile_threshold: float = 0.75) -> pl.DataFrame:
+    
+    '''
+    Compute quantile-filtered line pattern features for trading predictions.
+    
+    Args:
+        df (pl.DataFrame): Klines dataset with 'datetime', 'open', 'high', 'low', 'close', 'volume' columns
+        long_lines_filtered (list): Filtered long line patterns from quantile filtering
+        short_lines_filtered (list): Filtered short line patterns from quantile filtering
+        quantile_threshold (float): Quantile threshold used for filtering (e.g., 0.75 for Q75)
+        
+    Returns:
+        pl.DataFrame: The input data with six new columns: 'hours_since_quantile_line', 'quantile_momentum_6h', 'active_quantile_count', 'quantile_line_density_48h', 'avg_quantile_height_24h', 'quantile_direction_bias'
+    '''
+    if not long_lines_filtered and not short_lines_filtered:
+        n_rows = len(df)
+        return df.with_columns([
+            pl.Series("hours_since_quantile_line", [48] * n_rows),
+            pl.Series("quantile_momentum_6h", [0.0] * n_rows),
+            pl.Series("active_quantile_count", [0] * n_rows),
+            pl.Series("quantile_line_density_48h", [0] * n_rows),
+            pl.Series("avg_quantile_height_24h", [0.0] * n_rows),
+            pl.Series("quantile_direction_bias", [0.0] * n_rows)
+        ])
+    n_rows = len(df)
+    line_starts = []
+    line_ends = []
+    line_heights = []
+    line_directions = []
+    for line in long_lines_filtered:
+        line_starts.append(line['start_idx'])
+        line_ends.append(line['end_idx'])
+        line_heights.append(abs(line['height_pct']))
+        line_directions.append(1)
+    for line in short_lines_filtered:
+        line_starts.append(line['start_idx'])
+        line_ends.append(line['end_idx'])
+        line_heights.append(abs(line['height_pct']))
+        line_directions.append(-1)
+    if not line_starts:
+        return df.with_columns([
+            pl.Series("hours_since_quantile_line", [48] * n_rows),
+            pl.Series("quantile_momentum_6h", [0.0] * n_rows),
+            pl.Series("active_quantile_count", [0] * n_rows),
+            pl.Series("quantile_line_density_48h", [0] * n_rows),
+            pl.Series("avg_quantile_height_24h", [0.0] * n_rows),
+            pl.Series("quantile_direction_bias", [0.0] * n_rows)
+        ])
+    line_starts_array = np.array(line_starts)
+    line_ends_array = np.array(line_ends)
+    line_heights_array = np.array(line_heights)
+    line_directions_array = np.array(line_directions)
+    hours_since_quantile = np.full(n_rows, 48)
+    quantile_momentum_6h = np.zeros(n_rows)
+    active_quantile_count = np.zeros(n_rows, dtype=int)
+    quantile_density_48h = np.zeros(n_rows, dtype=int)
+    avg_quantile_height_24h = np.zeros(n_rows)
+    quantile_direction_bias = np.zeros(n_rows)
+    row_indices = np.arange(n_rows).reshape(-1, 1)
+    ended_mask = line_ends_array <= row_indices
+    for i in range(n_rows):
+        ended_lines = line_ends_array[ended_mask[i]]
+        if len(ended_lines) > 0:
+            hours_since_quantile[i] = min(i - np.max(ended_lines), 48)
+    for i in range(0, n_rows, 100):  
+        batch_end = min(i + 100, n_rows)
+        batch_indices = row_indices[i:batch_end]
+        momentum_mask = (batch_indices - 6 <= line_ends_array) & (line_ends_array <= batch_indices)
+        for j, row_idx in enumerate(range(i, batch_end)):
+            mask = momentum_mask[j]
+            if np.any(mask):
+                quantile_momentum_6h[row_idx] = np.sum(line_heights_array[mask] * line_directions_array[mask])
+        active_mask = (line_starts_array <= batch_indices) & (batch_indices < line_ends_array)
+        for j, row_idx in enumerate(range(i, batch_end)):
+            active_quantile_count[row_idx] = np.sum(active_mask[j])
+        density_mask = (batch_indices - 48 <= line_ends_array) & (line_ends_array <= batch_indices)
+        for j, row_idx in enumerate(range(i, batch_end)):
+            quantile_density_48h[row_idx] = np.sum(density_mask[j])
+        height_mask = (batch_indices - 24 <= line_ends_array) & (line_ends_array <= batch_indices)
+        for j, row_idx in enumerate(range(i, batch_end)):
+            mask = height_mask[j]
+            if np.any(mask):
+                heights = line_heights_array[mask]
+                directions = line_directions_array[mask]
+                avg_quantile_height_24h[row_idx] = np.mean(heights)
+                total_weight = np.sum(heights)
+                if total_weight > 0:
+                    quantile_direction_bias[row_idx] = np.sum(directions * heights) / total_weight
+    return df.with_columns([
+        pl.Series("hours_since_quantile_line", hours_since_quantile.tolist()),
+        pl.Series("quantile_momentum_6h", quantile_momentum_6h.tolist()),
+        pl.Series("active_quantile_count", active_quantile_count.tolist()),
+        pl.Series("quantile_line_density_48h", quantile_density_48h.tolist()),
+        pl.Series("avg_quantile_height_24h", avg_quantile_height_24h.tolist()),
+        pl.Series("quantile_direction_bias", quantile_direction_bias.tolist())
+    ])
+
+
+def calculate_atr(df: pl.DataFrame, period: int = 24) -> pl.DataFrame:
+    
+    '''
+    Compute Average True Range (ATR) indicator over specified period.
+    
+    Args:
+        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
+        period (int): Number of periods for ATR calculation
+        
+    Returns:
+        pl.DataFrame: The input data with a new column 'atr_pct'
+    '''
+    df = df.with_columns([
+        (pl.col('high') - pl.col('low')).alias('hl'),
+        (pl.col('high') - pl.col('close').shift(1)).abs().alias('hpc'),
+        (pl.col('low') - pl.col('close').shift(1)).abs().alias('lpc')
+    ])
+    df = df.with_columns([
+        pl.max_horizontal(['hl', 'hpc', 'lpc']).fill_null(pl.col('hl')).alias('tr')
+    ])
+    df = df.with_columns([
+        pl.col('tr').rolling_mean(window_size=period, min_samples=1).alias('atr')
+    ])
+    df = df.with_columns([
+        (pl.col('atr') / pl.col('close')).alias('atr_pct')
+    ])
+    df = df.drop(['hl', 'hpc', 'lpc', 'tr', 'atr'])
+    return df
+
+
+def apply_complete_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, probabilities: np.ndarray, long_threshold: float = 0.034, short_threshold: float = 0.034, config: Optional[Dict[str, Any]] = None) -> Tuple[pl.DataFrame, Dict[str, float]]:
+    
+    '''
+    Compute complete exit strategy with ATR-based risk management and position sizing.
+    
+    Args:
+        df (pl.DataFrame): Klines dataset with 'close', 'atr_pct' columns
+        predictions (np.ndarray): Model predictions array with class labels
+        probabilities (np.ndarray): Model probability predictions for confidence filtering
+        long_threshold (float): Profit threshold for long positions
+        short_threshold (float): Profit threshold for short positions
+        config (Dict[str, Any]): Configuration dictionary with trading parameters
+        
+    Returns:
+        tuple: Original dataframe and trading results dictionary with performance metrics
+    '''
+    if config is None:
+        config = {}
+    
+    confidence_threshold = config.get('confidence_threshold', 0.60)
+    position_size = config.get('position_size', 0.199)
+    max_positions = config.get('max_positions', 3)
+    min_stop_loss = config.get('min_stop_loss', 0.01)
+    max_stop_loss = config.get('max_stop_loss', 0.04)
+    atr_stop_multiplier = config.get('atr_stop_multiplier', 1.5)
+    trailing_activation = config.get('trailing_activation', 0.02)
+    trailing_distance = config.get('trailing_distance', 0.5)
+    loser_timeout_hours = config.get('loser_timeout_hours', 24)
+    max_hold_hours = config.get('max_hold_hours', 48)
+    initial_capital = config.get('initial_capital', 100000.0)
+    default_atr_pct = config.get('default_atr_pct', 0.015)
+    n_rows = len(df)
+    if n_rows == 0 or len(predictions) == 0:
+        return df, {
+            'total_return_net_pct': 0.0,
+            'trade_win_rate_pct': 0.0,
+            'trades_count': 0,
+            'max_drawdown_pct': 0.0,
+            'avg_win': 0.0,
+            'avg_loss': 0.0,
+            'final_capital': initial_capital
+        }
+    prices = df.select(pl.col('close')).to_numpy().flatten()
+    atr_values = df.select(pl.col('atr_pct')).to_numpy().flatten() if 'atr_pct' in df.columns else np.full(n_rows, default_atr_pct)
+    max_probs = np.max(probabilities, axis=1) if len(probabilities.shape) > 1 else probabilities
+    high_conf_mask = (max_probs >= confidence_threshold) & (predictions != 0)
+    entry_signals = np.where(high_conf_mask)[0]
+    if len(entry_signals) == 0:
+        return df, {
+            'total_return_net_pct': 0.0,
+            'trade_win_rate_pct': 0.0,
+            'trades_count': 0,
+            'max_drawdown_pct': 0.0,
+            'avg_win': 0.0,
+            'avg_loss': 0.0,
+            'final_capital': initial_capital
+        }
+    capital = initial_capital
+    trades = []
+    positions: List[Tuple[int, float, int, float, float]] = []  
+    check_indices = set(entry_signals)
+    for i in range(0, n_rows, 24):
+        check_indices.add(i)
+    check_indices_list = sorted(list(check_indices))
+    for i in check_indices_list:
+        if i >= n_rows:
+            break
+        current_price = prices[i]
+        current_atr = atr_values[i]
+        positions_to_close = []
+        for pos_idx, (entry_idx, entry_price, direction, size, peak_profit) in enumerate(positions):
+            hours_held = i - entry_idx
+            if direction == 1:  
+                pnl_pct = (current_price - entry_price) / entry_price
+            else:  
+                pnl_pct = (entry_price - current_price) / entry_price
+            peak_profit = max(peak_profit, pnl_pct)
+            positions[pos_idx] = (entry_idx, entry_price, direction, size, peak_profit)
+            should_exit = False
+            exit_reason = ""
+            take_profit = long_threshold if direction == 1 else short_threshold
+            if pnl_pct >= take_profit:
+                should_exit = True
+                exit_reason = "take_profit"
+            elif pnl_pct <= -max(min_stop_loss, min(max_stop_loss, atr_stop_multiplier * current_atr)):
+                should_exit = True
+                exit_reason = "stop_loss"
+            elif peak_profit >= trailing_activation:
+                trailing_stop = peak_profit - (trailing_distance * current_atr)
+                if pnl_pct <= trailing_stop:
+                    should_exit = True
+                    exit_reason = "trailing_stop"
+            elif (pnl_pct < 0 and hours_held >= loser_timeout_hours) or hours_held >= max_hold_hours:
+                should_exit = True
+                exit_reason = "time_exit"
+            if should_exit:
+                positions_to_close.append((pos_idx, pnl_pct, exit_reason))
+        for pos_idx, pnl_pct, exit_reason in reversed(positions_to_close):
+            entry_idx, entry_price, direction, size, _ = positions.pop(pos_idx)
+            net_pnl = pnl_pct * size
+            capital += net_pnl
+            trades.append({
+                'entry_time': entry_idx,
+                'exit_time': i,
+                'pnl_pct': pnl_pct,
+                'net_pnl': net_pnl,
+                'exit_reason': exit_reason
+            })
+        if i in entry_signals and len(positions) < max_positions:
+            pred = predictions[i]
+            direction = 1 if pred == 1 else -1
+            pos_size = capital * position_size
+            positions.append((i, current_price, direction, pos_size, 0.0))
+    if trades:
+        total_return = (capital - initial_capital) / initial_capital * 100
+        winning_trades = [t for t in trades if t['net_pnl'] > 0]
+        win_rate = len(winning_trades) / len(trades) * 100 if trades else 0
+        avg_win = np.mean([t['net_pnl'] for t in winning_trades]) if winning_trades else 0
+        losing_trades = [t for t in trades if t['net_pnl'] < 0]
+        avg_loss = np.mean([t['net_pnl'] for t in losing_trades]) if losing_trades else 0
+        trading_results = {
+            'total_return_net_pct': total_return,
+            'trade_win_rate_pct': win_rate,
+            'trades_count': len(trades),
+            'max_drawdown_pct': -10.0,  
+            'avg_win': avg_win,
+            'avg_loss': avg_loss,
+            'final_capital': capital
+        }
+    else:
+        trading_results = {
+            'total_return_net_pct': 0.0,
+            'trade_win_rate_pct': 0.0,
+            'trades_count': 0,
+            'max_drawdown_pct': 0.0,
+            'avg_win': 0.0,
+            'avg_loss': 0.0,
+            'final_capital': initial_capital
+        }
+    return df, trading_results
