@@ -73,109 +73,154 @@ def _create_sequences(data_df, feature_cols, target_col, lookback):
 
 
 def prep(data, round_params):
-    """
-    A deterministic data preparation pipeline (Final Version).
-    """
-    # ------------------ 1. Fulfill SFM Contract & Unpack Params ------------------
-    all_datetimes = data['datetime'].to_list() # Strict SFM requirement
-
-    # Unpack knobs
+    # -------- 0) Unpack knobs --------
+    all_datetimes = data['datetime'].to_list()
     lookback = round_params['lookback_window']
     horizon = round_params['target_horizon']
     price_thresh = round_params['target_threshold']
     scaler_type = round_params['scaler_type']
-    
-    processed_df = data.clone()
 
-    # ------------------ 2. Target Engineering ------------------
-    future_close = processed_df['close'].shift(-horizon)
-    price_change = (future_close - processed_df['close']) / processed_df['close']
-    
-    processed_df = processed_df.with_columns([
-        price_change.alias('price_change'),
-        (pl.when(price_change > price_thresh).then(1).otherwise(0)).alias('target')
+    # Ensure Polars datetime dtype
+    df = data.clone()
+    if df['datetime'].dtype != pl.Datetime:
+        df = df.with_columns(pl.col('datetime').cast(pl.Datetime))
+
+    all_datetimes = df['datetime'].to_list()
+
+    # -------- 1) Target engineering (Polars-native) --------
+    df = df.with_columns([
+        ((pl.col('close').shift(-horizon) - pl.col('close')) / pl.col('close')).alias('price_change'),
+    ])
+    df = df.with_columns([
+        (pl.when(pl.col('price_change') > price_thresh).then(1).otherwise(0)).alias('target')
     ])
 
-    # ------------------ 3. Feature Engineering ------------------
+    # Base feature columns
     feature_cols = [
         'open', 'high', 'low', 'close',
         'volume', 'no_of_trades', 'maker_ratio',
         'mean', 'std', 'median', 'iqr'
     ]
 
-    # Cyclical features
+    # -------- 2) Optional cyclical features (Polars expr, not NumPy on Series) --------
     if round_params['use_cyclical_features']:
-        cyc_feature_exprs = []
-        cyc_feature_names = []
-        kline_duration = (processed_df['datetime'][1] - processed_df['datetime'][0]).total_seconds()
+        # infer bar duration
+        kline_sec = (df['datetime'][1] - df['datetime'][0]).total_seconds()
+        exprs = []
+        names = []
 
-        if kline_duration < 3600:
-            cyc_feature_exprs.extend([
-                (np.sin(2 * np.pi * processed_df['datetime'].dt.minute() / 60)).alias('minute_sin'),
-                (np.cos(2 * np.pi * processed_df['datetime'].dt.minute() / 60)).alias('minute_cos')
-            ])
-            cyc_feature_names.extend(['minute_sin', 'minute_cos'])
+        if kline_sec < 3600:
+            exprs += [
+                ((2 * np.pi * pl.col('datetime').dt.minute() / 60).sin()).alias('minute_sin'),
+                ((2 * np.pi * pl.col('datetime').dt.minute() / 60).cos()).alias('minute_cos'),
+            ]
+            names += ['minute_sin', 'minute_cos']
 
-        cyc_feature_exprs.extend([
-            (np.sin(2 * np.pi * processed_df['datetime'].dt.hour() / 24)).alias('hour_sin'),
-            (np.cos(2 * np.pi * processed_df['datetime'].dt.hour() / 24)).alias('hour_cos'),
-            (np.sin(2 * np.pi * processed_df['datetime'].dt.weekday() / 7)).alias('day_of_week_sin'),
-            (np.cos(2 * np.pi * processed_df['datetime'].dt.weekday() / 7)).alias('day_of_week_cos')
-        ])
-        cyc_feature_names.extend(['hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos'])
+        exprs += [
+            ((2 * np.pi * pl.col('datetime').dt.hour() / 24).sin()).alias('hour_sin'),
+            ((2 * np.pi * pl.col('datetime').dt.hour() / 24).cos()).alias('hour_cos'),
+            ((2 * np.pi * pl.col('datetime').dt.weekday() / 7).sin()).alias('day_of_week_sin'),
+            ((2 * np.pi * pl.col('datetime').dt.weekday() / 7).cos()).alias('day_of_week_cos'),
+        ]
+        names += ['hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos']
 
-        processed_df = processed_df.with_columns(cyc_feature_exprs)
-        feature_cols.extend(cyc_feature_names)
+        df = df.with_columns(exprs)
+        feature_cols.extend(names)
 
-    # Sequential features
+    # -------- 3) Optional sequential features --------
     if round_params['use_sequential_features']:
-        first_datetime = processed_df['datetime'][0]
-        processed_df = processed_df.with_columns([
-            (processed_df['datetime'] - first_datetime).dt.days().alias('nth_day'),
-            (processed_df['datetime'] - first_datetime).dt.days().floordiv(7).alias('nth_week'),
-            ((processed_df['datetime'].dt.year() - first_datetime.year) * 12 + \
-             (processed_df['datetime'].dt.month() - first_datetime.month)).alias('nth_month')
+        first_dt = df['datetime'][0]
+        df = df.with_columns([
+            ( (pl.col('datetime') - pl.lit(first_dt)).dt.total_days() ).alias('nth_day'),
+            ( ((pl.col('datetime') - pl.lit(first_dt)).dt.total_days() // 7) ).alias('nth_week'),
+            ( ((pl.col('datetime').dt.year() - first_dt.year) * 12
+               + (pl.col('datetime').dt.month() - first_dt.month)) ).alias('nth_month'),
         ])
         feature_cols.extend(['nth_day', 'nth_week', 'nth_month'])
 
-    processed_df = processed_df.filter(~processed_df['target'].is_null())
+    # Remove rows made null by horizon shift
+    df = df.drop_nulls(subset=['price_change', 'target'])
 
-    # ------------------ 4. Chronological Split ------------------
-    n = len(processed_df)
-    train_end, val_end = int(n * 0.7), int(n * 0.85)
+    # -------- 4) Sequential split (Loop utility) --------
+    train_df, val_df, test_df = split_sequential(df, (70, 15, 15))
 
-    train_df = processed_df[:train_end]
-    val_df = processed_df[train_end:val_end]
-    test_df = processed_df[val_end:]
+    # Keep a copy of test datetimes to build alignment for predictions
+    test_dt = test_df['datetime'].to_list()
 
-    # ------------------ 5. Sequence Creation ------------------
-    X_train, y_train = _create_sequences(train_df, feature_cols, 'target', lookback)
-    X_val, y_val = _create_sequences(val_df, feature_cols, 'target', lookback)
-    X_test, y_test = _create_sequences(test_df, feature_cols, 'target', lookback)
+    # -------- 5) Build 3D sequences for Transformer --------
+    def _seq(pl_df, features, target, lb):
+        X, y = [], []
+        f_np = pl_df.select(features).to_numpy()
+        t_np = pl_df.select(target).to_numpy().ravel()
+        n = pl_df.height
+        for i in range(n - lb):
+            X.append(f_np[i:i+lb])
+            y.append(t_np[i + lb - 1])
+        return np.asarray(X), np.asarray(y)
 
-    # ------------------ 6. Scaling ------------------
+    X_train, y_train = _seq(train_df, feature_cols, 'target', lookback)
+    X_val,   y_val   = _seq(val_df,   feature_cols, 'target', lookback)
+    X_test,  y_test  = _seq(test_df,  feature_cols, 'target', lookback)
+
+    # -------- 6) Scale (fit on train only) --------
     scaler_map = {'standard': StandardScaler, 'minmax': MinMaxScaler, 'robust': RobustScaler}
     scaler = scaler_map[scaler_type]()
-
     n_features = X_train.shape[2]
+
     scaler.fit(X_train.reshape(-1, n_features))
+    X_train = scaler.transform(X_train.reshape(-1, n_features)).reshape(X_train.shape)
+    X_val   = scaler.transform(X_val.reshape(-1, n_features)).reshape(X_val.shape)
+    X_test  = scaler.transform(X_test.reshape(-1, n_features)).reshape(X_test.shape)
 
-    def scale(X):
-        return scaler.transform(X.reshape(-1, n_features)).reshape(X.shape)
+    # -------- 7) Build _alignment that matches *prediction rows* --------
+    # We only predict from the (lookback-1)-th bar onward in each split window.
+    # So the test datetimes that pair with preds are:
+    test_pred_datetimes = test_dt[lookback:]  # length == len(y_test)
 
-    data_dict = {
-        'X_train': scale(X_train), 'y_train': y_train,
-        'X_val': scale(X_val), 'y_val': y_val,
-        'X_test': scale(X_test), 'y_test': y_test,
-        '_scaler': scaler,
-        '_alignment': {
-            'missing_datetimes': sorted(set(all_datetimes) - set(processed_df['datetime'].to_list())),
-            'first_test_datetime': test_df['datetime'][lookback - 1], # CORRECTED
-            'last_test_datetime': test_df['datetime'][-1]
-        }
+    # Remaining datetimes = all train/val + ONLY the test_pred_datetimes
+    rem = (
+        train_df['datetime'].to_list()
+        + val_df['datetime'].to_list()
+        + test_pred_datetimes
+    )
+
+    # Missing datetimes are everything else
+    missing = sorted(set(all_datetimes) - set(rem))
+
+    # Polars logger anti-joins a DF built from missing; if it’s empty, its dtype
+    # can be problematic for .dt.cast_time_unit. Make it "safely non-empty"
+    # without dropping anything by adding a sentinel *outside* the test range.
+    if len(missing) == 0:
+        sentinel = test_pred_datetimes[0] - pl.duration(milliseconds=1)
+        missing = [sentinel]
+
+    alignment = {
+        'missing_datetimes': missing,
+        'first_test_datetime': test_pred_datetimes[0],
+        'last_test_datetime':  test_pred_datetimes[-1],
     }
 
-    return data_dict
+    #    # -------- 8) Return the final data dict --------
+    out = {
+        'X_train': X_train, 'y_train': y_train,
+        'X_val':   X_val,   'y_val':   y_val,
+        'X_test':  X_test,  'y_test':  y_test,
+        '_scaler': scaler,
+        '_alignment': alignment,
+        '_feature_names': feature_cols,
+    }
+
+    # -------- 9) Debug checks --------
+    expected_len = len(y_test)
+    actual_len   = len(test_pred_datetimes)
+    if expected_len != actual_len:
+        print(">>> DEBUG MISMATCH in prep:")
+        print(f"y_test length: {expected_len}")
+        print(f"test_pred_datetimes length: {actual_len}")
+        print("This WILL cause downstream errors in perf_df vs price_df.")
+        raise ValueError("Mismatch between y_test and test_pred_datetimes")
+
+    return out
 
 # =============================================================================
 # 3. MODEL TRAINING & EVALUATION (CORRECTED VERSION)
@@ -186,7 +231,6 @@ def _positional_encoding(seq_len, d_model):
     pos = keras.ops.arange(0, seq_len, dtype="float32")[:, None]
     i = keras.ops.arange(0, d_model, 2, dtype="float32")
     
-    # --- FIX 1: Replaced `1 / ...` with a type-safe Keras operation ---
     d_model_float = keras.ops.cast(d_model, dtype="float32")
     exponent = -((2.0 * i) / d_model_float)
     angle_rates = keras.ops.power(10000.0, exponent)
