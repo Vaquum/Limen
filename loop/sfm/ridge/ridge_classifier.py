@@ -1,16 +1,12 @@
 import math
+import warnings
+
 import numpy as np
 import pandas as pd
 import polars as pl
-from sklearn.linear_model import RidgeClassifier
 from sklearn.calibration import CalibratedClassifierCV
-from loop.metrics.binary_metrics import binary_metrics
-from loop.indicators import (
-    roc,
-    ppo,
-    rolling_volatility,
-    wilder_rsi
-)
+from sklearn.linear_model import RidgeClassifier
+
 from loop.features import (
     atr_percent_sma,
     ichimoku_cloud,
@@ -24,34 +20,31 @@ from loop.features import (
     trend_strength,
     volume_regime,
 )
+from loop.indicators import (
+    roc,
+    ppo,
+    rolling_volatility,
+    wilder_rsi,
+)
+from loop.metrics.binary_metrics import binary_metrics
+from loop.transforms.linear_transform import LinearTransform
 from loop.utils.splits import split_sequential, split_data_to_prep_output
-from loop.transforms.linreg_transform import LinearTransform, build_rules, get_scaling_rule
 
-import warnings
-warnings.filterwarnings("ignore")
-
-# Pre-compute constants at module level
-PI_2_DIV_96 = 2 * math.pi / 96
-PI_2_DIV_24 = 2 * math.pi / 24
+warnings.filterwarnings('ignore')
 
 
-def params():
-    # # Drastically reduced parameter space to prevent overfitting
+def params() -> dict:
+
     return {
-        # 'shift': (-1, -2, -3),
         'shift': (-1,),
         'q': (0.32, 0.35, 0.37),
         'roc_period': (4,),
-        # 'roc_period': (2, 4,),
-
-        # 'atr_period': (14, 28, 42),
         'atr_sma_period': (14, 28, 42),
         'ppo_fast': (8, 12, 20),
         'ppo_slow': (26, 32, 40),
         'ppo_signal': (9, 12),
         'rsi_period': (8, 14,),
-        'volatility_window': (12,  24),
-
+        'volatility_window': (12, 24),
         'high_distance_period': (20, 40),
         'low_distance_period': (20, 40),
         'price_range_position_period': (50, 100),
@@ -62,8 +55,6 @@ def params():
         'trend_fast_period': (10, 20),
         'trend_slow_period': (50, 100),
         'lookback': (50, 100),
-
-        # Model parameters
         'alpha': (2.0, 5.0, 8.0),
         'max_iter': (400,),
         'tol': (0.0001,),
@@ -71,17 +62,15 @@ def params():
         'class_weight': ('balanced',),
         'solver': ('auto',),
         'pred_threshold': (0.55,),
-        # 'pred_threshold': (0.5, 0.52, 0.55, 0.58),
         'random_state': (42,),
         'n_jobs': (8,),
     }
 
 
-def prep(data: pl.DataFrame, round_params: dict):
-    # Extract all_datetimes once at the beginning
+def prep(data: pl.DataFrame, round_params: dict) -> dict:
+    
     all_datetimes = data['datetime'].to_list()
 
-    # Extract all parameters once to avoid repeated dict lookups
     roc_period = round_params['roc_period']
     ppo_fast = round_params['ppo_fast']
     ppo_slow = round_params['ppo_slow']
@@ -102,55 +91,36 @@ def prep(data: pl.DataFrame, round_params: dict):
     q = round_params['q']
     shift = round_params['shift']
 
-    # Build rename map once with known column names
     rename_map = {
-        f"roc_{roc_period}": "roc",
-        f"ppo_{ppo_fast}_{ppo_slow}": "ppo",
-        f"ppo_signal_{ppo_signal}": "ppo_signal",
-        f"wilder_rsi_{rsi_period}": "wilder_rsi",
-        f"close_volatility_{volatility_window}": "close_volatility",
+        f'roc_{roc_period}': 'roc',
+        f'ppo_{ppo_fast}_{ppo_slow}': 'ppo',
+        f'ppo_signal_{ppo_signal}': 'ppo_signal',
+        f'wilder_rsi_{rsi_period}': 'wilder_rsi',
+        f'close_volatility_{volatility_window}': 'close_volatility',
     }
 
-    # Pre-define required columns list
     required_cols = [
         'datetime', 'hour', 'minute', 'more_trade',
-        # 'bar_sin', 'bar_cos', 'hour_sin', 'hour_cos',
         'std', 'maker_ratio',
         'ppo', 'ppo_signal', 'wilder_rsi', 'close_position',
         'distance_from_high', 'distance_from_low',
         'gap_high', 'price_range_position', 'range_pct',
         'atr_percent_sma', 'close_volatility', 'kijun', 'senkou_a',
-        'trend_strength', 'volume_regime'
+        'trend_strength', 'volume_regime',
     ]
 
     data_processed = (
         data.lazy()
-        # Time-based features in one go
         .with_columns([
             pl.col('datetime').dt.hour().alias('hour'),
             pl.col('datetime').dt.minute().alias('minute'),
         ])
-        # .with_columns([
-        #     (pl.col('hour') * 4 +
-        #      pl.col('minute').floordiv(15)).alias('bar'),
-        # ])
         .with_columns([
-            # # Use pre-computed constants for faster math
-            # (pl.col("bar").cast(pl.Float32) *
-            #  PI_2_DIV_96).sin().alias("bar_sin"),
-            # (pl.col("bar").cast(pl.Float32) *
-            #  PI_2_DIV_96).cos().alias("bar_cos"),
-            # (pl.col("hour").cast(pl.Float32) *
-            #  PI_2_DIV_24).sin().alias("hour_sin"),
-            # (pl.col("hour").cast(pl.Float32) *
-            #  PI_2_DIV_24).cos().alias("hour_cos"),
-            # Vectorized boolean logic
             (
-                (pl.col("datetime").dt.weekday() < 5) &
-                pl.col("hour").is_between(13, 20)
-            ).alias("more_trade")
+                (pl.col('datetime').dt.weekday() < 5) &
+                pl.col('hour').is_between(13, 20)
+            ).alias('more_trade')
         ])
-        # Apply all indicators in the lazy chain
         .pipe(roc, period=roc_period)
         .pipe(ppo, fast_period=ppo_fast, slow_period=ppo_slow, signal_period=ppo_signal)
         .pipe(wilder_rsi, period=rsi_period)
@@ -166,18 +136,13 @@ def prep(data: pl.DataFrame, round_params: dict):
         .pipe(gap_high)
         .pipe(price_range_position, period=price_range_position_period)
         .pipe(range_pct)
-        # Rename columns in the lazy chain
         .rename(rename_map)
-        # Drop nulls in lazy mode
         .drop_nulls(subset=required_cols)
-        # Single collect with streaming
         .collect()
     )
 
-    # Temporal splits
     split_data = split_sequential(data_processed, (6, 2, 2))
 
-    # Use quantile_flag helper (train cutoff only once)
     split_data[0], train_cutoff = quantile_flag(
         data=split_data[0], col='roc', q=q, return_cutoff=True
     )
@@ -193,36 +158,31 @@ def prep(data: pl.DataFrame, round_params: dict):
         processed_split = (
             processed_split
             .with_columns([
-                pl.col("quantile_flag")
+                pl.col('quantile_flag')
                 .shift(shift)
-                .alias("quantile_flag")
+                .alias('quantile_flag')
             ])
-            .drop_nulls(subset=["quantile_flag"])
+            .drop_nulls(subset=['quantile_flag'])
         )
         processed_splits.append(processed_split)
 
-    # Final columns list
     cols = required_cols + ['quantile_flag']
 
-    # Build output dictionary using optimized function
     data_dict = split_data_to_prep_output(
-        processed_splits, cols, all_datetimes)
+        processed_splits, cols, all_datetimes
+    )
 
-    # Feature scaling
     scaler = LinearTransform(x_train=data_dict['x_train'])
 
-    # Vectorized scaling for all x_ keys
-    # Known keys to avoid dict iteration
-    x_keys = ('x_train', 'x_val', 'x_test')
-    for key in x_keys:
+    for key in ('x_train', 'x_val', 'x_test'):
         data_dict[key] = scaler.transform(data_dict[key])
 
     data_dict['_scaler'] = scaler
     return data_dict
 
 
-def model(data: dict, round_params: dict):
-    # Extract parameters once
+def model(data: dict, round_params: dict) -> dict:
+    
     alpha = round_params['alpha']
     tol = round_params['tol']
     class_weight = round_params['class_weight']
@@ -233,7 +193,6 @@ def model(data: dict, round_params: dict):
     n_jobs = round_params['n_jobs']
     pred_threshold = round_params['pred_threshold']
 
-    # Initialize classifier with extracted parameters
     clf = RidgeClassifier(
         alpha=alpha,
         tol=tol,
@@ -241,23 +200,19 @@ def model(data: dict, round_params: dict):
         max_iter=max_iter,
         random_state=random_state,
         fit_intercept=fit_intercept,
-        solver=solver
+        solver=solver,
     )
 
-    # Fit classifier
     clf.fit(data['x_train'], data['y_train'])
 
-    # Calibrate probabilities using validation set
     calibrator = CalibratedClassifierCV(
-        clf, method='sigmoid', cv='prefit', n_jobs=n_jobs)
+        clf, method='sigmoid', cv='prefit', n_jobs=n_jobs
+    )
     calibrator.fit(data['x_val'], data['y_val'])
 
-    # Predictions - use numpy operations for speed
     probs = calibrator.predict_proba(data['x_test'])[:, 1]
-    preds = (probs >= pred_threshold).astype(
-        np.int8)  # int8 for memory efficiency
+    preds = (probs >= pred_threshold).astype(np.int8)
 
-    # Generate metrics
     round_results = binary_metrics(data, preds, probs)
     round_results['_preds'] = preds
 
