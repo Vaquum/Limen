@@ -17,6 +17,7 @@ from loop.features.atr_sma import atr_sma
 from loop.features.atr_percent_sma import atr_percent_sma
 from loop.features.ema_breakout import ema_breakout
 from loop.features.vwap import vwap
+from loop.features.ichimoku_cloud import ichimoku_cloud
 
 __all__ = [
     'conserved_flux_renormalization',
@@ -37,5 +38,6 @@ __all__ = [
     'atr_sma',
     'atr_percent_sma',
     'ema_breakout',
-    'vwap'
+    'vwap',
+    'ichimoku_cloud'
 ]
