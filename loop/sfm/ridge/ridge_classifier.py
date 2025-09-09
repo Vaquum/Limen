@@ -1,9 +1,8 @@
-import math
-import warnings
+'Long-Only Regime Binary Classifier Using Ridge Regression'
 
 import numpy as np
-import pandas as pd
 import polars as pl
+
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import RidgeClassifier
 
@@ -30,45 +29,43 @@ from loop.metrics.binary_metrics import binary_metrics
 from loop.transforms.linear_transform import LinearTransform
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 
-warnings.filterwarnings('ignore')
-
 
 def params() -> dict:
 
     return {
-        'shift': (-1,),
-        'q': (0.32, 0.35, 0.37),
-        'roc_period': (4,),
-        'atr_sma_period': (14, 28, 42),
-        'ppo_fast': (8, 12, 20),
-        'ppo_slow': (26, 32, 40),
-        'ppo_signal': (9, 12),
-        'rsi_period': (8, 14,),
-        'volatility_window': (12, 24),
-        'high_distance_period': (20, 40),
-        'low_distance_period': (20, 40),
-        'price_range_position_period': (50, 100),
-        'tenkan_period': (9, 14),
-        'kijun_period': (26, 30,),
-        'senkou_b_period': (52, 60),
-        'displacement': (26, 30),
-        'trend_fast_period': (10, 20),
-        'trend_slow_period': (50, 100),
-        'lookback': (50, 100),
-        'alpha': (2.0, 5.0, 8.0),
-        'max_iter': (400,),
-        'tol': (0.0001,),
-        'fit_intercept': (True,),
-        'class_weight': ('balanced',),
-        'solver': ('auto',),
-        'pred_threshold': (0.55,),
-        'random_state': (42,),
-        'n_jobs': (8,),
+        'shift': [-1],
+        'q': [0.32, 0.35, 0.37],
+        'roc_period': [4],
+        'atr_sma_period': [14, 28, 42],
+        'ppo_fast': [8, 12, 20],
+        'ppo_slow': [26, 32, 40],
+        'ppo_signal': [9, 12],
+        'rsi_period': [8, 14],
+        'volatility_window': [12, 24],
+        'high_distance_period': [20, 40],
+        'low_distance_period': [20, 40],
+        'price_range_position_period': [50, 100],
+        'tenkan_period': [9, 14],
+        'kijun_period': [26, 30],
+        'senkou_b_period': [52, 60],
+        'displacement': [26, 30],
+        'trend_fast_period': [10, 20],
+        'trend_slow_period': [50, 100],
+        'lookback': [50, 100],
+        'alpha': [2.0, 5.0, 8.0],
+        'max_iter': [400],
+        'tol': [0.0001],
+        'fit_intercept': [True],
+        'class_weight': ['balanced'],
+        'solver': ['auto'],
+        'pred_threshold': [0.55],
+        'random_state': [42],
+        'n_jobs': [8],
     }
 
 
 def prep(data: pl.DataFrame, round_params: dict) -> dict:
-    
+
     all_datetimes = data['datetime'].to_list()
 
     roc_period = round_params['roc_period']
@@ -100,7 +97,7 @@ def prep(data: pl.DataFrame, round_params: dict) -> dict:
     }
 
     required_cols = [
-        'datetime', 'hour', 'minute', 'more_trade',
+        'datetime', 'more_trade',
         'std', 'maker_ratio',
         'ppo', 'ppo_signal', 'wilder_rsi', 'close_position',
         'distance_from_high', 'distance_from_low',
@@ -112,13 +109,9 @@ def prep(data: pl.DataFrame, round_params: dict) -> dict:
     data_processed = (
         data.lazy()
         .with_columns([
-            pl.col('datetime').dt.hour().alias('hour'),
-            pl.col('datetime').dt.minute().alias('minute'),
-        ])
-        .with_columns([
             (
                 (pl.col('datetime').dt.weekday() < 5) &
-                pl.col('hour').is_between(13, 20)
+                pl.col('datetime').dt.hour().is_between(13, 20)
             ).alias('more_trade')
         ])
         .pipe(roc, period=roc_period)
@@ -172,7 +165,7 @@ def prep(data: pl.DataFrame, round_params: dict) -> dict:
         processed_splits, cols, all_datetimes
     )
 
-    scaler = LinearTransform(x_train=data_dict['x_train'])
+    scaler = LinearTransform(x_train=data_dict['x_train'], default='standard')
 
     for key in ('x_train', 'x_val', 'x_test'):
         data_dict[key] = scaler.transform(data_dict[key])
@@ -182,7 +175,7 @@ def prep(data: pl.DataFrame, round_params: dict) -> dict:
 
 
 def model(data: dict, round_params: dict) -> dict:
-    
+
     alpha = round_params['alpha']
     tol = round_params['tol']
     class_weight = round_params['class_weight']

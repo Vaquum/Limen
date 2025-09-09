@@ -44,7 +44,7 @@ DEFAULT_SCALING_RULES = {
     r'^chikou(_\d+)?$': 'standard',
     r'^price_range_position(_\d+)?$': 'standard',
     r'^range_pct$': 'standard',
-    r'.*': 'standard'
+    r'.*': 'none'
 }
 
 
@@ -72,7 +72,7 @@ def build_rules(
     return rules
 
 
-def get_scaling_rule(col: str, rules: dict[str, str], default: str = 'standard') -> str:
+def get_scaling_rule(col: str, rules: dict[str, str], default: str = 'none') -> str:
 
     """
     Find the matching scaling rule for a column name.
@@ -185,5 +185,5 @@ def inverse_transform(df: pl.DataFrame, scaler: LinearTransform) -> pl.DataFrame
         
         elif rule == 'none':
             exprs.append(pl.col(col).alias(col))
-            
+
     return df.with_columns(exprs)
