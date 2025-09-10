@@ -6,25 +6,8 @@ import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import RidgeClassifier
 
-from loop.features import (
-    atr_percent_sma,
-    ichimoku_cloud,
-    close_position,
-    distance_from_high,
-    distance_from_low,
-    gap_high,
-    price_range_position,
-    range_pct,
-    quantile_flag,
-    trend_strength,
-    volume_regime,
-)
-from loop.indicators import (
-    roc,
-    ppo,
-    rolling_volatility,
-    wilder_rsi,
-)
+from loop.features import atr_percent_sma, ichimoku_cloud, close_position, distance_from_high, distance_from_low, gap_high, price_range_position, range_pct, quantile_flag, trend_strength, volume_regime
+from loop.indicators import roc, ppo, rolling_volatility, wilder_rsi
 from loop.metrics.binary_metrics import binary_metrics
 from loop.transforms.linear_transform import LinearTransform
 from loop.utils.splits import split_sequential, split_data_to_prep_output
