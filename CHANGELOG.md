@@ -268,3 +268,9 @@
 - Use deterministic and stable SQL fuctions in `get_klines_data()` to minimize
 data mismatch
 - Update datasets for test data
+
+# v1.17.0 on 9th of September 2025
+- Add `linear_transform.py` under `loop.transforms`
+- Add `ridge_classifier.py` under `loop.sfm.ridge`
+- Fix `loop.features.ichimoku_cloud` not added into `loop.features.__init__`
+- Add test for the above SFM
