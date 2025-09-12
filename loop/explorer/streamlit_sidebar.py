@@ -63,15 +63,28 @@ def build_sidebar(
                 'Filter by Column Value', [''] + num_cols, index=0, key='table_numeric_filter_col'
             )
             if numeric_filter_col:
-                col_min = float(df_base[numeric_filter_col].min())
-                col_max = float(df_base[numeric_filter_col].max())
-                num_range = st.slider(
-                    f'{numeric_filter_col} range',
-                    min_value=col_min,
-                    max_value=col_max,
-                    value=(col_min, col_max),
-                    key='table_num_range',
-                )
+                series = df_base[numeric_filter_col]
+                if pd.api.types.is_integer_dtype(series):
+                    col_min = int(series.min())
+                    col_max = int(series.max())
+                    num_range = st.slider(
+                        f'{numeric_filter_col} range',
+                        min_value=col_min,
+                        max_value=col_max,
+                        value=(col_min, col_max),
+                        step=1,
+                        key='table_num_range',
+                    )
+                else:
+                    col_min = float(series.min())
+                    col_max = float(series.max())
+                    num_range = st.slider(
+                        f'{numeric_filter_col} range',
+                        min_value=col_min,
+                        max_value=col_max,
+                        value=(col_min, col_max),
+                        key='table_num_range',
+                    )
             fmt_mode = st.radio('Table Type', ['Normal', 'Inline Bars'], horizontal=False, key='table_fmt_mode')
 
             # Column visibility control with select/unselect all toggle
