@@ -104,10 +104,22 @@ name_to_path = {
     'Backtest Results': '/tmp/backtest_results.parquet',
 }
 selected_path = name_to_path.get(dataset_name, parquet_path)
-try:
-    df = _load_parquet(selected_path, _mtime(selected_path))
-except Exception:
-    df = _load_parquet(parquet_path, _mtime(parquet_path))
+
+# Strict loading: try primary (and legacy alias if defined); otherwise, raise
+legacy_map = {
+    'Confusion Metrics': '/tmp/experiment_confusion_metrics.parquet',
+    'Backtest Results': '/tmp/experiment_backtest_results.parquet',
+}
+candidates = [selected_path]
+if dataset_name in legacy_map:
+    candidates.append(legacy_map[dataset_name])
+
+existing_path = next((p for p in candidates if os.path.exists(p)), None)
+if not existing_path:
+    st.error(f'Missing dataset parquet for "{dataset_name}". Tried: {candidates}')
+    raise FileNotFoundError(f'Parquet not found for {dataset_name}: {candidates}')
+
+df = _load_parquet(existing_path, _mtime(existing_path))
 
 # ----------------
 # ---- Detail view

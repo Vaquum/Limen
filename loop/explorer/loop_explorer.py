@@ -34,11 +34,18 @@ def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -
     
     for key in datasets.keys():
         
+        # Align filenames with streamlit_app.py expectations
+        fname = key
+        if key == 'experiment_confusion_metrics':
+            fname = 'confusion_metrics'
+        elif key == 'experiment_backtest_results':
+            fname = 'backtest_results'
+
         try:
-            datasets[key].to_pandas().to_parquet(f'/tmp/{key}.parquet')
+            datasets[key].to_pandas().to_parquet(f'/tmp/{fname}.parquet')
         
         except AttributeError:
-            datasets[key].to_parquet(f'/tmp/{key}.parquet')
+            datasets[key].to_parquet(f'/tmp/{fname}.parquet')
 
     script_path='loop/explorer/streamlit_app.py'
     script_path = str(Path(script_path).resolve())
