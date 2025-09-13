@@ -293,5 +293,5 @@ data mismatch
 - Add new module `snippets` as a home for various dev workflow snippets specific to Loop
 - Add `snippets.get_uel_run_object`
 - Add `snippets.test_explorer_locally`
-- Update project rules files
+- Update project CLAUDE.md and Project.md
 

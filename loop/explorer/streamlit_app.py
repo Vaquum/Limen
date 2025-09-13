@@ -1,8 +1,7 @@
-import os, sys, argparse
+import os 
+import argparse
 import pandas as pd
-import numpy as np
 import streamlit as st
-import plotly.express as px
 
 from loop.explorer.streamlit_styles import streamlit_styles
 import loop.explorer.streamlit_charts as charts

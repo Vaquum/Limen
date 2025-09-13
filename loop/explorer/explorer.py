@@ -1,7 +1,6 @@
 from loop.explorer.loop_explorer import loop_explorer
 
 from typing import TYPE_CHECKING
-import random
 
 if TYPE_CHECKING:
     from loop.universal_experiment_loop import UniversalExperimentLoop

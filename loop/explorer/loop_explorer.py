@@ -1,5 +1,9 @@
 import random
-import os, sys, subprocess, time
+import os
+import sys
+import subprocess
+import time
+
 from IPython.display import Javascript, display
 from pathlib import Path
 from typing import TYPE_CHECKING
