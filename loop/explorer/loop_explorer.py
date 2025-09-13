@@ -51,9 +51,9 @@ def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -
         except AttributeError:
             datasets[key].to_parquet(f'/tmp/{fname}.parquet')
 
-    script_path='loop/explorer/streamlit_app.py'
-    script_path = str(Path(script_path).resolve())
-    workdir = str(Path(script_path).parent.resolve())
+    # Resolve script path relative to this file to avoid CWD dependence
+    script_path = str((Path(__file__).parent / 'streamlit_app.py').resolve())
+    workdir = str(Path(__file__).parent.resolve())
 
     cmd = [
         sys.executable, '-m', 'streamlit', 'run', script_path,
