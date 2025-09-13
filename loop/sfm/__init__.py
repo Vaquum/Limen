@@ -8,6 +8,7 @@ import loop.sfm.reference.logreg as logreg_reference
 import loop.sfm.logreg as logreg
 import loop.sfm.reference as reference
 import loop.sfm.rules_based as rules_based
+import loop.sfm.ridge as ridge
 
 __all__ = [
     'decomposition',
@@ -19,5 +20,6 @@ __all__ = [
     'logreg_reference', 
     'logreg',
     'reference',
-    'rules_based'
+    'rules_based',
+    'ridge'
 ]

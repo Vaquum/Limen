@@ -1,0 +1,22 @@
+name: Ruff Linting and Formatting
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Run ruff linting
+      - uses: astral-sh/ruff-action@v3
+        # This runs 'ruff check' by default
+
+      # Run ruff formatting check
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check --diff"
