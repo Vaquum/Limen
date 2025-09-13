@@ -50,3 +50,6 @@ tasks/
 x_spec.txt
 xscript.py
 Project.md
+
+mcp/
+.cursor/
