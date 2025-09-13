@@ -1,9 +1,10 @@
 import polars as pl
+from typing import Literal
 
 
 def price_vs_band_regime(df: pl.DataFrame,
                          period: int = 24,
-                         band: str = 'std',
+                         band: Literal['std', 'dev_std'] = 'std',
                          k: float = 0.75) -> pl.DataFrame:
 
     '''
@@ -12,7 +13,7 @@ def price_vs_band_regime(df: pl.DataFrame,
     Args:
         df (pl.DataFrame): Klines dataset with 'close' column
         period (int): Rolling period for center and band width
-        band (str): Band width type: 'std' or 'dev_std'
+        band (Literal['std', 'dev_std']): Band width type to use
         k (float): Band multiplier applied to the width
 
     Returns:

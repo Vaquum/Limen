@@ -14,7 +14,7 @@ def sma_deviation_std(data: pl.DataFrame,
         window (int): Rolling window for std of (close - SMA(period))
 
     Returns:
-        pl.DataFrame: The input data with a new column 'sma{period}_dev_std'
+        pl.DataFrame: The input data with a new column named using the pattern 'sma{period}_dev_std'
     '''
 
     sma_col = f'sma_{period}'

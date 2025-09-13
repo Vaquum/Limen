@@ -5,7 +5,6 @@ def zscore_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.Data
 
     '''
     Compute standard Z-score scaling for numeric columns.
-    Rows remain unchanged; values are centered and scaled by per-column mean/std.
 
     Args:
         df (pl.DataFrame): Klines dataset with numeric columns to scale

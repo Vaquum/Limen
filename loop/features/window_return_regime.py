@@ -1,5 +1,6 @@
 import polars as pl
 from loop.indicators.window_return import window_return
+from typing import Annotated
 
 
 def window_return_regime(df: pl.DataFrame,

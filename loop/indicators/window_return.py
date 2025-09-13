@@ -12,7 +12,7 @@ def window_return(data: pl.DataFrame,
         period (int): Window length for the return
 
     Returns:
-        pl.DataFrame: The input data with a new column 'ret_{period}'
+        pl.DataFrame: The input data with a new column named using the pattern 'ret_{period}'
     '''
 
     col = f'ret_{period}'

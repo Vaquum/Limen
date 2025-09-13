@@ -1,4 +1,5 @@
 import polars as pl
+from typing import Annotated
 
 
 def ma_slope_regime(df: pl.DataFrame,
