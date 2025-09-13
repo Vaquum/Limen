@@ -102,10 +102,36 @@ def function_name(data: pl.DataFrame, param: int) -> pl.DataFrame:
 - Definition no longer than a single sentence
 - No full stop at the end
 
-### Spacing
-- One empty line above docstring opening `'''`
-- One empty line below docstring closing `'''`
-- No empty lines within docstring content
+### Spacing (Authoritative Rules)
+- There is exactly one empty line between the function declaration and the opening `'''`
+- Inside the docstring:
+  - One single-line title comes first
+  - Then exactly one empty line
+  - Then the `Args:` section (if present)
+  - Then exactly one empty line
+  - Then the `Returns:` section (if present)
+  - There are no additional empty lines within sections themselves
+- There is exactly one empty line after the closing `'''` before the code body begins
+
+Decision flow for spacing:
+
+1) Is there a docstring?
+   - Yes → Ensure 1 blank line before opening `'''`
+   - No  → Add a docstring
+
+2) Inside the docstring, after the title line:
+   - Always add 1 blank line
+
+3) Next section present?
+   - Args present → Write `Args:` block (no internal blank lines), then add 1 blank line
+   - Returns only → Skip directly to `Returns:`
+
+4) Returns present?
+   - Yes → Write `Returns:` block (no internal blank lines)
+   - No  → End docstring
+
+5) After the closing `'''`:
+   - Always add 1 blank line before code
 
 ### Sections Order
 1. Main description (single line)

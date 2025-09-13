@@ -280,12 +280,12 @@ Compute regime by comparing 'close' to center ± k × band width over a rolling 
 
 #### Args
 
-| Parameter | Type           | Description                                       |
-|----------|----------------|---------------------------------------------------|
-| `data`   | `pl.DataFrame` | Klines dataset with 'close' column                |
-| `period` | `int`          | Rolling period for center and band width          |
-| `band`   | `str`          | Band width type: 'std' or 'dev_std'               |
-| `k`      | `float`        | Band multiplier applied to the width              |
+| Parameter | Type                          | Description                            |
+|----------|--------------------------------|----------------------------------------|
+| `data`   | `pl.DataFrame`                 | Klines dataset with 'close' column     |
+| `period` | `int`                          | Rolling period for center and band width |
+| `band`   | `Literal['std', 'dev_std']`    | Band width type to use                  |
+| `k`      | `float`                        | Band multiplier applied to the width    |
 
 #### Returns
 
