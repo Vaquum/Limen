@@ -22,14 +22,16 @@ def render_details_view(
     '''
     
     params = st.query_params
-    if "row" not in params:
+    if 'row' not in params:
         return
 
     try:
-        rid = int(params["row"][0])
+        raw = params['row']
+        sval = raw[0] if isinstance(raw, list) else raw
+        rid = int(str(sval))
         row = df.iloc[rid]
     except Exception:
-        st.error("Invalid row id.")
+        st.error('Invalid row id.')
         st.stop()
 
     st.markdown(f"<div class='lux-title'>Row {rid} details</div>", unsafe_allow_html=True)
