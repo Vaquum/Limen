@@ -82,6 +82,37 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# --- Minimal JS: open detail links in same tab
+st.markdown(
+    '''
+    <script>
+    (function() {
+      function isDetailLink(el) {
+        if (!el) return null;
+        var a = el.closest('a');
+        if (!a) return null;
+        var href = a.getAttribute('href');
+        if (!href) return null;
+        return (href.startsWith('?row=') || href.indexOf('?row=') !== -1) ? a : null;
+      }
+      document.addEventListener('click', function(e) {
+        var a = isDetailLink(e.target);
+        if (!a) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var href = a.getAttribute('href');
+        if (href.charAt(0) === '?') {
+          window.location.search = href;
+        } else {
+          window.location.href = href;
+        }
+      }, true);
+    })();
+    </script>
+    ''',
+    unsafe_allow_html=True,
+)
+
 # --------------
 # ---- Load data
 # --------------
@@ -218,11 +249,30 @@ df_filt, df_display = prepare_table_data(
     num_range=num_range,
 )
 
-if show_table and selected_columns:
-    # Respect user selection fully. If empty, do not render the table.
+if show_table:
     keep = [c for c in selected_columns if c in df_display.columns]
+    # Always pin 'rid' and 'view' to the front if present
+    pinned = [c for c in ['rid', 'view'] if c in df_display.columns]
     if keep:
-        render_table(df_display[keep], fmt_mode, column_order=keep)
+        keep_final = pinned + [c for c in keep if c not in pinned]
+    else:
+        # Fallback to all columns when no selection
+        rest = [c for c in df_display.columns if c not in pinned]
+        keep_final = pinned + rest
+    edited = render_table(df_display[keep_final], fmt_mode, column_order=keep_final)
+    if edited is not None and 'view' in edited.columns:
+        # Navigate to first row whose view==True
+        try:
+            idx = edited.index[edited['view'] == True]
+            if len(idx) > 0:
+                rid_val = int(edited.loc[idx[0], 'rid'])
+                try:
+                    st.query_params['row'] = str(rid_val)
+                except Exception:
+                    st.experimental_set_query_params(row=str(rid_val))
+                st.rerun()
+        except Exception:
+            pass
 
 # -----------
 # ---- Charts

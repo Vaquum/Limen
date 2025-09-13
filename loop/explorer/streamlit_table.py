@@ -13,7 +13,7 @@ def prepare_table_data(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     
     '''
-    Compute filtered table data and add a drill-down link column.
+    Compute filtered table data and add a drill-down action column.
     
     Args:
         df_base (pd.DataFrame): Klines dataset with 'rid' column for drill-down
@@ -30,9 +30,9 @@ def prepare_table_data(
         lo, hi = num_range
         df_filt = df_filt[(df_filt[numeric_filter_col] >= lo) & (df_filt[numeric_filter_col] <= hi)]
 
-    # Add drill-down link
+    # Add drill-down action (checkbox)
     df_view = df_filt.copy()
-    df_view.insert(1, 'view', [f"/?row={i}" for i in df_view["rid"]])
+    df_view.insert(1, 'view', [False] * len(df_view))
 
     # Pretty-print datetime to second resolution for display only
     if 'datetime' in df_view.columns:
@@ -51,7 +51,7 @@ def render_table(
     df_display: pd.DataFrame,
     fmt_mode: str,
     column_order: list[str] | None = None,
-) -> None:
+) -> pd.DataFrame | None:
     
     '''
     Render the table in either inline bar or normal mode.
@@ -61,16 +61,17 @@ def render_table(
         fmt_mode (str): Display mode selector ('Inline Bars' or 'Normal')
     
     Returns:
-        None: None
+        pd.DataFrame | None: Edited DataFrame when using data_editor
     '''
     
     numeric_visible = df_display.select_dtypes('number').columns.tolist()
 
+    # Build column configs
+    colcfg = {
+        'view': st.column_config.CheckboxColumn('', help='Open row details'),
+        'rid': st.column_config.NumberColumn('rid', help='Row id', width='small'),
+    }
     if fmt_mode == 'Inline Bars':
-        colcfg = {
-            'view': st.column_config.LinkColumn('', help='Open row details', display_text='view'),
-            'rid': st.column_config.NumberColumn('rid', help='Row id', width='small'),
-        }
         for c in numeric_visible:
             cmin = float(df_display[c].min())
             cmax = float(df_display[c].max())
@@ -84,21 +85,17 @@ def render_table(
                 max_value=cmax,
                 format='%.4g',
             )
-        st.dataframe(
-            df_display,
-            use_container_width=True,
-            hide_index=True,
-            column_config=colcfg,
-            column_order=column_order or list(df_display.columns),
-        )
-    else:
-        st.dataframe(
-            df_display,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                'view': st.column_config.LinkColumn('', help='Open row details', display_text='view'),
-                'rid': st.column_config.NumberColumn('rid', help='Row id', width='small'),
-            },
-            column_order=column_order or list(df_display.columns),
-        )
+
+    # Only 'view' is editable
+    disabled_cols = [c for c in df_display.columns if c != 'view']
+
+    edited = st.data_editor(
+        df_display,
+        use_container_width=True,
+        hide_index=True,
+        column_config=colcfg,
+        column_order=column_order or list(df_display.columns),
+        disabled=disabled_cols,
+        num_rows='fixed',
+    )
+    return edited

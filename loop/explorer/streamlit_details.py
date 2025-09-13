@@ -33,7 +33,28 @@ def render_details_view(
         st.stop()
 
     st.markdown(f"<div class='lux-title'>Row {rid} details</div>", unsafe_allow_html=True)
-    st.markdown("<div class='lux-back'><a href='/'>← Back to table</a></div>", unsafe_allow_html=True)
+    # Same-tab back: clear the 'row' query param and rerun
+    if st.button('← Back to table'):
+        # Build params without 'row'
+        try:
+            qp = dict(st.query_params)
+        except Exception:
+            qp = {}
+        qp.pop('row', None)
+        # Prefer overwriting the full query param set to ensure removal
+        try:
+            # New API path: clear then repopulate
+            try:
+                st.query_params.clear()
+                for k, v in qp.items():
+                    st.query_params[k] = v
+            except Exception:
+                st.experimental_set_query_params(**qp)
+        except Exception:
+            pass
+        # Ensure Show Table remains selected when returning
+        st.session_state['table_show'] = True
+        st.rerun()
     st.markdown("<div class='lux-subtle' style='margin:6px 0 14px;'>All values formatted for readability</div>", unsafe_allow_html=True)
 
     cols = st.columns(3)
