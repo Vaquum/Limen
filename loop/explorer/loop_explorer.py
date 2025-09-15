@@ -46,10 +46,10 @@ def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -
             fname = 'backtest_results'
 
         try:
-            datasets[key].to_pandas().to_parquet(f'/tmp/{fname}.parquet')
+            datasets[key].to_pandas().to_parquet(f"/tmp/{fname}.parquet")
         
         except AttributeError:
-            datasets[key].to_parquet(f'/tmp/{fname}.parquet')
+            datasets[key].to_parquet(f"/tmp/{fname}.parquet")
 
     # Resolve script path relative to this file to avoid CWD dependence
     script_path = str((Path(__file__).parent / 'streamlit_app.py').resolve())
