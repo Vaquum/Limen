@@ -257,6 +257,90 @@ Compute price position within rolling high-low range.
 
 `pl.DataFrame`: The input data with a new column 'price_range_position'
 
+### `ma_slope_regime`
+
+Compute regime using the slope of SMA(close, period) with optional normalization.
+
+#### Args
+
+| Parameter          | Type           | Description                                           |
+|--------------------|----------------|-------------------------------------------------------|
+| `data`             | `pl.DataFrame` | Klines dataset with 'close' column                    |
+| `period`           | `int`          | SMA period for the slope                              |
+| `threshold`        | `float`        | Slope threshold; applied after normalization when enabled |
+| `normalize_by_std` | `bool`         | Whether to divide slope by rolling std(period)        |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'regime_ma_slope'
+
+### `price_vs_band_regime`
+
+Compute regime by comparing 'close' to center ± k × band width over a rolling window.
+
+#### Args
+
+| Parameter | Type                          | Description                            |
+|----------|--------------------------------|----------------------------------------|
+| `data`   | `pl.DataFrame`                 | Klines dataset with 'close' column     |
+| `period` | `int`                          | Rolling period for center and band width |
+| `band`   | `Literal['std', 'dev_std']`    | Band width type to use                  |
+| `k`      | `float`                        | Band multiplier applied to the width    |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'regime_price_band'
+
+### `breakout_percentile_regime`
+
+Compute regime classification by percentile position of 'close' within rolling [low, high].
+
+#### Args
+
+| Parameter | Type           | Description                                  |
+|----------|----------------|----------------------------------------------|
+| `data`   | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
+| `period` | `int`          | Rolling window for high/low range            |
+| `p_hi`   | `float`        | Upper percentile threshold in [0, 1]         |
+| `p_lo`   | `float`        | Lower percentile threshold in [0, 1]         |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'regime_breakout_pct'
+
+### `window_return_regime`
+
+Compute regime using windowed return close/close.shift(period) - 1.
+
+#### Args
+
+| Parameter | Type           | Description                                 |
+|----------|----------------|---------------------------------------------|
+| `data`   | `pl.DataFrame` | Klines dataset with 'close' column          |
+| `period` | `int`          | Window length for return calculation        |
+| `r_hi`   | `float`        | Upper threshold for Up regime               |
+| `r_lo`   | `float`        | Lower threshold for Down regime             |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'regime_window_return'
+
+### `hh_hl_structure_regime`
+
+Compute regime by higher-high / higher-low market structure within a rolling window.
+
+#### Args
+
+| Parameter        | Type           | Description                                    |
+|------------------|----------------|------------------------------------------------|
+| `data`           | `pl.DataFrame` | Klines dataset with 'high', 'low' columns      |
+| `window`         | `int`          | Rolling window size for structure count        |
+| `score_threshold`| `int`          | Absolute score threshold for Up/Down classification |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'regime_hh_hl'
+
 ### `quantile_flag`
 
 Mark rows where `col` exceeds the (1 - q) quantile.

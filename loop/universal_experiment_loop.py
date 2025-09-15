@@ -5,6 +5,7 @@ import sqlite3
 
 from loop.utils.param_space import ParamSpace
 from loop.log.log import Log
+from loop.explorer.loop_explorer import loop_explorer
 
 
 class UniversalExperimentLoop:
@@ -185,4 +186,8 @@ class UniversalExperimentLoop:
         self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')
         self.experiment_backtest_results = self._log.experiment_backtest_results()
         self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
-        
+
+        def _explorer():
+            loop_explorer(self)
+
+        self.explorer = _explorer

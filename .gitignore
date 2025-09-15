@@ -1,7 +1,7 @@
+dev_snippets.py
 .env
-venv
+.venv
 loop.egg-info
-.cursor
 __pycache__
 **/__pycache__/
 .DS_Store
@@ -46,4 +46,10 @@ node_modules/
 
 # Task files
 tasks.json
-tasks/ 
+tasks/
+x_spec.txt
+xscript.py
+Project.md
+
+mcp/
+.cursor/
