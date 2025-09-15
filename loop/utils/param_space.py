@@ -14,11 +14,32 @@ class ParamSpace:
     
     def __init__(self, params: dict, n_permutations: int):
 
-        keys = list(params)
-        combos = [dict(zip(keys, c)) for c in product(*(params[k] for k in keys))]
-        combos = random.sample(combos, k=n_permutations)
+        self.params = params
+        self.keys = list(params.keys())
+        self.param_sizes = [len(params[k]) for k in self.keys]
+        self.total_space = 1
+        for size in self.param_sizes:
+            self.total_space *= size
+
+        # Generate n_permutations unique random indices
+        if n_permutations >= self.total_space:
+            indices = list(range(self.total_space))
+        else:
+            indices = random.sample(range(self.total_space), n_permutations)
+
+        # Convert indices to parameter combinations
+        combos = [self._index_to_combo(idx) for idx in indices]
         self.df_params = pl.DataFrame(combos)
         self.n_permutations = self.df_params.height
+
+    def _index_to_combo(self, index):
+        combo = {}
+        remaining_index = index
+        for i, key in enumerate(self.keys):
+            size = self.param_sizes[i]
+            combo[key] = self.params[key][remaining_index % size]
+            remaining_index //= size
+        return combo
 
     def generate(self, random_search: bool = True) -> dict:
         
