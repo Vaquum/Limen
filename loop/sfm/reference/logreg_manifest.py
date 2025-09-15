@@ -7,7 +7,10 @@ from loop.features import quantile_flag, kline_imbalance, vwap
 from loop.indicators import wilder_rsi, atr, ppo, roc
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.transforms.logreg_transform import LogRegTransform
-from loop.manifest import Manifest, process_manifest
+from loop.manifest import Manifest, process_manifest, process_bars
+
+def adaptive_bar_formation(data, **kwargs):
+    return data
 
 def manifest():
     return Manifest(
@@ -28,6 +31,13 @@ def manifest():
             'maker_ratio',
             'no_of_trades'
         ],
+
+        bar_formation=(adaptive_bar_formation, {
+            'bar_type': lambda p: p['bar_type'],
+            'time_freq': lambda p: p['time_freq'],
+            'volume_threshold': lambda p: p['volume_threshold'],
+            'liquidity_threshold': lambda p: p['liquidity_threshold']
+        }),
 
         indicators=[
             (roc, {'period': lambda p: p['roc_period']}),
@@ -54,6 +64,11 @@ def params():
         'q': [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53],
         'roc_period': [1, 4, 12, 24, 144],
         'penalty': ['l2'],
+        # bar formation parameters
+        'bar_type': ['base', 'time', 'volume', 'liquidity'],
+        'time_freq': ['5m', '15m', '30m', '1h'],
+        'volume_threshold': [500000, 1000000, 2000000],
+        'liquidity_threshold': [10000000, 50000000],
         # classifier parameters
         'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
         'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
@@ -65,17 +80,14 @@ def params():
 
 def prep(data, round_params, manifest):
 
-    all_datetimes = data['datetime'].to_list()
+    all_datetimes, bar_data = process_bars(manifest, data, round_params)
 
-    # Column names (resolved with round_params)
     roc_col = f"roc_{round_params['roc_period']}"
 
-    split_data = split_sequential(data, manifest.split_config)
+    split_data = split_sequential(bar_data, manifest.split_config)
 
     for i in range(len(split_data)):
         split_data[i] = process_manifest(manifest, split_data[i], round_params)
-
-    # Step 3: Apply target transformations with fit/transform pattern
 
     # Fit quantile_flag on training data only
     split_data[0], train_cutoff = quantile_flag(

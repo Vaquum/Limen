@@ -16,6 +16,7 @@ class Manifest:
     Args:
         name (str): Unique identifier for the experiment manifest
         description (str): Human-readable description of the experiment purpose
+        bar_formation (FeatureEntry): Bar formation function with parameters
         indicators (List[FeatureEntry]): List of indicator functions with their parameters
         features (List[FeatureEntry]): List of feature functions with their parameters
         transformations (List[FeatureEntry]): List of transformation functions with parameters
@@ -29,6 +30,7 @@ class Manifest:
 
     name: str
     description: str
+    bar_formation: FeatureEntry = None
     indicators: List[FeatureEntry] = field(default_factory=list)
     features: List[FeatureEntry] = field(default_factory=list)
     transformations: List[FeatureEntry] = field(default_factory=list)
@@ -57,6 +59,35 @@ def resolve_params(params: Dict[str, ParamValue], round_params: Dict[str, Any]) 
         else:
             resolved[key] = value
     return resolved
+
+
+def process_bars(
+    manifest: Manifest,
+    data: pl.DataFrame,
+    round_params: Dict[str, Any]) -> Tuple[List, pl.DataFrame]:
+
+    '''
+    Apply bar formation to data and return post-bar datetimes.
+
+    Args:
+        manifest (Manifest): Experiment manifest containing bar formation config
+        data (pl.DataFrame): Input raw dataset
+        round_params (Dict[str, Any]): Parameter values for current round
+
+    Returns:
+        Tuple[List, pl.DataFrame]: Post-bar datetimes and processed data
+    '''
+
+    if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
+        func, base_params = manifest.bar_formation
+        resolved = resolve_params(base_params, round_params)
+        lazy_data = data.lazy().pipe(func, **resolved)
+        bar_data = lazy_data.collect()
+        all_datetimes = bar_data['datetime'].to_list()
+        return all_datetimes, bar_data
+    else:
+        all_datetimes = data['datetime'].to_list()
+        return all_datetimes, data
 
 
 def process_manifest(
