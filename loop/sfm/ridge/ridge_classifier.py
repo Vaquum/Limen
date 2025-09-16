@@ -6,7 +6,7 @@ import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import RidgeClassifier
 
-from loop.features import atr_percent_sma, ichimoku_cloud, close_position, distance_from_high, distance_from_low, gap_high, price_range_position, range_pct, quantile_flag, trend_strength, volume_regime
+from loop.features import atr_percent_sma, ichimoku_cloud, close_position, distance_from_high, distance_from_low, gap_high, price_range_position, range_pct, quantile_flag, compute_quantile_cutoff, trend_strength, volume_regime
 from loop.indicators import roc, ppo, rolling_volatility, wilder_rsi
 from loop.metrics.binary_metrics import binary_metrics
 from loop.transforms.linear_transform import LinearTransform
@@ -119,18 +119,13 @@ def prep(data: pl.DataFrame, round_params: dict) -> dict:
 
     split_data = split_sequential(data_processed, (6, 2, 2))
 
-    split_data[0], train_cutoff = quantile_flag(
-        data=split_data[0], col='roc', q=q, return_cutoff=True
-    )
+    # Compute cutoff from training data
+    train_cutoff = compute_quantile_cutoff(split_data[0], col='roc', q=q)
 
     processed_splits = []
     for i, split_df in enumerate(split_data):
-        if i == 0:
-            processed_split = split_data[0]
-        else:
-            processed_split = quantile_flag(
-                data=split_df, col='roc', q=q, cutoff=train_cutoff
-            )
+        # Apply quantile flag to all splits using training cutoff
+        processed_split = quantile_flag(split_df, col='roc', cutoff=train_cutoff)
         processed_split = (
             processed_split
             .with_columns([
