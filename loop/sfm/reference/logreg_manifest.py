@@ -3,7 +3,7 @@ import polars as pl
 from sklearn.linear_model import LogisticRegression
 
 from loop.metrics.binary_metrics import binary_metrics
-from loop.features import quantile_flag, kline_imbalance, vwap
+from loop.features import quantile_flag, compute_quantile_cutoff, kline_imbalance, vwap
 from loop.indicators import wilder_rsi, atr, ppo, roc
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.transforms.logreg_transform import LogRegTransform
@@ -12,12 +12,10 @@ from loop.manifest import Manifest, process_manifest, process_bars
 def adaptive_bar_formation(data, **kwargs):
     return data
 
+
 def manifest():
     return Manifest(
-        name='logreg_manifest_split_first_v1',
-        description='Logistic regression with Universal Split-First architecture',
-
-        required_columns=[
+        required_bar_columns=[
             'datetime',
             'high',
             'low',
@@ -39,21 +37,30 @@ def manifest():
             'liquidity_threshold': lambda p: p['liquidity_threshold']
         }),
 
-        indicators=[
+        ordered_transformations=[
             (roc, {'period': lambda p: p['roc_period']}),
             (atr, {'period': 14}),
             (ppo, {}),
             (wilder_rsi, {}),
-        ],
-
-        features=[
             (vwap, {}),
             (kline_imbalance, {}),
+            ([
+                ('quantile_cutoff', compute_quantile_cutoff, {
+                 'col': lambda p: f"roc_{p['roc_period']}",
+                 'q': lambda p: p['q']
+                })
+             ],
+             quantile_flag, {
+                'col': lambda p: f"roc_{p['roc_period']}",
+                'cutoff': lambda p: p['quantile_cutoff']
+            }),
+            (lambda data, shift: data.with_columns(
+                pl.col("quantile_flag").shift(shift).alias("quantile_flag")
+            ), {'shift': lambda p: p['shift']})
         ],
 
         target_column='quantile_flag',
         split_config=(8,1,2),
-        transformations=[],
     )
 
 def params():
@@ -82,55 +89,11 @@ def prep(data, round_params, manifest):
 
     all_datetimes, bar_data = process_bars(manifest, data, round_params)
 
-    roc_col = f"roc_{round_params['roc_period']}"
-
     split_data = split_sequential(bar_data, manifest.split_config)
 
-    for i in range(len(split_data)):
-        split_data[i] = process_manifest(manifest, split_data[i], round_params)
+    split_data, _ = process_manifest(manifest, split_data, round_params)
 
-    # Fit quantile_flag on training data only
-    split_data[0], train_cutoff = quantile_flag(
-        data=split_data[0],
-        col=roc_col,
-        q=round_params['q'],
-        return_cutoff=True
-    )
-
-    # Apply the same cutoff to validation and test sets (transform only)
-    for i in range(1, len(split_data)):
-        split_data[i] = quantile_flag(
-            data=split_data[i],
-            col=roc_col,
-            q=round_params['q'],
-            cutoff=train_cutoff
-        )
-
-    # Apply target shifting to all splits
-    for i in range(len(split_data)):
-        split_data[i] = split_data[i].with_columns(
-            pl.col("quantile_flag")
-                .shift(round_params['shift'])
-                .alias("quantile_flag")).drop_nulls("quantile_flag")
-
-    # Auto-discover columns from processed data
-    available_cols = list(split_data[0].columns)
-
-    # Assert required columns are present
-    for required_col in manifest.required_columns:
-        assert required_col in available_cols, f"Required column '{required_col}' not found in data"
-
-    # Build final column order: auto-discovered + target_column last
-    cols = []
-
-    # Add all available columns except target
-    for col in available_cols:
-        if col != manifest.target_column:
-            cols.append(col)
-
-    # Add target column last (if it exists)
-    if manifest.target_column and manifest.target_column in available_cols:
-        cols.append(manifest.target_column)
+    cols = split_data[0].columns
 
     # Create data dictionary from splits
     data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)

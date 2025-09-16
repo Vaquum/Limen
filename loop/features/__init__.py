@@ -6,7 +6,7 @@ from loop.features.lag_range import lag_range
 from loop.features.gap_high import gap_high
 from loop.features.close_position import close_position
 from loop.features.range_pct import range_pct
-from loop.features.quantile_flag import quantile_flag
+from loop.features.quantile_flag import quantile_flag, compute_quantile_cutoff
 from loop.features.price_range_position import price_range_position
 from loop.features.distance_from_high import distance_from_high
 from loop.features.distance_from_low import distance_from_low
@@ -29,6 +29,7 @@ __all__ = [
     'close_position',
     'range_pct',
     'quantile_flag',
+    'compute_quantile_cutoff',
     'price_range_position',
     'distance_from_high',
     'distance_from_low',
