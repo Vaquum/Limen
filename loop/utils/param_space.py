@@ -65,9 +65,9 @@ class ParamSpace:
 
         self.df_params = (
             self.df_params
-              .with_row_index("__idx")
-              .filter(pl.col("__idx") != row_no)
-              .drop("__idx")
+              .with_row_index('__idx')
+              .filter(pl.col('__idx') != row_no)
+              .drop('__idx')
         )
 
         return round_params

@@ -1,34 +1,33 @@
 import polars as pl
 
 from sklearn.linear_model import LogisticRegression
-
 from loop.metrics.binary_metrics import binary_metrics
-from loop.features import quantile_flag, compute_quantile_cutoff, kline_imbalance, vwap
-from loop.indicators import wilder_rsi, atr, ppo, roc
-from loop.utils.splits import split_sequential, split_data_to_prep_output
+from loop.features import (
+    quantile_flag,
+    compute_quantile_cutoff,
+    kline_imbalance,
+    vwap
+)
+from loop.indicators import (
+    wilder_rsi,
+    atr,
+    ppo,
+    roc
+)
 from loop.transforms.logreg_transform import LogRegTransform
-from loop.manifest import Manifest, process_manifest, process_bars
+from loop.manifest import (
+    Manifest,
+    make_fitted_scaler
+)
 
+# TODO: placeholder no-op bar foramtion. To be tied to actual bar formation code
 def adaptive_bar_formation(data, **kwargs):
     return data
 
-
 def manifest():
     return Manifest(
-        required_bar_columns=[
-            'datetime',
-            'high',
-            'low',
-            'open',
-            'close',
-            'mean',
-            'std',
-            'median',
-            'iqr',
-            'volume',
-            'maker_ratio',
-            'no_of_trades'
-        ],
+        split_config=(8,1,2),
+        target_column='quantile_flag',
 
         bar_formation=(adaptive_bar_formation, {
             'bar_type': lambda p: p['bar_type'],
@@ -37,30 +36,49 @@ def manifest():
             'liquidity_threshold': lambda p: p['liquidity_threshold']
         }),
 
-        ordered_transformations=[
+        required_bar_columns=[
+            'datetime',
+            'high',
+            'low',
+            'open',
+            'close',
+            'mean',
+            'volume',
+            'maker_ratio',
+            'no_of_trades',
+            'maker_volume',
+            'maker_liquidity',
+        ],
+
+        feature_transforms=[
             (roc, {'period': lambda p: p['roc_period']}),
             (atr, {'period': 14}),
             (ppo, {}),
             (wilder_rsi, {}),
             (vwap, {}),
             (kline_imbalance, {}),
+        ],
+
+        target_transforms=[
             ([
-                ('quantile_cutoff', compute_quantile_cutoff, {
+                ('_quantile_cutoff', compute_quantile_cutoff, {
                  'col': lambda p: f"roc_{p['roc_period']}",
                  'q': lambda p: p['q']
                 })
              ],
              quantile_flag, {
                 'col': lambda p: f"roc_{p['roc_period']}",
-                'cutoff': lambda p: p['quantile_cutoff']
+                'cutoff': lambda p: p['_quantile_cutoff']
             }),
-            (lambda data, shift: data.with_columns(
-                pl.col("quantile_flag").shift(shift).alias("quantile_flag")
-            ), {'shift': lambda p: p['shift']})
+            ([], lambda data, shift, target_column: data.with_columns(
+                pl.col(target_column).shift(shift).alias(target_column)
+            ), {
+                'shift': lambda p: p['shift'],
+                'target_column': lambda p: p['target_column']
+            })
         ],
 
-        target_column='quantile_flag',
-        split_config=(8,1,2),
+        scaler=make_fitted_scaler('_scaler', LogRegTransform),
     )
 
 def params():
@@ -87,24 +105,9 @@ def params():
 
 def prep(data, round_params, manifest):
 
-    all_datetimes, bar_data = process_bars(manifest, data, round_params)
+    data_dict = manifest.prepare_data(data, round_params)
 
-    split_data = split_sequential(bar_data, manifest.split_config)
-
-    split_data, _ = process_manifest(manifest, split_data, round_params)
-
-    cols = split_data[0].columns
-
-    # Create data dictionary from splits
-    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
-    # Scale features using training data statistics (fit/transform pattern)
-    scaler = LogRegTransform(data_dict['x_train'])
-
-    for col in data_dict.keys():
-        if col.startswith('x_'):
-            data_dict[col] = scaler.transform(data_dict[col])
-
-    data_dict['_scaler'] = scaler
+    # SFM-specific modifications can go here if needed
 
     return data_dict
 
