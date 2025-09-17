@@ -57,11 +57,8 @@ CONFIG = {
     'max_hold_hours': 48,
     'initial_capital': 100000.0,
     'default_atr_pct': 0.015,
-    'batch_size': 100,
-    'max_hours_since_line': 48,
-    'momentum_lookback_hours': 6,
     'density_lookback_hours': 48,
-    'height_lookback_hours': 24,
+    'big_move_lookback_hours': 168,
     'early_stopping_rounds': 50,
     'log_evaluation_period': 0,
     'objective': 'binary',
@@ -92,7 +89,6 @@ def params() -> dict:
         'trailing_activation': [0.01, 0.02, 0.03],
         'trailing_distance': [0.3, 0.5, 0.7],
         'default_atr_pct': [0.010, 0.015, 0.020],
-        'max_hours_since_line': [24, 48, 72],
         'num_leaves': [31, 63, 127],  
         'learning_rate': [0.05, 0.1],  
         'feature_fraction': [0.9],  
@@ -136,9 +132,20 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     
     df = compute_price_features(df)
     
-    df = compute_line_features(df, long_lines_filtered, short_lines_filtered)
+    df = compute_line_features(
+        df,
+        long_lines_filtered,
+        short_lines_filtered,
+        big_move_lookback_hours=round_params.get('big_move_lookback_hours', CONFIG['big_move_lookback_hours'])
+    )
     
-    df = compute_quantile_line_features(df, long_lines_filtered, short_lines_filtered, quantile_threshold)
+    df = compute_quantile_line_features(
+        df,
+        long_lines_filtered,
+        short_lines_filtered,
+        quantile_threshold,
+        density_lookback_hours=round_params.get('density_lookback_hours', CONFIG['density_lookback_hours'])
+    )
     
     df = calculate_atr(df, period=CONFIG['atr_period'])
     
@@ -305,8 +312,7 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
             'atr_stop_multiplier',
             'trailing_activation',
             'trailing_distance',
-            'default_atr_pct',
-            'max_hours_since_line'
+            'default_atr_pct'
         ]:
             if k in round_params:
                 exit_config[k] = round_params[k]
@@ -319,7 +325,6 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
             'trading_return_net_pct': float(trading_results['total_return_net_pct']),
             'trading_win_rate_pct': float(trading_results['trade_win_rate_pct']),
             'trading_trades_count': float(trading_results['trades_count']),
-            'trading_max_drawdown_pct': float(trading_results['max_drawdown_pct']),
             'trading_avg_win': float(trading_results['avg_win']),
             'trading_avg_loss': float(trading_results['avg_loss'])
         })

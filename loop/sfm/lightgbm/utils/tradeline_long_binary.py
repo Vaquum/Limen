@@ -13,6 +13,12 @@ from sklearn.utils.class_weight import compute_class_weight
 # Import Loop indicators
 from loop.indicators.price_change_pct import price_change_pct
 from loop.indicators.rolling_volatility import rolling_volatility
+from loop.indicators.atr import atr
+from loop.features.active_lines import active_lines
+from loop.features.hours_since_big_move import hours_since_big_move
+from loop.features.hours_since_quantile_line import hours_since_quantile_line
+from loop.features.active_quantile_count import active_quantile_count
+from loop.features.quantile_line_density import quantile_line_density
 from loop.features.price_range_position import price_range_position
 from loop.features.distance_from_high import distance_from_high
 from loop.features.distance_from_low import distance_from_low
@@ -99,8 +105,6 @@ def compute_line_features(
     long_lines: List[Dict],
     short_lines: List[Dict],
     *,
-    momentum_lookback_hours: int = 6,
-    height_lookback_hours: int = 24,
     density_lookback_hours: int = 48,
     big_move_lookback_hours: int = 168,
 ) -> pl.DataFrame:
@@ -116,97 +120,8 @@ def compute_line_features(
     Returns:
         pl.DataFrame: DataFrame with line-based features added
     '''
-    n_rows = len(df)
-    all_lines = [(line, 1) for line in long_lines] + [(line, -1) for line in short_lines]
-    
-    # Initialize output arrays
-    active_lines = np.zeros(n_rows)
-    hours_since_big_move = np.full(n_rows, float(big_move_lookback_hours))
-    line_momentum_6h = np.zeros(n_rows)
-    trending_score = np.zeros(n_rows)
-    reversal_potential = np.zeros(n_rows)
-    
-    if not all_lines:
-        # Early return if no lines
-        return df.with_columns([
-            pl.Series('active_lines', active_lines),
-            pl.Series('hours_since_big_move', hours_since_big_move),
-            pl.Series('line_momentum_6h', line_momentum_6h),
-            pl.Series('trending_score', trending_score),
-            pl.Series('reversal_potential', reversal_potential)
-        ])
-    
-    # Step 1: Create sorted event list - O(m log m)
-    events = []
-    for i, (line, direction) in enumerate(all_lines):
-        events.append((line['start_idx'], 'enter', i, line, direction))
-        events.append((line['end_idx'] + 1, 'exit', i, line, direction))  # +1 for exclusive end
-    
-    events.sort()  # O(2m log 2m) = O(m log m)
-    
-    # Step 2: Sliding window state
-    active_set = set()
-    recent_long_ends = []  # List of (end_idx, line) tuples
-    recent_short_ends = []  # List of (end_idx, line) tuples
-    event_idx = 0
-    
-    # Step 3: Single pass through timestamps - O(n + 2m)
-    for idx in range(n_rows):
-        
-        # Process all events at current timestamp
-        while event_idx < len(events) and events[event_idx][0] <= idx:
-            timestamp, event_type, line_idx, line, direction = events[event_idx]
-            
-            if event_type == 'enter':
-                active_set.add(line_idx)
-            else:  # 'exit'
-                active_set.discard(line_idx)
-                
-                # Track recent endings for momentum (within momentum_lookback_hours)
-                if line['end_idx'] >= idx - momentum_lookback_hours and line['end_idx'] < idx:
-                    if direction > 0:
-                        recent_long_ends.append((line['end_idx'], line))
-                    else:
-                        recent_short_ends.append((line['end_idx'], line))
-            
-            event_idx += 1
-        
-        # Compute active lines count - O(1)
-        active_lines[idx] = len(active_set)
-        
-        # Clean old momentum data (keep only within momentum_lookback_hours)
-        recent_long_ends = [(end_idx, line) for end_idx, line in recent_long_ends if end_idx >= idx - momentum_lookback_hours]
-        recent_short_ends = [(end_idx, line) for end_idx, line in recent_short_ends if end_idx >= idx - momentum_lookback_hours]
-        
-        # Compute momentum features
-        recent_long_count = len(recent_long_ends)
-        recent_short_count = len(recent_short_ends)
-        
-        line_momentum_6h[idx] = recent_long_count - recent_short_count
-        
-        total_recent = recent_long_count + recent_short_count
-        if total_recent > 0:
-            trending_score[idx] = (recent_long_count - recent_short_count) / total_recent
-            reversal_potential[idx] = min(recent_long_count, recent_short_count) / max(recent_long_count, recent_short_count)
-        else:
-            trending_score[idx] = 0.0  # Neutral trend
-            reversal_potential[idx] = 0.0  # No reversal setup
-        
-        # Compute hours since big move (capped by big_move_lookback_hours)
-        for end_idx, line in recent_long_ends + recent_short_ends:
-            if end_idx < idx and (idx - end_idx) < big_move_lookback_hours:
-                hours_since = idx - end_idx
-                hours_since_big_move[idx] = min(hours_since_big_move[idx], hours_since)
-    
-    # Add columns to dataframe
-    df = df.with_columns([
-        pl.Series('active_lines', active_lines),
-        pl.Series('hours_since_big_move', hours_since_big_move),
-        pl.Series('line_momentum_6h', line_momentum_6h),
-        pl.Series('trending_score', trending_score),
-        pl.Series('reversal_potential', reversal_potential)
-    ])
-    
+    df = active_lines(df, long_lines, short_lines)
+    df = hours_since_big_move(df, long_lines, short_lines, big_move_lookback_hours)
     return df
 
 
@@ -362,8 +277,6 @@ def compute_quantile_line_features(
     short_lines_filtered: List[Dict[str, Any]],
     quantile_threshold: float = 0.75,
     *,
-    momentum_lookback_hours: int = 6,
-    height_lookback_hours: int = 24,
     density_lookback_hours: int = 48,
 ) -> pl.DataFrame:
     
@@ -379,88 +292,10 @@ def compute_quantile_line_features(
     Returns:
         pl.DataFrame: The input data with six new columns: 'hours_since_quantile_line', 'quantile_momentum_6h', 'active_quantile_count', 'quantile_line_density_48h', 'avg_quantile_height_24h', 'quantile_direction_bias'
     '''
-    if not long_lines_filtered and not short_lines_filtered:
-        n_rows = len(df)
-        return df.with_columns([
-            pl.Series("hours_since_quantile_line", [density_lookback_hours] * n_rows),
-            pl.Series("quantile_momentum_6h", [0.0] * n_rows),
-            pl.Series("active_quantile_count", [0] * n_rows),
-            pl.Series("quantile_line_density_48h", [0] * n_rows),
-            pl.Series("avg_quantile_height_24h", [0.0] * n_rows),
-            pl.Series("quantile_direction_bias", [0.0] * n_rows)
-        ])
-    n_rows = len(df)
-    line_starts = []
-    line_ends = []
-    line_heights = []
-    line_directions = []
-    for line in long_lines_filtered:
-        line_starts.append(line['start_idx'])
-        line_ends.append(line['end_idx'])
-        line_heights.append(abs(line['height_pct']))
-        line_directions.append(1)
-    for line in short_lines_filtered:
-        line_starts.append(line['start_idx'])
-        line_ends.append(line['end_idx'])
-        line_heights.append(abs(line['height_pct']))
-        line_directions.append(-1)
-    if not line_starts:
-        return df.with_columns([
-            pl.Series("hours_since_quantile_line", [48] * n_rows),
-            pl.Series("quantile_momentum_6h", [0.0] * n_rows),
-            pl.Series("active_quantile_count", [0] * n_rows),
-            pl.Series("quantile_line_density_48h", [0] * n_rows),
-            pl.Series("avg_quantile_height_24h", [0.0] * n_rows),
-            pl.Series("quantile_direction_bias", [0.0] * n_rows)
-        ])
-    line_starts_array = np.array(line_starts)
-    line_ends_array = np.array(line_ends)
-    line_heights_array = np.array(line_heights)
-    line_directions_array = np.array(line_directions)
-    hours_since_quantile = np.full(n_rows, density_lookback_hours)
-    quantile_momentum_6h = np.zeros(n_rows)
-    active_quantile_count = np.zeros(n_rows, dtype=int)
-    quantile_density_48h = np.zeros(n_rows, dtype=int)
-    avg_quantile_height_24h = np.zeros(n_rows)
-    quantile_direction_bias = np.zeros(n_rows)
-    row_indices = np.arange(n_rows).reshape(-1, 1)
-    ended_mask = line_ends_array <= row_indices
-    for i in range(n_rows):
-        ended_lines = line_ends_array[ended_mask[i]]
-        if len(ended_lines) > 0:
-            hours_since_quantile[i] = min(i - np.max(ended_lines), density_lookback_hours)
-    for i in range(0, n_rows, 100):  
-        batch_end = min(i + 100, n_rows)
-        batch_indices = row_indices[i:batch_end]
-        momentum_mask = (batch_indices - momentum_lookback_hours <= line_ends_array) & (line_ends_array <= batch_indices)
-        for j, row_idx in enumerate(range(i, batch_end)):
-            mask = momentum_mask[j]
-            if np.any(mask):
-                quantile_momentum_6h[row_idx] = np.sum(line_heights_array[mask] * line_directions_array[mask])
-        active_mask = (line_starts_array <= batch_indices) & (batch_indices < line_ends_array)
-        for j, row_idx in enumerate(range(i, batch_end)):
-            active_quantile_count[row_idx] = np.sum(active_mask[j])
-        density_mask = (batch_indices - density_lookback_hours <= line_ends_array) & (line_ends_array <= batch_indices)
-        for j, row_idx in enumerate(range(i, batch_end)):
-            quantile_density_48h[row_idx] = np.sum(density_mask[j])
-        height_mask = (batch_indices - height_lookback_hours <= line_ends_array) & (line_ends_array <= batch_indices)
-        for j, row_idx in enumerate(range(i, batch_end)):
-            mask = height_mask[j]
-            if np.any(mask):
-                heights = line_heights_array[mask]
-                directions = line_directions_array[mask]
-                avg_quantile_height_24h[row_idx] = np.mean(heights)
-                total_weight = np.sum(heights)
-                if total_weight > 0:
-                    quantile_direction_bias[row_idx] = np.sum(directions * heights) / total_weight
-    return df.with_columns([
-        pl.Series("hours_since_quantile_line", hours_since_quantile.tolist()),
-        pl.Series("quantile_momentum_6h", quantile_momentum_6h.tolist()),
-        pl.Series("active_quantile_count", active_quantile_count.tolist()),
-        pl.Series("quantile_line_density_48h", quantile_density_48h.tolist()),
-        pl.Series("avg_quantile_height_24h", avg_quantile_height_24h.tolist()),
-        pl.Series("quantile_direction_bias", quantile_direction_bias.tolist())
-    ])
+    df = hours_since_quantile_line(df, long_lines_filtered, short_lines_filtered, density_lookback_hours)
+    df = active_quantile_count(df, long_lines_filtered, short_lines_filtered)
+    df = quantile_line_density(df, long_lines_filtered, short_lines_filtered, density_lookback_hours)
+    return df
 
 
 def calculate_atr(df: pl.DataFrame, period: int = 24) -> pl.DataFrame:
@@ -475,21 +310,11 @@ def calculate_atr(df: pl.DataFrame, period: int = 24) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'atr_pct'
     '''
-    df = df.with_columns([
-        (pl.col('high') - pl.col('low')).alias('hl'),
-        (pl.col('high') - pl.col('close').shift(1)).abs().alias('hpc'),
-        (pl.col('low') - pl.col('close').shift(1)).abs().alias('lpc')
-    ])
-    df = df.with_columns([
-        pl.max_horizontal(['hl', 'hpc', 'lpc']).fill_null(pl.col('hl')).alias('tr')
-    ])
-    df = df.with_columns([
-        pl.col('tr').rolling_mean(window_size=period, min_samples=1).alias('atr')
-    ])
-    df = df.with_columns([
-        (pl.col('atr') / pl.col('close')).alias('atr_pct')
-    ])
-    df = df.drop(['hl', 'hpc', 'lpc', 'tr', 'atr'])
+    df = atr(df, period=period)
+    col = f"atr_{period}"
+    if col in df.columns:
+        df = df.with_columns([(pl.col(col) / pl.col('close')).alias('atr_pct')])
+        df = df.drop([col])
     return df
 
 
@@ -528,10 +353,8 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
             'total_return_net_pct': 0.0,
             'trade_win_rate_pct': 0.0,
             'trades_count': 0,
-            'max_drawdown_pct': 0.0,
             'avg_win': 0.0,
-            'avg_loss': 0.0,
-            'final_capital': initial_capital
+            'avg_loss': 0.0
         }
     prices = df.select(pl.col('close')).to_numpy().flatten()
     atr_values = df.select(pl.col('atr_pct')).to_numpy().flatten() if 'atr_pct' in df.columns else np.full(n_rows, default_atr_pct)
@@ -553,10 +376,8 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
             'total_return_net_pct': 0.0,
             'trade_win_rate_pct': 0.0,
             'trades_count': 0,
-            'max_drawdown_pct': 0.0,
             'avg_win': 0.0,
-            'avg_loss': 0.0,
-            'final_capital': initial_capital
+            'avg_loss': 0.0
         }
     capital = initial_capital
     trades = []
@@ -625,19 +446,15 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
             'total_return_net_pct': total_return,
             'trade_win_rate_pct': win_rate,
             'trades_count': len(trades),
-            'max_drawdown_pct': -10.0,  
             'avg_win': avg_win,
-            'avg_loss': avg_loss,
-            'final_capital': capital
+            'avg_loss': avg_loss
         }
     else:
         trading_results = {
             'total_return_net_pct': 0.0,
             'trade_win_rate_pct': 0.0,
             'trades_count': 0,
-            'max_drawdown_pct': 0.0,
             'avg_win': 0.0,
-            'avg_loss': 0.0,
-            'final_capital': initial_capital
+            'avg_loss': 0.0
         }
     return df, trading_results
