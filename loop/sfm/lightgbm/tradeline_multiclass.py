@@ -58,11 +58,8 @@ CONFIG = {
     'max_hold_hours': 48,
     'initial_capital': 100000.0,
     'default_atr_pct': 0.015,
-    'batch_size': 100,
-    'max_hours_since_line': 48,
-    'momentum_lookback_hours': 6,
     'density_lookback_hours': 48,
-    'height_lookback_hours': 24,
+    'big_move_lookback_hours': 168,
     'early_stopping_rounds': 50,
     'log_evaluation_period': 0,
     'objective': 'multiclass',
@@ -136,9 +133,20 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     
     df = compute_price_features(df)
     
-    df = compute_line_features(df, long_lines_filtered, short_lines_filtered)
+    df = compute_line_features(
+        df,
+        long_lines_filtered,
+        short_lines_filtered,
+        big_move_lookback_hours=round_params.get('big_move_lookback_hours', CONFIG['big_move_lookback_hours'])
+    )
     
-    df = compute_quantile_line_features(df, long_lines_filtered, short_lines_filtered, quantile_threshold)
+    df = compute_quantile_line_features(
+        df,
+        long_lines_filtered,
+        short_lines_filtered,
+        quantile_threshold,
+        density_lookback_hours=round_params.get('density_lookback_hours', CONFIG['density_lookback_hours'])
+    )
     
     df = calculate_atr(df, period=CONFIG['atr_period'])
     
@@ -313,7 +321,6 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
             'trading_return_net_pct': trading_results['total_return_net_pct'],
             'trading_win_rate_pct': trading_results['trade_win_rate_pct'],
             'trading_trades_count': trading_results['trades_count'],
-            'trading_max_drawdown_pct': trading_results['max_drawdown_pct'],
             'trading_avg_win': trading_results['avg_win'],
             'trading_avg_loss': trading_results['avg_loss']
         })
