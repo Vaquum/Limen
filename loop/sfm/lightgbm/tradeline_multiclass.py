@@ -27,9 +27,7 @@ from loop.sfm.lightgbm.utils.tradeline_multiclass import (
     apply_complete_exit_strategy
 )
 
-TRAIN_SPLIT = 0.7
-VAL_SPLIT = 0.15
-TEST_SPLIT = 0.15
+ 
 
 EXCLUDE_CATEGORIES = {
     'basic': ['datetime', 'open', 'high', 'low', 'close', 'volume'],
@@ -70,7 +68,10 @@ CONFIG = {
     'random_state': 42,
     'use_calibration_default': True,
     'calibration_method_default': 'isotonic',
-    'calibration_cv_default': 3
+    'calibration_cv_default': 3,
+    'train_split': 0.7,
+    'val_split': 0.15,
+    'test_split': 0.15
 }
 
 
@@ -169,7 +170,10 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     
     cols = ['datetime'] + numeric_features + ['label']
     
-    split_data = split_sequential(df_clean, ratios=[int(TRAIN_SPLIT * 100), int(VAL_SPLIT * 100), int(TEST_SPLIT * 100)])
+    train_split = CONFIG.get('train_split', 0.7)
+    val_split = CONFIG.get('val_split', 0.15)
+    test_split = CONFIG.get('test_split', 0.15)
+    split_data = split_sequential(df_clean, ratios=[int(train_split * 100), int(val_split * 100), int(test_split * 100)])
     
     data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
     data_dict['x_train'] = data_dict['x_train'].to_numpy()
