@@ -302,7 +302,7 @@ data mismatch
 - Added a test for sampling from large param space
 - Update `sfm.reference.logreg` to use new manifest API
 - Add comprehensive docs for `loop.manifest` including integration examples
-- Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support 
+- Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support
 
 # V1.19.1 on 22nd of September 2025
 - Add `loop.data` sub-module for computing time and information-based bars from base klines data.
@@ -313,3 +313,8 @@ data mismatch
 # V1.19.2 on 24th of September 2025
 - Refactor datetime alignment to work with manifest based bar data.
 - Fix `snippets/test_explorer_locally.py` to work with manifest based logreg.
+
+# V1.20.0 on 29th of September 2025
+- Add strategy logic to `lightgbm.tradeline_multiclass`
+- Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
+- Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
