@@ -36,25 +36,10 @@ EXCLUDE_CATEGORIES = {
 }
 
 CONFIG = {
-    'min_height_pct_default': 0.003,
-    'max_duration_hours_default': 48,
-    'lookahead_hours_default': 48,
-    'long_threshold_percentile_default': 75,
-    'quantile_threshold_default': 0.75,
     'default_threshold': 0.034,
     'atr_period': 24,
-    'confidence_threshold': 0.45,
-    'position_size': 0.199,
     'max_positions': 1,
-    'min_stop_loss': 0.01,
-    'max_stop_loss': 0.04,
-    'atr_stop_multiplier': 1.5,
-    'trailing_activation': 0.02,
-    'trailing_distance': 0.5,
-    'loser_timeout_hours': 24,
-    'max_hold_hours': 48,
     'initial_capital': 100000.0,
-    'default_atr_pct': 0.015,
     'density_lookback_hours': 48,
     'big_move_lookback_hours': 168,
     'early_stopping_rounds': 50,
@@ -64,9 +49,9 @@ CONFIG = {
     'boosting_type': 'gbdt',
     'verbose': -1,
     'random_state': 42,
-    'use_calibration_default': True,
-    'calibration_method_default': 'isotonic',
-    'calibration_cv_default': 3,
+    'use_calibration': True,
+    'calibration_method': 'isotonic',
+    'calibration_cv': 3,
     'train_split': 0.7,
     'val_split': 0.15,
     'test_split': 0.15
@@ -112,13 +97,16 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     df = data.clone()
     
     if round_params is None:
-        round_params = {}
-    
-    quantile_threshold = round_params.get('quantile_threshold', CONFIG['quantile_threshold_default'])
-    min_height_pct = round_params.get('min_height_pct', CONFIG['min_height_pct_default'])
-    max_duration_hours = round_params.get('max_duration_hours', CONFIG['max_duration_hours_default'])
-    lookahead_hours = round_params.get('lookahead_hours', CONFIG['lookahead_hours_default'])
-    long_threshold_percentile = round_params.get('long_threshold_percentile', CONFIG['long_threshold_percentile_default'])
+        raise ValueError("round_params is required for deterministic prep")
+    required_prep_keys = ['quantile_threshold','min_height_pct','max_duration_hours','lookahead_hours','long_threshold_percentile']
+    missing_prep = [k for k in required_prep_keys if k not in round_params]
+    if missing_prep:
+        raise ValueError(f"Missing required prep round_params: {missing_prep}")
+    quantile_threshold = round_params['quantile_threshold']
+    min_height_pct = round_params['min_height_pct']
+    max_duration_hours = round_params['max_duration_hours']
+    lookahead_hours = round_params['lookahead_hours']
+    long_threshold_percentile = round_params['long_threshold_percentile']
     long_lines, short_lines = find_price_lines(df, max_duration_hours, min_height_pct)
     
     long_lines_filtered = filter_lines_by_quantile(long_lines, quantile_threshold)
@@ -207,7 +195,7 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
 
 
 def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
-    use_calibration = round_params.get('use_calibration', CONFIG['use_calibration_default'])
+    use_calibration = round_params.get('use_calibration', CONFIG['use_calibration'])
     n_estimators = round_params.get('n_estimators', 500)
     decision_threshold = round_params.get('decision_threshold', 0.45)
     
@@ -300,43 +288,37 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
         'best_iteration': lgb_model.best_iteration if hasattr(lgb_model, 'best_iteration') else None,
         'calibration_used': use_calibration
     }
-    original_df = data.get('_original_df', None)
-    if original_df is not None and 'atr_pct' in original_df.columns:
-        long_threshold = data.get('_long_threshold', CONFIG['default_threshold'])
-        
-        # Allow exit-logic overrides from round params for sweeps
-        exit_config = dict(CONFIG)
-        for k in [
-            'loser_timeout_hours',
-            'max_hold_hours',
-            'confidence_threshold',
-            'position_size',
-            'min_stop_loss',
-            'max_stop_loss',
-            'atr_stop_multiplier',
-            'trailing_activation',
-            'trailing_distance',
-            'default_atr_pct'
-        ]:
-            if k in round_params:
-                exit_config[k] = round_params[k]
-        
-        _, trading_results = apply_long_only_exit_strategy(
-            original_df, y_pred, y_proba, long_threshold, exit_config
-        )
-        
-        metrics.update({
-            'trading_return_net_pct': float(trading_results['total_return_net_pct']),
-            'trading_win_rate_pct': float(trading_results['trade_win_rate_pct']),
-            'trading_trades_count': float(trading_results['trades_count']),
-            'trading_avg_win': float(trading_results['avg_win']),
-            'trading_avg_loss': float(trading_results['avg_loss'])
-        })
-        
-        extras['trading_results'] = trading_results
-        extras['complete_exit_strategy_applied'] = True
-    else:
-        raise ValueError("Could not apply complete exit strategy - missing original dataframe or ATR")
+    original_df = data['_original_df']
+    long_threshold = data.get('_long_threshold', CONFIG['default_threshold'])
+
+    exit_config = {
+        'confidence_threshold': round_params['confidence_threshold'],
+        'position_size': round_params['position_size'],
+        'min_stop_loss': round_params['min_stop_loss'],
+        'max_stop_loss': round_params['max_stop_loss'],
+        'atr_stop_multiplier': round_params['atr_stop_multiplier'],
+        'trailing_activation': round_params['trailing_activation'],
+        'trailing_distance': round_params['trailing_distance'],
+        'loser_timeout_hours': round_params['loser_timeout_hours'],
+        'max_hold_hours': round_params['max_hold_hours'],
+        'default_atr_pct': round_params['default_atr_pct'],
+        'initial_capital': CONFIG['initial_capital']
+    }
+
+    _, trading_results = apply_long_only_exit_strategy(
+        original_df, y_pred, y_proba, long_threshold, exit_config
+    )
+
+    metrics.update({
+        'trading_return_net_pct': float(trading_results['total_return_net_pct']),
+        'trading_win_rate_pct': float(trading_results['trade_win_rate_pct']),
+        'trading_trades_count': float(trading_results['trades_count']),
+        'trading_avg_win': float(trading_results['avg_win']),
+        'trading_avg_loss': float(trading_results['avg_loss'])
+    })
+
+    extras['trading_results'] = trading_results
+    extras['complete_exit_strategy_applied'] = True
     round_results = metrics
     round_results['models'] = [final_model]
     round_results['extras'] = extras
