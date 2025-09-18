@@ -9,8 +9,6 @@ import numpy as np
 import polars as pl
 from typing import List, Dict, Tuple, Any, Optional
 from sklearn.utils.class_weight import compute_class_weight
-
-# Import Loop indicators
 from loop.indicators.price_change_pct import price_change_pct
 from loop.indicators.rolling_volatility import rolling_volatility
 from loop.indicators.atr import atr
@@ -23,7 +21,7 @@ from loop.features.price_range_position import price_range_position
 from loop.features.distance_from_high import distance_from_high
 from loop.features.distance_from_low import distance_from_low
 
-MIN_VOLATILITY_THRESHOLD = 1e-6  # Minimum volatility to avoid division issues
+MIN_VOLATILITY_THRESHOLD = 1e-6
 
 
 def find_price_lines(df: pl.DataFrame, 
@@ -179,7 +177,7 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     
     df = df.with_columns(
         pl.when(pl.col('vol_6h') < MIN_VOLATILITY_THRESHOLD)
-        .then(1.0)  # When 6h volatility is near zero, assume no expansion
+        .then(1.0)
         .otherwise(pl.col('vol_24h') / pl.col('vol_6h'))
         .alias('vol_expansion')
     )
@@ -229,12 +227,10 @@ def create_binary_labels(df: pl.DataFrame,
         ret_24h = (close_prices[future_24h_idx] - current_price) / current_price
         ret_48h = (close_prices[future_48h_idx] - current_price) / current_price
         
-        # Only label as LONG (1) if future upward move meets threshold
         if max_future_ret >= long_threshold:
             if ret_48h > long_threshold or ret_24h > long_threshold:
-                labels[idx] = 1  # LONG
+                labels[idx] = 1
                 long_count += 1
-        # All other cases remain 0 (No Trade)
     
     df = df.with_columns(pl.Series('label', labels))
     
@@ -269,7 +265,6 @@ def compute_quantile_line_features(
     df: pl.DataFrame,
     long_lines_filtered: List[Dict[str, Any]],
     short_lines_filtered: List[Dict[str, Any]],
-    quantile_threshold: float = 0.75,
     *,
     density_lookback_hours: int = 48,
 ) -> pl.DataFrame:
@@ -281,7 +276,6 @@ def compute_quantile_line_features(
         df (pl.DataFrame): Klines dataset with 'datetime', 'open', 'high', 'low', 'close', 'volume' columns
         long_lines_filtered (list): Filtered long line patterns from quantile filtering
         short_lines_filtered (list): Filtered short line patterns from quantile filtering
-        quantile_threshold (float): Quantile threshold used for filtering (e.g., 0.75 for Q75)
         
     Returns:
         pl.DataFrame: The input data with six new columns: 'hours_since_quantile_line', 'quantile_momentum_6h', 'active_quantile_count', 'quantile_line_density_48h', 'avg_quantile_height_24h', 'quantile_direction_bias'
@@ -352,7 +346,6 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
         }
     prices = df.select(pl.col('close')).to_numpy().flatten()
     atr_values = df.select(pl.col('atr_pct')).to_numpy().flatten() if 'atr_pct' in df.columns else np.full(n_rows, default_atr_pct)
-    # Derive kline seconds and steps per hour from datetime spacing
     steps_per_hour = 1.0
     if 'datetime' in df.columns and df.height >= 2:
         dt = df.select(pl.col('datetime')).to_series().to_list()
@@ -361,7 +354,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
             steps_per_hour = max(1.0, 3600.0 / delta_sec)
         except Exception:
             steps_per_hour = 1.0
-    # For binary classification, probabilities is 1D array of probability for positive class
+
     max_probs = probabilities if len(probabilities.shape) == 1 else probabilities
     high_conf_mask = (max_probs >= confidence_threshold) & (predictions == 1)
     entry_signals = np.where(high_conf_mask)[0]
@@ -375,7 +368,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
         }
     capital = initial_capital
     trades = []
-    current_position = None  # Single position: (entry_idx, entry_price, size, peak_profit) or None
+    current_position = None 
     check_indices = set(entry_signals)
     periodic_check_step = int(max(1, round(24 * steps_per_hour)))
     for i in range(0, n_rows, periodic_check_step):
@@ -387,7 +380,6 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
         current_price = prices[i]
         current_atr = atr_values[i]
         
-        # Check if we need to close current position
         if current_position is not None:
             entry_idx, entry_price, size, peak_profit = current_position
             hours_held = (i - entry_idx) / steps_per_hour
@@ -425,7 +417,6 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
                 })
                 current_position = None
         
-        # Enter new position if we have a signal and no current position
         if i in entry_signals and current_position is None:
             pos_size = capital * position_size
             current_position = (i, current_price, pos_size, 0.0)
