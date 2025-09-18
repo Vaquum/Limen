@@ -15,71 +15,49 @@ from loop.indicators import (
     roc
 )
 from loop.transforms.logreg_transform import LogRegTransform
-from loop.manifest import (
-    Manifest,
-    make_fitted_scaler
-)
+from loop.manifest import Manifest
 
 # TODO: placeholder no-op bar foramtion. To be tied to actual bar formation code
 def adaptive_bar_formation(data, **kwargs):
     return data
 
 def manifest():
-    return Manifest(
-        split_config=(8,1,2),
-        target_column='quantile_flag',
+    def shift_transform(data, shift, target_column):
+        return data.with_columns(
+            pl.col(target_column).shift(shift).alias(target_column)
+        )
 
-        bar_formation=(adaptive_bar_formation, {
-            'bar_type': lambda p: p['bar_type'],
-            'time_freq': lambda p: p['time_freq'],
-            'volume_threshold': lambda p: p['volume_threshold'],
-            'liquidity_threshold': lambda p: p['liquidity_threshold']
-        }),
+    return (Manifest()
+        .set_split_config(8, 1, 2)
 
-        required_bar_columns=[
-            'datetime',
-            'high',
-            'low',
-            'open',
-            'close',
-            'mean',
-            'volume',
-            'maker_ratio',
-            'no_of_trades',
-            'maker_volume',
-            'maker_liquidity',
-        ],
+        .set_bar_formation(adaptive_bar_formation,
+            bar_type='bar_type',
+            time_freq='time_freq',
+            volume_threshold='volume_threshold',
+            liquidity_threshold='liquidity_threshold')
+        .set_required_bar_columns([
+            'datetime', 'high', 'low', 'open', 'close', 'mean',
+            'volume', 'maker_ratio', 'no_of_trades', 'maker_volume', 'maker_liquidity'
+        ])
 
-        feature_transforms=[
-            (roc, {'period': lambda p: p['roc_period']}),
-            (atr, {'period': 14}),
-            (ppo, {}),
-            (wilder_rsi, {}),
-            (vwap, {}),
-            (kline_imbalance, {}),
-        ],
+        .add_indicator(roc, period='roc_period')
+        .add_indicator(atr, period=14)
+        .add_indicator(ppo)
+        .add_indicator(wilder_rsi)
 
-        target_transforms=[
-            ([
-                ('_quantile_cutoff', compute_quantile_cutoff, {
-                 'col': lambda p: f"roc_{p['roc_period']}",
-                 'q': lambda p: p['q']
-                })
-             ],
-             quantile_flag, {
-                'col': lambda p: f"roc_{p['roc_period']}",
-                'cutoff': lambda p: p['_quantile_cutoff']
-            }),
-            ([], lambda data, shift, target_column: data.with_columns(
-                pl.col(target_column).shift(shift).alias(target_column)
-            ), {
-                'shift': lambda p: p['shift'],
-                'target_column': lambda p: p['target_column']
-            })
-        ],
+        .add_feature(vwap)
+        .add_feature(kline_imbalance)
 
-        scaler=make_fitted_scaler('_scaler', LogRegTransform),
+        .with_target('quantile_flag')
+            .add_fitted_transform(quantile_flag)
+                .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
+                .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
+            .add_transform(shift_transform, shift='shift', target_column='target_column')
+            .done()
+            
+        .set_scaler(LogRegTransform)
     )
+
 
 def params():
 
