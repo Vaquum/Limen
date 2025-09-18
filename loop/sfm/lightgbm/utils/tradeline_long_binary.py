@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-Optimized Utility functions for Tradeline Long Binary SFM
+Utility functions for Tradeline Long Binary SFM
 Implements line detection, feature engineering, and labeling for long-only binary trading predictions
 Uses sliding window event-driven algorithm for O(m log m + n) complexity
 '''
@@ -31,7 +31,6 @@ def find_price_lines(df: pl.DataFrame,
                      min_height_pct: float = 0.003) -> Tuple[List[Dict], List[Dict]]:
     '''
     Find linear price movements (lines) in the data.
-    UNCHANGED - this function is already reasonably efficient
     
     Args:
         df: DataFrame with 'close' price column
@@ -80,7 +79,6 @@ def find_price_lines(df: pl.DataFrame,
 def filter_lines_by_quantile(lines: List[Dict], quantile: float) -> List[Dict]:
     '''
     Filter lines to keep only those above the specified quantile by height.
-    UNCHANGED - already efficient
     
     Args:
         lines: List of line dictionaries
@@ -105,11 +103,10 @@ def compute_line_features(
     long_lines: List[Dict],
     short_lines: List[Dict],
     *,
-    density_lookback_hours: int = 48,
     big_move_lookback_hours: int = 168,
 ) -> pl.DataFrame:
     '''
-    OPTIMIZED: Compute line-based features using sliding window event-driven algorithm.
+    Compute line-based features using sliding window event-driven algorithm.
     Complexity: O(m log m + n) instead of O(n * m)
     
     Args:
@@ -128,7 +125,6 @@ def compute_line_features(
 def compute_temporal_features(df: pl.DataFrame) -> pl.DataFrame:
     '''
     Compute temporal features from datetime column including hour and day of week.
-    UNCHANGED - already efficient
     
     Args:
         df (pl.DataFrame): Klines dataset with 'datetime' column
@@ -147,7 +143,6 @@ def compute_temporal_features(df: pl.DataFrame) -> pl.DataFrame:
 def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     '''
     Compute comprehensive price-based features including returns, acceleration, and volatility.
-    UNCHANGED - already efficient
     
     Args:
         df (pl.DataFrame): Klines dataset with 'open', 'high', 'low', 'close', 'volume' columns
@@ -252,7 +247,6 @@ def create_binary_labels(df: pl.DataFrame,
 def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     '''
     Compute balanced sample weights to handle class imbalance in multiclass classification.
-    UNCHANGED - already efficient
     
     Args:
         y_train (np.ndarray): Array of training labels (0, 1, or 2)
