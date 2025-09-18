@@ -295,3 +295,7 @@ data mismatch
 - Add `snippets.test_explorer_locally`
 - Update project CLAUDE.md and Project.md
 
+# v1.19.0 on 18th of September 2025
+- Add strategy logic to `lightgbm.tradeline_multiclass`
+- Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
+- Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
