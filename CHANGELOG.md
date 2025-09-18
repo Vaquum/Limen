@@ -295,3 +295,9 @@ data mismatch
 - Add `snippets.test_explorer_locally`
 - Update project CLAUDE.md and Project.md
 
+# V1.19.0 on 19th of September, 2025
+- Add `loop.manifest` for experiment configuration
+- Add method chaining API for manifest configuration
+- Fix parameter space explosion in `utils.param_space` with mixed radix sampling
+- Added a test for sampling from large param space
+- Add `sfm.reference.logreg_manifest` to use new manifest API
