@@ -1,7 +1,7 @@
 import polars as pl
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Tuple, Union, Self
+from typing import Any, Callable, Dict, List, Tuple, Union
 from loop.utils.splits import split_data_to_prep_output, split_sequential
 
 ParamValue = Union[Any, Callable[[Dict[str, Any]], Any]]
@@ -78,12 +78,12 @@ class Manifest:
     target_column: str = None
     split_config: Tuple[int, int, int] = (8, 1, 2)
 
-    def _add_transform(self, func: Callable, **params) -> Self:
+    def _add_transform(self, func: Callable, **params) -> 'Manifest':
 
         self.feature_transforms.append((func, params))
         return self
 
-    def add_feature(self, func: Callable, **params) -> Self:
+    def add_feature(self, func: Callable, **params) -> 'Manifest':
 
         '''
         Add a feature transformation to the manifest.
@@ -93,12 +93,12 @@ class Manifest:
             **params: Parameters for the transformation
 
         Returns:
-            Self: Self for method chaining
+            Manifest: Self for method chaining
         '''
 
         return self._add_transform(func, **params)
 
-    def add_indicator(self, func: Callable, **params) -> Self:
+    def add_indicator(self, func: Callable, **params) -> 'Manifest':
 
         '''
         Add an indicator transformation to the manifest.
@@ -108,12 +108,12 @@ class Manifest:
             **params: Parameters for the transformation
 
         Returns:
-            Self: Self for method chaining
+            Manifest: Self for method chaining
         '''
 
         return self._add_transform(func, **params)
 
-    def set_bar_formation(self, func: Callable, **params) -> Self:
+    def set_bar_formation(self, func: Callable, **params) -> 'Manifest':
 
         '''
         Set bar formation function and parameters.
@@ -123,14 +123,14 @@ class Manifest:
             **params: Parameters for bar formation
 
         Returns:
-            Self: Self for method chaining
+            Manifest: Self for method chaining
         '''
 
         self.bar_formation = (func, params)
         return self
 
 
-    def set_required_bar_columns(self, columns: List[str]) -> Self:
+    def set_required_bar_columns(self, columns: List[str]) -> 'Manifest':
 
         '''
         Set required columns after bar formation.
@@ -139,13 +139,13 @@ class Manifest:
             columns (List[str]): List of required column names
 
         Returns:
-            Self: Self for method chaining
+            Manifest: Self for method chaining
         '''
 
         self.required_bar_columns = columns
         return self
 
-    def set_split_config(self, train: int, val: int, test: int) -> Self:
+    def set_split_config(self, train: int, val: int, test: int) -> 'Manifest':
 
         '''
         Set data split configuration.
@@ -156,13 +156,13 @@ class Manifest:
             test (int): Test split ratio
 
         Returns:
-            Self: Self for method chaining
+            Manifest: Self for method chaining
         '''
 
         self.split_config = (train, val, test)
         return self
 
-    def set_scaler(self, transform_class, param_name: str = '_scaler') -> Self:
+    def set_scaler(self, transform_class, param_name: str = '_scaler') -> 'Manifest':
 
         '''
         Set scaler transformation using make_fitted_scaler.
@@ -172,7 +172,7 @@ class Manifest:
             param_name (str): Parameter name for fitted scaler
 
         Returns:
-            Self: Self for method chaining
+            Manifest: Self for method chaining
         '''
 
         self.scaler = make_fitted_scaler(param_name, transform_class)

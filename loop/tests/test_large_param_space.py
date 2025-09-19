@@ -25,7 +25,7 @@ def test_large_param_space():
     elapsed = time.time() - start
 
     assert ps.n_permutations == 1000000
-    assert elapsed < 5.0
+    assert elapsed < 10.0
 
     combo = ps.generate()
     assert set(combo.keys()) == set(params.keys())

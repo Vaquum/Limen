@@ -5,19 +5,68 @@ from sklearn.linear_model import LogisticRegression
 from loop.metrics.binary_metrics import binary_metrics
 from loop.features import quantile_flag, compute_quantile_cutoff, kline_imbalance, vwap
 from loop.indicators import wilder_rsi, atr, ppo, roc
-from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.transforms.logreg_transform import LogRegTransform
 
 
-def params(): 
+from loop.manifest import Manifest
+
+# TODO: placeholder no-op bar foramtion. To be tied to actual bar formation code
+def adaptive_bar_formation(data, **kwargs):
+    return data
+
+def manifest():
     
+    def shift_transform(data, shift, target_column):
+        return data.with_columns(
+            pl.col(target_column).shift(shift).alias(target_column)
+        )
+
+    return (Manifest()
+        .set_split_config(8, 1, 2)
+
+        .set_bar_formation(adaptive_bar_formation,
+            bar_type='bar_type',
+            time_freq='time_freq',
+            volume_threshold='volume_threshold',
+            liquidity_threshold='liquidity_threshold')
+        .set_required_bar_columns([
+            'datetime', 'high', 'low', 'open', 'close', 'mean',
+            'volume', 'maker_ratio', 'no_of_trades', 'maker_volume', 'maker_liquidity'
+        ])
+
+        .add_indicator(roc, period='roc_period')
+        .add_indicator(atr, period=14)
+        .add_indicator(ppo)
+        .add_indicator(wilder_rsi)
+
+        .add_feature(vwap)
+        .add_feature(kline_imbalance)
+
+        .with_target('quantile_flag')
+            .add_fitted_transform(quantile_flag)
+                .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
+                .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
+            .add_transform(shift_transform, shift='shift', target_column='target_column')
+            .done()
+            
+        .set_scaler(LogRegTransform)
+    )
+
+
+def params():
+
     return {
-        # these are for data prep
+        # data prep parameters
         'shift': [-1, -2, -3, -4, -5],
         'q': [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53],
         'roc_period': [1, 4, 12, 24, 144],
         'penalty': ['l2'],
-        # these are for the classifier
+        # bar formation parameters
+        'bar_type': ['base', 'time', 'volume', 'liquidity'],
+        'time_freq': ['5m', '15m', '30m', '1h'],
+        'volume_threshold': [500000, 1000000, 2000000],
+        'liquidity_threshold': [10000000, 50000000],
+        # classifier parameters
         'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
         'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
         'max_iter': [30, 60, 90, 120, 180, 240],
@@ -25,74 +74,12 @@ def params():
         'tol': [0.001, 0.01, 0.03, 0.1, 0.3],
     }
 
-def prep(data, round_params):
 
-    all_datetimes = data['datetime'].to_list()
-    
-    # Calculate ROC and filter NaN values
-    roc_col = f"roc_{round_params['roc_period']}"
-    data = roc(data, period=round_params['roc_period']).filter(~pl.col(roc_col).is_nan())
-    
-    # Calculate other technical indicators
-    atr_col = 'atr_14'
-    data = atr(data)
+def prep(data, round_params, manifest):
 
-    ppo_col = 'ppo_12_26'
-    data = ppo(data)[1:]
-    
-    wilder_rsi_col = 'wilder_rsi_14'
-    data = wilder_rsi(data).filter(~pl.col(wilder_rsi_col).is_nan())[1:]
-    
-    data = vwap(data)
-    data = kline_imbalance(data)
-    
-    split_data = split_sequential(data, (8, 1, 2))
-    
-    # Compute cutoff from training data
-    train_cutoff = compute_quantile_cutoff(split_data[0], col=roc_col, q=round_params['q'])
+    data_dict = manifest.prepare_data(data, round_params)
 
-    # Apply quantile flag to all splits using training cutoff
-    for i in range(len(split_data)):
-        split_data[i] = quantile_flag(split_data[i], col=roc_col, cutoff=train_cutoff)
-    
-    # Shift the quantile flag to create the target (predicting future quantile)
-    for i in range(len(split_data)):
-        split_data[i] = split_data[i].with_columns(
-            pl.col("quantile_flag")
-              .shift(round_params['shift'])
-              .alias("quantile_flag")).drop_nulls("quantile_flag")
-    
-    # Define columns for the model
-    cols = ['datetime',
-            'high',
-            'low',
-            'open',
-            'close',
-            'mean',
-            'std',
-            'median',
-            'iqr',
-            'volume',
-            'maker_ratio',
-            'no_of_trades',
-            atr_col,
-            ppo_col,
-            wilder_rsi_col,
-            'vwap',
-            'imbalance',
-            'quantile_flag']
-
-    # Create data dictionary from splits
-    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
-    
-    # Scale features using training data statistics
-    scaler = LogRegTransform(data_dict['x_train'])
-
-    for col in data_dict.keys():
-        if col.startswith('x_'):
-            data_dict[col] = scaler.transform(data_dict[col])
-
-    data_dict['_scaler'] = scaler
+    # SFM-specific modifications can go here if needed
 
     return data_dict
 
@@ -114,7 +101,7 @@ def model(data: dict, round_params):
         warm_start=False,
         n_jobs=None,
     )
-    
+
     clf.fit(data['x_train'], data['y_train'])
 
     preds = clf.predict(data['x_test'])

@@ -22,6 +22,7 @@ def adaptive_bar_formation(data, **kwargs):
     return data
 
 def manifest():
+    
     def shift_transform(data, shift, target_column):
         return data.with_columns(
             pl.col(target_column).shift(shift).alias(target_column)
