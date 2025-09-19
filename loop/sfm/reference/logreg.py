@@ -48,7 +48,7 @@ def manifest():
                 .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
             .add_transform(shift_transform, shift='shift', target_column='target_column')
             .done()
-            
+
         .set_scaler(LogRegTransform)
     )
 
