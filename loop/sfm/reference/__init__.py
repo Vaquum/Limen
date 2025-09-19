@@ -4,7 +4,6 @@ import loop.sfm.reference.lightgbm as lightgbm
 import loop.sfm.reference.random as random
 import loop.sfm.reference.xgboost as xgboost
 import loop.sfm.reference.logreg as logreg
-import loop.sfm.reference.logreg_manifest as logreg_manifest
 
 __all__ = [
     'decomposition',
@@ -13,5 +12,4 @@ __all__ = [
     'random',
     'xgboost',
     'logreg',
-    'logreg_manifest'
 ]

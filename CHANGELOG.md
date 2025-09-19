@@ -300,4 +300,6 @@ data mismatch
 - Add method chaining API for manifest configuration
 - Fix parameter space explosion in `utils.param_space` with mixed radix sampling
 - Added a test for sampling from large param space
-- Add `sfm.reference.logreg_manifest` to use new manifest API
+- Update `sfm.reference.logreg` to use new manifest API
+- Add comprehensive docs for `loop.manifest` including integration examples
+- Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support 
