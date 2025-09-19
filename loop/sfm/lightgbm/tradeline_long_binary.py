@@ -132,7 +132,6 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
         df,
         long_lines_filtered,
         short_lines_filtered,
-        quantile_threshold,
         density_lookback_hours=round_params.get('density_lookback_hours', CONFIG['density_lookback_hours'])
     )
     
