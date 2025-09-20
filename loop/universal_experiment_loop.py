@@ -1,4 +1,6 @@
 import time
+import pickle
+import os
 from tqdm import tqdm
 import polars as pl
 import sqlite3
@@ -15,22 +17,32 @@ class UniversalExperimentLoop:
     '''
 
     def __init__(self,
-                 data,
-                 single_file_model):
+                 data=None,
+                 single_file_model=None,
+                 filepath=None):
         
         '''Initializes the UniversalExperimentLoop.
         
         Args:
-            data (pl.DataFrame): The data to use for the experiment.
-            single_file_model (SingleFileModel): The single file model to use for the experiment.
+            data (pl.DataFrame, optional): The data to use for the experiment.
+            single_file_model (SingleFileModel, optional): The single file model to use for the experiment.
+            filepath (str, optional): Path to a saved .uel file to load from.
         '''
 
-        self.data = data
-        self.model = single_file_model.model
-        self.params = single_file_model.params()
-        self.prep = single_file_model.prep
-        self.extras = []
-        self.models = []
+        if filepath is not None:
+            # Load from saved file
+            self.load(filepath)
+        else:
+            # Initialize normally
+            if data is None or single_file_model is None:
+                raise ValueError("Either filepath must be provided, or both data and single_file_model must be provided")
+            
+            self.data = data
+            self.model = single_file_model.model
+            self.params = single_file_model.params()
+            self.prep = single_file_model.prep
+            self.extras = []
+            self.models = []
 
     def run(self,
             experiment_name,
@@ -191,3 +203,101 @@ class UniversalExperimentLoop:
             loop_explorer(self)
 
         self.explorer = _explorer
+
+    def save(self, experiment_name):
+        '''
+        Save the UEL object to a file named f"{experiment_name}.uel".
+        
+        This method saves the complete state of the UEL object after a run,
+        including all data, results, parameters, models, and other artifacts.
+        
+        Args:
+            experiment_name (str): The name for the saved file (without .uel extension)
+        '''
+        filename = f"{experiment_name}.uel"
+        
+        # Create a dictionary with all the important state
+        # Note: We exclude functions that might not be pickleable
+        state_dict = {
+            'data': self.data,
+            'experiment_log': getattr(self, 'experiment_log', None),
+            'round_params': getattr(self, 'round_params', []),
+            'preds': getattr(self, 'preds', []),
+            'scalers': getattr(self, 'scalers', []),
+            'extras': getattr(self, 'extras', []),
+            'models': getattr(self, 'models', []),
+            '_alignment': getattr(self, '_alignment', []),
+            'params': self.params,
+            # Include computed results if they exist
+            'experiment_confusion_metrics': getattr(self, 'experiment_confusion_metrics', None),
+            'experiment_backtest_results': getattr(self, 'experiment_backtest_results', None),
+            'experiment_parameter_correlation': getattr(self, 'experiment_parameter_correlation', None),
+            '_log': getattr(self, '_log', None)
+        }
+        
+        # Note: We intentionally exclude 'model' and 'prep' functions as they may not be serializable
+        # Users should reconstruct UEL with original SFM if they need to run again
+        
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump(state_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+        except Exception as e:
+            # If pickle fails, try to save with more limited state
+            try:
+                limited_state = {
+                    'data': self.data,
+                    'experiment_log': getattr(self, 'experiment_log', None),
+                    'round_params': getattr(self, 'round_params', []),
+                    'preds': getattr(self, 'preds', []),
+                    '_alignment': getattr(self, '_alignment', []),
+                    'params': self.params
+                }
+                with open(filename, 'wb') as f:
+                    pickle.dump(limited_state, f, protocol=pickle.HIGHEST_PROTOCOL)
+            except Exception as e2:
+                raise RuntimeError(f"Failed to save UEL object to {filename}: {str(e)} (Limited save also failed: {str(e2)})")
+
+    def load(self, filepath):
+        '''
+        Load UEL object state from a .uel file.
+        
+        This method restores the complete state of a UEL object that was previously
+        saved using the save() method, recreating the exact same state as after 
+        the original run.
+        
+        Note: The original 'model' and 'prep' functions are not restored and will be None.
+        If you need to run the UEL again, initialize with the original SFM.
+        
+        Args:
+            filepath (str): Path to the .uel file to load
+        '''
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"UEL file not found: {filepath}")
+        
+        try:
+            with open(filepath, 'rb') as f:
+                state_dict = pickle.load(f)
+            
+            # Restore all attributes
+            for key, value in state_dict.items():
+                setattr(self, key, value)
+            
+            # Set function attributes to None since they weren't saved
+            if not hasattr(self, 'model'):
+                self.model = None
+            if not hasattr(self, 'prep'):
+                self.prep = None
+                
+            # Initialize missing attributes to empty if they don't exist
+            for attr in ['extras', 'models', 'round_params', 'preds', 'scalers', '_alignment']:
+                if not hasattr(self, attr):
+                    setattr(self, attr, [])
+                    
+            # Recreate the explorer function if we have the log
+            if hasattr(self, '_log') and self._log is not None:
+                def _explorer():
+                    loop_explorer(self)
+                self.explorer = _explorer
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to load UEL object from {filepath}: {str(e)}")
