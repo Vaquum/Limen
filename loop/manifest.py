@@ -2,7 +2,8 @@ import polars as pl
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Union
-from loop.utils.splits import split_data_to_prep_output, split_sequential
+from loop.utils.splits import split_data_to_prep_output
+from loop.utils.splits import split_sequential
 
 ParamValue = Union[Any, Callable[[Dict[str, Any]], Any]]
 FeatureEntry = Tuple[Callable[..., pl.LazyFrame], Dict[str, ParamValue]]

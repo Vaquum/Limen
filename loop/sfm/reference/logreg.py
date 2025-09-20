@@ -3,11 +3,16 @@ import polars as pl
 from sklearn.linear_model import LogisticRegression
 
 from loop.metrics.binary_metrics import binary_metrics
-from loop.features import quantile_flag, compute_quantile_cutoff, kline_imbalance, vwap
-from loop.indicators import wilder_rsi, atr, ppo, roc
+from loop.features import quantile_flag
+from loop.features import compute_quantile_cutoff
+from loop.features import kline_imbalance
+from loop.features import vwap
+from loop.indicators import wilder_rsi
+from loop.indicators import atr
+from loop.indicators import ppo
+from loop.indicators import roc
 from loop.transforms.logreg_transform import LogRegTransform
-
-
+from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 
 # TODO: placeholder no-op bar foramtion. To be tied to actual bar formation code
@@ -15,12 +20,6 @@ def adaptive_bar_formation(data, **kwargs):
     return data
 
 def manifest():
-    
-    def shift_transform(data, shift, target_column):
-        return data.with_columns(
-            pl.col(target_column).shift(shift).alias(target_column)
-        )
-
     return (Manifest()
         .set_split_config(8, 1, 2)
 
@@ -46,7 +45,7 @@ def manifest():
             .add_fitted_transform(quantile_flag)
                 .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
-            .add_transform(shift_transform, shift='shift', target_column='target_column')
+            .add_transform(shift_column, shift='shift', column='target_column')
             .done()
 
         .set_scaler(LogRegTransform)
