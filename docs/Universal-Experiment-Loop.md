@@ -57,8 +57,11 @@ Initializes the Universal Experiment Loop.
 
 | Parameter             | Type               | Description                                           |
 |-----------------------|--------------------|-------------------------------------------------------|
-| `data`                | `pl.DataFrame`     | The data to use for the experiment.                   |
-| `single_file_model`   | `SingleFileModel`  | The single file model to use for the experiment.      |
+| `data`                | `pl.DataFrame`     | The data to use for the experiment (optional if loading from file).     |
+| `single_file_model`   | `SingleFileModel`  | The single file model to use for the experiment (optional if loading from file).      |
+| `filepath`            | `str`              | Path to a saved `.uel` file to load from (optional).  |
+
+**Note:** Either provide both `data` and `single_file_model` for a new experiment, or provide `filepath` to load a saved experiment.
 
 
 ### `run`
@@ -162,6 +165,118 @@ confusion_df = uel.experiment_confusion_metrics
 round0_perf = uel._log.permutation_prediction_performance(round_id=0)
 
 # Visually explore the data
+uel.explorer()
+
+```
+
+## Saving and Loading UEL Objects
+
+UEL objects can be saved and loaded to persist experiment results across sessions. This is particularly useful for expensive experiments that take time to run, allowing you to resume analysis without re-running the experiment.
+
+### `save`
+
+Save the complete UEL object state to a file named `f"{experiment_name}.uel"`.
+
+#### Args
+
+| Parameter        | Type    | Description                                           |
+|------------------|---------|-------------------------------------------------------|
+| `experiment_name` | `str`  | The name for the saved file (without .uel extension) |
+
+#### Example
+
+```python
+# After running an experiment
+uel.run(experiment_name='my_experiment', n_permutations=10000)
+
+# Save the complete UEL state
+uel.save('my_experiment')  # Creates my_experiment.uel
+
+```
+
+### Loading from File
+
+Load a saved UEL object by providing the `filepath` parameter during initialization.
+
+#### Args
+
+| Parameter  | Type  | Description                    |
+|------------|-------|--------------------------------|
+| `filepath` | `str` | Path to the .uel file to load |
+
+#### Example
+
+```python
+# Load a previously saved UEL object (in a new session)
+uel = loop.UniversalExperimentLoop(filepath='my_experiment.uel')
+
+# All experiment state is restored:
+print(uel.experiment_log.shape)        # Original experiment log
+print(uel.experiment_backtest_results) # Original backtest results  
+print(uel.round_params)                # Original parameters used
+print(uel.preds)                       # Original predictions
+```
+
+#### What Gets Saved
+
+The save functionality preserves all experiment artifacts:
+
+- **Data**: Original input data (`data`)
+- **Results**: Experiment log, confusion metrics, backtest results
+- **Parameters**: All parameter combinations tested (`round_params`, `params`)
+- **Predictions**: Model predictions for each round (`preds`)
+- **Models**: Trained models if returned by SFM (`models`)
+- **Scalers**: Data scalers if used (`scalers`)
+- **Extras**: Additional artifacts from SFM (`extras`)
+- **Alignment**: Test data alignment metadata (`_alignment`)
+- **Analysis**: Pre-computed analysis results and Log instance
+
+#### What Doesn't Get Saved
+
+- **Functions**: The original SFM functions (`model`, `prep`) are not saved as they may not be serializable. These will be `None` in loaded objects.
+- **Explorer**: The explorer function is recreated upon loading if analysis results are available.
+
+#### Bullet-Proof Serialization
+
+The save/load functionality is designed to be robust:
+
+- Uses Python's `pickle` with highest protocol for efficiency
+- Handles complex objects like scikit-learn models, numpy arrays, and polars DataFrames
+- Includes fallback serialization for edge cases
+- Provides clear error messages if serialization fails
+
+### Complete Workflow Example
+
+```python
+import loop
+from loop import sfm
+
+# Initial experiment setup and run
+uel = loop.UniversalExperimentLoop(
+    data=your_data,
+    single_file_model=sfm.lightgbm.tradeable_regressor
+)
+
+# Run expensive experiment
+uel.run(experiment_name='production_model', n_permutations=50000)
+
+# Save for later analysis
+uel.save('production_model')
+
+# === Later, in a new session ===
+
+# Load the completed experiment
+uel = loop.UniversalExperimentLoop(filepath='production_model.uel')
+
+# Continue analysis without re-running
+best_params = uel.experiment_log.filter(uel.experiment_log['accuracy'] == uel.experiment_log['accuracy'].max())
+print(f"Best parameters: {best_params}")
+
+# Access all original results
+confusion_metrics = uel.experiment_confusion_metrics
+backtest_results = uel.experiment_backtest_results
+
+# Launch visual explorer
 uel.explorer()
 
 ```

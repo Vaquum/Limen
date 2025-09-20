@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.19.0 on XX XX, 2025
+- Add `save()` method to `UniversalExperimentLoop` for saving complete experiment state to `.uel` files
+- Add `filepath` parameter to `UniversalExperimentLoop.__init__` for loading saved experiment state
+- Add comprehensive test suite for UEL save/load functionality including complex object serialization
+- Update UEL documentation with save/load usage examples and workflows
+
 ## v0.7.9 on 25th of May, 2025
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
 - Rename `n_rows` input parameter to `n_latest` in [`get_trades_data`](utils/get_trades_data.py) for getting latest rows
