@@ -54,7 +54,8 @@ class UniversalExperimentLoop:
             save_to_sqlite=False,
             params=None,
             prep=None,
-            model=None):
+            model=None,
+            manifest=None):
         
         '''
         Run the experiment `n_permutations` times. 
@@ -98,6 +99,8 @@ class UniversalExperimentLoop:
         if model is not None:
             self.model = model
 
+        self.manifest = manifest
+
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
         
@@ -121,12 +124,21 @@ class UniversalExperimentLoop:
 
             # Always prep data with round_params passed in
             if prep_each_round is True:
-                data_dict = self.prep(self.data, round_params=round_params)
+                if self.manifest:
+                    data_dict = self.prep(
+                        self.data,
+                        round_params=round_params,
+                        manifest=self.manifest)
+                else:
+                    data_dict = self.prep(self.data, round_params=round_params)
 
             # Otherwise, only for the first round, prep data without round_params passed in
             else:
                 if i == 0:
-                    data_dict = self.prep(self.data)
+                    if manifest:
+                        data_dict = self.prep(self.data, manifest=manifest)
+                    else:
+                        data_dict = self.prep(self.data)
 
             # Perform the model training and evaluation
             round_results = self.model(data=data_dict, round_params=round_params)

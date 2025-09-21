@@ -11,5 +11,5 @@ __all__ = [
     'lightgbm',
     'random',
     'xgboost',
-    'logreg'
+    'logreg',
 ]

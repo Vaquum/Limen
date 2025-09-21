@@ -84,6 +84,7 @@ Runs the experiment `n_permutations` times.
 | `params`                      | `Callable`        | Optional override for the SFM `params` function. Must return a parameter space dictionary.              |
 | `prep`                        | `Callable`        | Optional override for the SFM `prep` function. Must follow the standard input/output contract.          |
 | `model`                       | `Callable`        | Optional override for the SFM `model` function. Must follow the standard input/output contract.         |
+| `manifest`                    | `Manifest`        | Optional [Experiment Manifest](Experiment-Manifest.md) for Universal Split-First data processing. When provided, enables advanced data preparation pipelines with bar formation and fitted parameters. |
 
 ### Returns
 
@@ -143,6 +144,7 @@ If you need additional methods, access the internal `Log` via `uel._log` (see [L
 import loop
 from loop import sfm
 
+# Standard SFM without manifest
 uel = loop.UniversalExperimentLoop(
     data=your_polars_dataframe,
     single_file_model=sfm.lightgbm.breakout_regressor,
@@ -155,6 +157,20 @@ uel.run(
     random_search=True,
     maintain_details_in_params=True,
     save_to_sqlite=False,
+)
+
+# SFM with manifest for Universal Split-First processing
+uel_manifest = loop.UniversalExperimentLoop(
+    data=your_polars_dataframe,
+    single_file_model=sfm.reference.logreg,
+)
+
+manifest = sfm.reference.logreg.manifest()
+uel_manifest.run(
+    experiment_name='exp_logreg_manifest',
+    n_permutations=100,
+    prep_each_round=True,
+    manifest=manifest,
 )
 
 # Post-run analysis via precomputed artifacts and internal Log

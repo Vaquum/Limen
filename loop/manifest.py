@@ -1,0 +1,457 @@
+import polars as pl
+
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Tuple, Union
+from loop.utils.splits import split_data_to_prep_output
+from loop.utils.splits import split_sequential
+
+ParamValue = Union[Any, Callable[[Dict[str, Any]], Any]]
+FeatureEntry = Tuple[Callable[..., pl.LazyFrame], Dict[str, ParamValue]]
+
+FittedParamsComputationEntry = Tuple[str, Callable[..., Any], Dict[str, ParamValue]]
+
+FittedTransformEntry = Tuple[
+    List[FittedParamsComputationEntry],
+    Callable[..., pl.LazyFrame],
+    Dict[str, ParamValue]
+]
+
+
+
+class TargetBuilder:
+
+    '''Helper class for building target transformations with context.'''
+
+    def __init__(self, manifest: 'Manifest', target_column: str):
+
+        self.manifest = manifest
+        self.target_column = target_column
+        self.manifest.target_column = target_column
+
+    def add_fitted_transform(self, func: Callable) -> 'FittedTransformBuilder':
+
+        return FittedTransformBuilder(self.manifest, func)
+
+    def add_transform(self, func: Callable, **params) -> 'TargetBuilder':
+
+        entry = ([], func, params)
+        self.manifest.target_transforms.append(entry)
+        return self
+
+    def done(self) -> 'Manifest':
+
+        return self.manifest
+
+
+class FittedTransformBuilder:
+
+    '''Helper class for building fitted transforms with parameter fitting.'''
+
+    def __init__(self, manifest: 'Manifest', func: Callable):
+
+        self.manifest = manifest
+        self.func = func
+        self.fitted_params: List[FittedParamsComputationEntry] = []
+
+    def fit_param(self, name: str, compute_func: Callable, **params) -> 'FittedTransformBuilder':
+
+        self.fitted_params.append((name, compute_func, params))
+        return self
+
+    def with_params(self, **params) -> 'TargetBuilder':
+
+        entry = (self.fitted_params, self.func, params)
+        self.manifest.target_transforms.append(entry)
+
+        return TargetBuilder(self.manifest, self.manifest.target_column)
+
+
+@dataclass
+class Manifest:
+
+    '''Defines manifest for Loop experiments.'''
+
+    bar_formation: FeatureEntry = None
+    feature_transforms: List[FeatureEntry] = field(default_factory=list)
+    target_transforms: List[FittedTransformEntry] = field(default_factory=list)
+    scaler: FittedTransformEntry = None
+    required_bar_columns: List[str] = field(default_factory=list)
+    target_column: str = None
+    split_config: Tuple[int, int, int] = (8, 1, 2)
+
+    def _add_transform(self, func: Callable, **params) -> 'Manifest':
+
+        self.feature_transforms.append((func, params))
+        return self
+
+    def add_feature(self, func: Callable, **params) -> 'Manifest':
+
+        '''
+        Add a feature transformation to the manifest.
+
+        Args:
+            func (Callable): Feature transformation function
+            **params: Parameters for the transformation
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        return self._add_transform(func, **params)
+
+    def add_indicator(self, func: Callable, **params) -> 'Manifest':
+
+        '''
+        Add an indicator transformation to the manifest.
+
+        Args:
+            func (Callable): Indicator transformation function
+            **params: Parameters for the transformation
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        return self._add_transform(func, **params)
+
+    def set_bar_formation(self, func: Callable, **params) -> 'Manifest':
+
+        '''
+        Set bar formation function and parameters.
+
+        Args:
+            func (Callable): Bar formation function
+            **params: Parameters for bar formation
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.bar_formation = (func, params)
+        return self
+
+
+    def set_required_bar_columns(self, columns: List[str]) -> 'Manifest':
+
+        '''
+        Set required columns after bar formation.
+
+        Args:
+            columns (List[str]): List of required column names
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.required_bar_columns = columns
+        return self
+
+    def set_split_config(self, train: int, val: int, test: int) -> 'Manifest':
+
+        '''
+        Set data split configuration.
+
+        Args:
+            train (int): Training split ratio
+            val (int): Validation split ratio
+            test (int): Test split ratio
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.split_config = (train, val, test)
+        return self
+
+    def set_scaler(self, transform_class, param_name: str = '_scaler') -> 'Manifest':
+
+        '''
+        Set scaler transformation using make_fitted_scaler.
+
+        Args:
+            transform_class: Transform class to use for scaling
+            param_name (str): Parameter name for fitted scaler
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.scaler = make_fitted_scaler(param_name, transform_class)
+        return self
+
+
+    def with_target(self, target_column: str) -> TargetBuilder:
+
+        '''
+        Start building target transformations with context.
+
+        Args:
+            target_column (str): Name of target column
+
+        Returns:
+            TargetBuilder: Builder for target transformations
+        '''
+        return TargetBuilder(self, target_column)
+
+    def prepare_data(
+        self,
+        raw_data: pl.DataFrame,
+        round_params: Dict[str, Any]
+    ) -> dict:
+
+        '''
+        Compute final data dictionary from raw data using manifest configuration.
+
+        Args:
+            raw_data (pl.DataFrame): Raw input dataset
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Final data dictionary ready for model training
+        '''
+
+        split_data = split_sequential(raw_data, self.split_config)
+
+        datetime_bar_pairs = [_process_bars(self, split, round_params) for split in split_data]
+        all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
+        split_data = [bar_data for _, bar_data in datetime_bar_pairs]
+
+        all_fitted_params = {}
+
+        for i in range(len(split_data)):
+            lazy_data = split_data[i].lazy()
+
+            lazy_data = _apply_feature_transforms(self, lazy_data, round_params)
+
+            data = lazy_data.collect()
+            data, all_fitted_params = _apply_target_transforms(
+                self, data, round_params, all_fitted_params, is_training=(i == 0)
+            )
+
+            data, all_fitted_params = _apply_scaler(
+                self, data, round_params, all_fitted_params, is_training=(i == 0)
+            )
+
+            split_data[i] = data.drop_nulls()
+
+        return _finalize_to_data_dict(split_data, all_datetimes, all_fitted_params, self)
+
+
+
+def _apply_fitted_transform(data: pl.DataFrame, fitted_transform):
+
+    '''
+    Compute transformed data using fitted transform instance.
+
+    Args:
+        data (pl.DataFrame): Data to transform
+        fitted_transform: Fitted transform instance with .transform() method
+
+    Returns:
+        pl.DataFrame: Transformed data
+    '''
+
+    return fitted_transform.transform(data)
+
+
+def make_fitted_scaler(param_name: str, transform_class):
+
+    '''
+    Create fitted transform entry for scaling.
+
+    Args:
+        param_name (str): Name for the fitted parameter
+        transform_class: Transform class to instantiate
+
+    Returns:
+        FittedTransformEntry: Complete fitted transform configuration
+    '''
+
+    return ([
+        (param_name, lambda data: transform_class(data), {})
+    ],
+    _apply_fitted_transform, {
+        'fitted_transform': param_name
+    })
+
+
+def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
+
+    '''
+    Resolve parameters using just-in-time detection with actual round_params.
+
+    Args:
+        params (Dict[str, Any]): Parameter specification dictionary
+        round_params (Dict[str, Any]): Round-specific parameter values
+
+    Returns:
+        Dict[str, Any]: Resolved parameter dictionary
+    '''
+
+    resolved = {}
+    for key, value in params.items():
+        if isinstance(value, str):
+            if value.startswith('_') or value in round_params:
+                resolved[key] = round_params[value]
+            elif '{' in value and '}' in value:
+                resolved[key] = value.format(**round_params)
+            else:
+                resolved[key] = value
+        else:
+            resolved[key] = value
+    return resolved
+
+
+def _process_bars(
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: Dict[str, Any]
+) -> Tuple[List, pl.DataFrame]:
+
+    '''
+    Compute bar formation on data and return post-bar datetimes.
+
+    Args:
+        manifest (Manifest): Experiment manifest containing bar formation config
+        data (pl.DataFrame): Input raw dataset
+        round_params (Dict[str, Any]): Parameter values for current round
+
+    Returns:
+        Tuple[List, pl.DataFrame]: Post-bar datetimes and processed data
+    '''
+
+    if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
+        func, base_params = manifest.bar_formation
+        resolved = _resolve_params(base_params, round_params)
+        lazy_data = data.lazy().pipe(func, **resolved)
+        bar_data = lazy_data.collect()
+        all_datetimes = bar_data['datetime'].to_list()
+    else:
+        all_datetimes = data['datetime'].to_list()
+        bar_data = data
+
+    # Validate required columns are present after bar formation
+    available_cols = list(bar_data.columns)
+    for required_col in manifest.required_bar_columns:
+        assert required_col in available_cols, (
+            f"Required bar column '{required_col}' not found after bar formation"
+        )
+
+    return all_datetimes, bar_data
+
+
+def _apply_feature_transforms(manifest: Manifest, lazy_data, round_params: Dict[str, Any]):
+
+    for func, base_params in manifest.feature_transforms:
+        resolved = _resolve_params(base_params, round_params)
+        lazy_data = lazy_data.pipe(func, **resolved)
+
+    return lazy_data
+
+
+def _apply_fitted_transforms(
+        transform_entries: List[FittedTransformEntry],
+        data: pl.DataFrame,
+        round_params: Dict[str, Any],
+        all_fitted_params: Dict[str, Any],
+        is_training: bool
+) -> Tuple[pl.DataFrame, Dict[str, Any]]:
+
+    '''
+    Compute fitted transforms on eager DataFrame.
+
+    Args:
+        transform_entries (List[FittedTransformEntry]): List of fitted transform configurations
+        data (pl.DataFrame): DataFrame to apply transforms to
+        round_params (Dict[str, Any]): Parameter values for current round
+        all_fitted_params (Dict[str, Any]): Previously fitted parameters
+        is_training (bool): Whether this is training data for fitting
+
+    Returns:
+        Tuple[pl.DataFrame, Dict[str, Any]]: Transformed data and updated fitted parameters
+    '''
+
+    for fitted_param_computations, func, base_params in transform_entries:
+        # Fit parameters on training data only
+        for param_name, compute_func, compute_base_params in fitted_param_computations:
+            if param_name not in all_fitted_params and is_training:
+                resolved = _resolve_params(compute_base_params, round_params)
+                value = compute_func(data, **resolved)
+                all_fitted_params[param_name] = value
+
+        # Apply transform using fitted parameters
+        combined_round_params = {**round_params, **all_fitted_params}
+        resolved = _resolve_params(base_params, combined_round_params)
+        data = func(data, **resolved)
+
+    return data, all_fitted_params
+
+
+def _apply_target_transforms(
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: Dict[str, Any],
+        all_fitted_params: Dict[str, Any],
+        is_training: bool
+) -> Tuple[pl.DataFrame, Dict[str, Any]]:
+
+    enhanced_round_params = round_params.copy()
+    if manifest.target_column:
+        enhanced_round_params['target_column'] = manifest.target_column
+
+    return _apply_fitted_transforms(
+        manifest.target_transforms, data, enhanced_round_params,
+        all_fitted_params, is_training
+    )
+
+
+def _apply_scaler(
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: Dict[str, Any],
+        all_fitted_params: Dict[str, Any],
+        is_training: bool
+) -> Tuple[pl.DataFrame, Dict[str, Any]]:
+
+    if manifest.scaler:
+        return _apply_fitted_transforms(
+            [manifest.scaler], data, round_params,
+            all_fitted_params, is_training
+        )
+    return data, all_fitted_params
+
+
+def _finalize_to_data_dict(
+        split_data: List[pl.DataFrame],
+        all_datetimes: List,
+        fitted_params: Dict[str, Any],
+        manifest: Manifest
+) -> dict:
+
+    # Validate all splits have datetime column
+    for i, split_df in enumerate(split_data):
+        assert 'datetime' in split_df.columns, f"Split {i} missing 'datetime' column"
+
+    # Ensure target_column is last column in all splits
+    if manifest.target_column:
+        for i, split_df in enumerate(split_data):
+            cols = list(split_df.columns)
+            if manifest.target_column in cols:
+                # Move target_column to end
+                cols.remove(manifest.target_column)
+                cols.append(manifest.target_column)
+                split_data[i] = split_df.select(cols)
+            else:
+                raise ValueError(f"Split {i} missing target column '{manifest.target_column}'")
+
+    cols = list(split_data[0].columns)
+
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
+
+    # Add fitted parameters to data_dict
+    for param_name, param_value in fitted_params.items():
+        data_dict[param_name] = param_value
+
+    return data_dict
+
+

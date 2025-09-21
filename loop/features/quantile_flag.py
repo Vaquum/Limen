@@ -1,45 +1,35 @@
 import polars as pl
 
 
-def quantile_flag(data: pl.DataFrame,
-                  col: str = 'close',
-                  q: float = 0.1,
-                  cutoff: float = None,
-                  return_cutoff: bool = False) -> pl.DataFrame:
-    
+def compute_quantile_cutoff(data: pl.DataFrame, col: str, q: float) -> float:
     '''
-    Mark rows where `col` exceeds the (1 - q) quantile.
+    Compute quantile cutoff value for binary flag creation.
 
     Args:
-        data (pl.DataFrame): Klines dataset with specified column
-        col (str): The column name on which to compute the quantile.
-        q (float): A value in [0,1]; if q = 0.1, use the 90% quantile.
-        cutoff (float): Optional pre-calculated cutoff value. If provided,
-                       this value is used instead of calculating from data.
-                       This prevents data leakage when applying training
-                       thresholds to test data.
-        return_cutoff (bool): If True, returns a tuple (data, cutoff) instead
-                             of just the data. Useful for applying the same
-                             cutoff to multiple datasets.
+        data (pl.DataFrame): Dataset with specified column
+        col (str): Column name to compute quantile on
+        q (float): Quantile parameter (0.1 = 90th percentile)
 
     Returns:
-        pl.DataFrame: The input data with a new UInt8 column "quantile_flag"
-                       that is 1 when `col` > cutoff, else 0
-        OR
-        tuple: (pl.DataFrame, float) if return_cutoff is True
+        float: Cutoff value at (1-q) quantile
     '''
+    return data.select(pl.col(col).quantile(1.0 - q)).item()
 
-    if cutoff is None:
-        cutoff = data.select(
-            pl.col(col).quantile(1.0 - q)
-        ).item()
-    
-    result = data.with_columns([
+
+def quantile_flag(data: pl.DataFrame, col: str, cutoff: float) -> pl.DataFrame:
+    '''
+    Apply binary flag based on pre-computed cutoff value.
+
+    Args:
+        data (pl.DataFrame): Dataset with specified column
+        col (str): Column name to apply flag on
+        cutoff (float): Pre-computed cutoff value
+
+    Returns:
+        pl.DataFrame: Data with quantile_flag column added
+    '''
+    return data.with_columns([
         (pl.col(col) > cutoff)
             .cast(pl.UInt8)
             .alias('quantile_flag')
     ])
-    
-    if return_cutoff:
-        return result, cutoff
-    return result
