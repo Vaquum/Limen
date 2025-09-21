@@ -21,6 +21,7 @@ from loop.utils.data_sampling.random_subsets_sampling import random_subsets_samp
 from loop.utils.data_sampling.bootstrap_sampling import bootstrap_sampling
 from loop.utils.data_sampling.temporal_windows_sampling import temporal_windows_sampling
 from loop.utils.uel_split_megamodel import uel_split_megamodel
+from loop.utils.shift_column import shift_column
 
 __all__ = [
     'add_breakout_ema',
@@ -52,5 +53,6 @@ __all__ = [
     'split_sequential',
     'temporal_windows_sampling',
     'to_average_price_klines',
-    'uel_split_megamodel'
+    'uel_split_megamodel',
+    'shift_column'
 ] 
