@@ -9,7 +9,7 @@ import loop
 
 
 def test_uel_save_load_basic():
-    """Test basic save and load functionality of UEL objects"""
+    '''Test basic save and load functionality of UEL objects'''
     
     # Create test data
     data = pl.DataFrame({
@@ -93,7 +93,7 @@ def test_uel_save_load_basic():
 
 
 def test_uel_save_load_complex_objects():
-    """Test save and load with complex objects like sklearn models and scalers"""
+    '''Test save and load with complex objects like sklearn models and scalers'''
     
     # Create test data
     np.random.seed(42)  # For reproducible results
@@ -177,7 +177,7 @@ def test_uel_save_load_complex_objects():
 
 
 def test_uel_load_errors():
-    """Test error handling in load functionality"""
+    '''Test error handling in load functionality'''
     
     # Test loading non-existent file
     try:
@@ -193,9 +193,3 @@ def test_uel_load_errors():
     except ValueError:
         pass
 
-
-if __name__ == "__main__":
-    test_uel_save_load_basic()
-    test_uel_save_load_complex_objects()
-    test_uel_load_errors()
-    print("All UEL save/load tests passed!")

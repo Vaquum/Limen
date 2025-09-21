@@ -18,9 +18,13 @@ from loop.tests.test_polars_lazy_evaluation import (
     test_polars_lazy_evaluation_performance,
 )
 from loop.tests.test_large_param_space import test_large_param_space
+from loop.tests.test_uel_save_load import test_uel_save_load_basic, test_uel_save_load_complex_objects, test_uel_load_errors
 
 tests = [
     test_large_param_space,
+    test_uel_save_load_basic,
+    test_uel_save_load_complex_objects,
+    test_uel_load_errors,
     test_klines_data_maker_fields,
     test_sfm,
     test_conserved_flux_renormalization,
