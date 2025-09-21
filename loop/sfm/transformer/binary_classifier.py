@@ -65,11 +65,12 @@ def _create_sequences(data_df, feature_cols, target_col, lookback):
     features_np = data_df[feature_cols].to_numpy()
     target_np = data_df[target_col].to_numpy()
     
-    for i in range(len(data_df) - lookback):
+    for i in range(len(data_df) - lookback ):
         X.append(features_np[i:(i + lookback)])
         y.append(target_np[i + lookback - 1]) # Target corresponds to the last step of the window
     
     return np.array(X), np.array(y)
+
 
 
 def prep(data, round_params):
@@ -222,6 +223,146 @@ def prep(data, round_params):
 
     return out
 
+
+
+# def prep(data, round_params):
+#     """
+#     A deterministic data preparation pipeline (Final Version).
+#     """
+#     # ------------------ 1. Fulfill SFM Contract & Unpack Params ------------------
+#     all_datetimes = data['datetime'].to_list() # Keep datetimes as a Polars DF
+
+#     # Unpack knobs
+#     lookback = round_params['lookback_window']
+#     horizon = round_params['target_horizon']
+#     price_thresh = round_params['target_threshold']
+#     scaler_type = round_params['scaler_type']
+    
+#     processed_df = data.clone()
+
+
+
+#     # ------------------ 2. Target Engineering ------------------
+#     future_close = processed_df['close'].shift(-horizon)
+#     price_change = (future_close - processed_df['close']) / processed_df['close']
+#     processed_df = processed_df.with_columns([
+#         price_change.alias('price_change'),
+#         (pl.when(price_change > price_thresh).then(1).otherwise(0)).alias('target')
+#     ])
+
+#     feature_cols = [
+#         'open', 'high', 'low', 'close',
+#         'volume', 'no_of_trades', 'maker_ratio',
+#         'mean', 'std', 'median', 'iqr'
+#     ]
+
+#     # Cyclical features
+#     if round_params['use_cyclical_features']:
+#         cyc_feature_exprs = []
+#         cyc_feature_names = []
+#         kline_duration = (processed_df['datetime'][1] - processed_df['datetime'][0]).total_seconds()
+
+#         if kline_duration < 3600:
+#             cyc_feature_exprs.extend([
+#                 (np.sin(2 * np.pi * processed_df['datetime'].dt.minute() / 60)).alias('minute_sin'),
+#                 (np.cos(2 * np.pi * processed_df['datetime'].dt.minute() / 60)).alias('minute_cos')
+#             ])
+#             cyc_feature_names.extend(['minute_sin', 'minute_cos'])
+
+#         cyc_feature_exprs.extend([
+#             (np.sin(2 * np.pi * processed_df['datetime'].dt.hour() / 24)).alias('hour_sin'),
+#             (np.cos(2 * np.pi * processed_df['datetime'].dt.hour() / 24)).alias('hour_cos'),
+#             (np.sin(2 * np.pi * processed_df['datetime'].dt.weekday() / 7)).alias('day_of_week_sin'),
+#             (np.cos(2 * np.pi * processed_df['datetime'].dt.weekday() / 7)).alias('day_of_week_cos')
+#         ])
+#         cyc_feature_names.extend(['hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos'])
+
+#         processed_df = processed_df.with_columns(cyc_feature_exprs)
+#         feature_cols.extend(cyc_feature_names)
+
+#     # Sequential features
+#     if round_params['use_sequential_features']:
+#         first_datetime = processed_df['datetime'][0]
+#         processed_df = processed_df.with_columns([
+#             (processed_df['datetime'] - first_datetime).dt.total_days().alias('nth_day'),
+#             ((processed_df['datetime'] - first_datetime).dt.total_days() // 7).alias('nth_week'),
+#             ((processed_df['datetime'].dt.year() - first_datetime.year) * 12 + \
+#              (processed_df['datetime'].dt.month() - first_datetime.month)).alias('nth_month')
+#         ])
+#         feature_cols.extend(['nth_day', 'nth_week', 'nth_month'])
+
+#     processed_df = processed_df.drop_nulls()
+#         # ------------------ 3.  Chronological Split ------------------
+#     split_data_list = split_sequential(processed_df, (70, 15, 15))
+#     train_df, val_df, test_df = split_data_list[0], split_data_list[1], split_data_list[2]
+#     # ------------------ 4. Chronological Split ------------------
+#     cols_for_utility = feature_cols + ['datetime', 'target']
+    
+#     # This call produces a base dictionary with 2D data and the crucial _alignment block
+#     base_data_dict = split_data_to_prep_output(
+#         split_data=split_data_list,
+#         cols=cols_for_utility,
+#         all_datetimes=all_datetimes
+#     )
+
+#     # ------------------ 4. Manual 3D Sequencing (Required for Transformer) ------------------
+    
+#     # Now, we create the 3D sequences our Transformer needs using our helper.
+#     X_train, y_train = _create_sequences(train_df, feature_cols, 'target', lookback)
+#     X_val, y_val = _create_sequences(val_df, feature_cols, 'target', lookback)
+#     X_test, y_test = _create_sequences(test_df, feature_cols, 'target', lookback)
+
+#     # ------------------ 5. Scaling ------------------
+    
+#     scaler_map = {'standard': StandardScaler, 'minmax': MinMaxScaler, 'robust': RobustScaler}
+#     scaler = scaler_map[scaler_type]()
+#     n_features = X_train.shape[2]
+
+#     # Reshape, fit on train only, and transform all sets
+#     scaler.fit(X_train.reshape(-1, n_features))
+#     X_train_scaled = scaler.transform(X_train.reshape(-1, n_features)).reshape(X_train.shape)
+#     X_val_scaled = scaler.transform(X_val.reshape(-1, n_features)).reshape(X_val.shape)
+#     X_test_scaled = scaler.transform(X_test.reshape(-1, n_features)).reshape(X_test.shape)
+
+#     # ------------------ 6. Construct Final Data Dictionary ------------------
+
+# # Drop first lookback rows from alignment to match sequence lengths
+#     import pandas as pd
+#     import datetime
+#     def trim_alignment(alignment_block, lookback):
+#         new_alignment = {}
+#         for split_name, df in alignment_block.items():
+#             if df is None:
+#                 new_alignment[split_name] = None
+#                 continue
+#             if isinstance(df, pd.Series):
+#                 df = df.to_frame(name="datetime")  # enforce column
+#             elif isinstance(df, datetime.datetime):
+#                 df = pd.DataFrame({"datetime": [df]})
+#             elif not isinstance(df, pd.DataFrame):
+#                 raise TypeError(f"Unexpected type for alignment[{split_name}]: {type(df)}")
+
+#             # Enforce datetime dtype
+#             if "datetime" in df.columns:
+#                 df["datetime"] = pd.to_datetime(df["datetime"])
+
+#             new_alignment[split_name] = df.iloc[lookback:].reset_index(drop=True)
+#         return new_alignment
+
+#     final_data_dict = {
+#         'X_train': X_train_scaled, 'y_train': y_train,
+#         'X_val': X_val_scaled, 'y_val': y_val,
+#         'X_test': X_test_scaled, 'y_test': y_test,
+#         '_scaler': scaler,
+#         '_alignment': trim_alignment(base_data_dict['_alignment'], lookback)
+#     }
+#     print(">>> DEBUG: Alignment after trimming")
+#     for k, v in final_data_dict["_alignment"].items():
+#         if v is not None and "datetime" in v.columns:
+#             assert pd.api.types.is_datetime64_any_dtype(v["datetime"]), f"{k} datetime wrong type"
+
+#     return final_data_dict
+
 # =============================================================================
 # 3. MODEL TRAINING & EVALUATION (CORRECTED VERSION)
 # =============================================================================
@@ -231,6 +372,7 @@ def _positional_encoding(seq_len, d_model):
     pos = keras.ops.arange(0, seq_len, dtype="float32")[:, None]
     i = keras.ops.arange(0, d_model, 2, dtype="float32")
     
+    # --- FIX 1: Replaced `1 / ...` with a type-safe Keras operation ---
     d_model_float = keras.ops.cast(d_model, dtype="float32")
     exponent = -((2.0 * i) / d_model_float)
     angle_rates = keras.ops.power(10000.0, exponent)
@@ -263,77 +405,66 @@ def _transformer_encoder_block(inputs, d_model, num_heads, dropout_rate):
 
 class RotaryEmbedding(keras.layers.Layer):
     """
-    Rotary Positional Embedding (RoPE) layer, implemented in pure Keras 3.0.
-
-    This layer rotates input embeddings based on their relative position, offering
-    a modern alternative to sinusoidal positional encoding.
-    
-    Args:
-        dim (int): The dimension of the feature space, which must be even.
+    Custom Rotary Positional Embedding layer.
     """
-    def __init__(self, dim, **kwargs):
+    def __init__(self, dim, seq_len, theta=10000.0, **kwargs):
         super().__init__(**kwargs)
-        if dim % 2 != 0:
-            raise ValueError(f"The feature dimension must be even for RotaryEmbedding, but got {dim}")
         self.dim = dim
+        self.seq_len = seq_len
+        self.theta = theta
+
+        # --- FIX IS HERE ---
+        # The original code created frequencies for the half-dimension, then incorrectly
+        # concatenated them back to the full dimension. We must create the sin/cos
+        # embeddings with the half-dimension to match the split inputs in call().
         
-        # Calculate inverse frequencies for the sinusoidal basis
-        inv_freq = 1.0 / (10000 ** (keras.ops.arange(0, dim, 2, dtype="float32") / dim))
-        self.inv_freq = inv_freq
+        # 1. Create frequencies for HALF the dimension
+        arange = keras.ops.arange(0, self.dim, 2, dtype="float32")
+        inv_freq = 1.0 / (self.theta ** (arange / self.dim))
+        
+        # 2. Create the time sequence
+        t = keras.ops.arange(self.seq_len, dtype=inv_freq.dtype)
+        
+        # 3. Calculate frequency matrix (shape will be [seq_len, dim/2])
+        freqs = keras.ops.einsum("i,j->ij", t, inv_freq)
+
+        # 4. Create sin and cos embeddings directly from the half-dim freqs
+        #    DO NOT concatenate them.
+        self.cos_emb = keras.ops.cos(freqs)
+        self.sin_emb = keras.ops.sin(freqs)
 
     def call(self, inputs):
-        """Applies rotary embedding to the input tensor."""
-        # inputs shape: (batch_size, sequence_length, feature_dimension)
-        seq_len = keras.ops.shape(inputs)[1]
-        t = keras.ops.arange(seq_len, dtype="float32")
-        
-        # Calculate frequency components
-        freqs = keras.ops.einsum("i,j->ij", t, self.inv_freq)
-        # freqs shape: (sequence_length, dim / 2)
-        
-        # Duplicate for both sine and cosine components
-        emb = keras.ops.concatenate([freqs, freqs], axis=-1)
-        # emb shape: (sequence_length, dim)
-
-        # Create cosine and sine embeddings for rotation
-        cos_emb = keras.ops.cos(emb)
-        sin_emb = keras.ops.sin(emb)
-
-        # Split the input into two halves for rotation
+        # Split the input into two halves along the feature dimension
         x1, x2 = keras.ops.split(inputs, 2, axis=-1)
         
+        # Now the shapes will match:
+        # x1 shape: (batch, seq_len, 16)
+        # cos_emb shape: (seq_len, 16)
+        
         # Apply the rotation matrix properties
-        # rotated_x = x * cos - flip(x) * sin
-        rotated_x1 = (x1 * cos_emb) - (x2 * sin_emb)
-        rotated_x2 = (x1 * sin_emb) + (x2 * cos_emb)
+        rotated_x1 = (x1 * self.cos_emb) - (x2 * self.sin_emb)
+        rotated_x2 = (x1 * self.sin_emb) + (x2 * self.cos_emb)
         
         # Concatenate the rotated halves back together
         return keras.ops.concatenate([rotated_x1, rotated_x2], axis=-1)
 
-    def get_config(self):
-        config = super().get_config()
-        config.update({"dim": self.dim})
-        return config
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 def _build_transformer_model(input_shape, round_params):
-    """Builds the complete Transformer classifier using pure Keras 3.0."""
+    """Builds the complete Transformer classifier using Keras 3.x."""
     d_model = round_params['d_model']
-    num_heads = round_params['num_heads']
-    
+    seq_len = input_shape[0] # This is the lookback_window
+    encoding_type = round_params['positional_encoding_type']
+
     inputs = Input(shape=input_shape)
-    
-    # Project input features into the Transformer's dimensional space (d_model)
     x = Dense(units=d_model, activation="relu")(inputs)
     
-    # --- MODIFIED SECTION: Apply Positional Encoding ---
-    encoding_type = round_params['positional_encoding_type']
-    
     if encoding_type == 'sinusoidal':
-        # Additive sinusoidal encoding
-        x += _positional_encoding(input_shape[0], d_model)
+        x += _positional_encoding(seq_len, d_model)
     elif encoding_type == 'rotary':
-        # Rotational encoding
-        x = RotaryEmbedding(dim=d_model)(x)
+        # Pass the sequence length to the layer during initialization
+        x = RotaryEmbedding(dim=d_model, seq_len=seq_len)(x)
     
     for _ in range(round_params['num_encoder_layers']):
         x = _transformer_encoder_block(
@@ -347,7 +478,7 @@ def _build_transformer_model(input_shape, round_params):
     
     return Model(inputs=inputs, outputs=outputs)
 
-def model(data_dict, round_params):
+def model(data: dict, round_params):
     """
     Builds, trains, and evaluates the model with all corrections applied.
     """
@@ -380,9 +511,9 @@ def model(data_dict, round_params):
     
 
     # ------------------ 2. Unpack Data and Params ------------------
-    X_train, y_train = data_dict['X_train'], data_dict['y_train']
-    X_val, y_val = data_dict['X_val'], data_dict['y_val']
-    X_test, y_test = data_dict['X_test'], data_dict['y_test']
+    X_train, y_train = data['X_train'], data['y_train']
+    X_val, y_val = data['X_val'], data['y_val']
+    X_test, y_test = data['X_test'], data['y_test']
 
     # ------------------ 3. Build and Compile the Model ------------------
     input_shape = (X_train.shape[1], X_train.shape[2])
