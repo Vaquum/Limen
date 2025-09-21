@@ -34,7 +34,7 @@ class UniversalExperimentLoop:
         else:
             # Initialize normally
             if data is None or single_file_model is None:
-                raise ValueError("Either filepath must be provided, or both data and single_file_model must be provided")
+                raise ValueError('Either filepath must be provided, or both data and single_file_model must be provided')
             
             self.data = data
             self.model = single_file_model.model
