@@ -1,8 +1,8 @@
+dev_snippets.py
 .env
 venv
 .venv/
 loop.egg-info
-.cursor
 __pycache__
 **/__pycache__/
 .DS_Store

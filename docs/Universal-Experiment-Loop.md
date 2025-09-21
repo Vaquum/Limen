@@ -110,6 +110,7 @@ Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming 
   - `experiment_backtest_results`: `pd.DataFrame` produced via `Log.experiment_backtest_results()`
   - `experiment_parameter_correlation`: Convenience reference to `Log.experiment_parameter_correlation`
   - `_log`: Internal `Log` instance used to compute the above artifacts
+  - `explorer`: Convenience callable that launches the Loop Explorer Streamlit UI bound to this UEL instance (dataset selector includes Historical Data, Experiment Log, Confusion Metrics, and Backtest Results)
 
 #### Parameter space
 
@@ -147,15 +148,22 @@ uel = loop.UniversalExperimentLoop(
 uel.run(
     experiment_name='exp_breakout',
     n_permutations=10,
-    prep_each_round=False,          # prep once for baseline runs
+    prep_each_round=False,
     random_search=True,
     maintain_details_in_params=True,
-    context_params={'symbol': 'BTCUSDT'},
     save_to_sqlite=False,
 )
 
 # Post-run analysis via precomputed artifacts and internal Log
 backtest_df = uel.experiment_backtest_results
 confusion_df = uel.experiment_confusion_metrics
+
+# Compute round specific results
 round0_perf = uel._log.permutation_prediction_performance(round_id=0)
+
+# Visually explore the data
+uel.explorer()
+
 ```
+
+The above examples are indicative, refer above in this document for outline of the full features available after `uel.run` completes operation. 

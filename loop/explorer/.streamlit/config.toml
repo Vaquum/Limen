@@ -1,0 +1,15 @@
+[theme]
+# Mid purple accent
+primaryColor = "#B5AAD7"
+
+# Refined warm-gray surfaces (between dark and sepia)
+backgroundColor = "#262429"
+secondaryBackgroundColor = "#2F2D36"
+
+# Elegant soft off-white text
+textColor = "#ECE8F2"
+
+# Sans-serif for a modern, premium feel
+font = "sans serif"
+
+

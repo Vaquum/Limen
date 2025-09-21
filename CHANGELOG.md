@@ -258,5 +258,40 @@
 - Pre-compute `experiment_confusion_metrics` and `experiment_backtest_results` (**NOTE**: `experiment_parameter_correlation` remains callable)
 - Clean `uel` object namespace
 
-# v1.15.1 on 19th of august 2025
+# v1.15.1 on 19th of August 2025
 - Add Ichimoku Cloud feature to `loop.features`
+
+# v1.16.0 on 24th of August 2025
+- Simplify `lightgbm.tradeable_regressor` - remove deadwood, genericize, etc
+
+# v1.16.1 on 4th of September 2025
+- Use deterministic and stable SQL fuctions in `get_klines_data()` to minimize
+data mismatch
+- Update datasets for test data
+
+# v1.16.2 on 31st of August, 2025
+- Fix Streamlit explorer launch path by injecting project root into `PYTHONPATH` for the subprocess in `loop.explorer.loop_explorer`, ensuring `loop` is importable when started via tools/Playwright
+
+# v1.17.0 on 9th of September 2025
+- Add `linear_transform.py` under `loop.transforms`
+- Add `ridge_classifier.py` under `loop.sfm.ridge`
+- Fix `loop.features.ichimoku_cloud` not added into `loop.features.__init__`
+- Add test for the above SFM
+
+# v1.18.0 on 13th of September, 2025
+- Add `loop.explorer` data visualization toolkit
+- Add `features.breakout_percentile_regime`
+- Add `features.hh_hl_structure_regime`
+- Add `features.ma_slope_regime`
+- Add `features.price_vs_band_regime`
+- Add `features.window_return_regime`
+- Add `indicators.sma_deviation_std`
+- Add `indicators.window_return`
+- Add `transforms.quantile_trim_transform`
+- Add `transforms.winsorize_return`
+- Add `transforms.zscore_transform`
+- Add new module `snippets` as a home for various dev workflow snippets specific to Loop
+- Add `snippets.get_uel_run_object`
+- Add `snippets.test_explorer_locally`
+- Update project CLAUDE.md and Project.md
+
