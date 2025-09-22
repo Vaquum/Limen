@@ -1,5 +1,7 @@
 import polars as pl
-from loop.data.bars import volume_bars, trade_bars, liquidity_bars
+from loop.data.bars import volume_bars
+from loop.data.bars import trade_bars
+from loop.data.bars import liquidity_bars
 from loop.tests.utils.get_data import get_klines_data_small
 
 
@@ -11,7 +13,7 @@ def validate_bars_output(
     expected_columns = {
         'datetime', 'open', 'high', 'low', 'close', 'volume', 
         'no_of_trades', 'liquidity_sum', 'maker_ratio', 'maker_volume', 
-        'maker_liquidity', 'bar_count', 'base_interval'
+        'maker_liquidity', 'mean', 'bar_count', 'base_interval'
     }
     assert set(result.columns) == expected_columns
     
@@ -35,6 +37,7 @@ def validate_bars_output(
     assert (result['maker_ratio'] <= 1).all()
     assert (result['maker_volume'] >= 0).all()
     assert (result['maker_liquidity'] >= 0).all()
+    assert (result['mean'] >= 0).all()
     assert (result['bar_count'] > 0).all()
     
     if expected_aggregation:
@@ -49,7 +52,7 @@ def test_volume_bars_basic():
     
     validate_bars_output(result, expected_aggregation=True)
     assert result['base_interval'][0] == 7200
-    assert 10 <= len(result) <= 20, f'Expected 10-20 bars, got {len(result)}'
+    assert 10 <= len(result) <= 20, f"Expected 10-20 bars, got {len(result)}"
 
 
 def test_trade_bars_basic():
@@ -58,7 +61,7 @@ def test_trade_bars_basic():
     
     validate_bars_output(result, expected_aggregation=True)
     assert result['base_interval'][0] == 7200
-    assert 10 <= len(result) <= 20, f'Expected 10-20 bars, got {len(result)}'
+    assert 10 <= len(result) <= 20, f"Expected 10-20 bars, got {len(result)}"
 
 
 def test_liquidity_bars_basic():
@@ -67,6 +70,6 @@ def test_liquidity_bars_basic():
     
     validate_bars_output(result, expected_aggregation=True)
     assert result['base_interval'][0] == 7200
-    assert 10 <= len(result) <= 20, f'Expected 10-20 bars, got {len(result)}'
+    assert 10 <= len(result) <= 20, f"Expected 10-20 bars, got {len(result)}"
 
 

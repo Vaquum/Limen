@@ -19,7 +19,7 @@ def _standard_bars(data: pl.DataFrame,
     Returns:
         pl.DataFrame:  Data bars with columns 'datetime', 'open', 'high',
                       'low', 'close', 'volume', 'no_of_trades', 'liquidity_sum',
-                      'maker_ratio', 'maker_volume', 'maker_liquidity',
+                      'maker_ratio', 'maker_volume', 'maker_liquidity', 'mean'
                       'bar_count', 'base_interval'
 
     '''
@@ -80,6 +80,8 @@ def _standard_bars(data: pl.DataFrame,
             pl.col('maker_liquidity').sum().alias('maker_liquidity'),
             ((pl.col('maker_ratio') * pl.col('no_of_trades')).sum()
              / pl.col('no_of_trades').sum()).alias('maker_ratio'),
+            ((pl.col('mean') * pl.col('no_of_trades')).sum()
+             / pl.col('no_of_trades').sum()).alias('mean'),
             pl.len().alias('bar_count'),
             pl.lit(base_interval).alias('base_interval')
         ])
@@ -87,7 +89,7 @@ def _standard_bars(data: pl.DataFrame,
         .select([
             'datetime', 'open', 'high', 'low', 'close', 'volume', 
             'no_of_trades', 'liquidity_sum', 'maker_ratio', 'maker_volume', 
-            'maker_liquidity', 'bar_count', 'base_interval'
+            'maker_liquidity', 'mean', 'bar_count', 'base_interval'
         ])
     )
     

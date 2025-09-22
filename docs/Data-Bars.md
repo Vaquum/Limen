@@ -25,6 +25,7 @@ All standard bar functions return a `pl.DataFrame` with the following structure:
 | `high` | `float` | Highest price reached during the bar period |
 | `low` | `float` | Lowest price reached during the bar period |
 | `close` | `float` | Closing price at the end of the bar period |
+| `mean` | `float` | Average price at the end of the bar period |
 | `volume` | `float` | Total volume accumulated in the bar |
 | `no_of_trades` | `int` | Number of trades accumulated in the bar |
 | `liquidity_sum` | `float` | Total liquidity accumulated in the bar |
