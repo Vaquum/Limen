@@ -293,7 +293,7 @@ def model(data, round_params):
     output = Dense(1, activation='sigmoid', name='output')(x)
     model_tf = Model(inputs=input_layer, outputs=output)
 
-    
+
     optimizer = AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
     model_tf.compile(
         optimizer=optimizer,#type: ignore
@@ -332,6 +332,7 @@ def model(data, round_params):
     round_results['_val_probs'] = val_probs
 
     return round_results
+
 
 
 
