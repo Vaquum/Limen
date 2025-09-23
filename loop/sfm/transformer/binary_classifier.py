@@ -173,14 +173,33 @@ def params():
 
 def prep(data, round_params, manifest):
     """
-    Delegate to manifest's prepare_data for split-first leakproof prep.
-    data: Polars DataFrame
-    round_params: dict with single values for each param
-    manifest: manifest() instance from this file
-    Returns: data_dict ready for model()
+    Leakproof prep for split-first alignment and proper windowing for sequence models.
+    - Marks first seq_len_eff-1 test datetimes as missing so UEL Log only aligns predictions to valid test labels.
+    - Converts feature and target splits to NumPy for Keras compatibility.
+    - Returns alignment dictionary for logging.
     """
+    # Prepare model-ready splits via manifest
     data_dict = manifest.prepare_data(data, round_params)
-    # --- Ensure model inputs are NumPy arrays ---
+
+    # Compute effective window length (for safest windowing across splits)
+    seq_len_eff = min(
+        round_params['seq_length'],
+        data_dict['x_train'].shape[0],
+        data_dict['x_val'].shape[0],
+        data_dict['x_test'].shape[0],
+    )
+
+    # Update alignment: drop first warmup test datetimes due to windowing
+    if '_alignment' in data_dict:
+        align   = dict(data_dict['_alignment'])
+        missing = list(align.get('missing_datetimes', []))
+        test_dt = align.get('test_datetimes', None)
+        if test_dt is not None and seq_len_eff > 1:
+            missing = list(missing) + list(test_dt[:seq_len_eff - 1])
+            align['missing_datetimes'] = missing
+            data_dict['_alignment'] = align
+
+    # Ensure model splits are NumPy ndarrays for Keras
     for k in ['x_train', 'x_val', 'x_test']:
         if isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy()
@@ -189,14 +208,16 @@ def prep(data, round_params, manifest):
             data_dict[k] = data_dict[k].to_numpy().ravel()
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
-  
+
+    # Optional debug shapes
     print("Prep output shapes/types:")
     for k in ['x_train', 'x_val', 'x_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
     for k in ['y_train', 'y_val', 'y_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
-    
+
     return data_dict
+
 
 def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
     """
@@ -241,7 +262,7 @@ def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
 def model(data, round_params):
     """
     Builds, trains, and evaluates a transformer regime classifier.
-    Keeps round_results scalar-only and pads _preds to raw test length for Log.
+    UEL-safe: no prediction padding; alignment removes any missing test rows for logs.
     """
     # --- Unpack parameters ---
     d_model = round_params['d_model']
@@ -264,10 +285,7 @@ def model(data, round_params):
     X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test']
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
 
-    # Save raw test length for Log padding
-    n_test_raw = int(y_test.shape[0])
-
-    # --- Robust windowing: cap seq_length by smallest split length ---
+    # Effective window length (safe for short splits)
     seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0])
     X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
     X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
@@ -312,34 +330,27 @@ def model(data, round_params):
     )
 
     # --- Evaluate on windowed test ---
-    test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() #type: ignore
+    test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
     test_preds = (test_probs > 0.5).astype(int)
 
     # Metrics against window-aligned y_test
     round_results = binary_metrics(data={'y_test': y_test}, preds=test_preds, probs=test_probs)
 
-    # Pad _preds to the raw test length so Log can align predictions and actuals
-    pad = n_test_raw - len(test_preds)
-    if pad > 0:
-        preds_for_log = np.concatenate([np.full(pad, np.nan), test_preds])
-    else:
-        preds_for_log = test_preds
+    # UEL artifacts (UEL pops _preds and models, extras are kept out of log columns)
+    round_results['_preds'] = test_preds          # UEL will collect
+    round_results['models'] = [model_tf]          # UEL will collect
 
-    # UEL artifacts
-    round_results['_preds'] = preds_for_log       # aligned length for Log
-    round_results['models'] = [model_tf]          # collected and popped by UEL
-
-    # Keep non-scalar arrays out of the log row
-    val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=0).flatten() #type: ignore
+    # Store validation arrays inside extras so not logged as columns
+    val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=0).flatten() # type: ignore
     val_preds = (val_probs > 0.5).astype(int)
     round_results['extras'] = {
         'seq_len_eff': seq_len_eff,
-        'pad': int(pad),
         'val_preds': val_preds,
         'val_probs': val_probs,
     }
 
     return round_results
+
 
 
 
