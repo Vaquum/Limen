@@ -26,20 +26,21 @@ import numpy as np
 from loop.manifest import Manifest
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
-    """Add cyclical features for hour, minute, and day to df"""
-    dt = df['datetime'].to_pandas()
-    hour = dt.dt.hour
-    minute = dt.dt.minute
-    day = dt.dt.day
+    """Add cyclical features for hour, minute, and day to df (Polars native)"""
     df = df.with_columns([
-        pl.Series('sin_hour', np.sin(2 * np.pi * hour / 24)),
-        pl.Series('cos_hour', np.cos(2 * np.pi * hour / 24)),
-        pl.Series('sin_minute', np.sin(2 * np.pi * minute / 60)),
-        pl.Series('cos_minute', np.cos(2 * np.pi * minute / 60)),
-        pl.Series('sin_day', np.sin(2 * np.pi * day / 31)),
-        pl.Series('cos_day', np.cos(2 * np.pi * day / 31))
+        (pl.col('datetime').dt.hour().alias('hour')),
+        (pl.col('datetime').dt.minute().alias('minute')),
+        (pl.col('datetime').dt.day().alias('day')),
     ])
-    return df
+    df = df.with_columns([
+        (np.sin(2 * np.pi * pl.col('hour') / 24).alias('sin_hour')),
+        (np.cos(2 * np.pi * pl.col('hour') / 24).alias('cos_hour')),
+        (np.sin(2 * np.pi * pl.col('minute') / 60).alias('sin_minute')),
+        (np.cos(2 * np.pi * pl.col('minute') / 60).alias('cos_minute')),
+        (np.sin(2 * np.pi * pl.col('day') / 31).alias('sin_day')),
+        (np.cos(2 * np.pi * pl.col('day') / 31).alias('cos_day')),
+    ])
+    return df.drop(['hour', 'minute', 'day'])
 
 def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: float) -> pl.DataFrame:
     """
@@ -77,22 +78,20 @@ def manifest():
         .set_split_config(8, 1, 2)
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
-
-        # Add cyclical features (all granular time encodings)
         .add_feature(add_cyclical_features)
-
-        # Target regime: quantile flag on windowed forward return
         .with_target('target_regime')
             .add_fitted_transform(regime_target)
-                .fit_param('_regime_cutoff', lambda df, prediction_window, target_quantile: 
-                    np.quantile(
-                        (df['close'].shift(-prediction_window) - df['close']) / df['close'], 
-                        target_quantile
-                    ), 
-                    prediction_window='prediction_window', target_quantile='target_quantile')
+                .fit_param(
+                    '_regime_cutoff',
+                    lambda df, prediction_window, target_quantile:
+                        np.quantile(
+                            (df['close'].shift(-prediction_window) - df['close']) / df['close'],
+                            target_quantile
+                        ),
+                    prediction_window='prediction_window', target_quantile='target_quantile'
+                )
                 .with_params(prediction_window='prediction_window', target_quantile='target_quantile')
             .done()
-
         .set_scaler(StandardScaler)
     )
 
