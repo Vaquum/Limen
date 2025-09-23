@@ -21,6 +21,80 @@ from keras.layers import (
 from keras.models import Model
 from keras.optimizers import Adam, AdamW
 from keras.callbacks import EarlyStopping
+import polars as pl
+import numpy as np
+from loop.manifest import Manifest
+
+def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
+    """Add cyclical features for hour, minute, and day to df"""
+    dt = df['datetime'].to_pandas()
+    hour = dt.dt.hour
+    minute = dt.dt.minute
+    day = dt.dt.day
+    df = df.with_columns([
+        pl.Series('sin_hour', np.sin(2 * np.pi * hour / 24)),
+        pl.Series('cos_hour', np.cos(2 * np.pi * hour / 24)),
+        pl.Series('sin_minute', np.sin(2 * np.pi * minute / 60)),
+        pl.Series('cos_minute', np.cos(2 * np.pi * minute / 60)),
+        pl.Series('sin_day', np.sin(2 * np.pi * day / 31)),
+        pl.Series('cos_day', np.cos(2 * np.pi * day / 31))
+    ])
+    return df
+
+def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: float) -> pl.DataFrame:
+    """
+    Label each row as a 'long regime' if forward windowed return exceeds quantile threshold.
+    - prediction_window: forecast horizon in minutes
+    - target_quantile: quantile to use as threshold (e.g., 0.55)
+    """
+    closes = df['close'].to_numpy()
+    windowed_returns = np.zeros_like(closes)
+    # Compute forward window return for every row
+    for i in range(len(closes)):
+        end_idx = min(i + prediction_window, len(closes) - 1)
+        windowed_returns[i] = (closes[end_idx] - closes[i]) / closes[i]
+    # Determine quantile threshold on training split only (in manifest, handled via fitted param)
+    quantile_cutoff = np.quantile(windowed_returns, target_quantile)
+    label = (windowed_returns > quantile_cutoff).astype(int)
+    df = df.with_columns([pl.Series('target_regime', label)])
+    return df
+
+def manifest():
+    # No-op bar formation for normal klines
+    def base_bar_formation(data: pl.DataFrame, **params) -> pl.DataFrame:
+        return data
+
+    required_cols = [
+        'datetime', 'open', 'high', 'low', 'close', 'mean', 'std', 'median', 'iqr',
+        'volume', 'maker_ratio', 'no_of_trades', 'open_liquidity', 'high_liquidity',
+        'low_liquidity', 'close_liquidity', 'liquidity_sum', 'maker_volume', 'maker_liquidity'
+    ]
+
+    from sklearn.preprocessing import StandardScaler
+
+    return (
+        Manifest()
+        .set_split_config(8, 1, 2)
+        .set_bar_formation(base_bar_formation, bar_type='base')
+        .set_required_bar_columns(required_cols)
+
+        # Add cyclical features (all granular time encodings)
+        .add_feature(add_cyclical_features)
+
+        # Target regime: quantile flag on windowed forward return
+        .with_target('target_regime')
+            .add_fitted_transform(regime_target)
+                .fit_param('_regime_cutoff', lambda df, prediction_window, target_quantile: 
+                    np.quantile(
+                        (df['close'].shift(-prediction_window) - df['close']) / df['close'], 
+                        target_quantile
+                    ), 
+                    prediction_window='prediction_window', target_quantile='target_quantile')
+                .with_params(prediction_window='prediction_window', target_quantile='target_quantile')
+            .done()
+
+        .set_scaler(StandardScaler)
+    )
 
 def params():
     return {
