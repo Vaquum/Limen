@@ -200,50 +200,52 @@ def prep(data, round_params, manifest):
 
 def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
     """
-    Build a modular Keras transformer encoder block with optional rotary positional encoding.
-    Args:
-        d_model: int, hidden embedding size
-        num_heads: int, attention heads
-        dropout: float, dropout rate
-        use_rotary: bool, whether to use rotary positional encoding
-    Returns:
-        function/layer block
+    Transformer encoder block operating in d_model space (residual-safe).
+    Input/output shape: (batch, timesteps, d_model)
     """
     def block(x):
         if use_rotary:
             x = RotaryEmbedding(sequence_axis=1, feature_axis=2)(x)
-        # key_dim per head so total model dim is d_model
-        attn_output = MultiHeadAttention(num_heads=num_heads, key_dim=d_model // num_heads)(x, x)
+        # Self-attention; per-head key_dim so total model dim is d_model
+        attn_output = MultiHeadAttention(
+            num_heads=num_heads,
+            key_dim=d_model // num_heads
+        )(x, x)
         attn_output = Dropout(dropout)(attn_output)
-        out1 = Add()([x, attn_output])             # both are (batch, T, d_model)
+        out1 = Add()([x, attn_output])
         out1 = LayerNormalization()(out1)
-        # 2-layer FFN with residual back to d_model
+
         ff = Dense(4 * d_model, activation='relu')(out1)
         ff = Dropout(dropout)(ff)
-        ff = Dense(d_model)(ff)                    # project back to d_model
-        out2 = Add()([out1, ff])                   # shapes now match
+        ff = Dense(d_model)(ff)
+        out2 = Add()([out1, ff])
         out2 = LayerNormalization()(out2)
         return out2
     return block
 
 
 def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
+    """
+    Build sliding windows over row-major time series.
+    X2d: (n_rows, n_features), y: (n_rows,)
+    Returns:
+      X3: (n_rows - seq_len + 1, seq_len, n_features)
+      y2: (n_rows - seq_len + 1,)
+    """
     if len(X2d) < seq_len:
         raise ValueError(f"Not enough rows ({len(X2d)}) for seq_length={seq_len}")
-    X3 = np.stack([X2d[i-seq_len+1:i+1] for i in range(seq_len-1, len(X2d))], axis=0)
-    y2 = y[seq_len-1:]
+    X3 = np.stack([X2d[i - seq_len + 1:i + 1] for i in range(seq_len - 1, len(X2d))], axis=0)
+    y2 = y[seq_len - 1:]
     return X3, y2
+
 
 def model(data, round_params):
     """
-    Builds, trains, and evaluates a regime-classifier transformer with rotary positional encoding in Keras 3.
-    Args:
-        data: dict, split and prepped data from prep()
-        round_params: dict, sweep parameters including use_rotary
-    Returns:
-        round_results: dict with metrics, model, preds for UEL
+    Builds, trains, and evaluates a transformer regime classifier.
+    Expects prep to provide x_* as 2D arrays (n, f) and y_* as 1D arrays.
+    Converts to 3D windows (n_win, T, f), projects to d_model, then stacks encoder blocks.
     """
-    # --- Unpack parameters and data ---
+    # --- Unpack parameters ---
     d_model = round_params['d_model']
     num_heads = round_params['num_heads']
     num_layers = round_params['num_layers']
@@ -260,47 +262,37 @@ def model(data, round_params):
 
     np.random.seed(seed)
 
+    # --- Data to arrays ---
     X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test']
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
 
-    # --- Reshape features to (samples, seq_length, n_features) if needed ---
-    X_train, y_train = make_windows(X_train, y_train, seq_length)
-    X_val,   y_val   = make_windows(X_val,   y_val,   seq_length)
-    X_test,  y_test  = make_windows(X_test,  y_test,  seq_length)
+    # --- Robust windowing: cap seq_length by smallest split length ---
+    seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0])
+    X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
+    X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
+    X_test,  y_test  = make_windows(X_test,  y_test,  seq_len_eff)
     n_features = X_train.shape[2]
-    # for X, name in [(X_train, 'train'), (X_val, 'val'), (X_test, 'test')]:
-    #     assert X.ndim in (2, 3), f"Data {name} must be 2D or 3D (received shape {X.shape})"
-    # if X_train.ndim == 2:
-    #     n_features = X_train.shape[1] // seq_length
-    #     assert X_train.shape[1] % seq_length == 0, "X_train shape must be a multiple of seq_length"
-    #     X_train = X_train.reshape(-1, seq_length, n_features)
-    #     X_val   = X_val.reshape(-1, seq_length, n_features)
-    #     X_test  = X_test.reshape(-1, seq_length, n_features)
-    # else:
-    #     n_features = X_train.shape[2]
+    seq_length = seq_len_eff  # ensure consistency for Input shape
 
-    # --- Build model ---
-    # After windowing to (batch, seq_length, n_features)
+    # --- Build model: project inputs to d_model, then encoder blocks ---
     input_layer = Input(shape=(seq_length, n_features), name='input')
-
-    # NEW: project features to d_model so residuals match
     x = Dense(d_model, name='input_projection')(input_layer)
     for _ in range(num_layers):
         x = transformer_encoder_block(d_model, num_heads, dropout, use_rotary)(x)
-
     x = GlobalAveragePooling1D()(x)
     x = Dropout(dropout)(x)
     output = Dense(1, activation='sigmoid', name='output')(x)
     model_tf = Model(inputs=input_layer, outputs=output)
 
-
+    # --- Compile ---
     optimizer = AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
     model_tf.compile(
-        optimizer=optimizer,#type: ignore
+        optimizer=optimizer,  # type: ignore
         loss=keras.losses.BinaryCrossentropy(label_smoothing=label_smoothing),
         metrics=['accuracy']
     )
 
+    # --- Train ---
     callbacks = [
         EarlyStopping(
             patience=early_stopping_patience,
@@ -309,29 +301,34 @@ def model(data, round_params):
             verbose=0
         )
     ]
-
     model_tf.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
         batch_size=batch_size,
         epochs=epochs,
         callbacks=callbacks,
-        verbose=0 #type: ignore
+        verbose=0  # type: ignore
     )
 
+    # --- Evaluate on windowed test ---
     test_probs = model_tf.predict(X_test, batch_size=batch_size).flatten()
     test_preds = (test_probs > 0.5).astype(int)
-    round_results = binary_metrics(data, test_preds, test_probs)
+
+    # IMPORTANT: pass the window-aligned y_test to metrics
+    round_results = binary_metrics(data={'y_test': y_test}, preds=test_preds, probs=test_probs)
+
+    # Artifacts for UEL
     round_results['_preds'] = test_preds
     round_results['models'] = [model_tf]
 
-    # Optionally: attach validation results for analysis/meta-calibration
+    # Optional val artifacts (already window-aligned)
     val_probs = model_tf.predict(X_val, batch_size=batch_size).flatten()
     val_preds = (val_probs > 0.5).astype(int)
     round_results['_val_preds'] = val_preds
     round_results['_val_probs'] = val_probs
 
     return round_results
+
 
 
 
