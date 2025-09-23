@@ -28,7 +28,7 @@ import polars as pl
 import numpy as np
 from loop.manifest import Manifest
 from loop.manifest import _apply_fitted_transform
-
+import loop.manifest
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     """Add cyclical features for hour, minute, and day to df (Polars native)"""
@@ -79,6 +79,8 @@ def my_make_fitted_scaler(param_name: str, transform_class):
         return scaler
     return ([ (param_name, fit_scaler, {}) ], _apply_fitted_transform, { 'fitted_transform': param_name })
 
+loop.manifest.make_fitted_scaler = my_make_fitted_scaler 
+print(loop.manifest.make_fitted_scaler)
 
 
 def manifest():
