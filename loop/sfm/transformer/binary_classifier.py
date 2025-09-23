@@ -1,12 +1,19 @@
 '''
 Transformer Binary Classifier - UEL Single File Model format
 Bitcoin long-only trading strategy with transformer-based sequence modeling
+
+This module implements a complete transformer-based binary classifier for cryptocurrency
+regime prediction using 1-minute OHLC data with technical indicators and liquidity features.
+The architecture follows UEL (Universal Experiment Loop) conventions for reproducible
+machine learning experiments.
 '''
+
 
 import numpy as np
 import polars as pl
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
 from sklearn.metrics import classification_report, confusion_matrix
+
 
 from loop.utils.splits import split_sequential, split_data_to_prep_output
 from loop.metrics.binary_metrics import binary_metrics
@@ -32,7 +39,19 @@ import loop.manifest
 
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
-    """Add cyclical features for hour, minute, and day to df (Polars native)"""
+    """
+    Add cyclical time-based features for temporal pattern recognition.
+    
+    Creates sine/cosine encodings for hour, minute, and day components to capture
+    periodic market behavior patterns. These cyclical features help the transformer
+    model understand temporal relationships in financial data.
+    
+    Args:
+        df: Polars DataFrame containing 'datetime' column
+        
+    Returns:
+        DataFrame with added cyclical features: sin/cos_hour, sin/cos_minute, sin/cos_day
+    """
     df = df.with_columns([
         (pl.col('datetime').dt.hour().alias('hour')),
         (pl.col('datetime').dt.minute().alias('minute')),
@@ -48,11 +67,22 @@ def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     ])
     return df.drop(['hour', 'minute', 'day'])
 
+
 def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: float) -> pl.DataFrame:
     """
     Label each row as a 'long regime' if forward windowed return exceeds quantile threshold.
-    - prediction_window: forecast horizon in minutes
-    - target_quantile: quantile to use as threshold (e.g., 0.55)
+    
+    Creates binary labels based on future price movement over a specified window.
+    This target engineering approach identifies periods favorable for long positions
+    by comparing forward returns against historical quantile thresholds.
+    
+    Args:
+        df: Input DataFrame with 'close' prices
+        prediction_window: forecast horizon in minutes  
+        target_quantile: quantile to use as threshold (e.g., 0.55)
+        
+    Returns:
+        DataFrame with added 'target_regime' binary column
     """
     closes = df['close'].to_numpy()
     windowed_returns = np.zeros_like(closes)
@@ -67,15 +97,37 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
     return df
 
 
+
 # Keep these imports in your SFM file
 import polars as pl
 import numpy as np
 from loop.manifest import _apply_fitted_transform
 import loop.manifest
 
+
 def my_make_fitted_scaler(param_name: str, transform_class):
+    """
+    Custom scaler factory for Polars DataFrame compatibility with sklearn scalers.
+    
+    Creates a fitted scaler that works with Polars DataFrames while preserving
+    the manifest's fitting paradigm. This ensures proper data leakage prevention
+    by fitting scalers only on training data.
+    """
     class PolarsColumnScaler:
+        """
+        Polars-compatible wrapper for sklearn preprocessing scalers.
+        
+        This wrapper class adapts sklearn scalers to work with Polars DataFrames
+        while maintaining column order and data types. It automatically identifies
+        numeric feature columns and excludes datetime and target columns.
+        """
         def __init__(self, data: pl.DataFrame):
+            """
+            Initialize and fit scaler on training data.
+            
+            Args:
+                data: Training DataFrame used to fit the scaler parameters
+            """
             # Exclude non-feature columns; adjust target name if needed
             drop_cols = ['datetime', 'target_regime']
             numeric_dtypes = (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
@@ -88,13 +140,24 @@ def my_make_fitted_scaler(param_name: str, transform_class):
             self.scaler = transform_class()
             self.scaler.fit(X)
 
+
         def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+            """
+            Apply fitted scaling transformation to new data.
+            
+            Args:
+                data: DataFrame to transform using fitted scaler parameters
+                
+            Returns:
+                DataFrame with scaled feature columns
+            """
             # Select the exact same columns in the same order
             X = data.select(self.feature_cols).to_numpy()
             Xs = self.scaler.transform(X)
             # Replace scaled columns back into a Polars DataFrame
             cols = [pl.Series(name, Xs[:, j]) for j, name in enumerate(self.feature_cols)]
             return data.with_columns(cols)
+
 
     # Return a "fitted transform entry" that Manifest expects
     return (
@@ -103,32 +166,56 @@ def my_make_fitted_scaler(param_name: str, transform_class):
         {'fitted_transform': param_name}
     )
 
+
 # Register the override so Manifest.set_scaler(StandardScaler) uses it
 loop.manifest.make_fitted_scaler = my_make_fitted_scaler
+
 
 # print(loop.manifest.make_fitted_scaler)
 
 
+
 def manifest():
+    """
+    Configure the data processing pipeline and experiment manifest.
+    
+    This function defines the complete data preprocessing pipeline including:
+    - Data splitting strategy (8:1:2 ratio for train:val:test)
+    - Required input columns for OHLC and liquidity data
+    - Feature engineering steps (cyclical time features)
+    - Target variable creation with regime labeling
+    - Data scaling using StandardScaler
+    
+    The manifest ensures reproducible experiments and proper data leakage prevention
+    by fitting all transformations only on training data.
+    
+    Returns:
+        Configured Manifest object ready for data preparation
+    """
     def base_bar_formation(data: pl.DataFrame, **params) -> pl.DataFrame:
+        """Identity function for basic bar data - no additional processing needed."""
         return data
 
+
+    # Define required columns for cryptocurrency market data with liquidity features
     required_cols = [
         'datetime', 'open', 'high', 'low', 'close', 'mean', 'std', 'median', 'iqr',
         'volume', 'maker_ratio', 'no_of_trades', 'open_liquidity', 'high_liquidity',
         'low_liquidity', 'close_liquidity', 'liquidity_sum', 'maker_volume', 'maker_liquidity'
     ]
 
+
     from sklearn.preprocessing import StandardScaler
+
 
     return(
         Manifest()
-        .set_split_config(8, 1, 2)
+        .set_split_config(8, 1, 2)  # 80% train, 10% validation, 20% test
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
-        .add_feature(add_cyclical_features)
+        .add_feature(add_cyclical_features)  # Add temporal cyclical features
         .with_target('target_regime')
-            .add_fitted_transform(regime_target)
+            .add_fitted_transform(regime_target)  # Create binary regime labels
                 .fit_param(
                     '_regime_cutoff',
                     lambda df, prediction_window, target_quantile:
@@ -140,11 +227,25 @@ def manifest():
                 )
                 .with_params(prediction_window='prediction_window', target_quantile='target_quantile')
             .done()
-        .set_scaler(StandardScaler)
+        .set_scaler(StandardScaler)  # Apply standard scaling to features
     )
 
 
+
 def params():
+    """
+    Define hyperparameter search space for transformer model optimization.
+    
+    This function specifies the parameter ranges for automated hyperparameter tuning.
+    Parameters are organized into categories:
+    - Model architecture: embedding dimensions, attention heads, layers
+    - Training dynamics: learning rate, batch size, regularization  
+    - Sequence modeling: context length and prediction windows
+    - Target engineering: regime detection thresholds
+    
+    Returns:
+        Dictionary of parameter names mapped to lists of candidate values
+    """
     return {
         # Model architecture and training params
         'd_model': [32, 64],             # Embedding/hidden size
@@ -153,34 +254,56 @@ def params():
         'dropout': [0.1, 0.2],           # Dropout for regularization
         'learning_rate': [1e-3, 5e-4],   # Adam optimizer learning rate
         'batch_size': [32, 64],          # Batch size
-        'weight_decay': [0.0, 1e-4],
+        'weight_decay': [0.0, 1e-4],     # L2 regularization strength
         'epochs': [5, 10],              # Number of epochs (low for speed)
         'seed': [42],                   # Random seed for reproducibility
         'early_stopping_patience': [3],  # Early stopping patience
 
+
         # Sequence and regime context params
         'seq_length': [30, 60],          # Number of context bars (1-min bars = 30-60min)
         'prediction_window': [60],       # Window to classify regime ahead (in minutes)
-        'positional_encoding_type': ['rotary'], # Positional encoding
+        'positional_encoding_type': ['rotary'], # Positional encoding type
 
-        # Target engineering
-        'target_quantile': [0.45, 0.55],
+
+        # Target engineering parameters
+        'target_quantile': [0.45, 0.55], # Regime threshold as quantile of returns
         'target_shift': [0],             # [0] means start window immediately after context
+
 
         # Output regularization/calibration
         'label_smoothing': [0.0, 0.1],   # Regularization for noisy regime signals
     }
+
+
 import datetime
+
 
 def prep(data, round_params, manifest):
     """
-    Leakproof prep for split-first alignment and proper windowing for sequence models.
-    - Marks first seq_len_eff-1 test datetimes as missing so UEL Log only aligns predictions to valid test labels.
-    - Converts feature and target splits to NumPy for Keras compatibility.
-    - Returns alignment dictionary for logging.
+    Leakproof data preparation with proper sequence alignment for transformer models.
+    
+    This function performs critical data preparation steps:
+    - Applies manifest transformations (scaling, feature engineering, target creation)
+    - Handles sequence windowing alignment to prevent data leakage
+    - Converts Polars DataFrames to NumPy arrays for Keras compatibility
+    - Manages test set alignment for proper prediction logging
+    
+    The prep function ensures that the first (seq_length-1) test predictions are marked
+    as missing since they don't have sufficient historical context, maintaining
+    integrity for evaluation metrics and logging.
+    
+    Args:
+        data: Raw input DataFrame
+        round_params: Current hyperparameter configuration
+        manifest: Configured manifest with all transformations
+        
+    Returns:
+        Dictionary containing train/val/test splits as NumPy arrays with alignment info
     """
     # Prepare model-ready splits via manifest
     data_dict = manifest.prepare_data(data, round_params)
+
 
     # Compute effective window length (for safest windowing across splits)
     seq_len_eff = min(
@@ -189,6 +312,7 @@ def prep(data, round_params, manifest):
         data_dict['x_val'].shape[0],
         data_dict['x_test'].shape[0],
     )
+
 
     # Alignment edit: Only add valid (non-null) missing datetimes
     if '_alignment' in data_dict:
@@ -204,6 +328,7 @@ def prep(data, round_params, manifest):
                     print("Problem in test_dt at index", i, "value:", dt, "type:", type(dt))
         print("Prep: missing before window append:", missing)
 
+
         if test_dt is not None and hasattr(test_dt, '__getitem__') and hasattr(test_dt, '__len__') and seq_len_eff > 1:
             # Slice and filter for valid (not None) values
             dt_slice = test_dt[:seq_len_eff - 1]
@@ -216,7 +341,8 @@ def prep(data, round_params, manifest):
         print("Prep: final missing_datetimes after filtering:", align['missing_datetimes'][:20])
 
 
-    # NumPy conversions
+
+    # NumPy conversions for Keras compatibility
     for k in ['x_train', 'x_val', 'x_test']:
         if isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy()
@@ -226,18 +352,21 @@ def prep(data, round_params, manifest):
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
 
-    # Window y_test as before
+
+    # Window y_test to match sequence predictions
     raw_y_test = data_dict['y_test']
     if len(raw_y_test) > seq_len_eff - 1:
         data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
         # Optionally save unwindowed test for reference:
         data_dict['_raw_y_test'] = raw_y_test
 
+
     print("Prep output shapes/types:")
     for k in ['x_train', 'x_val', 'x_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
     for k in ['y_train', 'y_val', 'y_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
+
 
     if '_alignment' in data_dict:
         print("FINAL CHECK - data_dict['_alignment']['missing_datetimes'] (first 10):", data_dict['_alignment'].get('missing_datetimes', [])[:10])
@@ -252,7 +381,9 @@ def prep(data, round_params, manifest):
     print("FINAL CHECK - y_test shape and dtype:", data_dict['y_test'].shape, type(data_dict['y_test']))
     print("Sample y_test values:", data_dict['y_test'][:10])
 
+
     return data_dict
+
 
 
 
@@ -261,12 +392,33 @@ def prep(data, round_params, manifest):
 
 def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
     """
-    Transformer encoder block operating in d_model space (residual-safe).
-    Input/output shape: (batch, timesteps, d_model)
+    Build a single transformer encoder block with optional rotary positional encoding.
+    
+    This function creates the core building block of the transformer architecture:
+    - Multi-head self-attention mechanism for capturing sequence relationships
+    - Feed-forward network for non-linear transformations  
+    - Residual connections and layer normalization for training stability
+    - Optional rotary positional encoding for improved position awareness
+    
+    The encoder block maintains the d_model dimensionality throughout all operations,
+    ensuring compatible residual connections and stable gradient flow.
+    
+    Args:
+        d_model: Model embedding/hidden dimension size
+        num_heads: Number of attention heads for parallel attention computation
+        dropout: Dropout probability for regularization
+        use_rotary: Whether to apply rotary positional encoding
+        
+    Returns:
+        Function that applies transformer encoder block to input tensors
+        Input/output shape: (batch, timesteps, d_model)
     """
     def block(x):
+        # Optional rotary positional encoding for enhanced position awareness
         if use_rotary:
             x = RotaryEmbedding(sequence_axis=1, feature_axis=2)(x)
+            
+        # Multi-head self-attention with residual connection
         attn_output = MultiHeadAttention(
             num_heads=num_heads,
             key_dim=d_model // num_heads
@@ -275,22 +427,36 @@ def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
         out1 = Add()([x, attn_output])
         out1 = LayerNormalization()(out1)
 
-        ff = Dense(4 * d_model, activation='relu')(out1)
+        # Feed-forward network with residual connection
+        ff = Dense(4 * d_model, activation='relu')(out1)  # Standard 4x expansion
         ff = Dropout(dropout)(ff)
-        ff = Dense(d_model)(ff)
+        ff = Dense(d_model)(ff)  # Project back to d_model
         out2 = Add()([out1, ff])
         out2 = LayerNormalization()(out2)
         return out2
     return block
 
 
+
 def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
     """
-    Build sliding windows over row-major time series.
-    X2d: (n_rows, n_features), y: (n_rows,)
+    Build sliding windows over row-major time series data for sequence modeling.
+    
+    Creates overlapping sequences from tabular time series data, where each window
+    contains seq_len consecutive timesteps. This transformation is essential for
+    feeding time series data into sequence models like transformers.
+    
+    Args:
+        X2d: Feature matrix of shape (n_rows, n_features)
+        y: Target vector of shape (n_rows,)
+        seq_len: Length of each sequence window
+        
     Returns:
-      X3: (n_rows - seq_len + 1, seq_len, n_features)
-      y2: (n_rows - seq_len + 1,)
+        X3: Windowed features of shape (n_samples, seq_len, n_features)
+        y2: Aligned targets of shape (n_samples,) 
+        
+    Raises:
+        ValueError: If insufficient data rows for the specified sequence length
     """
     if len(X2d) < seq_len:
         raise ValueError(f"Not enough rows ({len(X2d)}) for seq_length={seq_len}")
@@ -299,12 +465,36 @@ def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
     return X3, y2
 
 
+
 def model(data, round_params):
     """
-    Builds, trains, and evaluates a transformer regime classifier.
-    UEL-safe: no prediction padding; alignment removes any missing test rows for logs.
+    Build, train, and evaluate transformer-based binary regime classifier.
+    
+    This function implements the complete modeling pipeline:
+    1. Model Architecture: Transformer encoder with input projection and pooling
+    2. Training Setup: AdamW optimizer with early stopping and label smoothing  
+    3. Sequence Processing: Sliding window conversion for time series data
+    4. Evaluation: Binary classification metrics on windowed test predictions
+    
+    The model uses a projected embedding approach where input features are first
+    projected to d_model dimensions, then processed through transformer layers,
+    and finally pooled and classified. This design allows flexible input feature
+    dimensions while maintaining efficient attention computations.
+    
+    Key Features:
+    - Rotary positional encoding for improved sequence understanding
+    - Early stopping to prevent overfitting on noisy financial data
+    - Label smoothing for calibrated probability outputs
+    - UEL-compatible prediction alignment (no padding/invalid predictions)
+    
+    Args:
+        data: Preprocessed data dictionary with train/val/test splits
+        round_params: Hyperparameter configuration for current experiment round
+        
+    Returns:
+        Dictionary containing metrics, predictions, and model artifacts for UEL logging
     """
-    # --- Unpack parameters ---
+    # --- Unpack hyperparameters ---
     d_model = round_params['d_model']
     num_heads = round_params['num_heads']
     num_layers = round_params['num_layers']
@@ -319,13 +509,16 @@ def model(data, round_params):
     seq_length = round_params['seq_length']
     use_rotary = round_params.get('positional_encoding_type', 'rotary') == 'rotary'
 
+
     np.random.seed(seed)
 
-    # --- Data to arrays ---
+
+    # --- Extract data arrays ---
     X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test']
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
 
-    # Effective window length (safe for short splits)
+
+    # Compute effective sequence length (limited by smallest split size)
     seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0])
     X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
     X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
@@ -333,17 +526,24 @@ def model(data, round_params):
     n_features = X_train.shape[2]
     seq_length = seq_len_eff  # ensure consistency for Input shape
 
-    # --- Build model: project inputs to d_model, then encoder blocks ---
+
+    # --- Build transformer architecture ---
+    # Input projection: map features to transformer embedding space
     input_layer = Input(shape=(seq_length, n_features), name='input')
     x = Dense(d_model, name='input_projection')(input_layer)
+    
+    # Stack transformer encoder blocks
     for _ in range(num_layers):
         x = transformer_encoder_block(d_model, num_heads, dropout, use_rotary)(x)
-    x = GlobalAveragePooling1D()(x)
+        
+    # Global pooling and classification head
+    x = GlobalAveragePooling1D()(x)  # Aggregate sequence information
     x = Dropout(dropout)(x)
     output = Dense(1, activation='sigmoid', name='output')(x)
     model_tf = Model(inputs=input_layer, outputs=output)
 
-    # --- Compile ---
+
+    # --- Compile model with advanced training configuration ---
     optimizer = AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
     model_tf.compile(
         optimizer=optimizer,  # type: ignore
@@ -351,7 +551,8 @@ def model(data, round_params):
         metrics=['accuracy']
     )
 
-    # --- Train ---
+
+    # --- Train with early stopping ---
     callbacks = [
         EarlyStopping(
             patience=early_stopping_patience,
@@ -369,398 +570,35 @@ def model(data, round_params):
         verbose=0  # type: ignore
     )
 
+
+    # --- Generate test predictions ---
     # WARNING: Do not use a different/raw test label vector!
     # Only use data['y_test'] for predictions and Log/metrics.
-
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
     test_preds = (test_probs > 0.5).astype(int)
     print("model: y_test & test_preds lengths", len(data['y_test']), len(test_preds))
 
-    # Pass windowed y_test to metrics
+
+    # --- Compute evaluation metrics ---
+    # Pass windowed y_test to metrics for proper alignment
     round_results = binary_metrics(data={'y_test': data['y_test']}, preds=test_preds, probs=test_probs)
 
-    # UEL artifacts (UEL pops _preds and models, extras are kept out of log columns)
-    round_results['_preds'] = test_preds          # UEL will collect
-    round_results['models'] = [model_tf]          # UEL will collect
 
+    # --- Prepare UEL artifacts ---
+    # UEL artifacts (UEL pops _preds and models, extras are kept out of log columns)
+    round_results['_preds'] = test_preds          # UEL will collect for logging
+    round_results['models'] = [model_tf]          # UEL will collect trained model
+
+
+    # --- Store validation results and metadata ---
     # Store validation arrays inside extras so not logged as columns
     val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=0).flatten() # type: ignore
     val_preds = (val_probs > 0.5).astype(int)
     round_results['extras'] = {
-        'seq_len_eff': seq_len_eff,
-        'val_preds': val_preds,
-        'val_probs': val_probs,
+        'seq_len_eff': seq_len_eff,        # Actual sequence length used
+        'val_preds': val_preds,            # Validation predictions
+        'val_probs': val_probs,            # Validation probabilities
     }
 
+
     return round_results
-
-
-
-
-
-
-
-
-
-# def prep(data, round_params):
-#     # -------- 0) Unpack knobs --------
-#     all_datetimes = data['datetime'].to_list()
-#     lookback = round_params['lookback_window']
-#     horizon = round_params['target_horizon']
-#     price_thresh = round_params['target_threshold']
-#     scaler_type = round_params['scaler_type']
-
-#     # Ensure Polars datetime dtype
-#     df = data.clone()
-#     if df['datetime'].dtype != pl.Datetime:
-#         df = df.with_columns(pl.col('datetime').cast(pl.Datetime))
-
-#     all_datetimes = df['datetime'].to_list()
-
-#     # -------- 1) Target engineering (Polars-native) --------
-#     df = df.with_columns([
-#         ((pl.col('close').shift(-horizon) - pl.col('close')) / pl.col('close')).alias('price_change'),
-#     ])
-#     df = df.with_columns([
-#         (pl.when(pl.col('price_change') > price_thresh).then(1).otherwise(0)).alias('target')
-#     ])
-
-#     # Base feature columns
-#     feature_cols = [
-#         'open', 'high', 'low', 'close',
-#         'volume', 'no_of_trades', 'maker_ratio',
-#         'mean', 'std', 'median', 'iqr'
-#     ]
-
-#     # -------- 2) Optional cyclical features (Polars expr, not NumPy on Series) --------
-#     if round_params['use_cyclical_features']:
-#         # infer bar duration
-#         kline_sec = (df['datetime'][1] - df['datetime'][0]).total_seconds()
-#         exprs = []
-#         names = []
-
-#         if kline_sec < 3600:
-#             exprs += [
-#                 ((2 * np.pi * pl.col('datetime').dt.minute() / 60).sin()).alias('minute_sin'),
-#                 ((2 * np.pi * pl.col('datetime').dt.minute() / 60).cos()).alias('minute_cos'),
-#             ]
-#             names += ['minute_sin', 'minute_cos']
-
-#         exprs += [
-#             ((2 * np.pi * pl.col('datetime').dt.hour() / 24).sin()).alias('hour_sin'),
-#             ((2 * np.pi * pl.col('datetime').dt.hour() / 24).cos()).alias('hour_cos'),
-#             ((2 * np.pi * pl.col('datetime').dt.weekday() / 7).sin()).alias('day_of_week_sin'),
-#             ((2 * np.pi * pl.col('datetime').dt.weekday() / 7).cos()).alias('day_of_week_cos'),
-#         ]
-#         names += ['hour_sin', 'hour_cos', 'day_of_week_sin', 'day_of_week_cos']
-
-#         df = df.with_columns(exprs)
-#         feature_cols.extend(names)
-
-#     # -------- 3) Optional sequential features --------
-#     if round_params['use_sequential_features']:
-#         first_dt = df['datetime'][0]
-#         df = df.with_columns([
-#             ( (pl.col('datetime') - pl.lit(first_dt)).dt.total_days() ).alias('nth_day'),
-#             ( ((pl.col('datetime') - pl.lit(first_dt)).dt.total_days() // 7) ).alias('nth_week'),
-#             ( ((pl.col('datetime').dt.year() - first_dt.year) * 12
-#                + (pl.col('datetime').dt.month() - first_dt.month)) ).alias('nth_month'),
-#         ])
-#         feature_cols.extend(['nth_day', 'nth_week', 'nth_month'])
-
-#     # Remove rows made null by horizon shift
-#     df = df.drop_nulls(subset=['price_change', 'target'])
-
-#     # -------- 4) Sequential split (Loop utility) --------
-#     train_df, val_df, test_df = split_sequential(df, (70, 15, 15))
-
-#     # Keep a copy of test datetimes to build alignment for predictions
-#     test_dt = test_df['datetime'].to_list()
-
-#     # -------- 5) Build 3D sequences for Transformer --------
-#     def _seq(pl_df, features, target, lb):
-#         X, y = [], []
-#         f_np = pl_df.select(features).to_numpy()
-#         t_np = pl_df.select(target).to_numpy().ravel()
-#         n = pl_df.height
-#         for i in range(n - lb):
-#             X.append(f_np[i:i+lb])
-#             y.append(t_np[i + lb - 1])
-#         return np.asarray(X), np.asarray(y)
-
-#     X_train, y_train = _seq(train_df, feature_cols, 'target', lookback)
-#     X_val,   y_val   = _seq(val_df,   feature_cols, 'target', lookback)
-#     X_test,  y_test  = _seq(test_df,  feature_cols, 'target', lookback)
-
-#     # -------- 6) Scale (fit on train only) --------
-#     scaler_map = {'standard': StandardScaler, 'minmax': MinMaxScaler, 'robust': RobustScaler}
-#     scaler = scaler_map[scaler_type]()
-#     n_features = X_train.shape[2]
-
-#     scaler.fit(X_train.reshape(-1, n_features))
-#     X_train = scaler.transform(X_train.reshape(-1, n_features)).reshape(X_train.shape)
-#     X_val   = scaler.transform(X_val.reshape(-1, n_features)).reshape(X_val.shape)
-#     X_test  = scaler.transform(X_test.reshape(-1, n_features)).reshape(X_test.shape)
-
-#     # -------- 7) Build _alignment that matches *prediction rows* --------
-#     # We only predict from the (lookback-1)-th bar onward in each split window.
-#     # So the test datetimes that pair with preds are:
-#     test_pred_datetimes = test_dt[lookback:]  # length == len(y_test)
-
-#     # Remaining datetimes = all train/val + ONLY the test_pred_datetimes
-#     rem = (
-#         train_df['datetime'].to_list()
-#         + val_df['datetime'].to_list()
-#         + test_pred_datetimes
-#     )
-
-#     # Missing datetimes are everything else
-#     missing = sorted(set(all_datetimes) - set(rem))
-
-#     # Polars logger anti-joins a DF built from missing; if it’s empty, its dtype
-#     # can be problematic for .dt.cast_time_unit. Make it "safely non-empty"
-#     # without dropping anything by adding a sentinel *outside* the test range.
-#     if len(missing) == 0:
-#         sentinel = test_pred_datetimes[0] - pl.duration(milliseconds=1)
-#         missing = [sentinel]
-
-#     alignment = {
-#         'missing_datetimes': missing,
-#         'first_test_datetime': test_pred_datetimes[0],
-#         'last_test_datetime':  test_pred_datetimes[-1],
-#     }
-
-#     #    # -------- 8) Return the final data dict --------
-#     out = {
-#         'X_train': X_train, 'y_train': y_train,
-#         'X_val':   X_val,   'y_val':   y_val,
-#         'X_test':  X_test,  'y_test':  y_test,
-#         '_scaler': scaler,
-#         '_alignment': alignment,
-#         '_feature_names': feature_cols,
-#     }
-
-#     # -------- 9) Debug checks --------
-#     expected_len = len(y_test)
-#     actual_len   = len(test_pred_datetimes)
-#     if expected_len != actual_len:
-#         print(">>> DEBUG MISMATCH in prep:")
-#         print(f"y_test length: {expected_len}")
-#         print(f"test_pred_datetimes length: {actual_len}")
-#         print("This WILL cause downstream errors in perf_df vs price_df.")
-#         raise ValueError("Mismatch between y_test and test_pred_datetimes")
-
-#     return out
-
-# =============================================================================
-# 3. MODEL TRAINING & EVALUATION (CORRECTED VERSION)
-# =============================================================================
-
-# def _positional_encoding(seq_len, d_model):
-#     """Generates sinusoidal positional encoding."""
-#     pos = keras.ops.arange(0, seq_len, dtype="float32")[:, None]
-#     i = keras.ops.arange(0, d_model, 2, dtype="float32")
-    
-#     # --- FIX 1: Replaced `1 / ...` with a type-safe Keras operation ---
-#     d_model_float = keras.ops.cast(d_model, dtype="float32")
-#     exponent = -((2.0 * i) / d_model_float)
-#     angle_rates = keras.ops.power(10000.0, exponent)
-#     angle_rads = pos * angle_rates
-    
-#     sines = keras.ops.sin(angle_rads)
-#     cosines = keras.ops.cos(angle_rads)
-    
-#     pos_encoding = keras.ops.concatenate([sines, cosines], axis=-1)
-#     if d_model % 2 != 0:
-#         pos_encoding = keras.ops.pad(pos_encoding, [[0,0], [0,1]])
-        
-#     return keras.ops.expand_dims(pos_encoding, axis=0)
-
-# def _transformer_encoder_block(inputs, d_model, num_heads, dropout_rate):
-#     """A single Transformer Encoder block using Keras 3.x layers."""
-#     attn_output = MultiHeadAttention(
-#         num_heads=num_heads,
-#         key_dim=d_model // num_heads
-#     )(query=inputs, value=inputs, key=inputs)
-#     attn_output = Dropout(dropout_rate)(attn_output)
-#     x = LayerNormalization(epsilon=1e-6)(Add()([inputs, attn_output]))
-    
-#     ffn_output = Dense(units=d_model * 4, activation="relu")(x)
-#     ffn_output = Dense(units=d_model)(ffn_output)
-#     ffn_output = Dropout(dropout_rate)(ffn_output)
-#     return LayerNormalization(epsilon=1e-6)(Add()([x, ffn_output]))
-# # --- ADD THIS HELPER LAYER TO YOUR SFM FILE ---
-# # --- ADD THIS HELPER LAYER TO YOUR SFM FILE ---
-
-# class RotaryEmbedding(keras.layers.Layer):
-#     """
-#     Custom Rotary Positional Embedding layer.
-#     """
-#     def __init__(self, dim, seq_len, theta=10000.0, **kwargs):
-#         super().__init__(**kwargs)
-#         self.dim = dim
-#         self.seq_len = seq_len
-#         self.theta = theta
-
-#         # --- FIX IS HERE ---
-#         # The original code created frequencies for the half-dimension, then incorrectly
-#         # concatenated them back to the full dimension. We must create the sin/cos
-#         # embeddings with the half-dimension to match the split inputs in call().
-        
-#         # 1. Create frequencies for HALF the dimension
-#         arange = keras.ops.arange(0, self.dim, 2, dtype="float32")
-#         inv_freq = 1.0 / (self.theta ** (arange / self.dim))
-        
-#         # 2. Create the time sequence
-#         t = keras.ops.arange(self.seq_len, dtype=inv_freq.dtype)
-        
-#         # 3. Calculate frequency matrix (shape will be [seq_len, dim/2])
-#         freqs = keras.ops.einsum("i,j->ij", t, inv_freq)
-
-#         # 4. Create sin and cos embeddings directly from the half-dim freqs
-#         #    DO NOT concatenate them.
-#         self.cos_emb = keras.ops.cos(freqs)
-#         self.sin_emb = keras.ops.sin(freqs)
-
-#     def call(self, inputs):
-#         # Split the input into two halves along the feature dimension
-#         x1, x2 = keras.ops.split(inputs, 2, axis=-1)
-        
-#         # Now the shapes will match:
-#         # x1 shape: (batch, seq_len, 16)
-#         # cos_emb shape: (seq_len, 16)
-        
-#         # Apply the rotation matrix properties
-#         rotated_x1 = (x1 * self.cos_emb) - (x2 * self.sin_emb)
-#         rotated_x2 = (x1 * self.sin_emb) + (x2 * self.cos_emb)
-        
-#         # Concatenate the rotated halves back together
-#         return keras.ops.concatenate([rotated_x1, rotated_x2], axis=-1)
-
-#     def compute_output_shape(self, input_shape):
-#         return input_shape
-
-# def _build_transformer_model(input_shape, round_params):
-#     """Builds the complete Transformer classifier using Keras 3.x."""
-#     d_model = round_params['d_model']
-#     seq_len = input_shape[0] # This is the lookback_window
-#     encoding_type = round_params['positional_encoding_type']
-
-#     inputs = Input(shape=input_shape)
-#     x = Dense(units=d_model, activation="relu")(inputs)
-    
-#     if encoding_type == 'sinusoidal':
-#         x += _positional_encoding(seq_len, d_model)
-#     elif encoding_type == 'rotary':
-#         # Pass the sequence length to the layer during initialization
-#         x = RotaryEmbedding(dim=d_model, seq_len=seq_len)(x)
-    
-#     for _ in range(round_params['num_encoder_layers']):
-#         x = _transformer_encoder_block(
-#             x, d_model, round_params['num_heads'], round_params['dropout_rate']
-#         )
-        
-#     x = GlobalAveragePooling1D()(x)
-#     x = Dropout(0.2)(x)
-#     x = Dense(units=d_model // 2, activation="relu")(x)
-#     outputs = Dense(units=1, activation="sigmoid")(x)
-    
-#     return Model(inputs=inputs, outputs=outputs)
-
-# def model(data: dict, round_params):
-#     """
-#     Builds, trains, and evaluates the model with all corrections applied.
-#     """
-#     # ------------------ 1. SFM Rule Adherence: Validity Check ------------------
-#     d_model = round_params['d_model']
-#     num_heads = round_params['num_heads']
-#     encoding_type = round_params['positional_encoding_type']
-
-#     if d_model % num_heads != 0:
-#         return {
-#             'recall': None, 'precision': None, 'fpr': None, 'auc': None,
-#             'accuracy': None, '_preds': np.array([]),
-#             'extras': {'status': f'Skipped invalid arch: d_model={d_model}, num_heads={num_heads}'}
-#         }
-#     # Check 1: d_model must be divisible by num_heads for MultiHeadAttention
-#     if d_model % num_heads != 0:
-#         return {
-#             'recall': None, 'precision': None, 'fpr': None, 'auc': None,
-#             'accuracy': None, '_preds': np.array([]),
-#             'extras': {'status': f'Skipped invalid arch: d_model={d_model}, num_heads={num_heads}'}
-#         }
-        
-#     # Check 2: d_model must be even for RotaryEmbedding
-#     if encoding_type == 'rotary' and d_model % 2 != 0:
-#         return {
-#             'recall': None, 'precision': None, 'fpr': None, 'auc': None,
-#             'accuracy': None, '_preds': np.array([]),
-#             'extras': {'status': f'Skipped invalid arch: RoPE requires even d_model, got {d_model}'}
-#         }
-    
-
-#     # ------------------ 2. Unpack Data and Params ------------------
-#     X_train, y_train = data['X_train'], data['y_train']
-#     X_val, y_val = data['X_val'], data['y_val']
-#     X_test, y_test = data['X_test'], data['y_test']
-
-#     # ------------------ 3. Build and Compile the Model ------------------
-#     input_shape = (X_train.shape[1], X_train.shape[2])
-#     transformer_model = _build_transformer_model(input_shape, round_params)
-    
-#     optimizer = AdamW(
-#         learning_rate=round_params['learning_rate'],
-#         weight_decay=round_params['weight_decay']
-#     )
-    
-#     transformer_model.compile(
-#         optimizer=optimizer, # --- FIX 2: Ignore incorrect linter error --- # type: ignore
-#         loss='binary_crossentropy',
-#         metrics=['accuracy', keras.metrics.AUC(name='auc')]
-#     )
-
-#     # ------------------ 4. Train the Model ------------------
-#     early_stopping = EarlyStopping(
-#         monitor='val_loss',
-#         patience=round_params['early_stopping_patience'],
-#         restore_best_weights=True,
-#         verbose=0
-#     )
-    
-#     history = transformer_model.fit(
-#         X_train, y_train,
-#         validation_data=(X_val, y_val),
-#         batch_size=round_params['batch_size'],
-#         epochs=150,
-#         callbacks=[early_stopping],
-#         verbose=0 #type: ignore
-#     )
-
-#     # ------------------ 5. Evaluate and Return Results (Corrected Signature) ------------------
-#     test_preds_proba = transformer_model.predict(X_test, verbose=0).flatten() #type: ignore
-    
-#     # --- FIX 3: Prepare arguments exactly as `binary_metrics` expects ---
-#     # a. Create binary predictions from probabilities
-#     binary_preds = (test_preds_proba > 0.5).astype(int)
-    
-#     # b. Prepare the data dictionary argument
-#     data_for_metrics = {'y_test': y_test}
-    
-#     # c. Call the function with the correct arguments
-#     round_results = binary_metrics(
-#         data=data_for_metrics,
-#         preds=binary_preds.tolist(),
-#         probs=test_preds_proba.tolist()
-#     )
-
-#     # d. Manually add extras to the results dictionary
-#     round_results['extras'] = {
-#         'val_loss': min(history.history['val_loss']),
-#         'stopped_epoch': early_stopping.stopped_epoch
-#     }
-    
-#     # Add artifacts for UEL collection
-#     round_results['_preds'] = test_preds_proba
-#     # round_results['models'] = transformer_model # Optional
-    
-#     return round_results
