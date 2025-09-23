@@ -169,7 +169,7 @@ def params():
         # Output regularization/calibration
         'label_smoothing': [0.0, 0.1],   # Regularization for noisy regime signals
     }
-
+import datetime
 
 def prep(data, round_params, manifest):
     """
@@ -194,6 +194,14 @@ def prep(data, round_params, manifest):
         align   = dict(data_dict['_alignment'])
         missing = list(align.get('missing_datetimes', []))
         test_dt = align.get('test_datetimes', None)
+        print("\nPrep: test_dt first 20:", test_dt[:20] if test_dt is not None else None)
+        if test_dt is not None:
+            print(f"Prep: test_dt type: {type(test_dt)} length: {len(test_dt)} nulls: {sum(x is None for x in test_dt)}")
+            # print all problematic/non-datetime entries
+            for i, dt in enumerate(test_dt):
+                if not isinstance(dt, (datetime.datetime, np.datetime64)) or dt is None:
+                    print("Problem in test_dt at index", i, "value:", dt, "type:", type(dt))
+        print("Prep: missing before window append:", missing)
 
         if test_dt is not None and hasattr(test_dt, '__getitem__') and hasattr(test_dt, '__len__') and seq_len_eff > 1:
             # Slice and filter for valid (not None) values
@@ -203,6 +211,9 @@ def prep(data, round_params, manifest):
                 missing = missing + valid_dt
                 align['missing_datetimes'] = missing
                 data_dict['_alignment'] = align
+                        # ... after updating missing/missing_datetimes
+        print("Prep: final missing_datetimes after filtering:", align['missing_datetimes'][:20])
+
 
     # NumPy conversions
     for k in ['x_train', 'x_val', 'x_test']:
