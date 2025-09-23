@@ -27,6 +27,8 @@ from loop.metrics.binary_metrics import binary_metrics
 import polars as pl
 import numpy as np
 from loop.manifest import Manifest
+from loop.manifest import _apply_fitted_transform
+from loop.manifest import make_fitted_scaler
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     """Add cyclical features for hour, minute, and day to df (Polars native)"""
@@ -63,6 +65,7 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
     df = df.with_columns([pl.Series('target_regime', label)])
     return df
 
+
 def manifest():
     # No-op bar formation for normal klines
     def base_bar_formation(data: pl.DataFrame, **params) -> pl.DataFrame:
@@ -76,7 +79,7 @@ def manifest():
 
     from sklearn.preprocessing import StandardScaler
 
-    return (
+    return(
         Manifest()
         .set_split_config(8, 1, 2)
         .set_bar_formation(base_bar_formation, bar_type='base')
@@ -95,7 +98,7 @@ def manifest():
                 )
                 .with_params(prediction_window='prediction_window', target_quantile='target_quantile')
             .done()
-        .set_scaler(StandardScaler)
+        .set_scaler(make_fitted_scaler('_scaler', StandardScaler))
     )
 
 def params():
