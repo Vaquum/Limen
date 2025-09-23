@@ -67,8 +67,8 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
 
 def make_fitted_scaler(param_name: str, transform_class):
     def fit_scaler(data):
-        # Choose numeric columns for features (avoid 'datetime', targets)
-        drop_cols = ['datetime', 'target_regime']  # adjust target name if needed
+        # Only fit features (exclude 'datetime', target column)
+        drop_cols = ['datetime', 'target_regime']  # update target name if needed
         feature_cols = [
             col for col in data.columns
             if col not in drop_cols and data[col].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
@@ -77,6 +77,7 @@ def make_fitted_scaler(param_name: str, transform_class):
         scaler.fit(data.select(feature_cols).to_numpy())
         return scaler
     return ([ (param_name, fit_scaler, {}) ], _apply_fitted_transform, { 'fitted_transform': param_name })
+
 
 
 def manifest():
