@@ -84,7 +84,6 @@ print(loop.manifest.make_fitted_scaler)
 
 
 def manifest():
-    # No-op bar formation for normal klines
     def base_bar_formation(data: pl.DataFrame, **params) -> pl.DataFrame:
         return data
 
@@ -115,8 +114,9 @@ def manifest():
                 )
                 .with_params(prediction_window='prediction_window', target_quantile='target_quantile')
             .done()
-        .set_scaler(my_make_fitted_scaler('_scaler', StandardScaler))
+        .set_scaler(StandardScaler)
     )
+
 
 def params():
     return {
