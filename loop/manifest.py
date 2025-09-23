@@ -343,8 +343,7 @@ def _process_bars(
     if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
         func, base_params = manifest.bar_formation
         resolved = _resolve_params(base_params, round_params)
-        lazy_data = data.lazy().pipe(func, **resolved)
-        bar_data = lazy_data.collect()
+        bar_data = data.pipe(func, **resolved)
         all_datetimes = bar_data['datetime'].to_list()
     else:
         all_datetimes = data['datetime'].to_list()
