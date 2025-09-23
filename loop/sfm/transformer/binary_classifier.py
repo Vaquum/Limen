@@ -105,7 +105,7 @@ def my_make_fitted_scaler(param_name: str, transform_class):
 # Register the override so Manifest.set_scaler(StandardScaler) uses it
 loop.manifest.make_fitted_scaler = my_make_fitted_scaler
 
-print(loop.manifest.make_fitted_scaler)
+# print(loop.manifest.make_fitted_scaler)
 
 
 def manifest():
@@ -241,7 +241,7 @@ def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
 def model(data, round_params):
     """
     Builds, trains, and evaluates a transformer regime classifier.
-    Keeps round_results scalar-only to avoid Polars schema errors in UEL.
+    Keeps round_results scalar-only and pads _preds to raw test length for Log.
     """
     # --- Unpack parameters ---
     d_model = round_params['d_model']
@@ -263,6 +263,9 @@ def model(data, round_params):
     # --- Data to arrays ---
     X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test']
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
+
+    # Save raw test length for Log padding
+    n_test_raw = int(y_test.shape[0])
 
     # --- Robust windowing: cap seq_length by smallest split length ---
     seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0])
@@ -312,22 +315,32 @@ def model(data, round_params):
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() #type: ignore
     test_preds = (test_probs > 0.5).astype(int)
 
-    # Use the window-aligned y_test for metrics (length equals len(test_preds))
+    # Metrics against window-aligned y_test
     round_results = binary_metrics(data={'y_test': y_test}, preds=test_preds, probs=test_probs)
 
-    # UEL-safe artifacts
-    round_results['_preds'] = test_preds          # UEL will collect and pop this
-    round_results['models'] = [model_tf]          # UEL will collect and pop this
+    # Pad _preds to the raw test length so Log can align predictions and actuals
+    pad = n_test_raw - len(test_preds)
+    if pad > 0:
+        preds_for_log = np.concatenate([np.full(pad, np.nan), test_preds])
+    else:
+        preds_for_log = test_preds
 
-    # Store validation arrays inside extras so they are not logged as columns
+    # UEL artifacts
+    round_results['_preds'] = preds_for_log       # aligned length for Log
+    round_results['models'] = [model_tf]          # collected and popped by UEL
+
+    # Keep non-scalar arrays out of the log row
     val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=0).flatten() #type: ignore
     val_preds = (val_probs > 0.5).astype(int)
     round_results['extras'] = {
+        'seq_len_eff': seq_len_eff,
+        'pad': int(pad),
         'val_preds': val_preds,
         'val_probs': val_probs,
     }
 
     return round_results
+
 
 
 
