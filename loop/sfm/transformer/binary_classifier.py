@@ -185,10 +185,11 @@ def prep(data, round_params, manifest):
         if isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy()
     for k in ['y_train', 'y_val', 'y_test']:
-        if isinstance(data_dict[k], pl.DataFrame):
-            data_dict[k] = data_dict[k].to_numpy().flatten()
-    
-    # Optional: debug
+        if isinstance(data_dict[k], pl.Series):
+            data_dict[k] = data_dict[k].to_numpy().ravel()
+        elif isinstance(data_dict[k], pl.DataFrame):
+            data_dict[k] = data_dict[k].to_numpy().ravel()
+  
     print("Prep output shapes/types:")
     for k in ['x_train', 'x_val', 'x_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
@@ -224,6 +225,13 @@ def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
         return out2
     return block
 
+def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
+    if len(X2d) < seq_len:
+        raise ValueError(f"Not enough rows ({len(X2d)}) for seq_length={seq_len}")
+    X3 = np.stack([X2d[i-seq_len+1:i+1] for i in range(seq_len-1, len(X2d))], axis=0)
+    y2 = y[seq_len-1:]
+    return X3, y2
+
 def model(data, round_params):
     """
     Builds, trains, and evaluates a regime-classifier transformer with rotary positional encoding in Keras 3.
@@ -254,16 +262,20 @@ def model(data, round_params):
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
 
     # --- Reshape features to (samples, seq_length, n_features) if needed ---
-    for X, name in [(X_train, 'train'), (X_val, 'val'), (X_test, 'test')]:
-        assert X.ndim in (2, 3), f"Data {name} must be 2D or 3D (received shape {X.shape})"
-    if X_train.ndim == 2:
-        n_features = X_train.shape[1] // seq_length
-        assert X_train.shape[1] % seq_length == 0, "X_train shape must be a multiple of seq_length"
-        X_train = X_train.reshape(-1, seq_length, n_features)
-        X_val   = X_val.reshape(-1, seq_length, n_features)
-        X_test  = X_test.reshape(-1, seq_length, n_features)
-    else:
-        n_features = X_train.shape[2]
+    X_train, y_train = make_windows(X_train, y_train, seq_length)
+    X_val,   y_val   = make_windows(X_val,   y_val,   seq_length)
+    X_test,  y_test  = make_windows(X_test,  y_test,  seq_length)
+    n_features = X_train.shape[2]
+    # for X, name in [(X_train, 'train'), (X_val, 'val'), (X_test, 'test')]:
+    #     assert X.ndim in (2, 3), f"Data {name} must be 2D or 3D (received shape {X.shape})"
+    # if X_train.ndim == 2:
+    #     n_features = X_train.shape[1] // seq_length
+    #     assert X_train.shape[1] % seq_length == 0, "X_train shape must be a multiple of seq_length"
+    #     X_train = X_train.reshape(-1, seq_length, n_features)
+    #     X_val   = X_val.reshape(-1, seq_length, n_features)
+    #     X_test  = X_test.reshape(-1, seq_length, n_features)
+    # else:
+    #     n_features = X_train.shape[2]
 
     # --- Build model ---
     input_layer = Input(shape=(seq_length, n_features), name='input')
