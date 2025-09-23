@@ -189,7 +189,7 @@ def prep(data, round_params, manifest):
         data_dict['x_test'].shape[0],
     )
 
-    # Alignment edit (already correct)
+    # Alignment edit
     if '_alignment' in data_dict:
         align   = dict(data_dict['_alignment'])
         missing = list(align.get('missing_datetimes', []))
@@ -209,11 +209,11 @@ def prep(data, round_params, manifest):
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
 
-    # FINAL FIX: make y_test windowed so Log always matches
+    # FINAL FIX: make y_test windowed so Log and metrics always match predictions
     raw_y_test = data_dict['y_test']
     if len(raw_y_test) > seq_len_eff - 1:
         data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
-        # Optionally: keep full raw_y_test for reference under a separate key
+        # Optionally save unwindowed test for reference:
         data_dict['_raw_y_test'] = raw_y_test
 
     print("Prep output shapes/types:")
@@ -222,9 +222,8 @@ def prep(data, round_params, manifest):
     for k in ['y_train', 'y_val', 'y_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
 
-    
-
     return data_dict
+
 
 
 
@@ -338,14 +337,15 @@ def model(data, round_params):
         verbose=0  # type: ignore
     )
 
-    # --- Evaluate on windowed test ---
+    # WARNING: Do not use a different/raw test label vector!
+    # Only use data['y_test'] for predictions and Log/metrics.
+
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
     test_preds = (test_probs > 0.5).astype(int)
-
-    # **Insert this debug print line right here:**
     print("model: y_test & test_preds lengths", len(data['y_test']), len(test_preds))
-    # Metrics against window-aligned y_test
-    round_results = binary_metrics(data={'y_test': y_test}, preds=test_preds, probs=test_probs)
+
+    # Pass windowed y_test to metrics
+    round_results = binary_metrics(data={'y_test': data['y_test']}, preds=test_preds, probs=test_probs)
 
     # UEL artifacts (UEL pops _preds and models, extras are kept out of log columns)
     round_results['_preds'] = test_preds          # UEL will collect
