@@ -198,7 +198,6 @@ def prep(data, round_params, manifest):
     
     return data_dict
 
-
 def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
     """
     Build a modular Keras transformer encoder block with optional rotary positional encoding.
@@ -211,19 +210,22 @@ def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
         function/layer block
     """
     def block(x):
-        # Optional rotary positional encoding before attention
         if use_rotary:
             x = RotaryEmbedding(sequence_axis=1, feature_axis=2)(x)
-        attn_output = MultiHeadAttention(num_heads=num_heads, key_dim=d_model)(x, x)
+        # key_dim per head so total model dim is d_model
+        attn_output = MultiHeadAttention(num_heads=num_heads, key_dim=d_model // num_heads)(x, x)
         attn_output = Dropout(dropout)(attn_output)
-        out1 = Add()([x, attn_output])
+        out1 = Add()([x, attn_output])             # both are (batch, T, d_model)
         out1 = LayerNormalization()(out1)
-        ff = Dense(d_model, activation='relu')(out1)
+        # 2-layer FFN with residual back to d_model
+        ff = Dense(4 * d_model, activation='relu')(out1)
         ff = Dropout(dropout)(ff)
-        out2 = Add()([out1, ff])
+        ff = Dense(d_model)(ff)                    # project back to d_model
+        out2 = Add()([out1, ff])                   # shapes now match
         out2 = LayerNormalization()(out2)
         return out2
     return block
+
 
 def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
     if len(X2d) < seq_len:
@@ -278,14 +280,20 @@ def model(data, round_params):
     #     n_features = X_train.shape[2]
 
     # --- Build model ---
+    # After windowing to (batch, seq_length, n_features)
     input_layer = Input(shape=(seq_length, n_features), name='input')
-    x = input_layer
+
+    # NEW: project features to d_model so residuals match
+    x = Dense(d_model, name='input_projection')(input_layer)
     for _ in range(num_layers):
         x = transformer_encoder_block(d_model, num_heads, dropout, use_rotary)(x)
+
     x = GlobalAveragePooling1D()(x)
     x = Dropout(dropout)(x)
     output = Dense(1, activation='sigmoid', name='output')(x)
     model_tf = Model(inputs=input_layer, outputs=output)
+
+    
     optimizer = AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
     model_tf.compile(
         optimizer=optimizer,#type: ignore
