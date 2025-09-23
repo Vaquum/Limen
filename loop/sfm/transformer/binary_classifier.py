@@ -189,17 +189,22 @@ def prep(data, round_params, manifest):
         data_dict['x_test'].shape[0],
     )
 
-    # Alignment edit
+    # Alignment edit: Only add valid (non-null) missing datetimes
     if '_alignment' in data_dict:
         align   = dict(data_dict['_alignment'])
         missing = list(align.get('missing_datetimes', []))
         test_dt = align.get('test_datetimes', None)
-        if test_dt is not None and seq_len_eff > 1:
-            missing = list(missing) + list(test_dt[:seq_len_eff - 1])
-            align['missing_datetimes'] = missing
-            data_dict['_alignment'] = align
 
-    # Convert splits to NumPy
+        if test_dt is not None and hasattr(test_dt, '__getitem__') and hasattr(test_dt, '__len__') and seq_len_eff > 1:
+            # Slice and filter for valid (not None) values
+            dt_slice = test_dt[:seq_len_eff - 1]
+            valid_dt = [dt for dt in dt_slice if dt is not None]
+            if valid_dt:
+                missing = missing + valid_dt
+                align['missing_datetimes'] = missing
+                data_dict['_alignment'] = align
+
+    # NumPy conversions
     for k in ['x_train', 'x_val', 'x_test']:
         if isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy()
@@ -209,7 +214,7 @@ def prep(data, round_params, manifest):
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
 
-    # FINAL FIX: make y_test windowed so Log and metrics always match predictions
+    # Window y_test as before
     raw_y_test = data_dict['y_test']
     if len(raw_y_test) > seq_len_eff - 1:
         data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
@@ -223,6 +228,8 @@ def prep(data, round_params, manifest):
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
 
     return data_dict
+
+
 
 
 
