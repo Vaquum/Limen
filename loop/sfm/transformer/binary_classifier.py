@@ -189,7 +189,7 @@ def prep(data, round_params, manifest):
         data_dict['x_test'].shape[0],
     )
 
-    # Update alignment: drop first warmup test datetimes due to windowing
+    # Alignment edit (already correct)
     if '_alignment' in data_dict:
         align   = dict(data_dict['_alignment'])
         missing = list(align.get('missing_datetimes', []))
@@ -199,7 +199,7 @@ def prep(data, round_params, manifest):
             align['missing_datetimes'] = missing
             data_dict['_alignment'] = align
 
-    # Ensure model splits are NumPy ndarrays for Keras
+    # Convert splits to NumPy
     for k in ['x_train', 'x_val', 'x_test']:
         if isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy()
@@ -209,14 +209,23 @@ def prep(data, round_params, manifest):
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
 
-    # Optional debug shapes
+    # FINAL FIX: make y_test windowed so Log always matches
+    raw_y_test = data_dict['y_test']
+    if len(raw_y_test) > seq_len_eff - 1:
+        data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
+        # Optionally: keep full raw_y_test for reference under a separate key
+        data_dict['_raw_y_test'] = raw_y_test
+
     print("Prep output shapes/types:")
     for k in ['x_train', 'x_val', 'x_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
     for k in ['y_train', 'y_val', 'y_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
 
+    
+
     return data_dict
+
 
 
 def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
@@ -333,6 +342,8 @@ def model(data, round_params):
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
     test_preds = (test_probs > 0.5).astype(int)
 
+    # **Insert this debug print line right here:**
+    print("model: y_test & test_preds lengths", len(data['y_test']), len(test_preds))
     # Metrics against window-aligned y_test
     round_results = binary_metrics(data={'y_test': y_test}, preds=test_preds, probs=test_probs)
 
