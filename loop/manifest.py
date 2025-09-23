@@ -193,6 +193,26 @@ class Manifest:
         '''
         return TargetBuilder(self, target_column)
 
+    def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
+
+        '''
+        Compute test split bar data from raw data using manifest bar formation configuration.
+        Used by Log system to reconstruct the same test bar data that was used in training.
+
+        Args:
+            raw_data (pl.DataFrame): Raw input dataset
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            pl.DataFrame: Bar-formed test split data
+        '''
+
+        split_data = split_sequential(raw_data, self.split_config)
+        test_split = split_data[2]
+        _, test_bar_data = _process_bars(self, test_split, round_params)
+
+        return test_bar_data
+
     def prepare_data(
         self,
         raw_data: pl.DataFrame,
