@@ -22,39 +22,33 @@ from keras.models import Model
 from keras.optimizers import Adam, AdamW
 from keras.callbacks import EarlyStopping
 
-
 def params():
-    """
-    Defines the parameter space for the Transformer binary classifier experiment.
-    Every parameter is a "knob" we can turn.
-    """
     return {
-        # ---------------- Prep Knobs ----------------
-        'lookback_window': [24, 72],
-        'target_horizon': [6, 24],
-        'target_threshold': [0.002, 0.005], # % price change for a "bullish" event
-        'scaler_type': ['standard', 'minmax', 'robust'], # Use strings for serialization
-        
-        # ---------------- Feature Selection Knobs ----------------
-        'use_cyclical_features': [True, False],
-        'use_sequential_features': [True, False],
-        
-        # ---------------- Transformer Architecture Knobs ----------------
-        # Coupled tuples: (name, d_model, num_heads) to ensure d_model % num_heads == 0
-        'd_model': [32, 64], # The embedding dimension
-        'num_heads': [2, 4, 8],
+        # Model architecture and training params
+        'd_model': [32, 64],             # Embedding/hidden size
+        'num_heads': [2, 4],             # Multi-head attention count
+        'num_layers': [1, 2],            # Transformer encoder layers
+        'dropout': [0.1, 0.2],           # Dropout for regularization
+        'learning_rate': [1e-3, 5e-4],   # Adam optimizer learning rate
+        'batch_size': [32, 64],          # Batch size
+        'weight_decay': [0.0, 1e-4],
+        'epochs': [5, 10],              # Number of epochs (low for speed)
+        'seed': [42],                   # Random seed for reproducibility
+        'early_stopping_patience': [3],  # Early stopping patience
 
-        'num_encoder_layers': [2, 4],
-        'dropout_rate': [0.1, 0.2],
-        'positional_encoding_type': ['sinusoidal', 'rotary'],
-        
-        # ---------------- Training & Optimization Knobs ----------------
-        'learning_rate': [1e-4, 5e-4, 1e-3],
-        'batch_size': [32, 64, 128],
-        'weight_decay': [0.0, 0.01, 0.1], 
-        'early_stopping_patience': [5, 10], 
-        # 'traininng_split_ratio': []
+        # Sequence and regime context params
+        'seq_length': [30, 60],          # Number of context bars (1-min bars = 30-60min)
+        'prediction_window': [60],       # Window to classify regime ahead (in minutes)
+        'positional_encoding_type': ['rotary'], # Positional encoding
+
+        # Target engineering
+        'target_quantile': [0.45, 0.55],
+        'target_shift': [0],             # [0] means start window immediately after context
+
+        # Output regularization/calibration
+        'label_smoothing': [0.0, 0.1],   # Regularization for noisy regime signals
     }
+
 
 # Helper function remains the same and is correct
 def _create_sequences(data_df, feature_cols, target_col, lookback):
