@@ -66,20 +66,45 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
     return df
 
 
-def my_make_fitted_scaler(param_name: str, transform_class):
-    def fit_scaler(data):
-        # Only fit features (exclude 'datetime', target column)
-        drop_cols = ['datetime', 'target_regime']  # update target name if needed
-        feature_cols = [
-            col for col in data.columns
-            if col not in drop_cols and data[col].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
-        ]
-        scaler = transform_class()
-        scaler.fit(data.select(feature_cols).to_numpy())
-        return scaler
-    return ([ (param_name, fit_scaler, {}) ], _apply_fitted_transform, { 'fitted_transform': param_name })
+# Keep these imports in your SFM file
+import polars as pl
+import numpy as np
+from loop.manifest import _apply_fitted_transform
+import loop.manifest
 
-loop.manifest.make_fitted_scaler = my_make_fitted_scaler 
+def my_make_fitted_scaler(param_name: str, transform_class):
+    class PolarsColumnScaler:
+        def __init__(self, data: pl.DataFrame):
+            # Exclude non-feature columns; adjust target name if needed
+            drop_cols = ['datetime', 'target_regime']
+            numeric_dtypes = (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
+            self.feature_cols = [
+                c for c in data.columns
+                if c not in drop_cols and data[c].dtype in numeric_dtypes
+            ]
+            # Fit sklearn scaler on numpy array (no feature names)
+            X = data.select(self.feature_cols).to_numpy()
+            self.scaler = transform_class()
+            self.scaler.fit(X)
+
+        def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+            # Select the exact same columns in the same order
+            X = data.select(self.feature_cols).to_numpy()
+            Xs = self.scaler.transform(X)
+            # Replace scaled columns back into a Polars DataFrame
+            cols = [pl.Series(name, Xs[:, j]) for j, name in enumerate(self.feature_cols)]
+            return data.with_columns(cols)
+
+    # Return a "fitted transform entry" that Manifest expects
+    return (
+        [(param_name, lambda df: PolarsColumnScaler(df), {})],
+        _apply_fitted_transform,
+        {'fitted_transform': param_name}
+    )
+
+# Register the override so Manifest.set_scaler(StandardScaler) uses it
+loop.manifest.make_fitted_scaler = my_make_fitted_scaler
+
 print(loop.manifest.make_fitted_scaler)
 
 
