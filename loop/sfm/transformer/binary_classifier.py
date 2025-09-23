@@ -28,7 +28,6 @@ import polars as pl
 import numpy as np
 from loop.manifest import Manifest
 from loop.manifest import _apply_fitted_transform
-from loop.manifest import make_fitted_scaler
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     """Add cyclical features for hour, minute, and day to df (Polars native)"""
@@ -64,6 +63,20 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
     label = (windowed_returns > quantile_cutoff).astype(int)
     df = df.with_columns([pl.Series('target_regime', label)])
     return df
+
+
+def make_fitted_scaler(param_name: str, transform_class):
+    def fit_scaler(data):
+        # Choose numeric columns for features (avoid 'datetime', targets)
+        drop_cols = ['datetime', 'target_regime']  # adjust target name if needed
+        feature_cols = [
+            col for col in data.columns
+            if col not in drop_cols and data[col].dtype in (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
+        ]
+        scaler = transform_class()
+        scaler.fit(data.select(feature_cols).to_numpy())
+        return scaler
+    return ([ (param_name, fit_scaler, {}) ], _apply_fitted_transform, { 'fitted_transform': param_name })
 
 
 def manifest():
