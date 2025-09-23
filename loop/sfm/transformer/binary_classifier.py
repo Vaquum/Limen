@@ -206,7 +206,6 @@ def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
     def block(x):
         if use_rotary:
             x = RotaryEmbedding(sequence_axis=1, feature_axis=2)(x)
-        # Self-attention; per-head key_dim so total model dim is d_model
         attn_output = MultiHeadAttention(
             num_heads=num_heads,
             key_dim=d_model // num_heads
@@ -242,8 +241,7 @@ def make_windows(X2d: np.ndarray, y: np.ndarray, seq_len: int):
 def model(data, round_params):
     """
     Builds, trains, and evaluates a transformer regime classifier.
-    Expects prep to provide x_* as 2D arrays (n, f) and y_* as 1D arrays.
-    Converts to 3D windows (n_win, T, f), projects to d_model, then stacks encoder blocks.
+    Keeps round_results scalar-only to avoid Polars schema errors in UEL.
     """
     # --- Unpack parameters ---
     d_model = round_params['d_model']
@@ -311,23 +309,26 @@ def model(data, round_params):
     )
 
     # --- Evaluate on windowed test ---
-    test_probs = model_tf.predict(X_test, batch_size=batch_size).flatten()
+    test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() #type: ignore
     test_preds = (test_probs > 0.5).astype(int)
 
-    # IMPORTANT: pass the window-aligned y_test to metrics
+    # Use the window-aligned y_test for metrics (length equals len(test_preds))
     round_results = binary_metrics(data={'y_test': y_test}, preds=test_preds, probs=test_probs)
 
-    # Artifacts for UEL
-    round_results['_preds'] = test_preds
-    round_results['models'] = [model_tf]
+    # UEL-safe artifacts
+    round_results['_preds'] = test_preds          # UEL will collect and pop this
+    round_results['models'] = [model_tf]          # UEL will collect and pop this
 
-    # Optional val artifacts (already window-aligned)
-    val_probs = model_tf.predict(X_val, batch_size=batch_size).flatten()
+    # Store validation arrays inside extras so they are not logged as columns
+    val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=0).flatten() #type: ignore
     val_preds = (val_probs > 0.5).astype(int)
-    round_results['_val_preds'] = val_preds
-    round_results['_val_probs'] = val_probs
+    round_results['extras'] = {
+        'val_preds': val_preds,
+        'val_probs': val_probs,
+    }
 
     return round_results
+
 
 
 
