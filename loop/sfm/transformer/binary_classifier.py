@@ -30,6 +30,7 @@ from loop.manifest import Manifest
 from loop.manifest import _apply_fitted_transform
 import loop.manifest
 
+
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     """Add cyclical features for hour, minute, and day to df (Polars native)"""
     df = df.with_columns([
@@ -237,6 +238,19 @@ def prep(data, round_params, manifest):
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
     for k in ['y_train', 'y_val', 'y_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
+
+    if '_alignment' in data_dict:
+        print("FINAL CHECK - data_dict['_alignment']['missing_datetimes'] (first 10):", data_dict['_alignment'].get('missing_datetimes', [])[:10])
+        print("Length:", len(data_dict['_alignment'].get('missing_datetimes', [])))
+        print("Null count:", sum(x is None for x in data_dict['_alignment'].get('missing_datetimes', [])))
+        print("Bad types:", [type(x) for x in data_dict['_alignment'].get('missing_datetimes', []) if x is not None and not isinstance(x, (datetime.datetime, np.datetime64))])
+    # Show problematic values, if any
+    for i, x in enumerate(data_dict['_alignment'].get('missing_datetimes', [])[:10]):
+        if x is None or not isinstance(x, (datetime.datetime, np.datetime64)):
+            print(f"Problem in missing_datetimes at {i}: {x}, type: {type(x)}")
+    
+    print("FINAL CHECK - y_test shape and dtype:", data_dict['y_test'].shape, type(data_dict['y_test']))
+    print("Sample y_test values:", data_dict['y_test'][:10])
 
     return data_dict
 
