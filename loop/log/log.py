@@ -41,6 +41,11 @@ class Log:
             self.preds = uel_object.preds
             self._alignment = uel_object._alignment
 
+            if hasattr(uel_object, 'manifest'):
+                self.manifest = uel_object.manifest
+            else:
+                self.manifest = None
+
         elif file_path is not None:
             self.experiment_log = self.read_from_file(file_path)
 

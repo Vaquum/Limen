@@ -15,7 +15,10 @@ def _permutation_prediction_performance(self,
     '''
 
     try:
-        round_data = self.prep(self.data, self.round_params[round_id])
+        if hasattr(self, 'manifest') and self.manifest:
+            round_data = self.prep(self.data, self.round_params[round_id], self.manifest)
+        else:
+            round_data = self.prep(self.data, self.round_params[round_id])
     except TypeError:
         round_data = self.prep(self.data)
     

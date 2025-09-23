@@ -55,6 +55,14 @@ Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_p
 
 **NOTE**: Any scalar metrics you want recorded into the experiment log must be included directly in `round_results` (returned by the metrics helpers). Use `round_results['extras']` only for complex objects (models, arrays, DataFrames) that should not be flattened into the log. To persist test-set predictions for post-run analysis, set `round_results['_preds'] = ...` (UEL will collect these into `uel.preds`).
 
+### Optional function: `manifest`
+
+For SFMs that require complex data preparation pipelines with bar formation, feature engineering, and fitted parameters, an optional `manifest()` function can be provided. This function returns an [Experiment Manifest](Experiment-Manifest.md) that defines the Universal Split-First data processing pipeline.
+
+When a manifest is provided, the `prep` function should delegate to the manifest. The manifest ensures Universal Split-First architecture where data is split before any processing, preventing data leakage between train/validation/test sets.
+
+See [Experiment Manifest](Experiment-Manifest.md) for complete documentation and example code.
+
 # Appendix
 
 ## Model Categories
