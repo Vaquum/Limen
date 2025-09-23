@@ -180,6 +180,21 @@ def prep(data, round_params, manifest):
     Returns: data_dict ready for model()
     """
     data_dict = manifest.prepare_data(data, round_params)
+    # --- Ensure model inputs are NumPy arrays ---
+    for k in ['x_train', 'x_val', 'x_test']:
+        if isinstance(data_dict[k], pl.DataFrame):
+            data_dict[k] = data_dict[k].to_numpy()
+    for k in ['y_train', 'y_val', 'y_test']:
+        if isinstance(data_dict[k], pl.DataFrame):
+            data_dict[k] = data_dict[k].to_numpy().flatten()
+    
+    # Optional: debug
+    print("Prep output shapes/types:")
+    for k in ['x_train', 'x_val', 'x_test']:
+        print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
+    for k in ['y_train', 'y_val', 'y_test']:
+        print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
+    
     return data_dict
 
 
