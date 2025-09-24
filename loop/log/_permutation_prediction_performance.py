@@ -38,9 +38,10 @@ def _permutation_prediction_performance(self,
     price_df = self._get_test_data_with_all_cols(round_id)
     # Always slice from the end to match windowed outputs
     N = len(perf_df)
-    perf_df['open']        = price_df['open'][-N:].reset_index(drop=True)
-    perf_df['close']       = price_df['close'][-N:].reset_index(drop=True)
-    perf_df['price_change'] = perf_df['close'] - perf_df['open']
+    perf_df['open']        = price_df['open'][-N:]
+    perf_df['close']       = price_df['close'][-N:]
+    perf_df['price_change'] = perf_df['close'][-N:] - price_df['open'][-N:]
+
 
     # If you want other columns, do the same: perf_df['col'] = price_df['col'][-N:].reset_index(drop=True)
 
