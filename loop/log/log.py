@@ -95,7 +95,15 @@ class Log:
         # If not empty, do the join
         missing_df = pl.DataFrame({'datetime': missing_datetimes})
         # Only .with_columns if missing_df is not empty!
-        # (This block will only execute if len(missing_datetimes) > 0)
+        # (This block will only execute if len(missing_datetimes) > 0)'
+                
+        print("Nulls in self.data['datetime'] just before cast:",
+            self.data['datetime'].null_count())
+        print("Nulls in data_cleaned['datetime'] just before cast:",
+            data_cleaned['datetime'].null_count())
+        print("Sample values:", data_cleaned['datetime'].head(10))
+
+
         if missing_df.shape[0] > 0:
             missing_df = missing_df.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
 
