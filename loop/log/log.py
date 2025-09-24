@@ -82,7 +82,9 @@ class Log:
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
 
-        data_df = self.data.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+        data_cleaned = self.data.drop_nulls(subset=['datetime'])
+        data_df = data_cleaned.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+
 
         # If missing_datetimes is empty, skip join and just filter by test window
         if not missing_datetimes:
