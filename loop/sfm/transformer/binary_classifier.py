@@ -36,6 +36,7 @@ import numpy as np
 from loop.manifest import Manifest
 from loop.manifest import _apply_fitted_transform
 import loop.manifest
+import datetime
 
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -96,13 +97,6 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
     df = df.with_columns([pl.Series('target_regime', label)])
     return df
 
-
-
-# Keep these imports in your SFM file
-import polars as pl
-import numpy as np
-from loop.manifest import _apply_fitted_transform
-import loop.manifest
 
 
 def my_make_fitted_scaler(param_name: str, transform_class):
@@ -166,8 +160,6 @@ def my_make_fitted_scaler(param_name: str, transform_class):
         {'fitted_transform': param_name}
     )
 
-
-# Register the override so Manifest.set_scaler(StandardScaler) uses it
 loop.manifest.make_fitted_scaler = my_make_fitted_scaler
 
 
@@ -271,8 +263,6 @@ def params():
         'label_smoothing': [0.0, 0.1],   # Regularization for noisy regime signals
     }
 
-
-import datetime
 
 def is_valid_datetime(dt):
     # Accepts datetime.datetime, numpy.datetime64, rejects None and others
