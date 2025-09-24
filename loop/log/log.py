@@ -81,15 +81,20 @@ class Log:
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
-    
-        return (
-            self.data
-            .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-            .join(
+
+        # Start with the base data and cast datetime
+        result = self.data.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+        
+        # Only perform anti-join if there are missing datetimes to exclude
+        if missing_datetimes:  # Check if list is not empty
+            result = result.join(
                 pl.DataFrame({'datetime': missing_datetimes})
                 .with_columns(pl.col('datetime').dt.cast_time_unit('ms')),
                 on='datetime',
                 how='anti',
             )
-            .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
+        
+        # Apply the date range filter
+        return result.filter(
+            pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both')
         )
