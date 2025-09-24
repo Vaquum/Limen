@@ -67,6 +67,7 @@ class Log:
             self.inverse_scaler = None
 
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
+        print(f"Log._get_test_data_with_all_cols called for round_id={round_id}")
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
