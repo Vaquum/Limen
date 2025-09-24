@@ -2,8 +2,10 @@ import polars as pl
 import wrangle
 from typing import Optional, Callable, List, Any
 
+print(">>> Loading Log CLASS from:", __file__)
 
 class Log:
+    print(">>> Loading Log CLASS from:", __file__)
 
     '''Log object for storing and analyzing experiment results.'''
 
@@ -77,38 +79,19 @@ class Log:
         Returns:
             pl.DataFrame: Klines dataset filtered down to the permutation test window
         '''
-
-        missing_datetimes = self._alignment[round_id]['missing_datetimes']
-        first_test_datetime = self._alignment[round_id]['first_test_datetime']
-        last_test_datetime = self._alignment[round_id]['last_test_datetime']
-
-        data_cleaned = self.data.drop_nulls(subset=['datetime'])
-        data_df = data_cleaned.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-
-
-        # If missing_datetimes is empty, skip join and just filter by test window
-        if not missing_datetimes:
-            return data_df.filter(
-                pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both')
-            )
-
-        # If not empty, do the join
-        missing_df = pl.DataFrame({'datetime': missing_datetimes})
-        # Only .with_columns if missing_df is not empty!
-        # (This block will only execute if len(missing_datetimes) > 0)'
-                
-        print("Nulls in self.data['datetime'] just before cast:",
-            self.data['datetime'].null_count())
-        print("Nulls in data_cleaned['datetime'] just before cast:",
-            data_cleaned['datetime'].null_count())
-        print("Sample values:", data_cleaned['datetime'].head(10))
-
-
-        if missing_df.shape[0] > 0:
-            missing_df = missing_df.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-
-        return (
-            data_df
-            .join(missing_df, on='datetime', how='anti')
-            .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
-        )
+        raise Exception("LOG CLASS REACHED")
+        # missing_datetimes = self._alignment[round_id]['missing_datetimes']
+        # first_test_datetime = self._alignment[round_id]['first_test_datetime']
+        # last_test_datetime = self._alignment[round_id]['last_test_datetime']
+    
+        # return (
+        #     self.data
+        #     .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+        #     .join(
+        #         pl.DataFrame({'datetime': missing_datetimes})
+        #         .with_columns(pl.col('datetime').dt.cast_time_unit('ms')),
+        #         on='datetime',
+        #         how='anti',
+        #     )
+        #     .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
+        # )
