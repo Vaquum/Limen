@@ -2,9 +2,9 @@ import polars as pl
 import wrangle
 from typing import Optional, Callable, List, Any
 
-
+print('log.py loaded')
 class Log:
-
+    print('Log class defined')
     '''Log object for storing and analyzing experiment results.'''
 
     from loop.log._experiment_backtest_results import _experiment_backtest_results as experiment_backtest_results
@@ -77,7 +77,7 @@ class Log:
         Returns:
             pl.DataFrame: Klines dataset filtered down to the permutation test window
         '''
-
+        print(f'Computing test-period rows with all columns for round {round_id}...')
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
