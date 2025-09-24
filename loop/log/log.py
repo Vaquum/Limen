@@ -2,10 +2,8 @@ import polars as pl
 import wrangle
 from typing import Optional, Callable, List, Any
 
-print(">>> Loading Log CLASS from:", __file__)
 
 class Log:
-    print(">>> Loading Log CLASS from:", __file__)
 
     '''Log object for storing and analyzing experiment results.'''
 
@@ -79,19 +77,19 @@ class Log:
         Returns:
             pl.DataFrame: Klines dataset filtered down to the permutation test window
         '''
-        raise Exception("LOG CLASS REACHED")
-        # missing_datetimes = self._alignment[round_id]['missing_datetimes']
-        # first_test_datetime = self._alignment[round_id]['first_test_datetime']
-        # last_test_datetime = self._alignment[round_id]['last_test_datetime']
+
+        missing_datetimes = self._alignment[round_id]['missing_datetimes']
+        first_test_datetime = self._alignment[round_id]['first_test_datetime']
+        last_test_datetime = self._alignment[round_id]['last_test_datetime']
     
-        # return (
-        #     self.data
-        #     .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-        #     .join(
-        #         pl.DataFrame({'datetime': missing_datetimes})
-        #         .with_columns(pl.col('datetime').dt.cast_time_unit('ms')),
-        #         on='datetime',
-        #         how='anti',
-        #     )
-        #     .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
-        # )
+        return (
+            self.data
+            .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+            .join(
+                pl.DataFrame({'datetime': missing_datetimes})
+                .with_columns(pl.col('datetime').dt.cast_time_unit('ms')),
+                on='datetime',
+                how='anti',
+            )
+            .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
+        )
