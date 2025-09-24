@@ -171,10 +171,6 @@ def my_make_fitted_scaler(param_name: str, transform_class):
 loop.manifest.make_fitted_scaler = my_make_fitted_scaler
 
 
-# print(loop.manifest.make_fitted_scaler)
-
-
-
 def manifest():
     """
     Configure the data processing pipeline and experiment manifest.
@@ -339,13 +335,9 @@ def prep(data, round_params, manifest):
         data_dict['_alignment'] = align
 
         # FINAL SANITIZATION before returning
-        missing_filtered = [x for x in align['missing_datetimes'] if is_valid_datetime(x)]
-        if len(align['missing_datetimes']) != len(missing_filtered):
-            print(f"Filtered {len(align['missing_datetimes']) - len(missing_filtered)} bad/null values from missing_datetimes in prep.")
+        missing_filtered = [x for x in align['missing_datetimes'] if is_valid_datetime(x)]    
         data_dict['_alignment']['missing_datetimes'] = missing_filtered
-        print("FINAL filtered missing_datetimes (first 10):", missing_filtered[:10])
-        print("Length:", len(missing_filtered), "Nulls:", sum(x is None for x in missing_filtered))
-        print("Bad types:", [type(x) for x in missing_filtered if not isinstance(x, (datetime.datetime, np.datetime64))])
+       
 
     # NumPy conversions
     for k in ['x_train', 'x_val', 'x_test']:
@@ -363,11 +355,6 @@ def prep(data, round_params, manifest):
         data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
         data_dict['_raw_y_test'] = raw_y_test
 
-    print("Prep output shapes/types:")
-    for k in ['x_train', 'x_val', 'x_test']:
-        print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
-    for k in ['y_train', 'y_val', 'y_test']:
-        print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
 
     return data_dict
 
@@ -559,7 +546,6 @@ def model(data, round_params):
     # Only use data['y_test'] for predictions and Log/metrics.
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
     test_preds = (test_probs > 0.5).astype(int)
-    print("model: y_test & test_preds lengths", len(data['y_test']), len(test_preds))
 
 
     # --- Compute evaluation metrics ---
