@@ -82,19 +82,14 @@ class Log:
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
     
-        # Handle edge case where missing_datetimes is empty to avoid Polars ComputeError
-        data_df = self.data.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-
-        if not missing_datetimes:
-            filtered = data_df.filter(
-                pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both')
+        return (
+            self.data
+            .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+            .join(
+                pl.DataFrame({'datetime': missing_datetimes})
+                .with_columns(pl.col('datetime').dt.cast_time_unit('ms')),
+                on='datetime',
+                how='anti',
             )
-        else:
-            missing_df = pl.DataFrame({'datetime': missing_datetimes}).with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-            filtered = (
-                data_df
-                .join(missing_df, on='datetime', how='anti')
-                .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
-            )
-
-        return filtered
+            .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
+        )
