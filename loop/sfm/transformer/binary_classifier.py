@@ -278,6 +278,14 @@ def params():
 
 import datetime
 
+def is_valid_datetime(dt):
+    # Accepts datetime.datetime, numpy.datetime64, rejects None and others
+    if dt is None:
+        return False
+    if isinstance(dt, (datetime.datetime, np.datetime64)):
+        return True
+    return False
+
 
 def prep(data, round_params, manifest):
     """
@@ -314,35 +322,32 @@ def prep(data, round_params, manifest):
     )
 
 
-    # Alignment edit: Only add valid (non-null) missing datetimes
+# Alignment edit: Only add valid (non-null) missing datetimes
     if '_alignment' in data_dict:
         align   = dict(data_dict['_alignment'])
         missing = list(align.get('missing_datetimes', []))
         test_dt = align.get('test_datetimes', None)
-        print("\nPrep: test_dt first 20:", test_dt[:20] if test_dt is not None else None)
-        if test_dt is not None:
-            print(f"Prep: test_dt type: {type(test_dt)} length: {len(test_dt)} nulls: {sum(x is None for x in test_dt)}")
-            # print all problematic/non-datetime entries
-            for i, dt in enumerate(test_dt):
-                if not isinstance(dt, (datetime.datetime, np.datetime64)) or dt is None:
-                    print("Problem in test_dt at index", i, "value:", dt, "type:", type(dt))
-        print("Prep: missing before window append:", missing)
 
-
+        valid_dt = []
         if test_dt is not None and hasattr(test_dt, '__getitem__') and hasattr(test_dt, '__len__') and seq_len_eff > 1:
-            # Slice and filter for valid (not None) values
             dt_slice = test_dt[:seq_len_eff - 1]
-            valid_dt = [dt for dt in dt_slice if dt is not None]
-            if valid_dt:
-                missing = missing + valid_dt
-                align['missing_datetimes'] = missing
-                data_dict['_alignment'] = align
-                        # ... after updating missing/missing_datetimes
-        print("Prep: final missing_datetimes after filtering:", align['missing_datetimes'][:20])
+            valid_dt = [dt for dt in dt_slice if is_valid_datetime(dt)]
+        # Also filter any existing 'missing' from historical sources
+        missing = [dt for dt in missing if is_valid_datetime(dt)]
+        missing += valid_dt
+        align['missing_datetimes'] = missing
+        data_dict['_alignment'] = align
 
+        # FINAL SANITIZATION before returning
+        missing_filtered = [x for x in align['missing_datetimes'] if is_valid_datetime(x)]
+        if len(align['missing_datetimes']) != len(missing_filtered):
+            print(f"Filtered {len(align['missing_datetimes']) - len(missing_filtered)} bad/null values from missing_datetimes in prep.")
+        data_dict['_alignment']['missing_datetimes'] = missing_filtered
+        print("FINAL filtered missing_datetimes (first 10):", missing_filtered[:10])
+        print("Length:", len(missing_filtered), "Nulls:", sum(x is None for x in missing_filtered))
+        print("Bad types:", [type(x) for x in missing_filtered if not isinstance(x, (datetime.datetime, np.datetime64))])
 
-
-    # NumPy conversions for Keras compatibility
+    # NumPy conversions
     for k in ['x_train', 'x_val', 'x_test']:
         if isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy()
@@ -352,14 +357,11 @@ def prep(data, round_params, manifest):
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
 
-
-    # Window y_test to match sequence predictions
+    # Window y_test as before
     raw_y_test = data_dict['y_test']
     if len(raw_y_test) > seq_len_eff - 1:
         data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
-        # Optionally save unwindowed test for reference:
         data_dict['_raw_y_test'] = raw_y_test
-
 
     print("Prep output shapes/types:")
     for k in ['x_train', 'x_val', 'x_test']:
@@ -367,26 +369,7 @@ def prep(data, round_params, manifest):
     for k in ['y_train', 'y_val', 'y_test']:
         print(f"{k}: {type(data_dict[k])}, shape: {data_dict[k].shape}")
 
-
-    if '_alignment' in data_dict:
-        print("FINAL CHECK - data_dict['_alignment']['missing_datetimes'] (first 10):", data_dict['_alignment'].get('missing_datetimes', [])[:10])
-        print("Length:", len(data_dict['_alignment'].get('missing_datetimes', [])))
-        print("Null count:", sum(x is None for x in data_dict['_alignment'].get('missing_datetimes', [])))
-        print("Bad types:", [type(x) for x in data_dict['_alignment'].get('missing_datetimes', []) if x is not None and not isinstance(x, (datetime.datetime, np.datetime64))])
-    # Show problematic values, if any
-    for i, x in enumerate(data_dict['_alignment'].get('missing_datetimes', [])[:10]):
-        if x is None or not isinstance(x, (datetime.datetime, np.datetime64)):
-            print(f"Problem in missing_datetimes at {i}: {x}, type: {type(x)}")
-    
-    print("FINAL CHECK - y_test shape and dtype:", data_dict['y_test'].shape, type(data_dict['y_test']))
-    print("Sample y_test values:", data_dict['y_test'][:10])
-
-
     return data_dict
-
-
-
-
 
 
 
