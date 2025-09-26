@@ -309,3 +309,7 @@ data mismatch
 - Add fixed threshold trade, volume and liquidity bars to `loop.data.bars`
 - Add test cases for the above
 - Add documentation `docs/Data-Bars.md`
+
+# V1.19.2 on 24th of September 2025
+- Refactor datetime alignment to work with manifest based bar data.
+- Fix `snippets/test_explorer_locally.py` to work with manifest based logreg.

@@ -14,18 +14,15 @@ from loop.indicators import roc
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
-
-# TODO: placeholder no-op bar foramtion. To be tied to actual bar formation code
-def adaptive_bar_formation(data, **kwargs):
-    return data
+from loop.data import compute_data_bars
 
 def manifest():
     return (Manifest()
         .set_split_config(8, 1, 2)
 
-        .set_bar_formation(adaptive_bar_formation,
+        .set_bar_formation(compute_data_bars,
             bar_type='bar_type',
-            time_freq='time_freq',
+            trade_threshold='trade_threshold',
             volume_threshold='volume_threshold',
             liquidity_threshold='liquidity_threshold')
         .set_required_bar_columns([
@@ -61,10 +58,10 @@ def params():
         'roc_period': [1, 4, 12, 24, 144],
         'penalty': ['l2'],
         # bar formation parameters
-        'bar_type': ['base', 'time', 'volume', 'liquidity'],
-        'time_freq': ['5m', '15m', '30m', '1h'],
-        'volume_threshold': [500000, 1000000, 2000000],
-        'liquidity_threshold': [10000000, 50000000],
+        'bar_type': ['base', 'trade', 'volume', 'liquidity'],
+        'trade_threshold': [5000, 10000, 30000, 100000, 500000],
+        'volume_threshold': [100, 250, 500, 750, 1000, 5000],
+        'liquidity_threshold': [50000, 1000000, 5000000, 50000000, 100000000],
         # classifier parameters
         'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
         'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
