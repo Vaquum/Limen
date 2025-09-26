@@ -1,6 +1,6 @@
 # Data processing utilities module
-from loop.data.utils.adaptive_bar_formation import adaptive_bar_formation
+from loop.data.utils.compute_data_bars import compute_data_bars
 
 __all__ = [
-    'adaptive_bar_formation'
+    'compute_data_bars'
 ]

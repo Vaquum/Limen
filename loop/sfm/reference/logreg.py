@@ -14,13 +14,13 @@ from loop.indicators import roc
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
-from loop.data import adaptive_bar_formation
+from loop.data import compute_data_bars
 
 def manifest():
     return (Manifest()
         .set_split_config(8, 1, 2)
 
-        .set_bar_formation(adaptive_bar_formation,
+        .set_bar_formation(compute_data_bars,
             bar_type='bar_type',
             trade_threshold='trade_threshold',
             volume_threshold='volume_threshold',
