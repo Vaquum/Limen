@@ -249,7 +249,7 @@ def params():
         'learning_rate': [1e-3, 5e-4],   # Adam optimizer learning rate
         'batch_size': [32, 64],          # Batch size
         'weight_decay': [0.0, 1e-4],     # L2 regularization strength
-        'epochs': [5, 10],              # Number of epochs (low for speed)
+        'epochs': [20,50,75],              # Number of epochs (low for speed)
         'seed': [42],                   # Random seed for reproducibility
         'early_stopping_patience': [3],  # Early stopping patience
 
