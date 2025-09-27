@@ -54,19 +54,25 @@ def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
         DataFrame with added cyclical features: sin/cos_hour, sin/cos_minute, sin/cos_day
     """
     df = df.with_columns([
-        (pl.col('datetime').dt.hour().alias('hour')),
-        (pl.col('datetime').dt.minute().alias('minute')),
-        (pl.col('datetime').dt.day().alias('day')),
+        pl.col('datetime').dt.hour().alias('hour'),
+        pl.col('datetime').dt.minute().alias('minute'),
+        pl.col('datetime').dt.day().alias('day'),
+        pl.col('datetime').dt.weekday().alias('weekday'),  # Monday=0, Sunday=6
+        pl.col('datetime').dt.days_in_month().alias('days_in_month'),
     ])
     df = df.with_columns([
-        (np.sin(2 * np.pi * pl.col('hour') / 24).alias('sin_hour')),
-        (np.cos(2 * np.pi * pl.col('hour') / 24).alias('cos_hour')),
-        (np.sin(2 * np.pi * pl.col('minute') / 60).alias('sin_minute')),
-        (np.cos(2 * np.pi * pl.col('minute') / 60).alias('cos_minute')),
-        (np.sin(2 * np.pi * pl.col('day') / 31).alias('sin_day')),
-        (np.cos(2 * np.pi * pl.col('day') / 31).alias('cos_day')),
+        np.sin(2 * np.pi * pl.col('hour') / 24).alias('sin_hour'),
+        np.cos(2 * np.pi * pl.col('hour') / 24).alias('cos_hour'),
+        np.sin(2 * np.pi * pl.col('minute') / 60).alias('sin_minute'),
+        np.cos(2 * np.pi * pl.col('minute') / 60).alias('cos_minute'),
+        # Day-of-month encoding using actual days in month
+        np.sin(2 * np.pi * (pl.col('day') - 1) / pl.col('days_in_month')).alias('sin_day'),
+        np.cos(2 * np.pi * (pl.col('day') - 1) / pl.col('days_in_month')).alias('cos_day'),
+        # Day-of-week encoding (Monday=0, Sunday=6)
+        np.sin(2 * np.pi * pl.col('weekday') / 7).alias('sin_weekday'),
+        np.cos(2 * np.pi * pl.col('weekday') / 7).alias('cos_weekday'),
     ])
-    return df.drop(['hour', 'minute', 'day'])
+    return df.drop(['hour', 'minute', 'day', 'weekday', 'days_in_month'])
 
 
 def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: float) -> pl.DataFrame:
@@ -374,7 +380,9 @@ def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
         Input/output shape: (batch, timesteps, d_model)
     """
     def block(x):
-        # Optional rotary positional encoding for enhanced position awareness
+        # Instead of adding or learning position vectors, 
+        # rotary encoding rotates the feature space in a way that preserves relative positions, 
+        # which can help with generalization in time series.
         if use_rotary:
             x = RotaryEmbedding(sequence_axis=1, feature_axis=2)(x)
             
@@ -479,7 +487,7 @@ def model(data, round_params):
 
 
     # Compute effective sequence length (limited by smallest split size)
-    seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0])
+    seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0]) #This line ensures that the window size used for all splits is the largest possible value that fits in every split, so the model can be trained and evaluated without issues, regardless of how the data is split or how much data is available in each set.
     X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
     X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
     X_test,  y_test  = make_windows(X_test,  y_test,  seq_len_eff)
@@ -490,7 +498,7 @@ def model(data, round_params):
     # --- Build transformer architecture ---
     # Input projection: map features to transformer embedding space
     input_layer = Input(shape=(seq_length, n_features), name='input')
-    x = Dense(d_model, name='input_projection')(input_layer)
+    x = Dense(d_model, name='input_projection')(input_layer) # Dense layer maps raw features to the transformer embedding dimension (d_model).
     
     # Stack transformer encoder blocks
     for _ in range(num_layers):

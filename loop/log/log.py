@@ -77,7 +77,6 @@ class Log:
         Returns:
             pl.DataFrame: Klines dataset filtered down to the permutation test window
         '''
-        print(f"Log._get_test_data_with_all_cols called for round_id={round_id}.")
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
@@ -90,11 +89,6 @@ class Log:
                 .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
             )
 
-        # Now print and continue if join will occur
-        print("DEBUG: sample self.data['datetime']: ", self.data['datetime'].head(10))
-        print("DEBUG: null count in self.data['datetime']:", self.data['datetime'].null_count())
-        print("DEBUG: sample missing_datetimes:", missing_datetimes[:10] if isinstance(missing_datetimes, list) else missing_datetimes)
-        print("DEBUG: is missing_datetimes empty?", not bool(missing_datetimes))
         if isinstance(missing_datetimes, list) and missing_datetimes:
             print("DEBUG: missing_datetimes null count:", sum(x is None for x in missing_datetimes))
 
