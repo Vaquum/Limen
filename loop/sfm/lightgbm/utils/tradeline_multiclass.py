@@ -96,7 +96,6 @@ def filter_lines_by_quantile(lines: List[Dict], quantile: float) -> List[Dict]:
     threshold = np.quantile(heights, quantile)
     
     filtered = [line for line in lines if abs(line['height_pct']) >= threshold]
-    
     return filtered
 
 
@@ -248,7 +247,6 @@ def create_multiclass_labels(df: pl.DataFrame,
             if ret_48h < -short_threshold or ret_24h < -short_threshold:
                 labels[idx] = 2  # SHORT
                 short_count += 1
-    
     df = df.with_columns(pl.Series('label', labels))
     
     return df
