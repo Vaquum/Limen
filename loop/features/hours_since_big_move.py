@@ -25,7 +25,7 @@ def hours_since_big_move(data: pl.DataFrame,
     if n_rows == 0:
         return data.with_columns([pl.lit(float(lookback_hours)).alias('hours_since_big_move')])
 
-    ended = [l['end_idx'] for l in long_lines] + [s['end_idx'] for s in short_lines]
+    ended = [line['end_idx'] for line in long_lines] + [s['end_idx'] for s in short_lines]
     if not ended:
         return data.with_columns([pl.lit(float(lookback_hours)).alias('hours_since_big_move')])
 

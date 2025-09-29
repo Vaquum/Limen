@@ -237,15 +237,12 @@ def create_binary_labels(df: pl.DataFrame,
     return df
 
 
-    
-
-
 def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     '''
-    Compute balanced sample weights to handle class imbalance in multiclass classification.
-    
+    Compute balanced sample weights to handle class imbalance in binary classification.
+
     Args:
-        y_train (np.ndarray): Array of training labels (0, 1, or 2)
+        y_train (np.ndarray): Array of training labels (0 or 1)
         
     Returns:
         np.ndarray: Array of sample weights, same length as y_train
@@ -287,7 +284,6 @@ def compute_quantile_line_features(
 
 
 def calculate_atr(df: pl.DataFrame, period: int = 24) -> pl.DataFrame:
-    
     '''
     Compute Average True Range (ATR) indicator over specified period.
     

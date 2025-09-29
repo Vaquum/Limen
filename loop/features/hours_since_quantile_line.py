@@ -25,7 +25,7 @@ def hours_since_quantile_line(data: pl.DataFrame,
     if n_rows == 0:
         return data.with_columns([pl.lit(float(lookback_hours)).alias('hours_since_quantile_line')])
 
-    ends = [l['end_idx'] for l in long_lines_q] + [s['end_idx'] for s in short_lines_q]
+    ends = [line['end_idx'] for line in long_lines_q] + [s['end_idx'] for s in short_lines_q]
     if not ends:
         return data.with_columns([pl.lit(float(lookback_hours)).alias('hours_since_quantile_line')])
 

@@ -25,7 +25,7 @@ def quantile_line_density(data: pl.DataFrame,
     if n_rows == 0:
         return data.with_columns([pl.lit(0).alias('quantile_line_density_48h')])
 
-    ends = np.array(sorted([l['end_idx'] for l in long_lines_q] + [s['end_idx'] for s in short_lines_q]))
+    ends = np.array(sorted([line['end_idx'] for line in long_lines_q] + [s['end_idx'] for s in short_lines_q]))
     density = np.zeros(n_rows, dtype=int)
     if ends.size == 0:
         return data.with_columns([pl.Series('quantile_line_density_48h', density)])
