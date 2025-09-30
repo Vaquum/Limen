@@ -182,49 +182,36 @@ Compute rolling buyer/seller imbalance over klines instead of raw trades.
 
 `pl.DataFrame`: The input data with a new column 'kline_imbalance'
 
-### `lag_column`
+### Lagged Features
 
-Compute a lagged version of a column.
+The lagged features module provides a consolidated set of functions for creating lagged versions of columns. All functions are implemented using efficient vectorized Polars expressions.
 
-#### Args
+NOTE: All lag functions are available in `loop.features.lagged_features` and exported through `loop.features`.
 
-| Parameter | Type              | Description                                       |
-| --------- | ----------------- | ------------------------------------------------- |
-| `data`  | `pl.DataFrame`  | Klines dataset with specified column              |
-| `col`   | `str`           | The column name to lag                            |
-| `lag`   | `int`           | The number of periods to lag                      |
-| `alias` | `str, optional` | New column name. If None, uses alias f"lag_{lag}" |
+#### `lag_range_cols`
 
-#### Returns
+Compute multiple lagged versions of multiple columns over a range.
 
-`pl.DataFrame`: The input data with the lagged column appended
+This is the core function that all other lag functions derive from, using fully vectorized Polars expressions for maximum efficiency.
 
-### `lag_columns`
-
-Compute lagged versions of multiple columns.
-
-#### Args
+##### Args
 
 | Parameter | Type             | Description                           |
 | --------- | ---------------- | ------------------------------------- |
 | `data`  | `pl.DataFrame` | Klines dataset with specified columns |
 | `cols`  | `list[str]`    | The list of column names to lag       |
-| `lag`   | `int`          | The number of periods to lag          |
+| `start` | `int`          | The start of lag range (inclusive)    |
+| `end`   | `int`          | The end of lag range (inclusive)      |
 
-#### Returns
+##### Returns
 
 `pl.DataFrame`: The input data with the lagged columns appended
 
-NOTE:
-Additional input validation is performed by lag_column for each column.
-This function will raise the same errors as lag_column if any column
-fails validation.
-
-### `lag_range`
+#### `lag_range`
 
 Compute multiple lagged versions of a column over a range.
 
-#### Args
+##### Args
 
 | Parameter | Type             | Description                          |
 | --------- | ---------------- | ------------------------------------ |
@@ -233,14 +220,42 @@ Compute multiple lagged versions of a column over a range.
 | `start` | `int`          | The start of lag range (inclusive)   |
 | `end`   | `int`          | The end of lag range (inclusive)     |
 
-#### Returns
+##### Returns
 
 `pl.DataFrame`: The input data with the lagged columns appended
 
-NOTE:
-Input validation is performed by lag_column for each lag value.
-This function will raise the same errors as lag_column if any lag
-fails validation.
+#### `lag_columns`
+
+Compute lagged versions of multiple columns.
+
+##### Args
+
+| Parameter | Type             | Description                           |
+| --------- | ---------------- | ------------------------------------- |
+| `data`  | `pl.DataFrame` | Klines dataset with specified columns |
+| `cols`  | `list[str]`    | The list of column names to lag       |
+| `lag`   | `int`          | The number of periods to lag          |
+
+##### Returns
+
+`pl.DataFrame`: The input data with the lagged columns appended
+
+#### `lag_column`
+
+Compute a lagged version of a column.
+
+##### Args
+
+| Parameter | Type              | Description                                       |
+| --------- | ----------------- | ------------------------------------------------- |
+| `data`  | `pl.DataFrame`  | Klines dataset with specified column              |
+| `col`   | `str`           | The column name to lag                            |
+| `lag`   | `int`           | The number of periods to lag                      |
+| `alias` | `str, optional` | New column name. If None, uses alias f"lag_{lag}" |
+
+##### Returns
+
+`pl.DataFrame`: The input data with the lagged column appended
 
 ### `price_range_position`
 
