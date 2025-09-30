@@ -1,14 +1,17 @@
 import numpy as np
 import polars as pl
 import lightgbm as lgb
-from lightgbm import early_stopping, log_evaluation
-from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score
 
-from loop.features.lag_range import lag_range
-from loop.utils.slice_time_series import slice_time_series
-from loop.utils.splits import split_sequential, split_data_to_prep_output
+from lightgbm import early_stopping, log_evaluation
+
+from loop.features.time_features import time_features
+from loop.features.lagged_features import lag_range_cols
+from loop.indicators.sma import sma
 from loop.utils.add_breakout_ema import add_breakout_ema
 from loop.metrics.binary_metrics import binary_metrics
+from loop.manifest import Manifest
+from loop.data import compute_data_bars
+
 
 TARGET_COLUMN = 'liquidity_sum'
 LOOKBACK_WINDOW_SIZE = 100
@@ -17,9 +20,45 @@ NUM_SLICES = 10
 TARGET_COLUMN_CLASS = 'breakout_ema'
 
 
+def manifest():
+    return (Manifest()
+        .set_split_config(6, 2, 2)
+        .set_bar_formation(compute_data_bars,
+            bar_type='bar_type',
+            trade_threshold='trade_threshold',
+            volume_threshold='volume_threshold',
+            liquidity_threshold='liquidity_threshold')
+        .set_required_bar_columns([
+            'datetime', 'high', 'low', 'open', 'close', 'mean',
+            'volume', 'maker_ratio', 'no_of_trades', 'maker_volume', 'maker_liquidity'
+        ])
+        .add_feature(time_features)
+        .add_indicator(sma, column='liquidity_sum', period=3)
+        .add_feature(lambda data: data.with_columns([
+            pl.col('liquidity_sum').ewm_mean(span=5).alias('liq_ewm_5'),
+            pl.col('liquidity_sum').ewm_mean(span=10).alias('liq_ewm_10')
+        ]))
+        .add_feature(lag_range_cols,
+            cols=['datetime', 'liquidity_sum', 'hour', 'minute', 'weekday',
+                  'liquidity_sum_sma_3', 'liq_ewm_5', 'liq_ewm_10'],
+            start=1,
+            end=LOOKBACK_WINDOW_SIZE)
+        .add_feature(lambda data: data.with_columns([
+            (pl.col('liquidity_sum') - pl.col('liquidity_sum_lag_1')).alias('delta_liq')
+        ]))
+        .with_target(TARGET_COLUMN_CLASS)
+            .add_transform(add_breakout_ema, target_col=TARGET_COLUMN)
+            .done()
+    )
+
+
 def params():
 
     p = {
+        'bar_type': ['base', 'trade', 'volume', 'liquidity'],
+        'trade_threshold': [5000, 10000, 30000, 100000, 500000],
+        'volume_threshold': [100, 250, 500, 750, 1000, 5000],
+        'liquidity_threshold': [50000, 1000000, 5000000, 50000000, 100000000],
         'objective': ['binary'],
         'metric': ['auc'],
         'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
@@ -37,65 +76,11 @@ def params():
     return p
 
 
-def prep(data):
+def prep(data, round_params, manifest):
 
-    all_datetimes = data['datetime'].to_list()
+    data_dict = manifest.prepare_data(data, round_params)
 
-    slices = slice_time_series(data, TARGET_COLUMN, NUM_SLICES)
-    df_slice = slices[2]
-
-    df_slice = df_slice.with_columns([
-        pl.col('datetime').dt.hour().alias('hour'),
-        pl.col('datetime').dt.minute().alias('minute'),
-        pl.col('datetime').dt.weekday().alias('weekday'),
-        (pl.col('datetime').diff().dt.total_seconds()).fill_null(0).alias("delta_t_s")
-    ])
-    
-    df_slice = df_slice.with_columns([
-        pl.col('liquidity_sum').cast(pl.Float32),
-        pl.col('hour').cast(pl.UInt8),
-        pl.col('minute').cast(pl.UInt8),
-        pl.col('weekday').cast(pl.UInt8),
-        pl.col('delta_t_s').cast(pl.UInt32)
-    ])
-    
-    df_slice = df_slice.with_columns([
-        pl.col('liquidity_sum').shift(1).alias('liq_prev_1'),
-        pl.col('liquidity_sum').shift(2).alias('liq_prev_2'),
-        pl.col('liquidity_sum').rolling_mean(window_size=3, min_samples=1).alias('liq_rolling_3'),
-        pl.col('liquidity_sum').ewm_mean(span=5).alias('liq_ewm_5'),
-        pl.col('liquidity_sum').ewm_mean(span=10).alias('liq_ewm_10')
-    ])
-    
-    df_slice = df_slice.with_columns([
-      (pl.col('liquidity_sum') - pl.col('liq_prev_1')).alias('delta_liq')
-    ])
-
-    feature_cols = ['datetime',
-            'liquidity_sum',
-            'hour',
-            'minute',
-            'weekday',
-            'delta_t_s',
-            'liq_prev_1',
-            'liq_prev_2',
-            'liq_rolling_3',
-            'liq_ewm_5',
-            'liq_ewm_10',
-            'delta_liq']
-    
-    for col in feature_cols:
-        df_slice = lag_range(df_slice, col, 1, LOOKBACK_WINDOW_SIZE)
-
-    df_slice = add_breakout_ema(df_slice, TARGET_COLUMN)
-
-    split_data = split_sequential(data=df_slice, ratios=(6, 2, 2))
-    
-    cols = feature_cols + [TARGET_COLUMN_CLASS]
-
-
-    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
-
+    # LightGBM-specific dataset preparation
     data_dict['dtrain'] = lgb.Dataset(data_dict['x_train'], label=data_dict['y_train'].to_numpy())
     data_dict['dval'] = lgb.Dataset(data_dict['x_val'], label=data_dict['y_val'].to_numpy(), reference=data_dict['dtrain'])
 
