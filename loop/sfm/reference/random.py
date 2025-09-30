@@ -2,8 +2,6 @@ import numpy as np
 import polars as pl
 
 from loop.metrics.binary_metrics import binary_metrics
-from loop.utils.splits import split_sequential
-from loop.utils.splits import split_data_to_prep_output
 from loop.manifest import Manifest
 
 def manifest():
