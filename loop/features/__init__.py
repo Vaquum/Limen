@@ -1,8 +1,9 @@
 from loop.features.conserved_flux_renormalization import conserved_flux_renormalization
 from loop.features.breakout_features import breakout_features
-from loop.features.lag_column import lag_column
-from loop.features.lag_columns import lag_columns
-from loop.features.lag_range import lag_range
+from loop.features.lagged_features import lag_column
+from loop.features.lagged_features import lag_columns
+from loop.features.lagged_features import lag_range
+from loop.features.lagged_features import lag_range_cols
 from loop.features.gap_high import gap_high
 from loop.features.close_position import close_position
 from loop.features.range_pct import range_pct
@@ -26,6 +27,7 @@ __all__ = [
     'lag_column',
     'lag_columns',
     'lag_range',
+    'lag_range_cols',
     'gap_high',
     'close_position',
     'range_pct',
