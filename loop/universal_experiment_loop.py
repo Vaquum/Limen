@@ -26,9 +26,21 @@ class UniversalExperimentLoop:
         '''
 
         self.data = data
-        self.model = single_file_model.model
+        
+        # Check if manifest function exists
+        if hasattr(single_file_model, 'manifest'):
+            self.use_manifest = True
+            self.manifest_func = single_file_model.manifest
+            self.model = None
+            self.prep = None
+        else:
+            # Legacy approach - use prep and model functions
+            self.use_manifest = False
+            self.manifest_func = None
+            self.model = single_file_model.model
+            self.prep = single_file_model.prep
+            
         self.params = single_file_model.params()
-        self.prep = single_file_model.prep
         self.extras = []
         self.models = []
 
@@ -64,6 +76,7 @@ class UniversalExperimentLoop:
             params (dict): The parameters to use for the experiment.
             prep (function): The function to use to prepare the data.
             model (function): The function to use to run the model.
+            manifest (Manifest): The manifest object to use (legacy parameter, ignored in new approach).
 
         Returns:
             pl.DataFrame: The results of the experiment
@@ -87,7 +100,10 @@ class UniversalExperimentLoop:
         if model is not None:
             self.model = model
 
-        self.manifest = manifest
+        if self.use_manifest:
+            self.manifest = self.manifest_func()
+        else:
+            self.manifest = manifest
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
@@ -110,33 +126,47 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            # Always prep data with round_params passed in
-            if prep_each_round is True:
-                if self.manifest:
-                    data_dict = self.prep(
-                        self.data,
-                        round_params=round_params,
-                        manifest=self.manifest)
+            # Manifest based approach
+            if self.use_manifest:
+                # Execute the complete pipeline through manifest
+                full_results = self.manifest.execute(self.data, round_params)
+                
+                # Extract round_results (metrics) and data_dict separately
+                data_keys = {'x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', 
+                           '_train_clean', '_val_clean', '_test_clean', '_alignment'}
+                
+                # Create data_dict with just the data keys
+                data_dict = {k: v for k, v in full_results.items() if k in data_keys}
+                
+                # Create round_results with everything else (metrics, models, etc.)
+                round_results = {k: v for k, v in full_results.items() if k not in data_keys}
+                
+                # Handle _alignment if it exists in data_dict
+                if '_alignment' in data_dict:
+                    self._alignment.append(data_dict['_alignment'])
                 else:
+                    # Create a dummy alignment entry if not provided
+                    self._alignment.append({})
+
+            # Legacy approach
+            else:
+                # Always prep data with round_params passed in
+                if prep_each_round is True:
                     data_dict = self.prep(self.data, round_params=round_params)
 
-            # Otherwise, only for the first round, prep data without round_params passed in
-            else:
-                if i == 0:
-                    if manifest:
-                        data_dict = self.prep(self.data, manifest=manifest)
-                    else:
-                        data_dict = self.prep(self.data)
+                # Otherwise, only for the first round, prep data without round_params passed in
+                elif i == 0:
+                    data_dict = self.prep(self.data)
 
-            # Perform the model training and evaluation
-            round_results = self.model(data=data_dict, round_params=round_params)
+                # Perform the model training and evaluation
+                round_results = self.model(data=data_dict, round_params=round_params)
+
+                # Add alignment details
+                self._alignment.append(data_dict['_alignment'])
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
-
-            # Add alignment details
-            self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
@@ -152,9 +182,17 @@ class UniversalExperimentLoop:
                 self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
 
-            if '_scaler' in data_dict.keys():
-                self.scalers.append(data_dict['_scaler'])
-                data_dict.pop('_scaler')
+            # Handle scaler differently for manifest vs legacy approach
+            if self.use_manifest:
+                # For manifest approach, scalers are stored in round_results
+                if '_scaler' in round_results.keys():
+                    self.scalers.append(round_results['_scaler'])
+                    round_results.pop('_scaler')
+            else:
+                # Legacy approach - scaler is in data_dict
+                if '_scaler' in data_dict.keys():
+                    self.scalers.append(data_dict['_scaler'])
+                    data_dict.pop('_scaler')
 
             # Add the round number and execution time to the results
             round_results['id'] = i

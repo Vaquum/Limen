@@ -35,19 +35,29 @@ class Log:
 
             self.data = uel_object.data
             self.experiment_log = uel_object.experiment_log.to_pandas()
-            self.prep = uel_object.prep
             self.scalers = uel_object.scalers
             self.round_params = uel_object.round_params
             self.preds = uel_object.preds
             self._alignment = uel_object._alignment
 
-            if hasattr(uel_object, 'manifest'):
+            # Handle both manifest-based and legacy approaches
+            if hasattr(uel_object, 'use_manifest') and uel_object.use_manifest:
                 self.manifest = uel_object.manifest
+                self.prep = None  # No prep function in manifest approach
+                self.use_manifest = True
             else:
-                self.manifest = None
+                self.prep = uel_object.prep
+                self.use_manifest = False
+                if hasattr(uel_object, 'manifest'):
+                    self.manifest = uel_object.manifest
+                else:
+                    self.manifest = None
 
         elif file_path is not None:
             self.experiment_log = self.read_from_file(file_path)
+            self.use_manifest = False  # File-based logs default to legacy
+            self.prep = None
+            self.manifest = None
 
         else:
             raise ValueError("Both uel_object and file_path can't be None")
@@ -65,6 +75,39 @@ class Log:
             self.inverse_scaler = inverse_scaler
         else:
             self.inverse_scaler = None
+
+    def _get_round_data(self, round_id: int) -> dict:
+        """
+        Get processed data for a specific round, handling both manifest and legacy approaches.
+        
+        Args:
+            round_id (int): Round ID
+            
+        Returns:
+            dict: Data dictionary with train/val/test splits
+        """
+        if self.use_manifest and self.manifest:
+            # Manifest-based approach - re-execute the pipeline
+            full_results = self.manifest.execute(self.data, self.round_params[round_id])
+            
+            # Extract only the data keys needed for logging
+            data_keys = {'x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', 
+                        '_train_clean', '_val_clean', '_test_clean', '_alignment'}
+            
+            round_data = {k: v for k, v in full_results.items() if k in data_keys}
+            return round_data
+        elif self.prep:
+            # Legacy approach
+            try:
+                if hasattr(self, 'manifest') and self.manifest:
+                    round_data = self.prep(self.data, self.round_params[round_id], self.manifest)
+                else:
+                    round_data = self.prep(self.data, self.round_params[round_id])
+            except TypeError:
+                round_data = self.prep(self.data)
+            return round_data
+        else:
+            raise ValueError("Neither manifest nor prep function available for data processing")
 
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
         

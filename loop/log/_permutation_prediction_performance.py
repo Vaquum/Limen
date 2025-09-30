@@ -14,17 +14,11 @@ def _permutation_prediction_performance(self,
         pd.DataFrame: Table with columns 'predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change'
     '''
 
-    try:
-        if hasattr(self, 'manifest') and self.manifest:
-            round_data = self.prep(self.data, self.round_params[round_id], self.manifest)
-        else:
-            round_data = self.prep(self.data, self.round_params[round_id])
-    except TypeError:
-        round_data = self.prep(self.data)
+    # Use the new _get_round_data method that handles both manifest and legacy approaches
+    round_data = self._get_round_data(round_id)
     
     if self.inverse_scaler is not None:
         perf_df = self.inverse_scaler(round_data['x_test'], self.scalers[round_id]).to_pandas()
-    
     else:
         perf_df = pd.DataFrame()
     
