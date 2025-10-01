@@ -9,38 +9,47 @@ from loop.explorer.loop_explorer import loop_explorer
 
 
 class UniversalExperimentLoop:
-
-    '''
-    UniversalExperimentLoop class for running experiments.
-    '''
+    '''UniversalExperimentLoop class for running experiments.'''
 
     def __init__(self,
                  data,
-                 single_file_model):
-        
-        '''Initializes the UniversalExperimentLoop.
+                 single_file_model=None,
+                 manifest=None):
+        '''
+        Initializes the UniversalExperimentLoop.
         
         Args:
             data (pl.DataFrame): The data to use for the experiment.
-            single_file_model (SingleFileModel): The single file model to use for the experiment.
+            single_file_model (SingleFileModel or module, optional): Legacy single file model or manifest-based module
+            manifest (Manifest, optional): Manifest-based configuration (overrides single_file_model.manifest if present)
         '''
-
         self.data = data
+        self.manifest = manifest
         
-        # Check if manifest function exists
-        if hasattr(single_file_model, 'manifest'):
-            self.use_manifest = True
-            self.manifest_func = single_file_model.manifest
+        # Support both legacy and manifest approaches
+        if manifest is not None:
+            # Explicit manifest provided
             self.model = None
-            self.prep = None
+            self.prep = manifest.prepare_data
+            self.params = None
+        elif single_file_model is not None:
+            # Check if single_file_model has manifest attribute (new style)
+            if hasattr(single_file_model, 'manifest') and callable(single_file_model.manifest):
+                # New manifest-based module
+                self.manifest = single_file_model.manifest()
+                self.model = None
+                self.prep = self.manifest.prepare_data
+                self.params = single_file_model.params() if hasattr(single_file_model, 'params') else None
+            elif hasattr(single_file_model, 'model'):
+                # Legacy single file model
+                self.model = single_file_model.model
+                self.params = single_file_model.params() if callable(getattr(single_file_model, 'params', None)) else single_file_model.params
+                self.prep = single_file_model.prep
+            else:
+                raise ValueError("single_file_model must have either 'manifest' or 'model' attribute")
         else:
-            # Legacy approach - use prep and model functions
-            self.use_manifest = False
-            self.manifest_func = None
-            self.model = single_file_model.model
-            self.prep = single_file_model.prep
-            
-        self.params = single_file_model.params()
+            raise ValueError("Either single_file_model or manifest must be provided")
+        
         self.extras = []
         self.models = []
 
@@ -54,16 +63,9 @@ class UniversalExperimentLoop:
             save_to_sqlite=False,
             params=None,
             prep=None,
-            model=None,
-            manifest=None):
-        
+            model=None):
         '''
-        Run the experiment `n_permutations` times. 
-
-        NOTE: If you want to use a custom `params` or `prep` or `model`
-        function, you can pass them as arguments and permanently change
-        `single_file_model` for that part. Make sure that the inputs and
-        returns are same as the ones outlined in `docs/Single-File-Model.md`.
+        Run the experiment `n_permutations` times.
 
         Args:
             experiment_name (str): The name of the experiment.
@@ -73,15 +75,13 @@ class UniversalExperimentLoop:
             maintain_details_in_params (bool): Whether to maintain experiment details in params.
             context_params (dict): The context parameters to use for the experiment.
             save_to_sqlite (bool): Whether to save the results to a SQLite database.
-            params (dict): The parameters to use for the experiment.
+            params (dict or function): The parameters to use for the experiment.
             prep (function): The function to use to prepare the data.
             model (function): The function to use to run the model.
-            manifest (Manifest): The manifest object to use (legacy parameter, ignored in new approach).
 
         Returns:
             pl.DataFrame: The results of the experiment
         '''
-
         self.round_params = []
         self.models = []
         self.preds = []
@@ -91,26 +91,29 @@ class UniversalExperimentLoop:
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
+        # Handle params override
         if params is not None:
-            self.params = params()
+            if callable(params):
+                self.params = params()
+            else:
+                self.params = params
         
+        # Validate params are available
+        if self.params is None:
+            raise ValueError("params must be provided either in initialization or run() call")
+        
+        # Handle prep override
         if prep is not None:
             self.prep = prep
         
+        # Handle model override (for legacy mode)
         if model is not None:
             self.model = model
-
-        if self.use_manifest:
-            self.manifest = self.manifest_func()
-        else:
-            self.manifest = manifest
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
         
         for i in tqdm(range(n_permutations)):
-
-            # Start counting execution_time            
             start_time = time.time()
 
             # Generate the parameter values for the current round
@@ -126,47 +129,37 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            # Manifest based approach
-            if self.use_manifest:
-                # Execute the complete pipeline through manifest
-                full_results = self.manifest.execute(self.data, round_params)
-                
-                # Extract round_results (metrics) and data_dict separately
-                data_keys = {'x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', 
-                           '_train_clean', '_val_clean', '_test_clean', '_alignment'}
-                
-                # Create data_dict with just the data keys
-                data_dict = {k: v for k, v in full_results.items() if k in data_keys}
-                
-                # Create round_results with everything else (metrics, models, etc.)
-                round_results = {k: v for k, v in full_results.items() if k not in data_keys}
-                
-                # Handle _alignment if it exists in data_dict
-                if '_alignment' in data_dict:
-                    self._alignment.append(data_dict['_alignment'])
+            # Data preparation
+            if prep_each_round is True:
+                # Prep with round_params every round
+                if self.manifest:
+                    data_dict = self.prep(self.data, round_params)
                 else:
-                    # Create a dummy alignment entry if not provided
-                    self._alignment.append({})
-
-            # Legacy approach
-            else:
-                # Always prep data with round_params passed in
-                if prep_each_round is True:
                     data_dict = self.prep(self.data, round_params=round_params)
+            else:
+                # Only prep on first round
+                if i == 0:
+                    if self.manifest:
+                        data_dict = self.prep(self.data, round_params)
+                    else:
+                        data_dict = self.prep(self.data)
 
-                # Otherwise, only for the first round, prep data without round_params passed in
-                elif i == 0:
-                    data_dict = self.prep(self.data)
-
-                # Perform the model training and evaluation
+            # Model execution
+            if self.manifest and self.manifest.model_function:
+                # Use manifest's model configuration
+                round_results = self.manifest.run_model(data_dict, round_params)
+            elif self.model:
+                # Use legacy model function
                 round_results = self.model(data=data_dict, round_params=round_params)
-
-                # Add alignment details
-                self._alignment.append(data_dict['_alignment'])
+            else:
+                raise ValueError("No model function configured")
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
+
+            # Add alignment details
+            self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results.keys():
@@ -182,17 +175,9 @@ class UniversalExperimentLoop:
                 self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
 
-            # Handle scaler differently for manifest vs legacy approach
-            if self.use_manifest:
-                # For manifest approach, scalers are stored in round_results
-                if '_scaler' in round_results.keys():
-                    self.scalers.append(round_results['_scaler'])
-                    round_results.pop('_scaler')
-            else:
-                # Legacy approach - scaler is in data_dict
-                if '_scaler' in data_dict.keys():
-                    self.scalers.append(data_dict['_scaler'])
-                    data_dict.pop('_scaler')
+            if '_scaler' in data_dict.keys():
+                self.scalers.append(data_dict['_scaler'])
+                data_dict.pop('_scaler')
 
             # Add the round number and execution time to the results
             round_results['id'] = i

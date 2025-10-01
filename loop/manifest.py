@@ -1,18 +1,13 @@
-"""
-Enhanced Manifest System - Complete Data Prep + Model Training Pipeline
-
-This manifest replaces the need for separate prep() and model() functions.
-Everything from data processing to model training happens through method chaining.
-"""
-
 import polars as pl
-import numpy as np
+
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Tuple, Union, Optional
-from loop.utils.splits import split_sequential, split_data_to_prep_output
+from typing import Any, Callable, Dict, List, Tuple, Union
+from loop.utils.splits import split_data_to_prep_output
+from loop.utils.splits import split_sequential
 
 ParamValue = Union[Any, Callable[[Dict[str, Any]], Any]]
 FeatureEntry = Tuple[Callable[..., pl.LazyFrame], Dict[str, ParamValue]]
+
 FittedParamsComputationEntry = Tuple[str, Callable[..., Any], Dict[str, ParamValue]]
 
 FittedTransformEntry = Tuple[
@@ -23,53 +18,48 @@ FittedTransformEntry = Tuple[
 
 
 class ModelBuilder:
-    """Builder for model training configuration."""
-    
+    '''Helper class for building model configuration.'''
+
     def __init__(self, manifest: 'Manifest'):
         self.manifest = manifest
-    
-    def set_model_class(self, model_class, **init_params) -> 'ModelBuilder':
-        """Set the model class and initialization parameters."""
-        self.manifest.model_class = model_class
-        self.manifest.model_init_params = init_params
+
+    def set_model_function(self, func: Callable, **params) -> 'ModelBuilder':
+        '''
+        Set the model training function.
+        
+        Args:
+            func (Callable): Model function that takes (data, **params) and returns dict
+            **params: Parameter mappings for the model function
+            
+        Returns:
+            ModelBuilder: Self for method chaining
+        '''
+        self.manifest.model_function = func
+        self.manifest.model_params = params
         return self
-    
-    def set_training_params(self, **params) -> 'ModelBuilder':
-        """Set training-specific parameters (e.g., num_boost_round for LightGBM)."""
-        self.manifest.training_params = params
+
+    def set_metrics_function(self, func: Callable, **params) -> 'ModelBuilder':
+        '''
+        Set the metrics computation function.
+        
+        Args:
+            func (Callable): Metrics function that takes (data, y_pred, y_proba, **params)
+            **params: Parameter mappings for the metrics function
+            
+        Returns:
+            ModelBuilder: Self for method chaining
+        '''
+        self.manifest.metrics_function = func
+        self.manifest.metrics_params = params
         return self
-    
-    def set_sample_weights(self, weight_func: Callable) -> 'ModelBuilder':
-        """Set function to compute sample weights from training data."""
-        self.manifest.sample_weight_func = weight_func
-        return self
-    
-    def set_prediction_transform(self, transform_func: Callable) -> 'ModelBuilder':
-        """Set function to transform raw predictions (e.g., thresholding, argmax)."""
-        self.manifest.prediction_transform = transform_func
-        return self
-    
-    def set_calibration(self, method: str = 'isotonic', cv: int = 3) -> 'ModelBuilder':
-        """Enable probability calibration."""
-        self.manifest.calibration_config = {
-            'enabled': True,
-            'method': method,
-            'cv': cv
-        }
-        return self
-    
-    def set_metrics_function(self, metrics_func: Callable) -> 'ModelBuilder':
-        """Set function to compute evaluation metrics."""
-        self.manifest.metrics_func = metrics_func
-        return self
-    
+
     def done(self) -> 'Manifest':
-        """Complete model configuration and return to main manifest."""
+        '''Return to manifest for further configuration.'''
         return self.manifest
 
 
 class TargetBuilder:
-    """Helper class for building target transformations with context."""
+    '''Helper class for building target transformations with context.'''
 
     def __init__(self, manifest: 'Manifest', target_column: str):
         self.manifest = manifest
@@ -89,7 +79,7 @@ class TargetBuilder:
 
 
 class FittedTransformBuilder:
-    """Helper class for building fitted transforms with parameter fitting."""
+    '''Helper class for building fitted transforms with parameter fitting.'''
 
     def __init__(self, manifest: 'Manifest', func: Callable):
         self.manifest = manifest
@@ -108,9 +98,8 @@ class FittedTransformBuilder:
 
 @dataclass
 class Manifest:
-    """Complete pipeline specification from raw data to trained model."""
+    '''Defines manifest for Loop experiments.'''
 
-    # Data processing configuration
     bar_formation: FeatureEntry = None
     feature_transforms: List[FeatureEntry] = field(default_factory=list)
     target_transforms: List[FittedTransformEntry] = field(default_factory=list)
@@ -119,77 +108,62 @@ class Manifest:
     target_column: str = None
     split_config: Tuple[int, int, int] = (8, 1, 2)
     
-    # Model configuration
-    model_class: Any = None
-    model_init_params: Dict[str, ParamValue] = field(default_factory=dict)
-    training_params: Dict[str, ParamValue] = field(default_factory=dict)
-    sample_weight_func: Optional[Callable] = None
-    prediction_transform: Optional[Callable] = None
-    calibration_config: Dict[str, Any] = field(default_factory=dict)
-    metrics_func: Optional[Callable] = None
-    
-    # Storage for intermediate state
-    _fitted_params: Dict[str, Any] = field(default_factory=dict)
-    _trained_model: Any = None
+    # New model configuration fields
+    model_function: Callable = None
+    model_params: Dict[str, ParamValue] = field(default_factory=dict)
+    metrics_function: Callable = None
+    metrics_params: Dict[str, ParamValue] = field(default_factory=dict)
 
     def _add_transform(self, func: Callable, **params) -> 'Manifest':
         self.feature_transforms.append((func, params))
         return self
 
     def add_feature(self, func: Callable, **params) -> 'Manifest':
-        """Add a feature transformation to the manifest."""
+        '''Add a feature transformation to the manifest.'''
         return self._add_transform(func, **params)
 
     def add_indicator(self, func: Callable, **params) -> 'Manifest':
-        """Add an indicator transformation to the manifest."""
+        '''Add an indicator transformation to the manifest.'''
         return self._add_transform(func, **params)
 
     def set_bar_formation(self, func: Callable, **params) -> 'Manifest':
-        """Set bar formation function and parameters."""
+        '''Set bar formation function and parameters.'''
         self.bar_formation = (func, params)
         return self
 
     def set_required_bar_columns(self, columns: List[str]) -> 'Manifest':
-        """Set required columns after bar formation."""
+        '''Set required columns after bar formation.'''
         self.required_bar_columns = columns
         return self
 
     def set_split_config(self, train: int, val: int, test: int) -> 'Manifest':
-        """Set data split configuration."""
+        '''Set data split configuration.'''
         self.split_config = (train, val, test)
         return self
 
     def set_scaler(self, transform_class, param_name: str = '_scaler') -> 'Manifest':
-        """Set scaler transformation using make_fitted_scaler."""
+        '''Set scaler transformation using make_fitted_scaler.'''
         self.scaler = make_fitted_scaler(param_name, transform_class)
         return self
 
     def with_target(self, target_column: str) -> TargetBuilder:
-        """Start building target transformations with context."""
+        '''Start building target transformations with context.'''
         return TargetBuilder(self, target_column)
-    
+
     def with_model(self) -> ModelBuilder:
-        """Start building model configuration."""
+        '''Start building model configuration.'''
         return ModelBuilder(self)
 
-    def execute(
+    def prepare_data(
         self,
         raw_data: pl.DataFrame,
         round_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Execute the complete pipeline: data prep → model training → predictions.
-        
-        Args:
-            raw_data: Raw input dataset
-            round_params: Parameter values for current round
-            
-        Returns:
-            Dictionary containing all results including metrics, predictions, models, _alignment
-        """
-        
-        # Data Preparation
+    ) -> dict:
+        '''
+        Compute final data dictionary from raw data using manifest configuration.
+        '''
         split_data = split_sequential(raw_data, self.split_config)
+
         datetime_bar_pairs = [_process_bars(self, split, round_params) for split in split_data]
         all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
         split_data = [bar_data for _, bar_data in datetime_bar_pairs]
@@ -198,181 +172,85 @@ class Manifest:
 
         for i in range(len(split_data)):
             lazy_data = split_data[i].lazy()
-
             lazy_data = _apply_feature_transforms(self, lazy_data, round_params)
 
             data = lazy_data.collect()
             data, all_fitted_params = _apply_target_transforms(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
-            
+
             data, all_fitted_params = _apply_scaler(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
-            
+
             split_data[i] = data.drop_nulls()
 
-        for i, split_df in enumerate(split_data):
-            assert 'datetime' in split_df.columns, f"Split {i} missing 'datetime' column"
+        return _finalize_to_data_dict(split_data, all_datetimes, all_fitted_params, self)
 
-        if self.target_column:
-            for i, split_df in enumerate(split_data):
-                cols = list(split_df.columns)
-                if self.target_column in cols:
-                    cols.remove(self.target_column)
-                    cols.append(self.target_column)
-                    split_data[i] = split_df.select(cols)
-                else:
-                    raise ValueError(f"Split {i} missing target column '{self.target_column}'")
-
-        cols = list(split_data[0].columns)
-
-        data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
-        
-        # Add fitted parameters to data_dict
-        for param_name, param_value in all_fitted_params.items():
-            data_dict[param_name] = param_value
-
-        ## TODO: Make into loop.sfm.model
-        # Model Training
-        if self.model_class is not None:
-            round_results = self._train_and_evaluate(data_dict, round_params)
-            # Merge the data_dict into round_results for logging compatibility
-            # This ensures y_test, x_test, etc. are available for the logging system
-            merged_results = {**data_dict, **round_results}
-            return merged_results
-        else:
-            # Return just the prepared data if no model configured
-            return data_dict
-
-    def _train_and_evaluate(
-        self, 
-        data_dict: Dict[str, Any], 
-        round_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Train model and compute predictions/metrics.
+    def run_model(self, data: dict, round_params: Dict[str, Any]) -> dict:
+        '''
+        Execute model training and evaluation using configured functions.
         
         Args:
-            data_dict: Prepared data from data preparation phase
-            round_params: Parameter values for current round
+            data (dict): Prepared data dictionary
+            round_params (Dict[str, Any]): Parameter values for current round
             
         Returns:
-            Dictionary containing metrics, predictions, models, extras
-        """
-        ## TODO: Make into loop.sfm.model
+            dict: Results including predictions, metrics, and optional extras
+        '''
+        if self.model_function is None:
+            raise ValueError("Model function not configured. Use .with_model().set_model_function()")
+
         # Resolve model parameters
-        resolved_init = _resolve_params(self.model_init_params, round_params)
-        resolved_training = _resolve_params(self.training_params, round_params)
+        resolved_model_params = _resolve_params(self.model_params, round_params)
         
-        # Extract data
-        X_train = data_dict['x_train']
-        y_train = data_dict['y_train']
-        X_val = data_dict['x_val']
-        y_val = data_dict['y_val']
-        X_test = data_dict['x_test']
-        y_test = data_dict['y_test']
+        # Run model function
+        model_results = self.model_function(data, **resolved_model_params)
         
-        # Compute sample weights if configured
-        sample_weights = None
-        if self.sample_weight_func is not None:
-            # Pass the full training split for weight computation
-            train_df = data_dict.get('_train_clean')
-            if train_df is not None:
-                sample_weights = self.sample_weight_func(train_df, round_params)
+        # Extract predictions
+        y_pred = model_results.get('y_pred')
+        y_proba = model_results.get('y_proba')
+        trained_model = model_results.get('model')
         
-        # Initialize and train model
-        model = self.model_class(**resolved_init)
+        # Initialize results
+        round_results = {}
         
-        # Handle different training interfaces
-        if hasattr(model, 'fit'):
-            if sample_weights is not None:
-                model.fit(X_train, y_train, sample_weight=sample_weights)
-            else:
-                model.fit(X_train, y_train)
-        else:
-            # For LightGBM-style training
-            import lightgbm as lgb
-            train_data = lgb.Dataset(X_train, label=y_train, weight=sample_weights)
-            val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
-            
-            evals_result = {}
-            model = lgb.train(
-                params=resolved_init,
-                train_set=train_data,
-                valid_sets=[train_data, val_data],
-                valid_names=['train', 'val'],
-                callbacks=[
-                    lgb.early_stopping(stopping_rounds=30, verbose=False),
-                    lgb.record_evaluation(evals_result)
-                ],
-                **resolved_training
-            )
+        # Compute metrics if function is configured
+        if self.metrics_function is not None:
+            resolved_metrics_params = _resolve_params(self.metrics_params, round_params)
+            metrics_results = self.metrics_function(data, y_pred, y_proba, **resolved_metrics_params)
+            round_results.update(metrics_results)
         
-        # Apply calibration if configured
-        if self.calibration_config.get('enabled', False):
-            from sklearn.calibration import CalibratedClassifierCV
-            calibrator = CalibratedClassifierCV(
-                model,
-                method=self.calibration_config['method'],
-                cv=self.calibration_config.get('cv', 3)
-            )
-            calibrator.fit(X_val, y_val)
-            model = calibrator
-        
-        # Generate predictions
-        if hasattr(model, 'predict_proba'):
-            y_proba_raw = model.predict_proba(X_test)
-            # For binary classification, extract the positive class probabilities
-            if len(y_proba_raw.shape) == 2 and y_proba_raw.shape[1] == 2:
-                y_proba = y_proba_raw[:, 1]  # Take positive class probabilities
-            else:
-                y_proba = y_proba_raw
-        elif hasattr(model, 'predict'):
-            raw_pred = model.predict(X_test)
-            if len(raw_pred.shape) == 2:
-                y_proba = raw_pred[:, 1] if raw_pred.shape[1] == 2 else raw_pred
-            else:
-                y_proba = raw_pred
-        else:
-            y_proba = None
-        
-        # Transform predictions if configured
-        if self.prediction_transform is not None:
-            y_pred = self.prediction_transform(y_proba, round_params)
-        else:
-            if y_proba is not None:
-                # For binary classification, threshold the probabilities
-                y_pred = (y_proba >= 0.5).astype(np.int8)
-            else:
-                y_pred = model.predict(X_test)
-        
-        # Compute metrics
-        if self.metrics_func is not None:
-            round_results = self.metrics_func(data_dict, y_pred, y_proba)
-        else:
-            # Default: try to auto-detect metrics type
-            from loop.metrics.binary_metrics import binary_metrics
-            round_results = binary_metrics(data_dict, y_pred, y_proba)
-        
-        # Store artifacts
-        round_results['models'] = [model]
+        # Add predictions and model to results
         round_results['_preds'] = y_pred
-        
-        self._trained_model = model
+        if trained_model is not None:
+            round_results['models'] = trained_model
         
         return round_results
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform):
-    """Apply transformation using fitted transform instance."""
+    '''Compute transformed data using fitted transform instance.'''
     return fitted_transform.transform(data)
 
 
 def make_fitted_scaler(param_name: str, transform_class):
-    """Create fitted transform entry for scaling."""
+    '''Create fitted transform entry for scaling.'''
+    
+    def _fit_scaler_on_train(data):
+        '''Extract x_train and create scaler instance.'''
+        if isinstance(data, pl.DataFrame):
+            # Called during fitted transform on split data
+            # Assume last column is target, rest are features
+            feature_cols = data.columns[:-1]
+            x_train = data.select(feature_cols)
+            return transform_class(x_train=x_train, default='standard')
+        else:
+            # Fallback: assume data is already x_train
+            return transform_class(x_train=data, default='standard')
+    
     return ([
-        (param_name, lambda data: transform_class(data), {})
+        (param_name, _fit_scaler_on_train, {})
     ],
     _apply_fitted_transform, {
         'fitted_transform': param_name
@@ -380,7 +258,7 @@ def make_fitted_scaler(param_name: str, transform_class):
 
 
 def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
-    """Resolve parameters using round_params."""
+    '''Resolve parameters using just-in-time detection with actual round_params.'''
     resolved = {}
     for key, value in params.items():
         if isinstance(value, str):
@@ -396,11 +274,11 @@ def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dic
 
 
 def _process_bars(
-    manifest: Manifest,
-    data: pl.DataFrame,
-    round_params: Dict[str, Any]
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: Dict[str, Any]
 ) -> Tuple[List, pl.DataFrame]:
-    """Process bar formation on data."""
+    '''Compute bar formation on data and return post-bar datetimes.'''
     if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
         func, base_params = manifest.bar_formation
         resolved = _resolve_params(base_params, round_params)
@@ -411,6 +289,7 @@ def _process_bars(
         all_datetimes = data['datetime'].to_list()
         bar_data = data
 
+    # Validate required columns
     available_cols = list(bar_data.columns)
     for required_col in manifest.required_bar_columns:
         assert required_col in available_cols, (
@@ -421,7 +300,6 @@ def _process_bars(
 
 
 def _apply_feature_transforms(manifest: Manifest, lazy_data, round_params: Dict[str, Any]):
-    """Apply all feature transformations."""
     for func, base_params in manifest.feature_transforms:
         resolved = _resolve_params(base_params, round_params)
         lazy_data = lazy_data.pipe(func, **resolved)
@@ -429,20 +307,22 @@ def _apply_feature_transforms(manifest: Manifest, lazy_data, round_params: Dict[
 
 
 def _apply_fitted_transforms(
-    transform_entries: List[FittedTransformEntry],
-    data: pl.DataFrame,
-    round_params: Dict[str, Any],
-    all_fitted_params: Dict[str, Any],
-    is_training: bool
+        transform_entries: List[FittedTransformEntry],
+        data: pl.DataFrame,
+        round_params: Dict[str, Any],
+        all_fitted_params: Dict[str, Any],
+        is_training: bool
 ) -> Tuple[pl.DataFrame, Dict[str, Any]]:
-    """Apply fitted transforms."""
+    '''Compute fitted transforms on eager DataFrame.'''
     for fitted_param_computations, func, base_params in transform_entries:
+        # Fit parameters on training data only
         for param_name, compute_func, compute_base_params in fitted_param_computations:
             if param_name not in all_fitted_params and is_training:
                 resolved = _resolve_params(compute_base_params, round_params)
                 value = compute_func(data, **resolved)
                 all_fitted_params[param_name] = value
 
+        # Apply transform using fitted parameters
         combined_round_params = {**round_params, **all_fitted_params}
         resolved = _resolve_params(base_params, combined_round_params)
         data = func(data, **resolved)
@@ -451,13 +331,12 @@ def _apply_fitted_transforms(
 
 
 def _apply_target_transforms(
-    manifest: Manifest,
-    data: pl.DataFrame,
-    round_params: Dict[str, Any],
-    all_fitted_params: Dict[str, Any],
-    is_training: bool
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: Dict[str, Any],
+        all_fitted_params: Dict[str, Any],
+        is_training: bool
 ) -> Tuple[pl.DataFrame, Dict[str, Any]]:
-    """Apply target transformations."""
     enhanced_round_params = round_params.copy()
     if manifest.target_column:
         enhanced_round_params['target_column'] = manifest.target_column
@@ -469,16 +348,46 @@ def _apply_target_transforms(
 
 
 def _apply_scaler(
-    manifest: Manifest,
-    data: pl.DataFrame,
-    round_params: Dict[str, Any],
-    all_fitted_params: Dict[str, Any],
-    is_training: bool
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: Dict[str, Any],
+        all_fitted_params: Dict[str, Any],
+        is_training: bool
 ) -> Tuple[pl.DataFrame, Dict[str, Any]]:
-    """Apply scaling transformation."""
     if manifest.scaler:
         return _apply_fitted_transforms(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
     return data, all_fitted_params
+
+
+def _finalize_to_data_dict(
+        split_data: List[pl.DataFrame],
+        all_datetimes: List,
+        fitted_params: Dict[str, Any],
+        manifest: Manifest
+) -> dict:
+    # Validate all splits have datetime column
+    for i, split_df in enumerate(split_data):
+        assert 'datetime' in split_df.columns, f"Split {i} missing 'datetime' column"
+
+    # Ensure target_column is last column in all splits
+    if manifest.target_column:
+        for i, split_df in enumerate(split_data):
+            cols = list(split_df.columns)
+            if manifest.target_column in cols:
+                cols.remove(manifest.target_column)
+                cols.append(manifest.target_column)
+                split_data[i] = split_df.select(cols)
+            else:
+                raise ValueError(f"Split {i} missing target column '{manifest.target_column}'")
+
+    cols = list(split_data[0].columns)
+    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
+
+    # Add fitted parameters to data_dict
+    for param_name, param_value in fitted_params.items():
+        data_dict[param_name] = param_value
+
+    return data_dict

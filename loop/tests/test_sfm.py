@@ -34,16 +34,9 @@ def test_sfm():
 
             experiment_name = uuid.uuid4().hex[:8]
 
-            if test[3]:
-                manifest = test[0].manifest()
-                uel.run(experiment_name=experiment_name,
-                        n_permutations=2,
-                        prep_each_round=test[2],
-                        manifest=manifest)
-            else:
-                uel.run(experiment_name=experiment_name,
-                        n_permutations=2,
-                        prep_each_round=test[2])
+            uel.run(experiment_name=experiment_name,
+                    n_permutations=2,
+                    prep_each_round=test[2])
 
             print(f'    ✅ {test[0].__name__}: PASSED')
             
@@ -51,7 +44,7 @@ def test_sfm():
 
             print(f'    ❌ {test[0].__name__}: FAILED - {e}')
 
-            cleanup_csv_files()
+            # cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)
 

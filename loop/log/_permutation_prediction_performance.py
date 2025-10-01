@@ -14,7 +14,7 @@ def _permutation_prediction_performance(self,
         pd.DataFrame: Table with columns 'predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change'
     '''
 
-    # Use the new _get_round_data method that handles both manifest and legacy approaches
+    # Use the centralized _get_round_data method
     round_data = self._get_round_data(round_id)
     
     if self.inverse_scaler is not None:

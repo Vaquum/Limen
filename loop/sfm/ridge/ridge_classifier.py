@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """
-Manifest-Only Ridge Classifier SFM
+Updated Ridge Classifier SFM using loop.sfm.model.ridge
 
-This SFM demonstrates the new approach where manifest() handles everything.
-No separate prep() or model() functions needed.
+This demonstrates the new approach where model functions are reusable
+and imported from loop/sfm/model/, then configured through the manifest.
 """
 
-import numpy as np
-from sklearn.linear_model import RidgeClassifier
-from sklearn.calibration import CalibratedClassifierCV
-
 from loop.manifest import Manifest
+from loop.sfm.model.ridge import model as ridge_model
 from loop.features import (
     atr_percent_sma, ichimoku_cloud, close_position, 
     distance_from_high, distance_from_low, gap_high,
@@ -26,6 +23,7 @@ from loop.utils.shift_column import shift_column
 def params():
     """Parameter space for the experiment."""
     return {
+        # Data preparation parameters
         'shift': [-1],
         'q': [0.32, 0.35, 0.37],
         'roc_period': [4],
@@ -45,29 +43,28 @@ def params():
         'trend_fast_period': [10, 20],
         'trend_slow_period': [50, 100],
         'lookback': [50, 100],
+        
+        # Model parameters (passed to ridge_model function)
         'alpha': [2.0, 5.0, 8.0],
         'max_iter': [400],
         'tol': [0.0001],
         'fit_intercept': [True],
         'class_weight': ['balanced'],
         'solver': ['auto'],
+        'use_calibration': [True],
+        'calibration_method': ['sigmoid'],
+        'calibration_cv': ['prefit'],
+        'n_jobs': [8],
         'pred_threshold': [0.55],
         'random_state': [42],
-        'n_jobs': [8],
     }
 
 
 def manifest():
     """
-    Complete pipeline specification - replaces prep() and model().
-    Everything is configured through method chaining.
+    Complete pipeline specification using reusable model function.
+    The model function is imported and configured through the manifest.
     """
-    
-    def prediction_transform(y_proba, round_params):
-        """Transform probabilities to binary predictions using threshold."""
-        threshold = round_params.get('pred_threshold', 0.5)
-        # y_proba is now a 1D array of positive class probabilities
-        return (y_proba >= threshold).astype(np.int8)
     
     return (Manifest()
         # === DATA PREPARATION CONFIGURATION ===
@@ -96,7 +93,6 @@ def manifest():
         .add_feature(price_range_position, period='price_range_position_period')
         .add_feature(range_pct)
         
-        # Target transformation with fitted parameters
         .with_target('quantile_flag')
             .add_fitted_transform(quantile_flag)
                 .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
@@ -104,23 +100,26 @@ def manifest():
             .add_transform(shift_column, shift='shift', column='target_column')
             .done()
 
-        # Scaling
         .set_scaler(LinearTransform)
         
         # === MODEL CONFIGURATION ===
+        # Import and configure reusable model function
         .with_model()
-            .set_model_class(
-                RidgeClassifier,
+            .set_model_function(
+                ridge_model,
                 alpha='alpha',
                 tol='tol',
                 class_weight='class_weight',
                 max_iter='max_iter',
                 random_state='random_state',
                 fit_intercept='fit_intercept',
-                solver='solver'
+                solver='solver',
+                use_calibration='use_calibration',
+                calibration_method='calibration_method',
+                calibration_cv='calibration_cv',
+                n_jobs='n_jobs',
+                pred_threshold='pred_threshold'
             )
-            .set_calibration(method='sigmoid', cv=3)  # Use cv=3 instead of 'prefit'
-            .set_prediction_transform(prediction_transform)
             .set_metrics_function(binary_metrics)
             .done()
     )
