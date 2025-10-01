@@ -20,6 +20,7 @@ from loop.tests.test_polars_lazy_evaluation import (
 )
 from loop.tests.test_large_param_space import test_large_param_space
 from loop.tests.test_bars import test_volume_bars_basic, test_trade_bars_basic, test_liquidity_bars_basic
+from loop.tests.test_manifest_pre_split_random_selector import test_pre_split_random_selector
 
 tests = [
     test_large_param_space,
@@ -27,6 +28,7 @@ tests = [
     test_volume_bars_basic,
     test_trade_bars_basic,
     test_liquidity_bars_basic,
+    test_pre_split_random_selector,
     test_sfm,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,

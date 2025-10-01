@@ -8,6 +8,7 @@ from loop.features.time_features import time_features
 from loop.features.lagged_features import lag_range_cols
 from loop.indicators.sma import sma
 from loop.utils.add_breakout_ema import add_breakout_ema
+from loop.utils.random_slice import random_slice
 from loop.metrics.binary_metrics import binary_metrics
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
@@ -22,6 +23,13 @@ TARGET_COLUMN_CLASS = 'breakout_ema'
 
 def manifest():
     return (Manifest()
+        .set_pre_split_data_selector(
+            random_slice,
+            rows='random_slice_size',
+            safe_range_low='random_slice_min_pct',
+            safe_range_high='random_slice_max_pct',
+            seed='random_seed'
+        )
         .set_split_config(6, 2, 2)
         .set_bar_formation(compute_data_bars,
             bar_type='bar_type',
@@ -55,6 +63,10 @@ def manifest():
 def params():
 
     p = {
+        'random_slice_size': [5000],
+        'random_slice_min_pct': [0.25],
+        'random_slice_max_pct': [0.75],
+        'random_seed': [42],
         'bar_type': ['base', 'trade', 'volume', 'liquidity'],
         'trade_threshold': [5000, 10000, 30000, 100000, 500000],
         'volume_threshold': [100, 250, 500, 750, 1000, 5000],
