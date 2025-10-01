@@ -58,7 +58,7 @@ def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
         pl.col('datetime').dt.minute().alias('minute'),
         pl.col('datetime').dt.day().alias('day'),
         pl.col('datetime').dt.weekday().alias('weekday'),  # Monday=0, Sunday=6
-        pl.col('datetime').dt.days_in_month().alias('days_in_month'),
+        # pl.col('datetime').dt.days_in_month().alias('days_in_month'),
     ])
     df = df.with_columns([
         np.sin(2 * np.pi * pl.col('hour') / 24).alias('sin_hour'),
@@ -66,13 +66,13 @@ def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
         np.sin(2 * np.pi * pl.col('minute') / 60).alias('sin_minute'),
         np.cos(2 * np.pi * pl.col('minute') / 60).alias('cos_minute'),
         # Day-of-month encoding using actual days in month
-        np.sin(2 * np.pi * (pl.col('day') - 1) / pl.col('days_in_month')).alias('sin_day'),
-        np.cos(2 * np.pi * (pl.col('day') - 1) / pl.col('days_in_month')).alias('cos_day'),
+        # np.sin(2 * np.pi * (pl.col('day') - 1) / pl.col('days_in_month')).alias('sin_day'),
+        # np.cos(2 * np.pi * (pl.col('day') - 1) / pl.col('days_in_month')).alias('cos_day'),
         # Day-of-week encoding (Monday=0, Sunday=6)
         np.sin(2 * np.pi * pl.col('weekday') / 7).alias('sin_weekday'),
         np.cos(2 * np.pi * pl.col('weekday') / 7).alias('cos_weekday'),
     ])
-    return df.drop(['hour', 'minute', 'day', 'weekday', 'days_in_month'])
+    return df.drop(['hour', 'minute', 'day', 'weekday'])
 
 
 def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: float) -> pl.DataFrame:
