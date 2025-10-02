@@ -31,17 +31,19 @@ def model(data,
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-        alpha (float): Regularization strength
-        tol (float): Tolerance for stopping criteria
-        class_weight (str or dict): Class weights
-        max_iter (int): Maximum iterations
-        random_state (int): Random seed
-        fit_intercept (bool): Whether to fit intercept
         solver (str): Solver algorithm
-        use_calibration (bool): Whether to apply probability calibration
-        calibration_method (str): Calibration method ('sigmoid' or 'isotonic')
-        calibration_cv (int): CV folds for calibration
-        pred_threshold (float): Threshold for binary predictions
+        penalty (str): Regularization penalty
+        dual (bool): Dual or primal formulation
+        tol (float): Tolerance for stopping criteria
+        C (float): Inverse of regularization strength
+        fit_intercept (bool): Whether to fit intercept
+        intercept_scaling (float): Intercept scaling
+        class_weight (str or dict): Class weights
+        random_state (int): Random seed
+        max_iter (int): Maximum iterations
+        verbose (int): Verbosity level
+        warm_start (bool): Whether to reuse previous solution
+        n_jobs (int): Number of parallel jobs
         **kwargs: Additional parameters (ignored)
 
     Returns:
@@ -50,12 +52,10 @@ def model(data,
             - 'y_pred': Binary predictions
             - 'y_proba': Probability predictions
     """
-    # Extract data
     X_train = data['x_train']
     y_train = data['y_train']
     X_test = data['x_test']
 
-    # Initialize Ridge classifier
     clf = LogisticRegression(
         solver=solver,
         penalty=penalty,
@@ -72,7 +72,6 @@ def model(data,
         n_jobs=n_jobs,
     )
 
-    # Train base model
     clf.fit(X_train, y_train)
 
     preds = clf.predict(X_test)
