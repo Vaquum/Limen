@@ -44,9 +44,9 @@ def test_sfm():
 
             print(f'    ❌ {test[0].__name__}: FAILED - {e}')
 
-    cleanup_csv_files()
-    traceback.print_exc()
-    sys.exit(1)
+            cleanup_csv_files()
+            traceback.print_exc()
+            sys.exit(1)
 
 
 if __name__ == "__main__":
