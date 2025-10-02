@@ -249,9 +249,9 @@ def params():
         'learning_rate': [1e-3, 5e-4],   # Adam optimizer learning rate
         'batch_size': [32, 64],          # Batch size
         'weight_decay': [0.0, 1e-4],     # L2 regularization strength
-        'epochs': [20,50,75],              # Number of epochs (low for speed)
+        'epochs': [30,50,75],              # Number of epochs (low for speed)
         'seed': [42],                   # Random seed for reproducibility
-        'early_stopping_patience': [3],  # Early stopping patience
+        'early_stopping_patience': [10],  # Early stopping patience
 
 
         # Sequence and regime context params
@@ -261,7 +261,7 @@ def params():
 
 
         # Target engineering parameters
-        'target_quantile': [0.45, 0.55], # Regime threshold as quantile of returns
+        'target_quantile': [0.75, 0.85], # Regime threshold as quantile of returns
         'target_shift': [0],             # [0] means start window immediately after context
 
 
