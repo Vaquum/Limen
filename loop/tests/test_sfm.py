@@ -14,7 +14,7 @@ def test_sfm():
         # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log, uses_manifest
         # (sfm.reference.random, get_klines_data, True, False),
         # (sfm.reference.xgboost, get_klines_data, False, False),
-        # (sfm.reference.logreg, get_klines_data, True, True),
+        (sfm.reference.logreg, get_klines_data, True, True),
         # (sfm.logreg.regime_multiclass, get_klines_data, False, False),
         # (sfm.logreg.breakout_regressor_ridge, get_klines_data, False, False),
         # (sfm.reference.lightgbm, get_klines_data, False, False),
@@ -44,9 +44,9 @@ def test_sfm():
 
             print(f'    ❌ {test[0].__name__}: FAILED - {e}')
 
-            # cleanup_csv_files()
-            traceback.print_exc()
-            sys.exit(1)
+    cleanup_csv_files()
+    traceback.print_exc()
+    sys.exit(1)
 
 
 if __name__ == "__main__":

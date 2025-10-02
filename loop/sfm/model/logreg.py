@@ -6,25 +6,25 @@ Reusable Ridge model function that can be used with both manifest and legacy app
 """
 
 import numpy as np
-from sklearn.linear_model import RidgeClassifier
-from sklearn.calibration import CalibratedClassifierCV
+from sklearn.linear_model import LogisticRegression
 
 from loop.metrics.binary_metrics import binary_metrics
 
 
 def model(data,
-          alpha=1.0,
-          tol=0.0001,
-          class_weight=None,
-          max_iter=None,
-          random_state=None,
-          fit_intercept=True,
           solver='auto',
-          use_calibration=True,
-          calibration_method='sigmoid',
-          calibration_cv=3,
+          penalty='l2',
+          dual=False,
+          tol=0.0001,
+          C='C',
+          fit_intercept=True,
+          intercept_scaling=1,
+          class_weight=None,
+          random_state=None,
+          max_iter=None, 
+          verbose=0,
+          warm_start=False,
           n_jobs=1,
-          pred_threshold=0.5,
           **kwargs):
     """
     Train Ridge classifier with optional calibration.
@@ -53,38 +53,32 @@ def model(data,
     # Extract data
     X_train = data['x_train']
     y_train = data['y_train']
-    X_val = data['x_val']
-    y_val = data['y_val']
     X_test = data['x_test']
 
     # Initialize Ridge classifier
-    clf = RidgeClassifier(
-        alpha=alpha,
+    clf = LogisticRegression(
+        solver=solver,
+        penalty=penalty,
+        dual=dual,
         tol=tol,
-        class_weight=class_weight,
-        max_iter=max_iter,
-        random_state=random_state,
+        C=C,
         fit_intercept=fit_intercept,
-        solver=solver
+        intercept_scaling=intercept_scaling,
+        class_weight={0: class_weight, 1: 1},
+        random_state=random_state,
+        max_iter=max_iter,
+        verbose=verbose,
+        warm_start=warm_start,
+        n_jobs=n_jobs,
     )
 
     # Train base model
     clf.fit(X_train, y_train)
 
-    # Apply calibration if requested
-    if use_calibration:
-        calibrator = CalibratedClassifierCV(
-            clf,
-            method=calibration_method,
-            cv=calibration_cv,
-            n_jobs=n_jobs
-        )
-        calibrator.fit(X_val, y_val)
+    preds = clf.predict(X_test)
+    probs = clf.predict_proba(X_test)[:, 1]
 
-    y_proba = calibrator.predict_proba(X_test)[:, 1]
-    y_pred = (y_proba >= pred_threshold).astype(np.int8)
-
-    round_results = binary_metrics(data, y_pred, y_proba)
-    round_results['_preds'] = y_pred
+    round_results = binary_metrics(data, preds, probs)
+    round_results['_preds'] = preds
 
     return round_results

@@ -26,29 +26,19 @@ class UniversalExperimentLoop:
         self.data = data
         self.manifest = manifest
         
-        # Support both legacy and manifest approaches
-        if manifest is not None:
-            # Explicit manifest provided
+        if hasattr(single_file_model, 'manifest') and callable(single_file_model.manifest):
+            # New manifest-based module
+            self.manifest = single_file_model.manifest()
             self.model = None
-            self.prep = manifest.prepare_data
-            self.params = None
-        elif single_file_model is not None:
-            # Check if single_file_model has manifest attribute (new style)
-            if hasattr(single_file_model, 'manifest') and callable(single_file_model.manifest):
-                # New manifest-based module
-                self.manifest = single_file_model.manifest()
-                self.model = None
-                self.prep = self.manifest.prepare_data
-                self.params = single_file_model.params() if hasattr(single_file_model, 'params') else None
-            elif hasattr(single_file_model, 'model'):
-                # Legacy single file model
-                self.model = single_file_model.model
-                self.params = single_file_model.params() if callable(getattr(single_file_model, 'params', None)) else single_file_model.params
-                self.prep = single_file_model.prep
-            else:
-                raise ValueError("single_file_model must have either 'manifest' or 'model' attribute")
+            self.prep = self.manifest.prepare_data
+            self.params = single_file_model.params()
+        elif hasattr(single_file_model, 'model'):
+            # Legacy single file model
+            self.model = single_file_model.model
+            self.params = single_file_model.params()
+            self.prep = single_file_model.prep
         else:
-            raise ValueError("Either single_file_model or manifest must be provided")
+            raise ValueError("single_file_model must have either 'manifest' or 'model' attribute")
         
         self.extras = []
         self.models = []
@@ -131,18 +121,12 @@ class UniversalExperimentLoop:
 
             # Data preparation
             if prep_each_round is True:
-                # Prep with round_params every round
+                data_dict = self.prep(self.data, round_params)
+            elif i == 0:
                 if self.manifest:
-                    data_dict = self.prep(self.data, round_params)
+                    data_dict = self.prep(self.data)
                 else:
-                    data_dict = self.prep(self.data, round_params=round_params)
-            else:
-                # Only prep on first round
-                if i == 0:
-                    if self.manifest:
-                        data_dict = self.prep(self.data, round_params)
-                    else:
-                        data_dict = self.prep(self.data)
+                    data_dict = self.prep(self.data)
 
             # Model execution
             if self.manifest and self.manifest.model_function:

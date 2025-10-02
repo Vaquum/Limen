@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
-"""
-Updated Ridge Classifier SFM using loop.sfm.model.ridge
-
-This demonstrates the new approach where model functions are reusable
-and imported from loop/sfm/model/, then configured through the manifest.
-"""
+'Long-Only Regime Binary Classifier Using Ridge Regression'
 
 from loop.manifest import Manifest
 from loop.sfm.model.ridge import model as ridge_model
-from loop.features import (
-    atr_percent_sma, ichimoku_cloud, close_position, 
-    distance_from_high, distance_from_low, gap_high,
-    price_range_position, range_pct, quantile_flag, 
-    trend_strength, volume_regime, compute_quantile_cutoff
-)
+from loop.features import atr_percent_sma, ichimoku_cloud, close_position, distance_from_high, distance_from_low, gap_high, price_range_position, range_pct, quantile_flag, trend_strength, volume_regime, compute_quantile_cutoff
 from loop.indicators import roc, ppo, rolling_volatility, wilder_rsi
-from loop.metrics.binary_metrics import binary_metrics
 from loop.transforms.linear_transform import LinearTransform
 from loop.utils.shift_column import shift_column
 
@@ -67,7 +56,6 @@ def manifest():
     """
     
     return (Manifest()
-        # === DATA PREPARATION CONFIGURATION ===
         .set_split_config(6, 2, 2)
         
         .set_required_bar_columns([
@@ -93,6 +81,7 @@ def manifest():
         .add_feature(price_range_position, period='price_range_position_period')
         .add_feature(range_pct)
         
+        # Target
         .with_target('quantile_flag')
             .add_fitted_transform(quantile_flag)
                 .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
@@ -100,10 +89,10 @@ def manifest():
             .add_transform(shift_column, shift='shift', column='target_column')
             .done()
 
+        # Scaler
         .set_scaler(LinearTransform)
         
-        # === MODEL CONFIGURATION ===
-        # Import and configure reusable model function
+        # Model
         .with_model()
             .set_model_function(
                 ridge_model,
@@ -120,6 +109,5 @@ def manifest():
                 n_jobs='n_jobs',
                 pred_threshold='pred_threshold'
             )
-            .set_metrics_function(binary_metrics)
             .done()
     )
