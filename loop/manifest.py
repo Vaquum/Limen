@@ -217,7 +217,6 @@ class Manifest:
 
         return TargetBuilder(self, target_column)
 
-<<<<<<< HEAD
     def with_model(self) -> ModelBuilder:
 
         '''
@@ -228,7 +227,7 @@ class Manifest:
         '''
 
         return ModelBuilder(self)
-=======
+    
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
 
         '''
@@ -248,7 +247,6 @@ class Manifest:
         _, test_bar_data = _process_bars(self, test_split, round_params)
 
         return test_bar_data
->>>>>>> origin/main
 
     def prepare_data(
         self,
