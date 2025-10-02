@@ -15,7 +15,12 @@ def test_explorer_locally():
 
     print('Keep waiting, there will now be three progress bars, once the last is done, you will see the streamlit url')
 
-    uel.run(experiment_name='explorer_test', prep_each_round=True, n_permutations=100)
+    uel.run(
+            experiment_name='explorer_test',
+            prep_each_round=True,
+            n_permutations=100,
+            manifest=loop.sfm.reference.logreg.manifest()
+        )
 
     loop_explorer(uel, '0.0.0.0')
 

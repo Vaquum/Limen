@@ -217,6 +217,7 @@ class Manifest:
 
         return TargetBuilder(self, target_column)
 
+<<<<<<< HEAD
     def with_model(self) -> ModelBuilder:
 
         '''
@@ -227,6 +228,27 @@ class Manifest:
         '''
 
         return ModelBuilder(self)
+=======
+    def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
+
+        '''
+        Compute test split bar data from raw data using manifest bar formation configuration.
+        Used by Log system to reconstruct the same test bar data that was used in training.
+
+        Args:
+            raw_data (pl.DataFrame): Raw input dataset
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            pl.DataFrame: Bar-formed test split data
+        '''
+
+        split_data = split_sequential(raw_data, self.split_config)
+        test_split = split_data[2]
+        _, test_bar_data = _process_bars(self, test_split, round_params)
+
+        return test_bar_data
+>>>>>>> origin/main
 
     def prepare_data(
         self,
@@ -381,8 +403,7 @@ def _process_bars(
     if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
         func, base_params = manifest.bar_formation
         resolved = _resolve_params(base_params, round_params)
-        lazy_data = data.lazy().pipe(func, **resolved)
-        bar_data = lazy_data.collect()
+        bar_data = data.pipe(func, **resolved)
         all_datetimes = bar_data['datetime'].to_list()
     else:
         all_datetimes = data['datetime'].to_list()

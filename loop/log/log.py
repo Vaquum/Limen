@@ -90,23 +90,30 @@ class Log:
         return round_data
 
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
-        
+
         '''
         Compute test-period rows with all columns.
-        
+
         Args:
             round_id (int): Round ID
-        
+
         Returns:
-            pl.DataFrame: Klines dataset filtered down to the permutation test window
+            pl.DataFrame: Dataset filtered down to the permutation test window
         '''
 
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
         last_test_datetime = self._alignment[round_id]['last_test_datetime']
-    
+
+        if self.manifest is not None:
+            round_params = self.round_params[round_id]
+            test_bars = self.manifest.compute_test_bars(self.data, round_params)
+            data_source = test_bars
+        else:
+            data_source = self.data
+
         return (
-            self.data
+            data_source
             .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
             .join(
                 pl.DataFrame({'datetime': missing_datetimes})
