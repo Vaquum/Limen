@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-"""
-loop/sfm/model/ridge.py
-
-Reusable Ridge model function that can be used with both manifest and legacy approaches.
-"""
-
-import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 from loop.metrics.binary_metrics import binary_metrics
