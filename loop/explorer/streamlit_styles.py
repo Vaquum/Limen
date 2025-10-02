@@ -15,9 +15,13 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
     
     return f"""
     <style>
+      /* Import fonts: IBM Plex for text, Lexend for numerals */
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Lexend:wght@400;600;700&display=swap');
+
       /* Global font scaling (~20%) */
       html, body, [data-testid="stAppViewContainer"] {{
           font-size: 19px;
+          font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
       }}
 
       /* Sidebar spacing */
@@ -66,6 +70,10 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
         color: #ECE8F2;
         word-break: break-word;
         line-height: 1.25;
+        /* Numerals use Lexend with tabular figures for alignment */
+        font-family: "Lexend", "IBM Plex Sans", Arial, sans-serif;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
       }}
       .lux-back a {{
         color: #6D5AF7; font-weight: 600; text-decoration: none;
@@ -84,6 +92,10 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
       /* Enlarge table text (~20% above global) */
       [data-testid="stDataFrame"] * {{
         font-size: 1.2em !important;
+        /* Prefer Lexend for numeric-heavy tables */
+        font-family: "Lexend", "IBM Plex Sans", Arial, sans-serif !important;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
       }}
       /* Keep built-in column visibility menu visible (avoid Popper warnings) */
       /* Inline Bars (ProgressColumn) color override */
@@ -99,6 +111,15 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
         letter-spacing: -0.02em;
       }}
       .lux-subtle {{ color: #778295; }}
+
+      /* Plotly charts: use Lexend for tick and hover numerals */
+      .js-plotly-plot .xtick text,
+      .js-plotly-plot .ytick text,
+      .js-plotly-plot .hovertext text {{
+        font-family: "Lexend", "IBM Plex Sans", Arial, sans-serif !important;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+      }}
 
       /* Split card layout for detail view */
       .split-card {{
