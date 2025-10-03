@@ -7,7 +7,7 @@ regime prediction using 1-minute OHLC data with technical indicators and liquidi
 The architecture follows UEL (Universal Experiment Loop) conventions for reproducible
 machine learning experiments.
 '''
-
+"Given the current market state, is there a high probability that the next price move will be at least +X%?"
 
 import numpy as np
 import polars as pl
