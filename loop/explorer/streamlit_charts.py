@@ -5,6 +5,19 @@ import plotly.express as px
 import streamlit as st
 
 # -----------------------------
+# Shared color palette (low → high)
+# -----------------------------
+PALETTE = [
+    "#C4E8F4",  # 1 light blue
+    "#FCE2EB",  # 2 blush
+    "#EAA3C8",  # 3 pink
+    "#DC65A6",  # 4 magenta
+    "#F16068",  # 5 coral
+    "#BCABD3",  # 6 lavender
+    "#DDD941",  # 7 yellow
+]
+
+# -----------------------------
 # Internal helpers (module-local)
 # -----------------------------
 def _rolling_mean_per_series(df_long: pd.DataFrame,
@@ -203,7 +216,14 @@ def plot_scatter(
         common_args["color"] = hue_col
     if size_col:
         common_args["size"] = size_col
-    fig = px.scatter(df_filt, x=xcol, y=ycol, **common_args)
+    fig = px.scatter(
+        df_filt,
+        x=xcol,
+        y=ycol,
+        color_discrete_sequence=PALETTE,
+        color_continuous_scale=PALETTE,
+        **common_args,
+    )
     _apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -280,7 +300,14 @@ def plot_histogram(
                 .transform(minmax_scale)
             )
         # Default overlay (native numeric bins)
-        fig = px.histogram(long_df, x='Value', color='Series', opacity=0.6, histnorm='probability' if normalize_counts else None)
+        fig = px.histogram(
+            long_df,
+            x='Value',
+            color='Series',
+            opacity=0.6,
+            histnorm='probability' if normalize_counts else None,
+            color_discrete_sequence=PALETTE,
+        )
         fig.update_layout(barmode='overlay')
         _apply_plot_theme(fig)
         key = f"hist_multi_{'_'.join(cols)}_{int(normalize_counts)}_{int(normalize_data)}"
@@ -293,9 +320,22 @@ def plot_histogram(
         vmin, vmax = np.nanmin(s.values), np.nanmax(s.values)
         if np.isfinite(vmin) and np.isfinite(vmax) and vmax != vmin:
             s = -1.0 + 2.0 * ((s - vmin) / (vmax - vmin))
-        fig = px.histogram(x=s, histnorm='probability' if normalize_counts else None, **args)
+        fig = px.histogram(
+            x=s,
+            histnorm='probability' if normalize_counts else None,
+            color_discrete_sequence=PALETTE,
+            color_continuous_scale=PALETTE,
+            **args,
+        )
     else:
-        fig = px.histogram(df_filt, x=ycol, histnorm='probability' if normalize_counts else None, **args)
+        fig = px.histogram(
+            df_filt,
+            x=ycol,
+            histnorm='probability' if normalize_counts else None,
+            color_discrete_sequence=PALETTE,
+            color_continuous_scale=PALETTE,
+            **args,
+        )
     _apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True, key=f"hist_single_{ycol}_{int(normalize_counts)}_{int(normalize_data)}")
     

@@ -59,7 +59,7 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
 
       /* Detail cards */
       .lux-card {{
-        background: #2F2D36;
+        background: #231F20;
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 16px;
         padding: 14px 16px;
@@ -70,7 +70,7 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
         font-size: 16px;
         font-weight: 600;
         letter-spacing: .01em;
-        color: #5f6b7a;
+        color: #C4E8F4;
         margin-bottom: 8px;
         text-transform: none;
       }}
@@ -119,8 +119,9 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
       .lux-title {{
         font-size: 46px; font-weight: 800; margin: 0 0 6px 0;
         letter-spacing: -0.02em;
+        color: #F8F8F8;
       }}
-      .lux-subtle {{ color: #778295; }}
+      .lux-subtle {{ color: #DC65A6; }}
 
       /* Plotly charts: use Lexend for tick and hover numerals */
       .js-plotly-plot .xtick text,
