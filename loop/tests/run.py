@@ -1,4 +1,5 @@
 import sys
+import time
 import traceback
 
 from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
@@ -41,16 +42,42 @@ tests = [
 
 setup_cleanup_handlers()
 
+test_results = []
+
 for test in tests:
-    
+
     try:
+        start_time = time.time()
         test()
-        print(f'    ✅ {test.__name__}: PASSED')
-    
+        end_time = time.time()
+        duration = end_time - start_time
+        test_results.append((test.__name__, 'PASSED', duration))
+        print(f'    ✅ {test.__name__}: PASSED ({duration:.3f}s)')
+
     except Exception as e:
-        print(f'    ❌ {test.__name__}: FAILED - {e}')
+        end_time = time.time()
+        duration = end_time - start_time
+        test_results.append((test.__name__, 'FAILED', duration))
+        print(f'    ❌ {test.__name__}: FAILED ({duration:.3f}s) - {e}')
+
+        with open('test_results.txt', 'w') as f:
+            f.write('Test Results\n')
+            f.write('=' * 50 + '\n')
+            for name, status, dur in test_results:
+                f.write(f'{name}: {status} ({dur:.3f}s)\n')
+
         cleanup_csv_files()
         traceback.print_exc()
         sys.exit(1)
+
+with open('test_results.txt', 'w') as f:
+    f.write('Test Results\n')
+    f.write('=' * 50 + '\n')
+    total_time = 0
+    for name, status, duration in test_results:
+        f.write(f'{name}: {status} ({duration:.3f}s)\n')
+        total_time += duration
+    f.write('=' * 50 + '\n')
+    f.write(f'Total time: {total_time:.3f}s\n')
 
 cleanup_csv_files()
