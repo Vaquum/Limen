@@ -15,6 +15,16 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
     
     return f"""
     <style>
+      /* Palette variables */
+      :root {{
+        --palette-1: #C4E8F4; /* light blue */
+        --palette-2: #FCE2EB; /* blush */
+        --palette-3: #EAA3C8; /* pink */
+        --palette-4: #DC65A6; /* magenta accent */
+        --palette-5: #F16068; /* coral */
+        --palette-6: #BCABD3; /* lavender */
+        --palette-7: #DDD941; /* yellow */
+      }}
       /* Import fonts: IBM Plex for text, Lexend for numerals */
       @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Lexend:wght@400;600;700&display=swap');
 
@@ -76,12 +86,12 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
         font-feature-settings: "tnum" 1, "lnum" 1;
       }}
       .lux-back a {{
-        color: #6D5AF7; font-weight: 600; text-decoration: none;
+        color: var(--palette-4); font-weight: 600; text-decoration: none;
       }}
       .lux-back a:hover {{ text-decoration: underline; }}
       /* Match table 'view' links to theme purple */
       [data-testid="stDataFrame"] a[href^='/?row='] {{
-        color: #7B61FF !important;
+        color: var(--palette-4) !important;
         text-decoration: none;
         font-weight: 600;
       }}
@@ -100,7 +110,7 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
       /* Keep built-in column visibility menu visible (avoid Popper warnings) */
       /* Inline Bars (ProgressColumn) color override */
       [data-testid="stDataFrame"] [role="progressbar"] > div {{
-        background-color: #B5AAD7 !important;
+        background-color: var(--palette-6) !important;
       }}
       [data-testid="stDataFrame"] [role="progressbar"] {{
         border-radius: 6px !important;
