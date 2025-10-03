@@ -32,6 +32,12 @@ st.set_page_config(page_title='Loop Explorer', layout='wide')
 # Handle toolbar toggle via query param (?toggle=...)
 # Compatible with both new and experimental query param APIs
 # -----------------------------
+def _spacer(rem: float = 5.0) -> None:
+    try:
+        rem_val = float(rem)
+    except Exception:
+        rem_val = 5.0
+    st.markdown(f'<div class="section-spacer" style="height:{rem_val}rem"></div>', unsafe_allow_html=True)
 def _get_query_params() -> dict:
     try:
         qp = st.query_params
@@ -273,6 +279,8 @@ if show_table:
         except Exception:
             pass
 
+_spacer(6.0)
+
 # -----------
 # ---- Charts
 # -----------
@@ -333,11 +341,15 @@ if show_chart:
                 hue_col=hue_col,
             )
 
+_spacer(6.0)
+
 # ------------------------
 # ---- Correlation Heatmap
 # ------------------------
 if show_corr:
     render_corr_heatmap(df_filt, num_cols)
+
+_spacer(6.0)
 
 # ----------------
 # ---- Pivot Table
@@ -355,3 +367,5 @@ if show_pivot and pivot_val:
         quantile_cols=sidebar_state['quantile_cols'],
         quantile_bins_fn=quantile_bins_fixed,
     )
+
+_spacer(6.0)
