@@ -75,18 +75,18 @@ def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     return df.drop(['hour', 'minute', 'day', 'weekday'])
 
 
-def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: float) -> pl.DataFrame:
+def regime_target(df: pl.DataFrame, prediction_window: int, pct_move_threshold: float) -> pl.DataFrame:
     """
-    Label each row as a 'long regime' if forward windowed return exceeds quantile threshold.
+    Label each row as a 'long regime' if forward windowed return exceeds pct_move_threshold.
     
     Creates binary labels based on future price movement over a specified window.
     This target engineering approach identifies periods favorable for long positions
-    by comparing forward returns against historical quantile thresholds.
+    by comparing forward returns against historical thresholds.
     
     Args:
         df: Input DataFrame with 'close' prices
         prediction_window: forecast horizon in minutes  
-        target_quantile: quantile to use as threshold (e.g., 0.55)
+        pct_move_threshold: return threshold to classify as regime (e.g., 0.005 for 0.5%)
         
     Returns:
         DataFrame with added 'target_regime' binary column
@@ -97,9 +97,8 @@ def regime_target(df: pl.DataFrame, prediction_window: int, target_quantile: flo
     for i in range(len(closes)):
         end_idx = min(i + prediction_window, len(closes) - 1)
         windowed_returns[i] = (closes[end_idx] - closes[i]) / closes[i]
-    # Determine quantile threshold on training split only (in manifest, handled via fitted param)
-    quantile_cutoff = np.quantile(windowed_returns, target_quantile)
-    label = (windowed_returns > quantile_cutoff).astype(int)
+    # Determine threshold on training split only (in manifest, handled via fitted param)
+    label = (windowed_returns > pct_move_threshold).astype(int)
     df = df.with_columns([pl.Series('target_regime', label)])
     return df
 
@@ -197,11 +196,6 @@ def manifest():
         'volume', 'maker_ratio', 'no_of_trades', 'open_liquidity', 'high_liquidity',
         'low_liquidity', 'close_liquidity', 'liquidity_sum', 'maker_volume', 'maker_liquidity'
     ]
-
-
-    from sklearn.preprocessing import StandardScaler
-
-
     return(
         Manifest()
         .set_split_config(8, 1, 2)  # 80% train, 10% validation, 20% test
@@ -209,18 +203,9 @@ def manifest():
         .set_required_bar_columns(required_cols)
         .add_feature(add_cyclical_features)  # Add temporal cyclical features
         .with_target('target_regime')
-            .add_fitted_transform(regime_target)  # Create binary regime labels
-                .fit_param(
-                    '_regime_cutoff',
-                    lambda df, prediction_window, target_quantile:
-                        np.quantile(
-                            (df['close'].shift(-prediction_window) - df['close']) / df['close'],
-                            target_quantile
-                        ),
-                    prediction_window='prediction_window', target_quantile='target_quantile'
-                )
-                .with_params(prediction_window='prediction_window', target_quantile='target_quantile')
-            .done()
+        .add_fitted_transform(regime_target)  # Create binary regime labels
+        .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
+        .done()
         .set_scaler(StandardScaler)  # Apply standard scaling to features
     )
 
@@ -259,9 +244,8 @@ def params():
         'prediction_window': [60],       # Window to classify regime ahead (in minutes)
         'positional_encoding_type': ['rotary'], # Positional encoding type
 
-
-        # Target engineering parameters
-        'target_quantile': [0.75, 0.85], # Regime threshold as quantile of returns
+        # Target engineering params
+        'pct_move_threshold': [0.003, 0.005, 0.01], # Example: 0.2%, 0.5%, 1%
         'target_shift': [0],             # [0] means start window immediately after context
 
 
@@ -476,7 +460,7 @@ def model(data, round_params):
     early_stopping_patience = round_params.get('early_stopping_patience', 3)
     seq_length = round_params['seq_length']
     use_rotary = round_params.get('positional_encoding_type', 'rotary') == 'rotary'
-
+    pct_move_threshold = round_params['pct_move_threshold']
 
     np.random.seed(seed)
 
