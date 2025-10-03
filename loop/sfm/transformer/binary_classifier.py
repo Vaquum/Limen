@@ -100,6 +100,20 @@ def regime_target(df: pl.DataFrame, prediction_window: int, pct_move_threshold: 
     # Determine threshold on training split only (in manifest, handled via fitted param)
     label = (windowed_returns > pct_move_threshold).astype(int)
     df = df.with_columns([pl.Series('target_regime', label)])
+
+    # Print description of label distribution for sanity check
+    num_total = len(label)
+    num_positive = int(label.sum())
+    num_negative = num_total - num_positive
+    ratio_positive = num_positive / num_total
+    ratio_negative = num_negative / num_total
+
+    print(f"[LABEL SANITY CHECK] pct_move_threshold={pct_move_threshold:.5f}")
+    print(f"  Total samples: {num_total}")
+    print(f"  Positive regime labels (1): {num_positive} ({ratio_positive*100:.2f}%)")
+    print(f"  Negative regime labels (0): {num_negative} ({ratio_negative*100:.2f}%)")
+    print("-" * 40)
+
     return df
 
 
