@@ -3,8 +3,8 @@
 primaryColor = "#B5AAD7"
 
 # Refined warm-gray surfaces (between dark and sepia)
-backgroundColor = "#262429"
-secondaryBackgroundColor = "#2F2D36"
+backgroundColor = "#444444"
+secondaryBackgroundColor = "#231F20"
 
 # Elegant soft off-white text
 textColor = "#ECE8F2"
