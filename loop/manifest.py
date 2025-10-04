@@ -578,4 +578,6 @@ def _finalize_to_data_dict(
     for param_name, param_value in fitted_params.items():
         data_dict[param_name] = param_value
 
+    data_dict['_feature_names'] = cols
+
     return data_dict
