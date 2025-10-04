@@ -562,8 +562,26 @@ def model(data, round_params):
     round_results['extras'] = {
         'seq_len_eff': seq_len_eff,        # Actual sequence length used
         'val_preds': val_preds,            # Validation predictions
-        'val_probs': val_probs,            # Validation probabilities
+        'val_probs': val_probs,   
+        'val_targets': y_val        # Validation probabilities
     }
+
+    #     # NEW: Export per-sample test predictions for calibration
+    # import pandas as pd
+
+    # test_calib_df = pd.DataFrame({
+    #     'prob': test_probs,           # Raw model output probability (sigmoid)
+    #     'true_label': y_test          # Ground truth binary regime label
+    #     # Optionally add timestamps/ids if available, e.g., 'datetime': test_datetimes
+    # })
+    # test_calib_df.to_csv('/content/drive/MyDrive/Vaquum/Loop/experiment_predictions.csv', index=False)
+
+    # # Optionally: Write validation set for calibration fitting
+    # val_calib_df = pd.DataFrame({
+    #     'prob': val_probs,
+    #     'true_label': y_val
+    # })
+    # val_calib_df.to_csv('/content/drive/MyDrive/Vaquum/Loop/experiment_val_predictions.csv', index=False)
 
 
     return round_results
