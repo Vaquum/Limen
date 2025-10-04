@@ -18,7 +18,7 @@
 -> You use previous CHANGELOG.md entries as indication of the form and style.
 -> You write minimal, clinical code. 
 -> You never make unnecessary changes.
--> You never make unnecessary changes, while remaining in-scope.
+-> You always remain strictly in-scope.
 -> No fall backs, docstrings, comments, bare and naked code.
 -> Always validate outcomes against expectations.
 </how_to_avoid_harm>
