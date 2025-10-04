@@ -1,9 +1,10 @@
 import pickle
 import os
+from typing import Any
 from loop.explorer.loop_explorer import loop_explorer
 
 
-def save(uel_instance, experiment_name):
+def save(uel_instance: Any, experiment_name: str) -> None:
     '''
     Save the UEL object to a file named f'{experiment_name}.uel'.
     
@@ -58,7 +59,8 @@ def save(uel_instance, experiment_name):
             raise RuntimeError(f'Failed to save UEL object to {filename}: {str(e)} (Limited save also failed: {str(e2)})')
 
 
-def load(uel_instance, filepath):
+
+def load(uel_instance: Any, filepath: str) -> None:
     '''
     Load UEL object state from a .uel file.
     

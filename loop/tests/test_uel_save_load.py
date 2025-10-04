@@ -45,7 +45,7 @@ def test_uel_save_load_basic():
             }
     
     # Create and set up UEL
-    uel_original = loop.UniversalExperimentLoop(data=data, single_file_model=TestSFM)
+    uel_original = loop.UniversalExperimentLoop(TestSFM, data=data)
     
     # Set up basic state
     uel_original.round_params = [{'param1': 1}, {'param1': 2}]
@@ -72,7 +72,7 @@ def test_uel_save_load_basic():
     assert os.path.getsize(expected_file) > 0, "Save failed - file is empty"
     
     # Test load
-    uel_loaded = loop.UniversalExperimentLoop(filepath=expected_file)
+    uel_loaded = loop.UniversalExperimentLoop(TestSFM, filepath=expected_file)
     
     # Verify loaded state
     assert uel_original.data.equals(uel_loaded.data), "Data doesn't match"
@@ -117,7 +117,7 @@ def test_uel_save_load_complex_objects():
         def model(data, round_params):
             return {'test': 1}
     
-    uel_original = loop.UniversalExperimentLoop(data=data, single_file_model=MinimalSFM)
+    uel_original = loop.UniversalExperimentLoop(MinimalSFM, data=data)
     
     # Add complex objects
     model = LinearRegression()
@@ -145,7 +145,7 @@ def test_uel_save_load_complex_objects():
     assert os.path.exists(expected_file), "Save failed"
     
     # Test load
-    uel_loaded = loop.UniversalExperimentLoop(filepath=expected_file)
+    uel_loaded = loop.UniversalExperimentLoop(MinimalSFM, filepath=expected_file)
     
     # Verify complex objects
     assert len(uel_loaded.models) == 1, "Model not loaded"
@@ -179,16 +179,30 @@ def test_uel_save_load_complex_objects():
 def test_uel_load_errors():
     '''Test error handling in load functionality'''
     
+    # Create a dummy SFM for tests
+    class DummySFM:
+        @staticmethod
+        def params():
+            return {'test': [1]}
+        
+        @staticmethod
+        def prep(data, round_params=None):
+            return {}
+        
+        @staticmethod
+        def model(data, round_params):
+            return {'test': 1}
+    
     # Test loading non-existent file
     try:
-        loop.UniversalExperimentLoop(filepath="nonexistent.uel")
+        loop.UniversalExperimentLoop(DummySFM(), filepath="nonexistent.uel")
         assert False, "Should have raised FileNotFoundError"
     except FileNotFoundError:
         pass
     
     # Test invalid initialization (no data or filepath)
     try:
-        loop.UniversalExperimentLoop()
+        loop.UniversalExperimentLoop(DummySFM())
         assert False, "Should have raised ValueError"
     except ValueError:
         pass

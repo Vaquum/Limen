@@ -6,7 +6,8 @@ import sqlite3
 from loop.utils.param_space import ParamSpace
 from loop.log.log import Log
 from loop.explorer.loop_explorer import loop_explorer
-from loop.uel.save import save as uel_save, load as uel_load
+from loop.uel.save import save as uel_save
+from loop.uel.save import load as uel_load
 
 
 class UniversalExperimentLoop:
@@ -16,15 +17,15 @@ class UniversalExperimentLoop:
     '''
 
     def __init__(self,
+                 single_file_model,
                  data=None,
-                 single_file_model=None,
                  filepath=None):
         
         '''Initializes the UniversalExperimentLoop.
         
         Args:
+            single_file_model (SingleFileModel): The single file model to use for the experiment.
             data (pl.DataFrame, optional): The data to use for the experiment.
-            single_file_model (SingleFileModel, optional): The single file model to use for the experiment.
             filepath (str, optional): Path to a saved .uel file to load from.
         '''
 
@@ -33,14 +34,20 @@ class UniversalExperimentLoop:
             self.load(filepath)
         else:
             # Initialize normally
-            if data is None or single_file_model is None:
-                raise ValueError('Either filepath must be provided, or both data and single_file_model must be provided')
+            if data is None:
+                raise ValueError('Either filepath must be provided, or data must be provided')
             
             self.data = data
-            self.model = single_file_model.model
-            self.params = single_file_model.params()
-            self.prep = single_file_model.prep
+        
+        # Always set the SFM components since saved UEL doesn't contain SFM code
+        self.model = single_file_model.model
+        self.params = single_file_model.params()
+        self.prep = single_file_model.prep
+        
+        # Initialize attributes if they don't exist (from loading)
+        if not hasattr(self, 'extras'):
             self.extras = []
+        if not hasattr(self, 'models'):
             self.models = []
 
     def run(self,
