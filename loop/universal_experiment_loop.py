@@ -9,12 +9,14 @@ from loop.explorer.loop_explorer import loop_explorer
 
 
 class UniversalExperimentLoop:
+
     '''UniversalExperimentLoop class for running experiments.'''
 
     def __init__(self,
                  data,
                  single_file_model=None,
                  manifest=None):
+        
         '''
         Initializes the UniversalExperimentLoop.
         
@@ -23,17 +25,16 @@ class UniversalExperimentLoop:
             single_file_model (SingleFileModel or module, optional): Legacy single file model or manifest-based module
             manifest (Manifest, optional): Manifest-based configuration (overrides single_file_model.manifest if present)
         '''
+
         self.data = data
         self.manifest = manifest
         
         if hasattr(single_file_model, 'manifest') and callable(single_file_model.manifest):
-            # New manifest-based module
             self.manifest = single_file_model.manifest()
             self.model = None
             self.prep = self.manifest.prepare_data
             self.params = single_file_model.params()
         elif hasattr(single_file_model, 'model'):
-            # Legacy single file model
             self.model = single_file_model.model
             self.params = single_file_model.params()
             self.prep = single_file_model.prep
@@ -54,6 +55,7 @@ class UniversalExperimentLoop:
             params=None,
             prep=None,
             model=None):
+        
         '''
         Run the experiment `n_permutations` times.
 
@@ -72,6 +74,7 @@ class UniversalExperimentLoop:
         Returns:
             pl.DataFrame: The results of the experiment
         '''
+
         self.round_params = []
         self.models = []
         self.preds = []
@@ -130,10 +133,8 @@ class UniversalExperimentLoop:
 
             # Model execution
             if self.manifest and self.manifest.model_function:
-                # Use manifest's model configuration
                 round_results = self.manifest.run_model(data_dict, round_params)
             elif self.model:
-                # Use legacy model function
                 round_results = self.model(data=data_dict, round_params=round_params)
             else:
                 raise ValueError("No model function configured")

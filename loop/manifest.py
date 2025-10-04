@@ -99,7 +99,6 @@ class Manifest:
     # New model configuration fields
     model_function: Callable = None
     model_params: Dict[str, ParamValue] = field(default_factory=dict)
-    metrics_function: Callable = None
     metrics_params: Dict[str, ParamValue] = field(default_factory=dict)
 
 

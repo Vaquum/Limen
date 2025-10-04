@@ -2,11 +2,11 @@
 'Long-Only Regime Binary Classifier Using Ridge Regression'
 
 from loop.manifest import Manifest
-from loop.sfm.model.ridge import model as ridge_model
 from loop.features import atr_percent_sma, ichimoku_cloud, close_position, distance_from_high, distance_from_low, gap_high, price_range_position, range_pct, quantile_flag, trend_strength, volume_regime, compute_quantile_cutoff
 from loop.indicators import roc, ppo, rolling_volatility, wilder_rsi
 from loop.transforms.linear_transform import LinearTransform
 from loop.utils.shift_column import shift_column
+import loop.sfm.model.ridge
 
 
 def params():
@@ -95,7 +95,7 @@ def manifest():
         # Model
         .with_model()
             .set_model_function(
-                ridge_model,
+                loop.sfm.model.ridge.model,
                 alpha='alpha',
                 tol='tol',
                 class_weight='class_weight',

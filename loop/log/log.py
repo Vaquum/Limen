@@ -67,6 +67,7 @@ class Log:
             self.inverse_scaler = None
 
     def _get_round_data(self, round_id: int) -> dict:
+
         '''
         Get prepared data for a specific round.
         
@@ -76,15 +77,13 @@ class Log:
         Returns:
             dict: Prepared data dictionary
         '''
+
         try:
             if self.manifest:
-                # Manifest-based: prep(data, round_params)
                 round_data = self.prep(self.data, self.round_params[round_id])
             else:
-                # Legacy: prep(data, round_params=...)
                 round_data = self.prep(self.data, round_params=self.round_params[round_id])
         except TypeError:
-            # Fallback for prep without round_params
             round_data = self.prep(self.data)
         
         return round_data

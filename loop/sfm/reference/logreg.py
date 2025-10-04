@@ -12,9 +12,10 @@ from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
-from loop.sfm.model.logreg import model as logreg_model
+import loop.sfm.model.logreg
 
 def manifest():
+    
     return (Manifest()
         .set_split_config(8, 1, 2)
 
@@ -47,7 +48,7 @@ def manifest():
 
         .with_model()
             .set_model_function(
-                logreg_model,
+                loop.sfm.model.logreg.model,
                 solver='solver',
                 penalty='penalty',
                 dual=False,
