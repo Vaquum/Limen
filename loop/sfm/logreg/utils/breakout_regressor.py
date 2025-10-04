@@ -3,47 +3,46 @@ from datetime import timedelta
 from typing import List
 
 
-from loop.utils.random_slice import random_slice
-from loop.utils.breakout_labeling import to_average_price_klines, compute_htf_features, build_breakout_flags
+from loop.utils.breakout_labeling import to_average_price_klines
+from loop.utils.breakout_labeling import compute_htf_features
+from loop.utils.breakout_labeling import build_breakout_flags
 
-
-def build_sample_dataset_for_breakout_regressor(
+def build_breakout_regressor_base_features(
     df: pl.DataFrame,
-    *,
     datetime_col: str,
     target_col: str,
     interval_sec: int,
     lookahead: timedelta,
     ema_span: int,
-    deltas: List[float],
+    deltas: list[float],
     long_col_prefix: str,
     short_col_prefix: str,
     shift_bars: int,
-    random_slice_size: int,
     long_target_col: str,
     short_target_col: str,
 ) -> pl.DataFrame:
+
     '''
-    Compute sample dataset with average price klines and breakout features for breakout regressor model.
+    Compute base features for breakout regressor including average price klines, HTF features, breakout flags, and target columns.
 
     Args:
         df (pl.DataFrame): Trades dataset with 'datetime', 'volume', 'liquidity_sum' columns
-        datetime_col (str): Name of the datetime column
-        target_col (str): Name of the target/price column
-        interval_sec (int): Bucket size in seconds for kline aggregation (e.g., 60 for 1m, 900 for 15m)
+        datetime_col (str): Column name for datetime
+        target_col (str): Column name for target price
+        interval_sec (int): Bucket size in seconds for kline aggregation
         lookahead (timedelta): Lookahead period for computing future price extremes
         ema_span (int): EMA span parameter for trend calculation
-        deltas (List[float]): List of delta values for breakout calculations (e.g., [0.01, 0.02, 0.05])
-        long_col_prefix (str): Prefix for long breakout columns (e.g., 'long_0_')
-        short_col_prefix (str): Prefix for short breakout columns (e.g., 'short_0_')
+        deltas (list[float]): List of delta values for breakout calculations
+        long_col_prefix (str): Prefix for long breakout columns
+        short_col_prefix (str): Prefix for short breakout columns
         shift_bars (int): Number of bars to shift targets (negative for future prediction)
-        random_slice_size (int): Size of the random sequential slice to return
-        long_target_col (str): Name of the long breakout target column (e.g., 'breakout_long')
-        short_target_col (str): Name of the short breakout target column (e.g., 'breakout_short')
+        long_target_col (str): Name of the long breakout target column
+        short_target_col (str): Name of the short breakout target column
 
     Returns:
-        pl.DataFrame: The input data with new columns 'breakout_long', 'breakout_short'
+        pl.DataFrame: The input data with average price klines, HTF features, breakout flags, and target columns
     '''
+
     df_avg_price = to_average_price_klines(df, interval_sec)
 
     df_feat = compute_htf_features(
@@ -70,11 +69,5 @@ def build_sample_dataset_for_breakout_regressor(
     ])
 
     df_label = df_label.drop(long_cols + short_cols)
-    df_label = df_label.drop_nulls(subset=[long_target_col, short_target_col])
 
-    df_random = random_slice(
-        df_label,
-        random_slice_size,
-        safe_range_low=0.05,
-        safe_range_high=0.95)
-    return df_random
+    return df_label
