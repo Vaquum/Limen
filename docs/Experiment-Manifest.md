@@ -15,6 +15,8 @@ Raw data is split into train/validation/test sets first, then each split undergo
 The manifest uses a fluent interface for configuration:
 
 ```python
+from loop.sfm.model.ridge import model as ridge_model
+
 manifest = (Manifest()
     .set_split_config(8, 1, 2)
     .set_bar_formation(adaptive_bar_formation, bar_type='time')
@@ -26,6 +28,9 @@ manifest = (Manifest()
             .with_params(col='roc', cutoff='_cutoff')
         .done()
     .set_scaler(StandardScaler)
+    .with_model()
+        .set_model_function(ridge_model, alpha='alpha', use_calibration='use_calibration')
+        .done()
 )
 ```
 
@@ -140,6 +145,14 @@ Set the scaler/transform class for data preprocessing.
 
 `Manifest`: Self for method chaining
 
+### `with_model`
+
+Begin model configuration. Returns a `ModelBuilder` for chained model setup.
+
+#### Returns
+
+`ModelBuilder`: Builder for model configuration
+
 ### `prepare_data`
 
 Execute the complete data preparation pipeline with Universal Split-First architecture.
@@ -162,6 +175,64 @@ Execute the complete data preparation pipeline with Universal Split-First archit
 3. **Feature Engineering Phase**: Features computed per split
 4. **Target Transformation Phase**: Targets computed with fitted parameters
 5. **Scaling Phase**: Data scaled using fitted scalers
+
+
+### `run_model`
+
+Execute model training and evaluation using configured model function.
+
+#### Args
+
+| Parameter      | Type           | Description                    |
+|----------------|----------------|--------------------------------|
+| `data`         | `dict`         | Prepared data dictionary       |
+| `round_params` | `Dict[str, Any]` | Parameters for current round |
+
+#### Returns
+
+`dict`: Results including predictions, metrics, and model artifacts
+
+## `ModelBuilder`
+
+Helper class for building model configuration with reusable model functions.
+
+### `set_model_function`
+
+Configure the model function and its parameters.
+
+#### Args
+
+| Parameter     | Type       | Description                                  |
+|---------------|------------|----------------------------------------------|
+| `func`        | `Callable` | Model function from `loop.sfm.model`         |
+| `**params`    | `dict`     | Parameter mappings (resolved from round_params) |
+
+#### Returns
+
+`ModelBuilder`: Self for method chaining
+
+#### Example
+
+```python
+from loop.sfm.model.ridge import model as ridge_model
+
+.with_model()
+    .set_model_function(
+        ridge_model,
+        alpha='alpha',              # Resolved from round_params['alpha']
+        use_calibration='use_calibration',
+        pred_threshold='pred_threshold'
+    )
+    .done()
+```
+
+### `done`
+
+Complete model configuration and return to main manifest.
+
+#### Returns
+
+`Manifest`: Parent manifest for continued chaining
 
 ## `TargetBuilder`
 
@@ -238,22 +309,88 @@ Set parameters for the transform function.
 
 `FittedTransformBuilder`: Self for method chaining
 
-## Integration with SFM
 
-The manifest integrates with Single-File Models through the `prep` function:
+## Model Functions
+
+Model functions are reusable training functions stored in `loop/sfm/model/` that follow a standard contract.
+
+### Model Function Contract
+
+All model functions must follow this signature:
 
 ```python
-def prep(data, round_params, manifest):
-    return manifest.prepare_data(data, round_params)
+def model(data: dict, **model_params) -> dict:
+    """
+    Train a model and return predictions.
+    
+    Args:
+        data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
+        **model_params: Model-specific parameters (resolved from round_params)
+        
+    Returns:
+        dict: Dictionary containing:
+            - All metrics from selected metrics
+            - '_preds' (np.ndarray): Binary predictions on test set
+    """
+    pass
+```
+
+## Integration with SFM
+
+The manifest approach uses only `params()` and `manifest()` functions:
+
+```python
+from loop.sfm.model.ridge import model as ridge_model
+
+def params():
+    return {
+        'roc_period': [4, 8, 12],
+        'alpha': [1.0, 5.0, 10.0],
+        'use_calibration': [True, False]
+    }
+
+def manifest():
+    return (Manifest()
+        .set_split_config(8, 1, 2)
+        .add_indicator(roc, period='roc_period')
+        .with_target('quantile_flag')
+            .add_fitted_transform(quantile_flag)
+                .fit_param('_cutoff', compute_quantile_cutoff, 
+                          col='roc_{roc_period}', q=0.85)
+                .with_params(col='roc_{roc_period}', cutoff='_cutoff')
+            .done()
+        .set_scaler(StandardScaler)
+        .with_model()
+            .set_model_function(
+                ridge_model,
+                alpha='alpha',
+                use_calibration='use_calibration'
+            )
+            .done()
+    )
 ```
 
 ## Integration with UEL
 
-Execute experiments with manifest support:
+UEL automatically detects whether to use manifest or legacy mode:
 
 ```python
-uel = loop.UniversalExperimentLoop(data=data, single_file_model=sfm)
-uel.run(experiment_name='experiment', manifest=manifest(), n_permutations=1000)
+import loop
+
+# Create UEL - auto-detects manifest mode
+uel = loop.UniversalExperimentLoop(
+    data=data,
+    single_file_model=sfm.ridge.classifier
+)
+
+# Run experiment
+uel.run(
+    experiment_name='experiment',
+    n_permutations=1000
+)
+
+# Access results (same for both modes)
+print(uel.experiment_backtest_results)
 ```
 
 ## Example: Complete SFM with Manifest
@@ -280,6 +417,16 @@ def manifest():
             .add_transform(shift_transform, shift='shift', target_column='target_column')
             .done()
         .set_scaler(LogRegTransform)
+        .with_model()
+            .set_model_function(
+                ridge_model,
+                alpha='alpha',
+                use_calibration='use_calibration',
+                calibration_method='calibration_method',
+                calibration_cv='calibration_cv',
+                pred_threshold='pred_threshold'
+            )
+            .done()
     )
 
 def params():
@@ -289,11 +436,4 @@ def params():
         'q': [0.35, 0.41, 0.47],
         'shift': [-1, -2, -3],
     }
-
-def prep(data, round_params, manifest):
-    return manifest.prepare_data(data, round_params)
-
-def model(data, round_params):
-    # Model implementation
-    pass
 ```

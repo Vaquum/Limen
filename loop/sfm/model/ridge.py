@@ -38,10 +38,9 @@ def model(data,
         **kwargs: Additional parameters (ignored)
 
     Returns:
-        dict: Dictionary with trained model and predictions
-            - 'model': Trained model
-            - 'y_pred': Binary predictions
-            - 'y_proba': Probability predictions
+        dict: Dictionary containing:
+            - All metrics from binary_metrics
+            - '_preds' (np.ndarray): Binary predictions on test set
     """
     # Extract data
     X_train = data['x_train']
