@@ -18,10 +18,11 @@ from loop.metrics.multiclass_metrics import multiclass_metrics
 from datetime import timedelta
 
 # Import parts of our own libraries (leave empty line above)
-from loop.utils.splits import split_sequential, split_data_to_prep_output
-from loop.sfm.logreg.utils.regime_multiclass import build_sample_dataset_for_regime_multiclass
-from loop.sfm.logreg.utils.regime_multiclass import add_features_to_regime_multiclass_dataset
+from loop.sfm.logreg.utils.regime_multiclass import build_regime_base_features
+from loop.sfm.logreg.utils.regime_multiclass import add_regime_lag_features
+from loop.utils.random_slice import random_slice
 from loop.transforms.logreg_transform import LogRegTransform
+from loop.manifest import Manifest
 
 # Add configuration constants (leave empty line above)
 BREAKOUT_PERCENTAGE = 5
@@ -40,11 +41,52 @@ TEST_SPLIT = 2
 CONFIDENCE_THRESHOLD = 0.40
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
-# Add sfm.params function (leave two empty lines above)
+
+def manifest():
+    return (Manifest()
+        .set_pre_split_data_selector(
+            random_slice,
+            rows='random_slice_size',
+            safe_range_low='random_slice_min_pct',
+            safe_range_high='random_slice_max_pct',
+            seed='random_seed'
+        )
+        .set_split_config(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
+        .add_feature(build_regime_base_features,
+            datetime_col='datetime',
+            target_col=TARGET_COLUMN,
+            interval_sec=INTERVAL_SEC,
+            lookahead=timedelta(hours=LOOKAHEAD_HOURS),
+            ema_span=EMA_SPAN * LOOKBACK_BARS,
+            deltas=DELTAS,
+            long_col=LONG_COL,
+            short_col=SHORT_COL,
+            leakage_shift_bars=LEAKAGE_SHIFT)
+        .add_feature(add_regime_lag_features,
+            lookback_bars=LOOKBACK_BARS)
+        .with_target('regime')
+            .add_transform(lambda data: data.with_columns(
+                pl.when((pl.col(LONG_COL) == 1) & (pl.col(SHORT_COL) == 0)).then(1)
+                  .when((pl.col(SHORT_COL) == 1) & (pl.col(LONG_COL) == 0)).then(2)
+                  .otherwise(0)
+                  .alias('regime')
+            ))
+            .add_transform(lambda data: data.select([
+                c for c in data.columns
+                if not c.startswith(('long_0_', 'short_0_'))
+            ]))
+            .done()
+        .set_scaler(LogRegTransform)
+    )
+
+
 def params():
 
-    # Leave one empty line above
     p = {
+        'random_slice_size': [NUM_ROWS],
+        'random_slice_min_pct': [0.25],
+        'random_slice_max_pct': [0.75],
+        'random_seed': [42],
         'penalty': ['l1', 'l2', 'elasticnet'],
         'C': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
         'solver': ['lbfgs', 'liblinear', 'newton-cg', 'sag', 'saga'],
@@ -57,60 +99,14 @@ def params():
     }
     return p
 
-# Add sfm.prep function (leave two empty lines above)
-def prep(data):
 
-    all_datetimes = data['datetime'].to_list()
-    
-    # Leave one empty line above
-    df = build_sample_dataset_for_regime_multiclass(
-        data,
-        datetime_col='datetime',
-        target_col=TARGET_COLUMN,
-        interval_sec=INTERVAL_SEC,
-        lookahead=timedelta(hours=LOOKAHEAD_HOURS),
-        ema_span=EMA_SPAN * LOOKBACK_BARS,
-        deltas=DELTAS,
-        long_col=LONG_COL,
-        short_col=SHORT_COL,
-        leakage_shift_bars=LEAKAGE_SHIFT,
-        random_slice_size=NUM_ROWS,
-    )
-    df = add_features_to_regime_multiclass_dataset(
-        df,
-        lookback_bars=LOOKBACK_BARS,
-        long_col=LONG_COL,
-        short_col=SHORT_COL,
-    )
+def prep(data, round_params, manifest):
 
-    # This is an example for SFM where column names can change for permutations 
-    LEAK_PREFIXES = ('long_0_', 'short_0_')
-    cols = [
-        c for c in df.columns
-        if not c.startswith(LEAK_PREFIXES)
-    ]
-    
-    df = df.select(cols)
-
-    # Always use split_sequential for data splitting
-    split_data = split_sequential(data=df, ratios=(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT))
-    
-    # Always use split_data_to_prep_output for getting the standard data_dict
-    data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
-
-    # Always follow this pattern for handling scaling, just replace the scaler class
-    scaler = LogRegTransform(data_dict['x_train'])
-    for col in data_dict.keys():
-        if col.startswith('x_'):
-            data_dict[col] = scaler.transform(data_dict[col])
-
-    # Remember to add the scaler to data_dict for descaling later
-    data_dict['_scaler'] = scaler
-    data_dict['_feature_names'] = cols
+    data_dict = manifest.prepare_data(data, round_params)
 
     return data_dict
 
-# Add sfm.model function (leave two empty lines above)
+
 def model(data, round_params):
     
     params = round_params.copy()
