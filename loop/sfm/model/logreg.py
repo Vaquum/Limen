@@ -18,6 +18,7 @@ def model(data,
           warm_start=False,
           n_jobs=1,
           **kwargs):
+    
     """
     Train Ridge classifier with optional calibration.
 
@@ -43,6 +44,7 @@ def model(data,
             - All metrics from binary_metrics
             - '_preds' (np.ndarray): Binary predictions on test set
     """
+    
     X_train = data['x_train']
     y_train = data['y_train']
     X_test = data['x_test']

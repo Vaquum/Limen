@@ -10,7 +10,7 @@ import loop.sfm.model.ridge
 
 
 def params():
-    """Parameter space for the experiment."""
+
     return {
         # Data preparation parameters
         'shift': [-1],
@@ -50,10 +50,6 @@ def params():
 
 
 def manifest():
-    """
-    Complete pipeline specification using reusable model function.
-    The model function is imported and configured through the manifest.
-    """
     
     return (Manifest()
         .set_split_config(6, 2, 2)

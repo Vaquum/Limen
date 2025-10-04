@@ -19,6 +19,7 @@ def model(data,
           n_jobs=1,
           pred_threshold=0.5,
           **kwargs):
+    
     """
     Train Ridge classifier with optional calibration.
 
@@ -42,14 +43,13 @@ def model(data,
             - All metrics from binary_metrics
             - '_preds' (np.ndarray): Binary predictions on test set
     """
-    # Extract data
+
     X_train = data['x_train']
     y_train = data['y_train']
     X_val = data['x_val']
     y_val = data['y_val']
     X_test = data['x_test']
 
-    # Initialize Ridge classifier
     clf = RidgeClassifier(
         alpha=alpha,
         tol=tol,
@@ -60,10 +60,8 @@ def model(data,
         solver=solver
     )
 
-    # Train base model
     clf.fit(X_train, y_train)
 
-    # Apply calibration if requested
     if use_calibration:
         calibrator = CalibratedClassifierCV(
             clf,
