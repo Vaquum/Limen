@@ -313,3 +313,9 @@ data mismatch
 # V1.19.2 on 24th of September 2025
 - Refactor datetime alignment to work with manifest based bar data.
 - Fix `snippets/test_explorer_locally.py` to work with manifest based logreg.
+
+# V1.20.0 on 4th of October 2025
+- Refactor `loop.manifest`, `loop.universal_experiment_loop`, `loop.log` to remove prep() and model() functions
+- Add `loop.sfm.model` that contains sfm model files
+- Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
+- Update `loop.test.test_sfm` to support latest Manifest approach
