@@ -7,6 +7,7 @@ import polars as pl
 import loop
 from loop import sfm
 from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
+# from loop.tests.utils.get_data import get_klines_data_small
 
 
 def get_klines_data_fast():
@@ -63,11 +64,12 @@ def test_sfm():
         (sfm.reference.random, get_klines_data_fast, True, False),
         (sfm.reference.xgboost, get_klines_data_fast, False, False),
         (sfm.reference.logreg, get_klines_data_fast, True, True),
-        (sfm.logreg.regime_multiclass, get_klines_data_large, False, False),  # Re-enabled with large dataset
-        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, False, False),  # Re-enabled with large dataset
-        (sfm.reference.lightgbm, get_klines_data_large, False, False),  # Re-enabled with large dataset for class diversity
-        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, False, False),  # Re-enabled with large dataset for class diversity
-        # (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, False, False),  # Re-enabled with large dataset for class diversity
+        (sfm.logreg.regime_multiclass, get_klines_data_large, False, False), 
+        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, False, False), 
+        (sfm.reference.lightgbm, get_klines_data_large, False, False),
+        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, False, False),
+        # Enabling this is pushing the time from 30s to 260s 
+        # (sfm.lightgbm.tradeline_multiclass, get_klines_data_small, True, False),
         (sfm.rules_based.momentum_volatility_longonly, get_klines_data_small_fast, True, False),
         (sfm.rules_based.momentum_volatility, get_klines_data_small_fast, True, False),
         (sfm.ridge.ridge_classifier, get_klines_data_fast, True, False)
