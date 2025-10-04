@@ -33,7 +33,7 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
-    #test_moving_average_correction,
+    # test_moving_average_correction,
     test_account_conviction,
     test_backtest_conviction,
     test_polars_lazy_evaluation_correctness,
@@ -42,8 +42,6 @@ tests = [
 
 setup_cleanup_handlers()
 
-test_results = []
-
 for test in tests:
 
     try:
@@ -51,33 +49,15 @@ for test in tests:
         test()
         end_time = time.time()
         duration = end_time - start_time
-        test_results.append((test.__name__, 'PASSED', duration))
         print(f'    ✅ {test.__name__}: PASSED ({duration:.3f}s)')
 
     except Exception as e:
         end_time = time.time()
         duration = end_time - start_time
-        test_results.append((test.__name__, 'FAILED', duration))
         print(f'    ❌ {test.__name__}: FAILED ({duration:.3f}s) - {e}')
-
-        with open('test_results.txt', 'w') as f:
-            f.write('Test Results\n')
-            f.write('=' * 50 + '\n')
-            for name, status, dur in test_results:
-                f.write(f'{name}: {status} ({dur:.3f}s)\n')
 
         cleanup_csv_files()
         traceback.print_exc()
         sys.exit(1)
-
-with open('test_results.txt', 'w') as f:
-    f.write('Test Results\n')
-    f.write('=' * 50 + '\n')
-    total_time = 0
-    for name, status, duration in test_results:
-        f.write(f'{name}: {status} ({duration:.3f}s)\n')
-        total_time += duration
-    f.write('=' * 50 + '\n')
-    f.write(f'Total time: {total_time:.3f}s\n')
 
 cleanup_csv_files()
