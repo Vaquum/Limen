@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import polars as pl
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 
@@ -50,7 +51,7 @@ def create_test_data_dict():
     x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
     
     # Create datetime for test data
-    dt_test = pd.date_range('2023-01-01', periods=len(y_test), freq='1H')
+    dt_test = pd.date_range('2023-01-01', periods=len(y_test), freq='1h')
     
     return {
         'x_train': x_train,
@@ -127,11 +128,11 @@ def test_confidence_filtering_system():
     
     # Basic checks
     assert isinstance(results, dict)
-    assert isinstance(df_results, pd.DataFrame)
+    assert isinstance(df_results, pl.DataFrame)
     assert isinstance(calibration_stats, dict)
-    
+
     # Check DataFrame structure
-    expected_columns = ['datetime', 'prediction', 'uncertainty', 'is_confident', 
+    expected_columns = ['datetime', 'prediction', 'uncertainty', 'is_confident',
                        'confidence_threshold', 'actual_value', 'confidence_score']
     for col in expected_columns:
         assert col in df_results.columns

@@ -4,8 +4,8 @@ from typing import List
 
 
 from loop.utils.random_slice import random_slice
-from loop.features.lag_column import lag_column
-from loop.features.lag_range import lag_range
+from loop.features.lagged_features import lag_column
+from loop.features.lagged_features import lag_range
 
 from loop.utils.breakout_labeling import to_average_price_klines, compute_htf_features, build_breakout_flags
 

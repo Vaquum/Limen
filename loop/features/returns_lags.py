@@ -1,5 +1,5 @@
 import polars as pl
-from loop.features.lag_range import lag_range
+from loop.features.lagged_features import lag_range
 
 
 def returns_lags(data: pl.DataFrame, max_lag: int = 24, returns_col: str = 'returns') -> pl.DataFrame:

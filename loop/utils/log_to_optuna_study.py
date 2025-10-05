@@ -25,10 +25,10 @@ def log_to_optuna_study(experiment_log: object, params: object, objective: str) 
     
     param_cols = list(params.keys())
     
-    for _, row in experiment_log.to_pandas().iterrows():
-        
+    for row in experiment_log.iter_rows(named=True):
+
         params_dict = {c: row[c] for c in param_cols}
-        
+
         trial = create_trial(params = params_dict,
                              distributions = distributions,
                              value = row[objective],
