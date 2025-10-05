@@ -2,6 +2,7 @@ import polars as pl
 
 
 def time_features(df: pl.DataFrame) -> pl.DataFrame:
+
     '''
     Compute hour and minute features from datetime column.
     
@@ -9,7 +10,7 @@ def time_features(df: pl.DataFrame) -> pl.DataFrame:
         df (pl.DataFrame): Klines dataset with 'datetime' column
         
     Returns:
-        pl.DataFrame: The input data with new columns 'hour', 'minute','weekday'
+        pl.DataFrame: The input data with new columns 'hour', 'minute', 'weekday'
     '''
     
     return df.with_columns([
