@@ -317,7 +317,7 @@ data mismatch
 # V1.19.3 on 30th of September 2025
 - Refactor `sfm.reference.random` to use manifest system
 - Refactor `sfm.reference.lightgbm` to use manifest system
-- Add `features.lagged_features` to consilidate all lagged features with vectorized Polars implementations
+- Add `features.lagged_features` to consolidate all lagged features with vectorized Polars implementations
 - Remove pandas dependency from `utils.log_to_optuna_study` and `utils.confidence_filtering_system`
 - Refactor `utils.add_breakout_ema` to pure Polars implementation
 - Update `docs/Features.md` with consolidated lagged features documentation under single section
