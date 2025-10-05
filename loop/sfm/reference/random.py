@@ -4,6 +4,7 @@ import polars as pl
 from loop.metrics.binary_metrics import binary_metrics
 from loop.manifest import Manifest
 
+
 def manifest():
     return (Manifest()
         .set_split_config(3, 1, 1)
@@ -18,6 +19,7 @@ def manifest():
             .add_transform(lambda data: data[:-100])
             .done()
     )
+
 
 def params(): 
 

@@ -16,6 +16,7 @@ from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
 
+
 def manifest():
     return (Manifest()
         .set_split_config(8, 1, 2)
