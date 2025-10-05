@@ -7,8 +7,6 @@ import polars as pl
 import loop
 from loop import sfm
 from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
-# from loop.tests.utils.get_data import get_klines_data_small
-
 
 def get_klines_data_fast():
     '''
@@ -63,12 +61,12 @@ def test_sfm():
 
     tests = [
         # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log, uses_manifest
-        (sfm.reference.random, get_klines_data_fast, True, False),
+        (sfm.reference.random, get_klines_data_fast, True, True),
         (sfm.reference.xgboost, get_klines_data_fast, False, False),
         (sfm.reference.logreg, get_klines_data_fast, True, True),
         (sfm.logreg.regime_multiclass, get_klines_data_large, False, False),
         (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, False, False),
-        (sfm.reference.lightgbm, get_klines_data_large, False, False),
+        (sfm.reference.lightgbm, get_klines_data_large, True, True),
         (sfm.lightgbm.tradeable_regressor, get_klines_data_large, False, False),
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True, False),
         (sfm.rules_based.momentum_volatility_longonly,
