@@ -39,7 +39,7 @@ def manifest():
             pl.col('liquidity_sum').ewm_mean(span=10).alias('liq_ewm_10')
         ]))
         .add_feature(lag_range_cols,
-            cols=['datetime', 'liquidity_sum', 'hour', 'minute', 'weekday',
+            cols=['liquidity_sum', 'hour', 'minute', 'weekday',
                   'liquidity_sum_sma_3', 'liq_ewm_5', 'liq_ewm_10'],
             start=1,
             end=LOOKBACK_WINDOW_SIZE)
