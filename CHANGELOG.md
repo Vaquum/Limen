@@ -319,3 +319,11 @@ data mismatch
 - Add `loop.sfm.model` that contains sfm model files
 - Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
 - Update `loop.test.test_sfm` to support latest Manifest approach
+
+# V1.20.1 on 6th of October 2025
+- Refactor `sfm.reference.random` to use manifest system
+- Refactor `sfm.reference.lightgbm` to use manifest system
+- Add `features.lagged_features` to consolidate all lagged features with vectorized Polars implementations
+- Remove pandas dependency from `utils.log_to_optuna_study` and `utils.confidence_filtering_system`
+- Refactor `utils.add_breakout_ema` to pure Polars implementation
+- Update `docs/Features.md` with consolidated lagged features documentation under single section

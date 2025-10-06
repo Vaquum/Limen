@@ -1,5 +1,5 @@
 import polars as pl
-from loop.features.lag_range import lag_range
+from loop.features.lagged_features import lag_range
 
 
 def _breakout_lags(data: pl.DataFrame,
