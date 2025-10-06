@@ -14,6 +14,7 @@ from loop.manifest import Manifest
 from loop.data import compute_data_bars
 import loop.sfm.model.logreg
 
+
 def manifest():
     
     return (Manifest()

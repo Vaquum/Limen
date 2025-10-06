@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+import polars as pl
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
@@ -171,7 +171,7 @@ def confidence_filtering_system(models: list, data: dict, target_confidence: flo
     )
     
     # Step 3: Create detailed results DataFrame
-    df_results = pd.DataFrame({
+    df_results = pl.DataFrame({
         'datetime': data['dt_test'],
         'prediction': results['predictions'],
         'uncertainty': results['uncertainty'],
@@ -179,11 +179,13 @@ def confidence_filtering_system(models: list, data: dict, target_confidence: flo
         'confidence_threshold': confidence_threshold,
         'actual_value': data['y_test'],
     })
-    
+
     # Add confidence scores (higher = more confident)
-    df_results['confidence_score'] = 1 / (1 + results['uncertainty'])
+    df_results = df_results.with_columns([
+        (1 / (1 + pl.col('uncertainty'))).alias('confidence_score')
+    ])
     
     # Sort by confidence score (most confident first)
-    df_results = df_results.sort_values('confidence_score', ascending=False)
+    df_results = df_results.sort('confidence_score', descending=True)
     
     return results, df_results, calibration_stats

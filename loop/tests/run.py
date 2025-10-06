@@ -1,4 +1,5 @@
 import sys
+import time
 import traceback
 
 from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
@@ -32,7 +33,7 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
-    #test_moving_average_correction,
+    # test_moving_average_correction,
     test_account_conviction,
     test_backtest_conviction,
     test_polars_lazy_evaluation_correctness,
@@ -42,13 +43,19 @@ tests = [
 setup_cleanup_handlers()
 
 for test in tests:
-    
+
     try:
+        start_time = time.time()
         test()
-        print(f'    ✅ {test.__name__}: PASSED')
-    
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f'    ✅ {test.__name__}: PASSED ({duration:.3f}s)')
+
     except Exception as e:
-        print(f'    ❌ {test.__name__}: FAILED - {e}')
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f'    ❌ {test.__name__}: FAILED ({duration:.3f}s) - {e}')
+
         cleanup_csv_files()
         traceback.print_exc()
         sys.exit(1)

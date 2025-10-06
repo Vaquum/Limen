@@ -314,6 +314,14 @@ data mismatch
 - Refactor datetime alignment to work with manifest based bar data.
 - Fix `snippets/test_explorer_locally.py` to work with manifest based logreg.
 
+# V1.19.3 on 30th of September 2025
+- Refactor `sfm.reference.random` to use manifest system
+- Refactor `sfm.reference.lightgbm` to use manifest system
+- Add `features.lagged_features` to consolidate all lagged features with vectorized Polars implementations
+- Remove pandas dependency from `utils.log_to_optuna_study` and `utils.confidence_filtering_system`
+- Refactor `utils.add_breakout_ema` to pure Polars implementation
+- Update `docs/Features.md` with consolidated lagged features documentation under single section
+
 # V1.20.0 on 4th of October 2025
 - Refactor `loop.manifest`, `loop.universal_experiment_loop`, `loop.log` to remove prep() and model() functions
 - Add `loop.sfm.model` that contains sfm model files
