@@ -85,9 +85,16 @@ def test_sfm():
 
             experiment_name = uuid.uuid4().hex[:8]
 
-            uel.run(experiment_name=experiment_name,
-                    n_permutations=2,
-                    prep_each_round=test[2])
+            if test[3]:
+                manifest = test[0].manifest()
+                uel.run(experiment_name=experiment_name,
+                        n_permutations=2,
+                        prep_each_round=test[2],
+                        manifest=manifest)
+            else:
+                uel.run(experiment_name=experiment_name,
+                        n_permutations=2,
+                        prep_each_round=test[2])
 
             print(f'    ✅ {test[0].__name__}: PASSED')
 
