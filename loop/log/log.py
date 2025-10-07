@@ -66,27 +66,6 @@ class Log:
         else:
             self.inverse_scaler = None
 
-    def _get_round_data(self, round_id: int) -> dict:
-
-        '''
-        Get prepared data for a specific round.
-        
-        Args:
-            round_id (int): Round ID
-            
-        Returns:
-            dict: Prepared data dictionary
-        '''
-
-        try:
-            if self.manifest:
-                round_data = self.prep(self.data, self.round_params[round_id])
-            else:
-                round_data = self.prep(self.data, round_params=self.round_params[round_id])
-        except TypeError:
-            round_data = self.prep(self.data)
-        
-        return round_data
 
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
 
