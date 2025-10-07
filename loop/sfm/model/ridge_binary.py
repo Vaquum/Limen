@@ -5,23 +5,23 @@ from sklearn.calibration import CalibratedClassifierCV
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def model(data,
-          alpha=1.0,
-          tol=0.0001,
-          class_weight=None,
-          max_iter=None,
-          random_state=None,
-          fit_intercept=True,
-          solver='auto',
-          use_calibration=True,
-          calibration_method='sigmoid',
-          calibration_cv=3,
-          n_jobs=1,
-          pred_threshold=0.5,
-          **kwargs):
-    
-    """
-    Train Ridge classifier with optional calibration.
+def ridge_binary(data,
+                 alpha=1.0,
+                 tol=0.0001,
+                 class_weight=None,
+                 max_iter=None,
+                 random_state=None,
+                 fit_intercept=True,
+                 solver='auto',
+                 use_calibration=True,
+                 calibration_method='sigmoid',
+                 calibration_cv=3,
+                 n_jobs=-1,
+                 pred_threshold=0.5,
+                 **kwargs):
+
+    '''
+    Execute Ridge binary classification with optional calibration, training and evaluation.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
@@ -39,16 +39,8 @@ def model(data,
         **kwargs: Additional parameters (ignored)
 
     Returns:
-        dict: Dictionary containing:
-            - All metrics from binary_metrics
-            - '_preds' (np.ndarray): Binary predictions on test set
-    """
-
-    X_train = data['x_train']
-    y_train = data['y_train']
-    X_val = data['x_val']
-    y_val = data['y_val']
-    X_test = data['x_test']
+        dict: Results with binary metrics and predictions
+    '''
 
     clf = RidgeClassifier(
         alpha=alpha,
@@ -60,7 +52,7 @@ def model(data,
         solver=solver
     )
 
-    clf.fit(X_train, y_train)
+    clf.fit(data['x_train'], data['y_train'])
 
     if use_calibration:
         calibrator = CalibratedClassifierCV(
@@ -69,9 +61,12 @@ def model(data,
             cv=calibration_cv,
             n_jobs=n_jobs
         )
-        calibrator.fit(X_val, y_val)
+        calibrator.fit(data['x_val'], data['y_val'])
+        y_proba = calibrator.predict_proba(data['x_test'])[:, 1]
+    else:
+        y_proba = clf.decision_function(data['x_test'])
+        y_proba = 1 / (1 + np.exp(-y_proba))
 
-    y_proba = calibrator.predict_proba(X_test)[:, 1]
     y_pred = (y_proba >= pred_threshold).astype(np.int8)
 
     round_results = binary_metrics(data, y_pred, y_proba)

@@ -3,24 +3,24 @@ from sklearn.linear_model import LogisticRegression
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def model(data,
-          solver='auto',
-          penalty='l2',
-          dual=False,
-          tol=0.0001,
-          C='C',
-          fit_intercept=True,
-          intercept_scaling=1,
-          class_weight=None,
-          random_state=None,
-          max_iter=None, 
-          verbose=0,
-          warm_start=False,
-          n_jobs=1,
-          **kwargs):
-    
-    """
-    Train Ridge classifier with optional calibration.
+def logreg_binary(data,
+                  solver='lbfgs',
+                  penalty='l2',
+                  dual=False,
+                  tol=0.0001,
+                  C=1.0,
+                  fit_intercept=True,
+                  intercept_scaling=1,
+                  class_weight=None,
+                  random_state=None,
+                  max_iter=100,
+                  verbose=0,
+                  warm_start=False,
+                  n_jobs=-1,
+                  **kwargs):
+
+    '''
+    Execute logistic regression binary classification with training and evaluation.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
@@ -40,14 +40,8 @@ def model(data,
         **kwargs: Additional parameters (ignored)
 
     Returns:
-        dict: Dictionary containing:
-            - All metrics from binary_metrics
-            - '_preds' (np.ndarray): Binary predictions on test set
-    """
-    
-    X_train = data['x_train']
-    y_train = data['y_train']
-    X_test = data['x_test']
+        dict: Results with binary metrics and predictions
+    '''
 
     clf = LogisticRegression(
         solver=solver,
@@ -65,10 +59,10 @@ def model(data,
         n_jobs=n_jobs,
     )
 
-    clf.fit(X_train, y_train)
+    clf.fit(data['x_train'], data['y_train'])
 
-    preds = clf.predict(X_test)
-    probs = clf.predict_proba(X_test)[:, 1]
+    preds = clf.predict(data['x_test'])
+    probs = clf.predict_proba(data['x_test'])[:, 1]
 
     round_results = binary_metrics(data, preds, probs)
     round_results['_preds'] = preds

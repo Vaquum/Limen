@@ -12,7 +12,7 @@ from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
-import loop.sfm.model.logreg
+from loop.sfm.model import logreg_binary
 
 
 def manifest():
@@ -47,24 +47,7 @@ def manifest():
 
         .set_scaler(LogRegTransform)
 
-        .with_model()
-            .set_model_function(
-                loop.sfm.model.logreg.model,
-                solver='solver',
-                penalty='penalty',
-                dual=False,
-                tol='tol',
-                C='C',
-                fit_intercept=True,
-                intercept_scaling=1,
-                class_weight='class_weight',
-                max_iter='max_iter',
-                random_state=None,
-                verbose=0,
-                warm_start=False,
-                n_jobs=None,
-            )
-            .done()
+        .with_model(logreg_binary)
     )
 
 
