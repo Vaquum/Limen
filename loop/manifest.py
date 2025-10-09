@@ -280,6 +280,8 @@ class Manifest:
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
 
+            data = data.drop_nulls()
+
             data, all_fitted_params = _apply_scaler(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
