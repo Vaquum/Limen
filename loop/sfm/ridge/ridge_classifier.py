@@ -6,7 +6,7 @@ from loop.features import atr_percent_sma, ichimoku_cloud, close_position, dista
 from loop.indicators import roc, ppo, rolling_volatility, wilder_rsi
 from loop.transforms.linear_transform import LinearTransform
 from loop.utils.shift_column import shift_column
-import loop.sfm.model.ridge
+from loop.sfm.model import ridge_binary
 
 
 def params():
@@ -87,23 +87,7 @@ def manifest():
 
         # Scaler
         .set_scaler(LinearTransform)
-        
+
         # Model
-        .with_model()
-            .set_model_function(
-                loop.sfm.model.ridge.model,
-                alpha='alpha',
-                tol='tol',
-                class_weight='class_weight',
-                max_iter='max_iter',
-                random_state='random_state',
-                fit_intercept='fit_intercept',
-                solver='solver',
-                use_calibration='use_calibration',
-                calibration_method='calibration_method',
-                calibration_cv='calibration_cv',
-                n_jobs='n_jobs',
-                pred_threshold='pred_threshold'
-            )
-            .done()
+        .with_model(ridge_binary)
     )

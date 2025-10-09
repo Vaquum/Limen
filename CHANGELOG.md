@@ -322,8 +322,8 @@ data mismatch
 - Refactor `utils.add_breakout_ema` to pure Polars implementation
 - Update `docs/Features.md` with consolidated lagged features documentation under single section
 
-# V1.19.4 on 6th of October 2025
+# V1.19.4 on 9th of October 2025
 - Refactor `loop.manifest`, `loop.universal_experiment_loop`, `loop.log` to remove prep() and model() functions
 - Add `loop.sfm.model` that contains sfm model files
 - Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
-- Update `loop.test.test_sfm` to support latest Manifest approach
+- Update `loop.test.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.

@@ -15,7 +15,7 @@ Raw data is split into train/validation/test sets first, then each split undergo
 The manifest uses a fluent interface for configuration:
 
 ```python
-from loop.sfm.model.ridge import model as ridge_model
+from loop.sfm.model import ridge_binary
 
 manifest = (Manifest()
     .set_split_config(8, 1, 2)
@@ -28,9 +28,7 @@ manifest = (Manifest()
             .with_params(col='roc', cutoff='_cutoff')
         .done()
     .set_scaler(StandardScaler)
-    .with_model()
-        .set_model_function(ridge_model, alpha='alpha', use_calibration='use_calibration')
-        .done()
+    .with_model(ridge_binary)
 )
 ```
 
@@ -147,11 +145,34 @@ Set the scaler/transform class for data preprocessing.
 
 ### `with_model`
 
-Begin model configuration. Returns a `ModelBuilder` for chained model setup.
+Configure model function for training and evaluation.
+
+#### Args
+
+| Parameter        | Type       | Description                                  |
+|------------------|------------|----------------------------------------------|
+| `model_function` | `Callable` | Model function that takes (data, **params)   |
 
 #### Returns
 
-`ModelBuilder`: Builder for model configuration
+`Manifest`: Self for method chaining
+
+#### Note
+
+The model function should accept data dict and return results dict with metrics and predictions. Parameters are auto-mapped from round_params based on model function signature.
+
+#### Example
+
+```python
+from loop.sfm.model import logreg_binary, ridge_binary
+
+# Simple usage - parameters auto-detected
+.with_model(logreg_binary)
+
+# Parameters in round_params override model function defaults
+# Parameters not in round_params use model function defaults
+.with_model(ridge_binary)
+```
 
 ### `prepare_data`
 
@@ -179,7 +200,7 @@ Execute the complete data preparation pipeline with Universal Split-First archit
 
 ### `run_model`
 
-Execute model training and evaluation using configured model function.
+Execute model training and evaluation using configured model function with auto-parameter mapping.
 
 #### Args
 
@@ -192,47 +213,17 @@ Execute model training and evaluation using configured model function.
 
 `dict`: Results including predictions, metrics, and model artifacts
 
-## `ModelBuilder`
+#### Auto-Parameter Mapping
 
-Helper class for building model configuration with reusable model functions.
+The `run_model` method automatically maps parameters from `round_params` to the model function signature:
 
-### `set_model_function`
+1. Inspects model function signature using `inspect.signature()`
+2. For each parameter in the model function:
+   - If parameter exists in `round_params`, use that value
+   - Otherwise, use the model function's default value
+3. Passes resolved parameters to model function
 
-Configure the model function and its parameters.
-
-#### Args
-
-| Parameter     | Type       | Description                                  |
-|---------------|------------|----------------------------------------------|
-| `func`        | `Callable` | Model function from `loop.sfm.model`         |
-| `**params`    | `dict`     | Parameter mappings (resolved from round_params) |
-
-#### Returns
-
-`ModelBuilder`: Self for method chaining
-
-#### Example
-
-```python
-from loop.sfm.model.ridge import model as ridge_model
-
-.with_model()
-    .set_model_function(
-        ridge_model,
-        alpha='alpha',              # Resolved from round_params['alpha']
-        use_calibration='use_calibration',
-        pred_threshold='pred_threshold'
-    )
-    .done()
-```
-
-### `done`
-
-Complete model configuration and return to main manifest.
-
-#### Returns
-
-`Manifest`: Parent manifest for continued chaining
+This eliminates the need to manually specify parameter mappings in the manifest.
 
 ## `TargetBuilder`
 
@@ -312,35 +303,55 @@ Set parameters for the transform function.
 
 ## Model Functions
 
-Model functions are reusable training functions stored in `loop/sfm/model/` that follow a standard contract.
+Model functions are complete ML pipeline functions stored in `loop/sfm/model/` that encapsulate training, validation, testing, calibration, and metrics computation. Each model function combines an algorithm + metrics + configuration into a reusable unit.
+
+### Available Model Functions
+
+- `logreg_binary`: Logistic regression with binary classification metrics
+- `ridge_binary`: Ridge classifier with optional calibration and binary metrics
+
+Import via:
+```python
+from loop.sfm.model import logreg_binary, ridge_binary
+```
 
 ### Model Function Contract
 
 All model functions must follow this signature:
 
 ```python
-def model(data: dict, **model_params) -> dict:
+def model_name(data: dict, param1=default1, param2=default2, **kwargs) -> dict:
     """
-    Train a model and return predictions.
-    
+    Execute complete ML pipeline: train on train set, validate on val set,
+    predict on test set, compute metrics.
+
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-        **model_params: Model-specific parameters (resolved from round_params)
-        
+        param1: Model-specific parameter with default value
+        param2: Another parameter with default value
+        **kwargs: Additional parameters (ignored)
+
     Returns:
         dict: Dictionary containing:
-            - All metrics from selected metrics
-            - '_preds' (np.ndarray): Binary predictions on test set
+            - All metrics computed on test set
+            - '_preds' (np.ndarray): Predictions on test set
     """
     pass
 ```
+
+### Parameter Resolution
+
+Parameters are automatically resolved from `round_params`:
+- If parameter exists in `round_params`, that value is used
+- Otherwise, the model function's default value is used
+- This allows single source of truth for parameter defaults
 
 ## Integration with SFM
 
 The manifest approach uses only `params()` and `manifest()` functions:
 
 ```python
-from loop.sfm.model.ridge import model as ridge_model
+from loop.sfm.model import ridge_binary
 
 def params():
     return {
@@ -355,18 +366,12 @@ def manifest():
         .add_indicator(roc, period='roc_period')
         .with_target('quantile_flag')
             .add_fitted_transform(quantile_flag)
-                .fit_param('_cutoff', compute_quantile_cutoff, 
+                .fit_param('_cutoff', compute_quantile_cutoff,
                           col='roc_{roc_period}', q=0.85)
                 .with_params(col='roc_{roc_period}', cutoff='_cutoff')
             .done()
         .set_scaler(StandardScaler)
-        .with_model()
-            .set_model_function(
-                ridge_model,
-                alpha='alpha',
-                use_calibration='use_calibration'
-            )
-            .done()
+        .with_model(ridge_binary)
     )
 ```
 
@@ -376,11 +381,12 @@ UEL automatically detects whether to use manifest or legacy mode:
 
 ```python
 import loop
+import loop.sfm.ridge.ridge_classifier as ridge_classifier
 
 # Create UEL - auto-detects manifest mode
 uel = loop.UniversalExperimentLoop(
     data=data,
-    single_file_model=sfm.ridge.classifier
+    single_file_model=ridge_classifier
 )
 
 # Run experiment
@@ -399,6 +405,7 @@ print(uel.experiment_backtest_results)
 from loop.manifest import Manifest
 from loop.features import quantile_flag, compute_quantile_cutoff
 from loop.indicators import roc
+from loop.sfm.model import ridge_binary
 
 def manifest():
     def shift_transform(data, shift, target_column):
@@ -417,16 +424,7 @@ def manifest():
             .add_transform(shift_transform, shift='shift', target_column='target_column')
             .done()
         .set_scaler(LogRegTransform)
-        .with_model()
-            .set_model_function(
-                ridge_model,
-                alpha='alpha',
-                use_calibration='use_calibration',
-                calibration_method='calibration_method',
-                calibration_cv='calibration_cv',
-                pred_threshold='pred_threshold'
-            )
-            .done()
+        .with_model(ridge_binary)
     )
 
 def params():
@@ -435,5 +433,10 @@ def params():
         'roc_period': [1, 4, 12],
         'q': [0.35, 0.41, 0.47],
         'shift': [-1, -2, -3],
+        'alpha': [1.0, 5.0, 10.0],
+        'use_calibration': [True, False],
+        'calibration_method': ['sigmoid', 'isotonic'],
+        'calibration_cv': [3, 5],
+        'pred_threshold': [0.5, 0.55, 0.6]
     }
 ```

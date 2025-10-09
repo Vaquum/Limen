@@ -14,33 +14,20 @@ class UniversalExperimentLoop:
 
     def __init__(self,
                  data,
-                 single_file_model=None,
-                 manifest=None):
-        
+                 single_file_model):
+
         '''
-        Initializes the UniversalExperimentLoop.
-        
+        Initialize the UniversalExperimentLoop.
+
         Args:
-            data (pl.DataFrame): The data to use for the experiment.
-            single_file_model (SingleFileModel or module, optional): Legacy single file model or manifest-based module
-            manifest (Manifest, optional): Manifest-based configuration (overrides single_file_model.manifest if present)
+            data (pl.DataFrame): The data to use for the experiment
+            single_file_model (SingleFileModel): The single file model to use for the experiment
         '''
 
         self.data = data
-        self.manifest = manifest
-        
-        if hasattr(single_file_model, 'manifest') and callable(single_file_model.manifest):
-            self.manifest = single_file_model.manifest()
-            self.model = None
-            self.prep = self.manifest.prepare_data
-            self.params = single_file_model.params()
-        elif hasattr(single_file_model, 'model'):
-            self.model = single_file_model.model
-            self.params = single_file_model.params()
-            self.prep = single_file_model.prep
-        else:
-            raise ValueError("single_file_model must have either 'manifest' or 'model' attribute")
-        
+        self.model = getattr(single_file_model, 'model', None)
+        self.params = single_file_model.params()
+        self.prep = getattr(single_file_model, 'prep', None)
         self.extras = []
         self.models = []
 
@@ -54,22 +41,29 @@ class UniversalExperimentLoop:
             save_to_sqlite=False,
             params=None,
             prep=None,
-            model=None):
+            model=None,
+            manifest=None):
         
         '''
         Run the experiment `n_permutations` times.
 
+        NOTE: If you want to use a custom `params` or `prep` or `model`
+        function, you can pass them as arguments and permanently change
+        `single_file_model` for that part. Make sure that the inputs and
+        returns are same as the ones outlined in `docs/Single-File-Model.md`.
+
         Args:
-            experiment_name (str): The name of the experiment.
-            n_permutations (int): The number of permutations to run.
-            prep_each_round (bool): Whether to use `prep` for each round or just first.
-            random_search (bool): Whether to use random search or not.
-            maintain_details_in_params (bool): Whether to maintain experiment details in params.
-            context_params (dict): The context parameters to use for the experiment.
-            save_to_sqlite (bool): Whether to save the results to a SQLite database.
-            params (dict or function): The parameters to use for the experiment.
-            prep (function): The function to use to prepare the data.
-            model (function): The function to use to run the model.
+            experiment_name (str): The name of the experiment
+            n_permutations (int): The number of permutations to run
+            prep_each_round (bool): Whether to use `prep` for each round or just first
+            random_search (bool): Whether to use random search or not
+            maintain_details_in_params (bool): Whether to maintain experiment details in params
+            context_params (dict): The context parameters to use for the experiment
+            save_to_sqlite (bool): Whether to save the results to a SQLite database
+            params (dict): The parameters to use for the experiment
+            prep (function): The function to use to prepare the data
+            model (function): The function to use to run the model
+            manifest (Manifest, optional): Manifest based configuration for single-file-model
 
         Returns:
             pl.DataFrame: The results of the experiment
@@ -84,29 +78,30 @@ class UniversalExperimentLoop:
         if save_to_sqlite is True:
             self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
-        # Handle params override
         if params is not None:
-            if callable(params):
-                self.params = params()
-            else:
-                self.params = params
-        
-        # Validate params are available
-        if self.params is None:
-            raise ValueError("params must be provided either in initialization or run() call")
-        
-        # Handle prep override
+            self.params = params()
+
         if prep is not None:
             self.prep = prep
-        
-        # Handle model override (for legacy mode)
+
         if model is not None:
             self.model = model
+
+        self.manifest = manifest
+
+        # Full manifest mode - auto-generate prep and model from manifest
+        if manifest and hasattr(manifest, 'model_function') and manifest.model_function:
+            if self.prep is None:
+                self.prep = lambda data, round_params, manifest: manifest.prepare_data(data, round_params)
+            if self.model is None:
+                self.model = lambda data, round_params: manifest.run_model(data, round_params)
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
         
         for i in tqdm(range(n_permutations)):
+
+            # Start counting execution_time
             start_time = time.time()
 
             # Generate the parameter values for the current round
@@ -122,22 +117,26 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            # Data preparation
+            # Always prep data with round_params passed in
             if prep_each_round is True:
-                data_dict = self.prep(self.data, round_params)
-            elif i == 0:
                 if self.manifest:
-                    data_dict = self.prep(self.data)
+                    data_dict = self.prep(
+                        self.data,
+                        round_params=round_params,
+                        manifest=self.manifest)
                 else:
-                    data_dict = self.prep(self.data)
+                    data_dict = self.prep(self.data, round_params=round_params)
 
-            # Model execution
-            if self.manifest and self.manifest.model_function:
-                round_results = self.manifest.run_model(data_dict, round_params)
-            elif self.model:
-                round_results = self.model(data=data_dict, round_params=round_params)
+            # Otherwise, only for the first round, prep data without round_params passed in
             else:
-                raise ValueError("No model function configured")
+                if i == 0:
+                    if manifest:
+                        data_dict = self.prep(self.data, manifest=manifest)
+                    else:
+                        data_dict = self.prep(self.data)
+
+            # Perform the model training and evaluation
+            round_results = self.model(data=data_dict, round_params=round_params)
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:

@@ -60,7 +60,7 @@ def get_klines_data_small_fast():
 def test_sfm():
 
     tests = [
-        # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log
+        # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log, uses_manifest
         (sfm.reference.random, get_klines_data_fast, True, True),
         (sfm.reference.xgboost, get_klines_data_fast, False, False),
         (sfm.reference.logreg, get_klines_data_fast, True, True),
@@ -85,9 +85,16 @@ def test_sfm():
 
             experiment_name = uuid.uuid4().hex[:8]
 
-            uel.run(experiment_name=experiment_name,
-                    n_permutations=2,
-                    prep_each_round=test[2])
+            if test[3]:
+                manifest = test[0].manifest()
+                uel.run(experiment_name=experiment_name,
+                        n_permutations=2,
+                        prep_each_round=test[2],
+                        manifest=manifest)
+            else:
+                uel.run(experiment_name=experiment_name,
+                        n_permutations=2,
+                        prep_each_round=test[2])
 
             print(f'    ✅ {test[0].__name__}: PASSED')
 
