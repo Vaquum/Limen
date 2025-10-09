@@ -202,6 +202,7 @@ def build_sidebar(
 
             pivot_val  = st.selectbox('Pivot Value', num_cols)
             agg = st.selectbox('Aggregation', ['min', 'max', 'sum', 'mean', 'std', 'median', 'iqr', 'count'])
+            pivot_heatmap = st.checkbox('Render Pivot as Heatmap', value=False, key='pivot_heatmap')
 
         _tight_divider(sidebar_divider_gap_rem)
 
@@ -277,4 +278,5 @@ def build_sidebar(
         agg=agg,
         quantile_rows=quantile_rows,
         quantile_cols=quantile_cols,
+        pivot_heatmap=locals().get('pivot_heatmap', False),
     )

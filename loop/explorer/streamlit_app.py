@@ -356,6 +356,7 @@ _spacer(6.0)
 # ----------------
 show_pivot     = sidebar_state['show_pivot']
 pivot_val      = sidebar_state['pivot_val']
+pivot_heatmap  = sidebar_state.get('pivot_heatmap', False)
 if show_pivot and pivot_val:
     render_pivot_table(
         df_filt,
@@ -366,6 +367,7 @@ if show_pivot and pivot_val:
         quantile_rows=sidebar_state['quantile_rows'],
         quantile_cols=sidebar_state['quantile_cols'],
         quantile_bins_fn=quantile_bins_fixed,
+        as_heatmap=pivot_heatmap,
     )
 
 _spacer(6.0)

@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import streamlit as st
+import plotly.express as px
+import plotly.graph_objects as go
 
 def render_pivot_table(
     df_filt: pd.DataFrame,
@@ -14,6 +16,7 @@ def render_pivot_table(
     quantile_rows: bool,
     quantile_cols: bool,
     quantile_bins_fn,
+    as_heatmap: bool = False,
 ) -> None:
     '''
     Compute and render a pivot table with optional quantile binning.
@@ -93,5 +96,43 @@ def render_pivot_table(
     if row_header_prefix and idx:
         out = out.rename(columns={idx[0]: row_header_prefix})
 
-    st.subheader("Pivot table")
-    st.dataframe(out, use_container_width=True, hide_index=True)
+    title = "Pivot table rendered as heatmap" if as_heatmap and (pivot_rows or pivot_cols) else "Pivot table"
+    st.subheader(title)
+    if as_heatmap and (pivot_rows or pivot_cols):
+        # Build a 2D matrix for heatmap (requires at least rows or cols)
+        heat = pivot.copy()
+        # Ensure DataFrame shape for plotting
+        if isinstance(heat, pd.Series):
+            # If only columns present -> single row; if only rows present -> single col
+            if pivot_rows and not pivot_cols:
+                heat = heat.to_frame(name=pivot_val)
+            elif pivot_cols and not pivot_rows:
+                heat = heat.to_frame(name=pivot_val).T
+            else:
+                heat = heat.to_frame(name=pivot_val)
+
+        x_labels = [str(c) for c in heat.columns]
+        y_labels = [str(i) for i in heat.index]
+        z = heat.values
+
+        fig = go.Figure(data=go.Heatmap(
+            z=z,
+            x=x_labels,
+            y=y_labels,
+            colorscale=[
+                [0.0, "#C4E8F4"],
+                [0.16, "#FCE2EB"],
+                [0.33, "#EAA3C8"],
+                [0.5, "#DC65A6"],
+                [0.66, "#F16068"],
+                [0.83, "#BCABD3"],
+                [1.0, "#DDD941"],
+            ],
+            colorbar=dict(title=pivot_val),
+        ))
+        # Keep first row at top
+        fig.update_yaxes(autorange='reversed')
+        fig.update_layout(height=600, margin=dict(l=60, r=40, t=40, b=60))
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.dataframe(out, use_container_width=True, hide_index=True)
