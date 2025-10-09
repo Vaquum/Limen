@@ -128,12 +128,6 @@ class LinearTransform:
             else:
                 continue
 
-            # guard against bad values
-            if std is None or not math.isfinite(std) or std == 0:
-                std = 1.0
-            if mean is None or not math.isfinite(mean):
-                mean = 0.0
-
             self.means[col] = mean
             self.stds[col] = std
 
