@@ -57,7 +57,49 @@ def render_details_view(
         # Ensure Show Table remains selected when returning
         st.session_state['table_show'] = True
         st.rerun()
-    st.markdown("<div class='lux-subtle' style='margin:6px 0 14px;'>All values formatted for readability</div>", unsafe_allow_html=True)
+    # ---------- Subtitle: date range, bar interval, sample size ----------
+    def _format_timeresolution(td: pd.Timedelta | None) -> str:
+        if td is None or pd.isna(td):
+            return "N/A"
+        total_seconds = int(td.total_seconds())
+        if total_seconds <= 0:
+            return "N/A"
+        if total_seconds % 86400 == 0:
+            days = total_seconds // 86400
+            return f"{days}d"
+        if total_seconds % 3600 == 0:
+            hours = total_seconds // 3600
+            return f"{hours}h"
+        if total_seconds % 60 == 0:
+            minutes = total_seconds // 60
+            return f"{minutes}m"
+        return f"{total_seconds}s"
+
+    subtitle_parts: list[str] = ["All values formatted for readability"]
+
+    # Date range and inferred bar interval from 'datetime' column if present
+    if 'datetime' in df.columns:
+        try:
+            dt_series = pd.to_datetime(df['datetime'], utc=True, errors='coerce').dropna()
+            if not dt_series.empty:
+                dt_min = dt_series.min().tz_convert('UTC').tz_localize(None)
+                dt_max = dt_series.max().tz_convert('UTC').tz_localize(None)
+                subtitle_parts.append(f"Range: {dt_min:%Y-%m-%d} → {dt_max:%Y-%m-%d}")
+                # Use median difference as robust bar interval
+                diffs = dt_series.sort_values().diff().dropna()
+                bar_td = diffs.median() if not diffs.empty else None
+                subtitle_parts.append(f"Bar: {_format_timeresolution(bar_td)}")
+        except Exception:
+            pass
+
+    # Sample size (rows in df)
+    try:
+        subtitle_parts.append(f"Sample: {len(df):,}")
+    except Exception:
+        pass
+
+    subtitle_html = " \u00B7 ".join(subtitle_parts)
+    st.markdown(f"<div class='lux-subtle' style='margin:6px 0 14px;'>{subtitle_html}</div>", unsafe_allow_html=True)
 
     cols = st.columns(3)
     for i, (k, v) in enumerate(row.items()):
