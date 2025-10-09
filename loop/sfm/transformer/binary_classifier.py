@@ -470,7 +470,7 @@ def model(data, round_params):
     epochs = round_params['epochs']
     seed = round_params.get('seed', 42)
     label_smoothing = round_params.get('label_smoothing', 0.0)
-    early_stopping_patience = round_params.get('early_stopping_patience', 3)
+    # early_stopping_patience = round_params.get('early_stopping_patience', 3)
     seq_length = round_params['seq_length']
     use_rotary = round_params.get('positional_encoding_type', 'rotary') == 'rotary'
     pct_move_threshold = round_params['pct_move_threshold']
@@ -520,7 +520,7 @@ def model(data, round_params):
     # --- Train with early stopping ---
     callbacks = [
         EarlyStopping(
-            patience=early_stopping_patience,
+            # patience=early_stopping_patience,
             restore_best_weights=True,
             monitor='val_loss',
             verbose=0
