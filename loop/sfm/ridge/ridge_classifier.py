@@ -2,17 +2,30 @@
 'Long-Only Regime Binary Classifier Using Ridge Regression'
 
 from loop.manifest import Manifest
-from loop.features import atr_percent_sma, ichimoku_cloud, close_position, distance_from_high, distance_from_low, gap_high, price_range_position, range_pct, quantile_flag, trend_strength, volume_regime, compute_quantile_cutoff
-from loop.indicators import roc, ppo, rolling_volatility, wilder_rsi
+from loop.features import atr_percent_sma
+from loop.features import ichimoku_cloud
+from loop.features import close_position
+from loop.features import distance_from_high
+from loop.features import distance_from_low
+from loop.features import gap_high
+from loop.features import price_range_position
+from loop.features import range_pct
+from loop.features import quantile_flag
+from loop.features import trend_strength
+from loop.features import volume_regime
+from loop.features import compute_quantile_cutoff
+from loop.indicators import roc
+from loop.indicators import ppo
+from loop.indicators import rolling_volatility
+from loop.indicators import wilder_rsi
 from loop.transforms.linear_transform import LinearTransform
-from loop.utils.shift_column import shift_column
+from loop.utils import shift_column
 from loop.sfm.model import ridge_binary
 
 
 def params():
 
     return {
-        # Data preparation parameters
         'shift': [-1],
         'q': [0.32, 0.35, 0.37],
         'roc_period': [4],
@@ -32,8 +45,6 @@ def params():
         'trend_fast_period': [10, 20],
         'trend_slow_period': [50, 100],
         'lookback': [50, 100],
-        
-        # Model parameters (passed to ridge_model function)
         'alpha': [2.0, 5.0, 8.0],
         'max_iter': [400],
         'tol': [0.0001],
@@ -50,7 +61,7 @@ def params():
 
 
 def manifest():
-    
+
     return (Manifest()
         .set_split_config(6, 2, 2)
         

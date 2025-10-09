@@ -56,12 +56,14 @@ class FittedTransformBuilder:
     def fit_param(self, name: str, compute_func: Callable, **params) -> 'FittedTransformBuilder':
         
         self.fitted_params.append((name, compute_func, params))
+
         return self
 
     def with_params(self, **params) -> 'TargetBuilder':
         
         entry = (self.fitted_params, self.func, params)
         self.manifest.target_transforms.append(entry)
+
         return TargetBuilder(self.manifest, self.manifest.target_column)
 
 
@@ -87,6 +89,7 @@ class Manifest:
     def _add_transform(self, func: Callable, **params) -> 'Manifest':
 
         self.feature_transforms.append((func, params))
+
         return self
 
     def add_feature(self, func: Callable, **params) -> 'Manifest':
@@ -133,6 +136,7 @@ class Manifest:
         '''
 
         self.bar_formation = (func, params)
+
         return self
 
 
@@ -149,6 +153,7 @@ class Manifest:
         '''
 
         self.required_bar_columns = columns
+
         return self
 
     def set_split_config(self, train: int, val: int, test: int) -> 'Manifest':
@@ -166,6 +171,7 @@ class Manifest:
         '''
 
         self.split_config = (train, val, test)
+
         return self
 
     def set_scaler(self, transform_class, param_name: str = '_scaler') -> 'Manifest':
@@ -182,6 +188,7 @@ class Manifest:
         '''
 
         self.scaler = make_fitted_scaler(param_name, transform_class)
+
         return self
 
     def with_target(self, target_column: str) -> TargetBuilder:
@@ -214,6 +221,7 @@ class Manifest:
         '''
 
         self.model_function = model_function
+
         return self
     
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
@@ -387,6 +395,7 @@ def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dic
                 resolved[key] = value
         else:
             resolved[key] = value
+
     return resolved
 
 
@@ -505,6 +514,7 @@ def _apply_scaler(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
+    
     return data, all_fitted_params
 
 

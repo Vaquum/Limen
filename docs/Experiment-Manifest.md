@@ -354,6 +354,7 @@ The manifest approach uses only `params()` and `manifest()` functions:
 from loop.sfm.model import ridge_binary
 
 def params():
+
     return {
         'roc_period': [4, 8, 12],
         'alpha': [1.0, 5.0, 10.0],
@@ -361,6 +362,7 @@ def params():
     }
 
 def manifest():
+    
     return (Manifest()
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
