@@ -250,7 +250,6 @@ def params():
         'weight_decay': [0.0, 1e-4],     # L2 regularization strength
         'epochs': [30,50,75],              # Number of epochs (low for speed)
         'seed': [42],                   # Random seed for reproducibility
-        'early_stopping_patience': [10],  # Early stopping patience
 
 
         # Sequence and regime context params
@@ -259,7 +258,7 @@ def params():
         'positional_encoding_type': ['rotary'], # Positional encoding type
 
         # Target engineering params
-        'pct_move_threshold': [0.003, 0.005, 0.01], # Example: 0.2%, 0.5%, 1%
+        'pct_move_threshold': [0.003, 0.005], # Example: 0.2%, 0.5%
         'target_shift': [0],             # [0] means start window immediately after context
 
 
