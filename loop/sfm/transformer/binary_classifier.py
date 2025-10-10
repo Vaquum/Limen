@@ -258,7 +258,7 @@ def params():
         'positional_encoding_type': ['rotary'], # Positional encoding type
 
         # Target engineering params
-        'pct_move_threshold': [0.003, 0.005], # Example: 0.2%, 0.5%
+        'pct_move_threshold': [0.003, 0.0024, 0.0015], # Example: 0.2%, 0.5%
         'target_shift': [0],             # [0] means start window immediately after context
 
 
