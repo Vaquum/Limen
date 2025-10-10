@@ -322,4 +322,6 @@ data mismatch
 - Refactor `utils.add_breakout_ema` to pure Polars implementation
 - Update `docs/Features.md` with consolidated lagged features documentation under single section
 
+# V1.19.4 on 10th of October 2025
+- Enhance color consistency, typography & spacing in Explorer
 
