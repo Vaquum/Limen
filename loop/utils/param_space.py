@@ -1,6 +1,5 @@
 import random
 import polars as pl
-from itertools import product
 
 class ParamSpace:
     

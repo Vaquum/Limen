@@ -43,9 +43,9 @@ def get_klines_data(n_rows: Optional[int] = None,
         start_date_limit = ''
 
     if futures is True:
-        db_table = f"FROM tdw.binance_futures_trades "
+        db_table = 'FROM tdw.binance_futures_trades '
     else:
-        db_table = f"FROM tdw.binance_trades "
+        db_table = 'FROM tdw.binance_trades '
 
     query = (
         f"SELECT "

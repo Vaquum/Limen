@@ -1,6 +1,3 @@
-import numpy as np
-import pandas as pd
-
 def probabilities_to_classes(probs_df,
                              sideways_fraction=0.4):
 
