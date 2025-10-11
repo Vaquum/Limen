@@ -1,5 +1,4 @@
 import pandas as pd
-from typing import Any
 
 
 def _read_from_file(self, file_path: str) -> pd.DataFrame:
