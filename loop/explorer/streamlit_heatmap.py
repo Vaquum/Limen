@@ -25,8 +25,16 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
     fig_corr = px.imshow(
         corr,
         text_auto=False,
-        # Custom low→high scale: C4E8F4 (low) to DC65A6 (high)
-        color_continuous_scale=["#C4E8F4", "#DC65A6"],
+        # Custom palette (low → high)
+        color_continuous_scale=[
+            "#C4E8F4",  # palette-1
+            "#FCE2EB",  # palette-2
+            "#EAA3C8",  # palette-3
+            "#DC65A6",  # palette-4
+            "#F16068",  # palette-5
+            "#BCABD3",  # palette-6
+            "#DDD941",  # palette-7
+        ],
         origin="lower",
         aspect="auto",
     )
@@ -35,7 +43,7 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
     fig_corr.update_traces(
         text=corr.round(2).astype(str).values,
         texttemplate="<b>%{text}</b>",
-        textfont=dict(size=16),
+        textfont=dict(size=16, family='Lexend, "IBM Plex Sans", Arial, sans-serif'),
         opacity=0.85,
         selector=dict(type="heatmap"),
     )

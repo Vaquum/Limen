@@ -15,9 +15,23 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
     
     return f"""
     <style>
+      /* Palette variables */
+      :root {{
+        --palette-1: #C4E8F4; /* light blue */
+        --palette-2: #FCE2EB; /* blush */
+        --palette-3: #EAA3C8; /* pink */
+        --palette-4: #DC65A6; /* magenta accent */
+        --palette-5: #F16068; /* coral */
+        --palette-6: #BCABD3; /* lavender */
+        --palette-7: #DDD941; /* yellow */
+      }}
+      /* Import fonts: IBM Plex for text, Lexend for numerals */
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Lexend:wght@400;600;700&display=swap');
+
       /* Global font scaling (~20%) */
       html, body, [data-testid="stAppViewContainer"] {{
           font-size: 19px;
+          font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
       }}
 
       /* Sidebar spacing */
@@ -45,7 +59,7 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
 
       /* Detail cards */
       .lux-card {{
-        background: #2F2D36;
+        background: #231F20;
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 16px;
         padding: 14px 16px;
@@ -56,7 +70,7 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
         font-size: 16px;
         font-weight: 600;
         letter-spacing: .01em;
-        color: #5f6b7a;
+        color: #C4E8F4;
         margin-bottom: 8px;
         text-transform: none;
       }}
@@ -66,14 +80,18 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
         color: #ECE8F2;
         word-break: break-word;
         line-height: 1.25;
+        /* Numerals use Lexend with tabular figures for alignment */
+        font-family: "Lexend", "IBM Plex Sans", Arial, sans-serif;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
       }}
       .lux-back a {{
-        color: #6D5AF7; font-weight: 600; text-decoration: none;
+        color: var(--palette-4); font-weight: 600; text-decoration: none;
       }}
       .lux-back a:hover {{ text-decoration: underline; }}
       /* Match table 'view' links to theme purple */
       [data-testid="stDataFrame"] a[href^='/?row='] {{
-        color: #7B61FF !important;
+        color: var(--palette-4) !important;
         text-decoration: none;
         font-weight: 600;
       }}
@@ -84,11 +102,15 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
       /* Enlarge table text (~20% above global) */
       [data-testid="stDataFrame"] * {{
         font-size: 1.2em !important;
+        /* Prefer Lexend for numeric-heavy tables */
+        font-family: "Lexend", "IBM Plex Sans", Arial, sans-serif !important;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
       }}
       /* Keep built-in column visibility menu visible (avoid Popper warnings) */
       /* Inline Bars (ProgressColumn) color override */
       [data-testid="stDataFrame"] [role="progressbar"] > div {{
-        background-color: #B5AAD7 !important;
+        background-color: var(--palette-6) !important;
       }}
       [data-testid="stDataFrame"] [role="progressbar"] {{
         border-radius: 6px !important;
@@ -97,8 +119,18 @@ def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
       .lux-title {{
         font-size: 46px; font-weight: 800; margin: 0 0 6px 0;
         letter-spacing: -0.02em;
+        color: #F8F8F8;
       }}
-      .lux-subtle {{ color: #778295; }}
+      .lux-subtle {{ color: #DC65A6; }}
+
+      /* Plotly charts: use Lexend for tick and hover numerals */
+      .js-plotly-plot .xtick text,
+      .js-plotly-plot .ytick text,
+      .js-plotly-plot .hovertext text {{
+        font-family: "Lexend", "IBM Plex Sans", Arial, sans-serif !important;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+      }}
 
       /* Split card layout for detail view */
       .split-card {{
