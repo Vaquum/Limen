@@ -1,4 +1,6 @@
-import fsspec, zipfile, io
+import fsspec
+import zipfile
+import io
 
 
 def check_if_has_header(url: str, encoding: str = "utf-8") -> bool:

@@ -1,5 +1,4 @@
 import polars as pl
-from typing import Annotated
 
 
 def hh_hl_structure_regime(df: pl.DataFrame,

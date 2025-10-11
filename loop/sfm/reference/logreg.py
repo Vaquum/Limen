@@ -1,8 +1,5 @@
 import polars as pl
 
-from sklearn.linear_model import LogisticRegression
-
-from loop.metrics.binary_metrics import binary_metrics
 from loop.features import quantile_flag
 from loop.features import compute_quantile_cutoff
 from loop.features import kline_imbalance
@@ -15,9 +12,11 @@ from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
+from loop.sfm.model import logreg_binary
 
 
 def manifest():
+    
     return (Manifest()
         .set_split_config(8, 1, 2)
 
@@ -47,6 +46,8 @@ def manifest():
             .done()
 
         .set_scaler(LogRegTransform)
+
+        .with_model(logreg_binary)
     )
 
 
@@ -70,41 +71,3 @@ def params():
         'solver': ['lbfgs', 'newton-cg', 'liblinear', 'sag', 'newton-cholesky'],
         'tol': [0.001, 0.01, 0.03, 0.1, 0.3],
     }
-
-
-def prep(data, round_params, manifest):
-
-    data_dict = manifest.prepare_data(data, round_params)
-
-    # SFM-specific modifications can go here if needed
-
-    return data_dict
-
-
-def model(data: dict, round_params):
-
-    clf = LogisticRegression(
-        solver=round_params['solver'],
-        penalty=round_params['penalty'],
-        dual=False,
-        tol=round_params['tol'],
-        C=round_params['C'],
-        fit_intercept=True,
-        intercept_scaling=1,
-        class_weight={0: round_params['class_weight'], 1: 1},
-        random_state=None,
-        max_iter=round_params['max_iter'],
-        verbose=0,
-        warm_start=False,
-        n_jobs=None,
-    )
-
-    clf.fit(data['x_train'], data['y_train'])
-
-    preds = clf.predict(data['x_test'])
-    probs = clf.predict_proba(data['x_test'])[:, 1]
-
-    round_results = binary_metrics(data, preds, probs)
-    round_results['_preds'] = preds
-
-    return round_results

@@ -10,25 +10,24 @@ from loop.explorer.loop_explorer import loop_explorer
 
 class UniversalExperimentLoop:
 
-    '''
-    UniversalExperimentLoop class for running experiments.
-    '''
+    '''UniversalExperimentLoop class for running experiments.'''
 
     def __init__(self,
                  data,
                  single_file_model):
-        
-        '''Initializes the UniversalExperimentLoop.
-        
+
+        '''
+        Initialize the UniversalExperimentLoop.
+
         Args:
-            data (pl.DataFrame): The data to use for the experiment.
-            single_file_model (SingleFileModel): The single file model to use for the experiment.
+            data (pl.DataFrame): The data to use for the experiment
+            single_file_model (SingleFileModel): The single file model to use for the experiment
         '''
 
         self.data = data
-        self.model = single_file_model.model
+        self.model = getattr(single_file_model, 'model', None)
         self.params = single_file_model.params()
-        self.prep = single_file_model.prep
+        self.prep = getattr(single_file_model, 'prep', None)
         self.extras = []
         self.models = []
 
@@ -46,7 +45,7 @@ class UniversalExperimentLoop:
             manifest=None):
         
         '''
-        Run the experiment `n_permutations` times. 
+        Run the experiment `n_permutations` times.
 
         NOTE: If you want to use a custom `params` or `prep` or `model`
         function, you can pass them as arguments and permanently change
@@ -54,16 +53,17 @@ class UniversalExperimentLoop:
         returns are same as the ones outlined in `docs/Single-File-Model.md`.
 
         Args:
-            experiment_name (str): The name of the experiment.
-            n_permutations (int): The number of permutations to run.
-            prep_each_round (bool): Whether to use `prep` for each round or just first.
-            random_search (bool): Whether to use random search or not.
-            maintain_details_in_params (bool): Whether to maintain experiment details in params.
-            context_params (dict): The context parameters to use for the experiment.
-            save_to_sqlite (bool): Whether to save the results to a SQLite database.
-            params (dict): The parameters to use for the experiment.
-            prep (function): The function to use to prepare the data.
-            model (function): The function to use to run the model.
+            experiment_name (str): The name of the experiment
+            n_permutations (int): The number of permutations to run
+            prep_each_round (bool): Whether to use `prep` for each round or just first
+            random_search (bool): Whether to use random search or not
+            maintain_details_in_params (bool): Whether to maintain experiment details in params
+            context_params (dict): The context parameters to use for the experiment
+            save_to_sqlite (bool): Whether to save the results to a SQLite database
+            params (dict): The parameters to use for the experiment
+            prep (function): The function to use to prepare the data
+            model (function): The function to use to run the model
+            manifest (Manifest, optional): Manifest based configuration for single-file-model
 
         Returns:
             pl.DataFrame: The results of the experiment
@@ -80,21 +80,28 @@ class UniversalExperimentLoop:
 
         if params is not None:
             self.params = params()
-        
+
         if prep is not None:
             self.prep = prep
-        
+
         if model is not None:
             self.model = model
 
         self.manifest = manifest
+
+        # Full manifest mode - auto-generate prep and model from manifest
+        if manifest and hasattr(manifest, 'model_function') and manifest.model_function:
+            if self.prep is None:
+                self.prep = lambda data, round_params, manifest: manifest.prepare_data(data, round_params)
+            if self.model is None:
+                self.model = lambda data, round_params: manifest.run_model(data, round_params)
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
         
         for i in tqdm(range(n_permutations)):
 
-            # Start counting execution_time            
+            # Start counting execution_time
             start_time = time.time()
 
             # Generate the parameter values for the current round

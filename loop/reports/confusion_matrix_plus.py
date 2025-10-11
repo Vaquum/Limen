@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def confusion_matrix_plus(df_results: object, x: str, y_lim_correction: float = 6.5, outlier_quantiles: list = [0.01, 0.99]) -> None:

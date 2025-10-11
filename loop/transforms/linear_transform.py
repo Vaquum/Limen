@@ -118,13 +118,17 @@ class LinearTransform:
         for col in x_train.columns:
             rule = get_scaling_rule(col, self.rules, self.default)
 
-            if rule == 'log_standard':
-                self.means[col] = x_train.select(pl.col(col).log1p().mean()).item()
-                self.stds[col] = x_train.select(pl.col(col).log1p().std(ddof=0)).item()
-            
-            elif rule == 'standard':
-                self.means[col] = x_train[col].mean()
-                self.stds[col] = x_train[col].std(ddof=0)
+            if rule == "log_standard":
+                mean = x_train.select(pl.col(col).log1p().mean()).item()
+                std = x_train.select(pl.col(col).log1p().std(ddof=0)).item()
+            elif rule == "standard":
+                mean = x_train[col].mean()
+                std = x_train[col].std(ddof=0)
+            else:
+                continue
+
+            self.means[col] = mean
+            self.stds[col] = std
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
         

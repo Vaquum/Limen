@@ -73,7 +73,7 @@ def test_sfm():
          get_klines_data_small_fast, True, False),
         (sfm.rules_based.momentum_volatility,
          get_klines_data_small_fast, True, False),
-        (sfm.ridge.ridge_classifier, get_klines_data_fast, True, False)
+        (sfm.ridge.ridge_classifier, get_klines_data_fast, True, True)
     ]
 
     for test in tests:

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Sequence, Optional, Dict, Any, Tuple
+from typing import Sequence, Optional, Dict, Any
 from math import sqrt
 
 
@@ -122,7 +122,8 @@ def _permutation_confusion_metrics(self,
         if len(a) == 0 or len(b) == 0:
             return np.nan
         
-        a_sorted = np.sort(a); b_sorted = np.sort(b)
+        a_sorted = np.sort(a)
+        b_sorted = np.sort(b)
         all_vals = np.unique(np.concatenate([a_sorted, b_sorted]))
         cdf_a = np.searchsorted(a_sorted, all_vals, side='right') / len(a_sorted)
         cdf_b = np.searchsorted(b_sorted, all_vals, side='right') / len(b_sorted)

@@ -24,7 +24,6 @@ def _permutation_prediction_performance(self,
     
     if self.inverse_scaler is not None:
         perf_df = self.inverse_scaler(round_data['x_test'], self.scalers[round_id]).to_pandas()
-    
     else:
         perf_df = pd.DataFrame()
     

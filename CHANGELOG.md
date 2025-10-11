@@ -325,3 +325,9 @@ data mismatch
 # V1.19.4 on 10th of October 2025
 - Enhance color consistency, typography & spacing in Explorer
 
+# V1.20.0 on 11th of October 2025
+- Refactor `loop.manifest`, `loop.universal_experiment_loop`, `loop.log` to remove prep() and model() functions
+- Add `loop.sfm.model` that contains sfm model files
+- Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
+- Update `loop.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
+

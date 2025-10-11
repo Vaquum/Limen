@@ -66,6 +66,7 @@ class Log:
         else:
             self.inverse_scaler = None
 
+
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
 
         '''

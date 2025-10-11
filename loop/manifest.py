@@ -1,4 +1,5 @@
 import polars as pl
+import inspect
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Union
@@ -17,7 +18,6 @@ FittedTransformEntry = Tuple[
 ]
 
 
-
 class TargetBuilder:
 
     '''Helper class for building target transformations with context.'''
@@ -29,17 +29,17 @@ class TargetBuilder:
         self.manifest.target_column = target_column
 
     def add_fitted_transform(self, func: Callable) -> 'FittedTransformBuilder':
-
+        
         return FittedTransformBuilder(self.manifest, func)
 
     def add_transform(self, func: Callable, **params) -> 'TargetBuilder':
-
+        
         entry = ([], func, params)
         self.manifest.target_transforms.append(entry)
         return self
 
     def done(self) -> 'Manifest':
-
+        
         return self.manifest
 
 
@@ -48,18 +48,19 @@ class FittedTransformBuilder:
     '''Helper class for building fitted transforms with parameter fitting.'''
 
     def __init__(self, manifest: 'Manifest', func: Callable):
-
+        
         self.manifest = manifest
         self.func = func
         self.fitted_params: List[FittedParamsComputationEntry] = []
 
     def fit_param(self, name: str, compute_func: Callable, **params) -> 'FittedTransformBuilder':
-
+        
         self.fitted_params.append((name, compute_func, params))
+
         return self
 
     def with_params(self, **params) -> 'TargetBuilder':
-
+        
         entry = (self.fitted_params, self.func, params)
         self.manifest.target_transforms.append(entry)
 
@@ -78,16 +79,23 @@ class Manifest:
     required_bar_columns: List[str] = field(default_factory=list)
     target_column: str = None
     split_config: Tuple[int, int, int] = (8, 1, 2)
+    
+    # New model configuration fields
+    model_function: Callable = None
+    model_params: Dict[str, ParamValue] = field(default_factory=dict)
+    metrics_params: Dict[str, ParamValue] = field(default_factory=dict)
+
 
     def _add_transform(self, func: Callable, **params) -> 'Manifest':
 
         self.feature_transforms.append((func, params))
+
         return self
 
     def add_feature(self, func: Callable, **params) -> 'Manifest':
 
         '''
-        Add a feature transformation to the manifest.
+        Add feature transformation to the manifest.
 
         Args:
             func (Callable): Feature transformation function
@@ -102,7 +110,7 @@ class Manifest:
     def add_indicator(self, func: Callable, **params) -> 'Manifest':
 
         '''
-        Add an indicator transformation to the manifest.
+        Add indicator transformation to the manifest.
 
         Args:
             func (Callable): Indicator transformation function
@@ -128,6 +136,7 @@ class Manifest:
         '''
 
         self.bar_formation = (func, params)
+
         return self
 
 
@@ -144,6 +153,7 @@ class Manifest:
         '''
 
         self.required_bar_columns = columns
+
         return self
 
     def set_split_config(self, train: int, val: int, test: int) -> 'Manifest':
@@ -161,6 +171,7 @@ class Manifest:
         '''
 
         self.split_config = (train, val, test)
+
         return self
 
     def set_scaler(self, transform_class, param_name: str = '_scaler') -> 'Manifest':
@@ -177,8 +188,8 @@ class Manifest:
         '''
 
         self.scaler = make_fitted_scaler(param_name, transform_class)
-        return self
 
+        return self
 
     def with_target(self, target_column: str) -> TargetBuilder:
 
@@ -191,13 +202,34 @@ class Manifest:
         Returns:
             TargetBuilder: Builder for target transformations
         '''
+
         return TargetBuilder(self, target_column)
 
+    def with_model(self, model_function: Callable) -> 'Manifest':
+
+        '''
+        Configure model function for training and evaluation.
+
+        Args:
+            model_function (Callable): Model function that takes (data, **params) and returns results
+
+        Returns:
+            Manifest: Self for method chaining
+
+        NOTE: The model function should accept data dict and return results dict with metrics and predictions.
+        Parameters are auto-mapped from round_params based on model function signature.
+        '''
+
+        self.model_function = model_function
+
+        return self
+    
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
 
         '''
         Compute test split bar data from raw data using manifest bar formation configuration.
-        Used by Log system to reconstruct the same test bar data that was used in training.
+
+        NOTE: Used by Log system to reconstruct the same test bar data that was used in training.
 
         Args:
             raw_data (pl.DataFrame): Raw input dataset
@@ -248,6 +280,8 @@ class Manifest:
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
 
+            data = data.drop_nulls()
+
             data, all_fitted_params = _apply_scaler(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
@@ -256,6 +290,50 @@ class Manifest:
 
         return _finalize_to_data_dict(split_data, all_datetimes, all_fitted_params, self)
 
+    def run_model(self, data: dict, round_params: Dict[str, Any]) -> dict:
+
+        '''
+        Execute model training and evaluation using configured functions.
+
+        Args:
+            data (dict): Prepared data dictionary
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Results including predictions, metrics, and optional extras
+
+        Raises:
+            ValueError: If required model function parameters are missing from round_params
+
+        NOTE: Auto-maps parameters from round_params to model function signature.
+        Parameters in round_params override model function defaults.
+        Parameters not in round_params use model function defaults.
+        Required parameters (no defaults) must be in round_params.
+        '''
+
+        if self.model_function is None:
+            raise ValueError("Model function not configured. Use .with_model(model_function) before run_model().")
+
+        sig = inspect.signature(self.model_function)
+        model_kwargs = {}
+
+        for param_name, param_obj in sig.parameters.items():
+            if param_name == 'data' or param_obj.kind == inspect.Parameter.VAR_KEYWORD:
+                continue
+
+            if param_name in round_params:
+                model_kwargs[param_name] = round_params[param_name]
+            elif param_obj.default != inspect.Parameter.empty:
+                model_kwargs[param_name] = param_obj.default
+            else:
+                raise ValueError(
+                    f"Missing required parameter '{param_name}' for model function. "
+                    'It must be provided in round_params.'
+                )
+
+        round_results = self.model_function(data, **model_kwargs)
+
+        return round_results
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform):
@@ -319,6 +397,7 @@ def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dic
                 resolved[key] = value
         else:
             resolved[key] = value
+
     return resolved
 
 
@@ -437,6 +516,7 @@ def _apply_scaler(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
+    
     return data, all_fitted_params
 
 
@@ -472,5 +552,3 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     return data_dict
-
-
