@@ -22,15 +22,14 @@ import polars as pl
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import numpy as np
 import keras
-# from keras import backend as K
-# import gc
+from keras import backend as K
+import gc
 from keras.layers import (
     Input, Dense, Dropout, LayerNormalization,
     MultiHeadAttention, GlobalAveragePooling1D, Add
 )
 from keras.models import Model
 from keras.optimizers import AdamW
-from keras.callbacks import EarlyStopping
 from keras_hub.layers import RotaryEmbedding  
 from loop.metrics.binary_metrics import binary_metrics
 import polars as pl
@@ -222,7 +221,7 @@ def manifest():
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
         .done()
-        .set_scaler(StandardScaler)  # Apply standard scaling to features
+        .set_scaler(RobustScaler)  # Apply standard scaling to features
     )
 
 
@@ -243,15 +242,15 @@ def params():
     """
     return {
         # Model architecture and training params
-        'd_model':        [32, 48, 64, 96],            # Model width
+        'd_model':        [32, 48, 64],            # Model width
         'num_heads':      [2, 4, 8],                   # More heads: try up to 8
         'num_layers':     [1, 2, 3, 4],                # Up to 4 transformer blocks
-        'dropout':        [0.05, 0.1, 0.15, 0.2, 0.25],         # Dropout for regularization
+        'dropout':        [0.002, 0.05, 0.1, 0.15, 0.2, 0.25],         # Dropout for regularization
         # Optimization/training
         'learning_rate':  [1e-4, 5e-4, 1e-3, 2e-3],    # Extended, with finer gradation
         'batch_size':     [16, 32, 64, 128],           # Try small and large batches
         'weight_decay':   [0.0, 1e-5, 1e-4, 1e-3],     # Add smaller decay values
-        'epochs':         [50, 75, 100,150],           # Try longer training
+        'epochs':         [50, 75, 100, 150],           # Try longer training
         'seed':           [42, 77, 2025],              # Different initialization seeds
 
         # Sequence modeling
@@ -480,12 +479,22 @@ def model(data, round_params):
     X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test']
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
 
+    print("Before windowing -- x_train:", X_train.shape, "y_train:", y_train.shape)
+    print("x_val:", X_val.shape, "y_val:", y_val.shape)
+    print("x_test:", X_test.shape, "y_test:", y_test.shape)
+
 
     # Compute effective sequence length (limited by smallest split size)
     seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0]) #This line ensures that the window size used for all splits is the largest possible value that fits in every split, so the model can be trained and evaluated without issues, regardless of how the data is split or how much data is available in each set.
     X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
     X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
     X_test,  y_test  = make_windows(X_test,  y_test,  seq_len_eff)
+
+    print("After windowing -- X_train:", X_train.shape, "y_train:", y_train.shape)
+    print("X_val:", X_val.shape, "y_val:", y_val.shape)
+    print("X_test:", X_test.shape, "y_test:", y_test.shape)
+
+
     n_features = X_train.shape[2]
     seq_length = seq_len_eff  # ensure consistency for Input shape
 
@@ -530,6 +539,10 @@ def model(data, round_params):
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
     test_preds = (test_probs > 0.5).astype(int)
 
+    print("Test pred min/max:", test_preds.min(), test_preds.max(),
+      "y_test min/max:", y_test.min(), y_test.max())
+    print("test_preds shape:", test_preds.shape, "test_probs shape:", test_probs.shape, "y_test shape:", y_test.shape)
+    assert len(test_preds) == len(y_test), "Predictions and test labels are not aligned!"
 
     # --- Compute evaluation metrics ---
     # Pass windowed y_test to metrics for proper alignment
@@ -554,6 +567,11 @@ def model(data, round_params):
     }
 
     # Clean up Keras session to prevent memory leaks in UEL loops
-    # K.clear_session()
-    # gc.collect()
+
+    print("Final round_results keys:", round_results.keys())
+    print("First 10 preds:", test_preds[:10])
+    print("First 10 y_test:", y_test[:10])
+
+    K.clear_session()
+    gc.collect()
     return round_results
