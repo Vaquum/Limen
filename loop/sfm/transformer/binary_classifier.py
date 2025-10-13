@@ -222,7 +222,7 @@ def manifest():
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
         .done()
-        .set_scaler('{scaler}')
+        .set_scaler(StandardScaler)
     )
 
 
