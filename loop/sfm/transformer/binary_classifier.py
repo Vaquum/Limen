@@ -251,18 +251,18 @@ def params():
         'learning_rate':  [1e-4, 5e-4, 1e-3, 2e-3],    # Extended, with finer gradation
         'batch_size':     [16, 32, 64, 128],           # Try small and large batches
         'weight_decay':   [0.0, 1e-5, 1e-4, 1e-3],     # Add smaller decay values
-        'epochs':         [30, 50, 75, 100,150],           # Try longer training
+        'epochs':         [50, 75, 100,150],           # Try longer training
         'seed':           [42, 77, 2025],              # Different initialization seeds
 
         # Sequence modeling
-        'seq_length':     [30, 45, 60, 90, 120],       # Expand context window
+        'seq_length':     [45, 60, 90, 120],       # Expand context window
         'prediction_window': [30, 60, 90],             # Multiple regime horizons
 
         # Model tricks
-        'positional_encoding_type': ['rotary', 'sinusoidal'], # Try classic, rotary, etc.
+        'positional_encoding_type': ['rotary'], # Try classic, rotary, etc.
 
         # Target engineering
-        'pct_move_threshold': [0.003, 0.0024, 0.0015, 0.0012, 0.0009],
+        'pct_move_threshold': [0.003, 0.0024, 0.0015, 0.0012],
         'target_shift':      [0, 1],   # Regularization for noisy regime signals
     }
 
