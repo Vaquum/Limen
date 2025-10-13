@@ -516,14 +516,14 @@ def model(data, round_params):
 
 
     # --- Train with early stopping ---
-    # callbacks = [
-    #     EarlyStopping(
-    #         # patience=early_stopping_patience,
-    #         restore_best_weights=True,
-    #         monitor='val_loss',
-    #         verbose=0
-    #     )
-    # ]
+    callbacks = [
+        EarlyStopping(
+            # patience=early_stopping_patience,
+            restore_best_weights=True,
+            monitor='val_loss',
+            verbose=0
+        )
+    ]
     model_tf.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
