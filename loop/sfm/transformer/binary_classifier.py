@@ -184,6 +184,7 @@ loop.manifest.make_fitted_scaler = my_make_fitted_scaler
 
 
 def manifest():
+    
     """
     Configure the data processing pipeline and experiment manifest.
     
@@ -213,7 +214,7 @@ def manifest():
     ]
     return(
         Manifest()
-        .set_split_config(8, 1, 2)  # 80% train, 10% validation, 20% test
+        .set_split_config(8, 1, 2)  
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
         .add_feature(add_cyclical_features)  # Add temporal cyclical features
@@ -221,7 +222,7 @@ def manifest():
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
         .done()
-        .set_scaler(RobustScaler)  # Apply standard scaling to features
+        .set_scaler('{scaler}')
     )
 
 
@@ -252,7 +253,7 @@ def params():
         'weight_decay':   [0.0, 1e-5, 1e-4, 1e-3],     # Add smaller decay values
         'epochs':         [50, 75, 100, 150],           # Try longer training
         'seed':           [42, 77, 2025],              # Different initialization seeds
-
+        'scaler':         ['RobustScaler', 'StandardScaler', 'MinMaxScaler'],  # Different scaling methods
         # Sequence modeling
         'seq_length':     [45, 60, 90, 120],       # Expand context window
         'prediction_window': [30, 60, 90],             # Multiple regime horizons
