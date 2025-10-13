@@ -22,8 +22,8 @@ import polars as pl
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import numpy as np
 import keras
-from keras import backend as K
-import gc
+# from keras import backend as K
+# import gc
 from keras.layers import (
     Input, Dense, Dropout, LayerNormalization,
     MultiHeadAttention, GlobalAveragePooling1D, Add
@@ -515,15 +515,6 @@ def model(data, round_params):
     )
 
 
-    # --- Train with early stopping ---
-    callbacks = [
-        EarlyStopping(
-            # patience=early_stopping_patience,
-            restore_best_weights=True,
-            monitor='val_loss',
-            verbose=0
-        )
-    ]
     model_tf.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
@@ -563,6 +554,6 @@ def model(data, round_params):
     }
 
     # Clean up Keras session to prevent memory leaks in UEL loops
-    K.clear_session()
-    gc.collect()
+    # K.clear_session()
+    # gc.collect()
     return round_results
