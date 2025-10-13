@@ -22,6 +22,8 @@ import polars as pl
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 import numpy as np
 import keras
+from keras import backend as K
+import gc
 from keras.layers import (
     Input, Dense, Dropout, LayerNormalization,
     MultiHeadAttention, GlobalAveragePooling1D, Add
@@ -241,29 +243,27 @@ def params():
     """
     return {
         # Model architecture and training params
-        'd_model': [32, 64],             # Embedding/hidden size
-        'num_heads': [2, 4],             # Multi-head attention count
-        'num_layers': [1, 2],            # Transformer encoder layers
-        'dropout': [0.1, 0.2],           # Dropout for regularization
-        'learning_rate': [1e-3, 5e-4],   # Adam optimizer learning rate
-        'batch_size': [32, 64],          # Batch size
-        'weight_decay': [0.0, 1e-4],     # L2 regularization strength
-        'epochs': [30,50,75],              # Number of epochs (low for speed)
-        'seed': [42],                   # Random seed for reproducibility
+        'd_model':        [32, 48, 64, 96],            # Model width
+        'num_heads':      [2, 4, 8],                   # More heads: try up to 8
+        'num_layers':     [1, 2, 3, 4],                # Up to 4 transformer blocks
+        'dropout':        [0.05, 0.1, 0.15, 0.2, 0.25],         # Dropout for regularization
+        # Optimization/training
+        'learning_rate':  [1e-4, 5e-4, 1e-3, 2e-3],    # Extended, with finer gradation
+        'batch_size':     [16, 32, 64, 128],           # Try small and large batches
+        'weight_decay':   [0.0, 1e-5, 1e-4, 1e-3],     # Add smaller decay values
+        'epochs':         [30, 50, 75, 100,150],           # Try longer training
+        'seed':           [42, 77, 2025],              # Different initialization seeds
 
+        # Sequence modeling
+        'seq_length':     [30, 45, 60, 90, 120],       # Expand context window
+        'prediction_window': [30, 60, 90],             # Multiple regime horizons
 
-        # Sequence and regime context params
-        'seq_length': [30, 60],          # Number of context bars (1-min bars = 30-60min)
-        'prediction_window': [60],       # Window to classify regime ahead (in minutes)
-        'positional_encoding_type': ['rotary'], # Positional encoding type
+        # Model tricks
+        'positional_encoding_type': ['rotary', 'sinusoidal'], # Try classic, rotary, etc.
 
-        # Target engineering params
-        'pct_move_threshold': [0.003, 0.0024, 0.0015], # Example: 0.2%, 0.5%
-        'target_shift': [0],             # [0] means start window immediately after context
-
-
-        # Output regularization/calibration
-        'label_smoothing': [0.0, 0.1],   # Regularization for noisy regime signals
+        # Target engineering
+        'pct_move_threshold': [0.003, 0.0024, 0.0015, 0.0012, 0.0009],
+        'target_shift':      [0, 1],   # Regularization for noisy regime signals
     }
 
 
@@ -469,8 +469,6 @@ def model(data, round_params):
     batch_size = round_params['batch_size']
     epochs = round_params['epochs']
     seed = round_params.get('seed', 42)
-    label_smoothing = round_params.get('label_smoothing', 0.0)
-    # early_stopping_patience = round_params.get('early_stopping_patience', 3)
     seq_length = round_params['seq_length']
     use_rotary = round_params.get('positional_encoding_type', 'rotary') == 'rotary'
     pct_move_threshold = round_params['pct_move_threshold']
@@ -512,26 +510,25 @@ def model(data, round_params):
     optimizer = AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
     model_tf.compile(
         optimizer=optimizer,  # type: ignore
-        loss=keras.losses.BinaryCrossentropy(label_smoothing=label_smoothing),
+        loss=keras.losses.BinaryCrossentropy(),
         metrics=['accuracy']
     )
 
 
     # --- Train with early stopping ---
-    callbacks = [
-        EarlyStopping(
-            # patience=early_stopping_patience,
-            restore_best_weights=True,
-            monitor='val_loss',
-            verbose=0
-        )
-    ]
+    # callbacks = [
+    #     EarlyStopping(
+    #         # patience=early_stopping_patience,
+    #         restore_best_weights=True,
+    #         monitor='val_loss',
+    #         verbose=0
+    #     )
+    # ]
     model_tf.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
         batch_size=batch_size,
         epochs=epochs,
-        callbacks=callbacks,
         verbose=0  # type: ignore
     )
 
@@ -565,22 +562,7 @@ def model(data, round_params):
         'val_targets': y_val        # Validation probabilities
     }
 
-    #     # NEW: Export per-sample test predictions for calibration
-    # import pandas as pd
-
-    # test_calib_df = pd.DataFrame({
-    #     'prob': test_probs,           # Raw model output probability (sigmoid)
-    #     'true_label': y_test          # Ground truth binary regime label
-    #     # Optionally add timestamps/ids if available, e.g., 'datetime': test_datetimes
-    # })
-    # test_calib_df.to_csv('/content/drive/MyDrive/Vaquum/Loop/experiment_predictions.csv', index=False)
-
-    # # Optionally: Write validation set for calibration fitting
-    # val_calib_df = pd.DataFrame({
-    #     'prob': val_probs,
-    #     'true_label': y_val
-    # })
-    # val_calib_df.to_csv('/content/drive/MyDrive/Vaquum/Loop/experiment_val_predictions.csv', index=False)
-
-
+    # Clean up Keras session to prevent memory leaks in UEL loops
+    K.clear_session()
+    gc.collect()
     return round_results
