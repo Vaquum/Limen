@@ -263,8 +263,8 @@ def params():
     # =========================
     # Data & Sequence Modeling Parameters
     # =========================
-    'seq_length': [45, 60, 90, 120],            # Input sequence length: how many past timesteps the model observes; longer sequences capture more context.
-    'prediction_window': [30, 60, 90, 120],     # Prediction horizon: how far ahead the model predicts; multiple values for different trading regimes.
+    'seq_length': [45, 60, 90, 120],            # Input sequence length: how many consecutive timesteps/data points the model sees as input to make its prediction.
+    'prediction_window': [5, 10, 30, 60, 90],     # Prediction horizon: how far ahead the model predicts.
 
     # =========================
     # Target Engineering Parameters
@@ -349,14 +349,7 @@ def prep(data, round_params, manifest):
             data_dict[k] = data_dict[k].to_numpy().ravel()
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
-
-    # Window y_test as before
-    raw_y_test = data_dict['y_test']
-    if len(raw_y_test) > seq_len_eff - 1:
-        data_dict['y_test'] = raw_y_test[seq_len_eff - 1:]
-        data_dict['_raw_y_test'] = raw_y_test
-
-
+            
     return data_dict
 
 
@@ -457,7 +450,6 @@ def model(data, round_params):
     Key Features:
     - Rotary positional encoding for improved sequence understanding
     - Early stopping to prevent overfitting on noisy financial data
-    - Label smoothing for calibrated probability outputs
     - UEL-compatible prediction alignment (no padding/invalid predictions)
     
     Args:
