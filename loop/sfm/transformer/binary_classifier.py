@@ -242,29 +242,37 @@ def params():
         Dictionary of parameter names mapped to lists of candidate values
     """
     return {
-        # Model architecture and training params
-        'd_model':        [32, 48, 64],            # Model width
-        'num_heads':      [2, 4, 8],                   # More heads: try up to 8
-        'num_layers':     [1, 2, 3, 4],                # Up to 4 transformer blocks
-        'dropout':        [0.002, 0.05, 0.1, 0.15, 0.2, 0.25],         # Dropout for regularization
-        # Optimization/training
-        'learning_rate':  [1e-4, 5e-4, 1e-3, 2e-3],    # Extended, with finer gradation
-        'batch_size':     [16, 32, 64, 128],           # Try small and large batches
-        'weight_decay':   [0.0, 1e-5, 1e-4, 1e-3],     # Add smaller decay values
-        'epochs':         [50, 75, 100, 150],           # Try longer training
-        'seed':           [42, 77, 2025],              # Different initialization seeds
-        'scaler':         ['RobustScaler', 'StandardScaler', 'MinMaxScaler'],  # Different scaling methods
-        # Sequence modeling
-        'seq_length':     [45, 60, 90, 120],       # Expand context window
-        'prediction_window': [30, 60, 90],             # Multiple regime horizons
+    # =========================
+    # Model Architecture Parameters
+    # =========================
+    'd_model': [32, 48, 64, 96],  # Model width: controls the size of hidden representations; higher values increase capacity but also memory/computation.
+    'num_heads': [2, 4, 8],       # Number of attention heads: more heads allow the model to focus on different representation subspaces.
+    'num_layers': [2, 3, 4],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
+    'dropout': [0.002, 0.05, 0.1, 0.15, 0.2, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
+    'positional_encoding_type': ['rotary'],     # Type of positional encoding: rotary is efficient and effective for transformers on time series.
 
-        # Model tricks
-        'positional_encoding_type': ['rotary'], # Try classic, rotary, etc.
+    # =========================
+    # Optimization & Training Parameters
+    # =========================
+    'learning_rate': [1e-4, 2e-4, 5e-4, 1e-3],  # Learning rate: step size for weight updates; covers a practical range for transformers.
+    'batch_size': [32, 64, 96, 128],            # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
+    'weight_decay': [0.0, 1e-5, 5e-5, 1e-4, 2e-4],  # Weight decay: L2 regularization to prevent large weights and overfitting.
+    'epochs': [50, 75, 100, 150],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
+    'seed': [42, 77, 2025],                     # Random seeds: ensures reproducibility and tests robustness to initialization.
 
-        # Target engineering
-        'pct_move_threshold': [0.003, 0.0024, 0.0015, 0.0012],
-        'target_shift':      [0, 1],   # Regularization for noisy regime signals
-    }
+    # =========================
+    # Data & Sequence Modeling Parameters
+    # =========================
+    'seq_length': [45, 60, 90, 120],            # Input sequence length: how many past timesteps the model observes; longer sequences capture more context.
+    'prediction_window': [30, 60, 90, 120],     # Prediction horizon: how far ahead the model predicts; multiple values for different trading regimes.
+
+    # =========================
+    # Target Engineering Parameters
+    # =========================
+    'pct_move_threshold': [0.003, 0.0024, 0.0015, 0.0012],  # Thresholds for classifying significant price moves; controls label sensitivity.
+    'target_shift': [0],                  
+}
+
 
 
 def is_valid_datetime(dt):
@@ -526,53 +534,47 @@ def model(data, round_params):
 
 
     model_tf.fit(
-        X_train, y_train,
-        validation_data=(X_val, y_val),
-        batch_size=batch_size,
-        epochs=epochs,
-        verbose=0  # type: ignore
+        X_train, y_train,                      # Training features and labels
+        validation_data=(X_val, y_val),        # Validation data for monitoring
+        batch_size=batch_size,                 # Number of samples per gradient update
+        epochs=epochs,                         # Number of training epochs
+        verbose=1  # type: ignore              # Suppress training output
     )
 
-
     # --- Generate test predictions ---
-    # WARNING: Do not use a different/raw test label vector!
-    # Only use data['y_test'] for predictions and Log/metrics.
-    test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=0).flatten() # type: ignore
-    test_preds = (test_probs > 0.5).astype(int)
+    # WARNING: Only use windowed y_test for predictions and metrics
+    test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=1).flatten()  # Predicted probabilities for test set #type: ignore
+    test_preds = (test_probs > 0.5).astype(int)                                       # Convert probabilities to binary predictions if prob > 0.5
 
     print("Test pred min/max:", test_preds.min(), test_preds.max(),
-      "y_test min/max:", y_test.min(), y_test.max())
+          "y_test min/max:", y_test.min(), y_test.max())
     print("test_preds shape:", test_preds.shape, "test_probs shape:", test_probs.shape, "y_test shape:", y_test.shape)
-    # assert len(test_preds) == len(y_test), "Predictions and test labels are not aligned!"
+    assert len(test_preds) == len(y_test), "Predictions and test labels are not aligned!"
 
     # --- Compute evaluation metrics ---
     # Pass windowed y_test to metrics for proper alignment
     round_results = binary_metrics(data={'y_test': data['y_test']}, preds=test_preds, probs=test_probs)
 
-
-    # --- Prepare UEL artifacts ---
-    # UEL artifacts (UEL pops _preds and models, extras are kept out of log columns)
+    # --- Prepare UEL artifacts ---    # Store predictions and trained model for UEL logging
     round_results['_preds'] = test_preds          # UEL will collect for logging
     round_results['models'] = [model_tf]          # UEL will collect trained model
 
-
     # --- Store validation results and metadata ---
     # Store validation arrays inside extras so not logged as columns
-    val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=0).flatten() # type: ignore
-    val_preds = (val_probs > 0.5).astype(int)
+    val_probs = model_tf.predict(X_val, batch_size=batch_size, verbose=1).flatten() # Validation probabilities #type: ignore
+    val_preds = (val_probs > 0.5).astype(int)                                       # Validation binary predictions
     round_results['extras'] = {
         'seq_len_eff': seq_len_eff,        # Actual sequence length used
         'val_preds': val_preds,            # Validation predictions
-        'val_probs': val_probs,   
-        'val_targets': y_val        # Validation probabilities
+        'val_probs': val_probs,            # Validation probabilities
+        'val_targets': y_val               # Validation targets
     }
 
-    # Clean up Keras session to prevent memory leaks in UEL loops
-
+    # --- Clean up Keras session to prevent memory leaks in UEL loops ---
     print("Final round_results keys:", round_results.keys())
     print("First 10 preds:", test_preds[:10])
     print("First 10 y_test:", y_test[:10])
 
-    K.clear_session()
-    gc.collect()
-    return round_results
+    K.clear_session()  # Clear Keras backend session
+    gc.collect()       # Run garbage collection
+    return round_results  # Return results dictionary for UEL logging
