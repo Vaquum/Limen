@@ -349,7 +349,11 @@ def prep(data, round_params, manifest):
             data_dict[k] = data_dict[k].to_numpy().ravel()
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel()
-            
+
+    # Window y_test as before
+    raw_y_test = data_dict['y_test']
+   
+
     return data_dict
 
 
@@ -490,6 +494,14 @@ def model(data, round_params):
     X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
     X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
     X_test,  y_test  = make_windows(X_test,  y_test,  seq_len_eff)
+    
+    data['X_train'] = X_train
+    data['y_train'] = y_train
+    data['X_val'] = X_val
+    data['y_val'] = y_val
+    data['X_test'] = X_test
+    data['y_test'] = y_test
+
 
     print("After windowing -- X_train:", X_train.shape, "y_train:", y_train.shape)
     print("X_val:", X_val.shape, "y_val:", y_val.shape)
