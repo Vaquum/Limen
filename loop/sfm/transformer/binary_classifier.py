@@ -248,7 +248,7 @@ def params():
     'd_model': [32, 48, 64, 96],  # Model width: controls the size of hidden representations; higher values increase capacity but also memory/computation.
     'num_heads': [2, 4, 8],       # Number of attention heads: more heads allow the model to focus on different representation subspaces.
     'num_layers': [2, 3, 4],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
-    'dropout': [0.002, 0.05, 0.1, 0.15, 0.2, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
+    'dropout': [0.15, 0.2, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
     'positional_encoding_type': ['rotary'],     # Type of positional encoding: rotary is efficient and effective for transformers on time series.
 
     # =========================
@@ -256,8 +256,8 @@ def params():
     # =========================
     'learning_rate': [1e-4, 2e-4, 5e-4, 1e-3],  # Learning rate: step size for weight updates; covers a practical range for transformers.
     'batch_size': [32, 64, 96, 128],            # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
-    'weight_decay': [0.0, 1e-5, 5e-5, 1e-4, 2e-4],  # Weight decay: L2 regularization to prevent large weights and overfitting.
-    'epochs': [50, 75, 100, 150],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
+    'weight_decay': [5e-5, 1e-4, 2e-4, 1e-3],  # Weight decay: L2 regularization to prevent large weights and overfitting.
+    'epochs': [50, 75, 100],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
     'seed': [42, 77, 2025],                     # Random seeds: ensures reproducibility and tests robustness to initialization.
 
     # =========================
@@ -269,7 +269,7 @@ def params():
     # =========================
     # Target Engineering Parameters
     # =========================
-    'pct_move_threshold': [0.003, 0.0024, 0.0015, 0.0012],  # Thresholds for classifying significant price moves; controls label sensitivity.
+    'pct_move_threshold': [0.002, 0.0024, 0.0015, 0.0012],  # Thresholds for classifying significant price moves; controls label sensitivity.
     'target_shift': [0],                  
 }
 
