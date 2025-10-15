@@ -28,6 +28,7 @@ from keras.layers import (
     Input, Dense, Dropout, LayerNormalization,
     MultiHeadAttention, GlobalAveragePooling1D, Add
 )
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.models import Model
 from keras.optimizers import AdamW
 from keras_hub.layers import RotaryEmbedding  
@@ -541,12 +542,30 @@ def model(data, round_params):
         metrics=['accuracy']
     )
 
+    # Add early stopping callback
+    early_stop = EarlyStopping(
+        monitor='val_loss',
+        patience=10,  # Stop if val_loss doesn't improve for 10 epochs
+        restore_best_weights=True,  # Restore weights from best epoch
+        start_from_epoch= 15,  # Start checking after 15 epochs
+        verbose=1
+    )
+
+    reduce_lr = ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.5,  # Reduce LR by half
+        patience=5,
+        min_lr=1e-6,
+        verbose=1
+    )
+
     model_tf.fit(
         X_train, y_train,                      # Training features and labels
         validation_data=(X_val, y_val),        # Validation data for monitoring
         batch_size=batch_size,                 # Number of samples per gradient update
         epochs=epochs,                         # Number of training epochs
-        verbose=1  # type: ignore              # Suppress training output
+        verbose=1,                             # Show training progress       # type: ignore   
+        callbacks=[early_stop, reduce_lr]  
     )
 
     
@@ -580,5 +599,6 @@ def model(data, round_params):
     print("First 10 y_test:", y_test[:10])
 
     K.clear_session()  # Clear Keras backend session
-    gc.collect()       # Run garbage collection
+    del model_tf
+    gc.collect()
     return round_results  # Return results dictionary for UEL logging
