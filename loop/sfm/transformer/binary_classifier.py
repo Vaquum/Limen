@@ -464,37 +464,43 @@ def model(data, round_params):
         Dictionary containing metrics, predictions, and model artifacts for UEL logging
     """
     # --- Unpack hyperparameters ---
-    d_model = round_params['d_model']
-    num_heads = round_params['num_heads']
-    num_layers = round_params['num_layers']
-    dropout = round_params['dropout']
-    learning_rate = round_params['learning_rate']
-    weight_decay = round_params.get('weight_decay', 0.0)
-    batch_size = round_params['batch_size']
-    epochs = round_params['epochs']
-    seed = round_params.get('seed', 42)
-    seq_length = round_params['seq_length']
-    use_rotary = round_params.get('positional_encoding_type', 'rotary') == 'rotary'
-    pct_move_threshold = round_params['pct_move_threshold']
+    d_model = round_params['d_model']                      # Transformer embedding dimension
+    num_heads = round_params['num_heads']                  # Number of attention heads
+    num_layers = round_params['num_layers']                # Number of transformer encoder blocks
+    dropout = round_params['dropout']                      # Dropout rate for regularization
+    learning_rate = round_params['learning_rate']          # Learning rate for optimizer
+    weight_decay = round_params.get('weight_decay', 0.0)   # L2 regularization (default 0.0 if not set)
+    batch_size = round_params['batch_size']                # Batch size for training
+    epochs = round_params['epochs']                        # Number of training epochs
+    seed = round_params.get('seed', 42)                    # Random seed for reproducibility (default 42)
+    seq_length = round_params['seq_length']                # Sequence length for windowing
+    use_rotary = round_params.get('positional_encoding_type', 'rotary') == 'rotary'  # Use rotary positional encoding if specified
+    pct_move_threshold = round_params['pct_move_threshold'] # Threshold for regime target labeling
 
-    np.random.seed(seed)
+    np.random.seed(seed)                                   # Set numpy random seed for reproducibility
 
 
     # --- Extract data arrays ---
-    X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test']
-    y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
+    X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test'] # Inputs
+    y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test'] # Binary Labels
 
     print("Before windowing -- x_train:", X_train.shape, "y_train:", y_train.shape)
     print("x_val:", X_val.shape, "y_val:", y_val.shape)
     print("x_test:", X_test.shape, "y_test:", y_test.shape)
 
 
+    # --- Sequence Windowing for Transformer Input ---
     # Compute effective sequence length (limited by smallest split size)
-    seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0]) #This line ensures that the window size used for all splits is the largest possible value that fits in every split, so the model can be trained and evaluated without issues, regardless of how the data is split or how much data is available in each set.
+    # This ensures the window size fits in all splits, avoiding index errors.
+    seq_len_eff = min(seq_length, X_train.shape[0], X_val.shape[0], X_test.shape[0])
+
+    # Convert raw 2D arrays into 3D sliding windows for sequence modeling.
+    # Each sample is a sequence of 'seq_len_eff' consecutive timesteps.
     X_train, y_train = make_windows(X_train, y_train, seq_len_eff)
     X_val,   y_val   = make_windows(X_val,   y_val,   seq_len_eff)
     X_test,  y_test  = make_windows(X_test,  y_test,  seq_len_eff)
-    
+
+    # Store windowed arrays back into the data dictionary for reference.
     data['X_train'] = X_train
     data['y_train'] = y_train
     data['X_val'] = X_val
@@ -502,13 +508,14 @@ def model(data, round_params):
     data['X_test'] = X_test
     data['y_test'] = y_test
 
-
+    # Print shapes after windowing for debugging and verification.
     print("After windowing -- X_train:", X_train.shape, "y_train:", y_train.shape)
     print("X_val:", X_val.shape, "y_val:", y_val.shape)
     print("X_test:", X_test.shape, "y_test:", y_test.shape)
 
-
+    # Number of features per timestep (needed for model input shape).
     n_features = X_train.shape[2]
+    # Update sequence length to match effective window size for model input.
     seq_length = seq_len_eff  # ensure consistency for Input shape
 
 
@@ -527,15 +534,12 @@ def model(data, round_params):
     output = Dense(1, activation='sigmoid', name='output')(x)
     model_tf = Model(inputs=input_layer, outputs=output)
 
-
-    # --- Compile model with advanced training configuration ---
     optimizer = AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
     model_tf.compile(
         optimizer=optimizer,  # type: ignore
         loss=keras.losses.BinaryCrossentropy(),
         metrics=['accuracy']
     )
-
 
     model_tf.fit(
         X_train, y_train,                      # Training features and labels
@@ -545,21 +549,16 @@ def model(data, round_params):
         verbose=1  # type: ignore              # Suppress training output
     )
 
-    # --- Generate test predictions ---
-    # WARNING: Only use windowed y_test for predictions and metrics
+    
+
     test_probs = model_tf.predict(X_test, batch_size=batch_size, verbose=1).flatten()  # Predicted probabilities for test set #type: ignore
     test_preds = (test_probs > 0.5).astype(int)                                       # Convert probabilities to binary predictions if prob > 0.5
-
-    print("Test pred min/max:", test_preds.min(), test_preds.max(),
-          "y_test min/max:", y_test.min(), y_test.max())
     print("test_preds shape:", test_preds.shape, "test_probs shape:", test_probs.shape, "y_test shape:", y_test.shape)
     assert len(test_preds) == len(y_test), "Predictions and test labels are not aligned!"
 
-    # --- Compute evaluation metrics ---
-    # Pass windowed y_test to metrics for proper alignment
-    round_results = binary_metrics(data={'y_test': data['y_test']}, preds=test_preds, probs=test_probs)
 
-    # --- Prepare UEL artifacts ---    # Store predictions and trained model for UEL logging
+    # --- Compute evaluation metrics ---
+    round_results = binary_metrics(data={'y_test': data['y_test']}, preds=test_preds, probs=test_probs)
     round_results['_preds'] = test_preds          # UEL will collect for logging
     round_results['models'] = [model_tf]          # UEL will collect trained model
 
@@ -576,6 +575,7 @@ def model(data, round_params):
 
     # --- Clean up Keras session to prevent memory leaks in UEL loops ---
     print("Final round_results keys:", round_results.keys())
+    #Final round_results keys: dict_keys(['recall', 'precision', 'fpr', 'auc', 'accuracy', '_preds', 'models', 'extras'])
     print("First 10 preds:", test_preds[:10])
     print("First 10 y_test:", y_test[:10])
 
