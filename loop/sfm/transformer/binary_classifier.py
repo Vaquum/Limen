@@ -230,49 +230,57 @@ def manifest():
 
 def params():
     """
-    Define hyperparameter search space for transformer model optimization.
-    
-    This function specifies the parameter ranges for automated hyperparameter tuning.
-    Parameters are organized into categories:
-    - Model architecture: embedding dimensions, attention heads, layers
-    - Training dynamics: learning rate, batch size, regularization  
-    - Sequence modeling: context length and prediction windows
-    - Target engineering: regime detection thresholds
-    
+    SFM-Compliant Hyperparameter Definition for Transformer Binary Classifier
+
+    This function returns an optimized hyperparameter sweep space for transformer-based Bitcoin trading models.
+    - Parameter space spans architectural, optimization, and sequence modeling dimensions.
+    - Only includes valid (d_model, num_heads) pairs to prevent attention layer config errors.
+    - All selection ranges use closer gaps for more granular sweeps, as per convergence best practices.
+
     Returns:
-        Dictionary of parameter names mapped to lists of candidate values
+        dict: Parameter grid for sweep. Each key is a parameter name; each value is a list of values to scan.
     """
-    return {
+
+    # --- Architecture: Generate only valid (d_model, num_heads) pairs ---
+    # Power-of-two and divisible options for GPU efficiency and layer compatibility.
+    d_models = [32, 48, 64, 80, 96, 128]
+    num_heads = [2, 3, 4, 6, 8]
+    # Cartesian product filtered so that each d_model is divisible by num_heads
+    valid_pairs = [(dm, nh) for dm in d_models for nh in num_heads if dm % nh == 0]
+    # Unpack valid pairs for logic used in universal experiment loop (UEL)
+    d_model_space, num_heads_space = zip(*valid_pairs)
+
+    sweep_space = {
     # =========================
     # Model Architecture Parameters
     # =========================
-    'd_model': [32, 48, 64, 96],  # Model width: controls the size of hidden representations; higher values increase capacity but also memory/computation.
-    'num_heads': [2, 4, 8],       # Number of attention heads: more heads allow the model to focus on different representation subspaces.
-    'num_layers': [2, 3, 4],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
-    'dropout': [0.15, 0.2, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
+    'd_model': list(d_model_space),  # Model width: controls the size of hidden representations; higher values increase capacity but also memory/computation.
+    'num_heads':list(num_heads_space),      # Number of attention heads: more heads allow the model to focus on different representation subspaces.
+    'num_layers': [2, 3, 4, 5],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
+    'dropout': [0.10, 0.13, 0.15, 0.18, 0.20, 0.22, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
     'positional_encoding_type': ['rotary'],     # Type of positional encoding: rotary is efficient and effective for transformers on time series.
 
     # =========================
     # Optimization & Training Parameters
     # =========================
-    'learning_rate': [1e-4, 2e-4, 5e-4, 1e-3],  # Learning rate: step size for weight updates; covers a practical range for transformers.
-    'batch_size': [32, 64, 96, 128],            # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
-    'weight_decay': [5e-5, 1e-4, 2e-4, 1e-3],  # Weight decay: L2 regularization to prevent large weights and overfitting.
-    'epochs': [50, 75, 100],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
+    'learning_rate': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Learning rate: step size for weight updates; covers a practical range for transformers.
+    'batch_size': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],           # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
+    'weight_decay': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Weight decay: L2 regularization to prevent large weights and overfitting.
+    'epochs': [50, 65, 75, 100],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
     'seed': [42, 77, 2025],                     # Random seeds: ensures reproducibility and tests robustness to initialization.
 
     # =========================
     # Data & Sequence Modeling Parameters
     # =========================
-    'seq_length': [45, 60, 90, 120],            # Input sequence length: how many consecutive timesteps/data points the model sees as input to make its prediction.
+    'seq_length': [45, 60, 90, 105, 120],            # Input sequence length: how many consecutive timesteps/data points the model sees as input to make its prediction.
     'prediction_window': [5, 10, 30, 60, 90],     # Prediction horizon: how far ahead the model predicts.
 
     # =========================
     # Target Engineering Parameters
     # =========================
-    'pct_move_threshold': [0.002, 0.0024, 0.0015, 0.0012],  # Thresholds for classifying significant price moves; controls label sensitivity.
-    'target_shift': [0],                  
+    'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves; controls label sensitivity.
 }
+    return sweep_space
 
 
 
@@ -587,8 +595,8 @@ def model(data, round_params):
     val_preds = (val_probs > 0.5).astype(int)                                       # Validation binary predictions
     round_results['extras'] = {
         'seq_len_eff': seq_len_eff,        # Actual sequence length used
-        'val_preds': val_preds,            # Validation predictions
-        'val_probs': val_probs,            # Validation probabilities
+        'val_preds': val_preds,            # Validation set predicted labels
+        'val_probs': val_probs,            # Validation set predicted probabilities 
         'val_targets': y_val               # Validation targets
     }
 
