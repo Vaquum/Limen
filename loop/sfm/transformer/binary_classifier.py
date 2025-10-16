@@ -341,29 +341,64 @@ def is_valid_datetime(dt):
 def prep(data, round_params, manifest):
     """
     Leakproof data preparation with proper sequence alignment for transformer models.
-    
-    This function performs critical data preparation steps:
-    - Applies manifest transformations (scaling, feature engineering, target creation)
-    - Handles sequence windowing alignment to prevent data leakage
-    - Converts Polars DataFrames to NumPy arrays for Keras compatibility
-    - Manages test set alignment for proper prediction logging
-    
-    The prep function ensures that the first (seq_length-1) test predictions are marked
-    as missing since they don't have sufficient historical context, maintaining
-    integrity for evaluation metrics and logging.
-    
-    Args:
-        data: Raw input DataFrame
-        round_params: Current hyperparameter configuration
-        manifest: Configured manifest with all transformations
-        
-    Returns:
-        Dictionary containing train/val/test splits as NumPy arrays with alignment info
+    ...
     """
     # Prepare model-ready splits via manifest
     data_dict = manifest.prepare_data(data, round_params)
-
-
+    
+    # ============================================================
+    # CRITICAL: Remove NaN rows from indicators/features
+    # ============================================================
+    # After all feature engineering (indicators, targets, cyclical encoding)
+    # and BEFORE any windowing or model training
+    
+    print("\n" + "="*60)
+    print("NaN SANITIZATION CHECK")
+    print("="*60)
+    
+    # Check for NaNs in each split
+    for split_name in ['x_train', 'x_val', 'x_test']:
+        if split_name in data_dict:
+            X = data_dict[split_name]
+            if isinstance(X, pl.DataFrame):
+                nan_counts = X.select([pl.all().is_nan().sum()])
+                print(f"\n{split_name} NaN counts per column:")
+                print(nan_counts)
+                
+                print(f"{split_name} shape before NaN removal: {X.shape}")
+                
+                # Create boolean mask: True for rows WITHOUT any NaN
+                mask = X.select(~pl.any_horizontal(X.select([pl.all().is_nan()]))).to_series()
+                
+                # Remove rows with ANY NaN in ANY column
+                X_clean = X.filter(mask)
+                print(f"{split_name} shape after NaN removal: {X_clean.shape}")
+                print(f"Rows dropped: {len(X) - len(X_clean)}")
+                
+                # Update data_dict with cleaned data
+                data_dict[split_name] = X_clean
+                
+                # Also align corresponding y labels using the SAME mask
+                y_key = split_name.replace('x_', 'y_')
+                if y_key in data_dict:
+                    y = data_dict[y_key]
+                    if isinstance(y, pl.Series):
+                        # Filter Series using the same boolean mask
+                        data_dict[y_key] = y.filter(mask)
+                    elif isinstance(y, pl.DataFrame):
+                        # Filter DataFrame using the same mask
+                        data_dict[y_key] = y.filter(mask)
+    
+    # Final verification: assert NO NaNs remain
+    for split_name in ['x_train', 'x_val', 'x_test']:
+        if split_name in data_dict:
+            X = data_dict[split_name]
+            if isinstance(X, pl.DataFrame):
+                has_nan = X.select([pl.any_horizontal(pl.all().is_nan())]).to_series().any()
+                assert not has_nan, f"ERROR: {split_name} still contains NaN after cleaning!"
+    
+    print("\n✓ All splits verified NaN-free")
+    print("="*60 + "\n")
     # Compute effective window length (for safest windowing across splits)
     seq_len_eff = min(
         round_params['seq_length'],
@@ -409,7 +444,6 @@ def prep(data, round_params, manifest):
    
 
     return data_dict
-
 
 
 def transformer_encoder_block(d_model, num_heads, dropout, use_rotary):
