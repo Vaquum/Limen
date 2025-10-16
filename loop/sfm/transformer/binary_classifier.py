@@ -39,6 +39,17 @@ from loop.manifest import Manifest
 from loop.manifest import _apply_fitted_transform
 import loop.manifest
 import datetime
+from loop.manifest import Manifest
+from loop.indicators import (
+    roc, wilder_rsi, rsi_sma, macd, ppo, atr, rolling_volatility,
+    returns, price_change_pct
+)
+from loop.features import (
+    vwap, kline_imbalance, price_range_position, close_position,
+    ema_breakout, ichimoku_cloud, atr_percent_sma, atr_sma,
+     distance_from_high, distance_from_low,
+    breakout_features, lag_range, ma_slope_regime
+)
 
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -218,7 +229,29 @@ def manifest():
         .set_split_config(8, 1, 2)  
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
-        .add_feature(add_cyclical_features)  # Add temporal cyclical features
+        .add_feature(add_cyclical_features)
+        .add_indicator(wilder_rsi, period='rsi_period')  # RSI
+        .add_indicator(macd,
+                       close_col='close',
+                       fast_period='macd_fast',
+                       slow_period='macd_slow',
+                       signal_period='macd_signal')        # MACD
+        .add_indicator(atr,
+                       high_col='high',
+                       low_col='low',
+                       close_col='close',
+                       period='atr_period')                # ATR
+        .add_indicator(wilder_rsi, period='rsi_period')  # RSI
+        .add_indicator(macd,
+                       close_col='close',
+                       fast_period='macd_fast',
+                       slow_period='macd_slow',
+                       signal_period='macd_signal')        # MACD
+        .add_indicator(atr,
+                       high_col='high',
+                       low_col='low',
+                       close_col='close',
+                       period='atr_period')                # ATR
         .with_target('target_regime')
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
@@ -243,7 +276,7 @@ def params():
 
     # --- Architecture: Generate only valid (d_model, num_heads) pairs ---
     # Power-of-two and divisible options for GPU efficiency and layer compatibility.
-    d_models = [32, 48, 64, 80, 96, 128]
+    d_models = [32, 40, 48, 56, 64, 80, 96, 128]
     num_heads = [2, 3, 4, 6, 8]
     # Cartesian product filtered so that each d_model is divisible by num_heads
     valid_pairs = [(dm, nh) for dm in d_models for nh in num_heads if dm % nh == 0]
@@ -251,34 +284,46 @@ def params():
     d_model_space, num_heads_space = zip(*valid_pairs)
 
     sweep_space = {
-    # =========================
-    # Model Architecture Parameters
-    # =========================
+
+                                                        # =========================
+                                                        # Model Architecture Parameters
+                                                        # =========================
+
     'd_model': list(d_model_space),  # Model width: controls the size of hidden representations; higher values increase capacity but also memory/computation.
     'num_heads': list(num_heads_space),      # Number of attention heads: more heads allow the model to focus on different representation subspaces.
     'num_layers': [2, 3, 4, 5],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
     'dropout': [0.10, 0.13, 0.15, 0.18, 0.20, 0.22, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
     'positional_encoding_type': ['rotary'],     # Type of positional encoding: rotary is efficient and effective for transformers on time series.
 
-    # =========================
-    # Optimization & Training Parameters
-    # =========================
+                                                        # =========================
+                                                        # Optimization & Training Parameters
+                                                        # =========================
     'learning_rate': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Learning rate: step size for weight updates; covers a practical range for transformers.
-    'batch_size': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],           # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
+    'batch_size': [32, 48, 64, 80, 96, 112, 128],           # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
     'weight_decay': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Weight decay: L2 regularization to prevent large weights and overfitting.
     'epochs': [50, 65, 75, 100],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
     'seed': [42, 77, 2025],                     # Random seeds: ensures reproducibility and tests robustness to initialization.
 
-    # =========================
-    # Data & Sequence Modeling Parameters
-    # =========================
+                                                        # =========================
+                                                        # Data & Sequence Modeling Parameters
+                                                        # =========================
+
     'seq_length': [45, 60, 90, 105, 120],            # Input sequence length: how many consecutive timesteps/data points the model sees as input to make its prediction.
     'prediction_window': [5, 10, 30, 60, 90],     # Prediction horizon: how far ahead the model predicts.
 
-    # =========================
-    # Target Engineering Parameters
-    # =========================
+
+                                                        # =========================
+                                                        # Target Engineering Parameters
+                                                        # =========================
     'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves; controls label sensitivity.
+                                                        # Inidicator Parameters
+    'rsi_period': [10, 14, 21],                                 # Research supports 14 +/- for crypto
+    'macd_fast': [8, 12], 'macd_slow': [21, 26], 'macd_signal': [7, 9],
+    'atr_period': [7, 14, 21],                                  # Short and standard volatility windows
+    # Features
+    'range_pos_period': [14, 20],                               # Rolling window for range position
+    'ma_regime_period': [20, 30],                               # Trend periods
+    'ma_regime_thresh': [0.0, 1e-4],                            # Slope regime threshold choices
 }
     return sweep_space
 
