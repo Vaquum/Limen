@@ -289,7 +289,7 @@ def params():
                                                         # Model Architecture Parameters
                                                         # =========================
 
-    'd_model': [32, 48, 64, 96, 128],  # Model width: must be divisible by num_heads
+    'd_model': [32, 40, 48, 56, 64, 72, 80, 96, 128],  # Model width: must be divisible by num_heads
     'num_heads': [2, 4, 8],        # Number of attention heads
 
     'num_layers': [2, 3, 4, 5],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
