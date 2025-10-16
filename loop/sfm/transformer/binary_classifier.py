@@ -570,6 +570,7 @@ def model(data, round_params):
 
     # Number of features per timestep (needed for model input shape).
     n_features = X_train.shape[2]
+    print(f"Number of features: {n_features}")
     # Update sequence length to match effective window size for model input.
     seq_length = seq_len_eff  # ensure consistency for Input shape
 
