@@ -255,7 +255,7 @@ def params():
     # Model Architecture Parameters
     # =========================
     'd_model': list(d_model_space),  # Model width: controls the size of hidden representations; higher values increase capacity but also memory/computation.
-    'num_heads':list(num_heads_space),      # Number of attention heads: more heads allow the model to focus on different representation subspaces.
+    'num_heads': list(num_heads_space),      # Number of attention heads: more heads allow the model to focus on different representation subspaces.
     'num_layers': [2, 3, 4, 5],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
     'dropout': [0.10, 0.13, 0.15, 0.18, 0.20, 0.22, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
     'positional_encoding_type': ['rotary'],     # Type of positional encoding: rotary is efficient and effective for transformers on time series.
@@ -488,7 +488,8 @@ def model(data, round_params):
 
     np.random.seed(seed)                                   # Set numpy random seed for reproducibility
 
-
+    if d_model % num_heads != 0:
+        raise ValueError(f"Invalid transformer configuration: d_model ({d_model}) not divisible by num_heads ({num_heads})")
     # --- Extract data arrays ---
     X_train, X_val, X_test = data['x_train'], data['x_val'], data['x_test'] # Inputs
     y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test'] # Binary Labels
