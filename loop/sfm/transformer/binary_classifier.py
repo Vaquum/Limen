@@ -229,10 +229,10 @@ def manifest():
         .add_indicator(atr, period='atr_period')
         # Features
         .add_feature(vwap, price_col='close', volume_col='volume')
-        .add_feature(volume_spike, lookback='vol_spike_lookback', zscore=True)
+        .add_feature(volume_spike, period='vol_spike_period', use_zscore=True)
         .add_feature(price_range_position, period='range_pos_period')
         .add_feature(ma_slope_regime, period='ma_regime_period', threshold='ma_regime_thresh')
-        .add_feature(price_vs_band_regime, period='pbr_period', std='pbr_std')
+        .add_feature(price_vs_band_regime, period='pbr_period', band='pbr_band', k='pbr_k')  # Added band, k parameters for clarity
         .with_target('target_regime')
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
@@ -291,20 +291,22 @@ def params():
 
         'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves
 
-       # Indicators
-        'rsi_period': [10, 14, 21],                       # Standard, faster and slower RSI for robust search
-        'macd_fast': [8, 10, 12],                         # Fast period for 1-min trend
-        'macd_slow': [17, 21, 26],                        # Slow period for smoothing
-        'macd_signal': [5, 7, 9],                         # Signal EMA period
-        'atr_period': [5, 7, 10],                         # Short ATR for microstructure volatility
+        # Indicator Parameters
+        'rsi_period': [10, 14, 21],               # Short, classic, and slow
+        'macd_fast': [8, 10, 12],                 # Faster for minute bars
+        'macd_slow': [17, 21, 26],                # Smoothed bassline for microtrends
+        'macd_signal': [5, 7, 9],                 # Smoothing signal
+        'atr_period': [5, 7, 10],                 # Short-range volatility
 
-        # Features
-        'vol_spike_lookback': [14, 20, 30],               # Z-score window for volume spike detection; keep zscore=True
-        'range_pos_period': [10, 14, 20],                 # Price position lookback
-        'ma_regime_period': [14, 20, 30],                 # Slope regime window
-        'ma_regime_thresh': [1e-4, 2e-4, 5e-4],           # Slope threshold options for discrimination
-        'pbr_period': [14, 20],                           # Band regime window (parallel to range/MA, separate)
-        'pbr_std': [2.0, 2.2],                            # Band width in standard deviations
+        # Features (context and regime)
+        'vol_spike_period': [14, 20, 30],         # Range of z-score windows for spike detection
+        'range_pos_period': [10, 14, 20],         # Local context; tighter for faster, broader for slower environments
+        'ma_regime_period': [14, 20, 30],         # Trend context—test different regime perceptions
+        'ma_regime_thresh': [1e-4, 2e-4, 5e-4],   # Slope threshold variations
+
+        'pbr_period': [14, 20],                   # Context for band regime
+        'pbr_band': ['std', 'dev_std'],           # Standard deviation or dev from mean
+        'pbr_k': [0.5, 0.75, 1.0],                # Multiplier for band width; determines strength to register regime
     }
     return sweep_space
 
