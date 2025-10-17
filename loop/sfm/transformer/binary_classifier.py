@@ -329,31 +329,37 @@ def prep(data, round_params, manifest):
     # Prepare model-ready splits via manifest
     data_dict = manifest.prepare_data(data, round_params)
     
-    # ============================================================
-    # CRITICAL: Remove NaN rows from indicators/features
-    # ============================================================
-    # After all feature engineering (indicators, targets, cyclical encoding)
-    # and BEFORE any windowing or model training
-    
     print("\n" + "="*60)
     print("NaN SANITIZATION CHECK")
     print("="*60)
     
-    # Check for NaNs in each split
+    # Check for NaNs in each split (numeric columns only)
     for split_name in ['x_train', 'x_val', 'x_test']:
         if split_name in data_dict:
             X = data_dict[split_name]
             if isinstance(X, pl.DataFrame):
-                nan_counts = X.select([pl.all().is_nan().sum()])
-                print(f"\n{split_name} NaN counts per column:")
+                # Get numeric column names only
+                numeric_cols = [
+                    c for c in X.columns
+                    if X[c].dtype in (pl.Float32, pl.Float64, pl.Int32, pl.Int64)
+                ]
+
+                # Print NaN counts per numeric column
+                nan_counts = X.select([
+                    pl.col(col).is_nan().sum().alias(col) 
+                    for col in numeric_cols
+                ])
+                print(f"\n{split_name} NaN counts per numeric column:")
                 print(nan_counts)
                 
                 print(f"{split_name} shape before NaN removal: {X.shape}")
                 
-                # Create boolean mask: True for rows WITHOUT any NaN
-                mask = X.select(~pl.any_horizontal(X.select([pl.all().is_nan()]))).to_series()
+                # Create boolean mask as a Series (not Expr)
+                mask = X.select(
+                    ~pl.any_horizontal([pl.col(col).is_nan() for col in numeric_cols])
+                ).to_series()
                 
-                # Remove rows with ANY NaN in ANY column
+                # Remove rows with ANY NaN in numeric columns
                 X_clean = X.filter(mask)
                 print(f"{split_name} shape after NaN removal: {X_clean.shape}")
                 print(f"Rows dropped: {len(X) - len(X_clean)}")
@@ -361,27 +367,32 @@ def prep(data, round_params, manifest):
                 # Update data_dict with cleaned data
                 data_dict[split_name] = X_clean
                 
-                # Also align corresponding y labels using the SAME mask
+                # Align corresponding y labels using the SAME mask
                 y_key = split_name.replace('x_', 'y_')
                 if y_key in data_dict:
                     y = data_dict[y_key]
                     if isinstance(y, pl.Series):
-                        # Filter Series using the same boolean mask
                         data_dict[y_key] = y.filter(mask)
                     elif isinstance(y, pl.DataFrame):
-                        # Filter DataFrame using the same mask
                         data_dict[y_key] = y.filter(mask)
     
-    # Final verification: assert NO NaNs remain
+    # Final verification: assert NO NaNs remain in numeric columns
     for split_name in ['x_train', 'x_val', 'x_test']:
         if split_name in data_dict:
             X = data_dict[split_name]
             if isinstance(X, pl.DataFrame):
-                has_nan = X.select([pl.any_horizontal(pl.all().is_nan())]).to_series().any()
-                assert not has_nan, f"ERROR: {split_name} still contains NaN after cleaning!"
+                numeric_cols = [
+                    c for c in X.columns
+                    if X[c].dtype in (pl.Float32, pl.Float64, pl.Int32, pl.Int64)
+                ]
+                has_nan = X.select([
+                    pl.any_horizontal([pl.col(col).is_nan() for col in numeric_cols])
+                ]).to_series().any()
+                assert not has_nan, f"ERROR: {split_name} still contains NaN in numeric columns after cleaning!"
     
-    print("\n✓ All splits verified NaN-free")
+    print("\n✓ All splits verified NaN-free in numeric columns")
     print("="*60 + "\n")
+    
     # Compute effective window length (for safest windowing across splits)
     seq_len_eff = min(
         round_params['seq_length'],
