@@ -19,6 +19,9 @@ from loop.features.atr_percent_sma import atr_percent_sma
 from loop.features.ema_breakout import ema_breakout
 from loop.features.vwap import vwap
 from loop.features.ichimoku_cloud import ichimoku_cloud
+from loop.features.volume_spike import volume_spike
+from loop.features.ma_slope_regime import ma_slope_regime
+from loop.features.price_vs_band_regime import price_vs_band_regime
 
 __all__ = [
     'conserved_flux_renormalization',
@@ -41,5 +44,8 @@ __all__ = [
     'atr_percent_sma',
     'ema_breakout',
     'vwap',
-    'ichimoku_cloud'
+    'ichimoku_cloud',
+    'volume_spike',
+    'ma_slope_regime',
+    'price_vs_band_regime',
 ]

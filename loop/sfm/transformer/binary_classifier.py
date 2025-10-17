@@ -40,16 +40,8 @@ from loop.manifest import _apply_fitted_transform
 import loop.manifest
 import datetime
 from loop.manifest import Manifest
-from loop.indicators import (
-    roc, wilder_rsi, rsi_sma, macd, ppo, atr, rolling_volatility,
-    returns, price_change_pct
-)
-from loop.features import (
-    vwap, kline_imbalance, price_range_position, close_position,
-    ema_breakout, ichimoku_cloud, atr_percent_sma, atr_sma,
-     distance_from_high, distance_from_low,
-    breakout_features, lag_range, ma_slope_regime
-)
+from loop.indicators import returns, wilder_rsi, macd, atr
+from loop.features import vwap, volume_spike, price_range_position, ma_slope_regime, price_vs_band_regime
 
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -230,28 +222,17 @@ def manifest():
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
         .add_feature(add_cyclical_features)
-        .add_indicator(wilder_rsi, period='rsi_period')  # RSI
-        .add_indicator(macd,
-                       close_col='close',
-                       fast_period='macd_fast',
-                       slow_period='macd_slow',
-                       signal_period='macd_signal')        # MACD
-        .add_indicator(atr,
-                       high_col='high',
-                       low_col='low',
-                       close_col='close',
-                       period='atr_period')                # ATR
-        .add_indicator(wilder_rsi, period='rsi_period')  # RSI
-        .add_indicator(macd,
-                       close_col='close',
-                       fast_period='macd_fast',
-                       slow_period='macd_slow',
-                       signal_period='macd_signal')        # MACD
-        .add_indicator(atr,
-                       high_col='high',
-                       low_col='low',
-                       close_col='close',
-                       period='atr_period')                # ATR
+        # Indicators
+        .add_indicator(returns)  # Log returns for close (base movement)
+        .add_indicator(wilder_rsi, period='rsi_period')
+        .add_indicator(macd, fast_period='macd_fast', slow_period='macd_slow', signal_period='macd_signal')
+        .add_indicator(atr, period='atr_period')
+        # Features
+        .add_feature(vwap, price_col='close', volume_col='volume')
+        .add_feature(volume_spike, lookback='vol_spike_lookback', zscore=True)
+        .add_feature(price_range_position, period='range_pos_period')
+        .add_feature(ma_slope_regime, period='ma_regime_period', threshold='ma_regime_thresh')
+        .add_feature(price_vs_band_regime, period='pbr_period', std='pbr_std')
         .with_target('target_regime')
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
@@ -265,7 +246,8 @@ def params():
     """
     SFM-Compliant Hyperparameter Definition for Transformer Binary Classifier
 
-    This function returns an optimized hyperparameter sweep space for transformer-based Bitcoin trading models.
+    Returns an optimized hyperparameter sweep space for transformer-based Bitcoin trading models.
+
     - Parameter space spans architectural, optimization, and sequence modeling dimensions.
     - Only includes valid (d_model, num_heads) pairs to prevent attention layer config errors.
     - All selection ranges use closer gaps for more granular sweeps, as per convergence best practices.
@@ -274,58 +256,56 @@ def params():
         dict: Parameter grid for sweep. Each key is a parameter name; each value is a list of values to scan.
     """
 
-    # --- Architecture: Generate only valid (d_model, num_heads) pairs ---
-    # Power-of-two and divisible options for GPU efficiency and layer compatibility.
-    # d_models = [32, 40, 48, 56, 64, 80, 96, 128]
-    # num_heads = [2, 3, 4, 6, 8]
-    # # Cartesian product filtered so that each d_model is divisible by num_heads
-    # valid_pairs = [(dm, nh) for dm in d_models for nh in num_heads if dm % nh == 0]
-    # # Unpack valid pairs for logic used in universal experiment loop (UEL)
-    # d_model_space, num_heads_space = zip(*valid_pairs)
-
     sweep_space = {
 
-                                                        # =========================
-                                                        # Model Architecture Parameters
-                                                        # =========================
+        # =========================
+        # Model Architecture Parameters
+        # =========================
 
-    'd_model': [32, 40, 48, 56, 64, 72, 80, 96, 128],  # Model width: must be divisible by num_heads
-    'num_heads': [2, 4, 8],        # Number of attention heads
+        'd_model': [32, 40, 48, 56, 64, 72, 80, 96, 128],  # Model width: must be divisible by num_heads
+        'num_heads': [2, 4, 8],                            # Number of attention heads
+        'num_layers': [2, 3, 4, 5],                        # Number of transformer blocks
+        'dropout': [0.10, 0.13, 0.15, 0.18, 0.20, 0.22, 0.25],  # Dropout rates for regularization
+        'positional_encoding_type': ['rotary'],            # Type of positional encoding
 
-    'num_layers': [2, 3, 4, 5],   # Number of transformer blocks: deeper models can capture more complex patterns, but risk overfitting and higher compute.
-    'dropout': [0.10, 0.13, 0.15, 0.18, 0.20, 0.22, 0.25],  # Dropout rates: regularization to prevent overfitting; low values (0.002, 0.05) for minimal regularization, higher values (0.1-0.25) for stronger effect.
-    'positional_encoding_type': ['rotary'],     # Type of positional encoding: rotary is efficient and effective for transformers on time series.
+        # =========================
+        # Optimization & Training Parameters
+        # =========================
 
-                                                        # =========================
-                                                        # Optimization & Training Parameters
-                                                        # =========================
-    'learning_rate': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Learning rate: step size for weight updates; covers a practical range for transformers.
-    'batch_size': [32, 48, 64, 80, 96, 112, 128],           # Batch size: number of samples per update; larger values speed up training if memory allows, smaller values may help generalization.
-    'weight_decay': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Weight decay: L2 regularization to prevent large weights and overfitting.
-    'epochs': [50, 65, 75, 100],               # Number of training epochs: controls how many times the model sees the data; higher values for longer training.
-    'seed': [42, 77, 2025],                     # Random seeds: ensures reproducibility and tests robustness to initialization.
+        'learning_rate': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Learning rate
+        'batch_size': [32, 48, 64, 80, 96, 112, 128],                            # Batch size
+        'weight_decay': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],    # Weight decay (L2 regularization)
+        'epochs': [50, 65, 75, 100],                                             # Number of training epochs
+        'seed': [42, 77, 2025],                                                  # Random seeds for reproducibility
 
-                                                        # =========================
-                                                        # Data & Sequence Modeling Parameters
-                                                        # =========================
+        # =========================
+        # Data & Sequence Modeling Parameters
+        # =========================
 
-    'seq_length': [45, 60, 90, 105, 120],            # Input sequence length: how many consecutive timesteps/data points the model sees as input to make its prediction.
-    'prediction_window': [5, 10, 30, 60, 90],     # Prediction horizon: how far ahead the model predicts.
+        'seq_length': [45, 60, 90, 105, 120],            # Input sequence length
+        'prediction_window': [5, 10, 30, 60, 90],        # Prediction horizon
 
+        # =========================
+        # Target Engineering Parameters
+        # =========================
 
-                                                        # =========================
-                                                        # Target Engineering Parameters
-                                                        # =========================
-    'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves; controls label sensitivity.
-                                                        # Inidicator Parameters
-    'rsi_period': [10, 14, 21],                                 # Research supports 14 +/- for crypto
-    'macd_fast': [8, 12], 'macd_slow': [21, 26], 'macd_signal': [7, 9],
-    'atr_period': [7, 14, 21],                                  # Short and standard volatility windows
-    # Features
-    'range_pos_period': [14, 20],                               # Rolling window for range position
-    'ma_regime_period': [20, 30],                               # Trend periods
-    'ma_regime_thresh': [0.0, 1e-4],                            # Slope regime threshold choices
-}
+        'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves
+
+       # Indicators
+        'rsi_period': [10, 14, 21],                       # Standard, faster and slower RSI for robust search
+        'macd_fast': [8, 10, 12],                         # Fast period for 1-min trend
+        'macd_slow': [17, 21, 26],                        # Slow period for smoothing
+        'macd_signal': [5, 7, 9],                         # Signal EMA period
+        'atr_period': [5, 7, 10],                         # Short ATR for microstructure volatility
+
+        # Features
+        'vol_spike_lookback': [14, 20, 30],               # Z-score window for volume spike detection; keep zscore=True
+        'range_pos_period': [10, 14, 20],                 # Price position lookback
+        'ma_regime_period': [14, 20, 30],                 # Slope regime window
+        'ma_regime_thresh': [1e-4, 2e-4, 5e-4],           # Slope threshold options for discrimination
+        'pbr_period': [14, 20],                           # Band regime window (parallel to range/MA, separate)
+        'pbr_std': [2.0, 2.2],                            # Band width in standard deviations
+    }
     return sweep_space
 
 
