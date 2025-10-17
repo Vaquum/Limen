@@ -53,7 +53,7 @@ def params():
         'solver': ['auto'],
         'use_calibration': [True],
         'calibration_method': ['sigmoid'],
-        'calibration_cv': ['prefit'],
+        'calibration_cv': [3],
         'n_jobs': [8],
         'pred_threshold': [0.55],
         'random_state': [42],

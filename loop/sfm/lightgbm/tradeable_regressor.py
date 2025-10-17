@@ -164,7 +164,7 @@ def prep(data, round_params=None):
     df = calculate_returns_if_missing(df)
     
     df = df.with_columns([
-        pl.col('returns').rolling_std(CONFIG['volatility_lookback_candles'], min_periods=1).alias('vol_60h'),
+        pl.col('returns').rolling_std(CONFIG['volatility_lookback_candles'], min_samples=1).alias('vol_60h'),
         pl.lit(CONFIG['default_vol_percentile']).alias('vol_percentile'),
         pl.lit(CONFIG['default_volatility_regime']).alias('volatility_regime'),
         pl.lit(CONFIG['default_regime_low']).alias('regime_low'),

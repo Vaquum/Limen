@@ -52,7 +52,6 @@ def params():
         'tol': [0.0001, 0.001, 0.01, 0.1],
         'class_weight': ['None', 'balanced'],
         'l1_ratio': [0.15, 0.5, 0.85],
-        'multi_class': ['ovr', 'multinomial'],
         'fit_intercept': [True],
         'random_state': [42],
     }
@@ -117,7 +116,6 @@ def model(data, round_params):
     params = round_params.copy()
 
     if params['solver'] == 'liblinear':
-        params['multi_class'] = 'ovr'
         if params['penalty'] == 'elasticnet':
             params['penalty'] = 'l2'
     
@@ -127,8 +125,6 @@ def model(data, round_params):
     if params['penalty'] == 'l1' and params['solver'] not in ['liblinear', 'saga']:
         params['solver'] = 'saga'
     
-    if params['multi_class'] == 'multinomial' and params['solver'] == 'liblinear':
-        params['solver'] = 'lbfgs'
     
     if params['penalty'] != 'elasticnet':
         params.pop('l1_ratio', None)
@@ -143,7 +139,6 @@ def model(data, round_params):
         max_iter=params['max_iter'],
         tol=params['tol'],
         class_weight=params['class_weight'],
-        multi_class=params['multi_class'],
         fit_intercept=params['fit_intercept'],
         random_state=params['random_state'],
         l1_ratio=params.get('l1_ratio'),
