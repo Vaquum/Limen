@@ -424,19 +424,38 @@ def prep(data, round_params, manifest):
        
 
     # NumPy conversions
+    exclude_cols = ['datetime', 'target_regime']
+    numeric_dtypes = (pl.Float64, pl.Float32, pl.Int64, pl.Int32)
+    
+    # Convert feature DataFrames to NumPy (numeric columns only)
     for k in ['x_train', 'x_val', 'x_test']:
         if isinstance(data_dict[k], pl.DataFrame):
-            data_dict[k] = data_dict[k].to_numpy()
+            df = data_dict[k]
+            # Select only numeric feature columns
+            feature_cols = [
+                c for c in df.columns 
+                if c not in exclude_cols and df[c].dtype in numeric_dtypes
+            ]
+            # Convert to NumPy array with explicit float64 dtype
+            data_dict[k] = df.select(feature_cols).to_numpy(dtype=np.float64)
+    
+    # Convert target Series/DataFrames to NumPy (already numeric)
     for k in ['y_train', 'y_val', 'y_test']:
         if isinstance(data_dict[k], pl.Series):
-            data_dict[k] = data_dict[k].to_numpy().ravel()
+            data_dict[k] = data_dict[k].to_numpy().ravel().astype(np.int32)
         elif isinstance(data_dict[k], pl.DataFrame):
-            data_dict[k] = data_dict[k].to_numpy().ravel()
-
+            data_dict[k] = data_dict[k].to_numpy().ravel().astype(np.int32)
+    
+    # Verify dtypes before returning
+    print("\nDtype verification after conversion:")
+    for k in ['x_train', 'x_val', 'x_test']:
+        print(f"{k} dtype: {data_dict[k].dtype}, shape: {data_dict[k].shape}")
+    for k in ['y_train', 'y_val', 'y_test']:
+        print(f"{k} dtype: {data_dict[k].dtype}, shape: {data_dict[k].shape}")
+    
     # Window y_test as before
     raw_y_test = data_dict['y_test']
-   
-
+    
     return data_dict
 
 
