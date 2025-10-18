@@ -332,4 +332,5 @@ data mismatch
 - Update `loop.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
 
 # V1.20.1 on 18th of October 2025
+- Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
