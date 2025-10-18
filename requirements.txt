@@ -1,6 +1,6 @@
-pandas>=2.0.0
+pandas>=2.3.1
 polars>=1.0.0
-scikit-learn>=1.0.0
+scikit-learn>=1.6.1
 tqdm>=4.67.0
 xgboost
 python-dotenv
@@ -11,7 +11,7 @@ clickhouse_connect
 lightgbm
 wrangle
 pyarrow
-numpy
+numpy>=2.2.6
 matplotlib
 seaborn
 streamlit
