@@ -331,3 +331,5 @@ data mismatch
 - Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
 - Update `loop.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
 
+# V1.20.1 on 18th of October 2025
+- Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
