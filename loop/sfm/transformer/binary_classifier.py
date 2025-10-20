@@ -256,7 +256,7 @@ def manifest():
         # Order flow crucial for high-frequency trading [web:35]
         .add_feature(spread)  # Bid-ask spread for execution quality
         .add_feature(volume_spike)  # Sudden activity detection
-        .add_feature(volume_trend, short=7, long=21)  # Flow regime shift
+        .add_feature(volume_trend, short_period=7, long_period=21)  # Flow regime shift
         
         # ===== FEATURES: Regime Detection =====
         # Critical for filtering non-tradeable periods [web:21][web:33]
