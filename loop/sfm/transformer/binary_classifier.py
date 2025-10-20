@@ -272,7 +272,7 @@ def params():
         # =========================
 
         'learning_rate': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Learning rate
-        'batch_size': [32, 48, 64, 80, 96, 112, 128],                            # Batch size
+        'batch_size': [32, 48, 64, 80, 96, 112, 128, 256, 512],                            # Batch size
         'weight_decay': [1e-3, 2e-3, 5e-3, 1e-2, 2e-2, 5e-2, 1e-1],    # Increased weight decay (L2 regularization)
         'epochs': [50, 65, 75, 100],                                             # Number of training epochs
         'seed': [42, 77, 2025],                                                  # Random seeds for reproducibility
@@ -324,9 +324,6 @@ def prep(data, round_params, manifest):
     # Prepare model-ready splits via manifest
     data_dict = manifest.prepare_data(data, round_params)
     
-    print("\n" + "="*60)
-    print("NaN SANITIZATION CHECK")
-    print("="*60)
     
     # Check for NaNs in each split (numeric columns only)
     for split_name in ['x_train', 'x_val', 'x_test']:
@@ -344,10 +341,6 @@ def prep(data, round_params, manifest):
                     pl.col(col).is_nan().sum().alias(col) 
                     for col in numeric_cols
                 ])
-                print(f"\n{split_name} NaN counts per numeric column:")
-                print(nan_counts)
-                
-                print(f"{split_name} shape before NaN removal: {X.shape}")
                 
                 # Create boolean mask as a Series (not Expr)
                 mask = X.select(
@@ -356,8 +349,7 @@ def prep(data, round_params, manifest):
                 
                 # Remove rows with ANY NaN in numeric columns
                 X_clean = X.filter(mask)
-                print(f"{split_name} shape after NaN removal: {X_clean.shape}")
-                print(f"Rows dropped: {len(X) - len(X_clean)}")
+
                 
                 # Update data_dict with cleaned data
                 data_dict[split_name] = X_clean
@@ -442,12 +434,6 @@ def prep(data, round_params, manifest):
         elif isinstance(data_dict[k], pl.DataFrame):
             data_dict[k] = data_dict[k].to_numpy().ravel().astype(np.int32)
 
-    # Verify dtypes before returning
-    print("\nDtype verification after conversion:")
-    for k in ['x_train', 'x_val', 'x_test']:
-        print(f"{k} dtype: {data_dict[k].dtype}, shape: {data_dict[k].shape}")
-    for k in ['y_train', 'y_val', 'y_test']:
-        print(f"{k} dtype: {data_dict[k].dtype}, shape: {data_dict[k].shape}")
     
     # Window y_test as before
     raw_y_test = data_dict['y_test']
@@ -613,7 +599,6 @@ def model(data, round_params):
 
     # Number of features per timestep (needed for model input shape).
     n_features = X_train.shape[2]
-    print(f"Number of features: {n_features}")
     # Update sequence length to match effective window size for model input.
     seq_length = seq_len_eff  # ensure consistency for Input shape
 
@@ -689,13 +674,7 @@ def model(data, round_params):
         'val_probs': val_probs,            # Validation set predicted probabilities 
         'val_targets': y_val               # Validation targets
     }
-
-    # --- Clean up Keras session to prevent memory leaks in UEL loops ---
-    print("Final round_results keys:", round_results.keys())
-    #Final round_results keys: dict_keys(['recall', 'precision', 'fpr', 'auc', 'accuracy', '_preds', 'models', 'extras'])
-    print("First 10 preds:", test_preds[:10])
-    print("First 10 y_test:", y_test[:10])
-
+    
     K.clear_session()  # Clear Keras backend session
     del model_tf
     gc.collect()
