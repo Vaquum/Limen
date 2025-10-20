@@ -198,6 +198,12 @@ def my_make_fitted_scaler(param_name: str, transform_class):
     )
 
 loop.manifest.make_fitted_scaler = my_make_fitted_scaler
+import polars as pl
+
+def ensure_polars_dataframe(df: pl.DataFrame | pl.LazyFrame) -> pl.DataFrame:
+    if isinstance(df, pl.LazyFrame):
+        return df.collect()
+    return df
 
 
 def manifest():
@@ -259,12 +265,12 @@ def manifest():
         # ===== FEATURES: Regime Detection =====
         # Critical for filtering non-tradeable periods [web:21][web:33]
         .add_feature(market_regime)  # Overall market state
-        .add_feature(hh_hl_structure_regime, window=21)  # Long-friendly structure validation
+        # .add_feature(hh_hl_structure_regime, window=21)  # Long-friendly structure validation
         
         # ===== FEATURES: Momentum & Breakouts =====
         # Transformer models benefit from momentum features [web:21][web:23]
         .add_feature(momentum_weight)  # Weighted momentum
-        .add_feature(breakout_features)  # Breakout confirmation
+        # .add_feature(breakout_features)  # Breakout confirmation
         .add_feature(volatility_measure)  # Volatility proxy
         
         # ===== FEATURES: Returns & Dynamics =====
