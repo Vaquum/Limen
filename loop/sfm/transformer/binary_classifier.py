@@ -40,9 +40,24 @@ from loop.manifest import _apply_fitted_transform
 import loop.manifest
 import datetime
 from loop.manifest import Manifest
-from loop.indicators import returns, wilder_rsi, macd, atr
-from loop.features import vwap, volume_spike, price_range_position, ma_slope_regime, price_vs_band_regime
-
+from loop.indicators import macd, rsi_sma, atr, returns, rolling_volatility
+from loop.features import (
+    vwap, 
+    price_range_position,
+    spread,
+    market_regime,
+    hh_hl_structure_regime,
+    volume_spike,
+    volume_trend,
+    momentum_weight,
+    breakout_features,
+    volatility_measure,
+    ema_breakout,
+    log_returns,
+    returns_lags,
+    time_features
+)
+from sklearn.preprocessing import StandardScaler
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
     """
@@ -113,7 +128,7 @@ def regime_target(df: pl.DataFrame, prediction_window: int, pct_move_threshold: 
     ratio_positive = num_positive / num_total
     ratio_negative = num_negative / num_total
 
-    print(f"[LABEL SANITY CHECK] pct_move_threshold={pct_move_threshold:.5f}")
+    print(f"\n[LABEL SANITY CHECK] pct_move_threshold={pct_move_threshold:.5f}")
     print(f"  Total samples: {num_total}")
     print(f"  Positive regime labels (1): {num_positive} ({ratio_positive*100:.2f}%)")
     print(f"  Negative regime labels (0): {num_negative} ({ratio_negative*100:.2f}%)")
@@ -222,11 +237,56 @@ def manifest():
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
         .add_feature(add_cyclical_features)
+        # ===== MOMENTUM INDICATORS (Trend + Direction) =====
+        # VWAP+MACD is proven combo for 1-min BTC scalping [web:35]
+        .add_indicator(macd, fast=12, slow=26, signal=9)
+        .add_indicator(rsi_sma, period=14)  # Momentum oscillator for overbought/oversold
+        .add_indicator(ema_breakout, fast=8, slow=21)  # Fast trend detection
+        
+        # ===== VOLATILITY INDICATORS (Risk + Breakout Context) =====
+        # Essential for crypto volatility regime detection [web:35][web:21]
+        .add_indicator(atr, period=14)
+        .add_indicator(rolling_volatility, window=21)
+        
+        # ===== FEATURES: Price Position & Mean Reversion =====
+        # VWAP is critical for 1-min scalping entries [web:35]
+        .add_feature(vwap)
+        .add_feature(price_range_position, window=21)  # Where is close in recent range
+        
+        # ===== FEATURES: Microstructure & Liquidity =====
+        # Order flow crucial for high-frequency trading [web:35]
+        .add_feature(spread)  # Bid-ask spread for execution quality
+        .add_feature(volume_spike, window=21, threshold=2.0)  # Sudden activity detection
+        .add_feature(volume_trend, short=7, long=21)  # Flow regime shift
+        
+        # ===== FEATURES: Regime Detection =====
+        # Critical for filtering non-tradeable periods [web:21][web:33]
+        .add_feature(market_regime, window=13)  # Overall market state
+        .add_feature(hh_hl_structure_regime, window=21)  # Long-friendly structure validation
+        
+        # ===== FEATURES: Momentum & Breakouts =====
+        # Transformer models benefit from momentum features [web:21][web:23]
+        .add_feature(momentum_weight, window=14)  # Weighted momentum
+        .add_feature(breakout_features, window=21)  # Breakout confirmation
+        .add_feature(volatility_measure, window=21)  # Volatility proxy
+        
+        # ===== FEATURES: Returns & Dynamics =====
+        # Transformers capture temporal dependencies well [web:41][web:43]
+        .add_feature(returns, period=1)
+        .add_feature(log_returns, period=1)
+        .add_feature(returns_lags, periods=[1, 2, 3])  # Short-term dynamics only
+        
+        # ===== TARGET =====
         .with_target('target_regime')
-        .add_fitted_transform(regime_target)  # Create binary regime labels
-        .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
+        .add_fitted_transform(regime_target)
+        .with_params(
+            prediction_window='prediction_window',
+            pct_move_threshold='pct_move_threshold'
+        )
         .done()
-        .set_scaler(RobustScaler)
+        # ===== SCALER =====
+        # RobustScaler: Best for crypto with outliers and heavy tails [web:37][web:38][web:42]
+        .set_scaler(StandardScaler)
     )
 
 
@@ -271,14 +331,9 @@ def params():
         # Data & Sequence Modeling Parameters
         # =========================
 
-        'seq_length': [45, 60, 90, 105, 120],            # Input sequence length
-        'prediction_window': [5, 10, 30, 60, 90],        # Prediction horizon
-
-        # =========================
-        # Target Engineering Parameters
-        # =========================
-
-        'pct_move_threshold': [0.005, 0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves
+        'seq_length': [45, 60, 75, 90],                 # Input sequence length for transformer
+        'prediction_window': [5, 10, 15, 30],      # Forecast horizon in minutes
+        'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024] # Thresholds for classifying significant price moves
     }
     return sweep_space
 

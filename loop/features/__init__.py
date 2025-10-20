@@ -23,6 +23,15 @@ from loop.features.volume_spike import volume_spike
 from loop.features.ma_slope_regime import ma_slope_regime
 from loop.features.price_vs_band_regime import price_vs_band_regime
 from loop.features.volume_ratio import volume_ratio
+from loop.features.price_range_position import price_range_position
+from loop.features.spread import spread
+from loop.features.market_regime import market_regime
+from loop.features.hh_hl_structure_regime import hh_hl_structure_regime
+from loop.features.volume_trend import volume_trend
+from loop.features.momentum_weight import momentum_weight
+from loop.features.volatility_measure import volatility_measure
+from loop.features.log_returns import log_returns
+from loop.features.returns_lags import returns_lags     
 __all__ = [
     'conserved_flux_renormalization',
     'breakout_features',
@@ -49,4 +58,12 @@ __all__ = [
     'ma_slope_regime',
     'price_vs_band_regime',
     'volume_ratio',
+    'spread',
+    'market_regime',
+    'hh_hl_structure_regime',
+    'volume_trend',
+    'momentum_weight',
+    'volatility_measure',
+    'log_returns',
+    'returns_lags',
 ]
