@@ -239,9 +239,8 @@ def manifest():
         .add_feature(add_cyclical_features)
         # ===== MOMENTUM INDICATORS (Trend + Direction) =====
         # VWAP+MACD is proven combo for 1-min BTC scalping [web:35]
-        .add_indicator(macd, fast=12, slow=26, signal=9)
-        .add_indicator(rsi_sma, period=14)  # Momentum oscillator for overbought/oversold
-        .add_indicator(ema_breakout, fast=8, slow=21)  # Fast trend detection
+        .add_indicator(macd)
+        .add_indicator(rsi_sma)  # Momentum oscillator for overbought/oversold
         
         # ===== VOLATILITY INDICATORS (Risk + Breakout Context) =====
         # Essential for crypto volatility regime detection [web:35][web:21]
@@ -251,30 +250,30 @@ def manifest():
         # ===== FEATURES: Price Position & Mean Reversion =====
         # VWAP is critical for 1-min scalping entries [web:35]
         .add_feature(vwap)
-        .add_feature(price_range_position, window=21)  # Where is close in recent range
+        .add_feature(price_range_position, period=21)  # Where is close in recent range
         
         # ===== FEATURES: Microstructure & Liquidity =====
         # Order flow crucial for high-frequency trading [web:35]
         .add_feature(spread)  # Bid-ask spread for execution quality
-        .add_feature(volume_spike, window=21, threshold=2.0)  # Sudden activity detection
+        .add_feature(volume_spike)  # Sudden activity detection
         .add_feature(volume_trend, short=7, long=21)  # Flow regime shift
         
         # ===== FEATURES: Regime Detection =====
         # Critical for filtering non-tradeable periods [web:21][web:33]
-        .add_feature(market_regime, window=13)  # Overall market state
+        .add_feature(market_regime)  # Overall market state
         .add_feature(hh_hl_structure_regime, window=21)  # Long-friendly structure validation
         
         # ===== FEATURES: Momentum & Breakouts =====
         # Transformer models benefit from momentum features [web:21][web:23]
         .add_feature(momentum_weight, window=14)  # Weighted momentum
-        .add_feature(breakout_features, window=21)  # Breakout confirmation
-        .add_feature(volatility_measure, window=21)  # Volatility proxy
+        .add_feature(breakout_features)  # Breakout confirmation
+        .add_feature(volatility_measure)  # Volatility proxy
         
         # ===== FEATURES: Returns & Dynamics =====
         # Transformers capture temporal dependencies well [web:41][web:43]
-        .add_feature(returns, period=1)
-        .add_feature(log_returns, period=1)
-        .add_feature(returns_lags, periods=[1, 2, 3])  # Short-term dynamics only
+        .add_feature(returns)
+        .add_feature(log_returns)
+        .add_feature(returns_lags)  # Short-term dynamics only
         
         # ===== TARGET =====
         .with_target('target_regime')
