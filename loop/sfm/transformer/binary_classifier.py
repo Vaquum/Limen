@@ -54,8 +54,6 @@ from loop.features import (
     volatility_measure,
     ema_breakout,
     log_returns,
-    returns_lags,
-    time_features
 )
 from sklearn.preprocessing import StandardScaler
 
@@ -273,8 +271,6 @@ def manifest():
         # Transformers capture temporal dependencies well [web:41][web:43]
         .add_feature(returns)
         .add_feature(log_returns)
-        .add_feature(returns_lags)  # Short-term dynamics only
-        
         # ===== TARGET =====
         .with_target('target_regime')
         .add_fitted_transform(regime_target)
