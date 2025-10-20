@@ -41,7 +41,7 @@ import loop.manifest
 import datetime
 from loop.manifest import Manifest
 from loop.indicators import returns, wilder_rsi, macd, atr
-from loop.features import vwap, volume_spike, price_range_position, ma_slope_regime, price_vs_band_regime, volume_ratio
+from loop.features import vwap, volume_spike, price_range_position, ma_slope_regime, price_vs_band_regime
 
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -218,20 +218,10 @@ def manifest():
     ]
     return(
         Manifest()
-        .set_split_config(7, 2, 1)  
+        .set_split_config(8, 1, 2)  
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
         .add_feature(add_cyclical_features)
-        # Indicators
-        .add_indicator(wilder_rsi, period='rsi_period')
-        .add_indicator(macd, fast_period='macd_fast', slow_period='macd_slow')
-        .add_indicator(atr, period='atr_period')
-        # Features
-        .add_feature(vwap, price_col='close', volume_col='volume')
-        .add_feature(volume_ratio, period='vr_period')
-        .add_feature(volume_spike, period='vol_spike_period', use_zscore=True)
-        .add_feature(price_range_position, period='range_pos_period')
-        .add_feature(ma_slope_regime, period='ma_regime_period')
         .with_target('target_regime')
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
@@ -264,7 +254,7 @@ def params():
         'd_model': [32, 40, 48, 56, 64, 72, 80, 96, 128],  # Model width: must be divisible by num_heads
         'num_heads': [2, 4, 8],                            # Number of attention heads
         'num_layers': [2, 3, 4, 5],                        # Number of transformer blocks
-        'dropout': [0.15, 0.17, 0.18, 0.22, 0.35, 0.4, 0.42, 0.5],  # Dropout rates for regularization
+        'dropout': [0.22, 0.35, 0.4, 0.42, 0.5],  # Dropout rates for regularization
         'positional_encoding_type': ['rotary'],            # Type of positional encoding
 
         # =========================
@@ -289,19 +279,6 @@ def params():
         # =========================
 
         'pct_move_threshold': [0.005, 0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves
-
-        # Indicator Parameters
-        'rsi_period': [10, 14, 21],               # Short, classic, and slow
-        'macd_fast': [8, 10, 12],                 # Faster for minute bars
-        'macd_slow': [17, 21, 26],                # Smoothed bassline for microtrends
-        'macd_signal': [5, 7, 9],                 # Smoothing signal
-        'atr_period': [5, 7, 10],                 # Short-range volatility
-
-        # Feature Parameters
-        'vr_period': [10, 14, 21],                # Volume Ratio periods
-        'vol_spike_period': [14, 20, 25],         # Range of z-score windows for spike detection
-        'range_pos_period': [10, 14, 20],         # Local context; tighter for faster, broader for slower environments
-        'ma_regime_period': [14, 20, 30],         # Trend context—test different regime perceptions
     }
     return sweep_space
 
@@ -674,7 +651,7 @@ def model(data, round_params):
         'val_probs': val_probs,            # Validation set predicted probabilities 
         'val_targets': y_val               # Validation targets
     }
-    
+
     K.clear_session()  # Clear Keras backend session
     del model_tf
     gc.collect()
