@@ -354,8 +354,10 @@ def prep(data, round_params, manifest):
     """
     # Prepare model-ready splits via manifest
     data_dict = manifest.prepare_data(data, round_params)
-    
-    
+    for k, v in data_dict.items():
+        if isinstance(v, pl.LazyFrame):
+            data_dict[k] = v.collect()
+        
     # Check for NaNs in each split (numeric columns only)
     for split_name in ['x_train', 'x_val', 'x_test']:
         if split_name in data_dict:
