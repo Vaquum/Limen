@@ -265,7 +265,7 @@ def manifest():
         
         # ===== FEATURES: Momentum & Breakouts =====
         # Transformer models benefit from momentum features [web:21][web:23]
-        .add_feature(momentum_weight, window=14)  # Weighted momentum
+        .add_feature(momentum_weight)  # Weighted momentum
         .add_feature(breakout_features)  # Breakout confirmation
         .add_feature(volatility_measure)  # Volatility proxy
         
