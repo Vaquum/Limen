@@ -22,7 +22,7 @@ from loop.features.ichimoku_cloud import ichimoku_cloud
 from loop.features.volume_spike import volume_spike
 from loop.features.ma_slope_regime import ma_slope_regime
 from loop.features.price_vs_band_regime import price_vs_band_regime
-
+from loop.features.volume_ratio import volume_ratio
 __all__ = [
     'conserved_flux_renormalization',
     'breakout_features',
@@ -48,4 +48,5 @@ __all__ = [
     'volume_spike',
     'ma_slope_regime',
     'price_vs_band_regime',
+    'volume_ratio',
 ]

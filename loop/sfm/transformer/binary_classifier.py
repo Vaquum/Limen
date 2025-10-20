@@ -41,7 +41,7 @@ import loop.manifest
 import datetime
 from loop.manifest import Manifest
 from loop.indicators import returns, wilder_rsi, macd, atr
-from loop.features import vwap, volume_spike, price_range_position, ma_slope_regime, price_vs_band_regime
+from loop.features import vwap, volume_spike, price_range_position, ma_slope_regime, price_vs_band_regime, volume_ratio
 
 
 def add_cyclical_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -218,26 +218,25 @@ def manifest():
     ]
     return(
         Manifest()
-        .set_split_config(8, 1, 2)  
+        .set_split_config(7, 2, 1)  
         .set_bar_formation(base_bar_formation, bar_type='base')
         .set_required_bar_columns(required_cols)
         .add_feature(add_cyclical_features)
         # Indicators
-        .add_indicator(returns)  # Log returns for close (base movement)
         .add_indicator(wilder_rsi, period='rsi_period')
-        .add_indicator(macd, fast_period='macd_fast', slow_period='macd_slow', signal_period='macd_signal')
+        .add_indicator(macd, fast_period='macd_fast', slow_period='macd_slow')
         .add_indicator(atr, period='atr_period')
         # Features
         .add_feature(vwap, price_col='close', volume_col='volume')
+        .add_feature(volume_ratio, period='vr_period')
         .add_feature(volume_spike, period='vol_spike_period', use_zscore=True)
         .add_feature(price_range_position, period='range_pos_period')
-        .add_feature(ma_slope_regime, period='ma_regime_period', threshold='ma_regime_thresh')
-        .add_feature(price_vs_band_regime, period='pbr_period', band='pbr_band', k='pbr_k')  # Added band, k parameters for clarity
+        .add_feature(ma_slope_regime, period='ma_regime_period')
         .with_target('target_regime')
         .add_fitted_transform(regime_target)  # Create binary regime labels
         .with_params(prediction_window='prediction_window', pct_move_threshold='pct_move_threshold')
         .done()
-        .set_scaler(StandardScaler)
+        .set_scaler(RobustScaler)
     )
 
 
@@ -265,7 +264,7 @@ def params():
         'd_model': [32, 40, 48, 56, 64, 72, 80, 96, 128],  # Model width: must be divisible by num_heads
         'num_heads': [2, 4, 8],                            # Number of attention heads
         'num_layers': [2, 3, 4, 5],                        # Number of transformer blocks
-        'dropout': [0.10, 0.13, 0.15, 0.18, 0.20, 0.22, 0.25],  # Dropout rates for regularization
+        'dropout': [0.15, 0.17, 0.18, 0.22, 0.35, 0.4, 0.42, 0.5],  # Dropout rates for regularization
         'positional_encoding_type': ['rotary'],            # Type of positional encoding
 
         # =========================
@@ -274,7 +273,7 @@ def params():
 
         'learning_rate': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],  # Learning rate
         'batch_size': [32, 48, 64, 80, 96, 112, 128],                            # Batch size
-        'weight_decay': [1e-4, 1.5e-4, 2e-4, 2.5e-4, 4e-4, 6e-4, 8e-4, 1e-3],    # Weight decay (L2 regularization)
+        'weight_decay': [1e-3, 2e-3, 5e-3, 1e-2, 2e-2, 5e-2, 1e-1],    # Increased weight decay (L2 regularization)
         'epochs': [50, 65, 75, 100],                                             # Number of training epochs
         'seed': [42, 77, 2025],                                                  # Random seeds for reproducibility
 
@@ -289,7 +288,7 @@ def params():
         # Target Engineering Parameters
         # =========================
 
-        'pct_move_threshold': [0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves
+        'pct_move_threshold': [0.005, 0.0010, 0.0012, 0.0015, 0.0018, 0.0020, 0.0024],  # Thresholds for classifying significant price moves
 
         # Indicator Parameters
         'rsi_period': [10, 14, 21],               # Short, classic, and slow
@@ -298,15 +297,11 @@ def params():
         'macd_signal': [5, 7, 9],                 # Smoothing signal
         'atr_period': [5, 7, 10],                 # Short-range volatility
 
-        # Features (context and regime)
-        'vol_spike_period': [14, 20, 30],         # Range of z-score windows for spike detection
+        # Feature Parameters
+        'vr_period': [10, 14, 21],                # Volume Ratio periods
+        'vol_spike_period': [14, 20, 25],         # Range of z-score windows for spike detection
         'range_pos_period': [10, 14, 20],         # Local context; tighter for faster, broader for slower environments
         'ma_regime_period': [14, 20, 30],         # Trend context—test different regime perceptions
-        'ma_regime_thresh': [1e-4, 2e-4, 5e-4],   # Slope threshold variations
-
-        'pbr_period': [14, 20],                   # Context for band regime
-        'pbr_band': ['std', 'dev_std'],           # Standard deviation or dev from mean
-        'pbr_k': [0.5, 0.75, 1.0],                # Multiplier for band width; determines strength to register regime
     }
     return sweep_space
 
@@ -648,9 +643,9 @@ def model(data, round_params):
     # Add early stopping callback
     early_stop = EarlyStopping(
         monitor='val_loss',
-        patience=10,  # Stop if val_loss doesn't improve for 10 epochs
+        patience=7,  # Stop if val_loss doesn't improve for 10 epochs
         restore_best_weights=True,  # Restore weights from best epoch
-        start_from_epoch= 15,  # Start checking after 15 epochs
+        start_from_epoch= 10,  # Start checking after 15 epochs
         verbose=1
     )
 
