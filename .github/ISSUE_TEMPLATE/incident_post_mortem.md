@@ -1,5 +1,5 @@
 ---
-name: Post-Mortem Comment Template
+name: Incident Post-Mortem Template
 about: Template for adding resolution details to an incident
 ---
 
