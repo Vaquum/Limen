@@ -1,14 +1,13 @@
 'SFM Label Model for Breakout regressor using Ridge Regression'
 
-from sklearn.linear_model import Ridge
 from datetime import timedelta
 
 from loop.sfm.logreg.utils.breakout_regressor import build_breakout_regressor_base_features
 from loop.features.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
-from loop.metrics.continuous_metrics import continuous_metrics
 from loop.utils.random_slice import random_slice
 from loop.manifest import Manifest
+from loop.sfm.model import ridge_regression
 
 INTERVAL_SEC = 7200
 DATETIME_COL = 'datetime'
@@ -66,6 +65,7 @@ def manifest():
             ]))
             .done()
         .set_scaler(LogRegTransform)
+        .with_model(ridge_regression)
     )
 
 
@@ -81,41 +81,6 @@ def params():
         'max_iter': [100, 500, 1000, 2000, 5000],
         'tol': [0.0001, 0.001, 0.01, 0.1],
         'fit_intercept': [True, False],
-        'random_state': [42],
+        'random_state': [42, 56],
     }
     return p
-
-
-def prep(data, round_params, manifest):
-
-    data_dict = manifest.prepare_data(data, round_params)
-
-    return data_dict
-
-
-def model(data, round_params):
-
-    params = round_params.copy()
-
-    ridge_params = {
-        'alpha': params['alpha'],
-        'solver': params['solver'],
-        'max_iter': params['max_iter'],
-        'tol': params['tol'],
-        'fit_intercept': params['fit_intercept'],
-        'random_state': params['random_state'],
-    }
-
-    if params['solver'] == 'lbfgs':
-        ridge_params['positive'] = True
-
-    ridge = Ridge(**ridge_params)
-
-    ridge.fit(data['x_train'], data['y_train'])
-
-    preds = ridge.predict(data['x_test'])
-    
-    round_results = continuous_metrics(data, preds)
-    round_results['_preds'] = preds
-        
-    return round_results

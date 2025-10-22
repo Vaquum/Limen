@@ -55,8 +55,8 @@ def build_breakout_regressor_base_features(
 
     df_label = build_breakout_flags(df_feat, deltas)
 
-    long_cols = [c for c in df_label.columns if c.startswith(long_col_prefix)]
-    short_cols = [c for c in df_label.columns if c.startswith(short_col_prefix)]
+    long_cols = [c for c in df_label.collect_schema().names() if c.startswith(long_col_prefix)]
+    short_cols = [c for c in df_label.collect_schema().names() if c.startswith(short_col_prefix)]
 
     df_label = df_label.with_columns([
         (pl.max_horizontal([pl.when(pl.col(c) == 1).then(float(c.split('_')[-1])).otherwise(0) for c in long_cols])
