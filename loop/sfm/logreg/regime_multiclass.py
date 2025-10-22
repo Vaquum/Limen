@@ -1,19 +1,7 @@
-# General Guidelines
-# - Keep comments to minimum in SFMs
-# - No docstrings for SFMs
-# - Constants all capital
-# - All other variables lowercase
-
-# Start the SFM with a title wrapped in single quotes
-'SFM Label Model for Breakout Regime Classification using Logistic Regression'
-
-# Import whole 3rd-party libraries
 import polars as pl
 
-# Import parts of 3rd-party libraries (leave empty line above)
 from datetime import timedelta
 
-# Import parts of our own libraries (leave empty line above)
 from loop.sfm.logreg.utils.regime_multiclass import build_regime_base_features
 from loop.sfm.logreg.utils.regime_multiclass import add_regime_lag_features
 from loop.utils.random_slice import random_slice
@@ -21,7 +9,6 @@ from loop.transforms.logreg_transform import LogRegTransform
 from loop.manifest import Manifest
 from loop.sfm.model import logreg_multiclass
 
-# Add configuration constants (leave empty line above)
 BREAKOUT_PERCENTAGE = 5
 LONG_COL = f'long_0_0{BREAKOUT_PERCENTAGE}'
 SHORT_COL = f'short_0_0{BREAKOUT_PERCENTAGE}'
@@ -40,6 +27,7 @@ DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 
 def manifest():
+
     return (Manifest()
         .set_pre_split_data_selector(
             random_slice,
