@@ -8,13 +8,9 @@
 'SFM Label Model for Breakout Regime Classification using Logistic Regression'
 
 # Import whole 3rd-party libraries
-import numpy as np
 import polars as pl
 
 # Import parts of 3rd-party libraries (leave empty line above)
-from sklearn.linear_model import LogisticRegression
-from loop.metrics.multiclass_metrics import multiclass_metrics
-
 from datetime import timedelta
 
 # Import parts of our own libraries (leave empty line above)
@@ -23,6 +19,7 @@ from loop.sfm.logreg.utils.regime_multiclass import add_regime_lag_features
 from loop.utils.random_slice import random_slice
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.manifest import Manifest
+from loop.sfm.model import logreg_multiclass
 
 # Add configuration constants (leave empty line above)
 BREAKOUT_PERCENTAGE = 5
@@ -77,6 +74,7 @@ def manifest():
             ]))
             .done()
         .set_scaler(LogRegTransform)
+        .with_model(logreg_multiclass)
     )
 
 
@@ -98,61 +96,3 @@ def params():
         'random_state': [42],
     }
     return p
-
-
-def prep(data, round_params, manifest):
-
-    data_dict = manifest.prepare_data(data, round_params)
-
-    return data_dict
-
-
-def model(data, round_params):
-    
-    params = round_params.copy()
-
-    if params['solver'] == 'liblinear':
-        if params['penalty'] == 'elasticnet':
-            params['penalty'] = 'l2'
-    
-    if params['penalty'] == 'elasticnet' and params['solver'] not in ['saga']:
-        params['solver'] = 'saga'
-    
-    if params['penalty'] == 'l1' and params['solver'] not in ['liblinear', 'saga']:
-        params['solver'] = 'saga'
-    
-    
-    if params['penalty'] != 'elasticnet':
-        params.pop('l1_ratio', None)
-        
-    if params['class_weight'] == 'None':
-        params['class_weight'] = None
-    
-    clf = LogisticRegression(
-        penalty=params['penalty'],
-        C=params['C'],
-        solver=params['solver'],
-        max_iter=params['max_iter'],
-        tol=params['tol'],
-        class_weight=params['class_weight'],
-        fit_intercept=params['fit_intercept'],
-        random_state=params['random_state'],
-        l1_ratio=params.get('l1_ratio'),
-        verbose=0,
-        n_jobs=-1
-    )
-    
-    clf.fit(data['x_train'], data['y_train'])
-    
-    prediction_probs = clf.predict_proba(data['x_test'])
-    
-    preds = prediction_probs.argmax(axis=1)
-    probs = prediction_probs.max(axis=1)
-    
-    preds[probs < 0.40] = 0
-    
-    round_results = multiclass_metrics(data, preds, prediction_probs)
-
-    round_results['_preds'] = preds
-    
-    return round_results
