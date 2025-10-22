@@ -19,7 +19,7 @@
 ### Stage 3: Resolution
 - **Who:** Contributing Engineers
 - **Action:** 
-  - Add comment using post-mortem template (saved reply recommended)
+  - Add comment using post-mortem template
   - Check off items in the post-resolution checklist
 - **Fields:** Mitigation, resolution, Five Whys, action items
 
