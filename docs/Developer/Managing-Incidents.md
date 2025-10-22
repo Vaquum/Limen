@@ -24,7 +24,7 @@
 - **Fields:** Mitigation, resolution, Five Whys, action items
 
 ### Stage 4: Follow-up
-- **Who:** Core Mantainers
+- **Who:** Core Maintainers
 - **Actions:**
   - Review action items
   - Create separate issues for long-term fixes
