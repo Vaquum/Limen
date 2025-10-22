@@ -73,11 +73,19 @@ body:
     attributes:
       value: |
         ---
+
+        ## 📋 On-Going Resolution Checklist
+
+        **Engineering team: Complete these items once the incident is resolved:**
+        
+        - [ ] Keep all discussion and updates in this issue
+        - [ ] If discussion takes place in other channels, summarize here
         
         ## 📋 Post-Resolution Checklist
         
         **Engineering team: Complete these items once the incident is resolved:**
-        
+
+        - [ ] Create a sub-issue using the Incident Post-Mortem template
         - [ ] Incident resolved and end time documented
         - [ ] Mitigation steps documented
         - [ ] Root cause analysis (Five Whys) completed
