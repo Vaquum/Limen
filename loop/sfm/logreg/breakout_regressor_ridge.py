@@ -72,7 +72,7 @@ def manifest():
 
 def params():
 
-    p = {
+    return {
         'random_slice_size': [15000],
         'random_slice_min_pct': [0.10],
         'random_slice_max_pct': [0.90],
@@ -84,4 +84,3 @@ def params():
         'fit_intercept': [True, False],
         'random_state': [42, 56],
     }
-    return p

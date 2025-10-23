@@ -3,22 +3,22 @@ from sklearn.linear_model import LogisticRegression
 from loop.metrics.multiclass_metrics import multiclass_metrics
 
 
-def logreg_multiclass(data,
-                      penalty='l2',
-                      C=1.0,
-                      solver='lbfgs',
-                      max_iter=100,
-                      tol=0.0001,
-                      class_weight=None,
-                      l1_ratio=None,
-                      fit_intercept=True,
-                      random_state=None,
-                      confidence_threshold=0.40,
-                      n_jobs=-1,
-                      **kwargs):
+def logreg_multiclass(data: dict,
+                      penalty: str = 'l2',
+                      C: float = 1.0,
+                      solver: str = 'lbfgs',
+                      max_iter: int = 100,
+                      tol: float = 0.0001,
+                      class_weight: str | dict | None = None,
+                      l1_ratio: float | None = None,
+                      fit_intercept: bool = True,
+                      random_state: int | None = None,
+                      confidence_threshold: float = 0.40,
+                      n_jobs: int = -1,
+                      **kwargs) -> dict:
 
     '''
-    Execute logistic regression multiclass classification with training and evaluation.
+    Compute logistic regression multiclass predictions and evaluation metrics.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test

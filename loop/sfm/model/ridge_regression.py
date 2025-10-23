@@ -3,17 +3,17 @@ from sklearn.linear_model import Ridge
 from loop.metrics.continuous_metrics import continuous_metrics
 
 
-def ridge_regression(data,
-                     alpha=1.0,
-                     solver='auto',
-                     max_iter=None,
-                     tol=0.0001,
-                     fit_intercept=True,
-                     random_state=None,
-                     **kwargs):
+def ridge_regression(data: dict,
+                     alpha: float = 1.0,
+                     solver: str = 'auto',
+                     max_iter: int | None = None,
+                     tol: float = 0.0001,
+                     fit_intercept: bool = True,
+                     random_state: int | None = None,
+                     **kwargs) -> dict:
 
     '''
-    Execute Ridge regression with training and evaluation.
+    Compute Ridge regression predictions and evaluation metrics.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test

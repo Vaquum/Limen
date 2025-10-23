@@ -5,23 +5,23 @@ from sklearn.calibration import CalibratedClassifierCV
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def ridge_binary(data,
-                 alpha=1.0,
-                 tol=0.0001,
-                 class_weight=None,
-                 max_iter=None,
-                 random_state=None,
-                 fit_intercept=True,
-                 solver='auto',
-                 use_calibration=True,
-                 calibration_method='sigmoid',
-                 calibration_cv=3,
-                 n_jobs=-1,
-                 pred_threshold=0.5,
-                 **kwargs):
+def ridge_binary(data: dict,
+                 alpha: float = 1.0,
+                 tol: float = 0.0001,
+                 class_weight: str | dict | None = None,
+                 max_iter: int | None = None,
+                 random_state: int | None = None,
+                 fit_intercept: bool = True,
+                 solver: str = 'auto',
+                 use_calibration: bool = True,
+                 calibration_method: str = 'sigmoid',
+                 calibration_cv: int = 3,
+                 n_jobs: int = -1,
+                 pred_threshold: float = 0.5,
+                 **kwargs) -> dict:
 
     '''
-    Execute Ridge binary classification with optional calibration, training and evaluation.
+    Compute Ridge binary classification predictions and evaluation metrics.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test

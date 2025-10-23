@@ -1,7 +1,6 @@
 import polars as pl
-from datetime import timedelta
-from typing import List
 
+from datetime import timedelta
 
 from loop.utils.breakout_labeling import to_average_price_klines
 from loop.utils.breakout_labeling import compute_htf_features
@@ -27,8 +26,8 @@ def build_breakout_regressor_base_features(
 
     Args:
         df (pl.DataFrame): Trades dataset with 'datetime', 'volume', 'liquidity_sum' columns
-        datetime_col (str): Column name for datetime
-        target_col (str): Column name for target price
+        datetime_col (str): Column name for datetime in `{df}`
+        target_col (str): Column name for target price in `{df}`
         interval_sec (int): Bucket size in seconds for kline aggregation
         lookahead (timedelta): Lookahead period for computing future price extremes
         ema_span (int): EMA span parameter for trend calculation
@@ -40,7 +39,7 @@ def build_breakout_regressor_base_features(
         short_target_col (str): Name of the short breakout target column
 
     Returns:
-        pl.DataFrame: The input data with average price klines, HTF features, breakout flags, and target columns
+        pl.DataFrame: The input data with average price klines, HTF features, breakout flags, and target columns `{long_target_col}` and `{short_target_col}`
     '''
 
     df_avg_price = to_average_price_klines(df, interval_sec)
