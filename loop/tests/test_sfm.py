@@ -6,7 +6,7 @@ import polars as pl
 
 import loop
 from loop import sfm
-from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
+from loop.tests.utils.cleanup import cleanup_csv_files
 
 def get_klines_data_fast():
     '''

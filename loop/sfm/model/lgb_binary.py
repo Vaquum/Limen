@@ -1,5 +1,5 @@
-import numpy as np
 import lightgbm as lgb
+
 from lightgbm import early_stopping, log_evaluation
 
 from loop.metrics.binary_metrics import binary_metrics

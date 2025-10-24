@@ -1,11 +1,9 @@
 import polars as pl
-from datetime import timedelta
-from typing import List
 
+from datetime import timedelta
 
 from loop.features.lagged_features import lag_column
 from loop.features.lagged_features import lag_range
-
 from loop.utils.breakout_labeling import to_average_price_klines
 from loop.utils.breakout_labeling import compute_htf_features
 from loop.utils.breakout_labeling import build_breakout_flags
