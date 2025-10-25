@@ -1,7 +1,5 @@
 import lightgbm as lgb
 
-from lightgbm import early_stopping, log_evaluation
-
 from loop.metrics.binary_metrics import binary_metrics
 
 
@@ -80,8 +78,8 @@ def lgb_binary(data: dict,
         valid_sets=[dtrain, dval],
         valid_names=['train', 'valid'],
         callbacks=[
-            early_stopping(stopping_rounds=early_stopping_rounds, verbose=False),
-            log_evaluation(period=0)
+            lgb.early_stopping(stopping_rounds=early_stopping_rounds, verbose=False),
+            lgb.log_evaluation(period=0)
         ]
     )
 
