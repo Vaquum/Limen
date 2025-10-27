@@ -6,19 +6,19 @@ def sma_crossover(
     short_window: int = 10, 
     long_window: int = 30
 ) -> pl.DataFrame:
-
+    
     '''
-    Compute SMA crossover signals.
+    Compute Simple Moving Average (SMA) crossover signals.
     
     Args:
-        df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-        short_window
-        long_window
+        df (pl.DataFrame): Klines dataset with 'close' column
+        short_window (int): Number of periods for short-term SMA
+        long_window (int): Number of periods for long-term SMA
         
     Returns:
-        pl.DataFrame: The input data with a new column ''
+        pl.DataFrame: The input data with new columns 'sma_short_{short_window}', 'sma_long_{long_window}', 'sma_relation', 'crossover', and 'signal'
     '''
-
+    
     df = (
         df
         .with_columns([
@@ -32,9 +32,7 @@ def sma_crossover(
             ).alias('sma_relation')
         ])
         .with_columns([
-            # Detect crossovers using the diff in sma_relation
-            (pl.col('sma_relation') - pl.col('sma_relation').shift(1))
-            .alias('crossover')
+            (pl.col('sma_relation') - pl.col('sma_relation').shift(1)).alias('crossover')
         ])
         .with_columns([
             pl.when(pl.col('crossover') == 2)
