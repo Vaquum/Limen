@@ -18,13 +18,12 @@ def bollinger_bands(
         num_std (float): Number of standard deviations for upper and lower bands
         
     Returns:
-        pl.DataFrame: The input data with three new columns: 
-                      'bb_middle_{window}', 'bb_upper_{window}', and 'bb_lower_{window}'
+        pl.DataFrame: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
     '''
     
-    sma_col = f"bb_middle_{window}"
-    upper_col = f"bb_upper_{window}"
-    lower_col = f"bb_lower_{window}"
+    sma_col = 'bb_middle'
+    upper_col = 'bb_upper'
+    lower_col = 'bb_lower'
 
     return df.with_columns([
         pl.col(price_col).rolling_mean(window).alias(sma_col),

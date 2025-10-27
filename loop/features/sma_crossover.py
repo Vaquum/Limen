@@ -16,19 +16,19 @@ def sma_crossover(
         long_window (int): Number of periods for long-term SMA
         
     Returns:
-        pl.DataFrame: The input data with new columns 'sma_short_{short_window}', 'sma_long_{long_window}', 'sma_relation', 'crossover', and 'signal'
+        pl.DataFrame: The input data with new columns 'crossover', and 'signal'
     '''
     
     df = (
         df
         .with_columns([
-            pl.col("close").rolling_mean(short_window).alias(f"sma_short_{short_window}"),
-            pl.col("close").rolling_mean(long_window).alias(f"sma_long_{long_window}")
+            pl.col("close").rolling_mean(short_window).alias('sma_short'),
+            pl.col("close").rolling_mean(long_window).alias('sma_long')
         ])
         .with_columns([
             (
-                (pl.col(f"sma_short_{short_window}") > pl.col(f"sma_long_{long_window}")).cast(pl.Int8)
-                - (pl.col(f"sma_short_{short_window}") < pl.col(f"sma_long_{long_window}")).cast(pl.Int8)
+                (pl.col('sma_short') > pl.col('sma_long')).cast(pl.Int8)
+                - (pl.col('sma_short') < pl.col('sma_long')).cast(pl.Int8)
             ).alias('sma_relation')
         ])
         .with_columns([

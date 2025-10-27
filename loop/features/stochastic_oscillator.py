@@ -16,13 +16,13 @@ def stochastic_oscillator(
         window_d (int): Number of periods for %D smoothing (SMA of %K)
         
     Returns:
-        pl.DataFrame: The input data with two new columns 'stoch_k_{window_k}' and 'stoch_d_{window_d}'
+        pl.DataFrame: The input data with two new columns 'stoch_k' and 'stoch_d'
     '''
     
-    highest_col = f"stoch_highest_{window_k}"
-    lowest_col = f"stoch_lowest_{window_k}"
-    k_col = f"stoch_k_{window_k}"
-    d_col = f"stoch_d_{window_d}"
+    highest_col = 'stoch_highest'
+    lowest_col = 'stoch_lowest'
+    k_col = 'stoch_k'
+    d_col = 'stoch_d'
 
     return (
         df.with_columns([

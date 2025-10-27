@@ -11,7 +11,7 @@ def cci(df: pl.DataFrame, window: int = 14) -> pl.DataFrame:
         window (int): Number of periods for CCI calculation
         
     Returns:
-        pl.DataFrame: The input data with a new column 'cci_{window}'
+        pl.DataFrame: The input data with a new column 'cci'
     '''
     
     df = df.with_columns(
@@ -27,7 +27,7 @@ def cci(df: pl.DataFrame, window: int = 14) -> pl.DataFrame:
     )
     
     df = df.with_columns(
-        ((pl.col('tp') - pl.col('tp_sma')) / (0.015 * pl.col('mean_dev'))).alias(f"cci_{window}")
+        ((pl.col('tp') - pl.col('tp_sma')) / (0.015 * pl.col('mean_dev'))).alias('cci')
     )
     
     return df
