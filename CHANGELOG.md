@@ -335,7 +335,7 @@ data mismatch
 - Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
-# V1.20.2 on 27th of October 2025
+# V1.20.3 on 27th of October 2025
 - Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
 - Add `features.sma_crossover`
 - Refactor `sfm.ridge.ridge_classifier` with richer parameter ranges
