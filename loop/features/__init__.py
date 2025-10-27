@@ -20,6 +20,10 @@ from loop.features.atr_percent_sma import atr_percent_sma
 from loop.features.ema_breakout import ema_breakout
 from loop.features.vwap import vwap
 from loop.features.ichimoku_cloud import ichimoku_cloud
+from loop.features.bollinger_bands import bollinger_bands
+from loop.features.cci import cci
+from loop.features.sma_crossover import sma_crossover
+from loop.features.stochastic_oscillator import stochastic_oscillator
 
 __all__ = [
     'conserved_flux_renormalization',
@@ -43,5 +47,9 @@ __all__ = [
     'atr_percent_sma',
     'ema_breakout',
     'vwap',
-    'ichimoku_cloud'
+    'ichimoku_cloud',
+    'bollinger_bands',
+    'cci',
+    'sma_crossover',
+    'stochastic_oscillator',
 ]

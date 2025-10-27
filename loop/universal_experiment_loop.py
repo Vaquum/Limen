@@ -91,9 +91,9 @@ class UniversalExperimentLoop:
 
         # Full manifest mode - auto-generate prep and model from manifest
         if manifest and hasattr(manifest, 'model_function') and manifest.model_function:
-            if self.prep is None:
+            if self.prep is None or prep is None:
                 self.prep = lambda data, round_params, manifest: manifest.prepare_data(data, round_params)
-            if self.model is None:
+            if self.model is None or model is None:
                 self.model = lambda data, round_params: manifest.run_model(data, round_params)
 
         self.param_space = ParamSpace(params=self.params,
