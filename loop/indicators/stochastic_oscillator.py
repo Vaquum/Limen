@@ -39,4 +39,5 @@ def stochastic_oscillator(
         .with_columns(
             pl.col(k_col).rolling_mean(window_d).alias(d_col)
         )
+        .select(['stoch_k', 'stoch_d'])
     )

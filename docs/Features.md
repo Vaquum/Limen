@@ -514,6 +514,8 @@ Compute Simple Moving Average (SMA) crossover signals.
 | `df`        | `pl.DataFrame` | Klines dataset with 'close' columns                         |
 | `short_window` | `int`          | Number of periods for short-term SMA              |
 | `long_window`    | `int`          | Number of periods for long-term SMA |
+| `crossover_bull`    | `int`          | Value indicating bullish crossover |
+| `crossover_bear`    | `int`          | NumbValue indicating bearish crossover |
 
 #### Returns
 

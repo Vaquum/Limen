@@ -25,12 +25,18 @@ def bollinger_bands(
     upper_col = 'bb_upper'
     lower_col = 'bb_lower'
 
-    return df.with_columns([
-        pl.col(price_col).rolling_mean(window).alias(sma_col),
-        (pl.col(price_col).rolling_mean(window)
-         + num_std * pl.col(price_col).rolling_std(window)
-        ).alias(upper_col),
-        (pl.col(price_col).rolling_mean(window)
-         - num_std * pl.col(price_col).rolling_std(window)
-        ).alias(lower_col)
-    ])
+    return (
+        df.with_columns([
+            pl.col(price_col)
+              .rolling_mean(window)
+              .alias(sma_col),
+
+            (pl.col(price_col).rolling_mean(window)
+             + num_std * pl.col(price_col).rolling_std(window))
+             .alias(upper_col),
+
+            (pl.col(price_col).rolling_mean(window)
+             - num_std * pl.col(price_col).rolling_std(window))
+             .alias(lower_col),
+        ])
+    )
