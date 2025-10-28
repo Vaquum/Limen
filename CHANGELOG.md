@@ -331,8 +331,7 @@ data mismatch
 - Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
 - Update `loop.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
 
-# V1.21.0 on 27th of October 2025
+# V1.21.1 on 27th of October 2025
 - Add image-based deployment with Docker containerization
 - Add automated deployment workflow for GitHub Container Registry
 - Add Dockerfile for containerized Loop Streamlit application deployment
-
