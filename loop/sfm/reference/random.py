@@ -16,10 +16,9 @@ def manifest():
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))
-            .add_transform(lambda data: data[:-100])
+            .add_transform(lambda data: data[:-1])
             .done()
     )
-
 
 def params(): 
 

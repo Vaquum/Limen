@@ -335,9 +335,15 @@ data mismatch
 - Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
 - Fix package dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
+# V1.20.2 on 23rd of October 2025
+- Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
+- Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
+- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
+
 # V1.20.3 on 27th of October 2025
 - Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
 - Add `features.sma_crossover`
 - Refactor `sfm.ridge.ridge_classifier` with richer parameter ranges
 - Fix `loop.universal_experiment_loop` to provide manifest support for `sfm.reference.empty`
 - Add scaling for all klines data in `transform.linear_transform`
+- Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
