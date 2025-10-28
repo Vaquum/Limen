@@ -90,14 +90,14 @@ class Log:
         else:
             data_source = self.data
 
-        return (
-            data_source
-            .with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
-            .join(
+        result = data_source.with_columns(pl.col('datetime').dt.cast_time_unit('ms'))
+
+        if missing_datetimes:
+            result = result.join(
                 pl.DataFrame({'datetime': missing_datetimes})
                 .with_columns(pl.col('datetime').dt.cast_time_unit('ms')),
                 on='datetime',
                 how='anti',
             )
-            .filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))
-        )
+
+        return result.filter(pl.col('datetime').is_between(first_test_datetime, last_test_datetime, closed='both'))

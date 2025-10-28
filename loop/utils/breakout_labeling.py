@@ -35,64 +35,6 @@ def to_average_price_klines(df: pl.DataFrame, interval_sec: int) -> pl.DataFrame
     )
 
 
-def compute_htf_features(df: pl.DataFrame,
-                         *,
-                         datetime_col: str,
-                         target_col: str,
-                         lookahead: timedelta,
-                         ema_span: int) -> pl.DataFrame:
-    
-    '''
-    Compute higher timeframe features with EMA and future price extremes.
-    
-    Args:
-        df (pl.DataFrame): Klines dataset with datetime and price columns
-        datetime_col (str): Column name for datetime values
-        target_col (str): Column name for price values
-        lookahead (timedelta): Time period to look ahead for future extremes
-        ema_span (int): Number of periods for EMA calculation
-        
-    Returns:
-        pl.DataFrame: The input data with new columns 'ema_2h', 'future_max', 'future_min'
-    '''
-
-    # 1) sort data by datetime
-    df = df.sort(datetime_col)
-
-    #2) Compute EMA on the 2H average price directly
-    df = df.with_columns(pl.col(target_col).ewm_mean(span=ema_span, adjust=False).alias('ema_2h'))
-
-    # 3) compute future_max and future_min
-    if df.shape[0] < 2:
-        raise ValueError("Dataframe must have at least two rows to compute intervals.")
-    interval_diffs = df[datetime_col].diff().drop_nulls()
-    if interval_diffs.is_empty():
-        raise ValueError("No valid intervals found in datetime column.")
-    secs = int(interval_diffs[0].total_seconds())
-    window = int(lookahead.total_seconds() // secs)
-
-    prices = df[target_col].to_list()
-    rev = prices[::-1]
-
-    fut_max = (
-        pl.Series(rev)
-          .rolling_max(window+1)
-          .shift(-1)
-          .to_list()[::-1]
-    )
-    fut_min = (
-        pl.Series(rev)
-          .rolling_min(window+1)
-          .shift(-1)
-          .to_list()[::-1]
-    )
-
-    return df.with_columns([
-        pl.Series('future_max', fut_max),
-        pl.Series('future_min', fut_min),
-    ])
-
-
 def build_breakout_flags(df_feats: pl.DataFrame,
                          deltas: List[float],
                          *,
@@ -126,3 +68,68 @@ def build_breakout_flags(df_feats: pl.DataFrame,
         )
 
     return df_feats.select([datetime_col] + exprs).sort(datetime_col)
+
+
+def compute_htf_features(
+    df: pl.DataFrame,
+    datetime_col: str,
+    target_col: str,
+    lookahead: timedelta,
+    ema_span: int,
+) -> pl.DataFrame:
+
+    '''
+    Compute higher timeframe features with EMA and future price extremes using lazy operations.
+
+    Args:
+        df (pl.DataFrame): Klines dataset with datetime and price columns
+        datetime_col (str): Column name for datetime values
+        target_col (str): Column name for price values
+        lookahead (timedelta): Time period to look ahead for future extremes
+        ema_span (int): Number of periods for EMA calculation
+
+    Returns:
+        pl.DataFrame: The input data with new columns 'ema_2h', 'future_max', 'future_min'
+    '''
+
+    is_lazy = isinstance(df, pl.LazyFrame)
+
+    df = df.sort(datetime_col)
+
+    df = df.with_columns(
+        pl.col(datetime_col).diff().dt.total_seconds().alias('_interval_sec')
+    )
+
+    df = df.with_columns(
+        (pl.lit(lookahead.total_seconds()) / pl.col('_interval_sec').drop_nulls().first())
+        .cast(pl.Int32)
+        .alias('_lookahead_bars')
+    )
+
+    df = df.with_columns(
+        pl.col(target_col).ewm_mean(span=ema_span, adjust=False).alias('ema_2h')
+    )
+
+    if is_lazy:
+        lookahead_bars = df.select(pl.col('_lookahead_bars').first()).collect().item()
+    else:
+        lookahead_bars = df.select(pl.col('_lookahead_bars').first()).item()
+
+    df = df.with_columns([
+        pl.col(target_col)
+          .reverse()
+          .rolling_max(window_size=lookahead_bars + 1)
+          .shift(-1)
+          .reverse()
+          .alias('future_max'),
+        pl.col(target_col)
+          .reverse()
+          .rolling_min(window_size=lookahead_bars + 1)
+          .shift(-1)
+          .reverse()
+          .alias('future_min'),
+    ])
+
+    df = df.drop(['_interval_sec', '_lookahead_bars'])
+
+    return df
