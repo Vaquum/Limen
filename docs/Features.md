@@ -515,7 +515,7 @@ Compute Simple Moving Average (SMA) crossover signals.
 | `short_window` | `int`          | Number of periods for short-term SMA              |
 | `long_window`    | `int`          | Number of periods for long-term SMA |
 | `crossover_bull`    | `int`          | Value indicating bullish crossover |
-| `crossover_bear`    | `int`          | NumbValue indicating bearish crossover |
+| `crossover_bear`    | `int`          | Value indicating bearish crossover |
 
 #### Returns
 
