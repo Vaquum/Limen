@@ -331,7 +331,16 @@ data mismatch
 - Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
 - Update `loop.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
 
-# V1.21.1 on 27th of October 2025
+# V1.20.1 on 18th of October 2025
+- Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
+- Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
+
+# V1.20.2 on 23rd of October 2025
+- Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
+- Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
+- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
+
+# V1.20.3 on 27th of October 2025
 - Add image-based deployment with Docker containerization
 - Add automated deployment workflow for GitHub Container Registry
 - Add Dockerfile for containerized Loop Streamlit application deployment

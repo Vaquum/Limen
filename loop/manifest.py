@@ -72,6 +72,7 @@ class Manifest:
 
     '''Defines manifest for Loop experiments.'''
 
+    pre_split_data_selector: FeatureEntry = None
     bar_formation: FeatureEntry = None
     feature_transforms: List[FeatureEntry] = field(default_factory=list)
     target_transforms: List[FittedTransformEntry] = field(default_factory=list)
@@ -121,6 +122,22 @@ class Manifest:
         '''
 
         return self._add_transform(func, **params)
+
+    def set_pre_split_data_selector(self, func: Callable, **params) -> 'Manifest':
+
+        '''
+        Set pre-split data selector function and parameters.
+
+        Args:
+            func (Callable): Data selector function
+            **params: Parameters for data selection
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.pre_split_data_selector = (func, params)
+        return self
 
     def set_bar_formation(self, func: Callable, **params) -> 'Manifest':
 
@@ -239,6 +256,11 @@ class Manifest:
             pl.DataFrame: Bar-formed test split data
         '''
 
+        if self.pre_split_data_selector:
+            func, base_params = self.pre_split_data_selector
+            resolved = _resolve_params(base_params, round_params)
+            raw_data = func(raw_data, **resolved)
+
         split_data = split_sequential(raw_data, self.split_config)
         test_split = split_data[2]
         _, test_bar_data = _process_bars(self, test_split, round_params)
@@ -261,6 +283,11 @@ class Manifest:
         Returns:
             dict: Final data dictionary ready for model training
         '''
+
+        if self.pre_split_data_selector:
+            func, base_params = self.pre_split_data_selector
+            resolved = _resolve_params(base_params, round_params)
+            raw_data = func(raw_data, **resolved)
 
         split_data = split_sequential(raw_data, self.split_config)
 
@@ -550,5 +577,7 @@ def _finalize_to_data_dict(
     # Add fitted parameters to data_dict
     for param_name, param_value in fitted_params.items():
         data_dict[param_name] = param_value
+
+    data_dict['_feature_names'] = cols
 
     return data_dict

@@ -1,5 +1,3 @@
-import polars as pl
-
 from loop.features import quantile_flag
 from loop.features import compute_quantile_cutoff
 from loop.features import kline_imbalance

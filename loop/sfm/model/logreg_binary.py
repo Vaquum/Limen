@@ -3,24 +3,24 @@ from sklearn.linear_model import LogisticRegression
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def logreg_binary(data,
-                  solver='lbfgs',
-                  penalty='l2',
-                  dual=False,
-                  tol=0.0001,
-                  C=1.0,
-                  fit_intercept=True,
-                  intercept_scaling=1,
-                  class_weight=None,
-                  random_state=None,
-                  max_iter=100,
-                  verbose=0,
-                  warm_start=False,
-                  n_jobs=-1,
-                  **kwargs):
+def logreg_binary(data: dict,
+                  solver: str = 'lbfgs',
+                  penalty: str = 'l2',
+                  dual: bool = False,
+                  tol: float = 0.0001,
+                  C: float = 1.0,
+                  fit_intercept: bool = True,
+                  intercept_scaling: float = 1,
+                  class_weight: str | dict | None = None,
+                  random_state: int | None = None,
+                  max_iter: int = 100,
+                  verbose: int = 0,
+                  warm_start: bool = False,
+                  n_jobs: int = -1,
+                  **kwargs) -> dict:
 
     '''
-    Execute logistic regression binary classification with training and evaluation.
+    Compute logistic regression binary predictions and evaluation metrics.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
