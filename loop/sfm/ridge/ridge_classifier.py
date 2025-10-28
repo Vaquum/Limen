@@ -90,7 +90,7 @@ def manifest():
         .add_feature(rolling_volatility, column='close', window='volatility_window')
         .add_feature(ichimoku_cloud, tenkan_period='tenkan_period', kijun_period='kijun_period',
                     senkou_b_period='senkou_b_period', displacement='displacement')
-        .add_feature(volume_regime)
+        .add_feature(volume_regime, lookback='lookback')
         .add_feature(close_position)
         .add_feature(trend_strength, fast_period='trend_fast_period', slow_period='trend_slow_period')
         .add_feature(gap_high)
