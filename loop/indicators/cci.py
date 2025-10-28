@@ -28,5 +28,5 @@ def cci(df: pl.DataFrame, window: int = 14) -> pl.DataFrame:
         .with_columns([
             ((pl.col('tp') - pl.col('tp_sma')) / (0.015 * pl.col('mean_dev'))).alias('cci'),
         ])
-        .select(['cci'])
+        .drop(['tp', 'tp_sma', 'mean_dev']) 
     )

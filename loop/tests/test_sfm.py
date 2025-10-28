@@ -110,4 +110,3 @@ def test_sfm():
 if __name__ == "__main__":
 
     test_sfm()
-    

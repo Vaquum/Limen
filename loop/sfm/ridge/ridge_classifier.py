@@ -77,7 +77,7 @@ def manifest():
         .set_split_config(6, 2, 2)
         
         .set_required_bar_columns([
-                'datetime',
+                'datetime', 'open', 'high', 'low', 'close'
         ])
         
         # # Indicators
