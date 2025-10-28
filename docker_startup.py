@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import warnings
-warnings.filterwarnings("ignore")
-
 import sys
 import os
 import pandas as pd
 from pathlib import Path
+
+warnings.filterwarnings("ignore")
 
 def create_sample_data():
     """Create sample data from existing CSV files for Streamlit app"""
