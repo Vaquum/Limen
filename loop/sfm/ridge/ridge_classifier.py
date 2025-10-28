@@ -6,6 +6,9 @@ from loop.indicators import ppo
 from loop.indicators import rolling_volatility
 from loop.indicators import wilder_rsi
 from loop.indicators import atr
+from loop.indicators import stochastic_oscillator
+from loop.indicators import cci
+from loop.indicators import bollinger_bands
 from loop.features import ichimoku_cloud
 from loop.features import close_position
 from loop.features import gap_high
@@ -15,10 +18,7 @@ from loop.features import quantile_flag
 from loop.features import trend_strength
 from loop.features import volume_regime
 from loop.features import compute_quantile_cutoff
-from loop.features import stochastic_oscillator
 from loop.features import sma_crossover
-from loop.features import cci
-from loop.features import bollinger_bands
 from loop.manifest import Manifest
 from loop.transforms.linear_transform import LinearTransform
 from loop.utils import shift_column
