@@ -246,9 +246,8 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
     )
     
     final_val_loss = evals_result['val']['binary_logloss'][-1]
-    
+
     y_pred_proba = lgb_model.predict(X_test, num_iteration=lgb_model.best_iteration)
-    y_pred = (y_pred_proba > decision_threshold).astype(int)
 
     if use_calibration:
         val_pred_proba = lgb_model.predict(X_val, num_iteration=lgb_model.best_iteration)

@@ -5,9 +5,14 @@ Implements line detection, feature engineering, and labeling for long-only binar
 Uses sliding window event-driven algorithm for O(m log m + n) complexity
 '''
 
+from typing import List
+from typing import Dict
+from typing import Tuple
+from typing import Any
+from typing import Optional
+
 import numpy as np
 import polars as pl
-from typing import List, Dict, Tuple, Any, Optional
 from sklearn.utils.class_weight import compute_class_weight
 from loop.indicators.price_change_pct import price_change_pct
 from loop.indicators.rolling_volatility import rolling_volatility

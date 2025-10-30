@@ -9,7 +9,6 @@ from typing import List
 from typing import Dict
 from typing import Tuple
 from typing import Any
-from typing import Optional
 
 import numpy as np
 import polars as pl
