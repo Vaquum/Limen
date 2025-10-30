@@ -59,6 +59,7 @@ CONFIG = {
 
 
 def params() -> dict:
+
     p = {
         'quantile_threshold': [0.60, 0.70, 0.75, 0.80, 0.85],
         'min_height_pct': [0.001, 0.002, 0.003, 0.004, 0.005],
@@ -89,6 +90,7 @@ def params() -> dict:
 
 
 def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
     all_datetimes = data['datetime'].to_list()
     
     if not isinstance(data, pl.DataFrame):
@@ -98,17 +100,19 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     
     if round_params is None:
         raise ValueError("round_params is required for deterministic prep")
+    
     required_prep_keys = ['quantile_threshold','min_height_pct','max_duration_hours','lookahead_hours','long_threshold_percentile']
     missing_prep = [k for k in required_prep_keys if k not in round_params]
     if missing_prep:
         raise ValueError(f"Missing required prep round_params: {missing_prep}")
+    
     quantile_threshold = round_params['quantile_threshold']
     min_height_pct = round_params['min_height_pct']
     max_duration_hours = round_params['max_duration_hours']
     lookahead_hours = round_params['lookahead_hours']
     long_threshold_percentile = round_params['long_threshold_percentile']
+
     long_lines, short_lines = find_price_lines(df, max_duration_hours, min_height_pct)
-    
     long_lines_filtered = filter_lines_by_quantile(long_lines, quantile_threshold)
     short_lines_filtered = filter_lines_by_quantile(short_lines, quantile_threshold)
     
@@ -117,6 +121,7 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
         long_threshold = np.percentile(long_heights, long_threshold_percentile)
     else:
         long_threshold = CONFIG['default_threshold']
+        
     df = compute_temporal_features(df)
     
     df = compute_price_features(df)
@@ -194,6 +199,7 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
 
 
 def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
+
     use_calibration = round_params.get('use_calibration', CONFIG['use_calibration'])
     n_estimators = round_params.get('n_estimators', 500)
     decision_threshold = round_params.get('decision_threshold', 0.45)
