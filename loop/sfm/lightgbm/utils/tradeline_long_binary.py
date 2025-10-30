@@ -85,6 +85,7 @@ def filter_lines_by_quantile(lines: List[Dict], quantile: float) -> List[Dict]:
     Returns:
         Filtered list of lines
     '''
+
     if not lines:
         return []
     
@@ -148,6 +149,7 @@ def compute_price_features(df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         pl.DataFrame: DataFrame with comprehensive price-based features
     '''
+
     for period in [1, 6, 12, 24, 48]:
         df = price_change_pct(df, period)
         df = df.rename({f'price_change_pct_{period}': f'ret_{period}h'})
@@ -228,6 +230,7 @@ def create_binary_labels(df: pl.DataFrame,
         ret_48h = (close_prices[future_48h_idx] - current_price) / current_price
         
         if max_future_ret >= long_threshold:
+
             if ret_48h > long_threshold or ret_24h > long_threshold:
                 labels[idx] = 1
                 long_count += 1
@@ -251,6 +254,7 @@ def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
     
     sample_weights = np.zeros(len(y_train))
+
     for i, cls in enumerate(classes):
         mask = y_train == cls
         sample_weights[mask] = class_weights[i]
@@ -296,6 +300,7 @@ def calculate_atr(df: pl.DataFrame, period: int = 24) -> pl.DataFrame:
     '''
     df = atr(df, period=period)
     col = f"atr_{period}"
+
     if col in df.columns:
         df = df.with_columns([(pl.col(col) / pl.col('close')).alias('atr_pct')])
         df = df.drop([col])
@@ -317,6 +322,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
     Returns:
         tuple: Original dataframe and trading results dictionary with performance metrics
     '''
+
     if config is None:
         config = {}
     
@@ -332,6 +338,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
     initial_capital = config.get('initial_capital', 100000.0)
     default_atr_pct = config.get('default_atr_pct', 0.015)
     n_rows = len(df)
+
     if n_rows == 0 or len(predictions) == 0:
         return df, {
             'total_return_net_pct': 0.0,
@@ -343,6 +350,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
     prices = df.select(pl.col('close')).to_numpy().flatten()
     atr_values = df.select(pl.col('atr_pct')).to_numpy().flatten() if 'atr_pct' in df.columns else np.full(n_rows, default_atr_pct)
     steps_per_hour = 1.0
+
     if 'datetime' in df.columns and df.height >= 2:
         dt = df.select(pl.col('datetime')).to_series().to_list()
         try:
@@ -354,6 +362,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
     max_probs = probabilities if len(probabilities.shape) == 1 else probabilities
     high_conf_mask = (max_probs >= confidence_threshold) & (predictions == 1)
     entry_signals = np.where(high_conf_mask)[0]
+
     if len(entry_signals) == 0:
         return df, {
             'total_return_net_pct': 0.0,
@@ -367,10 +376,13 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
     current_position = None 
     check_indices = set(entry_signals)
     periodic_check_step = int(max(1, round(24 * steps_per_hour)))
+
     for i in range(0, n_rows, periodic_check_step):
         check_indices.add(i)
     check_indices_list = sorted(list(check_indices))
+
     for i in check_indices_list:
+
         if i >= n_rows:
             break
         current_price = prices[i]
@@ -394,6 +406,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
                 exit_reason = "stop_loss"
             elif peak_profit >= trailing_activation:
                 trailing_stop = peak_profit - (trailing_distance * current_atr)
+
                 if pnl_pct <= trailing_stop:
                     should_exit = True
                     exit_reason = "trailing_stop"
@@ -416,6 +429,7 @@ def apply_long_only_exit_strategy(df: pl.DataFrame, predictions: np.ndarray, pro
         if i in entry_signals and current_position is None:
             pos_size = capital * position_size
             current_position = (i, current_price, pos_size, 0.0)
+
     if trades:
         total_return = (capital - initial_capital) / initial_capital * 100
         winning_trades = [t for t in trades if t['net_pnl'] > 0]

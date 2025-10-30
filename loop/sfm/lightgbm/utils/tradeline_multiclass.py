@@ -141,6 +141,7 @@ def compute_line_features(df: pl.DataFrame,
         ])
 
     events = []
+
     for i, (line, direction) in enumerate(all_lines):
         events.append((line['start_idx'], 'enter', i, line, direction))
         events.append((line['end_idx'] + 1, 'exit', i, line, direction))
@@ -153,6 +154,7 @@ def compute_line_features(df: pl.DataFrame,
     event_idx = 0
 
     for idx in range(n_rows):
+
         while event_idx < len(events) and events[event_idx][0] <= idx:
             timestamp, event_type, line_idx, line, direction = events[event_idx]
 
@@ -162,6 +164,7 @@ def compute_line_features(df: pl.DataFrame,
                 active_set.discard(line_idx)
 
                 if line['end_idx'] >= idx - 6 and line['end_idx'] < idx:
+
                     if direction > 0:
                         recent_long_ends.append((line['end_idx'], line))
                     else:
@@ -180,6 +183,7 @@ def compute_line_features(df: pl.DataFrame,
         line_momentum_6h[idx] = recent_long_count - recent_short_count
 
         total_recent = recent_long_count + recent_short_count
+
         if total_recent > 0:
             trending_score[idx] = (recent_long_count - recent_short_count) / total_recent
             reversal_potential[idx] = min(recent_long_count, recent_short_count) / max(recent_long_count, recent_short_count)
@@ -188,6 +192,7 @@ def compute_line_features(df: pl.DataFrame,
             reversal_potential[idx] = 0.0
 
         for end_idx, line in recent_long_ends + recent_short_ends:
+
             if end_idx < idx and (idx - end_idx) < big_move_lookback_hours:
                 hours_since = idx - end_idx
                 hours_since_big_move[idx] = min(hours_since_big_move[idx], hours_since)
@@ -322,10 +327,12 @@ def create_multiclass_labels(df: pl.DataFrame,
         ret_48h = (close_prices[future_48h_idx] - current_price) / current_price
 
         if max_future_ret >= long_threshold:
+
             if ret_48h > long_threshold or ret_24h > long_threshold:
                 labels[idx] = 1
                 long_count += 1
         elif abs(min_future_ret) >= short_threshold:
+
             if ret_48h < -short_threshold or ret_24h < -short_threshold:
                 labels[idx] = 2
                 short_count += 1
@@ -389,6 +396,7 @@ def apply_class_weights(y_train: np.ndarray) -> np.ndarray:
     class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
 
     sample_weights = np.zeros(len(y_train))
+
     for i, cls in enumerate(classes):
         mask = y_train == cls
         sample_weights[mask] = class_weights[i]
@@ -472,6 +480,7 @@ def compute_quantile_line_features(df: pl.DataFrame,
 
     for i in range(n_rows):
         ended_lines = line_ends_array[ended_mask[i]]
+
         if len(ended_lines) > 0:
             hours_since_quantile[i] = min(i - np.max(ended_lines), density_lookback_hours)
 
@@ -480,27 +489,34 @@ def compute_quantile_line_features(df: pl.DataFrame,
         batch_indices = row_indices[i:batch_end]
 
         momentum_mask = (batch_indices - 6 <= line_ends_array) & (line_ends_array <= batch_indices)
+
         for j, row_idx in enumerate(range(i, batch_end)):
             mask = momentum_mask[j]
+
             if np.any(mask):
                 quantile_momentum_6h[row_idx] = np.sum(line_heights_array[mask] * line_directions_array[mask])
 
         active_mask = (line_starts_array <= batch_indices) & (batch_indices < line_ends_array)
+
         for j, row_idx in enumerate(range(i, batch_end)):
             active_quantile_count[row_idx] = np.sum(active_mask[j])
 
         density_mask = (batch_indices - density_lookback_hours <= line_ends_array) & (line_ends_array <= batch_indices)
+
         for j, row_idx in enumerate(range(i, batch_end)):
             quantile_density_48h[row_idx] = np.sum(density_mask[j])
 
         height_mask = (batch_indices - 24 <= line_ends_array) & (line_ends_array <= batch_indices)
+
         for j, row_idx in enumerate(range(i, batch_end)):
             mask = height_mask[j]
+
             if np.any(mask):
                 heights = line_heights_array[mask]
                 directions = line_directions_array[mask]
                 avg_quantile_height_24h[row_idx] = np.mean(heights)
                 total_weight = np.sum(heights)
+
                 if total_weight > 0:
                     quantile_direction_bias[row_idx] = np.sum(directions * heights) / total_weight
 
@@ -586,6 +602,7 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
     default_atr_pct = config.get('default_atr_pct', 0.015)
 
     n_rows = len(df)
+
     if n_rows == 0 or len(predictions) == 0:
         return df, {
             'total_return_net_pct': 0.0,
@@ -625,6 +642,7 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
     check_indices_list = sorted(list(check_indices))
 
     for i in check_indices_list:
+
         if i >= n_rows:
             break
 
@@ -655,6 +673,7 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
                 exit_reason = 'stop_loss'
             elif peak_profit >= trailing_activation:
                 trailing_stop = peak_profit - (trailing_distance * current_atr)
+
                 if pnl_pct <= trailing_stop:
                     should_exit = True
                     exit_reason = 'trailing_stop'
