@@ -36,6 +36,11 @@ EXCLUDE_CATEGORIES = {
 }
 
 CONFIG = {
+    'min_height_pct_default': 0.003,
+    'max_duration_hours_default': 48,
+    'lookahead_hours_default': 48,
+    'long_threshold_percentile_default': 75,
+    'quantile_threshold_default': 0.75,
     'default_threshold': 0.034,
     'atr_period': 24,
     'max_positions': 1,
@@ -95,22 +100,17 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     
     if not isinstance(data, pl.DataFrame):
         raise ValueError("Data must be a Polars DataFrame")
-    
+
     df = data.clone()
-    
+
     if round_params is None:
-        raise ValueError("round_params is required for deterministic prep")
-    
-    required_prep_keys = ['quantile_threshold','min_height_pct','max_duration_hours','lookahead_hours','long_threshold_percentile']
-    missing_prep = [k for k in required_prep_keys if k not in round_params]
-    if missing_prep:
-        raise ValueError(f"Missing required prep round_params: {missing_prep}")
-    
-    quantile_threshold = round_params['quantile_threshold']
-    min_height_pct = round_params['min_height_pct']
-    max_duration_hours = round_params['max_duration_hours']
-    lookahead_hours = round_params['lookahead_hours']
-    long_threshold_percentile = round_params['long_threshold_percentile']
+        round_params = {}
+
+    quantile_threshold = round_params.get('quantile_threshold', CONFIG['quantile_threshold_default'])
+    min_height_pct = round_params.get('min_height_pct', CONFIG['min_height_pct_default'])
+    max_duration_hours = round_params.get('max_duration_hours', CONFIG['max_duration_hours_default'])
+    lookahead_hours = round_params.get('lookahead_hours', CONFIG['lookahead_hours_default'])
+    long_threshold_percentile = round_params.get('long_threshold_percentile', CONFIG['long_threshold_percentile_default'])
 
     long_lines, short_lines = find_price_lines(df, max_duration_hours, min_height_pct)
     long_lines_filtered = filter_lines_by_quantile(long_lines, quantile_threshold)
