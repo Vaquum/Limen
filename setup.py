@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='loop',
-    version='1.20.2',
+    version='1.20.3',
     packages=find_packages(),
     install_requires=[],
     python_requires='>=3.10',
