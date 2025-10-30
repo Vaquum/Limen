@@ -338,4 +338,9 @@ data mismatch
 # V1.20.2 on 23rd of October 2025
 - Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
 - Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
-- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
+- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment.
+
+# V1.21.0 on 30th of October 2025
+- Add strategy logic to `lightgbm.tradeline_multiclass`
+- Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
+- Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
