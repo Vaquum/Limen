@@ -338,7 +338,7 @@ def create_multiclass_labels(df: pl.DataFrame,
                 labels[idx] = 2
                 short_count += 1
 
-    df = df.with_columns(pl.Series('label', labels))
+    df = df.with_columns(pl.Series('label', labels, dtype=pl.Int64))
 
     return df
 
