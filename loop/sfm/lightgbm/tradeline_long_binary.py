@@ -115,7 +115,7 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     long_lines, short_lines = find_price_lines(df, max_duration_hours, min_height_pct)
     long_lines_filtered = filter_lines_by_quantile(long_lines, quantile_threshold)
     short_lines_filtered = filter_lines_by_quantile(short_lines, quantile_threshold)
-    
+
     if long_lines:
         long_heights = [abs(line['height_pct']) for line in long_lines]
         long_threshold = np.percentile(long_heights, long_threshold_percentile)
@@ -148,13 +148,16 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
     
     if len(df_clean) == 0:
         raise ValueError("No data left after cleaning")
+
     exclude_cols = []
+
     for category in EXCLUDE_CATEGORIES.values():
         exclude_cols.extend(category)
-    
+
     feature_cols = [col for col in df_clean.columns if col not in exclude_cols]
-    
+
     numeric_features = []
+
     for col in feature_cols:
         if df_clean.schema[col] in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.UInt32, pl.UInt64]:
             numeric_features.append(col)
@@ -246,6 +249,7 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
     
     y_pred_proba = lgb_model.predict(X_test, num_iteration=lgb_model.best_iteration)
     y_pred = (y_pred_proba > decision_threshold).astype(int)
+
     if use_calibration:
         val_pred_proba = lgb_model.predict(X_val, num_iteration=lgb_model.best_iteration)
         

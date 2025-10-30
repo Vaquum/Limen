@@ -164,12 +164,14 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
         raise ValueError('No data left after cleaning')
 
     exclude_cols = []
+
     for category in EXCLUDE_CATEGORIES.values():
         exclude_cols.extend(category)
 
     feature_cols = [col for col in df_clean.columns if col not in exclude_cols]
 
     numeric_features = []
+
     for col in feature_cols:
         if df_clean.schema[col] in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.UInt32, pl.UInt64]:
             numeric_features.append(col)
@@ -270,12 +272,14 @@ def model(data: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
         val_pred_proba = lgb_model.predict(X_val, num_iteration=lgb_model.best_iteration)
 
         calibrators = []
+
         for i in range(3):
             iso_reg = IsotonicRegression(out_of_bounds='clip')
             iso_reg.fit(val_pred_proba[:, i], y_val == i)
             calibrators.append(iso_reg)
 
         calibrated_proba = np.zeros_like(y_pred_proba)
+
         for i in range(3):
             calibrated_proba[:, i] = calibrators[i].transform(y_pred_proba[:, i])
 
