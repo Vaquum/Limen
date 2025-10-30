@@ -104,7 +104,8 @@ def filter_lines_by_quantile(lines: List[Dict[str, Any]], quantile: float) -> Li
 def compute_line_features(df: pl.DataFrame,
                          long_lines: List[Dict[str, Any]],
                          short_lines: List[Dict[str, Any]],
-                         big_move_lookback_hours: int = 168) -> pl.DataFrame:
+                         big_move_lookback_hours: int = 168,
+                         recent_line_lookback_hours: int = 6) -> pl.DataFrame:
 
     '''
     Compute line-based features using sliding window event-driven algorithm.
@@ -116,6 +117,7 @@ def compute_line_features(df: pl.DataFrame,
         long_lines (List[Dict[str, Any]]): List of long line dictionaries from find_price_lines
         short_lines (List[Dict[str, Any]]): List of short line dictionaries from find_price_lines
         big_move_lookback_hours (int): Hours to look back for significant moves
+        recent_line_lookback_hours (int): Hours to look back for recent line endings
 
     Returns:
         pl.DataFrame: The input data with new columns 'active_lines', 'hours_since_big_move', 'line_momentum_6h', 'trending_score', 'reversal_potential'
@@ -162,7 +164,7 @@ def compute_line_features(df: pl.DataFrame,
             else:
                 active_set.discard(line_idx)
 
-                if line['end_idx'] >= idx - 6 and line['end_idx'] < idx:
+                if line['end_idx'] >= idx - recent_line_lookback_hours and line['end_idx'] < idx:
 
                     if direction > 0:
                         recent_long_ends.append((line['end_idx'], line))
@@ -173,8 +175,8 @@ def compute_line_features(df: pl.DataFrame,
 
         active_lines[idx] = len(active_set)
 
-        recent_long_ends = [(end_idx, line) for end_idx, line in recent_long_ends if end_idx >= idx - 6]
-        recent_short_ends = [(end_idx, line) for end_idx, line in recent_short_ends if end_idx >= idx - 6]
+        recent_long_ends = [(end_idx, line) for end_idx, line in recent_long_ends if end_idx >= idx - recent_line_lookback_hours]
+        recent_short_ends = [(end_idx, line) for end_idx, line in recent_short_ends if end_idx >= idx - recent_line_lookback_hours]
 
         recent_long_count = len(recent_long_ends)
         recent_short_count = len(recent_short_ends)

@@ -60,6 +60,7 @@ CONFIG = {
     'default_atr_pct': 0.015,
     'density_lookback_hours': 48,
     'big_move_lookback_hours': 168,
+    'recent_line_lookback_hours': 6,
     'early_stopping_rounds': 50,
     'log_evaluation_period': 0,
     'objective': 'multiclass',
@@ -143,7 +144,8 @@ def prep(data: pl.DataFrame, round_params: Optional[Dict[str, Any]] = None) -> D
         df,
         long_lines_filtered,
         short_lines_filtered,
-        big_move_lookback_hours=round_params.get('big_move_lookback_hours', CONFIG['big_move_lookback_hours'])
+        big_move_lookback_hours=round_params.get('big_move_lookback_hours', CONFIG['big_move_lookback_hours']),
+        recent_line_lookback_hours=round_params.get('recent_line_lookback_hours', CONFIG['recent_line_lookback_hours'])
     )
 
     df = compute_quantile_line_features(
