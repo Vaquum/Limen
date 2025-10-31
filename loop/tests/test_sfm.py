@@ -68,6 +68,7 @@ def test_sfm():
         (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True, True),
         (sfm.reference.lightgbm, get_klines_data_large, True, True),
         (sfm.lightgbm.tradeable_regressor, get_klines_data_large, False, False),
+        (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True, False),
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True, False),
         (sfm.rules_based.momentum_volatility_longonly,
          get_klines_data_small_fast, True, False),
