@@ -26,9 +26,9 @@ def test_sfm():
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True, False),
         (sfm.lightgbm.tradeline_directional_conditional, get_klines_data_fast, True, False),
         (sfm.rules_based.momentum_volatility_longonly,
-         get_klines_data_small_fast, True, False),
+         get_klines_data_small_fast, True, True),
         (sfm.rules_based.momentum_volatility,
-         get_klines_data_small_fast, True, False),
+         get_klines_data_small_fast, True, True),
         (sfm.ridge.ridge_classifier, get_klines_data_fast, True, True)
     ]
 
