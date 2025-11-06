@@ -33,6 +33,31 @@ from loop.features.time_features import time_features
 from loop.features.volatility_1h import volatility_1h
 from loop.features.feature_aliases import feature_aliases
 from loop.features.position_in_range import position_in_range
+from loop.utils.numeric_features import get_numeric_feature_columns
+
+EXCLUDE_CATEGORIES = {
+    'basic': ['datetime', 'open', 'high', 'low', 'close', 'volume'],
+    'targets': ['tradeable_breakout', 'tradeable_score', 'tradeable_score_base', 'capturable_breakout'],
+    'indicators': ['max_drawdown', 'ema', 'future_high', 'future_low', 'ema_alignment', 'volume_weight', 'volatility_weight'],
+    'features': ['momentum_weight', 'market_favorable', 'risk_reward_ratio', 'sma_20', 'sma_50', 'trend_strength'],
+    'volatility': ['volatility_ratio', 'volume_sma', 'volume_regime', 'rolling_volatility', 'atr', 'atr_pct', 'volatility_measure'],
+    'dynamics': ['dynamic_target', 'dynamic_stop_loss', 'entry_score', 'position_in_candle'],
+    'micro': ['micro_momentum', 'volume_spike', 'spread_pct', 'achieves_dynamic_target'],
+    'range': ['high_low', 'high_close', 'low_close', 'true_range'],
+    'momentum': ['momentum_1', 'momentum_3', 'momentum_score', 'volume_ma', 'volatility'],
+    'exit': ['exit_gross_return', 'exit_net_return', 'exit_reason', 'exit_bars', 'exit_max_return', 'exit_min_return'],
+    'reality': ['time_decay_factor', 'exit_reality_score', 'exit_quality', 'exit_reality_time_decayed', 'exit_on_prediction_drop'],
+    'position': ['close_to_high', 'close_to_low']
+}
+
+# Constants for test data modification
+EXIT_REALITY_COLS = [
+    'exit_gross_return', 'exit_net_return', 'exit_reason',
+    'exit_bars', 'exit_max_return', 'exit_min_return',
+    'time_decay_factor', 'exit_reality_score', 'exit_quality',
+    'exit_reality_time_decayed', 'achieves_dynamic_target'
+]
+
 
 def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame:
     '''
@@ -69,11 +94,12 @@ def calculate_dynamic_parameters(df: pl.DataFrame, config: dict) -> pl.DataFrame
         ])
     
     if config['volatility_adjusted_stops']:
-        if 'volatility_measure' not in df.columns:
+        columns = df.collect_schema().names()
+        if 'volatility_measure' not in columns:
             df = volatility_measure(df)
-        if 'regime_multiplier' not in df.columns:
-            df = regime_multiplier(df, config['regime_low_volatility_multiplier'], 
-                                  config['regime_normal_volatility_multiplier'], 
+        if 'regime_multiplier' not in columns:
+            df = regime_multiplier(df, config['regime_low_volatility_multiplier'],
+                                  config['regime_normal_volatility_multiplier'],
                                   config['regime_high_volatility_multiplier'])
         df = dynamic_stop_loss(df, config['base_stop_loss'], config['stop_volatility_multiplier'],
                               config['stop_loss_clip_lower'], config['stop_loss_clip_upper'])
@@ -364,5 +390,86 @@ def prepare_features_5m(df: pl.DataFrame, lookback: int = None, config: dict = N
     df = close_to_extremes(df)
     
     df = sma_ratios(df, periods=[5, 10, 20, 50])
-    
+
     return df
+
+
+def add_volatility_regime_columns(df: pl.DataFrame, config: dict) -> pl.DataFrame:
+
+    '''
+    Compute volatility and regime placeholder columns.
+
+    Args:
+        df (pl.DataFrame): Klines dataset with 'returns' column
+        config (dict): Configuration dictionary with volatility settings
+
+    Returns:
+        pl.DataFrame: The input data with new columns 'vol_60h', 'vol_percentile', 'volatility_regime', 'regime_low', 'regime_normal', 'regime_high'
+    '''
+
+    return df.with_columns([
+        pl.col('returns').rolling_std(config['volatility_lookback_candles'], min_samples=1).alias('vol_60h'),
+        pl.lit(config['default_vol_percentile']).alias('vol_percentile'),
+        pl.lit(config['default_volatility_regime']).alias('volatility_regime'),
+        pl.lit(config['default_regime_low']).alias('regime_low'),
+        pl.lit(config['default_regime_normal']).alias('regime_normal'),
+        pl.lit(config['default_regime_high']).alias('regime_high')
+    ])
+
+
+def add_momentum_score_column(df: pl.DataFrame, config: dict) -> pl.DataFrame:
+
+    '''
+    Compute momentum score column based on configuration.
+
+    Args:
+        df (pl.DataFrame): Klines dataset
+        config (dict): Configuration dictionary with momentum settings
+
+    Returns:
+        pl.DataFrame: The input data with new column 'momentum_score'
+    '''
+
+    if config.get('simple_momentum_confirmation', True):
+        return df
+    else:
+        return df.with_columns([pl.lit(1.0).alias('momentum_score')])
+
+
+def extend_data_dict(data_dict, split_data, round_params, fitted_params):
+
+    '''
+    Compute tradeable regressor specific additions to data_dict.
+
+    Args:
+        data_dict (dict): Base data dictionary from manifest preparation
+        split_data (list): List of [train, val, test] DataFrames with all columns
+        round_params (dict): Current round parameters
+        fitted_params (dict): Fitted parameters from training data
+
+    Returns:
+        dict: Enriched data dictionary with additional tradeable-specific entries
+    '''
+
+    # Add full split DataFrames
+    data_dict['_train_clean'] = split_data[0]
+    data_dict['_val_clean'] = split_data[1]
+    data_dict['_test_full'] = split_data[2]
+
+    # Compute and add numeric features list
+    exclude_cols = [col for category in EXCLUDE_CATEGORIES.values() for col in category]
+    numeric_features = get_numeric_feature_columns(split_data[0], exclude_cols)
+    data_dict['_numeric_features'] = numeric_features
+
+    # Save original test targets before modification
+    test_tradeable_scores = split_data[2].select('tradeable_score').to_numpy().flatten()
+    data_dict['_test_tradeable_scores'] = test_tradeable_scores
+
+    # Create modified test DataFrame for realistic backtesting
+    cols_to_drop = [col for col in EXIT_REALITY_COLS if col in split_data[2].columns]
+    test_clean = split_data[2].drop(cols_to_drop).with_columns(
+        pl.lit(0.0).alias('tradeable_score')
+    )
+    data_dict['_test_clean'] = test_clean
+
+    return data_dict
