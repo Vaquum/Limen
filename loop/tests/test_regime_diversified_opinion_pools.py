@@ -8,7 +8,7 @@ import polars as pl
 
 import loop
 from loop import sfm
-from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
+from loop import RegimeDiversifiedOpinionPools
 from loop.tests.utils.cleanup import cleanup_csv_files
 from loop.tests.utils.get_data import get_klines_data_fast, get_klines_data_large, get_klines_data_small_fast
 
