@@ -485,5 +485,29 @@ class RegimeDiversifiedOpinionPools:
             if len(regime_prediction_df) > 0:
                 prediction_dataframes.append(regime_prediction_df)
 
-        # Aggregate predictions
-        return pl.concat(prediction_dataframes, how='vertical')
+        # Aggregate predictions with normalized column structure
+        if not prediction_dataframes:
+            return pl.DataFrame()
+        elif len(prediction_dataframes) == 1:
+            return prediction_dataframes[0]
+
+        # Identify all column names across dataframes
+        all_columns = set()
+        for df in prediction_dataframes:
+            all_columns.update(df.columns)
+
+        all_columns = sorted(list(all_columns))
+
+        # Normalize all dataframes to have the same columns
+        normalized_dataframes = []
+        for df in prediction_dataframes:
+            missing_cols = [col for col in all_columns if col not in df.columns]
+            if missing_cols:
+                # Fill missing columns with nulls
+                null_columns = [pl.lit(None).alias(col) for col in missing_cols]
+                df = df.with_columns(null_columns)
+            # Ensure correct column order
+            df = df.select(all_columns)
+            normalized_dataframes.append(df)
+
+        return pl.concat(normalized_dataframes, how='vertical')
