@@ -344,3 +344,11 @@ data mismatch
 - Add strategy logic to `lightgbm.tradeline_multiclass`
 - Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
 - Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
+
+# v1.22.0 on 17th of November, 2025
+- Implement Regime Diversified Opinion Pools (RDOP) system in `loop.regime_diversified_opinion_pools.py`
+- Fix `loop.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
+- Fix `loop.universal_experimental_loop` issue with support for `prep_each_round=False`
+- Move `get_klines_data_fast()`, `get_klines_data_medium()`, `get_klines_data_large()`, and `get_klines_data_small_fast()` from `loop.tests.test_sfm` to `loop.tests.utils.get_data`
+- Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
+- Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
