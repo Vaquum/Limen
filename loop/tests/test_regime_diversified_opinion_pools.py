@@ -69,9 +69,9 @@ def test_rdop():
                 perf_cols=None,
                 iqr_multiplier=10.0,
                 target_count=2,
-                n_components=2,
-                n_clusters=3,
-                k=1
+                n_pca_components=2,
+                n_pca_clusters=3,
+                k_regimes=1
             )
 
             online_result = rdop.online_pipeline(
