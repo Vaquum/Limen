@@ -10,12 +10,12 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from functools import reduce
+from collections import Counter
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from loop import UniversalExperimentLoop
-from loop.tests.utils.cleanup import cleanup_csv_files
 from loop.sfm.reference import empty
 
 DEFAULT_PERF_COLS = [
@@ -31,7 +31,7 @@ class OfflineFilter:
 
     '''Compute data filtering and validation for offline pipeline.'''
 
-    def __init__(self, perf_cols: List[str] = None, iqr_multiplier: float = 3.0):
+    def __init__(self, perf_cols: List[str] | None = None, iqr_multiplier: float = 3.0):
 
         self.perf_cols = perf_cols or DEFAULT_PERF_COLS
         self.iqr_multiplier = iqr_multiplier
@@ -60,18 +60,15 @@ class OfflineFilter:
 
             q1, q3 = bounds.get('q1'), bounds.get('q3')
 
-            # Skip filtering if quantiles are None or all values identical
             if q1 is None or q3 is None or q1 == q3:
                 continue
 
-            # Ensure we're working with floats
             q1, q3 = float(q1), float(q3)
             iqr = q3 - q1
             lower_bound = q1 - self.iqr_multiplier * iqr
             upper_bound = q3 + self.iqr_multiplier * iqr
 
-            df = df.filter((pl.col(col) >= lower_bound) &
-                           (pl.col(col) <= upper_bound))
+            df = df.filter((pl.col(col) >= lower_bound) & (pl.col(col) <= upper_bound))
 
         return df
 
@@ -91,10 +88,7 @@ class OfflineRegime:
         metrics_matrix = df.select(cluster_cols).to_numpy()
         n_samples = len(metrics_matrix)
 
-        # Adjust k to be at most the number of samples
         actual_k = min(k, n_samples)
-
-        # If only 1 sample, all get label 0
         if actual_k == 1:
             return np.zeros(n_samples, dtype=int)
 
@@ -134,8 +128,7 @@ class OfflineDiversification:
         Xp = pca.fit_transform(Xs)
 
         # KMeans in PCA space
-        kmeans = KMeans(n_clusters=n_clusters,
-                        random_state=random_state, n_init='auto')
+        kmeans = KMeans(n_clusters=n_clusters, random_state=random_state, n_init='auto')
         labels = kmeans.fit_predict(Xp)
         centers = kmeans.cluster_centers_
 
@@ -188,20 +181,18 @@ class OnlineModelLoader:
         self.sfm = sfm
         self.manifest = manifest
         self.trained_models = {}
-        self.exclude_perf_cols = DEFAULT_PERF_COLS + \
-            ['x_name', 'n_kept', 'id', 'cluster']
+        self.exclude_perf_cols = DEFAULT_PERF_COLS + ['x_name', 'n_kept', 'id', 'cluster']
 
     def extract_model_params(self, regime_df: pl.DataFrame) -> List[Dict]:
 
-        param_cols = [
-            col for col in regime_df.columns if col not in self.exclude_perf_cols]
+        param_cols = [col for col in regime_df.columns if col not in self.exclude_perf_cols]
         return [
             {col: [row[col]] for col in param_cols}
             for row in regime_df.iter_rows(named=True)
         ]
 
     def run_single_model_experiment(self,
-                                    data: pl.DataFrame,
+                                    data: pd.DataFrame,
                                     params: Dict,
                                     regime_id: int,
                                     model_id: int):
@@ -227,20 +218,19 @@ class OnlineModelLoader:
                 model=self.sfm.model
             )
 
-        # Extract prediction performance
         round_id = 0
         perf_df = uel._log.permutation_prediction_performance(round_id).copy()
         perf_df = perf_df.drop(columns=['actuals', 'hit', 'miss'])
 
         return perf_df
 
-    def merge_prediction_dataframes(self, dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    def merge_prediction_dataframes(self, dfs: List[pd.DataFrame]) -> pl.DataFrame:
 
         merge_keys = ['open', 'close', 'price_change']
+        pl_dfs = [pl.from_pandas(df) for df in dfs]
         return reduce(
-            lambda left, right: pd.merge(
-                left, right, on=merge_keys, how='inner'),
-            dfs
+            lambda left, right: left.join(right, on=merge_keys, how='inner'),
+            pl_dfs
         )
 
 
@@ -248,27 +238,48 @@ class AggregationStrategy:
 
     '''Compute prediction aggregation strategies for multiple models.'''
 
-    def __init__(self, threshold: float = 0.5):
+    def __init__(self, threshold: Optional[float] = None):
 
         self.threshold = threshold
 
-    def mean_aggregation(self, pred_arrays: np.ndarray) -> pd.Series:
+    def mean_aggregation(self, pred_arrays: np.ndarray) -> np.ndarray:
 
         avg = np.mean(pred_arrays, axis=0)
-        return pd.Series((avg >= self.threshold).astype(int))
 
-    def median_aggregation(self, pred_arrays: np.ndarray) -> pd.Series:
+        if self.threshold is None:
+            return avg
+
+        return (avg >= self.threshold).astype(float)
+
+    def median_aggregation(self, pred_arrays: np.ndarray) -> np.ndarray:
 
         median = np.median(pred_arrays, axis=0)
-        return pd.Series((median >= self.threshold).astype(int))
+
+        if self.threshold is None:
+            return median
+
+        return (median >= self.threshold).astype(float)
 
     def majority_vote_aggregation(self, pred_arrays):
 
-        votes = pred_arrays.astype(int)
-        frac = (votes == votes.max(axis=0)).sum(axis=0) / votes.shape[0]
-        return pd.Series(frac)
+        results = []
 
-    def aggregate(self, pred_arrays: np.ndarray, method: str) -> pd.Series:
+        for col_preds in pred_arrays.T:
+
+            counts = Counter(col_preds)
+            most_common_val, count = counts.most_common(1)[0]
+
+            n = len(col_preds)
+            percentage = count / n
+
+            if self.threshold is None or percentage >= self.threshold:
+                results.append(float(most_common_val))
+            else:
+                results.append(0.0)
+
+        return np.array(results)
+
+    def aggregate(self, pred_arrays: np.ndarray, method: str) -> np.ndarray:
 
         if method == 'mean':
             return self.mean_aggregation(pred_arrays)
@@ -282,82 +293,51 @@ class AggregationStrategy:
 
 class OnlineAggregation:
 
-    '''Compute prediction aggregation and market direction analysis for online pipeline.'''
-
-    def __init__(self, sfm, manifest: Dict = None, aggregation_threshold: float = 0.5):
+    def __init__(self, sfm, manifest: Dict = None, aggregation_threshold: Optional[float] = None):
 
         self.sfm = sfm
         self.manifest = manifest
         self.aggregation_strategy = AggregationStrategy(threshold=aggregation_threshold)
         self.model_loader = OnlineModelLoader(sfm, manifest)
 
-    def aggregate_predictions(self, predictions_df: pd.DataFrame, method: str = 'mean') -> pd.Series:
+    def aggregate_predictions(self, predictions_df: pd.DataFrame, method: str = 'mean') -> np.ndarray:
 
         pred_arrays = predictions_df.values.T
         return self.aggregation_strategy.aggregate(pred_arrays, method)
 
-    def run_regime_experiments(self, data: pl.DataFrame, regime_id: int, regime_df: pl.DataFrame,
-                               aggregation_method: str) -> pl.DataFrame:
+    def run_regime_experiments(self, data: pd.DataFrame, regime_id: int, regime_df: pl.DataFrame,
+                               aggregation_method: str) -> tuple[np.ndarray, pl.DataFrame]:
 
-        # Extract model parameters
         model_params = self.model_loader.extract_model_params(regime_df)
 
-        # Run experiments for all models
         experiment_results = [
-            self.model_loader.run_single_model_experiment(
-                data, params, regime_id, i)
+            self.model_loader.run_single_model_experiment(data, params, regime_id, i)
             for i, params in enumerate(model_params)
         ]
 
-        # Filter successful experiments
         successful_experiments = [(i, perf_df) for i, result in enumerate(experiment_results)
                                   if result is not None for perf_df in [result]]
 
         processed_dfs = []
 
         for model_idx, perf_df in successful_experiments:
-            processed_df = perf_df.rename(
-                columns={'predictions': f"predictions_{model_idx}"})
+            processed_df = perf_df.rename(columns={'predictions': f"predictions_{model_idx}"})
             processed_dfs.append(processed_df)
 
-        merged_df = self.model_loader.merge_prediction_dataframes(
-            processed_dfs)
-        merged_df = pl.from_pandas(merged_df)
+        merged_df = self.model_loader.merge_prediction_dataframes(processed_dfs)
 
-        pred_cols = [
-            col for col in merged_df.columns if col.startswith('predictions_')]
-        if pred_cols:
-            # Aggregate predictions
-            agg_series = self.aggregate_predictions(
-                merged_df[pred_cols].to_pandas(), aggregation_method)
-            merged_df = merged_df.with_columns([
-                pl.Series('aggregated_prediction', agg_series),
-                pl.Series('pred_direction', agg_series)
-            ])
-
-            # Compute correct prediction directly from price_change
-            merged_df = merged_df.with_columns(
-                (pl.col('pred_direction') == pl.when(pl.col('price_change') > 0).then(1).otherwise(
-                    pl.when(pl.col('price_change') < 0).then(-1).otherwise(0)
-                )).cast(pl.Int64).alias('correct_prediction')
-            )
-
-            # Add regime identifier
-            merged_df = merged_df.with_columns([
-                pl.lit(regime_id).alias('regime')
-            ])
-
-            return merged_df
-
-        return pl.DataFrame()
-
+        pred_cols = [col for col in merged_df.columns if col.startswith('predictions_')]
+        
+        agg_series = self.aggregate_predictions(merged_df[pred_cols].to_pandas(), aggregation_method)
+        
+        return agg_series, merged_df.drop(pred_cols)
 
 class RegimeDiversifiedOpinionPools:
 
     '''Defines Regime Diversified Opinion Pools for Loop experiments.'''
 
     def __init__(self, sfm, random_state: Optional[int] = 42):
-        
+
         '''
         Create RegimeDiversifiedOpinionPools instance with core SFM dependency.
 
@@ -366,7 +346,6 @@ class RegimeDiversifiedOpinionPools:
             random_state (int, optional): Random state for reproducible results
         '''
 
-        # Initialize core state
         self.regime_pools = {}
         self.sfm = sfm
         self.manifest = sfm.manifest() if hasattr(sfm, 'manifest') and callable(getattr(sfm, 'manifest')) else None
@@ -376,45 +355,45 @@ class RegimeDiversifiedOpinionPools:
 
     def offline_pipeline(self,
                          confusion_metrics,
-                         perf_cols: List[str] = None,
-                         iqr_multiplier: float = 3.0,
+                         perf_cols: Optional[List[str]] = None,
                          target_count: int = 100,
-                         n_components: Optional[int] = None,
-                         n_clusters: int = 8,
-                         k: int = 5) -> pl.DataFrame:
+                         k_regimes: int = 6,
+                         iqr_multiplier: float = 3.0,
+                         n_pca_components: Optional[int] = None,
+                         n_pca_clusters: int = 8
+        ) -> Dict[int, pl.DataFrame]:
         
         '''
         Compute offline pipeline for model selection and regime detection.
 
         Args:
-            confusion_metrics: Pandas/polars dataframe with experiment confusion metrics
+            confusion_metrics (pd.DataFrame): Pandas dataframe with experiment confusion metrics
             perf_cols (List[str], optional): Performance columns for filtering
-            iqr_multiplier (float): Multiplier for IQR outlier detection
             target_count (int): Target number of models to select per regime
-            k (int): Number of clusters for regime detection
+            k_regimes (int): Number of regime clusters
+            iqr_multiplier (float): Multiplier for IQR outlier detection
+            n_pca_components (int, optional): Number of PCA dimensions to keep
+            n_pca_clusters (int): Number of clusters used inside PCA space
 
         Returns:
-            pl.DataFrame: All regime pools combined with regime labels
+            Dict[int, pl.DataFrame]: Dictionary mapping regime IDs to their respective filtered model dataframes
         '''
 
-        # Initialize components with provided parameters
-        offline_filter = OfflineFilter(
-            perf_cols=perf_cols or DEFAULT_PERF_COLS, iqr_multiplier=iqr_multiplier)
+        offline_filter = OfflineFilter(perf_cols=perf_cols, iqr_multiplier=iqr_multiplier)
         offline_regime = OfflineRegime(random_state=self.random_state)
         offline_diversification = OfflineDiversification()
 
         confusion_metrics = pl.from_pandas(confusion_metrics)
 
-        # Sanity filtering (null checking)
+        # Sanity filtering
         df_filtered = offline_filter.sanity_filter(confusion_metrics)
 
         if len(df_filtered) == 0:
             print('WARNING: All models failed sanity check (contained nulls). Using original metrics.')
-            # Return original metrics with added regime column for consistency
             df_filtered = confusion_metrics.with_columns(pl.lit(0).alias('regime'))
             self.n_regimes = 1
             self.regime_pools = {0: df_filtered}
-            return df_filtered
+            return {0: df_filtered}
 
         # Outlier filtering
         df_filtered = offline_filter.outlier_filter(df_filtered)
@@ -424,49 +403,46 @@ class RegimeDiversifiedOpinionPools:
             df_filtered = offline_filter.sanity_filter(confusion_metrics)
 
         # Regime clustering
-        cluster_labels = offline_regime.cluster_models(
-            df_filtered, k, perf_cols)
-        self.n_regimes = k
+        cluster_labels = offline_regime.cluster_models(df_filtered, k_regimes, perf_cols)
+        self.n_regimes = k_regimes
 
-        df_filtered = df_filtered.with_columns(
-            pl.Series('regime', cluster_labels)
-        )
+        df_filtered = df_filtered.with_columns(pl.Series('regime', cluster_labels))
 
-        # Diversification
-        selected_models_list = []
+        # Diversification and return regime dictionary
+        regime_results = {}
 
-        for cluster_id in range(k):
+        for cluster_id in range(k_regimes):
             regime_df = df_filtered.filter(pl.col('regime') == cluster_id)
 
             if len(regime_df) == 0:
                 continue
 
             selected_df = offline_diversification.pca_performance_selection(
-                regime_df, target_count, perf_cols, 
-                n_components=n_components, 
-                n_clusters=n_clusters, 
+                regime_df, target_count, perf_cols,
+                n_components=n_pca_components,
+                n_clusters=n_pca_clusters,
                 random_state=self.random_state
-                )
+            )
             self.regime_pools[cluster_id] = selected_df
-            selected_models_list.append(selected_df)
+            regime_results[cluster_id] = selected_df
 
-        return pl.concat(selected_models_list, how='vertical')
+        return regime_results if regime_results else {}
 
     def online_pipeline(self,
-                        data: pl.DataFrame,
+                        data: pd.DataFrame,
                         aggregation_method: str = 'mean',
-                        aggregation_threshold: float = 0.5) -> pl.DataFrame:
-        
+                        aggregation_threshold: Optional[float] = None) -> pl.DataFrame:
+
         '''
         Compute online pipeline for regime-based prediction aggregation.
 
         Args:
-            data (pl.DataFrame): Klines dataset with 'open', 'close', 'price_change' columns
+            data (pd.DataFrame): The data to use for the experiment
             aggregation_method (str): Method for aggregating predictions across models in each regime
-            aggregation_threshold (float): Threshold for aggregation decision
+            aggregation_threshold (float, optional): Threshold for aggregation decision
 
         Returns:
-            pl.DataFrame: Combined predictions with regime identifiers and performance data
+            pl.DataFrame: Combined predictions with regime identifiers.
         '''
 
         online_aggregation = OnlineAggregation(
@@ -475,39 +451,24 @@ class RegimeDiversifiedOpinionPools:
             aggregation_threshold=aggregation_threshold
         )
 
-        # Run UEL experiments for each regime
-        prediction_dataframes = []
+        regime_predictions = {}
+        result_df = None
 
+        # Run UEL experiments for each regime and aggregation
         for regime_id, regime_df in self.regime_pools.items():
-            regime_prediction_df = online_aggregation.run_regime_experiments(
+            regime_series, regime_data = online_aggregation.run_regime_experiments(
                 data, regime_id, regime_df, aggregation_method
             )
-            if len(regime_prediction_df) > 0:
-                prediction_dataframes.append(regime_prediction_df)
+            if len(regime_series) > 0:
+                regime_predictions[regime_id] = regime_series
+                if result_df is None and len(regime_data) > 0:
+                    result_df = regime_data
 
-        # Aggregate predictions with normalized column structure
-        if not prediction_dataframes:
+        if not regime_predictions or result_df is None:
             return pl.DataFrame()
-        elif len(prediction_dataframes) == 1:
-            return prediction_dataframes[0]
 
-        # Identify all column names across dataframes
-        all_columns = set()
-        for df in prediction_dataframes:
-            all_columns.update(df.columns)
+        for regime_id, prediction_series in regime_predictions.items():
+            prediction_col = pl.Series(f'regime_{regime_id}_prediction', prediction_series)
+            result_df = result_df.with_columns([prediction_col])
 
-        all_columns = sorted(list(all_columns))
-
-        # Normalize all dataframes to have the same columns
-        normalized_dataframes = []
-        for df in prediction_dataframes:
-            missing_cols = [col for col in all_columns if col not in df.columns]
-            if missing_cols:
-                # Fill missing columns with nulls
-                null_columns = [pl.lit(None).alias(col) for col in missing_cols]
-                df = df.with_columns(null_columns)
-            # Ensure correct column order
-            df = df.select(all_columns)
-            normalized_dataframes.append(df)
-
-        return pl.concat(normalized_dataframes, how='vertical')
+        return result_df
