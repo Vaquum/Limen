@@ -12,41 +12,6 @@ RDOP operates through a two-phase pipeline:
 
 The system integrates seamlessly with existing Loop infrastructure, consuming experiment results and producing aggregated predictions for improved stability and robustness across different market conditions.
 
-## Usage
-
-RDOP follows the standard Loop workflow extension pattern:
-
-```python
-from loop import RegimeDiversifiedOpinionPools
-from loop import UniversalExperimentLoop
-
-# 1. Generate confusion metrics (existing Loop workflow)
-uel = UniversalExperimentLoop(data=your_data, single_file_model=your_sfm)
-uel.run(experiment_name='your_experiment', n_permutations=1000)
-confusion_metrics = uel.experiment_confusion_metrics
-
-# 2. Train RDOP offline pipeline
-rdop = RegimeDiversifiedOpinionPools(your_sfm)
-offline_result = rdop.offline_pipeline(
-    confusion_metrics,
-    k_regimes=5,                  # Number of regimes to detect
-    target_count=20,              # Models per regime
-    iqr_multiplier=3.0           # Outlier detection sensitivity
-)
-
-# 3. Use RDOP online pipeline for predictions
-online_result = rdop.online_pipeline(
-    data=your_prediction_data,
-    aggregation_method='mean'
-)
-
-# Result contains aggregated predictions across model regimes
-# Access individual regime predictions
-predictions_regime_0 = online_result['regime_0_prediction']
-predictions_regime_1 = online_result['regime_1_prediction']
-# ... etc
-```
-
 ## Offline Pipeline
 
 ### `RegimeDiversifiedOpinionPools.offline_pipeline`
