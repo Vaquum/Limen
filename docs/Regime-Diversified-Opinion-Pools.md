@@ -29,7 +29,7 @@ confusion_metrics = uel.experiment_confusion_metrics
 rdop = RegimeDiversifiedOpinionPools(your_sfm)
 offline_result = rdop.offline_pipeline(
     confusion_metrics,
-    k=5,                           # Number of regimes to detect
+    k_regimes=5,                  # Number of regimes to detect
     target_count=20,              # Models per regime
     iqr_multiplier=3.0           # Outlier detection sensitivity
 )
@@ -41,7 +41,10 @@ online_result = rdop.online_pipeline(
 )
 
 # Result contains aggregated predictions across model regimes
-predictions = online_result['aggregated_prediction']
+# Access individual regime predictions
+predictions_regime_0 = online_result['regime_0_prediction']
+predictions_regime_1 = online_result['regime_1_prediction']
+# ... etc
 ```
 
 ## Offline Pipeline
@@ -58,9 +61,9 @@ Trains the RDOP system by analyzing historical model performance and creating re
 | `perf_cols`          | `list[str]`       | Performance column names to use for filtering and clustering (default: standard metric columns) |
 | `iqr_multiplier`      | `float`           | IQR multiplier for outlier filtering (default: 3.0) |
 | `target_count`        | `int`             | Target number of models to select per regime (default: 100) |
-| `n_components`        | `int`             | Number of PCA components for diversification (default: None, automatic) |
-| `n_clusters`          | `int`             | Number of clusters for PCA-based selection within regimes (default: 8) |
-| `k`                   | `int`             | Number of regimes to detect via clustering (default: 5) |
+| `n_pca_components`    | `int`             | Number of PCA components for diversification (default: None, automatic) |
+| `n_pca_clusters`      | `int`             | Number of clusters for PCA-based selection within regimes (default: 8) |
+| `k_regimes`           | `int`             | Number of regimes to detect via clustering (default: 6) |
 
 ### Returns
 
@@ -96,10 +99,8 @@ Runs predictions through the trained regime pools and aggregates results.
 
 Returns `pl.DataFrame` with original data plus aggregated prediction columns:
 
-- `aggregated_prediction`: Final combined prediction
-- `pred_direction`: Directional signal (-1, 0, 1)
-- `correct_prediction`: Accuracy against price_change
-- `regime`: Identified regime for this prediction
+- `regime_k_prediction`: Aggregated prediction for regime k using specified aggregation method
+- Individual regime predictions are available for analysis and risk management
 
 ### Processing Steps
 
@@ -145,7 +146,7 @@ uel.run('training_experiment', n_permutations=500)
 
 # RDOP consumes UEL results for regime-aware aggregation
 rdop = RegimeDiversifiedOpinionPools(your_sfm)
-offline_result = rdop.offline_pipeline(uel.experiment_confusion_metrics, k=3)
+offline_result = rdop.offline_pipeline(uel.experiment_confusion_metrics, k_regimes=3)
 
 # RDOP provides more stable predictions than individual models
 online_result = rdop.online_pipeline(production_data)
@@ -195,7 +196,7 @@ confusion_df = uel.experiment_confusion_metrics
 rdop = RegimeDiversifiedOpinionPools(sfm.lightgbm.tradeable_regressor)
 regime_pools = rdop.offline_pipeline(
     confusion_df,
-    k=5,                           # 5 different market regimes
+    k_regimes=5,                  # 5 different market regimes
     target_count=25,              # 25 models per regime
     iqr_multiplier=2.5           # Moderate outlier filtering
 )
@@ -207,8 +208,10 @@ production_predictions = rdop.online_pipeline(
 )
 
 # RDOP provides more stable, regime-adapted predictions
-final_signals = production_predictions['aggregated_prediction']
-regime_context = production_predictions['regime']
+# Access aggregated predictions by regime
+regime_0_predictions = production_predictions['regime_0_prediction']
+regime_1_predictions = production_predictions['regime_1_prediction']
+# etc.
 ```
 
 The RDOP system enhances Loop's predictive capabilities by adding intelligent model diversification and regime awareness to the standard experimental workflow.
