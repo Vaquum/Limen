@@ -9,6 +9,9 @@ from loop.indicators.rolling_volatility import rolling_volatility
 from loop.indicators.rsi_sma import rsi_sma
 from loop.indicators.sma import sma
 from loop.indicators.wilder_rsi import wilder_rsi
+from loop.indicators.bollinger_bands import bollinger_bands
+from loop.indicators.cci import cci
+from loop.indicators.stochastic_oscillator import stochastic_oscillator
 
 __all__ = [
     'atr',
@@ -21,5 +24,8 @@ __all__ = [
     'rolling_volatility',
     'rsi_sma',
     'sma',
-    'wilder_rsi'
+    'wilder_rsi',
+    'bollinger_bands',
+    'cci',
+    'stochastic_oscillator'
 ]
