@@ -1,3 +1,4 @@
+import os
 from clickhouse_connect import get_client
 import polars as pl
 import time
@@ -27,7 +28,7 @@ def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
     client = get_client(host='localhost',
                         port=8123,
                         username='default',
-                        password='password123',
+                        password=os.getenv('CLICKHOUSE_PASSWORD'),
                         compression=True)
 
     select_cols = ['trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker']
