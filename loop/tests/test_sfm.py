@@ -16,7 +16,7 @@ def test_sfm():
     tests = [
         # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log, uses_manifest
         (sfm.reference.random, get_klines_data_fast, True, True),
-        (sfm.reference.xgboost, get_klines_data_fast, False, False),
+        (sfm.reference.xgboost, get_klines_data_fast, True, True),
         (sfm.reference.logreg, get_klines_data_fast, True, True),
         (sfm.logreg.regime_multiclass, get_klines_data_large, True, True),
         (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True, True),
