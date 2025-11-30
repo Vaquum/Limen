@@ -5,7 +5,6 @@ Feature Engineering Functions for LightGBM Tradeable Regressor
 
 import polars as pl
 from loop.indicators.rsi_sma import rsi_sma
-from loop.indicators.sma import sma
 from loop.indicators.rolling_volatility import rolling_volatility
 from loop.features.atr_sma import atr_sma
 from loop.features.atr_percent_sma import atr_percent_sma
