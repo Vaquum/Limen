@@ -22,7 +22,7 @@ def params():
         'early_stopping_rounds': [50],
     }
 
-def prep(data: pl.DataFrame):
+def prep(data: pl.DataFrame, round_params=None):
 
     all_datetimes = data['datetime'].to_list()
 

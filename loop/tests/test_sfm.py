@@ -7,54 +7,8 @@ import polars as pl
 import loop
 from loop import sfm
 from loop.tests.utils.cleanup import cleanup_csv_files
+from loop.tests.utils.get_data import get_klines_data_fast, get_klines_data_large, get_klines_data_small_fast
 
-def get_klines_data_fast():
-    '''
-    Get optimized klines data for fast testing.
-    Uses every 4th row (8h intervals) and limited rows for speed.
-    '''
-    df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=8000)
-    df['datetime'] = pd.to_datetime(df['datetime'])
-    df = df.iloc[::4].reset_index(drop=True)  # Every 4th row (8h intervals)
-    df = pl.from_pandas(df)
-    return df
-
-
-def get_klines_data_medium():
-    '''
-    Get medium-sized optimized klines data for models requiring larger datasets.
-    Uses full dataset with 6h intervals to ensure sufficient data for regime models.
-    '''
-    df = pd.read_csv('datasets/klines_2h_2020_2025.csv')  # Use full dataset
-    df['datetime'] = pd.to_datetime(df['datetime'])
-    # Every 3rd row (6h intervals) -> ~7.8k rows
-    df = df.iloc[::3].reset_index(drop=True)
-    df = pl.from_pandas(df)
-    return df
-
-
-def get_klines_data_large():
-    '''
-    Get large dataset for models requiring 20k+ rows (like regime_multiclass).
-    Uses full dataset to ensure sufficient data.
-    '''
-    df = pd.read_csv(
-        'datasets/klines_2h_2020_2025.csv')  # Use full dataset (~23k rows)
-    df['datetime'] = pd.to_datetime(df['datetime'])
-    df = pl.from_pandas(df)
-    return df
-
-
-def get_klines_data_small_fast():
-    '''
-    Get small optimized klines data for fast testing.
-    Uses every 6th row (12h intervals) for maximum speed.
-    '''
-    df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=3000)
-    df['datetime'] = pd.to_datetime(df['datetime'])
-    df = df.iloc[::6].reset_index(drop=True)  # Every 6th row (12h intervals)
-    df = pl.from_pandas(df)
-    return df
 
 
 def test_sfm():

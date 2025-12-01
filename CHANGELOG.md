@@ -353,3 +353,11 @@ data mismatch
 - Fix `loop.universal_experiment_loop` to provide manifest support for `sfm.reference.empty`
 - Add scaling for all klines data in `transform.linear_transform`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
+
+# v1.22.1 on 26th of November, 2025
+- Implement Regime Diversified Opinion Pools (RDOP) system in `loop.regime_diversified_opinion_pools.py`
+- Fix `loop.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
+- Fix `loop.universal_experimental_loop` issue with support for `prep_each_round=False`
+- Move `get_klines_data_fast()`, `get_klines_data_medium()`, `get_klines_data_large()`, and `get_klines_data_small_fast()` from `loop.tests.test_sfm` to `loop.tests.utils.get_data`
+- Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
+- Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
