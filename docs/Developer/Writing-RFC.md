@@ -1,3 +1,5 @@
+# Writing RFC
+
 ## How to use this template
 
 This template is a single format for both product PRDs and engineering RFCs. It can be used in several ways:
