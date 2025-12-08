@@ -26,7 +26,7 @@ The only exception is that **_Work Phases_ may be left empty in an initial produ
 
 The level of detail is flexible:
 
-- A simple change documentation may be fully covered in **~15 minutes**.
+- A simple change request may be fully covered in **~15 minutes**.
 - A complex initiative may require **multiple iterations over days or weeks**.
 - Everything in between is ok.
 
