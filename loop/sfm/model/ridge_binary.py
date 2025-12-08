@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.linear_model import RidgeClassifier
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.frozen import FrozenEstimator
 
 from loop.metrics.binary_metrics import binary_metrics
 
@@ -14,8 +15,10 @@ def ridge_binary(data: dict,
                  fit_intercept: bool = True,
                  solver: str = 'auto',
                  use_calibration: bool = True,
+                 use_frozen_estimator: bool = True,
                  calibration_method: str = 'sigmoid',
                  calibration_cv: int = 3,
+                 ensemble: bool = True,
                  n_jobs: int = -1,
                  pred_threshold: float = 0.5,
                  **kwargs) -> dict:
@@ -32,9 +35,11 @@ def ridge_binary(data: dict,
         random_state (int): Random seed
         fit_intercept (bool): Whether to fit intercept
         solver (str): Solver algorithm
+        use_frozen_estimator (bool): Whether to use frozen estimator (mimics prefit behavior)
         use_calibration (bool): Whether to apply probability calibration
         calibration_method (str): Calibration method ('sigmoid' or 'isotonic')
         calibration_cv (int): CV folds for calibration
+        ensemble (bool): Whether to use ensemble calibration (multiple vs single calibrator)
         pred_threshold (float): Threshold for binary predictions
         **kwargs: Additional parameters (ignored)
 
@@ -55,10 +60,17 @@ def ridge_binary(data: dict,
     clf.fit(data['x_train'], data['y_train'])
 
     if use_calibration:
+        
+        if use_frozen_estimator:
+            base_estimator = FrozenEstimator(clf)
+        else:
+            base_estimator = clf
+
         calibrator = CalibratedClassifierCV(
-            clf,
+            base_estimator,
             method=calibration_method,
             cv=calibration_cv,
+            ensemble=ensemble,
             n_jobs=n_jobs
         )
         calibrator.fit(data['x_val'], data['y_val'])
