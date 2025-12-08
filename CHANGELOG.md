@@ -333,18 +333,27 @@ data mismatch
 
 # V1.20.1 on 18th of October 2025
 - Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
-- Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
+- Fix package dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
 # V1.20.2 on 23rd of October 2025
 - Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
 - Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
-- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment.
+# V1.21.1 on 31st of October 2025
+- Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
+- Add `features.sma_crossover`
+- Refactor `sfm.ridge.ridge_classifier` with richer parameter ranges
+- Fix `loop.universal_experiment_loop` to provide manifest support for `sfm.reference.empty`
+- Add scaling for all klines data in `transform.linear_transform`
+- Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
-# V1.21.0 on 30th of October 2025
-- Add strategy logic to `lightgbm.tradeline_multiclass`
-- Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
-- Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
+# v1.22.1 on 26th of November, 2025
+- Implement Regime Diversified Opinion Pools (RDOP) system in `loop.regime_diversified_opinion_pools.py`
+- Fix `loop.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
+- Fix `loop.universal_experimental_loop` issue with support for `prep_each_round=False`
+- Move `get_klines_data_fast()`, `get_klines_data_medium()`, `get_klines_data_large()`, and `get_klines_data_small_fast()` from `loop.tests.test_sfm` to `loop.tests.utils.get_data`
+- Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
+- Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
 
-# V1.22.0 on 22nd of November 2025
+# V1.23.0 on 22nd of November 2025
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics

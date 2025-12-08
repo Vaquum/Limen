@@ -4,6 +4,7 @@ from loop.account import Account
 from loop.backtest.backtest_sequential import BacktestSequential
 from loop.universal_experiment_loop import UniversalExperimentLoop
 from loop.manifest import Manifest
+from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
 
 import loop.explorer as explorer
 import loop.features as features
@@ -24,6 +25,7 @@ __all__ = [
     'Explorer',
     'explorer',
     'Manifest',
+    'RegimeDiversifiedOpinionPools',
     'features',
     'indicators',
     'metrics',

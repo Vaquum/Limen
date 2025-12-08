@@ -14,13 +14,10 @@ from loop.tests.test_moving_average_correction_model import test_moving_average_
 from loop.tests.test_account_conviction import test_account_conviction
 from loop.tests.test_backtest_conviction import test_backtest_conviction
 from loop.tests.test_klines_data_maker_fields import test_klines_data_maker_fields
-from loop.tests.test_polars_lazy_evaluation import (
-    test_polars_lazy_evaluation_correctness,
-    test_polars_lazy_evaluation_performance,
-)
 from loop.tests.test_large_param_space import test_large_param_space
 from loop.tests.test_bars import test_volume_bars_basic, test_trade_bars_basic, test_liquidity_bars_basic
 from loop.tests.test_manifest_pre_split_random_selector import test_pre_split_random_selector
+from loop.tests.test_regime_diversified_opinion_pools import test_rdop
 
 tests = [
     test_large_param_space,
@@ -38,8 +35,7 @@ tests = [
     # test_moving_average_correction,
     test_account_conviction,
     test_backtest_conviction,
-    test_polars_lazy_evaluation_correctness,
-    test_polars_lazy_evaluation_performance,
+    test_rdop,
 ]
 
 setup_cleanup_handlers()
