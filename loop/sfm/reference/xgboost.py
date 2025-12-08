@@ -13,6 +13,23 @@ from loop.features.lagged_features import lag_columns
 from loop.sfm.model.xgb_regressor import xgb_regressor
 
 
+def params():
+    return {
+        'learning_rate': [0.01, 0.02, 0.03],
+        'max_depth': [2, 3, 4],
+        'n_estimators': [300, 500, 700],
+        'min_child_weight': [5, 10, 20],
+        'subsample': [0.5, 0.6, 0.7],
+        'colsample_bytree': [0.5, 0.6, 0.7],
+        'gamma': [0.1, 0.5, 1.0],
+        'reg_alpha': [0.1, 0.5, 1.0],
+        'reg_lambda': [1.0, 5.0, 10.0],
+        'objective': ['reg:squarederror'],
+        'booster': ['gbtree'],
+        'early_stopping_rounds': [50],
+    }
+
+
 def manifest():
 
     return (
@@ -57,20 +74,3 @@ def manifest():
             .done()
         .with_model(xgb_regressor)
     )
-
-
-def params():
-    return {
-        'learning_rate': [0.01, 0.02, 0.03],
-        'max_depth': [2, 3, 4],
-        'n_estimators': [300, 500, 700],
-        'min_child_weight': [5, 10, 20],
-        'subsample': [0.5, 0.6, 0.7],
-        'colsample_bytree': [0.5, 0.6, 0.7],
-        'gamma': [0.1, 0.5, 1.0],
-        'reg_alpha': [0.1, 0.5, 1.0],
-        'reg_lambda': [1.0, 5.0, 10.0],
-        'objective': ['reg:squarederror'],
-        'booster': ['gbtree'],
-        'early_stopping_rounds': [50],
-    }
