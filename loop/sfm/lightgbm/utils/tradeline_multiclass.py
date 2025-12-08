@@ -338,7 +338,7 @@ def create_multiclass_labels(df: pl.DataFrame,
                 labels[idx] = 2
                 short_count += 1
 
-    df = df.with_columns(pl.Series('label', labels))
+    df = df.with_columns(pl.Series('label', labels, dtype=pl.Int32))
 
     return df
 
@@ -608,7 +608,7 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
         return df, {
             'total_return_net_pct': 0.0,
             'trade_win_rate_pct': 0.0,
-            'trades_count': 0,
+            'trades_count': 0.0,
             'max_drawdown_pct': 0.0,
             'avg_win': 0.0,
             'avg_loss': 0.0,
@@ -625,7 +625,7 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
         return df, {
             'total_return_net_pct': 0.0,
             'trade_win_rate_pct': 0.0,
-            'trades_count': 0,
+            'trades_count': 0.0,
             'max_drawdown_pct': 0.0,
             'avg_win': 0.0,
             'avg_loss': 0.0,
@@ -706,15 +706,15 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
     if trades:
         total_return = (capital - initial_capital) / initial_capital * 100
         winning_trades = [t for t in trades if t['net_pnl'] > 0]
-        win_rate = len(winning_trades) / len(trades) * 100 if trades else 0
-        avg_win = np.mean([t['net_pnl'] for t in winning_trades]) if winning_trades else 0
+        win_rate = len(winning_trades) / len(trades) * 100 if trades else 0.0
+        avg_win = np.mean([t['net_pnl'] for t in winning_trades]) if winning_trades else 0.0
         losing_trades = [t for t in trades if t['net_pnl'] < 0]
-        avg_loss = np.mean([t['net_pnl'] for t in losing_trades]) if losing_trades else 0
+        avg_loss = np.mean([t['net_pnl'] for t in losing_trades]) if losing_trades else 0.0
 
         trading_results = {
             'total_return_net_pct': total_return,
             'trade_win_rate_pct': win_rate,
-            'trades_count': len(trades),
+            'trades_count': float(len(trades)),
             'max_drawdown_pct': -10.0,
             'avg_win': avg_win,
             'avg_loss': avg_loss,
@@ -724,7 +724,7 @@ def apply_complete_exit_strategy(df: pl.DataFrame,
         trading_results = {
             'total_return_net_pct': 0.0,
             'trade_win_rate_pct': 0.0,
-            'trades_count': 0,
+            'trades_count': 0.0,
             'max_drawdown_pct': 0.0,
             'avg_win': 0.0,
             'avg_loss': 0.0,

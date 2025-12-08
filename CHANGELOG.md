@@ -338,14 +338,6 @@ data mismatch
 # V1.20.2 on 23rd of October 2025
 - Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
 - Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
-<<<<<<< HEAD
-- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
-
-# V1.21.0 on 30th of October 2025
-- Add strategy logic to `lightgbm.tradeline_multiclass`
-- Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
-- Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
-
 # V1.21.1 on 31st of October 2025
 - Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
 - Add `features.sma_crossover`
@@ -361,3 +353,7 @@ data mismatch
 - Move `get_klines_data_fast()`, `get_klines_data_medium()`, `get_klines_data_large()`, and `get_klines_data_small_fast()` from `loop.tests.test_sfm` to `loop.tests.utils.get_data`
 - Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
 - Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
+
+# V1.23.0 on 22nd of November 2025
+- Add `lightgbm.tradeline_directional_conditional` SFM
+- Fix type compatibility in tradeline_multiclass trading metrics
