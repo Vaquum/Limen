@@ -15,7 +15,7 @@ def create_quad_labels(df: pl.DataFrame, threshold: float, lookahead_hours: int)
         lookahead_hours (int): Number of candle periods to look ahead
 
     Returns:
-        pl.DataFrame: The input data with 4 additional label columns: 'label_long', 'label_short', 'label_movement', 'label_both'
+        pl.DataFrame: The input data with four columns: 'label_long', 'label_short', 'label_movement', 'label_both'
 
     NOTE: Labels are forward-looking (no lookahead bias in features)
     NOTE: label_both captures whipsaw/volatile periods
