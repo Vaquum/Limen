@@ -71,14 +71,14 @@ assignees: []
 
 <!-- Describe when this should ship and how that timing aligns with our roadmap and market expectations. -->
 
-### Conceptual Design
+### Design
 
-<!-- Provide an end-to-end overview of the solution—conceptual and, where relevant, technical—with links to key mocks, diagrams, and design docs. -->
+<!-- Provide an end-to-end overview of the solution — conceptual and, where relevant, technical — with links to key mocks, diagrams, and design docs. -->
 
 ### Work Phases
 
 <!--
-Break the work into a checkbox list under Non-coding and Coding, where each item is ≈1 day or less.
+Break the work into a checkbox list under Non-coding and Coding, where each item is ≈1 mad-day of work or less.
 Each coding item should eventually map to a single PR, forming a concrete, step-by-step execution plan
 and progress tracker.
 -->
