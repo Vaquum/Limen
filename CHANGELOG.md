@@ -364,3 +364,8 @@ data mismatch
 # V1.23.0 on 22nd of November 2025
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics
+
+# V1.24.0 on 8th of December 2025
+- Refactor xgboost reference sfm to use manifest
+- Refactor rule based sfms to use manifest
+- Refactor `lightgbm/tradeable_regressor` sfm to use manifest
