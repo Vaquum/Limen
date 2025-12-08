@@ -17,7 +17,7 @@ def volume_ratio(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     
     # Calculate volume SMA if not already present
     volume_sma_col = f'volume_sma_{period}'
-    if volume_sma_col not in data.columns:
+    if volume_sma_col not in data.collect_schema().names():
         data = sma(data, 'volume', period)
     
     return data.with_columns([
