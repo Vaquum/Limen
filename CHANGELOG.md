@@ -338,6 +338,13 @@ data mismatch
 # V1.20.2 on 23rd of October 2025
 - Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
 - Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
+- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
+
+# V1.21.0 on 30th of October 2025
+- Add strategy logic to `lightgbm.tradeline_multiclass`
+- Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
+- Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
+
 # V1.21.1 on 31st of October 2025
 - Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
 - Add `features.sma_crossover`
@@ -357,3 +364,8 @@ data mismatch
 # V1.23.0 on 22nd of November 2025
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics
+
+# V1.24.0 on 8th of December 2025
+- Refactor xgboost reference sfm to use manifest
+- Refactor rule based sfms to use manifest
+- Refactor `lightgbm/tradeable_regressor` sfm to use manifest

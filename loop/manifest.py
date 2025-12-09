@@ -73,19 +73,18 @@ class Manifest:
     '''Defines manifest for Loop experiments.'''
 
     pre_split_data_selector: FeatureEntry = None
+    split_config: Tuple[int, int, int] = (8, 1, 2)
     bar_formation: FeatureEntry = None
+    required_bar_columns: List[str] = field(default_factory=list)
     feature_transforms: List[FeatureEntry] = field(default_factory=list)
+    target_column: str = None
     target_transforms: List[FittedTransformEntry] = field(default_factory=list)
     scaler: FittedTransformEntry = None
-    required_bar_columns: List[str] = field(default_factory=list)
-    target_column: str = None
-    split_config: Tuple[int, int, int] = (8, 1, 2)
+    data_dict_extension: Callable = None
     
-    # New model configuration fields
     model_function: Callable = None
     model_params: Dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: Dict[str, ParamValue] = field(default_factory=dict)
-
 
     def _add_transform(self, func: Callable, **params) -> 'Manifest':
 
@@ -240,7 +239,25 @@ class Manifest:
         self.model_function = model_function
 
         return self
-    
+
+    def add_to_data_dict(self, func: Callable) -> 'Manifest':
+
+        '''
+        Configure data_dict extension function to add custom entries after data preparation.
+
+        Args:
+            func (Callable): Extension function with signature (data_dict, split_data, round_params, fitted_params) -> dict
+
+        Returns:
+            Manifest: Self for method chaining
+
+        NOTE: The extension function receives the base data_dict and full split DataFrames.
+        It should modify and return the data_dict with any additional custom entries needed by the model.
+        '''
+
+        self.data_dict_extension = func
+        return self
+
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
 
         '''
@@ -315,7 +332,7 @@ class Manifest:
 
             split_data[i] = data.drop_nulls()
 
-        return _finalize_to_data_dict(split_data, all_datetimes, all_fitted_params, self)
+        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params)
 
     def run_model(self, data: dict, round_params: Dict[str, Any]) -> dict:
 
@@ -548,10 +565,11 @@ def _apply_scaler(
 
 
 def _finalize_to_data_dict(
+        manifest: Manifest,
         split_data: List[pl.DataFrame],
         all_datetimes: List,
         fitted_params: Dict[str, Any],
-        manifest: Manifest
+        round_params: Dict[str, Any]
 ) -> dict:
 
     # Validate all splits have datetime column
@@ -579,5 +597,14 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     data_dict['_feature_names'] = cols
+
+    # Apply data_dict extension if configured
+    if manifest.data_dict_extension:
+        data_dict = manifest.data_dict_extension(
+            data_dict=data_dict,
+            split_data=split_data,
+            round_params=round_params,
+            fitted_params=fitted_params
+        )
 
     return data_dict
