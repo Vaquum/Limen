@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.linear_model import RidgeClassifier
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.frozen import FrozenEstimator
+from sklearn.utils.metaestimators import FrozenEstimator
 
 from loop.metrics.binary_metrics import binary_metrics
 
@@ -15,7 +15,7 @@ def ridge_binary(data: dict,
                  fit_intercept: bool = True,
                  solver: str = 'auto',
                  use_calibration: bool = True,
-                 use_frozen_estimator: bool = True,
+                 use_frozen_estimator: bool = False,
                  calibration_method: str = 'sigmoid',
                  calibration_cv: int = 3,
                  ensemble: bool = True,
@@ -60,7 +60,6 @@ def ridge_binary(data: dict,
     clf.fit(data['x_train'], data['y_train'])
 
     if use_calibration:
-        
         if use_frozen_estimator:
             base_estimator = FrozenEstimator(clf)
         else:
