@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.linear_model import RidgeClassifier
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.utils.metaestimators import FrozenEstimator
+from sklearn.frozen import FrozenEstimator
 
 from loop.metrics.binary_metrics import binary_metrics
 
