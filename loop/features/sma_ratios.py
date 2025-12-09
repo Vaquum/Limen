@@ -22,7 +22,7 @@ def sma_ratios(data: pl.DataFrame, periods: list = [5, 10, 20, 50], price_col: s
         sma_col = f'{price_col}_sma_{period}'
         
         # Calculate SMA if not already present
-        if sma_col not in df.columns:
+        if sma_col not in df.collect_schema().names():
             df = sma(df, price_col, period)
         
         # Add ratio column
