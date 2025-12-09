@@ -362,7 +362,7 @@ data mismatch
 - Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
 - Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
 
-# v1.22.1 on 26th of November, 2025
+# v1.22.1 on 8th of December, 2025
 - Modify `loop.sfm.model.ridge_binary` to add combination of frozenestimator and cv folds params
 - Add use_frozen_estimator parameter to mimic prefitted calibration behavior using sklearn's FrozenEstimator
 - Add ensemble parameter to control ensemble calibration in CalibratedClassifierCV  
