@@ -365,7 +365,13 @@ data mismatch
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics
 
-# V1.24.0 on 8th of December 2025
+# v1.24.0 on 8th of December 2025
 - Refactor xgboost reference sfm to use manifest
 - Refactor rule based sfms to use manifest
 - Refactor `lightgbm/tradeable_regressor` sfm to use manifest
+
+# v1.25.0 on 12th of December 2025
+- Add `loop.utils.generic_endpoint_for_tdw` for generic TDW ClickHouse queries
+- Add `loop.utils.get_agg_trades_data` for fetching Binance aggregated trades
+- Update `loop.utils.get_klines_data` and `loop.utils.get_trades_data` to use `CLICKHOUSE_PASSWORD` env var
+
