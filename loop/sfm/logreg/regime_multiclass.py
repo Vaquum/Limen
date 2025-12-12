@@ -26,6 +26,25 @@ CONFIDENCE_THRESHOLD = 0.40
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 
+def params():
+
+    return {
+        'random_slice_size': [NUM_ROWS],
+        'random_slice_min_pct': [0.25],
+        'random_slice_max_pct': [0.75],
+        'random_seed': [42],
+        'penalty': ['l1', 'l2', 'elasticnet'],
+        'C': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+        'solver': ['lbfgs', 'liblinear', 'newton-cg', 'sag', 'saga'],
+        'max_iter': [100, 200, 500, 1000, 2000],
+        'tol': [0.0001, 0.001, 0.01, 0.1],
+        'class_weight': ['None', 'balanced'],
+        'l1_ratio': [0.15, 0.5, 0.85],
+        'fit_intercept': [True],
+        'random_state': [42],
+    }
+
+
 def manifest():
 
     return (Manifest()
@@ -64,22 +83,3 @@ def manifest():
         .set_scaler(LogRegTransform)
         .with_model(logreg_multiclass)
     )
-
-
-def params():
-
-    return {
-        'random_slice_size': [NUM_ROWS],
-        'random_slice_min_pct': [0.25],
-        'random_slice_max_pct': [0.75],
-        'random_seed': [42],
-        'penalty': ['l1', 'l2', 'elasticnet'],
-        'C': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
-        'solver': ['lbfgs', 'liblinear', 'newton-cg', 'sag', 'saga'],
-        'max_iter': [100, 200, 500, 1000, 2000],
-        'tol': [0.0001, 0.001, 0.01, 0.1],
-        'class_weight': ['None', 'balanced'],
-        'l1_ratio': [0.15, 0.5, 0.85],
-        'fit_intercept': [True],
-        'random_state': [42],
-    }

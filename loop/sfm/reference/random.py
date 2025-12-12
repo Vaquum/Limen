@@ -5,6 +5,15 @@ from loop.metrics.binary_metrics import binary_metrics
 from loop.manifest import Manifest
 
 
+def params():
+
+    return {
+        'random_weights': [0.4, 0.5, 0.6],
+        'breakout_threshold': [0.05, 0.1, 0.2],
+        'shift': [-1, -2, -3]
+    }
+
+
 def manifest():
     return (Manifest()
         .set_split_config(3, 1, 1)
@@ -19,14 +28,6 @@ def manifest():
             .add_transform(lambda data: data[:-1])
             .done()
     )
-
-def params(): 
-
-    return {
-        'random_weights': [0.4, 0.5, 0.6],
-        'breakout_threshold': [0.05, 0.1, 0.2],
-        'shift': [-1, -2, -3]
-    }
 
 
 def prep(data, round_params, manifest):
