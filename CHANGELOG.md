@@ -369,3 +369,7 @@ data mismatch
 - Refactor xgboost reference sfm to use manifest
 - Refactor rule based sfms to use manifest
 - Refactor `lightgbm/tradeable_regressor` sfm to use manifest
+
+# V1.25.0 on 14th of December 2025
+- Add `sfm.tabpfn.tradeable_regressor_manifest` SFM using TabPFN model with manifest pattern
+- Add test for the above SFM
