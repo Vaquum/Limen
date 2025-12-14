@@ -9,6 +9,7 @@ tslearn
 optuna
 clickhouse_connect
 lightgbm
+tabpfn
 wrangle
 pyarrow
 numpy>=2.2.6

@@ -1,0 +1,620 @@
+{
+  "permutation_1": {
+    "parameters": {
+      "quantile_threshold": 0.8,
+      "min_height_pct": 0.005,
+      "max_duration_hours": 72,
+      "lookahead_hours": 72,
+      "long_threshold_percentile": 65,
+      "confidence_threshold": 0.4,
+      "position_size": 0.3,
+      "min_stop_loss": 0.01,
+      "max_stop_loss": 0.05,
+      "atr_stop_multiplier": 2.0,
+      "trailing_activation": 0.03,
+      "trailing_distance": 0.7,
+      "loser_timeout_hours": 12,
+      "max_hold_hours": 96,
+      "default_atr_pct": 0.02,
+      "num_leaves": 63,
+      "learning_rate": 0.05,
+      "feature_fraction": 0.9,
+      "bagging_fraction": 0.9,
+      "bagging_freq": 5,
+      "min_child_samples": 20,
+      "lambda_l1": 0.1,
+      "lambda_l2": 0.1,
+      "n_estimators": 500
+    },
+    "results": {
+      "30d": {
+        "raw_metrics": {
+          "auc": [],
+          "val_loss": [],
+          "precision": [],
+          "recall": [],
+          "f1": [],
+          "trading_return_net_pct": [],
+          "trading_win_rate_pct": [],
+          "win_loss_ratio": []
+        },
+        "stability": {
+          "auc": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "val_loss": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "precision": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "recall": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "f1": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_return_net_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_win_rate_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "win_loss_ratio": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          }
+        },
+        "total_windows": 1947,
+        "valid_windows": 0
+      },
+      "60d": {
+        "raw_metrics": {
+          "auc": [],
+          "val_loss": [],
+          "precision": [],
+          "recall": [],
+          "f1": [],
+          "trading_return_net_pct": [],
+          "trading_win_rate_pct": [],
+          "win_loss_ratio": []
+        },
+        "stability": {
+          "auc": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "val_loss": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "precision": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "recall": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "f1": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_return_net_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_win_rate_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "win_loss_ratio": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          }
+        },
+        "total_windows": 1947,
+        "valid_windows": 0
+      }
+    }
+  },
+  "permutation_2": {
+    "parameters": {
+      "quantile_threshold": 0.7,
+      "min_height_pct": 0.004,
+      "max_duration_hours": 24,
+      "lookahead_hours": 24,
+      "long_threshold_percentile": 75,
+      "confidence_threshold": 0.5,
+      "position_size": 0.1,
+      "min_stop_loss": 0.005,
+      "max_stop_loss": 0.03,
+      "atr_stop_multiplier": 2.0,
+      "trailing_activation": 0.03,
+      "trailing_distance": 0.7,
+      "loser_timeout_hours": 24,
+      "max_hold_hours": 96,
+      "default_atr_pct": 0.02,
+      "num_leaves": 63,
+      "learning_rate": 0.1,
+      "feature_fraction": 0.9,
+      "bagging_fraction": 0.8,
+      "bagging_freq": 5,
+      "min_child_samples": 20,
+      "lambda_l1": 0.0,
+      "lambda_l2": 0.1,
+      "n_estimators": 500
+    },
+    "results": {
+      "30d": {
+        "raw_metrics": {
+          "auc": [],
+          "val_loss": [],
+          "precision": [],
+          "recall": [],
+          "f1": [],
+          "trading_return_net_pct": [],
+          "trading_win_rate_pct": [],
+          "win_loss_ratio": []
+        },
+        "stability": {
+          "auc": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "val_loss": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "precision": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "recall": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "f1": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_return_net_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_win_rate_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "win_loss_ratio": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          }
+        },
+        "total_windows": 1947,
+        "valid_windows": 0
+      },
+      "60d": {
+        "raw_metrics": {
+          "auc": [],
+          "val_loss": [],
+          "precision": [],
+          "recall": [],
+          "f1": [],
+          "trading_return_net_pct": [],
+          "trading_win_rate_pct": [],
+          "win_loss_ratio": []
+        },
+        "stability": {
+          "auc": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "val_loss": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "precision": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "recall": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "f1": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_return_net_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_win_rate_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "win_loss_ratio": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          }
+        },
+        "total_windows": 1947,
+        "valid_windows": 0
+      }
+    }
+  },
+  "permutation_3": {
+    "parameters": {
+      "quantile_threshold": 0.8,
+      "min_height_pct": 0.001,
+      "max_duration_hours": 72,
+      "lookahead_hours": 24,
+      "long_threshold_percentile": 85,
+      "confidence_threshold": 0.6,
+      "position_size": 0.1,
+      "min_stop_loss": 0.005,
+      "max_stop_loss": 0.05,
+      "atr_stop_multiplier": 1.5,
+      "trailing_activation": 0.01,
+      "trailing_distance": 0.5,
+      "loser_timeout_hours": 24,
+      "max_hold_hours": 48,
+      "default_atr_pct": 0.01,
+      "num_leaves": 63,
+      "learning_rate": 0.05,
+      "feature_fraction": 0.9,
+      "bagging_fraction": 0.9,
+      "bagging_freq": 5,
+      "min_child_samples": 20,
+      "lambda_l1": 0.1,
+      "lambda_l2": 0.0,
+      "n_estimators": 500
+    },
+    "results": {
+      "30d": {
+        "raw_metrics": {
+          "auc": [],
+          "val_loss": [],
+          "precision": [],
+          "recall": [],
+          "f1": [],
+          "trading_return_net_pct": [],
+          "trading_win_rate_pct": [],
+          "win_loss_ratio": []
+        },
+        "stability": {
+          "auc": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "val_loss": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "precision": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "recall": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "f1": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_return_net_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_win_rate_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "win_loss_ratio": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          }
+        },
+        "total_windows": 1947,
+        "valid_windows": 0
+      },
+      "60d": {
+        "raw_metrics": {
+          "auc": [],
+          "val_loss": [],
+          "precision": [],
+          "recall": [],
+          "f1": [],
+          "trading_return_net_pct": [],
+          "trading_win_rate_pct": [],
+          "win_loss_ratio": []
+        },
+        "stability": {
+          "auc": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "val_loss": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "precision": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "recall": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "f1": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_return_net_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "trading_win_rate_pct": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          },
+          "win_loss_ratio": {
+            "mean": NaN,
+            "std": NaN,
+            "coeff_var": NaN,
+            "percentile_5": NaN,
+            "percentile_95": NaN,
+            "range": NaN,
+            "valid_windows": 0
+          }
+        },
+        "total_windows": 1947,
+        "valid_windows": 0
+      }
+    }
+  }
+}

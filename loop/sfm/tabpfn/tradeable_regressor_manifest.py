@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 '''
-TabPFN Tradeable Regressor (Manifest) - Manifest-based TabPFN version of tradeable regressor
-Uses same feature pipeline as LightGBM version but with TabPFN model
+TabPFN Tradeable Regressor (Manifest) - Manifest-based TabPFN tradeable regressor
 '''
 
 from loop.features.market_regime import market_regime
@@ -16,7 +15,7 @@ from loop.sfm.lightgbm.utils.tradeable_regressor import create_tradeable_labels
 from loop.sfm.lightgbm.utils.tradeable_regressor import extend_data_dict
 from loop.sfm.lightgbm.utils.tradeable_regressor import prepare_features_5m
 from loop.sfm.lightgbm.utils.tradeable_regressor import simulate_exit_reality
-from loop.sfm.model.tabpfn_tradeable_regression import tabpfn_tradeable_regression
+from loop.sfm.model.tabpfn_tradeable_regressor import tabpfn_tradeable_regressor
 from loop.utils.time_decay import time_decay
 
 
@@ -107,7 +106,7 @@ CONFIG = {
 
 def params():
     p = {
-        'n_estimators': [4],
+        'n_estimators': [4, 8],
         'device': ['cpu'],
     }
     return p
@@ -132,5 +131,5 @@ def manifest():
             .add_transform(create_tradeable_labels, config=CONFIG)
             .done()
         .add_to_data_dict(extend_data_dict)
-        .with_model(tabpfn_tradeable_regression)
+        .with_model(tabpfn_tradeable_regressor)
     )

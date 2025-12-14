@@ -4,7 +4,7 @@ from tabpfn.constants import ModelVersion
 from sklearn.preprocessing import StandardScaler
 
 
-def tabpfn_tradeable_regression(data: dict,
+def tabpfn_tradeable_regressor(data: dict,
                                  n_estimators: int = 4,
                                  device: str = 'cpu',
                                  random_state: int = 42,

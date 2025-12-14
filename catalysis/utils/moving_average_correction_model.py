@@ -1,0 +1,177 @@
+'''
+Moving Average Correction Model
+Implements LightGBM with adaptive moving average corrections based on residual tracking
+'''
+
+import numpy as np
+import lightgbm as lgb
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score
+
+def moving_average_correction_model(data, round_params,
+                                  short_window=5,
+                                  medium_window=15, 
+                                  long_window=30,
+                                  correction_factor=0.4,
+                                  trend_threshold=0.15,
+                                  residual_window=35):
+    '''
+    Compute LightGBM model with moving average correction based on residual tracking.
+    
+    Args:
+        data (dict): UEL data dict with 'dtrain', 'dval', 'x_test', 'y_test' keys
+        round_params (dict): Base parameters for LightGBM
+        short_window (int): Window size for short-term moving average
+        medium_window (int): Window size for medium-term moving average
+        long_window (int): Window size for long-term moving average
+        correction_factor (float): Base factor for applying corrections
+        trend_threshold (float): Threshold for detecting improving/degrading trends
+        residual_window (int): Maximum number of residuals to keep in sliding window
+    
+    Returns:
+        dict: UEL-compatible results dict with corrected predictions
+    '''
+    
+    # Set up model parameters
+    model_params = round_params.copy()
+    model_params.update({
+        'objective': 'regression',
+        'metric': 'mae', 
+        'verbose': -1,
+    })
+    
+    model = lgb.train(
+        params=model_params,
+        train_set=data['dtrain'],
+        num_boost_round=1500,
+        valid_sets=[data['dtrain'], data['dval']],
+        valid_names=['train', 'valid'],
+        callbacks=[lgb.early_stopping(100, verbose=False),
+                   lgb.log_evaluation(0)])
+
+    def calculate_ma_corrections(recent_residuals):
+        '''
+        Compute short, medium, and long-term moving average corrections from residuals.
+        
+        Args:
+            recent_residuals (list): List of recent prediction residuals
+            
+        Returns:
+            tuple: (short_ma, medium_ma, long_ma) correction values
+        '''
+        if len(recent_residuals) < 3:
+            return 0.0, 0.0, 0.0
+        
+        short_ma = np.mean(recent_residuals[-short_window:]) if len(recent_residuals) >= short_window else np.mean(recent_residuals)
+        medium_ma = np.mean(recent_residuals[-medium_window:]) if len(recent_residuals) >= medium_window else np.mean(recent_residuals)
+        long_ma = np.mean(recent_residuals[-long_window:]) if len(recent_residuals) >= long_window else np.mean(recent_residuals)
+        
+        return short_ma, medium_ma, long_ma
+
+    def get_weighted_correction(short_ma, medium_ma, long_ma):
+        '''
+        Compute weighted average correction using short, medium, and long-term moving averages.
+        
+        Args:
+            short_ma (float): Short-term moving average correction
+            medium_ma (float): Medium-term moving average correction  
+            long_ma (float): Long-term moving average correction
+            
+        Returns:
+            float: Weighted correction value
+        '''
+        weights = [0.5, 0.3, 0.2]
+        correction = (short_ma * weights[0] + medium_ma * weights[1] + long_ma * weights[2])
+        return correction
+
+    def detect_trend(recent_residuals):
+        '''
+        Detect trend direction in recent residuals and return adjustment factor.
+        
+        Args:
+            recent_residuals (list): List of recent prediction residuals
+            
+        Returns:
+            tuple: (trend_direction, adjustment_factor) where trend is 'improving', 'stable', or 'degrading'
+        '''
+        if len(recent_residuals) < 10:
+            return "stable", 1.0
+        
+        recent_10 = recent_residuals[-10:]
+        first_half_mean = np.mean(recent_10[:5])
+        second_half_mean = np.mean(recent_10[5:])
+        
+        if first_half_mean < second_half_mean - trend_threshold:
+            return "improving", 0.7
+        elif first_half_mean > second_half_mean + trend_threshold:
+            return "degrading", 1.3
+        else:
+            return "stable", 1.0
+
+    predictions = model.predict(data['x_test'])
+    corrected_predictions = predictions.copy()
+    
+    recent_residuals = []
+    corrections_applied = []
+    trend_adjustments = []
+    
+    for i in range(len(predictions)):
+        raw_pred = predictions[i]
+        
+        short_ma, medium_ma, long_ma = calculate_ma_corrections(recent_residuals)
+        ma_correction = get_weighted_correction(short_ma, medium_ma, long_ma)
+        
+        trend, trend_factor = detect_trend(recent_residuals)
+        
+        if len(recent_residuals) >= 10:
+            recent_std = np.std(recent_residuals[-10:])
+            confidence = 1.0 / (1.0 + recent_std)
+        else:
+            confidence = 0.5
+        
+        final_correction = ma_correction * confidence * trend_factor * correction_factor
+        corrected_predictions[i] = raw_pred + final_correction
+        
+        corrections_applied.append(final_correction)
+        trend_adjustments.append(trend_factor)
+        
+        if i >= 1:
+            actual = data['y_test'][i-1]
+            residual = actual - predictions[i-1]
+            recent_residuals.append(residual)
+            
+            if len(recent_residuals) > residual_window:
+                recent_residuals = recent_residuals[-residual_window:]
+    
+    mae_original = mean_absolute_error(data['y_test'], predictions)
+    mae_corrected = mean_absolute_error(data['y_test'], corrected_predictions)
+    rmse = root_mean_squared_error(data['y_test'], corrected_predictions)
+    r2 = r2_score(data['y_test'], corrected_predictions)
+    
+    improvement = (mae_original - mae_corrected) / mae_original * 100
+    avg_correction = np.mean(np.abs(corrections_applied))
+    significant_corrections = len([c for c in corrections_applied if abs(c) > 0.05])
+    
+    trend_counts = {
+        'improving': sum(1 for t in trend_adjustments if t < 1.0),
+        'stable': sum(1 for t in trend_adjustments if t == 1.0),
+        'degrading': sum(1 for t in trend_adjustments if t > 1.0)
+    }
+        
+    round_results = {
+        'models': [model],
+        'extras': {
+            'rmse': rmse, 
+            'mae': mae_corrected, 
+            'r2': r2,
+            'mae_original': mae_original,
+            'improvement_pct': improvement,
+            'avg_correction': avg_correction,
+            'significant_corrections': significant_corrections,
+            'trend_counts': trend_counts,
+            'corrections_applied': corrections_applied,
+            'predictions_original': predictions,
+            'predictions_corrected': corrected_predictions
+        }
+    }
+    
+    return round_results
