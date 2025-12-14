@@ -33,6 +33,7 @@ dependencies = [
   "playwright",
 ]
 
-[tool.setuptools]
-
-packages = { find = {} }
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["loop*"]
+exclude = ["loop.tests*", "tests*"]
