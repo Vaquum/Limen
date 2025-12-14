@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "loop"
 version = "1.24.0"
 description = "Bitcoin-first research and trading platform."
+readme = "README.md"
 authors = [{ name = "Mikko Kotila", email = "mailme@mikkokotila.com" }]
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -32,6 +33,10 @@ dependencies = [
   "mcp>=0.1.0",
   "playwright",
 ]
+
+[project.urls]
+Homepage = "https://vaquum.fi"
+Repository = "https://github.com/vaquum/loop"
 
 [tool.setuptools.packages.find]
 where = ["."]
