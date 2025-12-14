@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loop"
+version = "1.24.0"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.3.1",
+  "polars>=1.0.0",
+  "scikit-learn>=1.6.1",
+  "tqdm>=4.67.0",
+  "xgboost",
+  "python-dotenv",
+  "scipy",
+  "tslearn",
+  "optuna",
+  "clickhouse_connect",
+  "lightgbm",
+  "wrangle",
+  "pyarrow",
+  "numpy>=2.2.6",
+  "matplotlib",
+  "seaborn",
+  "streamlit",
+  "plotly",
+  "ipython",
+  "mcp>=0.1.0",
+  "playwright",
+]
+
+[tool.setuptools]
+
+packages = { find = {} }
