@@ -353,7 +353,7 @@ data mismatch
 - Add scaling for all klines data in `transform.linear_transform`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
-# v1.22.1 on 26th of November, 2025
+# v1.22.0 on 26th of November, 2025
 - Implement Regime Diversified Opinion Pools (RDOP) system in `loop.regime_diversified_opinion_pools.py`
 - Fix `loop.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
 - Fix `loop.universal_experimental_loop` issue with support for `prep_each_round=False`
@@ -369,3 +369,8 @@ data mismatch
 - Refactor xgboost reference sfm to use manifest
 - Refactor rule based sfms to use manifest
 - Refactor `lightgbm/tradeable_regressor` sfm to use manifest
+
+# v1.24.1 on 9th of December, 2025
+- Modify `loop.sfm.model.ridge_binary` to add combination of frozenestimator and cv folds params
+- Add use_frozen_estimator parameter to mimic prefitted calibration behavior using sklearn's FrozenEstimator
+- Add ensemble parameter to control ensemble calibration in CalibratedClassifierCV
