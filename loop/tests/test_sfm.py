@@ -14,22 +14,20 @@ from loop.tests.utils.get_data import get_klines_data_fast, get_klines_data_larg
 def test_sfm():
 
     tests = [
-        # COLUMN ORDER: sfm, data_endpoint, prep_each_round, log, uses_manifest
-        (sfm.reference.random, get_klines_data_fast, True, True),
-        (sfm.reference.xgboost, get_klines_data_fast, True, True),
-        (sfm.reference.logreg, get_klines_data_fast, True, True),
-        (sfm.logreg.regime_multiclass, get_klines_data_large, True, True),
-        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True, True),
-        (sfm.reference.lightgbm, get_klines_data_large, True, True),
-        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, True, True),
-        (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True, False),
-        (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True, False),
-        (sfm.lightgbm.tradeline_directional_conditional, get_klines_data_fast, True, False),
-        (sfm.rules_based.momentum_volatility_longonly,
-         get_klines_data_small_fast, True, True),
-        (sfm.rules_based.momentum_volatility,
-         get_klines_data_small_fast, True, True),
-        (sfm.ridge.ridge_classifier, get_klines_data_fast, True, True)
+        # COLUMN ORDER: sfm, data_endpoint, prep_each_round
+        (sfm.reference.random, get_klines_data_fast, True),
+        (sfm.reference.xgboost, get_klines_data_fast, True),
+        (sfm.reference.logreg, get_klines_data_fast, True),
+        (sfm.logreg.regime_multiclass, get_klines_data_large, True),
+        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True),
+        (sfm.reference.lightgbm, get_klines_data_large, True),
+        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, True),
+        (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),
+        (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True),
+        (sfm.lightgbm.tradeline_directional_conditional, get_klines_data_fast, True),
+        (sfm.rules_based.momentum_volatility_longonly, get_klines_data_small_fast, True),
+        (sfm.rules_based.momentum_volatility, get_klines_data_small_fast, True),
+        (sfm.ridge.ridge_classifier, get_klines_data_fast, True)
     ]
 
     for test in tests:
@@ -41,16 +39,9 @@ def test_sfm():
 
             experiment_name = uuid.uuid4().hex[:8]
 
-            if test[3]:
-                manifest = test[0].manifest()
-                uel.run(experiment_name=experiment_name,
-                        n_permutations=2,
-                        prep_each_round=test[2],
-                        manifest=manifest)
-            else:
-                uel.run(experiment_name=experiment_name,
-                        n_permutations=2,
-                        prep_each_round=test[2])
+            uel.run(experiment_name=experiment_name,
+                    n_permutations=2,
+                    prep_each_round=test[2])
 
             print(f'    ✅ {test[0].__name__}: PASSED')
 
