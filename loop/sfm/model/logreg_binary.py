@@ -16,8 +16,7 @@ def logreg_binary(data: dict,
                   max_iter: int = 100,
                   verbose: int = 0,
                   warm_start: bool = False,
-                  n_jobs: int = -1,
-                  **kwargs) -> dict:
+                  n_jobs: int = -1) -> dict:
 
     '''
     Compute logistic regression binary predictions and evaluation metrics.
@@ -37,7 +36,6 @@ def logreg_binary(data: dict,
         verbose (int): Verbosity level
         warm_start (bool): Whether to reuse previous solution
         n_jobs (int): Number of parallel jobs
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with binary metrics and predictions

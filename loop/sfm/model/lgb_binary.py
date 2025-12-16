@@ -18,8 +18,7 @@ def lgb_binary(data: dict,
                feature_pre_filter: str = 'false',
                num_boost_round: int = 4000,
                early_stopping_rounds: int = 200,
-               pred_threshold: float = 0.5,
-               **kwargs) -> dict:
+               pred_threshold: float = 0.5) -> dict:
 
     '''
     Compute LightGBM binary classification predictions and evaluation metrics.
@@ -41,7 +40,6 @@ def lgb_binary(data: dict,
         num_boost_round (int): Number of boosting iterations
         early_stopping_rounds (int): Early stopping rounds
         pred_threshold (float): Threshold for binary predictions
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with binary metrics and predictions

@@ -19,15 +19,34 @@ class UniversalExperimentLoop:
         '''
         Initialize the UniversalExperimentLoop.
 
+        NOTE: Automatically detects SFM structure and configures prep/model.
+        Manifest-based SFMs auto-generate prep/model from manifest.
+        Legacy SFMs use explicit prep/model functions.
+
         Args:
             data (pl.DataFrame): The data to use for the experiment
             single_file_model (SingleFileModel): The single file model to use for the experiment
         '''
 
         self.data = data
-        self.model = getattr(single_file_model, 'model', None)
         self.params = single_file_model.params()
-        self.prep = getattr(single_file_model, 'prep', None)
+        self.manifest = None
+
+        if hasattr(single_file_model, 'manifest'):
+            self.manifest = single_file_model.manifest()
+
+            if hasattr(self.manifest, 'model_function') and self.manifest.model_function:
+                self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
+                self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
+            else:
+                raise ValueError(
+                    'Manifest without model_function is not supported. '
+                    'Use .with_model(model_func) in your manifest.'
+                )
+        else:
+            self.prep = getattr(single_file_model, 'prep', None)
+            self.model = getattr(single_file_model, 'model', None)
+
         self.extras = []
         self.models = []
 
@@ -41,16 +60,13 @@ class UniversalExperimentLoop:
             save_to_sqlite=False,
             params=None,
             prep=None,
-            model=None,
-            manifest=None):
-        
+            model=None):
+
         '''
         Run the experiment `n_permutations` times.
 
-        NOTE: If you want to use a custom `params` or `prep` or `model`
-        function, you can pass them as arguments and permanently change
-        `single_file_model` for that part. Make sure that the inputs and
-        returns are same as the ones outlined in `docs/Single-File-Model.md`.
+        NOTE: Custom params/prep/model can override defaults for legacy SFMs.
+        For manifest-driven SFMs, params can be overridden but prep/model cannot.
 
         Args:
             experiment_name (str): The name of the experiment
@@ -63,7 +79,6 @@ class UniversalExperimentLoop:
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
-            manifest (Manifest, optional): Manifest based configuration for single-file-model
 
         Returns:
             pl.DataFrame: The results of the experiment
@@ -74,9 +89,19 @@ class UniversalExperimentLoop:
         self.preds = []
         self.scalers = []
         self._alignment = []
-        
+
         if save_to_sqlite is True:
-            self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
+            self.conn = sqlite3.connect('/opt/experiments/experiments.sqlite')
+
+        if self.manifest is not None:
+            if prep is not None or model is not None:
+                raise ValueError(
+                    'Cannot override prep/model when SFM has manifest.'
+                )
+            if not prep_each_round:
+                raise ValueError(
+                    'prep_each_round must be True for manifest-driven SFMs.'
+                )
 
         if params is not None:
             self.params = params()
@@ -86,13 +111,6 @@ class UniversalExperimentLoop:
 
         if model is not None:
             self.model = model
-
-        self.manifest = manifest
-
-        # Full manifest mode - auto-generate prep and model from manifest
-        if manifest and hasattr(manifest, 'model_function') and manifest.model_function:
-            self.prep = lambda data, round_params=None, manifest=None: manifest.prepare_data(data, round_params or {})
-            self.model = lambda data, round_params: manifest.run_model(data, round_params or {})
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
@@ -115,23 +133,11 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            # Always prep data with round_params passed in
             if prep_each_round is True:
-                if self.manifest:
-                    data_dict = self.prep(
-                        self.data,
-                        round_params=round_params,
-                        manifest=self.manifest)
-                else:
-                    data_dict = self.prep(self.data, round_params=round_params)
-
-            # Otherwise, only for the first round, prep data without round_params passed in
+                data_dict = self.prep(self.data, round_params=round_params)
             else:
                 if i == 0:
-                    if manifest:
-                        data_dict = self.prep(self.data, round_params=round_params, manifest=manifest)
-                    else:
-                        data_dict = self.prep(self.data, round_params=round_params)
+                    data_dict = self.prep(self.data, round_params=round_params)
 
             # Perform the model training and evaluation
             round_results = self.model(data=data_dict, round_params=round_params)

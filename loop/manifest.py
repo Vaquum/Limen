@@ -362,7 +362,7 @@ class Manifest:
         model_kwargs = {}
 
         for param_name, param_obj in sig.parameters.items():
-            if param_name == 'data' or param_obj.kind == inspect.Parameter.VAR_KEYWORD:
+            if param_name == 'data':
                 continue
 
             if param_name in round_params:

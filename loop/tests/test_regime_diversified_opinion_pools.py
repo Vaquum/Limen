@@ -18,20 +18,20 @@ def test_rdop():
     '''Test RDOP pipeline with multiple SFMs.'''
 
     tests = [
-        # COLUMN ORDER: sfm, data_function, prep_each_round, uses_manifest
-        (sfm.reference.xgboost, get_klines_data_fast, True, True),
-        (sfm.reference.logreg, get_klines_data_fast, True, True),
-        (sfm.logreg.regime_multiclass, get_klines_data_large, True, True),
-        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True, True),
-        (sfm.reference.lightgbm, get_klines_data_large, True, True),
-        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, True, True),
-        (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True, False),
-        (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True, False),
+        # COLUMN ORDER: sfm, data_function, prep_each_round
+        (sfm.reference.xgboost, get_klines_data_fast, True),
+        (sfm.reference.logreg, get_klines_data_fast, True),
+        (sfm.logreg.regime_multiclass, get_klines_data_large, True),
+        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True),
+        (sfm.reference.lightgbm, get_klines_data_large, True),
+        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, True),
+        (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),
+        (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True),
         (sfm.rules_based.momentum_volatility_longonly,
-         get_klines_data_small_fast, True, True),
+         get_klines_data_small_fast, True),
         (sfm.rules_based.momentum_volatility,
-         get_klines_data_small_fast, True, True),
-        (sfm.ridge.ridge_classifier, get_klines_data_fast, True, True)
+         get_klines_data_small_fast, True),
+        (sfm.ridge.ridge_classifier, get_klines_data_fast, True)
     ]
 
     for test in tests:
@@ -46,16 +46,9 @@ def test_rdop():
 
                 experiment_name = uuid.uuid4().hex[:8]
 
-                if test[3]:
-                    manifest = test[0].manifest()
-                    uel.run(experiment_name=experiment_name,
-                            n_permutations=1,
-                            prep_each_round=test[2],
-                            manifest=manifest)
-                else:
-                    uel.run(experiment_name=experiment_name,
-                            n_permutations=1,
-                            prep_each_round=test[2])
+                uel.run(experiment_name=experiment_name,
+                        n_permutations=1,
+                        prep_each_round=test[2])
 
                 confusion_df = uel.experiment_confusion_metrics
                 confusion_metrics.append(confusion_df)

@@ -9,8 +9,7 @@ def ridge_regression(data: dict,
                      max_iter: int | None = None,
                      tol: float = 0.0001,
                      fit_intercept: bool = True,
-                     random_state: int | None = None,
-                     **kwargs) -> dict:
+                     random_state: int | None = None) -> dict:
 
     '''
     Compute Ridge regression predictions and evaluation metrics.
@@ -23,7 +22,6 @@ def ridge_regression(data: dict,
         tol (float): Tolerance for stopping criteria
         fit_intercept (bool): Whether to fit intercept
         random_state (int): Random seed
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with continuous metrics and predictions

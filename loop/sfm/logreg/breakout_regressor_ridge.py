@@ -30,6 +30,22 @@ TARGET = BREAKOUT_LONG_COL
 DELTAS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
 
 
+def params():
+
+    return {
+        'random_slice_size': [15000],
+        'random_slice_min_pct': [0.10],
+        'random_slice_max_pct': [0.90],
+        'random_seed': [42],
+        'alpha': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0],
+        'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga', 'lbfgs'],
+        'max_iter': [100, 500, 1000, 2000, 5000],
+        'tol': [0.0001, 0.001, 0.01, 0.1],
+        'fit_intercept': [True, False],
+        'random_state': [42, 56],
+    }
+
+
 def manifest():
 
     return (Manifest()
@@ -69,18 +85,3 @@ def manifest():
         .with_model(ridge_regression)
     )
 
-
-def params():
-
-    return {
-        'random_slice_size': [15000],
-        'random_slice_min_pct': [0.10],
-        'random_slice_max_pct': [0.90],
-        'random_seed': [42],
-        'alpha': [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0],
-        'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga', 'lbfgs'],
-        'max_iter': [100, 500, 1000, 2000, 5000],
-        'tol': [0.0001, 0.001, 0.01, 0.1],
-        'fit_intercept': [True, False],
-        'random_state': [42, 56],
-    }

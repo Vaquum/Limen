@@ -16,8 +16,7 @@ def momentum_volatility_longonly(data: dict,
                                   volatility_buy_pct: int = 80,
                                   volatility_sell_pct: int = 85,
                                   lookback_window: int = 500,
-                                  trading_cost: float = 0.001,
-                                  **kwargs) -> dict:
+                                  trading_cost: float = 0.001) -> dict:
 
     '''
     Rules-based long-only momentum-volatility strategy using dynamic percentile thresholds.
@@ -31,7 +30,6 @@ def momentum_volatility_longonly(data: dict,
         volatility_sell_pct (int): Volatility percentile threshold for exit (default: 85)
         lookback_window (int): Historical window for threshold calculation (default: 500)
         trading_cost (float): Trading cost per trade (default: 0.001)
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with binary metrics and trading performance extras

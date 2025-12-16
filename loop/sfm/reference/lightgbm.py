@@ -17,6 +17,32 @@ NUM_SLICES = 10
 TARGET_COLUMN_CLASS = 'breakout_ema'
 
 
+def params():
+
+    return {
+        'random_slice_size': [5000],
+        'random_slice_min_pct': [0.25],
+        'random_slice_max_pct': [0.75],
+        'random_seed': [42],
+        'bar_type': ['base', 'trade', 'volume', 'liquidity'],
+        'trade_threshold': [5000, 10000, 30000, 100000, 500000],
+        'volume_threshold': [100, 250, 500, 750, 1000, 5000],
+        'liquidity_threshold': [50000, 1000000, 5000000, 50000000, 100000000],
+        'objective': ['binary'],
+        'metric': ['auc'],
+        'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
+        'num_leaves': [15, 31, 63, 127, 255],
+        'max_depth': [3, 5, 7, 9, -1],
+        'min_data_in_leaf': [20, 50, 100, 200, 500],
+        'feature_fraction': [0.6, 0.7, 0.8, 0.9, 1.0],
+        'bagging_fraction': [0.6, 0.7, 0.8, 0.9, 1.0],
+        'bagging_freq': [0, 1, 5, 10, 20],
+        'lambda_l1': [0.0, 0.1, 1.0, 10.0, 100.0],
+        'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
+        'feature_pre_filter': ['false'],
+    }
+
+
 def manifest():
 
     return (Manifest()
@@ -56,30 +82,3 @@ def manifest():
             .done()
         .with_model(lgb_binary)
     )
-
-
-def params():
-
-    return {
-        'random_slice_size': [5000],
-        'random_slice_min_pct': [0.25],
-        'random_slice_max_pct': [0.75],
-        'random_seed': [42],
-        'bar_type': ['base', 'trade', 'volume', 'liquidity'],
-        'trade_threshold': [5000, 10000, 30000, 100000, 500000],
-        'volume_threshold': [100, 250, 500, 750, 1000, 5000],
-        'liquidity_threshold': [50000, 1000000, 5000000, 50000000, 100000000],
-        'objective': ['binary'],
-        'metric': ['auc'],
-        'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
-        'num_leaves': [15, 31, 63, 127, 255],
-        'max_depth': [3, 5, 7, 9, -1],
-        'min_data_in_leaf': [20, 50, 100, 200, 500],
-        'feature_fraction': [0.6, 0.7, 0.8, 0.9, 1.0],
-        'bagging_fraction': [0.6, 0.7, 0.8, 0.9, 1.0],
-        'bagging_freq': [0, 1, 5, 10, 20],
-        'lambda_l1': [0.0, 0.1, 1.0, 10.0, 100.0],
-        'lambda_l2': [0.0, 0.1, 1.0, 10.0, 100.0],
-        'feature_pre_filter': ['false'],
-    }
-

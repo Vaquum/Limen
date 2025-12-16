@@ -1,8 +1,17 @@
 import numpy as np
 import polars as pl
 
-from loop.metrics.binary_metrics import binary_metrics
 from loop.manifest import Manifest
+from loop.sfm.model import random_clf_binary
+
+
+def params():
+
+    return {
+        'random_weights': [0.4, 0.5, 0.6],
+        'breakout_threshold': [0.05, 0.1, 0.2],
+        'shift': [-1, -2, -3]
+    }
 
 
 def manifest():
@@ -18,30 +27,5 @@ def manifest():
             ))
             .add_transform(lambda data: data[:-1])
             .done()
+        .with_model(random_clf_binary)
     )
-
-def params(): 
-
-    return {
-        'random_weights': [0.4, 0.5, 0.6],
-        'breakout_threshold': [0.05, 0.1, 0.2],
-        'shift': [-1, -2, -3]
-    }
-
-
-def prep(data, round_params, manifest):
-
-    return manifest.prepare_data(data, round_params)
-
-
-def model(data, round_params):
-
-    weights = [round_params['random_weights'], 1 - round_params['random_weights']]
-
-    preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
-    probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
-
-    round_results = binary_metrics(data, preds, probs)
-    round_results['_preds'] = preds
-
-    return round_results

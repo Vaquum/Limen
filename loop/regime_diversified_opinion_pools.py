@@ -198,13 +198,12 @@ class OnlineModelLoader:
                                     model_id: int):
 
         if self.manifest is not None:
-            uel = UniversalExperimentLoop(data=data, single_file_model=empty)
+            uel = UniversalExperimentLoop(data=data, single_file_model=self.sfm)
             uel.run(
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,
-                prep_each_round=False,
-                params=lambda: params,
-                manifest=self.sfm.manifest()
+                prep_each_round=True,
+                params=lambda: params
             )
         else:
             uel = UniversalExperimentLoop(
