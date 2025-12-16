@@ -40,8 +40,8 @@ class UniversalExperimentLoop:
                 self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
             else:
                 raise ValueError(
-                    "Manifest without model_function is not supported. "
-                    "Use .with_model(model_func) in your manifest."
+                    'Manifest without model_function is not supported. '
+                    'Use .with_model(model_func) in your manifest.'
                 )
         else:
             self.prep = getattr(single_file_model, 'prep', None)
@@ -91,16 +91,16 @@ class UniversalExperimentLoop:
         self._alignment = []
 
         if save_to_sqlite is True:
-            self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
+            self.conn = sqlite3.connect('/opt/experiments/experiments.sqlite')
 
         if self.manifest is not None:
             if prep is not None or model is not None:
                 raise ValueError(
-                    "Cannot override prep/model when SFM has manifest."
+                    'Cannot override prep/model when SFM has manifest.'
                 )
             if not prep_each_round:
                 raise ValueError(
-                    "prep_each_round must be True for manifest-driven SFMs."
+                    'prep_each_round must be True for manifest-driven SFMs.'
                 )
 
         if params is not None:
