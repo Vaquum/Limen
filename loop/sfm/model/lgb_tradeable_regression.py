@@ -20,8 +20,7 @@ def lgb_tradeable_regression(data: dict,
                               weight_high_score_p90: int = 20,
                               weight_high_score_p95: int = 50,
                               weight_high_score_p99: int = 100,
-                              weight_profitable_multiplier: float = 1.5,
-                              **kwargs) -> dict:
+                              weight_profitable_multiplier: float = 1.5) -> dict:
 
     '''
     Compute LightGBM regression predictions for tradeable score with custom sample weighting.
@@ -46,7 +45,6 @@ def lgb_tradeable_regression(data: dict,
         weight_high_score_p95 (int): Weight for high score samples >p95 (default: 50)
         weight_high_score_p99 (int): Weight for high score samples >p99 (default: 100)
         weight_profitable_multiplier (float): Multiplier for profitable samples (default: 1.5)
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with models, metrics, predictions and tradeable-specific extras

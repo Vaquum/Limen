@@ -14,8 +14,7 @@ def logreg_multiclass(data: dict,
                       fit_intercept: bool = True,
                       random_state: int | None = None,
                       confidence_threshold: float = 0.40,
-                      n_jobs: int = -1,
-                      **kwargs) -> dict:
+                      n_jobs: int = -1) -> dict:
 
     '''
     Compute logistic regression multiclass predictions and evaluation metrics.
@@ -33,7 +32,6 @@ def logreg_multiclass(data: dict,
         random_state (int): Random seed
         confidence_threshold (float): Minimum probability threshold for non-zero predictions
         n_jobs (int): Number of parallel jobs
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with multiclass metrics and predictions

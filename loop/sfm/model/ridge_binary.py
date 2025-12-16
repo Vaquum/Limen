@@ -20,8 +20,7 @@ def ridge_binary(data: dict,
                  calibration_cv: int = 3,
                  ensemble: bool = True,
                  n_jobs: int = -1,
-                 pred_threshold: float = 0.5,
-                 **kwargs) -> dict:
+                 pred_threshold: float = 0.5) -> dict:
 
     '''
     Compute Ridge binary classification predictions and evaluation metrics.
@@ -41,7 +40,6 @@ def ridge_binary(data: dict,
         calibration_cv (int): CV folds for calibration
         ensemble (bool): Whether to use ensemble calibration (multiple vs single calibrator)
         pred_threshold (float): Threshold for binary predictions
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with binary metrics and predictions

@@ -16,8 +16,7 @@ def xgb_regressor(data: dict,
                   objective: str = 'reg:squarederror',
                   booster: str = 'gbtree',
                   early_stopping_rounds: int | None = 50,
-                  random_state: int = 42,
-                  **kwargs) -> dict:
+                  random_state: int = 42) -> dict:
 
     '''
     Compute XGBoost regression predictions and evaluation metrics.
@@ -37,7 +36,6 @@ def xgb_regressor(data: dict,
         booster (str): Which booster to use
         early_stopping_rounds (int): Early stopping rounds
         random_state (int): Random seed
-        **kwargs: Additional parameters (ignored)
 
     Returns:
         dict: Results with continuous metrics and predictions
