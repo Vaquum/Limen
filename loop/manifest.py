@@ -18,6 +18,80 @@ FittedTransformEntry = Tuple[
 ]
 
 
+@dataclass
+class DataSourceConfig:
+
+    '''Declarative configuration for data fetching in manifests.'''
+
+    source_type: str
+    method: str
+    params: Dict[str, Any] = field(default_factory=dict)
+
+
+class DataSourceResolver:
+
+    '''Resolves data source config to DataFrame.'''
+
+    @staticmethod
+    def resolve(config: DataSourceConfig) -> pl.DataFrame:
+
+        '''
+        Execute data source config and return DataFrame.
+
+        Args:
+            config: DataSourceConfig instance
+
+        Returns:
+            pl.DataFrame: Fetched data
+        '''
+
+        if config.source_type == 'historical_data':
+            return DataSourceResolver._resolve_historical_data(config)
+
+        elif config.source_type == 'test_utils':
+            return DataSourceResolver._resolve_test_utils(config)
+
+        else:
+            raise ValueError(
+                f"Unknown source_type: {config.source_type}. "
+                f"Supported: historical_data, test_utils"
+            )
+
+    @staticmethod
+    def _resolve_historical_data(config: DataSourceConfig) -> pl.DataFrame:
+
+        '''Resolve HistoricalData API calls.'''
+
+        from loop.historical_data import HistoricalData
+
+        historical = HistoricalData()
+
+        if not hasattr(historical, config.method):
+            raise ValueError(
+                f"HistoricalData has no method '{config.method}'"
+            )
+
+        method = getattr(historical, config.method)
+        method(**config.params)
+
+        return historical.data
+
+    @staticmethod
+    def _resolve_test_utils(config: DataSourceConfig) -> pl.DataFrame:
+
+        '''Resolve test utility functions.'''
+
+        from loop.tests.utils import get_data
+
+        if not hasattr(get_data, config.method):
+            raise ValueError(
+                f"test utils has no function '{config.method}'"
+            )
+
+        func = getattr(get_data, config.method)
+        return func(**config.params)
+
+
 class TargetBuilder:
 
     '''Helper class for building target transformations with context.'''
@@ -72,6 +146,8 @@ class Manifest:
 
     '''Defines manifest for Loop experiments.'''
 
+    data_source_config: DataSourceConfig = None
+    test_data_source_config: DataSourceConfig = None
     pre_split_data_selector: FeatureEntry = None
     split_config: Tuple[int, int, int] = (8, 1, 2)
     bar_formation: FeatureEntry = None
@@ -91,6 +167,74 @@ class Manifest:
         self.feature_transforms.append((func, params))
 
         return self
+
+    def set_data_source(self,
+                       method: str,
+                       params: Dict[str, Any] = None) -> 'Manifest':
+
+        '''
+        Configure production data source for the manifest.
+
+        NOTE: Always uses historical_data source type.
+
+        Args:
+            method (str): Method name from HistoricalData (e.g., 'get_spot_klines')
+            params (dict): Parameters to pass to the method
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.data_source_config = DataSourceConfig(
+            source_type='historical_data',
+            method=method,
+            params=params or {}
+        )
+
+        return self
+
+    def set_test_data_source(self,
+                            method: str,
+                            params: Dict[str, Any] = None) -> 'Manifest':
+
+        '''
+        Configure test data source for the manifest.
+
+        NOTE: Always uses test_utils source type.
+
+        Args:
+            method (str): Function name from test_utils (e.g., 'get_klines_data_fast')
+            params (dict): Parameters to pass to the function
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.test_data_source_config = DataSourceConfig(
+            source_type='test_utils',
+            method=method,
+            params=params or {}
+        )
+
+        return self
+
+    def fetch_data(self) -> pl.DataFrame:
+
+        '''Fetch data using configured data source.'''
+
+        if self.data_source_config is None:
+            raise ValueError("No data source configured")
+
+        return DataSourceResolver.resolve(self.data_source_config)
+
+    def fetch_test_data(self) -> pl.DataFrame:
+
+        '''Fetch data using configured test data source.'''
+
+        if self.test_data_source_config is None:
+            raise ValueError("No test data source configured")
+
+        return DataSourceResolver.resolve(self.test_data_source_config)
 
     def add_feature(self, func: Callable, **params) -> 'Manifest':
 
