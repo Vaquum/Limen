@@ -34,6 +34,11 @@ def manifest():
 
     return (
         Manifest()
+        .set_data_source(
+            method='get_spot_klines',
+            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+        )
+        .set_test_data_source(method='get_klines_data_fast')
         .set_split_config(8, 1, 2)
         .add_indicator(window_return, period=1)
         .add_indicator(window_return, period=5)

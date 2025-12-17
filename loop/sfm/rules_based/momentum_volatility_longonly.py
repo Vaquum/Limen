@@ -16,6 +16,11 @@ def params():
 
 def manifest():
     return (Manifest()
+        .set_data_source(
+            method='get_spot_klines',
+            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+        )
+        .set_test_data_source(method='get_klines_data_small_fast')
         .set_split_config(80, 10, 10)
         .with_model(momentum_volatility_longonly)
     )
