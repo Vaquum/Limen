@@ -10,7 +10,7 @@ import loop
 from loop import sfm
 from loop import RegimeDiversifiedOpinionPools
 from loop.tests.utils.cleanup import cleanup_csv_files
-from loop.tests.utils.get_data import get_klines_data_fast, get_klines_data_large, get_klines_data_small_fast
+from loop.tests.utils.get_data import get_klines_data_fast
 
 
 def test_rdop():
@@ -19,30 +19,33 @@ def test_rdop():
 
     tests = [
         # COLUMN ORDER: sfm, data_function, prep_each_round
-        (sfm.reference.xgboost, get_klines_data_fast, True),
-        (sfm.reference.logreg, get_klines_data_fast, True),
-        (sfm.logreg.regime_multiclass, get_klines_data_large, True),
-        (sfm.logreg.breakout_regressor_ridge, get_klines_data_large, True),
-        (sfm.reference.lightgbm, get_klines_data_large, True),
-        (sfm.lightgbm.tradeable_regressor, get_klines_data_large, True),
+        # Manifest-driven SFMs (data_function=None, auto-fetch from manifest)
+        (sfm.reference.xgboost, None, True),
+        (sfm.reference.logreg, None, True),
+        (sfm.logreg.regime_multiclass, None, True),
+        (sfm.logreg.breakout_regressor_ridge, None, True),
+        (sfm.reference.lightgbm, None, True),
+        (sfm.lightgbm.tradeable_regressor, None, True),
+        (sfm.rules_based.momentum_volatility_longonly, None, True),
+        (sfm.rules_based.momentum_volatility, None, True),
+        (sfm.ridge.ridge_classifier, None, True),
+        # Legacy SFMs (no manifest, require explicit data)
         (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True),
-        (sfm.rules_based.momentum_volatility_longonly,
-         get_klines_data_small_fast, True),
-        (sfm.rules_based.momentum_volatility,
-         get_klines_data_small_fast, True),
-        (sfm.ridge.ridge_classifier, get_klines_data_fast, True)
     ]
 
     for test in tests:
 
         try:
             confusion_metrics = []
-            data = test[1]()
             n_permutations = 1
 
             for i in range(n_permutations):
-                uel = loop.UniversalExperimentLoop(data=data, single_file_model=test[0])
+                # Legacy SFMs need explicit data, manifest-driven SFMs auto-fetch
+                if test[1] is not None:
+                    uel = loop.UniversalExperimentLoop(data=test[1](), single_file_model=test[0])
+                else:
+                    uel = loop.UniversalExperimentLoop(single_file_model=test[0])
 
                 experiment_name = uuid.uuid4().hex[:8]
 
@@ -68,7 +71,7 @@ def test_rdop():
             )
 
             online_result = rdop.online_pipeline(
-                data=data,
+                data=uel.data,
                 aggregation_method='mean',
                 aggregation_threshold=0.5
             )
