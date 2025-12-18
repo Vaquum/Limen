@@ -374,3 +374,8 @@ data mismatch
 - Modify `loop.sfm.model.ridge_binary` to add combination of frozenestimator and cv folds params
 - Add use_frozen_estimator parameter to mimic prefitted calibration behavior using sklearn's FrozenEstimator
 - Add ensemble parameter to control ensemble calibration in CalibratedClassifierCV
+
+# V1.25.0 on 19th of December, 2025
+- Add declarative data fetching to manifest
+- Add data source configuration to all manifest-based SFMs
+
