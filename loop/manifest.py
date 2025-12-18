@@ -68,7 +68,12 @@ class DataSourceResolver:
 
                 if hasattr(instance, 'data'):
                     return instance.data
-                return None
+                else:
+                    raise ValueError(
+                        f"Method {method.__qualname__} executed successfully but "
+                        f"instance does not have 'data' attribute. Expected data source "
+                        f"methods to populate instance.data"
+                    )
             else:
                 return method(**params)
 

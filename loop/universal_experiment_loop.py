@@ -41,12 +41,19 @@ class UniversalExperimentLoop:
                 env = os.getenv('LOOP_ENV', 'test')
                 if env == 'test' and self.manifest.test_data_source_config is not None:
                     self.data = self.manifest.fetch_test_data()
+                elif env != 'test' and self.manifest.data_source_config is None:
+                    raise ValueError(
+                        f"LOOP_ENV='{env}' but no production data_source_config provided. "
+                        'Add .set_data_source(method=HistoricalData.get_spot_klines, params={{...}}) '
+                        'to manifest or set LOOP_ENV=test'
+                    )
                 else:
                     self.data = self.manifest.fetch_data()
             elif data is None:
                 raise ValueError(
                     'data parameter required when manifest has no data_source_config. '
-                    'Add .set_data_source(...) to manifest or pass data explicitly.'
+                    'Add .set_data_source(method=HistoricalData.get_spot_klines, params={{...}}) '
+                    'to manifest or pass data explicitly.'
                 )
             else:
                 self.data = data
