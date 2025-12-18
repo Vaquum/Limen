@@ -35,14 +35,14 @@ The manifest approach is **deliberately opinionated** to enforce best practices 
 - **Training-only fitting**: Parameters fitted only on training data (proper ML methodology)
 
 **Benefits:**
-- ✅ Prevents critical mistakes (data leakage, improper fitting)
-- ✅ Reproducible experiments (declarative configuration)
-- ✅ Consistent codebase (standardized patterns)
-- ✅ Performance optimizations (lazy evaluation)
+- Prevents critical mistakes (data leakage, improper fitting)
+- Reproducible experiments (declarative configuration)
+- Consistent codebase (standardized patterns)
+- Performance optimizations (lazy evaluation)
 
 **Trade-offs:**
-- ❌ Learning curve (Polars API, manifest patterns)
-- ❌ Less flexible (harder for non-standard workflows)
+- Learning curve (Polars API, manifest patterns)
+- Less flexible (harder for non-standard workflows)
 
 **When to use:** Production SFMs, reproducibility-critical work, collaborative projects
 
@@ -463,8 +463,8 @@ Configure target variable transformations with optional fitted parameters.
 **Fitted transforms** learn parameters from training data and apply them to validation/test data. This prevents data leakage.
 
 **Common use case:** Binary classification using a quantile threshold
-- ❌ **Wrong**: Compute 75th percentile on full dataset → data leakage!
-- ✅ **Right**: Compute 75th percentile on training data only, apply same threshold to val/test
+- **Wrong**: Compute 75th percentile on full dataset. This results in data leakage!
+- **Right**: Compute 75th percentile on training data only, apply same threshold to val/test data
 
 **Example workflow:**
 1. **Training set**: Compute quantile cutoff (e.g., 75th percentile = 0.032)
