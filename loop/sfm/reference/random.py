@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_fast
 from loop.manifest import Manifest
 from loop.sfm.model import random_clf_binary
 
@@ -17,10 +19,10 @@ def params():
 def manifest():
     return (Manifest()
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_fast')
+        .set_test_data_source(method=get_klines_data_fast)
         .set_split_config(3, 1, 1)
         .set_required_bar_columns([
             'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',

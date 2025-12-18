@@ -4,6 +4,8 @@ LightGBM Tradeable Regressor V3 Ultra - UEL Single File Model format
 Ultra-simplified V3 with maximum code reduction while maintaining equivalent performance
 '''
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_large
 from loop.features.market_regime import market_regime
 from loop.features.momentum_confirmation import momentum_confirmation
 from loop.indicators.returns import returns
@@ -132,10 +134,10 @@ def manifest():
 
     return (Manifest()
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_large')
+        .set_test_data_source(method=get_klines_data_large)
         .set_split_config(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
         .add_indicator(returns)
         .add_feature(add_volatility_regime_columns, config=CONFIG)

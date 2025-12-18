@@ -1,5 +1,6 @@
 import polars as pl
 import inspect
+import importlib
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Union
@@ -23,8 +24,7 @@ class DataSourceConfig:
 
     '''Declarative configuration for data fetching in manifests.'''
 
-    source_type: str
-    method: str
+    method: Callable
     params: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -45,51 +45,35 @@ class DataSourceResolver:
             pl.DataFrame: Fetched data
         '''
 
-        if config.source_type == 'historical_data':
-            return DataSourceResolver._resolve_historical_data(config)
+        method = config.method
+        params = config.params
 
-        elif config.source_type == 'test_utils':
-            return DataSourceResolver._resolve_test_utils(config)
+        if inspect.ismethod(method) or (hasattr(method, '__self__') and method.__self__ is not None):
+            result = method(**params)
+            if hasattr(method.__self__, 'data'):
+                return method.__self__.data
+            return result
+
+        elif inspect.isfunction(method):
+            if '.' in method.__qualname__:
+                module_name = method.__module__
+                class_name = method.__qualname__.rsplit('.', 1)[0]
+
+                module = importlib.import_module(module_name)
+                cls = getattr(module, class_name)
+
+                instance = cls()
+                bound_method = getattr(instance, method.__name__)
+                bound_method(**params)
+
+                if hasattr(instance, 'data'):
+                    return instance.data
+                return None
+            else:
+                return method(**params)
 
         else:
-            raise ValueError(
-                f"Unknown source_type: {config.source_type}. "
-                f"Supported: historical_data, test_utils"
-            )
-
-    @staticmethod
-    def _resolve_historical_data(config: DataSourceConfig) -> pl.DataFrame:
-
-        '''Resolve HistoricalData API calls.'''
-
-        from loop.historical_data import HistoricalData
-
-        historical = HistoricalData()
-
-        if not hasattr(historical, config.method):
-            raise ValueError(
-                f"HistoricalData has no method '{config.method}'"
-            )
-
-        method = getattr(historical, config.method)
-        method(**config.params)
-
-        return historical.data
-
-    @staticmethod
-    def _resolve_test_utils(config: DataSourceConfig) -> pl.DataFrame:
-
-        '''Resolve test utility functions.'''
-
-        from loop.tests.utils import get_data
-
-        if not hasattr(get_data, config.method):
-            raise ValueError(
-                f"test utils has no function '{config.method}'"
-            )
-
-        func = getattr(get_data, config.method)
-        return func(**config.params)
+            raise ValueError(f"Unsupported callable type: {type(method)}")
 
 
 class TargetBuilder:
@@ -169,16 +153,14 @@ class Manifest:
         return self
 
     def set_data_source(self,
-                       method: str,
+                       method: Callable,
                        params: Dict[str, Any] = None) -> 'Manifest':
 
         '''
         Configure production data source for the manifest.
 
-        NOTE: Always uses historical_data source type.
-
         Args:
-            method (str): Method name from HistoricalData (e.g., 'get_spot_klines')
+            method (Callable): Method or function reference (e.g., HistoricalData.get_spot_klines)
             params (dict): Parameters to pass to the method
 
         Returns:
@@ -186,7 +168,6 @@ class Manifest:
         '''
 
         self.data_source_config = DataSourceConfig(
-            source_type='historical_data',
             method=method,
             params=params or {}
         )
@@ -194,16 +175,14 @@ class Manifest:
         return self
 
     def set_test_data_source(self,
-                            method: str,
+                            method: Callable,
                             params: Dict[str, Any] = None) -> 'Manifest':
 
         '''
         Configure test data source for the manifest.
 
-        NOTE: Always uses test_utils source type.
-
         Args:
-            method (str): Function name from test_utils (e.g., 'get_klines_data_fast')
+            method (Callable): Function reference (e.g., get_klines_data_fast)
             params (dict): Parameters to pass to the function
 
         Returns:
@@ -211,7 +190,6 @@ class Manifest:
         '''
 
         self.test_data_source_config = DataSourceConfig(
-            source_type='test_utils',
             method=method,
             params=params or {}
         )

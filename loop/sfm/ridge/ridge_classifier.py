@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 'Long-Only Regime Binary Classifier Using Ridge Regression'
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_fast
 from loop.indicators import roc
 from loop.indicators import ppo
 from loop.indicators import rolling_volatility
@@ -76,10 +78,10 @@ def manifest():
 
     return (Manifest()
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_fast')
+        .set_test_data_source(method=get_klines_data_fast)
         .set_split_config(6, 2, 2)
         
         .set_required_bar_columns([

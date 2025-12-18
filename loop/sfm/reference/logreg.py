@@ -11,6 +11,8 @@ from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
 from loop.sfm.model import logreg_binary
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_fast
 
 
 def params():
@@ -39,10 +41,10 @@ def manifest():
 
     return (Manifest()
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_fast')
+        .set_test_data_source(method=get_klines_data_fast)
         .set_split_config(8, 1, 2)
 
         .set_bar_formation(compute_data_bars,

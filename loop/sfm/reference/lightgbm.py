@@ -1,5 +1,7 @@
 import polars as pl
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_large
 from loop.features.time_features import time_features
 from loop.features.lagged_features import lag_range_cols
 from loop.indicators.sma import sma
@@ -47,10 +49,10 @@ def manifest():
 
     return (Manifest()
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2024-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_large')
+        .set_test_data_source(method=get_klines_data_large)
         .set_pre_split_data_selector(
             random_slice,
             rows='random_slice_size',

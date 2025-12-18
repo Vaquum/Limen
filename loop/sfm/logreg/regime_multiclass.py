@@ -2,6 +2,8 @@ import polars as pl
 
 from datetime import timedelta
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_large
 from loop.sfm.logreg.utils.regime_multiclass import build_regime_base_features
 from loop.sfm.logreg.utils.regime_multiclass import add_regime_lag_features
 from loop.utils.random_slice import random_slice
@@ -49,10 +51,10 @@ def manifest():
 
     return (Manifest()
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2023-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_large')
+        .set_test_data_source(method=get_klines_data_large)
         .set_pre_split_data_selector(
             random_slice,
             rows='random_slice_size',

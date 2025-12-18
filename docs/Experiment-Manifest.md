@@ -56,6 +56,8 @@ Here's a complete minimal manifest-based SFM:
 
 ```python
 from loop.manifest import Manifest
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_fast
 from loop.indicators import roc
 from loop.features import quantile_flag, compute_quantile_cutoff
 from loop.utils import shift_column
@@ -75,10 +77,10 @@ def manifest():
     return (Manifest()
         # Data sources
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_fast')
+        .set_test_data_source(method=get_klines_data_fast)
 
         # Split configuration
         .set_split_config(7, 1, 2)
@@ -123,23 +125,25 @@ Configure production data source (uses `loop.historical_data.HistoricalData`).
 
 **Args:**
 
-| Parameter | Type   | Description                                      |
-|-----------|--------|--------------------------------------------------|
-| `method`  | `str`  | HistoricalData method name (e.g., 'get_spot_klines') |
-| `params`  | `dict` | Parameters to pass to the method                |
+| Parameter | Type       | Description                                      |
+|-----------|------------|--------------------------------------------------|
+| `method`  | `Callable` | HistoricalData method reference (e.g., `HistoricalData.get_spot_klines`) |
+| `params`  | `dict`     | Parameters to pass to the method                |
 
 **Returns:** `Manifest` (self for chaining)
 
 **Available methods:**
-- `get_spot_klines` - Fetch spot market kline data
-- `get_futures_klines` - Fetch futures market kline data
+- `HistoricalData.get_spot_klines` - Fetch spot market kline data
+- `HistoricalData.get_futures_klines` - Fetch futures market kline data
 - See `loop.historical_data.HistoricalData` for all available methods
 
 **Example:**
 
 ```python
+from loop.historical_data import HistoricalData
+
 .set_data_source(
-    method='get_spot_klines',
+    method=HistoricalData.get_spot_klines,
     params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
 )
 ```
@@ -150,10 +154,10 @@ Configure test data source (uses `loop.tests.utils.get_data`).
 
 **Args:**
 
-| Parameter | Type   | Description                                    |
-|-----------|--------|------------------------------------------------|
-| `method`  | `str`  | Test utils function name (e.g., 'get_klines_data_fast') |
-| `params`  | `dict` | Parameters to pass to the function            |
+| Parameter | Type       | Description                                    |
+|-----------|------------|------------------------------------------------|
+| `method`  | `Callable` | Test utils function reference (e.g., `get_klines_data_fast`) |
+| `params`  | `dict`     | Parameters to pass to the function            |
 
 **Returns:** `Manifest` (self for chaining)
 
@@ -165,7 +169,9 @@ Configure test data source (uses `loop.tests.utils.get_data`).
 **Example:**
 
 ```python
-.set_test_data_source(method='get_klines_data_fast')
+from loop.tests.utils.get_data import get_klines_data_fast
+
+.set_test_data_source(method=get_klines_data_fast)
 ```
 
 ### Environment-Based Data Fetching
@@ -846,6 +852,8 @@ Here's a comprehensive manifest-based SFM showing most available features:
 
 ```python
 from loop.manifest import Manifest
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_fast
 from loop.indicators import roc, ppo, wilder_rsi, atr, rolling_volatility
 from loop.features import (
     ichimoku_cloud, volume_regime,
@@ -893,10 +901,10 @@ def manifest():
     return (Manifest()
         # Data sources
         .set_data_source(
-            method='get_spot_klines',
+            method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method='get_klines_data_fast')
+        .set_test_data_source(method=get_klines_data_fast)
 
         # Split configuration
         .set_split_config(6, 2, 2)
