@@ -178,8 +178,22 @@ from loop.tests.utils.get_data import get_klines_data_fast
 
 UEL automatically selects the appropriate data source based on the `LOOP_ENV` environment variable:
 
-- `LOOP_ENV='test'` (default): Uses test data source
-- `LOOP_ENV='production'`: Uses production data source
+- `LOOP_ENV='test'` (default): Uses test data source (if configured via `.set_test_data_source()`)
+- Any other value: Uses production data source (configured via `.set_data_source()`)
+
+**Examples:**
+```bash
+# Uses test data source
+LOOP_ENV='test' python my_experiment.py
+
+# Uses production data source
+LOOP_ENV='production' python my_experiment.py
+
+# Also uses production data source
+LOOP_ENV='staging' python my_experiment.py
+```
+
+**Fallback behavior:** If `LOOP_ENV='test'` but no test data source is configured, production data source is used.
 
 This enables seamless switching between test and production environments without code changes.
 
