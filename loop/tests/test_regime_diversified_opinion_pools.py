@@ -28,8 +28,8 @@ def test_rdop():
         (sfm.lightgbm.tradeable_regressor, None, True),
         (sfm.rules_based.momentum_volatility_longonly, None, True),
         (sfm.rules_based.momentum_volatility, None, True),
-        (sfm.ridge.ridge_classifier, None, True),
-        # Legacy SFMs (no manifest, require explicit data)
+        # Legacy SFMs (no manifest or require explicit data)
+        (sfm.ridge.ridge_classifier, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True),
     ]
@@ -41,7 +41,6 @@ def test_rdop():
             n_permutations = 1
 
             for i in range(n_permutations):
-                # Legacy SFMs need explicit data, manifest-driven SFMs auto-fetch
                 if test[1] is not None:
                     uel = loop.UniversalExperimentLoop(data=test[1](), single_file_model=test[0])
                 else:

@@ -25,8 +25,8 @@ def test_sfm():
         (sfm.lightgbm.tradeable_regressor, None, True),
         (sfm.rules_based.momentum_volatility_longonly, None, True),
         (sfm.rules_based.momentum_volatility, None, True),
-        (sfm.ridge.ridge_classifier, None, True),
-        # Legacy SFMs (no manifest, require explicit data)
+        # Legacy SFMs (no manifest or require explicit data)
+        (sfm.ridge.ridge_classifier, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_directional_conditional, get_klines_data_fast, True),
@@ -36,14 +36,10 @@ def test_sfm():
 
         try:
 
-            # Legacy SFMs without manifests need explicit data
-            if test[0] in [sfm.lightgbm.tradeline_long_binary,
-                          sfm.lightgbm.tradeline_multiclass,
-                          sfm.lightgbm.tradeline_directional_conditional]:
+            if test[1] is not None:
                 uel = loop.UniversalExperimentLoop(data=test[1](),
                                                    single_file_model=test[0])
             else:
-                # All manifest-based SFMs auto-fetch data from configured sources
                 uel = loop.UniversalExperimentLoop(single_file_model=test[0])
 
             experiment_name = uuid.uuid4().hex[:8]
