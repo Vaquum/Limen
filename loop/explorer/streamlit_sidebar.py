@@ -172,6 +172,15 @@ def build_sidebar(
 
         # --- Correlation heatmap toggle
         show_corr = st.checkbox('**Show Correlation Heatmap**', value=False)
+        
+        heatmap_selected_cols = []
+        if show_corr:
+            heatmap_selected_cols = st.multiselect(
+                'Heatmap Columns',
+                options=num_cols,
+                default=num_cols,
+                key='heatmap_selected_cols',
+            )
 
         _tight_divider(sidebar_divider_gap_rem)
 
@@ -269,6 +278,7 @@ def build_sidebar(
         smoothing_window=smoothing_window,
         area_normalize_100=area_normalize_100,
         show_corr=show_corr,
+        heatmap_selected_cols=heatmap_selected_cols,
         normalize_counts_hist=locals().get('normalize_counts', False),
         normalize_data_hist=locals().get('normalize_data_hist', False),
         show_pivot=show_pivot,
