@@ -2,6 +2,8 @@
 
 from datetime import timedelta
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_large
 from loop.sfm.logreg.utils.breakout_regressor import build_breakout_regressor_base_features
 from loop.features.breakout_features import breakout_features
 from loop.transforms.logreg_transform import LogRegTransform
@@ -49,6 +51,11 @@ def params():
 def manifest():
 
     return (Manifest()
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'start_date_limit': '2023-01-01'}
+        )
+        .set_test_data_source(method=get_klines_data_large)
         .set_pre_split_data_selector(
             random_slice,
             rows='random_slice_size',

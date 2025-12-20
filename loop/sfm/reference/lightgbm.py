@@ -1,5 +1,7 @@
 import polars as pl
 
+from loop.historical_data import HistoricalData
+from loop.tests.utils.get_data import get_klines_data_large
 from loop.features.time_features import time_features
 from loop.features.lagged_features import lag_range_cols
 from loop.indicators.sma import sma
@@ -21,8 +23,8 @@ def params():
 
     return {
         'random_slice_size': [5000],
-        'random_slice_min_pct': [0.25],
-        'random_slice_max_pct': [0.75],
+        'random_slice_min_pct': [0.10],
+        'random_slice_max_pct': [0.90],
         'random_seed': [42],
         'bar_type': ['base', 'trade', 'volume', 'liquidity'],
         'trade_threshold': [5000, 10000, 30000, 100000, 500000],
@@ -46,6 +48,11 @@ def params():
 def manifest():
 
     return (Manifest()
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'start_date_limit': '2024-01-01'}
+        )
+        .set_test_data_source(method=get_klines_data_large)
         .set_pre_split_data_selector(
             random_slice,
             rows='random_slice_size',

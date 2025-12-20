@@ -1,5 +1,6 @@
 import polars as pl
 import inspect
+import importlib
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Union
@@ -16,6 +17,68 @@ FittedTransformEntry = Tuple[
     Callable[..., pl.LazyFrame],
     Dict[str, ParamValue]
 ]
+
+
+@dataclass
+class DataSourceConfig:
+
+    '''Declarative configuration for data fetching in manifests.'''
+
+    method: Callable
+    params: Dict[str, Any] = field(default_factory=dict)
+
+
+class DataSourceResolver:
+
+    '''Resolves data source config to DataFrame.'''
+
+    @staticmethod
+    def resolve(config: DataSourceConfig) -> pl.DataFrame:
+
+        '''
+        Execute data source config and return DataFrame.
+
+        Args:
+            config: DataSourceConfig instance
+
+        Returns:
+            pl.DataFrame: Fetched data
+        '''
+
+        method = config.method
+        params = config.params
+
+        if inspect.ismethod(method) or (hasattr(method, '__self__') and method.__self__ is not None):
+            result = method(**params)
+            if hasattr(method.__self__, 'data'):
+                return method.__self__.data
+            return result
+
+        elif inspect.isfunction(method):
+            if '.' in method.__qualname__:
+                module_name = method.__module__
+                class_name = method.__qualname__.rsplit('.', 1)[0]
+
+                module = importlib.import_module(module_name)
+                cls = getattr(module, class_name)
+
+                instance = cls()
+                bound_method = getattr(instance, method.__name__)
+                bound_method(**params)
+
+                if hasattr(instance, 'data'):
+                    return instance.data
+                else:
+                    raise ValueError(
+                        f"Method {method.__qualname__} executed successfully but "
+                        f"instance does not have 'data' attribute. Expected data source "
+                        f"methods to populate instance.data"
+                    )
+            else:
+                return method(**params)
+
+        else:
+            raise ValueError(f"Unsupported callable type: {type(method)}")
 
 
 class TargetBuilder:
@@ -72,6 +135,8 @@ class Manifest:
 
     '''Defines manifest for Loop experiments.'''
 
+    data_source_config: DataSourceConfig = None
+    test_data_source_config: DataSourceConfig = None
     pre_split_data_selector: FeatureEntry = None
     split_config: Tuple[int, int, int] = (8, 1, 2)
     bar_formation: FeatureEntry = None
@@ -91,6 +156,68 @@ class Manifest:
         self.feature_transforms.append((func, params))
 
         return self
+
+    def set_data_source(self,
+                       method: Callable,
+                       params: Dict[str, Any] = None) -> 'Manifest':
+
+        '''
+        Configure production data source for the manifest.
+
+        Args:
+            method (Callable): Method or function reference (e.g., HistoricalData.get_spot_klines)
+            params (dict): Parameters to pass to the method
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.data_source_config = DataSourceConfig(
+            method=method,
+            params=params or {}
+        )
+
+        return self
+
+    def set_test_data_source(self,
+                            method: Callable,
+                            params: Dict[str, Any] = None) -> 'Manifest':
+
+        '''
+        Configure test data source for the manifest.
+
+        Args:
+            method (Callable): Function reference (e.g., get_klines_data_fast)
+            params (dict): Parameters to pass to the function
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.test_data_source_config = DataSourceConfig(
+            method=method,
+            params=params or {}
+        )
+
+        return self
+
+    def fetch_data(self) -> pl.DataFrame:
+
+        '''Fetch data using configured data source.'''
+
+        if self.data_source_config is None:
+            raise ValueError("No data source configured")
+
+        return DataSourceResolver.resolve(self.data_source_config)
+
+    def fetch_test_data(self) -> pl.DataFrame:
+
+        '''Fetch data using configured test data source.'''
+
+        if self.test_data_source_config is None:
+            raise ValueError("No test data source configured")
+
+        return DataSourceResolver.resolve(self.test_data_source_config)
 
     def add_feature(self, func: Callable, **params) -> 'Manifest':
 

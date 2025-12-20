@@ -1,14 +1,40 @@
 # Single-File Model
 
-The Single-File Model (SFM) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfm`](../loop/sfm). Once an SFM is added to the package, it becomes available to be used as input for [`loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md). 
+The Single-File Model (SFM) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfm`](../loop/sfm). Once an SFM is added to the package, it becomes available to be used as input for [`loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md).
 
-## Requirements
+There are two types of SFMs: **Manifest-based SFMs** (recommended for new models) use a declarative manifest to configure data sources and auto-generate data preparation pipelines, while **Legacy SFMs** require manual implementation of data preparation and model functions.
 
-SFM is a standardized format so certain requirements must be met. For example, there are strict requirements for inputs and outputs of the three required functions of the SFM.
+## SFM Structure
 
-### Must-have three functions: `params`, `prep`, and `model`
+### Manifest-Based SFMs (Recommended)
 
-#### `params`
+Manifest-based SFMs define the experiment pipeline declaratively using a manifest. This approach:
+- Configures data sources for both production and testing
+- Auto-generates data preparation functions from manifest directives
+- Enables automatic data fetching in UEL
+- Ensures experiment reproducibility
+
+**Required functions:**
+- `params()` - Parameter space definition
+- `manifest()` - Returns an [Experiment Manifest](Experiment-Manifest.md) configuring the entire pipeline
+
+### Legacy SFMs
+
+Legacy SFMs manually implement all data preparation and model operations. This approach:
+- Requires explicit data to be passed to UEL
+- Manual implementation of data preparation logic
+- Maintained for backward compatibility
+
+**Required functions:**
+- `params()` - Parameter space definition
+- `prep()` - Data preparation implementation
+- `model()` - Model training and prediction implementation
+
+## Function Requirements
+
+SFM is a standardized format so certain requirements must be met. The sections below document the requirements for each function type.
+
+### Required for All SFMs: `params`
 
 Contains all parameters and their value ranges to be used in the parameter sweep.
 
@@ -16,7 +42,7 @@ Takes no input and returns a dictionary with keys as parameter names, and lists 
 
 **NOTE**: Generally speaking, it's best to start with as many parameters, with as broad parameter value ranges as possible.
 
-##### REQUIREMENTS
+#### REQUIREMENTS
 
 - The output is `round_params` a dictionary where each key has a list as its value
 - Individual parameter values can be any scalar values; integers, floats, strings, functions, etc. 
@@ -24,6 +50,22 @@ Takes no input and returns a dictionary with keys as parameter names, and lists 
 - Parameter values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
 
 **NOTE**: Parameters can be used to parametrize other parameters, for example, where one parameter is a function, and another parameter is an input argument to that function. Such higher-order parameters can be an extremely powerful way to make Loop play the song of Bitcoin.
+
+### Manifest-Based SFMs: `manifest`
+
+For manifest-based SFMs, the `manifest()` function returns an [Experiment Manifest](Experiment-Manifest.md) that declaratively configures the entire experiment pipeline. This replaces manual implementation of `prep()` and `model()` functions.
+
+The manifest enables:
+- **Data source configuration**: Specify production and test data sources
+- **Auto-generated data preparation**: Define indicators, features, and transformations declaratively
+- **Automatic data fetching**: UEL fetches data based on `LOOP_ENV` (defaults to 'test')
+- **Reproducible experiments**: All pipeline configuration in one place
+
+See [Experiment Manifest](Experiment-Manifest.md) for complete documentation, requirements, and examples.
+
+### Legacy SFMs
+
+The following sections document legacy SFM functions. These are maintained for backward compatibility but are not recommended for new SFMs.
 
 #### `prep`
 
@@ -54,14 +96,6 @@ Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_p
 - The output must come from one of `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` in `loop.metrics`.
 
 **NOTE**: Any scalar metrics you want recorded into the experiment log must be included directly in `round_results` (returned by the metrics helpers). Use `round_results['extras']` only for complex objects (models, arrays, DataFrames) that should not be flattened into the log. To persist test-set predictions for post-run analysis, set `round_results['_preds'] = ...` (UEL will collect these into `uel.preds`).
-
-### Optional function: `manifest`
-
-For SFMs that require complex data preparation pipelines with bar formation, feature engineering, and fitted parameters, an optional `manifest()` function can be provided. This function returns an [Experiment Manifest](Experiment-Manifest.md) that defines the Universal Split-First data processing pipeline.
-
-When a manifest is provided, the `prep` function should delegate to the manifest. The manifest ensures Universal Split-First architecture where data is split before any processing, preventing data leakage between train/validation/test sets.
-
-See [Experiment Manifest](Experiment-Manifest.md) for complete documentation and example code.
 
 # Appendix
 

@@ -24,7 +24,7 @@ def test_moving_average_correction():
         df_labeled = pl.from_pandas(df_labeled)
     
     # Step 4: Run UEL with moving average correction
-    uel = loop.UniversalExperimentLoop(df_labeled, lightgbm)
+    uel = loop.UniversalExperimentLoop(data=df_labeled, single_file_model=lightgbm)
     uel.run(
         experiment_name="ma_correction_test",
         n_permutations=3,  # Just 3 for quick test

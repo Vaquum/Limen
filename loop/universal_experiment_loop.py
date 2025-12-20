@@ -1,3 +1,4 @@
+import os
 import time
 from tqdm import tqdm
 import polars as pl
@@ -12,28 +13,45 @@ class UniversalExperimentLoop:
 
     '''UniversalExperimentLoop class for running experiments.'''
 
-    def __init__(self,
-                 data,
-                 single_file_model):
+    def __init__(self, *, data=None, single_file_model=None):
 
         '''
         Initialize the UniversalExperimentLoop.
 
         NOTE: Automatically detects SFM structure and configures prep/model.
         Manifest-based SFMs auto-generate prep/model from manifest.
-        Legacy SFMs use explicit prep/model functions.
+        If manifest has data_source_config and no data provided, auto-fetches data.
+        Legacy SFMs require explicit data parameter.
 
         Args:
-            data (pl.DataFrame): The data to use for the experiment
-            single_file_model (SingleFileModel): The single file model to use for the experiment
+            data (pl.DataFrame, optional): The data to use for the experiment
+            single_file_model (SingleFileModel, optional): The single file model to use for the experiment
         '''
 
-        self.data = data
+        if single_file_model is None:
+            raise ValueError('single_file_model is required')
+
         self.params = single_file_model.params()
         self.manifest = None
 
         if hasattr(single_file_model, 'manifest'):
             self.manifest = single_file_model.manifest()
+
+            if data is None:
+                if self.manifest.data_source_config is None:
+                    raise ValueError(
+                        'No data source configured in manifest. '
+                        'Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) '
+                        'to manifest or pass data explicitly.'
+                    )
+
+                env = os.getenv('LOOP_ENV', 'test')
+                if env == 'test' and self.manifest.test_data_source_config is not None:
+                    self.data = self.manifest.fetch_test_data()
+                else:
+                    self.data = self.manifest.fetch_data()
+            else:
+                self.data = data
 
             if hasattr(self.manifest, 'model_function') and self.manifest.model_function:
                 self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
@@ -44,6 +62,9 @@ class UniversalExperimentLoop:
                     'Use .with_model(model_func) in your manifest.'
                 )
         else:
+            if data is None:
+                raise ValueError('data parameter required for legacy SFMs')
+            self.data = data
             self.prep = getattr(single_file_model, 'prep', None)
             self.model = getattr(single_file_model, 'model', None)
 
