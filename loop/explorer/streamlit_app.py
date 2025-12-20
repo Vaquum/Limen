@@ -224,6 +224,7 @@ normalize_data_hist = sidebar_state.get('normalize_data_hist', False)
 # Show Correlation Heatmap
 # ------------------------
 show_corr = sidebar_state['show_corr']
+heatmap_selected_cols = sidebar_state.get('heatmap_selected_cols', [])
 
 # ----------------
 # Global Outlier Control
@@ -347,7 +348,7 @@ _spacer(6.0)
 # ---- Correlation Heatmap
 # ------------------------
 if show_corr:
-    render_corr_heatmap(df_filt, num_cols)
+    render_corr_heatmap(df_filt, heatmap_selected_cols if heatmap_selected_cols else num_cols)
 
 _spacer(6.0)
 
@@ -356,6 +357,7 @@ _spacer(6.0)
 # ----------------
 show_pivot     = sidebar_state['show_pivot']
 pivot_val      = sidebar_state['pivot_val']
+pivot_heatmap  = sidebar_state.get('pivot_heatmap', False)
 if show_pivot and pivot_val:
     render_pivot_table(
         df_filt,
@@ -366,6 +368,7 @@ if show_pivot and pivot_val:
         quantile_rows=sidebar_state['quantile_rows'],
         quantile_cols=sidebar_state['quantile_cols'],
         quantile_bins_fn=quantile_bins_fixed,
+        as_heatmap=pivot_heatmap,
     )
 
 _spacer(6.0)

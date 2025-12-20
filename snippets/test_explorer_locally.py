@@ -26,3 +26,4 @@ def test_explorer_locally():
 
 # Install these locally to make Playwrite work
 # python -m playwright install chromium
+test_explorer_locally()

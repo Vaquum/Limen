@@ -7,18 +7,18 @@ import streamlit as st
 def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
     
     '''
-    Compute and render a correlation heatmap for numeric columns.
+    Compute and render a correlation heatmap for selected numeric columns.
     
     Args:
         df_filt (pd.DataFrame): Klines dataset with numeric columns to correlate
-        num_cols (list[str]): Column names to include in the correlation matrix
+        num_cols (list[str]): User-selected column names to include in the correlation matrix
     
     Returns:
         None: None
     '''
     
     if len(num_cols) < 2:
-        st.info("Not enough numeric columns for correlation heatmap.")
+        st.info("Select at least 2 columns for the correlation heatmap.")
         return
 
     corr = df_filt[num_cols].corr()
