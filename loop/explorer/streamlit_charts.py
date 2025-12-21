@@ -46,7 +46,9 @@ def _rolling_mean_per_series(df_long: pd.DataFrame,
     )
 
 
-def _apply_plot_theme(fig):
+def _apply_plot_theme(fig, title: str | None = None):
+    # Title is now rendered as Streamlit subheader, not in Plotly chart
+    # Apply theme settings
     fig.update_layout(font=dict(size=16))
     fig.update_xaxes(title_font=dict(size=18), tickfont=dict(size=15))
     fig.update_yaxes(title_font=dict(size=18), tickfont=dict(size=15))
@@ -65,6 +67,7 @@ def plot_line(
     normalize_line: bool = False,
     hue_col: str | None = None,
     size_col: str | None = None,
+    title: str | None = None,
 ) -> None:
     
     '''
@@ -117,7 +120,7 @@ def plot_line(
         )
 
         fig = px.line(plot_long, x=xcol, y='minmax_scaled', color='Series')
-        _apply_plot_theme(fig)
+        _apply_plot_theme(fig, title=title)
         st.plotly_chart(fig, use_container_width=True)
 
     else:
@@ -128,7 +131,7 @@ def plot_line(
                 plot_df[col] = plot_df[col].rolling(window=smoothing_window, min_periods=1).mean()
 
         fig = px.line(plot_df, x=xcol, y=ycols, **common_args)
-        _apply_plot_theme(fig)
+        _apply_plot_theme(fig, title=title)
         st.plotly_chart(fig, use_container_width=True)
 
 
@@ -139,6 +142,7 @@ def plot_area(
     ycols: list[str],
     smoothing_window: int = 1,
     normalize_100: bool = True,
+    title: str | None = None,
 ) -> None:
     
     '''
@@ -184,7 +188,7 @@ def plot_area(
             x=xcol, y='Value', color='Series',
             category_orders={'Series': ycols_sorted},
         )
-    _apply_plot_theme(fig)
+    _apply_plot_theme(fig, title=title)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -195,6 +199,7 @@ def plot_scatter(
     ycol: str,
     hue_col: str | None = None,
     size_col: str | None = None,
+    title: str | None = None,
 ) -> None:
     
     '''
@@ -224,7 +229,7 @@ def plot_scatter(
         color_continuous_scale=PALETTE,
         **common_args,
     )
-    _apply_plot_theme(fig)
+    _apply_plot_theme(fig, title=title)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -234,6 +239,7 @@ def plot_box(
     xcol: str,
     ycol: str,
     hue_col: str | None = None,
+    title: str | None = None,
 ) -> None:
     
     '''
@@ -250,7 +256,7 @@ def plot_box(
     '''
     
     fig = px.box(df_filt, x=xcol, y=ycol, color=hue_col if hue_col else None)
-    _apply_plot_theme(fig)
+    _apply_plot_theme(fig, title=title)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -262,6 +268,7 @@ def plot_histogram(
     normalize_data: bool = False,
     normalize_counts: bool = False,
     hue_col: str | None = None,
+    title: str | None = None,
 ) -> None:
     
     '''
@@ -309,7 +316,7 @@ def plot_histogram(
             color_discrete_sequence=PALETTE,
         )
         fig.update_layout(barmode='overlay')
-        _apply_plot_theme(fig)
+        _apply_plot_theme(fig, title=title)
         key = f"hist_multi_{'_'.join(cols)}_{int(normalize_counts)}_{int(normalize_data)}"
         st.plotly_chart(fig, use_container_width=True, key=key)
         return
@@ -336,6 +343,6 @@ def plot_histogram(
             color_continuous_scale=PALETTE,
             **args,
         )
-    _apply_plot_theme(fig)
+    _apply_plot_theme(fig, title=title)
     st.plotly_chart(fig, use_container_width=True, key=f"hist_single_{ycol}_{int(normalize_counts)}_{int(normalize_data)}")
     
