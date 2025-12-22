@@ -443,11 +443,11 @@
 - Add ensemble parameter to control ensemble calibration in CalibratedClassifierCV
 
 # V1.25.0 on 19th of December, 2025
+
 - Add declarative data fetching to manifest
 - Add data source configuration to all manifest-based SFMs
 
-
-# v1.25.0 on 12th of December 2025
+# v1.25.1 on 22th of December 2025
 
 - Add `loop.utils.generic_endpoint_for_tdw` for generic TDW ClickHouse queries
 - Add `loop.utils.get_agg_trades_data` for fetching Binance aggregated trades
