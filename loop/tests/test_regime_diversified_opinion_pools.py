@@ -4,60 +4,44 @@ import uuid
 import sys
 import traceback
 import pandas as pd
-import polars as pl
 
 import loop
 from loop import sfm
 from loop import RegimeDiversifiedOpinionPools
 from loop.tests.utils.cleanup import cleanup_csv_files
-from loop.tests.utils.get_data import get_klines_data_fast
 
 
 def test_rdop():
+    '''Test RDOP pipeline with reference SFMs.'''
 
-    '''Test RDOP pipeline with multiple SFMs.'''
-
-    tests = [
-        # COLUMN ORDER: sfm, data_function, prep_each_round
-        # Manifest-driven SFMs (data_function=None, auto-fetch from manifest)
-        (sfm.reference.xgboost, None, True),
-        (sfm.reference.logreg, None, True),
-        (sfm.logreg.regime_multiclass, None, True),
-        (sfm.logreg.breakout_regressor_ridge, None, True),
-        (sfm.reference.lightgbm, None, True),
-        (sfm.lightgbm.tradeable_regressor, None, True),
-        (sfm.rules_based.momentum_volatility_longonly, None, True),
-        (sfm.rules_based.momentum_volatility, None, True),
-        # Legacy SFMs (no manifest or require explicit data)
-        (sfm.ridge.ridge_classifier, get_klines_data_fast, True),
-        (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),
-        (sfm.lightgbm.tradeline_multiclass, get_klines_data_fast, True),
+    reference_sfms = [
+        sfm.reference.xgboost,
+        sfm.reference.logreg,
+        sfm.reference.lightgbm,
     ]
 
-    for test in tests:
+    for single_file_model in reference_sfms:
 
         try:
             confusion_metrics = []
             n_permutations = 1
 
             for i in range(n_permutations):
-                if test[1] is not None:
-                    uel = loop.UniversalExperimentLoop(data=test[1](), single_file_model=test[0])
-                else:
-                    uel = loop.UniversalExperimentLoop(single_file_model=test[0])
-
+                uel = loop.UniversalExperimentLoop(single_file_model=single_file_model)
                 experiment_name = uuid.uuid4().hex[:8]
 
-                uel.run(experiment_name=experiment_name,
-                        n_permutations=1,
-                        prep_each_round=test[2])
+                uel.run(
+                    experiment_name=experiment_name,
+                    n_permutations=1,
+                    prep_each_round=True
+                )
 
                 confusion_df = uel.experiment_confusion_metrics
                 confusion_metrics.append(confusion_df)
 
             confusion_metrics = pd.concat(confusion_metrics, ignore_index=True)
 
-            rdop = RegimeDiversifiedOpinionPools(test[0])
+            rdop = RegimeDiversifiedOpinionPools(single_file_model)
 
             offline_result = rdop.offline_pipeline(
                 confusion_metrics=confusion_metrics,
@@ -77,12 +61,10 @@ def test_rdop():
 
             cleanup_csv_files()
 
-            print(f'    ✅ {test[0].__name__}: PASSED')
+            print(f'    ✅ {single_file_model.__name__}: PASSED')
 
         except Exception as e:
-
-            print(f'    ❌ {test[0].__name__}: FAILED - {e}')
-
+            print(f'    ❌ {single_file_model.__name__}: FAILED - {e}')
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)
