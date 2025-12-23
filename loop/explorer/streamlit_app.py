@@ -209,6 +209,7 @@ selected_columns   = sidebar_state.get('selected_columns', [])
 # ----------
 show_chart       = sidebar_state['show_chart']
 chart_type       = sidebar_state['chart_type']
+chart_title      = sidebar_state.get('chart_title', '')
 xcol             = sidebar_state['xcol']
 ycol             = sidebar_state['ycol']
 ycols            = sidebar_state['ycols']
@@ -286,6 +287,10 @@ _spacer(6.0)
 # ---- Charts
 # -----------
 if show_chart:
+    # Render chart title as subheader (same style as Pivot Table)
+    if chart_title and chart_title.strip():
+        st.subheader(chart_title.strip())
+    
     if chart_type == 'Line' and xcol and ycols:
         charts.plot_line(
             df_filt,

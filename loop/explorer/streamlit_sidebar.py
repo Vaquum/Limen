@@ -105,6 +105,7 @@ def build_sidebar(
         show_chart = st.checkbox('**Show Chart**', value=False)
 
         chart_type = 'Histogram'
+        chart_title = ''
         xcol = ''
         ycol = ''
         ycols = None
@@ -122,6 +123,7 @@ def build_sidebar(
 
         if show_chart:
             chart_type = st.radio('Chart Type', ['Histogram', 'Line', 'Area', 'Scatter', 'Box'], horizontal=True)
+            chart_title = st.text_input('Chart Title', value='', key='chart_title', placeholder='Enter chart title (optional)')
             if chart_type != 'Histogram':
                 xcol = st.selectbox('X-axis', [''] + df_base.columns.tolist(), index=0)
 
@@ -269,6 +271,7 @@ def build_sidebar(
         selected_columns=selected_columns,
         show_chart=show_chart,
         chart_type=chart_type,
+        chart_title=chart_title,
         xcol=xcol,
         ycol=ycol,
         ycols=ycols,

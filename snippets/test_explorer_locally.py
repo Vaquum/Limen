@@ -18,8 +18,7 @@ def test_explorer_locally():
     uel.run(
             experiment_name='explorer_test',
             prep_each_round=True,
-            n_permutations=100,
-            manifest=loop.sfm.reference.logreg.manifest()
+            n_permutations=100
         )
 
     loop_explorer(uel, '0.0.0.0')
