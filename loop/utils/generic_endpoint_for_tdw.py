@@ -1,4 +1,3 @@
-import os
 from clickhouse_connect import get_client
 import polars as pl
 import time
@@ -32,7 +31,7 @@ def generic_endpoint_for_tdw(month_year: Optional[Tuple[int,int]] = None,
     client = get_client(host='localhost',
                         port=8123,
                         username='default',
-                        password=os.getenv('CLICKHOUSE_PASSWORD'),
+                        password='password123',
                         compression=True)
 
     if include_datetime_col:

@@ -1,4 +1,3 @@
-import os
 from clickhouse_connect import get_client
 import polars as pl
 import time
@@ -29,7 +28,7 @@ def get_klines_data(n_rows: Optional[int] = None,
         host='localhost',
         port=8123,
         username='default',
-        password=os.getenv('CLICKHOUSE_PASSWORD'),
+        password='password123',
         compression=True
     )
 
