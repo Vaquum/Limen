@@ -146,9 +146,8 @@ If you need additional methods, access the internal `Log` via `uel._log` (see [L
 ```python
 import loop
 from loop import sfm
-from loop.historical_data import HistoricalData
 
-# Manifest-based SFM with auto-fetch (recommended)
+# Manifest-based SFM with auto-fetch
 # Data is automatically fetched from manifest-configured sources
 uel = loop.UniversalExperimentLoop(single_file_model=sfm.reference.logreg)
 
@@ -157,21 +156,6 @@ uel.run(
     n_permutations=100,
     prep_each_round=True,
     random_search=True,
-)
-
-# Legacy SFM (requires explicit data)
-historical = HistoricalData()
-historical.get_spot_klines(kline_size=3600, start_date_limit='2024-01-01')
-
-uel_legacy = loop.UniversalExperimentLoop(
-    data=historical.data,
-    single_file_model=sfm.lightgbm.tradeline_long_binary,
-)
-
-uel_legacy.run(
-    experiment_name='exp_tradeline',
-    n_permutations=10,
-    prep_each_round=False,
 )
 
 # Post-run analysis via precomputed artifacts and internal Log

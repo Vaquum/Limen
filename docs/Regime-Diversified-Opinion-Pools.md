@@ -153,12 +153,12 @@ from loop import sfm
 from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
 
 # Step 1: Train individual models (existing Loop workflow)
-uel = loop.UniversalExperimentLoop(data=train_data, single_file_model=sfm.lightgbm.tradeable_regressor)
+uel = loop.UniversalExperimentLoop(data=train_data, single_file_model=sfm.reference.lightgbm)
 uel.run('lgboost_training', n_permutations=1000, prep_each_round=True)
 confusion_df = uel.experiment_confusion_metrics
 
 # Step 2: Train RDOP diversification system
-rdop = RegimeDiversifiedOpinionPools(sfm.lightgbm.tradeable_regressor)
+rdop = RegimeDiversifiedOpinionPools(sfm.reference.lightgbm)
 regime_pools = rdop.offline_pipeline(
     confusion_df,
     k_regimes=5,                  # 5 different market regimes

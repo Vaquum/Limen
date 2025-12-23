@@ -4,7 +4,7 @@ import polars as pl
 from loop.historical_data import HistoricalData
 from loop.tests.utils.get_data import get_klines_data_fast
 from loop.manifest import Manifest
-from loop.sfm.model import random_clf_binary
+from loop.sfm.model import random_binary
 
 
 def params():
@@ -34,5 +34,5 @@ def manifest():
             ))
             .add_transform(lambda data: data[:-1])
             .done()
-        .with_model(random_clf_binary)
+        .with_model(random_binary)
     )

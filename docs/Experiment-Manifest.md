@@ -774,19 +774,17 @@ Configure model function for training and evaluation. Parameters are automatical
 
 ```python
 from loop.sfm.model import (
-    ridge_binary,              # Ridge classifier with binary metrics
+    lgb_binary,                # LightGBM binary classifier
     logreg_binary,             # Logistic regression with binary metrics
-    logreg_multiclass,         # Logistic regression with multiclass metrics
-    ridge_regression,          # Ridge regression with continuous metrics
-    lgb_tradeable_regression,  # LightGBM tradeable regression
-    # ... and more in loop/sfm/model/
+    random_binary,             # Random baseline classifier
+    xgb_regressor,             # XGBoost regressor
 )
 ```
 
 **Example:**
 
 ```python
-.with_model(ridge_binary)
+.with_model(logreg_binary)
 ```
 
 ### Auto-Parameter Mapping
@@ -803,7 +801,7 @@ The manifest automatically maps parameters from `round_params` to the model func
 
 ```python
 # Model function signature
-def ridge_binary(data, alpha=1.0, use_calibration=True, ...):
+def logreg_binary(data, C=1.0, use_calibration=True, ...):
     ...
 
 # In params()
@@ -814,7 +812,7 @@ def params():
     }
 
 # Manifest
-.with_model(ridge_binary)
+.with_model(logreg_binary)
 # Parameters 'alpha' and 'use_calibration' automatically mapped!
 ```
 
@@ -877,7 +875,7 @@ from loop.features import (
 )
 from loop.utils import shift_column
 from loop.transforms.linear_transform import LinearTransform
-from loop.sfm.model import ridge_binary
+from loop.sfm.model import logreg_binary
 
 def params():
     return {
@@ -959,7 +957,7 @@ def manifest():
         .set_scaler(LinearTransform)
 
         # Model
-        .with_model(ridge_binary)
+        .with_model(logreg_binary)
     )
 ```
 
