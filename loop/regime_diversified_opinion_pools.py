@@ -16,7 +16,6 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from loop import UniversalExperimentLoop
-from loop.sfm.reference import empty
 
 DEFAULT_PERF_COLS = [
     'pred_pos_rate_pct', 'actual_pos_rate_pct',
@@ -207,7 +206,7 @@ class OnlineModelLoader:
             )
         else:
             uel = UniversalExperimentLoop(
-                data=data, single_file_model=empty)
+                data=data, single_file_model=None)
             uel.run(
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,
