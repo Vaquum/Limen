@@ -175,9 +175,9 @@ class OnlineModelLoader:
 
     '''Compute model training and prediction extraction for online pipeline.'''
 
-    def __init__(self, sfm, manifest=None):
+    def __init__(self, sfd, manifest=None):
 
-        self.sfm = sfm
+        self.sfd = sfd
         self.manifest = manifest
         self.trained_models = {}
         self.exclude_perf_cols = DEFAULT_PERF_COLS + ['x_name', 'n_kept', 'id', 'cluster']
@@ -197,7 +197,7 @@ class OnlineModelLoader:
                                     model_id: int):
 
         if self.manifest is not None:
-            uel = UniversalExperimentLoop(data=data, single_file_model=self.sfm)
+            uel = UniversalExperimentLoop(data=data, single_file_decoder=self.sfd)
             uel.run(
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,
@@ -206,14 +206,14 @@ class OnlineModelLoader:
             )
         else:
             uel = UniversalExperimentLoop(
-                data=data, single_file_model=None)
+                data=data, single_file_decoder=None)
             uel.run(
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,
                 prep_each_round=False,
                 params=lambda: params,
-                prep=self.sfm.prep,
-                model=self.sfm.model
+                prep=self.sfd.prep,
+                model=self.sfd.model
             )
 
         round_id = 0
@@ -291,12 +291,12 @@ class AggregationStrategy:
 
 class OnlineAggregation:
 
-    def __init__(self, sfm, manifest: Dict = None, aggregation_threshold: Optional[float] = None):
+    def __init__(self, sfd, manifest: Dict = None, aggregation_threshold: Optional[float] = None):
 
-        self.sfm = sfm
+        self.sfd = sfd
         self.manifest = manifest
         self.aggregation_strategy = AggregationStrategy(threshold=aggregation_threshold)
-        self.model_loader = OnlineModelLoader(sfm, manifest)
+        self.model_loader = OnlineModelLoader(sfd, manifest)
 
     def aggregate_predictions(self, predictions_df: pd.DataFrame, method: str = 'mean') -> np.ndarray:
 
@@ -334,19 +334,19 @@ class RegimeDiversifiedOpinionPools:
 
     '''Defines Regime Diversified Opinion Pools for Loop experiments.'''
 
-    def __init__(self, sfm, random_state: Optional[int] = 42):
+    def __init__(self, sfd, random_state: Optional[int] = 42):
 
         '''
-        Create RegimeDiversifiedOpinionPools instance with core SFM dependency.
+        Create RegimeDiversifiedOpinionPools instance with core SFD dependency.
 
         Args:
-            sfm: Single File Model for experiments
+            sfd: Single File Decoder for experiments
             random_state (int, optional): Random state for reproducible results
         '''
 
         self.regime_pools = {}
-        self.sfm = sfm
-        self.manifest = sfm.manifest() if hasattr(sfm, 'manifest') and callable(getattr(sfm, 'manifest')) else None
+        self.sfd = sfd
+        self.manifest = sfd.manifest() if hasattr(sfd, 'manifest') and callable(getattr(sfd, 'manifest')) else None
         self.n_regimes = 0
         self.trained_models = {}
         self.random_state = random_state
@@ -444,7 +444,7 @@ class RegimeDiversifiedOpinionPools:
         '''
 
         online_aggregation = OnlineAggregation(
-            self.sfm,
+            self.sfd,
             manifest=self.manifest,
             aggregation_threshold=aggregation_threshold
         )

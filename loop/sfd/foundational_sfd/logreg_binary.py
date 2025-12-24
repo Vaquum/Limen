@@ -10,7 +10,7 @@ from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
-from loop.sfm.model import logreg_binary
+from loop.sfd.reference_architecture import logreg_binary
 from loop.historical_data import HistoricalData
 from loop.tests.utils.get_data import get_klines_data_fast
 

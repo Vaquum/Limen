@@ -12,7 +12,7 @@ from loop.features.range_pct import range_pct
 from loop.features.volume_ratio import volume_ratio
 from loop.features.sma_ratios import sma_ratios
 from loop.features.lagged_features import lag_columns
-from loop.sfm.model.xgb_regressor import xgb_regressor
+from loop.sfd.reference_architecture import xgboost_regressor
 
 
 def params():
@@ -79,5 +79,5 @@ def manifest():
                 ])
             )
             .done()
-        .with_model(xgb_regressor)
+        .with_model(xgboost_regressor)
     )

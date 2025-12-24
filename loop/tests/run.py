@@ -4,7 +4,7 @@ import traceback
 
 from loop.tests.utils.cleanup import cleanup_csv_files, setup_cleanup_handlers
 
-from loop.tests.test_sfm import test_sfm
+from loop.tests.test_foundational_sfd import test_foundational_sfd
 from loop.tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from loop.tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
 from loop.tests.test_confidence_filtering_system import test_apply_confidence_filtering
@@ -25,7 +25,7 @@ tests = [
     test_trade_bars_basic,
     test_liquidity_bars_basic,
     test_pre_split_random_selector,
-    test_sfm,
+    test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
     test_apply_confidence_filtering,

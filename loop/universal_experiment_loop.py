@@ -13,29 +13,29 @@ class UniversalExperimentLoop:
 
     '''UniversalExperimentLoop class for running experiments.'''
 
-    def __init__(self, *, data=None, single_file_model=None):
+    def __init__(self, *, data=None, single_file_decoder=None):
 
         '''
         Initialize the UniversalExperimentLoop.
 
-        NOTE: Automatically detects SFM structure and configures prep/model.
-        Manifest-based SFMs auto-generate prep/model from manifest.
+        NOTE: Automatically detects SFD structure and configures prep/model.
+        Manifest-based SFDs auto-generate prep/model from manifest.
         If manifest has data_source_config and no data provided, auto-fetches data.
-        Legacy SFMs require explicit data parameter.
+        Legacy SFDs require explicit data parameter.
 
         Args:
             data (pl.DataFrame, optional): The data to use for the experiment
-            single_file_model (SingleFileModel, optional): The single file model to use for the experiment
+            single_file_decoder (SingleFileDecoder, optional): The single file decoder to use for the experiment
         '''
 
-        if single_file_model is None:
-            raise ValueError('single_file_model is required')
+        if single_file_decoder is None:
+            raise ValueError('single_file_decoder is required')
 
-        self.params = single_file_model.params()
+        self.params = single_file_decoder.params()
         self.manifest = None
 
-        if hasattr(single_file_model, 'manifest'):
-            self.manifest = single_file_model.manifest()
+        if hasattr(single_file_decoder, 'manifest'):
+            self.manifest = single_file_decoder.manifest()
 
             if data is None:
                 if self.manifest.data_source_config is None:
@@ -63,10 +63,10 @@ class UniversalExperimentLoop:
                 )
         else:
             if data is None:
-                raise ValueError('data parameter required for legacy SFMs')
+                raise ValueError('data parameter required for legacy SFDs')
             self.data = data
-            self.prep = getattr(single_file_model, 'prep', None)
-            self.model = getattr(single_file_model, 'model', None)
+            self.prep = getattr(single_file_decoder, 'prep', None)
+            self.model = getattr(single_file_decoder, 'model', None)
 
         self.extras = []
         self.models = []

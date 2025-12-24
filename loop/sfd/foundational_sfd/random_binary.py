@@ -4,7 +4,7 @@ import polars as pl
 from loop.historical_data import HistoricalData
 from loop.tests.utils.get_data import get_klines_data_fast
 from loop.manifest import Manifest
-from loop.sfm.model import random_binary
+from loop.sfd.reference_architecture import random_binary
 
 
 def params():

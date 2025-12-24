@@ -11,7 +11,7 @@ def log_to_optuna_study(experiment_log: object, params: object, objective: str) 
 
     Args:
         experiment_log (uel.experiment_log | pl.DataFrame) : The experiment result log
-        params (sfm.params | func) : sfm.params function used in the experiment
+        params (sfd.params | func) : sfd.params function used in the experiment
         objective (str) : Target feature column name
         
     Returns:

@@ -9,7 +9,7 @@ from loop.utils.add_breakout_ema import add_breakout_ema
 from loop.utils.random_slice import random_slice
 from loop.manifest import Manifest
 from loop.data import compute_data_bars
-from loop.sfm.model import lgb_binary
+from loop.sfd.reference_architecture import lightgbm_binary
 
 
 TARGET_COLUMN = 'liquidity_sum'
@@ -87,5 +87,5 @@ def manifest():
         .with_target(TARGET_COLUMN_CLASS)
             .add_transform(add_breakout_ema, target_col=TARGET_COLUMN)
             .done()
-        .with_model(lgb_binary)
+        .with_model(lightgbm_binary)
     )

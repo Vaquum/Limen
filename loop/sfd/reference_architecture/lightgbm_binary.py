@@ -3,7 +3,7 @@ import lightgbm as lgb
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def lgb_binary(data: dict,
+def lightgbm_binary(data: dict,
                objective: str = 'binary',
                metric: str = 'auc',
                learning_rate: float = 0.05,

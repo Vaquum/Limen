@@ -6,28 +6,28 @@ import traceback
 import pandas as pd
 
 import loop
-from loop import sfm
+from loop import sfd
 from loop import RegimeDiversifiedOpinionPools
 from loop.tests.utils.cleanup import cleanup_csv_files
 
 
 def test_rdop():
-    '''Test RDOP pipeline with reference SFMs.'''
+    '''Test RDOP pipeline with foundational SFDs.'''
 
-    reference_sfms = [
-        sfm.reference.xgboost,
-        sfm.reference.logreg,
-        sfm.reference.lightgbm,
+    foundational_sfds = [
+        sfd.foundational_sfd.xgboost_regressor,
+        sfd.foundational_sfd.logreg_binary,
+        sfd.foundational_sfd.lightgbm_binary,
     ]
 
-    for single_file_model in reference_sfms:
+    for single_file_decoder in foundational_sfds:
 
         try:
             confusion_metrics = []
             n_permutations = 1
 
             for i in range(n_permutations):
-                uel = loop.UniversalExperimentLoop(single_file_model=single_file_model)
+                uel = loop.UniversalExperimentLoop(single_file_decoder=single_file_decoder)
                 experiment_name = uuid.uuid4().hex[:8]
 
                 uel.run(
@@ -41,7 +41,7 @@ def test_rdop():
 
             confusion_metrics = pd.concat(confusion_metrics, ignore_index=True)
 
-            rdop = RegimeDiversifiedOpinionPools(single_file_model)
+            rdop = RegimeDiversifiedOpinionPools(single_file_decoder)
 
             offline_result = rdop.offline_pipeline(
                 confusion_metrics=confusion_metrics,
@@ -61,10 +61,10 @@ def test_rdop():
 
             cleanup_csv_files()
 
-            print(f'    ✅ {single_file_model.__name__}: PASSED')
+            print(f'    ✅ {single_file_decoder.__name__}: PASSED')
 
         except Exception as e:
-            print(f'    ❌ {single_file_model.__name__}: FAILED - {e}')
+            print(f'    ❌ {single_file_decoder.__name__}: FAILED - {e}')
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)
