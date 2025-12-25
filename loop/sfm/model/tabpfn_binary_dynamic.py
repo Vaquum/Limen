@@ -18,25 +18,21 @@ def tabpfn_binary_dynamic(data: dict,
                           n_ensemble_configurations: int = 4,
                           device: str = 'cpu',
                           use_calibration: bool = True,
-                          threshold_metric: str = 'balanced',
-                          **kwargs) -> dict:
+                          threshold_metric: str = 'balanced') -> dict:
 
     '''
     Compute TabPFN binary classification with dynamic threshold tuning on validation set.
 
     Args:
-        data: Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-        n_ensemble_configurations: Number of ensemble configurations for TabPFN
-        device: Device to run on ('cpu' or 'cuda')
-        use_calibration: Whether to apply isotonic calibration on validation set
-        threshold_metric: Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
-        **kwargs: Additional parameters (ignored)
+        data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
+        n_ensemble_configurations (int): Number of ensemble configurations for TabPFN
+        device (str): Device to run on ('cpu' or 'cuda')
+        use_calibration (bool): Whether to apply isotonic calibration on validation set
+        threshold_metric (str): Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
 
     Returns:
-        Results from binary_metrics with '_preds', 'optimal_threshold', 'val_score' added
+        dict: Results from binary_metrics with '_preds', 'optimal_threshold', 'val_score' added
     '''
-
-    del kwargs
 
     X_train = data['x_train'].to_numpy() if hasattr(data['x_train'], 'to_numpy') else data['x_train']
     y_train = data['y_train'].to_numpy() if hasattr(data['y_train'], 'to_numpy') else data['y_train']

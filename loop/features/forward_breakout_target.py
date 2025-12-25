@@ -9,12 +9,12 @@ def compute_forward_breakout_threshold(data: pl.DataFrame,
     This is a fitted parameter, computed on training data only.
 
     Args:
-        data: Training data (unused, kept for fitted transform interface)
-        forward_periods: Number of periods to look ahead
-        threshold_pct: Percentage threshold (0.02 = 2%)
+        data (pl.DataFrame): Training data (unused, kept for fitted transform interface)
+        forward_periods (int): Number of periods to look ahead
+        threshold_pct (float): Percentage threshold (0.02 = 2%)
 
     Returns:
-        The threshold value (percentage)
+        float: The threshold value (percentage)
     '''
     del data, forward_periods
     return threshold_pct
@@ -31,13 +31,13 @@ def forward_breakout_target(data: pl.DataFrame,
     Target = 0 otherwise
 
     Args:
-        data: DataFrame with 'close' column
-        forward_periods: How many periods ahead to check
-        threshold: Percentage threshold (0.02 = 2%)
-        shift: Additional shift to apply (negative for forward-looking)
+        data (pl.DataFrame): DataFrame with 'close' column
+        forward_periods (int): How many periods ahead to check
+        threshold (float): Percentage threshold (0.02 = 2%)
+        shift (int): Additional shift to apply (negative for forward-looking)
 
     Returns:
-        Data with 'forward_breakout' column added
+        pl.DataFrame: Data with 'forward_breakout' column added
     '''
     # Calculate forward return
     future_price = pl.col('close').shift(-forward_periods)
