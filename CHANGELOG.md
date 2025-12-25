@@ -302,7 +302,7 @@ data mismatch
 - Added a test for sampling from large param space
 - Update `sfm.reference.logreg` to use new manifest API
 - Add comprehensive docs for `loop.manifest` including integration examples
-- Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support 
+- Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support
 
 # V1.19.1 on 22nd of September 2025
 - Add `loop.data` sub-module for computing time and information-based bars from base klines data.
@@ -338,7 +338,7 @@ data mismatch
 # V1.20.2 on 23rd of October 2025
 - Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
 - Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
-- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
+- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment.
 
 # V1.21.0 on 30th of October 2025
 - Add strategy logic to `lightgbm.tradeline_multiclass`
@@ -379,3 +379,5 @@ data mismatch
 - Add declarative data fetching to manifest
 - Add data source configuration to all manifest-based SFMs
 
+# V1.26.0 on 25th of December 2025
+- Add `tabpfn.dynamic_breakout_classifier` SFM with validation-based dynamic threshold tuning
