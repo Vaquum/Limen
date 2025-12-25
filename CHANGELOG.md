@@ -383,4 +383,4 @@ data mismatch
 - Remove all but foundational SFDs
 - Prune unused code
 - Update tests and docs to incorporate the standard glossary
-- Add test data endpoint to `historical_data`
+- Add local file-based endpoint to `historical_data.py`

@@ -6,7 +6,7 @@ All of the endpoints are found in [`loop/historical_data.py`](../loop/historical
 
 All of the endpoints rely on [Binance Market Data](https://data.binance.vision/?prefix=) as their source.
 
-There are in total five distinct data endpoints:
+There are in total six distinct data endpoints:
 
 - `HistoricalData.get_binance_file`
 - `HistoricalData.get_spot_klines` (for both spot and futures)
@@ -14,6 +14,7 @@ There are in total five distinct data endpoints:
 - `HistoricalData.get_spot_agg_trades`
 - `HistoricalData.get_futures_klines`
 - `HistoricalData.get_futures_trades`
+- `HistoricalData._get_data_for_test` (internal testing only)
 
 All of these endpoints are available in the following manner: 
 
@@ -204,3 +205,32 @@ Get historical trades data for Binance futures.
 | `quantity`         | `float`     | Quantity of the asset that was traded.             |
 | `is_buyer_maker`   | `bool`      | `True` if the buyer was the market maker.          |
 | `datetime`         | `datetime`  | Human-readable date/time derived from `timestamp`. |
+
+## `HistoricalData._get_data_for_test`
+
+Get test klines data from local CSV file for testing purposes.
+
+**NOTE:** This is an internal test-only method used by SFMs to load sample data during test runs. It reads from `datasets/klines_2h_2020_2025.csv` which contains pre-downloaded klines data. This method is not intended for production use.
+
+### Args
+
+| Parameter  | Type          | Description                                                    |
+|------------|---------------|----------------------------------------------------------------|
+| `n_rows`   | `int \| None` | Number of rows to read from CSV (default: 5000). If `None`, reads entire file. |
+
+### Returns
+
+`self.data` (pl.DataFrame) - The structure matches the output from `get_spot_klines` or `get_futures_klines`, containing OHLCV data and other kline-related columns.
+
+### Example Usage
+
+```python
+import loop
+historical = loop.HistoricalData()
+
+# Load 1000 rows of test data
+historical._get_data_for_test(n_rows=1000)
+
+# Access the data
+historical.data
+```
