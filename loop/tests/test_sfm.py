@@ -25,7 +25,7 @@ def test_sfm():
         (sfm.lightgbm.tradeable_regressor, None, True),
         (sfm.rules_based.momentum_volatility_longonly, None, True),
         (sfm.rules_based.momentum_volatility, None, True),
-        (sfm.tabpfn.dynamic_breakout_classifier, None, True),
+        (sfm.tabpfn, None, True),
         # Legacy SFMs (no manifest or require explicit data)
         (sfm.ridge.ridge_classifier, get_klines_data_fast, True),
         (sfm.lightgbm.tradeline_long_binary, get_klines_data_fast, True),

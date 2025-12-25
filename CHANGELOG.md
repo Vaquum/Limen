@@ -380,4 +380,4 @@ data mismatch
 - Add data source configuration to all manifest-based SFMs
 
 # V1.26.0 on 25th of December 2025
-- Add `tabpfn.dynamic_breakout_classifier` SFM with validation-based dynamic threshold tuning
+- Add `reference.tabpfn` SFM with validation-based dynamic threshold tuning

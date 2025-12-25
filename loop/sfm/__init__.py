@@ -9,7 +9,7 @@ import loop.sfm.logreg as logreg
 import loop.sfm.reference as reference
 import loop.sfm.rules_based as rules_based
 import loop.sfm.ridge as ridge
-import loop.sfm.tabpfn as tabpfn
+import loop.sfm.reference.tabpfn as tabpfn
 
 __all__ = [
     'decomposition',
