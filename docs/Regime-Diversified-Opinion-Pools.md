@@ -106,7 +106,7 @@ RDOP extends UEL workflows by providing model-level diversification:
 
 ```python
 # Standard UEL produces individual model results
-uel = UniversalExperimentLoop(data=train_data, single_file_decoder=your_sfd)
+uel = UniversalExperimentLoop(data=train_data, sfd=your_sfd)
 uel.run('training_experiment', n_permutations=500)
 
 # RDOP consumes UEL results for regime-aware aggregation
@@ -153,7 +153,7 @@ from loop import sfd
 from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
 
 # Step 1: Train individual models (existing Loop workflow)
-uel = loop.UniversalExperimentLoop(data=train_data, single_file_decoder=sfd.foundational_sfd.logreg_binary)
+uel = loop.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)
 uel.run('logreg_training', n_permutations=1000, prep_each_round=True)
 confusion_df = uel.experiment_confusion_metrics
 

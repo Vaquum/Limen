@@ -59,12 +59,12 @@ Initializes the Universal Experiment Loop.
 
 ### Args
 
-**Note:** All arguments are keyword-only (use `data=...`, `single_file_decoder=...`).
+**Note:** All arguments are keyword-only (use `data=...`, `sfd=...`).
 
 | Parameter             | Type               | Description                                           |
 |-----------------------|--------------------|-------------------------------------------------------|
 | `data`                | `pl.DataFrame`     | Optional. Experiment data. Required for SFDs using custom functions approach. For manifest-based SFDs, if not provided, data is automatically fetched from configured sources based on `LOOP_ENV` environment variable (defaults to 'test'). |
-| `single_file_decoder` | `SingleFileDecoder`| The single file decoder to use for the experiment.    |
+| `sfd`                 | `SingleFileDecoder`| The single file decoder to use for the experiment.    |
 
 
 ### `run`
@@ -149,7 +149,7 @@ from loop import sfd
 
 # Manifest-based SFD with auto-fetch
 # Data is automatically fetched from manifest-configured sources
-uel = loop.UniversalExperimentLoop(single_file_decoder=sfd.foundational_sfd.logreg_binary)
+uel = loop.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(
     experiment_name='exp_logreg',

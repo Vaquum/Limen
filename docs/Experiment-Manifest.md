@@ -110,7 +110,7 @@ import loop
 from loop import sfd
 
 # Data is automatically fetched from manifest-configured sources
-uel = loop.UniversalExperimentLoop(single_file_decoder=sfd.foundational_sfd.logreg_binary)
+uel = loop.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(experiment_name='my_experiment', n_permutations=100)
 ```

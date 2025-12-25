@@ -197,7 +197,7 @@ class OnlineModelLoader:
                                     model_id: int):
 
         if self.manifest is not None:
-            uel = UniversalExperimentLoop(data=data, single_file_decoder=self.sfd)
+            uel = UniversalExperimentLoop(data=data, sfd=self.sfd)
             uel.run(
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,
@@ -206,7 +206,7 @@ class OnlineModelLoader:
             )
         else:
             uel = UniversalExperimentLoop(
-                data=data, single_file_decoder=None)
+                data=data, sfd=self.sfd)
             uel.run(
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,

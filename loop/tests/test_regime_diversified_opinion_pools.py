@@ -20,14 +20,14 @@ def test_rdop():
         sfd.foundational_sfd.lightgbm_binary,
     ]
 
-    for single_file_decoder in foundational_sfds:
+    for sfd_module in foundational_sfds:
 
         try:
             confusion_metrics = []
             n_permutations = 1
 
             for i in range(n_permutations):
-                uel = loop.UniversalExperimentLoop(single_file_decoder=single_file_decoder)
+                uel = loop.UniversalExperimentLoop(sfd=sfd_module)
                 experiment_name = uuid.uuid4().hex[:8]
 
                 uel.run(
@@ -41,7 +41,7 @@ def test_rdop():
 
             confusion_metrics = pd.concat(confusion_metrics, ignore_index=True)
 
-            rdop = RegimeDiversifiedOpinionPools(single_file_decoder)
+            rdop = RegimeDiversifiedOpinionPools(sfd_module)
 
             offline_result = rdop.offline_pipeline(
                 confusion_metrics=confusion_metrics,
@@ -61,10 +61,10 @@ def test_rdop():
 
             cleanup_csv_files()
 
-            print(f'    ✅ {single_file_decoder.__name__}: PASSED')
+            print(f'    ✅ {sfd_module.__name__}: PASSED')
 
         except Exception as e:
-            print(f'    ❌ {single_file_decoder.__name__}: FAILED - {e}')
+            print(f'    ❌ {sfd_module.__name__}: FAILED - {e}')
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)

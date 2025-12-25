@@ -13,7 +13,7 @@ class UniversalExperimentLoop:
 
     '''UniversalExperimentLoop class for running experiments.'''
 
-    def __init__(self, *, data=None, single_file_decoder=None):
+    def __init__(self, *, data=None, sfd=None):
 
         '''
         Initialize the UniversalExperimentLoop.
@@ -21,21 +21,21 @@ class UniversalExperimentLoop:
         NOTE: Automatically detects SFD structure and configures prep/model.
         Manifest-based SFDs auto-generate prep/model from manifest.
         If manifest has data_source_config and no data provided, auto-fetches data.
-        Legacy SFDs require explicit data parameter.
+        Custom SFDs using custom functions approach require explicit data parameter.
 
         Args:
             data (pl.DataFrame, optional): The data to use for the experiment
-            single_file_decoder (SingleFileDecoder, optional): The single file decoder to use for the experiment
+            sfd (SingleFileDecoder, optional): The single file decoder to use for the experiment
         '''
 
-        if single_file_decoder is None:
-            raise ValueError('single_file_decoder is required')
+        if sfd is None:
+            raise ValueError('sfd is required')
 
-        self.params = single_file_decoder.params()
+        self.params = sfd.params()
         self.manifest = None
 
-        if hasattr(single_file_decoder, 'manifest'):
-            self.manifest = single_file_decoder.manifest()
+        if hasattr(sfd, 'manifest'):
+            self.manifest = sfd.manifest()
 
             if data is None:
                 if self.manifest.data_source_config is None:
@@ -63,10 +63,10 @@ class UniversalExperimentLoop:
                 )
         else:
             if data is None:
-                raise ValueError('data parameter required for legacy SFDs')
+                raise ValueError('data parameter required for custom SFDs using custom functions approach')
             self.data = data
-            self.prep = getattr(single_file_decoder, 'prep', None)
-            self.model = getattr(single_file_decoder, 'model', None)
+            self.prep = getattr(sfd, 'prep', None)
+            self.model = getattr(sfd, 'model', None)
 
         self.extras = []
         self.models = []
