@@ -2,7 +2,7 @@ import polars as pl
 from loop.data.bars import volume_bars
 from loop.data.bars import trade_bars
 from loop.data.bars import liquidity_bars
-from loop.tests.utils.get_data import get_klines_data_small
+from loop.historical_data import HistoricalData
 
 
 def validate_bars_output(
@@ -47,7 +47,9 @@ def validate_bars_output(
 
 
 def test_volume_bars_basic():
-    data = get_klines_data_small()
+    historical = HistoricalData()
+    historical._get_data_for_test(n_rows=5000)
+    data = historical.data
     result = volume_bars(data, volume_threshold=2060000.0)
     
     validate_bars_output(result, expected_aggregation=True)
@@ -56,7 +58,9 @@ def test_volume_bars_basic():
 
 
 def test_trade_bars_basic():
-    data = get_klines_data_small()
+    historical = HistoricalData()
+    historical._get_data_for_test(n_rows=5000)
+    data = historical.data
     result = trade_bars(data, trade_threshold=29000000)
     
     validate_bars_output(result, expected_aggregation=True)
@@ -65,7 +69,9 @@ def test_trade_bars_basic():
 
 
 def test_liquidity_bars_basic():
-    data = get_klines_data_small()
+    historical = HistoricalData()
+    historical._get_data_for_test(n_rows=5000)
+    data = historical.data
     result = liquidity_bars(data, liquidity_threshold=32000000000.0)
     
     validate_bars_output(result, expected_aggregation=True)

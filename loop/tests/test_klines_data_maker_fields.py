@@ -1,8 +1,10 @@
-from loop.tests.utils.get_data import get_klines_data
+from loop.historical_data import HistoricalData
 
 def test_klines_data_maker_fields():
-    
-    df = get_klines_data()
+
+    historical = HistoricalData()
+    historical._get_data_for_test(n_rows=None)
+    df = historical.data
     
     required_columns = [
         'datetime', 'open', 'high', 'low', 'close', 'mean', 'std', 'median', 'iqr',
