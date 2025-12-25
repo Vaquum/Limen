@@ -11,7 +11,6 @@ from loop.utils.shift_column import shift_column
 from loop.manifest import Manifest
 from loop.sfd.reference_architecture import logreg_binary
 from loop.historical_data import HistoricalData
-from loop.tests.utils.get_data import get_klines_data_fast
 
 
 def params():
@@ -38,7 +37,7 @@ def manifest():
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method=get_klines_data_fast)
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
         .set_split_config(8, 1, 2)
 
         .add_indicator(roc, period='roc_period')
