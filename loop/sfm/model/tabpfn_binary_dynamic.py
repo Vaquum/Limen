@@ -65,12 +65,12 @@ def tabpfn_binary_dynamic(data: dict,
 
     thresholds = np.arange(THRESHOLD_MIN, THRESHOLD_MAX + THRESHOLD_STEP, THRESHOLD_STEP)
     best_threshold = DEFAULT_THRESHOLD
-    best_score = -1
+    best_score = -1.0
 
     def balanced_metric(y_true, y_pred):
 
         if y_pred.sum() == 0:
-            return 0
+            return 0.0
         prec = precision_score(y_true, y_pred, zero_division=0)
         trade_rate = y_pred.sum() / len(y_pred)
         return prec * np.sqrt(trade_rate)
