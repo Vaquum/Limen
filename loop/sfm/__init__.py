@@ -9,6 +9,7 @@ import loop.sfm.logreg as logreg
 import loop.sfm.reference as reference
 import loop.sfm.rules_based as rules_based
 import loop.sfm.ridge as ridge
+import loop.sfm.tabpfn as tabpfn
 
 __all__ = [
     'decomposition',
@@ -17,9 +18,10 @@ __all__ = [
     'lightgbm',
     'random',
     'xgboost',
-    'logreg_reference', 
+    'logreg_reference',
     'logreg',
     'reference',
     'rules_based',
-    'ridge'
+    'ridge',
+    'tabpfn'
 ]
