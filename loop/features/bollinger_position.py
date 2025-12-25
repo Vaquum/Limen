@@ -1,6 +1,9 @@
 import polars as pl
 
 
+BANDWIDTH_EPSILON = 1e-6
+
+
 def bollinger_position(data: pl.DataFrame) -> pl.DataFrame:
 
     '''
@@ -16,7 +19,7 @@ def bollinger_position(data: pl.DataFrame) -> pl.DataFrame:
 
     bandwidth = pl.col('bb_upper') - pl.col('bb_lower')
     position = (
-        pl.when(bandwidth < 1e-6)
+        pl.when(bandwidth < BANDWIDTH_EPSILON)
         .then(0.5)
         .otherwise((pl.col('close') - pl.col('bb_lower')) / bandwidth)
         .clip(0.0, 1.0)
