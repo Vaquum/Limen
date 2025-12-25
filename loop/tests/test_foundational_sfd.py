@@ -13,7 +13,6 @@ def test_foundational_sfd():
         loop.sfd.foundational_sfd.random_binary,
         loop.sfd.foundational_sfd.xgboost_regressor,
         loop.sfd.foundational_sfd.logreg_binary,
-        loop.sfd.foundational_sfd.lightgbm_binary,
     ]
 
     for sfd_module in foundational_sfds:

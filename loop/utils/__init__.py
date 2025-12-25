@@ -10,7 +10,6 @@ from loop.utils.reporting import format_report_header, format_report_section, fo
 from loop.metrics.safe_ovr_auc import safe_ovr_auc
 from loop.utils.splits import split_data_to_prep_output, split_sequential, split_random
 from loop.utils.confidence_filtering_system import confidence_filtering_system
-from loop.utils.add_breakout_ema import add_breakout_ema
 from loop.utils.binance_file_to_polars import binance_file_to_polars
 from loop.utils.data_sampling.full_dataset_sampling import full_dataset_sampling
 from loop.utils.data_sampling.random_subsets_sampling import random_subsets_sampling
@@ -19,7 +18,6 @@ from loop.utils.data_sampling.temporal_windows_sampling import temporal_windows_
 from loop.utils.shift_column import shift_column
 
 __all__ = [
-    'add_breakout_ema',
     'binance_file_to_polars',
     'bootstrap_sampling',
     'confidence_filtering_system',

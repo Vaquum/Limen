@@ -774,7 +774,6 @@ Configure model function for training and evaluation. Parameters are automatical
 
 ```python
 from loop.sfd.reference_architecture import (
-    lightgbm_binary,           # LightGBM binary classifier
     logreg_binary,             # Logistic regression with binary metrics
     random_binary,             # Random baseline classifier
     xgboost_regressor,         # XGBoost regressor

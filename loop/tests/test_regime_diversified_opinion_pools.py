@@ -17,7 +17,6 @@ def test_rdop():
     foundational_sfds = [
         sfd.foundational_sfd.xgboost_regressor,
         sfd.foundational_sfd.logreg_binary,
-        sfd.foundational_sfd.lightgbm_binary,
     ]
 
     for sfd_module in foundational_sfds:
