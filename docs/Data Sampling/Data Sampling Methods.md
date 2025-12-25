@@ -65,9 +65,9 @@ datasets = temporal_windows_sampling(
 )
 ```
 
-## Integration with SFMs
+## Integration with SFDs
 
-All data sampling utilities integrate seamlessly with Loop's SFM pattern:
+All data sampling utilities integrate seamlessly with Loop's SFD pattern:
 
 ```python
 from loop.utils import random_subsets_sampling, split_sequential, split_data_to_prep_output
@@ -76,20 +76,20 @@ import loop
 # 1. Apply data sampling strategy
 datasets = random_subsets_sampling(data, sample_size=10000, n_samples=3, seed=42)
 
-# 2. For each dataset, apply standard SFM workflow
+# 2. For each dataset, apply standard SFD workflow
 for i, dataset in enumerate(datasets):
     # Standard Loop train/val/test split
     splits = split_sequential(dataset, ratios=(0.7, 0.15, 0.15))
     data_dict = split_data_to_prep_output(splits, cols, all_datetimes)
-    
-    # Works with any SFM
-    uel = loop.UniversalExperimentLoop(data_dict, your_sfm_function)
+
+    # Works with any SFD
+    uel = loop.UniversalExperimentLoop(data_dict, your_sfd_function)
     uel.run(experiment_name=f"megamodel_{i}")
 ```
 
 ## Performance Results
 
-Based on comprehensive trading backtests using tradeable_regressor SFM:
+Based on comprehensive trading backtests using tradeable_regressor SFD:
 
 | Strategy | Performance Rank | Notes |
 |----------|------------------|-------|
@@ -142,9 +142,9 @@ for i, dataset in enumerate(datasets):
 ### Model-Agnostic Design
 
 These utilities work with any model type:
-- Simple SFMs (linear regression, logistic regression)
-- Complex SFMs (tradeable_regressor with regime models)
-- Custom models outside the SFM framework
+- Simple SFDs (linear regression, logistic regression)
+- Complex SFDs (tradeable_regressor with regime models)
+- Custom models outside the SFD framework
 
 ### Reproducibility
 
@@ -178,7 +178,7 @@ all_datasets = random_datasets + bootstrap_datasets
 
 ### Loop Pattern Compliance
 
-- Pure DataFrame transformations (no SFM knowledge)
+- Pure DataFrame transformations (no SFD knowledge)
 - Composable with existing split functions
 - Follows Loop docstring and code standards
 - Type-safe with proper hints

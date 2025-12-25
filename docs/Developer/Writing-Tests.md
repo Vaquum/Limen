@@ -2,7 +2,7 @@
 
 ## When to add tests?
 
-If you are adding new code, add tests that cover that code. If you are adding an SFM, there is no requirement to write additional tests, simply drop it to the test harness in [`loop/tests/test_sfm.py`]('../loop/tests/test_sfm.py'). 
+If you are adding new code, add tests that cover that code. If you are adding an SFD, there is no requirement to write additional tests, simply drop it to the test harness in [`loop/tests/test_foundational_sfd.py`]('../loop/tests/test_foundational_sfd.py'). 
 
 ## Standards
 
@@ -15,4 +15,4 @@ Here is a few guidelines to ensure that our tests are as readable and maintainab
 - Never add any fallbacks to tests
 - Never add any printouts to tests
 
-**NOTE:** Simply add tests to [`loop/tests/run.py`]('../loop/tests/run.py') and additional SFM tests to [`loop/tests/test_sfm.py`]('../loop/tests/test_sfm.py').
+**NOTE:** Simply add tests to [`loop/tests/run.py`]('../loop/tests/run.py') and additional SFD tests to [`loop/tests/test_foundational_sfd.py`]('../loop/tests/test_foundational_sfd.py').

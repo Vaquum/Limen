@@ -2,7 +2,7 @@
 
 A lightweight, robust Python library for computing evaluation metrics in machine learning tasks. Focuses on regression and classification (binary/multiclass unified), with optional distributional insights via error quantiles. Built on scikit-learn for reliability.
 
-**NOTE:** Always use the functions in this library for measurement in `sfm.model`. 
+**NOTE:** Always use the functions in this library for measurement in `sfd.reference_architecture` model functions. 
 
 ## Key Features
 - **Regression Metrics**: MAE, RMSE, R², mean error, MAPE (with zero-handling).
