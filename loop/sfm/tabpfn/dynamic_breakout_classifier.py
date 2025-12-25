@@ -23,7 +23,8 @@ VAL_SPLIT = 20
 TEST_SPLIT = 30
 
 
-def params():
+def params() -> dict[str, list]:
+
     return {
         'forward_periods': [4, 8, 12],
         'threshold_pct': [0.01, 0.015, 0.02],
@@ -34,7 +35,7 @@ def params():
     }
 
 
-def manifest():
+def manifest() -> Manifest:
 
     return (Manifest()
         .set_split_config(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
@@ -62,7 +63,7 @@ def manifest():
                           threshold_pct='threshold_pct')
                 .with_params(
                     forward_periods='forward_periods',
-                    threshold='threshold_pct',
+                    threshold='_threshold',
                     shift=-1
                 )
             .done()

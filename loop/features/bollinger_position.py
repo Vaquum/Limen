@@ -14,8 +14,12 @@ def bollinger_position(data: pl.DataFrame) -> pl.DataFrame:
         pl.DataFrame: The input data with a new column 'bollinger_position'
     '''
 
-    return data.with_columns([
-        ((pl.col('close') - pl.col('bb_lower')) /
-         (pl.col('bb_upper') - pl.col('bb_lower') + 1e-8))
-        .alias('bollinger_position')
-    ])
+    bandwidth = pl.col('bb_upper') - pl.col('bb_lower')
+    position = (
+        pl.when(bandwidth < 1e-6)
+        .then(0.5)
+        .otherwise((pl.col('close') - pl.col('bb_lower')) / bandwidth)
+        .clip(0.0, 1.0)
+    )
+
+    return data.with_columns([position.alias('bollinger_position')])

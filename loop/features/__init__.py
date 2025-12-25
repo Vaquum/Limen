@@ -11,7 +11,6 @@ from loop.features.quantile_flag import compute_quantile_cutoff
 from loop.features.quantile_flag import quantile_flag
 from loop.features.forward_breakout_target import compute_forward_breakout_threshold
 from loop.features.forward_breakout_target import forward_breakout_target
-from loop.features.forward_direction_target import forward_direction_target
 from loop.features.price_range_position import price_range_position
 from loop.features.distance_from_high import distance_from_high
 from loop.features.distance_from_low import distance_from_low
@@ -25,7 +24,6 @@ from loop.features.vwap import vwap
 from loop.features.ichimoku_cloud import ichimoku_cloud
 from loop.features.sma_crossover import sma_crossover
 from loop.features.bollinger_position import bollinger_position
-from loop.features.volume_ratio import volume_ratio
 
 __all__ = [
     'conserved_flux_renormalization',
@@ -41,7 +39,6 @@ __all__ = [
     'compute_quantile_cutoff',
     'forward_breakout_target',
     'compute_forward_breakout_threshold',
-    'forward_direction_target',
     'price_range_position',
     'distance_from_high',
     'distance_from_low',
@@ -55,5 +52,4 @@ __all__ = [
     'ichimoku_cloud',
     'sma_crossover',
     'bollinger_position',
-    'volume_ratio'
 ]

@@ -1,6 +1,17 @@
 import numpy as np
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import f1_score, precision_score, accuracy_score
+from tabpfn import TabPFNClassifier
 
 from loop.metrics.binary_metrics import binary_metrics
+
+
+TABPFN_MODEL_PATH = 'tabpfn-v2-classifier-v2_default.ckpt'
+
+THRESHOLD_MIN = 0.20
+THRESHOLD_MAX = 0.70
+THRESHOLD_STEP = 0.05
+DEFAULT_THRESHOLD = 0.35
 
 
 def tabpfn_binary_dynamic(data: dict,
@@ -14,20 +25,18 @@ def tabpfn_binary_dynamic(data: dict,
     Compute TabPFN binary classification with dynamic threshold tuning on validation set.
 
     Args:
-        data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-        n_ensemble_configurations (int): Number of ensemble configurations for TabPFN
-        device (str): Device to run on ('cpu' or 'cuda')
-        use_calibration (bool): Whether to apply isotonic calibration on validation set
-        threshold_metric (str): Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
+        data: Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
+        n_ensemble_configurations: Number of ensemble configurations for TabPFN
+        device: Device to run on ('cpu' or 'cuda')
+        use_calibration: Whether to apply isotonic calibration on validation set
+        threshold_metric: Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
         **kwargs: Additional parameters (ignored)
 
     Returns:
-        dict: Results from binary_metrics with '_preds', 'optimal_threshold', 'val_score' added
+        Results from binary_metrics with '_preds', 'optimal_threshold', 'val_score' added
     '''
 
-    from tabpfn import TabPFNClassifier
-    from sklearn.calibration import CalibratedClassifierCV
-    from sklearn.metrics import f1_score, precision_score, accuracy_score
+    del kwargs
 
     X_train = data['x_train'].to_numpy() if hasattr(data['x_train'], 'to_numpy') else data['x_train']
     y_train = data['y_train'].to_numpy() if hasattr(data['y_train'], 'to_numpy') else data['y_train']
@@ -41,9 +50,9 @@ def tabpfn_binary_dynamic(data: dict,
         y_val = y_val.ravel()
 
     clf = TabPFNClassifier(
-        device='cpu',
+        device=device,
         n_estimators=n_ensemble_configurations,
-        model_path='tabpfn-v2-classifier-v2_default.ckpt',
+        model_path=TABPFN_MODEL_PATH,
         ignore_pretraining_limits=True
     )
 
@@ -58,11 +67,12 @@ def tabpfn_binary_dynamic(data: dict,
         y_val_proba = clf.predict_proba(X_val)[:, 1]
         y_test_proba = clf.predict_proba(X_test)[:, 1]
 
-    thresholds = np.arange(0.20, 0.70, 0.05)
-    best_threshold = 0.35
+    thresholds = np.arange(THRESHOLD_MIN, THRESHOLD_MAX + THRESHOLD_STEP, THRESHOLD_STEP)
+    best_threshold = DEFAULT_THRESHOLD
     best_score = -1
 
     def balanced_metric(y_true, y_pred):
+
         if y_pred.sum() == 0:
             return 0
         prec = precision_score(y_true, y_pred, zero_division=0)
