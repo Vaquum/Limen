@@ -81,7 +81,7 @@ In simple terms, the following constituents can be included in the `manifest` of
 
 The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Loop. 
 
-Full details for working with `SFD Manifest` be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Loop/blob/main/docs/Experiment-Manifest.md)
+Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Loop/blob/main/docs/Experiment-Manifest.md)
 
 
 ## Preparation
