@@ -385,6 +385,6 @@ data mismatch
 - Update tests and docs to incorporate the standard glossary
 - Add local file-based endpoint to `historical_data.py`
 
-# V1.27.0 on 26th December, 2025
+# V1.27.0 on 26th of December, 2025
 - Organize files in root into respective modules
 - Move all data related code from `loop/utils` to `loop/data`
