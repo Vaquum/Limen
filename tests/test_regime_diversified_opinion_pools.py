@@ -8,7 +8,7 @@ import pandas as pd
 import loop
 from loop import sfd
 from loop import RegimeDiversifiedOpinionPools
-from loop.tests.utils.cleanup import cleanup_csv_files
+from tests.utils.cleanup import cleanup_csv_files
 
 
 def test_rdop():

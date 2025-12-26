@@ -1,7 +1,7 @@
 import polars as pl
 import numpy as np
 from datetime import datetime, timedelta
-from loop.manifest import Manifest
+from loop.experiment import Manifest
 from loop.utils.random_slice import random_slice
 
 

@@ -1,10 +1,9 @@
-from loop.historical_data import HistoricalData
+from loop.data import HistoricalData
 from loop.log.log import Log
-from loop.account import Account
+from loop.trading import Account
 from loop.backtest.backtest_sequential import BacktestSequential
-from loop.universal_experiment_loop import UniversalExperimentLoop
-from loop.manifest import Manifest
-from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
+from loop.experiment import UniversalExperimentLoop, Manifest
+from loop.cohort import RegimeDiversifiedOpinionPools
 
 import loop.explorer as explorer
 import loop.features as features

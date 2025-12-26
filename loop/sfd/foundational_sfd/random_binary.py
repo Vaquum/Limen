@@ -1,8 +1,8 @@
 import numpy as np
 import polars as pl
 
-from loop.historical_data import HistoricalData
-from loop.manifest import Manifest
+from loop.data import HistoricalData
+from loop.experiment import Manifest
 from loop.sfd.reference_architecture import random_binary
 
 

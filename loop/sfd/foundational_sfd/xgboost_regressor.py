@@ -1,7 +1,7 @@
 import polars as pl
 
-from loop.historical_data import HistoricalData
-from loop.manifest import Manifest
+from loop.data import HistoricalData
+from loop.experiment import Manifest
 from loop.indicators.window_return import window_return
 from loop.indicators.sma import sma
 from loop.indicators.rolling_volatility import rolling_volatility

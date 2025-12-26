@@ -3,7 +3,7 @@ import uuid
 import sys
 import traceback
 
-from loop.tests.utils.cleanup import cleanup_csv_files
+from tests.utils.cleanup import cleanup_csv_files
 
 
 def test_foundational_sfd():

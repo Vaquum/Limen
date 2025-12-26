@@ -15,7 +15,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from loop import UniversalExperimentLoop
+from loop.experiment import UniversalExperimentLoop
 
 DEFAULT_PERF_COLS = [
     'pred_pos_rate_pct', 'actual_pos_rate_pct',
