@@ -36,9 +36,9 @@ For a contribution to pass this test, it of course requires sufficient explorati
 
 A `Foundational SFD` is an SFD that composes a design of experiment based on a `Reference Architecture` such as `LogReg`.  
 
-The `Foundational SFD` aspect has two parts: `params` and `manifest` which are always named like so.
+The `Foundational SFD` has two parts: `params` and `manifest` which are always named like so.
 
-The `Reference Architecture aspect has one part: `model` which is named according to the underlying architecture (e.g. logreg) and the type of decoder it is (e.g. binary), for example, `logreg_binary`. The name must have exactly two parts separated by underscore.
+The `Reference Architecture` has one part: `model` which is named according to the underlying architecture (e.g. logreg) and the type of decoder it is (e.g. binary), for example, `logreg_binary`. The name must have exactly two parts separated by underscore.
 
 The `manifest` in a `Foundational SFD` can be used to incorporate various `Extensions` into the experiment.
 
