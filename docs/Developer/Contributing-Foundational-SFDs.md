@@ -60,7 +60,7 @@ Extensions can include  `Data`, `Indicators`, `Features`, `Transforms`, and `Lab
 
 `Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `loop.features`.
 
-`Transforms` include all possible data transformations. It can include anything, everything goes here. Transforms must be contributed to `loop.transforms`.
+`Transforms` include all possible data transformations; everything goes here. Transforms must be contributed to `loop.transforms`.
 
 `Labels` include all so-called "dependent variables" and their various manipulations (e.g. confidence gating). Labels must be contributed to `loop.labels`.
 
