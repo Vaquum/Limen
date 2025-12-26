@@ -1,7 +1,6 @@
 import polars as pl
 
 from loop.historical_data import HistoricalData
-from loop.tests.utils.get_data import get_klines_data_fast
 from loop.manifest import Manifest
 from loop.indicators.window_return import window_return
 from loop.indicators.sma import sma
@@ -12,7 +11,7 @@ from loop.features.range_pct import range_pct
 from loop.features.volume_ratio import volume_ratio
 from loop.features.sma_ratios import sma_ratios
 from loop.features.lagged_features import lag_columns
-from loop.sfm.model.xgb_regressor import xgb_regressor
+from loop.sfd.reference_architecture import xgboost_regressor
 
 
 def params():
@@ -40,7 +39,7 @@ def manifest():
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method=get_klines_data_fast)
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
         .set_split_config(8, 1, 2)
         .add_indicator(window_return, period=1)
         .add_indicator(window_return, period=5)
@@ -79,5 +78,5 @@ def manifest():
                 ])
             )
             .done()
-        .with_model(xgb_regressor)
+        .with_model(xgboost_regressor)
     )

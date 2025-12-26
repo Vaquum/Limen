@@ -1,14 +1,14 @@
-# Single-File Model
+# Single File Decoder
 
-The Single-File Model (SFM) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfm`](../loop/sfm). Once an SFM is added to the package, it becomes available to be used as input for [`loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md).
+The Single File Decoder (SFD) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfd`](../loop/sfd). Once an SFD is added to the package, it becomes available to be used as input for [`loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md).
 
-There are two types of SFMs: **Manifest-based SFMs** (recommended for new models) use a declarative manifest to configure data sources and auto-generate data preparation pipelines, while **Legacy SFMs** require manual implementation of data preparation and model functions.
+There are two categories of SFDs: **Foundational SFDs** are the official reference SFDs provided by Loop (all use manifest-based configuration), while **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation of data preparation and model functions.
 
-## SFM Structure
+## SFD Implementation Approaches
 
-### Manifest-Based SFMs (Recommended)
+### Manifest-Based Configuration (Recommended)
 
-Manifest-based SFMs define the experiment pipeline declaratively using a manifest. This approach:
+SFDs using manifest-based configuration define the experiment pipeline declaratively. This approach:
 - Configures data sources for both production and testing
 - Auto-generates data preparation functions from manifest directives
 - Enables automatic data fetching in UEL
@@ -18,12 +18,12 @@ Manifest-based SFMs define the experiment pipeline declaratively using a manifes
 - `params()` - Parameter space definition
 - `manifest()` - Returns an [Experiment Manifest](Experiment-Manifest.md) configuring the entire pipeline
 
-### Legacy SFMs
+### Custom Functions Approach
 
-Legacy SFMs manually implement all data preparation and model operations. This approach:
+SFDs using the custom functions approach directly implement data preparation and model operations. This approach:
 - Requires explicit data to be passed to UEL
-- Manual implementation of data preparation logic
-- Maintained for backward compatibility
+- Custom implementation of data preparation logic
+- Provides full control for specialized use cases
 
 **Required functions:**
 - `params()` - Parameter space definition
@@ -32,9 +32,9 @@ Legacy SFMs manually implement all data preparation and model operations. This a
 
 ## Function Requirements
 
-SFM is a standardized format so certain requirements must be met. The sections below document the requirements for each function type.
+SFD is a standardized format so certain requirements must be met. The sections below document the requirements for each function type.
 
-### Required for All SFMs: `params`
+### Required for All SFDs: `params`
 
 Contains all parameters and their value ranges to be used in the parameter sweep.
 
@@ -51,9 +51,9 @@ Takes no input and returns a dictionary with keys as parameter names, and lists 
 
 **NOTE**: Parameters can be used to parametrize other parameters, for example, where one parameter is a function, and another parameter is an input argument to that function. Such higher-order parameters can be an extremely powerful way to make Loop play the song of Bitcoin.
 
-### Manifest-Based SFMs: `manifest`
+### Manifest-Based SFDs: `manifest`
 
-For manifest-based SFMs, the `manifest()` function returns an [Experiment Manifest](Experiment-Manifest.md) that declaratively configures the entire experiment pipeline. This replaces manual implementation of `prep()` and `model()` functions.
+For manifest-based SFDs, the `manifest()` function returns an [Experiment Manifest](Experiment-Manifest.md) that declaratively configures the entire experiment pipeline. This replaces custom implementation of `prep()` and `model()` functions.
 
 The manifest enables:
 - **Data source configuration**: Specify production and test data sources
@@ -63,9 +63,9 @@ The manifest enables:
 
 See [Experiment Manifest](Experiment-Manifest.md) for complete documentation, requirements, and examples.
 
-### Legacy SFMs
+### Custom Functions: `prep` and `model`
 
-The following sections document legacy SFM functions. These are maintained for backward compatibility but are not recommended for new SFMs.
+The following sections document custom SFD functions for implementations requiring full control over data preparation and model operations.
 
 #### `prep`
 
@@ -101,7 +101,7 @@ Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_p
 
 ## Model Categories
 
-The below table is provided as a guide for identifying model architecture candidates for SFMs.
+The below table is provided as a guide for identifying model architecture candidates for SFDs.
 
 | **Model family** | **Data it tends to shine on** | **Bitcoin-trading sweet-spot** | **Key caveats & blind spots** |
 | --- | --- | --- | --- |

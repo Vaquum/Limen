@@ -10,7 +10,7 @@ import loop.explorer as explorer
 import loop.features as features
 import loop.indicators as indicators
 import loop.metrics as metrics
-import loop.sfm as sfm
+import loop.sfd as sfd
 import loop.reports as reports
 import loop.transforms as transforms
 import loop.utils as utils
@@ -29,7 +29,7 @@ __all__ = [
     'features',
     'indicators',
     'metrics',
-    'sfm',
+    'sfd',
     'reports',
     'transforms',
     'utils',

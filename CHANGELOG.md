@@ -379,3 +379,8 @@ data mismatch
 - Add declarative data fetching to manifest
 - Add data source configuration to all manifest-based SFMs
 
+# V1.26.0 on 25th of December, 2025
+- Remove all but foundational SFDs
+- Prune unused code
+- Update tests and docs to incorporate the standard glossary
+- Add local file-based endpoint to `historical_data.py`

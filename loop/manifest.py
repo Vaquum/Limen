@@ -187,7 +187,7 @@ class Manifest:
         Configure test data source for the manifest.
 
         Args:
-            method (Callable): Function reference (e.g., get_klines_data_fast)
+            method (Callable): Function reference (e.g., HistoricalData._get_data_for_test)
             params (dict): Parameters to pass to the function
 
         Returns:

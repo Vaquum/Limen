@@ -67,7 +67,7 @@ These parts are here called *Folds*.
 - [`Data`](HistoricalData.md)
 - [`Indicator`](Indicators.md)
 - [`Feature`](Features.md)
-- [`SFM`](Single-File-Model.md)
+- [`SFD`](Single-File-Decoder.md)
 - [`UEL`](Universal-Experiment-Loop.md) 
 - `Log`
 - `Benchmark`
@@ -89,25 +89,25 @@ Read more in: [HistoricalData](Historical-Data.md)
 
 ### `Indicator`
 
-Includes common technical indicators, and any other non-compound signal that can be used for training models. Both Indicators and Features can be used in SFMs.
+Includes common technical indicators, and any other non-compound signal that can be used for training models. Both Indicators and Features can be used in SFDs.
 
 Read more in: [Indicators](Indicators.md)
 
 ### `Feature`
 
-More complex than Indicators, and often involve further refining Indicators or combining several Indicators into a single Feature. Feature can be anything, for example data on moon phases, sentiment, electricity prices, etc. Both Indicators and Features can be used in SFMs.
+More complex than Indicators, and often involve further refining Indicators or combining several Indicators into a single Feature. Feature can be anything, for example data on moon phases, sentiment, electricity prices, etc. Both Indicators and Features can be used in SFDs.
 
 Read more in: [Feature](Features.md)
 
-### `SFM`
+### `SFD`
 
 Contains all parameters, data preparation code, and model operation codes in a single python file. For example, representing an XGBoost bullish regime binary classifier.
 
-Read more in: [Single-File-Model](Single-File-Model.md)
+Read more in: [Single File Decoder](Single-File-Decoder.md)
 
 ### `UEL`
 
-(Universal Experiment Loop) is an iterative experiment loop where SFMs are used as basis for ad-hoc or continuous parameter sweeps. 
+(Universal Experiment Loop) is an iterative experiment loop where SFDs are used as basis for ad-hoc or continuous parameter sweeps. 
 
 Read more in: [UEL](Universal-Experiment-Loop.md)
 

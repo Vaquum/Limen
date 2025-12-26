@@ -89,13 +89,13 @@ Creates the RDOP system instance.
 
 | Parameter      | Type               | Description                                                                |
 |----------------|--------------------|----------------------------------------------------------------------------|
-| `sfm`          | `SingleFileModel`  | SFM to use for individual model experiments (must match offline training) |
+| `sfd`          | `SingleFileDecoder`  | SFD to use for individual model experiments (must match offline training) |
 | `random_state` | `int`              | Random state for reproducible clustering and model selection (default: 42) |
 
 ### Notes
 
-- Manifest is automatically extracted from SFM during initialization
-- Supports SFMs with or without custom manifest functions
+- Manifest is automatically extracted from SFD during initialization
+- Supports SFDs with or without custom manifest functions
 - Thread-safe for parallel operation after training
 
 ## Integration Points
@@ -106,11 +106,11 @@ RDOP extends UEL workflows by providing model-level diversification:
 
 ```python
 # Standard UEL produces individual model results
-uel = UniversalExperimentLoop(data=train_data, single_file_model=your_sfm)
+uel = UniversalExperimentLoop(data=train_data, sfd=your_sfd)
 uel.run('training_experiment', n_permutations=500)
 
 # RDOP consumes UEL results for regime-aware aggregation
-rdop = RegimeDiversifiedOpinionPools(your_sfm)
+rdop = RegimeDiversifiedOpinionPools(your_sfd)
 offline_result = rdop.offline_pipeline(uel.experiment_confusion_metrics, k_regimes=3)
 
 # RDOP provides more stable predictions than individual models
@@ -119,12 +119,12 @@ online_result = rdop.online_pipeline(production_data)
 
 ### With Experiment Manifest
 
-Fully supports manifest-based SFMs with Universal Split-First architecture:
+Fully supports manifest-based SFDs with Universal Split-First architecture:
 
 ```python
-# Manifest-based SFM works seamlessly with RDOP
-if hasattr(your_sfm, 'manifest'):
-    manifest = your_sfm.manifest()
+# Manifest-based SFD works seamlessly with RDOP
+if hasattr(your_sfd, 'manifest'):
+    manifest = your_sfd.manifest()
     uel.run('experiment', manifest=manifest)  # RDOP will use same manifest
 ```
 
@@ -149,16 +149,16 @@ if hasattr(your_sfm, 'manifest'):
 
 ```python
 import loop
-from loop import sfm
+from loop import sfd
 from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
 
 # Step 1: Train individual models (existing Loop workflow)
-uel = loop.UniversalExperimentLoop(data=train_data, single_file_model=sfm.lightgbm.tradeable_regressor)
-uel.run('lgboost_training', n_permutations=1000, prep_each_round=True)
+uel = loop.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)
+uel.run('logreg_training', n_permutations=1000, prep_each_round=True)
 confusion_df = uel.experiment_confusion_metrics
 
 # Step 2: Train RDOP diversification system
-rdop = RegimeDiversifiedOpinionPools(sfm.lightgbm.tradeable_regressor)
+rdop = RegimeDiversifiedOpinionPools(sfd.foundational_sfd.logreg_binary)
 regime_pools = rdop.offline_pipeline(
     confusion_df,
     k_regimes=5,                  # 5 different market regimes

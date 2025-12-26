@@ -3,7 +3,7 @@ import xgboost as xgb
 from loop.metrics.continuous_metrics import continuous_metrics
 
 
-def xgb_regressor(data: dict,
+def xgboost_regressor(data: dict,
                   learning_rate: float = 0.01,
                   max_depth: int = 3,
                   n_estimators: int = 500,

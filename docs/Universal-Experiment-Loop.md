@@ -1,13 +1,13 @@
 # Universal Experiment Loop
 
-Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its input data and a Single-File Model (SFM). `UEL` currently wraps onto itself (i.e. the object `uel.run` yields) all the folds from `Data` to `Backtest`. In other words, all the following folds are wrapped into one workflow `uel.run`:
+Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its input data and a Single File Decoder (SFD). `UEL` currently wraps onto itself (i.e. the object `uel.run` yields) all the folds from `Data` to `Backtest`. In other words, all the following folds are wrapped into one workflow `uel.run`:
 
 - [`Data`](HistoricalData.md)
 - [`Indicator`](Indicators.md)
 - [`Feature`](Features.md)
-- [`SFM`](Single-File-Model.md)
-- [`UEL`](Universal-Experiment-Loop.md) 
-- [`Log`](Log.md) 
+- [`SFD`](Single-File-Decoder.md)
+- [`UEL`](Universal-Experiment-Loop.md)
+- [`Log`](Log.md)
 - `Benchmark`
 - `Backtest`
 
@@ -31,9 +31,9 @@ In other words, the idea of performing a parameter sweep is equally relevant to 
 
 The meaning of the term experiment is encapsulated by the below workflow. 
 
-`Choose Data` -> `Choose Indicators` -> `Choose Features` -> `Develop SFM` -> `Run UEL` -> `Analyze Experiment Log` -> `Analyze Experiment Confusion Metrics` -> `Analyze Backtest Results` -> `Refine Parameters` -> `Run UEL` -> `...`
+`Choose Data` -> `Choose Indicators` -> `Choose Features` -> `Develop SFD` -> `Run UEL` -> `Analyze Experiment Log` -> `Analyze Experiment Confusion Metrics` -> `Analyze Backtest Results` -> `Refine Parameters` -> `Run UEL` -> `...`
 
-For an SFM to become mature and ready for trading, one must iterate between running `UEL` and refining parameters many times. Generally speaking, even a relatively small parameter space requires thousands or tens of thousands of permutation rounds before meaningful analytical power is unlocked.
+For an SFD to become mature and ready for trading, one must iterate between running `UEL` and refining parameters many times. Generally speaking, even a relatively small parameter space requires thousands or tens of thousands of permutation rounds before meaningful analytical power is unlocked.
 
 ## Refining Parameters
 
@@ -43,15 +43,15 @@ Refining parameters can be understood through expanding or contracting parameter
 
 A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from the provided (klines) endpoints available through [HistoricalData](Historical-Data.md). If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need, or make a PR that commits the proposed change.
 
-**Declarative manifest approach:** Manifest-based SFMs can configure data sources in their manifest, enabling UEL to automatically fetch data. See [Experiment Manifest](Experiment-Manifest.md) for details. 
+**Declarative manifest approach:** Manifest-based SFDs can configure data sources in their manifest, enabling UEL to automatically fetch data. See [Experiment Manifest](Experiment-Manifest.md) for details.
 
-## SFM
+## SFD
 
-An SFM contains all parameters, data preparation code, and model operation codes in a single python file. For example, representing an XGBoost bullish regime binary classifier.
+An SFD contains all parameters, data preparation code, and model operation codes in a single python file. For example, representing a logistic regression binary classifier.
 
-**Legacy SFMs** require explicit data to be passed to UEL. **Manifest-based SFMs** include a `manifest()` function that configures the entire experiment pipeline, including data sources, enabling UEL to automatically fetch data.
+**Foundational SFDs** are the official reference SFDs provided by Loop (all use manifest-based configuration). **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation. Manifest-based SFDs include a `manifest()` function that configures the entire experiment pipeline and enables automatic data fetching.
 
-Read more in [Single File Model](Single-File-Model.md).
+Read more in [Single File Decoder](Single-File-Decoder.md).
 
 ## `UniversalExperimentLoop`
 
@@ -59,19 +59,19 @@ Initializes the Universal Experiment Loop.
 
 ### Args
 
-**Note:** All arguments are keyword-only (use `data=...`, `single_file_model=...`).
+**Note:** All arguments are keyword-only (use `data=...`, `sfd=...`).
 
 | Parameter             | Type               | Description                                           |
 |-----------------------|--------------------|-------------------------------------------------------|
-| `data`                | `pl.DataFrame`     | Optional. Experiment data. Required for legacy SFMs. For manifest-based SFMs, if not provided, data is automatically fetched from configured sources based on `LOOP_ENV` environment variable (defaults to 'test'). |
-| `single_file_model`   | `SingleFileModel`  | The single file model to use for the experiment.      |
+| `data`                | `pl.DataFrame`     | Optional. Experiment data. Required for SFDs using custom functions approach. For manifest-based SFDs, if not provided, data is automatically fetched from configured sources based on `LOOP_ENV` environment variable (defaults to 'test'). |
+| `sfd`                 | `SingleFileDecoder`| The single file decoder to use for the experiment.    |
 
 
 ### `run`
 
-Runs the experiment `n_permutations` times. 
+Runs the experiment `n_permutations` times.
 
-**NOTE:** You can always over-ride any or all of `params` or `prep` or `model` by passing them through here as input arguments. Just make sure that the inputs and returns are same as the ones outlined in [Single File Model](Single-File-Model.md).
+**NOTE:** For **custom SFDs**, you can override any or all of `params`, `prep`, or `model` by passing them as input arguments. For **foundational SFDs**, the manifest auto-generates `prep` from declarative configuration and specifies `model` via `.with_model()`. When overriding, ensure inputs and returns match the contracts outlined in [Single File Decoder](Single-File-Decoder.md).
 
 ### Args
 
@@ -79,14 +79,14 @@ Runs the experiment `n_permutations` times.
 |-------------------------------|-------------------|---------------------------------------------------------------------------------------------------------|
 | `experiment_name`             | `str`             | The experiment name. Also used as the CSV filename written in the project root (`<name>.csv`).          |
 | `n_permutations`              | `int`             | Number of permutations to run (default: 10000).                                                         |
-| `prep_each_round`             | `bool`            | If `True`, calls `sfm.prep(data, round_params=...)` on every round. If `False`, calls `sfm.prep(data)` once on the first round. |
+| `prep_each_round`             | `bool`            | If `True`, calls `sfd.prep(data, round_params=...)` on every round. If `False`, calls `sfd.prep(data)` once on the first round. |
 | `random_search`               | `bool`            | If `True`, sample the parameter space randomly; if `False`, iterate deterministically (grid-like).      |
 | `maintain_details_in_params`  | `bool`            | If `True`, injects `_experiment_details` (e.g., current index) into `round_params` for logging, then removes it before writing results. |
 | `context_params`              | `dict`            | Extra context passed into `round_params` for every round (useful for identifiers like symbol, horizon). |
 | `save_to_sqlite`              | `bool`            | If `True`, appends results to SQLite at `/opt/experiments/experiments.sqlite` under table `experiment_name`. |
-| `params`                      | `Callable`        | Optional override for the SFM `params` function. Must return a parameter space dictionary.              |
-| `prep`                        | `Callable`        | Optional override for the SFM `prep` function. Must follow the standard input/output contract.          |
-| `model`                       | `Callable`        | Optional override for the SFM `model` function. Must follow the standard input/output contract.         |
+| `params`                      | `Callable`        | Optional override for the SFD `params` function. Must return a parameter space dictionary.              |
+| `prep`                        | `Callable`        | Optional override for the SFD `prep` function. Must follow the standard input/output contract.          |
+| `model`                       | `Callable`        | Optional override for the SFD `model` function. Must follow the standard input/output contract.         |
 
 ### Returns
 
@@ -98,15 +98,15 @@ Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming 
 #### Artifacts on the `UniversalExperimentLoop` instance
 
 - `data`: The `pl.DataFrame` used by the loop (explicitly passed or auto-fetched from manifest)
-- `params`: The parameter space in use (from SFM `params()` or `params` override in `run()`)
-- `prep`: The data preparation function (auto-generated from manifest for manifest-based SFMs, from SFM `prep()` for legacy SFMs, or `prep` override in `run()`)
-- `model`: The model function (from manifest via `with_model()` for manifest-based SFMs, from SFM `model()` for legacy SFMs, or `model` override in `run()`)
+- `params`: The parameter space in use (from SFD `params()` or `params` override in `run()`)
+- `prep`: The data preparation function (auto-generated from manifest for manifest-based SFDs, from SFD `prep()` for custom functions approach, or `prep` override in `run()`)
+- `model`: The model function (from manifest via `with_model()` for manifest-based SFDs, from SFD `model()` for custom functions approach, or `model` override in `run()`)
 - `round_params`: `list[dict]` of the actual parameter sets used in each permutation
 - `experiment_log`: `pl.DataFrame` containing accumulated round results (first row created on round 0, then vstacked)
-- `extras`: `list[Any]` of any extra artifacts returned by the SFM (when `round_results` contained an `extras` key)
-- `models`: `list[Any]` of models returned by the SFM (when `round_results` contained a `models` key)
-- `preds`: `list[Any]` predictions captured from the SFM when `round_results['_preds']` is present
-- `scalers`: `list[Any]` scalers captured from SFM `prep` when the data dict includes `_scaler`
+- `extras`: `list[Any]` of any extra artifacts returned by the SFD (when `round_results` contained an `extras` key)
+- `models`: `list[Any]` of models returned by the SFD (when `round_results` contained a `models` key)
+- `preds`: `list[Any]` predictions captured from the SFD when `round_results['_preds']` is present
+- `scalers`: `list[Any]` scalers captured from SFD `prep` when the data dict includes `_scaler`
 - `_alignment`: `list[dict]` alignment metadata per round, as produced by `utils.splits.split_data_to_prep_output`:
   - `missing_datetimes`: list of datetimes dropped during prep
   - `first_test_datetime` / `last_test_datetime`: inclusive test window bounds
@@ -139,39 +139,23 @@ If you need additional methods, access the internal `Log` via `uel._log` (see [L
 - `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
 
 
-**NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfm.prep` is not any random operations, or if you must have random operations, use parametric seeds for round-by-round reproducibility.
+**NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfd.prep` is not any random operations, or if you must have random operations, use parametric seeds for round-by-round reproducibility.
 
 ### Example
 
 ```python
 import loop
-from loop import sfm
-from loop.historical_data import HistoricalData
+from loop import sfd
 
-# Manifest-based SFM with auto-fetch (recommended)
+# Manifest-based SFD with auto-fetch
 # Data is automatically fetched from manifest-configured sources
-uel = loop.UniversalExperimentLoop(single_file_model=sfm.reference.logreg)
+uel = loop.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(
     experiment_name='exp_logreg',
     n_permutations=100,
     prep_each_round=True,
     random_search=True,
-)
-
-# Legacy SFM (requires explicit data)
-historical = HistoricalData()
-historical.get_spot_klines(kline_size=3600, start_date_limit='2024-01-01')
-
-uel_legacy = loop.UniversalExperimentLoop(
-    data=historical.data,
-    single_file_model=sfm.lightgbm.tradeline_long_binary,
-)
-
-uel_legacy.run(
-    experiment_name='exp_tradeline',
-    n_permutations=10,
-    prep_each_round=False,
 )
 
 # Post-run analysis via precomputed artifacts and internal Log

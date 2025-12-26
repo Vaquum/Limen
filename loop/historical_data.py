@@ -198,5 +198,28 @@ class HistoricalData:
                                              table_name=table_name,
                                              sort_by=sort_by,
                                              show_summary=show_summary)
-        
+
+        self.data_columns = self.data.columns
+
+    def _get_data_for_test(self, n_rows: Optional[int] = 5000):
+
+        '''
+        Get test klines data from local CSV file for testing purposes.
+
+        NOTE: This is a test-only method used by SFDs to load sample data
+        during test runs. Uses datasets/klines_2h_2020_2025.csv.
+
+        Args:
+            n_rows (int | None): Number of rows to read from CSV (default: 5000).
+                                 If None, reads entire file.
+
+        Returns:
+            None (sets self.data with the loaded klines data)
+        '''
+
+        import pandas as pd
+
+        df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=n_rows)
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        self.data = pl.from_pandas(df)
         self.data_columns = self.data.columns

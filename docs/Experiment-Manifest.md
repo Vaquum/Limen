@@ -9,7 +9,7 @@ The Experiment Manifest provides a declarative system for configuring Loop exper
 - **Automatic data fetching**: Configure data sources once, UEL fetches automatically based on environment.
 - **Reproducible experiments**: Entire pipeline configuration in one place.
 - **Universal Split-First architecture**: Data splits before processing, preventing data leakage.
-- **Auto-generated SFM functions**: Manifest generates much of the boilerplate code in the SFM.
+- **Auto-generated SFD functions**: Manifest generates much of the boilerplate code in the SFD.
 - **Declarative approach**: Clear, readable pipeline definition.
 
 ### Universal Split-First Architecture
@@ -44,15 +44,15 @@ The manifest approach is **deliberately opinionated** to enforce best practices 
 - Learning curve (Polars API, manifest patterns)
 - Less flexible (harder for non-standard workflows)
 
-**When to use:** Production SFMs, reproducibility-critical work, collaborative projects
+**When to use:** Production SFDs, reproducibility-critical work, collaborative projects
 
-**When to skip:** complex data workflows, external library integration (use Legacy SFMs)
+**When to skip:** Complex data workflows or external library integration requiring custom functions approach
 
 This is appropriate for financial trading systems where **correctness and reproducibility are paramount**. The opinions are deliberate guardrails, not arbitrary restrictions.
 
 ## Quick Start
 
-Here's a complete minimal manifest-based SFM:
+Here's a complete minimal manifest-based SFD:
 
 ```python
 from loop.manifest import Manifest
@@ -62,7 +62,7 @@ from loop.indicators import roc
 from loop.features import quantile_flag, compute_quantile_cutoff
 from loop.utils import shift_column
 from loop.transforms.linear_transform import LogregTransform
-from loop.sfm.model import logreg_binary
+from loop.sfd.reference_architecture import logreg_binary
 
 def params():
     return {
@@ -107,10 +107,10 @@ def manifest():
 
 ```python
 import loop
-from loop import sfm
+from loop import sfd
 
 # Data is automatically fetched from manifest-configured sources
-uel = loop.UniversalExperimentLoop(single_file_model=sfm.reference.logreg)
+uel = loop.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(experiment_name='my_experiment', n_permutations=100)
 ```
@@ -768,25 +768,22 @@ Configure model function for training and evaluation. Parameters are automatical
 
 **Returns:** `Manifest` (self for chaining)
 
-**Import from:** `loop.sfm.model`
+**Import from:** `loop.sfd.reference_architecture`
 
 **Available model functions:**
 
 ```python
-from loop.sfm.model import (
-    ridge_binary,              # Ridge classifier with binary metrics
+from loop.sfd.reference_architecture import (
     logreg_binary,             # Logistic regression with binary metrics
-    logreg_multiclass,         # Logistic regression with multiclass metrics
-    ridge_regression,          # Ridge regression with continuous metrics
-    lgb_tradeable_regression,  # LightGBM tradeable regression
-    # ... and more in loop/sfm/model/
+    random_binary,             # Random baseline classifier
+    xgboost_regressor,         # XGBoost regressor
 )
 ```
 
 **Example:**
 
 ```python
-.with_model(ridge_binary)
+.with_model(logreg_binary)
 ```
 
 ### Auto-Parameter Mapping
@@ -803,7 +800,7 @@ The manifest automatically maps parameters from `round_params` to the model func
 
 ```python
 # Model function signature
-def ridge_binary(data, alpha=1.0, use_calibration=True, ...):
+def logreg_binary(data, C=1.0, use_calibration=True, ...):
     ...
 
 # In params()
@@ -814,7 +811,7 @@ def params():
     }
 
 # Manifest
-.with_model(ridge_binary)
+.with_model(logreg_binary)
 # Parameters 'alpha' and 'use_calibration' automatically mapped!
 ```
 
@@ -862,7 +859,7 @@ def model_name(data: dict, param1=default1, ..., paramN=defaultN) -> dict:
 
 ## Complete Reference Example
 
-Here's a comprehensive manifest-based SFM showing most available features:
+Here's a comprehensive manifest-based SFD showing most available features:
 
 ```python
 from loop.manifest import Manifest
@@ -877,7 +874,7 @@ from loop.features import (
 )
 from loop.utils import shift_column
 from loop.transforms.linear_transform import LinearTransform
-from loop.sfm.model import ridge_binary
+from loop.sfd.reference_architecture import logreg_binary
 
 def params():
     return {
@@ -959,7 +956,7 @@ def manifest():
         .set_scaler(LinearTransform)
 
         # Model
-        .with_model(ridge_binary)
+        .with_model(logreg_binary)
     )
 ```
 
@@ -1100,6 +1097,6 @@ def model_function(data: dict,
 ---
 
 **For more information:**
-- [Single File Model](Single-File-Model.md) - SFM structure and requirements
+- [Single File Decoder](Single-File-Decoder.md) - SFD structure and requirements
 - [Universal Experiment Loop](Universal-Experiment-Loop.md) - Running experiments
-- Code examples in `loop/sfm/` directory
+- Code examples in `loop/sfd/` directory

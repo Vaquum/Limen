@@ -17,11 +17,11 @@ There are hundreds of well-known indicators, but they all fall under eight diffe
 | **7** | **Sentiment & Flow** | How are humans (and bots) feeling and positioning? | Fear & Greed Index, Social-media volume, Exchange net inflows/outflows[^3], CEX/DEX positioning trackers, Google-Trends hits for “buy bitcoin” | – |
 | **8** | **Macro & Liquidity** | What outside forces could push Bitcoin around? | DXY (U.S.-Dollar Index), Fed balance-sheet or global M2 growth, Treasury-yield curve shifts, Stable-coin supply expansion/contraction, BTC dominance, ETH/BTC ratio, Altcoin breadth metrics | Captures *relative-value / breadth* and cross-asset correlations |
 
-## Indicators and SFMs
+## Indicators and SFDs
 
-Read more about SFMs in: [Single File Model](Single-File-Model.md)
+Read more about SFDs in: [Single File Decoder](Single-File-Decoder.md)
 
-There can be an infinite number of distinct model architectures, but they all belong to one of 13 model families. Since model archicture and Indicators both give energy to SFMs, it is important to think about in a tightly coupled way. The below table provides an indication of how such thinking may appear.
+There can be an infinite number of distinct model architectures, but they all belong to one of 13 model families. Since model archicture and Indicators both give energy to SFDs, it is important to think about in a tightly coupled way. The below table provides an indication of how such thinking may appear.
 
 | Model family | Most-suitable indicator buckets (of the 8) | Least-suitable indicator buckets | Notes |
 |--------------|-------------------------------------------|----------------------------------|-------|

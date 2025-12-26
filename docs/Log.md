@@ -178,14 +178,14 @@ Create a table of model predictions, actual outcomes, and basic price movement s
 
 ### Determinism and per-round reconstruction
 
-`Log` may call your SFM `prep` to reconstruct the per-round test split (e.g., in `permutation_prediction_performance`). To ensure predictions align with reconstructed `actuals` and prices:
+`Log` may call your SFD `prep` to reconstruct the per-round test split (e.g., in `permutation_prediction_performance`). To ensure predictions align with reconstructed `actuals` and prices:
 
 - Prefer deterministic `prep` logic governed entirely by `round_params` (e.g., fixed seeds for any sampling).
 - Or run UEL with `prep_each_round=True` so the same `round_params` are applied to prep on every round.
 
 ### Persisting predictions and complex artifacts
 
-- To make test-set predictions available for downstream analysis, set `round_results['_preds'] = <numpy_or_array_like>` inside your SFM `model`. UEL will capture these into `uel.preds`, which `Log` uses when building per-round tables.
+- To make test-set predictions available for downstream analysis, set `round_results['_preds'] = <numpy_or_array_like>` inside your SFD `model`. UEL will capture these into `uel.preds`, which `Log` uses when building per-round tables.
 - Store complex or large objects (e.g., models, feature importances, intermediate frames) under `round_results['extras']`. These are not flattened into the experiment log but are preserved in `uel.extras` for later access.
 
 ### `_get_test_data_with_all_cols`

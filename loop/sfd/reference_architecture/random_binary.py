@@ -3,8 +3,8 @@ import numpy as np
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def random_clf_binary(data: dict,
-                      random_weights: float = 0.5) -> dict:
+def random_binary(data: dict,
+                  random_weights: float = 0.5) -> dict:
 
     '''
     Random binary classifier for testing and demonstration purposes.
