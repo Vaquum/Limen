@@ -106,7 +106,7 @@ Once a Reference Architecture is decided upon, certain requirements must be met:
 ### Deliverables
 
 - A thesis that summarize the findings of the research performed
-- A a model card that has the following sections:
+- A model card that has the following sections:
   - Reference Architecture description and links to literature
   - Indicators that were selected, with justification
   - Features that were selected, with justification
