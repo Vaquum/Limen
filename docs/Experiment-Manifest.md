@@ -240,7 +240,7 @@ Configure data selection before splitting (e.g., random sampling for faster expe
 **Common use case:**
 
 ```python
-from loop.utils.random_slice import random_slice
+from loop.data.utils import random_slice
 
 .set_pre_split_data_selector(
     random_slice,
