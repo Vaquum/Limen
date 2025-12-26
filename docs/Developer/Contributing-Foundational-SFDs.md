@@ -4,6 +4,15 @@
 
 With regard to Single File Decoders (SFD), there are two kinds: `foundational` and `custom`.  This document is focused on Foundational SFDs, and sets forth strict requirements for contributing Foundational SFDs into Vaquum Loop.
 
+## Terminology
+
+The Loop `Foundational SFD` here means two things coming together: The `Foundational SFD` itself coming together with a `Reference Architecture`. 
+
+A canonical example can be found in:
+
+`Foundational SFD`: https://github.com/Vaquum/Loop/blob/main/loop/sfd/foundational_sfd/logreg_binary.py
+`Reference Architecture`: https://github.com/Vaquum/Loop/blob/main/loop/sfd/reference_architecture/logreg_binary.py
+
 ## Motivation
 
 The motivation for a Foundational SFD, is to capture honestly and directly, pertaining to a single trainable reference architecture (e.g. LogReg), the state-of-the-art scientific data and literature without adding any out-of-literature innovation to it. 
@@ -11,6 +20,17 @@ The motivation for a Foundational SFD, is to capture honestly and directly, pert
 **Contributing Foundational SFDs is contributing to the beating heart of Loop, it is where the intelligence resides. Rest of Loop is, for the most part, aggregation and transport.**
 
 **NOTE:** Initially, during January 2026, we want to incorporate 6-8 new Foundational Manifests with their respective underlying reference architectures. https://github.com/Vaquum/Loop/issues/297
+
+## Minimal Requirements
+
+- Relies on a `Reference Architecture`
+- Is entirely based on `manifest`
+- `Parameters` are richly exposed
+- All the requirements in the below sections are satisfied
+
+**The test:** Can anyone just run it with Loop in a large scan, and it will yield something meaningful? 
+
+For a contribution to pass this test, it of course requires sufficient exploration of the parameter space. 
 
 ## Foundational SFD
 
