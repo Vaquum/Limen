@@ -10,8 +10,8 @@ The Loop `Foundational SFD` here means two things coming together: The `Foundati
 
 A canonical example can be found in:
 
-`Foundational SFD`: https://github.com/Vaquum/Loop/blob/main/loop/sfd/foundational_sfd/logreg_binary.py
-`Reference Architecture`: https://github.com/Vaquum/Loop/blob/main/loop/sfd/reference_architecture/logreg_binary.py
+- **Foundational SFD**: https://github.com/Vaquum/Loop/blob/main/loop/sfd/foundational_sfd/logreg_binary.py
+- **Reference Architecture**: https://github.com/Vaquum/Loop/blob/main/loop/sfd/reference_architecture/logreg_binary.py
 
 ## Motivation
 
