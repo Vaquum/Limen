@@ -58,7 +58,7 @@ Extensions can include  `Data`, `Indicators`, `Features`, `Transforms`, and `Lab
 
 `Indicators` include common technical indicators, and any other non-compound signal that can be used for training models. Indicators must be contributed to `loop.indicators`.
 
-`Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `loop.features`.
+`Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `loop.features`.
 
 `Transforms` include all possible data transformations. It can include anything, everything goes here. Transforms must be contributed to `loop.transforms`.
 
