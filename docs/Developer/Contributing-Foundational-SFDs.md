@@ -101,7 +101,7 @@ Once a Reference Architecture is decided upon, certain requirements must be met:
 
 - The scope of research requests is pinned down to: quantitative finance, day trading
 - Three frontier model in their deep research mode is used for initial research
-- At three frontier model are used for cross-checking findings and for establishing consensus
+- At least three frontier models are used for cross-checking findings and for establishing consensus.
 
 ### Deliverables
 
