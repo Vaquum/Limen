@@ -42,9 +42,9 @@ The `Reference Architecture` has one part: `model` which is named according to t
 
 The `manifest` in a `Foundational SFD` can be used to incorporate various `Extensions` into the experiment.
 
-`Extensions` are the primary mean by which the contributing modeller transmit intelligence in to the `Foundational SFD`. 
+`Extensions` are the primary mean by which the contributing modeller transmits intelligence in to the `Foundational SFD`. 
 
-**Note:**, how this mode of transmitting intelligence is in stark contrast with the approach where the contributing modeller transmit intelligence into the reference architecture through bespoke workflow code. 
+**NOTE:** how this mode of transmitting intelligence is in stark contrast with the approach where the contributing modeller transmits intelligence into the reference architecture through bespoke workflow code. 
 
 **Here, adding workflow code that is not strictly specific to the `Reference Architecture` is strictly prohibited.** 
 
