@@ -65,3 +65,19 @@ Compute standard Z-score scaling for numeric columns.
 #### Returns
 
 `pl.DataFrame`: The input data with Z-scored numeric columns
+
+### `shift_column_transform`
+
+Shift a column by a specified number of periods.
+
+#### Args
+
+| Parameter  | Type           | Description                                   |
+|------------|----------------|-----------------------------------------------|
+| `data`     | `pl.DataFrame` | Input DataFrame                               |
+| `shift`    | `int`          | Number of periods to shift (negative for forward shift) |
+| `column`   | `str`          | Name of column to shift                       |
+
+#### Returns
+
+`pl.DataFrame`: DataFrame with shifted column
