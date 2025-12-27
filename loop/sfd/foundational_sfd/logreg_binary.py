@@ -7,7 +7,7 @@ from loop.indicators import atr
 from loop.indicators import ppo
 from loop.indicators import roc
 from loop.scalers import LogRegScaler
-from loop.utils.shift_column import shift_column
+from loop.transforms import shift_column_transform
 from loop.experiment import Manifest
 from loop.sfd.reference_architecture import logreg_binary
 from loop.data import HistoricalData
@@ -52,7 +52,7 @@ def manifest():
             .add_fitted_transform(quantile_flag)
                 .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
-            .add_transform(shift_column, shift='shift', column='target_column')
+            .add_transform(shift_column_transform, shift='shift', column='target_column')
             .done()
 
         .set_scaler(LogRegScaler)
