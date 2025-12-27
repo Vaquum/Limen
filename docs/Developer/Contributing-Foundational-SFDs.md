@@ -52,7 +52,7 @@ If and when the authoritative literature implies additional workflow interventio
 
 ## Extensions
 
-Extensions can include  `Data`, `Indicators`, `Features`, `Transforms`, and `Labels`. 
+Extensions can include  `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and `Labels`.
 
 `Data` include any input data, for the time being, various market data, framed in various ways.
 
@@ -60,15 +60,17 @@ Extensions can include  `Data`, `Indicators`, `Features`, `Transforms`, and `Lab
 
 `Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `loop.features`.
 
-`Transforms` include all possible data transformations; everything goes here. Transforms must be contributed to `loop.transforms`.
+`Scalers` are stateful preprocessing transformations that fit on training data and then transform any dataset using learned parameters. They follow scikit-learn's convention (e.g., StandardScaler) and are used with `.set_scaler()` in manifests. Scalers must be contributed to `loop.scalers`.
+
+`Transforms` include stateless data transformations that compute statistics and apply transformations in a single step. Transforms must be contributed to `loop.transforms`.
 
 `Labels` include all so-called "dependent variables" and their various manipulations (e.g. confidence gating). Labels must be contributed to `loop.labels`.
 
-`Parameters` include all the parameters to be included in the experiment. These can include controls for Data, Indicators, Features, Transforms, Labels, and in the future, even Parameters themselves. Parameters are included in the respective Foundational SFD file.
+`Parameters` include all the parameters to be included in the experiment. These can include controls for Data, Indicators, Features, Scalers, Transforms, Labels, and in the future, even Parameters themselves. Parameters are included in the respective Foundational SFD file.
 
 ## SFD Manifest Constituents
 
-In simple terms, the following constituents can be included in the `manifest` of an SFD: 
+In simple terms, the following constituents can be included in the `manifest` of an SFD:
 
 - Manifest
 - Reference Architecture
@@ -76,21 +78,23 @@ In simple terms, the following constituents can be included in the `manifest` of
 - Data
 - Indicators
 - Features
+- Scalers
 - Transforms
 - Labels
 
-The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Loop. 
+The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Loop. 
 
 Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Loop/blob/main/docs/Experiment-Manifest.md)
 
 
 ## Preparation
 
-Once a Reference Architecture is decided upon, certain requirements must be met: 
+Once a Reference Architecture is decided upon, certain requirements must be met:
 
 - A comprehensive literature review to understand what kind of `Data` works best  for the Reference Architecture
 - A comprehensive literature review to understand what kind of `Indicators` works best  for the Reference Architecture
 - A comprehensive literature review to understand what kind of `Features` works best  for the Reference Architecture
+- A comprehensive literature review to understand what kind of `Scalers` works best  for the Reference Architecture
 - A comprehensive literature review to understand what kind of `Transforms` works best  for the Reference Architecture
 - A comprehensive literature review to understand what kind of `Labels` works best  for the Reference Architecture
 - A comprehensive literature review to understand what kind of `Params` works best  for the Reference Architecture
@@ -110,6 +114,7 @@ Once a Reference Architecture is decided upon, certain requirements must be met:
   - Reference Architecture description and links to literature
   - Indicators that were selected, with justification
   - Features that were selected, with justification
+  - Scalers that were selected, with justification
   - Transforms that were selected, with justification
   - Labels that were selected, with justification
   - Parameters that were selected, with justification
