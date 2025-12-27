@@ -60,7 +60,7 @@ from loop.data import HistoricalData
 from loop.indicators import roc
 from loop.features import quantile_flag, compute_quantile_cutoff
 from loop.utils import shift_column
-from loop.transforms.linear_transform import LogregTransform
+from loop.scalers import LogRegScaler
 from loop.sfd.reference_architecture import logreg_binary
 
 def params():
@@ -695,14 +695,14 @@ Set scaler/transform class for data preprocessing. The scaler is fitted on train
 **Available scalers:**
 
 ```python
-from loop.transforms.linear_transform import LinearTransform    # Min-max scaling
-from loop.transforms.logreg_transform import LogRegTransform    # Logistic regression specific
+from loop.scalers import LinearScaler    # Linear scaling
+from loop.scalers import LogRegScaler    # Logistic regression specific
 ```
 
 **Example:**
 
 ```python
-.set_scaler(LinearTransform)
+.set_scaler(LinearScaler)
 ```
 
 ## Data Dict Extension
@@ -875,7 +875,7 @@ from loop.features import (
     compute_quantile_cutoff
 )
 from loop.utils import shift_column
-from loop.transforms.linear_transform import LinearTransform
+from loop.scalers import LinearScaler
 from loop.sfd.reference_architecture import logreg_binary
 
 def params():
@@ -955,7 +955,7 @@ def manifest():
             .done()
 
         # Scaler
-        .set_scaler(LinearTransform)
+        .set_scaler(LinearScaler)
 
         # Model
         .with_model(logreg_binary)
