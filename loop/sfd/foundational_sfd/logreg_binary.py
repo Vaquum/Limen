@@ -8,9 +8,9 @@ from loop.indicators import ppo
 from loop.indicators import roc
 from loop.transforms.logreg_transform import LogRegTransform
 from loop.utils.shift_column import shift_column
-from loop.manifest import Manifest
+from loop.experiment import Manifest
 from loop.sfd.reference_architecture import logreg_binary
-from loop.historical_data import HistoricalData
+from loop.data import HistoricalData
 
 
 def params():

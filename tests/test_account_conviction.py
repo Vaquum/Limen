@@ -9,7 +9,7 @@
 
 import random
 from datetime import datetime
-from loop.account import Account
+from loop.trading import Account
 import csv
 import os
 

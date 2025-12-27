@@ -1,5 +1,5 @@
 import math
-from loop.account import Account
+from loop.trading import Account
 
 class BacktestSequential:
     

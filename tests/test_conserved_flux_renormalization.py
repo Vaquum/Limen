@@ -1,5 +1,5 @@
 from loop.features.conserved_flux_renormalization import conserved_flux_renormalization
-from loop.historical_data import HistoricalData
+from loop.data import HistoricalData
 
 
 def test_conserved_flux_renormalization():

@@ -149,8 +149,7 @@ if hasattr(your_sfd, 'manifest'):
 
 ```python
 import loop
-from loop import sfd
-from loop.regime_diversified_opinion_pools import RegimeDiversifiedOpinionPools
+from loop import sfd, RegimeDiversifiedOpinionPools
 
 # Step 1: Train individual models (existing Loop workflow)
 uel = loop.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)

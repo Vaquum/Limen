@@ -1,4 +1,4 @@
-from loop.historical_data import HistoricalData
+from loop.data import HistoricalData
 
 def test_klines_data_maker_fields():
 

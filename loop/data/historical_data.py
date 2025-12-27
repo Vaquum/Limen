@@ -2,12 +2,11 @@ import polars as pl
 
 from typing import List, Tuple, Optional
 
-from loop.utils.binance_file_to_polars import binance_file_to_polars
-
-from loop.utils.get_klines_data import get_klines_data
-from loop.utils.get_trades_data import get_trades_data
-from loop.utils.get_agg_trades_data import get_agg_trades_data
-from loop.utils.generic_endpoint_for_tdw import generic_endpoint_for_tdw
+from loop.data._internal.binance_file_to_polars import binance_file_to_polars
+from loop.data._internal.get_klines_data import get_klines_data
+from loop.data._internal.get_trades_data import get_trades_data
+from loop.data._internal.get_agg_trades_data import get_agg_trades_data
+from loop.data._internal.generic_endpoint_for_tdw import generic_endpoint_for_tdw
 
 
 class HistoricalData:

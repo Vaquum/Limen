@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "loop"
-version = "1.26.0"
+version = "1.27.0"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [
@@ -48,4 +48,4 @@ Repository = "https://github.com/vaquum/loop"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["loop*"]
-exclude = ["loop.tests*", "tests*"]
+exclude = ["tests*", "scripts*"]

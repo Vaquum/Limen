@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from loop.universal_experiment_loop import UniversalExperimentLoop
+    from loop.experiment import UniversalExperimentLoop
 
 
 def loop_explorer(uel: 'UniversalExperimentLoop', host: str = '37.27.112.167') -> None:

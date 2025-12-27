@@ -55,9 +55,8 @@ This is appropriate for financial trading systems where **correctness and reprod
 Here's a complete minimal manifest-based SFD:
 
 ```python
-from loop.manifest import Manifest
-from loop.historical_data import HistoricalData
-from loop.tests.utils.get_data import get_klines_data_fast
+from loop.experiment import Manifest
+from loop.data import HistoricalData
 from loop.indicators import roc
 from loop.features import quantile_flag, compute_quantile_cutoff
 from loop.utils import shift_column
@@ -80,7 +79,7 @@ def manifest():
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method=get_klines_data_fast)
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
 
         # Split configuration
         .set_split_config(7, 1, 2)
@@ -140,7 +139,7 @@ Configure production data source (uses `loop.historical_data.HistoricalData`).
 **Example:**
 
 ```python
-from loop.historical_data import HistoricalData
+from loop.data import HistoricalData
 
 .set_data_source(
     method=HistoricalData.get_spot_klines,
@@ -150,28 +149,32 @@ from loop.historical_data import HistoricalData
 
 ### `.set_test_data_source(method, params=None)`
 
-Configure test data source (uses `loop.tests.utils.get_data`).
+Configure test data source for testing purposes.
 
 **Args:**
 
 | Parameter | Type       | Description                                    |
 |-----------|------------|------------------------------------------------|
-| `method`  | `Callable` | Test utils function reference (e.g., `get_klines_data_fast`) |
-| `params`  | `dict`     | Parameters to pass to the function            |
+| `method`  | `Callable` | Test data method reference (e.g., `HistoricalData._get_data_for_test`) |
+| `params`  | `dict`     | Parameters to pass to the function (e.g., `{'n_rows': 5000}`) |
 
 **Returns:** `Manifest` (self for chaining)
-
-**Available methods:**
-- `get_klines_data_fast` - Small dataset for quick tests
-- `get_klines_data_large` - Larger dataset for comprehensive tests
-- `get_klines_data_small_fast` - Very small dataset for rapid iteration
 
 **Example:**
 
 ```python
-from loop.tests.utils.get_data import get_klines_data_fast
+from loop.data import HistoricalData
 
-.set_test_data_source(method=get_klines_data_fast)
+.set_test_data_source(method=HistoricalData._get_data_for_test)
+```
+
+To specify number of rows for testing:
+
+```python
+.set_test_data_source(
+    method=HistoricalData._get_data_for_test,
+    params={'n_rows': 1000}
+)
 ```
 
 ### Environment-Based Data Fetching
@@ -237,7 +240,7 @@ Configure data selection before splitting (e.g., random sampling for faster expe
 **Common use case:**
 
 ```python
-from loop.utils.random_slice import random_slice
+from loop.data.utils import random_slice
 
 .set_pre_split_data_selector(
     random_slice,
@@ -862,9 +865,8 @@ def model_name(data: dict, param1=default1, ..., paramN=defaultN) -> dict:
 Here's a comprehensive manifest-based SFD showing most available features:
 
 ```python
-from loop.manifest import Manifest
-from loop.historical_data import HistoricalData
-from loop.tests.utils.get_data import get_klines_data_fast
+from loop.experiment import Manifest
+from loop.data import HistoricalData
 from loop.indicators import roc, ppo, wilder_rsi, atr, rolling_volatility
 from loop.features import (
     ichimoku_cloud, volume_regime,
@@ -915,7 +917,7 @@ def manifest():
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method=get_klines_data_fast)
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
 
         # Split configuration
         .set_split_config(6, 2, 2)

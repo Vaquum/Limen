@@ -43,4 +43,4 @@ jobs:
       - name: Run loop tests (verbose)
         run: |
           set -x
-          python -u -m loop.tests.run
+          python -u -m tests.run

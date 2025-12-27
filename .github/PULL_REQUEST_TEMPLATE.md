@@ -6,7 +6,7 @@ _(A short description of the change)_
 
 ## Checklist
 
-- [ ] I have successfully run `python loop/tests/run.py`
+- [ ] I have successfully run `python tests/run.py`
 - [ ] I have updated `/docs` (if applicable)
 - [ ] All functions have docstrings in line with [Writing Docstrings](https://github.com/Vaquum/Loop/blob/main/docs/Developer/Writing-Docstrings.md)
 - [ ] I have updated `CHANGELOG.md` (if applicable)

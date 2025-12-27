@@ -2,7 +2,7 @@ import polars as pl
 from loop.data.bars import volume_bars
 from loop.data.bars import trade_bars
 from loop.data.bars import liquidity_bars
-from loop.historical_data import HistoricalData
+from loop.data import HistoricalData
 
 
 def validate_bars_output(
