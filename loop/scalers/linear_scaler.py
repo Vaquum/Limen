@@ -96,7 +96,7 @@ def get_scaling_rule(col: str, rules: dict[str, str], default: str = 'none') -> 
     return default
 
 
-class LinearTransform:
+class LinearScaler:
     def __init__(
         self,
         x_train: pl.DataFrame,
@@ -164,14 +164,14 @@ class LinearTransform:
         return df.with_columns(exprs)
 
 
-def inverse_transform(df: pl.DataFrame, scaler: LinearTransform) -> pl.DataFrame:
+def inverse_transform(df: pl.DataFrame, scaler: LinearScaler) -> pl.DataFrame:
 
     """
     Apply inverse scaling transformation.
 
     Args:
         df: DataFrame to inverse transform.
-        scaler: LinearTransform instance with fitted parameters.
+        scaler: LinearScaler instance with fitted parameters.
 
     Returns:
         DataFrame in original scale.
