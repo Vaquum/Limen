@@ -10,6 +10,7 @@ from loop.indicators.rsi_sma import rsi_sma
 from loop.indicators.sma import sma
 from loop.indicators.wilder_rsi import wilder_rsi
 from loop.indicators.bollinger_bands import bollinger_bands
+from loop.indicators.bollinger_position import bollinger_position
 from loop.indicators.cci import cci
 from loop.indicators.stochastic_oscillator import stochastic_oscillator
 from loop.indicators.sma_deviation_std import sma_deviation_std
@@ -28,6 +29,7 @@ __all__ = [
     'sma',
     'wilder_rsi',
     'bollinger_bands',
+    'bollinger_position',
     'cci',
     'stochastic_oscillator',
     'sma_deviation_std',
