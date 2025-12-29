@@ -88,7 +88,7 @@ class Account:
         if action == 'buy':
 
             if amount > self.account['total_usdt'][-1]:
-                raise ValueError('ERROR: amount can not be larger than total_usdt.')
+                raise ValueError('ERROR: amount cannot be larger than total_usdt.')
                 
             debit_usdt = amount
             amount_bought_btc = round(debit_usdt / price_usdt, 15)  # PRECISION FIX: 15 decimals instead of 7
