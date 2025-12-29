@@ -401,3 +401,9 @@ data mismatch
 
 # V1.29.0 on 29th of December, 2025
 - Remove `loop.reports` sub-module entirely
+
+# V1.30.0 on 29th of December, 2025
+- Add `tabpfn_binary` foundational SFD with validation-based dynamic threshold tuning
+- Add `bollinger_position` indicator
+- Add `forward_breakout_target` feature
+- Add `balanced_metric` for threshold optimization

@@ -41,6 +41,9 @@ dependencies = [
   "playwright",
 ]
 
+[project.optional-dependencies]
+tabpfn = ["tabpfn>=6"]
+
 [project.urls]
 Homepage = "https://vaquum.fi"
 Repository = "https://github.com/vaquum/loop"
