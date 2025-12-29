@@ -65,7 +65,7 @@ class Account:
         sell_price_usdt = 0
 
         if action not in ['buy', 'sell', 'short', 'cover', 'hold']:
-            raise ValueError('ERROR: ' + action + ' not suported.')
+            raise ValueError('ERROR: ' + action + ' not supported.')
         if not (amount > 0 or action == 'hold'):
             raise ValueError('ERROR: amount must be positive for all actions except hold.')
         if price_usdt <= 0:
