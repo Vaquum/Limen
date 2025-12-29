@@ -177,7 +177,7 @@ def test_account_integration():
     open_prices = [50000, 50000]
     close_prices = [51000, 51000]
     
-    results = backtest.run(actual, prediction, price_change, open_prices, close_prices)
+    _results = backtest.run(actual, prediction, price_change, open_prices, close_prices)
     
     final_usdt = backtest.account.account['total_usdt'][-1]
     assert final_usdt != initial_usdt

@@ -88,7 +88,7 @@ def _permutation_confusion_metrics(self,
     tn = _stats(m_tn)
     fn = _stats(m_fn)
 
-    TP, FP, TN, FN = tp['count'], fp['count'], tn['count'], fn['count']
+    TP, FP, _TN, FN = tp['count'], fp['count'], tn['count'], fn['count']
     precision = TP / (TP + FP) if (TP + FP) else np.nan
     recall    = TP / (TP + FN) if (TP + FN) else np.nan
 

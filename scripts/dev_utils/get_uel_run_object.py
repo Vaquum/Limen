@@ -11,7 +11,7 @@ def get_uel():
     uel = loop.UniversalExperimentLoop(data=historical.data,
                                     sfd=loop.sfd.foundational_sfd.logreg_binary)
     
-    uel.run(experiment_name=f"LogReg-Db0",
+    uel.run(experiment_name='LogReg-Db0',
             n_permutations=1000, 
             prep_each_round=True)
     

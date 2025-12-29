@@ -42,7 +42,7 @@ def test_rdop():
 
             rdop = RegimeDiversifiedOpinionPools(sfd_module)
 
-            offline_result = rdop.offline_pipeline(
+            _offline_result = rdop.offline_pipeline(
                 confusion_metrics=confusion_metrics,
                 perf_cols=None,
                 iqr_multiplier=10.0,
@@ -52,7 +52,7 @@ def test_rdop():
                 k_regimes=1
             )
 
-            online_result = rdop.online_pipeline(
+            _online_result = rdop.online_pipeline(
                 data=uel.data,
                 aggregation_method='mean',
                 aggregation_threshold=0.5

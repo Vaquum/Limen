@@ -1,16 +1,17 @@
 import warnings
-warnings.filterwarnings("ignore")
 
 import loop
 from loop.explorer.loop_explorer import loop_explorer
+
+warnings.filterwarnings("ignore")
 
 
 def test_explorer_locally():
 
     print('Keep waiting, it will take 30 seconds...')
 
-    historical = loop.HistoricalData();
-    historical.get_spot_klines(kline_size=57600);
+    historical = loop.HistoricalData()
+    historical.get_spot_klines(kline_size=57600)
     uel = loop.UniversalExperimentLoop(data=historical.data, sfd=loop.sfd.foundational_sfd.logreg_binary)
 
     print('Keep waiting, there will now be three progress bars, once the last is done, you will see the streamlit url')

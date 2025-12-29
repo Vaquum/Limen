@@ -119,12 +119,6 @@ def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
         uncertain_r2 = r2_score(y_test[uncertain_mask], test_pred_mean[uncertain_mask])
     else:
         uncertain_mae, uncertain_r2 = np.nan, np.nan
-    
-    # Calculate improvements
-    if not np.isnan(confident_mae):
-        mae_improvement = overall_mae - confident_mae
-        r2_improvement = confident_r2 - overall_r2
-        r2_improvement_pct = (r2_improvement / abs(overall_r2)) * 100 if overall_r2 != 0 else 0
         
     results = {
         'predictions': test_pred_mean,
