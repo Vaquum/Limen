@@ -12,6 +12,8 @@ from loop.indicators.wilder_rsi import wilder_rsi
 from loop.indicators.bollinger_bands import bollinger_bands
 from loop.indicators.cci import cci
 from loop.indicators.stochastic_oscillator import stochastic_oscillator
+from loop.indicators.sma_deviation_std import sma_deviation_std
+from loop.indicators.window_return import window_return
 
 __all__ = [
     'atr',
@@ -27,5 +29,7 @@ __all__ = [
     'wilder_rsi',
     'bollinger_bands',
     'cci',
-    'stochastic_oscillator'
+    'stochastic_oscillator',
+    'sma_deviation_std',
+    'window_return'
 ]

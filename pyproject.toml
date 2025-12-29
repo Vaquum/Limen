@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "loop"
-version = "1.28.0"
+version = "1.28.1"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [

@@ -455,53 +455,7 @@ Compute Ichimoku Cloud components for trend and momentum analysis.
 
 `pl.DataFrame`: The input data with new columns: 'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
 
-### `cci`
 
-Compute Commodity Channel Index (CCI) for identifying overbought and oversold market conditions.
-
-#### Args
-
-| Parameter | Type           | Description                                        |
-| --------- | -------------- | -------------------------------------------------- |
-| `df`      | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
-| `window`  | `int`          | Number of periods used for the CCI calculation     |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'cci' representing the computed Commodity Channel Index.
-
-### `bollinger_bands`
-
-Compute Bollinger Bands using Simple Moving Average (SMA).
-
-#### Args
-
-| Parameter   | Type           | Description                                                  |
-| ----------- | -------------- | ------------------------------------------------------------ |
-| `df`        | `pl.DataFrame` | Klines dataset with `'close'` column                         |
-| `price_col` | `str`          | Column name used for Bollinger Band calculation              |
-| `window`    | `int`          | Number of periods for SMA and standard deviation calculation |
-| `num_std`   | `float`        | Number of standard deviations for upper and lower bands      |
-
-#### Returns
-
-`pl.DataFrame`: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
-
-### `stochastic_oscillator`
-
-Compute Stochastic Oscillator (%K and %D) using rolling highs and lows.
-
-#### Args
-
-| Parameter   | Type           | Description                                                  |
-| ----------- | -------------- | ------------------------------------------------------------ |
-| `df`        | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns                         |
-| `window_k` | `int`          | Number of periods for %K calculation              |
-| `window_d`    | `int`          | Number of periods for %D smoothing (SMA of %K) |
-
-#### Returns
-
-`pl.DataFrame`: The input data with two new columns 'stoch_k' and 'stoch_d'
 
 ### `sma_crossover`
 
