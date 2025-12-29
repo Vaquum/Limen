@@ -398,3 +398,6 @@ data mismatch
 - Add missing indicator exports in `loop.indicator.__init__`
 - Add missing feature exports in `loop.feature.__init__`
 - Update `Indicators.md` and `Features.md` to the latest
+
+# V1.29.0 on 29th of December, 2025
+- Remove `loop.reports` sub-module entirely
