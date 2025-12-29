@@ -59,8 +59,8 @@ from loop.experiment import Manifest
 from loop.data import HistoricalData
 from loop.indicators import roc
 from loop.features import quantile_flag, compute_quantile_cutoff
-from loop.utils import shift_column
-from loop.transforms.linear_transform import LogregTransform
+from loop.transforms import shift_column_transform
+from loop.scalers import LogRegScaler
 from loop.sfd.reference_architecture import logreg_binary
 
 def params():
@@ -93,7 +93,7 @@ def manifest():
                 .fit_param('_cutoff', compute_quantile_cutoff,
                           col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_cutoff')
-            .add_transform(shift_column, shift='shift', column='target_column')
+            .add_transform(shift_column_transform, shift='shift', column='target_column')
             .done()
 
         # Scaling and model
@@ -649,9 +649,9 @@ Add simple transformation without parameter fitting.
 **Example:**
 
 ```python
-from loop.utils import shift_column
+from loop.transforms import shift_column_transform
 
-.add_transform(shift_column, shift='shift', column='target_column')
+.add_transform(shift_column_transform, shift='shift', column='target_column')
 ```
 
 ### `TargetBuilder.done()`
@@ -664,7 +664,7 @@ Complete target configuration and return to main manifest.
 
 ```python
 from loop.features import quantile_flag, compute_quantile_cutoff
-from loop.utils import shift_column
+from loop.transforms import shift_column_transform
 
 .with_target('quantile_flag')
     # Fitted transform: compute quantile cutoff on training data
@@ -673,7 +673,7 @@ from loop.utils import shift_column
                   col='roc_{roc_period}', q='q')
         .with_params(col='roc_{roc_period}', cutoff='_cutoff')
     # Simple transform: shift target for prediction horizon
-    .add_transform(shift_column, shift='shift', column='target_column')
+    .add_transform(shift_column_transform, shift='shift', column='target_column')
     .done()
 ```
 
@@ -695,14 +695,14 @@ Set scaler/transform class for data preprocessing. The scaler is fitted on train
 **Available scalers:**
 
 ```python
-from loop.transforms.linear_transform import LinearTransform    # Min-max scaling
-from loop.transforms.logreg_transform import LogRegTransform    # Logistic regression specific
+from loop.scalers import LinearScaler    # Linear scaling
+from loop.scalers import LogRegScaler    # Logistic regression specific
 ```
 
 **Example:**
 
 ```python
-.set_scaler(LinearTransform)
+.set_scaler(LinearScaler)
 ```
 
 ## Data Dict Extension
@@ -874,8 +874,8 @@ from loop.features import (
     price_range_position, range_pct, quantile_flag,
     compute_quantile_cutoff
 )
-from loop.utils import shift_column
-from loop.transforms.linear_transform import LinearTransform
+from loop.transforms import shift_column_transform
+from loop.scalers import LinearScaler
 from loop.sfd.reference_architecture import logreg_binary
 
 def params():
@@ -951,11 +951,11 @@ def manifest():
                 .fit_param('_cutoff', compute_quantile_cutoff,
                           col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_cutoff')
-            .add_transform(shift_column, shift='shift', column='target_column')
+            .add_transform(shift_column_transform, shift='shift', column='target_column')
             .done()
 
         # Scaler
-        .set_scaler(LinearTransform)
+        .set_scaler(LinearScaler)
 
         # Model
         .with_model(logreg_binary)

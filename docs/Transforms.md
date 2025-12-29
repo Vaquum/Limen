@@ -1,37 +1,10 @@
 # Transforms
 
-Transforms are preprocessing operations applied to datasets prior to modeling or exploration. They scale, clip, filter, or normalize numeric columns while preserving the core semantics of the data.
+Transforms are stateless preprocessing operations applied to datasets prior to modeling or exploration. They compute statistics and apply transformations in a single step. They scale, clip, filter, or normalize numeric columns while preserving the core semantics of the data.
+
+For stateful scalers that fit on training data, see [Scalers](Scalers.md).
 
 ## `loop.transforms`
-
-### `LogRegTransform`
-
-LogRegTransform class for scaling and inverse scaling data.
-
-#### Args
-
-| Parameter | Type           | Description       |
-|-----------|----------------|-------------------|
-| `x_train` | `pl.DataFrame` | The training data |
-
-#### Methods
-- `transform(df: pl.DataFrame) -> pl.DataFrame`: Transform the data using the scaling rules
-- `logreg_inverse_transform(df: pl.DataFrame, scaler: LogRegTransform) -> pl.DataFrame`: Inverse transform the data using the scaling rules
-
-### `logreg_inverse_transform`
-
-Inverse transform the data using the scaling rules.
-
-#### Args
-
-| Parameter | Type              | Description         |
-|-----------|-------------------|---------------------|
-| `df`      | `pl.DataFrame`    | The input DataFrame |
-| `scaler`  | `LogRegTransform` | The scaler object   |
-
-#### Returns
-
-`pl.DataFrame`: The inverse transformed DataFrame
 
 ### `mad_transform`
 
@@ -93,18 +66,18 @@ Compute standard Z-score scaling for numeric columns.
 
 `pl.DataFrame`: The input data with Z-scored numeric columns
 
-### `LinearTransform`
+### `shift_column_transform`
 
-Linear transformation utility for scaling features.
+Shift a column by a specified number of periods.
 
 #### Args
 
-| Parameter | Type                      | Description           |
-|-----------|---------------------------|-----------------------|
-| `x_train` | `pl.DataFrame`            | Training DataFrame    |
-| `rules`   | `dict[str, str] | None` | Regex-to-rule mapping |
-| `default` | `str`                     | Fallback scaling rule |
+| Parameter  | Type           | Description                                   |
+|------------|----------------|-----------------------------------------------|
+| `data`     | `pl.DataFrame` | Input DataFrame                               |
+| `shift`    | `int`          | Number of periods to shift (negative for forward shift) |
+| `column`   | `str`          | Name of column to shift                       |
 
-#### Methods
-- `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply linear scaling transformation
-- `inverse_transform(df: pl.DataFrame, scaler: LinearTransform) -> pl.DataFrame`: Apply inverse scaling transformation
+#### Returns
+
+`pl.DataFrame`: DataFrame with shifted column

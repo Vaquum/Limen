@@ -27,17 +27,17 @@ SCALING_RULES = {
     'close_liquidity': 'log_standard',
 }
 
-class LogRegTransform:
+class LogRegScaler:
 
     '''
-    LogRegTransform class for scaling and inverse scaling data.
+    LogRegScaler class for scaling and inverse scaling data.
     '''
     
     def __init__(self, x_train: pl.DataFrame):
 
         '''
-        Initialize the LogRegTransform object.
-        
+        Initialize the LogRegScaler object.
+
         Args:
             x_train (pl.DataFrame): The training data
         '''
@@ -96,15 +96,15 @@ class LogRegTransform:
         return df.with_columns(exprs)
 
 
-def inverse_transform(df: pl.DataFrame, scaler: LogRegTransform) -> pl.DataFrame:
+def inverse_transform(df: pl.DataFrame, scaler: LogRegScaler) -> pl.DataFrame:
 
     '''
     Inverse transform the data using the scaling rules.
-    
+
     Args:
         df (pl.DataFrame): The input DataFrame
-        scaler (LogRegTransform): The scaler object
-        
+        scaler (LogRegScaler): The scaler object
+
     Returns:
         pl.DataFrame: The inverse transformed DataFrame
     '''

@@ -11,6 +11,7 @@ import loop.indicators as indicators
 import loop.metrics as metrics
 import loop.sfd as sfd
 import loop.reports as reports
+import loop.scalers as scalers
 import loop.transforms as transforms
 import loop.utils as utils
 import loop.log as log
@@ -30,6 +31,7 @@ __all__ = [
     'metrics',
     'sfd',
     'reports',
+    'scalers',
     'transforms',
     'utils',
     'log'

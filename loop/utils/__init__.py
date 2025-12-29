@@ -5,7 +5,6 @@ from loop.utils.param_space import ParamSpace
 from loop.utils.reporting import format_report_header, format_report_section, format_report_footer
 from loop.metrics.safe_ovr_auc import safe_ovr_auc
 from loop.utils.confidence_filtering_system import confidence_filtering_system
-from loop.utils.shift_column import shift_column
 
 __all__ = [
     'confidence_filtering_system',
@@ -17,5 +16,4 @@ __all__ = [
     'log_to_optuna_study',
     'ParamSpace',
     'safe_ovr_auc',
-    'shift_column'
 ] 
