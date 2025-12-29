@@ -21,6 +21,11 @@ from loop.features.ema_breakout import ema_breakout
 from loop.features.vwap import vwap
 from loop.features.ichimoku_cloud import ichimoku_cloud
 from loop.features.sma_crossover import sma_crossover
+from loop.features.ma_slope_regime import ma_slope_regime
+from loop.features.price_vs_band_regime import price_vs_band_regime
+from loop.features.breakout_percentile_regime import breakout_percentile_regime
+from loop.features.window_return_regime import window_return_regime
+from loop.features.hh_hl_structure_regime import hh_hl_structure_regime
 
 __all__ = [
     'conserved_flux_renormalization',
@@ -45,5 +50,10 @@ __all__ = [
     'ema_breakout',
     'vwap',
     'ichimoku_cloud',
-    'sma_crossover'
+    'sma_crossover',
+    'ma_slope_regime',
+    'price_vs_band_regime',
+    'breakout_percentile_regime',
+    'window_return_regime',
+    'hh_hl_structure_regime'
 ]
