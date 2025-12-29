@@ -71,10 +71,10 @@ def render_toolbar() -> None:
     '''
     
     # Initialize flags if missing
-    st.session_state.setdefault("_show_outliers", False)
-    st.session_state.setdefault("_show_time", False)
-    st.session_state.setdefault("_show_trend", False)
-    st.session_state.setdefault("_show_dataset", False)
+    st.session_state.setdefault('_show_outliers', False)
+    st.session_state.setdefault('_show_time', False)
+    st.session_state.setdefault('_show_trend', False)
+    st.session_state.setdefault('_show_dataset', False)
 
     c1, c2, c3, c4 = st.sidebar.columns(4)
     _icon_button(c1, '◆', 'Outliers', '_show_outliers', 1)

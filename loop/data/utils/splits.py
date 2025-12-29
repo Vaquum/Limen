@@ -84,17 +84,17 @@ def split_data_to_prep_output(split_data: list,
     remaining_datetimes += split_data[1]['datetime'].to_list()
     remaining_datetimes += split_data[2]['datetime'].to_list()
 
-    first_test_datetime = split_data[2]["datetime"].min()
-    last_test_datetime = split_data[2]["datetime"].max()
+    first_test_datetime = split_data[2]['datetime'].min()
+    last_test_datetime = split_data[2]['datetime'].max()
 
-    split_data[0] = split_data[0].drop("datetime")
-    split_data[1] = split_data[1].drop("datetime")
-    split_data[2] = split_data[2].drop("datetime")
+    split_data[0] = split_data[0].drop('datetime')
+    split_data[1] = split_data[1].drop('datetime')
+    split_data[2] = split_data[2].drop('datetime')
 
-    if "datetime" in cols:
-        cols.remove("datetime")
+    if 'datetime' in cols:
+        cols.remove('datetime')
     else:
-        raise ValueError("SFDs must contain `datetime` in data up to when it enters `split_data_to_prep_output` in sfd.prep")
+        raise ValueError('SFDs must contain `datetime` in data up to when it enters `split_data_to_prep_output` in sfd.prep')
             
     data_dict = {'x_train': split_data[0][cols[:-1]],
                  'y_train': split_data[0][cols[-1]],

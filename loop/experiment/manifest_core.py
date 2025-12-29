@@ -206,7 +206,7 @@ class Manifest:
         '''Fetch data using configured data source.'''
 
         if self.data_source_config is None:
-            raise ValueError("No data source configured")
+            raise ValueError('No data source configured')
 
         return DataSourceResolver.resolve(self.data_source_config)
 
@@ -215,7 +215,7 @@ class Manifest:
         '''Fetch data using configured test data source.'''
 
         if self.test_data_source_config is None:
-            raise ValueError("No test data source configured")
+            raise ValueError('No test data source configured')
 
         return DataSourceResolver.resolve(self.test_data_source_config)
 
@@ -483,7 +483,7 @@ class Manifest:
         '''
 
         if self.model_function is None:
-            raise ValueError("Model function not configured. Use .with_model(model_function) before run_model().")
+            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model().')
 
         sig = inspect.signature(self.model_function)
         model_kwargs = {}

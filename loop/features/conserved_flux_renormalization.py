@@ -25,35 +25,35 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
     '''
 
     trades = (trades_df
-              .with_columns((pl.col("price") * pl.col("quantity")).alias("value"))
-              .sort("datetime"))
+              .with_columns((pl.col('price') * pl.col('quantity')).alias('value'))
+              .sort('datetime'))
 
     kl = (trades
-          .group_by_dynamic("datetime", every=kline_interval, closed="left")
+          .group_by_dynamic('datetime', every=kline_interval, closed='left')
           .agg(
-              pl.col("price").first().alias("open"),
-              pl.col("price").max().alias("high"),
-              pl.col("price").min().alias("low"),
-              pl.col("price").last().alias("close"),
-              pl.col("quantity").sum().alias("volume"),
-              pl.col("value").sum().alias("value_sum"),
+              pl.col('price').first().alias('open'),
+              pl.col('price').max().alias('high'),
+              pl.col('price').min().alias('low'),
+              pl.col('price').last().alias('close'),
+              pl.col('quantity').sum().alias('volume'),
+              pl.col('value').sum().alias('value_sum'),
           )
           .with_columns(
-              (pl.col("value_sum") / pl.col("volume")).alias("vwap"),
-              pl.col("datetime").cast(pl.Datetime("ms")),
+              (pl.col('value_sum') / pl.col('volume')).alias('vwap'),
+              pl.col('datetime').cast(pl.Datetime('ms')),
           ))
 
-    mult = {"s": 1_000, "m": 60_000, "h": 3_600_000, "d": 86_400_000}
+    mult = {'s': 1_000, 'm': 60_000, 'h': 3_600_000, 'd': 86_400_000}
     bucket_ms = int(kline_interval[:-1]) * mult[kline_interval[-1]]
 
     feature_schema = {
-        "datetime":            pl.Datetime("ms"),
-        "flux_rel_std_mean":   pl.Float64,
-        "flux_rel_std_var":    pl.Float64,
-        "entropy_mean":        pl.Float64,
-        "entropy_var":         pl.Float64,
-        "Δflux_rms":           pl.Float64,
-        "Δentropy_rms":        pl.Float64,
+        'datetime':            pl.Datetime('ms'),
+        'flux_rel_std_mean':   pl.Float64,
+        'flux_rel_std_var':    pl.Float64,
+        'entropy_mean':        pl.Float64,
+        'entropy_var':         pl.Float64,
+        'Δflux_rms':           pl.Float64,
+        'Δentropy_rms':        pl.Float64,
     }
 
     def _bar_features(g: pl.DataFrame) -> pl.DataFrame:
@@ -74,28 +74,28 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
         rms_flux = float(np.sqrt(((flux_vec - ideal_f) ** 2).mean()))
         rms_ent  = float(np.sqrt(((ent_vec  - ideal_e) ** 2).mean()))
 
-        ts_ms = int(g["datetime"].min().timestamp() * 1_000)
+        ts_ms = int(g['datetime'].min().timestamp() * 1_000)
         bucket = (ts_ms // bucket_ms) * bucket_ms
 
         return pl.DataFrame(
             {
-                "datetime": pl.Series([bucket]).cast(pl.Datetime("ms")),
-                "flux_rel_std_mean": [flux_mean],
-                "flux_rel_std_var":  [flux_var],
-                "entropy_mean":      [ent_mean],
-                "entropy_var":       [ent_var],
-                "Δflux_rms":         [rms_flux],
-                "Δentropy_rms":      [rms_ent],
+                'datetime': pl.Series([bucket]).cast(pl.Datetime('ms')),
+                'flux_rel_std_mean': [flux_mean],
+                'flux_rel_std_var':  [flux_var],
+                'entropy_mean':      [ent_mean],
+                'entropy_var':       [ent_var],
+                'Δflux_rms':         [rms_flux],
+                'Δentropy_rms':      [rms_ent],
             }
         )
 
     feats = (trades
-             .group_by_dynamic("datetime", every=kline_interval, closed="left")
+             .group_by_dynamic('datetime', every=kline_interval, closed='left')
              .map_groups(_bar_features, schema=feature_schema))
 
     return (kl
-            .join(feats, on="datetime", how="left")
-            .sort("datetime"))
+            .join(feats, on='datetime', how='left')
+            .sort('datetime'))
 
 
 def _per_scale_stats(trades: pl.DataFrame, *, base_window_s=60, levels=6):
@@ -105,17 +105,17 @@ def _per_scale_stats(trades: pl.DataFrame, *, base_window_s=60, levels=6):
     for k in range(levels):
         
         span = f"{base_window_s * 2**k}s"
-        bins = trades.group_by_dynamic("datetime", every=span, closed="left").agg(
-            pl.col("value").sum().alias("flux"),
+        bins = trades.group_by_dynamic('datetime', every=span, closed='left').agg(
+            pl.col('value').sum().alias('flux'),
             (
-                -((pl.col("value") / pl.col("value").sum())
-                  * (pl.col("value") / pl.col("value").sum()).log(base=2)
+                -((pl.col('value') / pl.col('value').sum())
+                  * (pl.col('value') / pl.col('value').sum()).log(base=2)
                  ).sum()
-            ).alias("entropy")
+            ).alias('entropy')
         )
         if bins.height < 2:
             continue
-        rel_std.append(float(bins["flux"].std(ddof=0) / bins["flux"].mean()))
-        ent.append(float(bins["entropy"].mean()))
+        rel_std.append(float(bins['flux'].std(ddof=0) / bins['flux'].mean()))
+        ent.append(float(bins['entropy'].mean()))
     
     return np.array(rel_std), np.array(ent)

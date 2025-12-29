@@ -218,9 +218,9 @@ def plot_scatter(
     
     common_args = {}
     if hue_col:
-        common_args["color"] = hue_col
+        common_args['color'] = hue_col
     if size_col:
-        common_args["size"] = size_col
+        common_args['size'] = size_col
     fig = px.scatter(
         df_filt,
         x=xcol,

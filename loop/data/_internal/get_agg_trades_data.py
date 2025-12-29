@@ -55,12 +55,12 @@ def get_agg_trades_data(month_year: Optional[Tuple[int,int]] = None,
     start = time.time()
     arrow_table = client.query_arrow(query)
     polars_df = pl.from_arrow(arrow_table)
-    polars_df = polars_df.sort("agg_trade_id")
+    polars_df = polars_df.sort('agg_trade_id')
     
     polars_df = polars_df.with_columns([
         (pl.col('datetime').cast(pl.Int64) * 1000)
-          .cast(pl.Datetime("ms", time_zone="UTC"))
-          .alias("datetime")])
+          .cast(pl.Datetime('ms', time_zone='UTC'))
+          .alias('datetime')])
 
     elapsed = time.time() - start
 

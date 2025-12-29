@@ -63,8 +63,8 @@ def generic_endpoint_for_tdw(month_year: Optional[Tuple[int,int]] = None,
     if include_datetime_col:
         polars_df = polars_df.with_columns([
             (pl.col('datetime').cast(pl.Int64) * 1000)
-            .cast(pl.Datetime("ms", time_zone="UTC"))
-            .alias("datetime")])
+            .cast(pl.Datetime('ms', time_zone='UTC'))
+            .alias('datetime')])
 
     elapsed = time.time() - start
 
@@ -72,11 +72,11 @@ def generic_endpoint_for_tdw(month_year: Optional[Tuple[int,int]] = None,
         print(f"{elapsed:.2f} seconds | {polars_df.shape[0]} rows | {polars_df.shape[1]} columns | {polars_df.estimated_size()/(1024**3):.2f} GB RAM")
 
     polars_df = polars_df.with_columns([
-        pl.when(pl.col("timestamp") < 10**13)
-        .then(pl.col("timestamp"))
-        .otherwise(pl.col("timestamp") // 1000)
+        pl.when(pl.col('timestamp') < 10**13)
+        .then(pl.col('timestamp'))
+        .otherwise(pl.col('timestamp') // 1000)
         .cast(pl.UInt64) 
-        .alias("timestamp")
+        .alias('timestamp')
     ])
 
     return polars_df

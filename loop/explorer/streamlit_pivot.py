@@ -32,7 +32,7 @@ def render_pivot_table(
         None: None
     '''
     if not (pivot_rows or pivot_cols):
-        st.warning("Select at least one pivot row or column to build the pivot table.")
+        st.warning('Select at least one pivot row or column to build the pivot table.')
         return
 
     work_df = df_filt.copy()
@@ -45,7 +45,7 @@ def render_pivot_table(
     # Rows -> Quantiles (fixed cuts), only if numeric and opted-in
     if pivot_rows and quantile_rows and pd.api.types.is_numeric_dtype(work_df[pivot_rows]):
         edges, labels = quantile_bins_fn(work_df[pivot_rows])
-        qname = pivot_rows + "_q"
+        qname = pivot_rows + '_q'
         work_df[qname] = pd.cut(work_df[pivot_rows], bins=edges, labels=labels, include_lowest=True)
         idx = [qname]
         row_header_prefix = f"{pivot_rows} (quantiles)"
@@ -53,7 +53,7 @@ def render_pivot_table(
     # Columns -> Quantiles (fixed cuts), only if numeric and opted-in
     if pivot_cols and quantile_cols and pd.api.types.is_numeric_dtype(work_df[pivot_cols]):
         edges, labels = quantile_bins_fn(work_df[pivot_cols])
-        qname = pivot_cols + "_q"
+        qname = pivot_cols + '_q'
         work_df[qname] = pd.cut(work_df[pivot_cols], bins=edges, labels=labels, include_lowest=True)
         cols = [qname]
         col_header_prefix = f"{pivot_cols} (quantiles)"
@@ -63,14 +63,14 @@ def render_pivot_table(
         return float(np.nanpercentile(x, 75) - np.nanpercentile(x, 25))
 
     agg_map = {
-        "min": "min",
-        "max": "max",
-        "sum": "sum",
-        "mean": "mean",
-        "std": "std",
-        "median": "median",
-        "iqr": _iqr_func,
-        "count": "count",
+        'min': 'min',
+        'max': 'max',
+        'sum': 'sum',
+        'mean': 'mean',
+        'std': 'std',
+        'median': 'median',
+        'iqr': _iqr_func,
+        'count': 'count',
     }
 
     pivot = pd.pivot_table(
@@ -83,7 +83,7 @@ def render_pivot_table(
     )
 
     if isinstance(pivot.columns, pd.MultiIndex):
-        pivot.columns = [" | ".join(map(str, tpl)).strip() for tpl in pivot.columns]
+        pivot.columns = [' | '.join(map(str, tpl)).strip() for tpl in pivot.columns]
 
     # Prefix columns (when quantiled by columns)
     if cols and col_header_prefix:
@@ -95,7 +95,7 @@ def render_pivot_table(
     if row_header_prefix and idx:
         out = out.rename(columns={idx[0]: row_header_prefix})
 
-    title = "Pivot table rendered as heatmap" if as_heatmap and (pivot_rows or pivot_cols) else "Pivot table"
+    title = 'Pivot table rendered as heatmap' if as_heatmap and (pivot_rows or pivot_cols) else 'Pivot table'
     st.subheader(title)
     if as_heatmap and (pivot_rows or pivot_cols):
         # Build a 2D matrix for heatmap (requires at least rows or cols)
@@ -119,13 +119,13 @@ def render_pivot_table(
             x=x_labels,
             y=y_labels,
             colorscale=[
-                [0.0, "#C4E8F4"],
-                [0.16, "#FCE2EB"],
-                [0.33, "#EAA3C8"],
-                [0.5, "#DC65A6"],
-                [0.66, "#F16068"],
-                [0.83, "#BCABD3"],
-                [1.0, "#DDD941"],
+                [0.0, '#C4E8F4'],
+                [0.16, '#FCE2EB'],
+                [0.33, '#EAA3C8'],
+                [0.5, '#DC65A6'],
+                [0.66, '#F16068'],
+                [0.83, '#BCABD3'],
+                [1.0, '#DDD941'],
             ],
             colorbar=dict(title=pivot_val),
         ))

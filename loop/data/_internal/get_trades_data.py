@@ -47,20 +47,20 @@ def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
         where = f"ORDER BY sipHash64(tuple(trade_id, timestamp)) LIMIT {n_random}"
     
     else:
-        raise AttributeError("Invalid parameter combination: Exactly one of 'month_year', 'n_latest', or 'n_random' must be set. "
-                             "Ensure that only one of these parameters is provided and the others are None.")
+        raise AttributeError('Invalid parameter combination: Exactly one of `month_year`, `n_latest`, or `n_random` must be set.'
+                             'Ensure that only one of these parameters is provided and the others are None.')
     query = (f"SELECT {', '.join(select_cols)} "
              f"FROM tdw.binance_trades {where}")
 
     start = time.time()
     arrow_table = client.query_arrow(query)
     polars_df = pl.from_arrow(arrow_table)
-    polars_df = polars_df.sort("trade_id")
+    polars_df = polars_df.sort('trade_id')
     
     polars_df = polars_df.with_columns([
         (pl.col('datetime').cast(pl.Int64) * 1000)
-          .cast(pl.Datetime("ms", time_zone="UTC"))
-          .alias("datetime")])
+          .cast(pl.Datetime('ms', time_zone='UTC'))
+          .alias('datetime')])
 
     elapsed = time.time() - start
 
