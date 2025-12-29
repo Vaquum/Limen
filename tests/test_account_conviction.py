@@ -67,7 +67,7 @@ def generate_random_sequence(n_transactions: int = 10000, seed: int = 42) -> dic
             prices.append(price)
             amounts.append(amount)
             
-        except Exception as e:
+        except Exception as _e:
             # Skip invalid operations but don't fail the test
             if action != 'hold':
                 action = 'hold'
@@ -131,19 +131,19 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
     assert abs(manual_long_btc - account_long) < btc_tolerance, f'Manual long ({manual_long_btc}) != Account long ({account_long})'
     assert abs(manual_short_btc - account_short) < btc_tolerance, f'Manual short ({manual_short_btc}) != Account short ({account_short})'
     assert abs(manual_usdt - account_usdt) < usdt_tolerance, f'Manual USDT ({manual_usdt}) != Account USDT ({account_usdt})'
-    assert abs((manual_long_btc - manual_short_btc) - account_net) < btc_tolerance, f'Manual net != Account net'
+    assert abs((manual_long_btc - manual_short_btc) - account_net) < btc_tolerance, 'Manual net != Account net'
     
-    assert abs((sum_bought - sum_sold) - account_long) < btc_tolerance, f'Sum-based long != Account long'
-    assert abs((sum_borrowed - sum_covered) - account_short) < btc_tolerance, f'Sum-based short != Account short'
-    assert abs((sum_credit - sum_debit) - account_usdt) < usdt_tolerance, f'Sum-based USDT != Account USDT'
+    assert abs((sum_bought - sum_sold) - account_long) < btc_tolerance, 'Sum-based long != Account long'
+    assert abs((sum_borrowed - sum_covered) - account_short) < btc_tolerance, 'Sum-based short != Account short'
+    assert abs((sum_credit - sum_debit) - account_usdt) < usdt_tolerance, 'Sum-based USDT != Account USDT'
     
     # Vector 4: History integrity
     assert len(account.account['action']) == len(actions) + 1, f'Action count mismatch: {len(account.account["action"])} vs {len(actions) + 1}'
     assert len(set(len(v) for v in account.account.values())) == 1, 'Inconsistent vector lengths'
     
     # Vector 5: Invariant checks
-    assert abs(account.account['total_btc'][-1] - account_long) < btc_tolerance, f'total_btc != long_position'
-    assert abs(account.net_position - (account_long - account_short)) < btc_tolerance, f'net_position calculation error'
+    assert abs(account.account['total_btc'][-1] - account_long) < btc_tolerance, 'total_btc != long_position'
+    assert abs(account.net_position - (account_long - account_short)) < btc_tolerance, 'net_position calculation error'
     
     action_counts = {action: actions.count(action) for action in ['buy', 'sell', 'short', 'cover', 'hold']}
     
@@ -181,9 +181,9 @@ def test_deterministic_sequence() -> None:
     expected_usdt = 100000 - 1000 + 2000 + 500 - 1500  # 100000
     
     tolerance = 1e-7
-    assert abs(account.long_position - expected_long) < tolerance, f'Deterministic long mismatch'
-    assert abs(account.short_position - expected_short) < tolerance, f'Deterministic short mismatch'
-    assert abs(account.account['total_usdt'][-1] - expected_usdt) < tolerance, f'Deterministic USDT mismatch'
+    assert abs(account.long_position - expected_long) < tolerance, 'Deterministic long mismatch'
+    assert abs(account.short_position - expected_short) < tolerance, 'Deterministic short mismatch'
+    assert abs(account.account['total_usdt'][-1] - expected_usdt) < tolerance, 'Deterministic USDT mismatch'
 
 def log_conviction_results(results_list: list) -> None:
     log_file = 'account-conviction-tests.csv'
