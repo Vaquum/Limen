@@ -11,7 +11,6 @@ from loop.experiment import Manifest
 from loop.data import HistoricalData
 from loop.indicators import roc, wilder_rsi, rolling_volatility, bollinger_bands, bollinger_position
 from loop.features.forward_breakout_target import forward_breakout_target
-from loop.transforms import LogRegTransform
 from loop.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
 
 
@@ -76,8 +75,6 @@ def manifest() -> Manifest:
                 shift=-1
             )
             .done()
-
-        .set_scaler(LogRegTransform)
 
         .with_model(tabpfn_binary)
     )

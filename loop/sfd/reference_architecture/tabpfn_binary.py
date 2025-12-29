@@ -2,9 +2,9 @@ import numpy as np
 from tabpfn import TabPFNClassifier
 
 from loop.metrics.binary_metrics import binary_metrics
-from loop.utils.calibrate_classifier import calibrate_classifier
+from loop.transforms.calibrate_classifier import calibrate_classifier
+from loop.transforms.optimize_binary_threshold import optimize_binary_threshold
 from loop.utils.data_dict_to_numpy import data_dict_to_numpy
-from loop.utils.optimize_binary_threshold import optimize_binary_threshold
 
 
 # TabPFN model checkpoint - auto-downloaded by tabpfn library on first use
