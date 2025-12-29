@@ -48,7 +48,7 @@ def get_trades_data(month_year: Optional[Tuple[int,int]] = None,
     
     else:
         raise AttributeError('Invalid parameter combination: Exactly one of `month_year`, `n_latest`, or `n_random` must be set.'
-                             'Ensure that only one of these parameters is provided and the others are None.')
+                             ' Ensure that only one of these parameters is provided and the others are None.')
     query = (f"SELECT {', '.join(select_cols)} "
              f"FROM tdw.binance_trades {where}")
 
