@@ -7,11 +7,11 @@ Uses balanced metric (precision * sqrt(trade_rate)) to find optimal
 prediction threshold that balances signal quality with trade frequency.
 '''
 
-from loop.manifest import Manifest
-from loop.historical_data import HistoricalData
+from loop.experiment import Manifest
+from loop.data import HistoricalData
 from loop.indicators import roc, wilder_rsi, rolling_volatility, bollinger_bands, bollinger_position
 from loop.features.forward_breakout_target import forward_breakout_target
-from sklearn.preprocessing import StandardScaler
+from loop.transforms import LogRegTransform
 from loop.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
 
 
@@ -47,6 +47,10 @@ def manifest() -> Manifest:
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
+        .set_test_data_source(
+            method=HistoricalData._get_data_for_test,
+            params={'n_rows': 1000}
+        )
         .set_split_config(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
         .set_required_bar_columns(['datetime', 'open', 'high', 'low', 'close', 'volume'])
 
@@ -73,7 +77,7 @@ def manifest() -> Manifest:
             )
             .done()
 
-        .set_scaler(StandardScaler)
+        .set_scaler(LogRegTransform)
 
         .with_model(tabpfn_binary)
     )
