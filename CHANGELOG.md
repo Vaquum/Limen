@@ -388,3 +388,13 @@ data mismatch
 # V1.27.0 on 26th of December, 2025
 - Organize files in root into respective modules
 - Move all data related code from `loop/utils` to `loop/data`
+
+# V1.28.0 on 28th of December, 2025
+- Move scalers from `loop.transforms` to new sub-module `loop.scalers`
+- Update documentations for the above
+- Refactor `loop.utils` and `loop.transforms`
+
+# V1.28.1 on 29th of December, 2025
+- Add missing indicator exports in `loop.indicator.__init__`
+- Add missing feature exports in `loop.feature.__init__`
+- Update `Indicators.md` and `Features.md` to the latest
