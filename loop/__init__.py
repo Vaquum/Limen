@@ -10,7 +10,6 @@ import loop.features as features
 import loop.indicators as indicators
 import loop.metrics as metrics
 import loop.sfd as sfd
-import loop.reports as reports
 import loop.scalers as scalers
 import loop.transforms as transforms
 import loop.utils as utils
