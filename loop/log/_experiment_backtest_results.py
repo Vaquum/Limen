@@ -4,9 +4,10 @@ import pandas as pd
 from loop.backtest.backtest_snapshot import backtest_snapshot
 
 
-def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd.DataFrame:
-
-    '''
+def _experiment_backtest_results(
+    self, disable_progress_bar: bool = False
+) -> pd.DataFrame:
+    """
     Compute backtest results for each round of an experiment.
 
     Args:
@@ -19,12 +20,11 @@ def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd
                       'trade_return_mean_win_pct', 'trade_return_mean_loss_pct',
                       'bars_total', 'sharpe_per_bar', 'bars_in_market_pct',
                       'trades_count', 'cost_round_trip_bps'
-    '''
+    """
 
     all_rows = []
-    
-    for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
 
+    for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
         result_df = backtest_snapshot(self.permutation_prediction_performance(i))
 
         all_rows.append(result_df)

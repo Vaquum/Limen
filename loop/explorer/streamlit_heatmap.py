@@ -4,19 +4,19 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+
 def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
-    
-    '''
+    """
     Compute and render a correlation heatmap for selected numeric columns.
-    
+
     Args:
         df_filt (pd.DataFrame): Klines dataset with numeric columns to correlate
         num_cols (list[str]): User-selected column names to include in the correlation matrix
-    
+
     Returns:
         None: None
-    '''
-    
+    """
+
     if len(num_cols) < 2:
         st.info("Select at least 2 columns for the correlation heatmap.")
         return
@@ -58,8 +58,10 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
         shapes=[
             dict(
                 type="rect",
-                x0=i - 0.5, x1=i + 0.5,
-                y0=j - 0.5, y1=j + 0.5,
+                x0=i - 0.5,
+                x1=i + 0.5,
+                y0=j - 0.5,
+                y1=j + 0.5,
                 line=dict(color="grey", width=0.3),
             )
             for i in range(len(corr.columns))

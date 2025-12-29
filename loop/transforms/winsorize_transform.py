@@ -1,9 +1,10 @@
 import polars as pl
 
 
-def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.DataFrame:
-
-    '''
+def winsorize_transform(
+    df: pl.DataFrame, *, time_col: str = "datetime"
+) -> pl.DataFrame:
+    """
     Compute winsorization by clipping numeric columns to fixed quantile bounds.
 
     Args:
@@ -12,11 +13,12 @@ def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.D
 
     Returns:
         pl.DataFrame: The input data with winsorized numeric columns
-    '''
+    """
 
     # Numeric columns excluding the time column
-    num_cols = [c for c, dt in zip(df.columns, df.dtypes)
-                if dt.is_numeric() and c != time_col]
+    num_cols = [
+        c for c, dt in zip(df.columns, df.dtypes) if dt.is_numeric() and c != time_col
+    ]
 
     if not num_cols:
         return df
@@ -32,9 +34,7 @@ def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.D
     upper = {c: float(upper_sel[0, c]) for c in num_cols}
 
     # Build clipping expressions
-    clipped_exprs = [
-        pl.col(c).clip(lower[c], upper[c]).alias(c) for c in num_cols
-    ]
+    clipped_exprs = [pl.col(c).clip(lower[c], upper[c]).alias(c) for c in num_cols]
 
     # Preserve non-numeric columns as-is
     other_exprs = [pl.col(c) for c in df.columns if c not in num_cols]

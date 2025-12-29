@@ -4,8 +4,8 @@ from loop.reports.confusion_matrix_plus import confusion_matrix_plus
 from loop.reports.deciles_plot import deciles_plot
 
 __all__ = [
-    'deciles_plot',
-    'compare_prediction_with_actual',
-    'quantiles',
-    'confusion_matrix_plus'
+    "deciles_plot",
+    "compare_prediction_with_actual",
+    "quantiles",
+    "confusion_matrix_plus",
 ]

@@ -6,9 +6,9 @@ from loop.data.utils.splits import split_random
 from loop.data.utils.random_slice import random_slice
 
 __all__ = [
-    'compute_data_bars',
-    'split_data_to_prep_output',
-    'split_sequential',
-    'split_random',
-    'random_slice',
+    "compute_data_bars",
+    "split_data_to_prep_output",
+    "split_sequential",
+    "split_random",
+    "random_slice",
 ]

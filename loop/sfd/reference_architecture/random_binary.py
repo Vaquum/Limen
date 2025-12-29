@@ -3,10 +3,8 @@ import numpy as np
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def random_binary(data: dict,
-                  random_weights: float = 0.5) -> dict:
-
-    '''
+def random_binary(data: dict, random_weights: float = 0.5) -> dict:
+    """
     Random binary classifier for testing and demonstration purposes.
 
     Args:
@@ -15,14 +13,14 @@ def random_binary(data: dict,
 
     Returns:
         dict: Results with binary metrics and predictions
-    '''
+    """
 
     weights = [random_weights, 1 - random_weights]
 
-    preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
-    probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
+    preds = np.random.choice([0, 1], size=len(data["x_test"]), p=weights)
+    probs = np.random.choice([0.1, 0.9], size=len(data["x_test"]), p=weights)
 
     round_results = binary_metrics(data, preds, probs)
-    round_results['_preds'] = preds
+    round_results["_preds"] = preds
 
     return round_results

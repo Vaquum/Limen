@@ -2,18 +2,22 @@ from loop.utils.log_to_optuna_study import log_to_optuna_study
 from loop.metrics.continuous_metrics import continuous_metrics
 from loop.metrics.binary_metrics import binary_metrics
 from loop.utils.param_space import ParamSpace
-from loop.utils.reporting import format_report_header, format_report_section, format_report_footer
+from loop.utils.reporting import (
+    format_report_header,
+    format_report_section,
+    format_report_footer,
+)
 from loop.metrics.safe_ovr_auc import safe_ovr_auc
 from loop.utils.confidence_filtering_system import confidence_filtering_system
 
 __all__ = [
-    'confidence_filtering_system',
-    'continuous_metrics',
-    'binary_metrics',
-    'format_report_footer',
-    'format_report_header',
-    'format_report_section',
-    'log_to_optuna_study',
-    'ParamSpace',
-    'safe_ovr_auc',
-] 
+    "confidence_filtering_system",
+    "continuous_metrics",
+    "binary_metrics",
+    "format_report_footer",
+    "format_report_header",
+    "format_report_section",
+    "log_to_optuna_study",
+    "ParamSpace",
+    "safe_ovr_auc",
+]

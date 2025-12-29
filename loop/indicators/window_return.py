@@ -1,10 +1,8 @@
 import polars as pl
 
 
-def window_return(data: pl.DataFrame,
-                  period: int = 24) -> pl.DataFrame:
-
-    '''
+def window_return(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
+    """
     Compute windowed return close/close.shift(period) - 1 for a given period.
 
     Args:
@@ -13,8 +11,10 @@ def window_return(data: pl.DataFrame,
 
     Returns:
         pl.DataFrame: The input data with a new column named using the pattern 'ret_{period}'
-    '''
+    """
 
-    col = f'ret_{period}'
-    
-    return data.with_columns(((pl.col('close') / pl.col('close').shift(period)) - 1.0).alias(col))
+    col = f"ret_{period}"
+
+    return data.with_columns(
+        ((pl.col("close") / pl.col("close").shift(period)) - 1.0).alias(col)
+    )

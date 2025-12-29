@@ -10,19 +10,15 @@ from loop.data._internal.generic_endpoint_for_tdw import generic_endpoint_for_td
 
 
 class HistoricalData:
-    
     def __init__(self):
-
-        '''Set of endpoints to get historical Binance data.'''
+        """Set of endpoints to get historical Binance data."""
 
         pass
 
-    def get_binance_file(self,
-                         file_url: str,
-                         has_header: bool = False,
-                         columns: List[str] = None):
-        
-        '''Get historical data from a Binance file based on the file URL. 
+    def get_binance_file(
+        self, file_url: str, has_header: bool = False, columns: List[str] = None
+    ):
+        """Get historical data from a Binance file based on the file URL.
 
         Data can be found here: https://data.binance.vision/
 
@@ -33,34 +29,32 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
-        '''
+
+        """
 
         self.data = binance_file_to_polars(file_url, has_header=has_header)
         self.data.columns = columns
 
-        self.data = self.data.with_columns([
-            pl.when(pl.col("timestamp") < 10**13)
-            .then(pl.col("timestamp"))
-            .otherwise(pl.col("timestamp") // 1000)
-            .cast(pl.UInt64) 
-            .alias("timestamp")
-        ])
+        self.data = self.data.with_columns(
+            [
+                pl.when(pl.col("timestamp") < 10**13)
+                .then(pl.col("timestamp"))
+                .otherwise(pl.col("timestamp") // 1000)
+                .cast(pl.UInt64)
+                .alias("timestamp")
+            ]
+        )
 
-        self.data = self.data.with_columns([
-            pl.col("timestamp")
-            .cast(pl.Datetime("ms"))
-            .alias("datetime")
-        ])
+        self.data = self.data.with_columns(
+            [pl.col("timestamp").cast(pl.Datetime("ms")).alias("datetime")]
+        )
 
         self.data_columns = self.data.columns
 
-    def get_spot_klines(self,
-                        n_rows: int = None,
-                        kline_size: int = 1,
-                        start_date_limit: str = None) -> None:
-        
-        '''Get historical klines data for Binance spot.
+    def get_spot_klines(
+        self, n_rows: int = None, kline_size: int = 1, start_date_limit: str = None
+    ) -> None:
+        """Get historical klines data for Binance spot.
 
         Args:
             n_rows (int): Number of rows to be pulled
@@ -69,22 +63,22 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
-        '''
 
-        self.data = get_klines_data(n_rows=n_rows,
-                                    kline_size=kline_size,
-                                    start_date_limit=start_date_limit,
-                                    futures=False)
+        """
+
+        self.data = get_klines_data(
+            n_rows=n_rows,
+            kline_size=kline_size,
+            start_date_limit=start_date_limit,
+            futures=False,
+        )
 
         self.data_columns = self.data.columns
 
-    def get_futures_klines(self,
-                           n_rows: int = None,
-                           kline_size: int = 1,
-                           start_date_limit: str = None) -> None:
-        
-        '''Get historical klines data for Binance futures.
+    def get_futures_klines(
+        self, n_rows: int = None, kline_size: int = 1, start_date_limit: str = None
+    ) -> None:
+        """Get historical klines data for Binance futures.
 
         Args:
             n_rows (int): Number of rows to be pulled
@@ -93,23 +87,26 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
-        '''
 
-        self.data = get_klines_data(n_rows=n_rows,
-                                    kline_size=kline_size,
-                                    start_date_limit=start_date_limit,
-                                    futures=True)
+        """
+
+        self.data = get_klines_data(
+            n_rows=n_rows,
+            kline_size=kline_size,
+            start_date_limit=start_date_limit,
+            futures=True,
+        )
 
         self.data_columns = self.data.columns
 
-    def get_spot_trades(self,
-                        month_year: Tuple = None,
-                        n_rows: int = None,
-                        n_random: int = None,
-                        include_datetime_col: bool = True) -> None:
-
-        '''Get historical trades data for Binance spot.
+    def get_spot_trades(
+        self,
+        month_year: Tuple = None,
+        n_rows: int = None,
+        n_random: int = None,
+        include_datetime_col: bool = True,
+    ) -> None:
+        """Get historical trades data for Binance spot.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
@@ -119,30 +116,35 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
-        '''
-        
-        self.data = get_trades_data(month_year=month_year,
-                                    n_latest=n_rows,
-                                    n_random=n_random,
-                                    include_datetime_col=include_datetime_col)
-        
-        self.data = self.data.with_columns([
-            pl.when(pl.col("timestamp") < 10**13)
-            .then(pl.col("timestamp"))
-            .otherwise(pl.col("timestamp") // 1000)
-            .cast(pl.UInt64) 
-            .alias("timestamp")
-        ])
+
+        """
+
+        self.data = get_trades_data(
+            month_year=month_year,
+            n_latest=n_rows,
+            n_random=n_random,
+            include_datetime_col=include_datetime_col,
+        )
+
+        self.data = self.data.with_columns(
+            [
+                pl.when(pl.col("timestamp") < 10**13)
+                .then(pl.col("timestamp"))
+                .otherwise(pl.col("timestamp") // 1000)
+                .cast(pl.UInt64)
+                .alias("timestamp")
+            ]
+        )
 
         self.data_columns = self.data.columns
 
-    def get_spot_agg_trades(self,
-                            month_year: Tuple = None,
-                            n_rows: int = None,
-                            include_datetime_col: bool = True) -> None:
-
-        '''Get historical aggTrades data for Binance spot.
+    def get_spot_agg_trades(
+        self,
+        month_year: Tuple = None,
+        n_rows: int = None,
+        include_datetime_col: bool = True,
+    ) -> None:
+        """Get historical aggTrades data for Binance spot.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
@@ -151,30 +153,35 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
-        '''
-        
-        self.data = get_agg_trades_data(month_year=month_year,
-                                        n_rows=n_rows,
-                                        include_datetime_col=include_datetime_col)
-        
-        self.data = self.data.with_columns([
-            pl.when(pl.col("timestamp") < 10**13)
-            .then(pl.col("timestamp"))
-            .otherwise(pl.col("timestamp") // 1000)
-            .cast(pl.UInt64) 
-            .alias("timestamp")
-        ])
+
+        """
+
+        self.data = get_agg_trades_data(
+            month_year=month_year,
+            n_rows=n_rows,
+            include_datetime_col=include_datetime_col,
+        )
+
+        self.data = self.data.with_columns(
+            [
+                pl.when(pl.col("timestamp") < 10**13)
+                .then(pl.col("timestamp"))
+                .otherwise(pl.col("timestamp") // 1000)
+                .cast(pl.UInt64)
+                .alias("timestamp")
+            ]
+        )
 
         self.data_columns = self.data.columns
-        
-    def get_futures_trades(self,
-                           month_year: Optional[Tuple[int,int]] = None,
-                           n_rows: Optional[int] = None,
-                           include_datetime_col: bool = True,
-                           show_summary: bool = False) -> pl.DataFrame:
-        
-        '''Get historical trades data for Binance futures.
+
+    def get_futures_trades(
+        self,
+        month_year: Optional[Tuple[int, int]] = None,
+        n_rows: Optional[int] = None,
+        include_datetime_col: bool = True,
+        show_summary: bool = False,
+    ) -> pl.DataFrame:
+        """Get historical trades data for Binance futures.
 
         Args:
             month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
@@ -184,25 +191,32 @@ class HistoricalData:
 
         Returns:
             pl.DataFrame: the requested trades.
-        '''
+        """
 
-        select_cols = ['futures_trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker']
-        table_name = 'binance_futures_trades'
-        sort_by = 'futures_trade_id'
+        select_cols = [
+            "futures_trade_id",
+            "timestamp",
+            "price",
+            "quantity",
+            "is_buyer_maker",
+        ]
+        table_name = "binance_futures_trades"
+        sort_by = "futures_trade_id"
 
-        self.data = generic_endpoint_for_tdw(month_year=month_year,
-                                             n_rows=n_rows,
-                                             include_datetime_col=include_datetime_col,
-                                             select_cols=select_cols,
-                                             table_name=table_name,
-                                             sort_by=sort_by,
-                                             show_summary=show_summary)
+        self.data = generic_endpoint_for_tdw(
+            month_year=month_year,
+            n_rows=n_rows,
+            include_datetime_col=include_datetime_col,
+            select_cols=select_cols,
+            table_name=table_name,
+            sort_by=sort_by,
+            show_summary=show_summary,
+        )
 
         self.data_columns = self.data.columns
 
     def _get_data_for_test(self, n_rows: Optional[int] = 5000):
-
-        '''
+        """
         Get test klines data from local CSV file for testing purposes.
 
         NOTE: This is a test-only method used by SFDs to load sample data
@@ -214,11 +228,11 @@ class HistoricalData:
 
         Returns:
             None (sets self.data with the loaded klines data)
-        '''
+        """
 
         import pandas as pd
 
-        df = pd.read_csv('datasets/klines_2h_2020_2025.csv', nrows=n_rows)
-        df['datetime'] = pd.to_datetime(df['datetime'])
+        df = pd.read_csv("datasets/klines_2h_2020_2025.csv", nrows=n_rows)
+        df["datetime"] = pd.to_datetime(df["datetime"])
         self.data = pl.from_pandas(df)
         self.data_columns = self.data.columns

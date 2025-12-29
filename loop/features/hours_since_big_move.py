@@ -4,11 +4,13 @@ from typing import List
 from typing import Dict
 
 
-def hours_since_big_move(data: pl.DataFrame,
-                         long_lines: List[Dict],
-                         short_lines: List[Dict],
-                         lookback_hours: int) -> pl.DataFrame:
-    '''
+def hours_since_big_move(
+    data: pl.DataFrame,
+    long_lines: List[Dict],
+    short_lines: List[Dict],
+    lookback_hours: int,
+) -> pl.DataFrame:
+    """
     Compute hours since the most recent line end capped by lookback_hours.
 
     Args:
@@ -19,17 +21,23 @@ def hours_since_big_move(data: pl.DataFrame,
 
     Returns:
         pl.DataFrame: The input data with a new column 'hours_since_big_move'
-    '''
+    """
 
     n_rows = data.height
 
     if n_rows == 0:
-        return data.with_columns([pl.lit(float(lookback_hours)).alias('hours_since_big_move')])
+        return data.with_columns(
+            [pl.lit(float(lookback_hours)).alias("hours_since_big_move")]
+        )
 
-    ended = [line['end_idx'] for line in long_lines] + [s['end_idx'] for s in short_lines]
+    ended = [line["end_idx"] for line in long_lines] + [
+        s["end_idx"] for s in short_lines
+    ]
 
     if not ended:
-        return data.with_columns([pl.lit(float(lookback_hours)).alias('hours_since_big_move')])
+        return data.with_columns(
+            [pl.lit(float(lookback_hours)).alias("hours_since_big_move")]
+        )
 
     ended = np.array(sorted(ended))
     recency = np.full(n_rows, float(lookback_hours))
@@ -42,4 +50,4 @@ def hours_since_big_move(data: pl.DataFrame,
         if ptr >= 0:
             recency[idx] = float(min(idx - ended[ptr], lookback_hours))
 
-    return data.with_columns([pl.Series('hours_since_big_move', recency)])
+    return data.with_columns([pl.Series("hours_since_big_move", recency)])

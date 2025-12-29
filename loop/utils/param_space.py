@@ -1,18 +1,17 @@
 import random
 import polars as pl
 
+
 class ParamSpace:
-    
-    '''
+    """
     Create parameter space manager for hyperparameter sampling.
-    
+
     Args:
         params (dict): Dictionary of parameter names and their possible values.
         n_permutations (int): Number of parameter combinations to sample.
-    '''
-    
-    def __init__(self, params: dict, n_permutations: int):
+    """
 
+    def __init__(self, params: dict, n_permutations: int):
         self.params = params
         self.keys = list(params.keys())
         self.param_sizes = [len(params[k]) for k in self.keys]
@@ -41,17 +40,16 @@ class ParamSpace:
         return combo
 
     def generate(self, random_search: bool = True) -> dict:
-        
-        '''
+        """
         Compute next parameter combination from the parameter space.
-        
+
         Args:
             random_search (bool): Whether to select parameters randomly or sequentially
-            
+
         Returns:
             dict: Dictionary of parameter names and selected values, or None if space is exhausted
-        '''
-        
+        """
+
         if self.df_params.is_empty():
             return None
 
@@ -63,10 +61,9 @@ class ParamSpace:
         round_params = dict(zip(self.df_params.columns, self.df_params.row(row_no)))
 
         self.df_params = (
-            self.df_params
-              .with_row_index('__idx')
-              .filter(pl.col('__idx') != row_no)
-              .drop('__idx')
+            self.df_params.with_row_index("__idx")
+            .filter(pl.col("__idx") != row_no)
+            .drop("__idx")
         )
 
         return round_params

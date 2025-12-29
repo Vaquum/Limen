@@ -2,8 +2,7 @@ import polars as pl
 
 
 def shift_column_transform(data: pl.DataFrame, shift: int, column: str) -> pl.DataFrame:
-
-    '''
+    """
     Shift a column by a specified number of periods.
 
     Args:
@@ -13,8 +12,6 @@ def shift_column_transform(data: pl.DataFrame, shift: int, column: str) -> pl.Da
 
     Returns:
         pl.DataFrame: DataFrame with shifted column
-    '''
+    """
 
-    return data.with_columns(
-        pl.col(column).shift(shift).alias(column)
-    )
+    return data.with_columns(pl.col(column).shift(shift).alias(column))

@@ -14,18 +14,18 @@ from loop.indicators.cci import cci
 from loop.indicators.stochastic_oscillator import stochastic_oscillator
 
 __all__ = [
-    'atr',
-    'body_pct',
-    'macd',
-    'ppo',
-    'price_change_pct',
-    'returns',
-    'roc',
-    'rolling_volatility',
-    'rsi_sma',
-    'sma',
-    'wilder_rsi',
-    'bollinger_bands',
-    'cci',
-    'stochastic_oscillator'
+    "atr",
+    "body_pct",
+    "macd",
+    "ppo",
+    "price_change_pct",
+    "returns",
+    "roc",
+    "rolling_volatility",
+    "rsi_sma",
+    "sma",
+    "wilder_rsi",
+    "bollinger_bands",
+    "cci",
+    "stochastic_oscillator",
 ]

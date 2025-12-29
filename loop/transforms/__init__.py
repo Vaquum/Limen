@@ -5,9 +5,9 @@ from loop.transforms.zscore_transform import zscore_transform
 from loop.transforms.shift_column_transform import shift_column_transform
 
 __all__ = [
-    'mad_transform',
-    'winsorize_transform',
-    'quantile_trim_transform',
-    'zscore_transform',
-    'shift_column_transform',
+    "mad_transform",
+    "winsorize_transform",
+    "quantile_trim_transform",
+    "zscore_transform",
+    "shift_column_transform",
 ]

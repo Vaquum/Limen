@@ -4,13 +4,14 @@ import time
 from typing import Optional
 
 
-def get_klines_data(n_rows: Optional[int] = None,
-                    kline_size: int = 1,
-                    start_date_limit: str = None,
-                    futures: bool = False,
-                    show_summary: bool = False,) -> pl.DataFrame:
-    
-    '''
+def get_klines_data(
+    n_rows: Optional[int] = None,
+    kline_size: int = 1,
+    start_date_limit: str = None,
+    futures: bool = False,
+    show_summary: bool = False,
+) -> pl.DataFrame:
+    """
     Query Binance klines data from ClickHouse.
 
     Args:
@@ -22,30 +23,30 @@ def get_klines_data(n_rows: Optional[int] = None,
 
     Returns:
         pl.DataFrame: the requested klines data
-    '''
-    
+    """
+
     client = get_client(
-        host='localhost',
+        host="localhost",
         port=8123,
-        username='default',
-        password='password123',
-        compression=True
+        username="default",
+        password="password123",
+        compression=True,
     )
 
     if n_rows is not None:
         limit = f"LIMIT {n_rows}"
     else:
-        limit = ''
+        limit = ""
 
     if start_date_limit is not None:
         start_date_limit = f"WHERE datetime >= toDateTime('{start_date_limit}') "
     else:
-        start_date_limit = ''
+        start_date_limit = ""
 
     if futures is True:
-        db_table = 'FROM tdw.binance_futures_trades '
+        db_table = "FROM tdw.binance_futures_trades "
     else:
-        db_table = 'FROM tdw.binance_trades '
+        db_table = "FROM tdw.binance_trades "
 
     query = (
         f"SELECT "
@@ -78,25 +79,32 @@ def get_klines_data(n_rows: Optional[int] = None,
     start = time.time()
     arrow_table = client.query_arrow(query)
     polars_df = pl.from_arrow(arrow_table)
-    
-    polars_df = polars_df.with_columns([
-        (pl.col('datetime').cast(pl.Int64) * 1000)
-          .cast(pl.Datetime('ms', time_zone='UTC'))
-          .alias('datetime')])
 
-    polars_df = polars_df.with_columns([
-        pl.col('mean').round(5),
-        pl.col('std').round(6),
-        pl.col('volume').round(9),
-        pl.col('liquidity_sum').round(1),
-        pl.col('maker_liquidity').round(1),
-    ])
+    polars_df = polars_df.with_columns(
+        [
+            (pl.col("datetime").cast(pl.Int64) * 1000)
+            .cast(pl.Datetime("ms", time_zone="UTC"))
+            .alias("datetime")
+        ]
+    )
 
-    polars_df = polars_df.sort('datetime')
+    polars_df = polars_df.with_columns(
+        [
+            pl.col("mean").round(5),
+            pl.col("std").round(6),
+            pl.col("volume").round(9),
+            pl.col("liquidity_sum").round(1),
+            pl.col("maker_liquidity").round(1),
+        ]
+    )
+
+    polars_df = polars_df.sort("datetime")
 
     elapsed = time.time() - start
 
     if show_summary is True:
-        print(f"{elapsed:.2f} seconds | {polars_df.shape[0]} rows | {polars_df.shape[1]} columns | {polars_df.estimated_size()/(1024**3):.2f} GB RAM")
+        print(
+            f"{elapsed:.2f} seconds | {polars_df.shape[0]} rows | {polars_df.shape[1]} columns | {polars_df.estimated_size() / (1024**3):.2f} GB RAM"
+        )
 
     return polars_df

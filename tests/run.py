@@ -9,7 +9,9 @@ from tests.utils.cleanup import cleanup_csv_files
 from tests.utils.cleanup import setup_cleanup_handlers
 
 from tests.test_foundational_sfd import test_foundational_sfd
-from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
+from tests.test_conserved_flux_renormalization import (
+    test_conserved_flux_renormalization,
+)
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
 from tests.test_confidence_filtering_system import test_apply_confidence_filtering
 from tests.test_confidence_filtering_system import test_confidence_filtering_system
@@ -45,18 +47,17 @@ tests = [
 setup_cleanup_handlers()
 
 for test in tests:
-
     try:
         start_time = time.time()
         test()
         end_time = time.time()
         duration = end_time - start_time
-        print(f'    ✅ {test.__name__}: PASSED ({duration:.3f}s)')
+        print(f"    ✅ {test.__name__}: PASSED ({duration:.3f}s)")
 
     except Exception as e:
         end_time = time.time()
         duration = end_time - start_time
-        print(f'    ❌ {test.__name__}: FAILED ({duration:.3f}s) - {e}')
+        print(f"    ❌ {test.__name__}: FAILED ({duration:.3f}s) - {e}")
 
         cleanup_csv_files()
         traceback.print_exc()

@@ -10,12 +10,10 @@ from loop.explorer.loop_explorer import loop_explorer
 
 
 class UniversalExperimentLoop:
-
-    '''UniversalExperimentLoop class for running experiments.'''
+    """UniversalExperimentLoop class for running experiments."""
 
     def __init__(self, *, data=None, sfd=None):
-
-        '''
+        """
         Initialize the UniversalExperimentLoop.
 
         NOTE: Automatically detects SFD structure and configures prep/model.
@@ -26,64 +24,74 @@ class UniversalExperimentLoop:
         Args:
             data (pl.DataFrame, optional): The data to use for the experiment
             sfd (SingleFileDecoder, optional): The single file decoder to use for the experiment
-        '''
+        """
 
         if sfd is None:
-            raise ValueError('sfd is required')
+            raise ValueError("sfd is required")
 
         self.params = sfd.params()
         self.manifest = None
 
-        if hasattr(sfd, 'manifest'):
+        if hasattr(sfd, "manifest"):
             self.manifest = sfd.manifest()
 
             if data is None:
                 if self.manifest.data_source_config is None:
                     raise ValueError(
-                        'No data source configured in manifest. '
-                        'Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) '
-                        'to manifest or pass data explicitly.'
+                        "No data source configured in manifest. "
+                        "Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) "
+                        "to manifest or pass data explicitly."
                     )
 
-                env = os.getenv('LOOP_ENV', 'test')
-                if env == 'test' and self.manifest.test_data_source_config is not None:
+                env = os.getenv("LOOP_ENV", "test")
+                if env == "test" and self.manifest.test_data_source_config is not None:
                     self.data = self.manifest.fetch_test_data()
                 else:
                     self.data = self.manifest.fetch_data()
             else:
                 self.data = data
 
-            if hasattr(self.manifest, 'model_function') and self.manifest.model_function:
-                self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
-                self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
+            if (
+                hasattr(self.manifest, "model_function")
+                and self.manifest.model_function
+            ):
+                self.prep = lambda data, round_params=None: self.manifest.prepare_data(
+                    data, round_params or {}
+                )
+                self.model = lambda data, round_params: self.manifest.run_model(
+                    data, round_params or {}
+                )
             else:
                 raise ValueError(
-                    'Manifest without model_function is not supported. '
-                    'Use .with_model(model_func) in your manifest.'
+                    "Manifest without model_function is not supported. "
+                    "Use .with_model(model_func) in your manifest."
                 )
         else:
             if data is None:
-                raise ValueError('data parameter required for custom SFDs using custom functions approach')
+                raise ValueError(
+                    "data parameter required for custom SFDs using custom functions approach"
+                )
             self.data = data
-            self.prep = getattr(sfd, 'prep', None)
-            self.model = getattr(sfd, 'model', None)
+            self.prep = getattr(sfd, "prep", None)
+            self.model = getattr(sfd, "model", None)
 
         self.extras = []
         self.models = []
 
-    def run(self,
-            experiment_name,
-            n_permutations=10000,
-            prep_each_round=False,
-            random_search=True,
-            maintain_details_in_params=False,
-            context_params=None,
-            save_to_sqlite=False,
-            params=None,
-            prep=None,
-            model=None):
-
-        '''
+    def run(
+        self,
+        experiment_name,
+        n_permutations=10000,
+        prep_each_round=False,
+        random_search=True,
+        maintain_details_in_params=False,
+        context_params=None,
+        save_to_sqlite=False,
+        params=None,
+        prep=None,
+        model=None,
+    ):
+        """
         Run the experiment `n_permutations` times.
 
         NOTE: Custom params/prep/model can override defaults for legacy SFMs.
@@ -103,7 +111,7 @@ class UniversalExperimentLoop:
 
         Returns:
             pl.DataFrame: The results of the experiment
-        '''
+        """
 
         self.round_params = []
         self.models = []
@@ -112,16 +120,14 @@ class UniversalExperimentLoop:
         self._alignment = []
 
         if save_to_sqlite is True:
-            self.conn = sqlite3.connect('/opt/experiments/experiments.sqlite')
+            self.conn = sqlite3.connect("/opt/experiments/experiments.sqlite")
 
         if self.manifest is not None:
             if prep is not None or model is not None:
-                raise ValueError(
-                    'Cannot override prep/model when SFM has manifest.'
-                )
+                raise ValueError("Cannot override prep/model when SFM has manifest.")
             if not prep_each_round:
                 raise ValueError(
-                    'prep_each_round must be True for manifest-driven SFMs.'
+                    "prep_each_round must be True for manifest-driven SFMs."
                 )
 
         if params is not None:
@@ -133,11 +139,9 @@ class UniversalExperimentLoop:
         if model is not None:
             self.model = model
 
-        self.param_space = ParamSpace(params=self.params,
-                                      n_permutations=n_permutations)
-        
-        for i in tqdm(range(n_permutations)):
+        self.param_space = ParamSpace(params=self.params, n_permutations=n_permutations)
 
+        for i in tqdm(range(n_permutations)):
             # Start counting execution_time
             start_time = time.time()
 
@@ -150,8 +154,8 @@ class UniversalExperimentLoop:
 
             # Add experiment details to round_params
             if maintain_details_in_params is True:
-                round_params['_experiment_details'] = {
-                    'current_index': i,
+                round_params["_experiment_details"] = {
+                    "current_index": i,
                 }
 
             if prep_each_round is True:
@@ -165,32 +169,32 @@ class UniversalExperimentLoop:
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
-                round_params.pop('_experiment_details')
+                round_params.pop("_experiment_details")
 
             # Add alignment details
-            self._alignment.append(data_dict['_alignment'])
+            self._alignment.append(data_dict["_alignment"])
 
             # Handle any extra results that are returned from the model
-            if 'extras' in round_results.keys():
-                self.extras.append(round_results['extras'])
-                round_results.pop('extras')
+            if "extras" in round_results.keys():
+                self.extras.append(round_results["extras"])
+                round_results.pop("extras")
 
             # Handle any models that are returned from the model
-            if 'models' in round_results.keys():
-                self.models.append(round_results['models'])
-                round_results.pop('models')
+            if "models" in round_results.keys():
+                self.models.append(round_results["models"])
+                round_results.pop("models")
 
-            if '_preds' in round_results.keys():
-                self.preds.append(round_results['_preds'])
-                round_results.pop('_preds')
+            if "_preds" in round_results.keys():
+                self.preds.append(round_results["_preds"])
+                round_results.pop("_preds")
 
-            if '_scaler' in data_dict.keys():
-                self.scalers.append(data_dict['_scaler'])
-                data_dict.pop('_scaler')
+            if "_scaler" in data_dict.keys():
+                self.scalers.append(data_dict["_scaler"])
+                data_dict.pop("_scaler")
 
             # Add the round number and execution time to the results
-            round_results['id'] = i
-            round_results['execution_time'] = round(time.time() - start_time, 2)
+            round_results["id"] = i
+            round_results["execution_time"] = round(time.time() - start_time, 2)
 
             self.round_params.append(round_params)
 
@@ -201,22 +205,23 @@ class UniversalExperimentLoop:
             if i == 0:
                 self.experiment_log = pl.DataFrame(round_results)
             else:
-                self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
+                self.experiment_log = self.experiment_log.vstack(
+                    pl.DataFrame([round_results])
+                )
 
             if save_to_sqlite is True:
                 # Handle writing to the database
-                self.experiment_log.to_pandas().tail(1).to_sql(experiment_name,
-                                                    self.conn,
-                                                    if_exists="append",
-                                                    index=False)
+                self.experiment_log.to_pandas().tail(1).to_sql(
+                    experiment_name, self.conn, if_exists="append", index=False
+                )
             # Handle writing to the file
             if i == 0:
-                header_colnames = ','.join(list(round_results.keys()))
-                with open(experiment_name + '.csv', 'a') as f:
+                header_colnames = ",".join(list(round_results.keys()))
+                with open(experiment_name + ".csv", "a") as f:
                     f.write(f"{header_colnames}\n")
 
             log_string = f"{', '.join(map(str, self.experiment_log.row(i)))}\n"
-            with open(experiment_name + '.csv', 'a') as f:
+            with open(experiment_name + ".csv", "a") as f:
                 f.write(log_string)
 
         if save_to_sqlite is True:
@@ -224,12 +229,16 @@ class UniversalExperimentLoop:
 
         # Add Log, Benchmark, and Backtest properties
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
-        
+
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
-        self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')
+        self.experiment_confusion_metrics = self._log.experiment_confusion_metrics(
+            "price_change"
+        )
         self.experiment_backtest_results = self._log.experiment_backtest_results()
-        self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
+        self.experiment_parameter_correlation = (
+            self._log.experiment_parameter_correlation
+        )
 
         def _explorer():
             loop_explorer(self)

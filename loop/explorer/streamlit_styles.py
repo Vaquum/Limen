@@ -1,18 +1,18 @@
-# IMPORTANT! -> Leave double quotes in this file exceptionally! 
+# IMPORTANT! -> Leave double quotes in this file exceptionally!
 
 
-def streamlit_styles(sidebar_container_gap_rem: float = 0.45,
-                     sidebar_divider_gap_rem: float = 0.30) -> str:
-    
-    '''
+def streamlit_styles(
+    sidebar_container_gap_rem: float = 0.45, sidebar_divider_gap_rem: float = 0.30
+) -> str:
+    """
     Compute CSS string for global Streamlit styles.
     Args:
         sidebar_container_gap_rem (float): Vertical spacing at the top of sidebar content
         sidebar_divider_gap_rem (float): Vertical spacing for sidebar dividers
     Returns:
         str: CSS string for use with st.markdown(..., unsafe_allow_html=True)
-    '''
-    
+    """
+
     return f"""
     <style>
       /* Palette variables */

@@ -3,22 +3,23 @@ from sklearn.linear_model import LogisticRegression
 from loop.metrics.binary_metrics import binary_metrics
 
 
-def logreg_binary(data: dict,
-                  solver: str = 'lbfgs',
-                  penalty: str = 'l2',
-                  dual: bool = False,
-                  tol: float = 0.0001,
-                  C: float = 1.0,
-                  fit_intercept: bool = True,
-                  intercept_scaling: float = 1,
-                  class_weight: str | dict | None = None,
-                  random_state: int | None = None,
-                  max_iter: int = 100,
-                  verbose: int = 0,
-                  warm_start: bool = False,
-                  n_jobs: int = -1) -> dict:
-
-    '''
+def logreg_binary(
+    data: dict,
+    solver: str = "lbfgs",
+    penalty: str = "l2",
+    dual: bool = False,
+    tol: float = 0.0001,
+    C: float = 1.0,
+    fit_intercept: bool = True,
+    intercept_scaling: float = 1,
+    class_weight: str | dict | None = None,
+    random_state: int | None = None,
+    max_iter: int = 100,
+    verbose: int = 0,
+    warm_start: bool = False,
+    n_jobs: int = -1,
+) -> dict:
+    """
     Compute logistic regression binary predictions and evaluation metrics.
 
     Args:
@@ -39,7 +40,7 @@ def logreg_binary(data: dict,
 
     Returns:
         dict: Results with binary metrics and predictions
-    '''
+    """
 
     clf = LogisticRegression(
         solver=solver,
@@ -57,12 +58,12 @@ def logreg_binary(data: dict,
         n_jobs=n_jobs,
     )
 
-    clf.fit(data['x_train'], data['y_train'])
+    clf.fit(data["x_train"], data["y_train"])
 
-    preds = clf.predict(data['x_test'])
-    probs = clf.predict_proba(data['x_test'])[:, 1]
+    preds = clf.predict(data["x_test"])
+    probs = clf.predict_proba(data["x_test"])[:, 1]
 
     round_results = binary_metrics(data, preds, probs)
-    round_results['_preds'] = preds
+    round_results["_preds"] = preds
 
     return round_results

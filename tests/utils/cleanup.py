@@ -16,20 +16,19 @@ def cleanup_csv_files():
     not subdirectories like datasets/.
     """
     project_root = Path.cwd()
-    
-    csv_pattern = os.path.join(project_root, '*.csv')
+
+    csv_pattern = os.path.join(project_root, "*.csv")
     csv_files = glob.glob(csv_pattern)
-    
+
     if csv_files:
         for csv_file in csv_files:
-            
             try:
                 os.remove(csv_file)
-                print(f'  ✅ Deleted: {os.path.basename(csv_file)}')
-            
+                print(f"  ✅ Deleted: {os.path.basename(csv_file)}")
+
             except (OSError, PermissionError) as e:
-                print(f'  ❌ Failed to delete {os.path.basename(csv_file)}: {e}')
-            
+                print(f"  ❌ Failed to delete {os.path.basename(csv_file)}: {e}")
+
 
 def signal_handler(signum, frame):
     """Handle interrupt signals and ensure cleanup."""
@@ -40,5 +39,5 @@ def signal_handler(signum, frame):
 def setup_cleanup_handlers():
     """Register cleanup handlers for multiple exit scenarios."""
     atexit.register(cleanup_csv_files)
-    signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
     signal.signal(signal.SIGTERM, signal_handler)  # Termination signal

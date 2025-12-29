@@ -1,9 +1,10 @@
 import polars as pl
 
 
-def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.DataFrame:
-
-    '''
+def quantile_trim_transform(
+    df: pl.DataFrame, *, time_col: str = "datetime"
+) -> pl.DataFrame:
+    """
     Compute outlier trimming by removing rows outside fixed quantile bounds across numeric columns.
 
     Args:
@@ -12,10 +13,11 @@ def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> 
 
     Returns:
         pl.DataFrame: The input data filtered within bounds for all numeric columns
-    '''
+    """
 
-    num_cols = [c for c, dt in zip(df.columns, df.dtypes)
-                if dt.is_numeric() and c != time_col]
+    num_cols = [
+        c for c, dt in zip(df.columns, df.dtypes) if dt.is_numeric() and c != time_col
+    ]
 
     if not num_cols:
         return df
@@ -23,14 +25,13 @@ def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> 
     lower_q = 0.005
     upper_q = 0.995
 
-    bounds = df.select([
-        pl.col(c).quantile(lower_q).alias(f'{c}__lo') for c in num_cols
-    ] + [
-        pl.col(c).quantile(upper_q).alias(f'{c}__hi') for c in num_cols
-    ])
+    bounds = df.select(
+        [pl.col(c).quantile(lower_q).alias(f"{c}__lo") for c in num_cols]
+        + [pl.col(c).quantile(upper_q).alias(f"{c}__hi") for c in num_cols]
+    )
 
-    lo = {c: float(bounds[0, f'{c}__lo']) for c in num_cols}
-    hi = {c: float(bounds[0, f'{c}__hi']) for c in num_cols}
+    lo = {c: float(bounds[0, f"{c}__lo"]) for c in num_cols}
+    hi = {c: float(bounds[0, f"{c}__hi"]) for c in num_cols}
 
     # Build AND mask across numeric columns
     mask = None

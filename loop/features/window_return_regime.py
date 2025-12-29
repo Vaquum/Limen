@@ -2,12 +2,10 @@ import polars as pl
 from loop.indicators.window_return import window_return
 
 
-def window_return_regime(df: pl.DataFrame,
-                         period: int = 24,
-                         r_hi: float = 0.0,
-                         r_lo: float = 0.0) -> pl.DataFrame:
-
-    '''
+def window_return_regime(
+    df: pl.DataFrame, period: int = 24, r_hi: float = 0.0, r_lo: float = 0.0
+) -> pl.DataFrame:
+    """
     Compute regime using windowed return close/close.shift(period) - 1.
 
     Args:
@@ -18,13 +16,18 @@ def window_return_regime(df: pl.DataFrame,
 
     Returns:
         pl.DataFrame: The input data with a new column 'regime_window_return'
-    '''
+    """
 
-    ret_col = f'ret_{period}'
+    ret_col = f"ret_{period}"
     df2 = window_return(df, period)
-    
-    return df2.with_columns([
-        pl.when(pl.col(ret_col) >= r_hi).then(pl.lit('Up'))
-         .when(pl.col(ret_col) <= r_lo).then(pl.lit('Down'))
-         .otherwise(pl.lit('Flat')).alias('regime_window_return')
-    ])
+
+    return df2.with_columns(
+        [
+            pl.when(pl.col(ret_col) >= r_hi)
+            .then(pl.lit("Up"))
+            .when(pl.col(ret_col) <= r_lo)
+            .then(pl.lit("Down"))
+            .otherwise(pl.lit("Flat"))
+            .alias("regime_window_return")
+        ]
+    )

@@ -3,7 +3,7 @@ import loop.sfd.foundational_sfd.random_binary as random_binary
 import loop.sfd.foundational_sfd.xgboost_regressor as xgboost_regressor
 
 __all__ = [
-    'logreg_binary',
-    'random_binary',
-    'xgboost_regressor',
+    "logreg_binary",
+    "random_binary",
+    "xgboost_regressor",
 ]
