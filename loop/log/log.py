@@ -50,7 +50,7 @@ class Log:
             self.experiment_log = self.read_from_file(file_path)
 
         else:
-            raise ValueError("Both uel_object and file_path can't be None")
+            raise ValueError('Both uel_object and file_path cannot be None')
         
         if cols_to_multilabel is not None:
             for col in cols_to_multilabel:

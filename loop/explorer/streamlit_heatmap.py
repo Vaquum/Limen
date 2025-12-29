@@ -18,7 +18,7 @@ def render_corr_heatmap(df_filt: pd.DataFrame, num_cols: list[str]) -> None:
     '''
     
     if len(num_cols) < 2:
-        st.info("Select at least 2 columns for the correlation heatmap.")
+        st.info('Select at least 2 columns for the correlation heatmap.')
         return
 
     corr = df_filt[num_cols].corr()

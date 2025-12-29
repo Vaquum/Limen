@@ -15,7 +15,7 @@ class BacktestSequential:
     def run(self, actual, prediction, price_change, open_prices, close_prices):
         
         if not all(len(arr) == len(actual) for arr in [prediction, price_change, open_prices, close_prices]):
-            raise ValueError("ERROR: Arrays must have same length")
+            raise ValueError('ERROR: Arrays must have same length')
         
         for i in range(len(actual)):
             pred = prediction[i]

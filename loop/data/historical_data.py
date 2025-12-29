@@ -40,17 +40,17 @@ class HistoricalData:
         self.data.columns = columns
 
         self.data = self.data.with_columns([
-            pl.when(pl.col("timestamp") < 10**13)
-            .then(pl.col("timestamp"))
-            .otherwise(pl.col("timestamp") // 1000)
+            pl.when(pl.col('timestamp') < 10**13)
+            .then(pl.col('timestamp'))
+            .otherwise(pl.col('timestamp') // 1000)
             .cast(pl.UInt64) 
-            .alias("timestamp")
+            .alias('timestamp')
         ])
 
         self.data = self.data.with_columns([
-            pl.col("timestamp")
-            .cast(pl.Datetime("ms"))
-            .alias("datetime")
+            pl.col('timestamp')
+            .cast(pl.Datetime('ms'))
+            .alias('datetime')
         ])
 
         self.data_columns = self.data.columns
@@ -128,11 +128,11 @@ class HistoricalData:
                                     include_datetime_col=include_datetime_col)
         
         self.data = self.data.with_columns([
-            pl.when(pl.col("timestamp") < 10**13)
-            .then(pl.col("timestamp"))
-            .otherwise(pl.col("timestamp") // 1000)
+            pl.when(pl.col('timestamp') < 10**13)
+            .then(pl.col('timestamp'))
+            .otherwise(pl.col('timestamp') // 1000)
             .cast(pl.UInt64) 
-            .alias("timestamp")
+            .alias('timestamp')
         ])
 
         self.data_columns = self.data.columns
@@ -159,11 +159,11 @@ class HistoricalData:
                                         include_datetime_col=include_datetime_col)
         
         self.data = self.data.with_columns([
-            pl.when(pl.col("timestamp") < 10**13)
-            .then(pl.col("timestamp"))
-            .otherwise(pl.col("timestamp") // 1000)
+            pl.when(pl.col('timestamp') < 10**13)
+            .then(pl.col('timestamp'))
+            .otherwise(pl.col('timestamp') // 1000)
             .cast(pl.UInt64) 
-            .alias("timestamp")
+            .alias('timestamp')
         ])
 
         self.data_columns = self.data.columns

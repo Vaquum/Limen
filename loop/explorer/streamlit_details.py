@@ -75,7 +75,7 @@ def render_details_view(
             return f"{minutes}m"
         return f"{total_seconds}s"
 
-    subtitle_parts: list[str] = ["All values formatted for readability"]
+    subtitle_parts: list[str] = ['All values formatted for readability']
 
     # Date range and inferred bar interval from 'datetime' column if present
     if 'datetime' in df.columns:

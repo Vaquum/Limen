@@ -45,5 +45,5 @@ def sma_crossover(
               .otherwise(pl.lit(0))
               .alias('signal')
         ])
-        .drop(["sma_short", "sma_long", "sma_relation"])
+        .drop(['sma_short', 'sma_long', 'sma_relation'])
     )
