@@ -87,7 +87,7 @@ def query_raw_data(table_name: str,
     elapsed = time.time() - start
 
     if show_summary:
-        print(f"{elapsed:.2f}s | {polars_df.shape[0]} rows | "
+        print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | "
               f"{polars_df.shape[1]} cols | "
               f"{polars_df.estimated_size()/(1024**3):.2f} GB RAM")
 

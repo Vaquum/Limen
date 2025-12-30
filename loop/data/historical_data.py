@@ -105,7 +105,8 @@ class HistoricalData:
                         month_year: Tuple = None,
                         n_rows: int = None,
                         n_random: int = None,
-                        include_datetime_col: bool = True) -> None:
+                        include_datetime_col: bool = True,
+                        show_summary: bool = False) -> None:
 
         '''Get historical trades data for Binance spot.
 
@@ -114,6 +115,7 @@ class HistoricalData:
             n_rows (int): Number of latest rows to be pulled
             n_random (int): Number of random rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
+            show_summary (bool): Print query execution summary
 
         Returns:
             self.data (pl.DataFrame)
@@ -127,7 +129,8 @@ class HistoricalData:
             month_year=month_year,
             n_rows=n_rows,
             n_random=n_random,
-            include_datetime_col=include_datetime_col
+            include_datetime_col=include_datetime_col,
+            show_summary=show_summary
         )
 
         self.data_columns = self.data.columns
@@ -135,14 +138,18 @@ class HistoricalData:
     def get_spot_agg_trades(self,
                             month_year: Tuple = None,
                             n_rows: int = None,
-                            include_datetime_col: bool = True) -> None:
+                            n_random: int = None,
+                            include_datetime_col: bool = True,
+                            show_summary: bool = False) -> None:
 
         '''Get historical aggTrades data for Binance spot.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
-            n_rows (int): Number of rows to be pulled
+            n_rows (int): Number of latest rows to be pulled
+            n_random (int): Number of random rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
+            show_summary (bool): Print query execution summary
 
         Returns:
             self.data (pl.DataFrame)
@@ -158,7 +165,9 @@ class HistoricalData:
             ],
             month_year=month_year,
             n_rows=n_rows,
-            include_datetime_col=include_datetime_col
+            n_random=n_random,
+            include_datetime_col=include_datetime_col,
+            show_summary=show_summary
         )
 
         self.data_columns = self.data.columns
@@ -166,14 +175,16 @@ class HistoricalData:
     def get_futures_trades(self,
                            month_year: Optional[Tuple[int,int]] = None,
                            n_rows: Optional[int] = None,
+                           n_random: Optional[int] = None,
                            include_datetime_col: bool = True,
                            show_summary: bool = False) -> pl.DataFrame:
-        
+
         '''Get historical trades data for Binance futures.
 
         Args:
             month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
             n_rows (int | None): if set, fetch this many latest rows instead.
+            n_random (int | None): if set, fetch this many random rows instead.
             include_datetime_col (bool): whether to include `datetime` in the result.
             show_summary (bool): if a summary for data is printed out
 
@@ -187,6 +198,7 @@ class HistoricalData:
             select_cols=['futures_trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker'],
             month_year=month_year,
             n_rows=n_rows,
+            n_random=n_random,
             include_datetime_col=include_datetime_col,
             show_summary=show_summary
         )
