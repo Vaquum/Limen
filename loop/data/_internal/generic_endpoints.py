@@ -38,12 +38,6 @@ def query_raw_data(table_name: str,
 
     cols = select_cols.copy()
 
-    datetime_added_internally = False
-    timestamp_added_internally = False
-
-    if include_datetime_col and 'datetime' not in cols:
-        cols.append('datetime')
-
     param_count = sum([month_year is not None, n_rows is not None, n_random is not None])
     if param_count != 1:
         raise ValueError(
@@ -51,13 +45,17 @@ def query_raw_data(table_name: str,
             f"Got: month_year={month_year}, n_rows={n_rows}, n_random={n_random}"
         )
 
-    if (month_year is not None or n_rows is not None) and 'datetime' not in cols:
-        cols.append('datetime')
-        datetime_added_internally = True
+    datetime_requested = include_datetime_col or 'datetime' in select_cols
+    datetime_needed_for_query = month_year is not None or n_rows is not None
 
-    if n_random is not None and 'timestamp' not in cols:
+    timestamp_requested = 'timestamp' in select_cols
+    timestamp_needed_for_query = n_random is not None
+
+    if datetime_needed_for_query and 'datetime' not in cols:
+        cols.append('datetime')
+
+    if timestamp_needed_for_query and 'timestamp' not in cols:
         cols.append('timestamp')
-        timestamp_added_internally = True
 
     if month_year is not None:
         month, year = month_year
@@ -100,10 +98,10 @@ def query_raw_data(table_name: str,
               f"{polars_df.shape[1]} cols | "
               f"{polars_df.estimated_size()/(1024**3):.2f} GB RAM")
 
-    if datetime_added_internally and 'datetime' in polars_df.columns:
+    if not datetime_requested and 'datetime' in polars_df.columns:
         polars_df = polars_df.drop('datetime')
 
-    if timestamp_added_internally and 'timestamp' in polars_df.columns:
+    if not timestamp_requested and 'timestamp' in polars_df.columns:
         polars_df = polars_df.drop('timestamp')
 
     return polars_df
