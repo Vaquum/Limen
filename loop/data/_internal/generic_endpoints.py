@@ -65,6 +65,14 @@ def query_raw_data(table_name: str,
     polars_df = pl.from_arrow(arrow_table)
     polars_df = polars_df.sort(id_col)
 
+    polars_df = polars_df.with_columns([
+        pl.when(pl.col('timestamp') < 10**13)
+        .then(pl.col('timestamp'))
+        .otherwise(pl.col('timestamp') // 1000)
+        .cast(pl.UInt64)
+        .alias('timestamp')
+    ])
+
     if include_datetime_col:
         polars_df = polars_df.with_columns([
             (pl.col('datetime').cast(pl.Int64) * 1000)

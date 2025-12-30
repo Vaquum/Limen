@@ -130,14 +130,6 @@ class HistoricalData:
             include_datetime_col=include_datetime_col
         )
 
-        self.data = self.data.with_columns([
-            pl.when(pl.col('timestamp') < 10**13)
-            .then(pl.col('timestamp'))
-            .otherwise(pl.col('timestamp') // 1000)
-            .cast(pl.UInt64)
-            .alias('timestamp')
-        ])
-
         self.data_columns = self.data.columns
 
     def get_spot_agg_trades(self,
@@ -168,14 +160,6 @@ class HistoricalData:
             n_rows=n_rows,
             include_datetime_col=include_datetime_col
         )
-
-        self.data = self.data.with_columns([
-            pl.when(pl.col('timestamp') < 10**13)
-            .then(pl.col('timestamp'))
-            .otherwise(pl.col('timestamp') // 1000)
-            .cast(pl.UInt64)
-            .alias('timestamp')
-        ])
 
         self.data_columns = self.data.columns
         
