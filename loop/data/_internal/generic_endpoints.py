@@ -1,7 +1,7 @@
 from clickhouse_connect import get_client
 import polars as pl
 import time
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple
 
 
 def query_raw_data(table_name: str,
@@ -110,7 +110,7 @@ def query_klines_data(n_rows: Optional[int] = None,
     )
 
     if n_rows is not None:
-        limit = f'LIMIT {n_rows}'
+        limit = f"LIMIT {n_rows}"
     else:
         limit = ''
 
@@ -127,31 +127,31 @@ def query_klines_data(n_rows: Optional[int] = None,
         id_col = 'trade_id'
 
     query = (
-        f'SELECT '
-        f'    toDateTime({kline_size} * intDiv(toUnixTimestamp(datetime), {kline_size})) AS datetime, '
-        f'    argMin(price, {id_col})       AS open, '
-        f'    max(price)                    AS high, '
-        f'    min(price)                    AS low, '
-        f'    argMax(price, {id_col})       AS close, '
-        f'    avg(price)                    AS mean, '
-        f'    stddevPopStable(price)        AS std, '
-        f'    quantileExact(0.5)(price)     AS median, '
-        f'    quantileExact(0.75)(price) - quantileExact(0.25)(price) AS iqr, '
-        f'    sumKahan(quantity)            AS volume, '
-        f'    avg(is_buyer_maker)           AS maker_ratio, '
-        f'    count()                       AS no_of_trades, '
-        f'    argMin(price * quantity, {id_col})    AS open_liquidity, '
-        f'    max(price * quantity)         AS high_liquidity, '
-        f'    min(price * quantity)         AS low_liquidity, '
-        f'    argMax(price * quantity, {id_col})    AS close_liquidity, '
-        f'    sum(price * quantity)         AS liquidity_sum, '
-        f'    sumKahan(is_buyer_maker * quantity)   AS maker_volume, '
-        f'    sum(is_buyer_maker * price * quantity) AS maker_liquidity '
-        f'{db_table}'
-        f'{start_date_limit}'
-        f'GROUP BY datetime '
-        f'ORDER BY datetime ASC '
-        f'{limit}'
+        f"SELECT "
+        f"    toDateTime({kline_size} * intDiv(toUnixTimestamp(datetime), {kline_size})) AS datetime, "
+        f"    argMin(price, {id_col})       AS open, "
+        f"    max(price)                    AS high, "
+        f"    min(price)                    AS low, "
+        f"    argMax(price, {id_col})       AS close, "
+        f"    avg(price)                    AS mean, "
+        f"    stddevPopStable(price)        AS std, "
+        f"    quantileExact(0.5)(price)     AS median, "
+        f"    quantileExact(0.75)(price) - quantileExact(0.25)(price) AS iqr, "
+        f"    sumKahan(quantity)            AS volume, "
+        f"    avg(is_buyer_maker)           AS maker_ratio, "
+        f"    count()                       AS no_of_trades, "
+        f"    argMin(price * quantity, {id_col})    AS open_liquidity, "
+        f"    max(price * quantity)         AS high_liquidity, "
+        f"    min(price * quantity)         AS low_liquidity, "
+        f"    argMax(price * quantity, {id_col})    AS close_liquidity, "
+        f"    sum(price * quantity)         AS liquidity_sum, "
+        f"    sumKahan(is_buyer_maker * quantity)   AS maker_volume, "
+        f"    sum(is_buyer_maker * price * quantity) AS maker_liquidity "
+        f"{db_table}"
+        f"{start_date_limit}"
+        f"GROUP BY datetime "
+        f"ORDER BY datetime ASC "
+        f"{limit}"
     )
 
     start = time.time()
@@ -176,6 +176,6 @@ def query_klines_data(n_rows: Optional[int] = None,
     elapsed = time.time() - start
 
     if show_summary is True:
-        print(f'{elapsed:.2f} seconds | {polars_df.shape[0]} rows | {polars_df.shape[1]} columns | {polars_df.estimated_size()/(1024**3):.2f} GB RAM')
+        print(f"{elapsed:.2f} seconds | {polars_df.shape[0]} rows | {polars_df.shape[1]} columns | {polars_df.estimated_size()/(1024**3):.2f} GB RAM")
 
     return polars_df
