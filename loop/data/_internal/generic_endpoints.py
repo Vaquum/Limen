@@ -12,21 +12,22 @@ def query_raw_data(table_name: str,
                    n_random: Optional[int] = None,
                    include_datetime_col: bool = True,
                    show_summary: bool = False) -> pl.DataFrame:
+
     '''
-    Query ClickHouse table and return results as Polars DataFrame.
+    Query raw trade data from ClickHouse database.
 
     Args:
-        table_name (str): ClickHouse table name (e.g., 'binance_trades', 'binance_futures_trades')
-        id_col (str): ID column for sorting (e.g., 'trade_id', 'futures_trade_id', 'agg_trade_id')
-        select_cols (list): Columns to select (datetime added automatically if include_datetime_col=True)
-        month_year (tuple, optional): (month, year) tuple for month-based filtering
-        n_rows (int, optional): Number of latest rows to fetch
-        n_random (int, optional): Number of random rows to fetch
-        include_datetime_col (bool, optional): Whether to include the datetime column
-        show_summary (bool, optional): Whether to print query summary
+        table_name (str): ClickHouse table name
+        id_col (str): ID column name for database table
+        select_cols (list): Column names to select from table
+        month_year (Optional[Tuple[int, int]]): Month and year tuple for filtering
+        n_rows (Optional[int]): Number of latest rows to fetch
+        n_random (Optional[int]): Number of random rows to fetch
+        include_datetime_col (bool): Include datetime column in result
+        show_summary (bool): Print query execution summary
 
     Returns:
-        pl.DataFrame: Polars DataFrame with the query results
+        pl.DataFrame: Raw trade data with selected columns sorted by ID
     '''
 
     client = get_client(host='localhost',
@@ -88,17 +89,17 @@ def query_klines_data(n_rows: Optional[int] = None,
                       show_summary: bool = False) -> pl.DataFrame:
 
     '''
-    Query Binance klines data from ClickHouse.
+    Query aggregated klines data from ClickHouse database.
 
     Args:
-        n_rows (int | None): if not None, fetch this many latest rows instead
-        kline_size (int): the size of the kline in seconds
-        start_date_limit (str): the start date of the klines data
-        futures (bool): if the data is from futures
-        show_summary (bool): if a summary for data is printed out
+        n_rows (Optional[int]): Number of latest kline rows to fetch
+        kline_size (int): Kline period size in seconds
+        start_date_limit (str): Start date for filtering klines data
+        futures (bool): Query futures market data instead of spot
+        show_summary (bool): Print query execution summary
 
     Returns:
-        pl.DataFrame: the requested klines data
+        pl.DataFrame: Klines data with 19 columns including OHLC, volume, and liquidity metrics
     '''
 
     client = get_client(
