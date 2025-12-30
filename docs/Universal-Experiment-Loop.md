@@ -117,7 +117,7 @@ Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming 
   - `experiment_backtest_results`: `pd.DataFrame` produced via `Log.experiment_backtest_results()`
   - `experiment_parameter_correlation`: Convenience reference to `Log.experiment_parameter_correlation`
   - `_log`: Internal `Log` instance used to compute the above artifacts
-  - `explorer`: Convenience callable that launches the Loop Explorer Streamlit UI bound to this UEL instance (dataset selector includes Historical Data, Experiment Log, Confusion Metrics, and Backtest Results)
+
 
 #### Parameter space
 
@@ -164,9 +164,6 @@ confusion_df = uel.experiment_confusion_metrics
 
 # Compute round-specific results
 round0_perf = uel._log.permutation_prediction_performance(round_id=0)
-
-# Visually explore the data
-uel.explorer()
 
 ```
 

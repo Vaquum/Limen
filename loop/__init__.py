@@ -5,7 +5,6 @@ from loop.backtest.backtest_sequential import BacktestSequential
 from loop.experiment import UniversalExperimentLoop, Manifest
 from loop.cohort import RegimeDiversifiedOpinionPools
 
-import loop.explorer as explorer
 import loop.features as features
 import loop.indicators as indicators
 import loop.metrics as metrics
@@ -21,8 +20,6 @@ __all__ = [
     'HistoricalData',
     'Log',
     'UniversalExperimentLoop',
-    'Explorer',
-    'explorer',
     'Manifest',
     'RegimeDiversifiedOpinionPools',
     'features',
