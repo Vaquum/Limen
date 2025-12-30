@@ -96,7 +96,7 @@ def query_raw_data(table_name: str,
 
 def query_klines_data(n_rows: Optional[int] = None,
                       kline_size: int = 1,
-                      start_date_limit: str = None,
+                      start_date_limit: Optional[str] = None,
                       futures: bool = False,
                       show_summary: bool = False) -> pl.DataFrame:
 
@@ -106,7 +106,7 @@ def query_klines_data(n_rows: Optional[int] = None,
     Args:
         n_rows (Optional[int]): Number of latest kline rows to fetch
         kline_size (int): Kline period size in seconds
-        start_date_limit (str): Start date for filtering klines data
+        start_date_limit (Optional[str]): Start date for filtering klines data
         futures (bool): Query futures market data instead of spot
         show_summary (bool): Print query execution summary
 

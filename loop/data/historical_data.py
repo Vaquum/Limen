@@ -171,7 +171,7 @@ class HistoricalData:
         )
 
         self.data_columns = self.data.columns
-        
+
     def get_futures_trades(self,
                            month_year: Optional[Tuple[int,int]] = None,
                            n_rows: Optional[int] = None,
