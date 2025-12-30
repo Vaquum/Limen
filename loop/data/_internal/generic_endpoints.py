@@ -201,7 +201,7 @@ def query_klines_data(n_rows: Optional[int] = None,
 
     elapsed = time.time() - start
 
-    if show_summary is True:
+    if show_summary:
         print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | {polars_df.shape[1]} cols | {polars_df.estimated_size()/(1024**3):.2f} GB RAM")
 
     return polars_df
