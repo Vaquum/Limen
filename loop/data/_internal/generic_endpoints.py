@@ -37,6 +37,10 @@ def query_raw_data(table_name: str,
                         compression=True)
 
     cols = select_cols.copy()
+
+    datetime_added_internally = False
+    timestamp_added_internally = False
+
     if include_datetime_col and 'datetime' not in cols:
         cols.append('datetime')
 
@@ -47,8 +51,13 @@ def query_raw_data(table_name: str,
             f"Got: month_year={month_year}, n_rows={n_rows}, n_random={n_random}"
         )
 
+    if (month_year is not None or n_rows is not None) and 'datetime' not in cols:
+        cols.append('datetime')
+        datetime_added_internally = True
+
     if n_random is not None and 'timestamp' not in cols:
         cols.append('timestamp')
+        timestamp_added_internally = True
 
     if month_year is not None:
         month, year = month_year
@@ -90,6 +99,12 @@ def query_raw_data(table_name: str,
         print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | "
               f"{polars_df.shape[1]} cols | "
               f"{polars_df.estimated_size()/(1024**3):.2f} GB RAM")
+
+    if datetime_added_internally and 'datetime' in polars_df.columns:
+        polars_df = polars_df.drop('datetime')
+
+    if timestamp_added_internally and 'timestamp' in polars_df.columns:
+        polars_df = polars_df.drop('timestamp')
 
     return polars_df
 
