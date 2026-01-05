@@ -100,6 +100,7 @@ Get historical trades data for Binance spot.
 | `n_rows`                | `int`    | Number of latest rows to be pulled.                 |
 | `n_random`              | `int`    | Number of random rows to be pulled.                 |
 | `include_datetime_col`  | `bool`   | If the datetime column is to be included.           |
+| `show_summary`          | `bool`   | Print query execution summary.                      |
 
 ### Returns
 
@@ -124,8 +125,10 @@ Get historical aggTrades data for Binance spot.
 | Parameter               | Type     | Description                                         |
 |-------------------------|----------|-----------------------------------------------------|
 | `month_year`            | `Tuple`  | The month of data to be pulled, e.g. `(3, 2025)`.   |
-| `n_rows`                | `int`    | Number of rows to be pulled.                        |
+| `n_rows`                | `int`    | Number of latest rows to be pulled.                 |
+| `n_random`              | `int`    | Number of random rows to be pulled.                 |
 | `include_datetime_col`  | `bool`   | If the datetime column is to be included.           |
+| `show_summary`          | `bool`   | Print query execution summary.                      |
 
 ### Returns
 
@@ -182,7 +185,7 @@ Get historical klines data for Binance futures.
 
 ## `HistoricalData.get_futures_trades`
 
-Get historical trades data for Binance futures. 
+Get historical trades data for Binance futures.
 
 ### Args
 
@@ -190,6 +193,7 @@ Get historical trades data for Binance futures.
 |-------------------------|----------------------------|-----------------------------------------------------|
 | `month_year`            | `tuple[int,int] \| None`   | (month, year) to fetch, e.g. `(3, 2025)`.           |
 | `n_rows`                | `int \| None`              | If set, fetch this many latest rows instead.        |
+| `n_random`              | `int \| None`              | If set, fetch this many random rows instead.        |
 | `include_datetime_col`  | `bool`                     | Whether to include `datetime` in the result.        |
 | `show_summary`          | `bool`                     | If a summary for the data is printed out.           |
 

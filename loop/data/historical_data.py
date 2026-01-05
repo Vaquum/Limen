@@ -3,10 +3,8 @@ import polars as pl
 from typing import List, Tuple, Optional
 
 from loop.data._internal.binance_file_to_polars import binance_file_to_polars
-from loop.data._internal.get_klines_data import get_klines_data
-from loop.data._internal.get_trades_data import get_trades_data
-from loop.data._internal.get_agg_trades_data import get_agg_trades_data
-from loop.data._internal.generic_endpoint_for_tdw import generic_endpoint_for_tdw
+from loop.data._internal.generic_endpoints import query_raw_data
+from loop.data._internal.generic_endpoints import query_klines_data
 
 
 class HistoricalData:
@@ -72,10 +70,10 @@ class HistoricalData:
     
         '''
 
-        self.data = get_klines_data(n_rows=n_rows,
-                                    kline_size=kline_size,
-                                    start_date_limit=start_date_limit,
-                                    futures=False)
+        self.data = query_klines_data(n_rows=n_rows,
+                                      kline_size=kline_size,
+                                      start_date_limit=start_date_limit,
+                                      futures=False)
 
         self.data_columns = self.data.columns
 
@@ -96,10 +94,10 @@ class HistoricalData:
     
         '''
 
-        self.data = get_klines_data(n_rows=n_rows,
-                                    kline_size=kline_size,
-                                    start_date_limit=start_date_limit,
-                                    futures=True)
+        self.data = query_klines_data(n_rows=n_rows,
+                                      kline_size=kline_size,
+                                      start_date_limit=start_date_limit,
+                                      futures=True)
 
         self.data_columns = self.data.columns
 
@@ -107,7 +105,8 @@ class HistoricalData:
                         month_year: Tuple = None,
                         n_rows: int = None,
                         n_random: int = None,
-                        include_datetime_col: bool = True) -> None:
+                        include_datetime_col: bool = True,
+                        show_summary: bool = False) -> None:
 
         '''Get historical trades data for Binance spot.
 
@@ -116,69 +115,76 @@ class HistoricalData:
             n_rows (int): Number of latest rows to be pulled
             n_random (int): Number of random rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
+            show_summary (bool): Print query execution summary
 
         Returns:
             self.data (pl.DataFrame)
-    
+
         '''
-        
-        self.data = get_trades_data(month_year=month_year,
-                                    n_latest=n_rows,
-                                    n_random=n_random,
-                                    include_datetime_col=include_datetime_col)
-        
-        self.data = self.data.with_columns([
-            pl.when(pl.col('timestamp') < 10**13)
-            .then(pl.col('timestamp'))
-            .otherwise(pl.col('timestamp') // 1000)
-            .cast(pl.UInt64) 
-            .alias('timestamp')
-        ])
+
+        self.data = query_raw_data(
+            table_name='binance_trades',
+            id_col='trade_id',
+            select_cols=['trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker'],
+            month_year=month_year,
+            n_rows=n_rows,
+            n_random=n_random,
+            include_datetime_col=include_datetime_col,
+            show_summary=show_summary
+        )
 
         self.data_columns = self.data.columns
 
     def get_spot_agg_trades(self,
                             month_year: Tuple = None,
                             n_rows: int = None,
-                            include_datetime_col: bool = True) -> None:
+                            n_random: int = None,
+                            include_datetime_col: bool = True,
+                            show_summary: bool = False) -> None:
 
         '''Get historical aggTrades data for Binance spot.
 
         Args:
             month_year (Tuple): The month of data to be pulled e.g. (3, 2025)
-            n_rows (int): Number of rows to be pulled
+            n_rows (int): Number of latest rows to be pulled
+            n_random (int): Number of random rows to be pulled
             include_datetime_col (bool): If datetime column is to be included
+            show_summary (bool): Print query execution summary
 
         Returns:
             self.data (pl.DataFrame)
-    
+
         '''
-        
-        self.data = get_agg_trades_data(month_year=month_year,
-                                        n_rows=n_rows,
-                                        include_datetime_col=include_datetime_col)
-        
-        self.data = self.data.with_columns([
-            pl.when(pl.col('timestamp') < 10**13)
-            .then(pl.col('timestamp'))
-            .otherwise(pl.col('timestamp') // 1000)
-            .cast(pl.UInt64) 
-            .alias('timestamp')
-        ])
+
+        self.data = query_raw_data(
+            table_name='binance_agg_trades',
+            id_col='agg_trade_id',
+            select_cols=[
+                'agg_trade_id', 'timestamp', 'price', 'quantity',
+                'is_buyer_maker', 'first_trade_id', 'last_trade_id'
+            ],
+            month_year=month_year,
+            n_rows=n_rows,
+            n_random=n_random,
+            include_datetime_col=include_datetime_col,
+            show_summary=show_summary
+        )
 
         self.data_columns = self.data.columns
-        
+
     def get_futures_trades(self,
                            month_year: Optional[Tuple[int,int]] = None,
                            n_rows: Optional[int] = None,
+                           n_random: Optional[int] = None,
                            include_datetime_col: bool = True,
                            show_summary: bool = False) -> pl.DataFrame:
-        
+
         '''Get historical trades data for Binance futures.
 
         Args:
             month_year (tuple[int,int] | None): (month, year) to fetch, e.g. (3, 2025).
             n_rows (int | None): if set, fetch this many latest rows instead.
+            n_random (int | None): if set, fetch this many random rows instead.
             include_datetime_col (bool): whether to include `datetime` in the result.
             show_summary (bool): if a summary for data is printed out
 
@@ -186,17 +192,16 @@ class HistoricalData:
             pl.DataFrame: the requested trades.
         '''
 
-        select_cols = ['futures_trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker']
-        table_name = 'binance_futures_trades'
-        sort_by = 'futures_trade_id'
-
-        self.data = generic_endpoint_for_tdw(month_year=month_year,
-                                             n_rows=n_rows,
-                                             include_datetime_col=include_datetime_col,
-                                             select_cols=select_cols,
-                                             table_name=table_name,
-                                             sort_by=sort_by,
-                                             show_summary=show_summary)
+        self.data = query_raw_data(
+            table_name='binance_futures_trades',
+            id_col='futures_trade_id',
+            select_cols=['futures_trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker'],
+            month_year=month_year,
+            n_rows=n_rows,
+            n_random=n_random,
+            include_datetime_col=include_datetime_col,
+            show_summary=show_summary
+        )
 
         self.data_columns = self.data.columns
 

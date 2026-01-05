@@ -407,3 +407,7 @@ data mismatch
 - Add `bollinger_position` indicator
 - Add `forward_breakout_target` feature
 - Add `balanced_metric` for threshold optimization
+
+# V1.31.0 on 31st of December, 2025
+- Refactor generic endpoints for querying Clickhouse data
+- Update docs for the above
