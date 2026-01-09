@@ -33,14 +33,14 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install loop package (and deps)
+      - name: Install limen package (and deps)
         run: |
           pip install -e .
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      - name: Run loop tests (verbose)
+      - name: Run limen tests (verbose)
         run: |
           set -x
           python -u -m tests.run

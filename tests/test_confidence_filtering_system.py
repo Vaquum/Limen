@@ -4,7 +4,7 @@ import polars as pl
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
 
-from loop.utils.confidence_filtering_system import (
+from limen.utils.confidence_filtering_system import (
     calibrate_confidence_threshold,
     apply_confidence_filtering,
     confidence_filtering_system

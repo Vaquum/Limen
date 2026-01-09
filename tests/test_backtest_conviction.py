@@ -1,7 +1,7 @@
 import math
 import numpy as np
 from datetime import datetime
-from loop.backtest.backtest_sequential import BacktestSequential
+from limen.backtest.backtest_sequential import BacktestSequential
 import csv
 import os
 

@@ -4,7 +4,7 @@
   <br>
 </h1>
 
-<h3 align="center">Loop</h3>
+<h3 align="center">Limen</h3>
 
 <p align="center">
   <a href="#description">Description</a> •
@@ -16,7 +16,7 @@
 
 # Description
 
-Vaquum Loop is a Bitcoin-first research and trading platform for quantitative traders, bringing together a comprehensive set of capabilities into a single closed-loop optimization cycle. Vaquum Loop reduces complex and mostly out-of-reach DataOps, research, model development, and trading workflows into one cohesive API and a set of single-file templates. Vaquum Loop powers quants with unparalleled ergonomics and productivity.
+Vaquum Limen is a Bitcoin-first research and trading platform for quantitative traders, bringing together a comprehensive set of capabilities into a single closed-loop optimization cycle. Vaquum Limen reduces complex and mostly out-of-reach DataOps, research, model development, and trading workflows into one cohesive API and a set of single-file templates. Vaquum Limen powers quants with unparalleled ergonomics and productivity.
 
 # Owner
 

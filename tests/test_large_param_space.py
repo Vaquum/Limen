@@ -1,5 +1,5 @@
 import time
-from loop.utils.param_space import ParamSpace
+from limen.utils.param_space import ParamSpace
 
 def test_large_param_space():
     params = {

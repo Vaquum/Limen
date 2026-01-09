@@ -50,9 +50,9 @@ Loop is the instrument we use to play the Song of Bitcoin. Loop gets its energy 
 
 ## Motivation
 
-The motivation behind Vaquum Loop is to bring together all aspects of research and trading into a single parametric optimization loop.
+The motivation behind Vaquum Loop is to bring together all aspects of research and trading into a single parametric optimization limen.
 
-The reason to bring everything into a single parametric optimization loop, is to unlock the ability to treat everything as a single never-ending experiment loop. 
+The reason to bring everything into a single parametric optimization loop, is to unlock the ability to treat everything as a single never-ending experiment limen. 
 
 Within this experiment loop, the hypothesis is always that "x paramater value for y parameter will yield z profit and loss in live trading". 
 
@@ -79,7 +79,7 @@ These parts are here called *Folds*.
 
 **NOTE:** Loop should not be thought of as something that runs and completes, but something that is continuous, and where subsequent Folds continuously send feedback to previous Folds. 
 
-Each Fold in itself can be a continuous feedback loop. The “full” Loop consist of up to 11 continuous feedback loops, each feeding back to itself and all the other Folds.
+Each Fold in itself can be a continuous feedback limen. The “full” Loop consist of up to 11 continuous feedback loops, each feeding back to itself and all the other Folds.
 
 ### `Data`
 

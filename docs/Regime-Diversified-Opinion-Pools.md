@@ -148,11 +148,11 @@ if hasattr(your_sfd, 'manifest'):
 ## Example: Complete Workflow
 
 ```python
-import loop
-from loop import sfd, RegimeDiversifiedOpinionPools
+import limen
+from limen import sfd, RegimeDiversifiedOpinionPools
 
 # Step 1: Train individual models (existing Loop workflow)
-uel = loop.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)
+uel = limen.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)
 uel.run('logreg_training', n_permutations=1000, prep_each_round=True)
 confusion_df = uel.experiment_confusion_metrics
 

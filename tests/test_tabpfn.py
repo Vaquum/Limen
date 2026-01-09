@@ -10,13 +10,13 @@ def test_tabpfn():
     '''Test TabPFN SFD.'''
 
     tabpfn_sfds = [
-        loop.sfd.foundational_sfd.tabpfn_binary,
+        limen.sfd.foundational_sfd.tabpfn_binary,
     ]
 
     for sfd_module in tabpfn_sfds:
 
         try:
-            uel = loop.UniversalExperimentLoop(sfd=sfd_module)
+            uel = limen.UniversalExperimentLoop(sfd=sfd_module)
             experiment_name = uuid.uuid4().hex[:8]
 
             uel.run(

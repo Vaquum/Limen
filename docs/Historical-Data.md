@@ -1,8 +1,8 @@
 # Historical Data
 
-The endpoints available through `loop.HistoricalData` provide rich and somewhat immediate access to Binance spot and futures data from year 2019 onwards, both kline and trade level data. Kline data is available at 1 second resolution for both spot and futures, and trade data is available at order and trade level. 
+The endpoints available through `limen.HistoricalData` provide rich and somewhat immediate access to Binance spot and futures data from year 2019 onwards, both kline and trade level data. Kline data is available at 1 second resolution for both spot and futures, and trade data is available at order and trade level. 
 
-All of the endpoints are found in [`loop/historical_data.py`](../loop/historical_data.py).  
+All of the endpoints are found in [`limen/historical_data.py`](../limen/historical_data.py).  
 
 All of the endpoints rely on [Binance Market Data](https://data.binance.vision/?prefix=) as their source.
 
@@ -20,8 +20,8 @@ All of these endpoints are available in the following manner:
 
 ```
 # Initialize the API
-import loop
-historical = loop.HistoricalData()
+import limen
+historical = limen.HistoricalData()
 
 # Call one of the endpoints:
 historical.get_spot_klines()
@@ -229,8 +229,8 @@ Get test klines data from local CSV file for testing purposes.
 ### Example Usage
 
 ```python
-import loop
-historical = loop.HistoricalData()
+import limen
+historical = limen.HistoricalData()
 
 # Load 1000 rows of test data
 historical._get_data_for_test(n_rows=1000)

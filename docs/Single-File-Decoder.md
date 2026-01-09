@@ -1,6 +1,6 @@
 # Single File Decoder
 
-The Single File Decoder (SFD) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`loop/sfd`](../loop/sfd). Once an SFD is added to the package, it becomes available to be used as input for [`loop.UniversalExperimentLoop`](Universal-Experiment-Loop.md).
+The Single File Decoder (SFD) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`limen/sfd`](../limen/sfd). Once an SFD is added to the package, it becomes available to be used as input for [`limen.UniversalExperimentLoop`](Universal-Experiment-Loop.md).
 
 There are two categories of SFDs: **Foundational SFDs** are the official reference SFDs provided by Loop (all use manifest-based configuration), while **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation of data preparation and model functions.
 
@@ -71,7 +71,7 @@ The following sections document custom SFD functions for implementations requiri
 
 Contains all data preparation procedures used in the parameter sweep.
 
-Takes as input data from `loop.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns `data_dict`, a  dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
+Takes as input data from `limen.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns `data_dict`, a  dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
 
 ##### REQUIREMENTS
 
@@ -88,12 +88,12 @@ Takes as input data from `loop.HistoricalData.data` and `round_params` which is 
 
 Contains the model architecture and all model operation procedures up to predictions on test data.
 
-Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_prep_output`, together with `round_params`. It returns `round_results` dictionary yielded by `loop.metrics.binary_metrics`, `loop.metrics.multiclass_metrics`, or `loop.metrics.continuous_metrics`. 
+Takes as input a `data_dict` dictionary yielded by `utils.splits.split_data_to_prep_output`, together with `round_params`. It returns `round_results` dictionary yielded by `limen.metrics.binary_metrics`, `limen.metrics.multiclass_metrics`, or `limen.metrics.continuous_metrics`. 
 
 ##### REQUIREMENTS
 
 - The input must accept at least `data` and optionally also `round_params`
-- The output must come from one of `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` in `loop.metrics`.
+- The output must come from one of `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` in `limen.metrics`.
 
 **NOTE**: Any scalar metrics you want recorded into the experiment log must be included directly in `round_results` (returned by the metrics helpers). Use `round_results['extras']` only for complex objects (models, arrays, DataFrames) that should not be flattened into the log. To persist test-set predictions for post-run analysis, set `round_results['_preds'] = ...` (UEL will collect these into `uel.preds`).
 

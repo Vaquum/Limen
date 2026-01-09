@@ -1,8 +1,8 @@
 import polars as pl
 import numpy as np
 from datetime import datetime, timedelta
-from loop.experiment import Manifest
-from loop.data.utils import random_slice
+from limen.experiment import Manifest
+from limen.data.utils import random_slice
 
 
 def test_pre_split_random_selector():
