@@ -411,3 +411,6 @@ data mismatch
 # V1.31.0 on 31st of December, 2025
 - Refactor generic endpoints for querying Clickhouse data
 - Update docs for the above
+
+# v1.32.0 on 9th of December, 2026
+- Move data endpoint creds to input argument

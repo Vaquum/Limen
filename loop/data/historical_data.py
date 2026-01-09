@@ -9,7 +9,7 @@ from loop.data._internal.generic_endpoints import query_klines_data
 
 class HistoricalData:
     
-    def __init__(self):
+    def __init__(self, auth_token: str = None):
 
         '''Set of endpoints to get historical Binance data.'''
 
@@ -73,7 +73,8 @@ class HistoricalData:
         self.data = query_klines_data(n_rows=n_rows,
                                       kline_size=kline_size,
                                       start_date_limit=start_date_limit,
-                                      futures=False)
+                                      futures=False,
+                                      auth_token=self.auth_token)
 
         self.data_columns = self.data.columns
 
@@ -97,7 +98,8 @@ class HistoricalData:
         self.data = query_klines_data(n_rows=n_rows,
                                       kline_size=kline_size,
                                       start_date_limit=start_date_limit,
-                                      futures=True)
+                                      futures=True,
+                                      auth_token=self.auth_token)
 
         self.data_columns = self.data.columns
 
@@ -130,7 +132,8 @@ class HistoricalData:
             n_rows=n_rows,
             n_random=n_random,
             include_datetime_col=include_datetime_col,
-            show_summary=show_summary
+            show_summary=show_summary,
+            auth_token=self.auth_token
         )
 
         self.data_columns = self.data.columns
@@ -167,7 +170,8 @@ class HistoricalData:
             n_rows=n_rows,
             n_random=n_random,
             include_datetime_col=include_datetime_col,
-            show_summary=show_summary
+            show_summary=show_summary,
+            auth_token=self.auth_token
         )
 
         self.data_columns = self.data.columns
@@ -200,7 +204,8 @@ class HistoricalData:
             n_rows=n_rows,
             n_random=n_random,
             include_datetime_col=include_datetime_col,
-            show_summary=show_summary
+            show_summary=show_summary,
+            auth_token=self.auth_token
         )
 
         self.data_columns = self.data.columns
