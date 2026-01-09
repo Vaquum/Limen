@@ -5,7 +5,7 @@ import sys
 import traceback
 import pandas as pd
 
-import loop
+import limen
 from limen import sfd
 from limen import RegimeDiversifiedOpinionPools
 from tests.utils.cleanup import cleanup_csv_files
