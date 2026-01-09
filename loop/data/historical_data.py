@@ -13,7 +13,7 @@ class HistoricalData:
 
         '''Set of endpoints to get historical Binance data.'''
 
-        pass
+        self.auth_token = auth_token
 
     def get_binance_file(self,
                          file_url: str,
