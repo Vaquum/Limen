@@ -11,7 +11,8 @@ def query_raw_data(table_name: str,
                    n_rows: Optional[int] = None,
                    n_random: Optional[int] = None,
                    include_datetime_col: bool = True,
-                   show_summary: bool = False) -> pl.DataFrame:
+                   show_summary: bool = False,
+                   auth_token: str = None) -> pl.DataFrame:
 
     '''
     Query raw trade data from ClickHouse database.
@@ -25,7 +26,7 @@ def query_raw_data(table_name: str,
         n_random (Optional[int]): Number of random rows to fetch
         include_datetime_col (bool): Include datetime column in result
         show_summary (bool): Print query execution summary
-
+        auth_token (str): Authentication token for ClickHouse database
     Returns:
         pl.DataFrame: Raw trade data with selected columns sorted by ID
     '''
@@ -33,7 +34,7 @@ def query_raw_data(table_name: str,
     client = get_client(host='localhost',
                         port=8123,
                         username='default',
-                        password='password123',
+                        password=auth_token,
                         compression=True)
 
     cols = select_cols.copy()
@@ -111,7 +112,8 @@ def query_klines_data(n_rows: Optional[int] = None,
                       kline_size: int = 1,
                       start_date_limit: Optional[str] = None,
                       futures: bool = False,
-                      show_summary: bool = False) -> pl.DataFrame:
+                      show_summary: bool = False,
+                      auth_token: str = None) -> pl.DataFrame:
 
     '''
     Query aggregated klines data from ClickHouse database.
@@ -122,7 +124,7 @@ def query_klines_data(n_rows: Optional[int] = None,
         start_date_limit (Optional[str]): Start date for filtering klines data
         futures (bool): Query futures market data instead of spot
         show_summary (bool): Print query execution summary
-
+        auth_token (str): Authentication token for ClickHouse database
     Returns:
         pl.DataFrame: Klines data with 19 columns including OHLC, volume, and liquidity metrics
     '''
@@ -131,7 +133,7 @@ def query_klines_data(n_rows: Optional[int] = None,
         host='localhost',
         port=8123,
         username='default',
-        password='password123',
+        password=auth_token,
         compression=True
     )
 
