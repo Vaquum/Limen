@@ -2,7 +2,7 @@
 
 Features are more complex than Indicators, and often involve further refining Indicators or combining several Indicators into a single Feature.
 
-## `loop.features`
+## `limen.features`
 
 ### `atr_percent_sma`
 
@@ -186,7 +186,7 @@ Compute rolling buyer/seller imbalance over klines instead of raw trades.
 
 The lagged features module provides a consolidated set of functions for creating lagged versions of columns. All functions are implemented using efficient vectorized Polars expressions.
 
-NOTE: All lag functions are available in `loop.features.lagged_features` and exported through `loop.features`.
+NOTE: All lag functions are available in `limen.features.lagged_features` and exported through `limen.features`.
 
 #### `lag_range_cols`
 

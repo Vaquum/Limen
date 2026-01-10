@@ -60,7 +60,7 @@ def inverse_transform(df: pl.DataFrame, scaler: YourScaler) -> pl.DataFrame:
 - **Post-processing**: `inverse_transform` enables converting predictions back to original scale
 - **Consistency**: All scalers work the same way, making them interchangeable
 
-## `loop.scalers`
+## `limen.scalers`
 
 ### `LogRegScaler`
 
@@ -81,8 +81,8 @@ LogRegScaler class for scaling and inverse scaling data.
 #### Example
 
 ```python
-from loop.scalers import LogRegScaler
-from loop.scalers.logreg_scaler import inverse_transform
+from limen.scalers import LogRegScaler
+from limen.scalers.logreg_scaler import inverse_transform
 
 # In manifest
 manifest.set_scaler(LogRegScaler)
@@ -112,8 +112,8 @@ Linear transformation utility for scaling features using configurable rules.
 #### Example
 
 ```python
-from loop.scalers import LinearScaler
-from loop.scalers.linear_scaler import inverse_transform
+from limen.scalers import LinearScaler
+from limen.scalers.linear_scaler import inverse_transform
 
 # In manifest
 manifest.set_scaler(LinearScaler)

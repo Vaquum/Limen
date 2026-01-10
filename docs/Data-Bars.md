@@ -1,6 +1,6 @@
 # Bars
 
-Alternative bar construction methods derived from klines data for enhanced sampling in data modeling for Loop.
+Alternative bar construction methods derived from klines data for enhanced sampling in data modeling for Limen.
 
 ## Purpose
 
@@ -35,7 +35,7 @@ All standard bar functions return a `pl.DataFrame` with the following structure:
 | `bar_count` | `int` | Number of base klines aggregated into this bar |
 | `base_interval` | `float` | Original kline interval in seconds (e.g., 7200.0 for 2h) |
 
-## `loop.data.bars`
+## `limen.data.bars`
 
 ### `volume_bars`
 

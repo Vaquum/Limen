@@ -4,7 +4,7 @@ Transforms are stateless preprocessing operations applied to datasets prior to m
 
 For stateful scalers that fit on training data, see [Scalers](Scalers.md).
 
-## `loop.transforms`
+## `limen.transforms`
 
 ### `mad_transform`
 

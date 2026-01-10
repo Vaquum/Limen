@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "loop"
+name = "limen"
 version = "1.32.0"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
@@ -46,9 +46,9 @@ tabpfn = ["tabpfn>=6"]
 
 [project.urls]
 Homepage = "https://vaquum.fi"
-Repository = "https://github.com/vaquum/loop"
+Repository = "https://github.com/vaquum/limen"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["loop*"]
+include = ["limen*"]
 exclude = ["tests*", "scripts*"]

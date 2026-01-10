@@ -4,7 +4,7 @@
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
 - Rename `n_rows` input parameter to `n_latest` in [`get_trades_data`](utils/get_trades_data.py) for getting latest rows
 - Add `n_sample` input parameter to [`get_trades_data`](utils/get_trades_data.py) for random sampling
-- Add ability to pass `params`, `prep`, or `model` as input parameters to `loop.UniversalExperimentLoop.run` to allow quickly iterating through development and research workflows without having to compromise `uel` as a base
+- Add ability to pass `params`, `prep`, or `model` as input parameters to `limen.UniversalExperimentLoop.run` to allow quickly iterating through development and research workflows without having to compromise `uel` as a base
 
 ## v0.8.0 28th of May, 2025
 - Move database connection init to inside `uel.run`
@@ -18,7 +18,7 @@
 - Add `prep_each_round` to `uel.run` for executing `sfm.prep` for each round individually
 - Add `random_search` to `uel.run` for turning random search on or off (with off being grid search)
 - Separated parameter space handling into pure polars based utility in `utils.param_space`
-- Move data splitters out from `loop.HistoricalData` and into `utils.splits`
+- Move data splitters out from `limen.HistoricalData` and into `utils.splits`
 - Add `splits.split_data_to_prep_output` for a clean way to get the classic 6-fold split data dictionary
 - Add reference model `models.random`
 
@@ -48,7 +48,7 @@
 
 ## v0.8.5 on 5th of June, 2025
 - Fix `transforms.logreg_transform.inverse_transform` use in `reports.experiment_benchmarking`
-- Eliminate tensorflow import warnings from `import loop`
+- Eliminate tensorflow import warnings from `import limen`
 - Allow `uel` uel to move `round_results[_preds]` from `sfm.model` to `uel.preds` for post run use
 
 ## v0.8.6 on 6th of June, 2025
@@ -109,7 +109,7 @@
 - Add standard book keeping library `Account.py`
 - Improve input validation and overflow protection in `Account`
 - Add conviction tests for `Account` and `Backtest`
-- Updated `loop.reports` namespace
+- Updated `limen.reports` namespace
 
 # v1.1.1 on 21st of July, 2025
 - Fix data leakage in quantile flag calculation by adding cutoff parameter
@@ -121,14 +121,14 @@
 # v1.2.0 on 23rd of July, 2025
 
 ## Metrics
-- Add `loop.metrics` as a standard metrics sub-module
-- Move `utils.safe_ovr_auc.py` to `loop.metrics`
-- Move `utils.metrics` to `loop.metrics.metrics`
-- Refactor `loop.metrics.metrics` functions to separate files in `loop.metrics`
+- Add `limen.metrics` as a standard metrics sub-module
+- Move `utils.safe_ovr_auc.py` to `limen.metrics`
+- Move `utils.metrics` to `limen.metrics.metrics`
+- Refactor `limen.metrics.metrics` functions to separate files in `limen.metrics`
 
 # SFM
-- Rename `loop.models` to `loop.sfm`
-- Refactor `loop.sfm`
+- Rename `limen.models` to `limen.sfm`
+- Refactor `limen.sfm`
 
 # Tests
 - Refactor the test suite
@@ -179,7 +179,7 @@
 - Fix Polars schema error in regime_multiclass SFM by handling None values in params
 
 # v1.6.0 on 5th of August, 2025
-- Rename `loop.data` to `loop.historical_data`
+- Rename `limen.data` to `limen.historical_data`
 - Split `get_historical_klines` into `get_spot_klines` and `get_futures_klines`
 - Rename `get_historical_trades` to `get_spot_trades`
 - Rename `get_historical_agg_trades` to `get_spot_agg_trades`
@@ -187,7 +187,7 @@
 - Make `get_futures_trades` create `self.data` instead of returning `pl.DataFrame`
 
 # v1.7.0 on 6th of August, 2025
-- Add `loop.features` sub-module
+- Add `limen.features` sub-module
 - Add `features.conserved_flux_renormalization`
 - Add `transform.mad_transform` for Median Absolute Deviation scaling
 - Add `utils.check_if_has_header` to check Binance Market Data files for header
@@ -197,10 +197,10 @@
 - Add test for the above SFM
 
 # v1.9.0 on 7th of August, 2025
-- Refactor `loop.indicators` sub-module (no code changes except imports)
-- Refactor `loop.features` sub-module (no code changes except imports)
-- Make docstrings cohesive and coherent across `loop.indicators` and `loop.features`
-- Add comprehensive docs for `loop.indicators` and `loop.features`
+- Refactor `limen.indicators` sub-module (no code changes except imports)
+- Refactor `limen.features` sub-module (no code changes except imports)
+- Make docstrings cohesive and coherent across `limen.indicators` and `limen.features`
+- Add comprehensive docs for `limen.indicators` and `limen.features`
 
 # v1.10.0 on 8th of August 2025
 - Add `rules_based.momentum_volatility` sfm
@@ -213,16 +213,16 @@
 # v1.13.0 on 14th of August 2025
 - Rename `uel.log_df` to `uel.experiment_log`
 - Improve data plumbing in `uel.run`
-- Add `loop.backtest` sub-module
-- Move `loop.backtest` to `loop.backtest.backtest_sequential`
-- Add `loop.backtest.backtest_snapshot`
-- Add `loop.log` sub-module
-- Add `loop.log.experiment_backtest_results`
-- Add `loop.log.experiment_confusion_metrics`
-- Add `loop.log.experiment_parameter_correlation`
-- Add `loop.log.permutation_confusion_metrics`
-- Add `loop.log.permutation_prediction_performance`
-- At end of `uel.run` add the above `loop.log` functions as properties
+- Add `limen.backtest` sub-module
+- Move `limen.backtest` to `limen.backtest.backtest_sequential`
+- Add `limen.backtest.backtest_snapshot`
+- Add `limen.log` sub-module
+- Add `limen.log.experiment_backtest_results`
+- Add `limen.log.experiment_confusion_metrics`
+- Add `limen.log.experiment_parameter_correlation`
+- Add `limen.log.permutation_confusion_metrics`
+- Add `limen.log.permutation_prediction_performance`
+- At end of `uel.run` add the above `limen.log` functions as properties
 - Add test for the above SFM
 - Improve `utils.split_data_to_prep_output` to support latest end-to-end features
 - Update all the SFMs to support latest end-to-end features
@@ -240,15 +240,15 @@
 - Removed util function not in use anymore
 
 # v1.13.3 on 16th of August 2025
-- Standardize `loop.indicators` inputs and outputs
-- Fix `loop.indicators.price_change_pct` calculation
-- Format code style for `loop.indicators`
-- Update docs for `loop.indicators`
+- Standardize `limen.indicators` inputs and outputs
+- Fix `limen.indicators.price_change_pct` calculation
+- Format code style for `limen.indicators`
+- Update docs for `limen.indicators`
 
 # v1.14.0 on 17th of August 2025
-- Refactor data sampler code to generic form in loop.utils.data_sampler
+- Refactor data sampler code to generic form in `limen.utils.data_sampler`
 - Remove data sampler class from lightgbm.utils
-- Refactor mega model code to generic form in loop.utils
+- Refactor mega model code to generic form in `limen.utils`
 - Remove mega model code from lightgbm.utils, tests
 - Add docs for data sampler, mega model
 
@@ -259,7 +259,7 @@
 - Clean `uel` object namespace
 
 # v1.15.1 on 19th of August 2025
-- Add Ichimoku Cloud feature to `loop.features`
+- Add Ichimoku Cloud feature to `limen.features`
 
 # v1.16.0 on 24th of August 2025
 - Simplify `lightgbm.tradeable_regressor` - remove deadwood, genericize, etc
@@ -270,16 +270,16 @@ data mismatch
 - Update datasets for test data
 
 # v1.16.2 on 31st of August, 2025
-- Fix Streamlit explorer launch path by injecting project root into `PYTHONPATH` for the subprocess in `loop.explorer.loop_explorer`, ensuring `loop` is importable when started via tools/Playwright
+- Fix Streamlit explorer launch path by injecting project root into `PYTHONPATH` for the subprocess in `limen.explorer.limen_explorer`, ensuring `limen` is importable when started via tools/Playwright
 
 # v1.17.0 on 9th of September 2025
-- Add `linear_transform.py` under `loop.transforms`
-- Add `ridge_classifier.py` under `loop.sfm.ridge`
-- Fix `loop.features.ichimoku_cloud` not added into `loop.features.__init__`
+- Add `linear_transform.py` under `limen.transforms`
+- Add `ridge_classifier.py` under `limen.sfm.ridge`
+- Fix `limen.features.ichimoku_cloud` not added into `limen.features.__init__`
 - Add test for the above SFM
 
 # v1.18.0 on 13th of September, 2025
-- Add `loop.explorer` data visualization toolkit
+- Add `limen.explorer` data visualization toolkit
 - Add `features.breakout_percentile_regime`
 - Add `features.hh_hl_structure_regime`
 - Add `features.ma_slope_regime`
@@ -296,17 +296,17 @@ data mismatch
 - Update project CLAUDE.md and Project.md
 
 # V1.19.0 on 19th of September, 2025
-- Add `loop.manifest` for experiment configuration
+- Add `limen.manifest` for experiment configuration
 - Add method chaining API for manifest configuration
 - Fix parameter space explosion in `utils.param_space` with mixed radix sampling
 - Added a test for sampling from large param space
 - Update `sfm.reference.logreg` to use new manifest API
-- Add comprehensive docs for `loop.manifest` including integration examples
+- Add comprehensive docs for `limen.manifest` including integration examples
 - Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support 
 
 # V1.19.1 on 22nd of September 2025
-- Add `loop.data` sub-module for computing time and information-based bars from base klines data.
-- Add fixed threshold trade, volume and liquidity bars to `loop.data.bars`
+- Add `limen.data` sub-module for computing time and information-based bars from base klines data.
+- Add fixed threshold trade, volume and liquidity bars to `limen.data.bars`
 - Add test cases for the above
 - Add documentation `docs/Data-Bars.md`
 
@@ -326,19 +326,19 @@ data mismatch
 - Enhance color consistency, typography & spacing in Explorer
 
 # V1.20.0 on 11th of October 2025
-- Refactor `loop.manifest`, `loop.universal_experiment_loop`, `loop.log` to remove prep() and model() functions
-- Add `loop.sfm.model` that contains sfm model files
-- Use latest Manifest on `loop.sfm.ridge.ridge_classifier` and `loop.sfm.reference.logreg`
-- Update `loop.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
+- Refactor `limen.manifest`, `limen.universal_experiment_loop`, `limen.log` to remove prep() and model() functions
+- Add `limen.sfm.model` that contains sfm model files
+- Use latest Manifest on `limen.sfm.ridge.ridge_classifier` and `limen.sfm.reference.logreg`
+- Update `limen.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
 
 # V1.20.1 on 18th of October 2025
 - Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
 - Fix package dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
 # V1.20.2 on 23rd of October 2025
-- Refactor `loop.sfm.logreg.regime_multiclass` and `loop.sfm.logreg.breakout_regressor_ridge` to use manifest.
-- Fix a data alignment bug in `loop/log/log.py` when there are no missing datetime values.
-- Refactor manifest for `loop.sfm.reference.lightgbm.py` to include model assignment. 
+- Refactor `limen.sfm.logreg.regime_multiclass` and `limen.sfm.logreg.breakout_regressor_ridge` to use manifest.
+- Fix a data alignment bug in `limen/log/log.py` when there are no missing datetime values.
+- Refactor manifest for `limen.sfm.reference.lightgbm.py` to include model assignment. 
 
 # V1.21.0 on 30th of October 2025
 - Add strategy logic to `lightgbm.tradeline_multiclass`
@@ -349,15 +349,15 @@ data mismatch
 - Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
 - Add `features.sma_crossover`
 - Refactor `sfm.ridge.ridge_classifier` with richer parameter ranges
-- Fix `loop.universal_experiment_loop` to provide manifest support for `sfm.reference.empty`
+- Fix `limen.universal_experiment_loop` to provide manifest support for `sfm.reference.empty`
 - Add scaling for all klines data in `transform.linear_transform`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
 # v1.22.0 on 26th of November, 2025
-- Implement Regime Diversified Opinion Pools (RDOP) system in `loop.regime_diversified_opinion_pools.py`
-- Fix `loop.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
-- Fix `loop.universal_experimental_loop` issue with support for `prep_each_round=False`
-- Move `get_klines_data_fast()`, `get_klines_data_medium()`, `get_klines_data_large()`, and `get_klines_data_small_fast()` from `loop.tests.test_sfm` to `loop.tests.utils.get_data`
+- Implement Regime Diversified Opinion Pools (RDOP) system in `limen.regime_diversified_opinion_pools.py`
+- Fix `limen.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
+- Fix `limen.universal_experimental_loop` issue with support for `prep_each_round=False`
+- Move `get_klines_data_fast()`, `get_klines_data_medium()`, `get_klines_data_large()`, and `get_klines_data_small_fast()` from `limen.tests.test_sfm` to `limen.tests.utils.get_data`
 - Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
 - Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
 
@@ -371,7 +371,7 @@ data mismatch
 - Refactor `lightgbm/tradeable_regressor` sfm to use manifest
 
 # v1.24.1 on 9th of December, 2025
-- Modify `loop.sfm.model.ridge_binary` to add combination of frozenestimator and cv folds params
+- Modify `limen.sfm.model.ridge_binary` to add combination of frozenestimator and cv folds params
 - Add use_frozen_estimator parameter to mimic prefitted calibration behavior using sklearn's FrozenEstimator
 - Add ensemble parameter to control ensemble calibration in CalibratedClassifierCV
 
@@ -387,20 +387,20 @@ data mismatch
 
 # V1.27.0 on 26th of December, 2025
 - Organize files in root into respective modules
-- Move all data related code from `loop/utils` to `loop/data`
+- Move all data related code from `limen/utils` to `limen/data`
 
 # V1.28.0 on 28th of December, 2025
-- Move scalers from `loop.transforms` to new sub-module `loop.scalers`
+- Move scalers from `limen.transforms` to new sub-module `limen.scalers`
 - Update documentations for the above
-- Refactor `loop.utils` and `loop.transforms`
+- Refactor `limen.utils` and `limen.transforms`
 
 # V1.28.1 on 29th of December, 2025
-- Add missing indicator exports in `loop.indicator.__init__`
-- Add missing feature exports in `loop.feature.__init__`
+- Add missing indicator exports in `limen.indicator.__init__`
+- Add missing feature exports in `limen.feature.__init__`
 - Update `Indicators.md` and `Features.md` to the latest
 
 # V1.29.0 on 29th of December, 2025
-- Remove `loop.reports` sub-module entirely
+- Remove `limen.reports` sub-module entirely
 
 # V1.30.0 on 29th of December, 2025
 - Add `tabpfn_binary` foundational SFD with validation-based dynamic threshold tuning

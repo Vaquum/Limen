@@ -41,7 +41,7 @@ Refining parameters can be understood through expanding or contracting parameter
 
 ## Data
 
-A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from the provided (klines) endpoints available through [HistoricalData](Historical-Data.md). If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Loop/issues/new) that requests the data that you need, or make a PR that commits the proposed change.
+A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from the provided (klines) endpoints available through [HistoricalData](Historical-Data.md). If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Limen/issues/new) that requests the data that you need, or make a PR that commits the proposed change.
 
 **Declarative manifest approach:** Manifest-based SFDs can configure data sources in their manifest, enabling UEL to automatically fetch data. See [Experiment Manifest](Experiment-Manifest.md) for details.
 
@@ -97,7 +97,7 @@ Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming 
 
 #### Artifacts on the `UniversalExperimentLoop` instance
 
-- `data`: The `pl.DataFrame` used by the loop (explicitly passed or auto-fetched from manifest)
+- `data`: The `pl.DataFrame` used by the limen (explicitly passed or auto-fetched from manifest)
 - `params`: The parameter space in use (from SFD `params()` or `params` override in `run()`)
 - `prep`: The data preparation function (auto-generated from manifest for manifest-based SFDs, from SFD `prep()` for custom functions approach, or `prep` override in `run()`)
 - `model`: The model function (from manifest via `with_model()` for manifest-based SFDs, from SFD `model()` for custom functions approach, or `model` override in `run()`)
@@ -127,7 +127,7 @@ UEL uses `utils.param_space.ParamSpace` to generate `round_params` either via ra
 
 At the end of `run`, UEL constructs an internal `Log` instance and exposes key analysis artifacts directly on the UEL object:
 
-- `self._log = loop.Log(uel_object=self, cols_to_multilabel=<all string columns>)`
+- `self._log = limen.Log(uel_object=self, cols_to_multilabel=<all string columns>)`
 - Precomputed properties set on UEL:
   - `self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')`
   - `self.experiment_backtest_results = self._log.experiment_backtest_results()`
@@ -144,12 +144,12 @@ If you need additional methods, access the internal `Log` via `uel._log` (see [L
 ### Example
 
 ```python
-import loop
-from loop import sfd
+import limen
+from limen import sfd
 
 # Manifest-based SFD with auto-fetch
 # Data is automatically fetched from manifest-configured sources
-uel = loop.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
+uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(
     experiment_name='exp_logreg',

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Experiment Manifest provides a declarative system for configuring Loop experiment pipelines. Instead of manually implementing data preparation and model functions, you define your experiment pipeline through a fluent manifest API that handles data fetching, feature engineering, target preparation, and model configuration.
+The Experiment Manifest provides a declarative system for configuring Limen experiment pipelines. Instead of manually implementing data preparation and model functions, you define your experiment pipeline through a fluent manifest API that handles data fetching, feature engineering, target preparation, and model configuration.
 
 ### Key Benefits
 
@@ -55,13 +55,13 @@ This is appropriate for financial trading systems where **correctness and reprod
 Here's a complete minimal manifest-based SFD:
 
 ```python
-from loop.experiment import Manifest
-from loop.data import HistoricalData
-from loop.indicators import roc
-from loop.features import quantile_flag, compute_quantile_cutoff
-from loop.transforms import shift_column_transform
-from loop.scalers import LogRegScaler
-from loop.sfd.reference_architecture import logreg_binary
+from limen.experiment import Manifest
+from limen.data import HistoricalData
+from limen.indicators import roc
+from limen.features import quantile_flag, compute_quantile_cutoff
+from limen.transforms import shift_column_transform
+from limen.scalers import LogRegScaler
+from limen.sfd.reference_architecture import logreg_binary
 
 def params():
     return {
@@ -105,11 +105,11 @@ def manifest():
 **Usage with UEL:**
 
 ```python
-import loop
-from loop import sfd
+import limen
+from limen import sfd
 
 # Data is automatically fetched from manifest-configured sources
-uel = loop.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
+uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(experiment_name='my_experiment', n_permutations=100)
 ```
@@ -120,7 +120,7 @@ Configure where UEL fetches data for training and testing.
 
 ### `.set_data_source(method, params=None)`
 
-Configure production data source (uses `loop.historical_data.HistoricalData`).
+Configure production data source (uses `limen.historical_data.HistoricalData`).
 
 **Args:**
 
@@ -134,12 +134,12 @@ Configure production data source (uses `loop.historical_data.HistoricalData`).
 **Available methods:**
 - `HistoricalData.get_spot_klines` - Fetch spot market kline data
 - `HistoricalData.get_futures_klines` - Fetch futures market kline data
-- See `loop.historical_data.HistoricalData` for all available methods
+- See `limen.historical_data.HistoricalData` for all available methods
 
 **Example:**
 
 ```python
-from loop.data import HistoricalData
+from limen.data import HistoricalData
 
 .set_data_source(
     method=HistoricalData.get_spot_klines,
@@ -163,7 +163,7 @@ Configure test data source for testing purposes.
 **Example:**
 
 ```python
-from loop.data import HistoricalData
+from limen.data import HistoricalData
 
 .set_test_data_source(method=HistoricalData._get_data_for_test)
 ```
@@ -240,7 +240,7 @@ Configure data selection before splitting (e.g., random sampling for faster expe
 **Common use case:**
 
 ```python
-from loop.data.utils import random_slice
+from limen.data.utils import random_slice
 
 .set_pre_split_data_selector(
     random_slice,
@@ -312,12 +312,12 @@ Add technical indicator to the pipeline. Indicators are computational functions 
 
 **Returns:** `Manifest` (self for chaining)
 
-**Import from:** `loop.indicators`
+**Import from:** `limen.indicators`
 
 **Available indicators (common ones):**
 
 ```python
-from loop.indicators import (
+from limen.indicators import (
     roc,              # Rate of Change
     wilder_rsi,       # Relative Strength Index
     ppo,              # Percentage Price Oscillator
@@ -327,7 +327,7 @@ from loop.indicators import (
     cci,              # Commodity Channel Index
     bollinger_bands,  # Bollinger Bands
     rolling_volatility,  # Rolling Volatility
-    # ... and more in loop/indicators/
+    # ... and more in limen/indicators/
 )
 ```
 
@@ -367,12 +367,12 @@ Add feature computation to the pipeline. Features are derived metrics that provi
 
 **Returns:** `Manifest` (self for chaining)
 
-**Import from:** `loop.features`
+**Import from:** `limen.features`
 
 **Available features (common ones):**
 
 ```python
-from loop.features import (
+from limen.features import (
     volume_regime,          # Volume regime classification
     ichimoku_cloud,         # Ichimoku Cloud
     trend_strength,         # Trend strength metrics
@@ -384,7 +384,7 @@ from loop.features import (
     vwap,                   # Volume-Weighted Average Price
     ema_breakout,           # EMA breakout detection
     kline_imbalance,        # Kline imbalance metrics
-    # ... and more - check loop/features/__init__.py for full list
+    # ... and more - check limen/features/__init__.py for full list
 )
 ```
 
@@ -649,7 +649,7 @@ Add simple transformation without parameter fitting.
 **Example:**
 
 ```python
-from loop.transforms import shift_column_transform
+from limen.transforms import shift_column_transform
 
 .add_transform(shift_column_transform, shift='shift', column='target_column')
 ```
@@ -663,8 +663,8 @@ Complete target configuration and return to main manifest.
 ### Complete Target Example
 
 ```python
-from loop.features import quantile_flag, compute_quantile_cutoff
-from loop.transforms import shift_column_transform
+from limen.features import quantile_flag, compute_quantile_cutoff
+from limen.transforms import shift_column_transform
 
 .with_target('quantile_flag')
     # Fitted transform: compute quantile cutoff on training data
@@ -695,8 +695,8 @@ Set scaler/transform class for data preprocessing. The scaler is fitted on train
 **Available scalers:**
 
 ```python
-from loop.scalers import LinearScaler    # Linear scaling
-from loop.scalers import LogRegScaler    # Logistic regression specific
+from limen.scalers import LinearScaler    # Linear scaling
+from limen.scalers import LogRegScaler    # Logistic regression specific
 ```
 
 **Example:**
@@ -771,12 +771,12 @@ Configure model function for training and evaluation. Parameters are automatical
 
 **Returns:** `Manifest` (self for chaining)
 
-**Import from:** `loop.sfd.reference_architecture`
+**Import from:** `limen.sfd.reference_architecture`
 
 **Available model functions:**
 
 ```python
-from loop.sfd.reference_architecture import (
+from limen.sfd.reference_architecture import (
     logreg_binary,             # Logistic regression with binary metrics
     random_binary,             # Random baseline classifier
     xgboost_regressor,         # XGBoost regressor
@@ -865,18 +865,18 @@ def model_name(data: dict, param1=default1, ..., paramN=defaultN) -> dict:
 Here's a comprehensive manifest-based SFD showing most available features:
 
 ```python
-from loop.experiment import Manifest
-from loop.data import HistoricalData
-from loop.indicators import roc, ppo, wilder_rsi, atr, rolling_volatility
-from loop.features import (
+from limen.experiment import Manifest
+from limen.data import HistoricalData
+from limen.indicators import roc, ppo, wilder_rsi, atr, rolling_volatility
+from limen.features import (
     ichimoku_cloud, volume_regime,
     close_position, trend_strength, gap_high,
     price_range_position, range_pct, quantile_flag,
     compute_quantile_cutoff
 )
-from loop.transforms import shift_column_transform
-from loop.scalers import LinearScaler
-from loop.sfd.reference_architecture import logreg_binary
+from limen.transforms import shift_column_transform
+from limen.scalers import LinearScaler
+from limen.sfd.reference_architecture import logreg_binary
 
 def params():
     return {
@@ -1077,9 +1077,9 @@ def model_function(data: dict,
     # Train model
     # Validate
     # Predict on test
-    # Compute metrics using loop.metrics helpers
+    # Compute metrics using limen.metrics helpers
 
-    from loop.metrics import binary_metrics  # or multiclass_metrics, continuous_metrics
+    from limen.metrics import binary_metrics  # or multiclass_metrics, continuous_metrics
 
     return binary_metrics(
         y_true=data['y_test'],
@@ -1093,7 +1093,7 @@ def model_function(data: dict,
 
 1. Accept `data` dict as first parameter
 2. All other parameters must have defaults
-3. Return dict from `loop.metrics` helpers
+3. Return dict from `limen.metrics` helpers
 4. Include `_preds` in return dict for UEL collection
 
 ---
@@ -1101,4 +1101,4 @@ def model_function(data: dict,
 **For more information:**
 - [Single File Decoder](Single-File-Decoder.md) - SFD structure and requirements
 - [Universal Experiment Loop](Universal-Experiment-Loop.md) - Running experiments
-- Code examples in `loop/sfd/` directory
+- Code examples in `limen/sfd/` directory

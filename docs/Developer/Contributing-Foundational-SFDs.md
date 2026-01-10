@@ -10,8 +10,8 @@ The Loop `Foundational SFD` here means two things coming together: The `Foundati
 
 A canonical example can be found in:
 
-- **Foundational SFD**: https://github.com/Vaquum/Loop/blob/main/loop/sfd/foundational_sfd/logreg_binary.py
-- **Reference Architecture**: https://github.com/Vaquum/Loop/blob/main/loop/sfd/reference_architecture/logreg_binary.py
+- **Foundational SFD**: https://github.com/Vaquum/Limen/blob/main/limen/sfd/foundational_sfd/logreg_binary.py
+- **Reference Architecture**: https://github.com/Vaquum/Limen/blob/main/limen/sfd/reference_architecture/logreg_binary.py
 
 ## Motivation
 
@@ -19,7 +19,7 @@ The motivation for a Foundational SFD, is to capture honestly and directly, pert
 
 **Contributing Foundational SFDs is contributing to the beating heart of Loop, it is where the intelligence resides. Rest of Loop is, for the most part, aggregation and transport.**
 
-**NOTE:** Initially, during January 2026, we want to incorporate 6-8 new Foundational Manifests with their respective underlying reference architectures. https://github.com/Vaquum/Loop/issues/297
+**NOTE:** Initially, during January 2026, we want to incorporate 6-8 new Foundational Manifests with their respective underlying reference architectures. https://github.com/Vaquum/Limen/issues/297
 
 ## Minimal Requirements
 
@@ -48,7 +48,7 @@ The `manifest` in a `Foundational SFD` can be used to incorporate various `Exten
 
 **Here, adding workflow code that is not strictly specific to the `Reference Architecture` is strictly prohibited.** 
 
-If and when the authoritative literature implies additional workflow interventions, these must be called from `loop.utils` and must be generally callable by any reference architecture.
+If and when the authoritative literature implies additional workflow interventions, these must be called from `limen.utils` and must be generally callable by any reference architecture.
 
 ## Extensions
 
@@ -56,15 +56,15 @@ Extensions can include  `Data`, `Indicators`, `Features`, `Scalers`, `Transforms
 
 `Data` include any input data, for the time being, various market data, framed in various ways.
 
-`Indicators` include common technical indicators, and any other non-compound signal that can be used for training models. Indicators must be contributed to `loop.indicators`.
+`Indicators` include common technical indicators, and any other non-compound signal that can be used for training models. Indicators must be contributed to `limen.indicators`.
 
-`Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `loop.features`.
+`Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `limen.features`.
 
-`Scalers` are stateful preprocessing transformations that fit on training data and then transform any dataset using learned parameters. They follow scikit-learn's convention (e.g., StandardScaler) and are used with `.set_scaler()` in manifests. Scalers must be contributed to `loop.scalers`.
+`Scalers` are stateful preprocessing transformations that fit on training data and then transform any dataset using learned parameters. They follow scikit-learn's convention (e.g., StandardScaler) and are used with `.set_scaler()` in manifests. Scalers must be contributed to `limen.scalers`.
 
-`Transforms` include stateless data transformations that compute statistics and apply transformations in a single step. Transforms must be contributed to `loop.transforms`.
+`Transforms` include stateless data transformations that compute statistics and apply transformations in a single step. Transforms must be contributed to `limen.transforms`.
 
-`Labels` include all so-called "dependent variables" and their various manipulations (e.g. confidence gating). Labels must be contributed to `loop.labels`.
+`Labels` include all so-called "dependent variables" and their various manipulations (e.g. confidence gating). Labels must be contributed to `limen.labels`.
 
 `Parameters` include all the parameters to be included in the experiment. These can include controls for Data, Indicators, Features, Scalers, Transforms, Labels, and in the future, even Parameters themselves. Parameters are included in the respective Foundational SFD file.
 
@@ -84,7 +84,7 @@ In simple terms, the following constituents can be included in the `manifest` of
 
 The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Loop. 
 
-Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Loop/blob/main/docs/Experiment-Manifest.md)
+Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md)
 
 
 ## Preparation
@@ -122,4 +122,4 @@ Once a Reference Architecture is decided upon, certain requirements must be met:
 
 ## Implementation
 
-Once the above has been comprehensively satisfied, after review of the deliverables, the contributing modeller moves to implementation following the guidelines laid out in: https://github.com/Vaquum/Loop/blob/main/docs/Experiment-Manifest.md.
+Once the above has been comprehensively satisfied, after review of the deliverables, the contributing modeller moves to implementation following the guidelines laid out in: https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md.

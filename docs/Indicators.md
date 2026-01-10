@@ -37,7 +37,7 @@ There can be an infinite number of distinct model architectures, but they all be
 | **Dimensionality-reduction models** (PCA, UMAP, Autoencoders) | Macro & Liquidity; Sentiment & Flow; On-Chain | Trend & Market Structure; Momentum (Oscillators) | Serve mainly as preprocessing—taming collinearity and noise before downstream models. |
 | **Reinforcement-learning agents** | Volume-Flow & Microstructure; Derivatives-Market Metrics; Trend & Market Structure | On-Chain; Macro & Liquidity; Sentiment & Flow | Suited to sequential decision-making (execution, allocation) where environment feedback is explicit; needs well-simulated microstructure data. |
 
-## `loop.indicators`
+## `limen.indicators`
 
 ### `atr`
 

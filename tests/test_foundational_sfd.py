@@ -1,4 +1,4 @@
-import loop
+import limen
 import uuid
 import sys
 import traceback
@@ -10,15 +10,15 @@ def test_foundational_sfd():
     '''Test all foundational SFDs.'''
 
     foundational_sfds = [
-        loop.sfd.foundational_sfd.random_binary,
-        loop.sfd.foundational_sfd.xgboost_regressor,
-        loop.sfd.foundational_sfd.logreg_binary,
+        limen.sfd.foundational_sfd.random_binary,
+        limen.sfd.foundational_sfd.xgboost_regressor,
+        limen.sfd.foundational_sfd.logreg_binary,
     ]
 
     for sfd_module in foundational_sfds:
 
         try:
-            uel = loop.UniversalExperimentLoop(sfd=sfd_module)
+            uel = limen.UniversalExperimentLoop(sfd=sfd_module)
             experiment_name = uuid.uuid4().hex[:8]
 
             uel.run(

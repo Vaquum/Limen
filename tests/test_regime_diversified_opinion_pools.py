@@ -5,9 +5,9 @@ import sys
 import traceback
 import pandas as pd
 
-import loop
-from loop import sfd
-from loop import RegimeDiversifiedOpinionPools
+import limen
+from limen import sfd
+from limen import RegimeDiversifiedOpinionPools
 from tests.utils.cleanup import cleanup_csv_files
 
 
@@ -26,7 +26,7 @@ def test_rdop():
             n_permutations = 1
 
             for i in range(n_permutations):
-                uel = loop.UniversalExperimentLoop(sfd=sfd_module)
+                uel = limen.UniversalExperimentLoop(sfd=sfd_module)
                 experiment_name = uuid.uuid4().hex[:8]
 
                 uel.run(
