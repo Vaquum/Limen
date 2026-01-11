@@ -18,7 +18,7 @@ Read more about how to plug-in your contributions with the standard testing harn
 
 ## Contributing a Foundational SFD
 
-Read more about how to contributing Foundational Single-File Decoders in [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)
+Read more about how to contribute Foundational Single-File Decoders in [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md).
 
 ## Managing Incidents
 
