@@ -6,7 +6,7 @@
 Simplicity isn’t just preferred—it’s the governing law. Choose the most straightforward design, the clearest algorithm, the leanest interface. Anything that adds complexity must earn its place.
 
 ### Consistency Over Creativity
-Uniform style (PEP 8 + house rules) removes mental friction. Identical filename ↔ function name pairs, single quotes (double only in f-strings), upper-case constants, lower-case variables—these small disciplines let readers focus on logic, not format.
+Uniform style ([PEP 8](https://legacy.python.org/dev/peps/pep-0008/) + [house rules](#guidelines)) removes mental friction. Identical filename ↔ function name pairs, single quotes (double only in f-strings), upper-case constants, lower-case variables—these small disciplines let readers focus on logic, not format.
 
 ### Self-Evident Code
 Code should explain itself. Docstrings are exhaustive; inline comments are rare and reserved for genuinely non-obvious decisions. No embedded examples—documentation and tests live elsewhere.
