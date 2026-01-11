@@ -6,7 +6,7 @@ Vaquum Limen reduces complex and otherwise out-of-reach research, model developm
 
 ### Core Capabilities
 
-Vaquum Limen brings every step - data ingestion, feature engineering, machine learning model development, parameter sweep, ensembling, and decisiong making - into a single closed-loop optimization cycle. This thermodynamic decision signal engine is delivered through one cohesive API and a set of lightweight, single-file templates called SFDs (Single-File Decoder). 
+Vaquum Limen brings every step - data ingestion, feature engineering, machine learning model development, parameter sweep, ensembling, and decision making - into a single closed-loop optimization cycle. This thermodynamic decision signal engine is delivered through one cohesive API and a set of lightweight, single-file templates called SFDs (Single-File Decoder). 
 
 **Limen is fully parametric, closed-loop, and Bitcoin-only.** These three core tenets will be explained in the below sections. 
 
