@@ -14,7 +14,7 @@ Vaquum Limen brings every step - data ingestion, feature engineering, machine le
 
 Every aspect of Limen can be controlled through parameters, and every parameter is coupled with rich metrics. This gives humans infinitely deep and infinitely fine control over every aspect of the system, without introducing any cumbersome abstraction that prohibit expression of human creativity. 
 
-The system relentlessly tests the hypothesis **"x paramater value for y parameter will yield z profit and loss in live trading".** across a vast n-dimensional space of possibilities where everything from ensembles to a single hyperparameter are treated as parameters.
+The system relentlessly tests the hypothesis **"x parameter value for y parameter will yield z profit and loss in live trading".** across a vast n-dimensional space of possibilities where everything from ensembles to a single hyperparameter are treated as parameters.
 
 Read more about the radical benefits of parametrization in [Three Eras of Knowledge Objects](https://medium.com/aecmaster/the-three-eras-of-knowledge-objects-994fa4ed9372).
 
