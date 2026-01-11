@@ -52,7 +52,7 @@ Completing the parameter sweep yields several useful datasets in the `uel.object
 
 - Parameter Sweep Log
 - Advanced Confusion Matrix
-- Bactest Results
+- Backtest Results
 
 # Contributing
 
