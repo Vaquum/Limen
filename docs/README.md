@@ -50,7 +50,7 @@ Vaquum Limen consist of three distinct sub-systems:
 
 `Experiment` is the sub-system where alpha is systematically discovered, primarily through the means of comprehensive parameter sweep involving multiple machine learning architectures.
 
-`Cohorts` is the sub-system that harnesses discovered alpha from `Experiment` into curated alpha, primarily through the means various ensembling and meta-modelling methods.
+`Cohorts` is the sub-system that harnesses discovered alpha from `Experiment` into curated alpha, primarily through the means of various ensembling and meta-modelling methods.
 
 `Manager` is the sub-system where alpha is crystallized into tradeable decisions, primarily through combining predictive signals with trading directives.
 
