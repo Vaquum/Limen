@@ -66,7 +66,7 @@ Everything in `Experiment` is captured in [Single-File Decoder](Single-File-Deco
 
 1) One of the built-in SFDs
 2) A locally customized version of one of the built-in SFDs
-3) A compltely custom SFD
+3) A completely custom SFD
 
 All of this is wrapped into a manifest for [Universal Experiment Loop](Universal-Experiment-Loop.md), which is basically a comphrensive parameter sweep suite. 
 
