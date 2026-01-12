@@ -58,7 +58,7 @@ Vaquum Limen consist of three distinct sub-systems:
 
 `Experiment` starts with [Data](Data-Bars.md), which could be standard, imbalance, or run bars. Data could also be any OHLC data from any source, as long as it contains standard OHLC columns.
 
-`Experiment` then continues with converting data into [Indicators](Indicators.md) and [Features](Features.md). In addition to the built-in ones, indicators and features, any custom polars expression could be used to create indepdent variables to be used in the `Experiment`.
+`Experiment` then continues with converting data into [Indicators](Indicators.md) and [Features](Features.md). In addition to the built-in ones, indicators and features, any custom polars expression could be used to create independent variables to be used in the `Experiment`.
 
 `Experiment` then continues with applying [Scalers](Scalers.md) and [Transforms](Transforms.md), which again could be some of the built-in ones, or any custom polars expressions.
 
