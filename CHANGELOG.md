@@ -63,46 +63,46 @@
 ## v0.8.8 on 7th of June, 2025
 - Add `futures=False` input argument to `HistoricalData.get_klines_historical` for getting futures data klines
 
-# v0.8.9 on 7th of June, 2025
+## v0.8.9 on 7th of June, 2025
 - Add `context_params` dictionary input in `uel.run` for passing context parameters through `round_params` for logging
 
-# v0.9.0 on 12th of June, 2025
+## v0.9.0 on 12th of June, 2025
 - Add statistical metrics (`mean`, `std`, `median`, and `iqr`) to `data.HistoricalData.get_historical_klines` endpoint for richer data analysis
 
-# v0.9.1 on 17th of June, 2025
+## v0.9.1 on 17th of June, 2025
 - Add simple lag based indicators `lag_column`, `lag_columns` and `lag_range`
 
-# v0.9.2 on 22nd of June, 2025
+## v0.9.2 on 22nd of June, 2025
 - Add `breakout_features` indicators for comprehensive breakout signal generation.
 
-# v0.9.3 on 25th of June, 2025
+## v0.9.3 on 25th of June, 2025
 - Fix datetime bucketing logic in `get_klines_data` to use epoch-based intervals instead of minute-boundary resets, ensuring continuous kline intervals across time boundaries
 - Add several updates to `models.logreg`
 - Reduce pulled datasizes in tests
 - Disabled test for `reports.experiment_benchmarking` due to the requirement to manually close the opening plot window
 
-# v0.9.4 on 26th of June, 2025
+## v0.9.4 on 26th of June, 2025
 - Added `utils` for breakout labeling.
 
-# v0.9.5 on 28th of June, 2025
+## v0.9.5 on 28th of June, 2025
 - Added `MegaModelDataSampler` class in lightgbm `utils` for megamodels via data sampling
 
-# v0.9.6 on 30th of June, 2025
+## v0.9.6 on 30th of June, 2025
 - Added lightgbm based `regime_multiclass` SFM for breakout regime classification
 
-# v0.9.7 on 1st of July, 2025
+## v0.9.7 on 1st of July, 2025
 - Added confidence filter utils for all models; megamodel preds for lightgbm base model
 
-# v0.9.8 on 2nd of July, 2025
+## v0.9.8 on 2nd of July, 2025
 - Added quantile model and moving average correction for lightgbm base model
 
-# v0.9.9 on 3rd of July, 2025
+## v0.9.9 on 3rd of July, 2025
 - Added lightgbm based `breakout_regressor` SFM for predicting breakout magnitude
 
-# v1.0.0 on 5th of July, 2025
+## v1.0.0 on 5th of July, 2025
 - Added lightgbm based `regime stability` SFM - better regime prediction via regime stability
 
-# v1.1.0 on 5th of July, 2025
+## v1.1.0 on 5th of July, 2025
 - Add a plotting function for visualizing decile means in datasets.
 - Introduce detailed performance metrics and trade simulation in backtesting
 - Add standard backtesting library `Bactest.py`
@@ -111,31 +111,25 @@
 - Add conviction tests for `Account` and `Backtest`
 - Updated `limen.reports` namespace
 
-# v1.1.1 on 21st of July, 2025
+## v1.1.1 on 21st of July, 2025
 - Fix data leakage in quantile flag calculation by adding cutoff parameter
 - Rename logreg.py to logreg_example.py for clarity
 - Reorganize logreg models to match lightgbm structure with dedicated folder
 - Add breakout_regressor_ridge.py model for ridge regression breakout prediction
 - Add regime_multiclass.py and breakout_regressor_ridge.py in logreg folder
 
-# v1.2.0 on 23rd of July, 2025
-
-## Metrics
+## v1.2.0 on 23rd of July, 2025
 - Add `limen.metrics` as a standard metrics sub-module
 - Move `utils.safe_ovr_auc.py` to `limen.metrics`
 - Move `utils.metrics` to `limen.metrics.metrics`
 - Refactor `limen.metrics.metrics` functions to separate files in `limen.metrics`
-
-# SFM
 - Rename `limen.models` to `limen.sfm`
 - Refactor `limen.sfm`
-
-# Tests
 - Refactor the test suite
 - Make tests fail hard
 - Remove all printouts (except PASSED/FAILED)
 
-# v1.3.0 on 25th of July, 2025
+## v1.3.0 on 25th of July, 2025
 - Update `sfm.reference.lightgbm` to data scaling and output standard
 - Update `sfm.lightgbm.breakout_regressor` to data scaling and output standard
 - Update `sfm.lightgbm.regime_multiclass` to data scaling and output standard
@@ -145,40 +139,40 @@
 - Add all of the above into `tests.test_sfm`
 - Add guideline/template comments in `logreg.regime_multiclass`
 
-# v1.3.1 on 25th of July, 2025
+## v1.3.1 on 25th of July, 2025
 - Fix CSV reading issue where string values had leading spaces in `reports.log_df.read_from_file`
 
-# v1.4.0 on 31st of July, 2025
+## v1.4.0 on 31st of July, 2025
 - Add tests to CI
 - Set `n_permutations` to `10000` in `uel.run` by default, and require an int as input
 - Add `n_permutations` as input argument to `utils.ParamSpace`
 - Make writing to sqlite optional in `uel.run` with `save_to_sqlite` having `False` as default
 - Disable `test_regime_stability`
 
-# v1.4.1 on 31st of July, 2025
+## v1.4.1 on 31st of July, 2025
 - Update `params` in `sfm.reference.logreg`
 - Remove redundant code from `model` in `sfm.reference.logreg`
 - Remove redundant logic/code from `prep` in `sfm.reference.logreg`
 - Refactor `sfm.reference.logreg` to work with standard data handling
 
-# v1.4.2 on 1st of August, 2025
+## v1.4.2 on 1st of August, 2025
 - Fix dataframe column orders in `sfm.logreg.breakout_regressor_ridge` and `sfm.lightgbm.breakout_regressor`
 - Update  `sfm.lightgbm.breakout_regressor` and `sfm.lightgbm.regime_multiclass` to data scaling
 - Fix reference models verbosity configuration
 - Refactor `test_mega_model` to use CSV data instead of live data fetching.
 
-# v.1.4.3 on 2nd of August, 2025
+## v.1.4.3 on 2nd of August, 2025
 - Update `sfm.lightgbm.regime_stability` to output standard
 - Add `sfm.lightgbm.regime_stability` to test suite
 
-# v1.5.0 on 4th of August, 2025
+## v1.5.0 on 4th of August, 2025
 - Create `sfm.lightgbm.tradeable_regressor` decoder
 - Add `sfm.lightgbm.tradeable_regressor` to test suite
 
-# v1.5.1 on 5th of August, 2025
+## v1.5.1 on 5th of August, 2025
 - Fix Polars schema error in regime_multiclass SFM by handling None values in params
 
-# v1.6.0 on 5th of August, 2025
+## v1.6.0 on 5th of August, 2025
 - Rename `limen.data` to `limen.historical_data`
 - Split `get_historical_klines` into `get_spot_klines` and `get_futures_klines`
 - Rename `get_historical_trades` to `get_spot_trades`
@@ -186,31 +180,31 @@
 - Rename `get_historical_futures_trades` to `get_futures_trades`
 - Make `get_futures_trades` create `self.data` instead of returning `pl.DataFrame`
 
-# v1.7.0 on 6th of August, 2025
+## v1.7.0 on 6th of August, 2025
 - Add `limen.features` sub-module
 - Add `features.conserved_flux_renormalization`
 - Add `transform.mad_transform` for Median Absolute Deviation scaling
 - Add `utils.check_if_has_header` to check Binance Market Data files for header
 
-# v1.8.0 on 7th of August, 2025
+## v1.8.0 on 7th of August, 2025
 - Add `lightgbm.tradeline_multiclass` sfm
 - Add test for the above SFM
 
-# v1.9.0 on 7th of August, 2025
+## v1.9.0 on 7th of August, 2025
 - Refactor `limen.indicators` sub-module (no code changes except imports)
 - Refactor `limen.features` sub-module (no code changes except imports)
 - Make docstrings cohesive and coherent across `limen.indicators` and `limen.features`
 - Add comprehensive docs for `limen.indicators` and `limen.features`
 
-# v1.10.0 on 8th of August 2025
+## v1.10.0 on 8th of August 2025
 - Add `rules_based.momentum_volatility` sfm
 - Add test for the above SFM
 
-# v1.12.0 on 13th of August 2025
+## v1.12.0 on 13th of August 2025
 - Add `maker_volume` and `maker_liquidity` columns to `get_klines_data` output
 - Add/Update test and doc for the above
 
-# v1.13.0 on 14th of August 2025
+## v1.13.0 on 14th of August 2025
 - Rename `uel.log_df` to `uel.experiment_log`
 - Improve data plumbing in `uel.run`
 - Add `limen.backtest` sub-module
@@ -229,56 +223,56 @@
 - Add the latest features to tests
 - **NOTE**: Temporarily disables tests `reference.lightgbm` and`lightgbm.test_regime_stability`
 
-# v1.13.1 on 16th of August 2025
+## v1.13.1 on 16th of August 2025
 - Remove lightgbm regime_multiclass and regime_stability models
 - Remove tests for the above
 - Cleanup all lightgbm utils/sfms (except megamodel code) docstrings, comments, prints, imports
 
-# v1.13.2 on 16th of August 2025
+## v1.13.2 on 16th of August 2025
 - Port sfm.reference.lightgbm to Loop standards
 - Update `tests.test_sfm` to enable the above
 - Removed util function not in use anymore
 
-# v1.13.3 on 16th of August 2025
+## v1.13.3 on 16th of August 2025
 - Standardize `limen.indicators` inputs and outputs
 - Fix `limen.indicators.price_change_pct` calculation
 - Format code style for `limen.indicators`
 - Update docs for `limen.indicators`
 
-# v1.14.0 on 17th of August 2025
+## v1.14.0 on 17th of August 2025
 - Refactor data sampler code to generic form in `limen.utils.data_sampler`
 - Remove data sampler class from lightgbm.utils
 - Refactor mega model code to generic form in `limen.utils`
 - Remove mega model code from lightgbm.utils, tests
 - Add docs for data sampler, mega model
 
-# v1.15.0 on 18th of August 2025
+## v1.15.0 on 18th of August 2025
 - Follow the column naming pattern from `experiment_backtest_results` in `experiment_confusion_metrics`
 - Organize `experiment_confusion_metrics` columns based on actual use pattern
 - Pre-compute `experiment_confusion_metrics` and `experiment_backtest_results` (**NOTE**: `experiment_parameter_correlation` remains callable)
 - Clean `uel` object namespace
 
-# v1.15.1 on 19th of August 2025
+## v1.15.1 on 19th of August 2025
 - Add Ichimoku Cloud feature to `limen.features`
 
-# v1.16.0 on 24th of August 2025
+## v1.16.0 on 24th of August 2025
 - Simplify `lightgbm.tradeable_regressor` - remove deadwood, genericize, etc
 
-# v1.16.1 on 4th of September 2025
+## v1.16.1 on 4th of September 2025
 - Use deterministic and stable SQL fuctions in `get_klines_data()` to minimize
 data mismatch
 - Update datasets for test data
 
-# v1.16.2 on 31st of August, 2025
+## v1.16.2 on 31st of August, 2025
 - Fix Streamlit explorer launch path by injecting project root into `PYTHONPATH` for the subprocess in `limen.explorer.limen_explorer`, ensuring `limen` is importable when started via tools/Playwright
 
-# v1.17.0 on 9th of September 2025
+## v1.17.0 on 9th of September 2025
 - Add `linear_transform.py` under `limen.transforms`
 - Add `ridge_classifier.py` under `limen.sfm.ridge`
 - Fix `limen.features.ichimoku_cloud` not added into `limen.features.__init__`
 - Add test for the above SFM
 
-# v1.18.0 on 13th of September, 2025
+## v1.18.0 on 13th of September, 2025
 - Add `limen.explorer` data visualization toolkit
 - Add `features.breakout_percentile_regime`
 - Add `features.hh_hl_structure_regime`
@@ -295,7 +289,7 @@ data mismatch
 - Add `snippets.test_explorer_locally`
 - Update project CLAUDE.md and Project.md
 
-# V1.19.0 on 19th of September, 2025
+## v1.19.0 on 19th of September, 2025
 - Add `limen.manifest` for experiment configuration
 - Add method chaining API for manifest configuration
 - Fix parameter space explosion in `utils.param_space` with mixed radix sampling
@@ -304,17 +298,17 @@ data mismatch
 - Add comprehensive docs for `limen.manifest` including integration examples
 - Update `Single-File-Model.md` and `Universal-Experiment-Loop.md` to include manifest support 
 
-# V1.19.1 on 22nd of September 2025
+## v1.19.1 on 22nd of September 2025
 - Add `limen.data` sub-module for computing time and information-based bars from base klines data.
 - Add fixed threshold trade, volume and liquidity bars to `limen.data.bars`
 - Add test cases for the above
 - Add documentation `docs/Data-Bars.md`
 
-# V1.19.2 on 24th of September 2025
+## v1.19.2 on 24th of September 2025
 - Refactor datetime alignment to work with manifest based bar data.
 - Fix `snippets/test_explorer_locally.py` to work with manifest based logreg.
 
-# V1.19.3 on 30th of September 2025
+## v1.19.3 on 30th of September 2025
 - Refactor `sfm.reference.random` to use manifest system
 - Refactor `sfm.reference.lightgbm` to use manifest system
 - Add `features.lagged_features` to consolidate all lagged features with vectorized Polars implementations
@@ -322,30 +316,30 @@ data mismatch
 - Refactor `utils.add_breakout_ema` to pure Polars implementation
 - Update `docs/Features.md` with consolidated lagged features documentation under single section
 
-# V1.19.4 on 10th of October 2025
+## v1.19.4 on 10th of October 2025
 - Enhance color consistency, typography & spacing in Explorer
 
-# V1.20.0 on 11th of October 2025
+## v1.20.0 on 11th of October 2025
 - Refactor `limen.manifest`, `limen.universal_experiment_loop`, `limen.log` to remove prep() and model() functions
 - Add `limen.sfm.model` that contains sfm model files
 - Use latest Manifest on `limen.sfm.ridge.ridge_classifier` and `limen.sfm.reference.logreg`
 - Update `limen.universal_experiment_loop` to support fully Manifest, partial Manifest and legacy modes.
 
-# V1.20.1 on 18th of October 2025
+## v1.20.1 on 18th of October 2025
 - Modify `requirement.txt` with newer package dependencies for `pandas>=2.3.1`, `scikit-learn>=1.6.1`, and `numpy>=2.2.6`
 - Fix package dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
-# V1.20.2 on 23rd of October 2025
+## v1.20.2 on 23rd of October 2025
 - Refactor `limen.sfm.logreg.regime_multiclass` and `limen.sfm.logreg.breakout_regressor_ridge` to use manifest.
 - Fix a data alignment bug in `limen/log/log.py` when there are no missing datetime values.
 - Refactor manifest for `limen.sfm.reference.lightgbm.py` to include model assignment. 
 
-# V1.21.0 on 30th of October 2025
+## v1.21.0 on 30th of October 2025
 - Add strategy logic to `lightgbm.tradeline_multiclass`
 - Simplify `lightgbm.tradeline_multiclass` - remove deadwood, genericize, etc
 - Add `lightgbm.tradeline_long_binary` based on the multiclass SFM
 
-# V1.21.1 on 31st of October 2025
+## v1.21.1 on 31st of October 2025
 - Add `indicator.bollinger_bands`, `indicator.cci`, and `indicator.stochastic_oscillator`
 - Add `features.sma_crossover`
 - Refactor `sfm.ridge.ridge_classifier` with richer parameter ranges
@@ -353,7 +347,7 @@ data mismatch
 - Add scaling for all klines data in `transform.linear_transform`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
-# v1.22.0 on 26th of November, 2025
+## v1.22.0 on 26th of November, 2025
 - Implement Regime Diversified Opinion Pools (RDOP) system in `limen.regime_diversified_opinion_pools.py`
 - Fix `limen.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
 - Fix `limen.universal_experimental_loop` issue with support for `prep_each_round=False`
@@ -361,56 +355,56 @@ data mismatch
 - Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
 - Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
 
-# V1.23.0 on 22nd of November 2025
+## v1.23.0 on 22nd of November 2025
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics
 
-# V1.24.0 on 8th of December 2025
+## v1.24.0 on 8th of December 2025
 - Refactor xgboost reference sfm to use manifest
 - Refactor rule based sfms to use manifest
 - Refactor `lightgbm/tradeable_regressor` sfm to use manifest
 
-# v1.24.1 on 9th of December, 2025
+## v1.24.1 on 9th of December, 2025
 - Modify `limen.sfm.model.ridge_binary` to add combination of frozenestimator and cv folds params
 - Add use_frozen_estimator parameter to mimic prefitted calibration behavior using sklearn's FrozenEstimator
 - Add ensemble parameter to control ensemble calibration in CalibratedClassifierCV
 
-# V1.25.0 on 19th of December, 2025
+## v1.25.0 on 19th of December, 2025
 - Add declarative data fetching to manifest
 - Add data source configuration to all manifest-based SFMs
 
-# V1.26.0 on 25th of December, 2025
+## v1.26.0 on 25th of December, 2025
 - Remove all but foundational SFDs
 - Prune unused code
 - Update tests and docs to incorporate the standard glossary
 - Add local file-based endpoint to `historical_data.py`
 
-# V1.27.0 on 26th of December, 2025
+## v1.27.0 on 26th of December, 2025
 - Organize files in root into respective modules
 - Move all data related code from `limen/utils` to `limen/data`
 
-# V1.28.0 on 28th of December, 2025
+## v1.28.0 on 28th of December, 2025
 - Move scalers from `limen.transforms` to new sub-module `limen.scalers`
 - Update documentations for the above
 - Refactor `limen.utils` and `limen.transforms`
 
-# V1.28.1 on 29th of December, 2025
+## v1.28.1 on 29th of December, 2025
 - Add missing indicator exports in `limen.indicator.__init__`
 - Add missing feature exports in `limen.feature.__init__`
 - Update `Indicators.md` and `Features.md` to the latest
 
-# V1.29.0 on 29th of December, 2025
+## v1.29.0 on 29th of December, 2025
 - Remove `limen.reports` sub-module entirely
 
-# V1.30.0 on 29th of December, 2025
+## v1.30.0 on 29th of December, 2025
 - Add `tabpfn_binary` foundational SFD with validation-based dynamic threshold tuning
 - Add `bollinger_position` indicator
 - Add `forward_breakout_target` feature
 - Add `balanced_metric` for threshold optimization
 
-# V1.31.0 on 31st of December, 2025
+## v1.31.0 on 31st of December, 2025
 - Refactor generic endpoints for querying Clickhouse data
 - Update docs for the above
 
-# v1.32.0 on 9th of December, 2026
+## v1.32.0 on 9th of December, 2026
 - Move data endpoint creds to input argument
