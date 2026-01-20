@@ -355,7 +355,7 @@ data mismatch
 - Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
 - Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
 
-## V1.23.0 on 22nd of November 2025
+## v1.23.0 on 22nd of November 2025
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics
 
