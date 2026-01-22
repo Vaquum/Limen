@@ -52,3 +52,80 @@ Repository = "https://github.com/vaquum/limen"
 where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+fix = false
+
+[tool.ruff.lint]
+select = [
+  "F",    # Pyflakes
+  "E",
+  "W",    # pycodestyle
+  "I",    # isort
+  "N",    # pep8-naming
+  "D",    # pydocstyle
+  "UP",   # pyupgrade
+  "ANN",  # flake8-annotations
+  "S",    # flake8-bandit
+  "BLE",  # flake8-blind-except
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "G",    # flake8-logging-format
+  "T20",  # flake8-print
+  "PT",   # flake8-pytest-style
+  "Q",    # flake8-quotes
+  "RET",  # flake8-return
+  "SIM",  # flake8-simplify
+  "ARG",  # flake8-unused-arguments
+  "PTH1", # flake8-use-pathlib (PTH1xx only: os.path replacements)
+  "ERA",  # eradicate
+  "PL",   # Pylint
+  "RUF",  # Ruff-specific rules
+]
+ignore = [
+  "D201", # No blank line before function docstring (We want the opposite)
+  "D202", # No blank line after function docstring (We want the opposite)
+  "D203", # 1 blank line required before class docstring (Conflicts with D211)
+  "D212", # Multi-line docstring summary at first line (Conflicts with D213)
+  "E501", # Line too long (Handled by formatter/wrap)
+  "I",    # Ignore isort import order rules
+  "D200", # Allow one-line docstring to span multiple lines
+  "D100", # Ignore missing docstring in public module
+]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.lint.pylint]
+max-statements = 50
+
+[tool.ruff.lint.isort]
+known-first-party = ["limen"]
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party",
+  "local-folder",
+]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+docstring-quotes = "double"
+multiline-quotes = "single"
+avoid-escape = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
