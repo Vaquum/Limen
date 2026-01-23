@@ -30,5 +30,7 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
 
         all_rows.append(result_df)
 
-    return pd.concat(all_rows, ignore_index=True)
+    df_all = pd.concat(all_rows, ignore_index=True)
+
+    return df_all
 

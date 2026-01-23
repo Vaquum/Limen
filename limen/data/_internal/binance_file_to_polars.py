@@ -26,5 +26,7 @@ def binance_file_to_polars(url: str, has_header: bool) -> pl.DataFrame:
     csv_filename = next(name for name in z.namelist() if name.lower().endswith('.csv'))
 
     with z.open(csv_filename) as csv_file:
-        return pl.read_csv(csv_file, has_header=has_header)
+        df = pl.read_csv(csv_file, has_header=has_header)
+
+    return df
 

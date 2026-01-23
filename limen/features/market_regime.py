@@ -53,4 +53,6 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
         .alias('market_favorable')
     ])
 
-    return df.drop('returns_temp')
+    df = df.drop('returns_temp')
+
+    return df

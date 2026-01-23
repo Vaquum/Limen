@@ -108,6 +108,7 @@ ignore = [
   "N803",    # Argument name should be lowercase
   "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
   "C401",    # Unnecessary generator (rewrite as a set comprehension)
+  "RET504",  # Unnecessary assignment to variable before return statement
 ]
 
 # Allow unused variables when underscore-prefixed.

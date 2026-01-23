@@ -500,7 +500,9 @@ class Manifest:
                     'It must be provided in round_params.'
                 )
 
-        return self.model_function(data, **model_kwargs)
+        round_results = self.model_function(data, **model_kwargs)
+
+        return round_results
 
 
 

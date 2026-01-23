@@ -160,11 +160,13 @@ def _experiment_parameter_correlation(self: Any,
             seen.add(pct)
 
     res['cohort_pct'] = pd.Categorical(res['cohort_pct'], categories=order, ordered=True)
-    return (
+    res = (
         res.assign(abs_corr_med=res['corr_med'].abs())
            .sort_values(['cohort_pct', 'abs_corr_med'], ascending=[True, False])
            .drop(columns='abs_corr_med')
            .set_index(['cohort_pct', 'feature'])
            .sort_index(level=0, sort_remaining=True)
     )
+
+    return res
 

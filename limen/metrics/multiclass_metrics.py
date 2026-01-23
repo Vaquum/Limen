@@ -18,8 +18,10 @@ def multiclass_metrics(data: dict, preds: list, probs: list, average: str = 'mac
         dict: Dictionary containing precision, recall, auc, and accuracy metrics
     '''
 
-    return {'precision': round(precision_score(data['y_test'], preds, average=average), 3),
+    round_results = {'precision': round(precision_score(data['y_test'], preds, average=average), 3),
                      'recall': round(recall_score(data['y_test'], preds, average=average), 3),
                      'auc': round(safe_ovr_auc(data['y_test'], probs), 3),
                      'accuracy': round(accuracy_score(data['y_test'], preds), 3)}
+
+    return round_results
 

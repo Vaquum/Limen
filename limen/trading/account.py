@@ -25,7 +25,7 @@ class Account:
 
         credit_usdt | int | starting usdt balance
         '''
-        return {'position_id': [self.position_id],
+        account = {'position_id': [self.position_id],
                    'action': ['hold'],
                    'timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
                    'credit_usdt': [credit_usdt],
@@ -38,6 +38,8 @@ class Account:
                    'sell_price_usdt': [0],
                    'total_usdt': [credit_usdt],
                    'total_btc': [0]}
+
+        return account
 
 
     def update_account(self,

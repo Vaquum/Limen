@@ -97,7 +97,9 @@ class OfflineRegime:
         metrics_scaled = scaler.fit_transform(metrics_matrix)
 
         kmeans = KMeans(n_clusters=actual_k, random_state=self.random_state, n_init='auto')
-        return kmeans.fit_predict(metrics_scaled)
+        cluster_labels = kmeans.fit_predict(metrics_scaled)
+
+        return cluster_labels
 
 
 
@@ -219,7 +221,9 @@ class OnlineModelLoader:
 
         round_id = 0
         perf_df = uel._log.permutation_prediction_performance(round_id).copy()
-        return perf_df.drop(columns=['actuals', 'hit', 'miss'])
+        perf_df = perf_df.drop(columns=['actuals', 'hit', 'miss'])
+
+        return perf_df
 
 
     def merge_prediction_dataframes(self, dfs: list[pd.DataFrame]) -> pl.DataFrame:
