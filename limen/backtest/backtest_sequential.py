@@ -1,5 +1,5 @@
 import math
-from typing import Any
+from collections.abc import Sequence
 from limen.trading import Account
 
 class BacktestSequential:
@@ -13,7 +13,12 @@ class BacktestSequential:
         self.trades = []
         self.equity_curve = []
 
-    def run(self, actual: Any, prediction: Any, price_change: Any, open_prices: Any, close_prices: Any) -> dict:
+    def run(self,
+            actual: Sequence[int | float],
+            prediction: Sequence[int | float],
+            price_change: Sequence[float],
+            open_prices: Sequence[float],
+            close_prices: Sequence[float]) -> dict:
 
         if not all(len(arr) == len(actual) for arr in [prediction, price_change, open_prices, close_prices]):
             raise ValueError('ERROR: Arrays must have same length')
