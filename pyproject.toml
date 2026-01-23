@@ -107,6 +107,7 @@ ignore = [
   "PT",      # flake8-pytest-style
   "N803",    # Argument name should be lowercase
   "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+  "C401",    # Unnecessary generator (rewrite as a set comprehension)
 ]
 
 # Allow unused variables when underscore-prefixed.

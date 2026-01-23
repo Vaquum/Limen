@@ -139,7 +139,7 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
 
     # Vector 4: History integrity
     assert len(account.account['action']) == len(actions) + 1, f"Action count mismatch: {len(account.account['action'])} vs {len(actions) + 1}"
-    assert len({len(v) for v in account.account.values()}) == 1, 'Inconsistent vector lengths'
+    assert len(set(len(v) for v in account.account.values())) == 1, 'Inconsistent vector lengths'
 
     # Vector 5: Invariant checks
     assert abs(account.account['total_btc'][-1] - account_long) < btc_tolerance, 'total_btc != long_position'
