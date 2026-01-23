@@ -6,13 +6,13 @@ def rsi_sma(data: pl.DataFrame,
 
     '''
     Compute RSI using Simple Moving Average smoothing (not Wilder's method).
-    
+
     NOTE: Different from wilder_rsi which uses exponential smoothing.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of periods for RSI calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'rsi_sma_{period}'
     '''

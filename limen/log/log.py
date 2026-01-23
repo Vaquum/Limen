@@ -24,7 +24,7 @@ class Log:
 
         '''
         Create Log object state from a UEL object or a log file.
-        
+
         Args:
             uel_object (object, optional): Source UEL object
             file_path (str, optional): Path to the log file

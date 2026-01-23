@@ -6,12 +6,12 @@ def feature_aliases(df: pl.DataFrame,
                    volatility_regime_enabled: bool = True) -> pl.DataFrame:
     '''
     Compute feature aliases with null filling for dynamic and regime features.
-    
+
     Args:
         df (pl.DataFrame): Klines dataset with dynamic features
         base_min_breakout (float): Default value for dynamic_target
         volatility_regime_enabled (bool): Whether to create regime feature aliases
-        
+
     Returns:
         pl.DataFrame: The input data with new columns 'dynamic_target_feature', 'entry_score_feature', 'momentum_score_feature' and optional regime columns
     '''

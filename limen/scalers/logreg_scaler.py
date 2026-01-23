@@ -33,7 +33,7 @@ class LogRegScaler:
     LogRegScaler class for scaling and inverse scaling data.
     '''
 
-    def __init__(self, x_train: pl.DataFrame):
+    def __init__(self, x_train: pl.DataFrame) -> None:
 
         '''
         Initialize the LogRegScaler object.
@@ -64,7 +64,7 @@ class LogRegScaler:
 
         '''
         Transform the data using the scaling rules.
-        
+
         Args:
             df (pl.DataFrame): The input DataFrame
 

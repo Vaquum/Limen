@@ -10,14 +10,14 @@ def _breakout_lags(data: pl.DataFrame,
 
     '''
     Compute lag features for breakout signals.
-    
+
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
         long_col (str): Name of long breakout column
         short_col (str): Name of short breakout column
         lookback (int): Number of periods to look back
         horizon (int): Number of periods to shift for known data
-        
+
     Returns:
         pl.DataFrame: The input data with new lag columns
     '''
@@ -40,14 +40,14 @@ def _breakout_stats(data: pl.DataFrame,
                   horizon: int = 12) -> pl.DataFrame:
     '''
     Compute rolling statistics for breakout signals.
-    
+
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
         long_col (str): Name of long breakout column
         short_col (str): Name of short breakout column
         lookback (int): Window size for rolling calculations
         horizon (int): Number of periods to shift for known data
-        
+
     Returns:
         pl.DataFrame: The input data with new statistical columns
     '''
@@ -79,14 +79,14 @@ def _breakout_roc(data: pl.DataFrame,
 
     '''
     Compute Rate of Change (ROC) for breakout signals.
-    
+
     Args:
         data (pl.DataFrame): Input DataFrame with breakout columns
         long_col (str): Name of current long breakout column
         short_col (str): Name of current short breakout column
         next_long_col (str): Name of next long breakout column
         next_short_col (str): Name of next short breakout column
-        
+
     Returns:
         pl.DataFrame: The input data with new ROC columns
     '''
@@ -121,7 +121,7 @@ def breakout_features(data: pl.DataFrame,
 
     '''
     Compute comprehensive breakout-related features including lags, stats, and ROC.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with breakout signal columns
         long_col (str): Column name for long breakout signals

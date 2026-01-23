@@ -1,23 +1,24 @@
+from typing import Any
 import numpy as np
 import polars as pl
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
-def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
+def calibrate_confidence_threshold(models: list, x_val: Any, y_val: Any, target_confidence: float = 0.8) -> tuple:
 
     '''
     Compute confidence threshold using validation data.
-    
+
     This function determines the optimal confidence threshold by analyzing model
     prediction variance on validation data. It establishes what level of prediction
     uncertainty corresponds to reliable vs unreliable predictions.
-    
+
     Args:
         models (list): List of trained models
         x_val (array-like): Validation features for threshold calibration
         y_val (array-like): Validation targets for performance evaluation
         target_confidence (float): Target percentage of predictions to classify as "confident" (0.0 to 1.0)
-        
+
     Returns:
         tuple: Confidence threshold and calibration statistics
     '''
@@ -75,17 +76,17 @@ def calibrate_confidence_threshold(models, x_val, y_val, target_confidence=0.8):
     return confidence_threshold, calibration_stats
 
 
-def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
+def apply_confidence_filtering(models: list, x_test: Any, y_test: Any, confidence_threshold: float) -> dict:
 
     '''
     Apply confidence filtering using pre-calibrated threshold.
-    
+
     Args:
         models (list): List of trained models
         x_test (array-like): Test features for prediction and confidence assessment
         y_test (array-like): Test targets for performance evaluation
         confidence_threshold (float): Pre-calibrated confidence threshold from validation data
-        
+
     Returns:
         dict: Results dictionary containing predictions, uncertainty, masks, and metrics
     '''
@@ -120,7 +121,7 @@ def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
     else:
         uncertain_mae, uncertain_r2 = np.nan, np.nan
 
-    results = {
+    return {
         'predictions': test_pred_mean,
         'uncertainty': test_pred_std,
         'confident_mask': confident_mask,
@@ -137,19 +138,18 @@ def apply_confidence_filtering(models, x_test, y_test, confidence_threshold):
         'individual_predictions': test_preds
     }
 
-    return results
 
 
 def confidence_filtering_system(models: list, data: dict, target_confidence: float = 0.8) -> tuple:
 
     '''
     Compute complete confidence filtering system with validation-based calibration.
-    
+
     Args:
         models (list): List of trained models for confidence estimation
         data (dict): Dictionary with validation and test data splits containing 'x_val', 'y_val', 'x_test', 'y_test', 'dt_test' keys
         target_confidence (float): Target percentage of predictions to classify as confident
-        
+
     Returns:
         tuple: Confidence threshold, filtered results, and calibration statistics
     '''

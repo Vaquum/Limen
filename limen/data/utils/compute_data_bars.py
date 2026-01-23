@@ -1,9 +1,10 @@
+from typing import Any
 import polars as pl
 
 from limen.data.bars import volume_bars, trade_bars, liquidity_bars
 
 
-def compute_data_bars(data: pl.DataFrame, **params) -> pl.DataFrame:
+def compute_data_bars(data: pl.DataFrame, **params: Any) -> pl.DataFrame:
 
     '''
     Compute adaptive bar formation based on bar_type parameter.

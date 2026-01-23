@@ -8,13 +8,13 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
 
     '''
     Compute market regime indicators including trend strength and volume regime.
-    
+
     Args:
         df (pl.DataFrame): Klines dataset with 'close', 'volume' columns
         lookback (int): Lookback period for calculations used for volatility ratio and volume regime
         short_sma (int): Period for short SMA calculation
         long_sma (int): Period for long SMA calculation
-        
+
     Returns:
         pl.DataFrame: The input data with new columns 'sma_20', 'sma_50', 'trend_strength', 'volatility_ratio', 'volume_sma', 'volume_regime', 'market_favorable'
     '''
@@ -41,10 +41,15 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
     df = df.rename({f'volume_sma_{lookback}': 'volume_sma'})
     df = volume_regime(df, lookback)
 
+    TREND_STRENGTH_THRESHOLD = -0.001
+    VOLATILITY_RATIO_THRESHOLD = 2.0
+    VOLUME_REGIME_THRESHOLD = 0.7
+    SCORE_NORMALIZER = 3.0
+
     df = df.with_columns([
-        (((pl.col('trend_strength') > -0.001).cast(pl.Int32) +
-          (pl.col('volatility_ratio') < 2.0).cast(pl.Int32) +
-          (pl.col('volume_regime') > 0.7).cast(pl.Int32)) / 3.0)
+        (((pl.col('trend_strength') > TREND_STRENGTH_THRESHOLD).cast(pl.Int32) +
+          (pl.col('volatility_ratio') < VOLATILITY_RATIO_THRESHOLD).cast(pl.Int32) +
+          (pl.col('volume_regime') > VOLUME_REGIME_THRESHOLD).cast(pl.Int32)) / SCORE_NORMALIZER)
         .alias('market_favorable')
     ])
 

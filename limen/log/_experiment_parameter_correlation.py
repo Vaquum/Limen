@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -9,12 +10,12 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def _experiment_parameter_correlation(self,
+def _experiment_parameter_correlation(self: Any,
                                    metric: str,
                                    *,
                                    cols_to_drop: list | None = None,
                                    sort_key: str | None = None,
-                                   sort_ascending=False,
+                                   sort_ascending: bool = False,
                                    heads: Sequence[float | int] | None = None,
                                    method: str = 'spearman',
                                    n_boot: int = 300,
@@ -37,7 +38,7 @@ def _experiment_parameter_correlation(self,
     Returns:
         pd.DataFrame: MultiIndex rows indexed by ('cohort_pct', 'feature') with columns
                       'n_rows', 'corr', 'corr_med', 'ci_lo', 'ci_hi', 'sign_stability'
-    
+
     NOTE: Non-numeric columns are coerced with errors='coerce' and ignored thereafter;
           constant or all-NaN numeric columns are dropped; rows with NaN in `metric` are
           dropped prior to sorting and slicing
@@ -93,7 +94,7 @@ def _experiment_parameter_correlation(self,
     total_n = len(num_df)
 
     def _corr_series(d: pd.DataFrame) -> pd.Series:
-        corr_mat = d[features + [metric]].corr(method=method)
+        corr_mat = d[[*features, metric]].corr(method=method)
         s = corr_mat.get(metric)
         if s is None:
             return pd.Series(dtype=float)
@@ -103,20 +104,17 @@ def _experiment_parameter_correlation(self,
     realized_pcts: list[int] = []
 
     for h in heads:
-        if isinstance(h, float) and h <= 1.0:
-            n = max(int(total_n * h), 1)
-        else:
-            n = int(h)
+        n = max(int(total_n * h), 1) if isinstance(h, float) and h <= 1.0 else int(h)
         n = min(n, total_n)
 
         if n < min_n:
-            logger.debug(f'Skipping cohort (requested={h}) with n={n} < min_n={min_n}')
+            logger.debug('Skipping cohort (requested=%s) with n=%d < min_n=%d', h, n, min_n)
             continue
 
         cohort = num_df.iloc[:n]
         base = _corr_series(cohort)
         if base.empty:
-            logger.debug(f'No correlations computed for cohort (requested={h}). Skipping.')
+            logger.debug('No correlations computed for cohort (requested=%s). Skipping.', h)
             continue
 
         boot_vals: list[pd.Series] = []
@@ -132,7 +130,7 @@ def _experiment_parameter_correlation(self,
         median_sign = np.sign(med)
         sign_stability = np.sign(boot_df).eq(median_sign, axis=0).mean(axis=1)
 
-        cohort_pct = int(round(100 * n / total_n))
+        cohort_pct = round(100 * n / total_n)
         realized_pcts.append(cohort_pct)
 
         block = pd.DataFrame(
@@ -162,7 +160,7 @@ def _experiment_parameter_correlation(self,
             seen.add(pct)
 
     res['cohort_pct'] = pd.Categorical(res['cohort_pct'], categories=order, ordered=True)
-    res = (
+    return (
         res.assign(abs_corr_med=res['corr_med'].abs())
            .sort_values(['cohort_pct', 'abs_corr_med'], ascending=[True, False])
            .drop(columns='abs_corr_med')
@@ -170,4 +168,3 @@ def _experiment_parameter_correlation(self,
            .sort_index(level=0, sort_remaining=True)
     )
 
-    return res

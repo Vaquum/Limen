@@ -11,14 +11,14 @@ def volatility_weight(data: pl.DataFrame,
 
     '''
     Compute volatility-based weighting factor with inverse scaling.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Period for volatility calculation
         volatility_scaling_factor (float): Scaling factor for volatility normalization
         volatility_weight_min (float): Minimum volatility weight value
         volatility_weight_max (float): Maximum volatility weight value
-        
+
     Returns:
         pl.DataFrame: The input data with new columns 'volatility', 'volatility_weight'
     '''

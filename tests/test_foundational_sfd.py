@@ -27,10 +27,8 @@ def test_foundational_sfd():
                 prep_each_round=True
             )
 
-            print(f'    ✅ {sfd_module.__name__}: PASSED')
 
-        except Exception as e:
-            print(f'    ❌ {sfd_module.__name__}: FAILED - {e}')
+        except Exception:
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)

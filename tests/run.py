@@ -51,12 +51,10 @@ for test in tests:
         test()
         end_time = time.time()
         duration = end_time - start_time
-        print(f'    ✅ {test.__name__}: PASSED ({duration:.3f}s)')
 
-    except Exception as e:
+    except Exception:
         end_time = time.time()
         duration = end_time - start_time
-        print(f'    ❌ {test.__name__}: FAILED ({duration:.3f}s) - {e}')
 
         cleanup_csv_files()
         traceback.print_exc()

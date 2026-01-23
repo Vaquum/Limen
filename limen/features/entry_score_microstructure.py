@@ -29,7 +29,7 @@ def entry_score_microstructure(data: pl.DataFrame,
 
     '''
     Compute sophisticated entry score based on microstructure timing signals.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'low', 'close', 'volume', 'volatility_regime' columns
         micro_momentum_period (int): Period for micro momentum calculation
@@ -52,7 +52,7 @@ def entry_score_microstructure(data: pl.DataFrame,
         entry_volume_spike_normalizer (float): Normalizer for volume spike scaling
         entry_spread_ratio_min (float): Minimum spread ratio for clipping
         entry_spread_ratio_max (float): Maximum spread ratio for clipping
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'entry_score'
     '''

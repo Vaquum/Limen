@@ -8,11 +8,11 @@ def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> list[pl.DataF
 
     '''
     Compute sequential data splits with proportional lengths based on ratios.
-    
+
     Args:
         data (pl.DataFrame): Polars DataFrame to split sequentially
         ratios (Sequence[int]): Sequence of positive integers defining split proportions
-        
+
     Returns:
         List[pl.DataFrame]: List of DataFrames partitioned sequentially without losing or duplicating rows
     '''
@@ -42,16 +42,16 @@ def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> list[pl.DataF
     return out
 
 
-def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int = None) -> list[pl.DataFrame]:
+def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = None) -> list[pl.DataFrame]:
 
     '''
     Compute random data splits with proportional lengths based on ratios.
-    
+
     Args:
         data (pl.DataFrame): Polars DataFrame to split randomly
         ratios (Sequence[int]): Sequence of positive integers defining split proportions
         seed (int): Seed for random number generator
-        
+
     Returns:
         List[pl.DataFrame]: List of randomly shuffled DataFrames with proportional sizes
     '''
@@ -59,9 +59,9 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int = None) ->
     total = data.height
     total_ratio = sum(ratios)
     bounds = [int(total * c / total_ratio) for c in accumulate(ratios)]
-    starts = [0] + bounds[:-1]
+    starts = [0, *bounds[:-1]]
 
-    return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds)]
+    return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds, strict=False)]
 
 
 def split_data_to_prep_output(split_data: list,
@@ -70,12 +70,12 @@ def split_data_to_prep_output(split_data: list,
 
     '''
     Compute data preparation output dictionary from split data and column names.
-    
+
     Args:
         split_data (list): List of three DataFrames representing train, validation, and test splits
         cols (list): Column names where the last column is the target variable
         all_datetimes (list): List of all datetimes
-        
+
     Returns:
         dict: Dictionary with train, validation, and test features and targets
     '''

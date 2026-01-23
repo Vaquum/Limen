@@ -10,14 +10,14 @@ def random_slice(df: pl.DataFrame,
 
     '''
     Compute contiguous slice from DataFrame within specified safe range.
-    
+
     Args:
         df (pl.DataFrame): Input DataFrame to slice from
         rows (int): Number of rows to include in the slice
         safe_range_low (float): Lower bound of safe range as fraction of total rows
         safe_range_high (float): Upper bound of safe range as fraction of total rows
         seed (int | None): Random seed for reproducible results
-        
+
     Returns:
         pl.DataFrame: Contiguous slice of the original DataFrame maintaining row order
     '''

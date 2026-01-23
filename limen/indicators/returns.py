@@ -5,7 +5,7 @@ def returns(data: pl.DataFrame) -> pl.DataFrame:
 
     '''
     Compute period-over-period returns of close prices.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
 

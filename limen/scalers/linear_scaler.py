@@ -102,7 +102,7 @@ class LinearScaler:
         x_train: pl.DataFrame,
         rules: dict[str, str] | None = None,
         default: str = 'standard',
-    ):
+    ) -> None:
 
         """
         Linear transformation utility for scaling features.

@@ -5,10 +5,10 @@ def volatility_measure(data: pl.DataFrame) -> pl.DataFrame:
 
     '''
     Compute combined volatility measure from rolling volatility and ATR percentage.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'rolling_volatility', 'atr_percent_sma' columns
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'volatility_measure'
     '''

@@ -7,12 +7,12 @@ def sma(data: pl.DataFrame,
 
     '''
     Compute Simple Moving Average (SMA) indicator.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with price column
         column (str): Column name to calculate SMA on
         period (int): Number of periods for SMA calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column '{column}_sma_{period}'
     '''

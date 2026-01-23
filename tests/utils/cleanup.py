@@ -4,9 +4,10 @@ Test cleanup utilities for managing temporary files and handling signals.
 
 import atexit
 import signal
-import glob
-import os
 from pathlib import Path
+import sys
+import contextlib
+from typing import Any
 
 
 def cleanup_csv_files():
@@ -17,24 +18,20 @@ def cleanup_csv_files():
     """
     project_root = Path.cwd()
 
-    csv_pattern = os.path.join(project_root, '*.csv')
-    csv_files = glob.glob(csv_pattern)
+    csv_files = list(project_root.glob('*.csv'))
 
     if csv_files:
         for csv_file in csv_files:
 
-            try:
-                os.remove(csv_file)
-                print(f'  ✅ Deleted: {os.path.basename(csv_file)}')
-
-            except (OSError, PermissionError) as e:
-                print(f'  ❌ Failed to delete {os.path.basename(csv_file)}: {e}')
+            with contextlib.suppress(OSError, PermissionError):
+                csv_file.unlink()
 
 
-def signal_handler(signum, frame):
+
+def signal_handler(_signum: Any, _frame: Any):
     """Handle interrupt signals and ensure cleanup."""
     cleanup_csv_files()
-    exit(1)
+    sys.exit(1)
 
 
 def setup_cleanup_handlers():

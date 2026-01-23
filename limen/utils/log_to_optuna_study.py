@@ -13,7 +13,7 @@ def log_to_optuna_study(experiment_log: object, params: object, objective: str) 
         experiment_log (uel.experiment_log | pl.DataFrame) : The experiment result log
         params (sfd.params | func) : sfd.params function used in the experiment
         objective (str) : Target feature column name
-        
+
     Returns:
         optuna.Study: The Optuna study object
     '''

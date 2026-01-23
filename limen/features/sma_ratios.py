@@ -2,20 +2,22 @@ import polars as pl
 from limen.indicators.sma import sma
 
 
-def sma_ratios(data: pl.DataFrame, periods: list = [5, 10, 20, 50], price_col: str = 'close') -> pl.DataFrame:
+def sma_ratios(data: pl.DataFrame, periods: list | None = None, price_col: str = 'close') -> pl.DataFrame:
 
     '''
     Compute price to SMA ratios for multiple time periods.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with price column
         periods (list): List of SMA periods to calculate ratios for
         price_col (str): Name of the price column (default: 'close')
-        
+
     Returns:
         pl.DataFrame: The input data with new columns 'sma_{period}_ratio'
     '''
 
+    if periods is None:
+        periods = [5, 10, 20, 50]
     df = data.clone()
 
     for period in periods:

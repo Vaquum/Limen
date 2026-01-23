@@ -6,11 +6,11 @@ def volume_ratio(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
 
     '''
     Compute volume ratio relative to simple moving average baseline.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'volume' column
         period (int): Number of periods for SMA calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'volume_ratio'
     '''

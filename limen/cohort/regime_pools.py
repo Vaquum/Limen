@@ -16,6 +16,9 @@ from sklearn.preprocessing import StandardScaler
 
 from limen.experiment import UniversalExperimentLoop
 
+from typing import Any
+
+
 DEFAULT_PERF_COLS = [
     'pred_pos_rate_pct', 'actual_pos_rate_pct',
     'precision_pct', 'recall_pct',
@@ -29,7 +32,7 @@ class OfflineFilter:
 
     '''Compute data filtering and validation for offline pipeline.'''
 
-    def __init__(self, perf_cols: list[str] | None = None, iqr_multiplier: float = 3.0):
+    def __init__(self, perf_cols: list[str] | None = None, iqr_multiplier: float = 3.0) -> None:
 
         self.perf_cols = perf_cols or DEFAULT_PERF_COLS
         self.iqr_multiplier = iqr_multiplier
@@ -75,11 +78,11 @@ class OfflineRegime:
 
     '''Compute model regime detection for offline pipeline.'''
 
-    def __init__(self, random_state: int):
+    def __init__(self, random_state: int) -> None:
 
         self.random_state = random_state
 
-    def cluster_models(self, df: pl.DataFrame, k: int, perf_cols: list[str] = None) -> np.ndarray:
+    def cluster_models(self, df: pl.DataFrame, k: int, perf_cols: list[str] | None = None) -> np.ndarray:
 
         cluster_cols = perf_cols or DEFAULT_PERF_COLS
 
@@ -94,9 +97,8 @@ class OfflineRegime:
         metrics_scaled = scaler.fit_transform(metrics_matrix)
 
         kmeans = KMeans(n_clusters=actual_k, random_state=self.random_state, n_init='auto')
-        cluster_labels = kmeans.fit_predict(metrics_scaled)
+        return kmeans.fit_predict(metrics_scaled)
 
-        return cluster_labels
 
 
 class OfflineDiversification:
@@ -174,12 +176,12 @@ class OnlineModelLoader:
 
     '''Compute model training and prediction extraction for online pipeline.'''
 
-    def __init__(self, sfd, manifest=None):
+    def __init__(self, sfd: Any, manifest: Any = None) -> None:
 
         self.sfd = sfd
         self.manifest = manifest
         self.trained_models = {}
-        self.exclude_perf_cols = DEFAULT_PERF_COLS + ['x_name', 'n_kept', 'id', 'cluster']
+        self.exclude_perf_cols = [*DEFAULT_PERF_COLS, 'x_name', 'n_kept', 'id', 'cluster']
 
     def extract_model_params(self, regime_df: pl.DataFrame) -> list[dict]:
 
@@ -217,9 +219,8 @@ class OnlineModelLoader:
 
         round_id = 0
         perf_df = uel._log.permutation_prediction_performance(round_id).copy()
-        perf_df = perf_df.drop(columns=['actuals', 'hit', 'miss'])
+        return perf_df.drop(columns=['actuals', 'hit', 'miss'])
 
-        return perf_df
 
     def merge_prediction_dataframes(self, dfs: list[pd.DataFrame]) -> pl.DataFrame:
 
@@ -235,7 +236,7 @@ class AggregationStrategy:
 
     '''Compute prediction aggregation strategies for multiple models.'''
 
-    def __init__(self, threshold: float | None = None):
+    def __init__(self, threshold: float | None = None) -> None:
 
         self.threshold = threshold
 
@@ -257,7 +258,7 @@ class AggregationStrategy:
 
         return (median >= self.threshold).astype(float)
 
-    def majority_vote_aggregation(self, pred_arrays):
+    def majority_vote_aggregation(self, pred_arrays: np.ndarray) -> np.ndarray:
 
         results = []
 
@@ -289,7 +290,7 @@ class AggregationStrategy:
 
 class OnlineAggregation:
 
-    def __init__(self, sfd, manifest: dict = None, aggregation_threshold: float | None = None):
+    def __init__(self, sfd: Any, manifest: dict | None = None, aggregation_threshold: float | None = None) -> None:
 
         self.sfd = sfd
         self.manifest = manifest
@@ -332,7 +333,7 @@ class RegimeDiversifiedOpinionPools:
 
     '''Defines Regime Diversified Opinion Pools for Loop experiments.'''
 
-    def __init__(self, sfd, random_state: int | None = 42):
+    def __init__(self, sfd: Any, random_state: int | None = 42) -> None:
 
         '''
         Create RegimeDiversifiedOpinionPools instance with core SFD dependency.
@@ -350,7 +351,7 @@ class RegimeDiversifiedOpinionPools:
         self.random_state = random_state
 
     def offline_pipeline(self,
-                         confusion_metrics,
+                         confusion_metrics: pd.DataFrame,
                          perf_cols: list[str] | None = None,
                          target_count: int = 100,
                          k_regimes: int = 6,
@@ -385,7 +386,6 @@ class RegimeDiversifiedOpinionPools:
         df_filtered = offline_filter.sanity_filter(confusion_metrics)
 
         if len(df_filtered) == 0:
-            print('WARNING: All models failed sanity check (contained nulls). Using original metrics.')
             df_filtered = confusion_metrics.with_columns(pl.lit(0).alias('regime'))
             self.n_regimes = 1
             self.regime_pools = {0: df_filtered}
@@ -395,7 +395,6 @@ class RegimeDiversifiedOpinionPools:
         df_filtered = offline_filter.outlier_filter(df_filtered)
 
         if len(df_filtered) == 0:
-            print('WARNING: All models removed by outlier filtering. Using sanity-filtered metrics.')
             df_filtered = offline_filter.sanity_filter(confusion_metrics)
 
         # Regime clustering

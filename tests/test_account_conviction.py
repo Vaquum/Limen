@@ -9,9 +9,9 @@
 
 import random
 from datetime import datetime
+from pathlib import Path
 from limen.trading import Account
 import csv
-import os
 
 BTC_PRECISION = 15
 
@@ -25,7 +25,7 @@ def generate_random_sequence(n_transactions: int = 10000, seed: int = 42) -> dic
     prices = []
     amounts = []
 
-    for i in range(n_transactions):
+    for _i in range(n_transactions):
         action = random.choice(actions)
         price = random.uniform(30000, 70000)
 
@@ -89,7 +89,7 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
     manual_short_btc = 0
     manual_usdt = account.account['credit_usdt'][0]  # Initial balance
 
-    for i, (action, price, amount) in enumerate(zip(actions, prices, amounts)):
+    for _i, (action, price, amount) in enumerate(zip(actions, prices, amounts, strict=False)):
         if action == 'buy':
             btc_bought = round(amount / price, BTC_PRECISION)  # Updated to match Account's 15-decimal precision
             manual_long_btc += btc_bought
@@ -139,7 +139,7 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
 
     # Vector 4: History integrity
     assert len(account.account['action']) == len(actions) + 1, f'Action count mismatch: {len(account.account["action"])} vs {len(actions) + 1}'
-    assert len(set(len(v) for v in account.account.values())) == 1, 'Inconsistent vector lengths'
+    assert len({len(v) for v in account.account.values()}) == 1, 'Inconsistent vector lengths'
 
     # Vector 5: Invariant checks
     assert abs(account.account['total_btc'][-1] - account_long) < btc_tolerance, 'total_btc != long_position'
@@ -172,7 +172,7 @@ def test_deterministic_sequence() -> None:
         ('hold', 0, 40000)
     ]
 
-    for i, (action, amount, price) in enumerate(sequence):
+    for _i, (action, amount, price) in enumerate(sequence):
         account.update_account(action, amount, price)
 
     # Expected final state
@@ -189,8 +189,8 @@ def log_conviction_results(results_list: list) -> None:
     log_file = 'account-conviction-tests.csv'
 
     # Create header if file doesn't exist
-    if not os.path.exists(log_file):
-        with open(log_file, 'w', newline='') as f:
+    if not Path(log_file).exists():
+        with Path(log_file).open('w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 'timestamp', 'test_type', 'n_transactions', 'seed', 'final_long', 'final_short',
@@ -199,7 +199,7 @@ def log_conviction_results(results_list: list) -> None:
             ])
 
     # Append results
-    with open(log_file, 'a', newline='') as f:
+    with Path(log_file).open('a', newline='') as f:
         writer = csv.writer(f)
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -258,7 +258,7 @@ def test_account_conviction():
     except Exception as e:
         # Log failure
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        with open('account-conviction-tests.csv', 'a', newline='') as f:
+        with Path('account-conviction-tests.csv').open('a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([timestamp, 'FAILED', 0, 'N/A', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, f'ERROR: {e!s}'])
         raise

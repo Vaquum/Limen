@@ -25,7 +25,7 @@ def test_rdop():
             confusion_metrics = []
             n_permutations = 1
 
-            for i in range(n_permutations):
+            for _i in range(n_permutations):
                 uel = limen.UniversalExperimentLoop(sfd=sfd_module)
                 experiment_name = uuid.uuid4().hex[:8]
 
@@ -60,10 +60,8 @@ def test_rdop():
 
             cleanup_csv_files()
 
-            print(f'    ✅ {sfd_module.__name__}: PASSED')
 
-        except Exception as e:
-            print(f'    ❌ {sfd_module.__name__}: FAILED - {e}')
+        except Exception:
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)

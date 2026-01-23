@@ -11,7 +11,7 @@ def query_raw_data(table_name: str,
                    n_random: int | None = None,
                    include_datetime_col: bool = True,
                    show_summary: bool = False,
-                   auth_token: str = None) -> pl.DataFrame:
+                   auth_token: str | None = None) -> pl.DataFrame:
 
     '''
     Query raw trade data from ClickHouse database.
@@ -91,12 +91,10 @@ def query_raw_data(table_name: str,
             .alias('datetime')
         ])
 
-    elapsed = time.time() - start
+    time.time() - start
 
     if show_summary:
-        print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | "
-              f"{polars_df.shape[1]} cols | "
-              f"{polars_df.estimated_size()/(1024**3):.2f} GB RAM")
+        pass
 
     if not datetime_requested and 'datetime' in polars_df.columns:
         polars_df = polars_df.drop('datetime')
@@ -112,7 +110,7 @@ def query_klines_data(n_rows: int | None = None,
                       start_date_limit: str | None = None,
                       futures: bool = False,
                       show_summary: bool = False,
-                      auth_token: str = None) -> pl.DataFrame:
+                      auth_token: str | None = None) -> pl.DataFrame:
 
     '''
     Query aggregated klines data from ClickHouse database.
@@ -136,10 +134,7 @@ def query_klines_data(n_rows: int | None = None,
         compression=True
     )
 
-    if n_rows is not None:
-        limit = f"LIMIT {n_rows}"
-    else:
-        limit = ''
+    limit = f"LIMIT {n_rows}" if n_rows is not None else ''
 
     if start_date_limit is not None:
         start_date_limit = f"WHERE datetime >= toDateTime('{start_date_limit}') "
@@ -200,9 +195,9 @@ def query_klines_data(n_rows: int | None = None,
 
     polars_df = polars_df.sort('datetime')
 
-    elapsed = time.time() - start
+    time.time() - start
 
     if show_summary:
-        print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | {polars_df.shape[1]} cols | {polars_df.estimated_size()/(1024**3):.2f} GB RAM")
+        pass
 
     return polars_df

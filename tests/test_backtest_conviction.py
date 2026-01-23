@@ -1,9 +1,9 @@
 import math
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 from limen.backtest.backtest_sequential import BacktestSequential
 import csv
-import os
 
 def test_basic_functionality():
 
@@ -25,7 +25,8 @@ def test_basic_functionality():
     assert 'net_long_volume' in results
     assert 'net_short_volume' in results
     assert 'net_trade_volume' in results
-    assert len(backtest.trades) == 3
+    EXPECTED_TRADES_COUNT = 3
+    assert len(backtest.trades) == EXPECTED_TRADES_COUNT
 
 def test_perfect_predictions():
     backtest = BacktestSequential(100000)
@@ -121,7 +122,7 @@ def test_array_length_mismatch():
 
     try:
         backtest.run(actual, prediction, price_change, open_prices, close_prices)
-        assert False, "Should have raised ValueError"
+        raise AssertionError("Should have raised ValueError")
     except ValueError as e:
         assert "Arrays must have same length" in str(e)
 
@@ -169,7 +170,8 @@ def test_account_integration():
     backtest = BacktestSequential(100000)
 
     initial_usdt = backtest.account.account['total_usdt'][-1]
-    assert initial_usdt == 100000
+    INITIAL_USDT_BALANCE = 100000
+    assert initial_usdt == INITIAL_USDT_BALANCE
 
     actual = [1, 1]
     prediction = [1, 1]
@@ -181,7 +183,8 @@ def test_account_integration():
 
     final_usdt = backtest.account.account['total_usdt'][-1]
     assert final_usdt != initial_usdt
-    assert len(backtest.trades) == 2
+    EXPECTED_INTEGRATION_TRADES = 2
+    assert len(backtest.trades) == EXPECTED_INTEGRATION_TRADES
 
 
 def test_volume_calculations():
@@ -204,19 +207,20 @@ def test_volume_calculations():
     for trade in backtest.trades:
         expected_volume += trade['volume']
 
-    assert abs(results['net_trade_volume'] - expected_volume) < 0.01
+    VOLUME_TOLERANCE = 0.01
+    assert abs(results['net_trade_volume'] - expected_volume) < VOLUME_TOLERANCE
 
 
-def log_conviction_results(results_list):
+def log_conviction_results(results_list: list) -> None:
 
     log_file = 'backtest-conviction-tests.csv'
 
-    if not os.path.exists(log_file):
-        with open(log_file, 'w', newline='') as f:
+    if not Path(log_file).exists():
+        with Path(log_file).open('w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['timestamp', 'test_name', 'status', 'details'])
 
-    with open(log_file, 'a', newline='') as f:
+    with Path(log_file).open('a', newline='') as f:
         writer = csv.writer(f)
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 

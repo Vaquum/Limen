@@ -5,13 +5,13 @@ def momentum_weight(data: pl.DataFrame, period: int = 12, weight_multiplier: flo
 
     '''
     Compute momentum-based weighting factor from price change direction.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Period for momentum calculation
         weight_multiplier (float): Multiplier for positive momentum
         base_weight (float): Base weight added to all observations
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'momentum_weight'
     '''

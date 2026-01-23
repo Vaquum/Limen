@@ -10,13 +10,13 @@ def bollinger_bands(
 
     '''
     Compute Bollinger Bands using Simple Moving Average (SMA).
-    
+
     Args:
         df (pl.DataFrame): Klines dataset with 'close' column
         price_col (str): Column name used for Bollinger Band calculation
         window (int): Number of periods for SMA and standard deviation calculation
         num_std (float): Number of standard deviations for upper and lower bands
-        
+
     Returns:
         pl.DataFrame: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
     '''

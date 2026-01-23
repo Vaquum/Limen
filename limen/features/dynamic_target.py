@@ -9,14 +9,14 @@ def dynamic_target(data: pl.DataFrame,
 
     '''
     Compute dynamic target levels based on volatility conditions and regime.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'volatility_measure', 'regime_multiplier' columns
         base_min_breakout (float): Base minimum breakout threshold
         target_volatility_multiplier (float): Multiplier for volatility-adjusted targets
         clip_lower_mult (float): Lower bound multiplier for clipping
         clip_upper_mult (float): Upper bound multiplier for clipping
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'dynamic_target'
     '''

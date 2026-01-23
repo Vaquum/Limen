@@ -1,15 +1,16 @@
+from typing import Any
 import pandas as pd
 
 
-def _permutation_prediction_performance(self,
+def _permutation_prediction_performance(self: Any,
                                        round_id: int) -> pd.DataFrame:
 
     '''
     Create prediction performance table based on round id.
-    
+
     Args:
         round_id (int): Round ID (i.e. nth permutation in an experiment)
-        
+
     Returns:
         pd.DataFrame: Table with columns 'predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change'
     '''

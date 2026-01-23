@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from math import sqrt
 
 
-def _permutation_confusion_metrics(self,
+def _permutation_confusion_metrics(self: Any,
                                   x: str,
                                   round_id: int,
                                   *,
@@ -103,13 +103,14 @@ def _permutation_confusion_metrics(self,
 
     def _cohen_d(a: np.ndarray, b: np.ndarray) -> float:
 
-        if len(a) < 2 or len(b) < 2:
+        MIN_SAMPLES_FOR_COHEN_D = 2
+        if len(a) < MIN_SAMPLES_FOR_COHEN_D or len(b) < MIN_SAMPLES_FOR_COHEN_D:
             return np.nan
 
         ma, mb = np.nanmean(a), np.nanmean(b)
         va, vb = np.nanvar(a, ddof=1), np.nanvar(b, ddof=1)
         sp_num = (len(a)-1)*va + (len(b)-1)*vb
-        sp_den = (len(a)+len(b)-2)
+        sp_den = (len(a)+len(b)-MIN_SAMPLES_FOR_COHEN_D)
 
         if sp_den <= 0:
             return np.nan
@@ -136,7 +137,7 @@ def _permutation_confusion_metrics(self,
     tp_fp_cohen_d = _cohen_d(tp_x, fp_x)
     tp_fp_ks = _ks(tp_x, fp_x)
 
-    data = pd.DataFrame.from_records([{
+    return pd.DataFrame.from_records([{
         **(id_cols or {}),
         'pred_pos_rate_pct': round(float(pred_pos_rate) * 100.0, 1),
         'actual_pos_rate_pct': round(float(actual_pos_rate) * 100.0, 1),
@@ -157,4 +158,3 @@ def _permutation_confusion_metrics(self,
         'n_kept': int(n),
     }])
 
-    return data

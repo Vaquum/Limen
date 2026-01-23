@@ -1,9 +1,10 @@
 import math
+from typing import Any
 from limen.trading import Account
 
 class BacktestSequential:
 
-    def __init__(self, start_usdt=30000):
+    def __init__(self, start_usdt: int | float = 30000) -> None:
 
         self.fee_rate = 0.001
 
@@ -12,7 +13,7 @@ class BacktestSequential:
         self.trades = []
         self.equity_curve = []
 
-    def run(self, actual, prediction, price_change, open_prices, close_prices):
+    def run(self, actual: Any, prediction: Any, price_change: Any, open_prices: Any, close_prices: Any) -> dict:
 
         if not all(len(arr) == len(actual) for arr in [prediction, price_change, open_prices, close_prices]):
             raise ValueError('ERROR: Arrays must have same length')
@@ -28,26 +29,25 @@ class BacktestSequential:
 
             current_usdt = self.account.account['total_usdt'][-1]
 
-            if pred == 1:
-                if current_usdt > 1:
-                    buy_fee = current_usdt * self.fee_rate
-                    usdt_after_buy_fee = current_usdt - buy_fee
-                    if usdt_after_buy_fee <= 0:
-                        continue
-                    self.account.update_account('buy', usdt_after_buy_fee, open_price)
-                    btc_held = self.account.long_position
-                    gross_sell_amount = btc_held * close_price
-                    sell_fee = gross_sell_amount * self.fee_rate
-                    net_sell_amount = gross_sell_amount - sell_fee
-                    self.account.update_account('sell', net_sell_amount, close_price)
-                    final_usdt = self.account.account['total_usdt'][-1]
-                    profit = final_usdt - current_usdt
-                    self.trades.append({'type': 'long', 'hit': act == pred, 'pnl': profit, 'volume': usdt_after_buy_fee})
-                    self.equity_curve.append(final_usdt)
+            if pred == 1 and current_usdt > 1:
+                buy_fee = current_usdt * self.fee_rate
+                usdt_after_buy_fee = current_usdt - buy_fee
+                if usdt_after_buy_fee <= 0:
+                    continue
+                self.account.update_account('buy', usdt_after_buy_fee, open_price)
+                btc_held = self.account.long_position
+                gross_sell_amount = btc_held * close_price
+                sell_fee = gross_sell_amount * self.fee_rate
+                net_sell_amount = gross_sell_amount - sell_fee
+                self.account.update_account('sell', net_sell_amount, close_price)
+                final_usdt = self.account.account['total_usdt'][-1]
+                profit = final_usdt - current_usdt
+                self.trades.append({'type': 'long', 'hit': act == pred, 'pnl': profit, 'volume': usdt_after_buy_fee})
+                self.equity_curve.append(final_usdt)
 
         return self._calculate_metrics()
 
-    def _calculate_metrics(self):
+    def _calculate_metrics(self) -> dict:
 
         if not self.trades:
             return {

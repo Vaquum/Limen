@@ -6,12 +6,12 @@ def volume_trend(data: pl.DataFrame, short_period: int = 12, long_period: int = 
 
     '''
     Compute volume trend by comparing short-term to long-term volume averages.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'volume' column
         short_period (int): Number of periods for short-term SMA calculation
         long_period (int): Number of periods for long-term SMA calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'volume_trend'
     '''

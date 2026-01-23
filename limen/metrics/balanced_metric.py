@@ -1,8 +1,9 @@
+from typing import Any
 import numpy as np
 from sklearn.metrics import precision_score
 
 
-def balanced_metric(y_true, y_pred) -> float:
+def balanced_metric(y_true: Any, y_pred: Any) -> float:
 
     '''
     Compute balanced precision metric that accounts for trade rate.

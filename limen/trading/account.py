@@ -5,9 +5,9 @@ class Account:
 
     '''Account class is used to keep track of account information for both long and short positions'''
 
-    def __init__(self, start_usdt):
+    def __init__(self, start_usdt: int | float) -> None:
         '''Initializes the account object.
-        
+
         start_usdt | int | starting usdt balance
         '''
         self.position_id = 0
@@ -19,13 +19,13 @@ class Account:
 
         self.account = self._init_account(credit_usdt=start_usdt)
 
-    def _init_account(self, credit_usdt):
+    def _init_account(self, credit_usdt: int | float) -> dict:
 
         '''Initializes the account with the starting balance.
-        
+
         credit_usdt | int | starting usdt balance
         '''
-        account = {'position_id': [self.position_id],
+        return {'position_id': [self.position_id],
                    'action': ['hold'],
                    'timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
                    'credit_usdt': [credit_usdt],
@@ -39,15 +39,14 @@ class Account:
                    'total_usdt': [credit_usdt],
                    'total_btc': [0]}
 
-        return account
 
     def update_account(self,
-                      action,
-                      amount,
-                      price_usdt):
+                      action: str,
+                      amount: int | float,
+                      price_usdt: int | float) -> None:
 
         '''Updates the account information based on the action taken.
-        
+
         action | str | 'buy', 'sell', 'short', 'cover', or 'hold'
         timestamp | datetime | current timestamp
         amount | int | amount in USDT (for buy/short) or BTC (for sell/cover)

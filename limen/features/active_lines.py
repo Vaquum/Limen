@@ -13,7 +13,7 @@ def active_lines(data: pl.DataFrame,
         data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
         long_lines (list[dict]): Long line definitions with 'start_idx' and 'end_idx'
         short_lines (list[dict]): Short line definitions with 'start_idx' and 'end_idx'
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'active_lines'
     '''

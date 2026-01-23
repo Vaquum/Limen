@@ -5,7 +5,7 @@ def close_position(data: pl.DataFrame) -> pl.DataFrame:
 
     '''
     Compute close position within the high-low range as percentage.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'low', and 'close' columns
 

@@ -8,10 +8,10 @@ def position_in_candle(data: pl.DataFrame) -> pl.DataFrame:
 
     '''
     Compute position of close within candle high-low range.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'position_in_candle'
     '''

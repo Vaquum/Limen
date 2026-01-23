@@ -13,7 +13,7 @@ def active_quantile_count(data: pl.DataFrame,
         data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
         long_lines_q (list[dict]): Quantile-filtered long lines with 'start_idx' and 'end_idx'
         short_lines_q (list[dict]): Quantile-filtered short lines with 'start_idx' and 'end_idx'
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'active_quantile_count'
     '''

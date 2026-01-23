@@ -84,7 +84,7 @@ def lag_columns(data: pl.DataFrame,
 def lag_column(data: pl.DataFrame,
         col: str,
         lag: int,
-        alias: str = None) -> pl.DataFrame:
+        alias: str | None = None) -> pl.DataFrame:
 
     '''
     Compute a lagged version of a column.

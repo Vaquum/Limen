@@ -100,7 +100,7 @@ def backtest_snapshot(df: pd.DataFrame,
 
     sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
 
-    data = pd.DataFrame.from_records([{
+    return pd.DataFrame.from_records([{
         'trade_win_rate_pct': round(trade_win_rate_pct, 1),
         'trade_expectancy_pct': round(trade_expectancy_pct, 3),
         'max_drawdown_pct': round(max_drawdown_pct, 1),
@@ -112,7 +112,6 @@ def backtest_snapshot(df: pd.DataFrame,
         'sharpe_per_bar': round(sharpe_per_bar, 2),
         'bars_in_market_pct': round(bars_in_market_pct, 1),
         'trades_count': int(trades_count),
-        'cost_round_trip_bps': int(round(2 * (fee_bps + slip_bps))),
+        'cost_round_trip_bps': round(2 * (fee_bps + slip_bps)),
     }])
 
-    return data

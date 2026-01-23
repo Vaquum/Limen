@@ -21,7 +21,7 @@ def create_test_data():
 def create_test_models():
     '''Create a few simple models for testing'''
     x, y = create_test_data()
-    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.4, random_state=42)
+    x_train, _x_temp, y_train, _y_temp = train_test_split(x, y, test_size=0.4, random_state=42)
 
     models = []
     for i in range(3):  # Create 3 models with slight variations
@@ -145,7 +145,7 @@ def test_confidence_filtering_system():
     assert 'test_metrics' in results
 
     # Test different target confidence
-    results2, df_results2, _ = confidence_filtering_system(
+    _results2, df_results2, _ = confidence_filtering_system(
         models, data, target_confidence=0.6
     )
     assert len(df_results2) == len(data['y_test'])

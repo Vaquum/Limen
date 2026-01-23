@@ -9,14 +9,14 @@ def dynamic_stop_loss(data: pl.DataFrame,
 
     '''
     Compute dynamic stop loss levels based on volatility conditions and regime.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'volatility_measure', 'regime_multiplier' columns
         base_stop_loss (float): Base stop loss threshold
         stop_volatility_multiplier (float): Multiplier for volatility-adjusted stops
         clip_lower_mult (float): Lower bound multiplier for clipping
         clip_upper_mult (float): Upper bound multiplier for clipping
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'dynamic_stop_loss'
     '''

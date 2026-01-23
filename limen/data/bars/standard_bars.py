@@ -2,6 +2,9 @@ import polars as pl
 
 
 
+MIN_DATA_LENGTH = 2
+
+
 def _standard_bars(data: pl.DataFrame,
                    threshold: int | float,
                    column_name: str) -> pl.DataFrame:
@@ -25,7 +28,7 @@ def _standard_bars(data: pl.DataFrame,
 
     base_interval = (
           (data['datetime'][1] - data['datetime'][0]).total_seconds()
-          if len(data) >= 2
+          if len(data) >= MIN_DATA_LENGTH
           else 0
       )
 
@@ -62,7 +65,7 @@ def _standard_bars(data: pl.DataFrame,
             .filter(pl.col('bar_group') < max_bar_group)
         )
 
-    result = (
+    return (
         df_with_groups
         .drop(['index', 'threshold_col'])
         .group_by('bar_group', maintain_order=True)
@@ -92,7 +95,6 @@ def _standard_bars(data: pl.DataFrame,
         ])
     )
 
-    return result
 
 
 

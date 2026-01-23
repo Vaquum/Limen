@@ -8,13 +8,13 @@ def momentum_confirmation(df: pl.DataFrame,
 
     '''
     Compute simple momentum confirmation scores based on recent price changes.
-    
+
     Args:
         df (pl.DataFrame): Klines dataset with 'close' column
         short_period (int): Number of periods for short-term momentum
         long_period (int): Number of periods for long-term momentum
         short_weight (float): Weight for short-term momentum in final score
-        
+
     Returns:
         pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
     '''
@@ -29,10 +29,9 @@ def momentum_confirmation(df: pl.DataFrame,
         pl.col('close').pct_change(long_period).alias(f'momentum_{long_period}')
     ])
 
-    df = df.with_columns([
+    return df.with_columns([
         ((pl.col(f'momentum_{short_period}') > 0).cast(pl.Float32) * short_weight +
          (pl.col(f'momentum_{long_period}') > 0).cast(pl.Float32) * long_weight)
         .alias('momentum_score')
     ])
 
-    return df

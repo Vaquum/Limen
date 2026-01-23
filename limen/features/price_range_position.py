@@ -7,11 +7,11 @@ def price_range_position(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
 
     '''
     Compute price position within rolling high-low range.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         period (int): Number of periods for rolling range calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'price_range_position'
     '''

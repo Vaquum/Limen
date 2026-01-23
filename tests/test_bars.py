@@ -53,8 +53,11 @@ def test_volume_bars_basic():
     result = volume_bars(data, volume_threshold=2060000.0)
 
     validate_bars_output(result, expected_aggregation=True)
-    assert result['base_interval'][0] == 7200
-    assert 10 <= len(result) <= 20, f"Expected 10-20 bars, got {len(result)}"
+    EXPECTED_BASE_INTERVAL = 7200
+    MIN_EXPECTED_BARS = 10
+    MAX_EXPECTED_BARS = 20
+    assert result['base_interval'][0] == EXPECTED_BASE_INTERVAL
+    assert MIN_EXPECTED_BARS <= len(result) <= MAX_EXPECTED_BARS, f"Expected 10-20 bars, got {len(result)}"
 
 
 def test_trade_bars_basic():
@@ -64,8 +67,11 @@ def test_trade_bars_basic():
     result = trade_bars(data, trade_threshold=29000000)
 
     validate_bars_output(result, expected_aggregation=True)
-    assert result['base_interval'][0] == 7200
-    assert 10 <= len(result) <= 20, f"Expected 10-20 bars, got {len(result)}"
+    EXPECTED_BASE_INTERVAL = 7200
+    MIN_EXPECTED_BARS = 10
+    MAX_EXPECTED_BARS = 20
+    assert result['base_interval'][0] == EXPECTED_BASE_INTERVAL
+    assert MIN_EXPECTED_BARS <= len(result) <= MAX_EXPECTED_BARS, f"Expected 10-20 bars, got {len(result)}"
 
 
 def test_liquidity_bars_basic():
@@ -75,7 +81,10 @@ def test_liquidity_bars_basic():
     result = liquidity_bars(data, liquidity_threshold=32000000000.0)
 
     validate_bars_output(result, expected_aggregation=True)
-    assert result['base_interval'][0] == 7200
-    assert 10 <= len(result) <= 20, f"Expected 10-20 bars, got {len(result)}"
+    EXPECTED_BASE_INTERVAL = 7200
+    MIN_EXPECTED_BARS = 10
+    MAX_EXPECTED_BARS = 20
+    assert result['base_interval'][0] == EXPECTED_BASE_INTERVAL
+    assert MIN_EXPECTED_BARS <= len(result) <= MAX_EXPECTED_BARS, f"Expected 10-20 bars, got {len(result)}"
 
 

@@ -8,7 +8,7 @@ from limen.data._internal.generic_endpoints import query_klines_data
 
 class HistoricalData:
 
-    def __init__(self, auth_token: str = None):
+    def __init__(self, auth_token: str | None = None) -> None:
 
         '''Set of endpoints to get historical Binance data.'''
 
@@ -17,9 +17,9 @@ class HistoricalData:
     def get_binance_file(self,
                          file_url: str,
                          has_header: bool = False,
-                         columns: list[str] = None):
+                         columns: list[str] | None = None):
 
-        '''Get historical data from a Binance file based on the file URL. 
+        '''Get historical data from a Binance file based on the file URL.
 
         Data can be found here: https://data.binance.vision/
 
@@ -30,7 +30,7 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
+
         '''
 
         self.data = binance_file_to_polars(file_url, has_header=has_header)
@@ -53,9 +53,9 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_spot_klines(self,
-                        n_rows: int = None,
+                        n_rows: int | None = None,
                         kline_size: int = 1,
-                        start_date_limit: str = None) -> None:
+                        start_date_limit: str | None = None) -> None:
 
         '''Get historical klines data for Binance spot.
 
@@ -66,7 +66,7 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
+
         '''
 
         self.data = query_klines_data(n_rows=n_rows,
@@ -78,9 +78,9 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_futures_klines(self,
-                           n_rows: int = None,
+                           n_rows: int | None = None,
                            kline_size: int = 1,
-                           start_date_limit: str = None) -> None:
+                           start_date_limit: str | None = None) -> None:
 
         '''Get historical klines data for Binance futures.
 
@@ -91,7 +91,7 @@ class HistoricalData:
 
         Returns:
             self.data (pl.DataFrame)
-    
+
         '''
 
         self.data = query_klines_data(n_rows=n_rows,
@@ -103,9 +103,9 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_spot_trades(self,
-                        month_year: tuple = None,
-                        n_rows: int = None,
-                        n_random: int = None,
+                        month_year: tuple | None = None,
+                        n_rows: int | None = None,
+                        n_random: int | None = None,
                         include_datetime_col: bool = True,
                         show_summary: bool = False) -> None:
 
@@ -138,9 +138,9 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_spot_agg_trades(self,
-                            month_year: tuple = None,
-                            n_rows: int = None,
-                            n_random: int = None,
+                            month_year: tuple | None = None,
+                            n_rows: int | None = None,
+                            n_random: int | None = None,
                             include_datetime_col: bool = True,
                             show_summary: bool = False) -> None:
 
@@ -209,7 +209,7 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
-    def _get_data_for_test(self, n_rows: int | None = 5000):
+    def _get_data_for_test(self, n_rows: int | None = 5000) -> None:
 
         '''
         Get test klines data from local CSV file for testing purposes.

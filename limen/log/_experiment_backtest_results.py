@@ -1,10 +1,11 @@
+from typing import Any
 import tqdm
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 
 
-def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd.DataFrame:
+def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) -> pd.DataFrame:
 
     '''
     Compute backtest results for each round of an experiment.
@@ -29,6 +30,5 @@ def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd
 
         all_rows.append(result_df)
 
-    df_all = pd.concat(all_rows, ignore_index=True)
+    return pd.concat(all_rows, ignore_index=True)
 
-    return df_all

@@ -11,14 +11,14 @@ def sma_crossover(
 
     '''
     Compute Simple Moving Average (SMA) crossover signals.
-    
+
     Args:
         df (pl.DataFrame): Klines dataset with 'close' column
         short_window (int): Number of periods for short-term SMA
         long_window (int): Number of periods for long-term SMA
         crossover_bull (int): Value indicating bullish crossover
         crossover_bear (int): Value indicating bearish crossover
-        
+
     Returns:
         pl.DataFrame: The input data with new columns 'crossover', and 'signal'
     '''

@@ -5,12 +5,12 @@ def volume_spike(data: pl.DataFrame, period: int = 20, use_zscore: bool = False)
 
     '''
     Compute volume spike relative to rolling statistics baseline.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'volume' column
         period (int): Number of periods for rolling statistics calculation
         use_zscore (bool): If True, use z-score (incorporating std dev), otherwise use ratio to mean
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'volume_spike'
     '''

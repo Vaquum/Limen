@@ -98,7 +98,7 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
             .sort('datetime'))
 
 
-def _per_scale_stats(trades: pl.DataFrame, *, base_window_s=60, levels=6):
+def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: int = 6) -> tuple[np.ndarray, np.ndarray]:
 
     rel_std, ent = [], []
 
@@ -113,7 +113,8 @@ def _per_scale_stats(trades: pl.DataFrame, *, base_window_s=60, levels=6):
                  ).sum()
             ).alias('entropy')
         )
-        if bins.height < 2:
+        MIN_BINS_FOR_STATS = 2
+        if bins.height < MIN_BINS_FOR_STATS:
             continue
         rel_std.append(float(bins['flux'].std(ddof=0) / bins['flux'].mean()))
         ent.append(float(bins['entropy'].mean()))
