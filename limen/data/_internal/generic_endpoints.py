@@ -91,15 +91,17 @@ def query_raw_data(table_name: str,
         polars_df = polars_df.with_columns([
             (pl.col('datetime').cast(pl.Int64) * 1000)
             .cast(pl.Datetime('ms', time_zone='UTC'))
-                    .alias('datetime')
-                ])
-            
-                if show_summary:
-                    elapsed = time.time() - start
-                    logger.info('%s s | %d rows | %d cols | %.2f GB RAM',
-                                f"{elapsed:.2f}", polars_df.shape[0], polars_df.shape[1],
-                                polars_df.estimated_size() / (1024**3))
-                if not datetime_requested and 'datetime' in polars_df.columns:
+            .alias('datetime')
+        ])
+
+    if show_summary:
+        elapsed = time.time() - start
+        logger.info('%s s | %d rows | %d cols | %.2f GB RAM',
+                    f"{elapsed:.2f}", polars_df.shape[0], polars_df.shape[1],
+                    polars_df.estimated_size() / (1024**3))
+
+    if not datetime_requested and 'datetime' in polars_df.columns:
+        polars_df = polars_df.drop('datetime')
         polars_df = polars_df.drop('datetime')
 
     if not timestamp_requested and 'timestamp' in polars_df.columns:
