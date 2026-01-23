@@ -128,9 +128,9 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
     btc_tolerance = 1e-5  # Increased tolerance to account for precision differences between manual (7-decimal) and Account (15-decimal)
     usdt_tolerance = 0.01  # Account rounds USDT to 2 decimals
 
-    assert abs(manual_long_btc - account_long) < btc_tolerance, f'Manual long ({manual_long_btc}) != Account long ({account_long})'
-    assert abs(manual_short_btc - account_short) < btc_tolerance, f'Manual short ({manual_short_btc}) != Account short ({account_short})'
-    assert abs(manual_usdt - account_usdt) < usdt_tolerance, f'Manual USDT ({manual_usdt}) != Account USDT ({account_usdt})'
+    assert abs(manual_long_btc - account_long) < btc_tolerance, f"Manual long ({manual_long_btc}) != Account long ({account_long})"
+    assert abs(manual_short_btc - account_short) < btc_tolerance, f"Manual short ({manual_short_btc}) != Account short ({account_short})"
+    assert abs(manual_usdt - account_usdt) < usdt_tolerance, f"Manual USDT ({manual_usdt}) != Account USDT ({account_usdt})"
     assert abs((manual_long_btc - manual_short_btc) - account_net) < btc_tolerance, 'Manual net != Account net'
 
     assert abs((sum_bought - sum_sold) - account_long) < btc_tolerance, 'Sum-based long != Account long'
@@ -138,7 +138,7 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
     assert abs((sum_credit - sum_debit) - account_usdt) < usdt_tolerance, 'Sum-based USDT != Account USDT'
 
     # Vector 4: History integrity
-    assert len(account.account['action']) == len(actions) + 1, f'Action count mismatch: {len(account.account["action"])} vs {len(actions) + 1}'
+    assert len(account.account['action']) == len(actions) + 1, f"Action count mismatch: {len(account.account['action'])} vs {len(actions) + 1}"
     assert len({len(v) for v in account.account.values()}) == 1, 'Inconsistent vector lengths'
 
     # Vector 5: Invariant checks
@@ -260,5 +260,5 @@ def test_account_conviction():
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with Path('account-conviction-tests.csv').open('a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([timestamp, 'FAILED', 0, 'N/A', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, f'ERROR: {e!s}'])
+            writer.writerow([timestamp, 'FAILED', 0, 'N/A', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, f"ERROR: {e!s}"])
         raise
