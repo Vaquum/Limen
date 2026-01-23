@@ -1,6 +1,9 @@
+import logging
 from clickhouse_connect import get_client
 import polars as pl
 import time
+
+logger = logging.getLogger(__name__)
 
 
 def query_raw_data(table_name: str,
@@ -91,10 +94,12 @@ def query_raw_data(table_name: str,
             .alias('datetime')
         ])
 
-    time.time() - start
+    elapsed = time.time() - start
 
     if show_summary:
-        pass
+        logger.info('%s s | %d rows | %d cols | %.2f GB RAM',
+                    f"{elapsed:.2f}", polars_df.shape[0], polars_df.shape[1],
+                    polars_df.estimated_size() / (1024**3))
 
     if not datetime_requested and 'datetime' in polars_df.columns:
         polars_df = polars_df.drop('datetime')
@@ -195,9 +200,11 @@ def query_klines_data(n_rows: int | None = None,
 
     polars_df = polars_df.sort('datetime')
 
-    time.time() - start
+    elapsed = time.time() - start
 
     if show_summary:
-        pass
+        logger.info('%s s | %d rows | %d cols | %.2f GB RAM',
+                    f"{elapsed:.2f}", polars_df.shape[0], polars_df.shape[1],
+                    polars_df.estimated_size() / (1024**3))
 
     return polars_df
