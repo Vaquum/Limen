@@ -1,9 +1,9 @@
 import polars as pl
 
 
-def rsi_sma(data: pl.DataFrame, 
+def rsi_sma(data: pl.DataFrame,
             period: int = 14) -> pl.DataFrame:
-    
+
     '''
     Compute RSI using Simple Moving Average smoothing (not Wilder's method).
     
@@ -16,7 +16,7 @@ def rsi_sma(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'rsi_sma_{period}'
     '''
-    
+
     return (
         data
         .with_columns([

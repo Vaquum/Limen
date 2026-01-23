@@ -1,6 +1,5 @@
 import polars as pl
 
-from typing import List, Tuple, Optional
 
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
 from limen.data._internal.generic_endpoints import query_raw_data
@@ -8,7 +7,7 @@ from limen.data._internal.generic_endpoints import query_klines_data
 
 
 class HistoricalData:
-    
+
     def __init__(self, auth_token: str = None):
 
         '''Set of endpoints to get historical Binance data.'''
@@ -18,8 +17,8 @@ class HistoricalData:
     def get_binance_file(self,
                          file_url: str,
                          has_header: bool = False,
-                         columns: List[str] = None):
-        
+                         columns: list[str] = None):
+
         '''Get historical data from a Binance file based on the file URL. 
 
         Data can be found here: https://data.binance.vision/
@@ -41,7 +40,7 @@ class HistoricalData:
             pl.when(pl.col('timestamp') < 10**13)
             .then(pl.col('timestamp'))
             .otherwise(pl.col('timestamp') // 1000)
-            .cast(pl.UInt64) 
+            .cast(pl.UInt64)
             .alias('timestamp')
         ])
 
@@ -57,7 +56,7 @@ class HistoricalData:
                         n_rows: int = None,
                         kline_size: int = 1,
                         start_date_limit: str = None) -> None:
-        
+
         '''Get historical klines data for Binance spot.
 
         Args:
@@ -82,7 +81,7 @@ class HistoricalData:
                            n_rows: int = None,
                            kline_size: int = 1,
                            start_date_limit: str = None) -> None:
-        
+
         '''Get historical klines data for Binance futures.
 
         Args:
@@ -104,7 +103,7 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_spot_trades(self,
-                        month_year: Tuple = None,
+                        month_year: tuple = None,
                         n_rows: int = None,
                         n_random: int = None,
                         include_datetime_col: bool = True,
@@ -139,7 +138,7 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_spot_agg_trades(self,
-                            month_year: Tuple = None,
+                            month_year: tuple = None,
                             n_rows: int = None,
                             n_random: int = None,
                             include_datetime_col: bool = True,
@@ -177,9 +176,9 @@ class HistoricalData:
         self.data_columns = self.data.columns
 
     def get_futures_trades(self,
-                           month_year: Optional[Tuple[int,int]] = None,
-                           n_rows: Optional[int] = None,
-                           n_random: Optional[int] = None,
+                           month_year: tuple[int, int] | None = None,
+                           n_rows: int | None = None,
+                           n_random: int | None = None,
                            include_datetime_col: bool = True,
                            show_summary: bool = False) -> pl.DataFrame:
 
@@ -210,7 +209,7 @@ class HistoricalData:
 
         self.data_columns = self.data.columns
 
-    def _get_data_for_test(self, n_rows: Optional[int] = 5000):
+    def _get_data_for_test(self, n_rows: int | None = 5000):
 
         '''
         Get test klines data from local CSV file for testing purposes.

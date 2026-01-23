@@ -134,7 +134,7 @@ class UniversalExperimentLoop:
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
-        
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time
@@ -153,11 +153,8 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            if prep_each_round is True:
+            if prep_each_round is True or i == 0:
                 data_dict = self.prep(self.data, round_params=round_params)
-            else:
-                if i == 0:
-                    data_dict = self.prep(self.data, round_params=round_params)
 
             # Perform the model training and evaluation
             round_results = self.model(data=data_dict, round_params=round_params)
@@ -223,7 +220,7 @@ class UniversalExperimentLoop:
 
         # Add Log, Benchmark, and Backtest properties
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
-        
+
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
         self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')

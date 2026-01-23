@@ -2,13 +2,13 @@ import polars as pl
 
 
 def sma_crossover(
-    df: pl.DataFrame, 
-    short_window: int = 10, 
+    df: pl.DataFrame,
+    short_window: int = 10,
     long_window: int = 30,
     crossover_bull: int = 2,
     crossover_bear: int = -2
 ) -> pl.DataFrame:
-    
+
     '''
     Compute Simple Moving Average (SMA) crossover signals.
     
@@ -22,7 +22,7 @@ def sma_crossover(
     Returns:
         pl.DataFrame: The input data with new columns 'crossover', and 'signal'
     '''
-    
+
     return (
         df.with_columns([
             pl.col('close').rolling_mean(short_window).alias('sma_short'),

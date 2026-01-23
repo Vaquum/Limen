@@ -2,7 +2,7 @@ import polars as pl
 
 
 def cci(df: pl.DataFrame, window: int = 14) -> pl.DataFrame:
-    
+
     '''
     Compute Commodity Channel Index (CCI) using rolling mean and mean deviation.
     
@@ -13,7 +13,7 @@ def cci(df: pl.DataFrame, window: int = 14) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'cci'
     '''
-    
+
     return (
         df
         .with_columns([
@@ -28,5 +28,5 @@ def cci(df: pl.DataFrame, window: int = 14) -> pl.DataFrame:
         .with_columns([
             ((pl.col('tp') - pl.col('tp_sma')) / (0.015 * pl.col('mean_dev'))).alias('cci'),
         ])
-        .drop(['tp', 'tp_sma', 'mean_dev']) 
+        .drop(['tp', 'tp_sma', 'mean_dev'])
     )

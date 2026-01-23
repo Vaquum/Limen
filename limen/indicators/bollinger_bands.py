@@ -7,7 +7,7 @@ def bollinger_bands(
     window: int = 20,
     num_std: float = 2.0
 ) -> pl.DataFrame:
-    
+
     '''
     Compute Bollinger Bands using Simple Moving Average (SMA).
     
@@ -20,7 +20,7 @@ def bollinger_bands(
     Returns:
         pl.DataFrame: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
     '''
-    
+
     sma_col = 'bb_middle'
     upper_col = 'bb_upper'
     lower_col = 'bb_lower'

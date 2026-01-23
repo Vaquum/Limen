@@ -5,7 +5,7 @@ from limen.features.volume_spike import volume_spike
 from limen.features.spread_percent import spread_percent
 
 
-def entry_score_microstructure(data: pl.DataFrame, 
+def entry_score_microstructure(data: pl.DataFrame,
                               micro_momentum_period: int = 3,
                               volume_spike_period: int = 20,
                               spread_mean_period: int = 48,
@@ -26,7 +26,7 @@ def entry_score_microstructure(data: pl.DataFrame,
                               entry_volume_spike_normalizer: float = 1.5,
                               entry_spread_ratio_min: float = 0,
                               entry_spread_ratio_max: float = 2) -> pl.DataFrame:
-    
+
     '''
     Compute sophisticated entry score based on microstructure timing signals.
     
@@ -56,13 +56,13 @@ def entry_score_microstructure(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'entry_score'
     '''
-    
+
     df = position_in_candle(data)
     df = micro_momentum(df, micro_momentum_period)
     df = volume_spike(df, volume_spike_period)
     df = spread_percent(df)
-    
-    
+
+
     df = df.with_columns([
         ((1 - pl.col('position_in_candle')) * entry_position_weight_base +
          (pl.col('micro_momentum') > 0).cast(pl.Float32) * entry_momentum_weight_base +
@@ -70,8 +70,8 @@ def entry_score_microstructure(data: pl.DataFrame,
          (1 - (pl.col('spread_percent') / pl.col('spread_percent').rolling_mean(window_size=spread_mean_period)).clip(entry_spread_ratio_min, entry_spread_ratio_max)) * entry_spread_weight_base)
         .alias('entry_score_base')
     ])
-    
-    
+
+
     df = df.with_columns([
         pl.when(pl.col('volatility_regime') == 'low')
             .then(
@@ -90,5 +90,5 @@ def entry_score_microstructure(data: pl.DataFrame,
             .otherwise(pl.col('entry_score_base'))
             .alias('entry_score')
     ])
-    
+
     return df.drop(['entry_score_base'])

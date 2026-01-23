@@ -10,7 +10,7 @@ def backtest_snapshot(df: pd.DataFrame,
                      fee_bps: float = 5.0,
                      slip_bps: float = 5.0,
                      trades_count_mode: str = 'bars') -> pd.DataFrame:
-    
+
     '''
     Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
     All percentage fields are in % units (not fractions). Sharpe is per bar (unitless).
@@ -41,7 +41,7 @@ def backtest_snapshot(df: pd.DataFrame,
         'cost_round_trip_bps',
       ]
     '''
-    
+
     df = df.copy()
 
     pred = pd.to_numeric(df[pred_col], errors='coerce').fillna(0).astype(int).clip(0, 1)
@@ -51,7 +51,7 @@ def backtest_snapshot(df: pd.DataFrame,
 
     pos = (pred == 1) & open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
 
-    bars_total = int(len(df))
+    bars_total = len(df)
     bars_in_market_pct = float(pos.mean() * 100.0)
 
     if trades_count_mode == 'runs':
@@ -97,7 +97,7 @@ def backtest_snapshot(df: pd.DataFrame,
 
     mu = float(R_net.mean())
     sd = float(R_net.std(ddof=1))
-    
+
     sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
 
     data = pd.DataFrame.from_records([{

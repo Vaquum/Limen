@@ -16,7 +16,7 @@ def _experiment_confusion_metrics(self, x: str, disable_progress_bar: bool = Fal
     '''
 
     all_rows = []
-    
+
     for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
 
         result_df = self.permutation_confusion_metrics(x=x,

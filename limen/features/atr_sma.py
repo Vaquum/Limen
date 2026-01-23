@@ -2,7 +2,7 @@ import polars as pl
 
 
 def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
-    
+
     '''
     Compute Average True Range using Simple Moving Average.
     
@@ -15,7 +15,7 @@ def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'atr_sma'
     '''
-    
+
     return (
         data
         .with_columns([

@@ -2,7 +2,7 @@ from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, reca
 
 
 def binary_metrics(data: dict, preds: list, probs: list) -> dict:
-    
+
     '''
     Compute binary classification metrics from predictions and probabilities.
     
@@ -21,4 +21,4 @@ def binary_metrics(data: dict, preds: list, probs: list) -> dict:
                      'auc': round(roc_auc_score(data['y_test'], probs), 3),
                      'accuracy': round(accuracy_score(data['y_test'], preds), 3)}
 
-    return round_results 
+    return round_results

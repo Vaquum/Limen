@@ -32,7 +32,7 @@ class LogRegScaler:
     '''
     LogRegScaler class for scaling and inverse scaling data.
     '''
-    
+
     def __init__(self, x_train: pl.DataFrame):
 
         '''
@@ -41,25 +41,25 @@ class LogRegScaler:
         Args:
             x_train (pl.DataFrame): The training data
         '''
-        
+
         self.means = {}
         self.stds = {}
-        
+
         for col in x_train.columns:
-            
+
             if col not in SCALING_RULES:
                 continue
-            
+
             rule = SCALING_RULES[col]
-            
+
             if rule == 'log_standard':
                 self.means[col] = x_train.select(pl.col(col).log1p().mean()).item()
                 self.stds[col] = x_train.select(pl.col(col).log1p().std(ddof=0)).item()
-            
+
             elif rule == 'standard':
                 self.means[col] = x_train[col].mean()
                 self.stds[col] = x_train[col].std(ddof=0)
-    
+
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
         '''
@@ -71,28 +71,28 @@ class LogRegScaler:
         Returns:
             pl.DataFrame: The transformed DataFrame
         '''
-        
+
         exprs = []
-        
+
         for col in df.columns:
-            
+
             if col not in SCALING_RULES:
                 continue
-            
+
             rule = SCALING_RULES[col]
-            
+
             if rule == 'standard':
                 exprs.append(((pl.col(col) - self.means[col]) / self.stds[col]).alias(col))
-            
+
             elif rule == 'log_standard':
                 exprs.append(((pl.col(col).log1p() - self.means[col]) / self.stds[col]).alias(col))
-            
+
             elif rule == 'divide_100':
                 exprs.append((pl.col(col) / 100).alias(col))
-            
+
             elif rule == 'none':
                 exprs.append(pl.col(col).alias(col))
-                
+
         return df.with_columns(exprs)
 
 
@@ -108,26 +108,26 @@ def inverse_transform(df: pl.DataFrame, scaler: LogRegScaler) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The inverse transformed DataFrame
     '''
-    
+
     exprs = []
-    
+
     for col in df.columns:
-        
+
         if col not in SCALING_RULES:
             continue
-            
+
         rule = SCALING_RULES[col]
-        
+
         if rule == 'standard':
             exprs.append((pl.col(col) * scaler.stds[col] + scaler.means[col]).alias(col))
-        
+
         elif rule == 'log_standard':
             exprs.append(((pl.col(col) * scaler.stds[col] + scaler.means[col]).exp() - 1).alias(col))
-        
+
         elif rule == 'divide_100':
             exprs.append((pl.col(col) * 100).alias(col))
-        
+
         elif rule == 'none':
             exprs.append(pl.col(col).alias(col))
-    
+
     return df.with_columns(exprs)

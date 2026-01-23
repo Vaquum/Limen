@@ -22,7 +22,7 @@ def window_return_regime(df: pl.DataFrame,
 
     ret_col = f'ret_{period}'
     df2 = window_return(df, period)
-    
+
     return df2.with_columns([
         pl.when(pl.col(ret_col) >= r_hi).then(pl.lit('Up'))
          .when(pl.col(ret_col) <= r_lo).then(pl.lit('Down'))

@@ -3,7 +3,7 @@ import polars as pl
 def vwap(data: pl.DataFrame,
          price_col: str = 'close',
          volume_col: str = 'volume') -> pl.DataFrame:
-    
+
     '''
     Compute Volume Weighted Average Price (VWAP) for each kline over its trading day.
 

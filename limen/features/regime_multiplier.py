@@ -6,7 +6,7 @@ def regime_multiplier(data: pl.DataFrame,
                      regime_low_volatility_multiplier: float = 0.8,
                      regime_normal_volatility_multiplier: float = 1.0,
                      regime_high_volatility_multiplier: float = 1.2) -> pl.DataFrame:
-    
+
     '''
     Compute volatility regime-based multiplier for dynamic parameter adjustment.
     
@@ -19,7 +19,7 @@ def regime_multiplier(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_multiplier'
     '''
-    
+
     return data.with_columns([
         pl.when(pl.col('volatility_regime') == 'low')
             .then(pl.lit(regime_low_volatility_multiplier))

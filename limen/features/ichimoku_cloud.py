@@ -23,7 +23,7 @@ def ichimoku_cloud(
         pl.DataFrame: The input data with new columns:
             'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
     '''
-    
+
     return (
         data
         .with_columns(

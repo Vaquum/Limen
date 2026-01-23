@@ -3,11 +3,11 @@ from limen.indicators.sma import sma
 
 
 
-def volume_weight(data: pl.DataFrame, 
+def volume_weight(data: pl.DataFrame,
                  period: int = 20,
                  volume_weight_min: float = 0.5,
                  volume_weight_max: float = 2.0) -> pl.DataFrame:
-    
+
     '''
     Compute volume-based weighting factor with clipping.
     
@@ -20,12 +20,12 @@ def volume_weight(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with new columns 'volume_ma', 'volume_weight'
     '''
-    
+
     df = sma(data, 'volume', period)
     df = df.rename({f'volume_sma_{period}': 'volume_ma'})
-    
+
     df = df.with_columns([
         (pl.col('volume') / pl.col('volume_ma')).clip(volume_weight_min, volume_weight_max).alias('volume_weight')
     ])
-    
+
     return df

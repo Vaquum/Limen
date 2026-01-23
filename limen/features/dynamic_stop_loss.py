@@ -1,12 +1,12 @@
 import polars as pl
 
 
-def dynamic_stop_loss(data: pl.DataFrame, 
+def dynamic_stop_loss(data: pl.DataFrame,
                      base_stop_loss: float,
                      stop_volatility_multiplier: float,
                      clip_lower_mult: float = 0.7,
                      clip_upper_mult: float = 1.4) -> pl.DataFrame:
-    
+
     '''
     Compute dynamic stop loss levels based on volatility conditions and regime.
     
@@ -20,7 +20,7 @@ def dynamic_stop_loss(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'dynamic_stop_loss'
     '''
-    
+
     return data.with_columns([
         (pl.col('volatility_measure') * stop_volatility_multiplier * pl.col('regime_multiplier'))
         .clip(base_stop_loss * clip_lower_mult, base_stop_loss * clip_upper_mult)

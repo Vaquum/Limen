@@ -23,7 +23,7 @@ def breakout_percentile_regime(df: pl.DataFrame,
 
     pos_df = price_range_position(df, period)
     pos = pl.col('price_range_position')
-    
+
     return pos_df.with_columns([
         pl.when(pos >= p_hi).then(pl.lit('Up'))
          .when(pos <= p_lo).then(pl.lit('Down'))

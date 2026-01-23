@@ -1,12 +1,11 @@
 import polars as pl
 import numpy as np
-from typing import List, Dict
 
 
 def active_quantile_count(data: pl.DataFrame,
-                          long_lines_q: List[Dict],
-                          short_lines_q: List[Dict]) -> pl.DataFrame:
-    
+                          long_lines_q: list[dict],
+                          short_lines_q: list[dict]) -> pl.DataFrame:
+
     '''
     Compute count of active quantile-filtered lines per row.
 

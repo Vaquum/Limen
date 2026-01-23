@@ -1,7 +1,7 @@
 import polars as pl
 
 
-def feature_aliases(df: pl.DataFrame, 
+def feature_aliases(df: pl.DataFrame,
                    base_min_breakout: float = 0.005,
                    volatility_regime_enabled: bool = True) -> pl.DataFrame:
     '''
@@ -15,14 +15,14 @@ def feature_aliases(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with new columns 'dynamic_target_feature', 'entry_score_feature', 'momentum_score_feature' and optional regime columns
     '''
-    
+
     # Create basic feature aliases
     df = df.with_columns([
         pl.col('dynamic_target').fill_null(base_min_breakout).alias('dynamic_target_feature'),
         pl.col('entry_score').fill_null(1.0).alias('entry_score_feature'),
         pl.col('momentum_score').fill_null(1.0).alias('momentum_score_feature')
     ])
-    
+
     # Create volatility regime aliases if enabled
     if volatility_regime_enabled:
         df = df.with_columns([
@@ -32,5 +32,5 @@ def feature_aliases(df: pl.DataFrame,
             pl.col('regime_normal').fill_null(1).alias('regime_normal_feature'),
             pl.col('regime_high').fill_null(0).alias('regime_high_feature')
         ])
-    
+
     return df

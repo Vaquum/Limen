@@ -14,7 +14,7 @@ def position_in_range(df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'position_in_range'
     '''
-    
+
     return df.with_columns([
         ((pl.col('close') - pl.col('low')) / (pl.col('high') - pl.col('low') + 1e-10)).alias('position_in_range')
     ])

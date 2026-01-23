@@ -2,7 +2,7 @@ import polars as pl
 
 
 def gap_high(data: pl.DataFrame) -> pl.DataFrame:
-    
+
     '''
     Compute gap between current high and previous close as percentage.
     

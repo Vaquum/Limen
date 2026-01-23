@@ -2,7 +2,7 @@ import polars as pl
 
 
 def close_position(data: pl.DataFrame) -> pl.DataFrame:
-    
+
     '''
     Compute close position within the high-low range as percentage.
     

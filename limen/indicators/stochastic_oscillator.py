@@ -6,7 +6,7 @@ def stochastic_oscillator(
     window_k: int = 14,
     window_d: int = 3,
 ) -> pl.DataFrame:
-    
+
     '''
     Compute Stochastic Oscillator (%K and %D) using rolling highs and lows.
     
@@ -18,7 +18,7 @@ def stochastic_oscillator(
     Returns:
         pl.DataFrame: The input data with two new columns 'stoch_k' and 'stoch_d'
     '''
-    
+
     highest_col = 'stoch_highest'
     lowest_col = 'stoch_lowest'
     k_col = 'stoch_k'

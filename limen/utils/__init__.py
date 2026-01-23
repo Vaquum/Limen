@@ -8,14 +8,14 @@ from limen.utils.confidence_filtering_system import confidence_filtering_system
 from limen.utils.data_dict_to_numpy import data_dict_to_numpy
 
 __all__ = [
+    'ParamSpace',
+    'binary_metrics',
     'confidence_filtering_system',
     'continuous_metrics',
-    'binary_metrics',
+    'data_dict_to_numpy',
     'format_report_footer',
     'format_report_header',
     'format_report_section',
     'log_to_optuna_study',
-    'ParamSpace',
     'safe_ovr_auc',
-    'data_dict_to_numpy',
-] 
+]

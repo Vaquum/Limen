@@ -11,7 +11,7 @@ def spread(df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'spread'
     '''
-    
+
     return df.with_columns([
         ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread')
     ])

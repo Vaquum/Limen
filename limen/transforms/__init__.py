@@ -7,11 +7,11 @@ from limen.transforms.calibrate_classifier import calibrate_classifier
 from limen.transforms.optimize_binary_threshold import optimize_binary_threshold
 
 __all__ = [
-    'mad_transform',
-    'winsorize_transform',
-    'quantile_trim_transform',
-    'zscore_transform',
-    'shift_column_transform',
     'calibrate_classifier',
+    'mad_transform',
     'optimize_binary_threshold',
+    'quantile_trim_transform',
+    'shift_column_transform',
+    'winsorize_transform',
+    'zscore_transform',
 ]

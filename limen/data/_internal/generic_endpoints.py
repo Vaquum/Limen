@@ -1,15 +1,14 @@
 from clickhouse_connect import get_client
 import polars as pl
 import time
-from typing import Optional, Tuple
 
 
 def query_raw_data(table_name: str,
                    id_col: str,
                    select_cols: list,
-                   month_year: Optional[Tuple[int, int]] = None,
-                   n_rows: Optional[int] = None,
-                   n_random: Optional[int] = None,
+                   month_year: tuple[int, int] | None = None,
+                   n_rows: int | None = None,
+                   n_random: int | None = None,
                    include_datetime_col: bool = True,
                    show_summary: bool = False,
                    auth_token: str = None) -> pl.DataFrame:
@@ -108,9 +107,9 @@ def query_raw_data(table_name: str,
     return polars_df
 
 
-def query_klines_data(n_rows: Optional[int] = None,
+def query_klines_data(n_rows: int | None = None,
                       kline_size: int = 1,
-                      start_date_limit: Optional[str] = None,
+                      start_date_limit: str | None = None,
                       futures: bool = False,
                       show_summary: bool = False,
                       auth_token: str = None) -> pl.DataFrame:

@@ -1,9 +1,9 @@
 import polars as pl
 
 
-def price_change_pct(data: pl.DataFrame, 
+def price_change_pct(data: pl.DataFrame,
                      period: int = 1) -> pl.DataFrame:
-    
+
     '''
     Compute price change percentage over a specific period.
 

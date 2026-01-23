@@ -16,20 +16,20 @@ def cleanup_csv_files():
     not subdirectories like datasets/.
     """
     project_root = Path.cwd()
-    
+
     csv_pattern = os.path.join(project_root, '*.csv')
     csv_files = glob.glob(csv_pattern)
-    
+
     if csv_files:
         for csv_file in csv_files:
-            
+
             try:
                 os.remove(csv_file)
                 print(f'  ✅ Deleted: {os.path.basename(csv_file)}')
-            
+
             except (OSError, PermissionError) as e:
                 print(f'  ❌ Failed to delete {os.path.basename(csv_file)}: {e}')
-            
+
 
 def signal_handler(signum, frame):
     """Handle interrupt signals and ensure cleanup."""

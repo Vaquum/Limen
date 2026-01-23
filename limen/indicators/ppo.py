@@ -6,7 +6,7 @@ def ppo(data: pl.DataFrame,
         fast_period: int = 12,
         slow_period: int = 26,
         signal_period: int = 9) -> pl.DataFrame:
-    
+
     '''
     Compute Percentage Price Oscillator (PPO) indicator.
 
@@ -37,7 +37,7 @@ def ppo(data: pl.DataFrame,
         ])
         .with_columns([
             (
-                (pl.col('__ema_fast') - pl.col('__ema_slow')) 
+                (pl.col('__ema_fast') - pl.col('__ema_slow'))
                 / pl.col('__ema_slow') * 100
             ).alias(f"ppo_{fast_period}_{slow_period}")
         ])

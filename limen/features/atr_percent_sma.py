@@ -2,7 +2,7 @@ import polars as pl
 
 
 def atr_percent_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
-    
+
     '''
     Compute ATR as percentage of close price using Simple Moving Average.
     
@@ -13,7 +13,7 @@ def atr_percent_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'atr_percent_sma'
     '''
-    
+
     return (
         data
         .with_columns([

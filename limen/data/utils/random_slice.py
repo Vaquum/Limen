@@ -7,7 +7,7 @@ def random_slice(df: pl.DataFrame,
                  safe_range_low: float = 0.25,
                  safe_range_high: float = 0.75,
                  seed: int | None = None) -> pl.DataFrame:
-    
+
     '''
     Compute contiguous slice from DataFrame within specified safe range.
     

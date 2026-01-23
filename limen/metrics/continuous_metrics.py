@@ -1,11 +1,11 @@
 import numpy as np
 
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error 
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 
 
 def continuous_metrics(data: dict, preds: list) -> dict:
-    
+
     '''
     Compute regression metrics from continuous predictions.
     

@@ -2,7 +2,7 @@ import polars as pl
 
 
 def returns(data: pl.DataFrame) -> pl.DataFrame:
-    
+
     '''
     Compute period-over-period returns of close prices.
     

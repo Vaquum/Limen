@@ -21,7 +21,7 @@ def ma_slope_regime(df: pl.DataFrame,
 
     sma = pl.col('close').rolling_mean(window_size=period)
     slope = (sma - sma.shift(period)) / period
-    
+
     if normalize_by_std:
         slope = slope / (pl.col('close').rolling_std(window_size=period) + 1e-12)
 

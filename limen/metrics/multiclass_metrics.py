@@ -4,7 +4,7 @@ from limen.metrics.safe_ovr_auc import safe_ovr_auc
 
 
 def multiclass_metrics(data: dict, preds: list, probs: list, average: str = 'macro') -> dict:
-    
+
     '''
     Compute multiclass classification metrics from predictions and probabilities.
     
@@ -23,4 +23,4 @@ def multiclass_metrics(data: dict, preds: list, probs: list, average: str = 'mac
                      'auc': round(safe_ovr_auc(data['y_test'], probs), 3),
                      'accuracy': round(accuracy_score(data['y_test'], preds), 3)}
 
-    return round_results 
+    return round_results

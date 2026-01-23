@@ -4,7 +4,6 @@ RegimeDiversifiedOpinionPools - Regime-Based Dynamic Optimization Pipeline.
 Compute model selection and prediction aggregation using regime-based clustering.
 '''
 
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -30,7 +29,7 @@ class OfflineFilter:
 
     '''Compute data filtering and validation for offline pipeline.'''
 
-    def __init__(self, perf_cols: List[str] | None = None, iqr_multiplier: float = 3.0):
+    def __init__(self, perf_cols: list[str] | None = None, iqr_multiplier: float = 3.0):
 
         self.perf_cols = perf_cols or DEFAULT_PERF_COLS
         self.iqr_multiplier = iqr_multiplier
@@ -43,13 +42,13 @@ class OfflineFilter:
 
         return self._remove_outliers_iqr(df, self.perf_cols)
 
-    def _drop_nulls(self, df: pl.DataFrame, columns: List[str]) -> pl.DataFrame:
+    def _drop_nulls(self, df: pl.DataFrame, columns: list[str]) -> pl.DataFrame:
 
         filters = [pl.col(col).is_not_null() for col in columns]
 
         return df.filter(pl.all_horizontal(filters))
 
-    def _remove_outliers_iqr(self, df: pl.DataFrame, columns: List[str]) -> pl.DataFrame:
+    def _remove_outliers_iqr(self, df: pl.DataFrame, columns: list[str]) -> pl.DataFrame:
 
         for col in columns:
             bounds = df.select([
@@ -80,7 +79,7 @@ class OfflineRegime:
 
         self.random_state = random_state
 
-    def cluster_models(self, df: pl.DataFrame, k: int, perf_cols: List[str] = None) -> np.ndarray:
+    def cluster_models(self, df: pl.DataFrame, k: int, perf_cols: list[str] = None) -> np.ndarray:
 
         cluster_cols = perf_cols or DEFAULT_PERF_COLS
 
@@ -107,8 +106,8 @@ class OfflineDiversification:
     def pca_performance_selection(self,
                                   df: pl.DataFrame,
                                   target_count: int,
-                                  perf_cols: Optional[List[str]] = None,
-                                  n_components: Optional[int] = None,
+                                  perf_cols: list[str] | None = None,
+                                  n_components: int | None = None,
                                   n_clusters: int = 8,
                                   random_state: int = 42) -> pl.DataFrame:
 
@@ -132,7 +131,7 @@ class OfflineDiversification:
         centers = kmeans.cluster_centers_
 
         # Select medoid from each cluster
-        selected_indices: List[int] = []
+        selected_indices: list[int] = []
         for cid in range(n_clusters):
             mask = labels == cid
             idxs = np.nonzero(mask)[0]
@@ -182,7 +181,7 @@ class OnlineModelLoader:
         self.trained_models = {}
         self.exclude_perf_cols = DEFAULT_PERF_COLS + ['x_name', 'n_kept', 'id', 'cluster']
 
-    def extract_model_params(self, regime_df: pl.DataFrame) -> List[Dict]:
+    def extract_model_params(self, regime_df: pl.DataFrame) -> list[dict]:
 
         param_cols = [col for col in regime_df.columns if col not in self.exclude_perf_cols]
         return [
@@ -192,7 +191,7 @@ class OnlineModelLoader:
 
     def run_single_model_experiment(self,
                                     data: pd.DataFrame,
-                                    params: Dict,
+                                    params: dict,
                                     regime_id: int,
                                     model_id: int):
 
@@ -222,7 +221,7 @@ class OnlineModelLoader:
 
         return perf_df
 
-    def merge_prediction_dataframes(self, dfs: List[pd.DataFrame]) -> pl.DataFrame:
+    def merge_prediction_dataframes(self, dfs: list[pd.DataFrame]) -> pl.DataFrame:
 
         merge_keys = ['open', 'close', 'price_change']
         pl_dfs = [pl.from_pandas(df) for df in dfs]
@@ -236,7 +235,7 @@ class AggregationStrategy:
 
     '''Compute prediction aggregation strategies for multiple models.'''
 
-    def __init__(self, threshold: Optional[float] = None):
+    def __init__(self, threshold: float | None = None):
 
         self.threshold = threshold
 
@@ -281,17 +280,16 @@ class AggregationStrategy:
 
         if method == 'mean':
             return self.mean_aggregation(pred_arrays)
-        elif method == 'median':
+        if method == 'median':
             return self.median_aggregation(pred_arrays)
-        elif method == 'majority_vote':
+        if method == 'majority_vote':
             return self.majority_vote_aggregation(pred_arrays)
-        else:
-            return self.mean_aggregation(pred_arrays)
+        return self.mean_aggregation(pred_arrays)
 
 
 class OnlineAggregation:
 
-    def __init__(self, sfd, manifest: Dict = None, aggregation_threshold: Optional[float] = None):
+    def __init__(self, sfd, manifest: dict = None, aggregation_threshold: float | None = None):
 
         self.sfd = sfd
         self.manifest = manifest
@@ -325,16 +323,16 @@ class OnlineAggregation:
         merged_df = self.model_loader.merge_prediction_dataframes(processed_dfs)
 
         pred_cols = [col for col in merged_df.columns if col.startswith('predictions_')]
-        
+
         agg_series = self.aggregate_predictions(merged_df[pred_cols].to_pandas(), aggregation_method)
-        
+
         return agg_series, merged_df.drop(pred_cols)
 
 class RegimeDiversifiedOpinionPools:
 
     '''Defines Regime Diversified Opinion Pools for Loop experiments.'''
 
-    def __init__(self, sfd, random_state: Optional[int] = 42):
+    def __init__(self, sfd, random_state: int | None = 42):
 
         '''
         Create RegimeDiversifiedOpinionPools instance with core SFD dependency.
@@ -346,21 +344,21 @@ class RegimeDiversifiedOpinionPools:
 
         self.regime_pools = {}
         self.sfd = sfd
-        self.manifest = sfd.manifest() if hasattr(sfd, 'manifest') and callable(getattr(sfd, 'manifest')) else None
+        self.manifest = sfd.manifest() if hasattr(sfd, 'manifest') and callable(sfd.manifest) else None
         self.n_regimes = 0
         self.trained_models = {}
         self.random_state = random_state
 
     def offline_pipeline(self,
                          confusion_metrics,
-                         perf_cols: Optional[List[str]] = None,
+                         perf_cols: list[str] | None = None,
                          target_count: int = 100,
                          k_regimes: int = 6,
                          iqr_multiplier: float = 3.0,
-                         n_pca_components: Optional[int] = None,
+                         n_pca_components: int | None = None,
                          n_pca_clusters: int = 8
-        ) -> Dict[int, pl.DataFrame]:
-        
+        ) -> dict[int, pl.DataFrame]:
+
         '''
         Compute offline pipeline for model selection and regime detection.
 
@@ -429,7 +427,7 @@ class RegimeDiversifiedOpinionPools:
     def online_pipeline(self,
                         data: pd.DataFrame,
                         aggregation_method: str = 'mean',
-                        aggregation_threshold: Optional[float] = None) -> pl.DataFrame:
+                        aggregation_threshold: float | None = None) -> pl.DataFrame:
 
         '''
         Compute online pipeline for regime-based prediction aggregation.

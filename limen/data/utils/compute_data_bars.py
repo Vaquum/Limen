@@ -21,20 +21,19 @@ def compute_data_bars(data: pl.DataFrame, **params) -> pl.DataFrame:
     if bar_type == 'base':
         return data
 
-    elif bar_type == 'trade':
+    if bar_type == 'trade':
         if 'trade_threshold' not in params:
             raise ValueError('trade_threshold parameter is required for trade bars')
         return trade_bars(data, params['trade_threshold'])
 
-    elif bar_type == 'volume':
+    if bar_type == 'volume':
         if 'volume_threshold' not in params:
             raise ValueError('volume_threshold parameter is required for volume bars')
         return volume_bars(data, params['volume_threshold'])
 
-    elif bar_type == 'liquidity':
+    if bar_type == 'liquidity':
         if 'liquidity_threshold' not in params:
             raise ValueError('liquidity_threshold parameter is required for liquidity bars')
         return liquidity_bars(data, params['liquidity_threshold'])
 
-    else:
-        return data
+    return data

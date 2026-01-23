@@ -22,7 +22,7 @@ def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd
     '''
 
     all_rows = []
-    
+
     for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
 
         result_df = backtest_snapshot(self.permutation_prediction_performance(i))
