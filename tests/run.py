@@ -1,6 +1,7 @@
 import sys
 import time
 import traceback
+import logging
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -42,6 +43,13 @@ tests = [
     test_rdop,
 ]
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 setup_cleanup_handlers()
 
 for test in tests:
@@ -51,11 +59,13 @@ for test in tests:
         test()
         end_time = time.time()
         duration = end_time - start_time
+        logger.info('✅ %s: PASSED (%.3fs)', test.__name__, duration)
 
-    except Exception:
+    except Exception as e:
         end_time = time.time()
         duration = end_time - start_time
 
+        logger.error('❌ %s: FAILED (%.3fs) - %s', test.__name__, duration, str(e))
         cleanup_csv_files()
         traceback.print_exc()
         sys.exit(1)

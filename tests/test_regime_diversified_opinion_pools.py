@@ -9,6 +9,9 @@ import limen
 from limen import sfd
 from limen import RegimeDiversifiedOpinionPools
 from tests.utils.cleanup import cleanup_csv_files
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def test_rdop():
@@ -59,9 +62,10 @@ def test_rdop():
             )
 
             cleanup_csv_files()
+            logger.info('    ✅ %s: PASSED', sfd_module.__name__)
 
-
-        except Exception:
+        except Exception as e:
+            logger.error('    ❌ %s: FAILED - %s', sfd_module.__name__, str(e))
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)

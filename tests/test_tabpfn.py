@@ -2,8 +2,11 @@ import limen
 import uuid
 import sys
 import traceback
+import logging
 
 from tests.utils.cleanup import cleanup_csv_files
+
+logger = logging.getLogger(__name__)
 
 
 def test_tabpfn():
@@ -25,8 +28,10 @@ def test_tabpfn():
                 prep_each_round=True
             )
 
+            logger.info('✅ %s: PASSED', sfd_module.__name__)
 
-        except Exception:
+        except Exception as e:
+            logger.error('❌ %s: FAILED - %s', sfd_module.__name__, str(e))
             cleanup_csv_files()
             traceback.print_exc()
             sys.exit(1)
