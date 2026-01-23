@@ -1,4 +1,4 @@
-name: Ruff Linting and Formatting
+name: Ruff Linting
 
 on:
   push:
