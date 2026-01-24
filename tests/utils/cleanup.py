@@ -6,8 +6,12 @@ import atexit
 import signal
 from pathlib import Path
 import sys
-import contextlib
 from typing import Any
+
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def cleanup_csv_files():
@@ -23,8 +27,10 @@ def cleanup_csv_files():
     if csv_files:
         for csv_file in csv_files:
 
-            with contextlib.suppress(OSError, PermissionError):
+            try:
                 csv_file.unlink()
+            except (OSError, PermissionError) as e:
+                logger.warning('Failed to delete %s: %s', csv_file, str(e))
 
 
 
