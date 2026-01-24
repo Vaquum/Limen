@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from limen.experiment import UniversalExperimentLoop
+from limen.experiment import UniversalExperimentLoop, Manifest
 
 from typing import Any
 
@@ -178,7 +178,7 @@ class OnlineModelLoader:
 
     '''Compute model training and prediction extraction for online pipeline.'''
 
-    def __init__(self, sfd: Any, manifest: Any = None) -> None:
+    def __init__(self, sfd: Any, manifest: Manifest | None = None) -> None:
 
         self.sfd = sfd
         self.manifest = manifest
@@ -294,7 +294,7 @@ class AggregationStrategy:
 
 class OnlineAggregation:
 
-    def __init__(self, sfd: Any, manifest: dict | None = None, aggregation_threshold: float | None = None) -> None:
+    def __init__(self, sfd: Any, manifest: Manifest | None = None, aggregation_threshold: float | None = None) -> None:
 
         self.sfd = sfd
         self.manifest = manifest
