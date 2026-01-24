@@ -1,6 +1,8 @@
 import polars as pl
 from limen.indicators.sma import sma
 
+DEFAULT_SMA_PERIODS = [5, 10, 20, 50]
+
 
 def sma_ratios(data: pl.DataFrame, periods: list | None = None, price_col: str = 'close') -> pl.DataFrame:
 
@@ -17,7 +19,7 @@ def sma_ratios(data: pl.DataFrame, periods: list | None = None, price_col: str =
     '''
 
     if periods is None:
-        periods = [5, 10, 20, 50]
+        periods = DEFAULT_SMA_PERIODS
     df = data.clone()
 
     for period in periods:
