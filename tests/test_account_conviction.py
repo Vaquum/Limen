@@ -89,7 +89,7 @@ def validate_vector_consistency(account: Account, actions: list, prices: list, a
     manual_short_btc = 0
     manual_usdt = account.account['credit_usdt'][0]  # Initial balance
 
-    for _i, (action, price, amount) in enumerate(zip(actions, prices, amounts, strict=False)):
+    for _i, (action, price, amount) in enumerate(zip(actions, prices, amounts, strict=True)):
         if action == 'buy':
             btc_bought = round(amount / price, BTC_PRECISION)  # Updated to match Account's 15-decimal precision
             manual_long_btc += btc_bought

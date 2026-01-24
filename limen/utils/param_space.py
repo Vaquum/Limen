@@ -57,7 +57,7 @@ class ParamSpace:
 
         row_no = random.randrange(self.df_params.height) if random_search else 0
 
-        round_params = dict(zip(self.df_params.columns, self.df_params.row(row_no), strict=False))
+        round_params = dict(zip(self.df_params.columns, self.df_params.row(row_no), strict=True))
 
         self.df_params = (
             self.df_params

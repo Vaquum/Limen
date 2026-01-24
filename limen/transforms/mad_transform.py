@@ -14,7 +14,7 @@ def mad_transform(df: pl.DataFrame, *, time_col: str = "datetime"):
         pl.DataFrame: The transformed DataFrame.
     '''
 
-    num_cols = [c for c, dt in zip(df.columns, df.dtypes, strict=False)
+    num_cols = [c for c, dt in zip(df.columns, df.dtypes, strict=True)
                 if dt.is_numeric() and c != time_col]
 
     med = df.select([pl.col(c).median().alias(c) for c in num_cols])

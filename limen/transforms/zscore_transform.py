@@ -14,7 +14,7 @@ def zscore_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.Data
         pl.DataFrame: The input data with Z-scored numeric columns
     '''
 
-    num_cols = [c for c, dt in zip(df.columns, df.dtypes, strict=False)
+    num_cols = [c for c, dt in zip(df.columns, df.dtypes, strict=True)
                 if dt.is_numeric() and c != time_col]
 
     if not num_cols:
