@@ -1,5 +1,7 @@
 import polars as pl
 
+DEFAULT_MOMENTUM_PERIODS = [12, 24, 48]
+
 
 def momentum_periods(data: pl.DataFrame, periods: list | None = None, price_col: str = 'close') -> pl.DataFrame:
 
@@ -16,7 +18,7 @@ def momentum_periods(data: pl.DataFrame, periods: list | None = None, price_col:
     '''
 
     if periods is None:
-        periods = [12, 24, 48]
+        periods = DEFAULT_MOMENTUM_PERIODS
     momentum_expressions = []
     for period in periods:
         momentum_expressions.append(
