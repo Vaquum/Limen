@@ -21,12 +21,12 @@ def create_test_data():
 def create_test_models():
     '''Create a few simple models for testing'''
     x, y = create_test_data()
-    x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.4, random_state=42)
-    
+    x_train, _x_temp, y_train, _y_temp = train_test_split(x, y, test_size=0.4, random_state=42)
+
     models = []
     for i in range(3):  # Create 3 models with slight variations
         train_data = lgb.Dataset(x_train, label=y_train)
-        
+
         params = {
             'objective': 'regression',
             'metric': 'mae',
@@ -35,24 +35,24 @@ def create_test_models():
             'verbose': -1,
             'random_state': 42 + i
         }
-        
+
         model = lgb.train(params, train_data, num_boost_round=10)
         models.append(model)
-    
+
     return models
 
 
 def create_test_data_dict():
     '''Create test data dictionary with all splits'''
     x, y = create_test_data()
-    
+
     # Split into train/val/test
     x_train, x_temp, y_train, y_temp = train_test_split(x, y, test_size=0.4, random_state=42)
     x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=42)
-    
+
     # Create datetime for test data
     dt_test = pd.date_range('2023-01-01', periods=len(y_test), freq='1h')
-    
+
     return {
         'x_train': x_train,
         'y_train': y_train,
@@ -66,22 +66,22 @@ def create_test_data_dict():
 
 def test_calibrate_confidence_threshold():
     '''Test confidence threshold calibration'''
-    
+
     models = create_test_models()
     data = create_test_data_dict()
-    
+
     # Test basic functionality
     threshold, stats = calibrate_confidence_threshold(
         models, data['x_val'], data['y_val'], target_confidence=0.7
     )
-    
+
     # Basic checks
     assert isinstance(threshold, (float, np.floating))
     assert isinstance(stats, dict)
     assert threshold > 0
     assert 'threshold' in stats
     assert 'confident_pct' in stats
-    
+
     # Test different confidence levels
     threshold2, _ = calibrate_confidence_threshold(
         models, data['x_val'], data['y_val'], target_confidence=0.9
@@ -91,20 +91,20 @@ def test_calibrate_confidence_threshold():
 
 def test_apply_confidence_filtering():
     '''Test confidence filtering application'''
-    
+
     models = create_test_models()
     data = create_test_data_dict()
-    
+
     # First calibrate to get threshold
     threshold, _ = calibrate_confidence_threshold(
         models, data['x_val'], data['y_val'], target_confidence=0.7
     )
-    
+
     # Test filtering
     results = apply_confidence_filtering(
         models, data['x_test'], data['y_test'], threshold
     )
-    
+
     # Basic checks
     assert isinstance(results, dict)
     assert 'predictions' in results
@@ -117,15 +117,15 @@ def test_apply_confidence_filtering():
 
 def test_confidence_filtering_system():
     '''Test the complete confidence filtering system'''
-    
+
     models = create_test_models()
     data = create_test_data_dict()
-    
+
     # Test complete system
     results, df_results, calibration_stats = confidence_filtering_system(
         models, data, target_confidence=0.8
     )
-    
+
     # Basic checks
     assert isinstance(results, dict)
     assert isinstance(df_results, pl.DataFrame)
@@ -136,33 +136,33 @@ def test_confidence_filtering_system():
                        'confidence_threshold', 'actual_value', 'confidence_score']
     for col in expected_columns:
         assert col in df_results.columns
-    
+
     assert len(df_results) == len(data['y_test'])
-    
+
     # Check results structure
     assert 'predictions' in results
     assert 'confident_mask' in results
     assert 'test_metrics' in results
-    
+
     # Test different target confidence
-    results2, df_results2, _ = confidence_filtering_system(
+    _results2, df_results2, _ = confidence_filtering_system(
         models, data, target_confidence=0.6
     )
     assert len(df_results2) == len(data['y_test'])
-    
+
 
 def test_edge_cases():
     '''Test edge cases and error handling'''
-    
+
     models = create_test_models()
     data = create_test_data_dict()
-    
+
     # Test with very high confidence (should still work)
     threshold, _ = calibrate_confidence_threshold(
         models, data['x_val'], data['y_val'], target_confidence=0.99
     )
     assert isinstance(threshold, (float, np.floating))
-    
+
     # Test with very low confidence
     threshold, _ = calibrate_confidence_threshold(
         models, data['x_val'], data['y_val'], target_confidence=0.1
@@ -171,7 +171,7 @@ def test_edge_cases():
 
 
 if __name__ == "__main__":
-    
+
     test_calibrate_confidence_threshold()
 
     test_apply_confidence_filtering()

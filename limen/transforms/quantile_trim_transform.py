@@ -14,7 +14,7 @@ def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> 
         pl.DataFrame: The input data filtered within bounds for all numeric columns
     '''
 
-    num_cols = [c for c, dt in zip(df.columns, df.dtypes)
+    num_cols = [c for c, dt in zip(df.columns, df.dtypes, strict=True)
                 if dt.is_numeric() and c != time_col]
 
     if not num_cols:

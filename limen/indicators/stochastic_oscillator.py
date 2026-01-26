@@ -6,19 +6,19 @@ def stochastic_oscillator(
     window_k: int = 14,
     window_d: int = 3,
 ) -> pl.DataFrame:
-    
+
     '''
     Compute Stochastic Oscillator (%K and %D) using rolling highs and lows.
-    
+
     Args:
         df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         window_k (int): Number of periods for %K calculation
         window_d (int): Number of periods for %D smoothing (SMA of %K)
-        
+
     Returns:
         pl.DataFrame: The input data with two new columns 'stoch_k' and 'stoch_d'
     '''
-    
+
     highest_col = 'stoch_highest'
     lowest_col = 'stoch_lowest'
     k_col = 'stoch_k'

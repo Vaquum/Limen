@@ -6,7 +6,7 @@ def macd(data: pl.DataFrame,
          fast_period: int = 12,
          slow_period: int = 26,
          signal_period: int = 9) -> pl.DataFrame:
-    
+
     '''
     Compute MACD (Moving Average Convergence Divergence) indicator.
 

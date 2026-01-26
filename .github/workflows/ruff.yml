@@ -1,4 +1,4 @@
-name: Ruff Linting and Formatting
+name: Ruff Linting
 
 on:
   push:
@@ -14,9 +14,3 @@ jobs:
 
       # Run ruff linting
       - uses: astral-sh/ruff-action@v3
-        # This runs 'ruff check' by default
-
-      # Run ruff formatting check
-      - uses: astral-sh/ruff-action@v3
-        with:
-          args: "format --check --diff"

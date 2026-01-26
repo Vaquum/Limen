@@ -1,6 +1,7 @@
 import polars as pl
 import wrangle
-from typing import Optional, Callable, List, Any
+from typing import Any
+from collections.abc import Callable
 
 
 class Log:
@@ -12,18 +13,18 @@ class Log:
     from limen.log._experiment_parameter_correlation import _experiment_parameter_correlation as experiment_parameter_correlation
     from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics as permutation_confusion_metrics
     from limen.log._permutation_prediction_performance import _permutation_prediction_performance as permutation_prediction_performance
-    
+
     from limen.log._read_from_file import _read_from_file as read_from_file
 
     def __init__(self,
-                 uel_object: Optional[Any] = None,
-                 file_path: Optional[str] = None,
-                 inverse_scaler: Optional[Callable] = None,
-                 cols_to_multilabel: Optional[List[str]] = None) -> None:
-        
+                 uel_object: Any | None = None,
+                 file_path: str | None = None,
+                 inverse_scaler: Callable | None = None,
+                 cols_to_multilabel: list[str] | None = None) -> None:
+
         '''
         Create Log object state from a UEL object or a log file.
-        
+
         Args:
             uel_object (object, optional): Source UEL object
             file_path (str, optional): Path to the log file
@@ -51,13 +52,13 @@ class Log:
 
         else:
             raise ValueError('Both uel_object and file_path cannot be None')
-        
+
         if cols_to_multilabel is not None:
             for col in cols_to_multilabel:
                 self.experiment_log = wrangle.col_to_multilabel(data=self.experiment_log,
                                                         col=col,
                                                         extended_colname=True)
-            
+
             for col in self.experiment_log.select_dtypes(include=bool):
                 self.experiment_log[col] = self.experiment_log[col].astype(int)
 

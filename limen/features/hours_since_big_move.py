@@ -1,12 +1,10 @@
 import polars as pl
 import numpy as np
-from typing import List
-from typing import Dict
 
 
 def hours_since_big_move(data: pl.DataFrame,
-                         long_lines: List[Dict],
-                         short_lines: List[Dict],
+                         long_lines: list[dict],
+                         short_lines: list[dict],
                          lookback_hours: int) -> pl.DataFrame:
     '''
     Compute hours since the most recent line end capped by lookback_hours.

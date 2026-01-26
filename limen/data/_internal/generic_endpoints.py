@@ -1,18 +1,20 @@
+import logging
 from clickhouse_connect import get_client
 import polars as pl
 import time
-from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 def query_raw_data(table_name: str,
                    id_col: str,
                    select_cols: list,
-                   month_year: Optional[Tuple[int, int]] = None,
-                   n_rows: Optional[int] = None,
-                   n_random: Optional[int] = None,
+                   month_year: tuple[int, int] | None = None,
+                   n_rows: int | None = None,
+                   n_random: int | None = None,
                    include_datetime_col: bool = True,
                    show_summary: bool = False,
-                   auth_token: str = None) -> pl.DataFrame:
+                   auth_token: str | None = None) -> pl.DataFrame:
 
     '''
     Query raw trade data from ClickHouse database.
@@ -92,14 +94,14 @@ def query_raw_data(table_name: str,
             .alias('datetime')
         ])
 
-    elapsed = time.time() - start
-
     if show_summary:
-        print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | "
-              f"{polars_df.shape[1]} cols | "
-              f"{polars_df.estimated_size()/(1024**3):.2f} GB RAM")
+        elapsed = time.time() - start
+        logger.info('%s s | %d rows | %d cols | %.2f GB RAM',
+                    f"{elapsed:.2f}", polars_df.shape[0], polars_df.shape[1],
+                    polars_df.estimated_size() / (1024**3))
 
     if not datetime_requested and 'datetime' in polars_df.columns:
+        polars_df = polars_df.drop('datetime')
         polars_df = polars_df.drop('datetime')
 
     if not timestamp_requested and 'timestamp' in polars_df.columns:
@@ -108,12 +110,12 @@ def query_raw_data(table_name: str,
     return polars_df
 
 
-def query_klines_data(n_rows: Optional[int] = None,
+def query_klines_data(n_rows: int | None = None,
                       kline_size: int = 1,
-                      start_date_limit: Optional[str] = None,
+                      start_date_limit: str | None = None,
                       futures: bool = False,
                       show_summary: bool = False,
-                      auth_token: str = None) -> pl.DataFrame:
+                      auth_token: str | None = None) -> pl.DataFrame:
 
     '''
     Query aggregated klines data from ClickHouse database.
@@ -137,10 +139,7 @@ def query_klines_data(n_rows: Optional[int] = None,
         compression=True
     )
 
-    if n_rows is not None:
-        limit = f"LIMIT {n_rows}"
-    else:
-        limit = ''
+    limit = f"LIMIT {n_rows}" if n_rows is not None else ''
 
     if start_date_limit is not None:
         start_date_limit = f"WHERE datetime >= toDateTime('{start_date_limit}') "
@@ -201,9 +200,10 @@ def query_klines_data(n_rows: Optional[int] = None,
 
     polars_df = polars_df.sort('datetime')
 
-    elapsed = time.time() - start
-
     if show_summary:
-        print(f"{elapsed:.2f} s | {polars_df.shape[0]} rows | {polars_df.shape[1]} cols | {polars_df.estimated_size()/(1024**3):.2f} GB RAM")
+        elapsed = time.time() - start
+        logger.info('%s s | %d rows | %d cols | %.2f GB RAM',
+                    f"{elapsed:.2f}", polars_df.shape[0], polars_df.shape[1],
+                    polars_df.estimated_size() / (1024**3))
 
     return polars_df

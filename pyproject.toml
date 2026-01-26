@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaquum_limen"
-version = "1.32.0"
+version = "1.32.1"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [
@@ -52,3 +52,83 @@ Repository = "https://github.com/vaquum/limen"
 where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+fix = false
+
+[tool.ruff.lint]
+select = [
+  "F",    # Pyflakes
+  "E",
+  "W",    # pycodestyle
+  "N",    # pep8-naming
+  "UP",   # pyupgrade
+  "ANN",  # flake8-annotations
+  "S",    # flake8-bandit
+  "BLE",  # flake8-blind-except
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "G",    # flake8-logging-format
+  "T20",  # flake8-print
+  "PT",   # flake8-pytest-style
+  "RET",  # flake8-return
+  "SIM",  # flake8-simplify
+  "ARG",  # flake8-unused-arguments
+  "PTH1", # flake8-use-pathlib (PTH1xx only: os.path replacements)
+  "ERA",  # eradicate
+  "PL",   # Pylint
+  "RUF",  # Ruff-specific rules
+]
+ignore = [
+  "D201", # No blank line before function docstring (We want the opposite)
+  "D202", # No blank line after function docstring (We want the opposite)
+  "D203", # 1 blank line required before class docstring (Conflicts with D211)
+  "D212", # Multi-line docstring summary at first line (Conflicts with D213)
+  "E501", # Line too long (Handled by formatter/wrap)
+  "I",    # Ignore isort import order rules
+  "D200", # Allow one-line docstring to span multiple lines
+  "D100", # Ignore missing docstring in public module
+  "ANN201", # Missing return type annotation for public function
+  "D102",   # Missing docstring in public method
+  "PLR0913", # Too many arguments in function definition
+  "D107",   # Missing docstring in __init__
+  "S101",    # Use of assert detected
+  "S113",    # Probable use of requests call without timeout
+  "S608",    # Possible SQL injection vector through string-based query construction
+  "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+  "N806",    # Variable in function should be lowercase
+  "PLC0415", # Import should be at the top-level of a file
+  "PLR0912", # Too many branches
+  "PLR0915", # Too many statements
+  "RUF002",  # Docstring contains ambiguous unicode character
+  "PT",      # flake8-pytest-style
+  "N803",    # Argument name should be lowercase
+  "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+  "C401",    # Unnecessary generator (rewrite as a set comprehension)
+  "RET504",  # Unnecessary assignment to variable before return statement
+]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "BLE001"]
+
+[tool.ruff.lint.pylint]
+max-statements = 50
+
+[tool.ruff.lint.isort]
+known-first-party = ["limen"]
+section-order = [
+  "future",
+  "standard-library",
+  "third-party",
+  "first-party",
+  "local-folder",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

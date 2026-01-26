@@ -21,11 +21,13 @@ def test_large_param_space():
     }
 
     start = time.time()
-    ps = ParamSpace(params, 1000000)
+    EXPECTED_PERMUTATIONS = 1000000
+    ps = ParamSpace(params, EXPECTED_PERMUTATIONS)
     elapsed = time.time() - start
 
-    assert ps.n_permutations == 1000000
-    assert elapsed < 10.0
+    assert ps.n_permutations == EXPECTED_PERMUTATIONS
+    MAX_ELAPSED_TIME = 10.0
+    assert elapsed < MAX_ELAPSED_TIME
 
     combo = ps.generate()
     assert set(combo.keys()) == set(params.keys())

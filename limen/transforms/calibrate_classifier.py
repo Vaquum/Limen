@@ -1,8 +1,9 @@
+from typing import Any
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
 
 
-def calibrate_classifier(clf,
+def calibrate_classifier(clf: Any,
                          x_val: np.ndarray,
                          y_val: np.ndarray,
                          x_sets: list,

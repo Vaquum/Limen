@@ -7,8 +7,8 @@ from limen.data.utils.random_slice import random_slice
 
 __all__ = [
     'compute_data_bars',
-    'split_data_to_prep_output',
-    'split_sequential',
-    'split_random',
     'random_slice',
+    'split_data_to_prep_output',
+    'split_random',
+    'split_sequential',
 ]

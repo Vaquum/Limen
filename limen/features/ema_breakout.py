@@ -16,7 +16,7 @@ def ema_breakout(data: pl.DataFrame,
         ema_span (int): Period for EMA calculation
         breakout_delta (float): Threshold for breakout detection
         breakout_horizon (int): Lookback period for breakout validation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'breakout_ema'
     '''

@@ -1,10 +1,12 @@
 import polars as pl
-from typing import Union
 
 
 
-def _standard_bars(data: pl.DataFrame, 
-                   threshold: Union[int, float],
+MIN_DATA_LENGTH = 2
+
+
+def _standard_bars(data: pl.DataFrame,
+                   threshold: int | float,
                    column_name: str) -> pl.DataFrame:
 
     '''
@@ -26,44 +28,44 @@ def _standard_bars(data: pl.DataFrame,
 
     base_interval = (
           (data['datetime'][1] - data['datetime'][0]).total_seconds()
-          if len(data) >= 2
+          if len(data) >= MIN_DATA_LENGTH
           else 0
       )
-        
+
     df_with_cumsum = data.with_row_index().with_columns([
         pl.col(column_name).alias('threshold_col')
     ])
-    
+
     def create_bar_groups(df: pl.DataFrame) -> pl.DataFrame:
         cumsum = 0.0
         bar_group = 0
         groups = []
-        
+
         for row in df.iter_rows(named=True):
             cumsum += row['threshold_col']
             groups.append(bar_group)
-            
+
             if cumsum >= threshold:
                 bar_group += 1
                 cumsum = 0.0
-        
+
         return df.with_columns(pl.Series('bar_group', groups))
-    
+
     df_with_groups = create_bar_groups(df_with_cumsum)
-    
+
     max_bar_group = df_with_groups['bar_group'].max()
     last_bar_sum = (
         df_with_groups
         .filter(pl.col('bar_group') == max_bar_group)[column_name]
         .sum())
-    
+
     if last_bar_sum < threshold:
         df_with_groups = (
             df_with_groups
             .filter(pl.col('bar_group') < max_bar_group)
         )
-    
-    result = (
+
+    return (
         df_with_groups
         .drop(['index', 'threshold_col'])
         .group_by('bar_group', maintain_order=True)
@@ -87,13 +89,12 @@ def _standard_bars(data: pl.DataFrame,
         ])
         .sort('bar_group')
         .select([
-            'datetime', 'open', 'high', 'low', 'close', 'volume', 
-            'no_of_trades', 'liquidity_sum', 'maker_ratio', 'maker_volume', 
+            'datetime', 'open', 'high', 'low', 'close', 'volume',
+            'no_of_trades', 'liquidity_sum', 'maker_ratio', 'maker_volume',
             'maker_liquidity', 'mean', 'bar_count', 'base_interval'
         ])
     )
-    
-    return result
+
 
 
 

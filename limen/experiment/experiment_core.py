@@ -1,5 +1,8 @@
 import os
 import time
+from pathlib import Path
+from typing import Any
+from collections.abc import Callable
 from tqdm import tqdm
 import polars as pl
 import sqlite3
@@ -12,7 +15,7 @@ class UniversalExperimentLoop:
 
     '''UniversalExperimentLoop class for running experiments.'''
 
-    def __init__(self, *, data=None, sfd=None):
+    def __init__(self, *, data: pl.DataFrame | None = None, sfd: Any = None) -> None:
 
         '''
         Initialize the UniversalExperimentLoop.
@@ -71,16 +74,16 @@ class UniversalExperimentLoop:
         self.models = []
 
     def run(self,
-            experiment_name,
-            n_permutations=10000,
-            prep_each_round=False,
-            random_search=True,
-            maintain_details_in_params=False,
-            context_params=None,
-            save_to_sqlite=False,
-            params=None,
-            prep=None,
-            model=None):
+            experiment_name: str,
+            n_permutations: int = 10000,
+            prep_each_round: bool = False,
+            random_search: bool = True,
+            maintain_details_in_params: bool = False,
+            context_params: dict | None = None,
+            save_to_sqlite: bool = False,
+            params: Callable | None = None,
+            prep: Callable | None = None,
+            model: Callable | None = None) -> None:
 
         '''
         Run the experiment `n_permutations` times.
@@ -134,7 +137,7 @@ class UniversalExperimentLoop:
 
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
-        
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time
@@ -153,11 +156,8 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            if prep_each_round is True:
+            if prep_each_round is True or i == 0:
                 data_dict = self.prep(self.data, round_params=round_params)
-            else:
-                if i == 0:
-                    data_dict = self.prep(self.data, round_params=round_params)
 
             # Perform the model training and evaluation
             round_results = self.model(data=data_dict, round_params=round_params)
@@ -170,20 +170,20 @@ class UniversalExperimentLoop:
             self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
-            if 'extras' in round_results.keys():
+            if 'extras' in round_results:
                 self.extras.append(round_results['extras'])
                 round_results.pop('extras')
 
             # Handle any models that are returned from the model
-            if 'models' in round_results.keys():
+            if 'models' in round_results:
                 self.models.append(round_results['models'])
                 round_results.pop('models')
 
-            if '_preds' in round_results.keys():
+            if '_preds' in round_results:
                 self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
 
-            if '_scaler' in data_dict.keys():
+            if '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
                 data_dict.pop('_scaler')
 
@@ -193,7 +193,7 @@ class UniversalExperimentLoop:
 
             self.round_params.append(round_params)
 
-            for key in round_params.keys():
+            for key in round_params:
                 round_results[key] = round_params[key]
 
             # Handle writing to the DataFrame
@@ -211,11 +211,11 @@ class UniversalExperimentLoop:
             # Handle writing to the file
             if i == 0:
                 header_colnames = ','.join(list(round_results.keys()))
-                with open(experiment_name + '.csv', 'a') as f:
+                with Path(experiment_name + '.csv').open('a') as f:
                     f.write(f"{header_colnames}\n")
 
             log_string = f"{', '.join(map(str, self.experiment_log.row(i)))}\n"
-            with open(experiment_name + '.csv', 'a') as f:
+            with Path(experiment_name + '.csv').open('a') as f:
                 f.write(log_string)
 
         if save_to_sqlite is True:
@@ -223,7 +223,7 @@ class UniversalExperimentLoop:
 
         # Add Log, Benchmark, and Backtest properties
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
-        
+
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
         self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')

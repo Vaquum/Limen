@@ -2,10 +2,10 @@ import polars as pl
 
 
 def body_pct(data: pl.DataFrame) -> pl.DataFrame:
-    
+
     '''
     Compute the body percentage (candle body size relative to open).
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'open' and 'close' columns
 

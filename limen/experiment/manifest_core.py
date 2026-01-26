@@ -3,19 +3,20 @@ import inspect
 import importlib
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any
+from collections.abc import Callable
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
 
-ParamValue = Union[Any, Callable[[Dict[str, Any]], Any]]
-FeatureEntry = Tuple[Callable[..., pl.LazyFrame], Dict[str, ParamValue]]
+ParamValue = Any | Callable[[dict[str, Any]], Any]
+FeatureEntry = tuple[Callable[..., pl.LazyFrame], dict[str, ParamValue]]
 
-FittedParamsComputationEntry = Tuple[str, Callable[..., Any], Dict[str, ParamValue]]
+FittedParamsComputationEntry = tuple[str, Callable[..., Any], dict[str, ParamValue]]
 
-FittedTransformEntry = Tuple[
-    List[FittedParamsComputationEntry],
+FittedTransformEntry = tuple[
+    list[FittedParamsComputationEntry],
     Callable[..., pl.LazyFrame],
-    Dict[str, ParamValue]
+    dict[str, ParamValue]
 ]
 
 
@@ -25,7 +26,7 @@ class DataSourceConfig:
     '''Declarative configuration for data fetching in manifests.'''
 
     method: Callable
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 class DataSourceResolver:
@@ -54,7 +55,7 @@ class DataSourceResolver:
                 return method.__self__.data
             return result
 
-        elif inspect.isfunction(method):
+        if inspect.isfunction(method):
             if '.' in method.__qualname__:
                 module_name = method.__module__
                 class_name = method.__qualname__.rsplit('.', 1)[0]
@@ -68,41 +69,38 @@ class DataSourceResolver:
 
                 if hasattr(instance, 'data'):
                     return instance.data
-                else:
-                    raise ValueError(
-                        f"Method {method.__qualname__} executed successfully but "
-                        f"instance does not have 'data' attribute. Expected data source "
-                        f"methods to populate instance.data"
-                    )
-            else:
-                return method(**params)
+                raise ValueError(
+                    f"Method {method.__qualname__} executed successfully but "
+                    f"instance does not have 'data' attribute. Expected data source "
+                    f"methods to populate instance.data"
+                )
+            return method(**params)
 
-        else:
-            raise ValueError(f"Unsupported callable type: {type(method)}")
+        raise ValueError(f"Unsupported callable type: {type(method)}")
 
 
 class TargetBuilder:
 
     '''Helper class for building target transformations with context.'''
 
-    def __init__(self, manifest: 'Manifest', target_column: str):
+    def __init__(self, manifest: 'Manifest', target_column: str) -> None:
 
         self.manifest = manifest
         self.target_column = target_column
         self.manifest.target_column = target_column
 
     def add_fitted_transform(self, func: Callable) -> 'FittedTransformBuilder':
-        
+
         return FittedTransformBuilder(self.manifest, func)
 
-    def add_transform(self, func: Callable, **params) -> 'TargetBuilder':
-        
+    def add_transform(self, func: Callable, **params: Any) -> 'TargetBuilder':
+
         entry = ([], func, params)
         self.manifest.target_transforms.append(entry)
         return self
 
     def done(self) -> 'Manifest':
-        
+
         return self.manifest
 
 
@@ -110,20 +108,20 @@ class FittedTransformBuilder:
 
     '''Helper class for building fitted transforms with parameter fitting.'''
 
-    def __init__(self, manifest: 'Manifest', func: Callable):
-        
+    def __init__(self, manifest: 'Manifest', func: Callable) -> None:
+
         self.manifest = manifest
         self.func = func
-        self.fitted_params: List[FittedParamsComputationEntry] = []
+        self.fitted_params: list[FittedParamsComputationEntry] = []
 
-    def fit_param(self, name: str, compute_func: Callable, **params) -> 'FittedTransformBuilder':
-        
+    def fit_param(self, name: str, compute_func: Callable, **params: Any) -> 'FittedTransformBuilder':
+
         self.fitted_params.append((name, compute_func, params))
 
         return self
 
-    def with_params(self, **params) -> 'TargetBuilder':
-        
+    def with_params(self, **params: Any) -> 'TargetBuilder':
+
         entry = (self.fitted_params, self.func, params)
         self.manifest.target_transforms.append(entry)
 
@@ -138,20 +136,20 @@ class Manifest:
     data_source_config: DataSourceConfig = None
     test_data_source_config: DataSourceConfig = None
     pre_split_data_selector: FeatureEntry = None
-    split_config: Tuple[int, int, int] = (8, 1, 2)
+    split_config: tuple[int, int, int] = (8, 1, 2)
     bar_formation: FeatureEntry = None
-    required_bar_columns: List[str] = field(default_factory=list)
-    feature_transforms: List[FeatureEntry] = field(default_factory=list)
+    required_bar_columns: list[str] = field(default_factory=list)
+    feature_transforms: list[FeatureEntry] = field(default_factory=list)
     target_column: str = None
-    target_transforms: List[FittedTransformEntry] = field(default_factory=list)
+    target_transforms: list[FittedTransformEntry] = field(default_factory=list)
     scaler: FittedTransformEntry = None
     data_dict_extension: Callable = None
-    
-    model_function: Callable = None
-    model_params: Dict[str, ParamValue] = field(default_factory=dict)
-    metrics_params: Dict[str, ParamValue] = field(default_factory=dict)
 
-    def _add_transform(self, func: Callable, **params) -> 'Manifest':
+    model_function: Callable = None
+    model_params: dict[str, ParamValue] = field(default_factory=dict)
+    metrics_params: dict[str, ParamValue] = field(default_factory=dict)
+
+    def _add_transform(self, func: Callable, **params: Any) -> 'Manifest':
 
         self.feature_transforms.append((func, params))
 
@@ -159,7 +157,7 @@ class Manifest:
 
     def set_data_source(self,
                        method: Callable,
-                       params: Dict[str, Any] = None) -> 'Manifest':
+                       params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
         Configure production data source for the manifest.
@@ -181,7 +179,7 @@ class Manifest:
 
     def set_test_data_source(self,
                             method: Callable,
-                            params: Dict[str, Any] = None) -> 'Manifest':
+                            params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
         Configure test data source for the manifest.
@@ -219,7 +217,7 @@ class Manifest:
 
         return DataSourceResolver.resolve(self.test_data_source_config)
 
-    def add_feature(self, func: Callable, **params) -> 'Manifest':
+    def add_feature(self, func: Callable, **params: Any) -> 'Manifest':
 
         '''
         Add feature transformation to the manifest.
@@ -234,7 +232,7 @@ class Manifest:
 
         return self._add_transform(func, **params)
 
-    def add_indicator(self, func: Callable, **params) -> 'Manifest':
+    def add_indicator(self, func: Callable, **params: Any) -> 'Manifest':
 
         '''
         Add indicator transformation to the manifest.
@@ -249,7 +247,7 @@ class Manifest:
 
         return self._add_transform(func, **params)
 
-    def set_pre_split_data_selector(self, func: Callable, **params) -> 'Manifest':
+    def set_pre_split_data_selector(self, func: Callable, **params: Any) -> 'Manifest':
 
         '''
         Set pre-split data selector function and parameters.
@@ -265,7 +263,7 @@ class Manifest:
         self.pre_split_data_selector = (func, params)
         return self
 
-    def set_bar_formation(self, func: Callable, **params) -> 'Manifest':
+    def set_bar_formation(self, func: Callable, **params: Any) -> 'Manifest':
 
         '''
         Set bar formation function and parameters.
@@ -283,7 +281,7 @@ class Manifest:
         return self
 
 
-    def set_required_bar_columns(self, columns: List[str]) -> 'Manifest':
+    def set_required_bar_columns(self, columns: list[str]) -> 'Manifest':
 
         '''
         Set required columns after bar formation.
@@ -317,7 +315,7 @@ class Manifest:
 
         return self
 
-    def set_scaler(self, transform_class, param_name: str = '_scaler') -> 'Manifest':
+    def set_scaler(self, transform_class: Any, param_name: str = '_scaler') -> 'Manifest':
 
         '''
         Set scaler transformation using make_fitted_scaler.
@@ -385,7 +383,7 @@ class Manifest:
         self.data_dict_extension = func
         return self
 
-    def compute_test_bars(self, raw_data: pl.DataFrame, round_params: Dict[str, Any]) -> pl.DataFrame:
+    def compute_test_bars(self, raw_data: pl.DataFrame, round_params: dict[str, Any]) -> pl.DataFrame:
 
         '''
         Compute test split bar data from raw data using manifest bar formation configuration.
@@ -414,7 +412,7 @@ class Manifest:
     def prepare_data(
         self,
         raw_data: pl.DataFrame,
-        round_params: Dict[str, Any]
+        round_params: dict[str, Any]
     ) -> dict:
 
         '''
@@ -461,7 +459,7 @@ class Manifest:
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params)
 
-    def run_model(self, data: dict, round_params: Dict[str, Any]) -> dict:
+    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
 
         '''
         Execute model training and evaluation using configured functions.
@@ -507,7 +505,8 @@ class Manifest:
         return round_results
 
 
-def _apply_fitted_transform(data: pl.DataFrame, fitted_transform):
+
+def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.DataFrame:
 
     '''
     Compute transformed data using fitted transform instance.
@@ -523,7 +522,7 @@ def _apply_fitted_transform(data: pl.DataFrame, fitted_transform):
     return fitted_transform.transform(data)
 
 
-def make_fitted_scaler(param_name: str, transform_class):
+def make_fitted_scaler(param_name: str, transform_class: Any) -> FittedTransformEntry:
 
     '''
     Create fitted transform entry for scaling.
@@ -544,7 +543,7 @@ def make_fitted_scaler(param_name: str, transform_class):
     })
 
 
-def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dict[str, Any]:
+def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
     '''
     Resolve parameters using just-in-time detection with actual round_params.
@@ -575,8 +574,8 @@ def _resolve_params(params: Dict[str, Any], round_params: Dict[str, Any]) -> Dic
 def _process_bars(
         manifest: Manifest,
         data: pl.DataFrame,
-        round_params: Dict[str, Any]
-) -> Tuple[List, pl.DataFrame]:
+        round_params: dict[str, Any]
+) -> tuple[list, pl.DataFrame]:
 
     '''
     Compute bar formation on data and return post-bar datetimes.
@@ -609,7 +608,7 @@ def _process_bars(
     return all_datetimes, bar_data
 
 
-def _apply_feature_transforms(manifest: Manifest, lazy_data, round_params: Dict[str, Any]):
+def _apply_feature_transforms(manifest: Manifest, lazy_data: pl.LazyFrame, round_params: dict[str, Any]) -> pl.LazyFrame:
 
     for func, base_params in manifest.feature_transforms:
         resolved = _resolve_params(base_params, round_params)
@@ -619,12 +618,12 @@ def _apply_feature_transforms(manifest: Manifest, lazy_data, round_params: Dict[
 
 
 def _apply_fitted_transforms(
-        transform_entries: List[FittedTransformEntry],
+        transform_entries: list[FittedTransformEntry],
         data: pl.DataFrame,
-        round_params: Dict[str, Any],
-        all_fitted_params: Dict[str, Any],
+        round_params: dict[str, Any],
+        all_fitted_params: dict[str, Any],
         is_training: bool
-) -> Tuple[pl.DataFrame, Dict[str, Any]]:
+) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     '''
     Compute fitted transforms on eager DataFrame.
@@ -659,10 +658,10 @@ def _apply_fitted_transforms(
 def _apply_target_transforms(
         manifest: Manifest,
         data: pl.DataFrame,
-        round_params: Dict[str, Any],
-        all_fitted_params: Dict[str, Any],
+        round_params: dict[str, Any],
+        all_fitted_params: dict[str, Any],
         is_training: bool
-) -> Tuple[pl.DataFrame, Dict[str, Any]]:
+) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     enhanced_round_params = round_params.copy()
     if manifest.target_column:
@@ -677,26 +676,26 @@ def _apply_target_transforms(
 def _apply_scaler(
         manifest: Manifest,
         data: pl.DataFrame,
-        round_params: Dict[str, Any],
-        all_fitted_params: Dict[str, Any],
+        round_params: dict[str, Any],
+        all_fitted_params: dict[str, Any],
         is_training: bool
-) -> Tuple[pl.DataFrame, Dict[str, Any]]:
+) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     if manifest.scaler:
         return _apply_fitted_transforms(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
-    
+
     return data, all_fitted_params
 
 
 def _finalize_to_data_dict(
         manifest: Manifest,
-        split_data: List[pl.DataFrame],
-        all_datetimes: List,
-        fitted_params: Dict[str, Any],
-        round_params: Dict[str, Any]
+        split_data: list[pl.DataFrame],
+        all_datetimes: list,
+        fitted_params: dict[str, Any],
+        round_params: dict[str, Any]
 ) -> dict:
 
     # Validate all splits have datetime column

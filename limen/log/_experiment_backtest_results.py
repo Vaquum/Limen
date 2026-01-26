@@ -1,10 +1,11 @@
+from typing import Any
 import tqdm
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 
 
-def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd.DataFrame:
+def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) -> pd.DataFrame:
 
     '''
     Compute backtest results for each round of an experiment.
@@ -22,7 +23,7 @@ def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd
     '''
 
     all_rows = []
-    
+
     for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
 
         result_df = backtest_snapshot(self.permutation_prediction_performance(i))
@@ -32,3 +33,4 @@ def _experiment_backtest_results(self, disable_progress_bar: bool = False) -> pd
     df_all = pd.concat(all_rows, ignore_index=True)
 
     return df_all
+

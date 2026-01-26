@@ -1,14 +1,14 @@
-import limen.metrics.binary_metrics as binary_metrics
-import limen.metrics.continuous_metrics as continuous_metrics
-import limen.metrics.multiclass_metrics as multiclass_metrics
-import limen.metrics.safe_ovr_auc as safe_ovr_auc
+from limen.metrics import binary_metrics
+from limen.metrics import continuous_metrics
+from limen.metrics import multiclass_metrics
+from limen.metrics import safe_ovr_auc
 from limen.metrics.balanced_metric import balanced_metric
 
 
 __all__ = [
+    'balanced_metric',
     'binary_metrics',
     'continuous_metrics',
     'multiclass_metrics',
-    'safe_ovr_auc',
-    'balanced_metric'
+    'safe_ovr_auc'
 ]

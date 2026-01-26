@@ -2,18 +2,18 @@ import polars as pl
 
 
 def volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
-    
+
     '''
     Compute volume regime (current vs average volume).
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'volume' column
         lookback (int): Number of periods for volume average calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'volume_regime'
     '''
-    
+
     return (
         data
         .with_columns([

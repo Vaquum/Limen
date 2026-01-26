@@ -1,20 +1,21 @@
 import pandas as pd
 import numpy as np
-from typing import Sequence, Optional, Dict, Any
+from typing import Any
+from collections.abc import Sequence
 from math import sqrt
 
 
-def _permutation_confusion_metrics(self,
+def _permutation_confusion_metrics(self: Any,
                                   x: str,
                                   round_id: int,
                                   *,
                                   pred_col: str = 'predictions',
                                   actual_col: str = 'actuals',
-                                  proba_col: Optional[str] = None,
+                                  proba_col: str | None = None,
                                   threshold: float = 0.5,
                                   outlier_quantiles: Sequence[float] = (0.01, 0.99),
                                   outlier_mode: str = 'filter',
-                                  id_cols: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
+                                  id_cols: dict[str, Any] | None = None) -> pd.DataFrame:
     '''
     Compute a single-row trimmed report for long-only evaluation: precision,
     recall, signal rates, counts and payoffs, and TP–FP separation.
@@ -35,31 +36,31 @@ def _permutation_confusion_metrics(self,
                       'tp_count', 'fp_count', 'tp_x_mean', 'tp_x_median', 'fp_x_mean', 'fp_x_median',
                       'pred_pos_x_mean', 'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks'
     '''
-    
+
     df = self.permutation_prediction_performance(round_id)
 
     # Optional: binarize from probabilities
     if proba_col is not None:
         if proba_col not in df:
             raise ValueError(f'proba_col "{proba_col}" not found')
-    
+
         df[pred_col] = (df[proba_col].astype(float) >= float(threshold)).astype(int)
 
     # Validate required columns
     for col in (pred_col, actual_col, x):
         if col not in df:
             raise ValueError(f'column "{col}" not found')
-    
+
     df[pred_col] = df[pred_col].astype(int)
     df[actual_col] = df[actual_col].astype(int)
 
     q_lo, q_hi = df[x].quantile(outlier_quantiles)
     if outlier_mode == 'filter':
         df = df[(df[x] >= q_lo) & (df[x] <= q_hi)]
-    
+
     elif outlier_mode == 'winsor':
         df[x] = df[x].clip(q_lo, q_hi)
-    
+
     else:
         raise ValueError('outlier_mode must be "filter" or "winsor"')
 
@@ -74,7 +75,7 @@ def _permutation_confusion_metrics(self,
     m_tn = (pred == 0) & (act == 0)
     m_fn = (pred == 0) & (act == 1)
 
-    def _stats(mask: pd.Series) -> Dict[str, float]:
+    def _stats(mask: pd.Series) -> dict[str, float]:
         s = df.loc[mask, x]
         k = int(mask.sum())
         return {
@@ -101,33 +102,34 @@ def _permutation_confusion_metrics(self,
     pred_pos_median_x = df.loc[pred == 1, x].median() if pred_pos_count else np.nan
 
     def _cohen_d(a: np.ndarray, b: np.ndarray) -> float:
-        
-        if len(a) < 2 or len(b) < 2:
+
+        MIN_SAMPLES_FOR_COHEN_D = 2
+        if len(a) < MIN_SAMPLES_FOR_COHEN_D or len(b) < MIN_SAMPLES_FOR_COHEN_D:
             return np.nan
-        
+
         ma, mb = np.nanmean(a), np.nanmean(b)
         va, vb = np.nanvar(a, ddof=1), np.nanvar(b, ddof=1)
         sp_num = (len(a)-1)*va + (len(b)-1)*vb
-        sp_den = (len(a)+len(b)-2)
-        
+        sp_den = (len(a)+len(b)-MIN_SAMPLES_FOR_COHEN_D)
+
         if sp_den <= 0:
             return np.nan
-        
+
         sp = sqrt(sp_num / sp_den) if sp_num > 0 else np.nan
-        
+
         return (ma - mb) / sp if sp and not np.isnan(sp) else np.nan
 
     def _ks(a: np.ndarray, b: np.ndarray) -> float:
-        
+
         if len(a) == 0 or len(b) == 0:
             return np.nan
-        
+
         a_sorted = np.sort(a)
         b_sorted = np.sort(b)
         all_vals = np.unique(np.concatenate([a_sorted, b_sorted]))
         cdf_a = np.searchsorted(a_sorted, all_vals, side='right') / len(a_sorted)
         cdf_b = np.searchsorted(b_sorted, all_vals, side='right') / len(b_sorted)
-        
+
         return float(np.max(np.abs(cdf_a - cdf_b)))
 
     tp_x = df.loc[m_tp, x].to_numpy()
@@ -135,7 +137,7 @@ def _permutation_confusion_metrics(self,
     tp_fp_cohen_d = _cohen_d(tp_x, fp_x)
     tp_fp_ks = _ks(tp_x, fp_x)
 
-    data = pd.DataFrame.from_records([{
+    return pd.DataFrame.from_records([{
         **(id_cols or {}),
         'pred_pos_rate_pct': round(float(pred_pos_rate) * 100.0, 1),
         'actual_pos_rate_pct': round(float(actual_pos_rate) * 100.0, 1),
@@ -155,5 +157,4 @@ def _permutation_confusion_metrics(self,
         'x_name': x,
         'n_kept': int(n),
     }])
-    
-    return data
+

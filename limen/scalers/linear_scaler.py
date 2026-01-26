@@ -55,7 +55,7 @@ def build_rules(
     overrides: dict[str, list[str]] | None = None,
     base_rules: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    
+
     """
     Build scaling rules by combining base rules and user overrides.
 
@@ -92,7 +92,7 @@ def get_scaling_rule(col: str, rules: dict[str, str], default: str = 'none') -> 
     for pattern, rule in rules.items():
         if re.match(pattern, col):
             return rule
-        
+
     return default
 
 
@@ -102,8 +102,8 @@ class LinearScaler:
         x_train: pl.DataFrame,
         rules: dict[str, str] | None = None,
         default: str = 'standard',
-    ):
-        
+    ) -> None:
+
         """
         Linear transformation utility for scaling features.
 
@@ -134,7 +134,7 @@ class LinearScaler:
             self.stds[col] = std
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
-        
+
         """
         Apply linear scaling transformation.
 
@@ -151,13 +151,13 @@ class LinearScaler:
 
             if rule == 'standard':
                 exprs.append(((pl.col(col) - self.means[col]) / self.stds[col]).alias(col))
-            
+
             elif rule == 'log_standard':
                 exprs.append(((pl.col(col).log1p() - self.means[col]) / self.stds[col]).alias(col))
-            
+
             elif rule == 'divide_100':
                 exprs.append((pl.col(col) / 100).alias(col))
-            
+
             elif rule == 'none':
                 exprs.append(pl.col(col).alias(col))
 
@@ -183,13 +183,13 @@ def inverse_transform(df: pl.DataFrame, scaler: LinearScaler) -> pl.DataFrame:
 
         if rule == 'standard':
             exprs.append((pl.col(col) * scaler.stds[col] + scaler.means[col]).alias(col))
-        
+
         elif rule == 'log_standard':
             exprs.append(((pl.col(col) * scaler.stds[col] + scaler.means[col]).exp() - 1).alias(col))
-        
+
         elif rule == 'divide_100':
             exprs.append((pl.col(col) * 100).alias(col))
-        
+
         elif rule == 'none':
             exprs.append(pl.col(col).alias(col))
 

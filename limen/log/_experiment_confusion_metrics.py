@@ -1,12 +1,13 @@
+from typing import Any
 import tqdm
 import pandas as pd
 
 
-def _experiment_confusion_metrics(self, x: str, disable_progress_bar: bool = False) -> pd.DataFrame:
+def _experiment_confusion_metrics(self: Any, x: str, disable_progress_bar: bool = False) -> pd.DataFrame:
 
     '''
     Compute confusion metrics for each round of an experiment.
-    
+
     Args:
         x (str): Column name to compute confusion metrics for
         disable_progress_bar (bool): Whether to disable the progress bar
@@ -16,7 +17,7 @@ def _experiment_confusion_metrics(self, x: str, disable_progress_bar: bool = Fal
     '''
 
     all_rows = []
-    
+
     for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
 
         result_df = self.permutation_confusion_metrics(x=x,
@@ -28,3 +29,4 @@ def _experiment_confusion_metrics(self, x: str, disable_progress_bar: bool = Fal
     df_all = pd.concat(all_rows, ignore_index=True)
 
     return df_all
+

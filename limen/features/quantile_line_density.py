@@ -1,13 +1,12 @@
 import polars as pl
 import numpy as np
-from typing import List, Dict
 
 
 def quantile_line_density(data: pl.DataFrame,
-                          long_lines_q: List[Dict],
-                          short_lines_q: List[Dict],
+                          long_lines_q: list[dict],
+                          short_lines_q: list[dict],
                           lookback_hours: int) -> pl.DataFrame:
-    
+
     '''
     Compute count of quantile-filtered line ends within lookback_hours window.
 
@@ -16,7 +15,7 @@ def quantile_line_density(data: pl.DataFrame,
         long_lines_q (list[dict]): Quantile-filtered long lines with 'end_idx'
         short_lines_q (list[dict]): Quantile-filtered short lines with 'end_idx'
         lookback_hours (int): Window size in hours for density calculation
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'quantile_line_density_48h'
     '''

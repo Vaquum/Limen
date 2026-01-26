@@ -1,12 +1,11 @@
 import polars as pl
 import numpy as np
-from typing import List, Dict
 
 
 def active_lines(data: pl.DataFrame,
-                 long_lines: List[Dict],
-                 short_lines: List[Dict]) -> pl.DataFrame:
-    
+                 long_lines: list[dict],
+                 short_lines: list[dict]) -> pl.DataFrame:
+
     '''
     Compute active line count per row from provided long and short line spans.
 
@@ -14,7 +13,7 @@ def active_lines(data: pl.DataFrame,
         data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
         long_lines (list[dict]): Long line definitions with 'start_idx' and 'end_idx'
         short_lines (list[dict]): Short line definitions with 'start_idx' and 'end_idx'
-        
+
     Returns:
         pl.DataFrame: The input data with a new column 'active_lines'
     '''

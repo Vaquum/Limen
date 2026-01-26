@@ -15,7 +15,7 @@ def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.D
     '''
 
     # Numeric columns excluding the time column
-    num_cols = [c for c, dt in zip(df.columns, df.dtypes)
+    num_cols = [c for c, dt in zip(df.columns, df.dtypes, strict=True)
                 if dt.is_numeric() and c != time_col]
 
     if not num_cols:

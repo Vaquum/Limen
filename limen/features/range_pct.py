@@ -2,10 +2,10 @@ import polars as pl
 
 
 def range_pct(data: pl.DataFrame) -> pl.DataFrame:
-    
+
     '''
     Compute range as percentage of close price (high-low)/close.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with 'high', 'low', and 'close' columns
 

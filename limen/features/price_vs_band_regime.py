@@ -21,7 +21,7 @@ def price_vs_band_regime(df: pl.DataFrame,
     '''
 
     center = pl.col('close').rolling_mean(window_size=period)
-    
+
     if band == 'dev_std':
         dev = pl.col('close') - center
         width = dev.rolling_std(window_size=period)

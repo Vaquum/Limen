@@ -1,4 +1,4 @@
-def data_dict_to_numpy(data: dict, keys: list = None) -> dict:
+def data_dict_to_numpy(data: dict, keys: list | None = None) -> dict:
 
     '''
     Convert data dictionary entries from polars/pandas to numpy arrays.

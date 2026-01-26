@@ -7,7 +7,7 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
                                    kline_interval: str = "1h",
                                    base_window_s: int = 60,
                                    levels: int = 6) -> pl.DataFrame:
-    
+
     '''
     Compute multi-scale, conserved-flux features and their deviation scores
     for each k-line—turning raw trade ticks into a six-value fingerprint that
@@ -57,11 +57,11 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
     }
 
     def _bar_features(g: pl.DataFrame) -> pl.DataFrame:
-        
+
         flux_vec, ent_vec = _per_scale_stats(
             g, base_window_s=base_window_s, levels=levels
         )
-        
+
         if len(flux_vec) == 0:
             return pl.DataFrame({k: [None] for k in feature_schema})  # empty bar
 
@@ -98,12 +98,12 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
             .sort('datetime'))
 
 
-def _per_scale_stats(trades: pl.DataFrame, *, base_window_s=60, levels=6):
-    
+def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: int = 6) -> tuple[np.ndarray, np.ndarray]:
+
     rel_std, ent = [], []
-    
+
     for k in range(levels):
-        
+
         span = f"{base_window_s * 2**k}s"
         bins = trades.group_by_dynamic('datetime', every=span, closed='left').agg(
             pl.col('value').sum().alias('flux'),
@@ -113,9 +113,10 @@ def _per_scale_stats(trades: pl.DataFrame, *, base_window_s=60, levels=6):
                  ).sum()
             ).alias('entropy')
         )
-        if bins.height < 2:
+        MIN_BINS_FOR_STATS = 2
+        if bins.height < MIN_BINS_FOR_STATS:
             continue
         rel_std.append(float(bins['flux'].std(ddof=0) / bins['flux'].mean()))
         ent.append(float(bins['entropy'].mean()))
-    
+
     return np.array(rel_std), np.array(ent)
