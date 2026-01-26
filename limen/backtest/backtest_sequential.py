@@ -4,7 +4,7 @@ from limen.trading import Account
 
 class BacktestSequential:
 
-    def __init__(self, start_usdt: int | float = 30000) -> None:
+    def __init__(self, start_usdt: float = 30000) -> None:
 
         self.fee_rate = 0.001
 
