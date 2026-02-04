@@ -92,8 +92,8 @@ def _breakout_roc(data: pl.DataFrame,
     '''
 
     try:
-        current_lag = int(long_col.split('-')[-1])
-        next_lag = int(next_long_col.split('-')[-1])
+        current_lag = int(long_col.rsplit('-', 1)[-1])
+        next_lag = int(next_long_col.rsplit('-', 1)[-1])
         base_lag = min(current_lag, next_lag)
         lag_diff = abs(current_lag - next_lag)
         suffix = f"_{base_lag}_{lag_diff}"
@@ -146,8 +146,8 @@ def breakout_features(data: pl.DataFrame,
     df = _breakout_roc(df, current_long_col, current_short_col, next_long_col, next_short_col)
 
     try:
-        current_lag = int(current_long_col.split('-')[-1])
-        next_lag = int(next_long_col.split('-')[-1])
+        current_lag = int(current_long_col.rsplit('-', 1)[-1])
+        next_lag = int(next_long_col.rsplit('-', 1)[-1])
         base_lag = min(current_lag, next_lag)
         lag_diff = abs(current_lag - next_lag)
         roc_suffix = f"_{base_lag}_{lag_diff}"
