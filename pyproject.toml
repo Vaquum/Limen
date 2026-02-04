@@ -109,6 +109,7 @@ ignore = [
   "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
   "C401",    # Unnecessary generator (rewrite as a set comprehension)
   "RET504",  # Unnecessary assignment to variable before return statement
+  "PLW0108", # Lambda may be unnecessary; consider inlining inner function
 ]
 
 # Allow unused variables when underscore-prefixed.
