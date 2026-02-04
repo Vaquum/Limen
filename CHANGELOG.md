@@ -492,3 +492,8 @@
 - Add comprehensive type hints to `experiment_core`, `account`, and `backtest` modules
 - Clean up unused arguments and imports
 - Update GitHub Actions workflow to enforce linting checks
+
+## v1.32.2 on 4th of February, 2026
+
+- Add Ruff linter exception for unnecessary lambda in `manifest_core.py` to allow preferred implementation style
+
