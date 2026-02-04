@@ -536,7 +536,7 @@ def make_fitted_scaler(param_name: str, transform_class: Any) -> FittedTransform
     '''
 
     return ([
-        (param_name, transform_class, {})
+        (param_name, lambda data: transform_class(data), {})
     ],
     _apply_fitted_transform, {
         'fitted_transform': param_name
