@@ -116,6 +116,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "BLE001"]
+"limen/experiment/manifest_core.py" = ["PLW0108"]
 
 [tool.ruff.lint.pylint]
 max-statements = 50
