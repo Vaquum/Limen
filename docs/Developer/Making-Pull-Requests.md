@@ -8,16 +8,16 @@ We have PR reviews for every PR, but the responsibility is with the author of th
 
 Every PR must minimally involve successfully going through the following steps: 
 
-- [ ] Self-review completed (reviewed full diff in “Files changed”)
-- [ ] No unnecessary files are included in the changes
-- [ ] Ran `python tests/run.py` successfully (where applicable)
-- [ ] Updated `/docs` (if behavior/API/config/user/etc changed)
-- [ ] Added/updated docstrings per [Writing Docstrings](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Writing-Docstrings.md) (for any changed public functions/classes)
-- [ ] Updated CHANGELOG.md (unless only docs or other non-code aspect was changed)
-- [ ] Added and/or updated tests (if behavior changed or new code paths added)
-- [ ] Validated changes manually
-- [ ] Validated changes with LLM
-- [ ] Removed any extraneous examples/comments
-- [ ] Linked issue is set to auto-close on merge (e.g., “Fixes #123”) when applicable
+- [ ] I have reviewed full diff in “Files changed”)
+- [ ] I left no unnecessary files in the changes
+- [ ] I ran `python tests/run.py` locally without errors (where applicable)
+- [ ] I updated `/docs` (if behavior/API/config/user/etc changed)
+- [ ] I added and/or updated docstrings as per [Writing Docstrings](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Writing-Docstrings.md) (for any changed public functions/classes)
+- [ ] I updated CHANGELOG.md (unless only docs or other non-code aspect was changed)
+- [ ] I added and/or updated tests (if behavior changed or new code paths added)
+- [ ] I validated changes manually
+- [ ] I validated changes with LLM
+- [ ] I removed any extraneous examples/comments
+- [ ] I linked issue to auto-close on merge (e.g., “Fixes #123”) when applicable
 
 Once all these boxes are checked, the PR is ready for adding reviewers.
