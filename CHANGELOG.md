@@ -492,3 +492,7 @@
 - Add comprehensive type hints to `experiment_core`, `account`, and `backtest` modules
 - Clean up unused arguments and imports
 - Update GitHub Actions workflow to enforce linting checks
+
+## v1.32.2 on 5th of February, 2026
+
+- Made naming of all PR check workflows consistent
