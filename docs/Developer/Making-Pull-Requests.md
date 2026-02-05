@@ -1,6 +1,6 @@
 # Making Pull Requests
 
-We have PR reviews for every PR, but the responsibility is with the author of the PR to ensure that the PR promoted for review is in a mergeable state: CI is green, tests pass locally, and there are no merge conflicts. Moreover, not everything can be catched by tests, so the author is further responsible for having carefully gone through the proposed changed with regards to their implications to the codebase.
+We have PR reviews for every PR, but the responsibility is with the author of the PR to ensure that the PR promoted for review is in a mergeable state: CI is green, tests pass locally, and there are no merge conflicts. Moreover, not everything can be caught by tests, so the author is further responsible for having carefully gone through the proposed changed with regards to their implications to the codebase.
 
 **NOTE:** The author must always **first review the PR themselves**, before requesting review from others, that means carefully having reviewed the full diff in GitHub.
 
