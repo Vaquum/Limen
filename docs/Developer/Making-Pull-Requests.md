@@ -8,7 +8,7 @@ We have PR reviews for every PR, but the responsibility is with the author of th
 
 Every PR must minimally involve successfully going through the following steps: 
 
-- [ ] I have reviewed full diff in “Files changed”)
+- [ ] I have reviewed full diff in “Files changed”
 - [ ] I left no unnecessary files in the changes
 - [ ] I ran `python tests/run.py` locally without errors (where applicable)
 - [ ] I updated `/docs` (if behavior/API/config/user/etc changed)
