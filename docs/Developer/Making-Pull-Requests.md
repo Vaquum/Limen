@@ -14,6 +14,7 @@ Every PR must minimally involve successfully going through the following steps:
 - [ ] I updated `/docs` (if behavior/API/config/user/etc changed)
 - [ ] I added and/or updated docstrings as per [Writing Docstrings](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Writing-Docstrings.md) (for any changed public functions/classes)
 - [ ] I updated CHANGELOG.md (unless only docs or other non-code aspect was changed)
+- [ ] I updated pyproject.toml (unless only docs or other non-code aspect was changed)
 - [ ] I added and/or updated tests (if behavior changed or new code paths added)
 - [ ] I validated changes manually
 - [ ] I validated changes with LLM
