@@ -2,7 +2,7 @@
 
 ## General Must-Read Developer Documentation
 
-[Vaquum Developer Docs](https://github.com/Vaquum/dev-docs/blob/main/src/README.md)
+[Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/)
 
 ## Limen Specific Developer Docs
 
