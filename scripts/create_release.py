@@ -198,6 +198,10 @@ def main() -> None:
         print('Error: GITHUB_TOKEN environment variable not set')
         sys.exit(1)
 
+    # Get model from environment variable or use default
+    model = os.getenv('ANTHROPIC_MODEL', 'claude-opus-4-6')
+    print(f'Using model: {model}')
+
     print('Creating release with Claude AI...')
 
     # Create the prompt
@@ -209,7 +213,7 @@ def main() -> None:
 
     try:
         message = client.messages.create(
-            model='claude-3-5-sonnet-20241022',
+            model=model,
             max_tokens=4096,
             messages=[
                 {'role': 'user', 'content': prompt}
