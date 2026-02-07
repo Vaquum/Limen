@@ -52,7 +52,7 @@ def get_git_log_since_last_tag() -> str:
         else:
             # No tags exist, get recent commits
             log_result = subprocess.run(
-                ['git', 'log', '--oneline', '-n', '50'],
+                ['git', 'log', '--oneline', '-n', str(MAX_COMMITS)],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -122,20 +122,41 @@ def parse_claude_response(response_text: str) -> dict:
     if start == -1:
         raise ValueError(f'Could not find JSON in response: {response_text}') from None
 
-    # Count braces to find the matching closing brace
+    # Count braces to find the matching closing brace, accounting for strings
     brace_count = 0
+    in_string = False
+    escape_next = False
+
     for i in range(start, len(response_text)):
-        if response_text[i] == '{':
-            brace_count += 1
-        elif response_text[i] == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                # Found matching brace
-                json_str = response_text[start:i+1]
-                try:
-                    return json.loads(json_str)
-                except json.JSONDecodeError as e:
-                    raise ValueError(f'Invalid JSON extracted: {json_str}') from e
+        char = response_text[i]
+
+        # Handle escape sequences
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == '\\':
+            escape_next = True
+            continue
+
+        # Track if we're inside a string
+        if char == '"':
+            in_string = not in_string
+            continue
+
+        # Only count braces outside of strings
+        if not in_string:
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    # Found matching brace
+                    json_str = response_text[start:i+1]
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError as e:
+                        raise ValueError(f'Invalid JSON extracted: {json_str}') from e
 
     raise ValueError(f'Could not find complete JSON object in response: {response_text}') from None
 
