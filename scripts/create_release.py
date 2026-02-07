@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Automated release creation script using Claude AI."""
-# ruff: noqa: T201, S607, S603, S108, BLE001
+# ruff: noqa: T201, S607, S603, BLE001, PLR2004
 
 import os
 import re
 import subprocess
 import sys
-from datetime import datetime
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import anthropic
@@ -64,9 +65,8 @@ def get_git_log_since_last_tag() -> str:
 
 def increment_version(version: str) -> str:
     """Increment the patch version."""
-    VERSION_PARTS = 3
     parts = version.split('.')
-    if len(parts) != VERSION_PARTS:
+    if len(parts) != 3:
         raise ValueError(f'Invalid version format: {version}')
 
     major, minor, patch = parts
@@ -80,7 +80,7 @@ def create_prompt() -> str:
     current_version = get_current_version()
     new_version = increment_version(current_version)
     git_log = get_git_log_since_last_tag()
-    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
+    current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
     prompt = f"""You are creating a new release for the Limen project.
 
@@ -144,15 +144,19 @@ def create_git_tag(tag: str, message: str) -> None:
 def create_github_release(tag: str, title: str, notes: str) -> None:
     """Create a GitHub release using gh CLI."""
     # Write notes to a temporary file to handle multiline content
-    notes_file = '/tmp/release_notes.md'
-    with Path(notes_file).open('w') as f:
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        notes_file = f.name
         f.write(notes)
 
-    subprocess.run(
-        ['gh', 'release', 'create', tag, '--title', title, '--notes-file', notes_file],
-        check=True,
-    )
-    print(f'Created GitHub release: {title} ({tag})')
+    try:
+        subprocess.run(
+            ['gh', 'release', 'create', tag, '--title', title, '--notes-file', notes_file],
+            check=True,
+        )
+        print(f'Created GitHub release: {title} ({tag})')
+    finally:
+        # Clean up temporary file
+        Path(notes_file).unlink(missing_ok=True)
 
 
 def main() -> None:
