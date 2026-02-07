@@ -62,7 +62,7 @@ The simplest way to start contributing is by [joining an open discussion](https:
 
 # Vulnerabilities
 
-Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/Vaquum/Limen/security/advisories).
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/Vaquum/Limen/security/advisories/new).
 
 # Citations
 
