@@ -8,8 +8,8 @@ When you are instructed to create a release, follow these steps precisely:
 
 ### 1. Determine the New Version
 
-- Read the current version from `pyproject.toml` (look for the `version` field in the `[project]` section)
-- This version will be used for both the git tag and the release
+- Read the version from `pyproject.toml` (look for the `version` field in the `[project]` section)
+- Use this version for both the git tag and the release
 
 ### 2. Create the Git Tag
 
