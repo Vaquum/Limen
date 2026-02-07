@@ -163,24 +163,32 @@ def parse_claude_response(response_text: str) -> dict:
 
 def tag_exists(tag: str) -> bool:
     """Check if a git tag already exists locally or remotely."""
-    # Check local tags first
-    result = subprocess.run(
-        ['git', 'tag', '-l', tag],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.stdout.strip() == tag:
-        return True
+    try:
+        # Check local tags first
+        result = subprocess.run(
+            ['git', 'tag', '-l', tag],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        if result.stdout.strip() == tag:
+            return True
 
-    # Check remote tags
-    result = subprocess.run(
-        ['git', 'ls-remote', '--tags', 'origin', f'refs/tags/{tag}'],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return len(result.stdout.strip()) > 0
+        # Check remote tags
+        result = subprocess.run(
+            ['git', 'ls-remote', '--tags', 'origin', f'refs/tags/{tag}'],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+        return len(result.stdout.strip()) > 0
+    except (subprocess.TimeoutExpired, Exception) as e:
+        # If we can't check, assume tag doesn't exist and let the
+        # actual tag creation fail with a proper error message
+        print(f'Warning: Could not check if tag exists: {e}')
+        return False
 
 
 def create_git_tag(tag: str, message: str) -> None:
