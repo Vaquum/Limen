@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Automated release creation script using Claude AI."""
+# ruff: noqa: T201, S607, S603, S108, BLE001
 
 import os
 import re
@@ -36,7 +37,7 @@ def get_git_log_since_last_tag() -> str:
             text=True,
             check=False,
         )
-        
+
         if result.returncode == 0:
             last_tag = result.stdout.strip()
             # Get commits since that tag
@@ -57,16 +58,17 @@ def get_git_log_since_last_tag() -> str:
     except subprocess.CalledProcessError as e:
         print(f'Error getting git log: {e}')
         return ''
-    
+
     return log_result.stdout.strip()
 
 
 def increment_version(version: str) -> str:
     """Increment the patch version."""
+    VERSION_PARTS = 3
     parts = version.split('.')
-    if len(parts) != 3:
+    if len(parts) != VERSION_PARTS:
         raise ValueError(f'Invalid version format: {version}')
-    
+
     major, minor, patch = parts
     new_patch = int(patch) + 1
     return f'{major}.{minor}.{new_patch}'
@@ -79,7 +81,7 @@ def create_prompt() -> str:
     new_version = increment_version(current_version)
     git_log = get_git_log_since_last_tag()
     current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
-    
+
     prompt = f"""You are creating a new release for the Limen project.
 
 CURRENT STATE:
@@ -112,14 +114,14 @@ IMPORTANT REQUIREMENTS:
 5. Return ONLY valid JSON, no other text
 
 Generate the release information now:"""
-    
+
     return prompt
 
 
 def parse_claude_response(response_text: str) -> dict:
     """Parse Claude's JSON response."""
     import json
-    
+
     # Try to extract JSON from the response
     try:
         # First try to parse directly
@@ -129,7 +131,7 @@ def parse_claude_response(response_text: str) -> dict:
         json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
         if json_match:
             return json.loads(json_match.group())
-        raise ValueError(f'Could not parse JSON from response: {response_text}')
+        raise ValueError(f'Could not parse JSON from response: {response_text}') from None
 
 
 def create_git_tag(tag: str, message: str) -> None:
@@ -145,7 +147,7 @@ def create_github_release(tag: str, title: str, notes: str) -> None:
     notes_file = '/tmp/release_notes.md'
     with Path(notes_file).open('w') as f:
         f.write(notes)
-    
+
     subprocess.run(
         ['gh', 'release', 'create', tag, '--title', title, '--notes-file', notes_file],
         check=True,
@@ -159,21 +161,21 @@ def main() -> None:
     if not api_key:
         print('Error: ANTHROPIC_API_KEY environment variable not set')
         sys.exit(1)
-    
+
     github_token = os.getenv('GITHUB_TOKEN')
     if not github_token:
         print('Error: GITHUB_TOKEN environment variable not set')
         sys.exit(1)
-    
+
     print('Creating release with Claude AI...')
-    
+
     # Create the prompt
     prompt = create_prompt()
     print(f'\nPrompt length: {len(prompt)} characters')
-    
+
     # Call Claude API
     client = anthropic.Anthropic(api_key=api_key)
-    
+
     try:
         message = client.messages.create(
             model='claude-3-5-sonnet-20241022',
@@ -182,35 +184,35 @@ def main() -> None:
                 {'role': 'user', 'content': prompt}
             ]
         )
-        
+
         response_text = message.content[0].text
         print(f'\nClaude response received ({len(response_text)} characters)')
-        
+
         # Parse the response
         release_info = parse_claude_response(response_text)
-        
-        print(f'\nRelease Information:')
+
+        print('\nRelease Information:')
         print(f'  Version: {release_info["version"]}')
         print(f'  Tag: {release_info["tag"]}')
         print(f'  Name: {release_info["release_name"]}')
-        print(f'\nRelease Notes Preview:')
+        print('\nRelease Notes Preview:')
         print(release_info['release_notes'][:500] + '...')
-        
+
         # Create git tag
         create_git_tag(
             release_info['tag'],
             f'Release {release_info["version"]}: {release_info["release_name"]}'
         )
-        
+
         # Create GitHub release
         create_github_release(
             release_info['tag'],
             release_info['release_name'],
             release_info['release_notes']
         )
-        
+
         print('\n✓ Release created successfully!')
-        
+
     except Exception as e:
         print(f'\nError creating release: {e}')
         sys.exit(1)
