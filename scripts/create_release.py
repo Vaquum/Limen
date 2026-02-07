@@ -161,6 +161,28 @@ def parse_claude_response(response_text: str) -> dict:
     raise ValueError(f'Could not find complete JSON object in response: {response_text}') from None
 
 
+def tag_exists(tag: str) -> bool:
+    """Check if a git tag already exists locally or remotely."""
+    # Check local tags first
+    result = subprocess.run(
+        ['git', 'tag', '-l', tag],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.stdout.strip() == tag:
+        return True
+
+    # Check remote tags
+    result = subprocess.run(
+        ['git', 'ls-remote', '--tags', 'origin', f'refs/tags/{tag}'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return len(result.stdout.strip()) > 0
+
+
 def create_git_tag(tag: str, message: str) -> None:
     """Create and push a git tag."""
     subprocess.run(['git', 'tag', '-a', tag, '-m', message], check=True)
@@ -232,6 +254,12 @@ def main() -> None:
         print(f'  Name: {release_info["release_name"]}')
         print('\nRelease Notes Preview:')
         print(release_info['release_notes'][:500] + '...')
+
+        # Check if tag already exists
+        if tag_exists(release_info['tag']):
+            print(f'\n✓ Tag {release_info["tag"]} already exists. Skipping release creation.')
+            print('This is expected when the version in pyproject.toml has not changed.')
+            sys.exit(0)
 
         # Create git tag
         create_git_tag(
