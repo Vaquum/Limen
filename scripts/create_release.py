@@ -29,7 +29,8 @@ def get_current_version() -> str:
 
 
 def get_git_log_since_last_tag() -> str:
-    """Get git log since the last tag, or all commits if no tags exist."""
+    """Get git log since the last tag, limited to prevent context overflow."""
+    MAX_COMMITS = 100
     try:
         # Get the latest tag
         result = subprocess.run(
@@ -41,15 +42,15 @@ def get_git_log_since_last_tag() -> str:
 
         if result.returncode == 0:
             last_tag = result.stdout.strip()
-            # Get commits since that tag
+            # Get commits since that tag, limited to MAX_COMMITS
             log_result = subprocess.run(
-                ['git', 'log', f'{last_tag}..HEAD', '--oneline'],
+                ['git', 'log', f'{last_tag}..HEAD', '--oneline', '-n', str(MAX_COMMITS)],
                 capture_output=True,
                 text=True,
                 check=True,
             )
         else:
-            # No tags exist, get all commits
+            # No tags exist, get recent commits
             log_result = subprocess.run(
                 ['git', 'log', '--oneline', '-n', '50'],
                 capture_output=True,
@@ -109,16 +110,34 @@ def parse_claude_response(response_text: str) -> dict:
     """Parse Claude's JSON response."""
     import json
 
-    # Try to extract JSON from the response
+    # Try to parse directly first
     try:
-        # First try to parse directly
         return json.loads(response_text)
     except json.JSONDecodeError:
-        # Try to find JSON in the response
-        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group())
-        raise ValueError(f'Could not parse JSON from response: {response_text}') from None
+        pass
+
+    # If direct parsing fails, try to extract JSON more carefully
+    # Look for the first { and find its matching }
+    start = response_text.find('{')
+    if start == -1:
+        raise ValueError(f'Could not find JSON in response: {response_text}') from None
+
+    # Count braces to find the matching closing brace
+    brace_count = 0
+    for i in range(start, len(response_text)):
+        if response_text[i] == '{':
+            brace_count += 1
+        elif response_text[i] == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                # Found matching brace
+                json_str = response_text[start:i+1]
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError as e:
+                    raise ValueError(f'Invalid JSON extracted: {json_str}') from e
+
+    raise ValueError(f'Could not find complete JSON object in response: {response_text}') from None
 
 
 def create_git_tag(tag: str, message: str) -> None:
