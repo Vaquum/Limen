@@ -9,8 +9,7 @@ When you are instructed to create a release, follow these steps precisely:
 ### 1. Determine the New Version
 
 - Read the current version from `pyproject.toml` (look for the `version` field in the `[project]` section)
-- Increment the version following semantic versioning principles based on the changes
-- The new version will be used for both the git tag and the release
+- This version will be used for both the git tag and the release
 
 ### 2. Create the Git Tag
 
@@ -24,7 +23,6 @@ git push origin v<NEW_VERSION>
 ### 3. Analyze Changes Since Last Release
 
 - Use `git log` to identify all commits since the previous release
-- If no previous release exists, analyze all recent commits
 - Group changes by type: features, fixes, improvements, documentation, etc.
 - Understand the impact and purpose of each change
 

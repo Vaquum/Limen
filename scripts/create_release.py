@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Automated release creation script using Claude AI."""
-# ruff: noqa: T201, S607, S603, BLE001, PLR2004
+# ruff: noqa: T201, S607, S603, BLE001
 
 import os
 import re
@@ -63,49 +63,36 @@ def get_git_log_since_last_tag() -> str:
     return log_result.stdout.strip()
 
 
-def increment_version(version: str) -> str:
-    """Increment the patch version."""
-    parts = version.split('.')
-    if len(parts) != 3:
-        raise ValueError(f'Invalid version format: {version}')
-
-    major, minor, patch = parts
-    new_patch = int(patch) + 1
-    return f'{major}.{minor}.{new_patch}'
-
-
 def create_prompt() -> str:
     """Create the prompt for Claude to generate release information."""
     docs = read_file('docs/Developer/Making-Release.md')
-    current_version = get_current_version()
-    new_version = increment_version(current_version)
+    version = get_current_version()
     git_log = get_git_log_since_last_tag()
     current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
     prompt = f"""You are creating a new release for the Limen project.
 
 CURRENT STATE:
-- Current version in pyproject.toml: {current_version}
-- New version to release: {new_version}
+- Version in pyproject.toml: {version}
 - Current date/time: {current_date}
 
 RELEASE DOCUMENTATION:
 {docs}
 
 GIT CHANGES SINCE LAST RELEASE:
-{git_log if git_log else "No previous releases found. This will be the first release."}
+{git_log}
 
 TASK:
 Based on the release documentation and the git changes above, create a JSON response with the following structure:
 {{
-    "version": "{new_version}",
-    "tag": "v{new_version}",
+    "version": "{version}",
+    "tag": "v{version}",
     "release_name": "<creative name based on lunar calendar animals>",
     "release_notes": "<markdown formatted release notes with Summary and Details sections>"
 }}
 
 IMPORTANT REQUIREMENTS:
-1. The tag MUST use lowercase 'v' prefix (e.g., v{new_version})
+1. The tag MUST use lowercase 'v' prefix (e.g., v{version})
 2. The release_name should be a creative play on lunar calendar animals (year, month, day, hour)
 3. The release_notes must include:
    - ## Summary section: concise bullet points of key changes
