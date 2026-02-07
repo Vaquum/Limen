@@ -60,6 +60,10 @@ The simplest way to start contributing is by [joining an open discussion](https:
 
 **Before contributing, make sure to start by reading through the** [Contributing Guidelines](https://github.com/Vaquum/Limen/tree/main/docs/Developer).
 
+# Vulnerabilities
+
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/Vaquum/Limen/security/advisories).
+
 # Citations
 
 If you use Limen for published work, please cite:
