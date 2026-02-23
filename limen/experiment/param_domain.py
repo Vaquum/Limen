@@ -17,6 +17,13 @@ class ParamDomain:
 
     def __init__(self, params: dict[str, list[Any]]) -> None:
 
+        '''
+        Initialize the ParamDomain.
+
+        Args:
+            params: Dict mapping parameter names to non-empty lists of values.
+        '''
+
         for k, v in params.items():
             if not isinstance(v, list) or len(v) == 0:
                 raise ValueError(

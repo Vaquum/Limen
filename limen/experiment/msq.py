@@ -32,6 +32,16 @@ class MSQ:
         max_filter_retries: int = 1000,
     ) -> None:
 
+        '''
+        Initialize the MSQ.
+
+        Args:
+            strategy: SearchStrategy instance to generate combinations.
+            domain: ParamDomain shared with the strategy.
+            n_permutations: Optional hard cap on total combinations yielded.
+            max_filter_retries: Max consecutive filter rejections before error.
+        '''
+
         if strategy.domain is not domain:
             raise ValueError(
                 'strategy.domain and domain must reference the same ParamDomain'

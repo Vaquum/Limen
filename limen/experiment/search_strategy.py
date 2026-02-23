@@ -18,6 +18,14 @@ class SearchStrategy(ABC):
 
     def __init__(self, domain: ParamDomain, *, seed: int | None = None) -> None:
 
+        '''
+        Initialize the SearchStrategy.
+
+        Args:
+            domain: ParamDomain to generate combinations from.
+            seed: Optional random seed for reproducibility.
+        '''
+
         self._domain = domain
         self._seed = seed
         self._generated_count: int = 0  # subclasses must increment in __next__
