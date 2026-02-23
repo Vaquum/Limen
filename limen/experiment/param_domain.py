@@ -31,7 +31,7 @@ class ParamDomain:
     @property
     def params(self) -> dict[str, list[Any]]:
 
-        '''Current parameter values. Returns a shallow copy.'''
+        '''Current parameter values. Returns a defensive copy.'''
 
         return {k: list(v) for k, v in self._params.items()}
 

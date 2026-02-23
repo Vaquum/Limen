@@ -164,7 +164,7 @@ def test_remove_custom():
 
     msq, _ = _make_msq()
 
-    msq.remove_custom(lambda c: not (c['a'] == 1 and c['b'] == 'x'))
+    msq.remove_custom(lambda c: c['a'] == 1 and c['b'] == 'x')
 
     combos = list(msq)
     assert len(combos) == 3
@@ -181,7 +181,7 @@ def test_filter_exhausted_error():
     strategy = StubStrategy(domain)
     msq = MSQ(strategy, domain, max_filter_retries=5)
 
-    msq.remove_custom(lambda c: False)
+    msq.remove_custom(lambda c: True)
 
     try:
         next(msq)

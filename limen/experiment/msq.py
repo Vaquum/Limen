@@ -101,9 +101,9 @@ class MSQ:
 
     def _passes_filters(self, combo: dict[str, Any]) -> bool:
 
-        '''Return True if combo passes all custom filters.'''
+        '''Return True if no filter wants to remove this combo.'''
 
-        return all(f(combo) for f in self._custom_filters)
+        return not any(f(combo) for f in self._custom_filters)
 
 
     def remove_is(self, param: str, value: Any) -> bool:
@@ -141,7 +141,7 @@ class MSQ:
 
         Args:
             condition: Function taking a combo dict, returning True
-                to KEEP, False to reject.
+                to REMOVE, False to keep.
         '''
 
         self._log_intervention('remove_custom', condition=repr(condition))
@@ -196,6 +196,7 @@ class MSQ:
         self._log_intervention(
             'inject', combo=combo, prioritize=prioritize,
         )
+        combo = dict(combo)
         combo_keys = set(combo.keys())
         domain_keys = set(self._domain.keys)
         missing = domain_keys - combo_keys
@@ -330,6 +331,7 @@ class MSQ:
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
+        self._custom_filters = []
         self._intervention_log = state['intervention_log']
         self._strategy.set_state(state['strategy_state'])
 
