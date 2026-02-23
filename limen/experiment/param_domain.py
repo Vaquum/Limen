@@ -20,7 +20,7 @@ class ParamDomain:
         for k, v in params.items():
             if not isinstance(v, list) or len(v) == 0:
                 raise ValueError(
-                    f'Parameter \'{k}\' must be a non-empty list, got {v!r}'
+                    f"Parameter '{k}' must be a non-empty list, got {v!r}"
                 )
 
         self._params: dict[str, list[Any]] = {k: list(v) for k, v in params.items()}
@@ -99,8 +99,8 @@ class ParamDomain:
             return False
         if len(values) == 1:
             raise ValueError(
-                f'Cannot remove \'{value}\' from \'{param}\': '
-                f'would leave domain empty.'
+                f"Cannot remove '{value}' from '{param}': "
+                f"would leave domain empty."
             )
         values.remove(value)
         self._notify([param])
@@ -124,13 +124,13 @@ class ParamDomain:
             kept = [v for v in original if v < threshold]
         except TypeError as e:
             raise TypeError(
-                f'Cannot compare values of \'{param}\' with threshold '
-                f'{threshold!r}: {e}'
+                f"Cannot compare values of '{param}' with threshold "
+                f"{threshold!r}: {e}"
             ) from e
         if len(kept) == 0:
             raise ValueError(
-                f'remove_ge({param}, {threshold}) would remove all '
-                f'{len(original)} values. Current values: {original}'
+                f"remove_ge({param}, {threshold}) would remove all "
+                f"{len(original)} values. Current values: {original}"
             )
         removed_count = len(original) - len(kept)
         if removed_count > 0:
@@ -156,13 +156,13 @@ class ParamDomain:
             kept = [v for v in original if v > threshold]
         except TypeError as e:
             raise TypeError(
-                f'Cannot compare values of \'{param}\' with threshold '
-                f'{threshold!r}: {e}'
+                f"Cannot compare values of '{param}' with threshold "
+                f"{threshold!r}: {e}"
             ) from e
         if len(kept) == 0:
             raise ValueError(
-                f'remove_le({param}, {threshold}) would remove all '
-                f'{len(original)} values. Current values: {original}'
+                f"remove_le({param}, {threshold}) would remove all "
+                f"{len(original)} values. Current values: {original}"
             )
         removed_count = len(original) - len(kept)
         if removed_count > 0:
@@ -186,8 +186,8 @@ class ParamDomain:
         kept = [v for v in original if v in values]
         if len(kept) == 0:
             raise ValueError(
-                f'keep_values({param}, {values}) would remove all values. '
-                f'No overlap with current: {original}'
+                f"keep_values({param}, {values}) would remove all values. "
+                f"No overlap with current: {original}"
             )
         removed_count = len(original) - len(kept)
         if removed_count > 0:
@@ -213,13 +213,13 @@ class ParamDomain:
             kept = [v for v in original if lower <= v <= upper]
         except TypeError as e:
             raise TypeError(
-                f'Cannot compare values of \'{param}\' with bounds '
-                f'[{lower!r}, {upper!r}]: {e}'
+                f"Cannot compare values of '{param}' with bounds "
+                f"[{lower!r}, {upper!r}]: {e}"
             ) from e
         if len(kept) == 0:
             raise ValueError(
-                f'keep_between({param}, {lower}, {upper}) would remove '
-                f'all values. Current values: {original}'
+                f"keep_between({param}, {lower}, {upper}) would remove "
+                f"all values. Current values: {original}"
             )
         removed_count = len(original) - len(kept)
         if removed_count > 0:

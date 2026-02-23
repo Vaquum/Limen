@@ -76,10 +76,10 @@ class MSQ:
                 return self._yield_combo(combo, injected=False)
 
         raise FilterExhaustedError(
-            f'Custom filters rejected {self._max_filter_retries} '
-            f'consecutive combinations. '
-            f'Active filters: {len(self._custom_filters)}. '
-            f'Consider relaxing filters or removing them.'
+            f"Custom filters rejected {self._max_filter_retries} "
+            f"consecutive combinations. "
+            f"Active filters: {len(self._custom_filters)}. "
+            f"Consider relaxing filters or removing them."
         )
 
 
@@ -200,10 +200,10 @@ class MSQ:
         domain_keys = set(self._domain.keys)
         missing = domain_keys - combo_keys
         if missing:
-            raise ValueError(f'Injected combo missing parameters: {missing}')
+            raise ValueError(f"Injected combo missing parameters: {missing}")
         extra = combo_keys - domain_keys
         if extra:
-            raise ValueError(f'Injected combo has extra keys: {extra}')
+            raise ValueError(f"Injected combo has extra keys: {extra}")
 
         if prioritize:
             self._priority_queue.appendleft(combo)
@@ -336,9 +336,9 @@ class MSQ:
         if state.get('custom_filters_count', 0) > 0:
             import warnings
             warnings.warn(
-                f'Checkpoint had {state["custom_filters_count"]} custom '
-                f'filters that cannot be restored from serialized state. '
-                f'Re-register them after resume.',
+                f"Checkpoint had {state['custom_filters_count']} custom "
+                f"filters that cannot be restored from serialized state. "
+                f"Re-register them after resume.",
                 stacklevel=2,
             )
 
