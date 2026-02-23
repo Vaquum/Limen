@@ -33,6 +33,7 @@ class SearchStrategy(ABC):
 
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
+
         return self
 
 
@@ -63,13 +64,18 @@ class SearchStrategy(ABC):
 
         return
 
+
     @property
     def domain(self) -> ParamDomain:
+
         return self._domain
+
 
     @property
     def generated_count(self) -> int:
+
         return self._generated_count
+
 
     @property
     def is_finite(self) -> bool:
@@ -79,12 +85,14 @@ class SearchStrategy(ABC):
 
         return False
 
+
     @abstractmethod
     def get_state(self) -> dict[str, Any]:
 
         '''Export state for checkpointing.'''
 
         ...
+
 
     @abstractmethod
     def set_state(self, state: dict[str, Any]) -> None:
