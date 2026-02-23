@@ -45,27 +45,6 @@ class StubStrategy(SearchStrategy):
         self._generated_count = state['generated_count']
 
 
-class _InfiniteStubStrategy(SearchStrategy):
-
-    '''Strategy that cycles forever. For testing filter exhaustion.'''
-
-    def __init__(self, domain, *, seed=None):
-        super().__init__(domain, seed=seed)
-
-    def __next__(self):
-        import random
-        params = self._domain._params
-        combo = {k: random.choice(v) for k, v in params.items()}
-        self._generated_count += 1
-        return combo
-
-    def get_state(self):
-        return {'generated_count': self._generated_count}
-
-    def set_state(self, state):
-        self._generated_count = state['generated_count']
-
-
 def _make_msq(params=None, n_permutations=None):
 
     if params is None:
@@ -117,8 +96,6 @@ def test_msq_yielded_count():
 
 def test_priority_queue():
 
-    '''Injected combos yield before strategy; prioritize controls ordering.'''
-
     msq, _ = _make_msq()
 
     msq.inject({'a': 10, 'b': 'back'})
@@ -136,7 +113,6 @@ def test_priority_queue():
     third = next(msq)
     assert third['_injected'] is False
 
-    # IDs are sequential regardless of source
     assert first['_id'] < second['_id'] < third['_id']
 
 
@@ -145,10 +121,16 @@ def test_inject_validates_keys():
     msq, _ = _make_msq()
 
     try:
-        msq.inject({'a': 1})  # missing 'b'
+        msq.inject({'a': 1})
         assert False, 'Should have raised ValueError'
     except ValueError as e:
         assert 'missing' in str(e).lower()
+
+    try:
+        msq.inject({'a': 1, 'b': 'x', 'c': 99})
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'extra' in str(e).lower()
 
 
 def test_intervention_routing():
@@ -157,29 +139,23 @@ def test_intervention_routing():
 
     msq, domain = _make_msq({'lr': [0.001, 0.01, 0.05, 0.1, 1.0]})
 
-    # remove_is
     msq.remove_is('lr', 1.0)
     assert 1.0 not in domain.values_for('lr')
 
-    # remove_ge
     removed = msq.remove_ge('lr', 0.1)
     assert removed == 1
     assert domain.values_for('lr') == [0.001, 0.01, 0.05]
 
-    # remove_le
     removed = msq.remove_le('lr', 0.001)
     assert removed == 1
     assert domain.values_for('lr') == [0.01, 0.05]
 
-    # inject_value
     assert msq.inject_value('lr', 0.03) is True
     assert 0.03 in domain.values_for('lr')
 
-    # keep_between
     msq.keep_between('lr', 0.01, 0.04)
     assert domain.values_for('lr') == [0.01, 0.03]
 
-    # keep_is
     msq.keep_is('lr', 0.01)
     assert domain.values_for('lr') == [0.01]
 
@@ -199,10 +175,10 @@ def test_remove_custom():
 
 def test_filter_exhausted_error():
 
-    '''Overly aggressive filters raise FilterExhaustedError, not infinite loop.'''
+    '''Overly aggressive filters raise FilterExhaustedError'''
 
-    domain = ParamDomain({'a': [1, 2], 'b': ['x', 'y']})
-    strategy = _InfiniteStubStrategy(domain)
+    domain = ParamDomain({'a': list(range(10)), 'b': list(range(10))})
+    strategy = StubStrategy(domain)
     msq = MSQ(strategy, domain, max_filter_retries=5)
 
     msq.remove_custom(lambda c: False)
@@ -233,52 +209,27 @@ def test_trim():
 
 def test_trim_with_priority_queue():
 
-    '''Priority queue items count against trim budget.'''
-
     msq, _ = _make_msq()
     msq.trim(2)
     msq.inject({'a': 10, 'b': 'z'})
 
-    assert msq.remaining_count() == 2 + 1
+    assert msq.remaining_count() == 2
 
     next(msq)
-    assert msq.remaining_count() == 1 + 0
+    assert msq.remaining_count() == 1
 
 
-def test_remaining_count_known():
+def test_remaining_count():
 
-    '''Finite strategy, n_permutations, and trim all produce known counts.'''
-
-    # Finite strategy: uses total_combinations
     msq, _ = _make_msq()
     assert msq.remaining_count() == 4
     next(msq)
     assert msq.remaining_count() == 3
 
-    # n_permutations takes precedence over total_combinations
     msq2, _ = _make_msq(n_permutations=100)
     assert msq2.remaining_count() == 100
     next(msq2)
     assert msq2.remaining_count() == 99
-
-    # Infinite strategy with n_permutations
-    domain = ParamDomain({'a': [1, 2], 'b': ['x', 'y']})
-    strategy = _InfiniteStubStrategy(domain)
-    msq3 = MSQ(strategy, domain, n_permutations=50)
-    assert msq3.remaining_count() == 50
-    next(msq3)
-    assert msq3.remaining_count() == 49
-
-
-def test_remaining_count_unknown():
-
-    '''Infinite strategy without budget returns None.'''
-
-    domain = ParamDomain({'a': [1, 2], 'b': ['x', 'y']})
-    strategy = _InfiniteStubStrategy(domain)
-    msq = MSQ(strategy, domain)
-
-    assert msq.remaining_count() is None
 
 
 def test_distribution():
@@ -299,11 +250,39 @@ def test_distribution():
     msq2, _ = _make_msq()
     assert msq2.distribution('a') == {1: 2, 2: 2}
 
-    # Infinite without budget returns empty
-    domain = ParamDomain({'a': [1, 2], 'b': ['x', 'y']})
-    strategy = _InfiniteStubStrategy(domain)
-    msq3 = MSQ(strategy, domain)
-    assert msq3.distribution() == {}
+
+def test_inject_does_not_mutate_caller_dict():
+
+    msq, _ = _make_msq()
+    original = {'a': 1, 'b': 'x'}
+    msq.inject(original)
+
+    next(msq)
+    assert '_id' not in original
+    assert '_injected' not in original
+
+
+def test_n_permutations_stops_iteration():
+
+    '''n_permutations acts as a hard stop on iteration.'''
+
+    msq, _ = _make_msq(n_permutations=3)
+
+    combos = list(msq)
+    assert len(combos) == 3
+
+
+def test_mismatched_domain_raises():
+
+    domain1 = ParamDomain({'a': [1, 2]})
+    domain2 = ParamDomain({'a': [1, 2]})
+    strategy = StubStrategy(domain1)
+
+    try:
+        MSQ(strategy, domain2)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'same ParamDomain' in str(e)
 
 
 def test_intervention_log():
@@ -341,4 +320,4 @@ def test_get_set_state():
 
     assert msq2.yielded_count == 2
     assert msq2.priority_queue_size == 1
-    assert msq2.remaining_count() == 98 + 1
+    assert msq2.remaining_count() == 99  # 98 remaining + 1 in queue

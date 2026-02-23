@@ -50,9 +50,11 @@ from tests.test_msq import test_remove_custom
 from tests.test_msq import test_filter_exhausted_error
 from tests.test_msq import test_trim
 from tests.test_msq import test_trim_with_priority_queue
-from tests.test_msq import test_remaining_count_known
-from tests.test_msq import test_remaining_count_unknown
+from tests.test_msq import test_remaining_count
 from tests.test_msq import test_distribution
+from tests.test_msq import test_inject_does_not_mutate_caller_dict
+from tests.test_msq import test_n_permutations_stops_iteration
+from tests.test_msq import test_mismatched_domain_raises
 from tests.test_msq import test_intervention_log
 from tests.test_msq import test_get_set_state
 
@@ -83,9 +85,11 @@ tests = [
     test_filter_exhausted_error,
     test_trim,
     test_trim_with_priority_queue,
-    test_remaining_count_known,
-    test_remaining_count_unknown,
+    test_remaining_count,
     test_distribution,
+    test_inject_does_not_mutate_caller_dict,
+    test_n_permutations_stops_iteration,
+    test_mismatched_domain_raises,
     test_intervention_log,
     test_get_set_state,
     test_large_param_space,

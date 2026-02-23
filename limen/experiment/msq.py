@@ -32,6 +32,10 @@ class MSQ:
         max_filter_retries: int = 1000,
     ) -> None:
 
+        if strategy.domain is not domain:
+            raise ValueError(
+                'strategy.domain and domain must reference the same ParamDomain'
+            )
         self._strategy = strategy
         self._domain = domain
         self._n_permutations = n_permutations
@@ -53,6 +57,9 @@ class MSQ:
         '''Return next parameter combination. Priority queue first, then strategy.'''
 
         if self._trim_budget is not None and self._trim_budget <= 0:
+            raise StopIteration
+
+        if self._n_permutations is not None and self._yielded_count >= self._n_permutations:
             raise StopIteration
 
         if self._priority_queue:
@@ -82,6 +89,7 @@ class MSQ:
 
         '''Enrich combo with metadata, update counters, and return.'''
 
+        combo = dict(combo)
         combo['_id'] = self._yielded_count
         combo['_injected'] = injected
         self._yielded_count += 1
@@ -188,9 +196,14 @@ class MSQ:
         self._log_intervention(
             'inject', combo=combo, prioritize=prioritize,
         )
-        missing = set(self._domain.keys) - set(combo.keys())
+        combo_keys = set(combo.keys())
+        domain_keys = set(self._domain.keys)
+        missing = domain_keys - combo_keys
         if missing:
             raise ValueError(f'Injected combo missing parameters: {missing}')
+        extra = combo_keys - domain_keys
+        if extra:
+            raise ValueError(f'Injected combo has extra keys: {extra}')
 
         if prioritize:
             self._priority_queue.appendleft(combo)
@@ -216,10 +229,10 @@ class MSQ:
         Returns None for infinite strategies without a budget.
         '''
 
-        queue_size = len(self._priority_queue)
-
         if self._trim_budget is not None:
-            return self._trim_budget + queue_size
+            return self._trim_budget
+
+        queue_size = len(self._priority_queue)
 
         if self._n_permutations is not None:
             remaining = max(
@@ -304,9 +317,8 @@ class MSQ:
             'trim_budget': self._trim_budget,
             'priority_queue': list(self._priority_queue),
             'custom_filters_count': len(self._custom_filters),
-            'intervention_log': self._intervention_log,
+            'intervention_log': list(self._intervention_log),
             'strategy_state': self._strategy.get_state(),
-            'domain_params': self._domain.params,
         }
 
 
