@@ -24,6 +24,7 @@ from tests.test_bars import test_trade_bars_basic
 from tests.test_bars import test_liquidity_bars_basic
 from tests.test_manifest_pre_split_random_selector import test_pre_split_random_selector
 from tests.test_regime_diversified_opinion_pools import test_rdop
+from tests.test_confidence_gate import test_confidence_gate
 
 tests = [
     test_large_param_space,
@@ -41,6 +42,7 @@ tests = [
     test_account_conviction,
     test_backtest_conviction,
     test_rdop,
+    test_confidence_gate,
 ]
 
 # Configure logging

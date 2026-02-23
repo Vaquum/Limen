@@ -73,6 +73,12 @@ Contains all data preparation procedures used in the parameter sweep.
 
 Takes as input data from `limen.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns `data_dict`, a  dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
 
+`split_data_to_prep_output` also supports optional confidence gating for target values before constructing `y_*` outputs:
+
+- `confidence_col` and `confidence_threshold` can be provided together to enable gating
+- `gate_splits` controls where gating is applied
+- `gated_value` controls the assigned target value when confidence is below threshold
+
 ##### REQUIREMENTS
 
 - The input must contain at least `historical.data` but must also contain `round_params` when `uel.run(prep_each_round=True)`

@@ -496,3 +496,11 @@
 ## v1.32.2 on 5th of February, 2026
 
 - Made naming of all PR check workflows consistent
+
+## v1.32.3 on 23rd of February, 2026
+
+- Add optional confidence-gating support to `limen.data.utils.split_data_to_prep_output` via `confidence_col`, `confidence_threshold`, `gated_target_col`, `gated_value`, and `gate_splits`
+- Add centralized confidence-gating helper and validation logic in `limen/data/utils/splits.py`
+- Add short historical-data-based confidence gate test in `tests/test_confidence_gate.py`
+- Register `test_confidence_gate` in `tests/run.py`
+- Update `docs/Single-File-Decoder.md` with optional confidence-gating usage notes for prep output
