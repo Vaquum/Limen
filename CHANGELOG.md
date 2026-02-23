@@ -496,3 +496,10 @@
 ## v1.32.2 on 5th of February, 2026
 
 - Made naming of all PR check workflows consistent
+
+## v1.33.0 on 24th of February, 2026
+
+- Add `ParamDomain` mutable parameter space with observer pattern
+- Add `SearchStrategy` abstract base class for search strategy implementations
+- Add `MSQ` (Mutable Search Queue) intervention orchestrator with priority queue, custom filters, trim budget, and checkpoint support
+- Add ruff per-file ignores for test files
