@@ -3,9 +3,10 @@ import polars as pl
 from limen.data import HistoricalData
 from limen.data.utils import split_data_to_prep_output, split_sequential
 
+CONFIDENCE_THRESHOLD = 0.5
+
 
 def test_confidence_gate() -> None:
-
     '''Test confidence gate'''
 
     historical = HistoricalData()
@@ -27,7 +28,7 @@ def test_confidence_gate() -> None:
     split_data = split_sequential(data, (8, 1, 2))
     expected_train = split_data[0]['pred_label'].to_list()
     expected_test_gated = [
-        0 if conf < 0.5 else pred_label
+        0 if conf < CONFIDENCE_THRESHOLD else pred_label
         for conf, pred_label in zip(
             split_data[2]['pred_pct'].to_list(),
             split_data[2]['pred_label'].to_list(),
@@ -40,7 +41,7 @@ def test_confidence_gate() -> None:
         cols=list(data.columns),
         all_datetimes=data['datetime'].to_list(),
         confidence_col='pred_pct',
-        confidence_threshold=0.5,
+        confidence_threshold=CONFIDENCE_THRESHOLD,
         gated_target_col='pred_label',
     )
 
