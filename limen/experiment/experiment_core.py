@@ -16,7 +16,6 @@ class UniversalExperimentLoop:
     '''UniversalExperimentLoop class for running experiments.'''
 
     def __init__(self, *, data: pl.DataFrame | None = None, sfd: Any = None) -> None:
-
         '''
         Initialize the UniversalExperimentLoop.
 
@@ -56,8 +55,10 @@ class UniversalExperimentLoop:
                 self.data = data
 
             if hasattr(self.manifest, 'model_function') and self.manifest.model_function:
-                self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
-                self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
+                self.prep = lambda data, round_params=None: self.manifest.prepare_data(
+                    data, round_params or {})
+                self.model = lambda data, round_params: self.manifest.run_model(
+                    data, round_params or {})
             else:
                 raise ValueError(
                     'Manifest without model_function is not supported. '
@@ -65,7 +66,8 @@ class UniversalExperimentLoop:
                 )
         else:
             if data is None:
-                raise ValueError('data parameter required for custom SFDs using custom functions approach')
+                raise ValueError(
+                    'data parameter required for custom SFDs using custom functions approach')
             self.data = data
             self.prep = getattr(sfd, 'prep', None)
             self.model = getattr(sfd, 'model', None)
@@ -81,10 +83,10 @@ class UniversalExperimentLoop:
             maintain_details_in_params: bool = False,
             context_params: dict | None = None,
             save_to_sqlite: bool = False,
+            enable_progress_bar: bool = True,
             params: Callable | None = None,
             prep: Callable | None = None,
             model: Callable | None = None) -> None:
-
         '''
         Run the experiment `n_permutations` times.
 
@@ -99,6 +101,7 @@ class UniversalExperimentLoop:
             maintain_details_in_params (bool): Whether to maintain experiment details in params
             context_params (dict): The context parameters to use for the experiment
             save_to_sqlite (bool): Whether to save the results to a SQLite database
+            enable_progress_bar (bool): Whether to enable the main experiment progress bar
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
@@ -138,13 +141,14 @@ class UniversalExperimentLoop:
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
 
-        for i in tqdm(range(n_permutations)):
+        for i in tqdm(range(n_permutations), disable=not enable_progress_bar):
 
             # Start counting execution_time
             start_time = time.time()
 
             # Generate the parameter values for the current round
-            round_params = self.param_space.generate(random_search=random_search)
+            round_params = self.param_space.generate(
+                random_search=random_search)
 
             # Add context parameters to round_params
             if context_params is not None:
@@ -205,9 +209,9 @@ class UniversalExperimentLoop:
             if save_to_sqlite is True:
                 # Handle writing to the database
                 self.experiment_log.to_pandas().tail(1).to_sql(experiment_name,
-                                                    self.conn,
-                                                    if_exists="append",
-                                                    index=False)
+                                                               self.conn,
+                                                               if_exists="append",
+                                                               index=False)
             # Handle writing to the file
             if i == 0:
                 header_colnames = ','.join(list(round_results.keys()))

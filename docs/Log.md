@@ -19,12 +19,6 @@ Create Log object state from a UEL object or a log file.
 
 Compute backtest performance metrics for each round of an experiment. It shows how often your trades win, how much they make on average, how deep the worst drawdowns are, and whether the strategy delivers consistent returns after costs. This lets you see not just if your system works, but how it performs under realistic trading conditions.
 
-#### Args
-
-| Parameter               | Type   | Description                         |
-|-------------------------|--------|-------------------------------------|
-| `disable_progress_bar`  | `bool` | Whether to disable the progress bar |
-
 #### Returns
 
 `pd.DataFrame`: One-row-per-round table with the following columns.
@@ -53,7 +47,6 @@ Compute confusion metrics for each round of an experiment. One way to think abou
 | Parameter               | Type   | Description                                       |
 |-------------------------|--------|---------------------------------------------------|
 | `x`                     | `str`  | Column name to compute confusion metrics for      |
-| `disable_progress_bar`  | `bool` | Whether to disable the progress bar               |
 
 #### Returns
 

@@ -84,6 +84,7 @@ Runs the experiment `n_permutations` times.
 | `maintain_details_in_params`  | `bool`            | If `True`, injects `_experiment_details` (e.g., current index) into `round_params` for logging, then removes it before writing results. |
 | `context_params`              | `dict`            | Extra context passed into `round_params` for every round (useful for identifiers like symbol, horizon). |
 | `save_to_sqlite`              | `bool`            | If `True`, appends results to SQLite at `/opt/experiments/experiments.sqlite` under table `experiment_name`. |
+| `enable_progress_bar`         | `bool`            | If `True`, enables the main UEL permutation progress bar. |
 | `params`                      | `Callable`        | Optional override for the SFD `params` function. Must return a parameter space dictionary.              |
 | `prep`                        | `Callable`        | Optional override for the SFD `prep` function. Must follow the standard input/output contract.          |
 | `model`                       | `Callable`        | Optional override for the SFD `model` function. Must follow the standard input/output contract.         |

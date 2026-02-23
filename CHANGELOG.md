@@ -504,3 +504,10 @@
 - Add short historical-data-based confidence gate test in `tests/test_confidence_gate.py`
 - Register `test_confidence_gate` in `tests/run.py`
 - Update `docs/Single-File-Decoder.md` with optional confidence-gating usage notes for prep output
+
+## v1.32.4 on 23rd of February, 2026
+
+- Add `enable_progress_bar` input argument to `limen.UniversalExperimentLoop.run` (default `True`) to control the main experiment progress bar
+- Remove post-processing progress bars from `experiment_confusion_metrics` and `experiment_backtest_results`
+- Remove `disable_progress_bar` usage from docs and update UEL docs to reflect `enable_progress_bar`
+- Register `test_uel_progress_bar` in `tests/run.py`

@@ -1,17 +1,12 @@
 from typing import Any
-import tqdm
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 
 
-def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) -> pd.DataFrame:
-
+def _experiment_backtest_results(self: Any) -> pd.DataFrame:
     '''
     Compute backtest results for each round of an experiment.
-
-    Args:
-        disable_progress_bar (bool): Whether to disable the progress bar
 
     Returns:
         pd.DataFrame: One-row-per-round table with columns 'trade_win_rate_pct',
@@ -24,7 +19,7 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
 
     all_rows = []
 
-    for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
+    for i in range(len(self.round_params)):
 
         result_df = backtest_snapshot(self.permutation_prediction_performance(i))
 
@@ -33,4 +28,3 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
     df_all = pd.concat(all_rows, ignore_index=True)
 
     return df_all
-
