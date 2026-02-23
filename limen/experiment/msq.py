@@ -332,7 +332,7 @@ class MSQ:
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
         self._custom_filters = []
-        self._intervention_log = state['intervention_log']
+        self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
         if state.get('custom_filters_count', 0) > 0:
