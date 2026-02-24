@@ -9,11 +9,13 @@ from limen.experiment.param_domain import ParamDomain
 
 class SearchStrategy(ABC):
 
-    '''Abstract base for all search strategies.
+    '''
+    Abstract base for all search strategies.
 
     Strategies are iterators that yield dict[str, Any] combination of parameters.
     They hold a reference to a ParamDomain and register as observers
     so they can react to domain mutations.
+
     '''
 
     def __init__(self, domain: ParamDomain, *, seed: int | None = None) -> None:
@@ -22,8 +24,9 @@ class SearchStrategy(ABC):
         Initialize the SearchStrategy.
 
         Args:
-            domain: ParamDomain to generate combinations from.
-            seed: Optional random seed for reproducibility.
+            domain (ParamDomain): ParamDomain to generate combinations from
+            seed (int | None): Optional random seed for reproducibility
+
         '''
 
         self._domain = domain
@@ -49,8 +52,11 @@ class SearchStrategy(ABC):
         self, _domain: ParamDomain, _changed_params: list[str],
     ) -> None:
 
-        '''Called when ParamDomain is mutated. Override if strategy
-        maintains state dependent on the domain.'''
+        '''
+        Called when ParamDomain is mutated. Override if strategy
+        maintains state dependent on the domain.
+
+        '''
 
         return
 
@@ -59,8 +65,11 @@ class SearchStrategy(ABC):
         self, _log: Any, _interventions: list[dict],
     ) -> None:
 
-        '''Hook for strategies that adapt based on experiment feedback.
-        Default is no-op. Stateful strategies (e.g. TPE) override this.'''
+        '''
+        Hook for strategies that adapt based on experiment feedback.
+        Default is no-op. Stateful strategies (e.g. TPE) override this.
+
+        '''
 
         return
 
@@ -80,8 +89,11 @@ class SearchStrategy(ABC):
     @property
     def is_finite(self) -> bool:
 
-        '''Whether this strategy has a finite number of combinations.
-        Override to return True for exhaustive strategies (e.g. Grid).'''
+        '''
+        Whether this strategy has a finite number of combinations.
+        Override to return True for exhaustive strategies (e.g. Grid).
+
+        '''
 
         return False
 

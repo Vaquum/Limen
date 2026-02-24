@@ -21,7 +21,8 @@ class ParamDomain:
         Initialize the ParamDomain.
 
         Args:
-            params: Dict mapping parameter names to non-empty lists of values.
+            params (dict[str, list[Any]]): Dict mapping parameter names to non-empty lists of values
+
         '''
 
         for k, v in params.items():
@@ -88,17 +89,19 @@ class ParamDomain:
 
     def remove_value(self, param: str, value: Any) -> bool:
 
-        '''Remove a single value from a parameter's domain.
+        '''
+        Remove a single value from a parameter's domain.
 
         Args:
-            param: Parameter name.
-            value: Value to remove.
+            param (str): Parameter name
+            value (Any): Value to remove
 
         Returns:
-            True if removed, False if value was not present.
+            bool: True if removed, False if value was not present
 
         Raises:
-            ValueError: If removal would leave the parameter with no values.
+            ValueError: If removal would leave the parameter with no values
+
         '''
 
         values = self._params[param]
@@ -116,14 +119,16 @@ class ParamDomain:
 
     def remove_values_ge(self, param: str, threshold: Any) -> int:
 
-        '''Remove all values >= threshold.
+        '''
+        Remove all values >= threshold.
 
         Returns:
-            Count of values removed.
+            int: Count of values removed
 
         Raises:
-            TypeError: If values are not comparable with threshold.
-            ValueError: If removal would leave the parameter with no values.
+            TypeError: If values are not comparable with threshold
+            ValueError: If removal would leave the parameter with no values
+
         '''
 
         original = self._params[param]
@@ -148,14 +153,16 @@ class ParamDomain:
 
     def remove_values_le(self, param: str, threshold: Any) -> int:
 
-        '''Remove all values <= threshold.
+        '''
+        Remove all values <= threshold.
 
         Returns:
-            Count of values removed.
+            int: Count of values removed
 
         Raises:
-            TypeError: If values are not comparable with threshold.
-            ValueError: If removal would leave the parameter with no values.
+            TypeError: If values are not comparable with threshold
+            ValueError: If removal would leave the parameter with no values
+
         '''
 
         original = self._params[param]
@@ -180,13 +187,15 @@ class ParamDomain:
 
     def keep_values(self, param: str, values: list[Any]) -> int:
 
-        '''Keep only specified values for a parameter.
+        '''
+        Keep only specified values for a parameter.
 
         Returns:
-            Count of values removed.
+            int: Count of values removed
 
         Raises:
-            ValueError: If no overlap with current values.
+            ValueError: If no overlap with current values
+
         '''
 
         original = self._params[param]
@@ -205,14 +214,16 @@ class ParamDomain:
 
     def keep_between(self, param: str, lower: Any, upper: Any) -> int:
 
-        '''Keep only values where lower <= value <= upper.
+        '''
+        Keep only values where lower <= value <= upper.
 
         Returns:
-            Count of values removed.
+            int: Count of values removed
 
         Raises:
-            TypeError: If values are not comparable with bounds.
-            ValueError: If no values fall within range.
+            TypeError: If values are not comparable with bounds
+            ValueError: If no values fall within range
+
         '''
 
         original = self._params[param]
@@ -237,10 +248,12 @@ class ParamDomain:
 
     def inject_value(self, param: str, value: Any) -> bool:
 
-        '''Add a new value to a parameter's domain.
+        '''
+        Add a new value to a parameter's domain.
 
         Returns:
-            True if added, False if value was already present.
+            bool: True if added, False if value was already present
+
         '''
 
         if value in self._params[param]:

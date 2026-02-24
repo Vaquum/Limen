@@ -15,12 +15,14 @@ class FilterExhaustedError(Exception):
 
 class MSQ:
 
-    '''Mutable Search Queue — wraps a SearchStrategy with intervention bookkeeping.
+    '''
+    Mutable Search Queue — wraps a SearchStrategy with intervention bookkeeping.
 
     Routes interventions to the correct layer:
     - Single-param operations (remove_is, keep_is, etc.) go to ParamDomain
     - Multi-param filters (remove_custom) stay here as post-generation checks
     - Injected combinations go to the priority deque
+
     '''
 
     def __init__(
@@ -36,10 +38,11 @@ class MSQ:
         Initialize the MSQ.
 
         Args:
-            strategy: SearchStrategy instance to generate combinations.
-            domain: ParamDomain shared with the strategy.
-            n_permutations: Optional hard cap on total combinations yielded.
-            max_filter_retries: Max consecutive filter rejections before error.
+            strategy (SearchStrategy): SearchStrategy instance to generate combinations
+            domain (ParamDomain): ParamDomain shared with the strategy
+            n_permutations (int | None): Optional hard cap on total combinations yielded
+            max_filter_retries (int): Max consecutive filter rejections before error
+
         '''
 
         if strategy.domain is not domain:
@@ -147,11 +150,13 @@ class MSQ:
         self, condition: Callable[[dict[str, Any]], bool],
     ) -> None:
 
-        '''Add a multi-parameter filter applied post-generation.
+        '''
+        Add a multi-parameter filter applied post-generation.
 
         Args:
-            condition: Function taking a combo dict, returning True
-                to REMOVE, False to keep.
+            condition (Callable): Function taking a combo dict, returning True
+                to REMOVE, False to keep
+
         '''
 
         self._log_intervention('remove_custom', condition=repr(condition))
@@ -160,10 +165,12 @@ class MSQ:
 
     def trim(self, target_count: int) -> None:
 
-        '''Limit remaining combinations to target_count.
+        '''
+        Limit remaining combinations to target_count.
 
         Sets a budget counter. After this many more combinations are
         yielded, StopIteration is raised.
+
         '''
 
         self._log_intervention('trim', target_count=target_count)
@@ -195,12 +202,14 @@ class MSQ:
         self, combo: dict[str, Any], *, prioritize: bool = False,
     ) -> None:
 
-        '''Inject a specific combination into the search.
+        '''
+        Inject a specific combination into the search.
 
         Args:
-            combo: Full parameter combination dict.
-            prioritize: If True, inserted at front of queue (next to yield).
-                If False, appended to back.
+            combo (dict[str, Any]): Full parameter combination dict
+            prioritize (bool): If True, inserted at front of queue (next to yield).
+                If False, appended to back
+
         '''
 
         self._log_intervention(
@@ -233,11 +242,13 @@ class MSQ:
 
     def remaining_count(self) -> int | None:
 
-        '''Return count of remaining combinations, or None if unknown.
+        '''
+        Return count of remaining combinations, or None if unknown.
 
         Uses trim budget if set, else n_permutations if set,
         else total_combinations for finite strategies.
         Returns None for infinite strategies without a budget.
+
         '''
 
         if self._trim_budget is not None:
@@ -262,7 +273,8 @@ class MSQ:
 
     def distribution(self, param: str | None = None) -> dict:
 
-        '''Return estimated count of pending combinations per value.
+        '''
+        Return estimated count of pending combinations per value.
 
         Assumes uniform sampling across the domain. Accurate for Grid
         and Random strategies. Adaptive strategies (e.g. TPE, Bayesian)
@@ -270,12 +282,13 @@ class MSQ:
         approximate in that case.
 
         Args:
-            param: If given, return {value: count} for that param.
-                If None, return {param: {value: count, ...}, ...} for all.
+            param (str | None): If given, return {value: count} for that param.
+                If None, return {param: {value: count, ...}, ...} for all
 
         Returns:
-            Dict of value→count, or dict of param→{value: count}.
-            Returns empty dict if remaining count is unknown.
+            dict: Value→count, or param→{value: count}.
+                Empty dict if remaining count is unknown
+
         '''
 
         remaining = self.remaining_count()
