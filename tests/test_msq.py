@@ -5,8 +5,6 @@ from limen.experiment.msq import MSQ, FilterExhaustedError
 
 class StubStrategy(SearchStrategy):
 
-    '''Deterministic finite strategy for testing. Cycles through all combos.'''
-
     def __init__(self, domain, *, seed=None):
         super().__init__(domain, seed=seed)
         self._combos = self._build_combos()
@@ -60,8 +58,6 @@ def _param_keys(combo):
 
 
 def test_msq_basic_iteration():
-
-    '''Yields all combinations with sequential _id and _injected metadata.'''
 
     msq, _ = _make_msq()
     combos = list(msq)
@@ -135,8 +131,6 @@ def test_inject_validates_keys():
 
 def test_intervention_routing():
 
-    '''All single-param MSQ methods route to ParamDomain correctly.'''
-
     msq, domain = _make_msq({'lr': [0.001, 0.01, 0.05, 0.1, 1.0]})
 
     msq.remove_is('lr', 1.0)
@@ -174,8 +168,6 @@ def test_remove_custom():
 
 
 def test_filter_exhausted_error():
-
-    '''Overly aggressive filters raise FilterExhaustedError'''
 
     domain = ParamDomain({'a': list(range(10)), 'b': list(range(10))})
     strategy = StubStrategy(domain)
@@ -234,8 +226,6 @@ def test_remaining_count():
 
 def test_distribution():
 
-    '''Uniform estimate of per-value counts from remaining runs.'''
-
     # With n_permutations
     msq, _ = _make_msq(n_permutations=100)
     assert msq.distribution('a') == {1: 50, 2: 50}
@@ -263,8 +253,6 @@ def test_inject_does_not_mutate_caller_dict():
 
 
 def test_n_permutations_stops_iteration():
-
-    '''n_permutations acts as a hard stop on iteration.'''
 
     msq, _ = _make_msq(n_permutations=3)
 
@@ -299,8 +287,6 @@ def test_intervention_log():
 
 
 def test_get_set_state():
-
-    '''Checkpoint round-trip preserves yielded_count, n_permutations, priority queue.'''
 
     msq, _ = _make_msq(n_permutations=100)
 

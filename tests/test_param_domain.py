@@ -30,10 +30,6 @@ def test_param_domain_init_validation():
 
 def test_param_domain_defensive_copy():
 
-    '''Ensures external code cannot bypass MSQ interventions by
-    mutating the original lists directly.
-    '''
-
     original = {'a': [1, 2, 3]}
     domain = ParamDomain(original)
 
@@ -194,8 +190,6 @@ def test_is_valid_combination():
 
 
 def test_comparison_type_error():
-
-    '''TypeError with context when comparing incompatible types.'''
 
     domain = ParamDomain({'opt': ['adam', 'sgd', 'rmsprop']})
 
