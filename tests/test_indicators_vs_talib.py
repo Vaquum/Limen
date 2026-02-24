@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, atr, bbands, mfi, natr, obv, trange
+from limen.indicators import ad, adosc, atr, bbands, dema, ema, ht_trendline, kama, ma, mama, mfi, natr, obv, sar, sarext, sma, t3, tema, trange, trima, tsf, wma
 
 
 historical = HistoricalData()
@@ -10,6 +10,7 @@ historical._get_data_for_test(n_rows=1000)
 SAMPLE_DATA = historical.data
 
 NUMPY_DATA = {
+    'open': SAMPLE_DATA['open'].to_numpy(),
     'high': SAMPLE_DATA['high'].to_numpy(),
     'low': SAMPLE_DATA['low'].to_numpy(),
     'close': SAMPLE_DATA['close'].to_numpy(),
@@ -18,11 +19,40 @@ NUMPY_DATA = {
 
 TOLERANCE = 1e-8
 DEFAULT_PERIOD = 14
+DEMA_PERIOD = 30
+EMA_PERIOD = 30
+KAMA_PERIOD = 30
+MA_PERIOD = 30
+MA_TYPES = list(range(9))
+SMA_PERIOD = 30
+TEMA_PERIOD = 30
+TRIMA_PERIOD = 30
+TSF_PERIOD = 14
+WMA_PERIOD = 30
+MAMA_FAST_LIMIT = 0.5
+MAMA_SLOW_LIMIT = 0.05
+SAR_ACCELERATION = 0.02
+SAR_MAXIMUM = 0.2
+SAREXT_START_VALUE = 0.0
+SAREXT_OFFSET_ON_REVERSE = 0.0
+SAREXT_AF_INIT_LONG = 0.02
+SAREXT_AF_LONG = 0.02
+SAREXT_AF_MAX_LONG = 0.2
+SAREXT_AF_INIT_SHORT = 0.02
+SAREXT_AF_SHORT = 0.02
+SAREXT_AF_MAX_SHORT = 0.2
 FAST_PERIOD = 3
 SLOW_PERIOD = 10
+APO_FAST_PERIOD = 12
+APO_SLOW_PERIOD = 26
+MACD_FAST_PERIOD = 12
+MACD_SLOW_PERIOD = 26
+MACD_SIGNAL_PERIOD = 9
 BB_WINDOW = 20
 BB_NUM_STD = 2.0
+BB_MA_TYPES = list(range(9))
 T3_VFACTOR = 0.7
+T3_PERIOD = 5
 
 
 def test_ad():
@@ -56,6 +86,204 @@ def test_adosc():
     verify_indicator_results_match(limen_result, talib_result)
 
 
+def test_dema():
+    out_col = f'dema_{DEMA_PERIOD}'
+    limen_result = dema(SAMPLE_DATA, price_col='close', period=DEMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.DEMA(
+        NUMPY_DATA['close'],
+        timeperiod=DEMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ema():
+    out_col = f'ema_{EMA_PERIOD}'
+    limen_result = ema(SAMPLE_DATA, price_col='close', period=EMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.EMA(
+        NUMPY_DATA['close'],
+        timeperiod=EMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ht_trendline():
+    limen_result = ht_trendline(SAMPLE_DATA, price_col='close')['ht_trendline'].to_numpy()
+    talib_result = talib.HT_TRENDLINE(NUMPY_DATA['close'])
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_kama():
+    out_col = f'kama_{KAMA_PERIOD}'
+    limen_result = kama(SAMPLE_DATA, price_col='close', period=KAMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.KAMA(
+        NUMPY_DATA['close'],
+        timeperiod=KAMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ma():
+    for ma_type in MA_TYPES:
+        out_col = f'ma_{MA_PERIOD}_{ma_type}'
+        limen_result = ma(
+            SAMPLE_DATA,
+            price_col='close',
+            period=MA_PERIOD,
+            ma_type=ma_type,
+        )[out_col].to_numpy()
+        talib_result = talib.MA(
+            NUMPY_DATA['close'],
+            timeperiod=MA_PERIOD,
+            matype=ma_type,
+        )
+
+        verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_mama():
+    limen = mama(
+        SAMPLE_DATA,
+        price_col='close',
+        fast_limit=MAMA_FAST_LIMIT,
+        slow_limit=MAMA_SLOW_LIMIT,
+    )
+    limen_mama = limen['mama'].to_numpy()
+    limen_fama = limen['fama'].to_numpy()
+
+    talib_mama, talib_fama = talib.MAMA(
+        NUMPY_DATA['close'],
+        fastlimit=MAMA_FAST_LIMIT,
+        slowlimit=MAMA_SLOW_LIMIT,
+    )
+
+    verify_indicator_results_match(limen_mama, talib_mama)
+    verify_indicator_results_match(limen_fama, talib_fama)
+
+
+def test_sma():
+    out_col = f'sma_{SMA_PERIOD}'
+    limen_result = sma(SAMPLE_DATA, price_col='close', period=SMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.SMA(
+        NUMPY_DATA['close'],
+        timeperiod=SMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_tema():
+    out_col = f'tema_{TEMA_PERIOD}'
+    limen_result = tema(SAMPLE_DATA, price_col='close', period=TEMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.TEMA(
+        NUMPY_DATA['close'],
+        timeperiod=TEMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_trima():
+    out_col = f'trima_{TRIMA_PERIOD}'
+    limen_result = trima(SAMPLE_DATA, price_col='close', period=TRIMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.TRIMA(
+        NUMPY_DATA['close'],
+        timeperiod=TRIMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_t3():
+    out_col = f't3_{T3_PERIOD}_{T3_VFACTOR:g}'
+    limen_result = t3(
+        SAMPLE_DATA,
+        price_col='close',
+        period=T3_PERIOD,
+        vfactor=T3_VFACTOR,
+    )[out_col].to_numpy()
+    talib_result = talib.T3(
+        NUMPY_DATA['close'],
+        timeperiod=T3_PERIOD,
+        vfactor=T3_VFACTOR,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_tsf():
+    out_col = f'tsf_{TSF_PERIOD}'
+    limen_result = tsf(SAMPLE_DATA, price_col='close', period=TSF_PERIOD)[out_col].to_numpy()
+    talib_result = talib.TSF(
+        NUMPY_DATA['close'],
+        timeperiod=TSF_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_wma():
+    out_col = f'wma_{WMA_PERIOD}'
+    limen_result = wma(SAMPLE_DATA, price_col='close', period=WMA_PERIOD)[out_col].to_numpy()
+    talib_result = talib.WMA(
+        NUMPY_DATA['close'],
+        timeperiod=WMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_sar():
+    limen_result = sar(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        acceleration=SAR_ACCELERATION,
+        maximum=SAR_MAXIMUM,
+    )['sar'].to_numpy()
+    talib_result = talib.SAR(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        acceleration=SAR_ACCELERATION,
+        maximum=SAR_MAXIMUM,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_sarext():
+    limen_result = sarext(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        start_value=SAREXT_START_VALUE,
+        offset_on_reverse=SAREXT_OFFSET_ON_REVERSE,
+        acceleration_init_long=SAREXT_AF_INIT_LONG,
+        acceleration_long=SAREXT_AF_LONG,
+        acceleration_max_long=SAREXT_AF_MAX_LONG,
+        acceleration_init_short=SAREXT_AF_INIT_SHORT,
+        acceleration_short=SAREXT_AF_SHORT,
+        acceleration_max_short=SAREXT_AF_MAX_SHORT,
+    )['sarext'].to_numpy()
+    talib_result = talib.SAREXT(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        startvalue=SAREXT_START_VALUE,
+        offsetonreverse=SAREXT_OFFSET_ON_REVERSE,
+        accelerationinitlong=SAREXT_AF_INIT_LONG,
+        accelerationlong=SAREXT_AF_LONG,
+        accelerationmaxlong=SAREXT_AF_MAX_LONG,
+        accelerationinitshort=SAREXT_AF_INIT_SHORT,
+        accelerationshort=SAREXT_AF_SHORT,
+        accelerationmaxshort=SAREXT_AF_MAX_SHORT,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
 def test_mfi():
     out_col = f'mfi_{DEFAULT_PERIOD}'
     limen_result = mfi(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
@@ -84,29 +312,30 @@ def test_atr():
 
 
 def test_bbands():
-    limen = bbands(
-        SAMPLE_DATA,
-        price_col='close',
-        period=BB_WINDOW,
-        nb_dev_up=BB_NUM_STD,
-        nb_dev_dn=BB_NUM_STD,
-        ma_type=0,
-    )
-    limen_upper = limen['bbands_upper'].to_numpy()
-    limen_middle = limen['bbands_middle'].to_numpy()
-    limen_lower = limen['bbands_lower'].to_numpy()
+    for ma_type in BB_MA_TYPES:
+        limen = bbands(
+            SAMPLE_DATA,
+            price_col='close',
+            period=BB_WINDOW,
+            nb_dev_up=BB_NUM_STD,
+            nb_dev_dn=BB_NUM_STD,
+            ma_type=ma_type,
+        )
+        limen_upper = limen['bbands_upper'].to_numpy()
+        limen_middle = limen['bbands_middle'].to_numpy()
+        limen_lower = limen['bbands_lower'].to_numpy()
 
-    talib_upper, talib_middle, talib_lower = talib.BBANDS(
-        NUMPY_DATA['close'],
-        timeperiod=BB_WINDOW,
-        nbdevup=BB_NUM_STD,
-        nbdevdn=BB_NUM_STD,
-        matype=0,
-    )
+        talib_upper, talib_middle, talib_lower = talib.BBANDS(
+            NUMPY_DATA['close'],
+            timeperiod=BB_WINDOW,
+            nbdevup=BB_NUM_STD,
+            nbdevdn=BB_NUM_STD,
+            matype=ma_type,
+        )
 
-    verify_indicator_results_match(limen_upper, talib_upper)
-    verify_indicator_results_match(limen_middle, talib_middle)
-    verify_indicator_results_match(limen_lower, talib_lower)
+        verify_indicator_results_match(limen_upper, talib_upper)
+        verify_indicator_results_match(limen_middle, talib_middle)
+        verify_indicator_results_match(limen_lower, talib_lower)
 
 
 def test_natr():
@@ -178,6 +407,20 @@ def test_indicators_vs_talib():
     test_functions = [
         ('AD', test_ad),
         ('ADOSC', test_adosc),
+        ('DEMA', test_dema),
+        ('EMA', test_ema),
+        ('HT_TRENDLINE', test_ht_trendline),
+        ('KAMA', test_kama),
+        ('MA', test_ma),
+        ('MAMA', test_mama),
+        ('SMA', test_sma),
+        ('TEMA', test_tema),
+        ('TRIMA', test_trima),
+        ('T3', test_t3),
+        ('TSF', test_tsf),
+        ('WMA', test_wma),
+        ('SAR', test_sar),
+        ('SAREXT', test_sarext),
         ('ATR', test_atr),
         ('BBANDS', test_bbands),
         ('MFI', test_mfi),

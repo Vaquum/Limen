@@ -20,8 +20,8 @@ def adosc(
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
         volume_col (str): Column name for volume
-        fast_period (int): Fast EMA period (>= 2)
-        slow_period (int): Slow EMA period (>= 2)
+        fast_period (int): Fast EMA period
+        slow_period (int): Slow EMA period
 
     Returns:
         pl.DataFrame: The input data with a new column 'adosc_{fast_period}_{slow_period}'

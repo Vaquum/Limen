@@ -19,7 +19,7 @@ def mfi(
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
         volume_col (str): Column name for volume
-        period (int): MFI period (>= 2)
+        period (int): MFI period
 
     Returns:
         pl.DataFrame: The input data with a new column 'mfi_{period}'

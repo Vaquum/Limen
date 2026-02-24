@@ -18,7 +18,7 @@ def atr(
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
-        period (int): Number of periods for ATR calculation (>= 1)
+        period (int): Number of periods for ATR calculation
 
     Returns:
         pl.DataFrame: The input data with a new column 'atr_{period}'
