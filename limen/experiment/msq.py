@@ -212,10 +212,10 @@ class MSQ:
 
         '''
 
-        self._log_intervention(
-            'inject', combo=combo, prioritize=prioritize,
-        )
         combo = dict(combo)
+        self._log_intervention(
+            'inject', combo=dict(combo), prioritize=prioritize,
+        )
         combo_keys = set(combo.keys())
         domain_keys = set(self._domain.keys)
         missing = domain_keys - combo_keys
@@ -264,7 +264,7 @@ class MSQ:
 
         if self._strategy.is_finite:
             remaining = max(
-                self._domain.total_combinations - self._yielded_count, 0,
+                self._domain.total_combinations - self._strategy.generated_count, 0,
             )
             return remaining + queue_size
 
@@ -333,7 +333,13 @@ class MSQ:
 
     def get_state(self) -> dict[str, Any]:
 
-        '''Export state for checkpointing.'''
+        '''
+        Export state for checkpointing.
+
+        NOTE: Does not include ParamDomain state. Callers must
+        persist and restore the domain separately.
+
+        '''
 
         return {
             'yielded_count': self._yielded_count,
@@ -348,7 +354,13 @@ class MSQ:
 
     def set_state(self, state: dict[str, Any]) -> None:
 
-        '''Restore state from checkpoint.'''
+        '''
+        Restore state from checkpoint.
+
+        NOTE: Does not restore ParamDomain state. Callers must
+        restore the domain separately before calling this method.
+
+        '''
 
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
