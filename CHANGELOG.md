@@ -503,3 +503,7 @@
 - Add `SearchStrategy` abstract base class for search strategy implementations
 - Add `MSQ` (Mutable Search Queue) intervention orchestrator with priority queue, custom filters, trim budget, and checkpoint support
 - Add ruff per-file ignores for test files
+
+## v1.34.0 on 24th February, 2026
+
+- Add `PruningStrategy` abstract base class for experiment reducers

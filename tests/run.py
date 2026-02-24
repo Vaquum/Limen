@@ -57,6 +57,8 @@ from tests.test_msq import test_n_permutations_stops_iteration
 from tests.test_msq import test_mismatched_domain_raises
 from tests.test_msq import test_intervention_log
 from tests.test_msq import test_get_set_state
+from tests.test_pruning_strategy import test_cannot_instantiate_abc
+from tests.test_pruning_strategy import test_active_flag
 
 tests = [
     test_param_domain_init,
@@ -92,6 +94,8 @@ tests = [
     test_mismatched_domain_raises,
     test_intervention_log,
     test_get_set_state,
+    test_cannot_instantiate_abc,
+    test_active_flag,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
