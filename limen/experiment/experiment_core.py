@@ -229,3 +229,49 @@ class UniversalExperimentLoop:
         self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')
         self.experiment_backtest_results = self._log.experiment_backtest_results()
         self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
+
+
+    def _create_temp_log(self) -> Log:
+
+        '''
+        Create a temporary Log from current experiment state.
+
+        Used by the feedback system to provide pruning strategies
+        and callbacks with an up-to-date Log for analysis.
+
+        Returns:
+            Log: Temporary log containing all results so far
+
+        '''
+
+        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
+
+        return Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
+
+
+    def _trigger_feedback(self,
+                          msq: Any,
+                          strategy: Any,
+                          feedback_controller: Any,
+                          current_round: int) -> list[dict]:
+
+        '''
+        Execute a feedback cycle at the current round.
+
+        Creates a temporary log, delegates to FeedbackController,
+        and returns the list of applied interventions.
+
+        Args:
+            msq (Any): The mutable search queue
+            strategy (Any): The current search strategy
+            feedback_controller (Any): The feedback controller
+            current_round (int): Current round number
+
+        Returns:
+            list[dict]: Interventions applied during this trigger
+
+        '''
+
+        log = self._create_temp_log()
+
+        return feedback_controller.trigger(log, msq, strategy, current_round)
