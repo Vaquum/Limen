@@ -1,46 +1,6 @@
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.search_strategy import SearchStrategy
 from limen.experiment.msq import MSQ, FilterExhaustedError
-
-
-class StubStrategy(SearchStrategy):
-
-    def __init__(self, domain, *, seed=None):
-        super().__init__(domain, seed=seed)
-        self._combos = self._build_combos()
-        self._index = 0
-
-    @property
-    def is_finite(self):
-        return True
-
-    def _build_combos(self):
-        import itertools
-        params = self._domain.params
-        keys = sorted(params.keys())
-        return [
-            dict(zip(keys, vals, strict=True))
-            for vals in itertools.product(*(params[k] for k in keys))
-        ]
-
-    def __next__(self):
-        if self._index >= len(self._combos):
-            raise StopIteration
-        combo = self._combos[self._index]
-        self._index += 1
-        self._generated_count += 1
-        return combo
-
-    def on_domain_changed(self, domain, changed_params):
-        self._combos = self._build_combos()
-        self._index = 0
-
-    def get_state(self):
-        return {'index': self._index, 'generated_count': self._generated_count}
-
-    def set_state(self, state):
-        self._index = state['index']
-        self._generated_count = state['generated_count']
+from tests.stubs.stubs import StubStrategy
 
 
 def _make_msq(params=None, n_permutations=None):
