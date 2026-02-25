@@ -73,7 +73,7 @@ from tests.test_feedback_controller import test_file_missing_no_error
 from tests.test_feedback_controller import test_file_invalid_json_no_error
 from tests.test_feedback_controller import test_source_isolation
 from tests.test_feedback_controller import test_audit_log_written
-from tests.test_feedback_controller import test_get_set_state
+from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
 
 tests = [
     test_param_domain_init,
@@ -125,7 +125,7 @@ tests = [
     test_file_invalid_json_no_error,
     test_source_isolation,
     test_audit_log_written,
-    test_get_set_state,
+    test_fc_get_set_state,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
