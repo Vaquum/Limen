@@ -507,3 +507,9 @@
 ## v1.34.0 on 24th February, 2026
 
 - Add `PruningStrategy` abstract base class for experiment reducers
+
+## v1.35.0 on 25th of February, 2026
+
+- Add `FeedbackController` orchestrator for feedback loop interventions from pruning strategies and user defined custom rules
+- Add `_create_temp_log` and `_trigger_feedback` methods to `UniversalExperimentLoop` for future integration with feedback loop
+- Refactor test stubs for feedback loop into shared `tests/stubs/` module
