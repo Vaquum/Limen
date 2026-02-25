@@ -199,7 +199,8 @@ class FeedbackController:
 
         The callback has direct MSQ access and applies interventions
         itself. We track what changed by comparing MSQ intervention_log
-        length before and after the call.
+        length before and after the call. If the callback crashes
+        mid-way, we still capture whatever it applied before failing.
 
         '''
 
@@ -207,10 +208,12 @@ class FeedbackController:
             return []
 
         log_len_before = len(msq.intervention_log)
-        self._intra_callback(log, msq)
-        log_len_after = len(msq.intervention_log)
+        try:
+            self._intra_callback(log, msq)
+        except _SOURCE_ERRORS as e:
+            logger.warning('Intra callback failed: %s', e)
 
-        new_entries = msq.intervention_log[log_len_before:log_len_after]
+        new_entries = msq.intervention_log[log_len_before:]
         return [{'source': 'intra_callback', **entry} for entry in new_entries]
 
 
