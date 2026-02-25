@@ -185,7 +185,6 @@ class FeedbackController:
                     'PruningStrategy %s failed: %s',
                     ps.__class__.__name__, e,
                 )
-                raise
 
         return interventions
 

@@ -258,6 +258,30 @@ def test_source_isolation():
     assert 3 not in domain.values_for('a')
 
 
+def test_pruning_strategy_isolation():
+
+    msq, strategy, domain = make_msq()
+
+    class FailingStrategy(StubPruningStrategy):
+        def analyze_and_intervene(self, _log, _msq):
+            raise RuntimeError('strategy crashed')
+
+    ps_bad = FailingStrategy()
+    ps_good = StubPruningStrategy(interventions=[
+        {'op': 'remove_is', 'param': 'a', 'value': 3},
+    ])
+
+    fc = FeedbackController(
+        feedback_interval=5,
+        pruning_strategies=[ps_bad, ps_good],
+    )
+
+    result = fc.trigger(None, msq, strategy, 5)
+
+    assert any(i['op'] == 'remove_is' for i in result)
+    assert 3 not in domain.values_for('a')
+
+
 def test_audit_log_written():
 
     msq, strategy, _ = make_msq()

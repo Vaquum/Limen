@@ -72,6 +72,7 @@ from tests.test_feedback_controller import test_file_polling_detects_change
 from tests.test_feedback_controller import test_file_missing_no_error
 from tests.test_feedback_controller import test_file_invalid_json_no_error
 from tests.test_feedback_controller import test_source_isolation
+from tests.test_feedback_controller import test_pruning_strategy_isolation
 from tests.test_feedback_controller import test_audit_log_written
 from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
 
@@ -124,6 +125,7 @@ tests = [
     test_file_missing_no_error,
     test_file_invalid_json_no_error,
     test_source_isolation,
+    test_pruning_strategy_isolation,
     test_audit_log_written,
     test_fc_get_set_state,
     test_large_param_space,
