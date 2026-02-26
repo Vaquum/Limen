@@ -312,7 +312,7 @@ class UniversalExperimentLoop:
                     current_round: int,
                     target_permutations: int,
                     *,
-                    strategy_type: str = 'unknown',
+                    strategy_type: str,
                     content_hash: str = '') -> None:
 
         '''

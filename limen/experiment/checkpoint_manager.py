@@ -5,6 +5,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from limen.experiment.msq import MSQ
+from limen.experiment.param_domain import ParamDomain
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,40 +47,37 @@ class CheckpointManager:
 
 
     @staticmethod
-    def compute_content_hash(content: dict | str) -> str:
+    def compute_content_hash(content: dict) -> str:
 
         '''
-        Compute a SHA-256 hex digest of a dict or string.
+        Compute a SHA-256 hex digest of a dict.
 
-        Dicts are serialized to JSON with sorted keys for determinism.
+        Serialized to JSON with sorted keys for determinism.
 
         Args:
-            content (dict | str): Content to hash
+            content (dict): Content to hash
 
         Returns:
             str: 64-character lowercase hex SHA-256 digest
 
         '''
 
-        if isinstance(content, dict):
-            raw = json.dumps(content, sort_keys=True)
-        else:
-            raw = content
+        raw = json.dumps(content, sort_keys=True)
         return hashlib.sha256(raw.encode('utf-8')).hexdigest()
 
 
-    def initialize_fresh(self, checkpoint_dir: str | Path) -> Path:
+    def initialize_fresh(self, checkpoint_dir: Path) -> Path:
 
         '''
         Create a checkpoint directory and return its path.
 
-        Idempotent — safe to call on an existing directory.
+        NOTE: Idempotent — safe to call on an existing directory.
 
         Args:
-            checkpoint_dir (str | Path): Path to create
+            checkpoint_dir (Path): Path to create
 
         Returns:
-            Path: Path to the checkpoint directory
+            Path: Created directory path
 
         '''
 
@@ -89,25 +89,25 @@ class CheckpointManager:
 
     def save(self,
              checkpoint_dir: Path,
-             msq: Any,
-             domain: Any,
+             msq: MSQ,
+             domain: ParamDomain,
              current_round: int,
              target_permutations: int,
              *,
-             strategy_type: str = 'unknown',
+             strategy_type: str,
              content_hash: str = '') -> None:
 
         '''
         Write checkpoint files into checkpoint_dir.
 
-        Each call overwrites the previous checkpoint. Files are written
+        NOTE: Each call overwrites the previous checkpoint. Files are written
         atomically using a write-then-rename pattern to avoid corrupt
         partial writes on crash.
 
         Args:
             checkpoint_dir (Path): Directory to write checkpoint files
-            msq (Any): MSQ instance with get_state() method
-            domain (Any): ParamDomain instance with get_state() method
+            msq (MSQ): MSQ instance to checkpoint
+            domain (ParamDomain): ParamDomain instance to checkpoint
             current_round (int): Round number at checkpoint time
             target_permutations (int): Total rounds planned for the run
             strategy_type (str): Class name of the search strategy
@@ -198,20 +198,6 @@ class CheckpointManager:
                 f"current is '{strategy_type}'. "
                 f"Cannot resume with a different search strategy."
             )
-
-
-    def get_state(self) -> dict[str, Any]:
-
-        '''Export state for checkpointing.'''
-
-        return {'checkpoint_interval': self._checkpoint_interval}
-
-
-    def set_state(self, state: dict[str, Any]) -> None:
-
-        '''Restore state from checkpoint.'''
-
-        self._checkpoint_interval = state['checkpoint_interval']
 
 
     @staticmethod

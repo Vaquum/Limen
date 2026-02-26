@@ -37,14 +37,6 @@ def test_should_checkpoint_default_interval():
     assert cm.should_checkpoint(2000) is True
 
 
-def test_compute_content_hash_string():
-
-    h = CheckpointManager.compute_content_hash('hello')
-
-    assert len(h) == 64
-    assert h == CheckpointManager.compute_content_hash('hello')
-
-
 def test_compute_content_hash_dict():
 
     h1 = CheckpointManager.compute_content_hash({'b': 2, 'a': 1})
@@ -56,7 +48,6 @@ def test_compute_content_hash_dict():
 
 def test_compute_content_hash_different_inputs():
 
-    assert CheckpointManager.compute_content_hash('a') != CheckpointManager.compute_content_hash('b')
     assert CheckpointManager.compute_content_hash({'x': 1}) != CheckpointManager.compute_content_hash({'x': 2})
 
 
@@ -187,20 +178,6 @@ def test_validate_raises_on_strategy_mismatch():
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'Strategy type mismatch' in str(e)
-
-
-def test_get_set_state():
-
-    cm = CheckpointManager(checkpoint_interval=250)
-
-    state = cm.get_state()
-
-    assert state['checkpoint_interval'] == 250
-
-    cm2 = CheckpointManager()
-    cm2.set_state(state)
-
-    assert cm2._checkpoint_interval == 250
 
 
 def test_param_domain_get_set_state():

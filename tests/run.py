@@ -77,7 +77,6 @@ from tests.test_feedback_controller import test_audit_log_written
 from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
 from tests.test_checkpoint_manager import test_should_checkpoint_default_interval
-from tests.test_checkpoint_manager import test_compute_content_hash_string
 from tests.test_checkpoint_manager import test_compute_content_hash_dict
 from tests.test_checkpoint_manager import test_compute_content_hash_different_inputs
 from tests.test_checkpoint_manager import test_initialize_fresh_creates_directory
@@ -87,7 +86,6 @@ from tests.test_checkpoint_manager import test_load_returns_all_keys
 from tests.test_checkpoint_manager import test_validate_passes_when_all_match
 from tests.test_checkpoint_manager import test_validate_raises_on_hash_mismatch
 from tests.test_checkpoint_manager import test_validate_raises_on_strategy_mismatch
-from tests.test_checkpoint_manager import test_get_set_state as test_cm_get_set_state
 from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
 from tests.test_checkpoint_manager import test_uel_checkpoint_and_resume
@@ -146,7 +144,6 @@ tests = [
     test_fc_get_set_state,
     test_should_checkpoint_interval,
     test_should_checkpoint_default_interval,
-    test_compute_content_hash_string,
     test_compute_content_hash_dict,
     test_compute_content_hash_different_inputs,
     test_initialize_fresh_creates_directory,
@@ -156,7 +153,6 @@ tests = [
     test_validate_passes_when_all_match,
     test_validate_raises_on_hash_mismatch,
     test_validate_raises_on_strategy_mismatch,
-    test_cm_get_set_state,
     test_param_domain_get_set_state,
     test_uel_shutdown_flag,
     test_uel_checkpoint_and_resume,
