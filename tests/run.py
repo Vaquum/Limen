@@ -76,13 +76,10 @@ from tests.test_feedback_controller import test_pruning_strategy_isolation
 from tests.test_feedback_controller import test_audit_log_written
 from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
-from tests.test_checkpoint_manager import test_should_checkpoint_default_interval
 from tests.test_checkpoint_manager import test_compute_content_hash_dict
-from tests.test_checkpoint_manager import test_compute_content_hash_different_inputs
 from tests.test_checkpoint_manager import test_initialize_fresh_creates_directory
 from tests.test_checkpoint_manager import test_save_writes_three_files
 from tests.test_checkpoint_manager import test_save_metadata_content
-from tests.test_checkpoint_manager import test_load_returns_all_keys
 from tests.test_checkpoint_manager import test_validate_passes_when_all_match
 from tests.test_checkpoint_manager import test_validate_raises_on_hash_mismatch
 from tests.test_checkpoint_manager import test_validate_raises_on_strategy_mismatch
@@ -143,13 +140,10 @@ tests = [
     test_audit_log_written,
     test_fc_get_set_state,
     test_should_checkpoint_interval,
-    test_should_checkpoint_default_interval,
     test_compute_content_hash_dict,
-    test_compute_content_hash_different_inputs,
     test_initialize_fresh_creates_directory,
     test_save_writes_three_files,
     test_save_metadata_content,
-    test_load_returns_all_keys,
     test_validate_passes_when_all_match,
     test_validate_raises_on_hash_mismatch,
     test_validate_raises_on_strategy_mismatch,

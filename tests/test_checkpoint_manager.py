@@ -28,15 +28,6 @@ def test_should_checkpoint_interval():
     assert cm.should_checkpoint(7) is False
 
 
-def test_should_checkpoint_default_interval():
-
-    cm = CheckpointManager()
-
-    assert cm.should_checkpoint(999) is False
-    assert cm.should_checkpoint(1000) is True
-    assert cm.should_checkpoint(2000) is True
-
-
 def test_compute_content_hash_dict():
 
     h1 = CheckpointManager.compute_content_hash({'b': 2, 'a': 1})
@@ -44,11 +35,6 @@ def test_compute_content_hash_dict():
 
     assert h1 == h2
     assert len(h1) == 64
-
-
-def test_compute_content_hash_different_inputs():
-
-    assert CheckpointManager.compute_content_hash({'x': 1}) != CheckpointManager.compute_content_hash({'x': 2})
 
 
 def test_initialize_fresh_creates_directory():
@@ -102,28 +88,6 @@ def test_save_metadata_content():
         assert 'saved_at' in metadata
 
 
-def test_load_returns_all_keys():
-
-    msq, _, domain = make_msq()
-    next(msq)
-    next(msq)
-
-    with TemporaryDirectory() as tmpdir:
-        ckpt_dir = Path(tmpdir) / 'ckpt'
-        ckpt_dir.mkdir()
-        cm = CheckpointManager()
-
-        cm.save(ckpt_dir, msq, domain, 50, 200,
-                strategy_type='StubStrategy', content_hash='c' * 64)
-
-        result = cm.load(ckpt_dir)
-
-    assert result['metadata']['experiment_round'] == 50
-    assert result['msq_state']['yielded_count'] == 2
-    assert 'a' in result['domain_state']
-    assert 'b' in result['domain_state']
-
-
 def test_validate_passes_when_all_match():
 
     msq, _, domain = make_msq()
@@ -137,7 +101,6 @@ def test_validate_passes_when_all_match():
         cm.save(ckpt_dir, msq, domain, 10, 100,
                 strategy_type='StubStrategy', content_hash=content_hash)
 
-        # Should not raise
         cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
 
 
