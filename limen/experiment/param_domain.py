@@ -271,3 +271,31 @@ class ParamDomain:
             if k not in self._params or v not in self._params[k]:
                 return False
         return True
+
+
+    def get_state(self) -> dict[str, Any]:
+
+        '''Export state for checkpointing.'''
+
+        return {k: list(v) for k, v in self._params.items()}
+
+
+    def set_state(self, state: dict[str, Any]) -> None:
+
+        '''
+        Restore state from checkpoint.
+
+        Reinitializes _params from the saved dict. Version resets to 0
+        and all observers are notified so strategies rebuild their
+        internal state.
+
+        Args:
+            state (dict): State dict from get_state()
+
+        '''
+
+        self._params = {k: list(v) for k, v in state.items()}
+        self._version = 0
+        changed_params = list(self._params.keys())
+        for obs in self._observers:
+            obs.on_domain_changed(self, changed_params)
