@@ -9,6 +9,9 @@ from tqdm import tqdm
 import polars as pl
 import sqlite3
 
+from limen.experiment.checkpoint_manager import CheckpointManager
+from limen.experiment.msq import MSQ
+from limen.experiment.param_domain import ParamDomain
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 
@@ -285,19 +288,17 @@ class UniversalExperimentLoop:
 
     def _initialize_fresh(self,
                           checkpoint_dir: Path,
-                          checkpoint_manager: Any) -> Path:
+                          checkpoint_manager: CheckpointManager) -> Path:
 
         '''
         Create a fresh checkpoint directory.
 
-        Delegates to CheckpointManager.initialize_fresh.
-
         Args:
             checkpoint_dir (Path): Path to create
-            checkpoint_manager (Any): CheckpointManager instance
+            checkpoint_manager (CheckpointManager): CheckpointManager instance
 
         Returns:
-            Path: Path to the checkpoint directory
+            Path: Created directory path
 
         '''
 
@@ -305,10 +306,10 @@ class UniversalExperimentLoop:
 
 
     def _checkpoint(self,
-                    msq: Any,
-                    domain: Any,
+                    msq: MSQ,
+                    domain: ParamDomain,
                     checkpoint_dir: Path,
-                    checkpoint_manager: Any,
+                    checkpoint_manager: CheckpointManager,
                     current_round: int,
                     target_permutations: int,
                     *,
@@ -318,13 +319,11 @@ class UniversalExperimentLoop:
         '''
         Save a checkpoint at the current experiment state.
 
-        Delegates to CheckpointManager.save.
-
         Args:
-            msq (Any): MSQ instance to checkpoint
-            domain (Any): ParamDomain instance to checkpoint
+            msq (MSQ): MSQ instance to checkpoint
+            domain (ParamDomain): ParamDomain instance to checkpoint
             checkpoint_dir (Path): Directory to write checkpoint files
-            checkpoint_manager (Any): CheckpointManager instance
+            checkpoint_manager (CheckpointManager): CheckpointManager instance
             current_round (int): Current round number
             target_permutations (int): Total rounds planned
             strategy_type (str): Class name of the search strategy
@@ -345,17 +344,17 @@ class UniversalExperimentLoop:
 
     def _resume_from_checkpoint(self,
                                  checkpoint_dir: Path,
-                                 checkpoint_manager: Any,
+                                 checkpoint_manager: CheckpointManager,
                                  *,
                                  content_hash: str = '',
-                                 strategy_type: str = 'unknown') -> dict:
+                                 strategy_type: str) -> dict:
 
         '''
         Validate and load state from an existing checkpoint directory.
 
         Args:
             checkpoint_dir (Path): Directory containing checkpoint files
-            checkpoint_manager (Any): CheckpointManager instance
+            checkpoint_manager (CheckpointManager): CheckpointManager instance
             content_hash (str): Expected SHA-256 digest for validation
             strategy_type (str): Expected strategy class name for validation
 
@@ -377,14 +376,7 @@ class UniversalExperimentLoop:
 
     def _register_shutdown_handler(self) -> None:
 
-        '''
-        Register SIGTERM and SIGINT handlers for graceful shutdown.
-
-        Sets self._shutdown_requested = True when a signal is received.
-        The run loop polls this flag after each round and triggers a
-        final checkpoint before exiting cleanly.
-
-        '''
+        '''Register SIGTERM and SIGINT handlers that set _shutdown_requested.'''
 
         def _handler(signum: int, _frame: Any) -> None:
             logger.warning(
