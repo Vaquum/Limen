@@ -285,9 +285,8 @@ class ParamDomain:
         '''
         Restore state from checkpoint.
 
-        Reinitializes _params from the saved dict. Version resets to 0
-        and all observers are notified so strategies rebuild their
-        internal state.
+        NOTE: Version resets to 0 and all observers are notified so
+        strategies rebuild their internal state.
 
         Args:
             state (dict): State dict from get_state()
