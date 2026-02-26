@@ -1,13 +1,14 @@
 import logging
 import os
 import signal
+import sqlite3
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
-from tqdm import tqdm
+
 import polars as pl
-import sqlite3
+from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.msq import MSQ
@@ -386,5 +387,11 @@ class UniversalExperimentLoop:
             )
             self._shutdown_requested = True
 
-        signal.signal(signal.SIGTERM, _handler)
-        signal.signal(signal.SIGINT, _handler)
+        try:
+            signal.signal(signal.SIGTERM, _handler)
+            signal.signal(signal.SIGINT, _handler)
+        except ValueError:
+            logger.warning(
+                'Cannot install signal handlers outside the main thread. '
+                'Graceful shutdown via signals will not be available.'
+            )

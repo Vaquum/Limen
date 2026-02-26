@@ -293,6 +293,11 @@ class ParamDomain:
 
         '''
 
+        for k, v in state.items():
+            if not isinstance(v, list) or len(v) == 0:
+                raise ValueError(
+                    f"Parameter '{k}' must be a non-empty list, got {v!r}"
+                )
         self._params = {k: list(v) for k, v in state.items()}
         self._version = 0
         changed_params = list(self._params.keys())

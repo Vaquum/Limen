@@ -16,6 +16,15 @@ def _make_uel():
     return uel
 
 
+def test_checkpoint_interval_validation():
+
+    try:
+        CheckpointManager(checkpoint_interval=0)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'checkpoint_interval' in str(e)
+
+
 def test_should_checkpoint_interval():
 
     cm = CheckpointManager(checkpoint_interval=5)
@@ -143,6 +152,51 @@ def test_validate_raises_on_strategy_mismatch():
             assert 'Strategy type mismatch' in str(e)
 
 
+def test_validate_raises_on_missing_metadata():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        try:
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'incomplete' in str(e)
+
+
+def test_validate_raises_on_corrupt_metadata():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        (ckpt_dir / 'checkpoint_metadata.json').write_text('not valid json')
+
+        try:
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'Corrupt' in str(e)
+
+
+def test_param_domain_set_state_invalid_leaves_state_unchanged():
+
+    domain = ParamDomain({'lr': [0.001, 0.01], 'n': [10, 20]})
+    original_lr = domain.values_for('lr')
+
+    try:
+        domain.set_state({'lr': [0.001], 'n': []})
+        assert False, 'Should have raised ValueError'
+    except ValueError:
+        pass
+
+    assert domain.values_for('lr') == original_lr
+    assert domain.values_for('n') == [10, 20]
+
+
 def test_param_domain_get_set_state():
 
     domain = ParamDomain({'lr': [0.001, 0.01], 'n': [10, 20, 30]})
@@ -169,8 +223,15 @@ def test_uel_shutdown_flag():
     assert uel._shutdown_requested is False
     assert uel._pause_requested is False
 
-    uel._register_shutdown_handler()
-    signal.raise_signal(signal.SIGTERM)
+    prev_sigterm = signal.getsignal(signal.SIGTERM)
+    prev_sigint = signal.getsignal(signal.SIGINT)
+
+    try:
+        uel._register_shutdown_handler()
+        signal.raise_signal(signal.SIGTERM)
+    finally:
+        signal.signal(signal.SIGTERM, prev_sigterm)
+        signal.signal(signal.SIGINT, prev_sigint)
 
     assert uel._shutdown_requested is True
     assert uel._pause_requested is False

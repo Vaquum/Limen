@@ -25,6 +25,10 @@ class CheckpointManager:
 
         '''
 
+        if checkpoint_interval < 1:
+            raise ValueError(
+                f"checkpoint_interval must be >= 1, got {checkpoint_interval}"
+            )
         self._checkpoint_interval = checkpoint_interval
 
 
@@ -100,9 +104,9 @@ class CheckpointManager:
         '''
         Write checkpoint files into checkpoint_dir.
 
-        NOTE: Each call overwrites the previous checkpoint. Files are written
-        atomically using a write-then-rename pattern to avoid corrupt
-        partial writes on crash.
+        NOTE: Metadata is written last as a commit marker. State files are
+        written first, each atomically via a write-then-rename pattern.
+        A missing metadata file always indicates an incomplete checkpoint.
 
         Args:
             checkpoint_dir (Path): Directory to write checkpoint files
@@ -116,6 +120,13 @@ class CheckpointManager:
         '''
 
         checkpoint_dir = Path(checkpoint_dir)
+        metadata_path = checkpoint_dir / 'checkpoint_metadata.json'
+
+        if metadata_path.exists():
+            metadata_path.unlink()
+
+        self._write_json(checkpoint_dir / 'msq_state.json', msq.get_state())
+        self._write_json(checkpoint_dir / 'domain_state.json', domain.get_state())
 
         metadata = {
             'experiment_round': current_round,
@@ -125,9 +136,7 @@ class CheckpointManager:
             'saved_at': datetime.now(tz=timezone.utc).isoformat(),
         }
 
-        self._write_json(checkpoint_dir / 'checkpoint_metadata.json', metadata)
-        self._write_json(checkpoint_dir / 'msq_state.json', msq.get_state())
-        self._write_json(checkpoint_dir / 'domain_state.json', domain.get_state())
+        self._write_json(metadata_path, metadata)
 
         logger.info('Checkpoint saved at round %d → %s', current_round, checkpoint_dir)
 
@@ -176,11 +185,21 @@ class CheckpointManager:
             strategy_type (str): Expected strategy class name
 
         Raises:
-            ValueError: If content hash or strategy type do not match
+            ValueError: If checkpoint is missing, corrupt, or configuration does not match
 
         '''
 
-        metadata = self.load(checkpoint_dir)['metadata']
+        try:
+            metadata = self._read_json(checkpoint_dir / 'checkpoint_metadata.json')
+        except FileNotFoundError as e:
+            raise ValueError(
+                f"No checkpoint found in '{checkpoint_dir}': "
+                f"metadata file missing or checkpoint is incomplete."
+            ) from e
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Corrupt checkpoint metadata in '{checkpoint_dir}': {e}"
+            ) from e
 
         saved_hash = metadata.get('content_hash', '')
         if saved_hash != content_hash:
