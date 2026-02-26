@@ -1,11 +1,19 @@
 from limen.indicators.ad import ad
 from limen.indicators.adosc import adosc
+from limen.indicators.apo import apo
+from limen.indicators.cci import cci
+from limen.indicators.cmo import cmo
 from limen.indicators.dema import dema
 from limen.indicators.ema import ema
 from limen.indicators.atr import atr
 from limen.indicators.bbands import bbands
+from limen.indicators.bop import bop
 from limen.indicators.body_pct import body_pct
+from limen.indicators.macd import macd
+from limen.indicators.macdfix import macdfix
+from limen.indicators.macdext import macdext
 from limen.indicators.mfi import mfi
+from limen.indicators.mom import mom
 from limen.indicators.kama import kama
 from limen.indicators.mama import mama
 from limen.indicators.ma import ma
@@ -37,16 +45,22 @@ from limen.indicators.window_return import window_return
 __all__ = [
     'ad',
     'adosc',
+    'apo',
     'dema',
     'ema',
     'atr',
     'bbands',
+    'bop',
     'body_pct',
     'bollinger_bands',
     'bollinger_position',
     'cci',
+    'cmo',
     'macd',
+    'macdfix',
+    'macdext',
     'mfi',
+    'mom',
     'kama',
     'mama',
     'ma',

@@ -1,9 +1,10 @@
 import numpy as np
 
 
-def _ema_talib_default_segment(
+def _ema_talib_segment_with_k(
     values: np.ndarray,
     period: int,
+    k: float,
     start_idx: int,
     end_idx: int,
 ) -> tuple[int, np.ndarray]:
@@ -16,7 +17,6 @@ def _ema_talib_default_segment(
     if start_idx > end_idx:
         return start_idx, np.empty(0, dtype=float)
 
-    k = 2.0 / (period + 1.0)
     today = start_idx - lookback
 
     prev_ma = values[today:today + period].mean()
@@ -33,3 +33,13 @@ def _ema_talib_default_segment(
         today += 1
 
     return start_idx, np.asarray(out, dtype=float)
+
+
+def _ema_talib_default_segment(
+    values: np.ndarray,
+    period: int,
+    start_idx: int,
+    end_idx: int,
+) -> tuple[int, np.ndarray]:
+    k = 2.0 / (period + 1.0)
+    return _ema_talib_segment_with_k(values, period, k, start_idx, end_idx)

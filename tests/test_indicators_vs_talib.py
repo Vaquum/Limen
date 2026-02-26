@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, atr, bbands, dema, ema, ht_trendline, kama, ma, mama, mfi, natr, obv, sar, sarext, sma, t3, tema, trange, trima, tsf, wma
+from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_trendline, kama, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, sar, sarext, sma, t3, tema, trange, trima, tsf, wma
 
 
 historical = HistoricalData()
@@ -45,14 +45,23 @@ FAST_PERIOD = 3
 SLOW_PERIOD = 10
 APO_FAST_PERIOD = 12
 APO_SLOW_PERIOD = 26
+PPO_FAST_PERIOD = 12
+PPO_SLOW_PERIOD = 26
 MACD_FAST_PERIOD = 12
 MACD_SLOW_PERIOD = 26
 MACD_SIGNAL_PERIOD = 9
+MACDFIX_SIGNAL_PERIOD = 9
+MOM_PERIOD = 10
 BB_WINDOW = 20
 BB_NUM_STD = 2.0
 BB_MA_TYPES = list(range(9))
 T3_VFACTOR = 0.7
 T3_PERIOD = 5
+MACDEXT_CASES = [
+    (12, 0, 26, 0, 9, 0),
+    (12, 1, 26, 1, 9, 1),
+    (8, 2, 21, 5, 7, 0),
+]
 
 
 def test_ad():
@@ -84,6 +93,46 @@ def test_adosc():
     )
 
     verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_apo():
+    for ma_type in MA_TYPES:
+        out_col = f'apo_{APO_FAST_PERIOD}_{APO_SLOW_PERIOD}_{ma_type}'
+        limen_result = apo(
+            SAMPLE_DATA,
+            price_col='close',
+            fast_period=APO_FAST_PERIOD,
+            slow_period=APO_SLOW_PERIOD,
+            ma_type=ma_type,
+        )[out_col].to_numpy()
+        talib_result = talib.APO(
+            NUMPY_DATA['close'],
+            fastperiod=APO_FAST_PERIOD,
+            slowperiod=APO_SLOW_PERIOD,
+            matype=ma_type,
+        )
+
+        verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ppo():
+    for ma_type in MA_TYPES:
+        out_col = f'ppo_{PPO_FAST_PERIOD}_{PPO_SLOW_PERIOD}_{ma_type}'
+        limen_result = ppo(
+            SAMPLE_DATA,
+            price_col='close',
+            fast_period=PPO_FAST_PERIOD,
+            slow_period=PPO_SLOW_PERIOD,
+            ma_type=ma_type,
+        )[out_col].to_numpy()
+        talib_result = talib.PPO(
+            NUMPY_DATA['close'],
+            fastperiod=PPO_FAST_PERIOD,
+            slowperiod=PPO_SLOW_PERIOD,
+            matype=ma_type,
+        )
+
+        verify_indicator_results_match(limen_result, talib_result)
 
 
 def test_dema():
@@ -338,6 +387,128 @@ def test_bbands():
         verify_indicator_results_match(limen_lower, talib_lower)
 
 
+def test_bop():
+    limen_result = bop(SAMPLE_DATA)['bop'].to_numpy()
+    talib_result = talib.BOP(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cci():
+    out_col = f'cci_{DEFAULT_PERIOD}'
+    limen_result = cci(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
+    talib_result = talib.CCI(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+        timeperiod=DEFAULT_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cmo():
+    out_col = f'cmo_{DEFAULT_PERIOD}'
+    limen_result = cmo(SAMPLE_DATA, price_col='close', period=DEFAULT_PERIOD)[out_col].to_numpy()
+    talib_result = talib.CMO(
+        NUMPY_DATA['close'],
+        timeperiod=DEFAULT_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_macd():
+    limen = macd(
+        SAMPLE_DATA,
+        price_col='close',
+        fast_period=MACD_FAST_PERIOD,
+        slow_period=MACD_SLOW_PERIOD,
+        signal_period=MACD_SIGNAL_PERIOD,
+    )
+    limen_macd = limen['macd'].to_numpy()
+    limen_signal = limen['macd_signal'].to_numpy()
+    limen_hist = limen['macd_hist'].to_numpy()
+
+    talib_macd, talib_signal, talib_hist = talib.MACD(
+        NUMPY_DATA['close'],
+        fastperiod=MACD_FAST_PERIOD,
+        slowperiod=MACD_SLOW_PERIOD,
+        signalperiod=MACD_SIGNAL_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_macd, talib_macd)
+    verify_indicator_results_match(limen_signal, talib_signal)
+    verify_indicator_results_match(limen_hist, talib_hist)
+
+
+def test_macdfix():
+    limen = macdfix(
+        SAMPLE_DATA,
+        price_col='close',
+        signal_period=MACDFIX_SIGNAL_PERIOD,
+    )
+    limen_macd = limen['macdfix'].to_numpy()
+    limen_signal = limen['macdfix_signal'].to_numpy()
+    limen_hist = limen['macdfix_hist'].to_numpy()
+
+    talib_macd, talib_signal, talib_hist = talib.MACDFIX(
+        NUMPY_DATA['close'],
+        signalperiod=MACDFIX_SIGNAL_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_macd, talib_macd)
+    verify_indicator_results_match(limen_signal, talib_signal)
+    verify_indicator_results_match(limen_hist, talib_hist)
+
+
+def test_macdext():
+    for fast_p, fast_t, slow_p, slow_t, signal_p, signal_t in MACDEXT_CASES:
+        limen = macdext(
+            SAMPLE_DATA,
+            price_col='close',
+            fast_period=fast_p,
+            fast_ma_type=fast_t,
+            slow_period=slow_p,
+            slow_ma_type=slow_t,
+            signal_period=signal_p,
+            signal_ma_type=signal_t,
+        )
+        limen_macd = limen['macdext'].to_numpy()
+        limen_signal = limen['macdext_signal'].to_numpy()
+        limen_hist = limen['macdext_hist'].to_numpy()
+
+        talib_macd, talib_signal, talib_hist = talib.MACDEXT(
+            NUMPY_DATA['close'],
+            fastperiod=fast_p,
+            fastmatype=fast_t,
+            slowperiod=slow_p,
+            slowmatype=slow_t,
+            signalperiod=signal_p,
+            signalmatype=signal_t,
+        )
+
+        verify_indicator_results_match(limen_macd, talib_macd)
+        verify_indicator_results_match(limen_signal, talib_signal)
+        verify_indicator_results_match(limen_hist, talib_hist)
+
+
+def test_mom():
+    out_col = f'mom_{MOM_PERIOD}'
+    limen_result = mom(SAMPLE_DATA, price_col='close', period=MOM_PERIOD)[out_col].to_numpy()
+    talib_result = talib.MOM(
+        NUMPY_DATA['close'],
+        timeperiod=MOM_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
 def test_natr():
     out_col = f'natr_{DEFAULT_PERIOD}'
     limen_result = natr(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
@@ -407,6 +578,8 @@ def test_indicators_vs_talib():
     test_functions = [
         ('AD', test_ad),
         ('ADOSC', test_adosc),
+        ('APO', test_apo),
+        ('PPO', test_ppo),
         ('DEMA', test_dema),
         ('EMA', test_ema),
         ('HT_TRENDLINE', test_ht_trendline),
@@ -423,6 +596,13 @@ def test_indicators_vs_talib():
         ('SAREXT', test_sarext),
         ('ATR', test_atr),
         ('BBANDS', test_bbands),
+        ('BOP', test_bop),
+        ('CCI', test_cci),
+        ('CMO', test_cmo),
+        ('MACD', test_macd),
+        ('MACDFIX', test_macdfix),
+        ('MACDEXT', test_macdext),
+        ('MOM', test_mom),
         ('MFI', test_mfi),
         ('NATR', test_natr),
         ('OBV', test_obv),

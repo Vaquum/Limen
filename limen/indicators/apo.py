@@ -3,10 +3,8 @@ import polars as pl
 
 from limen.indicators.ma import ma
 
-TA_EPSILON = 1e-14
 
-
-def ppo(
+def apo(
     data: pl.DataFrame,
     price_col: str = 'close',
     fast_period: int = 12,
@@ -15,7 +13,7 @@ def ppo(
 ) -> pl.DataFrame:
 
     '''
-    Compute Percentage Price Oscillator (PPO).
+    Compute Absolute Price Oscillator (APO).
 
     Args:
         data (pl.DataFrame): Dataset with input price column
@@ -25,7 +23,7 @@ def ppo(
         ma_type (int): TA-Lib MA type (0..8)
 
     Returns:
-        pl.DataFrame: The input data with a new column 'ppo_{fast_period}_{slow_period}_{ma_type}'
+        pl.DataFrame: The input data with a new column 'apo_{fast_period}_{slow_period}_{ma_type}'
     '''
 
     if fast_period < 2 or fast_period > 100000:
@@ -42,7 +40,7 @@ def ppo(
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     n = len(values)
-    out_col = f'ppo_{fast_period}_{slow_period}_{ma_type}'
+    out_col = f'apo_{fast_period}_{slow_period}_{ma_type}'
     out = np.full(n, np.nan, dtype=float)
 
     if n == 0:
@@ -65,9 +63,6 @@ def ppo(
         ma_type=ma_type,
     )[slow_col].to_numpy().astype(float, copy=False)
 
-    non_zero_mask = np.abs(slow_ma) >= TA_EPSILON
-    valid_mask = non_zero_mask & ~np.isnan(fast_ma) & ~np.isnan(slow_ma)
-    out[valid_mask] = ((fast_ma[valid_mask] - slow_ma[valid_mask]) / slow_ma[valid_mask]) * 100.0
-    out[~np.isnan(fast_ma) & ~np.isnan(slow_ma) & ~non_zero_mask] = 0.0
+    out[:] = fast_ma - slow_ma
 
     return data.with_columns(pl.Series(name=out_col, values=out))
