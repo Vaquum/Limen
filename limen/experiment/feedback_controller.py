@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -232,7 +231,7 @@ class FeedbackController:
         if not self._intervention_path.exists():
             return []
 
-        current_mtime = os.path.getmtime(self._intervention_path)
+        current_mtime = self._intervention_path.stat().st_mtime
         if current_mtime <= self._intervention_last_mtime:
             return []
 
