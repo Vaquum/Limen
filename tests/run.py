@@ -59,6 +59,22 @@ from tests.test_msq import test_intervention_log
 from tests.test_msq import test_get_set_state
 from tests.test_pruning_strategy import test_cannot_instantiate_abc
 from tests.test_pruning_strategy import test_active_flag
+from tests.test_feedback_controller import test_should_trigger_interval
+from tests.test_feedback_controller import test_trigger_pruning_strategy
+from tests.test_feedback_controller import test_trigger_inactive_pruning_strategy
+from tests.test_feedback_controller import test_trigger_intra_callback
+from tests.test_feedback_controller import test_apply_intervention_dispatch
+from tests.test_feedback_controller import test_apply_intervention_unknown_op
+from tests.test_feedback_controller import test_strategy_update_called
+from tests.test_feedback_controller import test_trigger_intervention_file
+from tests.test_feedback_controller import test_file_polling_skips_unchanged
+from tests.test_feedback_controller import test_file_polling_detects_change
+from tests.test_feedback_controller import test_file_missing_no_error
+from tests.test_feedback_controller import test_file_invalid_json_no_error
+from tests.test_feedback_controller import test_source_isolation
+from tests.test_feedback_controller import test_pruning_strategy_isolation
+from tests.test_feedback_controller import test_audit_log_written
+from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
 
 tests = [
     test_param_domain_init,
@@ -96,6 +112,22 @@ tests = [
     test_get_set_state,
     test_cannot_instantiate_abc,
     test_active_flag,
+    test_should_trigger_interval,
+    test_trigger_pruning_strategy,
+    test_trigger_inactive_pruning_strategy,
+    test_trigger_intra_callback,
+    test_apply_intervention_dispatch,
+    test_apply_intervention_unknown_op,
+    test_strategy_update_called,
+    test_trigger_intervention_file,
+    test_file_polling_skips_unchanged,
+    test_file_polling_detects_change,
+    test_file_missing_no_error,
+    test_file_invalid_json_no_error,
+    test_source_isolation,
+    test_pruning_strategy_isolation,
+    test_audit_log_written,
+    test_fc_get_set_state,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,

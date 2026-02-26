@@ -1,24 +1,5 @@
 from limen.experiment.pruning_strategy import PruningStrategy
-
-
-class StubPruningStrategy(PruningStrategy):
-
-    def __init__(self, *, active=True, interventions=None):
-
-        super().__init__(active=active)
-
-        self._interventions = interventions or []
-
-    def analyze_and_intervene(self, _log, _msq):
-        if not self._active:
-            return []
-        return list(self._interventions)
-
-    def get_state(self):
-        return {'active': self._active}
-
-    def set_state(self, state):
-        self._active = state['active']
+from tests.stubs.stubs import StubPruningStrategy
 
 
 def test_cannot_instantiate_abc():
