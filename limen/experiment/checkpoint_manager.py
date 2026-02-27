@@ -1,7 +1,8 @@
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -37,8 +38,6 @@ class CheckpointManager:
         '''
         Compute whether a checkpoint is due at the current round.
 
-        NOTE: Fires every checkpoint_interval rounds, never at round 0.
-
         Args:
             current_round (int): Current experiment round number
 
@@ -71,9 +70,7 @@ class CheckpointManager:
     def initialize_fresh(self, checkpoint_dir: Path) -> Path:
 
         '''
-        Create a checkpoint directory and return its path.
-
-        NOTE: Idempotent — safe to call on an existing directory.
+        Create the checkpoint directory if it does not exist, and return its path.
 
         Args:
             checkpoint_dir (Path): Path to create
@@ -169,10 +166,7 @@ class CheckpointManager:
                  strategy_type: str) -> dict[str, Any]:
 
         '''
-        Validate a checkpoint against the current experiment configuration.
-
-        Checks structure, content hash, and strategy type. Returns the loaded
-        checkpoint data if all checks pass.
+        Validate a checkpoint's structure, content hash, and strategy type against the current configuration.
 
         Args:
             checkpoint_dir (Path): Directory containing checkpoint file
