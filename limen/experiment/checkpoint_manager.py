@@ -35,15 +35,15 @@ class CheckpointManager:
     def should_checkpoint(self, current_round: int) -> bool:
 
         '''
-        Return True if a checkpoint should be saved at this round.
+        Compute whether a checkpoint is due at the current round.
 
-        Fires every checkpoint_interval rounds, never at round 0.
+        NOTE: Fires every checkpoint_interval rounds, never at round 0.
 
         Args:
             current_round (int): Current experiment round number
 
         Returns:
-            bool: True if checkpoint should fire
+            bool: True if a checkpoint should be saved
 
         '''
 
@@ -54,9 +54,7 @@ class CheckpointManager:
     def compute_content_hash(content: dict) -> str:
 
         '''
-        Compute a SHA-256 hex digest of a dict.
-
-        Serialized to JSON with sorted keys for determinism.
+        Compute a SHA-256 hex digest of a dict, serialized with sorted keys for determinism.
 
         Args:
             content (dict): Content to hash
@@ -168,18 +166,21 @@ class CheckpointManager:
                  checkpoint_dir: Path,
                  *,
                  content_hash: str,
-                 strategy_type: str) -> None:
+                 strategy_type: str) -> dict[str, Any]:
 
         '''
         Validate a checkpoint against the current experiment configuration.
 
-        Checks content hash and strategy type. Raises ValueError with a
-        descriptive message on any mismatch.
+        Checks structure, content hash, and strategy type. Returns the loaded
+        checkpoint data if all checks pass.
 
         Args:
             checkpoint_dir (Path): Directory containing checkpoint file
             content_hash (str): Expected SHA-256 digest
             strategy_type (str): Expected strategy class name
+
+        Returns:
+            dict: Validated checkpoint data with keys 'metadata', 'msq_state', 'domain_state'
 
         Raises:
             ValueError: If checkpoint is missing, corrupt, or configuration does not match
@@ -187,7 +188,18 @@ class CheckpointManager:
         '''
 
         data = self.load(checkpoint_dir)
+
+        if not isinstance(data, dict) or 'metadata' not in data:
+            raise ValueError(
+                f"Invalid checkpoint format in '{checkpoint_dir}': missing 'metadata' key."
+            )
+
         metadata = data['metadata']
+
+        if not isinstance(metadata, dict):
+            raise ValueError(
+                f"Invalid checkpoint format in '{checkpoint_dir}': 'metadata' must be an object."
+            )
 
         saved_hash = metadata.get('content_hash', '')
         if saved_hash != content_hash:
@@ -206,6 +218,14 @@ class CheckpointManager:
                 f"Cannot resume with a different search strategy."
             )
 
+        for key in ('msq_state', 'domain_state'):
+            if key not in data:
+                raise ValueError(
+                    f"Invalid checkpoint format in '{checkpoint_dir}': missing '{key}' key."
+                )
+
+        return data
+
 
     @staticmethod
     def _write_json(path: Path, data: dict) -> None:
@@ -215,7 +235,7 @@ class CheckpointManager:
             with tmp.open('w') as f:
                 json.dump(data, f, indent=2)
             tmp.replace(path)
-        except OSError:
+        except (OSError, TypeError):
             if tmp.exists():
                 tmp.unlink()
             raise

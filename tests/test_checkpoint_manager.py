@@ -107,7 +107,11 @@ def test_validate_passes_when_all_match():
         cm.save(ckpt_dir, msq, domain, 10, 100,
                 strategy_type='StubStrategy', content_hash=content_hash)
 
-        cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+        result = cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+
+        assert result['metadata']['experiment_round'] == 10
+        assert 'msq_state' in result
+        assert 'domain_state' in result
 
 
 def test_validate_raises_on_hash_mismatch():
@@ -226,6 +230,78 @@ def test_validate_raises_on_corrupt_checkpoint():
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'Corrupt' in str(e)
+
+
+def test_validate_raises_on_missing_metadata_key():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        (ckpt_dir / 'checkpoint.json').write_text('{"msq_state": {}, "domain_state": {}}')
+
+        try:
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'metadata' in str(e)
+
+
+def test_validate_raises_on_invalid_metadata_type():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        (ckpt_dir / 'checkpoint.json').write_text('{"metadata": "not a dict"}')
+
+        try:
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'metadata' in str(e)
+
+
+def test_validate_raises_on_missing_msq_state():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        content_hash = 'a' * 64
+        (ckpt_dir / 'checkpoint.json').write_text(
+            '{"metadata": {"content_hash": "' + content_hash + '", '
+            '"strategy_type": "StubStrategy"}, "domain_state": {}}'
+        )
+
+        try:
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'msq_state' in str(e)
+
+
+def test_validate_raises_on_missing_domain_state():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        content_hash = 'a' * 64
+        (ckpt_dir / 'checkpoint.json').write_text(
+            '{"metadata": {"content_hash": "' + content_hash + '", '
+            '"strategy_type": "StubStrategy"}, "msq_state": {}}'
+        )
+
+        try:
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'domain_state' in str(e)
 
 
 def test_param_domain_set_state_invalid_leaves_state_unchanged():

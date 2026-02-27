@@ -89,6 +89,10 @@ from tests.test_checkpoint_manager import test_load_raises_on_missing_checkpoint
 from tests.test_checkpoint_manager import test_load_raises_on_corrupt_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_metadata_key
+from tests.test_checkpoint_manager import test_validate_raises_on_invalid_metadata_type
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_msq_state
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_domain_state
 from tests.test_checkpoint_manager import test_param_domain_set_state_invalid_leaves_state_unchanged
 from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
@@ -160,6 +164,10 @@ tests = [
     test_load_raises_on_corrupt_checkpoint,
     test_validate_raises_on_missing_checkpoint,
     test_validate_raises_on_corrupt_checkpoint,
+    test_validate_raises_on_missing_metadata_key,
+    test_validate_raises_on_invalid_metadata_type,
+    test_validate_raises_on_missing_msq_state,
+    test_validate_raises_on_missing_domain_state,
     test_param_domain_set_state_invalid_leaves_state_unchanged,
     test_param_domain_get_set_state,
     test_uel_shutdown_flag,

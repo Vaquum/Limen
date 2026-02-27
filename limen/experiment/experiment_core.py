@@ -347,8 +347,8 @@ class UniversalExperimentLoop:
                                  checkpoint_dir: Path,
                                  checkpoint_manager: CheckpointManager,
                                  *,
-                                 content_hash: str = '',
-                                 strategy_type: str) -> dict:
+                                 strategy_type: str,
+                                 content_hash: str = '') -> dict:
 
         '''
         Validate and load state from an existing checkpoint directory.
@@ -356,8 +356,8 @@ class UniversalExperimentLoop:
         Args:
             checkpoint_dir (Path): Directory containing checkpoint files
             checkpoint_manager (CheckpointManager): CheckpointManager instance
-            content_hash (str): Expected SHA-256 digest for validation
             strategy_type (str): Expected strategy class name for validation
+            content_hash (str): Expected SHA-256 digest for validation
 
         Returns:
             dict: Keys 'metadata', 'msq_state', 'domain_state'
@@ -367,12 +367,11 @@ class UniversalExperimentLoop:
 
         '''
 
-        checkpoint_manager.validate(
+        return checkpoint_manager.validate(
             checkpoint_dir,
             content_hash=content_hash,
             strategy_type=strategy_type,
         )
-        return checkpoint_manager.load(checkpoint_dir)
 
 
     def _register_shutdown_handler(self) -> None:
