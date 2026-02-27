@@ -20,6 +20,11 @@ from limen.indicators.ma import ma
 from limen.indicators.natr import natr
 from limen.indicators.obv import obv
 from limen.indicators.ht_trendline import ht_trendline
+from limen.indicators.ht_dcphase import ht_dcphase
+from limen.indicators.ht_dcperiod import ht_dcperiod
+from limen.indicators.ht_phasor import ht_phasor
+from limen.indicators.ht_sine import ht_sine
+from limen.indicators.ht_trendmode import ht_trendmode
 from limen.indicators.sar import sar
 from limen.indicators.sarext import sarext
 from limen.indicators.ppo import ppo
@@ -77,6 +82,11 @@ __all__ = [
     'natr',
     'obv',
     'ht_trendline',
+    'ht_dcphase',
+    'ht_dcperiod',
+    'ht_phasor',
+    'ht_sine',
+    'ht_trendmode',
     'sar',
     'sarext',
     'ppo',

@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_trendline, kama, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, ultosc, willr, wma
+from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, ultosc, willr, wma
 
 
 historical = HistoricalData()
@@ -178,6 +178,49 @@ def test_ema():
 def test_ht_trendline():
     limen_result = ht_trendline(SAMPLE_DATA, price_col='close')['ht_trendline'].to_numpy()
     talib_result = talib.HT_TRENDLINE(NUMPY_DATA['close'])
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ht_dcperiod():
+    limen_result = ht_dcperiod(SAMPLE_DATA, price_col='close')['ht_dcperiod'].to_numpy()
+    talib_result = talib.HT_DCPERIOD(NUMPY_DATA['close'])
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ht_dcphase():
+    limen_result = ht_dcphase(SAMPLE_DATA, price_col='close')['ht_dcphase'].to_numpy()
+    talib_result = talib.HT_DCPHASE(NUMPY_DATA['close'])
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_ht_phasor():
+    limen = ht_phasor(SAMPLE_DATA, price_col='close')
+    limen_inphase = limen['ht_phasor_inphase'].to_numpy()
+    limen_quadrature = limen['ht_phasor_quadrature'].to_numpy()
+
+    talib_inphase, talib_quadrature = talib.HT_PHASOR(NUMPY_DATA['close'])
+
+    verify_indicator_results_match(limen_inphase, talib_inphase)
+    verify_indicator_results_match(limen_quadrature, talib_quadrature)
+
+
+def test_ht_sine():
+    limen = ht_sine(SAMPLE_DATA, price_col='close')
+    limen_sine = limen['ht_sine'].to_numpy()
+    limen_lead_sine = limen['ht_sine_lead'].to_numpy()
+
+    talib_sine, talib_lead_sine = talib.HT_SINE(NUMPY_DATA['close'])
+
+    verify_indicator_results_match(limen_sine, talib_sine)
+    verify_indicator_results_match(limen_lead_sine, talib_lead_sine)
+
+
+def test_ht_trendmode():
+    limen_result = ht_trendmode(SAMPLE_DATA, price_col='close')['ht_trendmode'].to_numpy()
+    talib_result = talib.HT_TRENDMODE(NUMPY_DATA['close'])
 
     verify_indicator_results_match(limen_result, talib_result)
 
@@ -788,29 +831,34 @@ def verify_indicator_results_match(limen_values, talib_values, tolerance=TOLERAN
     limen_clean = limen_values[~np.isnan(limen_values)]
     talib_clean = talib_values[~np.isnan(talib_values)]
 
-    assert len(limen_clean) == len(talib_clean), (
-        f"Length mismatch after NaN removal: "
-        f"Limen={len(limen_clean)}, TA-Lib={len(talib_clean)}"
-    )
+    def _debug_print():
+        print(
+            "First 10 valid values -\n"
+            f"\tLimen: {limen_clean[:10]}\n"
+            f"\tTA-Lib: {talib_clean[:10]}"
+        )
+        print(
+            "Last 10 valid values -\n"
+            f"\tLimen: {limen_clean[-10:]}\n"
+            f"\tTA-Lib: {talib_clean[-10:]}"
+        )
 
-    assert len(limen_clean) > 0, "No valid (non-NaN) values to compare"
+    try:
+        assert len(limen_clean) == len(talib_clean), (
+            f"Length mismatch after NaN removal: "
+            f"Limen={len(limen_clean)}, TA-Lib={len(talib_clean)}"
+        )
 
-    diff = np.abs(limen_clean - talib_clean)
-    max_diff = np.max(diff)
+        assert len(limen_clean) > 0, "No valid (non-NaN) values to compare"
 
-    print(
-        f"First 10 valid values -\n"
-        f"\tLimen: {limen_clean[:10]}\n"
-        f"\tTA-Lib: {talib_clean[:10]}"
-    )
-    print(
-        f"Last 10 valid values -\n"
-        f"\tLimen: {limen_clean[-10:]}\n"
-        f"\tTA-Lib: {talib_clean[-10:]}"
-    )
+        diff = np.abs(limen_clean - talib_clean)
+        max_diff = float(np.max(diff))  # float for cleaner printing
 
-    assert max_diff < tolerance, f"Results differ, Max Diff: {max_diff}"
+        assert max_diff < tolerance, f"Results differ, Max Diff: {max_diff}"
 
+    except AssertionError as e:
+        _debug_print()
+        raise
 
 def test_indicators_vs_talib():
     test_functions = [
@@ -821,6 +869,11 @@ def test_indicators_vs_talib():
         ('DEMA', test_dema),
         ('EMA', test_ema),
         ('HT_TRENDLINE', test_ht_trendline),
+        ('HT_DCPHASE', test_ht_dcphase),
+        ('HT_DCPERIOD', test_ht_dcperiod),
+        ('HT_PHASOR', test_ht_phasor),
+        ('HT_SINE', test_ht_sine),
+        ('HT_TRENDMODE', test_ht_trendmode),
         ('KAMA', test_kama),
         ('MA', test_ma),
         ('MAMA', test_mama),
