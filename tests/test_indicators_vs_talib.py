@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_trendline, kama, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, sar, sarext, sma, t3, tema, trange, trima, tsf, wma
+from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_trendline, kama, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, ultosc, willr, wma
 
 
 historical = HistoricalData()
@@ -27,6 +27,7 @@ MA_TYPES = list(range(9))
 SMA_PERIOD = 30
 TEMA_PERIOD = 30
 TRIMA_PERIOD = 30
+TRIX_PERIOD = 30
 TSF_PERIOD = 14
 WMA_PERIOD = 30
 MAMA_FAST_LIMIT = 0.5
@@ -52,16 +53,33 @@ MACD_SLOW_PERIOD = 26
 MACD_SIGNAL_PERIOD = 9
 MACDFIX_SIGNAL_PERIOD = 9
 MOM_PERIOD = 10
+ROC_PERIOD = 10
+ROCP_PERIOD = 10
+ROCR_PERIOD = 10
+ROCR100_PERIOD = 10
+RSI_PERIOD = 14
+STOCH_FASTK_PERIOD = 5
+STOCH_SLOWK_PERIOD = 3
+STOCH_SLOWD_PERIOD = 3
+STOCHF_FASTK_PERIOD = 5
+STOCHF_FASTD_PERIOD = 3
+STOCHRSI_PERIOD = 14
+STOCHRSI_FASTK_PERIOD = 5
+STOCHRSI_FASTD_PERIOD = 3
+ULTOSC_PERIOD1 = 7
+ULTOSC_PERIOD2 = 14
+ULTOSC_PERIOD3 = 28
+WILLR_PERIOD = 14
 BB_WINDOW = 20
 BB_NUM_STD = 2.0
 BB_MA_TYPES = list(range(9))
 T3_VFACTOR = 0.7
 T3_PERIOD = 5
-MACDEXT_CASES = [
-    (12, 0, 26, 0, 9, 0),
-    (12, 1, 26, 1, 9, 1),
-    (8, 2, 21, 5, 7, 0),
-]
+MACDEXT_CASES = list(dict.fromkeys(
+    [(12, ma_type, 26, 0, 9, 0) for ma_type in MA_TYPES]
+    + [(12, 0, 26, ma_type, 9, 0) for ma_type in MA_TYPES]
+    + [(12, 0, 26, 0, 9, ma_type) for ma_type in MA_TYPES]
+))
 
 
 def test_ad():
@@ -241,6 +259,17 @@ def test_trima():
     talib_result = talib.TRIMA(
         NUMPY_DATA['close'],
         timeperiod=TRIMA_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_trix():
+    out_col = f'trix_{TRIX_PERIOD}'
+    limen_result = trix(SAMPLE_DATA, price_col='close', period=TRIX_PERIOD)[out_col].to_numpy()
+    talib_result = talib.TRIX(
+        NUMPY_DATA['close'],
+        timeperiod=TRIX_PERIOD,
     )
 
     verify_indicator_results_match(limen_result, talib_result)
@@ -509,6 +538,215 @@ def test_mom():
     verify_indicator_results_match(limen_result, talib_result)
 
 
+def test_roc():
+    out_col = f'roc_{ROC_PERIOD}'
+    limen_result = roc(SAMPLE_DATA, price_col='close', period=ROC_PERIOD)[out_col].to_numpy()
+    talib_result = talib.ROC(
+        NUMPY_DATA['close'],
+        timeperiod=ROC_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_rocp():
+    out_col = f'rocp_{ROCP_PERIOD}'
+    limen_result = rocp(SAMPLE_DATA, price_col='close', period=ROCP_PERIOD)[out_col].to_numpy()
+    talib_result = talib.ROCP(
+        NUMPY_DATA['close'],
+        timeperiod=ROCP_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_rocr():
+    out_col = f'rocr_{ROCR_PERIOD}'
+    limen_result = rocr(SAMPLE_DATA, price_col='close', period=ROCR_PERIOD)[out_col].to_numpy()
+    talib_result = talib.ROCR(
+        NUMPY_DATA['close'],
+        timeperiod=ROCR_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_rocr100():
+    out_col = f'rocr100_{ROCR100_PERIOD}'
+    limen_result = rocr100(SAMPLE_DATA, price_col='close', period=ROCR100_PERIOD)[out_col].to_numpy()
+    talib_result = talib.ROCR100(
+        NUMPY_DATA['close'],
+        timeperiod=ROCR100_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_rsi():
+    out_col = f'rsi_{RSI_PERIOD}'
+    limen_result = rsi(SAMPLE_DATA, price_col='close', period=RSI_PERIOD)[out_col].to_numpy()
+    talib_result = talib.RSI(
+        NUMPY_DATA['close'],
+        timeperiod=RSI_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_stoch():
+    for slowk_ma_type in MA_TYPES:
+        limen = stoch(
+            SAMPLE_DATA,
+            high_col='high',
+            low_col='low',
+            close_col='close',
+            fastk_period=STOCH_FASTK_PERIOD,
+            slowk_period=STOCH_SLOWK_PERIOD,
+            slowk_ma_type=slowk_ma_type,
+            slowd_period=STOCH_SLOWD_PERIOD,
+            slowd_ma_type=0,
+        )
+        limen_slowk = limen['stoch_slowk'].to_numpy()
+        limen_slowd = limen['stoch_slowd'].to_numpy()
+
+        talib_slowk, talib_slowd = talib.STOCH(
+            NUMPY_DATA['high'],
+            NUMPY_DATA['low'],
+            NUMPY_DATA['close'],
+            fastk_period=STOCH_FASTK_PERIOD,
+            slowk_period=STOCH_SLOWK_PERIOD,
+            slowk_matype=slowk_ma_type,
+            slowd_period=STOCH_SLOWD_PERIOD,
+            slowd_matype=0,
+        )
+
+        verify_indicator_results_match(limen_slowk, talib_slowk)
+        verify_indicator_results_match(limen_slowd, talib_slowd)
+
+    for slowd_ma_type in MA_TYPES:
+        limen = stoch(
+            SAMPLE_DATA,
+            high_col='high',
+            low_col='low',
+            close_col='close',
+            fastk_period=STOCH_FASTK_PERIOD,
+            slowk_period=STOCH_SLOWK_PERIOD,
+            slowk_ma_type=0,
+            slowd_period=STOCH_SLOWD_PERIOD,
+            slowd_ma_type=slowd_ma_type,
+        )
+        limen_slowk = limen['stoch_slowk'].to_numpy()
+        limen_slowd = limen['stoch_slowd'].to_numpy()
+
+        talib_slowk, talib_slowd = talib.STOCH(
+            NUMPY_DATA['high'],
+            NUMPY_DATA['low'],
+            NUMPY_DATA['close'],
+            fastk_period=STOCH_FASTK_PERIOD,
+            slowk_period=STOCH_SLOWK_PERIOD,
+            slowk_matype=0,
+            slowd_period=STOCH_SLOWD_PERIOD,
+            slowd_matype=slowd_ma_type,
+        )
+
+        verify_indicator_results_match(limen_slowk, talib_slowk)
+        verify_indicator_results_match(limen_slowd, talib_slowd)
+
+
+def test_stochf():
+    for fastd_ma_type in MA_TYPES:
+        limen = stochf(
+            SAMPLE_DATA,
+            high_col='high',
+            low_col='low',
+            close_col='close',
+            fastk_period=STOCHF_FASTK_PERIOD,
+            fastd_period=STOCHF_FASTD_PERIOD,
+            fastd_ma_type=fastd_ma_type,
+        )
+        limen_fastk = limen['stochf_fastk'].to_numpy()
+        limen_fastd = limen['stochf_fastd'].to_numpy()
+
+        talib_fastk, talib_fastd = talib.STOCHF(
+            NUMPY_DATA['high'],
+            NUMPY_DATA['low'],
+            NUMPY_DATA['close'],
+            fastk_period=STOCHF_FASTK_PERIOD,
+            fastd_period=STOCHF_FASTD_PERIOD,
+            fastd_matype=fastd_ma_type,
+        )
+
+        verify_indicator_results_match(limen_fastk, talib_fastk)
+        verify_indicator_results_match(limen_fastd, talib_fastd)
+
+
+def test_stochrsi():
+    for fastd_ma_type in MA_TYPES:
+        limen = stochrsi(
+            SAMPLE_DATA,
+            price_col='close',
+            period=STOCHRSI_PERIOD,
+            fastk_period=STOCHRSI_FASTK_PERIOD,
+            fastd_period=STOCHRSI_FASTD_PERIOD,
+            fastd_ma_type=fastd_ma_type,
+        )
+        limen_fastk = limen['stochrsi_fastk'].to_numpy()
+        limen_fastd = limen['stochrsi_fastd'].to_numpy()
+
+        talib_fastk, talib_fastd = talib.STOCHRSI(
+            NUMPY_DATA['close'],
+            timeperiod=STOCHRSI_PERIOD,
+            fastk_period=STOCHRSI_FASTK_PERIOD,
+            fastd_period=STOCHRSI_FASTD_PERIOD,
+            fastd_matype=fastd_ma_type,
+        )
+
+        verify_indicator_results_match(limen_fastk, talib_fastk)
+        verify_indicator_results_match(limen_fastd, talib_fastd)
+
+
+def test_ultosc():
+    out_col = f'ultosc_{ULTOSC_PERIOD1}_{ULTOSC_PERIOD2}_{ULTOSC_PERIOD3}'
+    limen_result = ultosc(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        close_col='close',
+        period1=ULTOSC_PERIOD1,
+        period2=ULTOSC_PERIOD2,
+        period3=ULTOSC_PERIOD3,
+    )[out_col].to_numpy()
+    talib_result = talib.ULTOSC(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+        timeperiod1=ULTOSC_PERIOD1,
+        timeperiod2=ULTOSC_PERIOD2,
+        timeperiod3=ULTOSC_PERIOD3,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_willr():
+    out_col = f'willr_{WILLR_PERIOD}'
+    limen_result = willr(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        close_col='close',
+        period=WILLR_PERIOD,
+    )[out_col].to_numpy()
+    talib_result = talib.WILLR(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+        timeperiod=WILLR_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
 def test_natr():
     out_col = f'natr_{DEFAULT_PERIOD}'
     limen_result = natr(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
@@ -589,6 +827,7 @@ def test_indicators_vs_talib():
         ('SMA', test_sma),
         ('TEMA', test_tema),
         ('TRIMA', test_trima),
+        ('TRIX', test_trix),
         ('T3', test_t3),
         ('TSF', test_tsf),
         ('WMA', test_wma),
@@ -603,6 +842,16 @@ def test_indicators_vs_talib():
         ('MACDFIX', test_macdfix),
         ('MACDEXT', test_macdext),
         ('MOM', test_mom),
+        ('ROC', test_roc),
+        ('ROCP', test_rocp),
+        ('ROCR', test_rocr),
+        ('ROCR100', test_rocr100),
+        ('RSI', test_rsi),
+        ('STOCH', test_stoch),
+        ('STOCHF', test_stochf),
+        ('STOCHRSI', test_stochrsi),
+        ('ULTOSC', test_ultosc),
+        ('WILLR', test_willr),
         ('MFI', test_mfi),
         ('NATR', test_natr),
         ('OBV', test_obv),
