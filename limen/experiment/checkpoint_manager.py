@@ -102,14 +102,14 @@ class CheckpointManager:
              content_hash: str = '') -> None:
 
         '''
-        Write checkpoint files into checkpoint_dir.
+        Write a checkpoint file into checkpoint_dir.
 
-        NOTE: Metadata is written last as a commit marker. State files are
-        written first, each atomically via a write-then-rename pattern.
-        A missing metadata file always indicates an incomplete checkpoint.
+        NOTE: All state is written atomically to a single file via a
+        write-then-rename pattern. The previous checkpoint remains intact
+        until the new one is fully written.
 
         Args:
-            checkpoint_dir (Path): Directory to write checkpoint files
+            checkpoint_dir (Path): Directory to write checkpoint file
             msq (MSQ): MSQ instance to checkpoint
             domain (ParamDomain): ParamDomain instance to checkpoint
             current_round (int): Round number at checkpoint time
@@ -119,24 +119,19 @@ class CheckpointManager:
 
         '''
 
-        checkpoint_dir = Path(checkpoint_dir)
-        metadata_path = checkpoint_dir / 'checkpoint_metadata.json'
-
-        if metadata_path.exists():
-            metadata_path.unlink()
-
-        self._write_json(checkpoint_dir / 'msq_state.json', msq.get_state())
-        self._write_json(checkpoint_dir / 'domain_state.json', domain.get_state())
-
-        metadata = {
-            'experiment_round': current_round,
-            'target_permutations': target_permutations,
-            'strategy_type': strategy_type,
-            'content_hash': content_hash,
-            'saved_at': datetime.now(tz=timezone.utc).isoformat(),
+        checkpoint = {
+            'metadata': {
+                'experiment_round': current_round,
+                'target_permutations': target_permutations,
+                'strategy_type': strategy_type,
+                'content_hash': content_hash,
+                'saved_at': datetime.now(tz=timezone.utc).isoformat(),
+            },
+            'msq_state': msq.get_state(),
+            'domain_state': domain.get_state(),
         }
 
-        self._write_json(metadata_path, metadata)
+        self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 
         logger.info('Checkpoint saved at round %d → %s', current_round, checkpoint_dir)
 
@@ -144,27 +139,29 @@ class CheckpointManager:
     def load(self, checkpoint_dir: Path) -> dict[str, Any]:
 
         '''
-        Load all checkpoint files from checkpoint_dir.
+        Load checkpoint from checkpoint_dir.
 
         Args:
-            checkpoint_dir (Path): Directory containing checkpoint files
+            checkpoint_dir (Path): Directory containing checkpoint file
 
         Returns:
             dict: Keys 'metadata', 'msq_state', 'domain_state'
 
         Raises:
-            FileNotFoundError: If any checkpoint file is missing
-            json.JSONDecodeError: If any file contains invalid JSON
+            ValueError: If checkpoint is missing or corrupt
 
         '''
 
-        checkpoint_dir = Path(checkpoint_dir)
-
-        return {
-            'metadata': self._read_json(checkpoint_dir / 'checkpoint_metadata.json'),
-            'msq_state': self._read_json(checkpoint_dir / 'msq_state.json'),
-            'domain_state': self._read_json(checkpoint_dir / 'domain_state.json'),
-        }
+        try:
+            return self._read_json(Path(checkpoint_dir) / 'checkpoint.json')
+        except FileNotFoundError as e:
+            raise ValueError(
+                f"No checkpoint found in '{checkpoint_dir}'."
+            ) from e
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Corrupt checkpoint in '{checkpoint_dir}': {e}"
+            ) from e
 
 
     def validate(self,
@@ -180,7 +177,7 @@ class CheckpointManager:
         descriptive message on any mismatch.
 
         Args:
-            checkpoint_dir (Path): Directory containing checkpoint files
+            checkpoint_dir (Path): Directory containing checkpoint file
             content_hash (str): Expected SHA-256 digest
             strategy_type (str): Expected strategy class name
 
@@ -189,17 +186,8 @@ class CheckpointManager:
 
         '''
 
-        try:
-            metadata = self._read_json(checkpoint_dir / 'checkpoint_metadata.json')
-        except FileNotFoundError as e:
-            raise ValueError(
-                f"No checkpoint found in '{checkpoint_dir}': "
-                f"metadata file missing or checkpoint is incomplete."
-            ) from e
-        except json.JSONDecodeError as e:
-            raise ValueError(
-                f"Corrupt checkpoint metadata in '{checkpoint_dir}': {e}"
-            ) from e
+        data = self.load(checkpoint_dir)
+        metadata = data['metadata']
 
         saved_hash = metadata.get('content_hash', '')
         if saved_hash != content_hash:

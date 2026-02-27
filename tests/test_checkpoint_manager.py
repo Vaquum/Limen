@@ -1,4 +1,3 @@
-import json
 import signal
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -58,7 +57,7 @@ def test_initialize_fresh_creates_directory():
         assert result == ckpt_dir
 
 
-def test_save_writes_three_files():
+def test_save_writes_checkpoint_file():
 
     msq, _, domain = make_msq()
 
@@ -70,9 +69,7 @@ def test_save_writes_three_files():
         cm.save(ckpt_dir, msq, domain, 100, 1000,
                 strategy_type='StubStrategy', content_hash='a' * 64)
 
-        assert (ckpt_dir / 'checkpoint_metadata.json').exists()
-        assert (ckpt_dir / 'msq_state.json').exists()
-        assert (ckpt_dir / 'domain_state.json').exists()
+        assert (ckpt_dir / 'checkpoint.json').exists()
 
 
 def test_save_metadata_content():
@@ -87,8 +84,8 @@ def test_save_metadata_content():
         cm.save(ckpt_dir, msq, domain, 42, 500,
                 strategy_type='GridStrategy', content_hash='b' * 64)
 
-        with (ckpt_dir / 'checkpoint_metadata.json').open() as f:
-            metadata = json.load(f)
+        data = cm.load(ckpt_dir)
+        metadata = data['metadata']
 
         assert metadata['experiment_round'] == 42
         assert metadata['target_permutations'] == 500
@@ -152,7 +149,56 @@ def test_validate_raises_on_strategy_mismatch():
             assert 'Strategy type mismatch' in str(e)
 
 
-def test_validate_raises_on_missing_metadata():
+def test_second_checkpoint_overwrites_first():
+
+    msq, _, domain = make_msq()
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        cm.save(ckpt_dir, msq, domain, 100, 1000,
+                strategy_type='StubStrategy', content_hash='a' * 64)
+        cm.save(ckpt_dir, msq, domain, 200, 1000,
+                strategy_type='StubStrategy', content_hash='a' * 64)
+
+        result = cm.load(ckpt_dir)
+
+        assert result['metadata']['experiment_round'] == 200
+
+
+def test_load_raises_on_missing_checkpoint():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        try:
+            cm.load(ckpt_dir)
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'No checkpoint' in str(e)
+
+
+def test_load_raises_on_corrupt_checkpoint():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        (ckpt_dir / 'checkpoint.json').write_text('not valid json')
+
+        try:
+            cm.load(ckpt_dir)
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'Corrupt' in str(e)
+
+
+def test_validate_raises_on_missing_checkpoint():
 
     with TemporaryDirectory() as tmpdir:
         ckpt_dir = Path(tmpdir) / 'ckpt'
@@ -163,17 +209,17 @@ def test_validate_raises_on_missing_metadata():
             cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
-            assert 'incomplete' in str(e)
+            assert 'No checkpoint' in str(e)
 
 
-def test_validate_raises_on_corrupt_metadata():
+def test_validate_raises_on_corrupt_checkpoint():
 
     with TemporaryDirectory() as tmpdir:
         ckpt_dir = Path(tmpdir) / 'ckpt'
         ckpt_dir.mkdir()
         cm = CheckpointManager()
 
-        (ckpt_dir / 'checkpoint_metadata.json').write_text('not valid json')
+        (ckpt_dir / 'checkpoint.json').write_text('not valid json')
 
         try:
             cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')

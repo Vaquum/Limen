@@ -380,11 +380,7 @@ class UniversalExperimentLoop:
         '''Register SIGTERM and SIGINT handlers that set _shutdown_requested.'''
 
         def _handler(signum: int, _frame: Any) -> None:
-            logger.warning(
-                'Signal %d received — shutdown requested. '
-                'Will checkpoint at end of current round.',
-                signum,
-            )
+            logger.warning('Signal %d received — shutdown requested.', signum)
             self._shutdown_requested = True
 
         try:

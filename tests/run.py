@@ -79,13 +79,16 @@ from tests.test_checkpoint_manager import test_checkpoint_interval_validation
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
 from tests.test_checkpoint_manager import test_compute_content_hash_dict
 from tests.test_checkpoint_manager import test_initialize_fresh_creates_directory
-from tests.test_checkpoint_manager import test_save_writes_three_files
+from tests.test_checkpoint_manager import test_save_writes_checkpoint_file
 from tests.test_checkpoint_manager import test_save_metadata_content
 from tests.test_checkpoint_manager import test_validate_passes_when_all_match
 from tests.test_checkpoint_manager import test_validate_raises_on_hash_mismatch
 from tests.test_checkpoint_manager import test_validate_raises_on_strategy_mismatch
-from tests.test_checkpoint_manager import test_validate_raises_on_missing_metadata
-from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_metadata
+from tests.test_checkpoint_manager import test_second_checkpoint_overwrites_first
+from tests.test_checkpoint_manager import test_load_raises_on_missing_checkpoint
+from tests.test_checkpoint_manager import test_load_raises_on_corrupt_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_checkpoint
 from tests.test_checkpoint_manager import test_param_domain_set_state_invalid_leaves_state_unchanged
 from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
@@ -147,13 +150,16 @@ tests = [
     test_should_checkpoint_interval,
     test_compute_content_hash_dict,
     test_initialize_fresh_creates_directory,
-    test_save_writes_three_files,
+    test_save_writes_checkpoint_file,
     test_save_metadata_content,
     test_validate_passes_when_all_match,
     test_validate_raises_on_hash_mismatch,
     test_validate_raises_on_strategy_mismatch,
-    test_validate_raises_on_missing_metadata,
-    test_validate_raises_on_corrupt_metadata,
+    test_second_checkpoint_overwrites_first,
+    test_load_raises_on_missing_checkpoint,
+    test_load_raises_on_corrupt_checkpoint,
+    test_validate_raises_on_missing_checkpoint,
+    test_validate_raises_on_corrupt_checkpoint,
     test_param_domain_set_state_invalid_leaves_state_unchanged,
     test_param_domain_get_set_state,
     test_uel_shutdown_flag,
