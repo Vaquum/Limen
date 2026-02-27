@@ -91,6 +91,8 @@ from tests.test_checkpoint_manager import test_validate_raises_on_missing_checkp
 from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_metadata_key
 from tests.test_checkpoint_manager import test_validate_raises_on_invalid_metadata_type
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_experiment_round
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_target_permutations
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_msq_state
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_domain_state
 from tests.test_checkpoint_manager import test_param_domain_set_state_invalid_leaves_state_unchanged
@@ -166,6 +168,8 @@ tests = [
     test_validate_raises_on_corrupt_checkpoint,
     test_validate_raises_on_missing_metadata_key,
     test_validate_raises_on_invalid_metadata_type,
+    test_validate_raises_on_missing_experiment_round,
+    test_validate_raises_on_missing_target_permutations,
     test_validate_raises_on_missing_msq_state,
     test_validate_raises_on_missing_domain_state,
     test_param_domain_set_state_invalid_leaves_state_unchanged,

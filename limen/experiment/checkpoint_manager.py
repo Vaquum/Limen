@@ -212,6 +212,12 @@ class CheckpointManager:
                 f"Cannot resume with a different search strategy."
             )
 
+        for key in ('experiment_round', 'target_permutations'):
+            if key not in metadata:
+                raise ValueError(
+                    f"Invalid checkpoint format in '{checkpoint_dir}': missing metadata key '{key}'."
+                )
+
         for key in ('msq_state', 'domain_state'):
             if key not in data:
                 raise ValueError(

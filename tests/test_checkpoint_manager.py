@@ -264,6 +264,48 @@ def test_validate_raises_on_invalid_metadata_type():
             assert 'metadata' in str(e)
 
 
+def test_validate_raises_on_missing_experiment_round():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        content_hash = 'a' * 64
+        (ckpt_dir / 'checkpoint.json').write_text(
+            '{"metadata": {"content_hash": "' + content_hash + '", '
+            '"strategy_type": "StubStrategy", "target_permutations": 100}, '
+            '"msq_state": {}, "domain_state": {}}'
+        )
+
+        try:
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'experiment_round' in str(e)
+
+
+def test_validate_raises_on_missing_target_permutations():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        content_hash = 'a' * 64
+        (ckpt_dir / 'checkpoint.json').write_text(
+            '{"metadata": {"content_hash": "' + content_hash + '", '
+            '"strategy_type": "StubStrategy", "experiment_round": 10}, '
+            '"msq_state": {}, "domain_state": {}}'
+        )
+
+        try:
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'target_permutations' in str(e)
+
+
 def test_validate_raises_on_missing_msq_state():
 
     with TemporaryDirectory() as tmpdir:
@@ -274,7 +316,8 @@ def test_validate_raises_on_missing_msq_state():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy"}, "domain_state": {}}'
+            '"strategy_type": "StubStrategy", "experiment_round": 1, "target_permutations": 100}, '
+            '"domain_state": {}}'
         )
 
         try:
@@ -294,7 +337,8 @@ def test_validate_raises_on_missing_domain_state():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy"}, "msq_state": {}}'
+            '"strategy_type": "StubStrategy", "experiment_round": 1, "target_permutations": 100}, '
+            '"msq_state": {}}'
         )
 
         try:
