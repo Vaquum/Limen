@@ -229,7 +229,7 @@ class CheckpointManager:
             with tmp.open('w') as f:
                 json.dump(data, f, indent=2)
             tmp.replace(path)
-        except (OSError, TypeError):
+        except (OSError, TypeError, ValueError):
             if tmp.exists():
                 tmp.unlink()
             raise
