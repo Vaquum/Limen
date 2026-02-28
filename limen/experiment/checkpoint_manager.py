@@ -268,7 +268,7 @@ class CheckpointManager:
 
 
     @staticmethod
-    def _read_json(path: Path) -> dict:
+    def _read_json(path: Path) -> Any:
 
         with path.open('r', encoding='utf-8') as f:
             return json.load(f)

@@ -348,7 +348,7 @@ class UniversalExperimentLoop:
                                  checkpoint_manager: CheckpointManager,
                                  *,
                                  strategy_type: str,
-                                 content_hash: str) -> dict:
+                                 content_hash: str) -> dict[str, Any]:
 
         '''
         Validate and load state from an existing checkpoint directory.
