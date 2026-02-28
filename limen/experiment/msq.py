@@ -362,6 +362,11 @@ class MSQ:
 
         '''
 
+        required = ('yielded_count', 'trim_budget', 'priority_queue', 'intervention_log', 'strategy_state')
+        for key in required:
+            if key not in state:
+                raise ValueError(f"Invalid MSQ state: missing required key '{key}'.")
+
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
