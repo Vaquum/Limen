@@ -274,14 +274,14 @@ class ParamDomain:
         return True
 
 
-    def get_state(self) -> dict[str, Any]:
+    def get_state(self) -> dict[str, list[Any]]:
 
         '''Export state for checkpointing.'''
 
         return {k: list(v) for k, v in self._params.items()}
 
 
-    def set_state(self, state: dict[str, Any]) -> None:
+    def set_state(self, state: dict[str, list[Any]]) -> None:
 
         '''
         Restore state from checkpoint.
