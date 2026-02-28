@@ -98,6 +98,8 @@ from tests.test_checkpoint_manager import test_validate_raises_on_missing_experi
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_target_permutations
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_msq_state
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_domain_state
+from tests.test_checkpoint_manager import test_validate_raises_on_invalid_msq_state_type
+from tests.test_checkpoint_manager import test_validate_raises_on_invalid_domain_state_type
 from tests.test_checkpoint_manager import test_param_domain_set_state_invalid_leaves_state_unchanged
 from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
@@ -179,6 +181,8 @@ tests = [
     test_validate_raises_on_missing_target_permutations,
     test_validate_raises_on_missing_msq_state,
     test_validate_raises_on_missing_domain_state,
+    test_validate_raises_on_invalid_msq_state_type,
+    test_validate_raises_on_invalid_domain_state_type,
     test_param_domain_set_state_invalid_leaves_state_unchanged,
     test_param_domain_get_set_state,
     test_uel_shutdown_flag,
