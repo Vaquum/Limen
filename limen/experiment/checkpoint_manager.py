@@ -194,7 +194,7 @@ class CheckpointManager:
 
         metadata = data['metadata']
 
-        saved_hash = metadata.get('content_hash', '')
+        saved_hash = metadata['content_hash']
         if saved_hash != content_hash:
             raise ValueError(
                 f"Content hash mismatch: checkpoint was created with hash "
@@ -203,7 +203,7 @@ class CheckpointManager:
                 f"Delete the checkpoint directory to start fresh."
             )
 
-        saved_strategy = metadata.get('strategy_type', '')
+        saved_strategy = metadata['strategy_type']
         if saved_strategy != strategy_type:
             raise ValueError(
                 f"Strategy type mismatch: checkpoint used '{saved_strategy}', "
@@ -235,7 +235,7 @@ class CheckpointManager:
                 f"Invalid checkpoint format in '{checkpoint_dir}': 'metadata' must be an object."
             )
 
-        for key in ('experiment_round', 'target_permutations'):
+        for key in ('experiment_round', 'target_permutations', 'content_hash', 'strategy_type'):
             if key not in metadata:
                 raise ValueError(
                     f"Invalid checkpoint format in '{checkpoint_dir}': missing metadata key '{key}'."
