@@ -315,7 +315,7 @@ class UniversalExperimentLoop:
                     target_permutations: int,
                     *,
                     strategy_type: str,
-                    content_hash: str = '') -> None:
+                    content_hash: str) -> None:
 
         '''
         Save a checkpoint at the current experiment state.
@@ -348,7 +348,7 @@ class UniversalExperimentLoop:
                                  checkpoint_manager: CheckpointManager,
                                  *,
                                  strategy_type: str,
-                                 content_hash: str = '') -> dict:
+                                 content_hash: str) -> dict:
 
         '''
         Validate and load state from an existing checkpoint directory.
@@ -379,6 +379,8 @@ class UniversalExperimentLoop:
         '''Register SIGTERM and SIGINT handlers that set _shutdown_requested.'''
 
         def _handler(signum: int, _frame: Any) -> None:
+            if self._shutdown_requested:
+                raise KeyboardInterrupt
             logger.warning('Signal %d received — shutdown requested.', signum)
             self._shutdown_requested = True
 

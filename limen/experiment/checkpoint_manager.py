@@ -94,7 +94,7 @@ class CheckpointManager:
              target_permutations: int,
              *,
              strategy_type: str,
-             content_hash: str = '') -> None:
+             content_hash: str) -> None:
 
         '''
         Write a checkpoint file into checkpoint_dir.
@@ -235,7 +235,7 @@ class CheckpointManager:
             with tmp.open('w') as f:
                 json.dump(data, f, indent=2)
             tmp.replace(path)
-        except (OSError, TypeError, ValueError):
+        except Exception:
             if tmp.exists():
                 tmp.unlink()
             raise

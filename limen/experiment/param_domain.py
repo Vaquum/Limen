@@ -299,8 +299,20 @@ class ParamDomain:
                 raise ValueError(
                     f"Parameter '{k}' must be a non-empty list, got {v!r}"
                 )
+        if set(state.keys()) != set(self._params.keys()):
+            raise ValueError(
+                f"State keys {sorted(state.keys())} do not match "
+                f"domain keys {sorted(self._params.keys())}."
+            )
+        old_params = {k: list(v) for k, v in self._params.items()}
+        old_version = self._version
         self._params = {k: list(v) for k, v in state.items()}
         self._version = 0
         changed_params = list(self._params.keys())
-        for obs in self._observers:
-            obs.on_domain_changed(self, changed_params)
+        try:
+            for obs in self._observers:
+                obs.on_domain_changed(self, changed_params)
+        except Exception:
+            self._params = old_params
+            self._version = old_version
+            raise

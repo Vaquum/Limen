@@ -403,6 +403,28 @@ def test_uel_shutdown_flag():
     assert uel._pause_requested is False
 
 
+def test_uel_double_signal_raises():
+
+    uel = _make_uel()
+
+    prev_sigterm = signal.getsignal(signal.SIGTERM)
+    prev_sigint = signal.getsignal(signal.SIGINT)
+
+    try:
+        uel._register_shutdown_handler()
+        signal.raise_signal(signal.SIGINT)
+        assert uel._shutdown_requested is True
+
+        try:
+            signal.raise_signal(signal.SIGINT)
+            assert False, 'Should have raised KeyboardInterrupt'
+        except KeyboardInterrupt:
+            pass
+    finally:
+        signal.signal(signal.SIGTERM, prev_sigterm)
+        signal.signal(signal.SIGINT, prev_sigint)
+
+
 def test_uel_checkpoint_and_resume():
 
     uel = _make_uel()

@@ -40,6 +40,8 @@ from tests.test_param_domain import test_observer_notification
 from tests.test_param_domain import test_observer_version_increments
 from tests.test_param_domain import test_is_valid_combination
 from tests.test_param_domain import test_comparison_type_error
+from tests.test_param_domain import test_set_state_mismatched_keys
+from tests.test_param_domain import test_set_state_observer_rollback
 from tests.test_param_domain import test_total_combinations_updates
 from tests.test_msq import test_msq_basic_iteration
 from tests.test_msq import test_msq_yielded_count
@@ -98,6 +100,7 @@ from tests.test_checkpoint_manager import test_validate_raises_on_missing_domain
 from tests.test_checkpoint_manager import test_param_domain_set_state_invalid_leaves_state_unchanged
 from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
+from tests.test_checkpoint_manager import test_uel_double_signal_raises
 from tests.test_checkpoint_manager import test_uel_checkpoint_and_resume
 
 tests = [
@@ -117,6 +120,8 @@ tests = [
     test_observer_version_increments,
     test_is_valid_combination,
     test_comparison_type_error,
+    test_set_state_mismatched_keys,
+    test_set_state_observer_rollback,
     test_total_combinations_updates,
     test_msq_basic_iteration,
     test_msq_yielded_count,
@@ -175,6 +180,7 @@ tests = [
     test_param_domain_set_state_invalid_leaves_state_unchanged,
     test_param_domain_get_set_state,
     test_uel_shutdown_flag,
+    test_uel_double_signal_raises,
     test_uel_checkpoint_and_resume,
     test_large_param_space,
     test_klines_data_maker_fields,
