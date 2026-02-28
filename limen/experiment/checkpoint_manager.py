@@ -182,6 +182,32 @@ class CheckpointManager:
         '''
 
         data = self.load(checkpoint_dir)
+        self._validate_structure(data, checkpoint_dir)
+
+        metadata = data['metadata']
+
+        saved_hash = metadata.get('content_hash', '')
+        if saved_hash != content_hash:
+            raise ValueError(
+                f"Content hash mismatch: checkpoint was created with hash "
+                f"'{saved_hash[:16]}...', current is '{content_hash[:16]}...'. "
+                f"Experiment configuration has changed. "
+                f"Delete the checkpoint directory to start fresh."
+            )
+
+        saved_strategy = metadata.get('strategy_type', '')
+        if saved_strategy != strategy_type:
+            raise ValueError(
+                f"Strategy type mismatch: checkpoint used '{saved_strategy}', "
+                f"current is '{strategy_type}'. "
+                f"Cannot resume with a different search strategy."
+            )
+
+        return data
+
+
+    @staticmethod
+    def _validate_structure(data: Any, checkpoint_dir: Path) -> None:
 
         if not isinstance(data, dict):
             raise ValueError(
@@ -201,23 +227,6 @@ class CheckpointManager:
                 f"Invalid checkpoint format in '{checkpoint_dir}': 'metadata' must be an object."
             )
 
-        saved_hash = metadata.get('content_hash', '')
-        if saved_hash != content_hash:
-            raise ValueError(
-                f"Content hash mismatch: checkpoint was created with hash "
-                f"'{saved_hash[:16]}...', current is '{content_hash[:16]}...'. "
-                f"Experiment configuration has changed. "
-                f"Delete the checkpoint directory to start fresh."
-            )
-
-        saved_strategy = metadata.get('strategy_type', '')
-        if saved_strategy != strategy_type:
-            raise ValueError(
-                f"Strategy type mismatch: checkpoint used '{saved_strategy}', "
-                f"current is '{strategy_type}'. "
-                f"Cannot resume with a different search strategy."
-            )
-
         for key in ('experiment_round', 'target_permutations'):
             if key not in metadata:
                 raise ValueError(
@@ -229,8 +238,11 @@ class CheckpointManager:
                 raise ValueError(
                     f"Invalid checkpoint format in '{checkpoint_dir}': missing '{key}' key."
                 )
-
-        return data
+            if not isinstance(data[key], dict):
+                raise ValueError(
+                    f"Invalid checkpoint format in '{checkpoint_dir}': "
+                    f"'{key}' must be an object, got {type(data[key]).__name__}."
+                )
 
 
     @staticmethod
