@@ -148,7 +148,7 @@ class CheckpointManager:
         '''
 
         try:
-            return self._read_json(Path(checkpoint_dir) / 'checkpoint.json')
+            data = self._read_json(Path(checkpoint_dir) / 'checkpoint.json')
         except FileNotFoundError as e:
             raise ValueError(
                 f"No checkpoint found in '{checkpoint_dir}'."
@@ -157,6 +157,14 @@ class CheckpointManager:
             raise ValueError(
                 f"Corrupt checkpoint in '{checkpoint_dir}': {e}"
             ) from e
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Corrupt checkpoint in '{checkpoint_dir}': "
+                f"expected object, got {type(data).__name__}."
+            )
+
+        return data
 
 
     def validate(self,
@@ -250,7 +258,7 @@ class CheckpointManager:
 
         tmp = path.with_suffix('.tmp')
         try:
-            with tmp.open('w') as f:
+            with tmp.open('w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
             tmp.replace(path)
         except Exception:
@@ -262,5 +270,5 @@ class CheckpointManager:
     @staticmethod
     def _read_json(path: Path) -> dict:
 
-        with path.open('r') as f:
+        with path.open('r', encoding='utf-8') as f:
             return json.load(f)

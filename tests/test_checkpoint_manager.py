@@ -186,6 +186,22 @@ def test_load_raises_on_missing_checkpoint():
             assert 'No checkpoint' in str(e)
 
 
+def test_load_raises_on_non_dict_checkpoint():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        (ckpt_dir / 'checkpoint.json').write_text('[1, 2, 3]')
+
+        try:
+            cm.load(ckpt_dir)
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'list' in str(e)
+
+
 def test_load_raises_on_corrupt_checkpoint():
 
     with TemporaryDirectory() as tmpdir:

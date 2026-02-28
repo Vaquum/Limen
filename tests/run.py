@@ -90,6 +90,7 @@ from tests.test_checkpoint_manager import test_validate_raises_on_hash_mismatch
 from tests.test_checkpoint_manager import test_validate_raises_on_strategy_mismatch
 from tests.test_checkpoint_manager import test_second_checkpoint_overwrites_first
 from tests.test_checkpoint_manager import test_load_raises_on_missing_checkpoint
+from tests.test_checkpoint_manager import test_load_raises_on_non_dict_checkpoint
 from tests.test_checkpoint_manager import test_load_raises_on_corrupt_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_checkpoint
@@ -175,6 +176,7 @@ tests = [
     test_validate_raises_on_strategy_mismatch,
     test_second_checkpoint_overwrites_first,
     test_load_raises_on_missing_checkpoint,
+    test_load_raises_on_non_dict_checkpoint,
     test_load_raises_on_corrupt_checkpoint,
     test_validate_raises_on_missing_checkpoint,
     test_validate_raises_on_corrupt_checkpoint,
