@@ -91,6 +91,7 @@ from tests.test_checkpoint_manager import test_load_raises_on_missing_checkpoint
 from tests.test_checkpoint_manager import test_load_raises_on_corrupt_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_non_dict_checkpoint
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_metadata_key
 from tests.test_checkpoint_manager import test_validate_raises_on_invalid_metadata_type
 from tests.test_checkpoint_manager import test_validate_raises_on_missing_experiment_round
@@ -171,6 +172,7 @@ tests = [
     test_load_raises_on_corrupt_checkpoint,
     test_validate_raises_on_missing_checkpoint,
     test_validate_raises_on_corrupt_checkpoint,
+    test_validate_raises_on_non_dict_checkpoint,
     test_validate_raises_on_missing_metadata_key,
     test_validate_raises_on_invalid_metadata_type,
     test_validate_raises_on_missing_experiment_round,

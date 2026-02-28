@@ -232,6 +232,22 @@ def test_validate_raises_on_corrupt_checkpoint():
             assert 'Corrupt' in str(e)
 
 
+def test_validate_raises_on_non_dict_checkpoint():
+
+    with TemporaryDirectory() as tmpdir:
+        ckpt_dir = Path(tmpdir) / 'ckpt'
+        ckpt_dir.mkdir()
+        cm = CheckpointManager()
+
+        (ckpt_dir / 'checkpoint.json').write_text('[1, 2, 3]')
+
+        try:
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            assert False, 'Should have raised ValueError'
+        except ValueError as e:
+            assert 'list' in str(e)
+
+
 def test_validate_raises_on_missing_metadata_key():
 
     with TemporaryDirectory() as tmpdir:

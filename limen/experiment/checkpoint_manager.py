@@ -183,7 +183,13 @@ class CheckpointManager:
 
         data = self.load(checkpoint_dir)
 
-        if not isinstance(data, dict) or 'metadata' not in data:
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Invalid checkpoint format in '{checkpoint_dir}': "
+                f"top-level JSON must be an object, got {type(data).__name__}."
+            )
+
+        if 'metadata' not in data:
             raise ValueError(
                 f"Invalid checkpoint format in '{checkpoint_dir}': missing 'metadata' key."
             )
