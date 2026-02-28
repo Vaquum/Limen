@@ -313,6 +313,20 @@ def test_audit_log_written():
         assert entry['errors'] == []
 
 
+def test_set_state_missing_key():
+
+    fc = FeedbackController(feedback_interval=10)
+    state = fc.get_state()
+
+    for key in ('trigger_count', 'intervention_last_mtime'):
+        incomplete = {k: v for k, v in state.items() if k != key}
+        try:
+            fc.set_state(incomplete)
+            assert False, f'Should have raised ValueError for missing {key!r}'
+        except ValueError as e:
+            assert key in str(e)
+
+
 def test_get_set_state():
 
     fc = FeedbackController(feedback_interval=10)

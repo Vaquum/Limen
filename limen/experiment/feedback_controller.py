@@ -326,5 +326,10 @@ class FeedbackController:
 
         '''Restore state from checkpoint.'''
 
+        required = ('trigger_count', 'intervention_last_mtime')
+        for key in required:
+            if key not in state:
+                raise ValueError(f"Invalid FeedbackController state: missing required key '{key}'.")
+
         self._trigger_count = state['trigger_count']
         self._intervention_last_mtime = state['intervention_last_mtime']

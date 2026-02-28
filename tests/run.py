@@ -58,6 +58,7 @@ from tests.test_msq import test_inject_does_not_mutate_caller_dict
 from tests.test_msq import test_n_permutations_stops_iteration
 from tests.test_msq import test_mismatched_domain_raises
 from tests.test_msq import test_intervention_log
+from tests.test_msq import test_set_state_missing_key as test_msq_set_state_missing_key
 from tests.test_msq import test_get_set_state
 from tests.test_pruning_strategy import test_cannot_instantiate_abc
 from tests.test_pruning_strategy import test_active_flag
@@ -76,6 +77,7 @@ from tests.test_feedback_controller import test_file_invalid_json_no_error
 from tests.test_feedback_controller import test_source_isolation
 from tests.test_feedback_controller import test_pruning_strategy_isolation
 from tests.test_feedback_controller import test_audit_log_written
+from tests.test_feedback_controller import test_set_state_missing_key as test_fc_set_state_missing_key
 from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
 from tests.test_checkpoint_manager import test_checkpoint_interval_validation
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
@@ -141,6 +143,7 @@ tests = [
     test_n_permutations_stops_iteration,
     test_mismatched_domain_raises,
     test_intervention_log,
+    test_msq_set_state_missing_key,
     test_get_set_state,
     test_cannot_instantiate_abc,
     test_active_flag,
@@ -159,6 +162,7 @@ tests = [
     test_source_isolation,
     test_pruning_strategy_isolation,
     test_audit_log_written,
+    test_fc_set_state_missing_key,
     test_fc_get_set_state,
     test_checkpoint_interval_validation,
     test_should_checkpoint_interval,
