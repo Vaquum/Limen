@@ -241,6 +241,15 @@ class CheckpointManager:
                     f"Invalid checkpoint format in '{checkpoint_dir}': missing metadata key '{key}'."
                 )
 
+        for key, expected in (('experiment_round', int), ('target_permutations', int),
+                              ('content_hash', str), ('strategy_type', str)):
+            if not isinstance(metadata[key], expected):
+                raise ValueError(
+                    f"Invalid checkpoint format in '{checkpoint_dir}': "
+                    f"metadata key '{key}' must be {expected.__name__}, "
+                    f"got {type(metadata[key]).__name__}."
+                )
+
         for key in ('msq_state', 'domain_state'):
             if key not in data:
                 raise ValueError(
