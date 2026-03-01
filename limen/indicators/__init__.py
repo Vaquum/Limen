@@ -14,6 +14,7 @@ from limen.indicators.bollinger_position import bollinger_position
 from limen.indicators.cci import cci
 from limen.indicators.stochastic_oscillator import stochastic_oscillator
 from limen.indicators.sma_deviation_std import sma_deviation_std
+from limen.indicators.midpoint import midpoint
 from limen.indicators.window_return import window_return
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     'bollinger_position',
     'cci',
     'macd',
+    'midpoint',
     'ppo',
     'price_change_pct',
     'returns',
