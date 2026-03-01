@@ -49,7 +49,7 @@ def linearreg_angle(data: pl.DataFrame,
         data
         .with_columns([slope.alias('__slope')])
         .with_columns([
-            (pl.col('__slope').arctan() * DEGREES_PER_RADIAN).alias(f'linearreg_angle_{period}')
+            (pl.col('__slope').arctan() * DEGREES_PER_RADIAN).alias(f"linearreg_angle_{period}")
         ])
         .drop('__slope')
     )

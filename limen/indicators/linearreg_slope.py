@@ -38,4 +38,4 @@ def linearreg_slope(data: pl.DataFrame,
     sum_ty = (n - 1) * cum_y - cum_y.shift(1).rolling_sum(window_size=n - 1)
     slope = (n * sum_ty - SUM_T * sum_y) / DENOM
 
-    return data.with_columns([slope.alias(f'linearreg_slope_{period}')])
+    return data.with_columns([slope.alias(f"linearreg_slope_{period}")])

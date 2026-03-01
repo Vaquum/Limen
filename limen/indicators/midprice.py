@@ -25,5 +25,5 @@ def midprice(data: pl.DataFrame,
     return data.with_columns([
         (
             (pl.col(high_col).rolling_max(window_size=period) + pl.col(low_col).rolling_min(window_size=period)) / 2
-        ).alias(f'midprice_{period}')
+        ).alias(f"midprice_{period}")
     ])

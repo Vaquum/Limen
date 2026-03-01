@@ -21,5 +21,5 @@ def var(data: pl.DataFrame,
     '''
 
     return data.with_columns([
-        pl.col(col).rolling_var(window_size=period).alias(f'var_{period}')
+        pl.col(col).rolling_var(window_size=period).alias(f"var_{period}")
     ])

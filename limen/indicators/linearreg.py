@@ -42,4 +42,4 @@ def linearreg(data: pl.DataFrame,
     intercept = (sum_y - slope * SUM_T) / n
     value = slope * (n - 1) + intercept
 
-    return data.with_columns([value.alias(f'linearreg_{period}')])
+    return data.with_columns([value.alias(f"linearreg_{period}")])

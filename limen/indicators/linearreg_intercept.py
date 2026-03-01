@@ -40,4 +40,4 @@ def linearreg_intercept(data: pl.DataFrame,
     slope = (n * sum_ty - SUM_T * sum_y) / DENOM
     intercept = (sum_y - slope * SUM_T) / n
 
-    return data.with_columns([intercept.alias(f'linearreg_intercept_{period}')])
+    return data.with_columns([intercept.alias(f"linearreg_intercept_{period}")])

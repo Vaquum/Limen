@@ -40,6 +40,7 @@ __all__ = [
     'linearreg_slope',
     'macd',
     'medprice',
+    'midpoint',
     'midprice',
     'ppo',
     'price_change_pct',
