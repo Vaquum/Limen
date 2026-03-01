@@ -1,9 +1,5 @@
 # Changelog
 
-## v1.37.0 on 1st of March, 2026
-
-- Add `indicators.midpoint` implementing TA-Lib MIDPOINT (Midpoint Over Period)
-
 ## v0.7.9 on 25th of May, 2025
 
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
@@ -537,3 +533,7 @@
 - Add `get_state` / `set_state` to `ParamDomain` for checkpoint serialisation and restore
 - Add `_initialize_fresh`, `_checkpoint`, `_resume_from_checkpoint`, and `_register_shutdown_handler` methods to `UniversalExperimentLoop`
 - Add `_shutdown_requested` and `_pause_requested` flags to `UniversalExperimentLoop` for graceful signal handling
+
+## v1.37.0 on 1st of March, 2026
+
+- Add `indicators.midpoint` implementing TA-Lib MIDPOINT (Midpoint Over Period)
