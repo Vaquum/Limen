@@ -521,7 +521,6 @@
 - Add `_initialize_fresh`, `_checkpoint`, `_resume_from_checkpoint`, and `_register_shutdown_handler` methods to `UniversalExperimentLoop`
 - Add `_shutdown_requested` and `_pause_requested` flags to `UniversalExperimentLoop` for graceful signal handling
 
-
 ## v1.37.0 on 1st of March, 2026
 
 - Add `indicators.midpoint` implementing TA-Lib MIDPOINT (Midpoint Over Period)
