@@ -17,11 +17,11 @@ def midpoint(data: pl.DataFrame,
         period (int): Number of periods for the rolling window
 
     Returns:
-        pl.DataFrame: The input data with a new column 'midpoint_{period}'
+        pl.DataFrame: The input data with a new column '{col}_midpoint_{period}'
     '''
 
     return data.with_columns([
         (
             (pl.col(col).rolling_max(window_size=period) + pl.col(col).rolling_min(window_size=period)) / 2
-        ).alias(f"midpoint_{period}")
+        ).alias(f"{col}_midpoint_{period}")
     ])
