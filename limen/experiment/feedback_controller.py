@@ -1,8 +1,8 @@
 import json
 import logging
-import os
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from collections.abc import Callable
 from typing import Any
@@ -232,7 +232,7 @@ class FeedbackController:
         if not self._intervention_path.exists():
             return []
 
-        current_mtime = os.path.getmtime(self._intervention_path)
+        current_mtime = self._intervention_path.stat().st_mtime
         if current_mtime <= self._intervention_last_mtime:
             return []
 
@@ -325,6 +325,11 @@ class FeedbackController:
     def set_state(self, state: dict[str, Any]) -> None:
 
         '''Restore state from checkpoint.'''
+
+        required = ('trigger_count', 'intervention_last_mtime')
+        for key in required:
+            if key not in state:
+                raise ValueError(f"Invalid FeedbackController state: missing required key '{key}'.")
 
         self._trigger_count = state['trigger_count']
         self._intervention_last_mtime = state['intervention_last_mtime']

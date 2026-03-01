@@ -513,3 +513,10 @@
 - Add `FeedbackController` orchestrator for feedback loop interventions from pruning strategies and user defined custom rules
 - Add `_create_temp_log` and `_trigger_feedback` methods to `UniversalExperimentLoop` for future integration with feedback loop
 - Refactor test stubs for feedback loop into shared `tests/stubs/` module
+
+## v1.36.0 on 26th of February, 2026
+
+- Add `CheckpointManager` for saving, loading, and validating experiment state across MSQ, domain, and metadata
+- Add `get_state` / `set_state` to `ParamDomain` for checkpoint serialisation and restore
+- Add `_initialize_fresh`, `_checkpoint`, `_resume_from_checkpoint`, and `_register_shutdown_handler` methods to `UniversalExperimentLoop`
+- Add `_shutdown_requested` and `_pause_requested` flags to `UniversalExperimentLoop` for graceful signal handling

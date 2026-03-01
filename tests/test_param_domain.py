@@ -212,6 +212,39 @@ def test_comparison_type_error():
         assert 'opt' in str(e)
 
 
+def test_set_state_mismatched_keys():
+
+    domain = ParamDomain({'lr': [0.001, 0.01], 'n': [10, 20]})
+
+    try:
+        domain.set_state({'lr': [0.001], 'batch_size': [32]})
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'keys' in str(e)
+
+    assert domain.values_for('lr') == [0.001, 0.01]
+    assert domain.values_for('n') == [10, 20]
+
+
+def test_set_state_observer_rollback():
+
+    class BadObserver:
+        def on_domain_changed(self, domain, changed_params):
+            raise RuntimeError('observer failure')
+
+    domain = ParamDomain({'lr': [0.001, 0.01], 'n': [10, 20]})
+    domain.add_observer(BadObserver())
+
+    try:
+        domain.set_state({'lr': [0.001], 'n': [10]})
+        assert False, 'Should have raised RuntimeError'
+    except RuntimeError:
+        pass
+
+    assert domain.values_for('lr') == [0.001, 0.01]
+    assert domain.values_for('n') == [10, 20]
+
+
 def test_total_combinations_updates():
 
     domain = ParamDomain({'a': [1, 2, 3], 'b': ['x', 'y']})

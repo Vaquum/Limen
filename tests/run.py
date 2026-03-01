@@ -40,6 +40,8 @@ from tests.test_param_domain import test_observer_notification
 from tests.test_param_domain import test_observer_version_increments
 from tests.test_param_domain import test_is_valid_combination
 from tests.test_param_domain import test_comparison_type_error
+from tests.test_param_domain import test_set_state_mismatched_keys
+from tests.test_param_domain import test_set_state_observer_rollback
 from tests.test_param_domain import test_total_combinations_updates
 from tests.test_msq import test_msq_basic_iteration
 from tests.test_msq import test_msq_yielded_count
@@ -56,6 +58,7 @@ from tests.test_msq import test_inject_does_not_mutate_caller_dict
 from tests.test_msq import test_n_permutations_stops_iteration
 from tests.test_msq import test_mismatched_domain_raises
 from tests.test_msq import test_intervention_log
+from tests.test_msq import test_set_state_missing_key as test_msq_set_state_missing_key
 from tests.test_msq import test_get_set_state
 from tests.test_pruning_strategy import test_cannot_instantiate_abc
 from tests.test_pruning_strategy import test_active_flag
@@ -74,7 +77,37 @@ from tests.test_feedback_controller import test_file_invalid_json_no_error
 from tests.test_feedback_controller import test_source_isolation
 from tests.test_feedback_controller import test_pruning_strategy_isolation
 from tests.test_feedback_controller import test_audit_log_written
+from tests.test_feedback_controller import test_set_state_missing_key as test_fc_set_state_missing_key
 from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
+from tests.test_checkpoint_manager import test_checkpoint_interval_validation
+from tests.test_checkpoint_manager import test_should_checkpoint_interval
+from tests.test_checkpoint_manager import test_compute_content_hash_dict
+from tests.test_checkpoint_manager import test_initialize_fresh_creates_directory
+from tests.test_checkpoint_manager import test_save_writes_checkpoint_file
+from tests.test_checkpoint_manager import test_save_metadata_content
+from tests.test_checkpoint_manager import test_validate_passes_when_all_match
+from tests.test_checkpoint_manager import test_validate_raises_on_hash_mismatch
+from tests.test_checkpoint_manager import test_validate_raises_on_strategy_mismatch
+from tests.test_checkpoint_manager import test_second_checkpoint_overwrites_first
+from tests.test_checkpoint_manager import test_load_raises_on_missing_checkpoint
+from tests.test_checkpoint_manager import test_load_raises_on_non_dict_checkpoint
+from tests.test_checkpoint_manager import test_load_raises_on_corrupt_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_corrupt_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_non_dict_checkpoint
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_metadata_key
+from tests.test_checkpoint_manager import test_validate_raises_on_invalid_metadata_type
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_experiment_round
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_target_permutations
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_msq_state
+from tests.test_checkpoint_manager import test_validate_raises_on_missing_domain_state
+from tests.test_checkpoint_manager import test_validate_raises_on_invalid_msq_state_type
+from tests.test_checkpoint_manager import test_validate_raises_on_invalid_domain_state_type
+from tests.test_checkpoint_manager import test_param_domain_set_state_invalid_leaves_state_unchanged
+from tests.test_checkpoint_manager import test_param_domain_get_set_state
+from tests.test_checkpoint_manager import test_uel_shutdown_flag
+from tests.test_checkpoint_manager import test_uel_double_signal_raises
+from tests.test_checkpoint_manager import test_uel_checkpoint_and_resume
 
 tests = [
     test_param_domain_init,
@@ -93,6 +126,8 @@ tests = [
     test_observer_version_increments,
     test_is_valid_combination,
     test_comparison_type_error,
+    test_set_state_mismatched_keys,
+    test_set_state_observer_rollback,
     test_total_combinations_updates,
     test_msq_basic_iteration,
     test_msq_yielded_count,
@@ -109,6 +144,7 @@ tests = [
     test_n_permutations_stops_iteration,
     test_mismatched_domain_raises,
     test_intervention_log,
+    test_msq_set_state_missing_key,
     test_get_set_state,
     test_cannot_instantiate_abc,
     test_active_flag,
@@ -127,7 +163,37 @@ tests = [
     test_source_isolation,
     test_pruning_strategy_isolation,
     test_audit_log_written,
+    test_fc_set_state_missing_key,
     test_fc_get_set_state,
+    test_checkpoint_interval_validation,
+    test_should_checkpoint_interval,
+    test_compute_content_hash_dict,
+    test_initialize_fresh_creates_directory,
+    test_save_writes_checkpoint_file,
+    test_save_metadata_content,
+    test_validate_passes_when_all_match,
+    test_validate_raises_on_hash_mismatch,
+    test_validate_raises_on_strategy_mismatch,
+    test_second_checkpoint_overwrites_first,
+    test_load_raises_on_missing_checkpoint,
+    test_load_raises_on_non_dict_checkpoint,
+    test_load_raises_on_corrupt_checkpoint,
+    test_validate_raises_on_missing_checkpoint,
+    test_validate_raises_on_corrupt_checkpoint,
+    test_validate_raises_on_non_dict_checkpoint,
+    test_validate_raises_on_missing_metadata_key,
+    test_validate_raises_on_invalid_metadata_type,
+    test_validate_raises_on_missing_experiment_round,
+    test_validate_raises_on_missing_target_permutations,
+    test_validate_raises_on_missing_msq_state,
+    test_validate_raises_on_missing_domain_state,
+    test_validate_raises_on_invalid_msq_state_type,
+    test_validate_raises_on_invalid_domain_state_type,
+    test_param_domain_set_state_invalid_leaves_state_unchanged,
+    test_param_domain_get_set_state,
+    test_uel_shutdown_flag,
+    test_uel_double_signal_raises,
+    test_uel_checkpoint_and_resume,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,

@@ -246,6 +246,20 @@ def test_intervention_log():
     assert log[1]['operation'] == 'inject_value'
 
 
+def test_set_state_missing_key():
+
+    msq, _ = _make_msq()
+    state = msq.get_state()
+
+    for key in ('yielded_count', 'trim_budget', 'priority_queue', 'intervention_log', 'strategy_state'):
+        incomplete = {k: v for k, v in state.items() if k != key}
+        try:
+            msq.set_state(incomplete)
+            assert False, f'Should have raised ValueError for missing {key!r}'
+        except ValueError as e:
+            assert key in str(e)
+
+
 def test_get_set_state():
 
     msq, _ = _make_msq(n_permutations=100)

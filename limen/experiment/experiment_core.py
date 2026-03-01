@@ -1,14 +1,22 @@
+import logging
 import os
+import signal
+import sqlite3
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
-from tqdm import tqdm
-import polars as pl
-import sqlite3
 
+import polars as pl
+from tqdm import tqdm
+
+from limen.experiment.checkpoint_manager import CheckpointManager
+from limen.experiment.msq import MSQ
+from limen.experiment.param_domain import ParamDomain
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
+
+logger = logging.getLogger(__name__)
 
 
 class UniversalExperimentLoop:
@@ -72,6 +80,8 @@ class UniversalExperimentLoop:
 
         self.extras = []
         self.models = []
+        self._shutdown_requested: bool = False
+        self._pause_requested: bool = False
 
     def run(self,
             experiment_name: str,
@@ -275,3 +285,110 @@ class UniversalExperimentLoop:
         log = self._create_temp_log()
 
         return feedback_controller.trigger(log, msq, strategy, current_round)
+
+
+    def _initialize_fresh(self,
+                          checkpoint_dir: Path,
+                          checkpoint_manager: CheckpointManager) -> Path:
+
+        '''
+        Create a fresh checkpoint directory.
+
+        Args:
+            checkpoint_dir (Path): Path to create
+            checkpoint_manager (CheckpointManager): CheckpointManager instance
+
+        Returns:
+            Path: Created directory path
+
+        '''
+
+        return checkpoint_manager.initialize_fresh(checkpoint_dir)
+
+
+    def _checkpoint(self,
+                    msq: MSQ,
+                    domain: ParamDomain,
+                    checkpoint_dir: Path,
+                    checkpoint_manager: CheckpointManager,
+                    current_round: int,
+                    target_permutations: int,
+                    *,
+                    strategy_type: str,
+                    content_hash: str) -> None:
+
+        '''
+        Save a checkpoint at the current experiment state.
+
+        Args:
+            msq (MSQ): MSQ instance to checkpoint
+            domain (ParamDomain): ParamDomain instance to checkpoint
+            checkpoint_dir (Path): Directory to write checkpoint files
+            checkpoint_manager (CheckpointManager): CheckpointManager instance
+            current_round (int): Current round number
+            target_permutations (int): Total rounds planned
+            strategy_type (str): Class name of the search strategy
+            content_hash (str): SHA-256 digest of the experiment content
+
+        '''
+
+        checkpoint_manager.save(
+            checkpoint_dir,
+            msq,
+            domain,
+            current_round,
+            target_permutations,
+            strategy_type=strategy_type,
+            content_hash=content_hash,
+        )
+
+
+    def _resume_from_checkpoint(self,
+                                 checkpoint_dir: Path,
+                                 checkpoint_manager: CheckpointManager,
+                                 *,
+                                 strategy_type: str,
+                                 content_hash: str) -> dict[str, Any]:
+
+        '''
+        Validate and load state from an existing checkpoint directory.
+
+        Args:
+            checkpoint_dir (Path): Directory containing checkpoint files
+            checkpoint_manager (CheckpointManager): CheckpointManager instance
+            strategy_type (str): Expected strategy class name for validation
+            content_hash (str): Expected SHA-256 digest for validation
+
+        Returns:
+            dict: Keys 'metadata', 'msq_state', 'domain_state'
+
+        Raises:
+            ValueError: If validation fails
+
+        '''
+
+        return checkpoint_manager.validate(
+            checkpoint_dir,
+            content_hash=content_hash,
+            strategy_type=strategy_type,
+        )
+
+
+    def _register_shutdown_handler(self) -> None:
+
+        '''Register SIGTERM and SIGINT handlers that set _shutdown_requested.'''
+
+        def _handler(signum: int, _frame: Any) -> None:
+            if self._shutdown_requested:
+                raise KeyboardInterrupt
+            logger.warning('Signal %d received — shutdown requested.', signum)
+            self._shutdown_requested = True
+
+        try:
+            signal.signal(signal.SIGTERM, _handler)
+            signal.signal(signal.SIGINT, _handler)
+        except ValueError:
+            logger.warning(
+                'Cannot install signal handlers outside the main thread. '
+                'Graceful shutdown via signals will not be available.'
+            )

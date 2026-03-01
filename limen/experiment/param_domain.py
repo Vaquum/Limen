@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any
+from typing import Protocol
 
 
 class DomainObserver(Protocol):
@@ -271,3 +272,47 @@ class ParamDomain:
             if k not in self._params or v not in self._params[k]:
                 return False
         return True
+
+
+    def get_state(self) -> dict[str, list[Any]]:
+
+        '''Export state for checkpointing.'''
+
+        return {k: list(v) for k, v in self._params.items()}
+
+
+    def set_state(self, state: dict[str, list[Any]]) -> None:
+
+        '''
+        Restore state from checkpoint.
+
+        NOTE: Version resets to 0 and all observers are notified so
+        strategies rebuild their internal state.
+
+        Args:
+            state (dict): State dict from get_state()
+
+        '''
+
+        for k, v in state.items():
+            if not isinstance(v, list) or len(v) == 0:
+                raise ValueError(
+                    f"Parameter '{k}' must be a non-empty list, got {v!r}"
+                )
+        if set(state.keys()) != set(self._params.keys()):
+            raise ValueError(
+                f"State keys {sorted(state.keys())} do not match "
+                f"domain keys {sorted(self._params.keys())}."
+            )
+        old_params = {k: list(v) for k, v in self._params.items()}
+        old_version = self._version
+        self._params = {k: list(v) for k, v in state.items()}
+        self._version = 0
+        changed_params = list(self._params.keys())
+        try:
+            for obs in self._observers:
+                obs.on_domain_changed(self, changed_params)
+        except Exception:
+            self._params = old_params
+            self._version = old_version
+            raise
