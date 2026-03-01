@@ -22,6 +22,6 @@ def midpoint(data: pl.DataFrame,
 
     return data.with_columns([
         (
-            (pl.col(col).rolling_max(period) + pl.col(col).rolling_min(period)) / 2
-        ).alias(f'midpoint_{period}')
+            (pl.col(col).rolling_max(window_size=period) + pl.col(col).rolling_min(window_size=period)) / 2
+        ).alias(f"midpoint_{period}")
     ])
