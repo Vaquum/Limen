@@ -514,6 +514,19 @@
 - Add `_create_temp_log` and `_trigger_feedback` methods to `UniversalExperimentLoop` for future integration with feedback loop
 - Refactor test stubs for feedback loop into shared `tests/stubs/` module
 
+## v1.37.0 on 1st of March, 2026
+
+- Add `indicators.avgprice` (TA-Lib AVGPRICE): average of open, high, low, close
+- Add `indicators.medprice` (TA-Lib MEDPRICE): (high + low) / 2
+- Add `indicators.midprice` (TA-Lib MIDPRICE): rolling midpoint of high/low over period
+- Add `indicators.typprice` (TA-Lib TYPPRICE): (high + low + close) / 3
+- Add `indicators.wclprice` (TA-Lib WCLPRICE): (high + low + 2 * close) / 4
+- Add `indicators.var` (TA-Lib VAR): rolling sample variance
+- Add `indicators.linearreg` (TA-Lib LINEARREG): rolling linear regression end value
+- Add `indicators.linearreg_slope` (TA-Lib LINEARREG_SLOPE): rolling OLS slope
+- Add `indicators.linearreg_intercept` (TA-Lib LINEARREG_INTERCEPT): rolling OLS intercept
+- Add `indicators.linearreg_angle` (TA-Lib LINEARREG_ANGLE): rolling OLS slope angle in degrees
+
 ## v1.36.0 on 26th of February, 2026
 
 - Add `CheckpointManager` for saving, loading, and validating experiment state across MSQ, domain, and metadata
