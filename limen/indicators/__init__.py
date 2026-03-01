@@ -24,6 +24,7 @@ from limen.indicators.linearreg_intercept import linearreg_intercept
 from limen.indicators.linearreg_slope import linearreg_slope
 from limen.indicators.stochastic_oscillator import stochastic_oscillator
 from limen.indicators.sma_deviation_std import sma_deviation_std
+from limen.indicators.midpoint import midpoint
 from limen.indicators.window_return import window_return
 
 __all__ = [

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.37.0 on 1st of March, 2026
+
+- Add `indicators.midpoint` implementing TA-Lib MIDPOINT (Midpoint Over Period)
+
 ## v0.7.9 on 25th of May, 2025
 
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds

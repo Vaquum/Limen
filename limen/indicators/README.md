@@ -39,6 +39,7 @@ indicators/
 ├── bollinger_position.py    # Price position within Bollinger Bands
 ├── cci.py                   # Commodity Channel Index
 ├── macd.py                  # MACD line and signal line
+├── midpoint.py              # Midpoint Over Period (TA-Lib MIDPOINT)
 ├── ppo.py                   # Percentage Price Oscillator
 ├── price_change_pct.py      # Bar-over-bar percentage price change
 ├── returns.py               # Log or simple returns
