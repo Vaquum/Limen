@@ -6,6 +6,7 @@ from limen.indicators.cmo import cmo
 from limen.indicators.dema import dema
 from limen.indicators.ema import ema
 from limen.indicators.atr import atr
+from limen.indicators.avgprice import avgprice
 from limen.indicators.bbands import bbands
 from limen.indicators.bop import bop
 from limen.indicators.body_pct import body_pct
@@ -13,6 +14,11 @@ from limen.indicators.macd import macd
 from limen.indicators.macdfix import macdfix
 from limen.indicators.macdext import macdext
 from limen.indicators.mfi import mfi
+from limen.indicators.medprice import medprice
+from limen.indicators.midpoint import midpoint
+from limen.indicators.midprice import midprice
+from limen.indicators.typprice import typprice
+from limen.indicators.wclprice import wclprice
 from limen.indicators.mom import mom
 from limen.indicators.kama import kama
 from limen.indicators.mama import mama
@@ -70,6 +76,7 @@ __all__ = [
     'dema',
     'ema',
     'atr',
+    'avgprice',
     'bbands',
     'bop',
     'body_pct',
@@ -81,6 +88,11 @@ __all__ = [
     'macdfix',
     'macdext',
     'mfi',
+    'medprice',
+    'midpoint',
+    'midprice',
+    'typprice',
+    'wclprice',
     'mom',
     'kama',
     'mama',

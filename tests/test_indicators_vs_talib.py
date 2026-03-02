@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, ultosc, var, willr, wma
+from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
 
 
 historical = HistoricalData()
@@ -23,6 +23,8 @@ DEMA_PERIOD = 30
 EMA_PERIOD = 30
 KAMA_PERIOD = 30
 MA_PERIOD = 30
+MIDPOINT_PERIOD = 14
+MIDPRICE_PERIOD = 14
 MA_TYPES = list(range(9))
 SMA_PERIOD = 30
 TEMA_PERIOD = 30
@@ -518,6 +520,98 @@ def test_atr():
     verify_indicator_results_match(limen_result, talib_result)
 
 
+def test_avgprice():
+    limen_result = avgprice(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['avgprice'].to_numpy()
+    talib_result = talib.AVGPRICE(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_medprice():
+    limen_result = medprice(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+    )['medprice'].to_numpy()
+    talib_result = talib.MEDPRICE(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_midpoint():
+    out_col = f'midpoint_{MIDPOINT_PERIOD}'
+    limen_result = midpoint(SAMPLE_DATA, price_col='close', period=MIDPOINT_PERIOD)[out_col].to_numpy()
+    talib_result = talib.MIDPOINT(
+        NUMPY_DATA['close'],
+        timeperiod=MIDPOINT_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_midprice():
+    out_col = f'midprice_{MIDPRICE_PERIOD}'
+    limen_result = midprice(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        period=MIDPRICE_PERIOD,
+    )[out_col].to_numpy()
+    talib_result = talib.MIDPRICE(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        timeperiod=MIDPRICE_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_typprice():
+    limen_result = typprice(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['typprice'].to_numpy()
+    talib_result = talib.TYPPRICE(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_wclprice():
+    limen_result = wclprice(
+        SAMPLE_DATA,
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['wclprice'].to_numpy()
+    talib_result = talib.WCLPRICE(
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
 def test_bbands():
     for ma_type in BB_MA_TYPES:
         limen = bbands(
@@ -979,6 +1073,7 @@ def test_indicators_vs_talib():
         ('SAR', test_sar),
         ('SAREXT', test_sarext),
         ('ATR', test_atr),
+        ('AVGPRICE', test_avgprice),
         ('BBANDS', test_bbands),
         ('BOP', test_bop),
         ('CCI', test_cci),
@@ -998,6 +1093,11 @@ def test_indicators_vs_talib():
         ('ULTOSC', test_ultosc),
         ('WILLR', test_willr),
         ('MFI', test_mfi),
+        ('MEDPRICE', test_medprice),
+        ('MIDPOINT', test_midpoint),
+        ('MIDPRICE', test_midprice),
+        ('TYPPRICE', test_typprice),
+        ('WCLPRICE', test_wclprice),
         ('NATR', test_natr),
         ('OBV', test_obv),
         ('TRANGE', test_trange),
