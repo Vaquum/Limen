@@ -17,6 +17,12 @@ from limen.indicators.mom import mom
 from limen.indicators.kama import kama
 from limen.indicators.mama import mama
 from limen.indicators.ma import ma
+from limen.indicators.linearreg import linearreg
+from limen.indicators.linearreg_angle import linearreg_angle
+from limen.indicators.linearreg_intercept import linearreg_intercept
+from limen.indicators.linearreg_slope import linearreg_slope
+from limen.indicators.stddev import stddev
+from limen.indicators.var import var
 from limen.indicators.natr import natr
 from limen.indicators.obv import obv
 from limen.indicators.ht_trendline import ht_trendline
@@ -79,6 +85,12 @@ __all__ = [
     'kama',
     'mama',
     'ma',
+    'linearreg',
+    'linearreg_angle',
+    'linearreg_intercept',
+    'linearreg_slope',
+    'stddev',
+    'var',
     'natr',
     'obv',
     'ht_trendline',

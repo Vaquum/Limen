@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, ultosc, willr, wma
+from limen.indicators import ad, adosc, apo, atr, bbands, bop, cci, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, ultosc, var, willr, wma
 
 
 historical = HistoricalData()
@@ -29,6 +29,14 @@ TEMA_PERIOD = 30
 TRIMA_PERIOD = 30
 TRIX_PERIOD = 30
 TSF_PERIOD = 14
+LINEARREG_PERIOD = 14
+LINEARREG_ANGLE_PERIOD = 14
+LINEARREG_INTERCEPT_PERIOD = 14
+LINEARREG_SLOPE_PERIOD = 14
+STDDEV_PERIOD = 5
+STDDEV_NBDEV = 1.0
+VAR_PERIOD = 5
+VAR_NBDEV = 1.0
 WMA_PERIOD = 30
 MAMA_FAST_LIMIT = 0.5
 MAMA_SLOW_LIMIT = 0.05
@@ -341,6 +349,84 @@ def test_tsf():
     talib_result = talib.TSF(
         NUMPY_DATA['close'],
         timeperiod=TSF_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_linearreg():
+    out_col = f'linearreg_{LINEARREG_PERIOD}'
+    limen_result = linearreg(SAMPLE_DATA, price_col='close', period=LINEARREG_PERIOD)[out_col].to_numpy()
+    talib_result = talib.LINEARREG(
+        NUMPY_DATA['close'],
+        timeperiod=LINEARREG_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_linearreg_angle():
+    out_col = f'linearreg_angle_{LINEARREG_ANGLE_PERIOD}'
+    limen_result = linearreg_angle(SAMPLE_DATA, price_col='close', period=LINEARREG_ANGLE_PERIOD)[out_col].to_numpy()
+    talib_result = talib.LINEARREG_ANGLE(
+        NUMPY_DATA['close'],
+        timeperiod=LINEARREG_ANGLE_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_linearreg_intercept():
+    out_col = f'linearreg_intercept_{LINEARREG_INTERCEPT_PERIOD}'
+    limen_result = linearreg_intercept(SAMPLE_DATA, price_col='close', period=LINEARREG_INTERCEPT_PERIOD)[out_col].to_numpy()
+    talib_result = talib.LINEARREG_INTERCEPT(
+        NUMPY_DATA['close'],
+        timeperiod=LINEARREG_INTERCEPT_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_linearreg_slope():
+    out_col = f'linearreg_slope_{LINEARREG_SLOPE_PERIOD}'
+    limen_result = linearreg_slope(SAMPLE_DATA, price_col='close', period=LINEARREG_SLOPE_PERIOD)[out_col].to_numpy()
+    talib_result = talib.LINEARREG_SLOPE(
+        NUMPY_DATA['close'],
+        timeperiod=LINEARREG_SLOPE_PERIOD,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_stddev():
+    out_col = f'stddev_{STDDEV_PERIOD}_{STDDEV_NBDEV:g}'
+    limen_result = stddev(
+        SAMPLE_DATA,
+        price_col='close',
+        period=STDDEV_PERIOD,
+        nb_dev=STDDEV_NBDEV,
+    )[out_col].to_numpy()
+    talib_result = talib.STDDEV(
+        NUMPY_DATA['close'],
+        timeperiod=STDDEV_PERIOD,
+        nbdev=STDDEV_NBDEV,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_var():
+    out_col = f'var_{VAR_PERIOD}_{VAR_NBDEV:g}'
+    limen_result = var(
+        SAMPLE_DATA,
+        price_col='close',
+        period=VAR_PERIOD,
+        nb_dev=VAR_NBDEV,
+    )[out_col].to_numpy()
+    talib_result = talib.VAR(
+        NUMPY_DATA['close'],
+        timeperiod=VAR_PERIOD,
+        nbdev=VAR_NBDEV,
     )
 
     verify_indicator_results_match(limen_result, talib_result)
@@ -883,6 +969,12 @@ def test_indicators_vs_talib():
         ('TRIX', test_trix),
         ('T3', test_t3),
         ('TSF', test_tsf),
+        ('LINEARREG', test_linearreg),
+        ('LINEARREG_ANGLE', test_linearreg_angle),
+        ('LINEARREG_INTERCEPT', test_linearreg_intercept),
+        ('LINEARREG_SLOPE', test_linearreg_slope),
+        ('STDDEV', test_stddev),
+        ('VAR', test_var),
         ('WMA', test_wma),
         ('SAR', test_sar),
         ('SAREXT', test_sarext),
