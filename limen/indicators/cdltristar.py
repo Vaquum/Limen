@@ -1,6 +1,10 @@
 import numpy as np
 import polars as pl
 
+CDLTRISTAR_BODY_DOJI_AVG_PERIOD = 10
+CDLTRISTAR_BODY_DOJI_FACTOR = 0.1
+CDLTRISTAR_BODY_PERIOD_TOTAL = 0.0
+
 
 def cdltristar(
     data: pl.DataFrame,
@@ -30,17 +34,16 @@ def cdltristar(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for BodyDoji:
-    # rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
+
+    body_doji_avg_period = CDLTRISTAR_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLTRISTAR_BODY_DOJI_FACTOR
     lookback_total = body_doji_avg_period + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdltristar', values=out))
 
-    body_period_total = 0.0
+    body_period_total = CDLTRISTAR_BODY_PERIOD_TOTAL
     body_trailing_idx = lookback_total - 2 - body_doji_avg_period
 
     i = body_trailing_idx

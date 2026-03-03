@@ -1,9 +1,11 @@
 import math
-
 import numpy as np
 import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+
+HT_DCPERIOD_PERIOD = 0.0
+HT_DCPERIOD_SMOOTH_PERIOD = 0.0
 
 
 def ht_dcperiod(
@@ -76,7 +78,7 @@ def ht_dcperiod(
     ji_state = _init_hilbert_state()
     jq_state = _init_hilbert_state()
 
-    period = 0.0
+    period = HT_DCPERIOD_PERIOD
     out_idx = 0
     prev_i2 = 0.0
     prev_q2 = 0.0
@@ -87,7 +89,7 @@ def ht_dcperiod(
     i1_for_odd_prev3 = 0.0
     i1_for_even_prev2 = 0.0
     i1_for_even_prev3 = 0.0
-    smooth_period = 0.0
+    smooth_period = HT_DCPERIOD_SMOOTH_PERIOD
 
     rad2deg = 180.0 / (4.0 * math.atan(1.0))
 

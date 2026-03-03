@@ -1,6 +1,11 @@
 import numpy as np
 import polars as pl
 
+CDLUNIQUE3RIVER_BODY_LONG_AVG_PERIOD = 10
+CDLUNIQUE3RIVER_BODY_LONG_PERIOD_TOTAL = 0.0
+CDLUNIQUE3RIVER_BODY_SHORT_AVG_PERIOD = 10
+CDLUNIQUE3RIVER_BODY_SHORT_PERIOD_TOTAL = 0.0
+
 
 def cdlunique3river(
     data: pl.DataFrame,
@@ -30,19 +35,17 @@ def cdlunique3river(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_long_avg_period = 10
-    body_short_avg_period = 10
+
+    body_long_avg_period = CDLUNIQUE3RIVER_BODY_LONG_AVG_PERIOD
+    body_short_avg_period = CDLUNIQUE3RIVER_BODY_SHORT_AVG_PERIOD
     lookback_total = max(body_short_avg_period, body_long_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlunique3river', values=out))
 
-    body_long_period_total = 0.0
-    body_short_period_total = 0.0
+    body_long_period_total = CDLUNIQUE3RIVER_BODY_LONG_PERIOD_TOTAL
+    body_short_period_total = CDLUNIQUE3RIVER_BODY_SHORT_PERIOD_TOTAL
     body_long_trailing_idx = lookback_total - 2 - body_long_avg_period
     body_short_trailing_idx = lookback_total - body_short_avg_period
 

@@ -1,6 +1,10 @@
 import numpy as np
 import polars as pl
 
+CDLLADDERBOTTOM_SHADOW_VS_AVG_PERIOD = 10
+CDLLADDERBOTTOM_SHADOW_VS_FACTOR = 0.1
+CDLLADDERBOTTOM_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdlladderbottom(
     data: pl.DataFrame,
@@ -30,17 +34,16 @@ def cdlladderbottom(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for ShadowVeryShort:
-    # rangeType=HighLow, avgPeriod=10, factor=0.1
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
+
+    shadow_vs_avg_period = CDLLADDERBOTTOM_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLLADDERBOTTOM_SHADOW_VS_FACTOR
     lookback_total = shadow_vs_avg_period + 4
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlladderbottom', values=out))
 
-    shadow_vs_period_total = 0.0
+    shadow_vs_period_total = CDLLADDERBOTTOM_SHADOW_VS_PERIOD_TOTAL
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
 
     i = shadow_vs_trailing_idx

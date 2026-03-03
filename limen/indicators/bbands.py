@@ -29,8 +29,12 @@ def bbands(
         pl.DataFrame: Input data with 'bbands_upper', 'bbands_middle', 'bbands_lower'
     '''
 
-    if period < 2:
-        raise ValueError('period must be >= 2')
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
+    if nb_dev_up < -3e37 or nb_dev_up > 3e37:
+        raise ValueError('nb_dev_up must be between -3e37 and 3e37')
+    if nb_dev_dn < -3e37 or nb_dev_dn > 3e37:
+        raise ValueError('nb_dev_dn must be between -3e37 and 3e37')
     if ma_type < 0 or ma_type > 8:
         raise ValueError('ma_type must be between 0 and 8')
 

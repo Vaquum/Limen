@@ -1,5 +1,7 @@
 import numpy as np
 import polars as pl
+WMA_PERIOD_SUB = 0.0
+WMA_PERIOD_SUM = 0.0
 
 
 def wma(
@@ -40,8 +42,8 @@ def wma(
     out_idx = start_idx
     trailing_idx = start_idx - lookback_total
 
-    period_sum = 0.0
-    period_sub = 0.0
+    period_sum = WMA_PERIOD_SUM
+    period_sub = WMA_PERIOD_SUB
     in_idx = trailing_idx
     i = 1
     while in_idx < start_idx:

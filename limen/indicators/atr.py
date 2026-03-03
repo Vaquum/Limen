@@ -24,8 +24,8 @@ def atr(
         pl.DataFrame: The input data with a new column 'atr_{period}'
     '''
 
-    if period < 1:
-        raise ValueError('period must be >= 1')
+    if period < 1 or period > 100000:
+        raise ValueError('period must be between 1 and 100000')
 
     high = data[high_col].to_numpy()
     low = data[low_col].to_numpy()

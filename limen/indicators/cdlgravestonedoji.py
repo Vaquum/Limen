@@ -1,6 +1,13 @@
 import numpy as np
 import polars as pl
 
+CDLGRAVESTONEDOJI_BODY_DOJI_AVG_PERIOD = 10
+CDLGRAVESTONEDOJI_BODY_DOJI_FACTOR = 0.1
+CDLGRAVESTONEDOJI_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLGRAVESTONEDOJI_SHADOW_VS_AVG_PERIOD = 10
+CDLGRAVESTONEDOJI_SHADOW_VS_FACTOR = 0.1
+CDLGRAVESTONEDOJI_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdlgravestonedoji(
     data: pl.DataFrame,
@@ -30,21 +37,19 @@ def cdlgravestonedoji(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyDoji: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
+
+    body_doji_avg_period = CDLGRAVESTONEDOJI_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLGRAVESTONEDOJI_BODY_DOJI_FACTOR
+    shadow_vs_avg_period = CDLGRAVESTONEDOJI_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLGRAVESTONEDOJI_SHADOW_VS_FACTOR
     lookback_total = max(body_doji_avg_period, shadow_vs_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlgravestonedoji', values=out))
 
-    body_doji_period_total = 0.0
-    shadow_vs_period_total = 0.0
+    body_doji_period_total = CDLGRAVESTONEDOJI_BODY_DOJI_PERIOD_TOTAL
+    shadow_vs_period_total = CDLGRAVESTONEDOJI_SHADOW_VS_PERIOD_TOTAL
     body_doji_trailing_idx = lookback_total - body_doji_avg_period
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
 

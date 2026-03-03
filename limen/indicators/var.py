@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+VAR_PERIOD_TOTAL1 = 0.0
+VAR_PERIOD_TOTAL2 = 0.0
+
 
 def var(
     data: pl.DataFrame,
@@ -39,8 +42,8 @@ def var(
     start_idx = lookback_total
     end_idx = n - 1
 
-    period_total1 = 0.0
-    period_total2 = 0.0
+    period_total1 = VAR_PERIOD_TOTAL1
+    period_total2 = VAR_PERIOD_TOTAL2
     trailing_idx = start_idx - lookback_total
 
     i = trailing_idx

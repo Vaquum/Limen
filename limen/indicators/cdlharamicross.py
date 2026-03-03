@@ -1,6 +1,12 @@
 import numpy as np
 import polars as pl
 
+CDLHARAMICROSS_BODY_DOJI_AVG_PERIOD = 10
+CDLHARAMICROSS_BODY_DOJI_FACTOR = 0.1
+CDLHARAMICROSS_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLHARAMICROSS_BODY_LONG_AVG_PERIOD = 10
+CDLHARAMICROSS_BODY_LONG_PERIOD_TOTAL = 0.0
+
 
 def cdlharamicross(
     data: pl.DataFrame,
@@ -30,20 +36,18 @@ def cdlharamicross(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyDoji: rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_long_avg_period = 10
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
+
+    body_long_avg_period = CDLHARAMICROSS_BODY_LONG_AVG_PERIOD
+    body_doji_avg_period = CDLHARAMICROSS_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLHARAMICROSS_BODY_DOJI_FACTOR
     lookback_total = max(body_doji_avg_period, body_long_avg_period) + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlharamicross', values=out))
 
-    body_doji_period_total = 0.0
-    body_long_period_total = 0.0
+    body_doji_period_total = CDLHARAMICROSS_BODY_DOJI_PERIOD_TOTAL
+    body_long_period_total = CDLHARAMICROSS_BODY_LONG_PERIOD_TOTAL
     body_long_trailing_idx = lookback_total - 1 - body_long_avg_period
     body_doji_trailing_idx = lookback_total - body_doji_avg_period
 

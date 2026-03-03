@@ -1,6 +1,16 @@
 import numpy as np
 import polars as pl
 
+CDLRICKSHAWMAN_BODY_DOJI_AVG_PERIOD = 10
+CDLRICKSHAWMAN_BODY_DOJI_FACTOR = 0.1
+CDLRICKSHAWMAN_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLRICKSHAWMAN_NEAR_AVG_PERIOD = 5
+CDLRICKSHAWMAN_NEAR_FACTOR = 0.2
+CDLRICKSHAWMAN_NEAR_PERIOD_TOTAL = 0.0
+CDLRICKSHAWMAN_SHADOW_LONG_AVG_PERIOD = 0
+CDLRICKSHAWMAN_SHADOW_LONG_FACTOR = 1.0
+CDLRICKSHAWMAN_SHADOW_LONG_PERIOD_TOTAL = 0.0
+
 
 def cdlrickshawman(
     data: pl.DataFrame,
@@ -30,25 +40,22 @@ def cdlrickshawman(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyDoji: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # ShadowLong: rangeType=RealBody, avgPeriod=0, factor=1.0
-    # Near: rangeType=HighLow, avgPeriod=5, factor=0.2
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
-    shadow_long_avg_period = 0
-    shadow_long_factor = 1.0
-    near_avg_period = 5
-    near_factor = 0.2
+
+    body_doji_avg_period = CDLRICKSHAWMAN_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLRICKSHAWMAN_BODY_DOJI_FACTOR
+    shadow_long_avg_period = CDLRICKSHAWMAN_SHADOW_LONG_AVG_PERIOD
+    shadow_long_factor = CDLRICKSHAWMAN_SHADOW_LONG_FACTOR
+    near_avg_period = CDLRICKSHAWMAN_NEAR_AVG_PERIOD
+    near_factor = CDLRICKSHAWMAN_NEAR_FACTOR
     lookback_total = max(max(body_doji_avg_period, shadow_long_avg_period), near_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlrickshawman', values=out))
 
-    body_doji_period_total = 0.0
-    shadow_long_period_total = 0.0
-    near_period_total = 0.0
+    body_doji_period_total = CDLRICKSHAWMAN_BODY_DOJI_PERIOD_TOTAL
+    shadow_long_period_total = CDLRICKSHAWMAN_SHADOW_LONG_PERIOD_TOTAL
+    near_period_total = CDLRICKSHAWMAN_NEAR_PERIOD_TOTAL
     body_doji_trailing_idx = lookback_total - body_doji_avg_period
     shadow_long_trailing_idx = lookback_total - shadow_long_avg_period
     near_trailing_idx = lookback_total - near_avg_period

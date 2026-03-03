@@ -1,6 +1,11 @@
 import numpy as np
 import polars as pl
 
+CDL3INSIDE_BODY_LONG_AVG_PERIOD = 10
+CDL3INSIDE_BODY_LONG_PERIOD_TOTAL = 0.0
+CDL3INSIDE_BODY_SHORT_AVG_PERIOD = 10
+CDL3INSIDE_BODY_SHORT_PERIOD_TOTAL = 0.0
+
 
 def cdl3inside(
     data: pl.DataFrame,
@@ -28,19 +33,17 @@ def cdl3inside(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_long_avg_period = 10
-    body_short_avg_period = 10
+
+    body_long_avg_period = CDL3INSIDE_BODY_LONG_AVG_PERIOD
+    body_short_avg_period = CDL3INSIDE_BODY_SHORT_AVG_PERIOD
     lookback_total = max(body_short_avg_period, body_long_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdl3inside', values=out))
 
-    body_long_period_total = 0.0
-    body_short_period_total = 0.0
+    body_long_period_total = CDL3INSIDE_BODY_LONG_PERIOD_TOTAL
+    body_short_period_total = CDL3INSIDE_BODY_SHORT_PERIOD_TOTAL
     body_long_trailing_idx = lookback_total - 2 - body_long_avg_period
     body_short_trailing_idx = lookback_total - 1 - body_short_avg_period
 

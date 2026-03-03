@@ -1,6 +1,15 @@
 import numpy as np
 import polars as pl
 
+CDL3STARSINSOUTH_BODY_LONG_AVG_PERIOD = 10
+CDL3STARSINSOUTH_BODY_LONG_PERIOD_TOTAL = 0.0
+CDL3STARSINSOUTH_BODY_SHORT_AVG_PERIOD = 10
+CDL3STARSINSOUTH_BODY_SHORT_PERIOD_TOTAL = 0.0
+CDL3STARSINSOUTH_SHADOW_LONG_AVG_PERIOD = 0
+CDL3STARSINSOUTH_SHADOW_LONG_PERIOD_TOTAL = 0.0
+CDL3STARSINSOUTH_SHADOW_VS_AVG_PERIOD = 10
+CDL3STARSINSOUTH_SHADOW_VS_FACTOR = 0.1
+
 
 def cdl3starsinsouth(
     data: pl.DataFrame,
@@ -30,16 +39,12 @@ def cdl3starsinsouth(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # ShadowLong: rangeType=RealBody, avgPeriod=0, factor=1.0
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_long_avg_period = 10
-    body_short_avg_period = 10
-    shadow_long_avg_period = 0
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
+
+    body_long_avg_period = CDL3STARSINSOUTH_BODY_LONG_AVG_PERIOD
+    body_short_avg_period = CDL3STARSINSOUTH_BODY_SHORT_AVG_PERIOD
+    shadow_long_avg_period = CDL3STARSINSOUTH_SHADOW_LONG_AVG_PERIOD
+    shadow_vs_avg_period = CDL3STARSINSOUTH_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDL3STARSINSOUTH_SHADOW_VS_FACTOR
 
     lookback_total = max(
         max(shadow_vs_avg_period, shadow_long_avg_period),
@@ -50,9 +55,9 @@ def cdl3starsinsouth(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdl3starsinsouth', values=out))
 
-    body_long_period_total = 0.0
-    body_short_period_total = 0.0
-    shadow_long_period_total = 0.0
+    body_long_period_total = CDL3STARSINSOUTH_BODY_LONG_PERIOD_TOTAL
+    body_short_period_total = CDL3STARSINSOUTH_BODY_SHORT_PERIOD_TOTAL
+    shadow_long_period_total = CDL3STARSINSOUTH_SHADOW_LONG_PERIOD_TOTAL
     shadow_vs_period_total = np.zeros(2, dtype=float)
 
     body_long_trailing_idx = lookback_total - body_long_avg_period

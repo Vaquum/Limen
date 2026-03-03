@@ -1,6 +1,16 @@
 import numpy as np
 import polars as pl
 
+CDLTAKURI_BODY_DOJI_AVG_PERIOD = 10
+CDLTAKURI_BODY_DOJI_FACTOR = 0.1
+CDLTAKURI_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLTAKURI_SHADOW_VL_AVG_PERIOD = 0
+CDLTAKURI_SHADOW_VL_FACTOR = 2.0
+CDLTAKURI_SHADOW_VL_PERIOD_TOTAL = 0.0
+CDLTAKURI_SHADOW_VS_AVG_PERIOD = 10
+CDLTAKURI_SHADOW_VS_FACTOR = 0.1
+CDLTAKURI_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdltakuri(
     data: pl.DataFrame,
@@ -30,16 +40,13 @@ def cdltakuri(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyDoji: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # ShadowVeryLong: rangeType=RealBody, avgPeriod=0, factor=2.0
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
-    shadow_vl_avg_period = 0
-    shadow_vl_factor = 2.0
+
+    body_doji_avg_period = CDLTAKURI_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLTAKURI_BODY_DOJI_FACTOR
+    shadow_vs_avg_period = CDLTAKURI_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLTAKURI_SHADOW_VS_FACTOR
+    shadow_vl_avg_period = CDLTAKURI_SHADOW_VL_AVG_PERIOD
+    shadow_vl_factor = CDLTAKURI_SHADOW_VL_FACTOR
     lookback_total = max(
         max(body_doji_avg_period, shadow_vs_avg_period),
         shadow_vl_avg_period,
@@ -49,9 +56,9 @@ def cdltakuri(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdltakuri', values=out))
 
-    body_doji_period_total = 0.0
-    shadow_vs_period_total = 0.0
-    shadow_vl_period_total = 0.0
+    body_doji_period_total = CDLTAKURI_BODY_DOJI_PERIOD_TOTAL
+    shadow_vs_period_total = CDLTAKURI_SHADOW_VS_PERIOD_TOTAL
+    shadow_vl_period_total = CDLTAKURI_SHADOW_VL_PERIOD_TOTAL
     body_doji_trailing_idx = lookback_total - body_doji_avg_period
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
     shadow_vl_trailing_idx = lookback_total - shadow_vl_avg_period

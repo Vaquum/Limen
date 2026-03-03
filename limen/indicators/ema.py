@@ -22,8 +22,8 @@ def ema(
         pl.DataFrame: The input data with a new column 'ema_{period}'
     '''
 
-    if period < 2:
-        raise ValueError('period must be >= 2')
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     n = len(values)

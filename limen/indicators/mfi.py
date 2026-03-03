@@ -25,8 +25,8 @@ def mfi(
         pl.DataFrame: The input data with a new column 'mfi_{period}'
     '''
 
-    if period < 2:
-        raise ValueError('period must be >= 2')
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
 
     out_col = f'mfi_{period}'
 

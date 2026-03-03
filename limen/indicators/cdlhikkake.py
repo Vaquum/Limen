@@ -29,7 +29,7 @@ def cdlhikkake(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib lookback for CDLHIKKAKE.
+
     lookback_total = 5
 
     out = np.zeros(n, dtype=np.int32)

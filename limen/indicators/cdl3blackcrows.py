@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDL3BLACKCROWS_SHADOW_VS_AVG_PERIOD = 10
+CDL3BLACKCROWS_SHADOW_VS_FACTOR = 0.1
+
 
 def cdl3blackcrows(
     data: pl.DataFrame,
@@ -30,10 +33,9 @@ def cdl3blackcrows(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for ShadowVeryShort:
-    # rangeType=HighLow, avgPeriod=10, factor=0.1
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
+
+    shadow_vs_avg_period = CDL3BLACKCROWS_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDL3BLACKCROWS_SHADOW_VS_FACTOR
     lookback_total = shadow_vs_avg_period + 3
 
     out = np.zeros(n, dtype=np.int32)

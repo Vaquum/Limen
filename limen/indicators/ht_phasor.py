@@ -1,9 +1,10 @@
 import math
-
 import numpy as np
 import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+
+HT_PHASOR_PERIOD = 0.0
 
 
 def ht_phasor(
@@ -81,7 +82,7 @@ def ht_phasor(
     ji_state = _init_hilbert_state()
     jq_state = _init_hilbert_state()
 
-    period = 0.0
+    period = HT_PHASOR_PERIOD
     out_idx = 0
 
     prev_i2 = 0.0

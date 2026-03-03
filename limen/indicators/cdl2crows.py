@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDL2CROWS_BODY_LONG_AVG_PERIOD = 10
+CDL2CROWS_BODY_LONG_PERIOD_TOTAL = 0.0
+
 
 def cdl2crows(
     data: pl.DataFrame,
@@ -28,9 +31,8 @@ def cdl2crows(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for BodyLong:
-    # rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_long_avg_period = 10
+
+    body_long_avg_period = CDL2CROWS_BODY_LONG_AVG_PERIOD
     lookback_total = body_long_avg_period + 2
 
     out = np.zeros(n, dtype=np.int32)
@@ -38,7 +40,7 @@ def cdl2crows(
         return data.with_columns(pl.Series(name='cdl2crows', values=out))
 
     start_idx = lookback_total
-    body_long_period_total = 0.0
+    body_long_period_total = CDL2CROWS_BODY_LONG_PERIOD_TOTAL
     body_long_trailing_idx = start_idx - 2 - body_long_avg_period
 
     i = body_long_trailing_idx

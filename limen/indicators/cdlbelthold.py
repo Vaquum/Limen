@@ -1,6 +1,12 @@
 import numpy as np
 import polars as pl
 
+CDLBELTHOLD_BODY_LONG_AVG_PERIOD = 10
+CDLBELTHOLD_BODY_LONG_PERIOD_TOTAL = 0.0
+CDLBELTHOLD_SHADOW_VS_AVG_PERIOD = 10
+CDLBELTHOLD_SHADOW_VS_FACTOR = 0.1
+CDLBELTHOLD_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdlbelthold(
     data: pl.DataFrame,
@@ -30,20 +36,18 @@ def cdlbelthold(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_long_avg_period = 10
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
+
+    body_long_avg_period = CDLBELTHOLD_BODY_LONG_AVG_PERIOD
+    shadow_vs_avg_period = CDLBELTHOLD_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLBELTHOLD_SHADOW_VS_FACTOR
     lookback_total = max(body_long_avg_period, shadow_vs_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlbelthold', values=out))
 
-    body_long_period_total = 0.0
-    shadow_vs_period_total = 0.0
+    body_long_period_total = CDLBELTHOLD_BODY_LONG_PERIOD_TOTAL
+    shadow_vs_period_total = CDLBELTHOLD_SHADOW_VS_PERIOD_TOTAL
     body_long_trailing_idx = lookback_total - body_long_avg_period
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
 

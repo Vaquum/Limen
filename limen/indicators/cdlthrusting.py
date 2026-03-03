@@ -1,6 +1,12 @@
 import numpy as np
 import polars as pl
 
+CDLTHRUSTING_BODY_LONG_AVG_PERIOD = 10
+CDLTHRUSTING_BODY_LONG_PERIOD_TOTAL = 0.0
+CDLTHRUSTING_EQUAL_AVG_PERIOD = 5
+CDLTHRUSTING_EQUAL_FACTOR = 0.05
+CDLTHRUSTING_EQUAL_PERIOD_TOTAL = 0.0
+
 
 def cdlthrusting(
     data: pl.DataFrame,
@@ -30,20 +36,18 @@ def cdlthrusting(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # Equal: rangeType=HighLow, avgPeriod=5, factor=0.05
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    equal_avg_period = 5
-    equal_factor = 0.05
-    body_long_avg_period = 10
+
+    equal_avg_period = CDLTHRUSTING_EQUAL_AVG_PERIOD
+    equal_factor = CDLTHRUSTING_EQUAL_FACTOR
+    body_long_avg_period = CDLTHRUSTING_BODY_LONG_AVG_PERIOD
     lookback_total = max(equal_avg_period, body_long_avg_period) + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlthrusting', values=out))
 
-    equal_period_total = 0.0
-    body_long_period_total = 0.0
+    equal_period_total = CDLTHRUSTING_EQUAL_PERIOD_TOTAL
+    body_long_period_total = CDLTHRUSTING_BODY_LONG_PERIOD_TOTAL
     equal_trailing_idx = lookback_total - equal_avg_period
     body_long_trailing_idx = lookback_total - body_long_avg_period
 

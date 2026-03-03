@@ -1,6 +1,15 @@
 import numpy as np
 import polars as pl
 
+CDLSEPARATINGLINES_BODY_LONG_AVG_PERIOD = 10
+CDLSEPARATINGLINES_BODY_LONG_PERIOD_TOTAL = 0.0
+CDLSEPARATINGLINES_EQUAL_AVG_PERIOD = 5
+CDLSEPARATINGLINES_EQUAL_FACTOR = 0.05
+CDLSEPARATINGLINES_EQUAL_PERIOD_TOTAL = 0.0
+CDLSEPARATINGLINES_SHADOW_VS_AVG_PERIOD = 10
+CDLSEPARATINGLINES_SHADOW_VS_FACTOR = 0.1
+CDLSEPARATINGLINES_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdlseparatinglines(
     data: pl.DataFrame,
@@ -30,24 +39,21 @@ def cdlseparatinglines(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # Equal: rangeType=HighLow, avgPeriod=5, factor=0.05
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
-    body_long_avg_period = 10
-    equal_avg_period = 5
-    equal_factor = 0.05
+
+    shadow_vs_avg_period = CDLSEPARATINGLINES_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLSEPARATINGLINES_SHADOW_VS_FACTOR
+    body_long_avg_period = CDLSEPARATINGLINES_BODY_LONG_AVG_PERIOD
+    equal_avg_period = CDLSEPARATINGLINES_EQUAL_AVG_PERIOD
+    equal_factor = CDLSEPARATINGLINES_EQUAL_FACTOR
     lookback_total = max(max(shadow_vs_avg_period, body_long_avg_period), equal_avg_period) + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlseparatinglines', values=out))
 
-    shadow_vs_period_total = 0.0
-    body_long_period_total = 0.0
-    equal_period_total = 0.0
+    shadow_vs_period_total = CDLSEPARATINGLINES_SHADOW_VS_PERIOD_TOTAL
+    body_long_period_total = CDLSEPARATINGLINES_BODY_LONG_PERIOD_TOTAL
+    equal_period_total = CDLSEPARATINGLINES_EQUAL_PERIOD_TOTAL
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
     body_long_trailing_idx = lookback_total - body_long_avg_period
     equal_trailing_idx = lookback_total - equal_avg_period

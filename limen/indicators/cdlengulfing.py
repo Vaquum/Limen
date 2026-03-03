@@ -28,7 +28,7 @@ def cdlengulfing(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib lookback for CDLENGULFING.
+
     lookback_total = 2
 
     out = np.zeros(n, dtype=np.int32)

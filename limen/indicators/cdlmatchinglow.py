@@ -1,6 +1,10 @@
 import numpy as np
 import polars as pl
 
+CDLMATCHINGLOW_EQUAL_AVG_PERIOD = 5
+CDLMATCHINGLOW_EQUAL_FACTOR = 0.05
+CDLMATCHINGLOW_EQUAL_PERIOD_TOTAL = 0.0
+
 
 def cdlmatchinglow(
     data: pl.DataFrame,
@@ -30,17 +34,16 @@ def cdlmatchinglow(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for Equal:
-    # rangeType=HighLow, avgPeriod=5, factor=0.05
-    equal_avg_period = 5
-    equal_factor = 0.05
+
+    equal_avg_period = CDLMATCHINGLOW_EQUAL_AVG_PERIOD
+    equal_factor = CDLMATCHINGLOW_EQUAL_FACTOR
     lookback_total = equal_avg_period + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlmatchinglow', values=out))
 
-    equal_period_total = 0.0
+    equal_period_total = CDLMATCHINGLOW_EQUAL_PERIOD_TOTAL
     equal_trailing_idx = lookback_total - equal_avg_period
 
     i = equal_trailing_idx

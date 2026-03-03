@@ -1,6 +1,13 @@
 import numpy as np
 import polars as pl
 
+CDLLONGLEGGEDDOJI_BODY_DOJI_AVG_PERIOD = 10
+CDLLONGLEGGEDDOJI_BODY_DOJI_FACTOR = 0.1
+CDLLONGLEGGEDDOJI_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLLONGLEGGEDDOJI_SHADOW_LONG_AVG_PERIOD = 0
+CDLLONGLEGGEDDOJI_SHADOW_LONG_FACTOR = 1.0
+CDLLONGLEGGEDDOJI_SHADOW_LONG_PERIOD_TOTAL = 0.0
+
 
 def cdllongleggeddoji(
     data: pl.DataFrame,
@@ -30,21 +37,19 @@ def cdllongleggeddoji(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyDoji: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # ShadowLong: rangeType=RealBody, avgPeriod=0, factor=1.0
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
-    shadow_long_avg_period = 0
-    shadow_long_factor = 1.0
+
+    body_doji_avg_period = CDLLONGLEGGEDDOJI_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLLONGLEGGEDDOJI_BODY_DOJI_FACTOR
+    shadow_long_avg_period = CDLLONGLEGGEDDOJI_SHADOW_LONG_AVG_PERIOD
+    shadow_long_factor = CDLLONGLEGGEDDOJI_SHADOW_LONG_FACTOR
     lookback_total = max(body_doji_avg_period, shadow_long_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdllongleggeddoji', values=out))
 
-    body_doji_period_total = 0.0
-    shadow_long_period_total = 0.0
+    body_doji_period_total = CDLLONGLEGGEDDOJI_BODY_DOJI_PERIOD_TOTAL
+    shadow_long_period_total = CDLLONGLEGGEDDOJI_SHADOW_LONG_PERIOD_TOTAL
     body_doji_trailing_idx = lookback_total - body_doji_avg_period
     shadow_long_trailing_idx = lookback_total - shadow_long_avg_period
 

@@ -32,8 +32,8 @@ def ma(
         pl.DataFrame: The input data with a new column 'ma_{period}_{ma_type}'
     '''
 
-    if period < 1:
-        raise ValueError('period must be >= 1')
+    if period < 1 or period > 100000:
+        raise ValueError('period must be between 1 and 100000')
     if ma_type < 0 or ma_type > 8:
         raise ValueError('ma_type must be between 0 and 8')
 
@@ -45,7 +45,7 @@ def ma(
     if n == 0:
         return data.with_columns(pl.Series(name=out_col, values=out))
 
-    # TA-Lib MA: period=1 copies input regardless of ma_type.
+
     if period == 1:
         out[:] = values
         return data.with_columns(pl.Series(name=out_col, values=out))
@@ -67,7 +67,7 @@ def ma(
         kama_col = f'kama_{period}'
         out = kama(data, price_col=price_col, period=period)[kama_col].to_numpy().astype(float, copy=False)
     elif ma_type == 7:
-        # TA-Lib MA(MAMA) ignores period and uses default fast/slow limits.
+
         out = mama(data, price_col=price_col, fast_limit=0.5, slow_limit=0.05)['mama'].to_numpy().astype(float, copy=False)
     elif ma_type == 8:
         out = t3(data, price_col=price_col, period=period, vfactor=0.7)[f't3_{period}_0.7'].to_numpy().astype(float, copy=False)

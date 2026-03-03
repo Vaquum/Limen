@@ -1,9 +1,12 @@
 import math
-
 import numpy as np
 import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+
+HT_SINE_PERIOD = 0.0
+HT_SINE_SMOOTH_PERIOD = 0.0
+
 
 _SMOOTH_PRICE_SIZE = 50
 
@@ -83,7 +86,7 @@ def ht_sine(
     ji_state = _init_hilbert_state()
     jq_state = _init_hilbert_state()
 
-    period = 0.0
+    period = HT_SINE_PERIOD
     out_idx = 0
     prev_i2 = 0.0
     prev_q2 = 0.0
@@ -94,7 +97,7 @@ def ht_sine(
     i1_for_odd_prev3 = 0.0
     i1_for_even_prev2 = 0.0
     i1_for_even_prev3 = 0.0
-    smooth_period = 0.0
+    smooth_period = HT_SINE_SMOOTH_PERIOD
 
     smooth_price = [0.0] * _SMOOTH_PRICE_SIZE
     smooth_price_idx = 0

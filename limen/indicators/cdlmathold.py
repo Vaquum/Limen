@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDLMATHOLD_BODY_LONG_AVG_PERIOD = 10
+CDLMATHOLD_BODY_SHORT_AVG_PERIOD = 10
+
 
 def cdlmathold(
     data: pl.DataFrame,
@@ -26,19 +29,17 @@ def cdlmathold(
         pl.DataFrame: The input data with a new column 'cdlmathold'
     '''
 
-    if penetration < 0.0:
-        raise ValueError('penetration must be >= 0')
+    if penetration < 0.0 or penetration > 3e37:
+        raise ValueError('penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     high_values = data[high_col].to_numpy().astype(float, copy=False)
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_short_avg_period = 10
-    body_long_avg_period = 10
+
+    body_short_avg_period = CDLMATHOLD_BODY_SHORT_AVG_PERIOD
+    body_long_avg_period = CDLMATHOLD_BODY_LONG_AVG_PERIOD
     lookback_total = max(body_short_avg_period, body_long_avg_period) + 4
 
     out = np.zeros(n, dtype=np.int32)

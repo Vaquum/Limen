@@ -1,6 +1,11 @@
 import numpy as np
 import polars as pl
 
+CDLIDENTICAL3CROWS_EQUAL_AVG_PERIOD = 5
+CDLIDENTICAL3CROWS_EQUAL_FACTOR = 0.05
+CDLIDENTICAL3CROWS_SHADOW_VS_AVG_PERIOD = 10
+CDLIDENTICAL3CROWS_SHADOW_VS_FACTOR = 0.1
+
 
 def cdlidentical3crows(
     data: pl.DataFrame,
@@ -30,13 +35,11 @@ def cdlidentical3crows(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # Equal: rangeType=HighLow, avgPeriod=5, factor=0.05
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
-    equal_avg_period = 5
-    equal_factor = 0.05
+
+    shadow_vs_avg_period = CDLIDENTICAL3CROWS_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLIDENTICAL3CROWS_SHADOW_VS_FACTOR
+    equal_avg_period = CDLIDENTICAL3CROWS_EQUAL_AVG_PERIOD
+    equal_factor = CDLIDENTICAL3CROWS_EQUAL_FACTOR
     lookback_total = max(shadow_vs_avg_period, equal_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)

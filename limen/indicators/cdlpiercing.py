@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+CDLPIERCING_BODY_LONG_AVG_PERIOD = 10
+
 
 def cdlpiercing(
     data: pl.DataFrame,
@@ -29,9 +31,8 @@ def cdlpiercing(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for BodyLong:
-    # rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_long_avg_period = 10
+
+    body_long_avg_period = CDLPIERCING_BODY_LONG_AVG_PERIOD
     lookback_total = body_long_avg_period + 1
 
     out = np.zeros(n, dtype=np.int32)

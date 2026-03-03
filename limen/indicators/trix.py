@@ -39,19 +39,19 @@ def trix(
     start_idx = total_lookback
     end_idx = n - 1
 
-    # 1st EMA from (start_idx - total_lookback) to end_idx.
+
     _, temp = _ema_talib_default_segment(values, period, start_idx - total_lookback, end_idx)
     nb_element_to_output = n - 1
 
-    # 2nd EMA over the first EMA output.
+
     nb_element_to_output -= ema_lookback
     _, temp = _ema_talib_default_segment(temp, period, 0, nb_element_to_output)
 
-    # 3rd EMA over the second EMA output.
+
     nb_element_to_output -= ema_lookback
     _, temp = _ema_talib_default_segment(temp, period, 0, nb_element_to_output)
 
-    # 1-day ROC over the third EMA output.
+
     nb_element_to_output -= ema_lookback
     roc_vals = np.zeros(nb_element_to_output, dtype=float)
     for i in range(1, nb_element_to_output + 1):

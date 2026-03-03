@@ -3,6 +3,9 @@ import polars as pl
 
 from limen.indicators._ema import _ema_talib_default_segment, _ema_talib_segment_with_k
 
+MACDFIX_FIXED_FAST_PERIOD = 12
+MACDFIX_FIXED_SLOW_PERIOD = 26
+
 
 def macdfix(
     data: pl.DataFrame,
@@ -32,8 +35,8 @@ def macdfix(
     out_signal = np.full(n, np.nan, dtype=float)
     out_hist = np.full(n, np.nan, dtype=float)
 
-    fixed_fast_period = 12
-    fixed_slow_period = 26
+    fixed_fast_period = MACDFIX_FIXED_FAST_PERIOD
+    fixed_slow_period = MACDFIX_FIXED_SLOW_PERIOD
     fixed_fast_k = 0.15
     fixed_slow_k = 0.075
 

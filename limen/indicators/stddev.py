@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+STDDEV_PERIOD_TOTAL1 = 0.0
+STDDEV_PERIOD_TOTAL2 = 0.0
 _TA_EPSILON = 1e-14
 
 
@@ -41,8 +43,8 @@ def stddev(
     start_idx = lookback_total
     end_idx = n - 1
 
-    period_total1 = 0.0
-    period_total2 = 0.0
+    period_total1 = STDDEV_PERIOD_TOTAL1
+    period_total2 = STDDEV_PERIOD_TOTAL2
     trailing_idx = start_idx - lookback_total
 
     i = trailing_idx

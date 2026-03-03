@@ -1,6 +1,15 @@
 import numpy as np
 import polars as pl
 
+CDL3WHITESOLDIERS_BODY_SHORT_AVG_PERIOD = 10
+CDL3WHITESOLDIERS_BODY_SHORT_PERIOD_TOTAL = 0.0
+CDL3WHITESOLDIERS_FAR_AVG_PERIOD = 5
+CDL3WHITESOLDIERS_FAR_FACTOR = 0.6
+CDL3WHITESOLDIERS_NEAR_AVG_PERIOD = 5
+CDL3WHITESOLDIERS_NEAR_FACTOR = 0.2
+CDL3WHITESOLDIERS_SHADOW_VS_AVG_PERIOD = 10
+CDL3WHITESOLDIERS_SHADOW_VS_FACTOR = 0.1
+
 
 def cdl3whitesoldiers(
     data: pl.DataFrame,
@@ -30,18 +39,14 @@ def cdl3whitesoldiers(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # Near: rangeType=HighLow, avgPeriod=5, factor=0.2
-    # Far: rangeType=HighLow, avgPeriod=5, factor=0.6
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
-    body_short_avg_period = 10
-    near_avg_period = 5
-    near_factor = 0.2
-    far_avg_period = 5
-    far_factor = 0.6
+
+    shadow_vs_avg_period = CDL3WHITESOLDIERS_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDL3WHITESOLDIERS_SHADOW_VS_FACTOR
+    body_short_avg_period = CDL3WHITESOLDIERS_BODY_SHORT_AVG_PERIOD
+    near_avg_period = CDL3WHITESOLDIERS_NEAR_AVG_PERIOD
+    near_factor = CDL3WHITESOLDIERS_NEAR_FACTOR
+    far_avg_period = CDL3WHITESOLDIERS_FAR_AVG_PERIOD
+    far_factor = CDL3WHITESOLDIERS_FAR_FACTOR
 
     lookback_total = max(
         max(shadow_vs_avg_period, body_short_avg_period),
@@ -55,7 +60,7 @@ def cdl3whitesoldiers(
     shadow_vs_period_total = np.zeros(3, dtype=float)
     near_period_total = np.zeros(3, dtype=float)
     far_period_total = np.zeros(3, dtype=float)
-    body_short_period_total = 0.0
+    body_short_period_total = CDL3WHITESOLDIERS_BODY_SHORT_PERIOD_TOTAL
 
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
     near_trailing_idx = lookback_total - near_avg_period

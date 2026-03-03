@@ -1,6 +1,15 @@
 import numpy as np
 import polars as pl
 
+CDLINVERTEDHAMMER_BODY_PERIOD_TOTAL = 0.0
+CDLINVERTEDHAMMER_BODY_SHORT_AVG_PERIOD = 10
+CDLINVERTEDHAMMER_SHADOW_LONG_AVG_PERIOD = 0
+CDLINVERTEDHAMMER_SHADOW_LONG_FACTOR = 1.0
+CDLINVERTEDHAMMER_SHADOW_LONG_PERIOD_TOTAL = 0.0
+CDLINVERTEDHAMMER_SHADOW_VS_AVG_PERIOD = 10
+CDLINVERTEDHAMMER_SHADOW_VS_FACTOR = 0.1
+CDLINVERTEDHAMMER_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdlinvertedhammer(
     data: pl.DataFrame,
@@ -30,15 +39,12 @@ def cdlinvertedhammer(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # ShadowLong: rangeType=RealBody, avgPeriod=0, factor=1.0
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_short_avg_period = 10
-    shadow_long_avg_period = 0
-    shadow_long_factor = 1.0
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
+
+    body_short_avg_period = CDLINVERTEDHAMMER_BODY_SHORT_AVG_PERIOD
+    shadow_long_avg_period = CDLINVERTEDHAMMER_SHADOW_LONG_AVG_PERIOD
+    shadow_long_factor = CDLINVERTEDHAMMER_SHADOW_LONG_FACTOR
+    shadow_vs_avg_period = CDLINVERTEDHAMMER_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLINVERTEDHAMMER_SHADOW_VS_FACTOR
     lookback_total = max(
         max(body_short_avg_period, shadow_long_avg_period),
         shadow_vs_avg_period,
@@ -48,9 +54,9 @@ def cdlinvertedhammer(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlinvertedhammer', values=out))
 
-    body_period_total = 0.0
-    shadow_long_period_total = 0.0
-    shadow_vs_period_total = 0.0
+    body_period_total = CDLINVERTEDHAMMER_BODY_PERIOD_TOTAL
+    shadow_long_period_total = CDLINVERTEDHAMMER_SHADOW_LONG_PERIOD_TOTAL
+    shadow_vs_period_total = CDLINVERTEDHAMMER_SHADOW_VS_PERIOD_TOTAL
     body_trailing_idx = lookback_total - body_short_avg_period
     shadow_long_trailing_idx = lookback_total - shadow_long_avg_period
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period

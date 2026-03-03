@@ -11,7 +11,7 @@ def ad(
 
     '''
     Compute Chaikin Accumulation/Distribution (A/D) line.
-    
+
     Args:
         data (pl.DataFrame): Klines dataset with high/low/close/volume columns
         high_col (str): Column name for high prices

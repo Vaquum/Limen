@@ -1,6 +1,14 @@
 import numpy as np
 import polars as pl
 
+CDLABANDONEDBABY_BODY_DOJI_AVG_PERIOD = 10
+CDLABANDONEDBABY_BODY_DOJI_FACTOR = 0.1
+CDLABANDONEDBABY_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLABANDONEDBABY_BODY_LONG_AVG_PERIOD = 10
+CDLABANDONEDBABY_BODY_LONG_PERIOD_TOTAL = 0.0
+CDLABANDONEDBABY_BODY_SHORT_AVG_PERIOD = 10
+CDLABANDONEDBABY_BODY_SHORT_PERIOD_TOTAL = 0.0
+
 
 def cdlabandonedbaby(
     data: pl.DataFrame,
@@ -26,8 +34,8 @@ def cdlabandonedbaby(
         pl.DataFrame: The input data with a new column 'cdlabandonedbaby'
     '''
 
-    if penetration < 0.0:
-        raise ValueError('penetration must be >= 0')
+    if penetration < 0.0 or penetration > 3e37:
+        raise ValueError('penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     high_values = data[high_col].to_numpy().astype(float, copy=False)
@@ -35,14 +43,11 @@ def cdlabandonedbaby(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyDoji: rangeType=HighLow, avgPeriod=10, factor=0.1
-    body_long_avg_period = 10
-    body_short_avg_period = 10
-    body_doji_avg_period = 10
-    body_doji_factor = 0.1
+
+    body_long_avg_period = CDLABANDONEDBABY_BODY_LONG_AVG_PERIOD
+    body_short_avg_period = CDLABANDONEDBABY_BODY_SHORT_AVG_PERIOD
+    body_doji_avg_period = CDLABANDONEDBABY_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLABANDONEDBABY_BODY_DOJI_FACTOR
 
     lookback_total = max(
         max(body_doji_avg_period, body_long_avg_period),
@@ -53,9 +58,9 @@ def cdlabandonedbaby(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlabandonedbaby', values=out))
 
-    body_doji_period_total = 0.0
-    body_long_period_total = 0.0
-    body_short_period_total = 0.0
+    body_doji_period_total = CDLABANDONEDBABY_BODY_DOJI_PERIOD_TOTAL
+    body_long_period_total = CDLABANDONEDBABY_BODY_LONG_PERIOD_TOTAL
+    body_short_period_total = CDLABANDONEDBABY_BODY_SHORT_PERIOD_TOTAL
 
     body_long_trailing_idx = lookback_total - 2 - body_long_avg_period
     body_doji_trailing_idx = lookback_total - 1 - body_doji_avg_period

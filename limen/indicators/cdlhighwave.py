@@ -1,6 +1,12 @@
 import numpy as np
 import polars as pl
 
+CDLHIGHWAVE_BODY_PERIOD_TOTAL = 0.0
+CDLHIGHWAVE_BODY_SHORT_AVG_PERIOD = 10
+CDLHIGHWAVE_SHADOW_PERIOD_TOTAL = 0.0
+CDLHIGHWAVE_SHADOW_VL_AVG_PERIOD = 0
+CDLHIGHWAVE_SHADOW_VL_FACTOR = 2.0
+
 
 def cdlhighwave(
     data: pl.DataFrame,
@@ -30,20 +36,18 @@ def cdlhighwave(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # ShadowVeryLong: rangeType=RealBody, avgPeriod=0, factor=2.0
-    body_short_avg_period = 10
-    shadow_vl_avg_period = 0
-    shadow_vl_factor = 2.0
+
+    body_short_avg_period = CDLHIGHWAVE_BODY_SHORT_AVG_PERIOD
+    shadow_vl_avg_period = CDLHIGHWAVE_SHADOW_VL_AVG_PERIOD
+    shadow_vl_factor = CDLHIGHWAVE_SHADOW_VL_FACTOR
     lookback_total = max(body_short_avg_period, shadow_vl_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlhighwave', values=out))
 
-    body_period_total = 0.0
-    shadow_period_total = 0.0
+    body_period_total = CDLHIGHWAVE_BODY_PERIOD_TOTAL
+    shadow_period_total = CDLHIGHWAVE_SHADOW_PERIOD_TOTAL
     body_trailing_idx = lookback_total - body_short_avg_period
     shadow_trailing_idx = lookback_total - shadow_vl_avg_period
 

@@ -1,6 +1,15 @@
 import numpy as np
 import polars as pl
 
+CDLSTALLEDPATTERN_BODY_LONG_AVG_PERIOD = 10
+CDLSTALLEDPATTERN_BODY_SHORT_AVG_PERIOD = 10
+CDLSTALLEDPATTERN_BODY_SHORT_PERIOD_TOTAL = 0.0
+CDLSTALLEDPATTERN_NEAR_AVG_PERIOD = 5
+CDLSTALLEDPATTERN_NEAR_FACTOR = 0.2
+CDLSTALLEDPATTERN_SHADOW_VS_AVG_PERIOD = 10
+CDLSTALLEDPATTERN_SHADOW_VS_FACTOR = 0.1
+CDLSTALLEDPATTERN_SHADOW_VS_PERIOD_TOTAL = 0.0
+
 
 def cdlstalledpattern(
     data: pl.DataFrame,
@@ -30,17 +39,13 @@ def cdlstalledpattern(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # ShadowVeryShort: rangeType=HighLow, avgPeriod=10, factor=0.1
-    # Near: rangeType=HighLow, avgPeriod=5, factor=0.2
-    body_long_avg_period = 10
-    body_short_avg_period = 10
-    shadow_vs_avg_period = 10
-    shadow_vs_factor = 0.1
-    near_avg_period = 5
-    near_factor = 0.2
+
+    body_long_avg_period = CDLSTALLEDPATTERN_BODY_LONG_AVG_PERIOD
+    body_short_avg_period = CDLSTALLEDPATTERN_BODY_SHORT_AVG_PERIOD
+    shadow_vs_avg_period = CDLSTALLEDPATTERN_SHADOW_VS_AVG_PERIOD
+    shadow_vs_factor = CDLSTALLEDPATTERN_SHADOW_VS_FACTOR
+    near_avg_period = CDLSTALLEDPATTERN_NEAR_AVG_PERIOD
+    near_factor = CDLSTALLEDPATTERN_NEAR_FACTOR
 
     lookback_total = max(
         max(body_long_avg_period, body_short_avg_period),
@@ -53,8 +58,8 @@ def cdlstalledpattern(
 
     body_long_period_total = np.zeros(3, dtype=float)
     near_period_total = np.zeros(3, dtype=float)
-    body_short_period_total = 0.0
-    shadow_vs_period_total = 0.0
+    body_short_period_total = CDLSTALLEDPATTERN_BODY_SHORT_PERIOD_TOTAL
+    shadow_vs_period_total = CDLSTALLEDPATTERN_SHADOW_VS_PERIOD_TOTAL
 
     body_long_trailing_idx = lookback_total - body_long_avg_period
     body_short_trailing_idx = lookback_total - body_short_avg_period

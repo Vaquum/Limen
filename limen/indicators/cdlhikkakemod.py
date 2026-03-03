@@ -1,6 +1,10 @@
 import numpy as np
 import polars as pl
 
+CDLHIKKAKEMOD_NEAR_AVG_PERIOD = 5
+CDLHIKKAKEMOD_NEAR_FACTOR = 0.2
+CDLHIKKAKEMOD_NEAR_PERIOD_TOTAL = 0.0
+
 
 def cdlhikkakemod(
     data: pl.DataFrame,
@@ -29,17 +33,16 @@ def cdlhikkakemod(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for Near:
-    # rangeType=HighLow, avgPeriod=5, factor=0.2
-    near_avg_period = 5
-    near_factor = 0.2
+
+    near_avg_period = CDLHIKKAKEMOD_NEAR_AVG_PERIOD
+    near_factor = CDLHIKKAKEMOD_NEAR_FACTOR
     lookback_total = max(1, near_avg_period) + 5
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlhikkakemod', values=out))
 
-    near_period_total = 0.0
+    near_period_total = CDLHIKKAKEMOD_NEAR_PERIOD_TOTAL
     near_trailing_idx = lookback_total - 3 - near_avg_period
 
     i = near_trailing_idx

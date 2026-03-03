@@ -18,16 +18,16 @@ def sar(
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
         acceleration (float): Acceleration factor
-        maximum (float): Maximum acceleration factor 
+        maximum (float): Maximum acceleration factor
 
     Returns:
         pl.DataFrame: The input data with a new column 'sar'
     '''
 
-    if acceleration < 0.0:
-        raise ValueError('acceleration must be >= 0')
-    if maximum < 0.0:
-        raise ValueError('maximum must be >= 0')
+    if acceleration < 0.0 or acceleration > 3e37:
+        raise ValueError('acceleration must be between 0 and 3e37')
+    if maximum < 0.0 or maximum > 3e37:
+        raise ValueError('maximum must be between 0 and 3e37')
 
     high = data[high_col].to_numpy().astype(float, copy=False)
     low = data[low_col].to_numpy().astype(float, copy=False)
@@ -44,7 +44,7 @@ def sar(
     if af > maximum:
         af = acceleration = maximum
 
-    # TA-Lib uses MINUS_DM(1) at start index to infer the initial direction.
+
     diff_p = high[start_idx] - high[start_idx - 1]
     diff_m = low[start_idx - 1] - low[start_idx]
     is_long = 0 if ((diff_m > 0.0) and (diff_p < diff_m)) else 1

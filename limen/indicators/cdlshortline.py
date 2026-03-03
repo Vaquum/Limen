@@ -1,6 +1,11 @@
 import numpy as np
 import polars as pl
 
+CDLSHORTLINE_BODY_PERIOD_TOTAL = 0.0
+CDLSHORTLINE_BODY_SHORT_AVG_PERIOD = 10
+CDLSHORTLINE_SHADOW_PERIOD_TOTAL = 0.0
+CDLSHORTLINE_SHADOW_SHORT_AVG_PERIOD = 10
+
 
 def cdlshortline(
     data: pl.DataFrame,
@@ -30,19 +35,17 @@ def cdlshortline(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # ShadowShort: rangeType=Shadows, avgPeriod=10, factor=1.0
-    body_short_avg_period = 10
-    shadow_short_avg_period = 10
+
+    body_short_avg_period = CDLSHORTLINE_BODY_SHORT_AVG_PERIOD
+    shadow_short_avg_period = CDLSHORTLINE_SHADOW_SHORT_AVG_PERIOD
     lookback_total = max(body_short_avg_period, shadow_short_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlshortline', values=out))
 
-    body_period_total = 0.0
-    shadow_period_total = 0.0
+    body_period_total = CDLSHORTLINE_BODY_PERIOD_TOTAL
+    shadow_period_total = CDLSHORTLINE_SHADOW_PERIOD_TOTAL
     body_trailing_idx = lookback_total - body_short_avg_period
     shadow_trailing_idx = lookback_total - shadow_short_avg_period
 
@@ -66,7 +69,7 @@ def cdlshortline(
         color = 1 if close_values[i] >= open_values[i] else -1
 
         body_short_avg = body_period_total / body_short_avg_period
-        # ShadowShort uses Shadows range type, TA_CANDLEAVERAGE divides by 2.0.
+
         shadow_short_avg = (shadow_period_total / shadow_short_avg_period) / 2.0
 
         if (

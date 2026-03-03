@@ -1,6 +1,5 @@
 import numpy as np
 import polars as pl
-
 from limen.indicators.ma import ma
 
 TA_EPSILON = 1e-14

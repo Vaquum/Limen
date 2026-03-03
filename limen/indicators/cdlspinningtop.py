@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDLSPINNINGTOP_BODY_PERIOD_TOTAL = 0.0
+CDLSPINNINGTOP_BODY_SHORT_AVG_PERIOD = 10
+
 
 def cdlspinningtop(
     data: pl.DataFrame,
@@ -30,16 +33,15 @@ def cdlspinningtop(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting:
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_short_avg_period = 10
+
+    body_short_avg_period = CDLSPINNINGTOP_BODY_SHORT_AVG_PERIOD
     lookback_total = body_short_avg_period
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlspinningtop', values=out))
 
-    body_period_total = 0.0
+    body_period_total = CDLSPINNINGTOP_BODY_PERIOD_TOTAL
     body_trailing_idx = lookback_total - body_short_avg_period
 
     i = body_trailing_idx

@@ -1,9 +1,10 @@
 import math
-
 import numpy as np
 import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+
+MAMA_PERIOD = 0.0
 
 
 def mama(
@@ -89,7 +90,7 @@ def mama(
     ji_state = _init_hilbert_state()
     jq_state = _init_hilbert_state()
 
-    period = 0.0
+    period = MAMA_PERIOD
     out_idx = 0
     prev_i2 = 0.0
     prev_q2 = 0.0

@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDLDARKCLOUDCOVER_BODY_LONG_AVG_PERIOD = 10
+CDLDARKCLOUDCOVER_BODY_LONG_PERIOD_TOTAL = 0.0
+
 
 def cdldarkcloudcover(
     data: pl.DataFrame,
@@ -26,24 +29,23 @@ def cdldarkcloudcover(
         pl.DataFrame: The input data with a new column 'cdldarkcloudcover'
     '''
 
-    if penetration < 0.0:
-        raise ValueError('penetration must be >= 0')
+    if penetration < 0.0 or penetration > 3e37:
+        raise ValueError('penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     high_values = data[high_col].to_numpy().astype(float, copy=False)
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for BodyLong:
-    # rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_long_avg_period = 10
+
+    body_long_avg_period = CDLDARKCLOUDCOVER_BODY_LONG_AVG_PERIOD
     lookback_total = body_long_avg_period + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdldarkcloudcover', values=out))
 
-    body_long_period_total = 0.0
+    body_long_period_total = CDLDARKCLOUDCOVER_BODY_LONG_PERIOD_TOTAL
     body_long_trailing_idx = lookback_total - body_long_avg_period
 
     i = body_long_trailing_idx

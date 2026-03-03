@@ -1,6 +1,7 @@
 import numpy as np
 import polars as pl
 
+
 TA_EPSILON = 1e-14
 
 
@@ -37,7 +38,7 @@ def rsi(
     prev_gain = 0.0
     prev_loss = 0.0
 
-    # Initial Wilder average gain/loss over the first period deltas.
+
     for today in range(1, period + 1):
         diff = values[today] - prev_value
         prev_value = values[today]
@@ -52,7 +53,7 @@ def rsi(
     denom = prev_gain + prev_loss
     out[period] = 100.0 * (prev_gain / denom) if abs(denom) >= TA_EPSILON else 0.0
 
-    # Wilder smoothing for subsequent points.
+
     for today in range(period + 1, n):
         diff = values[today] - prev_value
         prev_value = values[today]

@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+SMA_PERIOD_TOTAL = 0.0
 
 
 def sma(
@@ -45,7 +46,7 @@ def sma(
             ]
         )
 
-    period_total = 0.0
+    period_total = SMA_PERIOD_TOTAL
     trailing_idx = 0
     i = 0
     while i < lookback:

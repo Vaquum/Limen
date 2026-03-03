@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDL3LINESTRIKE_NEAR_AVGPERIOD = 5
+CDL3LINESTRIKE_NEAR_FACTOR = 0.2
+
 
 def cdl3linestrike(
     data: pl.DataFrame,
@@ -30,10 +33,9 @@ def cdl3linestrike(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle setting for Near:
-    # rangeType=HighLow, avgPeriod=5, factor=0.2
-    near_avg_period = 5
-    near_factor = 0.2
+
+    near_avg_period = CDL3LINESTRIKE_NEAR_AVG_PERIOD
+    near_factor = CDL3LINESTRIKE_NEAR_FACTOR
     lookback_total = near_avg_period + 3
 
     out = np.zeros(n, dtype=np.int32)

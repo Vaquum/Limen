@@ -1,6 +1,9 @@
 import numpy as np
 import polars as pl
 
+CDLRISEFALL3METHODS_BODY_LONG_AVG_PERIOD = 10
+CDLRISEFALL3METHODS_BODY_SHORT_AVG_PERIOD = 10
+
 
 def cdlrisefall3methods(
     data: pl.DataFrame,
@@ -30,11 +33,9 @@ def cdlrisefall3methods(
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)
 
-    # TA-Lib default candle settings:
-    # BodyShort: rangeType=RealBody, avgPeriod=10, factor=1.0
-    # BodyLong: rangeType=RealBody, avgPeriod=10, factor=1.0
-    body_short_avg_period = 10
-    body_long_avg_period = 10
+
+    body_short_avg_period = CDLRISEFALL3METHODS_BODY_SHORT_AVG_PERIOD
+    body_long_avg_period = CDLRISEFALL3METHODS_BODY_LONG_AVG_PERIOD
     lookback_total = max(body_short_avg_period, body_long_avg_period) + 4
 
     out = np.zeros(n, dtype=np.int32)

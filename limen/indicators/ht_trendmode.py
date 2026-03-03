@@ -1,9 +1,12 @@
 import math
-
 import numpy as np
 import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+
+HT_TRENDMODE_PERIOD = 0.0
+HT_TRENDMODE_SMOOTH_PERIOD = 0.0
+
 
 _SMOOTH_PRICE_SIZE = 50
 
@@ -26,7 +29,7 @@ def ht_trendmode(
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     n = len(values)
-    # TA-Lib HT_TRENDMODE is integer-like output; leading values are 0, not NaN.
+
     out = np.zeros(n, dtype=float)
 
     lookback_total = 63
@@ -79,7 +82,7 @@ def ht_trendmode(
     ji_state = _init_hilbert_state()
     jq_state = _init_hilbert_state()
 
-    period = 0.0
+    period = HT_TRENDMODE_PERIOD
     out_idx = 0
     prev_i2 = 0.0
     prev_q2 = 0.0
@@ -90,7 +93,7 @@ def ht_trendmode(
     i1_for_odd_prev3 = 0.0
     i1_for_even_prev2 = 0.0
     i1_for_even_prev3 = 0.0
-    smooth_period = 0.0
+    smooth_period = HT_TRENDMODE_SMOOTH_PERIOD
 
     i_trend1 = 0.0
     i_trend2 = 0.0

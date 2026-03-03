@@ -1,6 +1,7 @@
 import numpy as np
 import polars as pl
 
+
 TA_EPSILON = 1e-14
 
 
@@ -69,7 +70,7 @@ def ultosc(
     out_col = f'ultosc_{period1}_{period2}_{period3}'
     out = np.full(n, np.nan, dtype=float)
 
-    # TA-Lib sorts periods internally from shortest to longest.
+
     sorted_periods = sorted([period1, period2, period3])
     p1, p2, p3 = sorted_periods[0], sorted_periods[1], sorted_periods[2]
 
@@ -84,7 +85,7 @@ def ultosc(
     a3_total = 0.0
     b3_total = 0.0
 
-    # Prime running totals up to (but excluding) start index.
+
     start_idx = lookback_total
     for i in range(start_idx - p1 + 1, start_idx):
         cm_tl, tr = _calc_terms(high, low, close, i)

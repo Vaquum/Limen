@@ -36,20 +36,22 @@ def sarext(
         pl.DataFrame: The input data with a new column 'sarext'
     '''
 
-    if offset_on_reverse < 0.0:
-        raise ValueError('offset_on_reverse must be >= 0')
-    if acceleration_init_long < 0.0:
-        raise ValueError('acceleration_init_long must be >= 0')
-    if acceleration_long < 0.0:
-        raise ValueError('acceleration_long must be >= 0')
-    if acceleration_max_long < 0.0:
-        raise ValueError('acceleration_max_long must be >= 0')
-    if acceleration_init_short < 0.0:
-        raise ValueError('acceleration_init_short must be >= 0')
-    if acceleration_short < 0.0:
-        raise ValueError('acceleration_short must be >= 0')
-    if acceleration_max_short < 0.0:
-        raise ValueError('acceleration_max_short must be >= 0')
+    if start_value < -3e37 or start_value > 3e37:
+        raise ValueError('start_value must be between -3e37 and 3e37')
+    if offset_on_reverse < 0.0 or offset_on_reverse > 3e37:
+        raise ValueError('offset_on_reverse must be between 0 and 3e37')
+    if acceleration_init_long < 0.0 or acceleration_init_long > 3e37:
+        raise ValueError('acceleration_init_long must be between 0 and 3e37')
+    if acceleration_long < 0.0 or acceleration_long > 3e37:
+        raise ValueError('acceleration_long must be between 0 and 3e37')
+    if acceleration_max_long < 0.0 or acceleration_max_long > 3e37:
+        raise ValueError('acceleration_max_long must be between 0 and 3e37')
+    if acceleration_init_short < 0.0 or acceleration_init_short > 3e37:
+        raise ValueError('acceleration_init_short must be between 0 and 3e37')
+    if acceleration_short < 0.0 or acceleration_short > 3e37:
+        raise ValueError('acceleration_short must be between 0 and 3e37')
+    if acceleration_max_short < 0.0 or acceleration_max_short > 3e37:
+        raise ValueError('acceleration_max_short must be between 0 and 3e37')
 
     high = data[high_col].to_numpy().astype(float, copy=False)
     low = data[low_col].to_numpy().astype(float, copy=False)
@@ -78,7 +80,7 @@ def sarext(
         acceleration_short = acceleration_max_short
 
     if start_value == 0.0:
-        # TA-Lib MINUS_DM(1) logic at start index.
+
         diff_p = high[start_idx] - high[start_idx - 1]
         diff_m = low[start_idx - 1] - low[start_idx]
         is_long = 0 if ((diff_m > 0.0) and (diff_p < diff_m)) else 1
