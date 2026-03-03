@@ -94,7 +94,9 @@ class CheckpointManager:
              target_permutations: int,
              *,
              strategy_type: str,
-             content_hash: str) -> None:
+             content_hash: str,
+             feedback_controller: Any | None = None,
+             pruning_strategies: list | None = None) -> None:
 
         '''
         Write a checkpoint file into checkpoint_dir.
@@ -111,6 +113,8 @@ class CheckpointManager:
             target_permutations (int): Total rounds planned for the run
             strategy_type (str): Class name of the search strategy
             content_hash (str): SHA-256 digest of the experiment content
+            feedback_controller (Any | None): FeedbackController to checkpoint
+            pruning_strategies (list | None): PruningStrategy instances to checkpoint
 
         '''
 
@@ -125,6 +129,16 @@ class CheckpointManager:
             'msq_state': msq.get_state(),
             'domain_state': domain.get_state(),
         }
+
+        if feedback_controller is not None:
+            checkpoint['feedback_controller_state'] = (
+                feedback_controller.get_state()
+            )
+
+        if pruning_strategies is not None:
+            checkpoint['pruning_strategy_states'] = [
+                ps.get_state() for ps in pruning_strategies
+            ]
 
         self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 

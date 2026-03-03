@@ -1,9 +1,11 @@
+import json
 import logging
 import os
 import signal
 import sqlite3
 import time
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +13,11 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
+from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.pruning_strategy import PruningStrategy
+from limen.experiment.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 
@@ -23,7 +28,16 @@ class UniversalExperimentLoop:
 
     '''UniversalExperimentLoop class for running experiments.'''
 
-    def __init__(self, *, data: pl.DataFrame | None = None, sfd: Any = None) -> None:
+    def __init__(self,
+                 *,
+                 data: pl.DataFrame | None = None,
+                 sfd: Any = None,
+                 search_strategy: SearchStrategy | None = None,
+                 pruning_strategies: list[PruningStrategy] | None = None,
+                 feedback_interval: int = 100,
+                 checkpoint_interval: int = 1000,
+                 experiment_dir: str | Path | None = None,
+                 intra_callback: Callable[[Any, MSQ], None] | None = None) -> None:
 
         '''
         Initialize the UniversalExperimentLoop.
@@ -32,10 +46,20 @@ class UniversalExperimentLoop:
         Manifest-based SFDs auto-generate prep/model from manifest.
         If manifest has data_source_config and no data provided, auto-fetches data.
         Custom SFDs using custom functions approach require explicit data parameter.
+        When experiment_dir is provided, all experiment artifacts are stored
+        under that directory: checkpoint.json, audit.jsonl, interventions.json,
+        and results.csv.
 
         Args:
             data (pl.DataFrame, optional): The data to use for the experiment
             sfd (SingleFileDecoder, optional): The single file decoder to use for the experiment
+            search_strategy (SearchStrategy | None): Search strategy for MSQ-based execution
+            pruning_strategies (list[PruningStrategy] | None): Reducers for feedback-driven pruning
+            feedback_interval (int): Trigger feedback every N rounds
+            checkpoint_interval (int): Save checkpoint every N rounds
+            experiment_dir (str | Path | None): Directory for all experiment artifacts
+            intra_callback (Callable | None): Python callback receiving (log, msq)
+
         '''
 
         if sfd is None:
@@ -82,6 +106,12 @@ class UniversalExperimentLoop:
         self.models = []
         self._shutdown_requested: bool = False
         self._pause_requested: bool = False
+        self._search_strategy = search_strategy
+        self._pruning_strategies = pruning_strategies or []
+        self._feedback_interval = feedback_interval
+        self._checkpoint_interval = checkpoint_interval
+        self._experiment_dir = Path(experiment_dir) if experiment_dir else None
+        self._intra_callback = intra_callback
 
     def run(self,
             experiment_name: str,
@@ -93,13 +123,16 @@ class UniversalExperimentLoop:
             save_to_sqlite: bool = False,
             params: Callable | None = None,
             prep: Callable | None = None,
-            model: Callable | None = None) -> None:
+            model: Callable | None = None,
+            resume: bool = False) -> None:
 
         '''
         Run the experiment `n_permutations` times.
 
-        NOTE: Custom params/prep/model can override defaults for legacy SFMs.
-        For manifest-driven SFMs, params can be overridden but prep/model cannot.
+        NOTE: When search_strategy was provided to __init__, dispatches to
+        _run_with_msq for MSQ-based execution. Legacy parameters
+        (random_search, maintain_details_in_params, save_to_sqlite, params,
+        prep, model) are ignored in that path.
 
         Args:
             experiment_name (str): The name of the experiment
@@ -112,9 +145,8 @@ class UniversalExperimentLoop:
             params (dict): The parameters to use for the experiment
             prep (function): The function to use to prepare the data
             model (function): The function to use to run the model
+            resume (bool): Whether to resume from an existing checkpoint
 
-        Returns:
-            pl.DataFrame: The results of the experiment
         '''
 
         self.round_params = []
@@ -135,6 +167,15 @@ class UniversalExperimentLoop:
                 raise ValueError(
                     'prep_each_round must be True for manifest-driven SFMs.'
                 )
+
+        if self._search_strategy is not None:
+            self._run_with_msq(
+                experiment_name=experiment_name,
+                n_permutations=n_permutations,
+                context_params=context_params,
+                resume=resume,
+            )
+            return
 
         if params is not None:
             self.params = params()
@@ -231,7 +272,13 @@ class UniversalExperimentLoop:
         if save_to_sqlite is True:
             self.conn.close()
 
-        # Add Log, Benchmark, and Backtest properties
+        self._finalize()
+
+
+    def _finalize(self) -> None:
+
+        '''Compute post-experiment Log, metrics, and backtest results.'''
+
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
@@ -287,6 +334,240 @@ class UniversalExperimentLoop:
         return feedback_controller.trigger(log, msq, strategy, current_round)
 
 
+    def _run_with_msq(self,
+                      *,
+                      experiment_name: str,
+                      n_permutations: int,
+                      context_params: dict | None,
+                      resume: bool) -> None:
+
+        '''
+        Run the experiment using the Mutable-Search-Queue based execution flow.
+
+        NOTE: Called by run() when search_strategy is configured. Sets up
+        MSQ, FeedbackController, and CheckpointManager, then iterates
+        over parameter combinations with feedback and checkpoint triggers.
+        Data is always prepared each round.
+
+        Args:
+            experiment_name (str): The name of the experiment
+            n_permutations (int): Maximum number of combinations to run
+            context_params (dict | None): Static parameters merged into each round
+            resume (bool): Whether to resume from an existing checkpoint
+
+        '''
+
+        domain = self._search_strategy.domain
+        msq = MSQ(
+            self._search_strategy, domain, n_permutations=n_permutations,
+        )
+
+        intervention_path = None
+        audit_log_path = None
+        if self._experiment_dir is not None:
+            intervention_path = self._experiment_dir / 'interventions.json'
+            audit_log_path = self._experiment_dir / 'audit.jsonl'
+
+        feedback_controller = FeedbackController(
+            feedback_interval=self._feedback_interval,
+            pruning_strategies=self._pruning_strategies,
+            intra_callback=self._intra_callback,
+            intervention_path=intervention_path,
+            audit_log_path=audit_log_path,
+        )
+
+        checkpoint_manager = CheckpointManager(
+            checkpoint_interval=self._checkpoint_interval,
+        )
+
+        content_hash = CheckpointManager.compute_content_hash(self.params)
+        strategy_type = type(self._search_strategy).__name__
+
+        csv_path = (
+            self._experiment_dir / 'results.csv'
+            if self._experiment_dir
+            else Path(f"{experiment_name}.csv")
+        )
+        round_data_path = (
+            self._experiment_dir / 'round_data.jsonl'
+            if self._experiment_dir
+            else None
+        )
+
+        start_round = 0
+        if resume and self._experiment_dir and self._experiment_dir.exists():
+            checkpoint_data = self._resume_from_checkpoint(
+                self._experiment_dir, checkpoint_manager,
+                content_hash=content_hash, strategy_type=strategy_type,
+            )
+            domain.set_state(checkpoint_data['domain_state'])
+            msq.set_state(checkpoint_data['msq_state'])
+            if 'feedback_controller_state' in checkpoint_data:
+                feedback_controller.set_state(
+                    checkpoint_data['feedback_controller_state'],
+                )
+            if 'pruning_strategy_states' in checkpoint_data:
+                for ps, state in zip(
+                    self._pruning_strategies,
+                    checkpoint_data['pruning_strategy_states'],
+                    strict=True,
+                ):
+                    ps.set_state(state)
+            start_round = checkpoint_data['metadata']['experiment_round'] + 1
+            logger.info('Resuming from round %d', start_round)
+        elif self._experiment_dir:
+            self._initialize_fresh(self._experiment_dir, checkpoint_manager)
+
+        self._register_shutdown_handler()
+
+        self.round_params = []
+        self.models = []
+        self.preds = []
+        self.scalers = []
+        self._alignment = []
+        self.experiment_log = None
+
+        if resume and start_round > 0 and self._experiment_dir:
+            if not round_data_path or not round_data_path.exists():
+                raise ValueError(
+                    f"Cannot resume: round_data.jsonl not found in "
+                    f"{self._experiment_dir}. Checkpoint indicates "
+                    f"{start_round} rounds completed but no round "
+                    f"data exists."
+                )
+            self._load_round_data(round_data_path, up_to_round=start_round)
+            if len(self.round_params) < start_round:
+                raise ValueError(
+                    f"Cannot resume: round_data.jsonl has "
+                    f"{len(self.round_params)} entries but checkpoint "
+                    f"indicates {start_round} rounds completed."
+                )
+            if csv_path.exists():
+                full_log = pl.read_csv(csv_path)
+                self.experiment_log = full_log.filter(
+                    pl.col('id').cast(pl.Int64) < start_round,
+                )
+
+        last_msq_state = msq.get_state()
+        last_completed_round = None
+
+        for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
+            current_round = round_params['_id']
+
+            if self._shutdown_requested:
+                logger.info(
+                    'Experiment stopped by shutdown signal at round %d',
+                    current_round,
+                )
+                if self._experiment_dir and last_completed_round is not None:
+                    msq.set_state(last_msq_state)
+                    self._checkpoint(
+                        msq, domain, self._experiment_dir, checkpoint_manager,
+                        last_completed_round, n_permutations,
+                        strategy_type=strategy_type, content_hash=content_hash,
+                        feedback_controller=feedback_controller,
+                        pruning_strategies=self._pruning_strategies,
+                    )
+                break
+
+            start_time = time.time()
+
+            sfd_params = {
+                k: v for k, v in round_params.items()
+                if not k.startswith('_')
+            }
+
+            if context_params is not None:
+                sfd_params.update(context_params)
+
+            data_dict = self.prep(self.data, round_params=sfd_params)
+
+            round_results = self.model(
+                data=data_dict, round_params=sfd_params,
+            )
+
+            if 'extras' in round_results:
+                self.extras.append(round_results.pop('extras'))
+            if 'models' in round_results:
+                self.models.append(round_results.pop('models'))
+            if '_preds' in round_results:
+                self.preds.append(round_results.pop('_preds'))
+            if '_scaler' in data_dict:
+                self.scalers.append(data_dict['_scaler'])
+
+            self._alignment.append(data_dict['_alignment'])
+
+            round_results['id'] = current_round
+            round_results['execution_time'] = round(
+                time.time() - start_time, 2,
+            )
+
+            self.round_params.append(sfd_params)
+            for key, value in round_params.items():
+                round_results[key] = value
+            if context_params is not None:
+                for key, value in context_params.items():
+                    round_results[key] = value
+
+            if self.experiment_log is not None:
+                self.experiment_log = self.experiment_log.vstack(
+                    pl.DataFrame([round_results]),
+                )
+            else:
+                self.experiment_log = pl.DataFrame(round_results)
+
+            if not csv_path.exists() or csv_path.stat().st_size == 0:
+                header = ','.join(list(round_results.keys()))
+                with csv_path.open('a') as f:
+                    f.write(f"{header}\n")
+
+            log_string = (
+                f"{','.join(map(str, self.experiment_log.row(-1)))}\n"
+            )
+            with csv_path.open('a') as f:
+                f.write(log_string)
+
+            if round_data_path:
+                self._append_round_data(
+                    round_data_path, current_round, sfd_params,
+                    self.preds[-1] if self.preds else [],
+                    data_dict['_alignment'],
+                )
+
+            checkpoint_due = (
+                self._experiment_dir
+                and checkpoint_manager.should_checkpoint(current_round)
+            )
+
+            if feedback_controller.should_trigger(current_round):
+                interventions = self._trigger_feedback(
+                    msq, self._search_strategy,
+                    feedback_controller, current_round,
+                )
+                if interventions and self._experiment_dir:
+                    checkpoint_due = True
+
+            if checkpoint_due:
+                self._checkpoint(
+                    msq, domain, self._experiment_dir, checkpoint_manager,
+                    current_round, n_permutations,
+                    strategy_type=strategy_type, content_hash=content_hash,
+                    feedback_controller=feedback_controller,
+                    pruning_strategies=self._pruning_strategies,
+                )
+
+            last_msq_state = msq.get_state()
+            last_completed_round = current_round
+
+        if not self._shutdown_requested:
+            logger.info(
+                'Experiment completed naturally after %d rounds',
+                msq.yielded_count,
+            )
+
+        self._finalize()
+
+
     def _initialize_fresh(self,
                           checkpoint_dir: Path,
                           checkpoint_manager: CheckpointManager) -> Path:
@@ -315,7 +596,9 @@ class UniversalExperimentLoop:
                     target_permutations: int,
                     *,
                     strategy_type: str,
-                    content_hash: str) -> None:
+                    content_hash: str,
+                    feedback_controller: FeedbackController | None = None,
+                    pruning_strategies: list[PruningStrategy] | None = None) -> None:
 
         '''
         Save a checkpoint at the current experiment state.
@@ -329,6 +612,8 @@ class UniversalExperimentLoop:
             target_permutations (int): Total rounds planned
             strategy_type (str): Class name of the search strategy
             content_hash (str): SHA-256 digest of the experiment content
+            feedback_controller (FeedbackController | None): FeedbackController to checkpoint
+            pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
 
         '''
 
@@ -340,7 +625,89 @@ class UniversalExperimentLoop:
             target_permutations,
             strategy_type=strategy_type,
             content_hash=content_hash,
+            feedback_controller=feedback_controller,
+            pruning_strategies=pruning_strategies,
         )
+
+
+    def _append_round_data(self,
+                           round_data_path: Path,
+                           round_id: int,
+                           round_params: dict,
+                           preds: Any,
+                           alignment: dict) -> None:
+
+        '''Append one round's data to the JSONL file.'''
+
+        entry = {
+            'round_id': round_id,
+            'round_params': round_params,
+            'preds': preds.tolist() if hasattr(preds, 'tolist') else list(preds),
+            'alignment': {
+                'missing_datetimes': [
+                    dt.isoformat()
+                    for dt in alignment.get('missing_datetimes', [])
+                ],
+                'first_test_datetime': (
+                    alignment['first_test_datetime'].isoformat()
+                ),
+                'last_test_datetime': (
+                    alignment['last_test_datetime'].isoformat()
+                ),
+            },
+        }
+
+        with round_data_path.open('a') as f:
+            f.write(json.dumps(entry) + '\n')
+
+
+    def _load_round_data(self,
+                         round_data_path: Path,
+                         up_to_round: int | None = None) -> None:
+
+        '''
+        Load accumulated round data from JSONL into instance lists.
+
+        Args:
+            round_data_path (Path): Path to the round_data.jsonl file
+            up_to_round (int | None): If set, only load entries with
+                round_id < up_to_round (for crash recovery consistency)
+
+        '''
+
+        if not round_data_path.exists():
+            return
+
+        with round_data_path.open('r') as f:
+            for raw_line in f:
+                stripped = raw_line.strip()
+                if not stripped:
+                    continue
+                try:
+                    entry = json.loads(stripped)
+                except json.JSONDecodeError:
+                    break
+
+                if (
+                    up_to_round is not None
+                    and entry['round_id'] >= up_to_round
+                ):
+                    continue
+
+                self.round_params.append(entry['round_params'])
+                self.preds.append(entry['preds'])
+                self._alignment.append({
+                    'missing_datetimes': [
+                        datetime.fromisoformat(dt)
+                        for dt in entry['alignment']['missing_datetimes']
+                    ],
+                    'first_test_datetime': datetime.fromisoformat(
+                        entry['alignment']['first_test_datetime'],
+                    ),
+                    'last_test_datetime': datetime.fromisoformat(
+                        entry['alignment']['last_test_datetime'],
+                    ),
+                })
 
 
     def _resume_from_checkpoint(self,
