@@ -39,7 +39,7 @@ dependencies = [
   "ipython",
   "mcp>=0.1.0",
   "playwright",
-  "talib",
+  "ta-lib",
 ]
 
 [project.optional-dependencies]
