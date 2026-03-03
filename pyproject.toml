@@ -39,7 +39,7 @@ dependencies = [
   "ipython",
   "mcp>=0.1.0",
   "playwright",
-  "ta-lib",
+  "talib",
 ]
 
 [project.optional-dependencies]
@@ -53,9 +53,6 @@ Repository = "https://github.com/vaquum/limen"
 where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "limen._version.__version__"}
 
 [tool.ruff]
 target-version = "py310"
