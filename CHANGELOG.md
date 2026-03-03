@@ -496,3 +496,44 @@
 ## v1.32.2 on 5th of February, 2026
 
 - Made naming of all PR check workflows consistent
+
+## v1.33.0 on 24th of February, 2026
+
+- Add `ParamDomain` mutable parameter space with observer pattern
+- Add `SearchStrategy` abstract base class for search strategy implementations
+- Add `MSQ` (Mutable Search Queue) intervention orchestrator with priority queue, custom filters, trim budget, and checkpoint support
+- Add ruff per-file ignores for test files
+
+## v1.34.0 on 24th February, 2026
+
+- Add `PruningStrategy` abstract base class for experiment reducers
+
+## v1.35.0 on 25th of February, 2026
+
+- Add `FeedbackController` orchestrator for feedback loop interventions from pruning strategies and user defined custom rules
+- Add `_create_temp_log` and `_trigger_feedback` methods to `UniversalExperimentLoop` for future integration with feedback loop
+- Refactor test stubs for feedback loop into shared `tests/stubs/` module
+
+## v1.36.0 on 26th of February, 2026
+
+- Add `CheckpointManager` for saving, loading, and validating experiment state across MSQ, domain, and metadata
+- Add `get_state` / `set_state` to `ParamDomain` for checkpoint serialisation and restore
+- Add `_initialize_fresh`, `_checkpoint`, `_resume_from_checkpoint`, and `_register_shutdown_handler` methods to `UniversalExperimentLoop`
+- Add `_shutdown_requested` and `_pause_requested` flags to `UniversalExperimentLoop` for graceful signal handling
+
+## v1.37.0 on 1st of March, 2026
+
+- Add `indicators.midpoint` implementing TA-Lib MIDPOINT (Midpoint Over Period)
+
+## v1.38.0 on 1st of March, 2026
+
+- Add `indicators.avgprice` (TA-Lib AVGPRICE): average of open, high, low, close
+- Add `indicators.medprice` (TA-Lib MEDPRICE): (high + low) / 2
+- Add `indicators.midprice` (TA-Lib MIDPRICE): rolling midpoint of high/low over period
+- Add `indicators.typprice` (TA-Lib TYPPRICE): (high + low + close) / 3
+- Add `indicators.wclprice` (TA-Lib WCLPRICE): (high + low + 2 * close) / 4
+- Add `indicators.var` (TA-Lib VAR): rolling sample variance
+- Add `indicators.linearreg` (TA-Lib LINEARREG): rolling linear regression end value
+- Add `indicators.linearreg_slope` (TA-Lib LINEARREG_SLOPE): rolling OLS slope
+- Add `indicators.linearreg_intercept` (TA-Lib LINEARREG_INTERCEPT): rolling OLS intercept
+- Add `indicators.linearreg_angle` (TA-Lib LINEARREG_ANGLE): rolling OLS slope angle in degrees

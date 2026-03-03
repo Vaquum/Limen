@@ -97,7 +97,10 @@ from limen.indicators.rsi import rsi
 from limen.indicators.rolling_volatility import rolling_volatility
 from limen.indicators.rsi_sma import rsi_sma
 from limen.indicators.sma import sma
+from limen.indicators.typprice import typprice
+from limen.indicators.var import var
 from limen.indicators.wilder_rsi import wilder_rsi
+from limen.indicators.wclprice import wclprice
 from limen.indicators.bollinger_bands import bollinger_bands
 from limen.indicators.bollinger_position import bollinger_position
 from limen.indicators.stochastic_oscillator import stochastic_oscillator
@@ -233,5 +236,5 @@ __all__ = [
     'willr',
     'wma',
     'wilder_rsi',
-    'window_return'
+    'window_return',
 ]

@@ -1898,8 +1898,193 @@ Compute Weighted Moving Average (WMA).
 
 `pl.DataFrame: The input data with a new column 'wma_{period}'`
 
+### `avgprice`
+
+Compute Average Price (AVGPRICE) indicator.
+
+Equivalent to TA-Lib AVGPRICE: (open + high + low + close) / 4.
+
+#### Args
+
+| Parameter   | Type            | Description                              |
+|-------------|-----------------|------------------------------------------|
+| `data`      | `pl.DataFrame`  | Klines dataset with OHLC columns         |
+| `open_col`  | `str`           | Column name for open prices              |
+| `high_col`  | `str`           | Column name for high prices              |
+| `low_col`   | `str`           | Column name for low prices               |
+| `close_col` | `str`           | Column name for close prices             |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'avgprice'
+
+### `medprice`
+
+Compute Median Price (MEDPRICE) indicator.
+
+Equivalent to TA-Lib MEDPRICE: (high + low) / 2.
+
+#### Args
+
+| Parameter  | Type            | Description                                    |
+|------------|-----------------|------------------------------------------------|
+| `data`     | `pl.DataFrame`  | Klines dataset with 'high' and 'low' columns  |
+| `high_col` | `str`           | Column name for high prices                    |
+| `low_col`  | `str`           | Column name for low prices                     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'medprice'
+
+### `midprice`
+
+Compute Midpoint Price Over Period (MIDPRICE) indicator.
+
+Equivalent to TA-Lib MIDPRICE: (rolling_max(high, period) + rolling_min(low, period)) / 2.
+
+#### Args
+
+| Parameter  | Type            | Description                                    |
+|------------|-----------------|------------------------------------------------|
+| `data`     | `pl.DataFrame`  | Klines dataset with 'high' and 'low' columns  |
+| `high_col` | `str`           | Column name for high prices                    |
+| `low_col`  | `str`           | Column name for low prices                     |
+| `period`   | `int`           | Number of periods for the rolling window       |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'midprice_{period}'
+
+### `typprice`
+
+Compute Typical Price (TYPPRICE) indicator.
+
+Equivalent to TA-Lib TYPPRICE: (high + low + close) / 3.
+
+#### Args
+
+| Parameter   | Type            | Description                                          |
+|-------------|-----------------|------------------------------------------------------|
+| `data`      | `pl.DataFrame`  | Klines dataset with 'high', 'low', 'close' columns  |
+| `high_col`  | `str`           | Column name for high prices                          |
+| `low_col`   | `str`           | Column name for low prices                           |
+| `close_col` | `str`           | Column name for close prices                         |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'typprice'
+
+### `wclprice`
+
+Compute Weighted Close Price (WCLPRICE) indicator.
+
+Equivalent to TA-Lib WCLPRICE: (high + low + 2 * close) / 4.
+
+#### Args
+
+| Parameter   | Type            | Description                                          |
+|-------------|-----------------|------------------------------------------------------|
+| `data`      | `pl.DataFrame`  | Klines dataset with 'high', 'low', 'close' columns  |
+| `high_col`  | `str`           | Column name for high prices                          |
+| `low_col`   | `str`           | Column name for low prices                           |
+| `close_col` | `str`           | Column name for close prices                         |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'wclprice'
+
+### `var`
+
+Compute Variance (VAR) over a rolling period.
+
+Equivalent to TA-Lib VAR: rolling sample variance (ddof=1) over `period` bars.
+
+#### Args
+
+| Parameter | Type            | Description                                  |
+|-----------|-----------------|----------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column             |
+| `col`     | `str`           | Column name for price data                   |
+| `period`  | `int`           | Number of periods for the rolling window     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'var_{period}'
+
+### `linearreg`
+
+Compute Linear Regression value (LINEARREG) indicator.
+
+Equivalent to TA-Lib LINEARREG: the value of the least-squares regression line at the last point of each `period`-bar window. Uses a vectorised closed-form OLS formula with time indices [0, 1, ..., period-1].
+
+#### Args
+
+| Parameter | Type            | Description                                  |
+|-----------|-----------------|----------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column             |
+| `col`     | `str`           | Column name for price data                   |
+| `period`  | `int`           | Number of periods for the rolling window     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'linearreg_{period}'
+
+### `linearreg_slope`
+
+Compute Linear Regression Slope (LINEARREG_SLOPE) indicator.
+
+Equivalent to TA-Lib LINEARREG_SLOPE: the slope of the least-squares regression line fitted to each `period`-bar window. Uses a vectorised closed-form OLS formula.
+
+#### Args
+
+| Parameter | Type            | Description                                  |
+|-----------|-----------------|----------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column             |
+| `col`     | `str`           | Column name for price data                   |
+| `period`  | `int`           | Number of periods for the rolling window     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'linearreg_slope_{period}'
+
+### `linearreg_intercept`
+
+Compute Linear Regression Intercept (LINEARREG_INTERCEPT) indicator.
+
+Equivalent to TA-Lib LINEARREG_INTERCEPT: the y-intercept of the least-squares regression line fitted to each `period`-bar window. Uses a vectorised closed-form OLS formula.
+
+#### Args
+
+| Parameter | Type            | Description                                  |
+|-----------|-----------------|----------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column             |
+| `col`     | `str`           | Column name for price data                   |
+| `period`  | `int`           | Number of periods for the rolling window     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'linearreg_intercept_{period}'
+
+### `linearreg_angle`
+
+Compute Linear Regression Angle (LINEARREG_ANGLE) indicator.
+
+Equivalent to TA-Lib LINEARREG_ANGLE: the angle in degrees of the slope of the least-squares regression line fitted to each `period`-bar window. Computed as atan(slope) * (180 / pi).
+
+#### Args
+
+| Parameter | Type            | Description                                  |
+|-----------|-----------------|----------------------------------------------|
+| `data`    | `pl.DataFrame`  | Klines dataset with price column             |
+| `col`     | `str`           | Column name for price data                   |
+| `period`  | `int`           | Number of periods for the rolling window     |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column 'linearreg_angle_{period}'
+
 ---
 
-[^1]: **VWAP** is both a trend-following anchor and a volume-weighted flow metric. We park it in **Volume-Flow & Microstructure** to keep all order-flow tools together, but many chartists also treat it as a trend indicator.  
-[^2]: **Implied Volatility (IV)** lives in **Derivatives** because the data source is options markets—even though it doubles as a forward-looking volatility gauge.  
+[^1]: **VWAP** is both a trend-following anchor and a volume-weighted flow metric. We park it in **Volume-Flow & Microstructure** to keep all order-flow tools together, but many chartists also treat it as a trend indicator.
+[^2]: **Implied Volatility (IV)** lives in **Derivatives** because the data source is options markets—even though it doubles as a forward-looking volatility gauge.
 [^3]: **Exchange flows** originate on-chain, yet we place them under **Sentiment & Flow** because traders mainly interpret net inflows/outflows as fear-vs-complacency signals.
