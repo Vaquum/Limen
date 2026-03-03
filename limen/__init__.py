@@ -1,3 +1,4 @@
+from limen._version import __version__
 from limen.data import HistoricalData
 from limen.log.log import Log
 from limen.trading import Account

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaquum_limen"
-version = "1.38.0"
+version = "1.39.0"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [
@@ -53,6 +53,9 @@ Repository = "https://github.com/vaquum/limen"
 where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "limen._version.__version__"}
 
 [tool.ruff]
 target-version = "py310"

@@ -8,8 +8,19 @@ When you are instructed to create a release, follow these steps precisely:
 
 ### 1. Determine the New Version
 
-- Read the version from `pyproject.toml` (look for the `version` field in the `[project]` section)
+- Read the version from `limen/_version.py` (`__version__` is the single source of truth)
+- `pyproject.toml` resolves package version dynamically from `limen._version.__version__`
 - Use this version for both the git tag and the release
+
+### Optional: Bump Version and Seed Changelog
+
+Use the helper script:
+
+```bash
+python scripts/bump_version.py <MAJOR.MINOR.PATCH>
+```
+
+This updates `limen/_version.py` and appends a new `CHANGELOG.md` section.
 
 ### 2. Create the Git Tag
 

@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import tomllib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,11 +21,46 @@ def read_file(filepath: str) -> str:
 
 
 def get_current_version() -> str:
-    """Extract current version from pyproject.toml."""
-    content = read_file('pyproject.toml')
-    match = re.search(r'version\s*=\s*"([^"]+)"', content)
+    """Extract current project version from pyproject.toml and dynamic metadata."""
+    pyproject_path = Path('pyproject.toml')
+    with pyproject_path.open('rb') as f:
+        pyproject = tomllib.load(f)
+
+    project = pyproject.get('project', {})
+    static_version = project.get('version')
+    if static_version:
+        return static_version
+
+    dynamic = project.get('dynamic', [])
+    if 'version' not in dynamic:
+        raise ValueError('Could not find static or dynamic project version metadata')
+
+    attr_path = (
+        pyproject.get('tool', {})
+        .get('setuptools', {})
+        .get('dynamic', {})
+        .get('version', {})
+        .get('attr')
+    )
+    if not attr_path:
+        raise ValueError('Dynamic version is enabled but tool.setuptools.dynamic.version.attr is missing')
+
+    module_path, _, variable_name = attr_path.rpartition('.')
+    if not module_path or not variable_name:
+        raise ValueError(f'Invalid dynamic version attr: {attr_path}')
+
+    version_file = Path(module_path.replace('.', '/')).with_suffix('.py')
+    if not version_file.exists():
+        raise ValueError(f'Could not find version source file: {version_file}')
+
+    content = version_file.read_text()
+    match = re.search(
+        rf"^{re.escape(variable_name)}\s*=\s*['\"]([^'\"]+)['\"]\s*$",
+        content,
+        re.M,
+    )
     if not match:
-        raise ValueError('Could not find version in pyproject.toml')
+        raise ValueError(f'Could not find {variable_name} in {version_file}')
     return match.group(1)
 
 
