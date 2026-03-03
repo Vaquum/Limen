@@ -18,6 +18,28 @@ from limen.indicators.cdlhighwave import cdlhighwave
 from limen.indicators.cdlhikkake import cdlhikkake
 from limen.indicators.cdlhikkakemod import cdlhikkakemod
 from limen.indicators.cdlhomingpigeon import cdlhomingpigeon
+from limen.indicators.cdlidentical3crows import cdlidentical3crows
+from limen.indicators.cdlinvertedhammer import cdlinvertedhammer
+from limen.indicators.cdlladderbottom import cdlladderbottom
+from limen.indicators.cdllongleggeddoji import cdllongleggeddoji
+from limen.indicators.cdllongline import cdllongline
+from limen.indicators.cdlmarubozu import cdlmarubozu
+from limen.indicators.cdlmathold import cdlmathold
+from limen.indicators.cdlmatchinglow import cdlmatchinglow
+from limen.indicators.cdlonneck import cdlonneck
+from limen.indicators.cdlpiercing import cdlpiercing
+from limen.indicators.cdlrickshawman import cdlrickshawman
+from limen.indicators.cdlrisefall3methods import cdlrisefall3methods
+from limen.indicators.cdlseparatinglines import cdlseparatinglines
+from limen.indicators.cdlshootingstar import cdlshootingstar
+from limen.indicators.cdlshortline import cdlshortline
+from limen.indicators.cdlspinningtop import cdlspinningtop
+from limen.indicators.cdlstalledpattern import cdlstalledpattern
+from limen.indicators.cdlsticksandwich import cdlsticksandwich
+from limen.indicators.cdltakuri import cdltakuri
+from limen.indicators.cdlthrusting import cdlthrusting
+from limen.indicators.cdltristar import cdltristar
+from limen.indicators.cdlunique3river import cdlunique3river
 from limen.indicators.cdlengulfing import cdlengulfing
 from limen.indicators.cdldarkcloudcover import cdldarkcloudcover
 from limen.indicators.cdl2crows import cdl2crows
@@ -115,6 +137,28 @@ __all__ = [
     'cdlhikkake',
     'cdlhikkakemod',
     'cdlhomingpigeon',
+    'cdlidentical3crows',
+    'cdlinvertedhammer',
+    'cdlladderbottom',
+    'cdllongleggeddoji',
+    'cdllongline',
+    'cdlmarubozu',
+    'cdlmathold',
+    'cdlmatchinglow',
+    'cdlonneck',
+    'cdlpiercing',
+    'cdlrickshawman',
+    'cdlrisefall3methods',
+    'cdlseparatinglines',
+    'cdlshootingstar',
+    'cdlshortline',
+    'cdlspinningtop',
+    'cdlstalledpattern',
+    'cdlsticksandwich',
+    'cdltakuri',
+    'cdlthrusting',
+    'cdltristar',
+    'cdlunique3river',
     'cdlengulfing',
     'cdldarkcloudcover',
     'cdl2crows',

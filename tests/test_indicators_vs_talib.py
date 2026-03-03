@@ -2,7 +2,7 @@ import talib
 import numpy as np
 import time
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cdladvancedblock, cdlabandonedbaby, cdlbelthold, cdlconcealbabyswall, cdlclosingmarubozu, cdlcounterattack, cdldarkcloudcover, cdldragonflydoji, cdlengulfing, cdlgravestonedoji, cdlhammer, cdlhangingman, cdlharami, cdlharamicross, cdlhighwave, cdlhikkake, cdlhikkakemod, cdlhomingpigeon, cdl2crows, cdl3blackcrows, cdl3inside, cdl3linestrike, cdl3starsinsouth, cdl3whitesoldiers, coldoji, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
+from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cdladvancedblock, cdlabandonedbaby, cdlbelthold, cdlconcealbabyswall, cdlclosingmarubozu, cdlcounterattack, cdldarkcloudcover, cdldragonflydoji, cdlengulfing, cdlgravestonedoji, cdlhammer, cdlhangingman, cdlharami, cdlharamicross, cdlhighwave, cdlhikkake, cdlhikkakemod, cdlhomingpigeon, cdlidentical3crows, cdlinvertedhammer, cdlladderbottom, cdllongleggeddoji, cdllongline, cdlmarubozu, cdlmatchinglow, cdlmathold, cdlonneck, cdlpiercing, cdlrickshawman, cdlrisefall3methods, cdlseparatinglines, cdlshootingstar, cdlshortline, cdlspinningtop, cdlstalledpattern, cdlsticksandwich, cdltakuri, cdlthrusting, cdltristar, cdlunique3river, cdl2crows, cdl3blackcrows, cdl3inside, cdl3linestrike, cdl3starsinsouth, cdl3whitesoldiers, coldoji, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
 
 
 historical = HistoricalData()
@@ -87,6 +87,7 @@ T3_VFACTOR = 0.7
 T3_PERIOD = 5
 ABANDONEDBABY_PENETRATION = 0.3
 DARKCLOUDCOVER_PENETRATION = 0.5
+MATHOLD_PENETRATION = 0.5
 MACDEXT_CASES = list(dict.fromkeys(
     [(12, ma_type, 26, 0, 9, 0) for ma_type in MA_TYPES]
     + [(12, 0, 26, ma_type, 9, 0) for ma_type in MA_TYPES]
@@ -1068,6 +1069,404 @@ def test_cdlhomingpigeon():
     verify_indicator_results_match(limen_result, talib_result)
 
 
+def test_cdlidentical3crows():
+    limen_result = cdlidentical3crows(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlidentical3crows'].to_numpy()
+    talib_result = talib.CDLIDENTICAL3CROWS(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlinvertedhammer():
+    limen_result = cdlinvertedhammer(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlinvertedhammer'].to_numpy()
+    talib_result = talib.CDLINVERTEDHAMMER(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlladderbottom():
+    limen_result = cdlladderbottom(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlladderbottom'].to_numpy()
+    talib_result = talib.CDLLADDERBOTTOM(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdllongleggeddoji():
+    limen_result = cdllongleggeddoji(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdllongleggeddoji'].to_numpy()
+    talib_result = talib.CDLLONGLEGGEDDOJI(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdllongline():
+    limen_result = cdllongline(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdllongline'].to_numpy()
+    talib_result = talib.CDLLONGLINE(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlmarubozu():
+    limen_result = cdlmarubozu(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlmarubozu'].to_numpy()
+    talib_result = talib.CDLMARUBOZU(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlmatchinglow():
+    limen_result = cdlmatchinglow(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlmatchinglow'].to_numpy()
+    talib_result = talib.CDLMATCHINGLOW(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlmathold():
+    limen_result = cdlmathold(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+        penetration=MATHOLD_PENETRATION,
+    )['cdlmathold'].to_numpy()
+    talib_result = talib.CDLMATHOLD(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+        penetration=MATHOLD_PENETRATION,
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlonneck():
+    limen_result = cdlonneck(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlonneck'].to_numpy()
+    talib_result = talib.CDLONNECK(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlpiercing():
+    limen_result = cdlpiercing(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlpiercing'].to_numpy()
+    talib_result = talib.CDLPIERCING(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlrickshawman():
+    limen_result = cdlrickshawman(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlrickshawman'].to_numpy()
+    talib_result = talib.CDLRICKSHAWMAN(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlrisefall3methods():
+    limen_result = cdlrisefall3methods(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlrisefall3methods'].to_numpy()
+    talib_result = talib.CDLRISEFALL3METHODS(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlseparatinglines():
+    limen_result = cdlseparatinglines(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlseparatinglines'].to_numpy()
+    talib_result = talib.CDLSEPARATINGLINES(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlshootingstar():
+    limen_result = cdlshootingstar(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlshootingstar'].to_numpy()
+    talib_result = talib.CDLSHOOTINGSTAR(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlshortline():
+    limen_result = cdlshortline(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlshortline'].to_numpy()
+    talib_result = talib.CDLSHORTLINE(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlspinningtop():
+    limen_result = cdlspinningtop(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlspinningtop'].to_numpy()
+    talib_result = talib.CDLSPINNINGTOP(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlstalledpattern():
+    limen_result = cdlstalledpattern(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlstalledpattern'].to_numpy()
+    talib_result = talib.CDLSTALLEDPATTERN(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlsticksandwich():
+    limen_result = cdlsticksandwich(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlsticksandwich'].to_numpy()
+    talib_result = talib.CDLSTICKSANDWICH(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdltakuri():
+    limen_result = cdltakuri(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdltakuri'].to_numpy()
+    talib_result = talib.CDLTAKURI(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlthrusting():
+    limen_result = cdlthrusting(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlthrusting'].to_numpy()
+    talib_result = talib.CDLTHRUSTING(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdltristar():
+    limen_result = cdltristar(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdltristar'].to_numpy()
+    talib_result = talib.CDLTRISTAR(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
+def test_cdlunique3river():
+    limen_result = cdlunique3river(
+        SAMPLE_DATA,
+        open_col='open',
+        high_col='high',
+        low_col='low',
+        close_col='close',
+    )['cdlunique3river'].to_numpy()
+    talib_result = talib.CDLUNIQUE3RIVER(
+        NUMPY_DATA['open'],
+        NUMPY_DATA['high'],
+        NUMPY_DATA['low'],
+        NUMPY_DATA['close'],
+    )
+
+    verify_indicator_results_match(limen_result, talib_result)
+
+
 def test_bbands():
     for ma_type in BB_MA_TYPES:
         limen = bbands(
@@ -1573,6 +1972,28 @@ def test_indicators_vs_talib():
         ('CDLHIKKAKE', test_cdlhikkake),
         ('CDLHIKKAKEMOD', test_cdlhikkakemod),
         ('CDLHOMINGPIGEON', test_cdlhomingpigeon),
+        ('CDLIDENTICAL3CROWS', test_cdlidentical3crows),
+        ('CDLINVERTEDHAMMER', test_cdlinvertedhammer),
+        ('CDLLADDERBOTTOM', test_cdlladderbottom),
+        ('CDLLONGLEGGEDDOJI', test_cdllongleggeddoji),
+        ('CDLLONGLINE', test_cdllongline),
+        ('CDLMARUBOZU', test_cdlmarubozu),
+        ('CDLMATCHINGLOW', test_cdlmatchinglow),
+        ('CDLMATHOLD', test_cdlmathold),
+        ('CDLONNECK', test_cdlonneck),
+        ('CDLPIERCING', test_cdlpiercing),
+        ('CDLRICKSHAWMAN', test_cdlrickshawman),
+        ('CDLRISEFALL3METHODS', test_cdlrisefall3methods),
+        ('CDLSEPARATINGLINES', test_cdlseparatinglines),
+        ('CDLSHOOTINGSTAR', test_cdlshootingstar),
+        ('CDLSHORTLINE', test_cdlshortline),
+        ('CDLSPINNINGTOP', test_cdlspinningtop),
+        ('CDLSTALLEDPATTERN', test_cdlstalledpattern),
+        ('CDLSTICKSANDWICH', test_cdlsticksandwich),
+        ('CDLTAKURI', test_cdltakuri),
+        ('CDLTHRUSTING', test_cdlthrusting),
+        ('CDLTRISTAR', test_cdltristar),
+        ('CDLUNIQUE3RIVER', test_cdlunique3river),
         ('CDL2CROWS', test_cdl2crows),
         ('CDL3BLACKCROWS', test_cdl3blackcrows),
         ('CDL3INSIDE', test_cdl3inside),
