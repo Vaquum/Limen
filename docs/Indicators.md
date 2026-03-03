@@ -39,261 +39,1864 @@ There can be an infinite number of distinct model architectures, but they all be
 
 ## `limen.indicators`
 
+### `ad`
+
+Compute Chaikin Accumulation/Distribution (A/D) line.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Klines dataset with high/low/close/volume columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `volume_col` | `str` | Column name for volume |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ad'`
+
+### `adosc`
+
+Compute Chaikin A/D Oscillator (ADOSC).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Klines dataset with high/low/close/volume columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `volume_col` | `str` | Column name for volume |
+| `fast_period` | `int` | Fast EMA period |
+| `slow_period` | `int` | Slow EMA period |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'adosc_{fast_period}_{slow_period}'`
+
+### `apo`
+
+Compute Absolute Price Oscillator (APO).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `fast_period` | `int` | Number of periods for fast MA (2..100000) |
+| `slow_period` | `int` | Number of periods for slow MA (2..100000) |
+| `ma_type` | `int` | TA-Lib MA type (0..8) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'apo_{fast_period}_{slow_period}_{ma_type}'`
+
 ### `atr`
 
-Compute Average True Range (ATR) using Wilder's smoothing method.
+Compute Average True Range (ATR).
 
 #### Args
 
-| Parameter   | Type            | Description                                      |
-|-------------|-----------------|--------------------------------------------------|
-| `data`      | `pl.DataFrame`  | Klines dataset with 'high', 'low', 'close' columns |
-| `high_col`  | `str`           | Column name for high prices                      |
-| `low_col`   | `str`           | Column name for low prices                       |
-| `close_col` | `str`           | Column name for close prices                     |
-| `period`    | `int`           | Number of periods for ATR calculation           |
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Klines dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `period` | `int` | Number of periods for ATR calculation |
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'atr_{period}'
+`pl.DataFrame: The input data with a new column 'atr_{period}'`
 
-### `body_pct`
+### `avgprice`
 
-Compute the body percentage (candle body size relative to open).
+Compute Average Price.
 
 #### Args
 
-| Parameter | Type            | Description                                      |
-|-----------|-----------------|--------------------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with 'open' and 'close' columns  |
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'body_pct'
+`pl.DataFrame: The input data with a new column 'avgprice'`
 
-### `macd`
+### `bbands`
 
-Compute MACD (Moving Average Convergence Divergence) indicator.
+Compute Bollinger Bands (upper/middle/lower).
 
 #### Args
 
-| Parameter       | Type            | Description                                           |
-|-----------------|-----------------|-------------------------------------------------------|
-| `data`          | `pl.DataFrame`  | Klines dataset with 'close' column                   |
-| `close_col`     | `str`           | Column name for close prices                         |
-| `fast_period`   | `int`           | Period for fast EMA calculation                      |
-| `slow_period`   | `int`           | Period for slow EMA calculation                      |
-| `signal_period` | `int`           | Period for signal line EMA calculation               |
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Rolling window length |
+| `nb_dev_up` | `float` | Upper-band deviation multiplier |
+| `nb_dev_dn` | `float` | Lower-band deviation multiplier |
+| `ma_type` | `int` | TA-Lib MA type |
 
 #### Returns
 
-`pl.DataFrame`: The input data with three columns: 'macd_{fast_period}_{slow_period}', 'macd_signal_{signal_period}', 'macd_hist'
+`pl.DataFrame: Input data with 'bbands_upper', 'bbands_middle', 'bbands_lower'`
 
-### `ppo`
+### `bop`
 
-Compute Percentage Price Oscillator (PPO) indicator.
+Compute Balance of Power (BOP).
 
 #### Args
 
-| Parameter    | Type            | Description                                      |
-|--------------|-----------------|--------------------------------------------------|
-| `data`       | `pl.DataFrame`  | Klines dataset with price column                 |
-| `close_col`  | `str`           | Column name for price data                       |
-| `fast_period` | `int`           | Period for short EMA calculation                 |
-| `slow_period`  | `int`           | Period for long EMA calculation                  |
-| `signal_period` | `int`           | Period for signal line EMA calculation               |
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
 
 #### Returns
 
-`pl.DataFrame`: The input data with three columns: 'ppo_{fast_period}_{slow_period}', 'ppo_signal_{signal_period}', 'ppo_hist'
-
-### `price_change_pct`
-
-Compute price change percentage over a specific period.
-
-#### Args
-
-| Parameter | Type            | Description                            |
-|-----------|-----------------|----------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column    |
-| `period`  | `int`           | Number of periods to look back         |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'price_change_pct_{period}'
-
-### `returns`
-
-Compute period-over-period returns of close prices.
-
-#### Args
-
-| Parameter | Type            | Description                            |
-|-----------|-----------------|----------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column    |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'returns'
-
-### `roc`
-
-Compute Rate of Change (ROC) indicator as percentage change.
-
-#### Args
-
-| Parameter | Type            | Description                                      |
-|-----------|-----------------|--------------------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with price column                 |
-| `col`     | `str`           | Column name for price data                       |
-| `period`  | `int`           | Number of periods for ROC calculation           |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'roc_{period}'
-
-### `rolling_volatility`
-
-Compute rolling volatility (standard deviation) over a specified period.
-
-#### Args
-
-| Parameter | Type            | Description                                           |
-|-----------|-----------------|-------------------------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with price/returns column             |
-| `column`  | `str`           | Column name to calculate volatility on (typically returns) |
-| `window`  | `int`           | Number of periods for rolling window calculation     |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column '{column}\_volatility_{window}'
-
-### `rsi_sma`
-
-Compute RSI using Simple Moving Average smoothing (not Wilder's method).
-
-NOTE: Different from wilder_rsi which uses exponential smoothing.
-
-#### Args
-
-| Parameter | Type            | Description                                      |
-|-----------|-----------------|--------------------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column              |
-| `period`  | `int`           | Number of periods for RSI calculation           |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'rsi_sma_{period}'
-
-### `sma`
-
-Compute Simple Moving Average (SMA) indicator.
-
-#### Args
-
-| Parameter | Type            | Description                            |
-|-----------|-----------------|----------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with price column       |
-| `column`  | `str`           | Column name to calculate SMA on        |
-| `period`  | `int`           | Number of periods for SMA calculation  |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column '{column}_sma_{period}'
-
-### `wilder_rsi`
-
-Compute Wilder's RSI using exponential smoothing method.
-
-#### Args
-
-| Parameter | Type            | Description                                      |
-|-----------|-----------------|--------------------------------------------------|
-| `data`    | `pl.DataFrame`  | Klines dataset with 'close' column              |
-| `period`  | `int`           | Number of periods for RSI calculation           |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'wilder_rsi_{period}'
-
-### `sma_deviation_std`
-
-Compute rolling standard deviation of the detrended price relative to SMA(period).
-
-#### Args
-
-| Parameter | Type           | Description                                       |
-|-----------|----------------|---------------------------------------------------|
-| `data`    | `pl.DataFrame` | Klines dataset with 'close' column                |
-| `period`  | `int`          | Period for the SMA                                |
-| `window`  | `int`          | Rolling window for std of (close - SMA(period))   |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column named using the pattern 'sma{period}_dev_std'
-
-### `window_return`
-
-Compute windowed return close/close.shift(period) - 1 for a given period.
-
-#### Args
-
-| Parameter | Type           | Description                            |
-|-----------|----------------|----------------------------------------|
-| `data`    | `pl.DataFrame` | Klines dataset with 'close' column     |
-| `period`  | `int`          | Window length for the return           |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column named using the pattern 'ret_{period}'
-
-### `bollinger_bands`
-
-Compute Bollinger Bands using Simple Moving Average (SMA).
-
-#### Args
-
-| Parameter   | Type            | Description                                           |
-|-------------|-----------------|-------------------------------------------------------|
-| `df`        | `pl.DataFrame`  | Klines dataset with 'close' column                    |
-| `price_col` | `str`           | Column name used for Bollinger Band calculation      |
-| `window`    | `int`           | Number of periods for SMA and standard deviation calculation |
-| `num_std`   | `float`         | Number of standard deviations for upper and lower bands |
-
-#### Returns
-
-`pl.DataFrame`: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
+`pl.DataFrame: The input data with a new column 'bop'`
 
 ### `cci`
 
-Compute Commodity Channel Index (CCI) using rolling mean and mean deviation.
+Compute Commodity Channel Index (CCI).
 
 #### Args
 
-| Parameter | Type            | Description                                      |
-|-----------|-----------------|--------------------------------------------------|
-| `df`      | `pl.DataFrame`  | Klines dataset with 'high', 'low', 'close' columns |
-| `window`  | `int`           | Number of periods for CCI calculation            |
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `period` | `int` | Number of periods (2..100000) |
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'cci'
+`pl.DataFrame: The input data with a new column 'cci_{period}'`
 
-### `stochastic_oscillator`
+### `cdl2crows`
 
-Compute Stochastic Oscillator (%K and %D) using rolling highs and lows.
+Compute Two Crows candlestick pattern.
 
 #### Args
 
-| Parameter  | Type            | Description                                           |
-|------------|-----------------|-------------------------------------------------------|
-| `df`       | `pl.DataFrame`  | Klines dataset with 'high', 'low', 'close' columns   |
-| `window_k` | `int`           | Number of periods for %K calculation                 |
-| `window_d` | `int`           | Number of periods for %D smoothing (SMA of %K)       |
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
 
 #### Returns
 
-`pl.DataFrame`: The input data with two new columns 'stoch_k' and 'stoch_d'
+`pl.DataFrame: The input data with a new column 'cdl2crows'`
+
+### `cdl3blackcrows`
+
+Compute Three Black Crows candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdl3blackcrows'`
+
+### `cdl3inside`
+
+Compute Three Inside Up/Down candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdl3inside'`
+
+### `cdl3linestrike`
+
+Compute Three-Line Strike candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdl3linestrike'`
+
+### `cdl3starsinsouth`
+
+Compute Three Stars In The South candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdl3starsinsouth'`
+
+### `cdl3whitesoldiers`
+
+Compute Three Advancing White Soldiers candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdl3whitesoldiers'`
+
+### `cdlabandonedbaby`
+
+Compute Abandoned Baby candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `penetration` | `float` | Percentage of penetration of the 3rd candle into the 1st real body |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlabandonedbaby'`
+
+### `cdladvancedblock`
+
+Compute Advance Block candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdladvancedblock'`
+
+### `cdlbelthold`
+
+Compute Belt-hold candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlbelthold'`
+
+### `cdlclosingmarubozu`
+
+Compute Closing Marubozu candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlclosingmarubozu'`
+
+### `cdlconcealbabyswall`
+
+Compute Concealing Baby Swallow candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlconcealbabyswall'`
+
+### `cdlcounterattack`
+
+Compute Counterattack candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlcounterattack'`
+
+### `cdldarkcloudcover`
+
+Compute Dark Cloud Cover candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `penetration` | `float` | Percentage of penetration of the 2nd candle into the 1st real body |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdldarkcloudcover'`
+
+### `cdldragonflydoji`
+
+Compute Dragonfly Doji candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdldragonflydoji'`
+
+### `cdlengulfing`
+
+Compute Engulfing candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlengulfing'`
+
+### `cdlgravestonedoji`
+
+Compute Gravestone Doji candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlgravestonedoji'`
+
+### `cdlhammer`
+
+Compute Hammer candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlhammer'`
+
+### `cdlhangingman`
+
+Compute Hanging Man candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlhangingman'`
+
+### `cdlharami`
+
+Compute Harami candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlharami'`
+
+### `cdlharamicross`
+
+Compute Harami Cross candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlharamicross'`
+
+### `cdlhighwave`
+
+Compute High-Wave Candle pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlhighwave'`
+
+### `cdlhikkake`
+
+Compute Hikkake candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlhikkake'`
+
+### `cdlhikkakemod`
+
+Compute Modified Hikkake candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlhikkakemod'`
+
+### `cdlhomingpigeon`
+
+Compute Homing Pigeon candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlhomingpigeon'`
+
+### `cdlidentical3crows`
+
+Compute Identical Three Crows candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlidentical3crows'`
+
+### `cdlinvertedhammer`
+
+Compute Inverted Hammer candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlinvertedhammer'`
+
+### `cdlladderbottom`
+
+Compute Ladder Bottom candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlladderbottom'`
+
+### `cdllongleggeddoji`
+
+Compute Long Legged Doji candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdllongleggeddoji'`
+
+### `cdllongline`
+
+Compute Long Line Candle pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdllongline'`
+
+### `cdlmarubozu`
+
+Compute Marubozu candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlmarubozu'`
+
+### `cdlmatchinglow`
+
+Compute Matching Low candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlmatchinglow'`
+
+### `cdlmathold`
+
+Compute Mat Hold candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `penetration` | `float` | Maximum percentage penetration of reaction days into the first white body |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlmathold'`
+
+### `cdlonneck`
+
+Compute On-Neck candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlonneck'`
+
+### `cdlpiercing`
+
+Compute Piercing candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlpiercing'`
+
+### `cdlrickshawman`
+
+Compute Rickshaw Man candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlrickshawman'`
+
+### `cdlrisefall3methods`
+
+Compute Rising/Falling Three Methods candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlrisefall3methods'`
+
+### `cdlseparatinglines`
+
+Compute Separating Lines candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlseparatinglines'`
+
+### `cdlshootingstar`
+
+Compute Shooting Star candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlshootingstar'`
+
+### `cdlshortline`
+
+Compute Short Line Candle pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlshortline'`
+
+### `cdlspinningtop`
+
+Compute Spinning Top candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlspinningtop'`
+
+### `cdlstalledpattern`
+
+Compute Stalled Pattern candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlstalledpattern'`
+
+### `cdlsticksandwich`
+
+Compute Stick Sandwich candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlsticksandwich'`
+
+### `cdltakuri`
+
+Compute Takuri (Dragonfly Doji with very long lower shadow) candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdltakuri'`
+
+### `cdlthrusting`
+
+Compute Thrusting candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlthrusting'`
+
+### `cdltristar`
+
+Compute Tristar candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdltristar'`
+
+### `cdlunique3river`
+
+Compute Unique 3 River candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cdlunique3river'`
+
+### `cmo`
+
+Compute Chande Momentum Oscillator (CMO).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (2..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'cmo_{period}'`
+
+### `coldoji`
+
+Compute Doji candlestick pattern.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with OHLC columns |
+| `open_col` | `str` | Column name for open prices |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'coldoji'`
+
+### `dema`
+
+Compute Double Exponential Moving Average (DEMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'dema_{period}'`
+
+### `ema`
+
+Compute Exponential Moving Average (EMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ema_{period}'`
+
+### `ht_dcperiod`
+
+Compute Hilbert Transform - Dominant Cycle Period.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ht_dcperiod'`
+
+### `ht_dcphase`
+
+Compute Hilbert Transform - Dominant Cycle Phase.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ht_dcphase'`
+
+### `ht_phasor`
+
+Compute Hilbert Transform - Phasor Components.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+
+#### Returns
+
+`pl.DataFrame: The input data with new columns 'ht_phasor_inphase' and 'ht_phasor_quadrature'`
+
+### `ht_sine`
+
+Compute Hilbert Transform - SineWave.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+
+#### Returns
+
+`pl.DataFrame: The input data with new columns 'ht_sine' and 'ht_sine_lead'`
+
+### `ht_trendline`
+
+Compute Hilbert Transform - Instantaneous Trendline.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ht_trendline'`
+
+### `ht_trendmode`
+
+Compute Hilbert Transform - Trend vs Cycle Mode.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ht_trendmode'`
+
+### `kama`
+
+Compute Kaufman Adaptive Moving Average (KAMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'kama_{period}'`
+
+### `linearreg`
+
+Compute Linear Regression.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'linearreg_{period}'`
+
+### `linearreg_angle`
+
+Compute Linear Regression Angle.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'linearreg_angle_{period}'`
+
+### `linearreg_intercept`
+
+Compute Linear Regression Intercept.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'linearreg_intercept_{period}'`
+
+### `linearreg_slope`
+
+Compute Linear Regression Slope.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'linearreg_slope_{period}'`
+
+### `ma`
+
+Compute Moving Average with selectable MA type (TA-Lib MA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+| `ma_type` | `int` | TA-Lib MA type |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ma_{period}_{ma_type}'`
+
+### `macd`
+
+Compute Moving Average Convergence/Divergence (MACD).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `fast_period` | `int` | Number of periods for fast EMA (2..100000) |
+| `slow_period` | `int` | Number of periods for slow EMA (2..100000) |
+| `signal_period` | `int` | Number of periods for signal EMA (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with columns 'macd', 'macd_signal', 'macd_hist'`
+
+### `macdext`
+
+Compute MACD with controllable MA types (MACDEXT).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `fast_period` | `int` | Number of periods for fast MA (2..100000) |
+| `fast_ma_type` | `int` | TA-Lib MA type for fast MA (0..8) |
+| `slow_period` | `int` | Number of periods for slow MA (2..100000) |
+| `slow_ma_type` | `int` | TA-Lib MA type for slow MA (0..8) |
+| `signal_period` | `int` | Number of periods for signal MA (1..100000) |
+| `signal_ma_type` | `int` | TA-Lib MA type for signal MA (0..8) |
+
+#### Returns
+
+`pl.DataFrame: The input data with columns 'macdext', 'macdext_signal', 'macdext_hist'`
+
+### `macdfix`
+
+Compute MACD Fix 12/26 (MACDFIX).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `signal_period` | `int` | Number of periods for signal EMA (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with columns 'macdfix', 'macdfix_signal', 'macdfix_hist'`
+
+### `mama`
+
+Compute MESA Adaptive Moving Average (MAMA) and Following Adaptive MA (FAMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `fast_limit` | `float` | Upper adaptive limit |
+| `slow_limit` | `float` | Lower adaptive limit |
+
+#### Returns
+
+`pl.DataFrame: The input data with new columns 'mama' and 'fama'`
+
+### `medprice`
+
+Compute Median Price.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high and low columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'medprice'`
+
+### `mfi`
+
+Compute Money Flow Index (MFI).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Klines dataset with high/low/close/volume columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `volume_col` | `str` | Column name for volume |
+| `period` | `int` | MFI period |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'mfi_{period}'`
+
+### `midpoint`
+
+Compute MidPoint over period.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (2..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'midpoint_{period}'`
+
+### `midprice`
+
+Compute Midpoint Price over period.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high and low columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `period` | `int` | Number of periods (2..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'midprice_{period}'`
+
+### `mom`
+
+Compute Momentum (MOM).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'mom_{period}'`
+
+### `natr`
+
+Compute Normalized Average True Range (NATR).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Klines dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `period` | `int` | Number of periods for NATR calculation |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'natr_{period}'`
+
+### `obv`
+
+Compute On-Balance Volume (OBV).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with price and volume columns |
+| `price_col` | `str` | Column name for price series |
+| `volume_col` | `str` | Column name for volume series |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'obv'`
+
+### `ppo`
+
+Compute Percentage Price Oscillator (PPO).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `fast_period` | `int` | Number of periods for fast MA (2..100000) |
+| `slow_period` | `int` | Number of periods for slow MA (2..100000) |
+| `ma_type` | `int` | TA-Lib MA type (0..8) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ppo_{fast_period}_{slow_period}_{ma_type}'`
+
+### `roc`
+
+Compute Rate of Change (ROC): ((price / prev_price) - 1) * 100.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'roc_{period}'`
+
+### `rocp`
+
+Compute Rate of Change Percentage (ROCP): (price - prev_price) / prev_price.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'rocp_{period}'`
+
+### `rocr`
+
+Compute Rate of Change Ratio (ROCR): price / prev_price.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'rocr_{period}'`
+
+### `rocr100`
+
+Compute Rate of Change Ratio 100 scale (ROCR100): (price / prev_price) * 100.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'rocr100_{period}'`
+
+### `rsi`
+
+Compute Relative Strength Index (RSI) using Wilder smoothing.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (2..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'rsi_{period}'`
+
+### `sar`
+
+Compute Parabolic SAR.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `acceleration` | `float` | Acceleration factor |
+| `maximum` | `float` | Maximum acceleration factor |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'sar'`
+
+### `sarext`
+
+Compute Parabolic SAR - Extended (SAREXT).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `start_value` | `float` | Start value and direction |
+| `offset_on_reverse` | `float` | Percent offset on reversal |
+| `acceleration_init_long` | `float` | Initial AF for long |
+| `acceleration_long` | `float` | AF increment for long |
+| `acceleration_max_long` | `float` | AF max for long |
+| `acceleration_init_short` | `float` | Initial AF for short |
+| `acceleration_short` | `float` | AF increment for short |
+| `acceleration_max_short` | `float` | AF max for short |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'sarext'`
+
+### `sma`
+
+Compute Simple Moving Average (SMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+| `column` | `str \| None` | Backward-compatible alias for price_col |
+
+#### Returns
+
+`pl.DataFrame: Input data with a new column 'sma_{period}'. Also includes '{price_col}_sma_{period}' as a compatibility alias.`
+
+### `stddev`
+
+Compute Standard Deviation.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+| `nb_dev` | `float` | Number of deviations to scale the output |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'stddev_{period}_{nb_dev:g}'`
+
+### `stoch`
+
+Compute Stochastic Oscillator (TA_STOCH): slow %K and slow %D.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `fastk_period` | `int` | Time period for Fast-K (1..100000) |
+| `slowk_period` | `int` | Smoothing period for Slow-K (1..100000) |
+| `slowk_ma_type` | `int` | MA type for Slow-K (0..8) |
+| `slowd_period` | `int` | Smoothing period for Slow-D (1..100000) |
+| `slowd_ma_type` | `int` | MA type for Slow-D (0..8) |
+
+#### Returns
+
+`pl.DataFrame: The input data with 'stoch_slowk' and 'stoch_slowd'`
+
+### `stochf`
+
+Compute Fast Stochastic Oscillator (TA_STOCHF): fast %K and fast %D.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `fastk_period` | `int` | Time period for Fast-K (1..100000) |
+| `fastd_period` | `int` | Smoothing period for Fast-D (1..100000) |
+| `fastd_ma_type` | `int` | MA type for Fast-D (0..8) |
+
+#### Returns
+
+`pl.DataFrame: The input data with 'stochf_fastk' and 'stochf_fastd'`
+
+### `stochrsi`
+
+Compute Stochastic RSI (TA_STOCHRSI): fast %K and fast %D on RSI values.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | RSI period (2..100000) |
+| `fastk_period` | `int` | Time period for Fast-K (1..100000) |
+| `fastd_period` | `int` | Smoothing period for Fast-D (1..100000) |
+| `fastd_ma_type` | `int` | MA type for Fast-D (0..8) |
+
+#### Returns
+
+`pl.DataFrame: The input data with 'stochrsi_fastk' and 'stochrsi_fastd'`
+
+### `t3`
+
+Compute Triple Exponential Moving Average (T3).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+| `vfactor` | `float` | Volume factor |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 't3_{period}_{vfactor}'`
+
+### `tema`
+
+Compute Triple Exponential Moving Average (TEMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'tema_{period}'`
+
+### `trange`
+
+Compute True Range (TRANGE).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Klines dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'trange'`
+
+### `trima`
+
+Compute Triangular Moving Average (TRIMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'trima_{period}'`
+
+### `trix`
+
+Compute TRIX: 1-day ROC of a triple-smoothed EMA.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'trix_{period}'`
+
+### `tsf`
+
+Compute Time Series Forecast (TSF).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'tsf_{period}'`
+
+### `typprice`
+
+Compute Typical Price.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high, low, and close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'typprice'`
+
+### `ultosc`
+
+Compute Ultimate Oscillator (ULTOSC).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `period1` | `int` | Number of bars for 1st period (1..100000) |
+| `period2` | `int` | Number of bars for 2nd period (1..100000) |
+| `period3` | `int` | Number of bars for 3rd period (1..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'ultosc_{period1}_{period2}_{period3}'`
+
+### `var`
+
+Compute Variance.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+| `nb_dev` | `float` | Kept for TA-Lib compatibility; does not affect VAR output |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'var_{period}_{nb_dev:g}'`
+
+### `wclprice`
+
+Compute Weighted Close Price.
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high, low, and close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'wclprice'`
+
+### `willr`
+
+Compute Williams' %R (WILLR).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with high/low/close columns |
+| `high_col` | `str` | Column name for high prices |
+| `low_col` | `str` | Column name for low prices |
+| `close_col` | `str` | Column name for close prices |
+| `period` | `int` | Number of periods (2..100000) |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'willr_{period}'`
+
+### `wma`
+
+Compute Weighted Moving Average (WMA).
+
+#### Args
+
+| Parameter | Type | Description |
+|---|---|---|
+| `data` | `pl.DataFrame` | Dataset with input price column |
+| `price_col` | `str` | Column name for input price |
+| `period` | `int` | Number of periods |
+
+#### Returns
+
+`pl.DataFrame: The input data with a new column 'wma_{period}'`
 
 ---
 

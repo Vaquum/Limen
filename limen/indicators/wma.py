@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+
 WMA_PERIOD_SUB = 0.0
 WMA_PERIOD_SUM = 0.0
 
