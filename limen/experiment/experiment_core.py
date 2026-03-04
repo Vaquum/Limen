@@ -518,15 +518,16 @@ class UniversalExperimentLoop:
 
         '''Validate preconditions for MSQ-based execution.'''
 
-        if resume and not self._experiment_dir:
-            raise ValueError(
-                'resume=True requires experiment_dir to be set.'
-            )
-        if resume and not self._experiment_dir.exists():
-            raise FileNotFoundError(
-                f"Cannot resume: experiment directory "
-                f"{self._experiment_dir} does not exist."
-            )
+        if resume:
+            if not self._experiment_dir:
+                raise ValueError(
+                    'resume=True requires experiment_dir to be set.'
+                )
+            if not self._experiment_dir.exists():
+                raise FileNotFoundError(
+                    f"Cannot resume: experiment directory "
+                    f"{self._experiment_dir} does not exist."
+                )
 
 
     def _setup_msq_components(self,
