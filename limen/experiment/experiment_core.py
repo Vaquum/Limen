@@ -48,8 +48,8 @@ class UniversalExperimentLoop:
         If manifest has data_source_config and no data provided, auto-fetches data.
         Custom SFDs using custom functions approach require explicit data parameter.
         When experiment_dir is provided, all experiment artifacts are stored
-        under that directory: checkpoint.json, audit.jsonl, interventions.json,
-        and results.csv.
+        under that directory: checkpoint.json, audit.jsonl, round_data.jsonl,
+        interventions.json, and results.csv.
 
         Args:
             data (pl.DataFrame, optional): The data to use for the experiment
@@ -143,9 +143,9 @@ class UniversalExperimentLoop:
             maintain_details_in_params (bool): Whether to maintain experiment details in params
             context_params (dict): The context parameters to use for the experiment
             save_to_sqlite (bool): Whether to save the results to a SQLite database
-            params (dict): The parameters to use for the experiment
-            prep (function): The function to use to prepare the data
-            model (function): The function to use to run the model
+            params (Callable | None): Callable that returns the parameters dict
+            prep (Callable | None): Callable to prepare the data
+            model (Callable | None): Callable to run the model
             resume (bool): Whether to resume from an existing checkpoint
 
         '''
@@ -419,6 +419,22 @@ class UniversalExperimentLoop:
             start_round = checkpoint_data['metadata']['experiment_round'] + 1
             logger.info('Resuming from round %d', start_round)
         elif self._experiment_dir:
+            if self._experiment_dir.exists():
+                artifact_files = [
+                    'results.csv', 'round_data.jsonl', 'checkpoint.json',
+                ]
+                existing = [
+                    f for f in artifact_files
+                    if (self._experiment_dir / f).exists()
+                ]
+                if existing:
+                    raise FileExistsError(
+                        f"Experiment directory {self._experiment_dir} "
+                        f"already contains artifacts: "
+                        f"{', '.join(existing)}. "
+                        f"Set resume=True to continue or choose a "
+                        f"different experiment_dir."
+                    )
             self._initialize_fresh(self._experiment_dir, checkpoint_manager)
 
         self._register_shutdown_handler()
