@@ -237,7 +237,6 @@ class UniversalExperimentLoop:
 
             if '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
-                data_dict.pop('_scaler')
 
             # Add the round number and execution time to the results
             round_results['id'] = i
