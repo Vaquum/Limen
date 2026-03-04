@@ -158,6 +158,15 @@ class UniversalExperimentLoop:
         if save_to_sqlite is True:
             self.conn = sqlite3.connect('/opt/experiments/experiments.sqlite')
 
+        if self._search_strategy is not None:
+            self._run_with_msq(
+                experiment_name=experiment_name,
+                n_permutations=n_permutations,
+                context_params=context_params,
+                resume=resume,
+            )
+            return
+
         if self.manifest is not None:
             if prep is not None or model is not None:
                 raise ValueError(
@@ -167,15 +176,6 @@ class UniversalExperimentLoop:
                 raise ValueError(
                     'prep_each_round must be True for manifest-driven SFMs.'
                 )
-
-        if self._search_strategy is not None:
-            self._run_with_msq(
-                experiment_name=experiment_name,
-                n_permutations=n_permutations,
-                context_params=context_params,
-                resume=resume,
-            )
-            return
 
         if params is not None:
             self.params = params()
@@ -278,6 +278,9 @@ class UniversalExperimentLoop:
     def _finalize(self) -> None:
 
         '''Compute post-experiment Log, metrics, and backtest results.'''
+
+        if self.experiment_log is None:
+            return
 
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
 
@@ -422,6 +425,7 @@ class UniversalExperimentLoop:
 
         self.round_params = []
         self.models = []
+        self.extras = []
         self.preds = []
         self.scalers = []
         self._alignment = []
@@ -442,11 +446,17 @@ class UniversalExperimentLoop:
                     f"{len(self.round_params)} entries but checkpoint "
                     f"indicates {start_round} rounds completed."
                 )
-            if csv_path.exists():
-                full_log = pl.read_csv(csv_path)
-                self.experiment_log = full_log.filter(
-                    pl.col('id').cast(pl.Int64) < start_round,
+            if not csv_path.exists():
+                raise ValueError(
+                    f"Cannot resume: results.csv not found in "
+                    f"{self._experiment_dir}. Checkpoint indicates "
+                    f"{start_round} rounds completed but no results "
+                    f"log exists."
                 )
+            full_log = pl.read_csv(csv_path)
+            self.experiment_log = full_log.filter(
+                pl.col('id').cast(pl.Int64) < start_round,
+            )
 
         last_msq_state = msq.get_state()
         last_completed_round = None
@@ -692,7 +702,7 @@ class UniversalExperimentLoop:
                     up_to_round is not None
                     and entry['round_id'] >= up_to_round
                 ):
-                    continue
+                    break
 
                 self.round_params.append(entry['round_params'])
                 self.preds.append(entry['preds'])
@@ -727,7 +737,8 @@ class UniversalExperimentLoop:
             content_hash (str): Expected SHA-256 digest for validation
 
         Returns:
-            dict: Keys 'metadata', 'msq_state', 'domain_state'
+            dict: Keys 'metadata', 'msq_state', 'domain_state', and
+                optionally 'feedback_controller_state', 'pruning_strategy_states'
 
         Raises:
             ValueError: If validation fails
