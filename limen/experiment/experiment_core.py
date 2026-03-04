@@ -727,6 +727,7 @@ class UniversalExperimentLoop:
 
         artifact_files = [
             'results.csv', 'round_data.jsonl', 'checkpoint.json',
+            'audit.jsonl', 'interventions.json',
         ]
         existing = [
             f for f in artifact_files
