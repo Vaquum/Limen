@@ -398,6 +398,7 @@ class UniversalExperimentLoop:
 
         last_msq_state = msq.get_state()
         last_completed_round = None
+        results_accumulator: list[dict[str, Any]] = []
 
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
             current_round = round_params['_id']
@@ -438,7 +439,9 @@ class UniversalExperimentLoop:
                 self.extras.append(round_results.pop('extras'))
             if 'models' in round_results:
                 self.models.append(round_results.pop('models'))
-            current_preds = round_results.pop('_preds', [])
+            current_preds = round_results.pop('_preds', None)
+            if current_preds is None:
+                current_preds = []
             self.preds.append(current_preds)
             if '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
@@ -457,19 +460,14 @@ class UniversalExperimentLoop:
                 for key, value in context_params.items():
                     round_results[key] = value
 
-            if self.experiment_log is not None:
-                self.experiment_log = self.experiment_log.vstack(
-                    pl.DataFrame([round_results]),
-                )
-            else:
-                self.experiment_log = pl.DataFrame(round_results)
+            results_accumulator.append(round_results)
 
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             with csv_path.open('a', newline='') as f:
                 writer = csv.writer(f)
                 if write_header:
                     writer.writerow(round_results.keys())
-                writer.writerow(self.experiment_log.row(-1))
+                writer.writerow(round_results.values())
 
             if round_data_path:
                 self._append_round_data(
@@ -484,6 +482,8 @@ class UniversalExperimentLoop:
             )
 
             if feedback_controller.should_trigger(current_round):
+                self._flush_results(results_accumulator)
+                results_accumulator = []
                 interventions = self._trigger_feedback(
                     msq, self._search_strategy,
                     feedback_controller, current_round,
@@ -509,6 +509,7 @@ class UniversalExperimentLoop:
                 msq.yielded_count,
             )
 
+        self._flush_results(results_accumulator)
         self._finalize()
 
 
@@ -669,7 +670,50 @@ class UniversalExperimentLoop:
             pl.col('id').cast(pl.Int64) < start_round,
         )
 
+        self._truncate_round_data(round_data_path, start_round)
+        self.experiment_log.write_csv(csv_path)
+
         return start_round
+
+
+    @staticmethod
+    def _truncate_round_data(round_data_path: Path,
+                              start_round: int) -> None:
+
+        '''Truncate round_data.jsonl to only contain rounds before start_round.'''
+
+        valid_lines: list[str] = []
+        with round_data_path.open('r') as f:
+            for raw_line in f:
+                stripped = raw_line.strip()
+                if not stripped:
+                    continue
+                try:
+                    entry = json.loads(stripped)
+                except json.JSONDecodeError:
+                    break
+                if entry['round_id'] >= start_round:
+                    break
+                valid_lines.append(stripped)
+
+        with round_data_path.open('w') as f:
+            for line in valid_lines:
+                f.write(line + '\n')
+
+
+    def _flush_results(self,
+                       accumulator: list[dict[str, Any]]) -> None:
+
+        '''Flush accumulated round results into experiment_log.'''
+
+        if not accumulator:
+            return
+
+        batch = pl.DataFrame(accumulator)
+        if self.experiment_log is not None:
+            self.experiment_log = self.experiment_log.vstack(batch)
+        else:
+            self.experiment_log = batch
 
 
     def _guard_stale_artifacts(self) -> None:
