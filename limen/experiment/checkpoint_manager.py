@@ -6,8 +6,10 @@ from datetime import timezone
 from pathlib import Path
 from typing import Any
 
+from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.pruning_strategy import PruningStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +97,8 @@ class CheckpointManager:
              *,
              strategy_type: str,
              content_hash: str,
-             feedback_controller: Any | None = None,
-             pruning_strategies: list | None = None) -> None:
+             feedback_controller: FeedbackController | None = None,
+             pruning_strategies: list[PruningStrategy] | None = None) -> None:
 
         '''
         Write a checkpoint file into checkpoint_dir.
@@ -113,8 +115,8 @@ class CheckpointManager:
             target_permutations (int): Total rounds planned for the run
             strategy_type (str): Class name of the search strategy
             content_hash (str): SHA-256 digest of the experiment content
-            feedback_controller (Any | None): FeedbackController to checkpoint
-            pruning_strategies (list | None): PruningStrategy instances to checkpoint
+            feedback_controller (FeedbackController | None): FeedbackController to checkpoint
+            pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
 
         '''
 
