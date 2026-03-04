@@ -360,82 +360,20 @@ class UniversalExperimentLoop:
 
         '''
 
-        domain = self._search_strategy.domain
-        msq = MSQ(
-            self._search_strategy, domain, n_permutations=n_permutations,
+        self._validate_msq_preconditions(resume=resume)
+
+        components = self._setup_msq_components(
+            experiment_name=experiment_name,
+            n_permutations=n_permutations,
         )
-
-        intervention_path = None
-        audit_log_path = None
-        if self._experiment_dir is not None:
-            intervention_path = self._experiment_dir / 'interventions.json'
-            audit_log_path = self._experiment_dir / 'audit.jsonl'
-
-        feedback_controller = FeedbackController(
-            feedback_interval=self._feedback_interval,
-            pruning_strategies=self._pruning_strategies,
-            intra_callback=self._intra_callback,
-            intervention_path=intervention_path,
-            audit_log_path=audit_log_path,
-        )
-
-        checkpoint_manager = CheckpointManager(
-            checkpoint_interval=self._checkpoint_interval,
-        )
-
-        content_hash = CheckpointManager.compute_content_hash(self.params)
-        strategy_type = type(self._search_strategy).__name__
-
-        csv_path = (
-            self._experiment_dir / 'results.csv'
-            if self._experiment_dir
-            else Path(f"{experiment_name}.csv")
-        )
-        round_data_path = (
-            self._experiment_dir / 'round_data.jsonl'
-            if self._experiment_dir
-            else None
-        )
-
-        start_round = 0
-        if resume and self._experiment_dir and self._experiment_dir.exists():
-            checkpoint_data = self._resume_from_checkpoint(
-                self._experiment_dir, checkpoint_manager,
-                content_hash=content_hash, strategy_type=strategy_type,
-            )
-            domain.set_state(checkpoint_data['domain_state'])
-            msq.set_state(checkpoint_data['msq_state'])
-            if 'feedback_controller_state' in checkpoint_data:
-                feedback_controller.set_state(
-                    checkpoint_data['feedback_controller_state'],
-                )
-            if 'pruning_strategy_states' in checkpoint_data:
-                for ps, state in zip(
-                    self._pruning_strategies,
-                    checkpoint_data['pruning_strategy_states'],
-                    strict=True,
-                ):
-                    ps.set_state(state)
-            start_round = checkpoint_data['metadata']['experiment_round'] + 1
-            logger.info('Resuming from round %d', start_round)
-        elif self._experiment_dir:
-            if self._experiment_dir.exists():
-                artifact_files = [
-                    'results.csv', 'round_data.jsonl', 'checkpoint.json',
-                ]
-                existing = [
-                    f for f in artifact_files
-                    if (self._experiment_dir / f).exists()
-                ]
-                if existing:
-                    raise FileExistsError(
-                        f"Experiment directory {self._experiment_dir} "
-                        f"already contains artifacts: "
-                        f"{', '.join(existing)}. "
-                        f"Set resume=True to continue or choose a "
-                        f"different experiment_dir."
-                    )
-            self._initialize_fresh(self._experiment_dir, checkpoint_manager)
+        domain = components['domain']
+        msq = components['msq']
+        feedback_controller = components['feedback_controller']
+        checkpoint_manager = components['checkpoint_manager']
+        content_hash = components['content_hash']
+        strategy_type = components['strategy_type']
+        csv_path = components['csv_path']
+        round_data_path = components['round_data_path']
 
         self._register_shutdown_handler()
 
@@ -447,32 +385,16 @@ class UniversalExperimentLoop:
         self._alignment = []
         self.experiment_log = None
 
-        if resume and start_round > 0 and self._experiment_dir:
-            if not round_data_path or not round_data_path.exists():
-                raise ValueError(
-                    f"Cannot resume: round_data.jsonl not found in "
-                    f"{self._experiment_dir}. Checkpoint indicates "
-                    f"{start_round} rounds completed but no round "
-                    f"data exists."
-                )
-            self._load_round_data(round_data_path, up_to_round=start_round)
-            if len(self.round_params) < start_round:
-                raise ValueError(
-                    f"Cannot resume: round_data.jsonl has "
-                    f"{len(self.round_params)} entries but checkpoint "
-                    f"indicates {start_round} rounds completed."
-                )
-            if not csv_path.exists():
-                raise ValueError(
-                    f"Cannot resume: results.csv not found in "
-                    f"{self._experiment_dir}. Checkpoint indicates "
-                    f"{start_round} rounds completed but no results "
-                    f"log exists."
-                )
-            full_log = pl.read_csv(csv_path)
-            self.experiment_log = full_log.filter(
-                pl.col('id').cast(pl.Int64) < start_round,
+        start_round = 0
+        if resume and self._experiment_dir.exists():
+            start_round = self._restore_checkpoint_state(
+                msq, domain, feedback_controller, checkpoint_manager,
+                content_hash=content_hash, strategy_type=strategy_type,
+                csv_path=csv_path, round_data_path=round_data_path,
             )
+        elif self._experiment_dir:
+            self._guard_stale_artifacts()
+            self._initialize_fresh(self._experiment_dir, checkpoint_manager)
 
         last_msq_state = msq.get_state()
         last_completed_round = None
@@ -588,6 +510,184 @@ class UniversalExperimentLoop:
             )
 
         self._finalize()
+
+
+    def _validate_msq_preconditions(self,
+                                     *,
+                                     resume: bool) -> None:
+
+        '''Validate preconditions for MSQ-based execution.'''
+
+        if resume and not self._experiment_dir:
+            raise ValueError(
+                'resume=True requires experiment_dir to be set.'
+            )
+
+
+    def _setup_msq_components(self,
+                               *,
+                               experiment_name: str,
+                               n_permutations: int) -> dict[str, Any]:
+
+        '''Create MSQ, FeedbackController, CheckpointManager, and file paths.'''
+
+        domain = self._search_strategy.domain
+        msq = MSQ(
+            self._search_strategy, domain, n_permutations=n_permutations,
+        )
+
+        intervention_path = None
+        audit_log_path = None
+        if self._experiment_dir is not None:
+            intervention_path = self._experiment_dir / 'interventions.json'
+            audit_log_path = self._experiment_dir / 'audit.jsonl'
+
+        feedback_controller = FeedbackController(
+            feedback_interval=self._feedback_interval,
+            pruning_strategies=self._pruning_strategies,
+            intra_callback=self._intra_callback,
+            intervention_path=intervention_path,
+            audit_log_path=audit_log_path,
+        )
+
+        checkpoint_manager = CheckpointManager(
+            checkpoint_interval=self._checkpoint_interval,
+        )
+
+        csv_path = (
+            self._experiment_dir / 'results.csv'
+            if self._experiment_dir
+            else Path(f"{experiment_name}.csv")
+        )
+        round_data_path = (
+            self._experiment_dir / 'round_data.jsonl'
+            if self._experiment_dir
+            else None
+        )
+
+        return {
+            'domain': domain,
+            'msq': msq,
+            'feedback_controller': feedback_controller,
+            'checkpoint_manager': checkpoint_manager,
+            'content_hash': CheckpointManager.compute_content_hash(self.params),
+            'strategy_type': type(self._search_strategy).__name__,
+            'csv_path': csv_path,
+            'round_data_path': round_data_path,
+        }
+
+
+    def _restore_checkpoint_state(self,
+                                   msq: MSQ,
+                                   domain: ParamDomain,
+                                   feedback_controller: FeedbackController,
+                                   checkpoint_manager: CheckpointManager,
+                                   *,
+                                   content_hash: str,
+                                   strategy_type: str,
+                                   csv_path: Path,
+                                   round_data_path: Path | None) -> int:
+
+        '''
+        Restore experiment state from checkpoint and data files.
+
+        Args:
+            msq (MSQ): MSQ instance to restore state into
+            domain (ParamDomain): ParamDomain instance to restore state into
+            feedback_controller (FeedbackController): FeedbackController to restore
+            checkpoint_manager (CheckpointManager): CheckpointManager for loading
+            content_hash (str): Expected content hash for validation
+            strategy_type (str): Expected strategy type for validation
+            csv_path (Path): Path to results CSV
+            round_data_path (Path | None): Path to round_data.jsonl
+
+        Returns:
+            int: The round number to resume from
+
+        '''
+
+        checkpoint_data = self._resume_from_checkpoint(
+            self._experiment_dir, checkpoint_manager,
+            content_hash=content_hash, strategy_type=strategy_type,
+        )
+        domain.set_state(checkpoint_data['domain_state'])
+        msq.set_state(checkpoint_data['msq_state'])
+
+        if 'feedback_controller_state' in checkpoint_data:
+            feedback_controller.set_state(
+                checkpoint_data['feedback_controller_state'],
+            )
+
+        if 'pruning_strategy_states' in checkpoint_data:
+            states = checkpoint_data['pruning_strategy_states']
+            if len(self._pruning_strategies) != len(states):
+                raise ValueError(
+                    f"Pruning strategy count mismatch: checkpoint "
+                    f"has {len(states)} but "
+                    f"{len(self._pruning_strategies)} configured. "
+                    f"Use the same strategies to resume or delete "
+                    f"the checkpoint to start fresh."
+                )
+            for ps, state in zip(self._pruning_strategies, states, strict=True):
+                ps.set_state(state)
+
+        start_round = (
+            checkpoint_data['metadata']['experiment_round'] + 1
+        )
+        logger.info('Resuming from round %d', start_round)
+
+        if not round_data_path or not round_data_path.exists():
+            raise ValueError(
+                f"Cannot resume: round_data.jsonl not found in "
+                f"{self._experiment_dir}. Checkpoint indicates "
+                f"{start_round} rounds completed but no round "
+                f"data exists."
+            )
+        self._load_round_data(round_data_path, up_to_round=start_round)
+        if len(self.round_params) < start_round:
+            raise ValueError(
+                f"Cannot resume: round_data.jsonl has "
+                f"{len(self.round_params)} entries but checkpoint "
+                f"indicates {start_round} rounds completed."
+            )
+
+        if not csv_path.exists():
+            raise ValueError(
+                f"Cannot resume: results.csv not found in "
+                f"{self._experiment_dir}. Checkpoint indicates "
+                f"{start_round} rounds completed but no results "
+                f"log exists."
+            )
+        full_log = pl.read_csv(csv_path)
+        self.experiment_log = full_log.filter(
+            pl.col('id').cast(pl.Int64) < start_round,
+        )
+
+        return start_round
+
+
+    def _guard_stale_artifacts(self) -> None:
+
+        '''Raise FileExistsError if experiment_dir has leftover artifacts.'''
+
+        if not self._experiment_dir or not self._experiment_dir.exists():
+            return
+
+        artifact_files = [
+            'results.csv', 'round_data.jsonl', 'checkpoint.json',
+        ]
+        existing = [
+            f for f in artifact_files
+            if (self._experiment_dir / f).exists()
+        ]
+        if existing:
+            raise FileExistsError(
+                f"Experiment directory {self._experiment_dir} "
+                f"already contains artifacts: "
+                f"{', '.join(existing)}. "
+                f"Set resume=True to continue or choose a "
+                f"different experiment_dir."
+            )
 
 
     def _initialize_fresh(self,
