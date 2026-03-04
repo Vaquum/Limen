@@ -6,8 +6,10 @@ from datetime import timezone
 from pathlib import Path
 from typing import Any
 
+from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.pruning_strategy import PruningStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +96,9 @@ class CheckpointManager:
              target_permutations: int,
              *,
              strategy_type: str,
-             content_hash: str) -> None:
+             content_hash: str,
+             feedback_controller: FeedbackController | None = None,
+             pruning_strategies: list[PruningStrategy] | None = None) -> None:
 
         '''
         Write a checkpoint file into checkpoint_dir.
@@ -111,6 +115,8 @@ class CheckpointManager:
             target_permutations (int): Total rounds planned for the run
             strategy_type (str): Class name of the search strategy
             content_hash (str): SHA-256 digest of the experiment content
+            feedback_controller (FeedbackController | None): FeedbackController to checkpoint
+            pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
 
         '''
 
@@ -126,6 +132,16 @@ class CheckpointManager:
             'domain_state': domain.get_state(),
         }
 
+        if feedback_controller is not None:
+            checkpoint['feedback_controller_state'] = (
+                feedback_controller.get_state()
+            )
+
+        if pruning_strategies is not None:
+            checkpoint['pruning_strategy_states'] = [
+                ps.get_state() for ps in pruning_strategies
+            ]
+
         self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 
         logger.info('Checkpoint saved at round %d → %s', current_round, checkpoint_dir)
@@ -140,7 +156,8 @@ class CheckpointManager:
             checkpoint_dir (Path): Directory containing checkpoint file
 
         Returns:
-            dict: Keys 'metadata', 'msq_state', 'domain_state'
+            dict: Keys 'metadata', 'msq_state', 'domain_state', and
+                optionally 'feedback_controller_state', 'pruning_strategy_states'
 
         Raises:
             ValueError: If checkpoint is missing or corrupt
@@ -182,7 +199,9 @@ class CheckpointManager:
             strategy_type (str): Expected strategy class name
 
         Returns:
-            dict: Validated checkpoint data with keys 'metadata', 'msq_state', 'domain_state'
+            dict: Validated checkpoint data with keys 'metadata', 'msq_state',
+                'domain_state', and optionally 'feedback_controller_state',
+                'pruning_strategy_states'
 
         Raises:
             ValueError: If checkpoint is missing, corrupt, or configuration does not match

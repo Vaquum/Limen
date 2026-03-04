@@ -537,3 +537,12 @@
 - Add `indicators.linearreg_slope` (TA-Lib LINEARREG_SLOPE): rolling OLS slope
 - Add `indicators.linearreg_intercept` (TA-Lib LINEARREG_INTERCEPT): rolling OLS intercept
 - Add `indicators.linearreg_angle` (TA-Lib LINEARREG_ANGLE): rolling OLS slope angle in degrees
+
+## v1.39.0 on 4th of March, 2026
+
+- Add `_run_with_msq` method to `UniversalExperimentLoop` for MSQ-based experiment execution with feedback and checkpoint integration
+- Add `_finalize` method for post-experiment Log creation and metrics computation
+- Refactor `UniversalExperimentLoop.__init__` to accept search strategy, pruning strategies, feedback, and checkpoint configuration
+- Refactor `run()` to dispatch to MSQ-based flow when search strategy is configured
+- Extend `CheckpointManager` to persist `FeedbackController` and `PruningStrategy` states alongside MSQ and domain
+- Add round data persistence via `round_data.jsonl` for full experiment integrity across shutdown and resume

@@ -108,6 +108,17 @@ from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
 from tests.test_checkpoint_manager import test_uel_double_signal_raises
 from tests.test_checkpoint_manager import test_uel_checkpoint_and_resume
+from tests.test_experiment_core_msq import test_run_with_msq_basic_flow
+from tests.test_experiment_core_msq import test_run_with_msq_context_params
+from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
+from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
+from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
+from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
+from tests.test_experiment_core_msq import test_shutdown_before_any_round_completes
+from tests.test_experiment_core_msq import test_resume_fails_without_round_data
+from tests.test_experiment_core_msq import test_preds_none_does_not_crash
+from tests.test_experiment_core_msq import test_resume_truncates_stale_rounds
+from tests.test_experiment_core_msq import test_truncate_round_data_unit
 
 tests = [
     test_param_domain_init,
@@ -194,6 +205,17 @@ tests = [
     test_uel_shutdown_flag,
     test_uel_double_signal_raises,
     test_uel_checkpoint_and_resume,
+    test_run_with_msq_basic_flow,
+    test_run_with_msq_context_params,
+    test_run_with_msq_feedback_trigger,
+    test_run_with_msq_checkpoint_trigger,
+    test_checkpoint_saves_feedback_and_pruning_state,
+    test_run_with_msq_shutdown_resume_full_data,
+    test_shutdown_before_any_round_completes,
+    test_resume_fails_without_round_data,
+    test_preds_none_does_not_crash,
+    test_resume_truncates_stale_rounds,
+    test_truncate_round_data_unit,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
