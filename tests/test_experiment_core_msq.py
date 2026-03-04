@@ -301,6 +301,22 @@ def test_run_with_msq_shutdown_resume_full_data():
         assert len(corr) > 0
 
 
+def test_shutdown_before_any_round_completes():
+
+    uel, _, _ = _make_uel()
+    uel._shutdown_requested = True
+
+    with TemporaryDirectory() as tmpdir:
+        uel._run_with_msq(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=6,
+            context_params=None,
+            resume=False,
+        )
+
+    assert uel.experiment_log is None
+
+
 def test_resume_fails_without_round_data():
 
     params = sfd_module.params()
