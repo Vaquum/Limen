@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -526,16 +527,12 @@ class UniversalExperimentLoop:
             else:
                 self.experiment_log = pl.DataFrame(round_results)
 
-            if not csv_path.exists() or csv_path.stat().st_size == 0:
-                header = ','.join(list(round_results.keys()))
-                with csv_path.open('a') as f:
-                    f.write(f"{header}\n")
-
-            log_string = (
-                f"{','.join(map(str, self.experiment_log.row(-1)))}\n"
-            )
-            with csv_path.open('a') as f:
-                f.write(log_string)
+            write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+            with csv_path.open('a', newline='') as f:
+                writer = csv.writer(f)
+                if write_header:
+                    writer.writerow(round_results.keys())
+                writer.writerow(self.experiment_log.row(-1))
 
             if round_data_path:
                 self._append_round_data(
