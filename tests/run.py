@@ -116,6 +116,9 @@ from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pr
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_shutdown_before_any_round_completes
 from tests.test_experiment_core_msq import test_resume_fails_without_round_data
+from tests.test_experiment_core_msq import test_preds_none_does_not_crash
+from tests.test_experiment_core_msq import test_resume_truncates_stale_rounds
+from tests.test_experiment_core_msq import test_truncate_round_data_unit
 
 tests = [
     test_param_domain_init,
@@ -210,6 +213,9 @@ tests = [
     test_run_with_msq_shutdown_resume_full_data,
     test_shutdown_before_any_round_completes,
     test_resume_fails_without_round_data,
+    test_preds_none_does_not_crash,
+    test_resume_truncates_stale_rounds,
+    test_truncate_round_data_unit,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,

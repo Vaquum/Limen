@@ -1,3 +1,5 @@
+import csv
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -353,3 +355,145 @@ def test_resume_fails_without_round_data():
             assert 'round_data.jsonl not found' in str(e)
 
         assert raised
+
+
+def test_preds_none_does_not_crash():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_data_path = exp_dir / 'round_data.jsonl'
+
+        uel, _, _ = _make_uel(experiment_dir=exp_dir)
+        sfd_params = {'random_weights': True, 'breakout_threshold': 1.2, 'shift': 1}
+        data_dict = uel.prep(uel.data, round_params=sfd_params)
+        round_results = uel.model(data=data_dict, round_params=sfd_params)
+
+        round_results['_preds'] = None
+
+        current_preds = round_results.pop('_preds', None)
+        if current_preds is None:
+            current_preds = []
+
+        uel._append_round_data(
+            round_data_path, 0, sfd_params, current_preds,
+            data_dict['_alignment'],
+        )
+
+        assert round_data_path.exists()
+        with round_data_path.open('r') as f:
+            entry = json.loads(f.readline())
+        assert entry['preds'] == []
+
+
+def test_resume_truncates_stale_rounds():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+
+        uel, _, _ = _make_uel(
+            experiment_dir=exp_dir,
+            checkpoint_interval=2,
+        )
+        original_model = uel.model
+        round_count = 0
+
+        def shutdown_after_4(data, round_params):
+            nonlocal round_count
+            round_count += 1
+            result = original_model(data, round_params)
+            if round_count >= 4:
+                uel._shutdown_requested = True
+            return result
+
+        uel.model = shutdown_after_4
+
+        uel._run_with_msq(
+            experiment_name='test_truncation',
+            n_permutations=6,
+            context_params=None,
+            resume=False,
+        )
+
+        round_data_path = exp_dir / 'round_data.jsonl'
+        csv_path = exp_dir / 'results.csv'
+        assert round_data_path.exists()
+        assert csv_path.exists()
+
+        with round_data_path.open('r') as f:
+            existing_lines = [raw.strip() for raw in f if raw.strip()]
+
+        # Append stale entries beyond the checkpoint to simulate crash
+        checkpoint_round = json.loads(existing_lines[-1])['round_id']
+        for i in range(1, 3):
+            stale_entry = json.loads(existing_lines[-1])
+            stale_entry['round_id'] = checkpoint_round + i
+            with round_data_path.open('a') as f:
+                f.write(json.dumps(stale_entry) + '\n')
+
+        with csv_path.open('r') as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            rows = list(reader)
+        id_idx = header.index('id')
+        with csv_path.open('a', newline='') as f:
+            writer = csv.writer(f)
+            for offset in range(1, 3):
+                stale_row = list(rows[-1])
+                stale_row[id_idx] = str(int(stale_row[id_idx]) + offset)
+                writer.writerow(stale_row)
+
+        with round_data_path.open('r') as f:
+            pre_resume_jsonl = [raw for raw in f if raw.strip()]
+        assert len(pre_resume_jsonl) == len(existing_lines) + 2
+
+        uel2, _, _ = _make_uel(
+            experiment_dir=exp_dir,
+            checkpoint_interval=2,
+        )
+
+        uel2._run_with_msq(
+            experiment_name='test_truncation',
+            n_permutations=6,
+            context_params=None,
+            resume=True,
+        )
+
+        assert uel2.experiment_log.shape[0] == 6
+        assert uel2.experiment_log['id'].to_list() == [0, 1, 2, 3, 4, 5]
+
+        with round_data_path.open('r') as f:
+            final_jsonl = [raw for raw in f if raw.strip()]
+        assert len(final_jsonl) == 6
+        for i, line in enumerate(final_jsonl):
+            assert json.loads(line)['round_id'] == i
+
+        with csv_path.open('r') as f:
+            final_csv = [raw for raw in f if raw.strip()]
+        assert len(final_csv) == 7
+
+
+def test_truncate_round_data_unit():
+
+    with TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / 'round_data.jsonl'
+
+        entries = [
+            {'round_id': 0, 'data': 'a'},
+            {'round_id': 1, 'data': 'b'},
+            {'round_id': 2, 'data': 'c'},
+            {'round_id': 3, 'data': 'd'},
+            {'round_id': 4, 'data': 'e'},
+        ]
+        with path.open('w') as f:
+            for entry in entries:
+                f.write(json.dumps(entry) + '\n')
+
+        UniversalExperimentLoop._truncate_round_data(path, 3)
+
+        with path.open('r') as f:
+            remaining = [json.loads(raw) for raw in f if raw.strip()]
+
+        assert len(remaining) == 3
+        assert [e['round_id'] for e in remaining] == [0, 1, 2]
