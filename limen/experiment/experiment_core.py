@@ -159,6 +159,11 @@ class UniversalExperimentLoop:
         if save_to_sqlite is True:
             self.conn = sqlite3.connect('/opt/experiments/experiments.sqlite')
 
+        if resume and self._search_strategy is None:
+            raise ValueError(
+                'resume=True is only supported with a search_strategy.'
+            )
+
         if self._search_strategy is not None:
             self._run_with_msq(
                 experiment_name=experiment_name,
