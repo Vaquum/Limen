@@ -438,8 +438,8 @@ class UniversalExperimentLoop:
                 self.extras.append(round_results.pop('extras'))
             if 'models' in round_results:
                 self.models.append(round_results.pop('models'))
-            if '_preds' in round_results:
-                self.preds.append(round_results.pop('_preds'))
+            current_preds = round_results.pop('_preds', [])
+            self.preds.append(current_preds)
             if '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
 
@@ -474,7 +474,7 @@ class UniversalExperimentLoop:
             if round_data_path:
                 self._append_round_data(
                     round_data_path, current_round, sfd_params,
-                    self.preds[-1] if self.preds else [],
+                    current_preds,
                     data_dict['_alignment'],
                 )
 
