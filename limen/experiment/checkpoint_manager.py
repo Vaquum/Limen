@@ -156,7 +156,8 @@ class CheckpointManager:
             checkpoint_dir (Path): Directory containing checkpoint file
 
         Returns:
-            dict: Keys 'metadata', 'msq_state', 'domain_state'
+            dict: Keys 'metadata', 'msq_state', 'domain_state', and
+                optionally 'feedback_controller_state', 'pruning_strategy_states'
 
         Raises:
             ValueError: If checkpoint is missing or corrupt
@@ -198,7 +199,9 @@ class CheckpointManager:
             strategy_type (str): Expected strategy class name
 
         Returns:
-            dict: Validated checkpoint data with keys 'metadata', 'msq_state', 'domain_state'
+            dict: Validated checkpoint data with keys 'metadata', 'msq_state',
+                'domain_state', and optionally 'feedback_controller_state',
+                'pruning_strategy_states'
 
         Raises:
             ValueError: If checkpoint is missing, corrupt, or configuration does not match
