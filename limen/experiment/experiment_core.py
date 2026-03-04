@@ -670,10 +670,7 @@ class UniversalExperimentLoop:
                 f"{start_round} rounds completed but no results "
                 f"log exists."
             )
-        full_log = pl.read_csv(csv_path)
-        self.experiment_log = full_log.filter(
-            pl.col('id').cast(pl.Int64) < start_round,
-        )
+        self.experiment_log = pl.read_csv(csv_path, n_rows=start_round)
 
         self._truncate_round_data(round_data_path, start_round)
         self.experiment_log.write_csv(csv_path)
