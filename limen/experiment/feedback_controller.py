@@ -58,6 +58,10 @@ class FeedbackController:
 
         '''
 
+        if feedback_interval < 1:
+            raise ValueError(
+                f"feedback_interval must be >= 1, got {feedback_interval}"
+            )
         self._feedback_interval = feedback_interval
         self._pruning_strategies = pruning_strategies or []
         self._intra_callback = intra_callback
