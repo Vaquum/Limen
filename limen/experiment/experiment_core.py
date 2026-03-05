@@ -296,24 +296,6 @@ class UniversalExperimentLoop:
         self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
 
 
-    def _create_temp_log(self) -> Log:
-
-        '''
-        Create a temporary Log from current experiment state.
-
-        Used by the feedback system to provide pruning strategies
-        and callbacks with an up-to-date Log for analysis.
-
-        Returns:
-            Log: Temporary log containing all results so far
-
-        '''
-
-        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
-
-        return Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
-
-
     def _trigger_feedback(self,
                           msq: Any,
                           strategy: Any,
@@ -323,8 +305,8 @@ class UniversalExperimentLoop:
         '''
         Execute a feedback cycle at the current round.
 
-        Creates a temporary log, delegates to FeedbackController,
-        and returns the list of applied interventions.
+        Passes the polars experiment log directly to FeedbackController,
+        avoiding the overhead of constructing a full Log object.
 
         Args:
             msq (Any): The mutable search queue
@@ -337,9 +319,9 @@ class UniversalExperimentLoop:
 
         '''
 
-        log = self._create_temp_log()
-
-        return feedback_controller.trigger(log, msq, strategy, current_round)
+        return feedback_controller.trigger(
+            self.experiment_log, msq, strategy, current_round,
+        )
 
 
     def _run_with_msq(self,

@@ -1,5 +1,7 @@
 from typing import Any
 
+import polars as pl
+
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 
 
@@ -43,7 +45,7 @@ class SanityReducer(PruningStrategy):
 
 
     def analyze_and_intervene(self,
-                              log: Any,
+                              log: pl.DataFrame,
                               msq: Any) -> list[dict[str, Any]]:
 
         '''
@@ -55,9 +57,9 @@ class SanityReducer(PruningStrategy):
         if not self._active:
             return []
 
-        df = log.experiment_log
+        df = log
 
-        if df.empty or self._metric not in df.columns:
+        if df.is_empty() or self._metric not in df.columns:
             return []
 
         param_names = msq._domain.keys
@@ -67,16 +69,24 @@ class SanityReducer(PruningStrategy):
             if param not in df.columns:
                 continue
 
-            for value, group in df.groupby(param):
+            stats = (
+                df.group_by(param)
+                .agg(
+                    pl.len().alias('_total'),
+                    (pl.col(self._metric).is_null() | pl.col(self._metric).is_nan()).sum().alias('_nan_count'),
+                )
+            )
+
+            for row in stats.iter_rows(named=True):
+                value = row[param]
+
                 if (param, value) in self._removed:
                     continue
 
-                total = len(group)
-                if total < self._min_observations:
+                if row['_total'] < self._min_observations:
                     continue
 
-                nan_count = group[self._metric].isna().sum()
-                if nan_count / total > self._nan_threshold:
+                if row['_nan_count'] / row['_total'] > self._nan_threshold:
                     self._removed.add((param, value))
                     interventions.append({
                         'op': 'remove_is',
