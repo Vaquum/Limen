@@ -8,7 +8,7 @@ from collections.abc import Callable
 from typing import Any
 
 from limen.experiment.msq import MSQ
-from limen.experiment.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.search_strategy import SearchStrategy
 
 logger = logging.getLogger(__name__)

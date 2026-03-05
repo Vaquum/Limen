@@ -9,7 +9,7 @@ from typing import Any
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
 
 logger = logging.getLogger(__name__)
 
