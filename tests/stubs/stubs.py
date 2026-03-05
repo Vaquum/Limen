@@ -2,7 +2,7 @@ import itertools
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.search_strategy import SearchStrategy
-from limen.experiment.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.msq import MSQ
 
 

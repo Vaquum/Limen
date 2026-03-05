@@ -1,4 +1,4 @@
-from limen.experiment.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from tests.stubs.stubs import StubPruningStrategy
 
 

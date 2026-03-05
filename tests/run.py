@@ -119,6 +119,16 @@ from tests.test_experiment_core_msq import test_resume_fails_without_round_data
 from tests.test_experiment_core_msq import test_preds_none_does_not_crash
 from tests.test_experiment_core_msq import test_resume_truncates_stale_rounds
 from tests.test_experiment_core_msq import test_truncate_round_data_unit
+from tests.test_sanity_reducer import test_nan_above_threshold
+from tests.test_sanity_reducer import test_nan_below_threshold
+from tests.test_sanity_reducer import test_min_observations_gate
+from tests.test_sanity_reducer import test_empty_log
+from tests.test_sanity_reducer import test_missing_metric_column
+from tests.test_sanity_reducer import test_inactive_returns_empty
+from tests.test_sanity_reducer import test_multiple_params_pruned
+from tests.test_sanity_reducer import test_dedup_across_triggers
+from tests.test_sanity_reducer import test_checkpoint_roundtrip
+from tests.test_sanity_reducer import test_boundary_exact_threshold
 
 tests = [
     test_param_domain_init,
@@ -216,6 +226,16 @@ tests = [
     test_preds_none_does_not_crash,
     test_resume_truncates_stale_rounds,
     test_truncate_round_data_unit,
+    test_nan_above_threshold,
+    test_nan_below_threshold,
+    test_min_observations_gate,
+    test_empty_log,
+    test_missing_metric_column,
+    test_inactive_returns_empty,
+    test_multiple_params_pruned,
+    test_dedup_across_triggers,
+    test_checkpoint_roundtrip,
+    test_boundary_exact_threshold,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
