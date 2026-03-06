@@ -116,12 +116,17 @@ class FeedbackController:
                 msq, all_interventions, errors,
             )
 
-        strategy.update_from_feedback(log, all_interventions)
+        applied = [i for i in all_interventions if i.get('action') != 'suggest']
+        suggestions = [i for i in all_interventions if i.get('action') == 'suggest']
 
-        self._write_audit_entry(current_round, all_interventions, errors, msq)
+        strategy.update_from_feedback(log, applied)
+
+        self._write_audit_entry(
+            current_round, applied, errors, msq, suggestions=suggestions,
+        )
         self._trigger_count += 1
 
-        return all_interventions
+        return applied
 
 
     def _run_source(self,
@@ -150,7 +155,8 @@ class FeedbackController:
             interventions = collector()
             if needs_dispatch:
                 for intervention in interventions:
-                    self._apply_intervention(msq, intervention)
+                    if intervention.get('action') != 'suggest':
+                        self._apply_intervention(msq, intervention)
             all_interventions.extend(interventions)
         except _SOURCE_ERRORS as e:
             logger.warning('%s failed: %s', name, e)
@@ -289,7 +295,9 @@ class FeedbackController:
                            current_round: int,
                            interventions: list[dict[str, Any]],
                            errors: list[dict[str, Any]],
-                           msq: MSQ) -> None:
+                           msq: MSQ,
+                           *,
+                           suggestions: list[dict[str, Any]] | None = None) -> None:
 
         '''Append a single JSONL entry to the audit log file.'''
 
@@ -301,6 +309,7 @@ class FeedbackController:
             'timestamp': datetime.now(tz=timezone.utc).isoformat(),
             'trigger_number': self._trigger_count,
             'interventions': interventions,
+            'suggestions': suggestions or [],
             'errors': errors,
             'msq_state_after': {
                 'remaining_count': msq.remaining_count(),
