@@ -5,6 +5,7 @@ import os
 import signal
 import sqlite3
 import time
+import warnings
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -416,10 +417,16 @@ class UniversalExperimentLoop:
             if context_params is not None:
                 sfd_params.update(context_params)
 
-            data_dict = self.prep(self.data, round_params=sfd_params)
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter('always')
+                data_dict = self.prep(self.data, round_params=sfd_params)
+                round_results = self.model(
+                    data=data_dict, round_params=sfd_params,
+                )
 
-            round_results = self.model(
-                data=data_dict, round_params=sfd_params,
+            round_results['_warnings'] = (
+                json.dumps([str(w.message) for w in caught])
+                if caught else '[]'
             )
 
             if 'extras' in round_results:
