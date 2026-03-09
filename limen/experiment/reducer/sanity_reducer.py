@@ -89,8 +89,13 @@ class SanityReducer(PruningStrategy):
         if df.is_empty() or self._metric not in df.columns:
             return []
 
-        param_names = msq._domain.keys
+        param_names = msq.domain_keys
         interventions: list[dict[str, Any]] = []
+
+        is_numeric = df[self._metric].dtype.is_numeric()
+        nan_expr = pl.col(self._metric).is_null()
+        if is_numeric:
+            nan_expr = nan_expr | pl.col(self._metric).is_nan()
 
         for param in param_names:
             if param not in df.columns:
@@ -98,8 +103,7 @@ class SanityReducer(PruningStrategy):
 
             agg_exprs: list[pl.Expr] = [
                 pl.len().alias('_total'),
-                (pl.col(self._metric).is_null() | pl.col(self._metric).is_nan())
-                    .sum().alias('_nan_count'),
+                nan_expr.sum().alias('_nan_count'),
             ]
 
             detectors: list[tuple[str, float, str]] = []
@@ -135,12 +139,12 @@ class SanityReducer(PruningStrategy):
 
                 if ((param, value) not in self._removed
                         and row['_nan_count'] / row['_total'] > self._nan_threshold):
-                        self._removed.add((param, value))
-                        interventions.append({
-                            'op': 'remove_is',
-                            'param': param,
-                            'value': value,
-                        })
+                    self._removed.add((param, value))
+                    interventions.append({
+                        'op': 'remove_is',
+                        'param': param,
+                        'value': value,
+                    })
 
                 for count_col, threshold, label in detectors:
                     interventions.extend(
