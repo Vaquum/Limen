@@ -342,7 +342,6 @@ def test_get_set_state():
     assert fc2._intervention_last_mtime == 12345.67
 
 
-
 def test_suggestion_not_dispatched():
 
     msq, strategy, domain = make_msq()

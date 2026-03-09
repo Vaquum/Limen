@@ -90,15 +90,17 @@ class FeedbackController:
 
         Collects interventions from each source, applies them to the MSQ,
         updates the search strategy, and writes an audit trail entry.
+        Suggestion interventions (action='suggest') are logged in the
+        audit trail but not dispatched or returned.
 
         Args:
-            log (Any): Current experiment Log for analysis
+            log (pl.DataFrame): Polars experiment log for analysis
             msq (MSQ): Mutable search queue to apply interventions to
             strategy (SearchStrategy): Search strategy to notify of changes
             current_round (int): Current experiment round number
 
         Returns:
-            list[dict[str, Any]]: All interventions applied during this trigger
+            list[dict[str, Any]]: Applied interventions (excludes suggestions)
 
         '''
 
