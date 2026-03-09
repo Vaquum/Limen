@@ -165,7 +165,6 @@ def test_file_polling_skips_unchanged():
         result1 = fc.trigger(None, msq, strategy, 5)
         assert len(result1) == 1
 
-        # Second trigger without file change — no new interventions
         result2 = fc.trigger(None, msq, strategy, 10)
         assert result2 == []
 
@@ -229,7 +228,6 @@ def test_file_invalid_json_no_error():
             intervention_path=path,
         )
 
-        # Should not raise — error captured internally
         result = fc.trigger(None, msq, strategy, 5)
         assert result == []
 
@@ -342,3 +340,64 @@ def test_get_set_state():
     fc2.set_state(state)
     assert fc2._trigger_count == 3
     assert fc2._intervention_last_mtime == 12345.67
+
+
+def test_suggestion_not_dispatched():
+
+    msq, strategy, domain = make_msq()
+    ps = StubPruningStrategy(interventions=[
+        {'op': 'remove_is', 'param': 'a', 'value': 3, 'action': 'suggest'},
+    ])
+    fc = FeedbackController(
+        feedback_interval=5,
+        pruning_strategies=[ps],
+    )
+
+    result = fc.trigger(None, msq, strategy, 5)
+
+    assert result == []
+    assert 3 in domain.values_for('a')
+
+
+def test_suggestion_in_audit_log():
+
+    msq, strategy, _ = make_msq()
+    ps = StubPruningStrategy(interventions=[
+        {'op': 'remove_is', 'param': 'a', 'value': 3, 'action': 'suggest'},
+    ])
+
+    with TemporaryDirectory() as tmpdir:
+        audit_path = Path(tmpdir) / 'audit.jsonl'
+
+        fc = FeedbackController(
+            feedback_interval=5,
+            pruning_strategies=[ps],
+            audit_log_path=audit_path,
+        )
+
+        fc.trigger(None, msq, strategy, 5)
+
+        entry = json.loads(audit_path.read_text().strip())
+        assert entry['interventions'] == []
+        assert len(entry['suggestions']) == 1
+        assert entry['suggestions'][0]['action'] == 'suggest'
+
+
+def test_mixed_interventions_and_suggestions():
+
+    msq, strategy, domain = make_msq()
+    ps = StubPruningStrategy(interventions=[
+        {'op': 'remove_is', 'param': 'a', 'value': 3},
+        {'op': 'remove_is', 'param': 'a', 'value': 2, 'action': 'suggest'},
+    ])
+    fc = FeedbackController(
+        feedback_interval=5,
+        pruning_strategies=[ps],
+    )
+
+    result = fc.trigger(None, msq, strategy, 5)
+
+    assert len(result) == 1
+    assert result[0]['value'] == 3
+    assert 3 not in domain.values_for('a')
+    assert 2 in domain.values_for('a')

@@ -331,6 +331,12 @@ class MSQ:
         return list(self._intervention_log)
 
 
+    @property
+    def domain_keys(self) -> list[str]:
+
+        return self._domain.keys
+
+
     def get_state(self) -> dict[str, Any]:
 
         '''

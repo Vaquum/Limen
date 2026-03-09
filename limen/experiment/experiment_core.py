@@ -5,6 +5,7 @@ import os
 import signal
 import sqlite3
 import time
+import warnings
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +18,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
@@ -296,24 +297,6 @@ class UniversalExperimentLoop:
         self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
 
 
-    def _create_temp_log(self) -> Log:
-
-        '''
-        Create a temporary Log from current experiment state.
-
-        Used by the feedback system to provide pruning strategies
-        and callbacks with an up-to-date Log for analysis.
-
-        Returns:
-            Log: Temporary log containing all results so far
-
-        '''
-
-        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
-
-        return Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
-
-
     def _trigger_feedback(self,
                           msq: Any,
                           strategy: Any,
@@ -323,8 +306,8 @@ class UniversalExperimentLoop:
         '''
         Execute a feedback cycle at the current round.
 
-        Creates a temporary log, delegates to FeedbackController,
-        and returns the list of applied interventions.
+        Passes the polars experiment log directly to FeedbackController,
+        avoiding the overhead of constructing a full Log object.
 
         Args:
             msq (Any): The mutable search queue
@@ -337,9 +320,9 @@ class UniversalExperimentLoop:
 
         '''
 
-        log = self._create_temp_log()
-
-        return feedback_controller.trigger(log, msq, strategy, current_round)
+        return feedback_controller.trigger(
+            self.experiment_log, msq, strategy, current_round,
+        )
 
 
     def _run_with_msq(self,
@@ -434,10 +417,16 @@ class UniversalExperimentLoop:
             if context_params is not None:
                 sfd_params.update(context_params)
 
-            data_dict = self.prep(self.data, round_params=sfd_params)
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter('always')
+                data_dict = self.prep(self.data, round_params=sfd_params)
+                round_results = self.model(
+                    data=data_dict, round_params=sfd_params,
+                )
 
-            round_results = self.model(
-                data=data_dict, round_params=sfd_params,
+            round_results['_warnings'] = (
+                json.dumps([str(w.message) for w in caught])
+                if caught else '[]'
             )
 
             if 'extras' in round_results:
