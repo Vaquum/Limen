@@ -9,11 +9,11 @@ from limen.experiment.reducer.pruning_strategy import PruningStrategy
 class SanityReducer(PruningStrategy):
 
     '''
-    Remove parameter values whose trials produce NaN in the target
-    metric above a configurable threshold.
+    Remove parameter values whose trials produce null or NaN in the
+    target metric above a configurable threshold.
 
-    Only considers NaN occurrences in the specified metric column.
-    Values are pruned when nan_count / total > nan_threshold and
+    Counts both null and NaN (for float columns) in the metric column.
+    Values are pruned when missing_count / total > nan_threshold and
     total >= min_observations.
 
     Optionally emits suggestion interventions (logged but not dispatched)
