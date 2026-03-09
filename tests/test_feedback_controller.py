@@ -165,7 +165,6 @@ def test_file_polling_skips_unchanged():
         result1 = fc.trigger(None, msq, strategy, 5)
         assert len(result1) == 1
 
-        # Second trigger without file change — no new interventions
         result2 = fc.trigger(None, msq, strategy, 10)
         assert result2 == []
 
@@ -229,7 +228,6 @@ def test_file_invalid_json_no_error():
             intervention_path=path,
         )
 
-        # Should not raise — error captured internally
         result = fc.trigger(None, msq, strategy, 5)
         assert result == []
 
@@ -343,8 +341,6 @@ def test_get_set_state():
     assert fc2._trigger_count == 3
     assert fc2._intervention_last_mtime == 12345.67
 
-
-# --- Advisory tests ---
 
 
 def test_suggestion_not_dispatched():
