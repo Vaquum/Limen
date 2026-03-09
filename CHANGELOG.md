@@ -546,3 +546,8 @@
 - Refactor `run()` to dispatch to MSQ-based flow when search strategy is configured
 - Extend `CheckpointManager` to persist `FeedbackController` and `PruningStrategy` states alongside MSQ and domain
 - Add round data persistence via `round_data.jsonl` for full experiment integrity across shutdown and resume
+
+## v1.40.0 on 9th of March, 2026
+
+- Add `SanityReducer` pruning strategy with NaN detection and suggestion system (zero-metric, execution timeout, warning detectors)
+- Add advisory suggestion flow to `FeedbackController` — suggestions are logged in audit trail but not dispatched to MSQ
