@@ -4,6 +4,9 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 
+ACTION_SUGGEST = 'suggest'
+
+
 class PruningStrategy(ABC):
 
     '''

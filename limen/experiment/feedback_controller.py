@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any
 
 from limen.experiment.msq import MSQ
+from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.search_strategy import SearchStrategy
 
@@ -116,8 +117,8 @@ class FeedbackController:
                 msq, all_interventions, errors,
             )
 
-        applied = [i for i in all_interventions if i.get('action') != 'suggest']
-        suggestions = [i for i in all_interventions if i.get('action') == 'suggest']
+        applied = [i for i in all_interventions if i.get('action') != ACTION_SUGGEST]
+        suggestions = [i for i in all_interventions if i.get('action') == ACTION_SUGGEST]
 
         strategy.update_from_feedback(log, applied)
 
@@ -155,7 +156,7 @@ class FeedbackController:
             interventions = collector()
             if needs_dispatch:
                 for intervention in interventions:
-                    if intervention.get('action') != 'suggest':
+                    if intervention.get('action') != ACTION_SUGGEST:
                         self._apply_intervention(msq, intervention)
             all_interventions.extend(interventions)
         except _SOURCE_ERRORS as e:

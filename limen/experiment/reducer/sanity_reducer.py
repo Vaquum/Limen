@@ -2,6 +2,7 @@ from typing import Any
 
 import polars as pl
 
+from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 
 
@@ -64,7 +65,7 @@ class SanityReducer(PruningStrategy):
         self._timeout_rate_threshold = timeout_rate_threshold
         self._warning_threshold = warning_threshold
         self._removed: set[tuple[str, Any]] = set()
-        self._suggested: set[tuple[str, Any]] = set()
+        self._suggested: set[tuple[str, Any, str]] = set()
 
 
     def analyze_and_intervene(self,
@@ -89,190 +90,94 @@ class SanityReducer(PruningStrategy):
             return []
 
         param_names = msq._domain.keys
-        interventions = self._detect_nan(df, param_names)
-        interventions.extend(self._detect_suggestions(df, param_names))
-        return interventions
-
-
-    def _detect_nan(self,
-                    df: pl.DataFrame,
-                    param_names: list[str]) -> list[dict[str, Any]]:
-
-        '''Detect NaN metric values and return remove_is interventions.'''
-
         interventions: list[dict[str, Any]] = []
 
         for param in param_names:
             if param not in df.columns:
                 continue
 
-            stats = (
-                df.group_by(param)
-                .agg(
-                    pl.len().alias('_total'),
-                    (pl.col(self._metric).is_null() | pl.col(self._metric).is_nan()).sum().alias('_nan_count'),
+            agg_exprs: list[pl.Expr] = [
+                pl.len().alias('_total'),
+                (pl.col(self._metric).is_null() | pl.col(self._metric).is_nan())
+                    .sum().alias('_nan_count'),
+            ]
+
+            detectors: list[tuple[str, float, str]] = []
+
+            if self._zero_metric_threshold is not None:
+                agg_exprs.append(
+                    (pl.col(self._metric) == 0.0).sum().alias('_zero_count')
                 )
-            )
+                detectors.append(('_zero_count', self._zero_metric_threshold, 'zero_metric'))
+
+            if (self._execution_time_threshold is not None
+                    and self._execution_time_column in df.columns):
+                agg_exprs.append(
+                    (pl.col(self._execution_time_column) > self._execution_time_threshold)
+                        .sum().alias('_timeout_count')
+                )
+                detectors.append(('_timeout_count', self._timeout_rate_threshold, 'execution_timeout'))
+
+            if (self._warning_threshold is not None
+                    and '_warnings' in df.columns):
+                agg_exprs.append(
+                    (pl.col('_warnings') != '[]').sum().alias('_warning_count')
+                )
+                detectors.append(('_warning_count', self._warning_threshold, 'warning'))
+
+            stats = df.group_by(param).agg(*agg_exprs)
 
             for row in stats.iter_rows(named=True):
                 value = row[param]
 
-                if (param, value) in self._removed:
-                    continue
-
                 if row['_total'] < self._min_observations:
                     continue
 
-                if row['_nan_count'] / row['_total'] > self._nan_threshold:
-                    self._removed.add((param, value))
-                    interventions.append({
-                        'op': 'remove_is',
-                        'param': param,
-                        'value': value,
-                    })
+                if ((param, value) not in self._removed
+                        and row['_nan_count'] / row['_total'] > self._nan_threshold):
+                        self._removed.add((param, value))
+                        interventions.append({
+                            'op': 'remove_is',
+                            'param': param,
+                            'value': value,
+                        })
+
+                for count_col, threshold, label in detectors:
+                    interventions.extend(
+                        self._rate_suggestion(row, param, value, count_col, threshold, label)
+                    )
 
         return interventions
 
 
-    def _detect_suggestions(self,
-                            df: pl.DataFrame,
-                            param_names: list[str]) -> list[dict[str, Any]]:
-
-        '''Detect soft signals and return suggestion interventions.'''
-
-        suggestions: list[dict[str, Any]] = []
-
-        for param in param_names:
-            if param not in df.columns:
-                continue
-
-            stats = df.group_by(param).agg(pl.len().alias('_total'))
-
-            if self._zero_metric_threshold is not None:
-                suggestions.extend(
-                    self._detect_zero_metric(df, param, stats)
-                )
-
-            if (self._execution_time_threshold is not None
-                    and self._execution_time_column in df.columns):
-                suggestions.extend(
-                    self._detect_execution_timeout(df, param, stats)
-                )
-
-            if (self._warning_threshold is not None
-                    and '_warnings' in df.columns):
-                suggestions.extend(
-                    self._detect_warnings(df, param, stats)
-                )
-
-        return suggestions
-
-
-    def _detect_zero_metric(self,
-                            df: pl.DataFrame,
-                            param: str,
-                            stats: pl.DataFrame) -> list[dict[str, Any]]:
-
-        '''Suggest removal for parameter values with high zero-metric rate.'''
-
-        zero_stats = (
-            df.group_by(param)
-            .agg((pl.col(self._metric) == 0.0).sum().alias('_zero_count'))
-        )
-        merged = stats.join(zero_stats, on=param)
-        suggestions: list[dict[str, Any]] = []
-
-        for row in merged.iter_rows(named=True):
-            value = row[param]
-            if (param, value) in self._suggested:
-                continue
-            if row['_total'] < self._min_observations:
-                continue
-            rate = row['_zero_count'] / row['_total']
-            if rate > self._zero_metric_threshold:
-                self._suggested.add((param, value))
-                suggestions.append({
-                    'op': 'remove_is',
-                    'param': param,
-                    'value': value,
-                    'action': 'suggest',
-                    'reason': f"zero_metric rate {rate:.2f} for {param}={value}",
-                })
-
-        return suggestions
-
-
-    def _detect_execution_timeout(self,
-                                  df: pl.DataFrame,
-                                  param: str,
-                                  stats: pl.DataFrame) -> list[dict[str, Any]]:
-
-        '''Suggest removal for parameter values with high execution timeout rate.'''
-
-        timeout_stats = (
-            df.group_by(param)
-            .agg(
-                (pl.col(self._execution_time_column) > self._execution_time_threshold)
-                .sum().alias('_timeout_count')
-            )
-        )
-        merged = stats.join(timeout_stats, on=param)
-        suggestions: list[dict[str, Any]] = []
-
-        for row in merged.iter_rows(named=True):
-            value = row[param]
-            if (param, value) in self._suggested:
-                continue
-            if row['_total'] < self._min_observations:
-                continue
-            rate = row['_timeout_count'] / row['_total']
-            if rate > self._timeout_rate_threshold:
-                self._suggested.add((param, value))
-                suggestions.append({
-                    'op': 'remove_is',
-                    'param': param,
-                    'value': value,
-                    'action': 'suggest',
-                    'reason': f"execution_timeout rate {rate:.2f} for {param}={value}",
-                })
-
-        return suggestions
-
-
-    def _detect_warnings(self,
-                         df: pl.DataFrame,
+    def _rate_suggestion(self,
+                         row: dict[str, Any],
                          param: str,
-                         stats: pl.DataFrame) -> list[dict[str, Any]]:
+                         value: Any,
+                         count_col: str,
+                         threshold: float,
+                         reason_label: str) -> list[dict[str, Any]]:
 
-        '''Suggest removal for parameter values with high warning rate.'''
+        '''Emit a suggestion if the rate exceeds the threshold.'''
 
-        warning_stats = (
-            df.group_by(param)
-            .agg(
-                (pl.col('_warnings') != '[]').sum().alias('_warning_count')
-            )
-        )
-        merged = stats.join(warning_stats, on=param)
-        suggestions: list[dict[str, Any]] = []
+        if (param, value) in self._removed:
+            return []
 
-        for row in merged.iter_rows(named=True):
-            value = row[param]
-            if (param, value) in self._suggested:
-                continue
-            if row['_total'] < self._min_observations:
-                continue
-            rate = row['_warning_count'] / row['_total']
-            if rate > self._warning_threshold:
-                self._suggested.add((param, value))
-                suggestions.append({
-                    'op': 'remove_is',
-                    'param': param,
-                    'value': value,
-                    'action': 'suggest',
-                    'reason': f"warning rate {rate:.2f} for {param}={value}",
-                })
+        if (param, value, reason_label) in self._suggested:
+            return []
 
-        return suggestions
+        rate = row[count_col] / row['_total']
+        if rate > threshold:
+            self._suggested.add((param, value, reason_label))
+            return [{
+                'op': 'remove_is',
+                'param': param,
+                'value': value,
+                'action': ACTION_SUGGEST,
+                'reason': f"{reason_label} rate {rate:.2f} for {param}={value}",
+            }]
+
+        return []
 
 
     def get_state(self) -> dict[str, Any]:
