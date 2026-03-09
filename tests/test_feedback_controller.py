@@ -401,5 +401,3 @@ def test_mixed_interventions_and_suggestions():
     assert result[0]['value'] == 3
     assert 3 not in domain.values_for('a')
     assert 2 in domain.values_for('a')
-
-

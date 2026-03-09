@@ -197,5 +197,8 @@ class SanityReducer(PruningStrategy):
 
         '''Restore state from checkpoint.'''
 
+        if 'removed' not in state:
+            raise ValueError("Invalid SanityReducer state: missing required key 'removed'.")
+
         self._removed = set(tuple(x) for x in state['removed'])
         self._suggested = set(tuple(x) for x in state.get('suggested', []))
