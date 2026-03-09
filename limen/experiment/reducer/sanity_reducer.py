@@ -92,44 +92,43 @@ class SanityReducer(PruningStrategy):
         param_names = msq.domain_keys
         interventions: list[dict[str, Any]] = []
 
-        is_numeric = df[self._metric].dtype.is_numeric()
+        is_float = df[self._metric].dtype.is_float()
         nan_expr = pl.col(self._metric).is_null()
-        if is_numeric:
+        if is_float:
             nan_expr = nan_expr | pl.col(self._metric).is_nan()
+
+        base_exprs: list[pl.Expr] = [
+            pl.len().alias('_total'),
+            nan_expr.sum().alias('_nan_count'),
+        ]
+        detectors: list[tuple[str, float, str]] = []
+
+        if self._zero_metric_threshold is not None:
+            base_exprs.append(
+                (pl.col(self._metric) == 0.0).sum().alias('_zero_count')
+            )
+            detectors.append(('_zero_count', self._zero_metric_threshold, 'zero_metric'))
+
+        if (self._execution_time_threshold is not None
+                and self._execution_time_column in df.columns):
+            base_exprs.append(
+                (pl.col(self._execution_time_column) > self._execution_time_threshold)
+                    .sum().alias('_timeout_count')
+            )
+            detectors.append(('_timeout_count', self._timeout_rate_threshold, 'execution_timeout'))
+
+        if (self._warning_threshold is not None
+                and '_warnings' in df.columns):
+            base_exprs.append(
+                (pl.col('_warnings') != '[]').sum().alias('_warning_count')
+            )
+            detectors.append(('_warning_count', self._warning_threshold, 'warning'))
 
         for param in param_names:
             if param not in df.columns:
                 continue
 
-            agg_exprs: list[pl.Expr] = [
-                pl.len().alias('_total'),
-                nan_expr.sum().alias('_nan_count'),
-            ]
-
-            detectors: list[tuple[str, float, str]] = []
-
-            if self._zero_metric_threshold is not None:
-                agg_exprs.append(
-                    (pl.col(self._metric) == 0.0).sum().alias('_zero_count')
-                )
-                detectors.append(('_zero_count', self._zero_metric_threshold, 'zero_metric'))
-
-            if (self._execution_time_threshold is not None
-                    and self._execution_time_column in df.columns):
-                agg_exprs.append(
-                    (pl.col(self._execution_time_column) > self._execution_time_threshold)
-                        .sum().alias('_timeout_count')
-                )
-                detectors.append(('_timeout_count', self._timeout_rate_threshold, 'execution_timeout'))
-
-            if (self._warning_threshold is not None
-                    and '_warnings' in df.columns):
-                agg_exprs.append(
-                    (pl.col('_warnings') != '[]').sum().alias('_warning_count')
-                )
-                detectors.append(('_warning_count', self._warning_threshold, 'warning'))
-
-            stats = df.group_by(param).agg(*agg_exprs)
+            stats = df.group_by(param).agg(*base_exprs)
 
             for row in stats.iter_rows(named=True):
                 value = row[param]
