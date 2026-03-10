@@ -59,6 +59,26 @@ class FocusReducer(PruningStrategy):
 
         '''
 
+        if focus_range_pct < 0:
+            raise ValueError(
+                f"focus_range_pct must be >= 0, got {focus_range_pct}"
+            )
+
+        if focus_timeout <= 0:
+            raise ValueError(
+                f"focus_timeout must be > 0, got {focus_timeout}"
+            )
+
+        if variation_count <= 0:
+            raise ValueError(
+                f"variation_count must be > 0, got {variation_count}"
+            )
+
+        if min_observations <= 0:
+            raise ValueError(
+                f"min_observations must be > 0, got {min_observations}"
+            )
+
         super().__init__(active=active)
         self._metric = metric
         self._breakthrough_threshold = breakthrough_threshold
