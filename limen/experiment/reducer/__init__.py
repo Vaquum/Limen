@@ -1,3 +1,6 @@
+from limen.experiment.reducer.budget_reducer import BudgetReducer
+from limen.experiment.reducer.budget_reducer import TRIM_RANDOM
+from limen.experiment.reducer.budget_reducer import TRIM_WORST_FIRST
 from limen.experiment.reducer.correlation_reducer import CorrelationReducer
 from limen.experiment.reducer.filter_types import FILTER_EXCLUDE_VALUE
 from limen.experiment.reducer.filter_types import FILTER_KEEP_BETWEEN
@@ -15,6 +18,9 @@ __all__ = [
     'FILTER_KEEP_BETWEEN',
     'FILTER_KEEP_VALUES',
     'FILTER_SAMPLE',
+    'TRIM_RANDOM',
+    'TRIM_WORST_FIRST',
+    'BudgetReducer',
     'CorrelationReducer',
     'FocusReducer',
     'PruningStrategy',
