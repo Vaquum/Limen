@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import traceback
@@ -8,11 +9,27 @@ from collections.abc import Callable
 from typing import Any
 
 from limen.experiment.msq import MSQ
+from limen.experiment.reducer.filter_types import FILTER_EXCLUDE_VALUE
+from limen.experiment.reducer.filter_types import FILTER_KEEP_BETWEEN
+from limen.experiment.reducer.filter_types import FILTER_KEEP_VALUES
+from limen.experiment.reducer.filter_types import FILTER_SAMPLE
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.search_strategy import SearchStrategy
 
 logger = logging.getLogger(__name__)
+
+_FILTER_BUILDERS: dict[str, Callable[[dict[str, Any]], Callable[[dict[str, Any]], bool]]] = {
+    FILTER_EXCLUDE_VALUE: lambda fp: lambda c: c[fp['param']] == fp['value'],
+    FILTER_KEEP_VALUES: lambda fp: lambda c: c[fp['param']] not in fp['values'],
+    FILTER_KEEP_BETWEEN: lambda fp: lambda c: not (fp['lower'] <= c[fp['param']] <= fp['upper']),
+    FILTER_SAMPLE: lambda fp: lambda c: (
+        c.get(fp['param']) == fp['value']
+        and int(hashlib.sha256(
+            str(sorted(c.items())).encode()
+        ).hexdigest(), 16) % 100 >= int(fp['fraction'] * 100)
+    ),
+}
 
 _SOURCE_ERRORS = (
     ValueError,
@@ -285,6 +302,11 @@ class FeedbackController:
             'inject': lambda i: msq.inject(i['combo'], prioritize=i.get('prioritize', False)),
             'inject_value': lambda i: msq.inject_value(i['param'], i['value']),
             'trim': lambda i: msq.trim(i['target_count']),
+            'set_filter': lambda i: msq.set_filter(
+                i['key'],
+                _FILTER_BUILDERS[i['filter_type']](i['filter_params']),
+            ),
+            'clear_filter': lambda i: msq.clear_filter(i['key']),
         }
 
         op = intervention['op']
