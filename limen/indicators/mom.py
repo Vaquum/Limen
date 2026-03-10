@@ -1,4 +1,3 @@
-import numpy as np
 import polars as pl
 
 
@@ -23,13 +22,11 @@ def mom(
     if period < 1 or period > 100000:
         raise ValueError('period must be between 1 and 100000')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    n = len(values)
     out_col = f'mom_{period}'
-    out = np.full(n, np.nan, dtype=float)
-
-    if n <= period:
-        return data.with_columns(pl.Series(name=out_col, values=out))
-
-    out[period:] = values[period:] - values[:-period]
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    mom_expr = (
+        pl.when(pl.int_range(0, pl.len()) < period)
+        .then(None)
+        .otherwise(pl.col(price_col) - pl.col(price_col).shift(period))
+        .alias(out_col)
+    )
+    return data.with_columns(mom_expr)

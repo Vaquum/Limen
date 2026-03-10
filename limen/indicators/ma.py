@@ -1,15 +1,14 @@
-import numpy as np
 import polars as pl
 
-from limen.indicators.dema import dema
-from limen.indicators.ema import ema
-from limen.indicators.kama import kama
-from limen.indicators.mama import mama
-from limen.indicators.sma import sma
-from limen.indicators.t3 import t3
-from limen.indicators.tema import tema
-from limen.indicators.trima import trima
-from limen.indicators.wma import wma
+from limen.indicators.dema import _dema_from_values
+from limen.indicators.ema import _ema_from_values
+from limen.indicators.kama import _kama_from_values
+from limen.indicators.mama import _mama_from_values
+from limen.indicators.sma import _sma_from_values
+from limen.indicators.t3 import _t3_from_values
+from limen.indicators.tema import _tema_from_values
+from limen.indicators.trima import _trima_from_values
+from limen.indicators.wma import _wma_from_values
 
 
 def ma(
@@ -37,39 +36,102 @@ def ma(
     if ma_type < 0 or ma_type > 8:
         raise ValueError('ma_type must be between 0 and 8')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    n = len(values)
     out_col = f'ma_{period}_{ma_type}'
-    out = np.full(n, np.nan, dtype=float)
-
-    if n == 0:
-        return data.with_columns(pl.Series(name=out_col, values=out))
-
-
+    frame = data
     if period == 1:
-        out[:] = values
-        return data.with_columns(pl.Series(name=out_col, values=out))
+        return frame.with_columns(pl.col(price_col).alias(out_col))
 
     if ma_type == 0:
-        out = sma(data, price_col=price_col, period=period)[f'sma_{period}'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _sma_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 1:
-        out = ema(data, price_col=price_col, period=period)[f'ema_{period}'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ema_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 2:
-        out = wma(data, price_col=price_col, period=period)[f'wma_{period}'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _wma_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 3:
-        dema_col = f'dema_{period}'
-        out = dema(data, price_col=price_col, period=period)[dema_col].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _dema_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 4:
-        out = tema(data, price_col=price_col, period=period)[f'tema_{period}'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _tema_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 5:
-        out = trima(data, price_col=price_col, period=period)[f'trima_{period}'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _trima_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 6:
-        kama_col = f'kama_{period}'
-        out = kama(data, price_col=price_col, period=period)[kama_col].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _kama_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 7:
-
-        out = mama(data, price_col=price_col, fast_limit=0.5, slow_limit=0.05)['mama'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _mama_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    0.5,
+                    0.05,
+                )[0]
+            ),
+            return_dtype=pl.Float64,
+        )
     elif ma_type == 8:
-        out = t3(data, price_col=price_col, period=period, vfactor=0.7)[f't3_{period}_0.7'].to_numpy().astype(float, copy=False)
+        expr = pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _t3_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                    0.7,
+                )
+            ),
+            return_dtype=pl.Float64,
+        )
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return frame.with_columns(expr.alias(out_col))

@@ -2,39 +2,13 @@ import numpy as np
 import polars as pl
 
 
-def t3(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-    period: int = 5,
-    vfactor: float = 0.7,
-) -> pl.DataFrame:
-
-    '''
-    Compute Triple Exponential Moving Average (T3).
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        period (int): Number of periods
-        vfactor (float): Volume factor
-
-    Returns:
-        pl.DataFrame: The input data with a new column 't3_{period}_{vfactor}'
-    '''
-
-    if period < 2 or period > 100000:
-        raise ValueError('period must be between 2 and 100000')
-    if vfactor < 0.0 or vfactor > 1.0:
-        raise ValueError('vfactor must be between 0 and 1')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _t3_from_values(values: np.ndarray, period: int, vfactor: float) -> np.ndarray:
     n = len(values)
-    out_col = f't3_{period}_{vfactor:g}'
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = 6 * (period - 1)
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -137,4 +111,44 @@ def t3(
         out[out_idx] = (c1 * e6) + (c2 * e5) + (c3 * e4) + (c4 * e3)
         out_idx += 1
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return out
+
+
+def t3(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    period: int = 5,
+    vfactor: float = 0.7,
+) -> pl.DataFrame:
+
+    '''
+    Compute Triple Exponential Moving Average (T3).
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        period (int): Number of periods
+        vfactor (float): Volume factor
+
+    Returns:
+        pl.DataFrame: The input data with a new column 't3_{period}_{vfactor}'
+    '''
+
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
+    if vfactor < 0.0 or vfactor > 1.0:
+        raise ValueError('vfactor must be between 0 and 1')
+
+    out_col = f't3_{period}_{vfactor:g}'
+    frame = data
+    t3_expr = pl.col(price_col).map_batches(
+        lambda s: pl.Series(
+            _t3_from_values(
+                s.to_numpy().astype(float, copy=False),
+                period,
+                vfactor,
+            )
+        ),
+        return_dtype=pl.Float64,
+    ).alias(out_col)
+    return frame.with_columns(t3_expr)

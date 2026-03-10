@@ -22,44 +22,15 @@ def _ma_lookback(period: int, ma_type: int) -> int:
     raise ValueError('ma_type must be between 0 and 8')
 
 
-def stochf(
-    data: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    fastk_period: int = 5,
-    fastd_period: int = 3,
-    fastd_ma_type: int = 0,
-) -> pl.DataFrame:
-
-    '''
-    Compute Fast Stochastic Oscillator (TA_STOCHF): fast %K and fast %D.
-
-    Args:
-        data (pl.DataFrame): Dataset with high/low/close columns
-        high_col (str): Column name for high prices
-        low_col (str): Column name for low prices
-        close_col (str): Column name for close prices
-        fastk_period (int): Time period for Fast-K (1..100000)
-        fastd_period (int): Smoothing period for Fast-D (1..100000)
-        fastd_ma_type (int): MA type for Fast-D (0..8)
-
-    Returns:
-        pl.DataFrame: The input data with 'stochf_fastk' and 'stochf_fastd'
-    '''
-
-    if fastk_period < 1 or fastk_period > 100000:
-        raise ValueError('fastk_period must be between 1 and 100000')
-    if fastd_period < 1 or fastd_period > 100000:
-        raise ValueError('fastd_period must be between 1 and 100000')
-    if fastd_ma_type < 0 or fastd_ma_type > 8:
-        raise ValueError('fastd_ma_type must be between 0 and 8')
-
-    high = data[high_col].to_numpy().astype(float, copy=False)
-    low = data[low_col].to_numpy().astype(float, copy=False)
-    close = data[close_col].to_numpy().astype(float, copy=False)
+def _stochf_from_arrays(
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    fastk_period: int,
+    fastd_period: int,
+    fastd_ma_type: int,
+) -> tuple[np.ndarray, np.ndarray]:
     n = len(close)
-
     out_fastk = np.full(n, np.nan, dtype=float)
     out_fastd = np.full(n, np.nan, dtype=float)
 
@@ -69,14 +40,8 @@ def stochf(
 
     start_idx = lookback_total
     end_idx = n - 1
-
     if start_idx > end_idx:
-        return data.with_columns(
-            [
-                pl.Series(name='stochf_fastk', values=out_fastk),
-                pl.Series(name='stochf_fastd', values=out_fastd),
-            ]
-        )
+        return out_fastk, out_fastd
 
     trailing_idx = start_idx - lookback_total
     today = trailing_idx + lookback_k
@@ -150,9 +115,91 @@ def stochf(
         out_fastk[start_idx:start_idx + out_count] = fastk_out[:out_count]
         out_fastd[start_idx:start_idx + out_count] = fastd_valid[:out_count]
 
-    return data.with_columns(
+    return out_fastk, out_fastd
+
+
+def _stochf_component(
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    fastk_period: int,
+    fastd_period: int,
+    fastd_ma_type: int,
+    component_index: int,
+) -> np.ndarray:
+    return _stochf_from_arrays(
+        high,
+        low,
+        close,
+        fastk_period,
+        fastd_period,
+        fastd_ma_type,
+    )[component_index]
+
+
+def stochf(
+    data: pl.DataFrame,
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    fastk_period: int = 5,
+    fastd_period: int = 3,
+    fastd_ma_type: int = 0,
+) -> pl.DataFrame:
+
+    '''
+    Compute Fast Stochastic Oscillator (TA_STOCHF): fast %K and fast %D.
+
+    Args:
+        data (pl.DataFrame): Dataset with high/low/close columns
+        high_col (str): Column name for high prices
+        low_col (str): Column name for low prices
+        close_col (str): Column name for close prices
+        fastk_period (int): Time period for Fast-K (1..100000)
+        fastd_period (int): Smoothing period for Fast-D (1..100000)
+        fastd_ma_type (int): MA type for Fast-D (0..8)
+
+    Returns:
+        pl.DataFrame: The input data with 'stochf_fastk' and 'stochf_fastd'
+    '''
+
+    if fastk_period < 1 or fastk_period > 100000:
+        raise ValueError('fastk_period must be between 1 and 100000')
+    if fastd_period < 1 or fastd_period > 100000:
+        raise ValueError('fastd_period must be between 1 and 100000')
+    if fastd_ma_type < 0 or fastd_ma_type > 8:
+        raise ValueError('fastd_ma_type must be between 0 and 8')
+
+    frame = data
+    return frame.with_columns(
         [
-            pl.Series(name='stochf_fastk', values=out_fastk),
-            pl.Series(name='stochf_fastd', values=out_fastd),
+            pl.struct([high_col, low_col, close_col]).map_batches(
+                lambda s: pl.Series(
+                    _stochf_component(
+                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
+                        fastk_period,
+                        fastd_period,
+                        fastd_ma_type,
+                        0,
+                    )
+                ),
+                return_dtype=pl.Float64,
+            ).alias('stochf_fastk'),
+            pl.struct([high_col, low_col, close_col]).map_batches(
+                lambda s: pl.Series(
+                    _stochf_component(
+                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
+                        fastk_period,
+                        fastd_period,
+                        fastd_ma_type,
+                        1,
+                    )
+                ),
+                return_dtype=pl.Float64,
+            ).alias('stochf_fastd'),
         ]
     )

@@ -1,4 +1,3 @@
-import numpy as np
 import polars as pl
 from limen.indicators.ma import ma
 
@@ -39,34 +38,32 @@ def ppo(
     if effective_slow < effective_fast:
         effective_fast, effective_slow = effective_slow, effective_fast
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    n = len(values)
     out_col = f'ppo_{fast_period}_{slow_period}_{ma_type}'
-    out = np.full(n, np.nan, dtype=float)
-
-    if n == 0:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+    frame = data
 
     fast_col = f'ma_{effective_fast}_{ma_type}'
     slow_col = f'ma_{effective_slow}_{ma_type}'
 
-    fast_ma = ma(
-        data,
+    frame = ma(
+        frame,
         price_col=price_col,
         period=effective_fast,
         ma_type=ma_type,
-    )[fast_col].to_numpy().astype(float, copy=False)
-
-    slow_ma = ma(
-        data,
+    )
+    frame = ma(
+        frame,
         price_col=price_col,
         period=effective_slow,
         ma_type=ma_type,
-    )[slow_col].to_numpy().astype(float, copy=False)
+    )
 
-    non_zero_mask = np.abs(slow_ma) >= TA_EPSILON
-    valid_mask = non_zero_mask & ~np.isnan(fast_ma) & ~np.isnan(slow_ma)
-    out[valid_mask] = ((fast_ma[valid_mask] - slow_ma[valid_mask]) / slow_ma[valid_mask]) * 100.0
-    out[~np.isnan(fast_ma) & ~np.isnan(slow_ma) & ~non_zero_mask] = 0.0
+    ppo_expr = (
+        pl.when(pl.col(fast_col).is_null() | pl.col(slow_col).is_null())
+        .then(None)
+        .when(pl.col(slow_col).abs() >= TA_EPSILON)
+        .then(((pl.col(fast_col) - pl.col(slow_col)) / pl.col(slow_col)) * 100.0)
+        .otherwise(0.0)
+        .alias(out_col)
+    )
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return frame.with_columns(ppo_expr).drop([fast_col, slow_col])

@@ -2,40 +2,16 @@ import numpy as np
 import polars as pl
 
 
-def sar(
-    data: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    acceleration: float = 0.02,
-    maximum: float = 0.2,
-) -> pl.DataFrame:
-
-    '''
-    Compute Parabolic SAR.
-
-    Args:
-        data (pl.DataFrame): Dataset with high/low columns
-        high_col (str): Column name for high prices
-        low_col (str): Column name for low prices
-        acceleration (float): Acceleration factor
-        maximum (float): Maximum acceleration factor
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'sar'
-    '''
-
-    if acceleration < 0.0 or acceleration > 3e37:
-        raise ValueError('acceleration must be between 0 and 3e37')
-    if maximum < 0.0 or maximum > 3e37:
-        raise ValueError('maximum must be between 0 and 3e37')
-
-    high = data[high_col].to_numpy().astype(float, copy=False)
-    low = data[low_col].to_numpy().astype(float, copy=False)
-    n = len(data)
-
+def _sar_from_arrays(
+    high: np.ndarray,
+    low: np.ndarray,
+    acceleration: float,
+    maximum: float,
+) -> np.ndarray:
+    n = len(high)
     out = np.full(n, np.nan, dtype=float)
     if n <= 1:
-        return data.with_columns(pl.Series(name='sar', values=out))
+        return out
 
     start_idx = 1
     end_idx = n - 1
@@ -43,7 +19,6 @@ def sar(
     af = acceleration
     if af > maximum:
         af = acceleration = maximum
-
 
     diff_p = high[start_idx] - high[start_idx - 1]
     diff_m = low[start_idx - 1] - low[start_idx]
@@ -149,4 +124,47 @@ def sar(
                 if sar_value < new_high:
                     sar_value = new_high
 
-    return data.with_columns(pl.Series(name='sar', values=out))
+    return out
+
+
+def sar(
+    data: pl.DataFrame,
+    high_col: str = 'high',
+    low_col: str = 'low',
+    acceleration: float = 0.02,
+    maximum: float = 0.2,
+) -> pl.DataFrame:
+
+    '''
+    Compute Parabolic SAR.
+
+    Args:
+        data (pl.DataFrame): Dataset with high/low columns
+        high_col (str): Column name for high prices
+        low_col (str): Column name for low prices
+        acceleration (float): Acceleration factor
+        maximum (float): Maximum acceleration factor
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'sar'
+    '''
+
+    if acceleration < 0.0 or acceleration > 3e37:
+        raise ValueError('acceleration must be between 0 and 3e37')
+    if maximum < 0.0 or maximum > 3e37:
+        raise ValueError('maximum must be between 0 and 3e37')
+
+    frame = data
+    sar_expr = pl.struct([high_col, low_col]).map_batches(
+        lambda s: pl.Series(
+            _sar_from_arrays(
+                s.struct.field(high_col).to_numpy().astype(float, copy=False),
+                s.struct.field(low_col).to_numpy().astype(float, copy=False),
+                acceleration,
+                maximum,
+            )
+        ),
+        return_dtype=pl.Float64,
+    ).alias('sar')
+
+    return frame.with_columns(sar_expr)

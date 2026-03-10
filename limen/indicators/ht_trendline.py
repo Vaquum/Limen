@@ -11,29 +11,13 @@ HT_TRENDLINE_SMOOTH_PERIOD = 0.0
 _SMOOTH_PRICE_SIZE = 50
 
 
-def ht_trendline(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-) -> pl.DataFrame:
-
-    '''
-    Compute Hilbert Transform - Instantaneous Trendline.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'ht_trendline'
-    '''
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _ht_trendline_from_values(values: np.ndarray) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = 63
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name='ht_trendline', values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -235,4 +219,32 @@ def ht_trendline(
 
         today += 1
 
-    return data.with_columns(pl.Series(name='ht_trendline', values=out))
+    return out
+
+
+def ht_trendline(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+) -> pl.DataFrame:
+
+    '''
+    Compute Hilbert Transform - Instantaneous Trendline.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'ht_trendline'
+    '''
+
+    frame = data
+    trendline_expr = pl.col(price_col).map_batches(
+        lambda s: pl.Series(
+            _ht_trendline_from_values(
+                s.to_numpy().astype(float, copy=False)
+            )
+        ),
+        return_dtype=pl.Float64,
+    ).alias('ht_trendline')
+    return frame.with_columns(trendline_expr)

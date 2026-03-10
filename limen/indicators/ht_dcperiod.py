@@ -8,29 +8,13 @@ HT_DCPERIOD_PERIOD = 0.0
 HT_DCPERIOD_SMOOTH_PERIOD = 0.0
 
 
-def ht_dcperiod(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-) -> pl.DataFrame:
-
-    '''
-    Compute Hilbert Transform - Dominant Cycle Period.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'ht_dcperiod'
-    '''
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _ht_dcperiod_from_values(values: np.ndarray) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = 32
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name='ht_dcperiod', values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -203,4 +187,32 @@ def ht_dcperiod(
 
         today += 1
 
-    return data.with_columns(pl.Series(name='ht_dcperiod', values=out))
+    return out
+
+
+def ht_dcperiod(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+) -> pl.DataFrame:
+
+    '''
+    Compute Hilbert Transform - Dominant Cycle Period.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'ht_dcperiod'
+    '''
+
+    return data.with_columns(
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_dcperiod_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_dcperiod')
+    )

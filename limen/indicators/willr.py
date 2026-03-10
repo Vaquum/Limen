@@ -1,5 +1,6 @@
-import numpy as np
 import polars as pl
+
+WILLR_SCALE = -100.0
 
 
 def willr(
@@ -27,68 +28,18 @@ def willr(
     if period < 2 or period > 100000:
         raise ValueError('period must be between 2 and 100000')
 
-    high = data[high_col].to_numpy().astype(float, copy=False)
-    low = data[low_col].to_numpy().astype(float, copy=False)
-    close = data[close_col].to_numpy().astype(float, copy=False)
-    n = len(close)
-
     out_col = f'willr_{period}'
-    out = np.full(n, np.nan, dtype=float)
+    highest = pl.col(high_col).rolling_max(window_size=period)
+    lowest = pl.col(low_col).rolling_min(window_size=period)
+    diff = (highest - lowest) / WILLR_SCALE
 
-    lookback = period - 1
-    start_idx = lookback
-    if start_idx >= n:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+    willr_expr = (
+        pl.when(pl.int_range(0, pl.len()) < (period - 1))
+        .then(None)
+        .when(diff != 0.0)
+        .then((highest - pl.col(close_col)) / diff)
+        .otherwise(0.0)
+        .alias(out_col)
+    )
 
-    today = start_idx
-    trailing_idx = start_idx - lookback
-    lowest_idx = -1
-    highest_idx = -1
-    lowest = 0.0
-    highest = 0.0
-    diff = 0.0
-
-    while today < n:
-        tmp = low[today]
-        if lowest_idx < trailing_idx:
-            lowest_idx = trailing_idx
-            lowest = low[lowest_idx]
-            i = lowest_idx + 1
-            while i <= today:
-                tmp = low[i]
-                if tmp < lowest:
-                    lowest_idx = i
-                    lowest = tmp
-                i += 1
-            diff = (highest - lowest) / (-100.0)
-        elif tmp <= lowest:
-            lowest_idx = today
-            lowest = tmp
-            diff = (highest - lowest) / (-100.0)
-
-        tmp = high[today]
-        if highest_idx < trailing_idx:
-            highest_idx = trailing_idx
-            highest = high[highest_idx]
-            i = highest_idx + 1
-            while i <= today:
-                tmp = high[i]
-                if tmp > highest:
-                    highest_idx = i
-                    highest = tmp
-                i += 1
-            diff = (highest - lowest) / (-100.0)
-        elif tmp >= highest:
-            highest_idx = today
-            highest = tmp
-            diff = (highest - lowest) / (-100.0)
-
-        if diff != 0.0:
-            out[today] = (highest - close[today]) / diff
-        else:
-            out[today] = 0.0
-
-        trailing_idx += 1
-        today += 1
-
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return data.with_columns(willr_expr)

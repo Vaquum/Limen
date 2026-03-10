@@ -5,35 +5,13 @@ import polars as pl
 _TA_EPSILON = 1e-14
 
 
-def kama(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-    period: int = 30,
-) -> pl.DataFrame:
-
-    '''
-    Compute Kaufman Adaptive Moving Average (KAMA).
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        period (int): Number of periods
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'kama_{period}'
-    '''
-
-    if period < 2 or period > 100000:
-        raise ValueError('period must be between 2 and 100000')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _kama_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
-    out_col = f'kama_{period}'
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = period
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -114,4 +92,39 @@ def kama(
         out[today] = prev_kama
         today += 1
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return out
+
+
+def kama(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    period: int = 30,
+) -> pl.DataFrame:
+
+    '''
+    Compute Kaufman Adaptive Moving Average (KAMA).
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        period (int): Number of periods
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'kama_{period}'
+    '''
+
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
+
+    out_col = f'kama_{period}'
+    frame = data
+    kama_expr = pl.col(price_col).map_batches(
+        lambda s: pl.Series(
+            _kama_from_values(
+                s.to_numpy().astype(float, copy=False),
+                period,
+            )
+        ),
+        return_dtype=pl.Float64,
+    ).alias(out_col)
+    return frame.with_columns(kama_expr)

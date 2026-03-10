@@ -11,30 +11,14 @@ HT_TRENDMODE_SMOOTH_PERIOD = 0.0
 _SMOOTH_PRICE_SIZE = 50
 
 
-def ht_trendmode(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-) -> pl.DataFrame:
-
-    '''
-    Compute Hilbert Transform - Trend vs Cycle Mode.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'ht_trendmode'
-    '''
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _ht_trendmode_from_values(values: np.ndarray) -> np.ndarray:
     n = len(values)
 
     out = np.zeros(n, dtype=float)
 
     lookback_total = 63
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name='ht_trendmode', values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -306,4 +290,32 @@ def ht_trendmode(
 
         today += 1
 
-    return data.with_columns(pl.Series(name='ht_trendmode', values=out))
+    return out
+
+
+def ht_trendmode(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+) -> pl.DataFrame:
+
+    '''
+    Compute Hilbert Transform - Trend vs Cycle Mode.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'ht_trendmode'
+    '''
+
+    return data.with_columns(
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_trendmode_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_trendmode')
+    )

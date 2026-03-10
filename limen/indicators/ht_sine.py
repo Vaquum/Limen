@@ -11,34 +11,14 @@ HT_SINE_SMOOTH_PERIOD = 0.0
 _SMOOTH_PRICE_SIZE = 50
 
 
-def ht_sine(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-) -> pl.DataFrame:
-
-    '''
-    Compute Hilbert Transform - SineWave.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-
-    Returns:
-        pl.DataFrame: The input data with new columns 'ht_sine' and
-            'ht_sine_lead'
-    '''
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _ht_sine_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     n = len(values)
     out_sine = np.full(n, np.nan, dtype=float)
     out_lead_sine = np.full(n, np.nan, dtype=float)
 
     lookback_total = 63
     if n <= lookback_total:
-        return data.with_columns([
-            pl.Series(name='ht_sine', values=out_sine),
-            pl.Series(name='ht_sine_lead', values=out_lead_sine),
-        ])
+        return out_sine, out_lead_sine
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -256,7 +236,41 @@ def ht_sine(
 
         today += 1
 
+    return out_sine, out_lead_sine
+
+
+def ht_sine(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+) -> pl.DataFrame:
+
+    '''
+    Compute Hilbert Transform - SineWave.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+
+    Returns:
+        pl.DataFrame: The input data with new columns 'ht_sine' and
+            'ht_sine_lead'
+    '''
+
     return data.with_columns([
-        pl.Series(name='ht_sine', values=out_sine),
-        pl.Series(name='ht_sine_lead', values=out_lead_sine),
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_sine_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )[0]
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_sine'),
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_sine_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )[1]
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_sine_lead'),
     ])

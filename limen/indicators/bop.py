@@ -1,4 +1,3 @@
-import numpy as np
 import polars as pl
 
 
@@ -27,15 +26,12 @@ def bop(
         pl.DataFrame: The input data with a new column 'bop'
     '''
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    denominator = pl.col(high_col) - pl.col(low_col)
+    bop_expr = (
+        pl.when(denominator >= BOP_EPSILON)
+        .then((pl.col(close_col) - pl.col(open_col)) / denominator)
+        .otherwise(0.0)
+        .alias('bop')
+    )
 
-    denominator = high_values - low_values
-    out = np.zeros(len(data), dtype=float)
-
-    valid = denominator >= BOP_EPSILON
-    out[valid] = (close_values[valid] - open_values[valid]) / denominator[valid]
-
-    return data.with_columns(pl.Series(name='bop', values=out))
+    return data.with_columns(bop_expr)

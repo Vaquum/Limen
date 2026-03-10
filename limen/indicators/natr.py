@@ -1,5 +1,13 @@
-import numpy as np
 import polars as pl
+
+from limen.indicators._atr import _atr_from_true_range_expr
+
+NATR_PERIOD_MIN = 1
+NATR_PERIOD_MAX = 100000
+NATR_SCALE = 100.0
+NATR_OUT_COL_PREFIX = 'natr_'
+NATR_TR_COL = '__natr_tr'
+NATR_ATR_COL = '__natr_atr'
 
 
 def natr(
@@ -24,45 +32,35 @@ def natr(
         pl.DataFrame: The input data with a new column 'natr_{period}'
     '''
 
-    if period < 1 or period > 100000:
-        raise ValueError('period must be between 1 and 100000')
+    if period < NATR_PERIOD_MIN or period > NATR_PERIOD_MAX:
+        raise ValueError(f'period must be between {NATR_PERIOD_MIN} and {NATR_PERIOD_MAX}')
 
-    high = data[high_col].to_numpy()
-    low = data[low_col].to_numpy()
-    close = data[close_col].to_numpy()
-    n = len(data)
+    out_col = f'{NATR_OUT_COL_PREFIX}{period}'
+    prev_close = pl.col(close_col).shift(1)
+    true_range_expr = (
+        pl.max_horizontal(pl.col(high_col), prev_close)
+        - pl.min_horizontal(pl.col(low_col), prev_close)
+    ).alias(NATR_TR_COL)
 
-    out = np.full(n, np.nan, dtype=float)
-    if n <= 1:
-        return data.with_columns(pl.Series(name=f'natr_{period}', values=out))
+    frame = data.with_columns(true_range_expr).with_columns(
+        _atr_from_true_range_expr(NATR_TR_COL, period).alias(NATR_ATR_COL)
+    )
 
-    tr = np.full(n, np.nan, dtype=float)
-    prev_close = close[:-1]
-    tr[1:] = np.maximum.reduce([
-        high[1:] - low[1:],
-        np.abs(high[1:] - prev_close),
-        np.abs(low[1:] - prev_close),
-    ])
+    if period <= 1:
+        return frame.with_columns(
+            pl.when(pl.int_range(0, pl.len()) < 1)
+            .then(None)
+            .otherwise(pl.col(NATR_TR_COL))
+            .alias(out_col)
+        ).drop([NATR_TR_COL, NATR_ATR_COL])
 
-    if period == 1:
-        out[1:] = tr[1:]
-        return data.with_columns(pl.Series(name=f'natr_{period}', values=out))
+    natr_expr = (
+        pl.when(pl.col(NATR_ATR_COL).is_null())
+        .then(None)
+        .when(pl.col(close_col) == 0.0)
+        .then(0.0)
+        .otherwise((pl.col(NATR_ATR_COL) / pl.col(close_col)) * NATR_SCALE)
+        .alias(out_col)
+    )
 
-    if n <= period:
-        return data.with_columns(pl.Series(name=f'natr_{period}', values=out))
-
-    prev_atr = tr[1:period + 1].mean()
-    out[period] = prev_atr
-
-    for i in range(period + 1, n):
-        prev_atr = ((prev_atr * (period - 1)) + tr[i]) / period
-        out[i] = prev_atr
-
-    valid = ~np.isnan(out)
-    non_zero_close = valid & (close != 0.0)
-    zero_close = valid & (close == 0.0)
-
-    out[non_zero_close] = (out[non_zero_close] / close[non_zero_close]) * 100.0
-    out[zero_close] = 0.0
-
-    return data.with_columns(pl.Series(name=f'natr_{period}', values=out))
+    return frame.with_columns(natr_expr).drop([NATR_TR_COL, NATR_ATR_COL])

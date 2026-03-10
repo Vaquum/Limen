@@ -2,64 +2,22 @@ import numpy as np
 import polars as pl
 
 
-def sarext(
-    data: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    start_value: float = 0.0,
-    offset_on_reverse: float = 0.0,
-    acceleration_init_long: float = 0.02,
-    acceleration_long: float = 0.02,
-    acceleration_max_long: float = 0.2,
-    acceleration_init_short: float = 0.02,
-    acceleration_short: float = 0.02,
-    acceleration_max_short: float = 0.2,
-) -> pl.DataFrame:
-
-    '''
-    Compute Parabolic SAR - Extended (SAREXT).
-
-    Args:
-        data (pl.DataFrame): Dataset with high/low columns
-        high_col (str): Column name for high prices
-        low_col (str): Column name for low prices
-        start_value (float): Start value and direction
-        offset_on_reverse (float): Percent offset on reversal
-        acceleration_init_long (float): Initial AF for long
-        acceleration_long (float): AF increment for long
-        acceleration_max_long (float): AF max for long
-        acceleration_init_short (float): Initial AF for short
-        acceleration_short (float): AF increment for short
-        acceleration_max_short (float): AF max for short
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'sarext'
-    '''
-
-    if start_value < -3e37 or start_value > 3e37:
-        raise ValueError('start_value must be between -3e37 and 3e37')
-    if offset_on_reverse < 0.0 or offset_on_reverse > 3e37:
-        raise ValueError('offset_on_reverse must be between 0 and 3e37')
-    if acceleration_init_long < 0.0 or acceleration_init_long > 3e37:
-        raise ValueError('acceleration_init_long must be between 0 and 3e37')
-    if acceleration_long < 0.0 or acceleration_long > 3e37:
-        raise ValueError('acceleration_long must be between 0 and 3e37')
-    if acceleration_max_long < 0.0 or acceleration_max_long > 3e37:
-        raise ValueError('acceleration_max_long must be between 0 and 3e37')
-    if acceleration_init_short < 0.0 or acceleration_init_short > 3e37:
-        raise ValueError('acceleration_init_short must be between 0 and 3e37')
-    if acceleration_short < 0.0 or acceleration_short > 3e37:
-        raise ValueError('acceleration_short must be between 0 and 3e37')
-    if acceleration_max_short < 0.0 or acceleration_max_short > 3e37:
-        raise ValueError('acceleration_max_short must be between 0 and 3e37')
-
-    high = data[high_col].to_numpy().astype(float, copy=False)
-    low = data[low_col].to_numpy().astype(float, copy=False)
-    n = len(data)
-
+def _sarext_from_arrays(
+    high: np.ndarray,
+    low: np.ndarray,
+    start_value: float,
+    offset_on_reverse: float,
+    acceleration_init_long: float,
+    acceleration_long: float,
+    acceleration_max_long: float,
+    acceleration_init_short: float,
+    acceleration_short: float,
+    acceleration_max_short: float,
+) -> np.ndarray:
+    n = len(high)
     out = np.full(n, np.nan, dtype=float)
     if n <= 1:
-        return data.with_columns(pl.Series(name='sarext', values=out))
+        return out
 
     start_idx = 1
     end_idx = n - 1
@@ -80,7 +38,6 @@ def sarext(
         acceleration_short = acceleration_max_short
 
     if start_value == 0.0:
-
         diff_p = high[start_idx] - high[start_idx - 1]
         diff_m = low[start_idx - 1] - low[start_idx]
         is_long = 0 if ((diff_m > 0.0) and (diff_p < diff_m)) else 1
@@ -200,4 +157,76 @@ def sarext(
                 if sar_value < new_high:
                     sar_value = new_high
 
-    return data.with_columns(pl.Series(name='sarext', values=out))
+    return out
+
+
+def sarext(
+    data: pl.DataFrame,
+    high_col: str = 'high',
+    low_col: str = 'low',
+    start_value: float = 0.0,
+    offset_on_reverse: float = 0.0,
+    acceleration_init_long: float = 0.02,
+    acceleration_long: float = 0.02,
+    acceleration_max_long: float = 0.2,
+    acceleration_init_short: float = 0.02,
+    acceleration_short: float = 0.02,
+    acceleration_max_short: float = 0.2,
+) -> pl.DataFrame:
+
+    '''
+    Compute Parabolic SAR - Extended (SAREXT).
+
+    Args:
+        data (pl.DataFrame): Dataset with high/low columns
+        high_col (str): Column name for high prices
+        low_col (str): Column name for low prices
+        start_value (float): Start value and direction
+        offset_on_reverse (float): Percent offset on reversal
+        acceleration_init_long (float): Initial AF for long
+        acceleration_long (float): AF increment for long
+        acceleration_max_long (float): AF max for long
+        acceleration_init_short (float): Initial AF for short
+        acceleration_short (float): AF increment for short
+        acceleration_max_short (float): AF max for short
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'sarext'
+    '''
+
+    if start_value < -3e37 or start_value > 3e37:
+        raise ValueError('start_value must be between -3e37 and 3e37')
+    if offset_on_reverse < 0.0 or offset_on_reverse > 3e37:
+        raise ValueError('offset_on_reverse must be between 0 and 3e37')
+    if acceleration_init_long < 0.0 or acceleration_init_long > 3e37:
+        raise ValueError('acceleration_init_long must be between 0 and 3e37')
+    if acceleration_long < 0.0 or acceleration_long > 3e37:
+        raise ValueError('acceleration_long must be between 0 and 3e37')
+    if acceleration_max_long < 0.0 or acceleration_max_long > 3e37:
+        raise ValueError('acceleration_max_long must be between 0 and 3e37')
+    if acceleration_init_short < 0.0 or acceleration_init_short > 3e37:
+        raise ValueError('acceleration_init_short must be between 0 and 3e37')
+    if acceleration_short < 0.0 or acceleration_short > 3e37:
+        raise ValueError('acceleration_short must be between 0 and 3e37')
+    if acceleration_max_short < 0.0 or acceleration_max_short > 3e37:
+        raise ValueError('acceleration_max_short must be between 0 and 3e37')
+
+    frame = data
+    sarext_expr = pl.struct([high_col, low_col]).map_batches(
+        lambda s: pl.Series(
+            _sarext_from_arrays(
+                s.struct.field(high_col).to_numpy().astype(float, copy=False),
+                s.struct.field(low_col).to_numpy().astype(float, copy=False),
+                start_value,
+                offset_on_reverse,
+                acceleration_init_long,
+                acceleration_long,
+                acceleration_max_long,
+                acceleration_init_short,
+                acceleration_short,
+                acceleration_max_short,
+            )
+        ),
+        return_dtype=pl.Float64,
+    ).alias('sarext')
+    return frame.with_columns(sarext_expr)

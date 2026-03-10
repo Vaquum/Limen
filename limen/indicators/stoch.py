@@ -22,52 +22,17 @@ def _ma_lookback(period: int, ma_type: int) -> int:
     raise ValueError('ma_type must be between 0 and 8')
 
 
-def stoch(
-    data: pl.DataFrame,
-    high_col: str = 'high',
-    low_col: str = 'low',
-    close_col: str = 'close',
-    fastk_period: int = 5,
-    slowk_period: int = 3,
-    slowk_ma_type: int = 0,
-    slowd_period: int = 3,
-    slowd_ma_type: int = 0,
-) -> pl.DataFrame:
-
-    '''
-    Compute Stochastic Oscillator (TA_STOCH): slow %K and slow %D.
-
-    Args:
-        data (pl.DataFrame): Dataset with high/low/close columns
-        high_col (str): Column name for high prices
-        low_col (str): Column name for low prices
-        close_col (str): Column name for close prices
-        fastk_period (int): Time period for Fast-K (1..100000)
-        slowk_period (int): Smoothing period for Slow-K (1..100000)
-        slowk_ma_type (int): MA type for Slow-K (0..8)
-        slowd_period (int): Smoothing period for Slow-D (1..100000)
-        slowd_ma_type (int): MA type for Slow-D (0..8)
-
-    Returns:
-        pl.DataFrame: The input data with 'stoch_slowk' and 'stoch_slowd'
-    '''
-
-    if fastk_period < 1 or fastk_period > 100000:
-        raise ValueError('fastk_period must be between 1 and 100000')
-    if slowk_period < 1 or slowk_period > 100000:
-        raise ValueError('slowk_period must be between 1 and 100000')
-    if slowd_period < 1 or slowd_period > 100000:
-        raise ValueError('slowd_period must be between 1 and 100000')
-    if slowk_ma_type < 0 or slowk_ma_type > 8:
-        raise ValueError('slowk_ma_type must be between 0 and 8')
-    if slowd_ma_type < 0 or slowd_ma_type > 8:
-        raise ValueError('slowd_ma_type must be between 0 and 8')
-
-    high = data[high_col].to_numpy().astype(float, copy=False)
-    low = data[low_col].to_numpy().astype(float, copy=False)
-    close = data[close_col].to_numpy().astype(float, copy=False)
+def _stoch_from_arrays(
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    fastk_period: int,
+    slowk_period: int,
+    slowk_ma_type: int,
+    slowd_period: int,
+    slowd_ma_type: int,
+) -> tuple[np.ndarray, np.ndarray]:
     n = len(close)
-
     out_slowk = np.full(n, np.nan, dtype=float)
     out_slowd = np.full(n, np.nan, dtype=float)
 
@@ -78,14 +43,8 @@ def stoch(
 
     start_idx = lookback_total
     end_idx = n - 1
-
     if start_idx > end_idx:
-        return data.with_columns(
-            [
-                pl.Series(name='stoch_slowk', values=out_slowk),
-                pl.Series(name='stoch_slowd', values=out_slowd),
-            ]
-        )
+        return out_slowk, out_slowd
 
     trailing_idx = start_idx - lookback_total
     today = trailing_idx + lookback_k
@@ -170,9 +129,107 @@ def stoch(
         out_slowk[start_idx:start_idx + out_count] = slowk_out[:out_count]
         out_slowd[start_idx:start_idx + out_count] = slowd_valid[:out_count]
 
-    return data.with_columns(
+    return out_slowk, out_slowd
+
+
+def _stoch_component(
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    fastk_period: int,
+    slowk_period: int,
+    slowk_ma_type: int,
+    slowd_period: int,
+    slowd_ma_type: int,
+    component_index: int,
+) -> np.ndarray:
+    return _stoch_from_arrays(
+        high,
+        low,
+        close,
+        fastk_period,
+        slowk_period,
+        slowk_ma_type,
+        slowd_period,
+        slowd_ma_type,
+    )[component_index]
+
+
+def stoch(
+    data: pl.DataFrame,
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    fastk_period: int = 5,
+    slowk_period: int = 3,
+    slowk_ma_type: int = 0,
+    slowd_period: int = 3,
+    slowd_ma_type: int = 0,
+) -> pl.DataFrame:
+
+    '''
+    Compute Stochastic Oscillator (TA_STOCH): slow %K and slow %D.
+
+    Args:
+        data (pl.DataFrame): Dataset with high/low/close columns
+        high_col (str): Column name for high prices
+        low_col (str): Column name for low prices
+        close_col (str): Column name for close prices
+        fastk_period (int): Time period for Fast-K (1..100000)
+        slowk_period (int): Smoothing period for Slow-K (1..100000)
+        slowk_ma_type (int): MA type for Slow-K (0..8)
+        slowd_period (int): Smoothing period for Slow-D (1..100000)
+        slowd_ma_type (int): MA type for Slow-D (0..8)
+
+    Returns:
+        pl.DataFrame: The input data with 'stoch_slowk' and 'stoch_slowd'
+    '''
+
+    if fastk_period < 1 or fastk_period > 100000:
+        raise ValueError('fastk_period must be between 1 and 100000')
+    if slowk_period < 1 or slowk_period > 100000:
+        raise ValueError('slowk_period must be between 1 and 100000')
+    if slowd_period < 1 or slowd_period > 100000:
+        raise ValueError('slowd_period must be between 1 and 100000')
+    if slowk_ma_type < 0 or slowk_ma_type > 8:
+        raise ValueError('slowk_ma_type must be between 0 and 8')
+    if slowd_ma_type < 0 or slowd_ma_type > 8:
+        raise ValueError('slowd_ma_type must be between 0 and 8')
+
+    frame = data
+    return frame.with_columns(
         [
-            pl.Series(name='stoch_slowk', values=out_slowk),
-            pl.Series(name='stoch_slowd', values=out_slowd),
+            pl.struct([high_col, low_col, close_col]).map_batches(
+                lambda s: pl.Series(
+                    _stoch_component(
+                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
+                        fastk_period,
+                        slowk_period,
+                        slowk_ma_type,
+                        slowd_period,
+                        slowd_ma_type,
+                        0,
+                    )
+                ),
+                return_dtype=pl.Float64,
+            ).alias('stoch_slowk'),
+            pl.struct([high_col, low_col, close_col]).map_batches(
+                lambda s: pl.Series(
+                    _stoch_component(
+                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
+                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
+                        fastk_period,
+                        slowk_period,
+                        slowk_ma_type,
+                        slowd_period,
+                        slowd_ma_type,
+                        1,
+                    )
+                ),
+                return_dtype=pl.Float64,
+            ).alias('stoch_slowd'),
         ]
     )

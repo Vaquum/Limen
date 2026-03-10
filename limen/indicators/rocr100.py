@@ -1,4 +1,3 @@
-import numpy as np
 import polars as pl
 
 
@@ -23,20 +22,14 @@ def rocr100(
     if period < 1 or period > 100000:
         raise ValueError('period must be between 1 and 100000')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    n = len(values)
     out_col = f'rocr100_{period}'
-    out = np.full(n, np.nan, dtype=float)
-
-    if n <= period:
-        return data.with_columns(pl.Series(name=out_col, values=out))
-
-    current = values[period:]
-    trailing = values[:-period]
-    non_zero_mask = trailing != 0.0
-
-    out_tail = np.zeros(n - period, dtype=float)
-    out_tail[non_zero_mask] = (current[non_zero_mask] / trailing[non_zero_mask]) * 100.0
-    out[period:] = out_tail
-
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    trailing = pl.col(price_col).shift(period)
+    rocr100_expr = (
+        pl.when(pl.int_range(0, pl.len()) < period)
+        .then(None)
+        .when(trailing != 0.0)
+        .then((pl.col(price_col) / trailing) * 100.0)
+        .otherwise(0.0)
+        .alias(out_col)
+    )
+    return data.with_columns(rocr100_expr)

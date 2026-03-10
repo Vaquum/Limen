@@ -1,4 +1,3 @@
-import numpy as np
 import polars as pl
 
 from limen.indicators.ma import ma
@@ -38,31 +37,25 @@ def apo(
     if effective_slow < effective_fast:
         effective_fast, effective_slow = effective_slow, effective_fast
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    n = len(values)
     out_col = f'apo_{fast_period}_{slow_period}_{ma_type}'
-    out = np.full(n, np.nan, dtype=float)
-
-    if n == 0:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+    frame = data
 
     fast_col = f'ma_{effective_fast}_{ma_type}'
     slow_col = f'ma_{effective_slow}_{ma_type}'
 
-    fast_ma = ma(
-        data,
+    frame = ma(
+        frame,
         price_col=price_col,
         period=effective_fast,
         ma_type=ma_type,
-    )[fast_col].to_numpy().astype(float, copy=False)
-
-    slow_ma = ma(
-        data,
+    )
+    frame = ma(
+        frame,
         price_col=price_col,
         period=effective_slow,
         ma_type=ma_type,
-    )[slow_col].to_numpy().astype(float, copy=False)
+    )
 
-    out[:] = fast_ma - slow_ma
-
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return frame.with_columns(
+        (pl.col(fast_col) - pl.col(slow_col)).alias(out_col)
+    ).drop([fast_col, slow_col])

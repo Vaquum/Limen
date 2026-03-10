@@ -1,8 +1,40 @@
-import numpy as np
 import polars as pl
 
-from limen.indicators._bbands import _stddev_from_var, _stddev_using_precalc_ma
 from limen.indicators.ma import ma
+
+BBANDS_PERIOD_MIN = 2
+BBANDS_PERIOD_MAX = 100000
+BBANDS_NBDEV_MIN = -3e37
+BBANDS_NBDEV_MAX = 3e37
+BBANDS_MATYPE_MIN = 0
+BBANDS_MATYPE_MAX = 8
+BBANDS_SMA_MATYPE = 0
+BBANDS_STDDEV_FLOOR = 0.0
+
+
+def _bbands_stddev_expr(
+    price_col: str,
+    middle_col: str,
+    period: int,
+    ma_type: int,
+) -> pl.Expr:
+    mean_sq = (pl.col(price_col) * pl.col(price_col)).rolling_mean(window_size=period)
+
+    if ma_type == BBANDS_SMA_MATYPE:
+        variance = mean_sq - (pl.col(middle_col) * pl.col(middle_col))
+    else:
+        mean = pl.col(price_col).rolling_mean(window_size=period)
+        variance = mean_sq - (mean * mean)
+
+    return (
+        pl.when(pl.col(middle_col).is_null())
+        .then(None)
+        .otherwise(
+            pl.when(variance > BBANDS_STDDEV_FLOOR)
+            .then(variance.sqrt())
+            .otherwise(BBANDS_STDDEV_FLOOR)
+        )
+    )
 
 
 def bbands(
@@ -29,78 +61,53 @@ def bbands(
         pl.DataFrame: Input data with 'bbands_upper', 'bbands_middle', 'bbands_lower'
     '''
 
-    if period < 2 or period > 100000:
-        raise ValueError('period must be between 2 and 100000')
-    if nb_dev_up < -3e37 or nb_dev_up > 3e37:
-        raise ValueError('nb_dev_up must be between -3e37 and 3e37')
-    if nb_dev_dn < -3e37 or nb_dev_dn > 3e37:
-        raise ValueError('nb_dev_dn must be between -3e37 and 3e37')
-    if ma_type < 0 or ma_type > 8:
-        raise ValueError('ma_type must be between 0 and 8')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    n = len(values)
-    upper = np.full(n, np.nan, dtype=float)
-    middle = np.full(n, np.nan, dtype=float)
-    lower = np.full(n, np.nan, dtype=float)
-    if n == 0:
-        return data.with_columns(
-            [
-                pl.Series(name='bbands_upper', values=upper),
-                pl.Series(name='bbands_middle', values=middle),
-                pl.Series(name='bbands_lower', values=lower),
-            ]
-        )
+    if period < BBANDS_PERIOD_MIN or period > BBANDS_PERIOD_MAX:
+        raise ValueError(f'period must be between {BBANDS_PERIOD_MIN} and {BBANDS_PERIOD_MAX}')
+    if nb_dev_up < BBANDS_NBDEV_MIN or nb_dev_up > BBANDS_NBDEV_MAX:
+        raise ValueError(f'nb_dev_up must be between {BBANDS_NBDEV_MIN} and {BBANDS_NBDEV_MAX}')
+    if nb_dev_dn < BBANDS_NBDEV_MIN or nb_dev_dn > BBANDS_NBDEV_MAX:
+        raise ValueError(f'nb_dev_dn must be between {BBANDS_NBDEV_MIN} and {BBANDS_NBDEV_MAX}')
+    if ma_type < BBANDS_MATYPE_MIN or ma_type > BBANDS_MATYPE_MAX:
+        raise ValueError(f'ma_type must be between {BBANDS_MATYPE_MIN} and {BBANDS_MATYPE_MAX}')
 
     middle_col = f'ma_{period}_{ma_type}'
-    middle_values = ma(data, price_col=price_col, period=period, ma_type=ma_type)[middle_col].to_numpy().astype(float, copy=False)
-    middle[:] = middle_values
+    frame = ma(
+        data,
+        price_col=price_col,
+        period=period,
+        ma_type=ma_type,
+    )
 
-    valid_idx = np.flatnonzero(~np.isnan(middle_values))
-    if valid_idx.size == 0:
-        return data.with_columns(
-            [
-                pl.Series(name='bbands_upper', values=upper),
-                pl.Series(name='bbands_middle', values=middle),
-                pl.Series(name='bbands_lower', values=lower),
-            ]
-        )
-    out_beg_idx = int(valid_idx[0])
-    out_nb_element = n - out_beg_idx
-
-    if ma_type == 0:
-        std_values = _stddev_using_precalc_ma(
-            values,
-            middle_values,
-            out_beg_idx,
-            out_nb_element,
-            period,
-        )
-    else:
-        _, std_values = _stddev_from_var(values, out_beg_idx, n - 1, period)
+    stddev_expr = _bbands_stddev_expr(
+        price_col=price_col,
+        middle_col=middle_col,
+        period=period,
+        ma_type=ma_type,
+    ).alias('__bbands_stddev')
+    frame = frame.with_columns(stddev_expr)
 
     if nb_dev_up == nb_dev_dn:
         if nb_dev_up == 1.0:
-            upper[out_beg_idx:] = middle_values[out_beg_idx:] + std_values
-            lower[out_beg_idx:] = middle_values[out_beg_idx:] - std_values
+            upper_expr = pl.col(middle_col) + pl.col('__bbands_stddev')
+            lower_expr = pl.col(middle_col) - pl.col('__bbands_stddev')
         else:
-            scaled = std_values * nb_dev_up
-            upper[out_beg_idx:] = middle_values[out_beg_idx:] + scaled
-            lower[out_beg_idx:] = middle_values[out_beg_idx:] - scaled
+            scaled_stddev = pl.col('__bbands_stddev') * nb_dev_up
+            upper_expr = pl.col(middle_col) + scaled_stddev
+            lower_expr = pl.col(middle_col) - scaled_stddev
     elif nb_dev_up == 1.0:
-        upper[out_beg_idx:] = middle_values[out_beg_idx:] + std_values
-        lower[out_beg_idx:] = middle_values[out_beg_idx:] - (std_values * nb_dev_dn)
+        upper_expr = pl.col(middle_col) + pl.col('__bbands_stddev')
+        lower_expr = pl.col(middle_col) - (pl.col('__bbands_stddev') * nb_dev_dn)
     elif nb_dev_dn == 1.0:
-        lower[out_beg_idx:] = middle_values[out_beg_idx:] - std_values
-        upper[out_beg_idx:] = middle_values[out_beg_idx:] + (std_values * nb_dev_up)
+        upper_expr = pl.col(middle_col) + (pl.col('__bbands_stddev') * nb_dev_up)
+        lower_expr = pl.col(middle_col) - pl.col('__bbands_stddev')
     else:
-        upper[out_beg_idx:] = middle_values[out_beg_idx:] + (std_values * nb_dev_up)
-        lower[out_beg_idx:] = middle_values[out_beg_idx:] - (std_values * nb_dev_dn)
+        upper_expr = pl.col(middle_col) + (pl.col('__bbands_stddev') * nb_dev_up)
+        lower_expr = pl.col(middle_col) - (pl.col('__bbands_stddev') * nb_dev_dn)
 
-    return data.with_columns(
+    return frame.with_columns(
         [
-            pl.Series(name='bbands_upper', values=upper),
-            pl.Series(name='bbands_middle', values=middle),
-            pl.Series(name='bbands_lower', values=lower),
+            upper_expr.alias('bbands_upper'),
+            pl.col(middle_col).alias('bbands_middle'),
+            lower_expr.alias('bbands_lower'),
         ]
-    )
+    ).drop([middle_col, '__bbands_stddev'])

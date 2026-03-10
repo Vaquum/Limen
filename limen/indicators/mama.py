@@ -7,42 +7,18 @@ from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
 MAMA_PERIOD = 0.0
 
 
-def mama(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-    fast_limit: float = 0.5,
-    slow_limit: float = 0.05,
-) -> pl.DataFrame:
-
-    '''
-    Compute MESA Adaptive Moving Average (MAMA) and Following Adaptive MA (FAMA).
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        fast_limit (float): Upper adaptive limit
-        slow_limit (float): Lower adaptive limit
-
-    Returns:
-        pl.DataFrame: The input data with new columns 'mama' and 'fama'
-    '''
-
-    if fast_limit < 0.01 or fast_limit > 0.99:
-        raise ValueError('fast_limit must be between 0.01 and 0.99')
-    if slow_limit < 0.01 or slow_limit > 0.99:
-        raise ValueError('slow_limit must be between 0.01 and 0.99')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _mama_from_values(
+    values: np.ndarray,
+    fast_limit: float,
+    slow_limit: float,
+) -> tuple[np.ndarray, np.ndarray]:
     n = len(values)
     out_mama = np.full(n, np.nan, dtype=float)
     out_fama = np.full(n, np.nan, dtype=float)
 
     lookback_total = 32
     if n <= lookback_total:
-        return data.with_columns([
-            pl.Series(name='mama', values=out_mama),
-            pl.Series(name='fama', values=out_fama),
-        ])
+        return out_mama, out_fama
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -243,7 +219,54 @@ def mama(
 
         today += 1
 
-    return data.with_columns([
-        pl.Series(name='mama', values=out_mama),
-        pl.Series(name='fama', values=out_fama),
+    return out_mama, out_fama
+
+
+def mama(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    fast_limit: float = 0.5,
+    slow_limit: float = 0.05,
+) -> pl.DataFrame:
+
+    '''
+    Compute MESA Adaptive Moving Average (MAMA) and Following Adaptive MA (FAMA).
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        fast_limit (float): Upper adaptive limit
+        slow_limit (float): Lower adaptive limit
+
+    Returns:
+        pl.DataFrame: The input data with new columns 'mama' and 'fama'
+    '''
+
+    if fast_limit < 0.01 or fast_limit > 0.99:
+        raise ValueError('fast_limit must be between 0.01 and 0.99')
+    if slow_limit < 0.01 or slow_limit > 0.99:
+        raise ValueError('slow_limit must be between 0.01 and 0.99')
+
+    frame = data
+    return frame.with_columns([
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _mama_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    fast_limit,
+                    slow_limit,
+                )[0]
+            ),
+            return_dtype=pl.Float64,
+        ).alias('mama'),
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _mama_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    fast_limit,
+                    slow_limit,
+                )[1]
+            ),
+            return_dtype=pl.Float64,
+        ).alias('fama'),
     ])

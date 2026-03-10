@@ -1,8 +1,57 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators.rsi import rsi
-from limen.indicators.stochf import stochf
+from limen.indicators.rsi import _rsi_from_values
+from limen.indicators.stochf import _stochf_from_arrays
+
+
+def _stochrsi_from_values(
+    values: np.ndarray,
+    period: int,
+    fastk_period: int,
+    fastd_period: int,
+    fastd_ma_type: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    n = len(values)
+    out_fastk = np.full(n, np.nan, dtype=float)
+    out_fastd = np.full(n, np.nan, dtype=float)
+
+    rsi_values = _rsi_from_values(values, period)
+    lookback_rsi = period
+    if n <= lookback_rsi:
+        return out_fastk, out_fastd
+
+    rsi_buffer = rsi_values[lookback_rsi:]
+    stochf_fastk, stochf_fastd = _stochf_from_arrays(
+        rsi_buffer,
+        rsi_buffer,
+        rsi_buffer,
+        fastk_period,
+        fastd_period,
+        fastd_ma_type,
+    )
+
+    end = lookback_rsi + len(rsi_buffer)
+    out_fastk[lookback_rsi:end] = stochf_fastk
+    out_fastd[lookback_rsi:end] = stochf_fastd
+    return out_fastk, out_fastd
+
+
+def _stochrsi_component(
+    values: np.ndarray,
+    period: int,
+    fastk_period: int,
+    fastd_period: int,
+    fastd_ma_type: int,
+    component_index: int,
+) -> np.ndarray:
+    return _stochrsi_from_values(
+        values,
+        period,
+        fastk_period,
+        fastd_period,
+        fastd_ma_type,
+    )[component_index]
 
 
 def stochrsi(
@@ -38,49 +87,34 @@ def stochrsi(
     if fastd_ma_type < 0 or fastd_ma_type > 8:
         raise ValueError('fastd_ma_type must be between 0 and 8')
 
-    n = len(data)
-    out_fastk = np.full(n, np.nan, dtype=float)
-    out_fastd = np.full(n, np.nan, dtype=float)
-
-    rsi_col = f'rsi_{period}'
-    rsi_values = rsi(
-        data,
-        price_col=price_col,
-        period=period,
-    )[rsi_col].to_numpy().astype(float, copy=False)
-
-    lookback_rsi = period
-    if n <= lookback_rsi:
-        return data.with_columns(
-            [
-                pl.Series(name='stochrsi_fastk', values=out_fastk),
-                pl.Series(name='stochrsi_fastd', values=out_fastd),
-            ]
-        )
-
-    rsi_buffer = rsi_values[lookback_rsi:]
-    rsi_df = pl.DataFrame({'_rsi': rsi_buffer})
-
-    stochf_result = stochf(
-        rsi_df,
-        high_col='_rsi',
-        low_col='_rsi',
-        close_col='_rsi',
-        fastk_period=fastk_period,
-        fastd_period=fastd_period,
-        fastd_ma_type=fastd_ma_type,
-    )
-
-    stochf_fastk = stochf_result['stochf_fastk'].to_numpy().astype(float, copy=False)
-    stochf_fastd = stochf_result['stochf_fastd'].to_numpy().astype(float, copy=False)
-
-    end = lookback_rsi + len(rsi_buffer)
-    out_fastk[lookback_rsi:end] = stochf_fastk
-    out_fastd[lookback_rsi:end] = stochf_fastd
-
-    return data.with_columns(
+    frame = data
+    return frame.with_columns(
         [
-            pl.Series(name='stochrsi_fastk', values=out_fastk),
-            pl.Series(name='stochrsi_fastd', values=out_fastd),
+            pl.col(price_col).map_batches(
+                lambda s: pl.Series(
+                    _stochrsi_component(
+                        s.to_numpy().astype(float, copy=False),
+                        period,
+                        fastk_period,
+                        fastd_period,
+                        fastd_ma_type,
+                        0,
+                    )
+                ),
+                return_dtype=pl.Float64,
+            ).alias('stochrsi_fastk'),
+            pl.col(price_col).map_batches(
+                lambda s: pl.Series(
+                    _stochrsi_component(
+                        s.to_numpy().astype(float, copy=False),
+                        period,
+                        fastk_period,
+                        fastd_period,
+                        fastd_ma_type,
+                        1,
+                    )
+                ),
+                return_dtype=pl.Float64,
+            ).alias('stochrsi_fastd'),
         ]
     )

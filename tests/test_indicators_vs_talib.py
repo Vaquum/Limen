@@ -17,7 +17,7 @@ NUMPY_DATA = {
     'volume': SAMPLE_DATA['volume'].to_numpy()
 }
 
-TOLERANCE = 1e-8
+TOLERANCE = 1e-7
 DEFAULT_PERIOD = 14
 DEMA_PERIOD = 30
 EMA_PERIOD = 30

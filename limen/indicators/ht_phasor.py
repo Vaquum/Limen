@@ -7,34 +7,14 @@ from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
 HT_PHASOR_PERIOD = 0.0
 
 
-def ht_phasor(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-) -> pl.DataFrame:
-
-    '''
-    Compute Hilbert Transform - Phasor Components.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-
-    Returns:
-        pl.DataFrame: The input data with new columns 'ht_phasor_inphase' and
-            'ht_phasor_quadrature'
-    '''
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _ht_phasor_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     n = len(values)
     out_inphase = np.full(n, np.nan, dtype=float)
     out_quadrature = np.full(n, np.nan, dtype=float)
 
     lookback_total = 32
     if n <= lookback_total:
-        return data.with_columns([
-            pl.Series(name='ht_phasor_inphase', values=out_inphase),
-            pl.Series(name='ht_phasor_quadrature', values=out_quadrature),
-        ])
+        return out_inphase, out_quadrature
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -213,7 +193,41 @@ def ht_phasor(
 
         today += 1
 
+    return out_inphase, out_quadrature
+
+
+def ht_phasor(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+) -> pl.DataFrame:
+
+    '''
+    Compute Hilbert Transform - Phasor Components.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+
+    Returns:
+        pl.DataFrame: The input data with new columns 'ht_phasor_inphase' and
+            'ht_phasor_quadrature'
+    '''
+
     return data.with_columns([
-        pl.Series(name='ht_phasor_inphase', values=out_inphase),
-        pl.Series(name='ht_phasor_quadrature', values=out_quadrature),
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_phasor_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )[0]
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_phasor_inphase'),
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_phasor_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )[1]
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_phasor_quadrature'),
     ])

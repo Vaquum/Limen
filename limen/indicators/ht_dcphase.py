@@ -9,29 +9,13 @@ HT_DCPHASE_SMOOTH_PERIOD = 0.0
 _SMOOTH_PRICE_SIZE = 50
 
 
-def ht_dcphase(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-) -> pl.DataFrame:
-
-    '''
-    Compute Hilbert Transform - Dominant Cycle Phase.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'ht_dcphase'
-    '''
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _ht_dcphase_from_values(values: np.ndarray) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = 63
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name='ht_dcphase', values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -247,4 +231,32 @@ def ht_dcphase(
 
         today += 1
 
-    return data.with_columns(pl.Series(name='ht_dcphase', values=out))
+    return out
+
+
+def ht_dcphase(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+) -> pl.DataFrame:
+
+    '''
+    Compute Hilbert Transform - Dominant Cycle Phase.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'ht_dcphase'
+    '''
+
+    return data.with_columns(
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _ht_dcphase_from_values(
+                    s.to_numpy().astype(float, copy=False)
+                )
+            ),
+            return_dtype=pl.Float64,
+        ).alias('ht_dcphase')
+    )

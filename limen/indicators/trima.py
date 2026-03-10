@@ -2,35 +2,13 @@ import numpy as np
 import polars as pl
 
 
-def trima(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-    period: int = 30,
-) -> pl.DataFrame:
-
-    '''
-    Compute Triangular Moving Average (TRIMA).
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        period (int): Number of periods
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'trima_{period}'
-    '''
-
-    if period < 2 or period > 100000:
-        raise ValueError('period must be between 2 and 100000')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _trima_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
-    out_col = f'trima_{period}'
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = period - 1
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -140,4 +118,40 @@ def trima(
             out[out_idx] = numerator * factor
             out_idx += 1
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return out
+
+
+def trima(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    period: int = 30,
+) -> pl.DataFrame:
+
+    '''
+    Compute Triangular Moving Average (TRIMA).
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        period (int): Number of periods
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'trima_{period}'
+    '''
+
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
+
+    out_col = f'trima_{period}'
+    frame = data
+    trima_expr = pl.col(price_col).map_batches(
+        lambda s: pl.Series(
+            _trima_from_values(
+                s.to_numpy().astype(float, copy=False),
+                period,
+            )
+        ),
+        return_dtype=pl.Float64,
+    ).alias(out_col)
+
+    return frame.with_columns(trima_expr)
