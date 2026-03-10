@@ -57,8 +57,10 @@ def ppo(
         ma_type=ma_type,
     )
 
+    missing_fast = pl.col(fast_col).is_null() | pl.col(fast_col).is_nan()
+    missing_slow = pl.col(slow_col).is_null() | pl.col(slow_col).is_nan()
     ppo_expr = (
-        pl.when(pl.col(fast_col).is_null() | pl.col(slow_col).is_null())
+        pl.when(missing_fast | missing_slow)
         .then(None)
         .when(pl.col(slow_col).abs() >= TA_EPSILON)
         .then(((pl.col(fast_col) - pl.col(slow_col)) / pl.col(slow_col)) * 100.0)
