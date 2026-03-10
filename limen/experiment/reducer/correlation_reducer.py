@@ -103,7 +103,7 @@ class CorrelationReducer(PruningStrategy):
             return []
 
         try:
-            corr_df = self._compute_correlations(df)
+            corr_df = self._compute_correlations(df, msq.domain_keys)
         except (ValueError, KeyError):
             logger.debug('Correlation computation failed, skipping')
             return []
@@ -141,10 +141,16 @@ class CorrelationReducer(PruningStrategy):
         return interventions
 
 
-    def _compute_correlations(self, df: pl.DataFrame) -> pl.DataFrame:
+    def _compute_correlations(self,
+                              df: pl.DataFrame,
+                              domain_keys: list[str]) -> pl.DataFrame:
 
         '''
         Compute bootstrap correlations via the existing correlation function.
+
+        Args:
+            df (pl.DataFrame): Experiment log
+            domain_keys (list[str]): Parameter names from the domain
 
         Returns:
             pl.DataFrame: Correlation results with columns 'feature',
@@ -152,7 +158,7 @@ class CorrelationReducer(PruningStrategy):
 
         '''
 
-        cols = [c for c in df.columns if c == self._metric or not c.startswith('_')]
+        cols = [c for c in domain_keys if c in df.columns] + [self._metric]
         pdf = df.select(cols).to_pandas()
         shim = _CorrelationShim(pdf)
 
