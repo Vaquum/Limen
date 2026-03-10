@@ -135,6 +135,17 @@ from tests.test_sanity_reducer import test_warning_suggestion
 from tests.test_sanity_reducer import test_warning_no_column
 from tests.test_sanity_reducer import test_suggestion_dedup
 from tests.test_sanity_reducer import test_suggestion_checkpoint_roundtrip
+from tests.test_correlation_reducer import test_wrong_direction_removal
+from tests.test_correlation_reducer import test_low_impact_suggestion
+from tests.test_correlation_reducer import test_dedup_across_triggers as test_corr_dedup_across_triggers
+from tests.test_correlation_reducer import test_inactive_returns_empty as test_corr_inactive_returns_empty
+from tests.test_correlation_reducer import test_early_return_empty_df as test_corr_early_return_empty_df
+from tests.test_correlation_reducer import test_min_observations_gate as test_corr_min_observations_gate
+from tests.test_correlation_reducer import test_insufficient_data_for_correlation
+from tests.test_correlation_reducer import test_state_roundtrip as test_corr_state_roundtrip
+from tests.test_correlation_reducer import test_set_state_missing_key as test_corr_set_state_missing_key
+from tests.test_correlation_reducer import test_maximize_false
+from tests.test_correlation_reducer import test_sign_stability_below_threshold
 
 tests = [
     test_param_domain_init,
@@ -248,6 +259,17 @@ tests = [
     test_warning_no_column,
     test_suggestion_dedup,
     test_suggestion_checkpoint_roundtrip,
+    test_wrong_direction_removal,
+    test_low_impact_suggestion,
+    test_corr_dedup_across_triggers,
+    test_corr_inactive_returns_empty,
+    test_corr_early_return_empty_df,
+    test_corr_min_observations_gate,
+    test_insufficient_data_for_correlation,
+    test_corr_state_roundtrip,
+    test_corr_set_state_missing_key,
+    test_maximize_false,
+    test_sign_stability_below_threshold,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
