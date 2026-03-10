@@ -461,13 +461,18 @@ class MSQ:
                 self._named_filter_descriptors[key] = (filter_type, filter_params)
                 restored_keys.add(key)
         all_named_keys = set(state.get('named_filter_keys', []))
-        non_restorable_named = len(all_named_keys - restored_keys)
-        non_restorable = state.get('custom_filters_count', 0) + non_restorable_named
+        lost_named = all_named_keys - restored_keys
+        custom_count = state.get('custom_filters_count', 0)
+        non_restorable = custom_count + len(lost_named)
         if non_restorable > 0:
+            parts = []
+            if lost_named:
+                parts.append(f"named filters: {sorted(lost_named)}")
+            if custom_count:
+                parts.append(f"{custom_count} custom filter(s)")
             import warnings
             warnings.warn(
-                f"Checkpoint had {non_restorable} filter(s) "
-                f"that cannot be restored from serialized state. "
+                f"Checkpoint had non-restorable filters ({', '.join(parts)}). "
                 f"Re-register them after resume.",
                 stacklevel=2,
             )

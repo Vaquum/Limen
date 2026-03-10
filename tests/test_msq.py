@@ -398,4 +398,4 @@ def test_non_descriptor_filter_warns_on_restore():
         warnings.simplefilter('always')
         msq2.set_state(state)
         assert len(w) == 1
-        assert 'cannot be restored' in str(w[0].message).lower()
+        assert 'non-restorable' in str(w[0].message).lower()
