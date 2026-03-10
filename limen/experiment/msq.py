@@ -54,6 +54,7 @@ class MSQ:
         self._n_permutations = n_permutations
         self._priority_queue: deque[dict[str, Any]] = deque()
         self._custom_filters: list[Callable[[dict[str, Any]], bool]] = []
+        self._named_filters: dict[str, Callable[[dict[str, Any]], bool]] = {}
         self._max_filter_retries = max_filter_retries
         self._trim_budget: int | None = None
         self._yielded_count: int = 0
@@ -88,10 +89,11 @@ class MSQ:
             if self._passes_filters(combo):
                 return self._yield_combo(combo, injected=False)
 
+        total_filters = len(self._custom_filters) + len(self._named_filters)
         raise FilterExhaustedError(
-            f"Custom filters rejected {self._max_filter_retries} "
+            f"Filters rejected {self._max_filter_retries} "
             f"consecutive combinations. "
-            f"Active filters: {len(self._custom_filters)}. "
+            f"Active filters: {total_filters}. "
             f"Consider relaxing filters or removing them."
         )
 
@@ -116,7 +118,9 @@ class MSQ:
 
         '''Return True if no filter wants to remove this combo.'''
 
-        return not any(f(combo) for f in self._custom_filters)
+        if any(f(combo) for f in self._custom_filters):
+            return False
+        return not any(f(combo) for f in self._named_filters.values())
 
 
     def remove_is(self, param: str, value: Any) -> bool:
@@ -161,6 +165,39 @@ class MSQ:
 
         self._log_intervention('remove_custom', condition=repr(condition))
         self._custom_filters.append(condition)
+
+
+    def set_filter(self,
+                   key: str,
+                   condition: Callable[[dict[str, Any]], bool]) -> None:
+
+        '''
+        Set a named filter. Replaces any existing filter with the same key.
+
+        Args:
+            key (str): Unique identifier for this filter
+            condition (Callable): Function taking a combo dict, returning True
+                to REMOVE, False to keep
+
+        '''
+
+        self._log_intervention('set_filter', key=key)
+        self._named_filters[key] = condition
+
+
+    def clear_filter(self, key: str) -> None:
+
+        '''
+        Remove a named filter by key. No-op if key not found.
+
+        Args:
+            key (str): Identifier of the filter to remove
+
+        '''
+
+        if key in self._named_filters:
+            self._log_intervention('clear_filter', key=key)
+            del self._named_filters[key]
 
 
     def trim(self, target_count: int) -> None:
@@ -353,6 +390,7 @@ class MSQ:
             'trim_budget': self._trim_budget,
             'priority_queue': list(self._priority_queue),
             'custom_filters_count': len(self._custom_filters),
+            'named_filter_keys': list(self._named_filters.keys()),
             'intervention_log': list(self._intervention_log),
             'strategy_state': self._strategy.get_state(),
         }
@@ -378,14 +416,16 @@ class MSQ:
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
         self._custom_filters = []
+        self._named_filters = {}
         self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
-        if state.get('custom_filters_count', 0) > 0:
+        non_restorable = state.get('custom_filters_count', 0) + len(state.get('named_filter_keys', []))
+        if non_restorable > 0:
             import warnings
             warnings.warn(
-                f"Checkpoint had {state['custom_filters_count']} custom "
-                f"filters that cannot be restored from serialized state. "
+                f"Checkpoint had {non_restorable} filter(s) "
+                f"that cannot be restored from serialized state. "
                 f"Re-register them after resume.",
                 stacklevel=2,
             )
