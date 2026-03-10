@@ -44,6 +44,11 @@ class SaturationReducer(PruningStrategy):
 
         '''
 
+        if not 0.0 <= retain_fraction <= 1.0:
+            raise ValueError(
+                f"retain_fraction must be between 0.0 and 1.0, got {retain_fraction}"
+            )
+
         super().__init__(active=active)
         self._metric = metric
         self._cv_threshold = cv_threshold

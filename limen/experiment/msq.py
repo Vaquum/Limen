@@ -195,7 +195,11 @@ class MSQ:
                 'filter_type and filter_params must both be provided or both omitted.'
             )
 
-        self._log_intervention('set_filter', key=key)
+        log_kwargs: dict[str, Any] = {'key': key}
+        if filter_type is not None:
+            log_kwargs['filter_type'] = filter_type
+            log_kwargs['filter_params'] = filter_params
+        self._log_intervention('set_filter', **log_kwargs)
         self._named_filters[key] = condition
         if filter_type is not None:
             self._named_filter_descriptors[key] = (filter_type, filter_params)
