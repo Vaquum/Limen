@@ -1,0 +1,279 @@
+import logging
+from typing import Any
+
+import polars as pl
+
+from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen.log._experiment_parameter_correlation import _experiment_parameter_correlation
+
+logger = logging.getLogger(__name__)
+
+
+class _CorrelationShim:
+
+    '''Minimal wrapper to satisfy _experiment_parameter_correlation's self.experiment_log interface.'''
+
+    def __init__(self, experiment_log: Any) -> None:
+
+        self.experiment_log = experiment_log
+
+
+class CorrelationReducer(PruningStrategy):
+
+    '''
+    Prune parameter values based on bootstrap correlation analysis.
+
+    Two pruning modes:
+    - Wrong-direction: parameters with strong negative correlation
+      (for maximization) get their worst-performing value removed
+    - Low-impact: parameters with negligible |correlation| and high
+      sign stability get a keep_is suggestion for the best value
+
+    '''
+
+    def __init__(self,
+                 *,
+                 metric: str,
+                 method: str = 'spearman',
+                 min_observations: int = 50,
+                 prune_threshold: float = 0.05,
+                 sign_stability_threshold: float = 0.8,
+                 n_boot: int = 300,
+                 negative_correlation_threshold: float = -0.3,
+                 maximize: bool = True,
+                 random_state: int = 0,
+                 active: bool = True) -> None:
+
+        '''
+        Initialize the CorrelationReducer.
+
+        Args:
+            metric (str): Target metric column for correlation analysis
+            method (str): Correlation method ('spearman', 'pearson', 'kendall')
+            min_observations (int): Minimum rows before correlation is computed
+            prune_threshold (float): |correlation| below this is considered
+                low-impact (eligible for keep_is suggestion)
+            sign_stability_threshold (float): Minimum sign stability to act
+            n_boot (int): Number of bootstrap resamples
+            negative_correlation_threshold (float): Correlation below this
+                triggers wrong-direction removal (for maximize=True)
+            maximize (bool): Whether higher metric values are better
+            random_state (int): RNG seed for bootstrap reproducibility
+            active (bool): Whether this reducer is enabled
+
+        '''
+
+        super().__init__(active=active)
+        self._metric = metric
+        self._method = method
+        self._min_observations = min_observations
+        self._prune_threshold = prune_threshold
+        self._sign_stability_threshold = sign_stability_threshold
+        self._n_boot = n_boot
+        self._negative_correlation_threshold = negative_correlation_threshold
+        self._maximize = maximize
+        self._random_state = random_state
+        self._applied: set[tuple[str, Any]] = set()
+        self._suggested: set[str] = set()
+
+
+    def analyze_and_intervene(self,
+                              log: pl.DataFrame,
+                              msq: Any) -> list[dict[str, Any]]:
+
+        '''
+        Analyze parameter correlations and return interventions.
+
+        Computes bootstrap correlations between each parameter and the
+        target metric. Emits remove_is for wrong-direction parameters
+        and keep_is suggestions for low-impact parameters.
+
+        '''
+
+        if not self._active:
+            return []
+
+        df = log
+
+        if df.is_empty() or self._metric not in df.columns:
+            return []
+
+        if len(df) < self._min_observations:
+            return []
+
+        try:
+            corr_df = self._compute_correlations(df)
+        except (ValueError, KeyError):
+            logger.debug('Correlation computation failed, skipping')
+            return []
+
+        if corr_df.is_empty():
+            return []
+
+        domain_params = set(msq.domain_keys)
+        interventions: list[dict[str, Any]] = []
+
+        for row in corr_df.iter_rows(named=True):
+            param = row['feature']
+
+            if param not in domain_params:
+                continue
+
+            corr_med = row['corr_med']
+            sign_stability = row['sign_stability']
+
+            if sign_stability < self._sign_stability_threshold:
+                continue
+
+            interventions.extend(
+                self._check_wrong_direction(df, param, corr_med)
+            )
+            interventions.extend(
+                self._check_low_impact(df, param, corr_med)
+            )
+
+        return interventions
+
+
+    def _compute_correlations(self, df: pl.DataFrame) -> pl.DataFrame:
+
+        '''
+        Compute bootstrap correlations via the existing correlation function.
+
+        Returns:
+            pl.DataFrame: Correlation results with columns 'feature',
+                'corr_med', 'sign_stability'
+
+        '''
+
+        pdf = df.to_pandas()
+        shim = _CorrelationShim(pdf)
+
+        result = _experiment_parameter_correlation(
+            shim,
+            self._metric,
+            heads=(0.99,),
+            method=self._method,
+            n_boot=self._n_boot,
+            min_n=self._min_observations,
+            random_state=self._random_state,
+        )
+
+        return pl.from_pandas(result.reset_index())
+
+
+    def _check_wrong_direction(self,
+                               df: pl.DataFrame,
+                               param: str,
+                               corr_med: float) -> list[dict[str, Any]]:
+
+        '''Emit remove_is for the worst-performing value if correlation is wrong-direction.'''
+
+        if self._maximize:
+            is_wrong = corr_med < self._negative_correlation_threshold
+        else:
+            is_wrong = corr_med > abs(self._negative_correlation_threshold)
+
+        if not is_wrong:
+            return []
+
+        value_means = self._value_means(df, param)
+        if not value_means:
+            return []
+
+        if self._maximize:
+            worst_value = min(value_means, key=value_means.get)
+        else:
+            worst_value = max(value_means, key=value_means.get)
+
+        if (param, worst_value) in self._applied:
+            return []
+
+        self._applied.add((param, worst_value))
+        direction = 'negative' if self._maximize else 'positive'
+        return [{
+            'op': 'remove_is',
+            'param': param,
+            'value': worst_value,
+            'reason': f"wrong-direction ({direction}) correlation {corr_med:.3f} for {param}",
+        }]
+
+
+    def _check_low_impact(self,
+                          df: pl.DataFrame,
+                          param: str,
+                          corr_med: float) -> list[dict[str, Any]]:
+
+        '''Emit keep_is suggestion for the best value if parameter has negligible impact.'''
+
+        if abs(corr_med) >= self._prune_threshold:
+            return []
+
+        if param in self._suggested:
+            return []
+
+        value_means = self._value_means(df, param)
+        if not value_means:
+            return []
+
+        if self._maximize:
+            best_value = max(value_means, key=value_means.get)
+        else:
+            best_value = min(value_means, key=value_means.get)
+
+        self._suggested.add(param)
+        return [{
+            'op': 'keep_is',
+            'param': param,
+            'value': best_value,
+            'action': ACTION_SUGGEST,
+            'reason': f"low-impact correlation {corr_med:.3f} for {param}",
+        }]
+
+
+    def _value_means(self,
+                     df: pl.DataFrame,
+                     param: str) -> dict[Any, float]:
+
+        '''Compute mean metric per parameter value, excluding nulls and NaN.'''
+
+        if param not in df.columns:
+            return {}
+
+        metric_col = pl.col(self._metric)
+        filter_expr = metric_col.is_not_null()
+        if df[self._metric].dtype.is_float():
+            filter_expr = filter_expr & metric_col.is_not_nan()
+
+        stats = (
+            df.filter(filter_expr)
+              .group_by(param)
+              .agg(metric_col.mean().alias('_mean'))
+        )
+
+        return {
+            row[param]: row['_mean']
+            for row in stats.iter_rows(named=True)
+        }
+
+
+    def get_state(self) -> dict[str, Any]:
+
+        '''Export state for checkpointing.'''
+
+        return {
+            'applied': list(self._applied),
+            'suggested': list(self._suggested),
+        }
+
+
+    def set_state(self, state: dict[str, Any]) -> None:
+
+        '''Restore state from checkpoint.'''
+
+        if 'applied' not in state:
+            raise ValueError("Invalid CorrelationReducer state: missing required key 'applied'.")
+
+        self._applied = set(tuple(x) for x in state['applied'])
+        self._suggested = set(state.get('suggested', []))
