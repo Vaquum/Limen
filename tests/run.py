@@ -173,6 +173,21 @@ from tests.test_focus_reducer import test_mixed_param_types as test_focus_mixed_
 from tests.test_focus_reducer import test_improvement_updates_combo
 from tests.test_focus_reducer import test_state_roundtrip as test_focus_state_roundtrip
 from tests.test_focus_reducer import test_set_state_missing_key as test_focus_set_state_missing_key
+from tests.test_budget_reducer import test_constructor_validation as test_budget_constructor_validation
+from tests.test_budget_reducer import test_early_returns as test_budget_early_returns
+from tests.test_budget_reducer import test_trimmed_flag_prevents_retrim
+from tests.test_budget_reducer import test_permutation_budget_trim_random
+from tests.test_budget_reducer import test_permutation_budget_check_after_pct_gate
+from tests.test_budget_reducer import test_walltime_budget_trim
+from tests.test_budget_reducer import test_walltime_exceeded
+from tests.test_budget_reducer import test_no_trim_when_within_budget
+from tests.test_budget_reducer import test_worst_first_trim
+from tests.test_budget_reducer import test_worst_first_fallback_to_random
+from tests.test_budget_reducer import test_both_budgets_takes_min
+from tests.test_budget_reducer import test_no_budget_configured
+from tests.test_budget_reducer import test_state_roundtrip as test_budget_state_roundtrip
+from tests.test_budget_reducer import test_set_state_missing_key as test_budget_set_state_missing_key
+from tests.test_budget_reducer import test_worst_first_maximize_false
 
 tests = [
     test_param_domain_init,
@@ -324,6 +339,21 @@ tests = [
     test_improvement_updates_combo,
     test_focus_state_roundtrip,
     test_focus_set_state_missing_key,
+    test_budget_constructor_validation,
+    test_budget_early_returns,
+    test_trimmed_flag_prevents_retrim,
+    test_permutation_budget_trim_random,
+    test_permutation_budget_check_after_pct_gate,
+    test_walltime_budget_trim,
+    test_walltime_exceeded,
+    test_no_trim_when_within_budget,
+    test_worst_first_trim,
+    test_worst_first_fallback_to_random,
+    test_both_budgets_takes_min,
+    test_no_budget_configured,
+    test_budget_state_roundtrip,
+    test_budget_set_state_missing_key,
+    test_worst_first_maximize_false,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
