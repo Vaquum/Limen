@@ -128,7 +128,7 @@ class BudgetReducer(PruningStrategy):
         new_total = yielded + target
         interventions: list[dict[str, Any]] = []
 
-        if self._trim_strategy == TRIM_WORST_FIRST and self._metric is not None:
+        if self._trim_strategy == TRIM_WORST_FIRST:
             worst_interventions = self._trim_worst_first(log, msq, target)
             interventions.extend(worst_interventions)
 
