@@ -24,6 +24,6 @@ FILTER_BUILDERS: dict[str, Callable[[dict[str, Any]], Callable[[dict[str, Any]],
         c.get(fp['param']) == fp['value']
         and int(hashlib.sha256(
             str(sorted(c.items())).encode()
-        ).hexdigest(), 16) % 100 >= int(fp['fraction'] * 100)
+        ).hexdigest(), 16) % 10_000 >= round(fp['fraction'] * 10_000)
     ),
 }
