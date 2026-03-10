@@ -152,7 +152,8 @@ class CorrelationReducer(PruningStrategy):
 
         '''
 
-        pdf = df.to_pandas()
+        cols = [c for c in df.columns if c == self._metric or not c.startswith('_')]
+        pdf = df.select(cols).to_pandas()
         shim = _CorrelationShim(pdf)
 
         result = _experiment_parameter_correlation(

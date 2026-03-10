@@ -10,7 +10,7 @@ from limen.experiment.search_strategy import SearchStrategy
 
 class FilterExhaustedError(Exception):
 
-    '''Raised when custom filters aggressively reject too many consecutive combinations.'''
+    '''Raised when filters reject too many consecutive combinations.'''
 
 
 class MSQ:

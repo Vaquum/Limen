@@ -294,7 +294,9 @@ class FocusReducer(PruningStrategy):
                     values = list(range(lower, upper + 1))
                 else:
                     step = (range_size - 1) / (self._variation_count - 1)
-                    values = [lower + round(i * step) for i in range(self._variation_count)]
+                    values = sorted(set(
+                        lower + round(i * step) for i in range(self._variation_count)
+                    ))
             else:
                 step = (upper - lower) / (self._variation_count - 1)
                 values = [lower + i * step for i in range(self._variation_count)]
