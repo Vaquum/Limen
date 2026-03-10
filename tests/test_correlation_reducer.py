@@ -1,3 +1,5 @@
+import random
+
 import polars as pl
 
 from limen.experiment.reducer.correlation_reducer import CorrelationReducer
@@ -85,50 +87,32 @@ def test_dedup_across_triggers():
     assert len(a_removals_2) == 0
 
 
-def test_inactive_returns_empty():
+def test_early_returns():
 
     df = _make_correlated_df()
     msq, _, _ = make_msq(params={'a': [0, 1], 'b': [10, 20]})
 
-    reducer = CorrelationReducer(
-        metric='score',
-        active=False,
-        min_observations=10,
-        n_boot=50,
-    )
-    assert reducer.analyze_and_intervene(df, msq) == []
+    inactive = CorrelationReducer(metric='score', active=False, min_observations=10, n_boot=50)
+    assert inactive.analyze_and_intervene(df, msq) == []
 
-
-def test_early_return_empty_df():
-
-    msq, _, _ = make_msq(params={'a': [0, 1], 'b': [10, 20]})
+    reducer = CorrelationReducer(metric='score', min_observations=10, n_boot=50)
 
     df_empty = pl.DataFrame(
         {'a': [], 'b': [], 'score': []},
         schema={'a': pl.Int64, 'b': pl.Int64, 'score': pl.Float64},
     )
-    reducer = CorrelationReducer(metric='score', min_observations=10, n_boot=50)
     assert reducer.analyze_and_intervene(df_empty, msq) == []
 
     df_no_metric = pl.DataFrame({'a': [0, 1], 'b': [10, 20], 'other': [1.0, 2.0]})
     assert reducer.analyze_and_intervene(df_no_metric, msq) == []
 
-
-def test_min_observations_gate():
-
-    df = pl.DataFrame({
+    df_few = pl.DataFrame({
         'a': [0, 1, 0, 1, 0],
         'b': [10, 20, 10, 20, 10],
         'score': [8.0, 2.0, 7.0, 3.0, 9.0],
     })
-    msq, _, _ = make_msq(params={'a': [0, 1], 'b': [10, 20]})
-
-    reducer = CorrelationReducer(
-        metric='score',
-        min_observations=100,
-        n_boot=50,
-    )
-    assert reducer.analyze_and_intervene(df, msq) == []
+    few_reducer = CorrelationReducer(metric='score', min_observations=100, n_boot=50)
+    assert few_reducer.analyze_and_intervene(df_few, msq) == []
 
 
 def test_insufficient_data_for_correlation():
@@ -206,7 +190,6 @@ def test_maximize_false():
 def test_sign_stability_below_threshold():
 
     n = 60
-    import random
     random.seed(42)
     scores = [random.gauss(5.0, 2.0) for _ in range(n)]
 
