@@ -55,6 +55,7 @@ class MSQ:
         self._priority_queue: deque[dict[str, Any]] = deque()
         self._custom_filters: list[Callable[[dict[str, Any]], bool]] = []
         self._named_filters: dict[str, Callable[[dict[str, Any]], bool]] = {}
+        self._named_filter_descriptors: dict[str, tuple[str, dict[str, Any]]] = {}
         self._max_filter_retries = max_filter_retries
         self._trim_budget: int | None = None
         self._yielded_count: int = 0
@@ -169,7 +170,10 @@ class MSQ:
 
     def set_filter(self,
                    key: str,
-                   condition: Callable[[dict[str, Any]], bool]) -> None:
+                   condition: Callable[[dict[str, Any]], bool],
+                   *,
+                   filter_type: str | None = None,
+                   filter_params: dict[str, Any] | None = None) -> None:
 
         '''
         Set a named filter. Replaces any existing filter with the same key.
@@ -178,11 +182,20 @@ class MSQ:
             key (str): Unique identifier for this filter
             condition (Callable): Function taking a combo dict, returning True
                 to REMOVE, False to keep
+            filter_type (str | None): Declarative filter type for checkpoint
+                restoration. When provided with filter_params, the filter
+                can be rebuilt on resume
+            filter_params (dict[str, Any] | None): Parameters for the filter
+                builder. Required when filter_type is provided
 
         '''
 
         self._log_intervention('set_filter', key=key)
         self._named_filters[key] = condition
+        if filter_type is not None and filter_params is not None:
+            self._named_filter_descriptors[key] = (filter_type, filter_params)
+        elif key in self._named_filter_descriptors:
+            del self._named_filter_descriptors[key]
 
 
     def clear_filter(self, key: str) -> None:
@@ -198,6 +211,7 @@ class MSQ:
         if key in self._named_filters:
             self._log_intervention('clear_filter', key=key)
             del self._named_filters[key]
+            self._named_filter_descriptors.pop(key, None)
 
 
     def trim(self, target_count: int) -> None:
@@ -391,6 +405,9 @@ class MSQ:
             'priority_queue': list(self._priority_queue),
             'custom_filters_count': len(self._custom_filters),
             'named_filter_keys': list(self._named_filters.keys()),
+            'named_filter_descriptors': {
+                k: list(v) for k, v in self._named_filter_descriptors.items()
+            },
             'intervention_log': list(self._intervention_log),
             'strategy_state': self._strategy.get_state(),
         }
@@ -411,16 +428,29 @@ class MSQ:
             if key not in state:
                 raise ValueError(f"Invalid MSQ state: missing required key '{key}'.")
 
+        from limen.experiment.reducer.filter_types import FILTER_BUILDERS
+
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
         self._custom_filters = []
         self._named_filters = {}
+        self._named_filter_descriptors = {}
         self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
-        non_restorable = state.get('custom_filters_count', 0) + len(state.get('named_filter_keys', []))
+        descriptors = state.get('named_filter_descriptors', {})
+        for key, (filter_type, filter_params) in descriptors.items():
+            builder = FILTER_BUILDERS.get(filter_type)
+            if builder is not None:
+                self._named_filters[key] = builder(filter_params)
+                self._named_filter_descriptors[key] = (filter_type, filter_params)
+
+        restored_keys = set(descriptors.keys())
+        all_named_keys = set(state.get('named_filter_keys', []))
+        non_restorable_named = len(all_named_keys - restored_keys)
+        non_restorable = state.get('custom_filters_count', 0) + non_restorable_named
         if non_restorable > 0:
             import warnings
             warnings.warn(

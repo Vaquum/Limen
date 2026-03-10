@@ -99,7 +99,7 @@ class BudgetReducer(PruningStrategy):
             return []
 
         remaining = msq.remaining_count()
-        if not remaining:
+        if remaining is not None and remaining == 0:
             return []
 
         yielded = msq.yielded_count
@@ -107,7 +107,7 @@ class BudgetReducer(PruningStrategy):
             return []
 
         target = self._compute_target(yielded)
-        if target is None or target >= remaining:
+        if target is None or (remaining is not None and target >= remaining):
             return []
 
         new_total = yielded + target
@@ -115,12 +115,9 @@ class BudgetReducer(PruningStrategy):
 
         if self._trim_strategy == TRIM_WORST_FIRST and self._metric is not None:
             worst_interventions = self._trim_worst_first(log, msq, target)
-            if worst_interventions:
-                interventions.extend(worst_interventions)
-            else:
-                interventions.append(self._trim_random(new_total))
-        else:
-            interventions.append(self._trim_random(new_total))
+            interventions.extend(worst_interventions)
+
+        interventions.append(self._trim_random(new_total))
 
         self._trimmed = True
 
@@ -149,7 +146,7 @@ class BudgetReducer(PruningStrategy):
             if budget_pct >= self._check_after_pct:
                 if elapsed_hours >= self._max_walltime_hours:
                     target_from_walltime = 0
-                elif yielded > 0:
+                elif elapsed_hours > 0 and yielded > 0:
                     rate_per_hour = yielded / elapsed_hours
                     hours_left = self._max_walltime_hours - elapsed_hours
                     target_from_walltime = int(rate_per_hour * hours_left)
