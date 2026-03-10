@@ -7,7 +7,7 @@ CDLIDENTICAL3CROWS_SHADOW_VS_AVG_PERIOD = 10
 CDLIDENTICAL3CROWS_SHADOW_VS_FACTOR = 0.1
 
 
-def cdlidentical3crows(
+def _cdlidentical3crows_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -112,3 +112,27 @@ def cdlidentical3crows(
         equal_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdlidentical3crows', values=out))
+
+
+def cdlidentical3crows(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdlidentical3crows'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdlidentical3crows_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

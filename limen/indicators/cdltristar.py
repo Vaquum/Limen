@@ -6,7 +6,7 @@ CDLTRISTAR_BODY_DOJI_FACTOR = 0.1
 CDLTRISTAR_BODY_PERIOD_TOTAL = 0.0
 
 
-def cdltristar(
+def _cdltristar_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -85,3 +85,27 @@ def cdltristar(
         body_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdltristar', values=out))
+
+
+def cdltristar(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdltristar'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdltristar_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

@@ -7,7 +7,7 @@ CDLUNIQUE3RIVER_BODY_SHORT_AVG_PERIOD = 10
 CDLUNIQUE3RIVER_BODY_SHORT_PERIOD_TOTAL = 0.0
 
 
-def cdlunique3river(
+def _cdlunique3river_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -97,3 +97,27 @@ def cdlunique3river(
         body_short_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdlunique3river', values=out))
+
+
+def cdlunique3river(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdlunique3river'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdlunique3river_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

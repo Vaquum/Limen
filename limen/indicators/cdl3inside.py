@@ -7,7 +7,7 @@ CDL3INSIDE_BODY_SHORT_AVG_PERIOD = 10
 CDL3INSIDE_BODY_SHORT_PERIOD_TOTAL = 0.0
 
 
-def cdl3inside(
+def _cdl3inside_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -98,3 +98,27 @@ def cdl3inside(
         body_short_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdl3inside', values=out))
+
+
+def cdl3inside(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdl3inside'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdl3inside_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

@@ -5,7 +5,7 @@ CDLRISEFALL3METHODS_BODY_LONG_AVG_PERIOD = 10
 CDLRISEFALL3METHODS_BODY_SHORT_AVG_PERIOD = 10
 
 
-def cdlrisefall3methods(
+def _cdlrisefall3methods_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -121,3 +121,27 @@ def cdlrisefall3methods(
         body_long_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdlrisefall3methods', values=out))
+
+
+def cdlrisefall3methods(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdlrisefall3methods'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdlrisefall3methods_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

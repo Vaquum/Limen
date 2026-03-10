@@ -8,7 +8,7 @@ CDLHIGHWAVE_SHADOW_VL_AVG_PERIOD = 0
 CDLHIGHWAVE_SHADOW_VL_FACTOR = 2.0
 
 
-def cdlhighwave(
+def _cdlhighwave_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -94,3 +94,27 @@ def cdlhighwave(
         shadow_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdlhighwave', values=out))
+
+
+def cdlhighwave(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdlhighwave'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdlhighwave_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

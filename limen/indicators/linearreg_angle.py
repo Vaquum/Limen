@@ -3,35 +3,13 @@ import numpy as np
 import polars as pl
 
 
-def linearreg_angle(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-    period: int = 14,
-) -> pl.DataFrame:
-
-    '''
-    Compute Linear Regression Angle.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        period (int): Number of periods
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'linearreg_angle_{period}'
-    '''
-
-    if period < 2 or period > 100000:
-        raise ValueError('period must be between 2 and 100000')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _linearreg_angle_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
-    out_col = f'linearreg_angle_{period}'
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = period - 1
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -57,4 +35,39 @@ def linearreg_angle(
         out[today] = math.atan(m) * rad_to_deg
         today += 1
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return out
+
+
+def linearreg_angle(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    period: int = 14,
+) -> pl.DataFrame:
+
+    '''
+    Compute Linear Regression Angle.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        period (int): Number of periods
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'linearreg_angle_{period}'
+    '''
+
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
+
+    out_col = f'linearreg_angle_{period}'
+    return data.with_columns(
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _linearreg_angle_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        ).alias(out_col)
+    )

@@ -6,39 +6,13 @@ STDDEV_PERIOD_TOTAL2 = 0.0
 _TA_EPSILON = 1e-14
 
 
-def stddev(
-    data: pl.DataFrame,
-    price_col: str = 'close',
-    period: int = 5,
-    nb_dev: float = 1.0,
-) -> pl.DataFrame:
-
-    '''
-    Compute Standard Deviation.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        period (int): Number of periods
-        nb_dev (float): Number of deviations to scale the output
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'stddev_{period}_{nb_dev:g}'
-    '''
-
-    if period < 2 or period > 100000:
-        raise ValueError('period must be between 2 and 100000')
-    if nb_dev < -3e37 or nb_dev > 3e37:
-        raise ValueError('nb_dev must be between -3e37 and 3e37')
-
-    values = data[price_col].to_numpy().astype(float, copy=False)
+def _stddev_from_values(values: np.ndarray, period: int, nb_dev: float) -> np.ndarray:
     n = len(values)
-    out_col = f'stddev_{period}_{nb_dev:g}'
     out = np.full(n, np.nan, dtype=float)
 
     lookback_total = period - 1
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name=out_col, values=out))
+        return out
 
     start_idx = lookback_total
     end_idx = n - 1
@@ -79,4 +53,44 @@ def stddev(
             out[start_idx + out_idx] = np.sqrt(variance)
         out_idx += 1
 
-    return data.with_columns(pl.Series(name=out_col, values=out))
+    return out
+
+
+def stddev(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    period: int = 5,
+    nb_dev: float = 1.0,
+) -> pl.DataFrame:
+
+    '''
+    Compute Standard Deviation.
+
+    Args:
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        period (int): Number of periods
+        nb_dev (float): Number of deviations to scale the output
+
+    Returns:
+        pl.DataFrame: The input data with a new column 'stddev_{period}_{nb_dev:g}'
+    '''
+
+    if period < 2 or period > 100000:
+        raise ValueError('period must be between 2 and 100000')
+    if nb_dev < -3e37 or nb_dev > 3e37:
+        raise ValueError('nb_dev must be between -3e37 and 3e37')
+
+    out_col = f'stddev_{period}_{nb_dev:g}'
+    return data.with_columns(
+        pl.col(price_col).map_batches(
+            lambda s: pl.Series(
+                _stddev_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                    nb_dev,
+                )
+            ),
+            return_dtype=pl.Float64,
+        ).alias(out_col)
+    )

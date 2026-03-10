@@ -11,7 +11,7 @@ CDL3WHITESOLDIERS_SHADOW_VS_AVG_PERIOD = 10
 CDL3WHITESOLDIERS_SHADOW_VS_FACTOR = 0.1
 
 
-def cdl3whitesoldiers(
+def _cdl3whitesoldiers_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -157,3 +157,27 @@ def cdl3whitesoldiers(
         body_short_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdl3whitesoldiers', values=out))
+
+
+def cdl3whitesoldiers(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+) -> pl.DataFrame:
+
+    out_col = 'cdl3whitesoldiers'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdl3whitesoldiers_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )

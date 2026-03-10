@@ -10,7 +10,7 @@ CDLABANDONEDBABY_BODY_SHORT_AVG_PERIOD = 10
 CDLABANDONEDBABY_BODY_SHORT_PERIOD_TOTAL = 0.0
 
 
-def cdlabandonedbaby(
+def _cdlabandonedbaby_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -141,3 +141,29 @@ def cdlabandonedbaby(
         body_short_trailing_idx += 1
 
     return data.with_columns(pl.Series(name='cdlabandonedbaby', values=out))
+
+
+def cdlabandonedbaby(
+    data: pl.DataFrame,
+    open_col: str = 'open',
+    high_col: str = 'high',
+    low_col: str = 'low',
+    close_col: str = 'close',
+    penetration: float = 0.3,
+) -> pl.DataFrame:
+
+    out_col = 'cdlabandonedbaby'
+    input_cols = [open_col, high_col, low_col, close_col]
+    return data.with_columns(
+        pl.struct(input_cols).map_batches(
+            lambda s: _cdlabandonedbaby_impl(
+                pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
+                open_col=open_col,
+                high_col=high_col,
+                low_col=low_col,
+                close_col=close_col,
+                penetration=penetration,
+            ).get_column(out_col),
+            return_dtype=pl.Int32,
+        ).alias(out_col)
+    )
