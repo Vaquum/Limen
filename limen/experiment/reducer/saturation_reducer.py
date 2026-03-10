@@ -44,6 +44,11 @@ class SaturationReducer(PruningStrategy):
 
         '''
 
+        if cv_threshold <= 0:
+            raise ValueError(
+                f"cv_threshold must be > 0, got {cv_threshold}"
+            )
+
         if not 0.0 <= retain_fraction <= 1.0:
             raise ValueError(
                 f"retain_fraction must be between 0.0 and 1.0, got {retain_fraction}"
