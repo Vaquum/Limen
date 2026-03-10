@@ -39,6 +39,10 @@ def _build_keep_between(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
 def _build_sample(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
 
     param, value, fraction = fp['param'], fp['value'], fp['fraction']
+    if not 0.0 <= fraction <= 1.0:
+        raise ValueError(
+            f"FILTER_SAMPLE fraction must be between 0.0 and 1.0, got {fraction}"
+        )
     threshold = round(fraction * 10_000)
     return lambda c: (
         c.get(param) == value

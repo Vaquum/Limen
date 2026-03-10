@@ -245,10 +245,16 @@ class BudgetReducer(PruningStrategy):
 
         interventions: list[dict[str, Any]] = []
         remaining = msq.remaining_count() or 0
+        full_dist = msq.distribution()
+        domain_sizes = {p: len(full_dist.get(p, {})) for p in domain_keys}
 
         for param, value in worst_values:
             if remaining <= target_remaining:
                 break
+
+            n_values = domain_sizes.get(param, 0)
+            if n_values <= 1:
+                continue
 
             interventions.append({
                 'op': 'remove_is',
@@ -257,9 +263,8 @@ class BudgetReducer(PruningStrategy):
                 'reason': f"budget worst_first: removing worst-performing {param}={value}",
             })
 
-            distribution = msq.distribution(param)
-            removed_count = distribution.get(value, 0)
-            remaining -= removed_count
+            remaining -= remaining // n_values
+            domain_sizes[param] = n_values - 1
 
         return interventions
 
