@@ -98,7 +98,7 @@ class SaturationReducer(PruningStrategy):
                 continue
 
             grouped = (
-                df.group_by(param)
+                df.group_by(param, maintain_order=True)
                   .agg(
                       pl.col(self._metric).tail(self._window_size).std().alias('_std'),
                       pl.col(self._metric).tail(self._window_size).mean().alias('_mean'),
