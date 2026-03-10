@@ -20,6 +20,42 @@ def test_constructor_validation():
     except ValueError as e:
         assert 'Unknown trim_strategy' in str(e)
 
+    try:
+        BudgetReducer(max_walltime_hours=0)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'max_walltime_hours must be > 0' in str(e)
+
+    try:
+        BudgetReducer(max_walltime_hours=-1.0)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'max_walltime_hours must be > 0' in str(e)
+
+    try:
+        BudgetReducer(max_permutations=0)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'max_permutations must be > 0' in str(e)
+
+    try:
+        BudgetReducer(max_permutations=-5)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'max_permutations must be > 0' in str(e)
+
+    try:
+        BudgetReducer(max_permutations=10, check_after_pct=-0.1)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'check_after_pct must be between 0.0 and 1.0' in str(e)
+
+    try:
+        BudgetReducer(max_permutations=10, check_after_pct=1.5)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'check_after_pct must be between 0.0 and 1.0' in str(e)
+
 
 def test_early_returns():
 

@@ -177,3 +177,42 @@ def test_set_state_missing_key():
         assert False, 'Should have raised ValueError'
     except ValueError as e:
         assert 'saturated' in str(e)
+
+
+def test_constructor_validation():
+
+    try:
+        SaturationReducer(metric='score', retain_fraction=-0.1)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'retain_fraction must be between 0.0 and 1.0' in str(e)
+
+    try:
+        SaturationReducer(metric='score', retain_fraction=1.5)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'retain_fraction must be between 0.0 and 1.0' in str(e)
+
+    try:
+        SaturationReducer(metric='score', window_size=0)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'window_size must be > 0' in str(e)
+
+    try:
+        SaturationReducer(metric='score', window_size=-5)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'window_size must be > 0' in str(e)
+
+    try:
+        SaturationReducer(metric='score', min_samples_per_value=0)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'min_samples_per_value must be > 0' in str(e)
+
+    try:
+        SaturationReducer(metric='score', min_samples_per_value=-1)
+        assert False, 'Should have raised ValueError'
+    except ValueError as e:
+        assert 'min_samples_per_value must be > 0' in str(e)

@@ -160,6 +160,7 @@ from tests.test_saturation_reducer import test_zero_mean_skipped
 from tests.test_saturation_reducer import test_unsaturation_clears_filter
 from tests.test_saturation_reducer import test_state_roundtrip as test_sat_state_roundtrip
 from tests.test_saturation_reducer import test_set_state_missing_key as test_sat_set_state_missing_key
+from tests.test_saturation_reducer import test_constructor_validation as test_sat_constructor_validation
 from tests.test_focus_reducer import test_breakthrough_activates_focus
 from tests.test_focus_reducer import test_no_breakthrough
 from tests.test_focus_reducer import test_maximize_false as test_focus_maximize_false
@@ -332,6 +333,7 @@ tests = [
     test_unsaturation_clears_filter,
     test_sat_state_roundtrip,
     test_sat_set_state_missing_key,
+    test_sat_constructor_validation,
     test_breakthrough_activates_focus,
     test_no_breakthrough,
     test_focus_maximize_false,

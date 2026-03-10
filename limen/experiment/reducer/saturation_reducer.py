@@ -49,6 +49,16 @@ class SaturationReducer(PruningStrategy):
                 f"retain_fraction must be between 0.0 and 1.0, got {retain_fraction}"
             )
 
+        if window_size <= 0:
+            raise ValueError(
+                f"window_size must be > 0, got {window_size}"
+            )
+
+        if min_samples_per_value <= 0:
+            raise ValueError(
+                f"min_samples_per_value must be > 0, got {min_samples_per_value}"
+            )
+
         super().__init__(active=active)
         self._metric = metric
         self._cv_threshold = cv_threshold
