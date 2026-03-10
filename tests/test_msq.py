@@ -281,3 +281,39 @@ def test_get_set_state():
     assert msq2.yielded_count == 2
     assert msq2.priority_queue_size == 1
     assert msq2.remaining_count() == 99  # 98 remaining + 1 in queue
+
+
+def test_set_filter():
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+    msq.set_filter('test', lambda c: c['a'] == 3)
+    combos = [_param_keys(c) for c in msq]
+
+    assert len(combos) == 2
+    assert all(c['a'] != 3 for c in combos)
+
+
+def test_clear_filter():
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+    msq.set_filter('test', lambda c: c['a'] == 3)
+
+    next(msq)
+    msq.clear_filter('test')
+
+    remaining = [_param_keys(c) for c in msq]
+    a_values = {c['a'] for c in remaining}
+    assert 3 in a_values
+
+
+def test_set_filter_replaces():
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+    msq.set_filter('test', lambda c: c['a'] == 1)
+    msq.set_filter('test', lambda c: c['a'] == 2)
+    combos = [_param_keys(c) for c in msq]
+
+    assert len(combos) == 2
+    a_values = {c['a'] for c in combos}
+    assert 1 in a_values
+    assert 2 not in a_values

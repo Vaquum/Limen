@@ -60,6 +60,9 @@ from tests.test_msq import test_mismatched_domain_raises
 from tests.test_msq import test_intervention_log
 from tests.test_msq import test_set_state_missing_key as test_msq_set_state_missing_key
 from tests.test_msq import test_get_set_state
+from tests.test_msq import test_set_filter
+from tests.test_msq import test_clear_filter
+from tests.test_msq import test_set_filter_replaces
 from tests.test_pruning_strategy import test_cannot_instantiate_abc
 from tests.test_pruning_strategy import test_active_flag
 from tests.test_feedback_controller import test_should_trigger_interval
@@ -82,6 +85,8 @@ from tests.test_feedback_controller import test_get_set_state as test_fc_get_set
 from tests.test_feedback_controller import test_suggestion_not_dispatched
 from tests.test_feedback_controller import test_suggestion_in_audit_log
 from tests.test_feedback_controller import test_mixed_interventions_and_suggestions
+from tests.test_feedback_controller import test_set_filter_dispatch
+from tests.test_feedback_controller import test_clear_filter_dispatch
 from tests.test_checkpoint_manager import test_checkpoint_interval_validation
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
 from tests.test_checkpoint_manager import test_compute_content_hash_dict
@@ -144,6 +149,14 @@ from tests.test_correlation_reducer import test_state_roundtrip as test_corr_sta
 from tests.test_correlation_reducer import test_set_state_missing_key as test_corr_set_state_missing_key
 from tests.test_correlation_reducer import test_maximize_false
 from tests.test_correlation_reducer import test_sign_stability_below_threshold
+from tests.test_saturation_reducer import test_saturated_value_filter
+from tests.test_saturation_reducer import test_no_saturation
+from tests.test_saturation_reducer import test_early_returns as test_sat_early_returns
+from tests.test_saturation_reducer import test_window_size
+from tests.test_saturation_reducer import test_zero_mean_skipped
+from tests.test_saturation_reducer import test_unsaturation_clears_filter
+from tests.test_saturation_reducer import test_state_roundtrip as test_sat_state_roundtrip
+from tests.test_saturation_reducer import test_set_state_missing_key as test_sat_set_state_missing_key
 
 tests = [
     test_param_domain_init,
@@ -182,6 +195,9 @@ tests = [
     test_intervention_log,
     test_msq_set_state_missing_key,
     test_get_set_state,
+    test_set_filter,
+    test_clear_filter,
+    test_set_filter_replaces,
     test_cannot_instantiate_abc,
     test_active_flag,
     test_should_trigger_interval,
@@ -204,6 +220,8 @@ tests = [
     test_suggestion_not_dispatched,
     test_suggestion_in_audit_log,
     test_mixed_interventions_and_suggestions,
+    test_set_filter_dispatch,
+    test_clear_filter_dispatch,
     test_checkpoint_interval_validation,
     test_should_checkpoint_interval,
     test_compute_content_hash_dict,
@@ -266,6 +284,14 @@ tests = [
     test_corr_set_state_missing_key,
     test_maximize_false,
     test_sign_stability_below_threshold,
+    test_saturated_value_filter,
+    test_no_saturation,
+    test_sat_early_returns,
+    test_window_size,
+    test_zero_mean_skipped,
+    test_unsaturation_clears_filter,
+    test_sat_state_roundtrip,
+    test_sat_set_state_missing_key,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
