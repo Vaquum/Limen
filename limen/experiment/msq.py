@@ -190,9 +190,14 @@ class MSQ:
 
         '''
 
+        if (filter_type is None) != (filter_params is None):
+            raise ValueError(
+                'filter_type and filter_params must both be provided or both omitted.'
+            )
+
         self._log_intervention('set_filter', key=key)
         self._named_filters[key] = condition
-        if filter_type is not None and filter_params is not None:
+        if filter_type is not None:
             self._named_filter_descriptors[key] = (filter_type, filter_params)
         elif key in self._named_filter_descriptors:
             del self._named_filter_descriptors[key]
@@ -441,13 +446,13 @@ class MSQ:
         self._strategy.set_state(state['strategy_state'])
 
         descriptors = state.get('named_filter_descriptors', {})
+        restored_keys: set[str] = set()
         for key, (filter_type, filter_params) in descriptors.items():
             builder = FILTER_BUILDERS.get(filter_type)
             if builder is not None:
                 self._named_filters[key] = builder(filter_params)
                 self._named_filter_descriptors[key] = (filter_type, filter_params)
-
-        restored_keys = set(descriptors.keys())
+                restored_keys.add(key)
         all_named_keys = set(state.get('named_filter_keys', []))
         non_restorable_named = len(all_named_keys - restored_keys)
         non_restorable = state.get('custom_filters_count', 0) + non_restorable_named

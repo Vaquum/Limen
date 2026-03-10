@@ -184,7 +184,7 @@ class BudgetReducer(PruningStrategy):
                           target_remaining: int) -> list[dict[str, Any]]:
 
         '''
-        Emit remove_custom interventions for worst-performing combos.
+        Emit remove_is interventions for worst-performing param values.
 
         Ranks completed parameter values by mean metric performance and
         removes combinations containing the worst-performing values

@@ -25,6 +25,28 @@ _SOURCE_ERRORS = (
 )
 
 
+def _apply_set_filter(msq: MSQ, intervention: dict[str, Any]) -> None:
+
+    '''Validate and apply a set_filter intervention to the MSQ.'''
+
+    filter_type = intervention.get('filter_type')
+    filter_params = intervention.get('filter_params')
+
+    if filter_type not in FILTER_BUILDERS:
+        supported = ', '.join(sorted(FILTER_BUILDERS.keys()))
+        raise ValueError(
+            f"Unknown filter_type '{filter_type}'. Supported types: {supported}"
+        )
+
+    condition = FILTER_BUILDERS[filter_type](filter_params)
+    msq.set_filter(
+        intervention['key'],
+        condition,
+        filter_type=filter_type,
+        filter_params=filter_params,
+    )
+
+
 class FeedbackController:
 
     '''
@@ -286,12 +308,7 @@ class FeedbackController:
             'inject': lambda i: msq.inject(i['combo'], prioritize=i.get('prioritize', False)),
             'inject_value': lambda i: msq.inject_value(i['param'], i['value']),
             'trim': lambda i: msq.trim(i['target_count']),
-            'set_filter': lambda i: msq.set_filter(
-                i['key'],
-                FILTER_BUILDERS[i['filter_type']](i['filter_params']),
-                filter_type=i['filter_type'],
-                filter_params=i['filter_params'],
-            ),
+            'set_filter': lambda i: _apply_set_filter(msq, i),
             'clear_filter': lambda i: msq.clear_filter(i['key']),
         }
 
