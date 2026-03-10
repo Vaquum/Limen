@@ -126,11 +126,15 @@ class CorrelationReducer(PruningStrategy):
             if sign_stability < self._sign_stability_threshold:
                 continue
 
+            value_means = self._value_means(df, param)
+            if not value_means:
+                continue
+
             interventions.extend(
-                self._check_wrong_direction(df, param, corr_med)
+                self._check_wrong_direction(param, corr_med, value_means)
             )
             interventions.extend(
-                self._check_low_impact(df, param, corr_med)
+                self._check_low_impact(param, corr_med, value_means)
             )
 
         return interventions
@@ -164,9 +168,9 @@ class CorrelationReducer(PruningStrategy):
 
 
     def _check_wrong_direction(self,
-                               df: pl.DataFrame,
                                param: str,
-                               corr_med: float) -> list[dict[str, Any]]:
+                               corr_med: float,
+                               value_means: dict[Any, float]) -> list[dict[str, Any]]:
 
         '''Emit remove_is for the worst-performing value if correlation is wrong-direction.'''
 
@@ -176,10 +180,6 @@ class CorrelationReducer(PruningStrategy):
             is_wrong = corr_med > abs(self._negative_correlation_threshold)
 
         if not is_wrong:
-            return []
-
-        value_means = self._value_means(df, param)
-        if not value_means:
             return []
 
         if self._maximize:
@@ -201,9 +201,9 @@ class CorrelationReducer(PruningStrategy):
 
 
     def _check_low_impact(self,
-                          df: pl.DataFrame,
                           param: str,
-                          corr_med: float) -> list[dict[str, Any]]:
+                          corr_med: float,
+                          value_means: dict[Any, float]) -> list[dict[str, Any]]:
 
         '''Emit keep_is suggestion for the best value if parameter has negligible impact.'''
 
@@ -211,10 +211,6 @@ class CorrelationReducer(PruningStrategy):
             return []
 
         if param in self._suggested:
-            return []
-
-        value_means = self._value_means(df, param)
-        if not value_means:
             return []
 
         if self._maximize:
