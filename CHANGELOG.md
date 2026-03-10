@@ -551,3 +551,10 @@
 
 - Add `SanityReducer` pruning strategy with NaN detection and suggestion system (zero-metric, execution timeout, warning detectors)
 - Add advisory suggestion flow to `FeedbackController` — suggestions are logged in audit trail but not dispatched to MSQ
+
+## v1.41.0 on 10th of March, 2026
+
+- Add `CorrelationReducer` pruning strategy with wrong-direction removal and low-impact suggestions
+- Add named filter infrastructure to `MSQ` with `set_filter`/`clear_filter` for reversible domain restrictions
+- Add declarative filter specs (`FILTER_EXCLUDE_VALUE`, `FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_SAMPLE`) with builder registry in `FeedbackController`
+- Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
