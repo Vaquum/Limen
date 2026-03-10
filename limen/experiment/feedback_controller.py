@@ -38,6 +38,11 @@ def _apply_set_filter(msq: MSQ, intervention: dict[str, Any]) -> None:
             f"Unknown filter_type '{filter_type}'. Supported types: {supported}"
         )
 
+    if not isinstance(filter_params, dict):
+        raise ValueError(
+            f"filter_params must be a dict, got {type(filter_params).__name__}"
+        )
+
     condition = FILTER_BUILDERS[filter_type](filter_params)
     msq.set_filter(
         intervention['key'],
