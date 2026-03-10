@@ -157,6 +157,22 @@ from tests.test_saturation_reducer import test_zero_mean_skipped
 from tests.test_saturation_reducer import test_unsaturation_clears_filter
 from tests.test_saturation_reducer import test_state_roundtrip as test_sat_state_roundtrip
 from tests.test_saturation_reducer import test_set_state_missing_key as test_sat_set_state_missing_key
+from tests.test_focus_reducer import test_breakthrough_activates_focus
+from tests.test_focus_reducer import test_no_breakthrough
+from tests.test_focus_reducer import test_maximize_false as test_focus_maximize_false
+from tests.test_focus_reducer import test_early_returns as test_focus_early_returns
+from tests.test_focus_reducer import test_snap_back_after_timeout
+from tests.test_focus_reducer import test_improvement_resets_timeout
+from tests.test_focus_reducer import test_numeric_narrowing_range
+from tests.test_focus_reducer import test_categorical_narrowing
+from tests.test_focus_reducer import test_zero_center_narrowing
+from tests.test_focus_reducer import test_variation_injection_count
+from tests.test_focus_reducer import test_variation_injection_linspace
+from tests.test_focus_reducer import test_no_injection_on_improvement
+from tests.test_focus_reducer import test_mixed_param_types as test_focus_mixed_param_types
+from tests.test_focus_reducer import test_improvement_updates_combo
+from tests.test_focus_reducer import test_state_roundtrip as test_focus_state_roundtrip
+from tests.test_focus_reducer import test_set_state_missing_key as test_focus_set_state_missing_key
 
 tests = [
     test_param_domain_init,
@@ -292,6 +308,22 @@ tests = [
     test_unsaturation_clears_filter,
     test_sat_state_roundtrip,
     test_sat_set_state_missing_key,
+    test_breakthrough_activates_focus,
+    test_no_breakthrough,
+    test_focus_maximize_false,
+    test_focus_early_returns,
+    test_snap_back_after_timeout,
+    test_improvement_resets_timeout,
+    test_numeric_narrowing_range,
+    test_categorical_narrowing,
+    test_zero_center_narrowing,
+    test_variation_injection_count,
+    test_variation_injection_linspace,
+    test_no_injection_on_improvement,
+    test_focus_mixed_param_types,
+    test_improvement_updates_combo,
+    test_focus_state_roundtrip,
+    test_focus_set_state_missing_key,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
