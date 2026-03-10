@@ -63,6 +63,9 @@ from tests.test_msq import test_get_set_state
 from tests.test_msq import test_set_filter
 from tests.test_msq import test_clear_filter
 from tests.test_msq import test_set_filter_replaces
+from tests.test_msq import test_named_filter_descriptor_roundtrip
+from tests.test_msq import test_clear_filter_removes_descriptor
+from tests.test_msq import test_non_descriptor_filter_warns_on_restore
 from tests.test_pruning_strategy import test_cannot_instantiate_abc
 from tests.test_pruning_strategy import test_active_flag
 from tests.test_feedback_controller import test_should_trigger_interval
@@ -183,6 +186,9 @@ from tests.test_budget_reducer import test_walltime_exceeded
 from tests.test_budget_reducer import test_no_trim_when_within_budget
 from tests.test_budget_reducer import test_worst_first_trim
 from tests.test_budget_reducer import test_worst_first_fallback_to_random
+from tests.test_budget_reducer import test_remaining_none_with_permutation_budget
+from tests.test_budget_reducer import test_walltime_zero_elapsed
+from tests.test_budget_reducer import test_worst_first_includes_trim_fallback
 from tests.test_budget_reducer import test_both_budgets_takes_min
 from tests.test_budget_reducer import test_no_budget_configured
 from tests.test_budget_reducer import test_state_roundtrip as test_budget_state_roundtrip
@@ -229,6 +235,9 @@ tests = [
     test_set_filter,
     test_clear_filter,
     test_set_filter_replaces,
+    test_named_filter_descriptor_roundtrip,
+    test_clear_filter_removes_descriptor,
+    test_non_descriptor_filter_warns_on_restore,
     test_cannot_instantiate_abc,
     test_active_flag,
     test_should_trigger_interval,
@@ -349,6 +358,9 @@ tests = [
     test_no_trim_when_within_budget,
     test_worst_first_trim,
     test_worst_first_fallback_to_random,
+    test_remaining_none_with_permutation_budget,
+    test_walltime_zero_elapsed,
+    test_worst_first_includes_trim_fallback,
     test_both_budgets_takes_min,
     test_no_budget_configured,
     test_budget_state_roundtrip,

@@ -280,6 +280,80 @@ def test_set_state_missing_key():
             assert key in str(e)
 
 
+def test_remaining_none_with_permutation_budget():
+
+    msq, _, _ = make_msq(params={'a': [1, 2, 3], 'b': ['x', 'y']})
+    for _ in range(4):
+        next(msq)
+
+    reducer = BudgetReducer(
+        max_permutations=5,
+        check_after_pct=0.0,
+    )
+    df = pl.DataFrame({
+        'a': [1, 2, 3, 1],
+        'b': ['x', 'x', 'x', 'y'],
+        'score': [0.5, 0.6, 0.7, 0.8],
+    })
+
+    original_remaining = msq.remaining_count
+    msq.remaining_count = lambda: None
+
+    result = reducer.analyze_and_intervene(df, msq)
+    assert len(result) == 1
+    assert result[0]['op'] == 'trim'
+
+    msq.remaining_count = original_remaining
+
+
+def test_walltime_zero_elapsed():
+
+    msq, _, _ = make_msq(params={'a': [1, 2, 3], 'b': ['x', 'y']})
+    for _ in range(3):
+        next(msq)
+
+    reducer = BudgetReducer(
+        start_time=time.time(),
+        max_walltime_hours=1.0,
+        check_after_pct=0.0,
+    )
+    df = pl.DataFrame({
+        'a': [1, 2, 3],
+        'b': ['x', 'x', 'x'],
+        'score': [0.5, 0.6, 0.7],
+    })
+
+    result = reducer.analyze_and_intervene(df, msq)
+    assert result == []
+
+
+def test_worst_first_includes_trim_fallback():
+
+    msq, _, _ = make_msq(params={'a': [1, 2, 3], 'b': ['x', 'y']})
+    for _ in range(4):
+        next(msq)
+
+    reducer = BudgetReducer(
+        max_permutations=5,
+        trim_strategy='worst_first',
+        metric='score',
+        maximize=True,
+        check_after_pct=0.0,
+    )
+
+    df = pl.DataFrame({
+        'a': [1, 1, 2, 2, 3, 3],
+        'b': ['x', 'y', 'x', 'y', 'x', 'y'],
+        'score': [0.1, 0.2, 0.5, 0.6, 0.9, 0.95],
+    })
+
+    result = reducer.analyze_and_intervene(df, msq)
+    remove_ops = [r for r in result if r['op'] == 'remove_is']
+    trim_ops = [r for r in result if r['op'] == 'trim']
+    assert len(remove_ops) >= 1
+    assert len(trim_ops) == 1
+
+
 def test_worst_first_maximize_false():
 
     msq, _, _ = make_msq(params={'a': [1, 2, 3], 'b': ['x', 'y']})
