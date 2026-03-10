@@ -456,7 +456,7 @@ class MSQ:
             if builder is not None:
                 try:
                     self._named_filters[key] = builder(filter_params)
-                except (KeyError, TypeError):
+                except (KeyError, TypeError, ValueError):
                     continue
                 self._named_filter_descriptors[key] = (filter_type, filter_params)
                 restored_keys.add(key)
