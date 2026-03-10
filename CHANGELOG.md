@@ -559,3 +559,4 @@
 - Add declarative filter specs (`FILTER_EXCLUDE_VALUE`, `FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_SAMPLE`) with builder registry in `FeedbackController`
 - Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
 - Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
+- Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
