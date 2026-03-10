@@ -454,7 +454,10 @@ class MSQ:
         for key, (filter_type, filter_params) in descriptors.items():
             builder = FILTER_BUILDERS.get(filter_type)
             if builder is not None:
-                self._named_filters[key] = builder(filter_params)
+                try:
+                    self._named_filters[key] = builder(filter_params)
+                except (KeyError, TypeError):
+                    continue
                 self._named_filter_descriptors[key] = (filter_type, filter_params)
                 restored_keys.add(key)
         all_named_keys = set(state.get('named_filter_keys', []))

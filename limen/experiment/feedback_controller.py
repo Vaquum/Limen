@@ -43,7 +43,13 @@ def _apply_set_filter(msq: MSQ, intervention: dict[str, Any]) -> None:
             f"filter_params must be a dict, got {type(filter_params).__name__}"
         )
 
-    condition = FILTER_BUILDERS[filter_type](filter_params)
+    try:
+        condition = FILTER_BUILDERS[filter_type](filter_params)
+    except KeyError as e:
+        raise ValueError(
+            f"filter_params for '{filter_type}' missing required key: {e}"
+        ) from e
+
     msq.set_filter(
         intervention['key'],
         condition,

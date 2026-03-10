@@ -42,9 +42,9 @@ def _build_sample(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
     threshold = round(fraction * 10_000)
     return lambda c: (
         c.get(param) == value
-        and int(hashlib.sha256(
-            str(sorted(c.items())).encode()
-        ).hexdigest(), 16) % 10_000 >= threshold
+        and int.from_bytes(hashlib.blake2b(
+            str(sorted(c.items())).encode(), digest_size=8,
+        ).digest(), 'big') % 10_000 >= threshold
     )
 
 
