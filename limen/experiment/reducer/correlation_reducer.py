@@ -113,6 +113,7 @@ class CorrelationReducer(PruningStrategy):
 
         domain_params = set(msq.domain_keys)
         interventions: list[dict[str, Any]] = []
+        filtered = self._filter_valid_metric(df)
 
         for row in corr_df.iter_rows(named=True):
             param = row['feature']
@@ -126,7 +127,7 @@ class CorrelationReducer(PruningStrategy):
             if sign_stability < self._sign_stability_threshold:
                 continue
 
-            value_means = self._value_means(df, param)
+            value_means = self._value_means(filtered, param)
             if not value_means:
                 continue
 
@@ -228,24 +229,30 @@ class CorrelationReducer(PruningStrategy):
         }]
 
 
+    def _filter_valid_metric(self, df: pl.DataFrame) -> pl.DataFrame:
+
+        '''Filter rows with valid (non-null, non-NaN) metric values.'''
+
+        col = pl.col(self._metric)
+        filter_expr = col.is_not_null()
+        if df[self._metric].dtype.is_float():
+            filter_expr = filter_expr & col.is_not_nan()
+        return df.filter(filter_expr)
+
+
     def _value_means(self,
-                     df: pl.DataFrame,
+                     filtered: pl.DataFrame,
                      param: str) -> dict[Any, float]:
 
-        '''Compute mean metric per parameter value, excluding nulls and NaN.'''
+        '''Compute mean metric per parameter value from pre-filtered data.'''
 
-        if param not in df.columns:
+        if param not in filtered.columns:
             return {}
 
-        metric_col = pl.col(self._metric)
-        filter_expr = metric_col.is_not_null()
-        if df[self._metric].dtype.is_float():
-            filter_expr = filter_expr & metric_col.is_not_nan()
-
         stats = (
-            df.filter(filter_expr)
+            filtered
               .group_by(param)
-              .agg(metric_col.mean().alias('_mean'))
+              .agg(pl.col(self._metric).mean().alias('_mean'))
         )
 
         return {

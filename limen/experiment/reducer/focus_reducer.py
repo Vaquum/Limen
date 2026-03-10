@@ -289,12 +289,12 @@ class FocusReducer(PruningStrategy):
             if self._variation_count <= 1:
                 values = [value]
             elif isinstance(value, int):
-                full_range = list(range(lower, upper + 1))
-                if len(full_range) <= self._variation_count:
-                    values = full_range
+                range_size = upper - lower + 1
+                if range_size <= self._variation_count:
+                    values = list(range(lower, upper + 1))
                 else:
-                    step = (len(full_range) - 1) / (self._variation_count - 1)
-                    values = [full_range[round(i * step)] for i in range(self._variation_count)]
+                    step = (range_size - 1) / (self._variation_count - 1)
+                    values = [lower + round(i * step) for i in range(self._variation_count)]
             else:
                 step = (upper - lower) / (self._variation_count - 1)
                 values = [lower + i * step for i in range(self._variation_count)]
