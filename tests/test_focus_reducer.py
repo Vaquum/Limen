@@ -161,7 +161,6 @@ def test_improvement_resets_timeout():
     reducer.analyze_and_intervene(df1, msq)
     assert reducer._rounds_since_improvement == 1
 
-    # Improvement resets counter
     df2 = pl.DataFrame({
         'a': [1] * n,
         'b': ['x'] * n,
@@ -171,7 +170,6 @@ def test_improvement_resets_timeout():
     assert reducer._rounds_since_improvement == 0
     assert reducer._best_metric == 0.98
 
-    # set_filter re-emitted on improvement
     set_filters = [r for r in result if r['op'] == 'set_filter']
     assert len(set_filters) >= 1
 
@@ -267,7 +265,6 @@ def test_variation_injection_count():
     )
     result = reducer.analyze_and_intervene(df, msq)
 
-    # Only numeric param 'a' gets injections, not categorical 'b'
     inject_a = [r for r in result if r['op'] == 'inject_value' and r['param'] == 'a']
     inject_b = [r for r in result if r['op'] == 'inject_value' and r['param'] == 'b']
     assert len(inject_a) == 7
@@ -298,7 +295,6 @@ def test_variation_injection_linspace():
     assert abs(inject_values[0] - 8.0) < 1e-9
     assert abs(inject_values[-1] - 12.0) < 1e-9
 
-    # Check even spacing
     for i in range(1, len(inject_values)):
         gap = inject_values[i] - inject_values[i - 1]
         assert abs(gap - 1.0) < 1e-9
@@ -325,7 +321,6 @@ def test_no_injection_on_improvement():
     inject1 = [r for r in result1 if r['op'] == 'inject_value']
     assert len(inject1) > 0
 
-    # Improvement: only filters, no new injections
     df2 = pl.DataFrame({
         'a': [10] * n,
         'b': ['x'] * n,
