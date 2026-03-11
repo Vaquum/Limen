@@ -317,9 +317,13 @@ class FocusReducer(PruningStrategy):
                     values = sorted(set(
                         lower + round(i * step) for i in range(self._variation_count)
                     ))
+            elif lower == upper:
+                values = [lower]
             else:
                 step = (upper - lower) / (self._variation_count - 1)
-                values = [lower + i * step for i in range(self._variation_count)]
+                values = sorted(set(
+                    lower + i * step for i in range(self._variation_count)
+                ))
 
             for val in values:
                 interventions.append({
@@ -392,6 +396,16 @@ class FocusReducer(PruningStrategy):
             if key not in state:
                 raise ValueError(
                     f"Invalid FocusReducer state: missing required key '{key}'."
+                )
+
+        if state['focus_active']:
+            if state['best_metric'] is None:
+                raise ValueError(
+                    "Invalid FocusReducer state: best_metric cannot be None when focus_active is True."
+                )
+            if state['breakthrough_combo'] is None:
+                raise ValueError(
+                    "Invalid FocusReducer state: breakthrough_combo cannot be None when focus_active is True."
                 )
 
         self._focus_active = state['focus_active']
