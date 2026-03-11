@@ -20,14 +20,19 @@ class BudgetReducer(PruningStrategy):
     budgets (walltime or permutation count).
 
     Purely resource-driven — no statistical analysis of results.
-    Supports two trim strategies: random (uniform downsample) and
-    worst_first (remove combos most similar to low-performing results).
+    Supports two trim strategies:
+    - random: uniformly downsample permutations to the target count
+    - worst_first: rank parameter values by mean metric performance
+      and remove combinations containing the worst-performing values
+
+    A random trim is always emitted as a fallback to ensure the queue
+    is reduced to the target count if value-based pruning alone is
+    insufficient.
 
     NOTE: Fires at most once per experiment — once trimming occurs,
-    further calls to analyze_and_intervene return empty.
-
-    NOTE: The check_after_pct gate prevents premature trimming when
-    throughput estimates are unreliable early in the experiment.
+    further calls to analyze_and_intervene return empty. The
+    check_after_pct gate prevents premature trimming when throughput
+    estimates are unreliable early in the experiment.
 
     '''
 
