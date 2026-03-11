@@ -458,7 +458,7 @@ class MSQ:
                     self._named_filters[key] = builder(filter_params)
                 except (KeyError, TypeError, ValueError):
                     continue
-                self._named_filter_descriptors[key] = (filter_type, filter_params)
+                self._named_filter_descriptors[key] = (filter_type, dict(filter_params))
                 restored_keys.add(key)
         all_named_keys = set(state.get('named_filter_keys', []))
         lost_named = all_named_keys - restored_keys
