@@ -30,6 +30,10 @@ class CorrelationReducer(PruningStrategy):
     - Low-impact: parameters with negligible |correlation| and high
       sign stability get a keep_is suggestion for the best value
 
+    NOTE: Only acts on numeric parameters. Categorical/string parameters
+    are coerced to numeric internally and silently skipped when coercion
+    produces all-NaN or constant columns.
+
     '''
 
     def __init__(self,
