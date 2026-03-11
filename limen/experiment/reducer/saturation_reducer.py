@@ -141,7 +141,7 @@ class SaturationReducer(PruningStrategy):
                             'reason': f"saturated CV {cv:.4f} < {self._cv_threshold} for {param}={value}",
                         })
 
-        for param, value in self._saturated - currently_saturated:
+        for param, value in sorted(self._saturated - currently_saturated):
             key = f"saturation_{param}_{value}"
             interventions.append({
                 'op': 'clear_filter',

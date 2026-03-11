@@ -184,7 +184,7 @@ class FocusReducer(PruningStrategy):
         '''Revert to full exploration by clearing all focus filters.'''
 
         interventions: list[dict[str, Any]] = []
-        for key in self._focused_params:
+        for key in sorted(self._focused_params):
             interventions.append({
                 'op': 'clear_filter',
                 'key': key,
