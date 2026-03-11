@@ -26,7 +26,7 @@ def _build_exclude_value(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]
 
 def _build_keep_values(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
 
-    param, values = fp['param'], fp['values']
+    param, values = fp['param'], set(fp['values'])
     return lambda c: c[param] not in values
 
 
