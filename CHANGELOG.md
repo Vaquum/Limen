@@ -538,7 +538,21 @@
 - Add `indicators.linearreg_intercept` (TA-Lib LINEARREG_INTERCEPT): rolling OLS intercept
 - Add `indicators.linearreg_angle` (TA-Lib LINEARREG_ANGLE): rolling OLS slope angle in degrees
 
-## v1.39.0 on 3rd of March, 2026
+## v1.39.0 on 4th of March, 2026
+
+- Add `_run_with_msq` method to `UniversalExperimentLoop` for MSQ-based experiment execution with feedback and checkpoint integration
+- Add `_finalize` method for post-experiment Log creation and metrics computation
+- Refactor `UniversalExperimentLoop.__init__` to accept search strategy, pruning strategies, feedback, and checkpoint configuration
+- Refactor `run()` to dispatch to MSQ-based flow when search strategy is configured
+- Extend `CheckpointManager` to persist `FeedbackController` and `PruningStrategy` states alongside MSQ and domain
+- Add round data persistence via `round_data.jsonl` for full experiment integrity across shutdown and resume
+
+## v1.40.0 on 9th of March, 2026
+
+- Add `SanityReducer` pruning strategy with NaN detection and suggestion system (zero-metric, execution timeout, warning detectors)
+- Add advisory suggestion flow to `FeedbackController` — suggestions are logged in audit trail but not dispatched to MSQ
+
+## v1.41.0 on 11rd of March, 2026
 
 - Implement 106 TA-Lib indicators in `limen.indicators` and align behavior with TA-Lib references.
 - Add Volume Indicators: `indicators.ad`, `indicators.adosc`, `indicators.mfi`, `indicators.obv`

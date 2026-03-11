@@ -79,6 +79,9 @@ from tests.test_feedback_controller import test_pruning_strategy_isolation
 from tests.test_feedback_controller import test_audit_log_written
 from tests.test_feedback_controller import test_set_state_missing_key as test_fc_set_state_missing_key
 from tests.test_feedback_controller import test_get_set_state as test_fc_get_set_state
+from tests.test_feedback_controller import test_suggestion_not_dispatched
+from tests.test_feedback_controller import test_suggestion_in_audit_log
+from tests.test_feedback_controller import test_mixed_interventions_and_suggestions
 from tests.test_checkpoint_manager import test_checkpoint_interval_validation
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
 from tests.test_checkpoint_manager import test_compute_content_hash_dict
@@ -108,6 +111,30 @@ from tests.test_checkpoint_manager import test_param_domain_get_set_state
 from tests.test_checkpoint_manager import test_uel_shutdown_flag
 from tests.test_checkpoint_manager import test_uel_double_signal_raises
 from tests.test_checkpoint_manager import test_uel_checkpoint_and_resume
+from tests.test_experiment_core_msq import test_run_with_msq_basic_flow
+from tests.test_experiment_core_msq import test_run_with_msq_context_params
+from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
+from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
+from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
+from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
+from tests.test_experiment_core_msq import test_shutdown_before_any_round_completes
+from tests.test_experiment_core_msq import test_resume_fails_without_round_data
+from tests.test_experiment_core_msq import test_preds_none_does_not_crash
+from tests.test_experiment_core_msq import test_resume_truncates_stale_rounds
+from tests.test_experiment_core_msq import test_truncate_round_data_unit
+from tests.test_sanity_reducer import test_nan_above_threshold
+from tests.test_sanity_reducer import test_min_observations_gate
+from tests.test_sanity_reducer import test_early_returns
+from tests.test_sanity_reducer import test_multiple_params_pruned
+from tests.test_sanity_reducer import test_dedup_across_triggers
+from tests.test_sanity_reducer import test_boundary_exact_threshold
+from tests.test_sanity_reducer import test_zero_metric_suggestion
+from tests.test_sanity_reducer import test_zero_metric_disabled_by_default
+from tests.test_sanity_reducer import test_execution_timeout_suggestion
+from tests.test_sanity_reducer import test_warning_suggestion
+from tests.test_sanity_reducer import test_warning_no_column
+from tests.test_sanity_reducer import test_suggestion_dedup
+from tests.test_sanity_reducer import test_suggestion_checkpoint_roundtrip
 
 tests = [
     test_param_domain_init,
@@ -165,6 +192,9 @@ tests = [
     test_audit_log_written,
     test_fc_set_state_missing_key,
     test_fc_get_set_state,
+    test_suggestion_not_dispatched,
+    test_suggestion_in_audit_log,
+    test_mixed_interventions_and_suggestions,
     test_checkpoint_interval_validation,
     test_should_checkpoint_interval,
     test_compute_content_hash_dict,
@@ -194,6 +224,30 @@ tests = [
     test_uel_shutdown_flag,
     test_uel_double_signal_raises,
     test_uel_checkpoint_and_resume,
+    test_run_with_msq_basic_flow,
+    test_run_with_msq_context_params,
+    test_run_with_msq_feedback_trigger,
+    test_run_with_msq_checkpoint_trigger,
+    test_checkpoint_saves_feedback_and_pruning_state,
+    test_run_with_msq_shutdown_resume_full_data,
+    test_shutdown_before_any_round_completes,
+    test_resume_fails_without_round_data,
+    test_preds_none_does_not_crash,
+    test_resume_truncates_stale_rounds,
+    test_truncate_round_data_unit,
+    test_nan_above_threshold,
+    test_early_returns,
+    test_min_observations_gate,
+    test_multiple_params_pruned,
+    test_dedup_across_triggers,
+    test_boundary_exact_threshold,
+    test_zero_metric_suggestion,
+    test_zero_metric_disabled_by_default,
+    test_execution_timeout_suggestion,
+    test_warning_suggestion,
+    test_warning_no_column,
+    test_suggestion_dedup,
+    test_suggestion_checkpoint_roundtrip,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
