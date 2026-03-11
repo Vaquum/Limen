@@ -401,3 +401,47 @@ def test_mixed_interventions_and_suggestions():
     assert result[0]['value'] == 3
     assert 3 not in domain.values_for('a')
     assert 2 in domain.values_for('a')
+
+
+def test_set_filter_dispatch():
+
+    from limen.experiment.feedback_controller import FeedbackController
+    from limen.experiment.reducer.filter_types import FILTER_EXCLUDE_VALUE
+
+    msq, _, domain = make_msq()
+
+    FeedbackController._apply_intervention(msq, {
+        'op': 'set_filter',
+        'key': 'test_filter',
+        'filter_type': FILTER_EXCLUDE_VALUE,
+        'filter_params': {'param': 'a', 'value': 3},
+    })
+
+    combos = list(msq)
+    a_values = {c['a'] for c in combos}
+    assert 3 not in a_values
+    assert 3 in domain.values_for('a')
+
+
+def test_clear_filter_dispatch():
+
+    from limen.experiment.feedback_controller import FeedbackController
+    from limen.experiment.reducer.filter_types import FILTER_EXCLUDE_VALUE
+
+    msq, _, _ = make_msq()
+
+    FeedbackController._apply_intervention(msq, {
+        'op': 'set_filter',
+        'key': 'test_filter',
+        'filter_type': FILTER_EXCLUDE_VALUE,
+        'filter_params': {'param': 'a', 'value': 3},
+    })
+
+    FeedbackController._apply_intervention(msq, {
+        'op': 'clear_filter',
+        'key': 'test_filter',
+    })
+
+    combos = list(msq)
+    a_values = {c['a'] for c in combos}
+    assert 3 in a_values

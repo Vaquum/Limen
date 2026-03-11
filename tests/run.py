@@ -60,6 +60,12 @@ from tests.test_msq import test_mismatched_domain_raises
 from tests.test_msq import test_intervention_log
 from tests.test_msq import test_set_state_missing_key as test_msq_set_state_missing_key
 from tests.test_msq import test_get_set_state
+from tests.test_msq import test_set_filter
+from tests.test_msq import test_clear_filter
+from tests.test_msq import test_set_filter_replaces
+from tests.test_msq import test_named_filter_descriptor_roundtrip
+from tests.test_msq import test_clear_filter_removes_descriptor
+from tests.test_msq import test_non_descriptor_filter_warns_on_restore
 from tests.test_pruning_strategy import test_cannot_instantiate_abc
 from tests.test_pruning_strategy import test_active_flag
 from tests.test_feedback_controller import test_should_trigger_interval
@@ -82,6 +88,8 @@ from tests.test_feedback_controller import test_get_set_state as test_fc_get_set
 from tests.test_feedback_controller import test_suggestion_not_dispatched
 from tests.test_feedback_controller import test_suggestion_in_audit_log
 from tests.test_feedback_controller import test_mixed_interventions_and_suggestions
+from tests.test_feedback_controller import test_set_filter_dispatch
+from tests.test_feedback_controller import test_clear_filter_dispatch
 from tests.test_checkpoint_manager import test_checkpoint_interval_validation
 from tests.test_checkpoint_manager import test_should_checkpoint_interval
 from tests.test_checkpoint_manager import test_compute_content_hash_dict
@@ -135,6 +143,58 @@ from tests.test_sanity_reducer import test_warning_suggestion
 from tests.test_sanity_reducer import test_warning_no_column
 from tests.test_sanity_reducer import test_suggestion_dedup
 from tests.test_sanity_reducer import test_suggestion_checkpoint_roundtrip
+from tests.test_correlation_reducer import test_wrong_direction_removal
+from tests.test_correlation_reducer import test_low_impact_suggestion
+from tests.test_correlation_reducer import test_dedup_across_triggers as test_corr_dedup_across_triggers
+from tests.test_correlation_reducer import test_early_returns as test_corr_early_returns
+from tests.test_correlation_reducer import test_insufficient_data_for_correlation
+from tests.test_correlation_reducer import test_state_roundtrip as test_corr_state_roundtrip
+from tests.test_correlation_reducer import test_set_state_missing_key as test_corr_set_state_missing_key
+from tests.test_correlation_reducer import test_maximize_false
+from tests.test_correlation_reducer import test_sign_stability_below_threshold
+from tests.test_saturation_reducer import test_saturated_value_filter
+from tests.test_saturation_reducer import test_no_saturation
+from tests.test_saturation_reducer import test_early_returns as test_sat_early_returns
+from tests.test_saturation_reducer import test_window_size
+from tests.test_saturation_reducer import test_zero_mean_skipped
+from tests.test_saturation_reducer import test_unsaturation_clears_filter
+from tests.test_saturation_reducer import test_state_roundtrip as test_sat_state_roundtrip
+from tests.test_saturation_reducer import test_set_state_missing_key as test_sat_set_state_missing_key
+from tests.test_saturation_reducer import test_constructor_validation as test_sat_constructor_validation
+from tests.test_focus_reducer import test_breakthrough_activates_focus
+from tests.test_focus_reducer import test_no_breakthrough
+from tests.test_focus_reducer import test_maximize_false as test_focus_maximize_false
+from tests.test_focus_reducer import test_early_returns as test_focus_early_returns
+from tests.test_focus_reducer import test_snap_back_after_timeout
+from tests.test_focus_reducer import test_improvement_resets_timeout
+from tests.test_focus_reducer import test_numeric_narrowing_range
+from tests.test_focus_reducer import test_categorical_narrowing
+from tests.test_focus_reducer import test_zero_center_narrowing
+from tests.test_focus_reducer import test_variation_injection_count
+from tests.test_focus_reducer import test_variation_injection_linspace
+from tests.test_focus_reducer import test_no_injection_on_improvement
+from tests.test_focus_reducer import test_mixed_param_types as test_focus_mixed_param_types
+from tests.test_focus_reducer import test_improvement_updates_combo
+from tests.test_focus_reducer import test_state_roundtrip as test_focus_state_roundtrip
+from tests.test_focus_reducer import test_set_state_missing_key as test_focus_set_state_missing_key
+from tests.test_budget_reducer import test_constructor_validation as test_budget_constructor_validation
+from tests.test_budget_reducer import test_early_returns as test_budget_early_returns
+from tests.test_budget_reducer import test_trimmed_flag_prevents_retrim
+from tests.test_budget_reducer import test_permutation_budget_trim_random
+from tests.test_budget_reducer import test_permutation_budget_check_after_pct_gate
+from tests.test_budget_reducer import test_walltime_budget_trim
+from tests.test_budget_reducer import test_walltime_exceeded
+from tests.test_budget_reducer import test_no_trim_when_within_budget
+from tests.test_budget_reducer import test_worst_first_trim
+from tests.test_budget_reducer import test_worst_first_fallback_to_random
+from tests.test_budget_reducer import test_remaining_none_with_permutation_budget
+from tests.test_budget_reducer import test_walltime_zero_elapsed
+from tests.test_budget_reducer import test_worst_first_includes_trim_fallback
+from tests.test_budget_reducer import test_both_budgets_takes_min
+from tests.test_budget_reducer import test_no_budget_configured
+from tests.test_budget_reducer import test_state_roundtrip as test_budget_state_roundtrip
+from tests.test_budget_reducer import test_set_state_missing_key as test_budget_set_state_missing_key
+from tests.test_budget_reducer import test_worst_first_maximize_false
 
 tests = [
     test_param_domain_init,
@@ -173,6 +233,12 @@ tests = [
     test_intervention_log,
     test_msq_set_state_missing_key,
     test_get_set_state,
+    test_set_filter,
+    test_clear_filter,
+    test_set_filter_replaces,
+    test_named_filter_descriptor_roundtrip,
+    test_clear_filter_removes_descriptor,
+    test_non_descriptor_filter_warns_on_restore,
     test_cannot_instantiate_abc,
     test_active_flag,
     test_should_trigger_interval,
@@ -195,6 +261,8 @@ tests = [
     test_suggestion_not_dispatched,
     test_suggestion_in_audit_log,
     test_mixed_interventions_and_suggestions,
+    test_set_filter_dispatch,
+    test_clear_filter_dispatch,
     test_checkpoint_interval_validation,
     test_should_checkpoint_interval,
     test_compute_content_hash_dict,
@@ -248,6 +316,58 @@ tests = [
     test_warning_no_column,
     test_suggestion_dedup,
     test_suggestion_checkpoint_roundtrip,
+    test_wrong_direction_removal,
+    test_low_impact_suggestion,
+    test_corr_dedup_across_triggers,
+    test_corr_early_returns,
+    test_insufficient_data_for_correlation,
+    test_corr_state_roundtrip,
+    test_corr_set_state_missing_key,
+    test_maximize_false,
+    test_sign_stability_below_threshold,
+    test_saturated_value_filter,
+    test_no_saturation,
+    test_sat_early_returns,
+    test_window_size,
+    test_zero_mean_skipped,
+    test_unsaturation_clears_filter,
+    test_sat_state_roundtrip,
+    test_sat_set_state_missing_key,
+    test_sat_constructor_validation,
+    test_breakthrough_activates_focus,
+    test_no_breakthrough,
+    test_focus_maximize_false,
+    test_focus_early_returns,
+    test_snap_back_after_timeout,
+    test_improvement_resets_timeout,
+    test_numeric_narrowing_range,
+    test_categorical_narrowing,
+    test_zero_center_narrowing,
+    test_variation_injection_count,
+    test_variation_injection_linspace,
+    test_no_injection_on_improvement,
+    test_focus_mixed_param_types,
+    test_improvement_updates_combo,
+    test_focus_state_roundtrip,
+    test_focus_set_state_missing_key,
+    test_budget_constructor_validation,
+    test_budget_early_returns,
+    test_trimmed_flag_prevents_retrim,
+    test_permutation_budget_trim_random,
+    test_permutation_budget_check_after_pct_gate,
+    test_walltime_budget_trim,
+    test_walltime_exceeded,
+    test_no_trim_when_within_budget,
+    test_worst_first_trim,
+    test_worst_first_fallback_to_random,
+    test_remaining_none_with_permutation_budget,
+    test_walltime_zero_elapsed,
+    test_worst_first_includes_trim_fallback,
+    test_both_budgets_takes_min,
+    test_no_budget_configured,
+    test_budget_state_roundtrip,
+    test_budget_set_state_missing_key,
+    test_worst_first_maximize_false,
     test_large_param_space,
     test_klines_data_maker_fields,
     test_volume_bars_basic,

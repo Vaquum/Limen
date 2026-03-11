@@ -10,7 +10,7 @@ from limen.experiment.search_strategy import SearchStrategy
 
 class FilterExhaustedError(Exception):
 
-    '''Raised when custom filters aggressively reject too many consecutive combinations.'''
+    '''Raised when filters reject too many consecutive combinations.'''
 
 
 class MSQ:
@@ -54,6 +54,8 @@ class MSQ:
         self._n_permutations = n_permutations
         self._priority_queue: deque[dict[str, Any]] = deque()
         self._custom_filters: list[Callable[[dict[str, Any]], bool]] = []
+        self._named_filters: dict[str, Callable[[dict[str, Any]], bool]] = {}
+        self._named_filter_descriptors: dict[str, tuple[str, dict[str, Any]]] = {}
         self._max_filter_retries = max_filter_retries
         self._trim_budget: int | None = None
         self._yielded_count: int = 0
@@ -88,10 +90,11 @@ class MSQ:
             if self._passes_filters(combo):
                 return self._yield_combo(combo, injected=False)
 
+        total_filters = len(self._custom_filters) + len(self._named_filters)
         raise FilterExhaustedError(
-            f"Custom filters rejected {self._max_filter_retries} "
+            f"Filters rejected {self._max_filter_retries} "
             f"consecutive combinations. "
-            f"Active filters: {len(self._custom_filters)}. "
+            f"Active filters: {total_filters}. "
             f"Consider relaxing filters or removing them."
         )
 
@@ -116,7 +119,9 @@ class MSQ:
 
         '''Return True if no filter wants to remove this combo.'''
 
-        return not any(f(combo) for f in self._custom_filters)
+        if any(f(combo) for f in self._custom_filters):
+            return False
+        return not any(f(combo) for f in self._named_filters.values())
 
 
     def remove_is(self, param: str, value: Any) -> bool:
@@ -161,6 +166,61 @@ class MSQ:
 
         self._log_intervention('remove_custom', condition=repr(condition))
         self._custom_filters.append(condition)
+
+
+    def set_filter(self,
+                   key: str,
+                   condition: Callable[[dict[str, Any]], bool],
+                   *,
+                   filter_type: str | None = None,
+                   filter_params: dict[str, Any] | None = None) -> None:
+
+        '''
+        Set a named filter. Replaces any existing filter with the same key.
+
+        Args:
+            key (str): Unique identifier for this filter
+            condition (Callable): Function taking a combo dict, returning True
+                to REMOVE, False to keep
+            filter_type (str | None): Declarative filter type for checkpoint
+                restoration. When provided with filter_params, the filter
+                can be rebuilt on resume
+            filter_params (dict[str, Any] | None): Parameters for the filter
+                builder. Required when filter_type is provided
+
+        '''
+
+        if (filter_type is None) != (filter_params is None):
+            raise ValueError(
+                'filter_type and filter_params must both be provided or both omitted.'
+            )
+
+        log_kwargs: dict[str, Any] = {'key': key}
+        if filter_type is not None:
+            log_kwargs['filter_type'] = filter_type
+            log_kwargs['filter_params'] = dict(filter_params)
+        self._log_intervention('set_filter', **log_kwargs)
+        self._named_filters[key] = condition
+        if filter_type is not None:
+            self._named_filter_descriptors[key] = (filter_type, dict(filter_params))
+        elif key in self._named_filter_descriptors:
+            del self._named_filter_descriptors[key]
+
+
+    def clear_filter(self, key: str) -> None:
+
+        '''
+        Remove a named filter by key. No-op if key not found.
+
+        Args:
+            key (str): Identifier of the filter to remove
+
+        '''
+
+        if key in self._named_filters:
+            self._log_intervention('clear_filter', key=key)
+            del self._named_filters[key]
+            self._named_filter_descriptors.pop(key, None)
 
 
     def trim(self, target_count: int) -> None:
@@ -353,6 +413,10 @@ class MSQ:
             'trim_budget': self._trim_budget,
             'priority_queue': list(self._priority_queue),
             'custom_filters_count': len(self._custom_filters),
+            'named_filter_keys': list(self._named_filters.keys()),
+            'named_filter_descriptors': {
+                k: list(v) for k, v in self._named_filter_descriptors.items()
+            },
             'intervention_log': list(self._intervention_log),
             'strategy_state': self._strategy.get_state(),
         }
@@ -373,19 +437,42 @@ class MSQ:
             if key not in state:
                 raise ValueError(f"Invalid MSQ state: missing required key '{key}'.")
 
+        from limen.experiment.reducer.filter_types import FILTER_BUILDERS
+
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
         self._custom_filters = []
+        self._named_filters = {}
+        self._named_filter_descriptors = {}
         self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
-        if state.get('custom_filters_count', 0) > 0:
+        descriptors = state.get('named_filter_descriptors', {})
+        restored_keys: set[str] = set()
+        for key, (filter_type, filter_params) in descriptors.items():
+            builder = FILTER_BUILDERS.get(filter_type)
+            if builder is not None:
+                try:
+                    self._named_filters[key] = builder(filter_params)
+                except (KeyError, TypeError, ValueError):
+                    continue
+                self._named_filter_descriptors[key] = (filter_type, dict(filter_params))
+                restored_keys.add(key)
+        all_named_keys = set(state.get('named_filter_keys', []))
+        lost_named = all_named_keys - restored_keys
+        custom_count = state.get('custom_filters_count', 0)
+        non_restorable = custom_count + len(lost_named)
+        if non_restorable > 0:
+            parts = []
+            if lost_named:
+                parts.append(f"named filters: {sorted(lost_named)}")
+            if custom_count:
+                parts.append(f"{custom_count} custom filter(s)")
             import warnings
             warnings.warn(
-                f"Checkpoint had {state['custom_filters_count']} custom "
-                f"filters that cannot be restored from serialized state. "
+                f"Checkpoint had non-restorable filters ({', '.join(parts)}). "
                 f"Re-register them after resume.",
                 stacklevel=2,
             )

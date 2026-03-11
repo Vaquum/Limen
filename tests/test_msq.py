@@ -281,3 +281,121 @@ def test_get_set_state():
     assert msq2.yielded_count == 2
     assert msq2.priority_queue_size == 1
     assert msq2.remaining_count() == 99  # 98 remaining + 1 in queue
+
+
+def test_set_filter():
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+    msq.set_filter('test', lambda c: c['a'] == 3)
+    combos = [_param_keys(c) for c in msq]
+
+    assert len(combos) == 2
+    assert all(c['a'] != 3 for c in combos)
+
+
+def test_clear_filter():
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+    msq.set_filter('test', lambda c: c['a'] == 3)
+
+    next(msq)
+    msq.clear_filter('test')
+
+    remaining = [_param_keys(c) for c in msq]
+    a_values = {c['a'] for c in remaining}
+    assert 3 in a_values
+
+
+def test_set_filter_replaces():
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+    msq.set_filter('test', lambda c: c['a'] == 1)
+    msq.set_filter('test', lambda c: c['a'] == 2)
+    combos = [_param_keys(c) for c in msq]
+
+    assert len(combos) == 2
+    a_values = {c['a'] for c in combos}
+    assert 1 in a_values
+    assert 2 not in a_values
+
+
+def test_named_filter_descriptor_roundtrip():
+
+    from limen.experiment.reducer.filter_types import FILTER_BUILDERS
+    from limen.experiment.reducer.filter_types import FILTER_KEEP_BETWEEN
+    from limen.experiment.reducer.filter_types import FILTER_KEEP_VALUES
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3, 4, 5], 'b': ['x', 'y', 'z']})
+
+    between_params = {'param': 'a', 'lower': 2, 'upper': 4}
+    msq.set_filter(
+        'focus_a',
+        FILTER_BUILDERS[FILTER_KEEP_BETWEEN](between_params),
+        filter_type=FILTER_KEEP_BETWEEN,
+        filter_params=between_params,
+    )
+
+    values_params = {'param': 'b', 'values': ['x', 'y']}
+    msq.set_filter(
+        'focus_b',
+        FILTER_BUILDERS[FILTER_KEEP_VALUES](values_params),
+        filter_type=FILTER_KEEP_VALUES,
+        filter_params=values_params,
+    )
+
+    next(msq)
+    state = msq.get_state()
+
+    assert 'named_filter_descriptors' in state
+    assert 'focus_a' in state['named_filter_descriptors']
+    assert 'focus_b' in state['named_filter_descriptors']
+
+    msq2, _ = _make_msq(params={'a': [1, 2, 3, 4, 5], 'b': ['x', 'y', 'z']})
+    msq2.set_state(state)
+
+    combos = [_param_keys(c) for c in msq2]
+    for c in combos:
+        assert 2 <= c['a'] <= 4
+        assert c['b'] in ('x', 'y')
+
+
+def test_clear_filter_removes_descriptor():
+
+    from limen.experiment.reducer.filter_types import FILTER_BUILDERS
+    from limen.experiment.reducer.filter_types import FILTER_KEEP_VALUES
+
+    msq, _ = _make_msq(params={'a': [1, 2, 3], 'b': ['x']})
+
+    params = {'param': 'a', 'values': [1, 2]}
+    msq.set_filter(
+        'test',
+        FILTER_BUILDERS[FILTER_KEEP_VALUES](params),
+        filter_type=FILTER_KEEP_VALUES,
+        filter_params=params,
+    )
+
+    state1 = msq.get_state()
+    assert 'test' in state1['named_filter_descriptors']
+
+    msq.clear_filter('test')
+    state2 = msq.get_state()
+    assert 'test' not in state2['named_filter_descriptors']
+
+
+def test_non_descriptor_filter_warns_on_restore():
+
+    import warnings
+
+    msq, _ = _make_msq(params={'a': [1, 2], 'b': ['x']})
+    msq.set_filter('bare', lambda c: c['a'] == 1)
+
+    state = msq.get_state()
+    assert 'bare' in state['named_filter_keys']
+    assert 'bare' not in state['named_filter_descriptors']
+
+    msq2, _ = _make_msq(params={'a': [1, 2], 'b': ['x']})
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+        msq2.set_state(state)
+        assert len(w) == 1
+        assert 'non-restorable' in str(w[0].message).lower()
