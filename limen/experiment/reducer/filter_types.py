@@ -6,6 +6,10 @@ FILTER_BUILDERS maps these to factory functions that create filter callables
 from filter_params dicts. Keys are extracted eagerly so missing params
 fail at filter creation time, not during MSQ iteration.
 
+All builders return a callable with signature (combo: dict) -> bool.
+True means REMOVE the combo, False means keep it. This matches
+MSQ._passes_filters which treats True as a rejection.
+
 '''
 
 import hashlib
