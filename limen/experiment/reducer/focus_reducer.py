@@ -374,7 +374,7 @@ class FocusReducer(PruningStrategy):
 
         return {
             'focus_active': self._focus_active,
-            'breakthrough_combo': self._breakthrough_combo,
+            'breakthrough_combo': dict(self._breakthrough_combo) if self._breakthrough_combo is not None else None,
             'best_metric': self._best_metric,
             'rounds_since_improvement': self._rounds_since_improvement,
             'focused_params': list(self._focused_params),
@@ -409,7 +409,7 @@ class FocusReducer(PruningStrategy):
                 )
 
         self._focus_active = state['focus_active']
-        self._breakthrough_combo = state['breakthrough_combo']
+        self._breakthrough_combo = dict(state['breakthrough_combo']) if state['breakthrough_combo'] is not None else None
         self._best_metric = state['best_metric']
         self._rounds_since_improvement = state['rounds_since_improvement']
         self._focused_params = set(state['focused_params'])
