@@ -143,7 +143,7 @@ class FocusReducer(PruningStrategy):
             return []
 
         self._focus_active = True
-        self._breakthrough_combo = best_combo
+        self._breakthrough_combo = dict(best_combo)
         self._best_metric = best_value
         self._rounds_since_improvement = 0
 
@@ -167,7 +167,7 @@ class FocusReducer(PruningStrategy):
 
         if improved:
             self._best_metric = best_value
-            self._breakthrough_combo = best_combo
+            self._breakthrough_combo = dict(best_combo)
             self._rounds_since_improvement = 0
             return self._build_narrowing(best_combo, msq)
 
