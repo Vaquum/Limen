@@ -25,6 +25,7 @@ def _cdlpiercing_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdlpiercing'
     '''
+    _ = high_col
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     low_values = data[low_col].to_numpy().astype(float, copy=False)

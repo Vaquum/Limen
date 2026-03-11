@@ -5,6 +5,10 @@ from limen.indicators.rsi import _rsi_from_values
 from limen.indicators.stochf import _stochf_from_arrays
 
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+CMP_N_8 = 8
+
 def _stochrsi_from_values(
     values: np.ndarray,
     period: int,
@@ -78,13 +82,13 @@ def stochrsi(
         pl.DataFrame: The input data with 'stochrsi_fastk' and 'stochrsi_fastd'
     '''
 
-    if period < 2 or period > 100000:
+    if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
-    if fastk_period < 1 or fastk_period > 100000:
+    if fastk_period < 1 or fastk_period > CMP_N_100000:
         raise ValueError('fastk_period must be between 1 and 100000')
-    if fastd_period < 1 or fastd_period > 100000:
+    if fastd_period < 1 or fastd_period > CMP_N_100000:
         raise ValueError('fastd_period must be between 1 and 100000')
-    if fastd_ma_type < 0 or fastd_ma_type > 8:
+    if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
         raise ValueError('fastd_ma_type must be between 0 and 8')
 
     frame = data

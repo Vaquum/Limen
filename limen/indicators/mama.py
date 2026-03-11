@@ -4,6 +4,12 @@ import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
 
+CMP_N_0_01 = 0.01
+CMP_N_0_99 = 0.99
+CMP_N_3 = 3
+CMP_N_50_0 = 50.0
+CMP_N_6_0 = 6.0
+
 MAMA_PERIOD = 0.0
 
 
@@ -121,7 +127,7 @@ def _mama_from_values(
             )
 
             hilbert_idx += 1
-            if hilbert_idx == 3:
+            if hilbert_idx == CMP_N_3:
                 hilbert_idx = 0
 
             q2 = (0.2 * (q1 + ji)) + (0.8 * prev_q2)
@@ -177,13 +183,11 @@ def _mama_from_values(
 
         temp_real = prev_phase - temp_real2
         prev_phase = temp_real2
-        if temp_real < 1.0:
-            temp_real = 1.0
+        temp_real = max(temp_real, 1.0)
 
         if temp_real > 1.0:
             temp_real = fast_limit / temp_real
-            if temp_real < slow_limit:
-                temp_real = slow_limit
+            temp_real = max(temp_real, slow_limit)
         else:
             temp_real = fast_limit
 
@@ -206,14 +210,12 @@ def _mama_from_values(
             period = 360.0 / (math.atan(im / re) * rad2deg)
 
         temp_real2 = 1.5 * temp_real
-        if period > temp_real2:
-            period = temp_real2
+        period = min(period, temp_real2)
         temp_real2 = 0.67 * temp_real
-        if period < temp_real2:
-            period = temp_real2
-        if period < 6.0:
+        period = max(period, temp_real2)
+        if period < CMP_N_6_0:
             period = 6.0
-        elif period > 50.0:
+        elif period > CMP_N_50_0:
             period = 50.0
         period = (0.2 * period) + (0.8 * temp_real)
 
@@ -242,9 +244,9 @@ def mama(
         pl.DataFrame: The input data with new columns 'mama' and 'fama'
     '''
 
-    if fast_limit < 0.01 or fast_limit > 0.99:
+    if fast_limit < CMP_N_0_01 or fast_limit > CMP_N_0_99:
         raise ValueError('fast_limit must be between 0.01 and 0.99')
-    if slow_limit < 0.01 or slow_limit > 0.99:
+    if slow_limit < CMP_N_0_01 or slow_limit > CMP_N_0_99:
         raise ValueError('slow_limit must be between 0.01 and 0.99')
 
     frame = data

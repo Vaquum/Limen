@@ -1,6 +1,5 @@
 import talib
 import numpy as np
-import time
 from limen.data import HistoricalData
 from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cdladvancedblock, cdlabandonedbaby, cdlbelthold, cdlconcealbabyswall, cdlclosingmarubozu, cdlcounterattack, cdldarkcloudcover, cdldragonflydoji, cdlengulfing, cdlgravestonedoji, cdlhammer, cdlhangingman, cdlharami, cdlharamicross, cdlhighwave, cdlhikkake, cdlhikkakemod, cdlhomingpigeon, cdlidentical3crows, cdlinvertedhammer, cdlladderbottom, cdllongleggeddoji, cdllongline, cdlmarubozu, cdlmatchinglow, cdlmathold, cdlonneck, cdlpiercing, cdlrickshawman, cdlrisefall3methods, cdlseparatinglines, cdlshootingstar, cdlshortline, cdlspinningtop, cdlstalledpattern, cdlsticksandwich, cdltakuri, cdlthrusting, cdltristar, cdlunique3river, cdl2crows, cdl3blackcrows, cdl3inside, cdl3linestrike, cdl3starsinsouth, cdl3whitesoldiers, coldoji, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
 
@@ -1866,172 +1865,129 @@ def verify_indicator_results_match(limen_values, talib_values, tolerance=TOLERAN
     limen_clean = limen_values[~np.isnan(limen_values)]
     talib_clean = talib_values[~np.isnan(talib_values)]
 
-    def _debug_print():
-        print(
-            "First 10 valid values -\n"
-            f"\tLimen: {limen_clean[:10]}\n"
-            f"\tTA-Lib: {talib_clean[:10]}"
-        )
-        print(
-            "Last 10 valid values -\n"
-            f"\tLimen: {limen_clean[-10:]}\n"
-            f"\tTA-Lib: {talib_clean[-10:]}"
-        )
 
-    try:
-        assert len(limen_clean) == len(talib_clean), (
-            f"Length mismatch after NaN removal: "
-            f"Limen={len(limen_clean)}, TA-Lib={len(talib_clean)}"
-        )
+    assert len(limen_clean) == len(talib_clean), (
+        f"Length mismatch after NaN removal: "
+        f"Limen={len(limen_clean)}, TA-Lib={len(talib_clean)}"
+    )
 
-        assert len(limen_clean) > 0, "No valid (non-NaN) values to compare"
+    assert len(limen_clean) > 0, "No valid (non-NaN) values to compare"
 
-        diff = np.abs(limen_clean - talib_clean)
-        max_diff = float(np.max(diff))  # float for cleaner printing
+    diff = np.abs(limen_clean - talib_clean)
+    max_diff = float(np.max(diff))  # float for cleaner printing
 
-        assert max_diff < tolerance, f"Results differ, Max Diff: {max_diff}"
+    assert max_diff < tolerance, f"Results differ, Max Diff: {max_diff}"
 
-    except AssertionError as e:
-        _debug_print()
-        raise
 
 def test_indicators_vs_talib():
     test_functions = [
-        ('AD', test_ad),
-        ('ADOSC', test_adosc),
-        ('APO', test_apo),
-        ('PPO', test_ppo),
-        ('DEMA', test_dema),
-        ('EMA', test_ema),
-        ('HT_TRENDLINE', test_ht_trendline),
-        ('HT_DCPHASE', test_ht_dcphase),
-        ('HT_DCPERIOD', test_ht_dcperiod),
-        ('HT_PHASOR', test_ht_phasor),
-        ('HT_SINE', test_ht_sine),
-        ('HT_TRENDMODE', test_ht_trendmode),
-        ('KAMA', test_kama),
-        ('MA', test_ma),
-        ('MAMA', test_mama),
-        ('SMA', test_sma),
-        ('TEMA', test_tema),
-        ('TRIMA', test_trima),
-        ('TRIX', test_trix),
-        ('T3', test_t3),
-        ('TSF', test_tsf),
-        ('LINEARREG', test_linearreg),
-        ('LINEARREG_ANGLE', test_linearreg_angle),
-        ('LINEARREG_INTERCEPT', test_linearreg_intercept),
-        ('LINEARREG_SLOPE', test_linearreg_slope),
-        ('STDDEV', test_stddev),
-        ('VAR', test_var),
-        ('WMA', test_wma),
-        ('SAR', test_sar),
-        ('SAREXT', test_sarext),
-        ('ATR', test_atr),
-        ('AVGPRICE', test_avgprice),
-        ('BBANDS', test_bbands),
-        ('BOP', test_bop),
-        ('CCI', test_cci),
-        ('CMO', test_cmo),
-        ('MACD', test_macd),
-        ('MACDFIX', test_macdfix),
-        ('MACDEXT', test_macdext),
-        ('MOM', test_mom),
-        ('ROC', test_roc),
-        ('ROCP', test_rocp),
-        ('ROCR', test_rocr),
-        ('ROCR100', test_rocr100),
-        ('RSI', test_rsi),
-        ('STOCH', test_stoch),
-        ('STOCHF', test_stochf),
-        ('STOCHRSI', test_stochrsi),
-        ('ULTOSC', test_ultosc),
-        ('WILLR', test_willr),
-        ('MFI', test_mfi),
-        ('MEDPRICE', test_medprice),
-        ('MIDPOINT', test_midpoint),
-        ('MIDPRICE', test_midprice),
-        ('TYPPRICE', test_typprice),
-        ('WCLPRICE', test_wclprice),
-        ('CDLADVANCEBLOCK', test_cdladvancedblock),
-        ('CDLABANDONEDBABY', test_cdlabandonedbaby),
-        ('CDLBELTHOLD', test_cdlbelthold),
-        ('CDLCONCEALBABYSWALL', test_cdlconcealbabyswall),
-        ('CDLCLOSINGMARUBOZU', test_cdlclosingmarubozu),
-        ('CDLCOUNTERATTACK', test_cdlcounterattack),
-        ('CDLDARKCLOUDCOVER', test_cdldarkcloudcover),
-        ('CDLDOJI', test_coldoji),
-        ('CDLDRAGONFLYDOJI', test_cdldragonflydoji),
-        ('CDLENGULFING', test_cdlengulfing),
-        ('CDLGRAVESTONEDOJI', test_cdlgravestonedoji),
-        ('CDLHAMMER', test_cdlhammer),
-        ('CDLHANGINGMAN', test_cdlhangingman),
-        ('CDLHARAMI', test_cdlharami),
-        ('CDLHARAMICROSS', test_cdlharamicross),
-        ('CDLHIGHWAVE', test_cdlhighwave),
-        ('CDLHIKKAKE', test_cdlhikkake),
-        ('CDLHIKKAKEMOD', test_cdlhikkakemod),
-        ('CDLHOMINGPIGEON', test_cdlhomingpigeon),
-        ('CDLIDENTICAL3CROWS', test_cdlidentical3crows),
-        ('CDLINVERTEDHAMMER', test_cdlinvertedhammer),
-        ('CDLLADDERBOTTOM', test_cdlladderbottom),
-        ('CDLLONGLEGGEDDOJI', test_cdllongleggeddoji),
-        ('CDLLONGLINE', test_cdllongline),
-        ('CDLMARUBOZU', test_cdlmarubozu),
-        ('CDLMATCHINGLOW', test_cdlmatchinglow),
-        ('CDLMATHOLD', test_cdlmathold),
-        ('CDLONNECK', test_cdlonneck),
-        ('CDLPIERCING', test_cdlpiercing),
-        ('CDLRICKSHAWMAN', test_cdlrickshawman),
-        ('CDLRISEFALL3METHODS', test_cdlrisefall3methods),
-        ('CDLSEPARATINGLINES', test_cdlseparatinglines),
-        ('CDLSHOOTINGSTAR', test_cdlshootingstar),
-        ('CDLSHORTLINE', test_cdlshortline),
-        ('CDLSPINNINGTOP', test_cdlspinningtop),
-        ('CDLSTALLEDPATTERN', test_cdlstalledpattern),
-        ('CDLSTICKSANDWICH', test_cdlsticksandwich),
-        ('CDLTAKURI', test_cdltakuri),
-        ('CDLTHRUSTING', test_cdlthrusting),
-        ('CDLTRISTAR', test_cdltristar),
-        ('CDLUNIQUE3RIVER', test_cdlunique3river),
-        ('CDL2CROWS', test_cdl2crows),
-        ('CDL3BLACKCROWS', test_cdl3blackcrows),
-        ('CDL3INSIDE', test_cdl3inside),
-        ('CDL3LINESTRIKE', test_cdl3linestrike),
-        ('CDL3STARSINSOUTH', test_cdl3starsinsouth),
-        ('CDL3WHITESOLDIERS', test_cdl3whitesoldiers),
-        ('NATR', test_natr),
-        ('OBV', test_obv),
-        ('TRANGE', test_trange),
+        test_ad,
+        test_adosc,
+        test_apo,
+        test_ppo,
+        test_dema,
+        test_ema,
+        test_ht_trendline,
+        test_ht_dcperiod,
+        test_ht_dcphase,
+        test_ht_phasor,
+        test_ht_sine,
+        test_ht_trendmode,
+        test_kama,
+        test_ma,
+        test_mama,
+        test_sma,
+        test_tema,
+        test_trima,
+        test_trix,
+        test_t3,
+        test_tsf,
+        test_linearreg,
+        test_linearreg_angle,
+        test_linearreg_intercept,
+        test_linearreg_slope,
+        test_stddev,
+        test_var,
+        test_wma,
+        test_sar,
+        test_sarext,
+        test_mfi,
+        test_atr,
+        test_avgprice,
+        test_medprice,
+        test_midpoint,
+        test_midprice,
+        test_typprice,
+        test_wclprice,
+        test_cdl2crows,
+        test_cdl3blackcrows,
+        test_cdl3inside,
+        test_cdl3linestrike,
+        test_cdl3starsinsouth,
+        test_cdl3whitesoldiers,
+        test_cdlabandonedbaby,
+        test_cdladvancedblock,
+        test_cdlbelthold,
+        test_cdlclosingmarubozu,
+        test_cdlconcealbabyswall,
+        test_cdlcounterattack,
+        test_cdldarkcloudcover,
+        test_coldoji,
+        test_cdldragonflydoji,
+        test_cdlengulfing,
+        test_cdlgravestonedoji,
+        test_cdlhammer,
+        test_cdlhangingman,
+        test_cdlharami,
+        test_cdlharamicross,
+        test_cdlhighwave,
+        test_cdlhikkake,
+        test_cdlhikkakemod,
+        test_cdlhomingpigeon,
+        test_cdlidentical3crows,
+        test_cdlinvertedhammer,
+        test_cdlladderbottom,
+        test_cdllongleggeddoji,
+        test_cdllongline,
+        test_cdlmarubozu,
+        test_cdlmatchinglow,
+        test_cdlmathold,
+        test_cdlonneck,
+        test_cdlpiercing,
+        test_cdlrickshawman,
+        test_cdlrisefall3methods,
+        test_cdlseparatinglines,
+        test_cdlshootingstar,
+        test_cdlshortline,
+        test_cdlspinningtop,
+        test_cdlstalledpattern,
+        test_cdlsticksandwich,
+        test_cdltakuri,
+        test_cdlthrusting,
+        test_cdltristar,
+        test_cdlunique3river,
+        test_bbands,
+        test_bop,
+        test_cci,
+        test_cmo,
+        test_macd,
+        test_macdfix,
+        test_macdext,
+        test_mom,
+        test_roc,
+        test_rocp,
+        test_rocr,
+        test_rocr100,
+        test_rsi,
+        test_stoch,
+        test_stochf,
+        test_stochrsi,
+        test_ultosc,
+        test_willr,
+        test_natr,
+        test_obv,
+        test_trange,
     ]
 
-    print("Running indicator validation tests against TA-Lib...")
-    print("=" * 60)
-
-    total_time = 0.0
-    test_results = []
-
-    for indicator_name, test_func in test_functions:
-        start_time = time.time()
-        try:
-            test_func()
-            end_time = time.time()
-            execution_time = end_time - start_time
-            total_time += execution_time
-            test_results.append((indicator_name, "PASSED", execution_time))
-            print(f'    ✅ {indicator_name}: PASSED ({execution_time:.4f}s)')
-        except Exception as e:
-            end_time = time.time()
-            execution_time = end_time - start_time
-            total_time += execution_time
-            test_results.append((indicator_name, f"FAILED - {e}", execution_time))
-            print(f'    ❌ {indicator_name}: FAILED - {e} ({execution_time:.4f}s)')
-
-    print("=" * 60)
-    print(f"Total execution time: {total_time:.4f}s")
-    print(f"Average time per test: {total_time/len(test_functions):.4f}s")
-    print(f"Tests completed: {len([r for r in test_results if r[1] == 'PASSED'])}/{len(test_results)} passed")
-
-
-if __name__ == "__main__":
-    test_indicators_vs_talib()
+    for test_func in test_functions:
+        test_func()

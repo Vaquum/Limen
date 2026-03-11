@@ -27,6 +27,7 @@ def _cdlhikkakemod_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdlhikkakemod'
     '''
+    _ = open_col
 
     high_values = data[high_col].to_numpy().astype(float, copy=False)
     low_values = data[low_col].to_numpy().astype(float, copy=False)

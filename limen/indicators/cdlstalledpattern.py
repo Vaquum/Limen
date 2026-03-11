@@ -47,10 +47,7 @@ def _cdlstalledpattern_impl(
     near_avg_period = CDLSTALLEDPATTERN_NEAR_AVG_PERIOD
     near_factor = CDLSTALLEDPATTERN_NEAR_FACTOR
 
-    lookback_total = max(
-        max(body_long_avg_period, body_short_avg_period),
-        max(shadow_vs_avg_period, near_avg_period),
-    ) + 2
+    lookback_total = max(body_long_avg_period, body_short_avg_period, shadow_vs_avg_period, near_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

@@ -4,6 +4,8 @@ import polars as pl
 from limen.indicators._ema import _ema_talib_default_segment
 
 
+CMP_N_100000 = 100000
+
 def _trix_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
@@ -56,7 +58,7 @@ def trix(
         pl.DataFrame: The input data with a new column 'trix_{period}'
     '''
 
-    if period < 1 or period > 100000:
+    if period < 1 or period > CMP_N_100000:
         raise ValueError('period must be between 1 and 100000')
 
     out_col = f'trix_{period}'

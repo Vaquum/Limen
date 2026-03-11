@@ -45,10 +45,7 @@ def _cdlshootingstar_impl(
     shadow_long_factor = CDLSHOOTINGSTAR_SHADOW_LONG_FACTOR
     shadow_vs_avg_period = CDLSHOOTINGSTAR_SHADOW_VS_AVG_PERIOD
     shadow_vs_factor = CDLSHOOTINGSTAR_SHADOW_VS_FACTOR
-    lookback_total = max(
-        max(body_short_avg_period, shadow_long_avg_period),
-        shadow_vs_avg_period,
-    ) + 1
+    lookback_total = max(body_short_avg_period, shadow_long_avg_period, shadow_vs_avg_period) + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

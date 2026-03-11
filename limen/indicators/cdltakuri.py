@@ -47,10 +47,7 @@ def _cdltakuri_impl(
     shadow_vs_factor = CDLTAKURI_SHADOW_VS_FACTOR
     shadow_vl_avg_period = CDLTAKURI_SHADOW_VL_AVG_PERIOD
     shadow_vl_factor = CDLTAKURI_SHADOW_VL_FACTOR
-    lookback_total = max(
-        max(body_doji_avg_period, shadow_vs_avg_period),
-        shadow_vl_avg_period,
-    )
+    lookback_total = max(body_doji_avg_period, shadow_vs_avg_period, shadow_vl_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

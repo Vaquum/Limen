@@ -30,7 +30,7 @@ def _cdlunique3river_impl(
     '''
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
+    data[high_col].to_numpy().astype(float, copy=False)
     low_values = data[low_col].to_numpy().astype(float, copy=False)
     close_values = data[close_col].to_numpy().astype(float, copy=False)
     n = len(data)

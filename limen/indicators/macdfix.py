@@ -3,6 +3,8 @@ import polars as pl
 
 from limen.indicators._ema import _ema_talib_default_segment, _ema_talib_segment_with_k
 
+CMP_N_100000 = 100000
+
 MACDFIX_FIXED_FAST_PERIOD = 12
 MACDFIX_FIXED_SLOW_PERIOD = 26
 MACDFIX_COL = 'macdfix'
@@ -86,7 +88,7 @@ def macdfix(
         pl.DataFrame: The input data with columns 'macdfix', 'macdfix_signal', 'macdfix_hist'
     '''
 
-    if signal_period < 1 or signal_period > 100000:
+    if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('signal_period must be between 1 and 100000')
 
     frame = data

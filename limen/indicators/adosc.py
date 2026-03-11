@@ -1,6 +1,9 @@
 import polars as pl
 
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
 def adosc(
     data: pl.DataFrame,
     high_col: str = 'high',
@@ -27,9 +30,9 @@ def adosc(
         pl.DataFrame: The input data with a new column 'adosc_{fast_period}_{slow_period}'
     '''
 
-    if fast_period < 2 or fast_period > 100000:
+    if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('fast_period must be between 2 and 100000')
-    if slow_period < 2 or slow_period > 100000:
+    if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
         raise ValueError('slow_period must be between 2 and 100000')
 
     out_col = f'adosc_{fast_period}_{slow_period}'

@@ -1,6 +1,8 @@
 import polars as pl
 
 
+CMP_N_100000 = 100000
+
 def mom(
     data: pl.DataFrame,
     price_col: str = 'close',
@@ -19,7 +21,7 @@ def mom(
         pl.DataFrame: The input data with a new column 'mom_{period}'
     '''
 
-    if period < 1 or period > 100000:
+    if period < 1 or period > CMP_N_100000:
         raise ValueError('period must be between 1 and 100000')
 
     out_col = f'mom_{period}'

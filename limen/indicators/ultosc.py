@@ -2,6 +2,8 @@ import numpy as np
 import polars as pl
 
 
+CMP_N_100000 = 100000
+
 TA_EPSILON = 1e-14
 
 
@@ -20,11 +22,9 @@ def _calc_terms(
 
     true_range = temp_ht - temp_lt
     temp_double = abs(temp_cy - temp_ht)
-    if temp_double > true_range:
-        true_range = temp_double
+    true_range = max(true_range, temp_double)
     temp_double = abs(temp_cy - temp_lt)
-    if temp_double > true_range:
-        true_range = temp_double
+    true_range = max(true_range, temp_double)
 
     return close_minus_true_low, true_range
 
@@ -138,11 +138,11 @@ def ultosc(
         pl.DataFrame: The input data with a new column 'ultosc_{period1}_{period2}_{period3}'
     '''
 
-    if period1 < 1 or period1 > 100000:
+    if period1 < 1 or period1 > CMP_N_100000:
         raise ValueError('period1 must be between 1 and 100000')
-    if period2 < 1 or period2 > 100000:
+    if period2 < 1 or period2 > CMP_N_100000:
         raise ValueError('period2 must be between 1 and 100000')
-    if period3 < 1 or period3 > 100000:
+    if period3 < 1 or period3 > CMP_N_100000:
         raise ValueError('period3 must be between 1 and 100000')
 
     out_col = f'ultosc_{period1}_{period2}_{period3}'

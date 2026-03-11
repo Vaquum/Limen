@@ -4,6 +4,12 @@ import polars as pl
 
 from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
 
+CMP_N_0_01 = 0.01
+CMP_N_3 = 3
+CMP_N_315_0 = 315.0
+CMP_N_50_0 = 50.0
+CMP_N_6_0 = 6.0
+
 HT_SINE_PERIOD = 0.0
 HT_SINE_SMOOTH_PERIOD = 0.0
 
@@ -126,7 +132,7 @@ def _ht_sine_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             )
 
             hilbert_idx += 1
-            if hilbert_idx == 3:
+            if hilbert_idx == CMP_N_3:
                 hilbert_idx = 0
 
             q2 = (0.2 * (q1 + ji)) + (0.8 * prev_q2)
@@ -180,14 +186,12 @@ def _ht_sine_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             period = 360.0 / (math.atan(im / re) * rad2deg)
 
         temp_real2 = 1.5 * temp_real
-        if period > temp_real2:
-            period = temp_real2
+        period = min(period, temp_real2)
         temp_real2 = 0.67 * temp_real
-        if period < temp_real2:
-            period = temp_real2
-        if period < 6.0:
+        period = max(period, temp_real2)
+        if period < CMP_N_6_0:
             period = 6.0
-        elif period > 50.0:
+        elif period > CMP_N_50_0:
             period = 50.0
         period = (0.2 * period) + (0.8 * temp_real)
 
@@ -212,7 +216,7 @@ def _ht_sine_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         temp_real = abs(imag_part)
         if temp_real > 0.0:
             dc_phase = math.atan(real_part / imag_part) * rad2deg
-        elif temp_real <= 0.01:
+        elif temp_real <= CMP_N_0_01:
             if real_part < 0.0:
                 dc_phase -= 90.0
             elif real_part > 0.0:
@@ -222,7 +226,7 @@ def _ht_sine_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         dc_phase += 360.0 / smooth_period
         if imag_part < 0.0:
             dc_phase += 180.0
-        if dc_phase > 315.0:
+        if dc_phase > CMP_N_315_0:
             dc_phase -= 360.0
 
         if today >= start_idx:

@@ -47,7 +47,7 @@ def _cdlrickshawman_impl(
     shadow_long_factor = CDLRICKSHAWMAN_SHADOW_LONG_FACTOR
     near_avg_period = CDLRICKSHAWMAN_NEAR_AVG_PERIOD
     near_factor = CDLRICKSHAWMAN_NEAR_FACTOR
-    lookback_total = max(max(body_doji_avg_period, shadow_long_avg_period), near_avg_period)
+    lookback_total = max(body_doji_avg_period, shadow_long_avg_period, near_avg_period)
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

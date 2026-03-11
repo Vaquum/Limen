@@ -48,10 +48,7 @@ def _cdl3whitesoldiers_impl(
     far_avg_period = CDL3WHITESOLDIERS_FAR_AVG_PERIOD
     far_factor = CDL3WHITESOLDIERS_FAR_FACTOR
 
-    lookback_total = max(
-        max(shadow_vs_avg_period, body_short_avg_period),
-        max(far_avg_period, near_avg_period),
-    ) + 2
+    lookback_total = max(shadow_vs_avg_period, body_short_avg_period, far_avg_period, near_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

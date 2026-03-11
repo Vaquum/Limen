@@ -46,10 +46,7 @@ def _cdl3starsinsouth_impl(
     shadow_vs_avg_period = CDL3STARSINSOUTH_SHADOW_VS_AVG_PERIOD
     shadow_vs_factor = CDL3STARSINSOUTH_SHADOW_VS_FACTOR
 
-    lookback_total = max(
-        max(shadow_vs_avg_period, shadow_long_avg_period),
-        max(body_long_avg_period, body_short_avg_period),
-    ) + 2
+    lookback_total = max(shadow_vs_avg_period, shadow_long_avg_period, body_long_avg_period, body_short_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

@@ -2,6 +2,9 @@ import numpy as np
 import polars as pl
 
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
 def _midprice_from_arrays(high_values: np.ndarray, low_values: np.ndarray, period: int) -> np.ndarray:
     n = len(high_values)
     out = np.full(n, np.nan, dtype=float)
@@ -18,11 +21,9 @@ def _midprice_from_arrays(high_values: np.ndarray, low_values: np.ndarray, perio
         i = trailing_idx + 1
         while i <= today:
             low_tmp = low_values[i]
-            if low_tmp < lowest:
-                lowest = low_tmp
+            lowest = min(lowest, low_tmp)
             high_tmp = high_values[i]
-            if high_tmp > highest:
-                highest = high_tmp
+            highest = max(highest, high_tmp)
             i += 1
 
         out[today] = (highest + lowest) / 2.0
@@ -52,7 +53,7 @@ def midprice(
         pl.DataFrame: The input data with a new column 'midprice_{period}'
     '''
 
-    if period < 2 or period > 100000:
+    if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
 
     out_col = f'midprice_{period}'

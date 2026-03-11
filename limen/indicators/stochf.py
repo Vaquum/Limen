@@ -4,21 +4,29 @@ import polars as pl
 from limen.indicators.ma import ma
 
 
+CMP_N_100000 = 100000
+CMP_N_3 = 3
+CMP_N_4 = 4
+CMP_N_6 = 6
+CMP_N_7 = 7
+CMP_N_8 = 8
+
 def _ma_lookback(period: int, ma_type: int) -> int:
     if period <= 1:
         return 0
-    if ma_type in (0, 1, 2, 5):
-        return period - 1
-    if ma_type == 3:
-        return 2 * (period - 1)
-    if ma_type == 4:
-        return 3 * (period - 1)
-    if ma_type == 6:
-        return period
-    if ma_type == 7:
-        return 32
-    if ma_type == 8:
-        return 6 * (period - 1)
+    lookback_by_type = {
+        0: period - 1,
+        1: period - 1,
+        2: period - 1,
+        5: period - 1,
+        CMP_N_3: 2 * (period - 1),
+        CMP_N_4: 3 * (period - 1),
+        CMP_N_6: period,
+        CMP_N_7: 32,
+        CMP_N_8: 6 * (period - 1),
+    }
+    if ma_type in lookback_by_type:
+        return lookback_by_type[ma_type]
     raise ValueError('ma_type must be between 0 and 8')
 
 
@@ -163,11 +171,11 @@ def stochf(
         pl.DataFrame: The input data with 'stochf_fastk' and 'stochf_fastd'
     '''
 
-    if fastk_period < 1 or fastk_period > 100000:
+    if fastk_period < 1 or fastk_period > CMP_N_100000:
         raise ValueError('fastk_period must be between 1 and 100000')
-    if fastd_period < 1 or fastd_period > 100000:
+    if fastd_period < 1 or fastd_period > CMP_N_100000:
         raise ValueError('fastd_period must be between 1 and 100000')
-    if fastd_ma_type < 0 or fastd_ma_type > 8:
+    if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
         raise ValueError('fastd_ma_type must be between 0 and 8')
 
     frame = data

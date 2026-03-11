@@ -135,6 +135,7 @@ from tests.test_sanity_reducer import test_warning_suggestion
 from tests.test_sanity_reducer import test_warning_no_column
 from tests.test_sanity_reducer import test_suggestion_dedup
 from tests.test_sanity_reducer import test_suggestion_checkpoint_roundtrip
+from tests.test_indicators_vs_talib import test_indicators_vs_talib
 
 tests = [
     test_param_domain_init,
@@ -263,6 +264,7 @@ tests = [
     test_account_conviction,
     test_backtest_conviction,
     test_rdop,
+    test_indicators_vs_talib,
 ]
 
 # Configure logging

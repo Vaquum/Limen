@@ -48,10 +48,7 @@ def _cdladvancedblock_impl(
     far_avg_period = CDLADVANCEDBLOCK_FAR_AVG_PERIOD
     far_factor = CDLADVANCEDBLOCK_FAR_FACTOR
 
-    lookback_total = max(
-        max(max(shadow_long_avg_period, shadow_short_avg_period), max(far_avg_period, near_avg_period)),
-        body_long_avg_period,
-    ) + 2
+    lookback_total = max(shadow_long_avg_period, shadow_short_avg_period, far_avg_period, near_avg_period, body_long_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

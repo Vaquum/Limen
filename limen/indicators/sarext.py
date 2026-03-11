@@ -2,6 +2,9 @@ import numpy as np
 import polars as pl
 
 
+CMP_NEG_3E37 = -3e37
+CMP_N_3E37 = 3e37
+
 def _sarext_from_arrays(
     high: np.ndarray,
     low: np.ndarray,
@@ -28,14 +31,12 @@ def _sarext_from_arrays(
     if af_long > acceleration_max_long:
         af_long = acceleration_max_long
         acceleration_init_long = acceleration_max_long
-    if acceleration_long > acceleration_max_long:
-        acceleration_long = acceleration_max_long
+    acceleration_long = min(acceleration_long, acceleration_max_long)
 
     if af_short > acceleration_max_short:
         af_short = acceleration_max_short
         acceleration_init_short = acceleration_max_short
-    if acceleration_short > acceleration_max_short:
-        acceleration_short = acceleration_max_short
+    acceleration_short = min(acceleration_short, acceleration_max_short)
 
     if start_value == 0.0:
         diff_p = high[start_idx] - high[start_idx - 1]
@@ -81,10 +82,8 @@ def _sarext_from_arrays(
                 is_long = 0
                 sar_value = ep
 
-                if sar_value < prev_high:
-                    sar_value = prev_high
-                if sar_value < new_high:
-                    sar_value = new_high
+                sar_value = max(sar_value, prev_high)
+                sar_value = max(sar_value, new_high)
 
                 if offset_on_reverse != 0.0:
                     sar_value += sar_value * offset_on_reverse
@@ -96,10 +95,8 @@ def _sarext_from_arrays(
 
                 sar_value = sar_value + (af_short * (ep - sar_value))
 
-                if sar_value < prev_high:
-                    sar_value = prev_high
-                if sar_value < new_high:
-                    sar_value = new_high
+                sar_value = max(sar_value, prev_high)
+                sar_value = max(sar_value, new_high)
             else:
                 out[out_series_idx] = sar_value
                 out_series_idx += 1
@@ -107,55 +104,44 @@ def _sarext_from_arrays(
                 if new_high > ep:
                     ep = new_high
                     af_long += acceleration_long
-                    if af_long > acceleration_max_long:
-                        af_long = acceleration_max_long
+                    af_long = min(af_long, acceleration_max_long)
 
                 sar_value = sar_value + (af_long * (ep - sar_value))
 
-                if sar_value > prev_low:
-                    sar_value = prev_low
-                if sar_value > new_low:
-                    sar_value = new_low
+                sar_value = min(sar_value, prev_low)
+                sar_value = min(sar_value, new_low)
+        elif new_high >= sar_value:
+            is_long = 1
+            sar_value = ep
+
+            sar_value = min(sar_value, prev_low)
+            sar_value = min(sar_value, new_low)
+
+            if offset_on_reverse != 0.0:
+                sar_value -= sar_value * offset_on_reverse
+            out[out_series_idx] = sar_value
+            out_series_idx += 1
+
+            af_long = acceleration_init_long
+            ep = new_high
+
+            sar_value = sar_value + (af_long * (ep - sar_value))
+
+            sar_value = min(sar_value, prev_low)
+            sar_value = min(sar_value, new_low)
         else:
-            if new_high >= sar_value:
-                is_long = 1
-                sar_value = ep
+            out[out_series_idx] = -sar_value
+            out_series_idx += 1
 
-                if sar_value > prev_low:
-                    sar_value = prev_low
-                if sar_value > new_low:
-                    sar_value = new_low
+            if new_low < ep:
+                ep = new_low
+                af_short += acceleration_short
+                af_short = min(af_short, acceleration_max_short)
 
-                if offset_on_reverse != 0.0:
-                    sar_value -= sar_value * offset_on_reverse
-                out[out_series_idx] = sar_value
-                out_series_idx += 1
+            sar_value = sar_value + (af_short * (ep - sar_value))
 
-                af_long = acceleration_init_long
-                ep = new_high
-
-                sar_value = sar_value + (af_long * (ep - sar_value))
-
-                if sar_value > prev_low:
-                    sar_value = prev_low
-                if sar_value > new_low:
-                    sar_value = new_low
-            else:
-                out[out_series_idx] = -sar_value
-                out_series_idx += 1
-
-                if new_low < ep:
-                    ep = new_low
-                    af_short += acceleration_short
-                    if af_short > acceleration_max_short:
-                        af_short = acceleration_max_short
-
-                sar_value = sar_value + (af_short * (ep - sar_value))
-
-                if sar_value < prev_high:
-                    sar_value = prev_high
-                if sar_value < new_high:
-                    sar_value = new_high
+            sar_value = max(sar_value, prev_high)
+            sar_value = max(sar_value, new_high)
 
     return out
 
@@ -194,21 +180,21 @@ def sarext(
         pl.DataFrame: The input data with a new column 'sarext'
     '''
 
-    if start_value < -3e37 or start_value > 3e37:
+    if start_value < CMP_NEG_3E37 or start_value > CMP_N_3E37:
         raise ValueError('start_value must be between -3e37 and 3e37')
-    if offset_on_reverse < 0.0 or offset_on_reverse > 3e37:
+    if offset_on_reverse < 0.0 or offset_on_reverse > CMP_N_3E37:
         raise ValueError('offset_on_reverse must be between 0 and 3e37')
-    if acceleration_init_long < 0.0 or acceleration_init_long > 3e37:
+    if acceleration_init_long < 0.0 or acceleration_init_long > CMP_N_3E37:
         raise ValueError('acceleration_init_long must be between 0 and 3e37')
-    if acceleration_long < 0.0 or acceleration_long > 3e37:
+    if acceleration_long < 0.0 or acceleration_long > CMP_N_3E37:
         raise ValueError('acceleration_long must be between 0 and 3e37')
-    if acceleration_max_long < 0.0 or acceleration_max_long > 3e37:
+    if acceleration_max_long < 0.0 or acceleration_max_long > CMP_N_3E37:
         raise ValueError('acceleration_max_long must be between 0 and 3e37')
-    if acceleration_init_short < 0.0 or acceleration_init_short > 3e37:
+    if acceleration_init_short < 0.0 or acceleration_init_short > CMP_N_3E37:
         raise ValueError('acceleration_init_short must be between 0 and 3e37')
-    if acceleration_short < 0.0 or acceleration_short > 3e37:
+    if acceleration_short < 0.0 or acceleration_short > CMP_N_3E37:
         raise ValueError('acceleration_short must be between 0 and 3e37')
-    if acceleration_max_short < 0.0 or acceleration_max_short > 3e37:
+    if acceleration_max_short < 0.0 or acceleration_max_short > CMP_N_3E37:
         raise ValueError('acceleration_max_short must be between 0 and 3e37')
 
     frame = data

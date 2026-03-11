@@ -2,6 +2,9 @@ import numpy as np
 import polars as pl
 
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
 def _t3_from_values(values: np.ndarray, period: int, vfactor: float) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
@@ -134,7 +137,7 @@ def t3(
         pl.DataFrame: The input data with a new column 't3_{period}_{vfactor}'
     '''
 
-    if period < 2 or period > 100000:
+    if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
     if vfactor < 0.0 or vfactor > 1.0:
         raise ValueError('vfactor must be between 0 and 1')

@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+CMP_N_3E37 = 3e37
+
 CDLMATHOLD_BODY_LONG_AVG_PERIOD = 10
 CDLMATHOLD_BODY_SHORT_AVG_PERIOD = 10
 
@@ -28,8 +30,9 @@ def _cdlmathold_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdlmathold'
     '''
+    _ = low_col
 
-    if penetration < 0.0 or penetration > 3e37:
+    if penetration < 0.0 or penetration > CMP_N_3E37:
         raise ValueError('penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
@@ -103,7 +106,7 @@ def _cdlmathold_impl(
             and third_rb_high < open_values[i - 3]
             and fourth_rb_high < third_rb_high
             and open_values[i] > close_values[i - 1]
-            and close_values[i] > max(max(high_values[i - 3], high_values[i - 2]), high_values[i - 1])
+            and close_values[i] > max(high_values[i - 3], high_values[i - 2], high_values[i - 1])
         ):
             out[i] = 100
 

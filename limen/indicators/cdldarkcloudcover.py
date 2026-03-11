@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+CMP_N_3E37 = 3e37
+
 CDLDARKCLOUDCOVER_BODY_LONG_AVG_PERIOD = 10
 CDLDARKCLOUDCOVER_BODY_LONG_PERIOD_TOTAL = 0.0
 
@@ -28,8 +30,9 @@ def _cdldarkcloudcover_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdldarkcloudcover'
     '''
+    _ = low_col
 
-    if penetration < 0.0 or penetration > 3e37:
+    if penetration < 0.0 or penetration > CMP_N_3E37:
         raise ValueError('penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)

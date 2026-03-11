@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+CMP_N_3E37 = 3e37
+
 CDLABANDONEDBABY_BODY_DOJI_AVG_PERIOD = 10
 CDLABANDONEDBABY_BODY_DOJI_FACTOR = 0.1
 CDLABANDONEDBABY_BODY_DOJI_PERIOD_TOTAL = 0.0
@@ -34,7 +36,7 @@ def _cdlabandonedbaby_impl(
         pl.DataFrame: The input data with a new column 'cdlabandonedbaby'
     '''
 
-    if penetration < 0.0 or penetration > 3e37:
+    if penetration < 0.0 or penetration > CMP_N_3E37:
         raise ValueError('penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
@@ -49,10 +51,7 @@ def _cdlabandonedbaby_impl(
     body_doji_avg_period = CDLABANDONEDBABY_BODY_DOJI_AVG_PERIOD
     body_doji_factor = CDLABANDONEDBABY_BODY_DOJI_FACTOR
 
-    lookback_total = max(
-        max(body_doji_avg_period, body_long_avg_period),
-        body_short_avg_period,
-    ) + 2
+    lookback_total = max(body_doji_avg_period, body_long_avg_period, body_short_avg_period) + 2
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

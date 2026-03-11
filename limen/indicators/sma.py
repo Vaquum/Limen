@@ -1,5 +1,8 @@
 import numpy as np
 import polars as pl
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
 SMA_PERIOD_TOTAL = 0.0
 
 
@@ -52,7 +55,7 @@ def sma(
     if column is not None:
         price_col = column
 
-    if period < 2 or period > 100000:
+    if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
 
     out_col = f'sma_{period}'

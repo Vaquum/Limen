@@ -45,7 +45,7 @@ def _cdlseparatinglines_impl(
     body_long_avg_period = CDLSEPARATINGLINES_BODY_LONG_AVG_PERIOD
     equal_avg_period = CDLSEPARATINGLINES_EQUAL_AVG_PERIOD
     equal_factor = CDLSEPARATINGLINES_EQUAL_FACTOR
-    lookback_total = max(max(shadow_vs_avg_period, body_long_avg_period), equal_avg_period) + 1
+    lookback_total = max(shadow_vs_avg_period, body_long_avg_period, equal_avg_period) + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:

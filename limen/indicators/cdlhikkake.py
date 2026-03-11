@@ -23,6 +23,7 @@ def _cdlhikkake_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdlhikkake'
     '''
+    _ = open_col
 
     high_values = data[high_col].to_numpy().astype(float, copy=False)
     low_values = data[low_col].to_numpy().astype(float, copy=False)

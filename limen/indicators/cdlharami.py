@@ -28,6 +28,7 @@ def _cdlharami_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdlharami'
     '''
+    _ = high_col, low_col
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     close_values = data[close_col].to_numpy().astype(float, copy=False)

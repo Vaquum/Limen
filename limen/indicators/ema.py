@@ -4,6 +4,9 @@ import polars as pl
 from limen.indicators._ema import _ema_talib_default_segment
 
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
 def _ema_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
@@ -36,7 +39,7 @@ def ema(
         pl.DataFrame: The input data with a new column 'ema_{period}'
     '''
 
-    if period < 2 or period > 100000:
+    if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
 
     out_col = f'ema_{period}'

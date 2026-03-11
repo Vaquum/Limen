@@ -1,6 +1,10 @@
 import polars as pl
 from limen.indicators.ma import ma
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+CMP_N_8 = 8
+
 TA_EPSILON = 1e-14
 
 
@@ -26,11 +30,11 @@ def ppo(
         pl.DataFrame: The input data with a new column 'ppo_{fast_period}_{slow_period}_{ma_type}'
     '''
 
-    if fast_period < 2 or fast_period > 100000:
+    if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('fast_period must be between 2 and 100000')
-    if slow_period < 2 or slow_period > 100000:
+    if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
         raise ValueError('slow_period must be between 2 and 100000')
-    if ma_type < 0 or ma_type > 8:
+    if ma_type < 0 or ma_type > CMP_N_8:
         raise ValueError('ma_type must be between 0 and 8')
 
     effective_fast = fast_period

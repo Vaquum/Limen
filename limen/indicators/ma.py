@@ -11,6 +11,15 @@ from limen.indicators.trima import _trima_from_values
 from limen.indicators.wma import _wma_from_values
 
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+CMP_N_3 = 3
+CMP_N_4 = 4
+CMP_N_5 = 5
+CMP_N_6 = 6
+CMP_N_7 = 7
+CMP_N_8 = 8
+
 def ma(
     data: pl.DataFrame,
     price_col: str = 'close',
@@ -31,9 +40,9 @@ def ma(
         pl.DataFrame: The input data with a new column 'ma_{period}_{ma_type}'
     '''
 
-    if period < 1 or period > 100000:
+    if period < 1 or period > CMP_N_100000:
         raise ValueError('period must be between 1 and 100000')
-    if ma_type < 0 or ma_type > 8:
+    if ma_type < 0 or ma_type > CMP_N_8:
         raise ValueError('ma_type must be between 0 and 8')
 
     out_col = f'ma_{period}_{ma_type}'
@@ -61,7 +70,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 2:
+    elif ma_type == CMP_N_2:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _wma_from_values(
@@ -71,7 +80,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 3:
+    elif ma_type == CMP_N_3:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _dema_from_values(
@@ -81,7 +90,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 4:
+    elif ma_type == CMP_N_4:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _tema_from_values(
@@ -91,7 +100,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 5:
+    elif ma_type == CMP_N_5:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _trima_from_values(
@@ -101,7 +110,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 6:
+    elif ma_type == CMP_N_6:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _kama_from_values(
@@ -111,7 +120,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 7:
+    elif ma_type == CMP_N_7:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _mama_from_values(
@@ -122,7 +131,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
-    elif ma_type == 8:
+    elif ma_type == CMP_N_8:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
                 _t3_from_values(

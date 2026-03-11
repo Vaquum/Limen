@@ -1,6 +1,11 @@
 import numpy as np
 import polars as pl
 
+CMP_NEG_3E37 = -3e37
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+CMP_N_3E37 = 3e37
+
 STDDEV_PERIOD_TOTAL1 = 0.0
 STDDEV_PERIOD_TOTAL2 = 0.0
 _TA_EPSILON = 1e-14
@@ -76,9 +81,9 @@ def stddev(
         pl.DataFrame: The input data with a new column 'stddev_{period}_{nb_dev:g}'
     '''
 
-    if period < 2 or period > 100000:
+    if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
-    if nb_dev < -3e37 or nb_dev > 3e37:
+    if nb_dev < CMP_NEG_3E37 or nb_dev > CMP_N_3E37:
         raise ValueError('nb_dev must be between -3e37 and 3e37')
 
     out_col = f'stddev_{period}_{nb_dev:g}'

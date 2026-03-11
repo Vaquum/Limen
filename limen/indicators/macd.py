@@ -3,6 +3,9 @@ import polars as pl
 
 from limen.indicators._ema import _ema_talib_default_segment
 
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
 MACD_COL = 'macd'
 MACD_SIGNAL_COL = 'macd_signal'
 MACD_HIST_COL = 'macd_hist'
@@ -80,11 +83,11 @@ def macd(
         pl.DataFrame: The input data with columns 'macd', 'macd_signal', 'macd_hist'
     '''
 
-    if fast_period < 2 or fast_period > 100000:
+    if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('fast_period must be between 2 and 100000')
-    if slow_period < 2 or slow_period > 100000:
+    if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
         raise ValueError('slow_period must be between 2 and 100000')
-    if signal_period < 1 or signal_period > 100000:
+    if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('signal_period must be between 1 and 100000')
 
     frame = data

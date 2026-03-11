@@ -26,6 +26,7 @@ def _cdl2crows_impl(
     Returns:
         pl.DataFrame: The input data with a new column 'cdl2crows'
     '''
+    _ = high_col, low_col
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     close_values = data[close_col].to_numpy().astype(float, copy=False)
@@ -58,7 +59,7 @@ def _cdl2crows_impl(
         third_black = close_values[i] < open_values[i]
 
         second_rb_low = min(open_values[i - 1], close_values[i - 1])
-        second_rb_high = max(open_values[i - 1], close_values[i - 1])
+        max(open_values[i - 1], close_values[i - 1])
         first_rb_high = max(open_values[i - 2], close_values[i - 2])
         gap_up = second_rb_low > first_rb_high
 

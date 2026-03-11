@@ -2,6 +2,8 @@ import numpy as np
 import polars as pl
 
 
+CMP_N_3E37 = 3e37
+
 def _sar_from_arrays(
     high: np.ndarray,
     low: np.ndarray,
@@ -52,10 +54,8 @@ def _sar_from_arrays(
                 is_long = 0
                 sar_value = ep
 
-                if sar_value < prev_high:
-                    sar_value = prev_high
-                if sar_value < new_high:
-                    sar_value = new_high
+                sar_value = max(sar_value, prev_high)
+                sar_value = max(sar_value, new_high)
 
                 out[out_series_idx] = sar_value
                 out_series_idx += 1
@@ -65,10 +65,8 @@ def _sar_from_arrays(
 
                 sar_value = sar_value + (af * (ep - sar_value))
 
-                if sar_value < prev_high:
-                    sar_value = prev_high
-                if sar_value < new_high:
-                    sar_value = new_high
+                sar_value = max(sar_value, prev_high)
+                sar_value = max(sar_value, new_high)
             else:
                 out[out_series_idx] = sar_value
                 out_series_idx += 1
@@ -76,53 +74,42 @@ def _sar_from_arrays(
                 if new_high > ep:
                     ep = new_high
                     af += acceleration
-                    if af > maximum:
-                        af = maximum
+                    af = min(af, maximum)
 
                 sar_value = sar_value + (af * (ep - sar_value))
 
-                if sar_value > prev_low:
-                    sar_value = prev_low
-                if sar_value > new_low:
-                    sar_value = new_low
+                sar_value = min(sar_value, prev_low)
+                sar_value = min(sar_value, new_low)
+        elif new_high >= sar_value:
+            is_long = 1
+            sar_value = ep
+
+            sar_value = min(sar_value, prev_low)
+            sar_value = min(sar_value, new_low)
+
+            out[out_series_idx] = sar_value
+            out_series_idx += 1
+
+            af = acceleration
+            ep = new_high
+
+            sar_value = sar_value + (af * (ep - sar_value))
+
+            sar_value = min(sar_value, prev_low)
+            sar_value = min(sar_value, new_low)
         else:
-            if new_high >= sar_value:
-                is_long = 1
-                sar_value = ep
+            out[out_series_idx] = sar_value
+            out_series_idx += 1
 
-                if sar_value > prev_low:
-                    sar_value = prev_low
-                if sar_value > new_low:
-                    sar_value = new_low
+            if new_low < ep:
+                ep = new_low
+                af += acceleration
+                af = min(af, maximum)
 
-                out[out_series_idx] = sar_value
-                out_series_idx += 1
+            sar_value = sar_value + (af * (ep - sar_value))
 
-                af = acceleration
-                ep = new_high
-
-                sar_value = sar_value + (af * (ep - sar_value))
-
-                if sar_value > prev_low:
-                    sar_value = prev_low
-                if sar_value > new_low:
-                    sar_value = new_low
-            else:
-                out[out_series_idx] = sar_value
-                out_series_idx += 1
-
-                if new_low < ep:
-                    ep = new_low
-                    af += acceleration
-                    if af > maximum:
-                        af = maximum
-
-                sar_value = sar_value + (af * (ep - sar_value))
-
-                if sar_value < prev_high:
-                    sar_value = prev_high
-                if sar_value < new_high:
-                    sar_value = new_high
+            sar_value = max(sar_value, prev_high)
+            sar_value = max(sar_value, new_high)
 
     return out
 
@@ -149,9 +136,9 @@ def sar(
         pl.DataFrame: The input data with a new column 'sar'
     '''
 
-    if acceleration < 0.0 or acceleration > 3e37:
+    if acceleration < 0.0 or acceleration > CMP_N_3E37:
         raise ValueError('acceleration must be between 0 and 3e37')
-    if maximum < 0.0 or maximum > 3e37:
+    if maximum < 0.0 or maximum > CMP_N_3E37:
         raise ValueError('maximum must be between 0 and 3e37')
 
     frame = data

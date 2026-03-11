@@ -51,10 +51,7 @@ def _cdlhammer_impl(
     near_avg_period = CDLHAMMER_NEAR_AVG_PERIOD
     near_factor = CDLHAMMER_NEAR_FACTOR
 
-    lookback_total = max(
-        max(max(body_short_avg_period, shadow_long_avg_period), shadow_vs_avg_period),
-        near_avg_period,
-    ) + 1
+    lookback_total = max(body_short_avg_period, shadow_long_avg_period, shadow_vs_avg_period, near_avg_period) + 1
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
