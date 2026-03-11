@@ -145,7 +145,7 @@ def ultosc(
     if period3 < 1 or period3 > CMP_N_100000:
         raise ValueError('period3 must be between 1 and 100000')
 
-    out_col = f'ultosc_{period1}_{period2}_{period3}'
+    out_col = f"ultosc_{period1}_{period2}_{period3}"
     frame = data
     ultosc_expr = pl.struct([high_col, low_col, close_col]).map_batches(
         lambda s: pl.Series(

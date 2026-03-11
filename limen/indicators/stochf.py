@@ -107,7 +107,7 @@ def _stochf_from_arrays(
         today += 1
 
     fastk_df = pl.DataFrame({'_x': fastk_buffer})
-    fastd_col = f'ma_{fastd_period}_{fastd_ma_type}'
+    fastd_col = f"ma_{fastd_period}_{fastd_ma_type}"
     fastd_full = ma(
         fastk_df,
         price_col='_x',

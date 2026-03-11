@@ -31,7 +31,7 @@ def mfi(
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
 
-    out_col = f'mfi_{period}'
+    out_col = f"mfi_{period}"
 
     positive_flow = (
         pl.when(pl.col('__mfi_delta').is_null())

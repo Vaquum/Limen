@@ -107,7 +107,7 @@ def test_ad():
 
 
 def test_adosc():
-    out_col = f'adosc_{FAST_PERIOD}_{SLOW_PERIOD}'
+    out_col = f"adosc_{FAST_PERIOD}_{SLOW_PERIOD}"
     limen_result = adosc(
         SAMPLE_DATA,
         fast_period=FAST_PERIOD,
@@ -127,7 +127,7 @@ def test_adosc():
 
 def test_apo():
     for ma_type in MA_TYPES:
-        out_col = f'apo_{APO_FAST_PERIOD}_{APO_SLOW_PERIOD}_{ma_type}'
+        out_col = f"apo_{APO_FAST_PERIOD}_{APO_SLOW_PERIOD}_{ma_type}"
         limen_result = apo(
             SAMPLE_DATA,
             price_col='close',
@@ -147,7 +147,7 @@ def test_apo():
 
 def test_ppo():
     for ma_type in MA_TYPES:
-        out_col = f'ppo_{PPO_FAST_PERIOD}_{PPO_SLOW_PERIOD}_{ma_type}'
+        out_col = f"ppo_{PPO_FAST_PERIOD}_{PPO_SLOW_PERIOD}_{ma_type}"
         limen_result = ppo(
             SAMPLE_DATA,
             price_col='close',
@@ -166,7 +166,7 @@ def test_ppo():
 
 
 def test_dema():
-    out_col = f'dema_{DEMA_PERIOD}'
+    out_col = f"dema_{DEMA_PERIOD}"
     limen_result = dema(SAMPLE_DATA, price_col='close', period=DEMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.DEMA(
         NUMPY_DATA['close'],
@@ -177,7 +177,7 @@ def test_dema():
 
 
 def test_ema():
-    out_col = f'ema_{EMA_PERIOD}'
+    out_col = f"ema_{EMA_PERIOD}"
     limen_result = ema(SAMPLE_DATA, price_col='close', period=EMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.EMA(
         NUMPY_DATA['close'],
@@ -238,7 +238,7 @@ def test_ht_trendmode():
 
 
 def test_kama():
-    out_col = f'kama_{KAMA_PERIOD}'
+    out_col = f"kama_{KAMA_PERIOD}"
     limen_result = kama(SAMPLE_DATA, price_col='close', period=KAMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.KAMA(
         NUMPY_DATA['close'],
@@ -250,7 +250,7 @@ def test_kama():
 
 def test_ma():
     for ma_type in MA_TYPES:
-        out_col = f'ma_{MA_PERIOD}_{ma_type}'
+        out_col = f"ma_{MA_PERIOD}_{ma_type}"
         limen_result = ma(
             SAMPLE_DATA,
             price_col='close',
@@ -287,7 +287,7 @@ def test_mama():
 
 
 def test_sma():
-    out_col = f'sma_{SMA_PERIOD}'
+    out_col = f"sma_{SMA_PERIOD}"
     limen_result = sma(SAMPLE_DATA, price_col='close', period=SMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.SMA(
         NUMPY_DATA['close'],
@@ -298,7 +298,7 @@ def test_sma():
 
 
 def test_tema():
-    out_col = f'tema_{TEMA_PERIOD}'
+    out_col = f"tema_{TEMA_PERIOD}"
     limen_result = tema(SAMPLE_DATA, price_col='close', period=TEMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.TEMA(
         NUMPY_DATA['close'],
@@ -309,7 +309,7 @@ def test_tema():
 
 
 def test_trima():
-    out_col = f'trima_{TRIMA_PERIOD}'
+    out_col = f"trima_{TRIMA_PERIOD}"
     limen_result = trima(SAMPLE_DATA, price_col='close', period=TRIMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.TRIMA(
         NUMPY_DATA['close'],
@@ -320,7 +320,7 @@ def test_trima():
 
 
 def test_trix():
-    out_col = f'trix_{TRIX_PERIOD}'
+    out_col = f"trix_{TRIX_PERIOD}"
     limen_result = trix(SAMPLE_DATA, price_col='close', period=TRIX_PERIOD)[out_col].to_numpy()
     talib_result = talib.TRIX(
         NUMPY_DATA['close'],
@@ -331,7 +331,7 @@ def test_trix():
 
 
 def test_t3():
-    out_col = f't3_{T3_PERIOD}_{T3_VFACTOR:g}'
+    out_col = f"t3_{T3_PERIOD}_{T3_VFACTOR:g}"
     limen_result = t3(
         SAMPLE_DATA,
         price_col='close',
@@ -348,7 +348,7 @@ def test_t3():
 
 
 def test_tsf():
-    out_col = f'tsf_{TSF_PERIOD}'
+    out_col = f"tsf_{TSF_PERIOD}"
     limen_result = tsf(SAMPLE_DATA, price_col='close', period=TSF_PERIOD)[out_col].to_numpy()
     talib_result = talib.TSF(
         NUMPY_DATA['close'],
@@ -359,7 +359,7 @@ def test_tsf():
 
 
 def test_linearreg():
-    out_col = f'linearreg_{LINEARREG_PERIOD}'
+    out_col = f"linearreg_{LINEARREG_PERIOD}"
     limen_result = linearreg(SAMPLE_DATA, price_col='close', period=LINEARREG_PERIOD)[out_col].to_numpy()
     talib_result = talib.LINEARREG(
         NUMPY_DATA['close'],
@@ -370,7 +370,7 @@ def test_linearreg():
 
 
 def test_linearreg_angle():
-    out_col = f'linearreg_angle_{LINEARREG_ANGLE_PERIOD}'
+    out_col = f"linearreg_angle_{LINEARREG_ANGLE_PERIOD}"
     limen_result = linearreg_angle(SAMPLE_DATA, price_col='close', period=LINEARREG_ANGLE_PERIOD)[out_col].to_numpy()
     talib_result = talib.LINEARREG_ANGLE(
         NUMPY_DATA['close'],
@@ -381,7 +381,7 @@ def test_linearreg_angle():
 
 
 def test_linearreg_intercept():
-    out_col = f'linearreg_intercept_{LINEARREG_INTERCEPT_PERIOD}'
+    out_col = f"linearreg_intercept_{LINEARREG_INTERCEPT_PERIOD}"
     limen_result = linearreg_intercept(SAMPLE_DATA, price_col='close', period=LINEARREG_INTERCEPT_PERIOD)[out_col].to_numpy()
     talib_result = talib.LINEARREG_INTERCEPT(
         NUMPY_DATA['close'],
@@ -392,7 +392,7 @@ def test_linearreg_intercept():
 
 
 def test_linearreg_slope():
-    out_col = f'linearreg_slope_{LINEARREG_SLOPE_PERIOD}'
+    out_col = f"linearreg_slope_{LINEARREG_SLOPE_PERIOD}"
     limen_result = linearreg_slope(SAMPLE_DATA, price_col='close', period=LINEARREG_SLOPE_PERIOD)[out_col].to_numpy()
     talib_result = talib.LINEARREG_SLOPE(
         NUMPY_DATA['close'],
@@ -403,7 +403,7 @@ def test_linearreg_slope():
 
 
 def test_stddev():
-    out_col = f'stddev_{STDDEV_PERIOD}_{STDDEV_NBDEV:g}'
+    out_col = f"stddev_{STDDEV_PERIOD}_{STDDEV_NBDEV:g}"
     limen_result = stddev(
         SAMPLE_DATA,
         price_col='close',
@@ -420,7 +420,7 @@ def test_stddev():
 
 
 def test_var():
-    out_col = f'var_{VAR_PERIOD}_{VAR_NBDEV:g}'
+    out_col = f"var_{VAR_PERIOD}_{VAR_NBDEV:g}"
     limen_result = var(
         SAMPLE_DATA,
         price_col='close',
@@ -437,7 +437,7 @@ def test_var():
 
 
 def test_wma():
-    out_col = f'wma_{WMA_PERIOD}'
+    out_col = f"wma_{WMA_PERIOD}"
     limen_result = wma(SAMPLE_DATA, price_col='close', period=WMA_PERIOD)[out_col].to_numpy()
     talib_result = talib.WMA(
         NUMPY_DATA['close'],
@@ -496,7 +496,7 @@ def test_sarext():
 
 
 def test_mfi():
-    out_col = f'mfi_{DEFAULT_PERIOD}'
+    out_col = f"mfi_{DEFAULT_PERIOD}"
     limen_result = mfi(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
     talib_result = talib.MFI(
         NUMPY_DATA['high'],
@@ -510,7 +510,7 @@ def test_mfi():
 
 
 def test_atr():
-    out_col = f'atr_{DEFAULT_PERIOD}'
+    out_col = f"atr_{DEFAULT_PERIOD}"
     limen_result = atr(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
     talib_result = talib.ATR(
         NUMPY_DATA['high'],
@@ -555,7 +555,7 @@ def test_medprice():
 
 
 def test_midpoint():
-    out_col = f'midpoint_{MIDPOINT_PERIOD}'
+    out_col = f"midpoint_{MIDPOINT_PERIOD}"
     limen_result = midpoint(SAMPLE_DATA, price_col='close', period=MIDPOINT_PERIOD)[out_col].to_numpy()
     talib_result = talib.MIDPOINT(
         NUMPY_DATA['close'],
@@ -566,7 +566,7 @@ def test_midpoint():
 
 
 def test_midprice():
-    out_col = f'midprice_{MIDPRICE_PERIOD}'
+    out_col = f"midprice_{MIDPRICE_PERIOD}"
     limen_result = midprice(
         SAMPLE_DATA,
         high_col='high',
@@ -1506,7 +1506,7 @@ def test_bop():
 
 
 def test_cci():
-    out_col = f'cci_{DEFAULT_PERIOD}'
+    out_col = f"cci_{DEFAULT_PERIOD}"
     limen_result = cci(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
     talib_result = talib.CCI(
         NUMPY_DATA['high'],
@@ -1519,7 +1519,7 @@ def test_cci():
 
 
 def test_cmo():
-    out_col = f'cmo_{DEFAULT_PERIOD}'
+    out_col = f"cmo_{DEFAULT_PERIOD}"
     limen_result = cmo(SAMPLE_DATA, price_col='close', period=DEFAULT_PERIOD)[out_col].to_numpy()
     talib_result = talib.CMO(
         NUMPY_DATA['close'],
@@ -1605,7 +1605,7 @@ def test_macdext():
 
 
 def test_mom():
-    out_col = f'mom_{MOM_PERIOD}'
+    out_col = f"mom_{MOM_PERIOD}"
     limen_result = mom(SAMPLE_DATA, price_col='close', period=MOM_PERIOD)[out_col].to_numpy()
     talib_result = talib.MOM(
         NUMPY_DATA['close'],
@@ -1616,7 +1616,7 @@ def test_mom():
 
 
 def test_roc():
-    out_col = f'roc_{ROC_PERIOD}'
+    out_col = f"roc_{ROC_PERIOD}"
     limen_result = roc(SAMPLE_DATA, price_col='close', period=ROC_PERIOD)[out_col].to_numpy()
     talib_result = talib.ROC(
         NUMPY_DATA['close'],
@@ -1627,7 +1627,7 @@ def test_roc():
 
 
 def test_rocp():
-    out_col = f'rocp_{ROCP_PERIOD}'
+    out_col = f"rocp_{ROCP_PERIOD}"
     limen_result = rocp(SAMPLE_DATA, price_col='close', period=ROCP_PERIOD)[out_col].to_numpy()
     talib_result = talib.ROCP(
         NUMPY_DATA['close'],
@@ -1638,7 +1638,7 @@ def test_rocp():
 
 
 def test_rocr():
-    out_col = f'rocr_{ROCR_PERIOD}'
+    out_col = f"rocr_{ROCR_PERIOD}"
     limen_result = rocr(SAMPLE_DATA, price_col='close', period=ROCR_PERIOD)[out_col].to_numpy()
     talib_result = talib.ROCR(
         NUMPY_DATA['close'],
@@ -1649,7 +1649,7 @@ def test_rocr():
 
 
 def test_rocr100():
-    out_col = f'rocr100_{ROCR100_PERIOD}'
+    out_col = f"rocr100_{ROCR100_PERIOD}"
     limen_result = rocr100(SAMPLE_DATA, price_col='close', period=ROCR100_PERIOD)[out_col].to_numpy()
     talib_result = talib.ROCR100(
         NUMPY_DATA['close'],
@@ -1660,7 +1660,7 @@ def test_rocr100():
 
 
 def test_rsi():
-    out_col = f'rsi_{RSI_PERIOD}'
+    out_col = f"rsi_{RSI_PERIOD}"
     limen_result = rsi(SAMPLE_DATA, price_col='close', period=RSI_PERIOD)[out_col].to_numpy()
     talib_result = talib.RSI(
         NUMPY_DATA['close'],
@@ -1783,7 +1783,7 @@ def test_stochrsi():
 
 
 def test_ultosc():
-    out_col = f'ultosc_{ULTOSC_PERIOD1}_{ULTOSC_PERIOD2}_{ULTOSC_PERIOD3}'
+    out_col = f"ultosc_{ULTOSC_PERIOD1}_{ULTOSC_PERIOD2}_{ULTOSC_PERIOD3}"
     limen_result = ultosc(
         SAMPLE_DATA,
         high_col='high',
@@ -1806,7 +1806,7 @@ def test_ultosc():
 
 
 def test_willr():
-    out_col = f'willr_{WILLR_PERIOD}'
+    out_col = f"willr_{WILLR_PERIOD}"
     limen_result = willr(
         SAMPLE_DATA,
         high_col='high',
@@ -1825,7 +1825,7 @@ def test_willr():
 
 
 def test_natr():
-    out_col = f'natr_{DEFAULT_PERIOD}'
+    out_col = f"natr_{DEFAULT_PERIOD}"
     limen_result = natr(SAMPLE_DATA, period=DEFAULT_PERIOD)[out_col].to_numpy()
     talib_result = talib.NATR(
         NUMPY_DATA['high'],

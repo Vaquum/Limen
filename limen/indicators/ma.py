@@ -45,7 +45,7 @@ def ma(
     if ma_type < 0 or ma_type > CMP_N_8:
         raise ValueError('ma_type must be between 0 and 8')
 
-    out_col = f'ma_{period}_{ma_type}'
+    out_col = f"ma_{period}_{ma_type}"
     frame = data
     if period == 1:
         return frame.with_columns(pl.col(price_col).alias(out_col))

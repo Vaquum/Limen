@@ -78,7 +78,7 @@ def var(
     if nb_dev < CMP_NEG_3E37 or nb_dev > CMP_N_3E37:
         raise ValueError('nb_dev must be between -3e37 and 3e37')
 
-    out_col = f'var_{period}_{nb_dev:g}'
+    out_col = f"var_{period}_{nb_dev:g}"
     return data.with_columns(
         pl.col(price_col).map_batches(
             lambda s: pl.Series(

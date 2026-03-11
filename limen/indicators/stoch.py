@@ -110,7 +110,7 @@ def _stoch_from_arrays(
         today += 1
 
     fastk_df = pl.DataFrame({'_x': fastk_buffer})
-    slowk_col = f'ma_{slowk_period}_{slowk_ma_type}'
+    slowk_col = f"ma_{slowk_period}_{slowk_ma_type}"
     slowk_full = ma(
         fastk_df,
         price_col='_x',
@@ -121,7 +121,7 @@ def _stoch_from_arrays(
     slowk_valid = slowk_full[lookback_k_slow:]
 
     slowd_df = pl.DataFrame({'_x': slowk_valid})
-    slowd_col = f'ma_{slowd_period}_{slowd_ma_type}'
+    slowd_col = f"ma_{slowd_period}_{slowd_ma_type}"
     slowd_full = ma(
         slowd_df,
         price_col='_x',

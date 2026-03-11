@@ -31,7 +31,7 @@ def willr(
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
 
-    out_col = f'willr_{period}'
+    out_col = f"willr_{period}"
     highest = pl.col(high_col).rolling_max(window_size=period)
     lowest = pl.col(low_col).rolling_min(window_size=period)
     diff = (highest - lowest) / WILLR_SCALE

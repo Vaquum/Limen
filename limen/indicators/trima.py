@@ -145,7 +145,7 @@ def trima(
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('period must be between 2 and 100000')
 
-    out_col = f'trima_{period}'
+    out_col = f"trima_{period}"
     frame = data
     trima_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(

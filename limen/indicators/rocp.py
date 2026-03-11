@@ -24,7 +24,7 @@ def rocp(
     if period < 1 or period > CMP_N_100000:
         raise ValueError('period must be between 1 and 100000')
 
-    out_col = f'rocp_{period}'
+    out_col = f"rocp_{period}"
     trailing = pl.col(price_col).shift(period)
     rocp_expr = (
         pl.when(pl.int_range(0, pl.len()) < period)

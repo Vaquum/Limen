@@ -42,11 +42,11 @@ def ppo(
     if effective_slow < effective_fast:
         effective_fast, effective_slow = effective_slow, effective_fast
 
-    out_col = f'ppo_{fast_period}_{slow_period}_{ma_type}'
+    out_col = f"ppo_{fast_period}_{slow_period}_{ma_type}"
     frame = data
 
-    fast_col = f'ma_{effective_fast}_{ma_type}'
-    slow_col = f'ma_{effective_slow}_{ma_type}'
+    fast_col = f"ma_{effective_fast}_{ma_type}"
+    slow_col = f"ma_{effective_slow}_{ma_type}"
 
     frame = ma(
         frame,

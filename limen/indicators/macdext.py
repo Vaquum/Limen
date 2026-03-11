@@ -46,7 +46,7 @@ def _ma_talib_segment(
     base_idx = start - lookback
     segment = values[base_idx:end_idx + 1]
     segment_df = pl.DataFrame({'_x': segment})
-    ma_col = f'ma_{period}_{ma_type}'
+    ma_col = f"ma_{period}_{ma_type}"
     segment_ma = ma(
         segment_df,
         price_col='_x',

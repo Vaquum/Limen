@@ -35,7 +35,7 @@ def adosc(
     if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
         raise ValueError('slow_period must be between 2 and 100000')
 
-    out_col = f'adosc_{fast_period}_{slow_period}'
+    out_col = f"adosc_{fast_period}_{slow_period}"
     lookback = max(fast_period, slow_period) - 1
     alpha_fast = 2.0 / (fast_period + 1.0)
     alpha_slow = 2.0 / (slow_period + 1.0)

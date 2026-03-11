@@ -142,7 +142,7 @@ def t3(
     if vfactor < 0.0 or vfactor > 1.0:
         raise ValueError('vfactor must be between 0 and 1')
 
-    out_col = f't3_{period}_{vfactor:g}'
+    out_col = f"t3_{period}_{vfactor:g}"
     frame = data
     t3_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(

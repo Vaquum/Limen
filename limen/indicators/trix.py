@@ -61,7 +61,7 @@ def trix(
     if period < 1 or period > CMP_N_100000:
         raise ValueError('period must be between 1 and 100000')
 
-    out_col = f'trix_{period}'
+    out_col = f"trix_{period}"
     frame = data
     trix_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
