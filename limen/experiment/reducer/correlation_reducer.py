@@ -317,8 +317,12 @@ class CorrelationReducer(PruningStrategy):
 
         '''Restore state from checkpoint.'''
 
-        if 'applied' not in state:
-            raise ValueError("Invalid CorrelationReducer state: missing required key 'applied'.")
+        required = ('applied', 'suggested')
+        for key in required:
+            if key not in state:
+                raise ValueError(
+                    f"Invalid CorrelationReducer state: missing required key '{key}'."
+                )
 
         self._applied = set(tuple(x) for x in state['applied'])
-        self._suggested = set(state.get('suggested', []))
+        self._suggested = set(state['suggested'])
