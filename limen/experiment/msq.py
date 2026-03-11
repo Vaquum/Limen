@@ -202,7 +202,7 @@ class MSQ:
         self._log_intervention('set_filter', **log_kwargs)
         self._named_filters[key] = condition
         if filter_type is not None:
-            self._named_filter_descriptors[key] = (filter_type, filter_params)
+            self._named_filter_descriptors[key] = (filter_type, dict(filter_params))
         elif key in self._named_filter_descriptors:
             del self._named_filter_descriptors[key]
 
