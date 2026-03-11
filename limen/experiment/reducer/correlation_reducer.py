@@ -196,7 +196,7 @@ class CorrelationReducer(PruningStrategy):
         result = _experiment_parameter_correlation(
             shim,
             self._metric,
-            heads=(0.99,),
+            heads=(1.0,),
             method=self._method,
             n_boot=self._n_boot,
             min_n=self._min_observations,
