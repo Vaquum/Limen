@@ -94,9 +94,9 @@ class CorrelationReducer(PruningStrategy):
                 f"n_boot must be > 0, got {n_boot}"
             )
 
-        if not -1.0 <= negative_correlation_threshold <= 1.0:
+        if not -1.0 <= negative_correlation_threshold <= 0.0:
             raise ValueError(
-                f"negative_correlation_threshold must be between -1.0 and 1.0, got {negative_correlation_threshold}"
+                f"negative_correlation_threshold must be between -1.0 and 0.0, got {negative_correlation_threshold}"
             )
 
         super().__init__(active=active)
