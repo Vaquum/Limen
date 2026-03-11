@@ -198,7 +198,7 @@ class MSQ:
         log_kwargs: dict[str, Any] = {'key': key}
         if filter_type is not None:
             log_kwargs['filter_type'] = filter_type
-            log_kwargs['filter_params'] = filter_params
+            log_kwargs['filter_params'] = dict(filter_params)
         self._log_intervention('set_filter', **log_kwargs)
         self._named_filters[key] = condition
         if filter_type is not None:
