@@ -8,6 +8,7 @@ from limen.sfd.reference_architecture import TabPFNBinary
 
 
 def _make_data(n=200, binary=False, with_val=True, with_price=True):
+
     np.random.seed(42)
     n_features = 5
     x = np.random.randn(n, n_features)
@@ -45,6 +46,7 @@ def _make_data(n=200, binary=False, with_val=True, with_price=True):
 
 
 def test_xgboost_train_returns_fitted_model():
+
     data = _make_data()
     model = XGBoostRegressor()
     result = model.train(data, learning_rate=0.1, n_estimators=10, random_state=42)
@@ -54,6 +56,7 @@ def test_xgboost_train_returns_fitted_model():
 
 
 def test_xgboost_evaluate_returns_all_metric_types():
+
     data = _make_data(with_price=True)
     model = XGBoostRegressor().train(data, learning_rate=0.1, n_estimators=10, random_state=42)
     results = model.evaluate(data)
@@ -73,6 +76,7 @@ def test_xgboost_evaluate_returns_all_metric_types():
 
 
 def test_logreg_train_evaluate_end_to_end():
+
     data = _make_data(binary=True, with_price=False)
     model = LogRegBinary().train(data, solver='lbfgs', max_iter=200)
     results = model.evaluate(data)
@@ -90,6 +94,7 @@ def test_logreg_train_evaluate_end_to_end():
 
 
 def test_random_binary_train_evaluate_end_to_end():
+
     data = _make_data(binary=True, with_price=False)
     model = RandomBinary().train(data, random_weights=0.5)
     results = model.evaluate(data)
@@ -104,6 +109,7 @@ def test_random_binary_train_evaluate_end_to_end():
 
 
 def test_tabpfn_train_evaluate_end_to_end():
+
     if TabPFNBinary is None:
         return
 
@@ -123,6 +129,7 @@ def test_tabpfn_train_evaluate_end_to_end():
 
 
 def test_train_with_validation_data():
+
     data = _make_data(with_val=True)
     model = XGBoostRegressor().train(data, learning_rate=0.1, n_estimators=10, random_state=42)
     assert model.model is not None
@@ -132,6 +139,7 @@ def test_train_with_validation_data():
 
 
 def test_train_without_validation_data():
+
     data = _make_data(with_val=False)
     model = XGBoostRegressor().train(data, learning_rate=0.1, n_estimators=10, random_state=42)
     assert model.model is not None
