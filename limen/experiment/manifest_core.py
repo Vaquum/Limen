@@ -1,3 +1,4 @@
+import copy
 import polars as pl
 import inspect
 import importlib
@@ -407,7 +408,6 @@ class Manifest:
         if unknown:
             raise ValueError(f"Unsupported override keys: {unknown}. Allowed: {sorted(allowed_keys)}")
 
-        import copy
         new_manifest = copy.deepcopy(self)
 
         if 'split_config' in overrides:

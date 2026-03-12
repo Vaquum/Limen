@@ -34,8 +34,6 @@ def _prepare_data_with_manifest(manifest: Manifest) -> dict:
     return manifest.prepare_data(raw_data, round_params)
 
 
-# --- B2: price_data_for_backtest ---
-
 def test_price_data_for_backtest_has_ohlc_columns() -> None:
 
     manifest = _make_manifest()
@@ -54,8 +52,6 @@ def test_price_data_for_backtest_row_count_matches_test() -> None:
 
     assert price_df.height == len(data['x_test'])
 
-
-# --- B3: with_params_override ---
 
 def test_override_split_config() -> None:
 
