@@ -56,6 +56,7 @@ class TabPFNBinary(ReferenceModel):
             n_estimators=n_ensemble_configurations,
             model_path=TABPFN_MODEL_PATH,
             ignore_pretraining_limits=True,
+            **params,
         )
 
         self.model.fit(arrays['x_train'], arrays['y_train'])
