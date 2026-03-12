@@ -414,7 +414,9 @@ class Manifest:
             new_manifest.split_config = overrides['split_config']
 
         ds_overrides = {k: v for k, v in overrides.items() if k in data_source_keys}
-        if ds_overrides and new_manifest.data_source_config is not None:
+        if ds_overrides:
+            if new_manifest.data_source_config is None:
+                raise ValueError('Cannot override data source params: no data source configured')
             new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
             new_manifest.data_source_config.params.update(ds_overrides)
 

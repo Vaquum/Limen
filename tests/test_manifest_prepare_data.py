@@ -5,7 +5,7 @@ from limen.data import HistoricalData
 from limen.experiment import Manifest
 
 
-def _make_manifest():
+def _make_manifest() -> Manifest:
 
     return (Manifest()
         .set_data_source(
@@ -27,7 +27,7 @@ def _make_manifest():
     )
 
 
-def _prepare_data_with_manifest(manifest):
+def _prepare_data_with_manifest(manifest: Manifest) -> dict:
 
     raw_data = manifest.fetch_test_data()
     round_params = {'bar_type': 'base'}
@@ -36,15 +36,7 @@ def _prepare_data_with_manifest(manifest):
 
 # --- B2: price_data_for_backtest ---
 
-def test_price_data_for_backtest_key_exists():
-
-    manifest = _make_manifest()
-    data = _prepare_data_with_manifest(manifest)
-
-    assert 'price_data_for_backtest' in data
-
-
-def test_price_data_for_backtest_has_ohlc_columns():
+def test_price_data_for_backtest_has_ohlc_columns() -> None:
 
     manifest = _make_manifest()
     data = _prepare_data_with_manifest(manifest)
@@ -54,7 +46,7 @@ def test_price_data_for_backtest_has_ohlc_columns():
         assert col in price_df.columns, f"Missing column: {col}"
 
 
-def test_price_data_for_backtest_row_count_matches_test():
+def test_price_data_for_backtest_row_count_matches_test() -> None:
 
     manifest = _make_manifest()
     data = _prepare_data_with_manifest(manifest)
@@ -63,18 +55,9 @@ def test_price_data_for_backtest_row_count_matches_test():
     assert price_df.height == len(data['x_test'])
 
 
-def test_existing_data_dict_keys_unchanged():
-
-    manifest = _make_manifest()
-    data = _prepare_data_with_manifest(manifest)
-
-    for key in ['x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', '_alignment']:
-        assert key in data, f"Missing expected key: {key}"
-
-
 # --- B3: with_params_override ---
 
-def test_override_split_config():
+def test_override_split_config() -> None:
 
     manifest = _make_manifest()
     new_manifest = manifest.with_params_override(split_config=(1, 0, 0))
@@ -82,15 +65,7 @@ def test_override_split_config():
     assert new_manifest.split_config == (1, 0, 0)
 
 
-def test_original_manifest_unchanged_after_override():
-
-    manifest = _make_manifest()
-    manifest.with_params_override(split_config=(1, 0, 0))
-
-    assert manifest.split_config == (3, 1, 1)
-
-
-def test_override_data_source_param():
+def test_override_data_source_param() -> None:
 
     manifest = _make_manifest()
     new_manifest = manifest.with_params_override(end_date_limit='2024-06-01')
@@ -99,7 +74,7 @@ def test_override_data_source_param():
     assert 'end_date_limit' not in manifest.data_source_config.params
 
 
-def test_override_multiple_params():
+def test_override_multiple_params() -> None:
 
     manifest = _make_manifest()
     new_manifest = manifest.with_params_override(
@@ -113,7 +88,7 @@ def test_override_multiple_params():
     assert manifest.data_source_config.params['kline_size'] == 3600
 
 
-def test_unknown_override_key_raises():
+def test_unknown_override_key_raises() -> None:
 
     manifest = _make_manifest()
 

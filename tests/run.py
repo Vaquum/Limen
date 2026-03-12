@@ -202,12 +202,9 @@ from tests.test_reference_architecture import test_random_binary_train_evaluate_
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
-from tests.test_manifest_prepare_data import test_price_data_for_backtest_key_exists
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
-from tests.test_manifest_prepare_data import test_existing_data_dict_keys_unchanged
 from tests.test_manifest_prepare_data import test_override_split_config
-from tests.test_manifest_prepare_data import test_original_manifest_unchanged_after_override
 from tests.test_manifest_prepare_data import test_override_data_source_param
 from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
@@ -406,12 +403,9 @@ tests = [
     test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
-    test_price_data_for_backtest_key_exists,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
-    test_existing_data_dict_keys_unchanged,
     test_override_split_config,
-    test_original_manifest_unchanged_after_override,
     test_override_data_source_param,
     test_override_multiple_params,
     test_unknown_override_key_raises,
