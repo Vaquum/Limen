@@ -115,6 +115,9 @@ class ReferenceModel(ABC):
 
         bt_result = backtest_snapshot(bt_input)
 
+        if bt_result.empty:
+            return {}
+
         return {
             f"backtest_{k}": v
             for k, v in bt_result.iloc[0].to_dict().items()

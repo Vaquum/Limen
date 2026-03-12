@@ -27,7 +27,7 @@ class XGBoostRegressor(ReferenceModel):
         early_stopping_rounds = params.pop('early_stopping_rounds', 50)
 
         self.model = xgb.XGBRegressor(
-            early_stopping_rounds=early_stopping_rounds if early_stopping_rounds is not None else None,
+            early_stopping_rounds=early_stopping_rounds,
             eval_metric=['rmse'],
             **params,
         )
