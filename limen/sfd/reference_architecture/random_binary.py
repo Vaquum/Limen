@@ -30,7 +30,6 @@ class RandomBinary(ReferenceModel):
 
         _ = data
         self._random_weights = params.get('random_weights', 0.5)
-        self._is_trained = True
 
         return self
 
