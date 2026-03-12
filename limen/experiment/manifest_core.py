@@ -383,6 +383,43 @@ class Manifest:
         self.data_dict_extension = func
         return self
 
+    def with_params_override(self, **overrides: Any) -> 'Manifest':
+
+        '''
+        Create a deep copy of this manifest with overridden parameters.
+
+        Args:
+            **overrides: Parameters to override. Supported keys:
+                split_config (tuple[int, int, int]): New split ratios
+                end_date_limit, start_date_limit, kline_size, n_rows: Data source params
+
+        Returns:
+            Manifest: New manifest with overridden parameters
+
+        Raises:
+            ValueError: If an unsupported override key is provided
+        '''
+
+        data_source_keys = {'end_date_limit', 'start_date_limit', 'kline_size', 'n_rows'}
+        allowed_keys = data_source_keys | {'split_config'}
+
+        unknown = set(overrides) - allowed_keys
+        if unknown:
+            raise ValueError(f"Unsupported override keys: {unknown}. Allowed: {sorted(allowed_keys)}")
+
+        import copy
+        new_manifest = copy.deepcopy(self)
+
+        if 'split_config' in overrides:
+            new_manifest.split_config = overrides['split_config']
+
+        ds_overrides = {k: v for k, v in overrides.items() if k in data_source_keys}
+        if ds_overrides and new_manifest.data_source_config is not None:
+            new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
+            new_manifest.data_source_config.params.update(ds_overrides)
+
+        return new_manifest
+
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: dict[str, Any]) -> pl.DataFrame:
 
         '''
@@ -437,6 +474,11 @@ class Manifest:
         all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
         split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
+        price_cols = ['datetime', 'open', 'high', 'low', 'close']
+        test_split = split_data[2]
+        available = [c for c in price_cols if c in test_split.columns]
+        price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
+
         all_fitted_params = {}
 
         for i in range(len(split_data)):
@@ -457,7 +499,11 @@ class Manifest:
 
             split_data[i] = data.drop_nulls()
 
-        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params)
+        if price_data_for_backtest is not None:
+            final_test_height = split_data[2].height
+            price_data_for_backtest = price_data_for_backtest.tail(final_test_height)
+
+        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
     def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
 
@@ -695,7 +741,8 @@ def _finalize_to_data_dict(
         split_data: list[pl.DataFrame],
         all_datetimes: list,
         fitted_params: dict[str, Any],
-        round_params: dict[str, Any]
+        round_params: dict[str, Any],
+        price_data_for_backtest: pl.DataFrame | None = None
 ) -> dict:
 
     # Validate all splits have datetime column
@@ -723,6 +770,9 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     data_dict['_feature_names'] = cols
+
+    if price_data_for_backtest is not None:
+        data_dict['price_data_for_backtest'] = price_data_for_backtest
 
     # Apply data_dict extension if configured
     if manifest.data_dict_extension:
