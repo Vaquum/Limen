@@ -195,6 +195,13 @@ from tests.test_budget_reducer import test_no_budget_configured
 from tests.test_budget_reducer import test_state_roundtrip as test_budget_state_roundtrip
 from tests.test_budget_reducer import test_set_state_missing_key as test_budget_set_state_missing_key
 from tests.test_budget_reducer import test_worst_first_maximize_false
+from tests.test_reference_architecture import test_xgboost_train_returns_fitted_model
+from tests.test_reference_architecture import test_xgboost_evaluate_returns_all_metric_types
+from tests.test_reference_architecture import test_logreg_train_evaluate_end_to_end
+from tests.test_reference_architecture import test_random_binary_train_evaluate_end_to_end
+from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
+from tests.test_reference_architecture import test_train_with_validation_data
+from tests.test_reference_architecture import test_train_without_validation_data
 
 tests = [
     test_param_domain_init,
@@ -383,6 +390,13 @@ tests = [
     test_account_conviction,
     test_backtest_conviction,
     test_rdop,
+    test_xgboost_train_returns_fitted_model,
+    test_xgboost_evaluate_returns_all_metric_types,
+    test_logreg_train_evaluate_end_to_end,
+    test_random_binary_train_evaluate_end_to_end,
+    test_tabpfn_train_evaluate_end_to_end,
+    test_train_with_validation_data,
+    test_train_without_validation_data,
 ]
 
 # Configure logging

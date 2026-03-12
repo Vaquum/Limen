@@ -560,3 +560,9 @@
 - Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
 - Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
 - Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
+
+## v1.42.0 on 12th of March, 2026
+
+- Add `ReferenceModel` abstract base class for class-based reference architecture with shared `_compute_confusion()` and `_compute_backtest()` helpers
+- Refactor `XGBoostRegressor`, `LogRegBinary`, `RandomBinary`, `TabPFNBinary` from standalone functions to classes with `.train()` / `.evaluate()` interface
+- Legacy function wrappers preserved for backward compatibility

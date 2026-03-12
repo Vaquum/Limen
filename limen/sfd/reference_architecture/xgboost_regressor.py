@@ -1,6 +1,75 @@
+from typing import Any
+
+import numpy as np
 import xgboost as xgb
 
 from limen.metrics.continuous_metrics import continuous_metrics
+from limen.sfd.reference_architecture.base import ReferenceModel
+
+
+class XGBoostRegressor(ReferenceModel):
+
+    '''XGBoost regression model with train/evaluate interface.'''
+
+    def train(self, data: dict, **params: Any) -> 'XGBoostRegressor':
+
+        '''
+        Train XGBoost regressor on provided data.
+
+        Args:
+            data (dict): Data dictionary with x_train, y_train, and optionally x_val, y_val
+            **params: XGBoost hyperparameters
+
+        Returns:
+            XGBoostRegressor: Self with fitted model stored
+        '''
+
+        early_stopping_rounds = params.pop('early_stopping_rounds', 50)
+
+        self.model = xgb.XGBRegressor(
+            early_stopping_rounds=early_stopping_rounds,
+            eval_metric=['rmse'],
+            **params,
+        )
+
+        has_val = 'x_val' in data and 'y_val' in data
+
+        fit_kwargs = {'verbose': False}
+        if has_val:
+            fit_kwargs['eval_set'] = [(data['x_val'], data['y_val'])]
+        else:
+            self.model.set_params(early_stopping_rounds=None)
+
+        self.model.fit(data['x_train'], data['y_train'], **fit_kwargs)
+
+        return self
+
+    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+
+        '''
+        Evaluate trained model on test data.
+
+        Args:
+            data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
+            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+
+        Returns:
+            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+        '''
+
+        preds = self.model.predict(data['x_test'])
+
+        results = continuous_metrics(data, preds)
+        results['_preds'] = preds
+
+        if inline_metrics:
+            y_test = np.asarray(data['y_test'])
+            pred_direction = (preds > 0).astype(int)
+            actual_direction = (y_test > 0).astype(int)
+            results.update(self._compute_confusion(pred_direction, actual_direction))
+            results.update(self._compute_backtest(pred_direction, data))
+
+        return results
 
 
 def xgboost_regressor(data: dict,
@@ -41,7 +110,8 @@ def xgboost_regressor(data: dict,
         dict: Results with continuous metrics and predictions
     '''
 
-    model = xgb.XGBRegressor(
+    model = XGBoostRegressor().train(
+        data,
         learning_rate=learning_rate,
         max_depth=max_depth,
         n_estimators=n_estimators,
@@ -53,21 +123,8 @@ def xgboost_regressor(data: dict,
         reg_lambda=reg_lambda,
         objective=objective,
         booster=booster,
+        early_stopping_rounds=early_stopping_rounds,
         random_state=random_state,
-        early_stopping_rounds=early_stopping_rounds if early_stopping_rounds is not None else None,
-        eval_metric=['rmse']
     )
 
-    model.fit(
-        data['x_train'],
-        data['y_train'],
-        eval_set=[(data['x_val'], data['y_val'])],
-        verbose=False
-    )
-
-    preds = model.predict(data['x_test'])
-
-    round_results = continuous_metrics(data, preds)
-    round_results['_preds'] = preds
-
-    return round_results
+    return model.evaluate(data, inline_metrics=False)
