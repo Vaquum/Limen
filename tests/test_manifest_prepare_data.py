@@ -1,0 +1,124 @@
+import numpy as np
+import polars as pl
+
+from limen.data import HistoricalData
+from limen.experiment import Manifest
+
+
+def _make_manifest():
+
+    return (Manifest()
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+        )
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_split_config(3, 1, 1)
+        .set_required_bar_columns([
+            'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',
+            'no_of_trades'
+        ])
+        .with_target('outcome')
+            .add_transform(lambda data: data.with_columns(
+                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
+            ))
+            .add_transform(lambda data: data[:-1])
+            .done()
+    )
+
+
+def _prepare_data_with_manifest(manifest):
+
+    raw_data = manifest.fetch_test_data()
+    round_params = {'bar_type': 'base'}
+    return manifest.prepare_data(raw_data, round_params)
+
+
+# --- B2: price_data_for_backtest ---
+
+def test_price_data_for_backtest_key_exists():
+
+    manifest = _make_manifest()
+    data = _prepare_data_with_manifest(manifest)
+
+    assert 'price_data_for_backtest' in data
+
+
+def test_price_data_for_backtest_has_ohlc_columns():
+
+    manifest = _make_manifest()
+    data = _prepare_data_with_manifest(manifest)
+    price_df = data['price_data_for_backtest']
+
+    for col in ['datetime', 'open', 'high', 'low', 'close']:
+        assert col in price_df.columns, f"Missing column: {col}"
+
+
+def test_price_data_for_backtest_row_count_matches_test():
+
+    manifest = _make_manifest()
+    data = _prepare_data_with_manifest(manifest)
+    price_df = data['price_data_for_backtest']
+
+    assert price_df.height == len(data['x_test'])
+
+
+def test_existing_data_dict_keys_unchanged():
+
+    manifest = _make_manifest()
+    data = _prepare_data_with_manifest(manifest)
+
+    for key in ['x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', '_alignment']:
+        assert key in data, f"Missing expected key: {key}"
+
+
+# --- B3: with_params_override ---
+
+def test_override_split_config():
+
+    manifest = _make_manifest()
+    new_manifest = manifest.with_params_override(split_config=(1, 0, 0))
+
+    assert new_manifest.split_config == (1, 0, 0)
+
+
+def test_original_manifest_unchanged_after_override():
+
+    manifest = _make_manifest()
+    manifest.with_params_override(split_config=(1, 0, 0))
+
+    assert manifest.split_config == (3, 1, 1)
+
+
+def test_override_data_source_param():
+
+    manifest = _make_manifest()
+    new_manifest = manifest.with_params_override(end_date_limit='2024-06-01')
+
+    assert new_manifest.data_source_config.params['end_date_limit'] == '2024-06-01'
+    assert 'end_date_limit' not in manifest.data_source_config.params
+
+
+def test_override_multiple_params():
+
+    manifest = _make_manifest()
+    new_manifest = manifest.with_params_override(
+        split_config=(1, 0, 0),
+        kline_size=7200,
+    )
+
+    assert new_manifest.split_config == (1, 0, 0)
+    assert new_manifest.data_source_config.params['kline_size'] == 7200
+    assert manifest.split_config == (3, 1, 1)
+    assert manifest.data_source_config.params['kline_size'] == 3600
+
+
+def test_unknown_override_key_raises():
+
+    manifest = _make_manifest()
+
+    try:
+        manifest.with_params_override(invalid_key=123)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'invalid_key' in str(e)
