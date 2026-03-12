@@ -199,6 +199,7 @@ from tests.test_reference_architecture import test_xgboost_train_returns_fitted_
 from tests.test_reference_architecture import test_xgboost_evaluate_returns_all_metric_types
 from tests.test_reference_architecture import test_logreg_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_random_binary_train_evaluate_end_to_end
+from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
 
@@ -393,6 +394,7 @@ tests = [
     test_xgboost_evaluate_returns_all_metric_types,
     test_logreg_train_evaluate_end_to_end,
     test_random_binary_train_evaluate_end_to_end,
+    test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
 ]
