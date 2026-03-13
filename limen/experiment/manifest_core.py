@@ -390,33 +390,32 @@ class Manifest:
         Create a deep copy of this manifest with overridden parameters.
 
         Args:
-            **overrides: Parameters to override. Supported keys:
-                split_config (tuple[int, int, int]): New split ratios
-                end_date_limit, start_date_limit, kline_size, n_rows: Data source params
+            **overrides: Parameters to override. 'split_config' overrides the split
+                ratios directly. All other keys are treated as data source param
+                overrides and must match existing keys in data_source_config.params
 
         Returns:
             Manifest: New manifest with overridden parameters
 
         Raises:
-            ValueError: If an unsupported override key is provided
+            ValueError: If a key is not 'split_config' and not in data_source_config.params
         '''
-
-        data_source_keys = {'end_date_limit', 'start_date_limit', 'kline_size', 'n_rows'}
-        allowed_keys = data_source_keys | {'split_config'}
-
-        unknown = set(overrides) - allowed_keys
-        if unknown:
-            raise ValueError(f"Unsupported override keys: {unknown}. Allowed: {sorted(allowed_keys)}")
 
         new_manifest = copy.deepcopy(self)
 
         if 'split_config' in overrides:
             new_manifest.split_config = overrides['split_config']
 
-        ds_overrides = {k: v for k, v in overrides.items() if k in data_source_keys}
+        ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
         if ds_overrides:
             if new_manifest.data_source_config is None:
                 raise ValueError('Cannot override data source params: no data source configured')
+            unknown = set(ds_overrides) - set(new_manifest.data_source_config.params)
+            if unknown:
+                raise ValueError(
+                    f"Unknown data source params: {unknown}. "
+                    f"Available: {sorted(new_manifest.data_source_config.params.keys())}"
+                )
             new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
             new_manifest.data_source_config.params.update(ds_overrides)
 
@@ -502,8 +501,10 @@ class Manifest:
             split_data[i] = data.drop_nulls()
 
         if price_data_for_backtest is not None:
-            final_test_height = split_data[2].height
-            price_data_for_backtest = price_data_for_backtest.tail(final_test_height)
+            final_datetimes = split_data[2].select('datetime')
+            price_data_for_backtest = price_data_for_backtest.join(
+                final_datetimes, on='datetime', how='semi'
+            )
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
