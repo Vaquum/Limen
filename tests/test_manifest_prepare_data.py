@@ -50,7 +50,7 @@ def test_price_data_for_backtest_row_count_matches_test() -> None:
     data = _prepare_data_with_manifest(manifest)
     price_df = data['price_data_for_backtest']
 
-    assert price_df.height == len(data['x_test'])
+    assert price_df.height == data['x_test'].height
 
 
 def test_price_data_for_backtest_datetime_alignment() -> None:
