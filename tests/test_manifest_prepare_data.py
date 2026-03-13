@@ -64,10 +64,10 @@ def test_override_split_config() -> None:
 def test_override_data_source_param() -> None:
 
     manifest = _make_manifest()
-    new_manifest = manifest.with_params_override(end_date_limit='2024-06-01')
+    new_manifest = manifest.with_params_override(start_date_limit='2024-06-01')
 
-    assert new_manifest.data_source_config.params['end_date_limit'] == '2024-06-01'
-    assert 'end_date_limit' not in manifest.data_source_config.params
+    assert new_manifest.data_source_config.params['start_date_limit'] == '2024-06-01'
+    assert manifest.data_source_config.params['start_date_limit'] == '2025-01-01'
 
 
 def test_override_multiple_params() -> None:
@@ -89,7 +89,7 @@ def test_unknown_override_key_raises() -> None:
     manifest = _make_manifest()
 
     try:
-        manifest.with_params_override(invalid_key=123)
+        manifest.with_params_override(nonexistent_param=123)
         assert False, 'Expected ValueError'
     except ValueError as e:
-        assert 'invalid_key' in str(e)
+        assert 'nonexistent_param' in str(e)
