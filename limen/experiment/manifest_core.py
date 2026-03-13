@@ -405,7 +405,13 @@ class Manifest:
         new_manifest = copy.deepcopy(self)
 
         if 'split_config' in overrides:
-            new_manifest.split_config = overrides['split_config']
+            sc = overrides['split_config']
+            _split_len = 3
+            if not (isinstance(sc, tuple) and len(sc) == _split_len and all(isinstance(v, int) for v in sc)):
+                raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
+            if sum(sc) == 0:
+                raise ValueError('split_config ratios must not all be zero')
+            new_manifest.split_config = sc
 
         ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
         if ds_overrides:
