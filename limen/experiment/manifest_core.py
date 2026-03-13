@@ -392,13 +392,14 @@ class Manifest:
         Args:
             **overrides: Parameters to override. 'split_config' overrides the split
                 ratios directly. All other keys are treated as data source param
-                overrides and must match existing keys in data_source_config.params
+                overrides and are validated against the data source method signature
 
         Returns:
             Manifest: New manifest with overridden parameters
 
         Raises:
-            ValueError: If a key is not 'split_config' and not in data_source_config.params
+            ValueError: If a key is not 'split_config' and not accepted by the
+                data source method
         '''
 
         new_manifest = copy.deepcopy(self)
@@ -410,11 +411,15 @@ class Manifest:
         if ds_overrides:
             if new_manifest.data_source_config is None:
                 raise ValueError('Cannot override data source params: no data source configured')
-            unknown = set(ds_overrides) - set(new_manifest.data_source_config.params)
+            method_params = set(inspect.signature(
+                new_manifest.data_source_config.method
+            ).parameters.keys()) - {'self', 'cls'}
+            unknown = set(ds_overrides) - method_params
             if unknown:
                 raise ValueError(
                     f"Unknown data source params: {sorted(unknown)}. "
-                    f"Available: {sorted(new_manifest.data_source_config.params.keys())}"
+                    f"Accepted by {new_manifest.data_source_config.method.__name__}: "
+                    f"{sorted(method_params)}"
                 )
             new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
             new_manifest.data_source_config.params.update(ds_overrides)
