@@ -204,6 +204,7 @@ from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
+from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
 from tests.test_manifest_prepare_data import test_override_split_config
 from tests.test_manifest_prepare_data import test_override_data_source_param
 from tests.test_manifest_prepare_data import test_override_multiple_params
@@ -405,6 +406,7 @@ tests = [
     test_train_without_validation_data,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
+    test_price_data_for_backtest_datetime_alignment,
     test_override_split_config,
     test_override_data_source_param,
     test_override_multiple_params,

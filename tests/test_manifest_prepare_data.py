@@ -53,6 +53,23 @@ def test_price_data_for_backtest_row_count_matches_test() -> None:
     assert price_df.height == len(data['x_test'])
 
 
+def test_price_data_for_backtest_datetime_alignment() -> None:
+
+    manifest = _make_manifest()
+    data = _prepare_data_with_manifest(manifest)
+    price_df = data['price_data_for_backtest']
+    alignment = data['_alignment']
+
+    price_datetimes = price_df['datetime'].to_list()
+
+    # datetimes are monotonically increasing (correct order)
+    assert price_datetimes == sorted(price_datetimes)
+
+    # first and last datetime match the test split boundaries
+    assert price_datetimes[0] == alignment['first_test_datetime']
+    assert price_datetimes[-1] == alignment['last_test_datetime']
+
+
 def test_override_split_config() -> None:
 
     manifest = _make_manifest()
