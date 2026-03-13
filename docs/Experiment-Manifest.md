@@ -757,6 +757,22 @@ def add_metadata(data_dict, split_data, round_params, fitted_params):
 .add_to_data_dict(add_metadata)
 ```
 
+### Data Dict Keys
+
+`prepare_data()` returns a dictionary with these keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `x_train` | `pl.DataFrame` | Training features |
+| `y_train` | `pl.Series` | Training targets |
+| `x_val` | `pl.DataFrame` | Validation features |
+| `y_val` | `pl.Series` | Validation targets |
+| `x_test` | `pl.DataFrame` | Test features |
+| `y_test` | `pl.Series` | Test targets |
+| `_alignment` | `dict` | Datetime alignment metadata (`first_test_datetime`, `last_test_datetime`, `missing_datetimes`) |
+| `_feature_names` | `list[str]` | Column names including target |
+| `price_data_for_backtest` | `pl.DataFrame` or absent | Raw OHLC from test split with columns `datetime`, `open`, `high`, `low`, `close`. Present only when the test split contains all five columns after bar formation. Row-aligned with `x_test` |
+
 ## Parameter Override
 
 ### `.with_params_override(**overrides)`
