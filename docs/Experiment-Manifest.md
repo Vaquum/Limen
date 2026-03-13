@@ -757,6 +757,46 @@ def add_metadata(data_dict, split_data, round_params, fitted_params):
 .add_to_data_dict(add_metadata)
 ```
 
+## Parameter Override
+
+### `.with_params_override(**overrides)`
+
+Create a deep copy of the manifest with overridden parameters. The original manifest is not modified.
+
+**NOTE:** This method is primarily used by the Trainer for two-pass training, where Pass 2 overrides `split_config` to `(1, 0, 0)` to retrain on all available data.
+
+**Args:**
+
+| Parameter       | Type                     | Description                                                    |
+|-----------------|--------------------------|----------------------------------------------------------------|
+| `split_config`  | `tuple[int, int, int]`   | New split ratios (overrides `.set_split_config()`)             |
+| `**kwargs`      | `Any`                    | Data source param overrides (must match existing keys in `data_source_config.params`) |
+
+**Returns:** `Manifest` (new deep copy with overridden parameters)
+
+**Raises:** `ValueError` if a key is not `split_config` and not in `data_source_config.params`
+
+**Example:**
+
+```python
+manifest = Manifest().set_data_source(
+    method=HistoricalData.get_spot_klines,
+    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+).set_split_config(7, 1, 2)
+
+# Override split config for retraining on all data
+retrain_manifest = manifest.with_params_override(split_config=(1, 0, 0))
+
+# Override data source params
+extended_manifest = manifest.with_params_override(
+    start_date_limit='2024-01-01',
+    kline_size=7200,
+)
+
+# Original manifest is unchanged
+assert manifest.split_config == (7, 1, 2)
+```
+
 ## Model Configuration
 
 ### `.with_model(model_function)`
