@@ -514,7 +514,8 @@ class Manifest:
         if price_data_for_backtest is not None:
             final_datetimes = split_data[2].select('datetime')
             price_data_for_backtest = final_datetimes.join(
-                price_data_for_backtest, on='datetime', how='left'
+                price_data_for_backtest, on='datetime', how='left',
+                maintain_order='left'
             )
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
