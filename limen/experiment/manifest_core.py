@@ -1,10 +1,12 @@
-import polars as pl
+import copy
 import inspect
 import importlib
-
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
-from collections.abc import Callable
+
+import polars as pl
+
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
 
@@ -383,6 +385,57 @@ class Manifest:
         self.data_dict_extension = func
         return self
 
+    def with_params_override(self, **overrides: Any) -> 'Manifest':
+
+        '''
+        Create a deep copy of this manifest with overridden parameters.
+
+        Args:
+            **overrides: Parameters to override. 'split_config' overrides the split
+                ratios directly. All other keys are treated as data source param
+                overrides and are validated against the data source method signature
+
+        Returns:
+            Manifest: New manifest with overridden parameters
+
+        Raises:
+            ValueError: If a key is not 'split_config' and not accepted by the
+                data source method
+        '''
+
+        new_manifest = copy.deepcopy(self)
+
+        if 'split_config' in overrides:
+            sc = overrides['split_config']
+            _split_len = 3
+            if not (isinstance(sc, tuple) and len(sc) == _split_len
+                    and all(isinstance(v, int) and not isinstance(v, bool) for v in sc)):
+                raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
+            if any(v < 0 for v in sc):
+                raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
+            if sum(sc) == 0:
+                raise ValueError('split_config ratios must not all be zero')
+            new_manifest.split_config = sc
+
+        ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
+        if ds_overrides:
+            if new_manifest.data_source_config is None:
+                raise ValueError('Cannot override data source params: no data source configured')
+            method_params = set(inspect.signature(
+                new_manifest.data_source_config.method
+            ).parameters.keys()) - {'self', 'cls'}
+            unknown = set(ds_overrides) - method_params
+            if unknown:
+                raise ValueError(
+                    f"Unknown data source params: {sorted(unknown)}. "
+                    f"Accepted by {new_manifest.data_source_config.method.__name__}: "
+                    f"{sorted(method_params)}"
+                )
+            new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
+            new_manifest.data_source_config.params.update(ds_overrides)
+
+        return new_manifest
+
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: dict[str, Any]) -> pl.DataFrame:
 
         '''
@@ -437,6 +490,11 @@ class Manifest:
         all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
         split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
+        price_cols = ['datetime', 'open', 'high', 'low', 'close']
+        test_split = split_data[2]
+        available = [c for c in price_cols if c in test_split.columns]
+        price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
+
         all_fitted_params = {}
 
         for i in range(len(split_data)):
@@ -457,7 +515,14 @@ class Manifest:
 
             split_data[i] = data.drop_nulls()
 
-        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params)
+        if price_data_for_backtest is not None:
+            final_datetimes = split_data[2].select('datetime')
+            price_data_for_backtest = final_datetimes.join(
+                price_data_for_backtest, on='datetime', how='left',
+                maintain_order='left'
+            )
+
+        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
     def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
 
@@ -695,7 +760,8 @@ def _finalize_to_data_dict(
         split_data: list[pl.DataFrame],
         all_datetimes: list,
         fitted_params: dict[str, Any],
-        round_params: dict[str, Any]
+        round_params: dict[str, Any],
+        price_data_for_backtest: pl.DataFrame | None = None
 ) -> dict:
 
     # Validate all splits have datetime column
@@ -723,6 +789,9 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     data_dict['_feature_names'] = cols
+
+    if price_data_for_backtest is not None:
+        data_dict['price_data_for_backtest'] = price_data_for_backtest
 
     # Apply data_dict extension if configured
     if manifest.data_dict_extension:

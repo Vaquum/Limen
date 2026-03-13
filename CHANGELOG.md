@@ -566,3 +566,8 @@
 - Add `ReferenceModel` abstract base class for class-based reference architecture with shared `_compute_confusion()` and `_compute_backtest()` helpers
 - Refactor `XGBoostRegressor`, `LogRegBinary`, `RandomBinary`, `TabPFNBinary` from standalone functions to classes with `.train()` / `.evaluate()` interface
 - Legacy function wrappers preserved for backward compatibility
+
+## v1.43.0 on 13th of March, 2026
+
+- Add `price_data_for_backtest` to `prepare_data()` output with raw OHLC from test split after bar formation
+- Add `with_params_override()` method to `Manifest` for creating deep copies with overridden split_config or data source parameters

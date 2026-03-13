@@ -757,6 +757,64 @@ def add_metadata(data_dict, split_data, round_params, fitted_params):
 .add_to_data_dict(add_metadata)
 ```
 
+### Data Dict Keys
+
+`prepare_data()` returns a dictionary with these keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `x_train` | `pl.DataFrame` | Training features |
+| `y_train` | `pl.Series` | Training targets |
+| `x_val` | `pl.DataFrame` | Validation features |
+| `y_val` | `pl.Series` | Validation targets |
+| `x_test` | `pl.DataFrame` | Test features |
+| `y_test` | `pl.Series` | Test targets |
+| `_alignment` | `dict` | Datetime alignment metadata (`first_test_datetime`, `last_test_datetime`, `missing_datetimes`) |
+| `_feature_names` | `list[str]` | Column names including target |
+| `price_data_for_backtest` | `pl.DataFrame` or absent | Raw OHLC from test split with columns `datetime`, `open`, `high`, `low`, `close`. Present only when the test split contains all five columns after bar formation. Row-aligned with `x_test` |
+
+**NOTE:** `price_data_for_backtest` is distinct from `Manifest.compute_test_bars()`. `price_data_for_backtest` is extracted during `prepare_data()` and row-aligned with the final `x_test` for inline backtest metrics during model evaluation. `compute_test_bars()` is used by the Log system for post-hoc reconstruction and returns the full bar-formed test split with all columns.
+
+## Parameter Override
+
+### `.with_params_override(**overrides)`
+
+Create a deep copy of the manifest with overridden parameters. The original manifest is not modified.
+
+**NOTE:** This method is primarily used by the Trainer for two-pass training, where Pass 2 overrides `split_config` to `(1, 0, 0)` to retrain on all available data.
+
+**Args:**
+
+| Parameter       | Type                     | Description                                                    |
+|-----------------|--------------------------|----------------------------------------------------------------|
+| `split_config`  | `tuple[int, int, int]`   | New split ratios (overrides `.set_split_config()`)             |
+| `**kwargs`      | `Any`                    | Data source param overrides (validated against the data source method signature) |
+
+**Returns:** `Manifest` (new deep copy with overridden parameters)
+
+**Raises:** `ValueError` if a key is not `split_config` and not accepted by the data source method
+
+**Example:**
+
+```python
+manifest = Manifest().set_data_source(
+    method=HistoricalData.get_spot_klines,
+    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+).set_split_config(7, 1, 2)
+
+# Override split config for retraining on all data
+retrain_manifest = manifest.with_params_override(split_config=(1, 0, 0))
+
+# Override data source params
+extended_manifest = manifest.with_params_override(
+    start_date_limit='2024-01-01',
+    kline_size=7200,
+)
+
+# Original manifest is unchanged
+assert manifest.split_config == (7, 1, 2)
+```
+
 ## Model Configuration
 
 ### `.with_model(model_function)`
