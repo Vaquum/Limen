@@ -208,6 +208,7 @@ from tests.test_manifest_prepare_data import test_price_data_for_backtest_dateti
 from tests.test_manifest_prepare_data import test_override_split_config
 from tests.test_manifest_prepare_data import test_override_data_source_param
 from tests.test_manifest_prepare_data import test_override_multiple_params
+from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
 
 tests = [
@@ -410,6 +411,7 @@ tests = [
     test_override_split_config,
     test_override_data_source_param,
     test_override_multiple_params,
+    test_override_param_not_in_original_but_in_signature,
     test_unknown_override_key_raises,
 ]
 
