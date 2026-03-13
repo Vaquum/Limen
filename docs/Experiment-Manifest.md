@@ -770,11 +770,11 @@ Create a deep copy of the manifest with overridden parameters. The original mani
 | Parameter       | Type                     | Description                                                    |
 |-----------------|--------------------------|----------------------------------------------------------------|
 | `split_config`  | `tuple[int, int, int]`   | New split ratios (overrides `.set_split_config()`)             |
-| `**kwargs`      | `Any`                    | Data source param overrides (must match existing keys in `data_source_config.params`) |
+| `**kwargs`      | `Any`                    | Data source param overrides (validated against the data source method signature) |
 
 **Returns:** `Manifest` (new deep copy with overridden parameters)
 
-**Raises:** `ValueError` if a key is not `split_config` and not in `data_source_config.params`
+**Raises:** `ValueError` if a key is not `split_config` and not accepted by the data source method
 
 **Example:**
 
