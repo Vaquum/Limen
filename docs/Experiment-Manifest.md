@@ -773,6 +773,8 @@ def add_metadata(data_dict, split_data, round_params, fitted_params):
 | `_feature_names` | `list[str]` | Column names including target |
 | `price_data_for_backtest` | `pl.DataFrame` or absent | Raw OHLC from test split with columns `datetime`, `open`, `high`, `low`, `close`. Present only when the test split contains all five columns after bar formation. Row-aligned with `x_test` |
 
+**NOTE:** `price_data_for_backtest` is distinct from `Manifest.compute_test_bars()`. `price_data_for_backtest` is extracted during `prepare_data()` and row-aligned with the final `x_test` for inline backtest metrics during model evaluation. `compute_test_bars()` is used by the Log system for post-hoc reconstruction and returns the full bar-formed test split with all columns.
+
 ## Parameter Override
 
 ### `.with_params_override(**overrides)`
