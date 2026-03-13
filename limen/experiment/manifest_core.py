@@ -1,12 +1,12 @@
 import copy
 import inspect
 import importlib
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
 
 import polars as pl
 
-from dataclasses import dataclass, field
-from typing import Any
-from collections.abc import Callable
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
 
