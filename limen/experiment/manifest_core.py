@@ -1,7 +1,8 @@
 import copy
-import polars as pl
 import inspect
 import importlib
+
+import polars as pl
 
 from dataclasses import dataclass, field
 from typing import Any
