@@ -413,7 +413,7 @@ class Manifest:
             unknown = set(ds_overrides) - set(new_manifest.data_source_config.params)
             if unknown:
                 raise ValueError(
-                    f"Unknown data source params: {unknown}. "
+                    f"Unknown data source params: {sorted(unknown)}. "
                     f"Available: {sorted(new_manifest.data_source_config.params.keys())}"
                 )
             new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
@@ -502,8 +502,8 @@ class Manifest:
 
         if price_data_for_backtest is not None:
             final_datetimes = split_data[2].select('datetime')
-            price_data_for_backtest = price_data_for_backtest.join(
-                final_datetimes, on='datetime', how='semi'
+            price_data_for_backtest = final_datetimes.join(
+                price_data_for_backtest, on='datetime', how='left'
             )
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
