@@ -210,6 +210,7 @@ from tests.test_manifest_prepare_data import test_override_data_source_param
 from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
+from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 
 tests = [
     test_param_domain_init,
@@ -413,6 +414,7 @@ tests = [
     test_override_multiple_params,
     test_override_param_not_in_original_but_in_signature,
     test_unknown_override_key_raises,
+    test_inline_and_post_experiment_metrics,
 ]
 
 # Configure logging
