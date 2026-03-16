@@ -131,7 +131,9 @@ def tabpfn_binary(data: dict,
         threshold_metric (str): Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
 
     Returns:
-        dict: Results from binary_metrics with '_preds', 'optimal_threshold', 'val_score' added
+        dict: Results with binary metrics, predictions, inline confusion metrics,
+            backtest metrics when price_data_for_backtest is in data,
+            and 'optimal_threshold', 'val_score'
     '''
 
     model = TabPFNBinary().train(

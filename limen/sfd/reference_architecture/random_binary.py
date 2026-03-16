@@ -72,7 +72,8 @@ def random_binary(data: dict,
         random_weights (float): Probability weight for class 1 (0.0 to 1.0)
 
     Returns:
-        dict: Results with binary metrics and predictions
+        dict: Results with binary metrics, predictions, inline confusion metrics,
+            and backtest metrics when price_data_for_backtest is in data
     '''
 
     return RandomBinary().train(data, random_weights=random_weights).evaluate(data, inline_metrics=True)
