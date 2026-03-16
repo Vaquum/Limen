@@ -75,4 +75,4 @@ def random_binary(data: dict,
         dict: Results with binary metrics and predictions
     '''
 
-    return RandomBinary().train(data, random_weights=random_weights).evaluate(data, inline_metrics=False)
+    return RandomBinary().train(data, random_weights=random_weights).evaluate(data, inline_metrics=True)

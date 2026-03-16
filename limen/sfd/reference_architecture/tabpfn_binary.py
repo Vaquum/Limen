@@ -142,4 +142,4 @@ def tabpfn_binary(data: dict,
         threshold_metric=threshold_metric,
     )
 
-    return model.evaluate(data, inline_metrics=False)
+    return model.evaluate(data, inline_metrics=True)

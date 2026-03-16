@@ -113,4 +113,4 @@ def logreg_binary(data: dict,
         n_jobs=n_jobs,
     )
 
-    return model.evaluate(data, inline_metrics=False)
+    return model.evaluate(data, inline_metrics=True)
