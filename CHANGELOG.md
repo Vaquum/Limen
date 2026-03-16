@@ -571,3 +571,7 @@
 
 - Add `price_data_for_backtest` to `prepare_data()` output with raw OHLC from test split after bar formation
 - Add `with_params_override()` method to `Manifest` for creating deep copies with overridden split_config or data source parameters
+
+## v1.44.0 on 16th of March, 2026
+
+- Enable inline metrics (`confusion_*`, `backtest_*` columns) in all reference architecture function wrappers by default
