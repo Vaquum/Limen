@@ -107,7 +107,8 @@ def xgboost_regressor(data: dict,
         random_state (int): Random seed
 
     Returns:
-        dict: Results with continuous metrics and predictions
+        dict: Results with continuous metrics, predictions, inline confusion metrics,
+            and backtest metrics when price_data_for_backtest is in data
     '''
 
     model = XGBoostRegressor().train(
@@ -127,4 +128,4 @@ def xgboost_regressor(data: dict,
         random_state=random_state,
     )
 
-    return model.evaluate(data, inline_metrics=False)
+    return model.evaluate(data, inline_metrics=True)

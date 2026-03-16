@@ -93,7 +93,8 @@ def logreg_binary(data: dict,
         n_jobs (int): Number of parallel jobs
 
     Returns:
-        dict: Results with binary metrics and predictions
+        dict: Results with binary metrics, predictions, inline confusion metrics,
+            and backtest metrics when price_data_for_backtest is in data
     '''
 
     model = LogRegBinary().train(
@@ -113,4 +114,4 @@ def logreg_binary(data: dict,
         n_jobs=n_jobs,
     )
 
-    return model.evaluate(data, inline_metrics=False)
+    return model.evaluate(data, inline_metrics=True)
