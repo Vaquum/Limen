@@ -8,12 +8,12 @@ The output of training is a list of [Sensor](#sensor) instances — callable wra
 
 The experiment must have been run with `experiment_dir` set in [UniversalExperimentLoop](Universal-Experiment-Loop.md). This ensures `metadata.json` and `round_data.jsonl` are available for the Trainer to reconstruct the pipeline.
 
-## Pass 1 and Pass 2
+## 2-Pass Training
 
-Training has two passes:
+Training proceeds in two passes:
 
-- **Pass 1** (current): Validation. Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters. The returned Sensor instances contain evaluation results but no trained model object. This validates that permutations reproduce correctly.
-- **Pass 2** (future): Full-data retraining. Will retrain on the full dataset (no validation/test split) using the model class directly, producing Sensor instances with callable trained models.
+- **Pass 1 — Validation** (current): Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters and compares metrics against the experiment log to detect pipeline drift. The returned Sensor instances contain evaluation results but no trained model object.
+- **Pass 2 — Retraining** (future): Retrains on the full dataset (no validation/test split) using the model class directly, producing Sensor instances with callable trained models.
 
 ## `Trainer`
 
