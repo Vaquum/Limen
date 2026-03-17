@@ -7,7 +7,7 @@ from typing import Any
 
 import polars as pl
 
-from limen.experiment.sensor import Sensor
+from limen.experiment.trainer.sensor import Sensor
 
 __all__ = ['Trainer']
 
