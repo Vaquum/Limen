@@ -26,8 +26,7 @@ class Trainer:
     manifest.prepare_data() → manifest.run_model(). Compares results
     against the original experiment log to detect pipeline drift.
     Returns Sensor instances with results but no trained model object.
-    Pass 2 (full-data retraining with model class) will be added in
-    a later PR.
+    Pass 2 (full-data retraining with model class) will be added later
     '''
 
     def __init__(self,
@@ -35,6 +34,8 @@ class Trainer:
                  data: pl.DataFrame | None = None) -> None:
 
         '''
+        Create a Trainer from a completed experiment directory.
+
         Args:
             experiment_dir (str | Path): Path to completed experiment directory
             data (pl.DataFrame | None): Data to use for training. If None,
@@ -64,6 +65,7 @@ class Trainer:
 
         self._manifest = sfd.manifest()
         self._params = sfd.params()
+        self._param_keys = frozenset(self._params.keys())
         self._round_data = self._load_round_data()
         self._original_log = self._load_original_log()
 
@@ -71,6 +73,7 @@ class Trainer:
             self._data = data
         else:
             self._data = self._manifest.fetch_data_for_env()
+
 
     def _load_round_data(self) -> dict[int, dict[str, Any]]:
 
@@ -103,25 +106,32 @@ class Trainer:
 
         return result
 
-    def _load_original_log(self) -> pl.DataFrame | None:
+
+    def _load_original_log(self) -> dict[int, dict[str, Any]] | None:
 
         '''
-        Load results.csv as a polars DataFrame.
+        Load results.csv into a dict keyed by permutation id.
 
         Returns:
-            pl.DataFrame | None: Original experiment log, or None if not found
+            dict[int, dict[str, Any]] | None: Mapping of id to row, or None if not found
 
         '''
 
         csv_path = self._experiment_dir / 'results.csv'
         try:
-            return pl.read_csv(csv_path)
+            df = pl.read_csv(csv_path)
         except FileNotFoundError:
             logger.warning(
                 'results.csv not found in %s — skipping validation',
                 self._experiment_dir,
             )
             return None
+
+        result: dict[int, dict[str, Any]] = {}
+        for row in df.iter_rows(named=True):
+            result[row['id']] = row
+        return result
+
 
     def _validate_metrics(self,
                           permutation_id: int,
@@ -142,16 +152,13 @@ class Trainer:
         if self._original_log is None:
             return []
 
-        original_rows = self._original_log.filter(pl.col('id') == permutation_id)
-        if original_rows.height == 0:
+        original = self._original_log.get(permutation_id)
+        if original is None:
             return [f"permutation {permutation_id} not found in results.csv"]
-
-        original = original_rows.row(0, named=True)
-        param_keys = set(self._params.keys())
         mismatches: list[str] = []
 
         for key, new_value in results.items():
-            if key.startswith('_') or key in _SKIP_COLUMNS or key in param_keys:
+            if key.startswith('_') or key in _SKIP_COLUMNS or key in self._param_keys:
                 continue
             if key not in original:
                 continue
@@ -174,6 +181,7 @@ class Trainer:
                 )
 
         return mismatches
+
 
     def train(self, permutation_ids: list[int]) -> list[Sensor]:
 
@@ -206,7 +214,7 @@ class Trainer:
         sensors: list[Sensor] = []
 
         for pid in permutation_ids:
-            round_params = self._round_data[pid]['round_params']
+            round_params = dict(self._round_data[pid]['round_params'])
 
             data_dict = self._manifest.prepare_data(self._data, round_params)
             results = self._manifest.run_model(data_dict, round_params)

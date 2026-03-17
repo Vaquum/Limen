@@ -748,6 +748,7 @@ class UniversalExperimentLoop:
 
         return checkpoint_manager.initialize_fresh(checkpoint_dir)
 
+
     def _write_metadata(self, experiment_dir: Path) -> None:
 
         '''
