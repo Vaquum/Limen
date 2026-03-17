@@ -1,7 +1,5 @@
 from typing import Any
 
-__all__ = ['Sensor']
-
 
 class Sensor:
 
