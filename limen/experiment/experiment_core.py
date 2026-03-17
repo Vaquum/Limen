@@ -1,4 +1,5 @@
 import csv
+import importlib.metadata
 import json
 import logging
 import os
@@ -67,6 +68,7 @@ class UniversalExperimentLoop:
         if sfd is None:
             raise ValueError('sfd is required')
 
+        self._sfd_module_name = getattr(sfd, '__name__', None)
         self.params = sfd.params()
         self.manifest = None
 
@@ -383,6 +385,7 @@ class UniversalExperimentLoop:
         elif self._experiment_dir:
             self._guard_stale_artifacts()
             self._initialize_fresh(self._experiment_dir, checkpoint_manager)
+            self._write_metadata(self._experiment_dir)
 
         last_msq_state = msq.get_state()
         last_completed_round = None
@@ -716,7 +719,7 @@ class UniversalExperimentLoop:
 
         artifact_files = [
             'results.csv', 'round_data.jsonl', 'checkpoint.json',
-            'audit.jsonl', 'interventions.json',
+            'audit.jsonl', 'interventions.json', 'metadata.json',
         ]
         existing = [
             f for f in artifact_files
@@ -749,6 +752,25 @@ class UniversalExperimentLoop:
         '''
 
         return checkpoint_manager.initialize_fresh(checkpoint_dir)
+
+    def _write_metadata(self, experiment_dir: Path) -> None:
+
+        '''
+        Write metadata.json to experiment directory.
+
+        Args:
+            experiment_dir (Path): Directory to write metadata into
+
+        '''
+
+        metadata = {
+            'sfd_module': self._sfd_module_name,
+            'limen_version': importlib.metadata.version('vaquum_limen'),
+            'created_at': datetime.now().isoformat(),
+        }
+
+        with (experiment_dir / 'metadata.json').open('w') as f:
+            json.dump(metadata, f, indent=2)
 
 
     def _checkpoint(self,
