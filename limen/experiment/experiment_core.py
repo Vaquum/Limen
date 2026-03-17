@@ -2,7 +2,6 @@ import csv
 import importlib.metadata
 import json
 import logging
-import os
 import signal
 import sqlite3
 import time
@@ -83,11 +82,7 @@ class UniversalExperimentLoop:
                         'to manifest or pass data explicitly.'
                     )
 
-                env = os.getenv('LOOP_ENV', 'test')
-                if env == 'test' and self.manifest.test_data_source_config is not None:
-                    self.data = self.manifest.fetch_test_data()
-                else:
-                    self.data = self.manifest.fetch_data()
+                self.data = self.manifest.fetch_data_for_env()
             else:
                 self.data = data
 
@@ -762,6 +757,12 @@ class UniversalExperimentLoop:
             experiment_dir (Path): Directory to write metadata into
 
         '''
+
+        if self._sfd_module_name is None:
+            raise ValueError(
+                'Cannot write metadata: SFD module has no __name__ attribute. '
+                'Trainer requires a reimportable SFD module.'
+            )
 
         metadata = {
             'sfd_module': self._sfd_module_name,

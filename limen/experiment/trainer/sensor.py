@@ -35,17 +35,17 @@ class Sensor:
     @property
     def round_params(self) -> dict[str, Any]:
 
-        return self._round_params
+        return dict(self._round_params)
 
     @property
     def metadata(self) -> dict[str, Any]:
 
-        return self._metadata
+        return dict(self._metadata)
 
     @property
     def results(self) -> dict[str, Any] | None:
 
-        return self._results
+        return dict(self._results) if self._results is not None else None
 
     def __call__(self, data: dict) -> dict:
 

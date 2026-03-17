@@ -1,6 +1,7 @@
 import copy
 import inspect
 import importlib
+import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -218,6 +219,21 @@ class Manifest:
             raise ValueError('No test data source configured')
 
         return DataSourceResolver.resolve(self.test_data_source_config)
+
+    def fetch_data_for_env(self) -> pl.DataFrame:
+
+        '''
+        Fetch data based on LOOP_ENV environment variable.
+
+        Returns:
+            pl.DataFrame: Fetched data from test or production source
+
+        '''
+
+        env = os.getenv('LOOP_ENV', 'test')
+        if env == 'test' and self.test_data_source_config is not None:
+            return self.fetch_test_data()
+        return self.fetch_data()
 
     def add_feature(self, func: Callable, **params: Any) -> 'Manifest':
 

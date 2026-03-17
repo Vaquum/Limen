@@ -1,7 +1,6 @@
 import importlib
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -40,14 +39,14 @@ class Trainer:
         self._experiment_dir = Path(experiment_dir)
 
         metadata_path = self._experiment_dir / 'metadata.json'
-        if not metadata_path.exists():
+        try:
+            with metadata_path.open('r') as f:
+                self._metadata = json.load(f)
+        except FileNotFoundError:
             raise FileNotFoundError(
                 f"metadata.json not found in {self._experiment_dir}. "
                 f"Only experiments created with experiment_dir support training."
-            )
-
-        with metadata_path.open('r') as f:
-            self._metadata = json.load(f)
+            ) from None
 
         if 'sfd_module' not in self._metadata:
             raise ValueError(
@@ -64,11 +63,7 @@ class Trainer:
         if data is not None:
             self._data = data
         else:
-            env = os.getenv('LOOP_ENV', 'test')
-            if env == 'test' and self._manifest.test_data_source_config is not None:
-                self._data = self._manifest.fetch_test_data()
-            else:
-                self._data = self._manifest.fetch_data()
+            self._data = self._manifest.fetch_data_for_env()
 
     def _load_round_data(self) -> dict[int, dict[str, Any]]:
 
@@ -81,14 +76,17 @@ class Trainer:
         '''
 
         round_data_path = self._experiment_dir / 'round_data.jsonl'
-        if not round_data_path.exists():
+
+        result: dict[int, dict[str, Any]] = {}
+        try:
+            f = round_data_path.open('r')
+        except FileNotFoundError:
             raise FileNotFoundError(
                 f"round_data.jsonl not found in {self._experiment_dir}. "
                 f"Cannot load permutation parameters."
-            )
+            ) from None
 
-        result: dict[int, dict[str, Any]] = {}
-        with round_data_path.open('r') as f:
+        with f:
             for raw_line in f:
                 stripped = raw_line.strip()
                 if not stripped:
