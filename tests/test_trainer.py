@@ -6,7 +6,7 @@ from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.trainer import Trainer
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
-from limen.sfd.foundational_sfd import random_binary as sfd_module
+from limen.sfd.foundational_sfd import random_binary as random_sfd
 from tests.stubs.stubs import StubStrategy
 
 
@@ -14,12 +14,12 @@ def test_trainer_end_to_end():
 
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir) / 'experiment'
-        params = sfd_module.params()
+        params = random_sfd.params()
         domain = ParamDomain(params)
         strategy = StubStrategy(domain)
 
         uel = UniversalExperimentLoop(
-            sfd=sfd_module,
+            sfd=random_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
         )
@@ -44,7 +44,7 @@ def test_trainer_end_to_end():
         assert trainer._params is not None
         assert len(trainer._round_data) == 3
         assert trainer._original_log is not None
-        assert trainer._original_log.height == 3
+        assert len(trainer._original_log) == 3
 
         # train returns Sensor instances with results
         permutation_ids = list(trainer._round_data.keys())
