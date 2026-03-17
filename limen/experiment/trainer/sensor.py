@@ -48,16 +48,19 @@ class Sensor:
     def __call__(self, data: dict) -> dict:
 
         '''
-        Run inference on data using the trained model.
+        Run inference on unlabeled data using the trained model.
+
+        NOTE: Not functional in Pass 1. Pass 2 will add a predict() method
+        to ReferenceModel for unlabeled inference and wire it here.
 
         Args:
-            data (dict): Data dictionary with x_test, y_test
+            data (dict): Data dictionary with feature arrays
 
         Returns:
-            dict: Evaluation results
+            dict: Prediction results
 
         Raises:
-            ValueError: If no trained model is available (Pass 1 only)
+            ValueError: If no trained model is available (Pass 1)
 
         '''
 
