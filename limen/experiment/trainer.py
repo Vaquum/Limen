@@ -9,6 +9,8 @@ import polars as pl
 
 from limen.experiment.sensor import Sensor
 
+__all__ = ['Trainer']
+
 logger = logging.getLogger(__name__)
 
 
