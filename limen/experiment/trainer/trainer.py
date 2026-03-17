@@ -10,6 +10,12 @@ from limen.experiment.trainer.sensor import Sensor
 
 logger = logging.getLogger(__name__)
 
+_SKIP_COLUMNS = frozenset({
+    'id', '_id', 'execution_time', '_warnings',
+})
+
+_FLOAT_TOLERANCE = 1e-6
+
 
 class Trainer:
 
@@ -17,9 +23,11 @@ class Trainer:
     Retrain selected permutations from a completed experiment.
 
     NOTE: Pass 1 implementation — validates permutations by re-running
-    manifest.prepare_data() → manifest.run_model(). Returns Sensor
-    instances with results but no trained model object. Pass 2
-    (full-data retraining with model class) will be added in a later PR.
+    manifest.prepare_data() → manifest.run_model(). Compares results
+    against the original experiment log to detect pipeline drift.
+    Returns Sensor instances with results but no trained model object.
+    Pass 2 (full-data retraining with model class) will be added in
+    a later PR.
     '''
 
     def __init__(self,
@@ -57,6 +65,7 @@ class Trainer:
         self._manifest = sfd.manifest()
         self._params = sfd.params()
         self._round_data = self._load_round_data()
+        self._original_log = self._load_original_log()
 
         if data is not None:
             self._data = data
@@ -94,10 +103,85 @@ class Trainer:
 
         return result
 
+    def _load_original_log(self) -> pl.DataFrame | None:
+
+        '''
+        Load results.csv as a polars DataFrame.
+
+        Returns:
+            pl.DataFrame | None: Original experiment log, or None if not found
+
+        '''
+
+        csv_path = self._experiment_dir / 'results.csv'
+        try:
+            return pl.read_csv(csv_path)
+        except FileNotFoundError:
+            logger.warning(
+                'results.csv not found in %s — skipping validation',
+                self._experiment_dir,
+            )
+            return None
+
+    def _validate_metrics(self,
+                          permutation_id: int,
+                          results: dict[str, Any]) -> list[str]:
+
+        '''
+        Compare Pass 1 results against original experiment log entry.
+
+        Args:
+            permutation_id (int): Round ID to validate
+            results (dict[str, Any]): Pass 1 results from run_model
+
+        Returns:
+            list[str]: List of mismatch descriptions, empty if all match
+
+        '''
+
+        if self._original_log is None:
+            return []
+
+        original_rows = self._original_log.filter(pl.col('id') == permutation_id)
+        if original_rows.height == 0:
+            return [f"permutation {permutation_id} not found in results.csv"]
+
+        original = original_rows.row(0, named=True)
+        param_keys = set(self._params.keys())
+        mismatches: list[str] = []
+
+        for key, new_value in results.items():
+            if key.startswith('_') or key in _SKIP_COLUMNS or key in param_keys:
+                continue
+            if key not in original:
+                continue
+
+            original_value = original[key]
+
+            if not isinstance(new_value, (int, float)):
+                continue
+            if original_value is None:
+                continue
+
+            if isinstance(new_value, float):
+                if abs(new_value - original_value) > _FLOAT_TOLERANCE:
+                    mismatches.append(
+                        f"{key}: original={original_value}, new={new_value}"
+                    )
+            elif new_value != original_value:
+                mismatches.append(
+                    f"{key}: original={original_value}, new={new_value}"
+                )
+
+        return mismatches
+
     def train(self, permutation_ids: list[int]) -> list[Sensor]:
 
         '''
-        Run Pass 1 training for selected permutations.
+        Run Pass 1 validation for selected permutations.
+
+        Re-runs the pipeline and compares metrics against the original
+        experiment log. Logs warnings for any metric mismatches.
 
         Args:
             permutation_ids (list[int]): Round IDs from experiment_log to retrain
@@ -127,6 +211,13 @@ class Trainer:
             data_dict = self._manifest.prepare_data(self._data, round_params)
             results = self._manifest.run_model(data_dict, round_params)
 
+            mismatches = self._validate_metrics(pid, results)
+            if mismatches:
+                logger.warning(
+                    'Permutation %d: metric mismatch detected — %s',
+                    pid, '; '.join(mismatches),
+                )
+
             sensor = Sensor(
                 model=None,
                 round_params=round_params,
@@ -135,6 +226,6 @@ class Trainer:
             )
             sensors.append(sensor)
 
-            logger.info('Trained sensor for permutation %d', pid)
+            logger.info('Validated sensor for permutation %d', pid)
 
         return sensors
