@@ -65,6 +65,12 @@ Initializes the Universal Experiment Loop.
 |-----------------------|--------------------|-------------------------------------------------------|
 | `data`                | `pl.DataFrame`     | Optional. Experiment data. Required for SFDs using custom functions approach. For manifest-based SFDs, if not provided, data is automatically fetched from configured sources based on `LOOP_ENV` environment variable (defaults to 'test'). |
 | `sfd`                 | `SingleFileDecoder`| The single file decoder to use for the experiment.    |
+| `search_strategy`     | `SearchStrategy`   | Optional. Search strategy for MSQ-based execution. When provided, dispatches to MSQ flow instead of legacy ParamSpace. |
+| `pruning_strategies`  | `list[PruningStrategy]` | Optional. Reducers for feedback-driven pruning during MSQ execution. |
+| `feedback_interval`   | `int`              | Trigger feedback every N rounds (default: 100). |
+| `checkpoint_interval` | `int`              | Save checkpoint every N rounds (default: 1000). |
+| `experiment_dir`      | `str \| Path`      | Optional. Directory for all experiment artifacts. Enables checkpointing, resumption, and [Trainer](Trainer.md) support. |
+| `intra_callback`      | `Callable`         | Optional. Python callback receiving `(log, msq)` at each feedback trigger. |
 
 
 ### `run`
@@ -87,6 +93,7 @@ Runs the experiment `n_permutations` times.
 | `params`                      | `Callable`        | Optional override for the SFD `params` function. Must return a parameter space dictionary.              |
 | `prep`                        | `Callable`        | Optional override for the SFD `prep` function. Must follow the standard input/output contract.          |
 | `model`                       | `Callable`        | Optional override for the SFD `model` function. Must follow the standard input/output contract.         |
+| `resume`                      | `bool`            | If `True`, resume from an existing checkpoint in `experiment_dir`. Requires `search_strategy` and `experiment_dir`. |
 
 ### Returns
 
@@ -140,6 +147,27 @@ If you need additional methods, access the internal `Log` via `uel._log` (see [L
 
 
 **NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfd.prep` is not any random operations, or if you must have random operations, use parametric seeds for round-by-round reproducibility.
+
+### Experiment Directory
+
+When `experiment_dir` is provided, all experiment artifacts are stored under that directory. This enables checkpointing, resumption, and training via [Trainer](Trainer.md).
+
+| File | Description |
+|------|-------------|
+| `results.csv` | Streaming experiment log (one row per round) |
+| `round_data.jsonl` | Per-round parameters, predictions, and alignment metadata |
+| `checkpoint.json` | MSQ, domain, and feedback controller state for resumption |
+| `audit.jsonl` | Feedback controller audit trail |
+| `interventions.json` | Applied interventions from pruning strategies |
+| `metadata.json` | Experiment metadata for [Trainer](Trainer.md) reconstruction |
+
+`metadata.json` is written at experiment start (non-resume runs only) and contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sfd_module` | `str` | Python module path of the SFD (e.g. `limen.sfd.foundational_sfd.random_binary`) |
+| `limen_version` | `str` | Limen package version at experiment time |
+| `created_at` | `str` | ISO 8601 timestamp of experiment creation |
 
 ### Example
 
