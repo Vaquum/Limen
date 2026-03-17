@@ -2,7 +2,10 @@ from limen.data import HistoricalData
 from limen.log.log import Log
 from limen.trading import Account
 from limen.backtest.backtest_sequential import BacktestSequential
-from limen.experiment import UniversalExperimentLoop, Manifest
+from limen.experiment import Manifest
+from limen.experiment import Sensor
+from limen.experiment import Trainer
+from limen.experiment import UniversalExperimentLoop
 from limen.cohort import RegimeDiversifiedOpinionPools
 
 from limen import features
@@ -21,6 +24,8 @@ __all__ = [
     'Log',
     'Manifest',
     'RegimeDiversifiedOpinionPools',
+    'Sensor',
+    'Trainer',
     'UniversalExperimentLoop',
     'features',
     'indicators',
