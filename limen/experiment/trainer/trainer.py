@@ -67,6 +67,12 @@ class Trainer:
         sfd_module_name = self._metadata['sfd_module']
         sfd = importlib.import_module(sfd_module_name)
 
+        if not hasattr(sfd, 'manifest') or not hasattr(sfd, 'params'):
+            raise ValueError(
+                f"SFD module '{sfd_module_name}' does not have manifest() and "
+                f"params(). Trainer requires a manifest-based SFD."
+            )
+
         self._manifest = sfd.manifest()
         params = sfd.params()
         self._param_keys = frozenset(params.keys())
