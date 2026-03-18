@@ -575,3 +575,9 @@
 ## v1.44.0 on 16th of March, 2026
 
 - Enable inline metrics (`confusion_*`, `backtest_*` columns) in all reference architecture function wrappers by default
+
+## v1.45.0 on 17th of March, 2026
+
+- Add `metadata.json` to experiment directory, written on experiment start with SFD module path and version
+- Add `Trainer` class for retraining selected permutations from a completed experiment
+- Add `Sensor` class as callable wrapper around trained models
