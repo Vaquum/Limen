@@ -2,7 +2,7 @@
 
 The Trainer takes a completed experiment directory and retrains selected permutations. It reads `metadata.json` to reconstruct the SFD manifest and parameters, then uses `round_data.jsonl` to look up the parameter values for each requested permutation.
 
-The output of training is a list of [Sensor](#sensor) instances — callable wrappers around trained models ready for live inference.
+The output of training is a list of [Sensor](#sensor) instances. In Pass 1, these contain validation results but no trained model. In Pass 2 (future), they will wrap trained models callable for live inference.
 
 ## Prerequisites
 

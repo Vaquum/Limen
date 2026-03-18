@@ -69,7 +69,7 @@ Initializes the Universal Experiment Loop.
 | `pruning_strategies`  | `list[PruningStrategy]` | Optional. Reducers for feedback-driven pruning during MSQ execution. |
 | `feedback_interval`   | `int`              | Trigger feedback every N rounds (default: 100). |
 | `checkpoint_interval` | `int`              | Save checkpoint every N rounds (default: 1000). |
-| `experiment_dir`      | `str \| Path`      | Optional. Directory for all experiment artifacts. Enables checkpointing, resumption, and [Trainer](Trainer.md) support. |
+| `experiment_dir`      | `str \| Path`      | Optional. Directory for all experiment artifacts. Requires `search_strategy` (MSQ flow). Enables checkpointing, resumption, and [Trainer](Trainer.md) support. |
 | `intra_callback`      | `Callable`         | Optional. Python callback receiving `(log, msq)` at each feedback trigger. |
 
 
