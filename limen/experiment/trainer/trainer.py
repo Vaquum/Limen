@@ -36,6 +36,10 @@ class Trainer:
         '''
         Create a Trainer from a completed experiment directory.
 
+        NOTE: experiment_dir must be trusted. The SFD module path stored
+        in metadata.json is imported via importlib.import_module(), which
+        executes arbitrary code from that module.
+
         Args:
             experiment_dir (str | Path): Path to completed experiment directory
             data (pl.DataFrame | None): Data to use for training. If None,
@@ -179,8 +183,8 @@ class Trainer:
             if not isinstance(original_value, (int, float)):
                 continue
 
-            if isinstance(new_value, float):
-                if abs(new_value - original_value) > _FLOAT_TOLERANCE:
+            if isinstance(new_value, float) or isinstance(original_value, float):
+                if abs(float(new_value) - float(original_value)) > _FLOAT_TOLERANCE:
                     mismatches.append(
                         f"{key}: original={original_value}, new={new_value}"
                     )
