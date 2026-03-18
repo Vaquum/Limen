@@ -768,12 +768,21 @@ class UniversalExperimentLoop:
 
         metadata = {
             'sfd_module': self._sfd_module_name,
-            'limen_version': importlib.metadata.version('vaquum_limen'),
+            'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
         }
 
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
+
+
+    @staticmethod
+    def _get_limen_version() -> str:
+
+        try:
+            return importlib.metadata.version('vaquum_limen')
+        except importlib.metadata.PackageNotFoundError:
+            return 'dev'
 
 
     def _checkpoint(self,
