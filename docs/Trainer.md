@@ -6,7 +6,9 @@ The output of training is a list of [Sensor](#sensor) instances. In Pass 1, thes
 
 ## Prerequisites
 
-The experiment must have been run with `experiment_dir` set in [UniversalExperimentLoop](Universal-Experiment-Loop.md). This ensures `metadata.json` and `round_data.jsonl` are available for the Trainer to reconstruct the pipeline.
+- The experiment must have been run with `experiment_dir` set in [UniversalExperimentLoop](Universal-Experiment-Loop.md). This ensures `metadata.json` and `round_data.jsonl` are available for the Trainer to reconstruct the pipeline.
+- The SFD must be **manifest-based** (i.e., it must expose `manifest()` and `params()`). Custom-function SFDs are not supported.
+- The `experiment_dir` must be trusted — the SFD module path from `metadata.json` is imported at runtime.
 
 ## 2-Pass Training
 
