@@ -41,7 +41,7 @@ def test_trainer_end_to_end():
         # Trainer loads manifest, params, round data, and original log
         trainer = Trainer(experiment_dir, data=uel.data)
         assert trainer._manifest is not None
-        assert trainer._params is not None
+        assert len(trainer._param_keys) > 0
         assert len(trainer._round_data) == 3
         assert trainer._original_log is not None
         assert len(trainer._original_log) == 3

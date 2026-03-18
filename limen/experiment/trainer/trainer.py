@@ -68,8 +68,8 @@ class Trainer:
         sfd = importlib.import_module(sfd_module_name)
 
         self._manifest = sfd.manifest()
-        self._params = sfd.params()
-        self._param_keys = frozenset(self._params.keys())
+        params = sfd.params()
+        self._param_keys = frozenset(params.keys())
         self._round_data = self._load_round_data()
         self._original_log = self._load_original_log()
 
