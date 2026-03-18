@@ -8,6 +8,7 @@ import time
 import warnings
 from collections.abc import Callable
 from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -768,7 +769,7 @@ class UniversalExperimentLoop:
         metadata = {
             'sfd_module': self._sfd_module_name,
             'limen_version': importlib.metadata.version('vaquum_limen'),
-            'created_at': datetime.now().isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
         }
 
         with (experiment_dir / 'metadata.json').open('w') as f:
