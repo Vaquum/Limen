@@ -169,6 +169,8 @@ class Trainer:
                 continue
             if original_value is None:
                 continue
+            if not isinstance(original_value, (int, float)):
+                continue
 
             if isinstance(new_value, float):
                 if abs(new_value - original_value) > _FLOAT_TOLERANCE:
