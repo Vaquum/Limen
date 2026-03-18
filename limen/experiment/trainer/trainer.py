@@ -101,7 +101,14 @@ class Trainer:
                 stripped = raw_line.strip()
                 if not stripped:
                     continue
-                entry = json.loads(stripped)
+                try:
+                    entry = json.loads(stripped)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        'Skipping malformed line in round_data.jsonl: %s',
+                        stripped[:80],
+                    )
+                    continue
                 result[entry['round_id']] = entry
 
         return result
