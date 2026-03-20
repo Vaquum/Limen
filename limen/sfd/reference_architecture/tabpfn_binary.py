@@ -24,6 +24,8 @@ class TabPFNBinary(ReferenceModel):
 
     '''TabPFN binary classifier with train/evaluate interface.'''
 
+    deterministic = False
+
     def __init__(self) -> None:
 
         super().__init__()

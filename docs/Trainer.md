@@ -90,7 +90,7 @@ Wraps a trained `ReferenceModel` instance for live inference. Each Sensor stores
 
 ### `predict(data)`
 
-Generate predictions from feature data. Only requires `x_test` in the data dictionary (no labels needed).
+Generate predictions from feature data. Most models only require `x_test` in the data dictionary (no labels needed). `TabPFNBinary` additionally requires `x_val` and `y_val` for threshold tuning.
 
 ```python
 result = sensor.predict({'x_test': features})

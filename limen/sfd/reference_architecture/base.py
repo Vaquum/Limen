@@ -41,7 +41,8 @@ class ReferenceModel(ABC):
         Generate predictions from feature data.
 
         Args:
-            data (dict): Data dictionary with x_test
+            data (dict): Data dictionary with x_test. Some models may
+                require additional keys (e.g. x_val, y_val for threshold tuning)
 
         Returns:
             dict: Prediction results with '_preds' key
