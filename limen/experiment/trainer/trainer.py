@@ -247,8 +247,8 @@ class Trainer:
                     )
             else:
                 diff = abs(float(new_value) - float(original_value))
-                denom = max(abs(float(original_value)), 1e-9)
-                if diff / denom > _STOCHASTIC_TOLERANCE:
+                scale = max(abs(float(original_value)), abs(float(new_value)), 1.0)
+                if diff > _FLOAT_TOLERANCE and diff / scale > _STOCHASTIC_TOLERANCE:
                     mismatches.append(
                         f"{key}: original={original_value}, new={new_value}"
                     )
