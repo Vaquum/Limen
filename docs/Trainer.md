@@ -70,31 +70,42 @@ trainer = Trainer(experiment_dir='path/to/experiment')
 sensors = trainer.train(permutation_ids=[42, 87, 103])
 
 for sensor in sensors:
-    print(sensor.round_params)
-    print(sensor.results)
-    prediction = sensor(data_dict)
+    print(sensor.permutation_id, sensor.round_params)
+    prediction = sensor.predict({'x_test': live_features})
 ```
 
 ## Sensor
 
-Wraps a trained `ReferenceModel` instance as a callable for live inference. Each Sensor also stores the Pass 1 validation results and the round parameters used to train it.
+Wraps a trained `ReferenceModel` instance for live inference. Each Sensor stores the permutation ID, round parameters, experiment metadata, and Pass 1 validation results for full traceability.
 
 ### Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
+| `permutation_id` | `int` | Round ID from experiment log |
 | `model` | `ReferenceModel` | Trained model instance |
 | `round_params` | `dict` | Parameter values used for this permutation |
 | `metadata` | `dict` | Experiment metadata from metadata.json |
 | `results` | `dict \| None` | Model evaluation results from Pass 1 |
 
-### Calling a Sensor
+### `predict(data)`
+
+Generate predictions from feature data. Only requires `x_test` in the data dictionary (no labels needed).
 
 ```python
-# Call with data to get predictions
-result = sensor(data_dict)
+result = sensor.predict({'x_test': features})
+preds = result['_preds']
+```
 
-# Access Pass 1 validation results
-print(sensor.results)
-print(sensor.round_params)
+Sensors are also callable — `sensor(data)` is shorthand for `sensor.predict(data)`.
+
+### Traceability
+
+```python
+# Identify which permutation and model produced this sensor
+print(sensor.permutation_id)           # e.g. 42
+print(sensor.round_params)             # parameter values
+print(sensor.metadata['sfd_module'])   # SFD module path
+print(sensor.model.__class__.__name__) # e.g. 'LogRegBinary'
+print(sensor.results)                  # Pass 1 validation metrics
 ```
