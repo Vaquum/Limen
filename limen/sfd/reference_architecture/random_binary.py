@@ -50,7 +50,7 @@ class RandomBinary(ReferenceModel):
         weights = [self._random_weights, 1 - self._random_weights]
 
         preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
-        probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
+        probs = np.where(preds == 1, 0.9, 0.1)
 
         return {'_preds': preds, '_probs': probs}
 
