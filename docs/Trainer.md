@@ -2,7 +2,7 @@
 
 The Trainer takes a completed experiment directory and retrains selected permutations. It reads `metadata.json` to reconstruct the SFD manifest and parameters, then uses `round_data.jsonl` to look up the parameter values for each requested permutation.
 
-The output of training is a list of [Sensor](#sensor) instances. In Pass 1, these contain validation results but no trained model. In Pass 2 (future), they will wrap trained models callable for live inference.
+The output of training is a list of [Sensor](#sensor) instances wrapping trained `ReferenceModel` objects callable for live inference.
 
 ## Prerequisites
 
@@ -14,8 +14,30 @@ The output of training is a list of [Sensor](#sensor) instances. In Pass 1, thes
 
 Training proceeds in two passes:
 
-- **Pass 1 — Validation** (current): Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters and compares metrics against the experiment log to detect pipeline drift. The returned Sensor instances contain evaluation results but no trained model object.
-- **Pass 2 — Retraining** (future): Retrains on the full dataset (no validation/test split) using the model class directly, producing Sensor instances with callable trained models.
+- **Pass 1 — Validation**: Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters and compares metrics against the experiment log. Raises `ReconstructionError` if metrics deviate beyond tolerance. This detects pipeline drift between experiment completion and training.
+- **Pass 2 — Retraining**: Retrains on the full dataset using `split_config=(1,0,0)` (all data for training, no validation/test split). The model class is resolved from the model function's module and instantiated directly via `.train()`. The resulting trained model is wrapped in a callable Sensor.
+
+### Tolerance Thresholds
+
+Tolerance is determined by the model's `deterministic` class attribute:
+
+| Model Type | Tolerance | Examples |
+|------------|-----------|----------|
+| Deterministic (`deterministic = True`) | Exact match (1e-6 float tolerance) | `LogRegBinary`, `XGBoostRegressor` |
+| Stochastic (`deterministic = False`) | 1% relative difference | `RandomBinary`, `TabPFNBinary` |
+
+### ReconstructionError
+
+Raised when Pass 1 validation detects metric deviation beyond tolerance. The error message includes the permutation ID and a list of mismatched metrics with their original and new values.
+
+```python
+from limen import ReconstructionError
+
+try:
+    sensors = trainer.train(permutation_ids=[42])
+except ReconstructionError as e:
+    print(f"Pipeline drift detected: {e}")
+```
 
 ## `Trainer`
 
@@ -28,7 +50,7 @@ Training proceeds in two passes:
 
 ### `train(permutation_ids)`
 
-Runs training for selected permutations.
+Runs 2-pass training for selected permutations.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -37,6 +59,7 @@ Runs training for selected permutations.
 Returns a `list[Sensor]`, one per permutation ID.
 
 Raises `ValueError` if any permutation ID is not found in `round_data.jsonl`.
+Raises `ReconstructionError` if Pass 1 metrics deviate beyond tolerance.
 
 ### Usage
 
@@ -49,28 +72,29 @@ sensors = trainer.train(permutation_ids=[42, 87, 103])
 for sensor in sensors:
     print(sensor.round_params)
     print(sensor.results)
+    prediction = sensor(data_dict)
 ```
 
 ## Sensor
 
-Wraps the results of a trained permutation. In Pass 1, it stores validation results but has no trained model. In Pass 2 (future), it will wrap a trained `ReferenceModel` instance and be callable for live inference.
+Wraps a trained `ReferenceModel` instance as a callable for live inference. Each Sensor also stores the Pass 1 validation results and the round parameters used to train it.
 
 ### Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `model` | `Any \| None` | Trained model instance (None in Pass 1) |
+| `model` | `ReferenceModel` | Trained model instance |
 | `round_params` | `dict` | Parameter values used for this permutation |
 | `metadata` | `dict` | Experiment metadata from metadata.json |
-| `results` | `dict \| None` | Model evaluation results |
+| `results` | `dict \| None` | Model evaluation results from Pass 1 |
 
 ### Calling a Sensor
 
 ```python
-# Pass 1 — access results directly
+# Call with data to get predictions
+result = sensor(data_dict)
+
+# Access Pass 1 validation results
 print(sensor.results)
 print(sensor.round_params)
-
-# Pass 2 (future) — callable with trained model
-result = sensor(data_dict)
 ```
