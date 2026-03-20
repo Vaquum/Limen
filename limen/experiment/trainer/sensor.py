@@ -78,11 +78,7 @@ class Sensor:
         '''
 
         if self._model is None:
-            raise ValueError(
-                'Sensor has no trained model. '
-                'Pass 1 sensors store results only. '
-                'Use Pass 2 training to create callable sensors.'
-            )
+            raise ValueError('Sensor has no trained model.')
 
         return self._model.predict(data)
 
