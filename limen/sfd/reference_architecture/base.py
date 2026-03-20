@@ -38,7 +38,7 @@ class ReferenceModel(ABC):
     def predict(self, data: dict) -> dict:
 
         '''
-        Generate predictions from feature data.
+        Compute predictions from feature data.
 
         Args:
             data (dict): Data dictionary with x_test. Some models may

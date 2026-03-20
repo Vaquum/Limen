@@ -49,7 +49,7 @@ class XGBoostRegressor(ReferenceModel):
     def predict(self, data: dict) -> dict:
 
         '''
-        Generate continuous predictions from feature data.
+        Compute continuous predictions from feature data.
 
         Args:
             data (dict): Data dictionary with x_test

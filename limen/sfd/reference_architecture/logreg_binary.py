@@ -37,7 +37,7 @@ class LogRegBinary(ReferenceModel):
     def predict(self, data: dict) -> dict:
 
         '''
-        Generate binary predictions from feature data.
+        Compute binary predictions from feature data.
 
         Args:
             data (dict): Data dictionary with x_test

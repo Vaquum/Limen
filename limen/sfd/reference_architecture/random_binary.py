@@ -38,7 +38,7 @@ class RandomBinary(ReferenceModel):
     def predict(self, data: dict) -> dict:
 
         '''
-        Generate random binary predictions.
+        Compute random binary predictions.
 
         Args:
             data (dict): Data dictionary with x_test

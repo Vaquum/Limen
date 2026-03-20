@@ -64,7 +64,7 @@ class Sensor:
     def predict(self, data: dict) -> dict:
 
         '''
-        Generate predictions from feature data.
+        Compute predictions from feature data.
 
         Args:
             data (dict): Data dictionary with x_test

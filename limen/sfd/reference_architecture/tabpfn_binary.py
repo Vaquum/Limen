@@ -68,7 +68,7 @@ class TabPFNBinary(ReferenceModel):
     def predict(self, data: dict) -> dict:
 
         '''
-        Generate binary predictions with threshold tuning on validation set.
+        Compute binary predictions with threshold tuning on validation set.
 
         Args:
             data (dict): Data dictionary with x_val, y_val, x_test
