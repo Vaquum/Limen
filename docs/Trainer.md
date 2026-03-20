@@ -24,7 +24,7 @@ Tolerance is determined by the model's `deterministic` class attribute:
 | Model Type | Tolerance | Examples |
 |------------|-----------|----------|
 | Deterministic (`deterministic = True`) | Exact match (1e-6 float tolerance) | `LogRegBinary`, `XGBoostRegressor` |
-| Stochastic (`deterministic = False`) | 1% relative difference | `RandomBinary`, `TabPFNBinary` |
+| Stochastic (`deterministic = False`) | 1% scaled difference (`max(\|orig\|, \|new\|, 1.0)`) | `RandomBinary`, `TabPFNBinary` |
 
 ### ReconstructionError
 
