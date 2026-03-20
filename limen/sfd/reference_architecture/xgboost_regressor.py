@@ -34,7 +34,7 @@ class XGBoostRegressor(ReferenceModel):
             **params,
         )
 
-        has_val = 'x_val' in data and 'y_val' in data
+        has_val = 'x_val' in data and 'y_val' in data and len(data['x_val']) > 0
 
         fit_kwargs = {'verbose': False}
         if has_val:
