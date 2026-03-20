@@ -194,42 +194,6 @@ class Trainer:
         return classes[0]
 
 
-    def _extract_model_kwargs(self,
-                              round_params: dict[str, Any],
-                              sig: inspect.Signature) -> dict[str, Any]:
-
-        '''
-        Extract model-specific kwargs from round_params.
-
-        Mirrors manifest_core.run_model() signature inspection logic.
-
-        Args:
-            round_params (dict[str, Any]): Parameter values for this permutation
-            sig (inspect.Signature): Pre-computed model function signature
-
-        Returns:
-            dict[str, Any]: Keyword arguments for model_class().train()
-
-        '''
-
-        model_kwargs: dict[str, Any] = {}
-
-        for param_name, param_obj in sig.parameters.items():
-            if param_name == 'data':
-                continue
-            if param_name in round_params:
-                model_kwargs[param_name] = round_params[param_name]
-            elif param_obj.default != inspect.Parameter.empty:
-                model_kwargs[param_name] = param_obj.default
-            else:
-                raise ValueError(
-                    f"Missing required parameter '{param_name}' for model function. "
-                    'It must be provided in round_params.'
-                )
-
-        return model_kwargs
-
-
     def _validate_metrics(self,
                           permutation_id: int,
                           results: dict[str, Any],
@@ -324,7 +288,6 @@ class Trainer:
             )
 
         model_class = self._resolve_model_class()
-        model_sig = inspect.signature(self._manifest.model_function)
         manifest_full = self._manifest.with_params_override(split_config=(1, 0, 0))
         sensors: list[Sensor] = []
 
@@ -344,7 +307,7 @@ class Trainer:
 
             # Pass 2: retrain on full data
             full_data = manifest_full.prepare_data(self._data, round_params)
-            model_kwargs = self._extract_model_kwargs(round_params, model_sig)
+            model_kwargs = self._manifest.resolve_model_kwargs(round_params)
             trained_model = model_class().train(full_data, **model_kwargs)
 
             sensor = Sensor(
