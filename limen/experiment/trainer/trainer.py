@@ -167,6 +167,12 @@ class Trainer:
 
         '''
 
+        if self._manifest.model_function is None:
+            raise ValueError(
+                'Model function not configured on manifest. '
+                'Cannot resolve model class.'
+            )
+
         module_name = self._manifest.model_function.__module__
         module = importlib.import_module(module_name)
 
@@ -189,7 +195,8 @@ class Trainer:
 
 
     def _extract_model_kwargs(self,
-                              round_params: dict[str, Any]) -> dict[str, Any]:
+                              round_params: dict[str, Any],
+                              sig: inspect.Signature) -> dict[str, Any]:
 
         '''
         Extract model-specific kwargs from round_params.
@@ -198,13 +205,13 @@ class Trainer:
 
         Args:
             round_params (dict[str, Any]): Parameter values for this permutation
+            sig (inspect.Signature): Pre-computed model function signature
 
         Returns:
             dict[str, Any]: Keyword arguments for model_class().train()
 
         '''
 
-        sig = inspect.signature(self._manifest.model_function)
         model_kwargs: dict[str, Any] = {}
 
         for param_name, param_obj in sig.parameters.items():
@@ -226,7 +233,7 @@ class Trainer:
     def _validate_metrics(self,
                           permutation_id: int,
                           results: dict[str, Any],
-                          model_class: type[ReferenceModel]) -> list[str]:
+                          is_deterministic: bool) -> list[str]:
 
         '''
         Compare Pass 1 results against original experiment log entry.
@@ -234,7 +241,7 @@ class Trainer:
         Args:
             permutation_id (int): Round ID to validate
             results (dict[str, Any]): Pass 1 results from run_model
-            model_class (type[ReferenceModel]): Model class for tolerance selection
+            is_deterministic (bool): Whether to use exact-match tolerance
 
         Returns:
             list[str]: List of mismatch descriptions, empty if all match
@@ -247,8 +254,6 @@ class Trainer:
         original = self._original_log.get(permutation_id)
         if original is None:
             return [f"permutation {permutation_id} not found in results.csv"]
-
-        is_deterministic = model_class.deterministic
         mismatches: list[str] = []
 
         for key, new_value in results.items():
@@ -319,6 +324,7 @@ class Trainer:
             )
 
         model_class = self._resolve_model_class()
+        model_sig = inspect.signature(self._manifest.model_function)
         manifest_full = self._manifest.with_params_override(split_config=(1, 0, 0))
         sensors: list[Sensor] = []
 
@@ -329,7 +335,7 @@ class Trainer:
             data_dict = self._manifest.prepare_data(self._data, round_params)
             results = self._manifest.run_model(data_dict, round_params)
 
-            mismatches = self._validate_metrics(pid, results, model_class)
+            mismatches = self._validate_metrics(pid, results, model_class.deterministic)
             if mismatches:
                 raise ReconstructionError(
                     f"Permutation {pid}: metric mismatch detected — "
@@ -338,7 +344,7 @@ class Trainer:
 
             # Pass 2: retrain on full data
             full_data = manifest_full.prepare_data(self._data, round_params)
-            model_kwargs = self._extract_model_kwargs(round_params)
+            model_kwargs = self._extract_model_kwargs(round_params, model_sig)
             trained_model = model_class().train(full_data, **model_kwargs)
 
             sensor = Sensor(

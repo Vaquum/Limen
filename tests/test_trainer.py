@@ -162,7 +162,6 @@ def test_deterministic_validation():
         sensors = trainer.train(permutation_ids)
 
         # Deterministic model produces zero mismatches
-        from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
         for pid, sensor in zip(permutation_ids, sensors, strict=True):
-            mismatches = trainer._validate_metrics(pid, sensor.results, LogRegBinary)
+            mismatches = trainer._validate_metrics(pid, sensor.results, True)
             assert mismatches == [], f"Permutation {pid} had mismatches: {mismatches}"
