@@ -229,8 +229,10 @@ def test_sensor_inference():
         sensors = trainer.train([pid])
         sensor = sensors[0]
 
-        # Sensor produces results with trained model
+        # Sensor predicts on feature-only data (no labels needed)
         data_dict = trainer._manifest.prepare_data(uel.data, sensor.round_params)
-        result = sensor(data_dict)
+        live_data = {'x_test': data_dict['x_test']}
+        result = sensor(live_data)
         assert isinstance(result, dict)
         assert '_preds' in result
+        assert len(result['_preds']) == len(data_dict['x_test'])
