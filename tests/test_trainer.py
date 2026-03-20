@@ -53,7 +53,8 @@ def test_trainer_end_to_end():
         sensors = trainer.train(permutation_ids)
         assert len(sensors) == 2
 
-        for sensor in sensors:
+        for pid, sensor in zip(permutation_ids, sensors, strict=True):
+            assert sensor.permutation_id == pid
             assert sensor.round_params is not None
             assert sensor.metadata is not None
             assert sensor.results is not None
