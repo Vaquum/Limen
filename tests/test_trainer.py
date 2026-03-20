@@ -230,10 +230,15 @@ def test_sensor_inference():
         sensors = trainer.train([pid])
         sensor = sensors[0]
 
-        # Sensor predicts on feature-only data (no labels needed)
+        # sensor.predict() works on feature-only data (no labels needed)
         data_dict = trainer._manifest.prepare_data(uel.data, sensor.round_params)
         live_data = {'x_test': data_dict['x_test']}
-        result = sensor(live_data)
+        result = sensor.predict(live_data)
         assert isinstance(result, dict)
         assert '_preds' in result
+        assert '_probs' in result
         assert len(result['_preds']) == len(data_dict['x_test'])
+
+        # __call__ delegates to predict()
+        result_via_call = sensor(live_data)
+        assert result_via_call.keys() == result.keys()
