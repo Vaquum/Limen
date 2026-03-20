@@ -34,6 +34,24 @@ class LogRegBinary(ReferenceModel):
 
         return self
 
+    def predict(self, data: dict) -> dict:
+
+        '''
+        Generate binary predictions from feature data.
+
+        Args:
+            data (dict): Data dictionary with x_test
+
+        Returns:
+            dict: Prediction results with '_preds' and '_probs' keys
+        '''
+
+        preds = self.model.predict(data['x_test'])
+        probs = self.model.predict_proba(data['x_test'])[:, 1]
+
+        return {'_preds': preds, '_probs': probs}
+
+
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
 
         '''
@@ -47,8 +65,9 @@ class LogRegBinary(ReferenceModel):
             dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
         '''
 
-        preds = self.model.predict(data['x_test'])
-        probs = self.model.predict_proba(data['x_test'])[:, 1]
+        pred_result = self.predict(data)
+        preds = pred_result['_preds']
+        probs = pred_result['_probs']
 
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds

@@ -75,4 +75,4 @@ class Sensor:
                 'Use Pass 2 training to create callable sensors.'
             )
 
-        return self._model.evaluate(data, inline_metrics=False)
+        return self._model.predict(data)

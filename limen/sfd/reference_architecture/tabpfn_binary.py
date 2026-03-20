@@ -63,18 +63,17 @@ class TabPFNBinary(ReferenceModel):
 
         return self
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def predict(self, data: dict) -> dict:
 
         '''
-        Evaluate trained model on test data with threshold tuning.
+        Generate binary predictions with threshold tuning on validation set.
 
         Args:
-            data (dict): Data dictionary with x_val, y_val, x_test, y_test,
-                         and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+            data (dict): Data dictionary with x_val, y_val, x_test
 
         Returns:
-            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+            dict: Prediction results with '_preds', '_probs', 'optimal_threshold',
+                'val_score' keys
         '''
 
         arrays = data_dict_to_numpy(data, ['x_val', 'y_val', 'x_test'])
@@ -102,14 +101,40 @@ class TabPFNBinary(ReferenceModel):
 
         y_pred = (y_test_proba >= best_threshold).astype(np.int8)
 
-        results = binary_metrics(data, y_pred, y_test_proba)
-        results['optimal_threshold'] = best_threshold
-        results['val_score'] = best_score
-        results['_preds'] = y_pred
+        return {
+            '_preds': y_pred,
+            '_probs': y_test_proba,
+            'optimal_threshold': best_threshold,
+            'val_score': best_score,
+        }
+
+
+    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+
+        '''
+        Evaluate trained model on test data with threshold tuning.
+
+        Args:
+            data (dict): Data dictionary with x_val, y_val, x_test, y_test,
+                         and optionally price_data_for_backtest
+            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+
+        Returns:
+            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+        '''
+
+        pred_result = self.predict(data)
+        preds = pred_result['_preds']
+        probs = pred_result['_probs']
+
+        results = binary_metrics(data, preds, probs)
+        results['optimal_threshold'] = pred_result['optimal_threshold']
+        results['val_score'] = pred_result['val_score']
+        results['_preds'] = preds
 
         if inline_metrics:
-            results.update(self._compute_confusion(y_pred, data['y_test']))
-            results.update(self._compute_backtest(y_pred, data))
+            results.update(self._compute_confusion(preds, data['y_test']))
+            results.update(self._compute_backtest(preds, data))
 
         return results
 

@@ -33,6 +33,26 @@ class RandomBinary(ReferenceModel):
 
         return self
 
+    def predict(self, data: dict) -> dict:
+
+        '''
+        Generate random binary predictions.
+
+        Args:
+            data (dict): Data dictionary with x_test
+
+        Returns:
+            dict: Prediction results with '_preds' and '_probs' keys
+        '''
+
+        weights = [self._random_weights, 1 - self._random_weights]
+
+        preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
+        probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
+
+        return {'_preds': preds, '_probs': probs}
+
+
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
 
         '''
@@ -46,10 +66,9 @@ class RandomBinary(ReferenceModel):
             dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
         '''
 
-        weights = [self._random_weights, 1 - self._random_weights]
-
-        preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
-        probs = np.random.choice([0.1, 0.9], size=len(data['x_test']), p=weights)
+        pred_result = self.predict(data)
+        preds = pred_result['_preds']
+        probs = pred_result['_probs']
 
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds

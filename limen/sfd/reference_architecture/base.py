@@ -35,6 +35,22 @@ class ReferenceModel(ABC):
         ...
 
     @abstractmethod
+    def predict(self, data: dict) -> dict:
+
+        '''
+        Generate predictions from feature data.
+
+        Args:
+            data (dict): Data dictionary with x_test
+
+        Returns:
+            dict: Prediction results with '_preds' key
+        '''
+
+        ...
+
+
+    @abstractmethod
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
 
         '''
