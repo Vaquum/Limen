@@ -183,7 +183,9 @@ class Trainer:
 
         if len(classes) == 0:
             raise ValueError(
-                f"No ReferenceModel subclass found in '{module_name}'"
+                f"No ReferenceModel subclass found in '{module_name}'. "
+                'The model module must define exactly one ReferenceModel '
+                'subclass with train(), predict(), and evaluate() methods.'
             )
         if len(classes) > 1:
             raise ValueError(
