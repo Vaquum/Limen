@@ -12,6 +12,8 @@ class ReferenceModel(ABC):
 
     '''Base class for class-based reference architecture models.'''
 
+    deterministic: bool = False
+
     def __init__(self) -> None:
 
         self.model = None

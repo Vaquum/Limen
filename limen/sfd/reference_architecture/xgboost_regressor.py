@@ -11,6 +11,8 @@ class XGBoostRegressor(ReferenceModel):
 
     '''XGBoost regression model with train/evaluate interface.'''
 
+    deterministic = True
+
     def train(self, data: dict, **params: Any) -> 'XGBoostRegressor':
 
         '''

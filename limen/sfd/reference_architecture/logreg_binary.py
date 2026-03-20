@@ -10,6 +10,8 @@ class LogRegBinary(ReferenceModel):
 
     '''Logistic regression binary classifier with train/evaluate interface.'''
 
+    deterministic = True
+
     def train(self, data: dict, **params: Any) -> 'LogRegBinary':
 
         '''
