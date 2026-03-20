@@ -1,12 +1,5 @@
 # Changelog
 
-## v1.46.0 on 20th of March, 2026
-
-- Add Pass 2 full-data retraining to Trainer with `split_config=(1,0,0)`
-- Add `ReconstructionError` exception raised when Pass 1 metrics deviate beyond tolerance
-- Add `deterministic` class attribute to `ReferenceModel` for per-model tolerance selection
-- Sensor now wraps trained `ReferenceModel` and is callable for inference
-
 ## v0.7.9 on 25th of May, 2025
 
 - Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
@@ -588,3 +581,10 @@
 - Add `metadata.json` to experiment directory, written on experiment start with SFD module path and version
 - Add `Trainer` class for retraining selected permutations from a completed experiment
 - Add `Sensor` class as callable wrapper around trained models
+
+## v1.46.0 on 20th of March, 2026
+
+- Add Pass 2 full-data retraining to Trainer with `split_config=(1,0,0)`
+- Add `ReconstructionError` exception raised when Pass 1 metrics deviate beyond tolerance
+- Add `deterministic` class attribute to `ReferenceModel` for per-model tolerance selection
+- Sensor now wraps trained `ReferenceModel` and is callable for inference

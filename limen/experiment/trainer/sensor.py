@@ -12,6 +12,8 @@ class Sensor:
                  results: dict[str, Any] | None = None) -> None:
 
         '''
+        Create a Sensor from a trained model and experiment context.
+
         Args:
             model (Any): Trained ReferenceModel instance, or None for Pass 1
             round_params (dict[str, Any]): Parameter values used for this permutation
