@@ -47,7 +47,7 @@ class RandomBinary(ReferenceModel):
             dict: Prediction results with '_preds' and '_probs' keys
         '''
 
-        weights = [self._random_weights, 1 - self._random_weights]
+        weights = [1 - self._random_weights, self._random_weights]
 
         preds = np.random.choice([0, 1], size=len(data['x_test']), p=weights)
         probs = np.where(preds == 1, 0.9, 0.1)
