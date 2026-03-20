@@ -14,7 +14,7 @@ The output of training is a list of [Sensor](#sensor) instances wrapping trained
 
 Training proceeds in two passes:
 
-- **Pass 1 — Validation**: Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters and compares metrics against the experiment log. Raises `ReconstructionError` if metrics deviate beyond tolerance. This detects pipeline drift between experiment completion and training.
+- **Pass 1 — Validation**: Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters and compares metrics against the experiment log. Raises `ReconstructionError` if metrics deviate beyond tolerance. This detects pipeline drift between experiment completion and training. If `results.csv` is not present in the experiment directory, validation is skipped and Pass 2 proceeds directly.
 - **Pass 2 — Retraining**: Retrains on the full dataset using `split_config=(1,0,0)` (all data for training, no validation/test split). The model class is resolved from the model function's module and instantiated directly via `.train()`. The resulting trained model is wrapped in a callable Sensor.
 
 ### Tolerance Thresholds
