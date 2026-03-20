@@ -7,6 +7,7 @@ class Sensor:
 
     def __init__(self,
                  model: Any,
+                 permutation_id: int,
                  round_params: dict[str, Any],
                  metadata: dict[str, Any],
                  results: dict[str, Any] | None = None) -> None:
@@ -15,7 +16,8 @@ class Sensor:
         Create a Sensor from a trained model and experiment context.
 
         Args:
-            model (Any): Trained ReferenceModel instance, or None for Pass 1
+            model (Any): Trained ReferenceModel instance
+            permutation_id (int): Round ID from experiment log
             round_params (dict[str, Any]): Parameter values used for this permutation
             metadata (dict[str, Any]): Experiment metadata from metadata.json
             results (dict[str, Any] | None): Model evaluation results from Pass 1
@@ -23,6 +25,7 @@ class Sensor:
         '''
 
         self._model = model
+        self._permutation_id = permutation_id
         self._round_params = dict(round_params)
         self._metadata = dict(metadata)
         self._results = dict(results) if results is not None else None
@@ -32,6 +35,12 @@ class Sensor:
     def model(self) -> Any:
 
         return self._model
+
+
+    @property
+    def permutation_id(self) -> int:
+
+        return self._permutation_id
 
 
     @property
@@ -52,16 +61,16 @@ class Sensor:
         return dict(self._results) if self._results is not None else None
 
 
-    def __call__(self, data: dict) -> dict:
+    def predict(self, data: dict) -> dict:
 
         '''
-        Run inference using the trained model.
+        Generate predictions from feature data.
 
         Args:
-            data (dict): Data dictionary with feature arrays
+            data (dict): Data dictionary with x_test
 
         Returns:
-            dict: Prediction results
+            dict: Prediction results with '_preds' key
 
         Raises:
             ValueError: If no trained model is available
@@ -76,3 +85,8 @@ class Sensor:
             )
 
         return self._model.predict(data)
+
+
+    def __call__(self, data: dict) -> dict:
+
+        return self.predict(data)

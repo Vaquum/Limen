@@ -312,6 +312,7 @@ class Trainer:
 
             sensor = Sensor(
                 model=trained_model,
+                permutation_id=pid,
                 round_params=round_params,
                 metadata=self._metadata,
                 results=results,
