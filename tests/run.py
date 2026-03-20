@@ -215,6 +215,8 @@ from tests.test_trainer import test_trainer_end_to_end
 from tests.test_trainer import test_reconstruction_error_stochastic
 from tests.test_trainer import test_reconstruction_error_tampered_log
 from tests.test_trainer import test_deterministic_validation
+from tests.test_trainer import test_pass2_uses_full_data
+from tests.test_trainer import test_sensor_inference
 
 tests = [
     test_param_domain_init,
@@ -423,6 +425,8 @@ tests = [
     test_reconstruction_error_stochastic,
     test_reconstruction_error_tampered_log,
     test_deterministic_validation,
+    test_pass2_uses_full_data,
+    test_sensor_inference,
 ]
 
 # Configure logging

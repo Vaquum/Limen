@@ -165,3 +165,72 @@ def test_deterministic_validation():
         for pid, sensor in zip(permutation_ids, sensors, strict=True):
             mismatches = trainer._validate_metrics(pid, sensor.results, True)
             assert mismatches == [], f"Permutation {pid} had mismatches: {mismatches}"
+
+
+def test_pass2_uses_full_data():
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir) / 'experiment'
+        params = logreg_sfd.params()
+        domain = ParamDomain(params)
+        strategy = StubStrategy(domain)
+
+        uel = UniversalExperimentLoop(
+            sfd=logreg_sfd,
+            search_strategy=strategy,
+            experiment_dir=experiment_dir,
+        )
+
+        uel.run(
+            experiment_name='test_full_data',
+            n_permutations=1,
+        )
+
+        trainer = Trainer(experiment_dir, data=uel.data)
+        pid = next(iter(trainer._round_data.keys()))
+        round_params = dict(trainer._round_data[pid]['round_params'])
+
+        # Pass 1 data has original split — val and test are non-empty
+        pass1_data = trainer._manifest.prepare_data(uel.data, round_params)
+        assert len(pass1_data['x_val']) > 0
+        assert len(pass1_data['x_test']) > 0
+        pass1_train_rows = len(pass1_data['x_train'])
+
+        # Pass 2 data uses split_config=(1,0,0) — all data in training
+        manifest_full = trainer._manifest.with_params_override(split_config=(1, 0, 0))
+        pass2_data = manifest_full.prepare_data(uel.data, round_params)
+        pass2_train_rows = len(pass2_data['x_train'])
+        assert len(pass2_data['x_val']) == 0
+        assert len(pass2_data['x_test']) == 0
+        assert pass2_train_rows > pass1_train_rows
+
+
+def test_sensor_inference():
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir) / 'experiment'
+        params = logreg_sfd.params()
+        domain = ParamDomain(params)
+        strategy = StubStrategy(domain)
+
+        uel = UniversalExperimentLoop(
+            sfd=logreg_sfd,
+            search_strategy=strategy,
+            experiment_dir=experiment_dir,
+        )
+
+        uel.run(
+            experiment_name='test_inference',
+            n_permutations=1,
+        )
+
+        trainer = Trainer(experiment_dir, data=uel.data)
+        pid = next(iter(trainer._round_data.keys()))
+        sensors = trainer.train([pid])
+        sensor = sensors[0]
+
+        # Sensor produces results with trained model
+        data_dict = trainer._manifest.prepare_data(uel.data, sensor.round_params)
+        result = sensor(data_dict)
+        assert isinstance(result, dict)
+        assert '_preds' in result
