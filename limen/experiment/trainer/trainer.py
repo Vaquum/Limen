@@ -1,4 +1,5 @@
 import importlib
+import inspect
 import json
 import logging
 from pathlib import Path
@@ -6,7 +7,9 @@ from typing import Any
 
 import polars as pl
 
+from limen.experiment.trainer.errors import ReconstructionError
 from limen.experiment.trainer.sensor import Sensor
+from limen.sfd.reference_architecture.base import ReferenceModel
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,7 @@ _SKIP_COLUMNS = frozenset({
 })
 
 _FLOAT_TOLERANCE = 1e-6
+_STOCHASTIC_TOLERANCE = 0.01
 
 
 class Trainer:
@@ -22,11 +26,11 @@ class Trainer:
     '''
     Retrain selected permutations from a completed experiment.
 
-    NOTE: Pass 1 implementation — validates permutations by re-running
-    manifest.prepare_data() → manifest.run_model(). Compares results
-    against the original experiment log to detect pipeline drift.
-    Returns Sensor instances with results but no trained model object.
-    Pass 2 (full-data retraining with model class) will be added later
+    Pass 1 validates permutations by re-running manifest.prepare_data()
+    and manifest.run_model(), comparing metrics against the original
+    experiment log. Pass 2 retrains on the full dataset with
+    split_config=(1,0,0) using the model class directly. Returns Sensor
+    instances wrapping trained ReferenceModel objects.
     '''
 
     def __init__(self,
@@ -150,9 +154,52 @@ class Trainer:
         return result
 
 
+    def _resolve_model_class(self) -> type[ReferenceModel]:
+
+        '''
+        Resolve the ReferenceModel subclass from the model function's module.
+
+        Returns:
+            type[ReferenceModel]: The model class
+
+        Raises:
+            ValueError: If zero or multiple ReferenceModel subclasses found
+
+        '''
+
+        if self._manifest.model_function is None:
+            raise ValueError(
+                'Model function not configured on manifest. '
+                'Cannot resolve model class.'
+            )
+
+        module_name = self._manifest.model_function.__module__
+        module = importlib.import_module(module_name)
+
+        classes = [
+            cls for _, cls in inspect.getmembers(module, inspect.isclass)
+            if issubclass(cls, ReferenceModel) and cls is not ReferenceModel
+        ]
+
+        if len(classes) == 0:
+            raise ValueError(
+                f"No ReferenceModel subclass found in '{module_name}'. "
+                'The model module must define exactly one ReferenceModel '
+                'subclass with train(), predict(), and evaluate() methods.'
+            )
+        if len(classes) > 1:
+            raise ValueError(
+                f"Multiple ReferenceModel subclasses found in '{module_name}': "
+                f"{[c.__name__ for c in classes]}"
+            )
+
+        return classes[0]
+
+
     def _validate_metrics(self,
                           permutation_id: int,
-                          results: dict[str, Any]) -> list[str]:
+                          results: dict[str, Any],
+                          is_deterministic: bool) -> list[str]:
 
         '''
         Compare Pass 1 results against original experiment log entry.
@@ -160,6 +207,7 @@ class Trainer:
         Args:
             permutation_id (int): Round ID to validate
             results (dict[str, Any]): Pass 1 results from run_model
+            is_deterministic (bool): Whether to use exact-match tolerance
 
         Returns:
             list[str]: List of mismatch descriptions, empty if all match
@@ -189,15 +237,23 @@ class Trainer:
             if not isinstance(original_value, (int, float)):
                 continue
 
-            if isinstance(new_value, float) or isinstance(original_value, float):
-                if abs(float(new_value) - float(original_value)) > _FLOAT_TOLERANCE:
+            if is_deterministic:
+                if isinstance(new_value, float) or isinstance(original_value, float):
+                    if abs(float(new_value) - float(original_value)) > _FLOAT_TOLERANCE:
+                        mismatches.append(
+                            f"{key}: original={original_value}, new={new_value}"
+                        )
+                elif new_value != original_value:
                     mismatches.append(
                         f"{key}: original={original_value}, new={new_value}"
                     )
-            elif new_value != original_value:
-                mismatches.append(
-                    f"{key}: original={original_value}, new={new_value}"
-                )
+            else:
+                diff = abs(float(new_value) - float(original_value))
+                scale = max(abs(float(original_value)), abs(float(new_value)), 1.0)
+                if diff > _FLOAT_TOLERANCE and diff / scale > _STOCHASTIC_TOLERANCE:
+                    mismatches.append(
+                        f"{key}: original={original_value}, new={new_value}"
+                    )
 
         return mismatches
 
@@ -205,19 +261,22 @@ class Trainer:
     def train(self, permutation_ids: list[int]) -> list[Sensor]:
 
         '''
-        Run Pass 1 validation for selected permutations.
+        Run 2-pass training for selected permutations.
 
-        Re-runs the pipeline and compares metrics against the original
-        experiment log. Logs warnings for any metric mismatches.
+        Pass 1 re-runs the pipeline and compares metrics against the
+        original experiment log. Raises ReconstructionError on mismatch.
+        Pass 2 retrains on the full dataset with split_config=(1,0,0)
+        using the model class directly.
 
         Args:
             permutation_ids (list[int]): Round IDs from experiment_log to retrain
 
         Returns:
-            list[Sensor]: Sensor instances with validation results
+            list[Sensor]: Sensor instances wrapping trained models
 
         Raises:
             ValueError: If any permutation ID is not found in round_data
+            ReconstructionError: If Pass 1 metrics deviate beyond tolerance
 
         '''
 
@@ -230,29 +289,38 @@ class Trainer:
                 f"Permutation IDs not found in round_data: {missing}"
             )
 
+        model_class = self._resolve_model_class()
+        manifest_full = self._manifest.with_params_override(split_config=(1, 0, 0))
         sensors: list[Sensor] = []
 
         for pid in permutation_ids:
             round_params = dict(self._round_data[pid]['round_params'])
 
+            # Pass 1: validate with original split
             data_dict = self._manifest.prepare_data(self._data, round_params)
             results = self._manifest.run_model(data_dict, round_params)
 
-            mismatches = self._validate_metrics(pid, results)
+            mismatches = self._validate_metrics(pid, results, model_class.deterministic)
             if mismatches:
-                logger.warning(
-                    'Permutation %d: metric mismatch detected — %s',
-                    pid, '; '.join(mismatches),
+                raise ReconstructionError(
+                    f"Permutation {pid}: metric mismatch detected — "
+                    + '; '.join(mismatches)
                 )
 
+            # Pass 2: retrain on full data
+            full_data = manifest_full.prepare_data(self._data, round_params)
+            model_kwargs = self._manifest.resolve_model_kwargs(round_params)
+            trained_model = model_class().train(full_data, **model_kwargs)
+
             sensor = Sensor(
-                model=None,
+                model=trained_model,
+                permutation_id=pid,
                 round_params=round_params,
                 metadata=self._metadata,
                 results=results,
             )
             sensors.append(sensor)
 
-            logger.info('Validated sensor for permutation %d', pid)
+            logger.info('Trained sensor for permutation %d', pid)
 
         return sensors

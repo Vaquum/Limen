@@ -540,32 +540,31 @@ class Manifest:
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
-    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+    def resolve_model_kwargs(self, round_params: dict[str, Any]) -> dict[str, Any]:
 
         '''
-        Execute model training and evaluation using configured functions.
+        Resolve model function kwargs from round_params using signature inspection.
+
+        Maps round_params keys to model function parameters, falling back
+        to defaults for unspecified parameters.
 
         Args:
-            data (dict): Prepared data dictionary
-            round_params (Dict[str, Any]): Parameter values for current round
+            round_params (dict[str, Any]): Parameter values for current round
 
         Returns:
-            dict: Results including predictions, metrics, and optional extras
+            dict[str, Any]: Keyword arguments for the model function
 
         Raises:
-            ValueError: If required model function parameters are missing from round_params
+            ValueError: If model function is not configured or required parameters
+                are missing from round_params
 
-        NOTE: Auto-maps parameters from round_params to model function signature.
-        Parameters in round_params override model function defaults.
-        Parameters not in round_params use model function defaults.
-        Required parameters (no defaults) must be in round_params.
         '''
 
         if self.model_function is None:
-            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model().')
+            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model() or resolve_model_kwargs().')
 
         sig = inspect.signature(self.model_function)
-        model_kwargs = {}
+        model_kwargs: dict[str, Any] = {}
 
         for param_name, param_obj in sig.parameters.items():
             if param_name == 'data':
@@ -581,6 +580,31 @@ class Manifest:
                     'It must be provided in round_params.'
                 )
 
+        return model_kwargs
+
+
+    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+
+        '''
+        Execute model training and evaluation using configured functions.
+
+        Args:
+            data (dict): Prepared data dictionary
+            round_params (dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Results including predictions, metrics, and optional extras
+
+        Raises:
+            ValueError: If required model function parameters are missing from round_params
+
+        NOTE: Auto-maps parameters from round_params to model function signature.
+        Parameters in round_params override model function defaults.
+        Parameters not in round_params use model function defaults.
+        Required parameters (no defaults) must be in round_params.
+        '''
+
+        model_kwargs = self.resolve_model_kwargs(round_params)
         round_results = self.model_function(data, **model_kwargs)
 
         return round_results

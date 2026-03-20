@@ -11,6 +11,8 @@ class XGBoostRegressor(ReferenceModel):
 
     '''XGBoost regression model with train/evaluate interface.'''
 
+    deterministic = True
+
     def train(self, data: dict, **params: Any) -> 'XGBoostRegressor':
 
         '''
@@ -32,7 +34,7 @@ class XGBoostRegressor(ReferenceModel):
             **params,
         )
 
-        has_val = 'x_val' in data and 'y_val' in data
+        has_val = 'x_val' in data and 'y_val' in data and len(data['x_val']) > 0
 
         fit_kwargs = {'verbose': False}
         if has_val:
@@ -43,6 +45,23 @@ class XGBoostRegressor(ReferenceModel):
         self.model.fit(data['x_train'], data['y_train'], **fit_kwargs)
 
         return self
+
+    def predict(self, data: dict) -> dict:
+
+        '''
+        Compute continuous predictions from feature data.
+
+        Args:
+            data (dict): Data dictionary with x_test
+
+        Returns:
+            dict: Prediction results with '_preds' key
+        '''
+
+        preds = self.model.predict(data['x_test'])
+
+        return {'_preds': preds}
+
 
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
 
@@ -57,7 +76,7 @@ class XGBoostRegressor(ReferenceModel):
             dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
         '''
 
-        preds = self.model.predict(data['x_test'])
+        preds = self.predict(data)['_preds']
 
         results = continuous_metrics(data, preds)
         results['_preds'] = preds

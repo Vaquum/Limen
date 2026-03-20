@@ -12,6 +12,8 @@ class ReferenceModel(ABC):
 
     '''Base class for class-based reference architecture models.'''
 
+    deterministic: bool = False
+
     def __init__(self) -> None:
 
         self.model = None
@@ -31,6 +33,23 @@ class ReferenceModel(ABC):
         '''
 
         ...
+
+    @abstractmethod
+    def predict(self, data: dict) -> dict:
+
+        '''
+        Compute predictions from feature data.
+
+        Args:
+            data (dict): Data dictionary with x_test. Some models may
+                require additional keys (e.g. x_val, y_val for threshold tuning)
+
+        Returns:
+            dict: Prediction results with '_preds' key
+        '''
+
+        ...
+
 
     @abstractmethod
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:

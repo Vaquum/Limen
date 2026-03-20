@@ -212,7 +212,11 @@ from tests.test_manifest_prepare_data import test_override_param_not_in_original
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 from tests.test_trainer import test_trainer_end_to_end
-from tests.test_trainer import test_trainer_deterministic_validation
+from tests.test_trainer import test_reconstruction_error_stochastic
+from tests.test_trainer import test_reconstruction_error_tampered_log
+from tests.test_trainer import test_deterministic_validation
+from tests.test_trainer import test_pass2_uses_full_data
+from tests.test_trainer import test_sensor_inference
 
 tests = [
     test_param_domain_init,
@@ -418,7 +422,11 @@ tests = [
     test_unknown_override_key_raises,
     test_inline_and_post_experiment_metrics,
     test_trainer_end_to_end,
-    test_trainer_deterministic_validation,
+    test_reconstruction_error_stochastic,
+    test_reconstruction_error_tampered_log,
+    test_deterministic_validation,
+    test_pass2_uses_full_data,
+    test_sensor_inference,
 ]
 
 # Configure logging
