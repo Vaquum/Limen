@@ -561,7 +561,7 @@ class Manifest:
         '''
 
         if self.model_function is None:
-            raise ValueError('Model function not configured. Use .with_model(model_function) before resolve_model_kwargs().')
+            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model() or resolve_model_kwargs().')
 
         sig = inspect.signature(self.model_function)
         model_kwargs: dict[str, Any] = {}
