@@ -299,7 +299,7 @@ Set required columns that must be present after bar formation (validation check)
 
 ## Feature Engineering
 
-### `.add_indicator(func, **params)`
+### `.add_indicator(func, group=None, include_if=None, **params)`
 
 Add technical indicator to the pipeline. Indicators are computational functions that derive technical analysis metrics from price/volume data.
 
@@ -308,6 +308,8 @@ Add technical indicator to the pipeline. Indicators are computational functions 
 | Parameter | Type       | Description                        |
 |-----------|------------|------------------------------------|
 | `func`    | `Callable` | Indicator function                 |
+| `group`   | `str \| None` | Perturbation group tag for feature filtering |
+| `include_if` | `str \| None` | round_params key that controls inclusion |
 | `**params`| `dict`     | Parameter mappings from round_params |
 
 **Returns:** `Manifest` (self for chaining)
@@ -354,7 +356,7 @@ Parameters are mapped from `round_params` using string references:
 )
 ```
 
-### `.add_feature(func, **params)`
+### `.add_feature(func, group=None, include_if=None, **params)`
 
 Add feature computation to the pipeline. Features are derived metrics that provide additional context or transformations beyond standard indicators.
 
@@ -363,6 +365,8 @@ Add feature computation to the pipeline. Features are derived metrics that provi
 | Parameter | Type       | Description                        |
 |-----------|------------|------------------------------------|
 | `func`    | `Callable` | Feature function                   |
+| `group`   | `str \| None` | Perturbation group tag for feature filtering |
+| `include_if` | `str \| None` | round_params key that controls inclusion |
 | `**params`| `dict`     | Parameter mappings from round_params |
 
 **Returns:** `Manifest` (self for chaining)
@@ -459,6 +463,65 @@ def custom_momentum(data: pl.LazyFrame, window: int = 20, threshold: float = 0.0
 # Use in manifest
 .add_indicator(custom_momentum, window='momentum_window', threshold='momentum_threshold')
 ```
+
+### Feature Perturbation
+
+Feature perturbation controls which indicators and features are included in each permutation, enabling systematic exploration of feature subsets.
+
+#### Group Filtering
+
+Tag indicators and features with semantic groups, then select subsets via `feature_groups` in round_params.
+
+```python
+# Tag indicators with groups
+.add_indicator(roc, group='momentum', period='roc_period')
+.add_indicator(atr, group='volatility', period=14)
+.add_indicator(sma, group='trend', column='close', period=20)
+.add_feature(vwap, group='volume')
+
+# In params: select which groups to include per permutation
+params = {
+    'feature_groups': [['momentum'], ['volatility'], ['momentum', 'volatility', 'trend']],
+}
+```
+
+If `feature_groups` is not in round_params, all features are included regardless of their group tag.
+
+#### Conditional Inclusion
+
+Enable or disable specific features via boolean round_params keys.
+
+```python
+.add_indicator(wilder_rsi, include_if='include_rsi', period=14)
+
+# In params
+params = {'include_rsi': [True, False]}  # creates with/without RSI permutations
+```
+
+If the `include_if` key is absent from round_params, the feature is included by default.
+
+#### Feature Ablation (Drop-N)
+
+### `.set_feature_ablation(drop_count_key, seed_key)`
+
+Randomly drop N feature columns per permutation using a deterministic seed. Operates on columns after all feature transforms are applied.
+
+```python
+manifest = (Manifest()
+    .add_indicator(roc, period=12)
+    .add_indicator(atr, period=14)
+    .add_feature(vwap)
+    .set_feature_ablation()  # uses default keys: 'feature_drop_count', 'feature_drop_seed'
+    # ...
+)
+
+params = {
+    'feature_drop_count': [0, 1, 2],    # drop 0, 1, or 2 feature columns
+    'feature_drop_seed': [42, 43, 44],  # different random subsets
+}
+```
+
+The same `(count, seed)` pair always drops the same columns. Dropped column names are stored in `round_params['_dropped_features']` for traceability. The `datetime` column and target column are never dropped.
 
 **In params():**
 
