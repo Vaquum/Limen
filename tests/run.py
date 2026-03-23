@@ -216,6 +216,7 @@ from tests.test_feature_perturbation import test_add_indicator_creates_transform
 from tests.test_feature_perturbation import test_feature_group_filtering_includes_selected
 from tests.test_feature_perturbation import test_feature_group_filtering_multiple_groups
 from tests.test_feature_perturbation import test_feature_group_absent_includes_all
+from tests.test_feature_perturbation import test_combined_group_and_include_if
 from tests.test_feature_perturbation import test_include_if_true
 from tests.test_feature_perturbation import test_include_if_false
 from tests.test_feature_perturbation import test_include_if_key_missing_includes
@@ -440,6 +441,7 @@ tests = [
     test_feature_group_filtering_includes_selected,
     test_feature_group_filtering_multiple_groups,
     test_feature_group_absent_includes_all,
+    test_combined_group_and_include_if,
     test_include_if_true,
     test_include_if_false,
     test_include_if_key_missing_includes,

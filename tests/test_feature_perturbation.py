@@ -92,6 +92,34 @@ def test_feature_group_absent_includes_all():
     assert 'sma_10' in columns
 
 
+def test_combined_group_and_include_if():
+
+    manifest = (Manifest()
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_split_config(3, 1, 1)
+        .add_indicator(
+            lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
+            group='momentum',
+            include_if='include_roc',
+        )
+        .add_indicator(
+            lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')),
+            group='volatility',
+        )
+        .with_target('outcome')
+            .add_transform(lambda data: data.with_columns(
+                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
+            ))
+            .add_transform(lambda data: data[:-1])
+            .done()
+    )
+    # roc: group passes (momentum selected) but include_if is False → excluded
+    data = _prepare(manifest, {'feature_groups': ['momentum', 'volatility'], 'include_roc': False})
+    columns = list(data['_feature_names'])
+    assert 'roc' not in columns
+    assert 'vol_5' in columns
+
+
 # --- Conditional inclusion ---
 
 def _make_manifest_with_include_if() -> Manifest:
