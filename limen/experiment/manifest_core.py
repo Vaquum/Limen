@@ -806,7 +806,7 @@ def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any
 
     if isinstance(feature_groups, str):
         raise TypeError(
-            "round_params['feature_groups'] must be a list, not a string"
+            f"round_params['feature_groups'] must be a list, got {feature_groups!r}"
         )
 
     return entry.group in feature_groups
