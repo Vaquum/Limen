@@ -797,10 +797,19 @@ def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any
     if entry.include_if is not None and not round_params.get(entry.include_if, True):
         return False
 
-    if entry.group is None or 'feature_groups' not in round_params:
+    if entry.group is None:
         return True
 
-    return entry.group in round_params['feature_groups']
+    feature_groups = round_params.get('feature_groups')
+    if feature_groups is None:
+        return True
+
+    if isinstance(feature_groups, str):
+        raise TypeError(
+            "round_params['feature_groups'] must be a list, not a string"
+        )
+
+    return entry.group in feature_groups
 
 
 def _apply_feature_ablation(
@@ -829,7 +838,8 @@ def _apply_feature_ablation(
         )
 
     if drop_count == 0:
-        return data, columns_to_drop
+        round_params.pop('_dropped_features', None)
+        return data, None
 
     if columns_to_drop is None:
         eligible = sorted(
