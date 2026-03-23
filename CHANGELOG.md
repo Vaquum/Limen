@@ -588,3 +588,11 @@
 - Add `ReconstructionError` exception raised when Pass 1 metrics deviate beyond tolerance
 - Add `deterministic` class attribute to `ReferenceModel` for per-model tolerance selection
 - Sensor now wraps trained `ReferenceModel` and is callable for inference
+
+## v1.47.0 on 23rd of March, 2026
+
+- Replace `FeatureEntry` tuple with `TransformEntry` dataclass supporting `group` and `include_if` metadata
+- Add feature group filtering via `feature_groups` round_params key
+- Add conditional feature inclusion via `include_if` round_params key
+- Add `set_feature_ablation()` for random Drop-N feature column ablation with deterministic seeding
+- Rename `FeatureEntry` to `PipelineStep` for pre-split and bar formation pipeline steps
