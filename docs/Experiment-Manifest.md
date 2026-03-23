@@ -520,7 +520,7 @@ params = {
 }
 ```
 
-The same `(count, seed)` pair always drops the same columns. Dropped column names are stored in `round_params['_dropped_features']` for traceability. The `datetime` column and target column are never dropped.
+The same `(count, seed)` pair always drops the same columns. Dropped column names are stored in `round_params['_dropped_features']` for traceability. Only columns added by feature transforms are eligible for dropping — base data columns and bar formation columns are always protected.
 
 ## Target Configuration
 
