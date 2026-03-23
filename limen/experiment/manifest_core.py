@@ -795,8 +795,14 @@ def _process_bars(
 
 def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any]) -> bool:
 
-    if entry.include_if is not None and not round_params.get(entry.include_if, True):
-        return False
+    if entry.include_if is not None and entry.include_if in round_params:
+        flag = round_params[entry.include_if]
+        if not isinstance(flag, bool):
+            raise TypeError(
+                f"round_params['{entry.include_if}'] must be a bool, got {flag!r}"
+            )
+        if not flag:
+            return False
 
     if entry.group is None:
         return True
