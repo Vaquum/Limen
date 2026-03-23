@@ -592,15 +592,15 @@ class Manifest:
 
             data = lazy_data.collect()
 
+            data, all_fitted_params = _apply_target_transforms(
+                self, data, round_params, all_fitted_params, is_training=(i == 0)
+            )
+
             if self.ablation_config is not None:
                 data, columns_to_drop = _apply_feature_ablation(
                     data, self, round_params, columns_to_drop,
                     pre_transform_columns,
                 )
-
-            data, all_fitted_params = _apply_target_transforms(
-                self, data, round_params, all_fitted_params, is_training=(i == 0)
-            )
 
             data = data.drop_nulls()
 
@@ -842,8 +842,11 @@ def _apply_feature_ablation(
         return data, None
 
     if columns_to_drop is None:
+        protected = pre_transform_columns
+        if manifest.target_column:
+            protected = protected | {manifest.target_column}
         eligible = sorted(
-            c for c in data.columns if c not in pre_transform_columns
+            c for c in data.columns if c not in protected
         )
 
         if drop_count > len(eligible):
