@@ -435,8 +435,9 @@ class Manifest:
         '''
         Configure random feature ablation (Drop-N).
 
-        After feature transforms are applied, randomly drops N feature
-        columns per permutation using a deterministic seed from round_params.
+        Randomly drops N feature columns per permutation using a
+        deterministic seed from round_params. Runs after feature and
+        target transforms in the prepare_data pipeline.
 
         Args:
             drop_count_key (str): round_params key for number of columns to drop
@@ -819,6 +820,13 @@ def _apply_feature_ablation(
         columns_to_drop: list[str] | None,
         pre_transform_columns: frozenset[str],
 ) -> tuple[pl.DataFrame, list[str] | None]:
+
+    '''
+    Drop random feature columns from data for ablation.
+
+    NOTE: Mutates round_params by adding '_dropped_features' key
+    with the sorted list of dropped column names.
+    '''
 
     config = manifest.ablation_config
 
