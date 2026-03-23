@@ -224,6 +224,27 @@ def test_ablation_not_configured_noop():
     assert '_dropped_features' not in rp
 
 
+def test_feature_groups_string_raises_type_error():
+
+    manifest = _make_manifest_with_groups()
+    try:
+        _prepare(manifest, {'feature_groups': 'momentum'})
+        assert False, 'Expected TypeError'
+    except TypeError as e:
+        assert 'must be a list' in str(e)
+
+
+def test_ablation_invalid_drop_count_raises():
+
+    manifest = _make_manifest_with_groups().set_feature_ablation()
+    rp = {'feature_drop_count': -1, 'feature_drop_seed': 42}
+    try:
+        _prepare(manifest, rp)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'non-negative int' in str(e)
+
+
 def test_ablation_drop_count_exceeds_eligible_raises():
 
     manifest = _make_manifest_with_groups().set_feature_ablation()
