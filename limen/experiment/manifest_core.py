@@ -812,8 +812,21 @@ def _apply_feature_ablation(
 ) -> tuple[pl.DataFrame, list[str] | None]:
 
     config = manifest.ablation_config
-    drop_count = round_params.get(config.drop_count_key) or 0
-    seed = round_params.get(config.seed_key) or 0
+
+    raw_drop_count = round_params.get(config.drop_count_key)
+    drop_count = 0 if raw_drop_count is None else raw_drop_count
+    if not isinstance(drop_count, int) or isinstance(drop_count, bool) or drop_count < 0:
+        raise ValueError(
+            f"round_params['{config.drop_count_key}'] must be a non-negative int, "
+            f"got {raw_drop_count!r}"
+        )
+
+    raw_seed = round_params.get(config.seed_key)
+    seed = 0 if raw_seed is None else raw_seed
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        raise ValueError(
+            f"round_params['{config.seed_key}'] must be an int, got {raw_seed!r}"
+        )
 
     if drop_count == 0:
         return data, columns_to_drop
