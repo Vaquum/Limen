@@ -18,9 +18,10 @@ The manifest enforces a split-first processing pattern:
 
 1. **Split Phase**: Raw data divided into train/validation/test splits
 2. **Bar Formation Phase**: Each split processes bars independently (if configured)
-3. **Feature Engineering Phase**: Indicators and features computed per split
-4. **Target Transformation Phase**: Targets computed with fitted parameters (train) or applied parameters (val/test)
-5. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
+3. **Feature Engineering Phase**: Indicators and features computed per split (with group filtering and conditional inclusion)
+4. **Feature Ablation Phase**: Random feature columns dropped if ablation is configured
+5. **Target Transformation Phase**: Targets computed with fitted parameters (train) or applied parameters (val/test)
+6. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
 
 This architecture ensures no data leakage between splits and maintains reproducible results.
 
@@ -97,7 +98,7 @@ def manifest():
             .done()
 
         # Scaling and model
-        .set_scaler(LogregTransform)
+        .set_scaler(LogRegScaler)
         .with_model(logreg_binary)
     )
 ```
@@ -502,9 +503,7 @@ If the `include_if` key is absent from round_params, the feature is included by 
 
 #### Feature Ablation (Drop-N)
 
-### `.set_feature_ablation(drop_count_key, seed_key)`
-
-Randomly drop N feature columns per permutation using a deterministic seed. Operates on columns after all feature transforms are applied.
+Configure via `.set_feature_ablation(drop_count_key, seed_key)`. Randomly drops N feature columns per permutation using a deterministic seed. Operates on columns after all feature transforms are applied.
 
 ```python
 manifest = (Manifest()
@@ -522,17 +521,6 @@ params = {
 ```
 
 The same `(count, seed)` pair always drops the same columns. Dropped column names are stored in `round_params['_dropped_features']` for traceability. The `datetime` column and target column are never dropped.
-
-**In params():**
-
-```python
-def params():
-    return {
-        'momentum_window': [10, 20, 30],
-        'momentum_threshold': [0.01, 0.02, 0.03],
-        # ...
-    }
-```
 
 ## Target Configuration
 
