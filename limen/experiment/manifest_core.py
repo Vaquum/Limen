@@ -13,7 +13,7 @@ from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
-PipelineStep = tuple[Callable[..., pl.LazyFrame], dict[str, ParamValue]]
+PipelineStep = tuple[Callable[..., pl.DataFrame], dict[str, ParamValue]]
 
 FittedParamsComputationEntry = tuple[str, Callable[..., Any], dict[str, ParamValue]]
 
@@ -583,6 +583,7 @@ class Manifest:
 
         all_fitted_params = {}
         columns_to_drop: list[str] | None = None
+        pre_transform_columns = frozenset(split_data[0].columns)
 
         for i in range(len(split_data)):
             lazy_data = split_data[i].lazy()
@@ -594,6 +595,7 @@ class Manifest:
             if self.ablation_config is not None:
                 data, columns_to_drop = _apply_feature_ablation(
                     data, self, round_params, columns_to_drop,
+                    pre_transform_columns,
                 )
 
             data, all_fitted_params = _apply_target_transforms(
@@ -806,6 +808,7 @@ def _apply_feature_ablation(
         manifest: Manifest,
         round_params: dict[str, Any],
         columns_to_drop: list[str] | None,
+        pre_transform_columns: frozenset[str],
 ) -> tuple[pl.DataFrame, list[str] | None]:
 
     config = manifest.ablation_config
@@ -816,14 +819,13 @@ def _apply_feature_ablation(
         return data, columns_to_drop
 
     if columns_to_drop is None:
-        protected = {'datetime'}
-        if manifest.target_column:
-            protected.add(manifest.target_column)
-        eligible = sorted(c for c in data.columns if c not in protected)
+        eligible = sorted(
+            c for c in data.columns if c not in pre_transform_columns
+        )
 
         if drop_count > len(eligible):
             raise ValueError(
-                f"feature_drop_count ({drop_count}) exceeds "
+                f"{config.drop_count_key} ({drop_count}) exceeds "
                 f"eligible feature columns ({len(eligible)})"
             )
 
