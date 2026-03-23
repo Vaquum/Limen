@@ -520,7 +520,7 @@ params = {
 }
 ```
 
-The same `(count, seed)` pair always drops the same columns. Dropped column names are stored in `round_params['_dropped_features']` for traceability. Only columns added by feature transforms are eligible for dropping — base data columns and bar formation columns are always protected.
+The same `(count, seed)` pair always drops the same columns. If `feature_drop_count` is missing from round_params, it defaults to `0` (no ablation). If `feature_drop_seed` is missing, it defaults to `0` — provide an explicit seed to get different random subsets across permutations. Dropped column names are stored in `round_params['_dropped_features']` for traceability. Only columns added by feature transforms are eligible for dropping — base data columns and bar formation columns are always protected.
 
 ## Target Configuration
 
