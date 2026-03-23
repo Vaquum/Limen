@@ -2,6 +2,7 @@ import copy
 import inspect
 import importlib
 import os
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -794,9 +795,10 @@ def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any
     if entry.include_if is not None and not round_params.get(entry.include_if, True):
         return False
 
-    return not (entry.group is not None
-                and 'feature_groups' in round_params
-                and entry.group not in round_params['feature_groups'])
+    if entry.group is None or 'feature_groups' not in round_params:
+        return True
+
+    return entry.group in round_params['feature_groups']
 
 
 def _apply_feature_ablation(
@@ -807,8 +809,8 @@ def _apply_feature_ablation(
 ) -> tuple[pl.DataFrame, list[str] | None]:
 
     config = manifest.ablation_config
-    drop_count = round_params.get(config.drop_count_key, 0)
-    seed = round_params.get(config.seed_key, 0)
+    drop_count = round_params.get(config.drop_count_key) or 0
+    seed = round_params.get(config.seed_key) or 0
 
     if drop_count == 0:
         return data, columns_to_drop
@@ -825,7 +827,6 @@ def _apply_feature_ablation(
                 f"eligible feature columns ({len(eligible)})"
             )
 
-        import random
         rng = random.Random(seed)
         columns_to_drop = rng.sample(eligible, drop_count)
         round_params['_dropped_features'] = sorted(columns_to_drop)
