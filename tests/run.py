@@ -224,7 +224,9 @@ from tests.test_feature_perturbation import test_ablation_deterministic_with_see
 from tests.test_feature_perturbation import test_ablation_zero_drops_nothing
 from tests.test_feature_perturbation import test_ablation_preserves_datetime_and_target
 from tests.test_feature_perturbation import test_ablation_consistent_across_splits
+from tests.test_feature_perturbation import test_ungrouped_features_always_included
 from tests.test_feature_perturbation import test_ablation_not_configured_noop
+from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_trainer import test_trainer_end_to_end
 from tests.test_trainer import test_reconstruction_error_stochastic
 from tests.test_trainer import test_reconstruction_error_tampered_log
@@ -448,7 +450,9 @@ tests = [
     test_ablation_zero_drops_nothing,
     test_ablation_preserves_datetime_and_target,
     test_ablation_consistent_across_splits,
+    test_ungrouped_features_always_included,
     test_ablation_not_configured_noop,
+    test_ablation_drop_count_exceeds_eligible_raises,
     test_trainer_end_to_end,
     test_reconstruction_error_stochastic,
     test_reconstruction_error_tampered_log,

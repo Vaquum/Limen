@@ -98,6 +98,31 @@ def test_feature_group_absent_includes_all():
     assert 'sma_10' in columns
 
 
+def test_ungrouped_features_always_included():
+
+    manifest = (Manifest()
+        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_split_config(3, 1, 1)
+        .add_indicator(
+            lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
+            group='momentum',
+        )
+        .add_indicator(
+            lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')),
+        )
+        .with_target('outcome')
+            .add_transform(lambda data: data.with_columns(
+                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
+            ))
+            .add_transform(lambda data: data[:-1])
+            .done()
+    )
+    data = _prepare(manifest, {'feature_groups': ['momentum']})
+    columns = list(data['_feature_names'])
+    assert 'roc' in columns
+    assert 'vol_5' in columns
+
+
 def test_combined_group_and_include_if():
 
     manifest = (Manifest()
@@ -197,3 +222,15 @@ def test_ablation_not_configured_noop():
     rp = {'feature_drop_count': 2, 'feature_drop_seed': 42}
     _prepare(manifest, rp)
     assert '_dropped_features' not in rp
+
+
+def test_ablation_drop_count_exceeds_eligible_raises():
+
+    manifest = _make_manifest_with_groups().set_feature_ablation()
+    rp = {'feature_drop_count': 9999, 'feature_drop_seed': 42}
+    try:
+        _prepare(manifest, rp)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'feature_drop_count' in str(e)
+        assert 'exceeds' in str(e)
