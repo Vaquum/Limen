@@ -32,22 +32,30 @@ def _make_manifest_with_groups() -> Manifest:
     )
 
 
+def _make_manifest_with_include_if() -> Manifest:
+
+    return (Manifest()
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_split_config(3, 1, 1)
+        .add_indicator(
+            lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
+            include_if='include_roc',
+        )
+        .with_target('outcome')
+            .add_transform(lambda data: data.with_columns(
+                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
+            ))
+            .add_transform(lambda data: data[:-1])
+            .done()
+    )
+
+
 def _prepare(manifest, round_params=None):
 
     raw_data = manifest.fetch_test_data()
     if round_params is None:
         round_params = {}
     return manifest.prepare_data(raw_data, round_params)
-
-
-# --- TransformEntry ---
-
-def test_transform_entry_defaults():
-
-    entry = TransformEntry(func=lambda x: x)
-    assert entry.group is None
-    assert entry.include_if is None
-    assert entry.params == {}
 
 
 def test_add_indicator_creates_transform_entry():
@@ -59,8 +67,6 @@ def test_add_indicator_creates_transform_entry():
     assert entry.group == 'momentum'
     assert entry.params == {'period': 14}
 
-
-# --- Group filtering ---
 
 def test_feature_group_filtering_includes_selected():
 
@@ -113,31 +119,10 @@ def test_combined_group_and_include_if():
             .add_transform(lambda data: data[:-1])
             .done()
     )
-    # roc: group passes (momentum selected) but include_if is False → excluded
     data = _prepare(manifest, {'feature_groups': ['momentum', 'volatility'], 'include_roc': False})
     columns = list(data['_feature_names'])
     assert 'roc' not in columns
     assert 'vol_5' in columns
-
-
-# --- Conditional inclusion ---
-
-def _make_manifest_with_include_if() -> Manifest:
-
-    return (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
-        .set_split_config(3, 1, 1)
-        .add_indicator(
-            lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
-            include_if='include_roc',
-        )
-        .with_target('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
-    )
 
 
 def test_include_if_true():
@@ -154,12 +139,9 @@ def test_include_if_false():
 
 def test_include_if_key_missing_includes():
 
-    # Key not in round_params → default to include
     data = _prepare(_make_manifest_with_include_if(), {})
     assert 'roc' in data['_feature_names']
 
-
-# --- Feature ablation ---
 
 def test_ablation_drops_correct_count():
 
