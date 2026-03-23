@@ -19,8 +19,8 @@ The manifest enforces a split-first processing pattern:
 1. **Split Phase**: Raw data divided into train/validation/test splits
 2. **Bar Formation Phase**: Each split processes bars independently (if configured)
 3. **Feature Engineering Phase**: Indicators and features computed per split (with group filtering and conditional inclusion)
-4. **Feature Ablation Phase**: Random feature columns dropped if ablation is configured
-5. **Target Transformation Phase**: Targets computed with fitted parameters (train) or applied parameters (val/test)
+4. **Target Transformation Phase**: Targets computed with fitted parameters (train) or applied parameters (val/test)
+5. **Feature Ablation Phase**: Random feature columns dropped if ablation is configured (runs after target transforms so targets can reference any feature)
 6. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
 
 This architecture ensures no data leakage between splits and maintains reproducible results.
