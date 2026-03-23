@@ -211,6 +211,21 @@ from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
+from tests.test_feature_perturbation import test_transform_entry_defaults
+from tests.test_feature_perturbation import test_add_indicator_creates_transform_entry
+from tests.test_feature_perturbation import test_feature_group_filtering_includes_selected
+from tests.test_feature_perturbation import test_feature_group_filtering_multiple_groups
+from tests.test_feature_perturbation import test_feature_group_absent_includes_all
+from tests.test_feature_perturbation import test_include_if_true
+from tests.test_feature_perturbation import test_include_if_false
+from tests.test_feature_perturbation import test_include_if_key_missing_includes
+from tests.test_feature_perturbation import test_ablation_drops_correct_count
+from tests.test_feature_perturbation import test_ablation_deterministic_with_seed
+from tests.test_feature_perturbation import test_ablation_different_seed_different_columns
+from tests.test_feature_perturbation import test_ablation_zero_drops_nothing
+from tests.test_feature_perturbation import test_ablation_preserves_datetime_and_target
+from tests.test_feature_perturbation import test_ablation_consistent_across_splits
+from tests.test_feature_perturbation import test_ablation_not_configured_noop
 from tests.test_trainer import test_trainer_end_to_end
 from tests.test_trainer import test_reconstruction_error_stochastic
 from tests.test_trainer import test_reconstruction_error_tampered_log
@@ -421,6 +436,21 @@ tests = [
     test_override_param_not_in_original_but_in_signature,
     test_unknown_override_key_raises,
     test_inline_and_post_experiment_metrics,
+    test_transform_entry_defaults,
+    test_add_indicator_creates_transform_entry,
+    test_feature_group_filtering_includes_selected,
+    test_feature_group_filtering_multiple_groups,
+    test_feature_group_absent_includes_all,
+    test_include_if_true,
+    test_include_if_false,
+    test_include_if_key_missing_includes,
+    test_ablation_drops_correct_count,
+    test_ablation_deterministic_with_seed,
+    test_ablation_different_seed_different_columns,
+    test_ablation_zero_drops_nothing,
+    test_ablation_preserves_datetime_and_target,
+    test_ablation_consistent_across_splits,
+    test_ablation_not_configured_noop,
     test_trainer_end_to_end,
     test_reconstruction_error_stochastic,
     test_reconstruction_error_tampered_log,
