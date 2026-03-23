@@ -486,7 +486,7 @@ params = {
 }
 ```
 
-If `feature_groups` is not in round_params, all features are included regardless of their group tag.
+If `feature_groups` is not in round_params, all features are included regardless of their group tag. Features with no group tag are always included even when `feature_groups` is set — they are treated as unconditional baseline transforms.
 
 #### Conditional Inclusion
 
