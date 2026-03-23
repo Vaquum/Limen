@@ -2,6 +2,7 @@ import copy
 import inspect
 import importlib
 import os
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -12,9 +13,29 @@ from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
-FeatureEntry = tuple[Callable[..., pl.LazyFrame], dict[str, ParamValue]]
+PipelineStep = tuple[Callable[..., pl.DataFrame], dict[str, ParamValue]]
 
 FittedParamsComputationEntry = tuple[str, Callable[..., Any], dict[str, ParamValue]]
+
+
+@dataclass
+class TransformEntry:
+
+    '''Feature or indicator transform with optional perturbation metadata.'''
+
+    func: Callable
+    params: dict[str, ParamValue] = field(default_factory=dict)
+    group: str | None = None
+    include_if: str | None = None
+
+
+@dataclass
+class AblationConfig:
+
+    '''Configuration for random feature ablation (Drop-N).'''
+
+    drop_count_key: str
+    seed_key: str
 
 FittedTransformEntry = tuple[
     list[FittedParamsComputationEntry],
@@ -138,23 +159,34 @@ class Manifest:
 
     data_source_config: DataSourceConfig = None
     test_data_source_config: DataSourceConfig = None
-    pre_split_data_selector: FeatureEntry = None
+    pre_split_data_selector: PipelineStep = None
     split_config: tuple[int, int, int] = (8, 1, 2)
-    bar_formation: FeatureEntry = None
+    bar_formation: PipelineStep = None
     required_bar_columns: list[str] = field(default_factory=list)
-    feature_transforms: list[FeatureEntry] = field(default_factory=list)
+    feature_transforms: list[TransformEntry] = field(default_factory=list)
     target_column: str = None
     target_transforms: list[FittedTransformEntry] = field(default_factory=list)
     scaler: FittedTransformEntry = None
+    ablation_config: AblationConfig | None = None
     data_dict_extension: Callable = None
 
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
 
-    def _add_transform(self, func: Callable, **params: Any) -> 'Manifest':
+    def _add_transform(self,
+                       func: Callable,
+                       group: str | None = None,
+                       include_if: str | None = None,
+                       **params: Any) -> 'Manifest':
 
-        self.feature_transforms.append((func, params))
+        entry = TransformEntry(
+            func=func,
+            params=params,
+            group=group,
+            include_if=include_if,
+        )
+        self.feature_transforms.append(entry)
 
         return self
 
@@ -235,35 +267,48 @@ class Manifest:
             return self.fetch_test_data()
         return self.fetch_data()
 
-    def add_feature(self, func: Callable, **params: Any) -> 'Manifest':
+    def add_feature(self,
+                    func: Callable,
+                    group: str | None = None,
+                    include_if: str | None = None,
+                    **params: Any) -> 'Manifest':
 
         '''
         Add feature transformation to the manifest.
 
         Args:
             func (Callable): Feature transformation function
+            group (str | None): Perturbation group tag for feature filtering
+            include_if (str | None): round_params key that controls inclusion
             **params: Parameters for the transformation
 
         Returns:
             Manifest: Self for method chaining
         '''
 
-        return self._add_transform(func, **params)
+        return self._add_transform(func, group=group, include_if=include_if, **params)
 
-    def add_indicator(self, func: Callable, **params: Any) -> 'Manifest':
+
+    def add_indicator(self,
+                      func: Callable,
+                      group: str | None = None,
+                      include_if: str | None = None,
+                      **params: Any) -> 'Manifest':
 
         '''
         Add indicator transformation to the manifest.
 
         Args:
             func (Callable): Indicator transformation function
+            group (str | None): Perturbation group tag for feature filtering
+            include_if (str | None): round_params key that controls inclusion
             **params: Parameters for the transformation
 
         Returns:
             Manifest: Self for method chaining
         '''
 
-        return self._add_transform(func, **params)
+        return self._add_transform(func, group=group, include_if=include_if, **params)
 
     def set_pre_split_data_selector(self, func: Callable, **params: Any) -> 'Manifest':
 
@@ -382,6 +427,32 @@ class Manifest:
         self.model_function = model_function
 
         return self
+
+    def set_feature_ablation(self,
+                             drop_count_key: str = 'feature_drop_count',
+                             seed_key: str = 'feature_drop_seed') -> 'Manifest':
+
+        '''
+        Configure random feature ablation (Drop-N).
+
+        Randomly drops N feature columns per permutation using a
+        deterministic seed from round_params. Runs after feature and
+        target transforms in the prepare_data pipeline.
+
+        Args:
+            drop_count_key (str): round_params key for number of columns to drop
+            seed_key (str): round_params key for random seed
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.ablation_config = AblationConfig(
+            drop_count_key=drop_count_key,
+            seed_key=seed_key,
+        )
+        return self
+
 
     def add_to_data_dict(self, func: Callable) -> 'Manifest':
 
@@ -512,6 +583,8 @@ class Manifest:
         price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
 
         all_fitted_params = {}
+        columns_to_drop: list[str] | None = None
+        pre_transform_columns = frozenset(split_data[0].columns)
 
         for i in range(len(split_data)):
             lazy_data = split_data[i].lazy()
@@ -519,9 +592,16 @@ class Manifest:
             lazy_data = _apply_feature_transforms(self, lazy_data, round_params)
 
             data = lazy_data.collect()
+
             data, all_fitted_params = _apply_target_transforms(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
+
+            if self.ablation_config is not None:
+                data, columns_to_drop = _apply_feature_ablation(
+                    data, self, round_params, columns_to_drop,
+                    pre_transform_columns,
+                )
 
             data = data.drop_nulls()
 
@@ -713,11 +793,96 @@ def _process_bars(
     return all_datetimes, bar_data
 
 
+def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any]) -> bool:
+
+    if entry.include_if is not None and entry.include_if in round_params:
+        flag = round_params[entry.include_if]
+        if not isinstance(flag, bool):
+            raise TypeError(
+                f"round_params['{entry.include_if}'] must be a bool, got {flag!r}"
+            )
+        if not flag:
+            return False
+
+    if entry.group is None:
+        return True
+
+    feature_groups = round_params.get('feature_groups')
+    if feature_groups is None:
+        return True
+
+    if isinstance(feature_groups, str):
+        raise TypeError(
+            f"round_params['feature_groups'] must be a list, got {feature_groups!r}"
+        )
+
+    return entry.group in feature_groups
+
+
+def _apply_feature_ablation(
+        data: pl.DataFrame,
+        manifest: Manifest,
+        round_params: dict[str, Any],
+        columns_to_drop: list[str] | None,
+        pre_transform_columns: frozenset[str],
+) -> tuple[pl.DataFrame, list[str] | None]:
+
+    '''
+    Drop random feature columns from data for ablation.
+
+    NOTE: Mutates round_params by adding '_dropped_features' key
+    with the sorted list of dropped column names.
+    '''
+
+    config = manifest.ablation_config
+
+    raw_drop_count = round_params.get(config.drop_count_key)
+    drop_count = 0 if raw_drop_count is None else raw_drop_count
+    if not isinstance(drop_count, int) or isinstance(drop_count, bool) or drop_count < 0:
+        raise ValueError(
+            f"round_params['{config.drop_count_key}'] must be a non-negative int, "
+            f"got {raw_drop_count!r}"
+        )
+
+    raw_seed = round_params.get(config.seed_key)
+    seed = 0 if raw_seed is None else raw_seed
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        raise ValueError(
+            f"round_params['{config.seed_key}'] must be an int, got {raw_seed!r}"
+        )
+
+    if drop_count == 0:
+        round_params.pop('_dropped_features', None)
+        return data, None
+
+    if columns_to_drop is None:
+        protected = pre_transform_columns
+        if manifest.target_column:
+            protected = protected | {manifest.target_column}
+        eligible = sorted(
+            c for c in data.columns if c not in protected
+        )
+
+        if drop_count > len(eligible):
+            raise ValueError(
+                f"{config.drop_count_key} ({drop_count}) exceeds "
+                f"eligible feature columns ({len(eligible)})"
+            )
+
+        rng = random.Random(seed)
+        columns_to_drop = rng.sample(eligible, drop_count)
+        round_params['_dropped_features'] = sorted(columns_to_drop)
+
+    return data.drop(columns_to_drop), columns_to_drop
+
+
 def _apply_feature_transforms(manifest: Manifest, lazy_data: pl.LazyFrame, round_params: dict[str, Any]) -> pl.LazyFrame:
 
-    for func, base_params in manifest.feature_transforms:
-        resolved = _resolve_params(base_params, round_params)
-        lazy_data = lazy_data.pipe(func, **resolved)
+    for entry in manifest.feature_transforms:
+        if not _should_include_transform(entry, round_params):
+            continue
+        resolved = _resolve_params(entry.params, round_params)
+        lazy_data = lazy_data.pipe(entry.func, **resolved)
 
     return lazy_data
 
