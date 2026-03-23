@@ -221,7 +221,6 @@ from tests.test_feature_perturbation import test_include_if_false
 from tests.test_feature_perturbation import test_include_if_key_missing_includes
 from tests.test_feature_perturbation import test_ablation_drops_correct_count
 from tests.test_feature_perturbation import test_ablation_deterministic_with_seed
-from tests.test_feature_perturbation import test_ablation_different_seed_different_columns
 from tests.test_feature_perturbation import test_ablation_zero_drops_nothing
 from tests.test_feature_perturbation import test_ablation_preserves_datetime_and_target
 from tests.test_feature_perturbation import test_ablation_consistent_across_splits
@@ -446,7 +445,6 @@ tests = [
     test_include_if_key_missing_includes,
     test_ablation_drops_correct_count,
     test_ablation_deterministic_with_seed,
-    test_ablation_different_seed_different_columns,
     test_ablation_zero_drops_nothing,
     test_ablation_preserves_datetime_and_target,
     test_ablation_consistent_across_splits,

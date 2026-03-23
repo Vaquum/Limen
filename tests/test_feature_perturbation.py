@@ -94,9 +94,9 @@ def test_feature_group_absent_includes_all():
 
 # --- Conditional inclusion ---
 
-def test_include_if_true():
+def _make_manifest_with_include_if() -> Manifest:
 
-    manifest = (Manifest()
+    return (Manifest()
         .set_test_data_source(method=HistoricalData._get_data_for_test)
         .set_split_config(3, 1, 1)
         .add_indicator(
@@ -110,48 +110,24 @@ def test_include_if_true():
             .add_transform(lambda data: data[:-1])
             .done()
     )
-    data = _prepare(manifest, {'include_roc': True})
+
+
+def test_include_if_true():
+
+    data = _prepare(_make_manifest_with_include_if(), {'include_roc': True})
     assert 'roc' in data['_feature_names']
 
 
 def test_include_if_false():
 
-    manifest = (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
-        .set_split_config(3, 1, 1)
-        .add_indicator(
-            lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
-            include_if='include_roc',
-        )
-        .with_target('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
-    )
-    data = _prepare(manifest, {'include_roc': False})
+    data = _prepare(_make_manifest_with_include_if(), {'include_roc': False})
     assert 'roc' not in data['_feature_names']
 
 
 def test_include_if_key_missing_includes():
 
-    manifest = (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
-        .set_split_config(3, 1, 1)
-        .add_indicator(
-            lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
-            include_if='include_roc',
-        )
-        .with_target('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
-    )
     # Key not in round_params → default to include
-    data = _prepare(manifest, {})
+    data = _prepare(_make_manifest_with_include_if(), {})
     assert 'roc' in data['_feature_names']
 
 
@@ -174,17 +150,6 @@ def test_ablation_deterministic_with_seed():
     rp2 = {'feature_drop_count': 1, 'feature_drop_seed': 42}
     _prepare(manifest, rp2)
     assert rp1['_dropped_features'] == rp2['_dropped_features']
-
-
-def test_ablation_different_seed_different_columns():
-
-    manifest = _make_manifest_with_groups().set_feature_ablation()
-    rp1 = {'feature_drop_count': 1, 'feature_drop_seed': 42}
-    _prepare(manifest, rp1)
-    rp2 = {'feature_drop_count': 1, 'feature_drop_seed': 99}
-    _prepare(manifest, rp2)
-    assert len(rp1['_dropped_features']) == 1
-    assert len(rp2['_dropped_features']) == 1
 
 
 def test_ablation_zero_drops_nothing():
