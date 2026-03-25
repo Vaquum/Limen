@@ -68,7 +68,7 @@ class RankGaussScaler:
             if col not in df.columns:
                 continue
 
-            values = df[col].to_numpy().astype(np.float64)
+            values = df[col].cast(pl.Float64).to_numpy()
             nan_mask = np.isnan(values)
 
             reference = np.linspace(0, 1, len(quantiles))
