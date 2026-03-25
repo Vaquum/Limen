@@ -414,7 +414,7 @@ class Manifest:
         '''
 
         def _scaler_factory(data: 'pl.DataFrame',
-                            scaler_type: str = 'linear') -> Any:
+                            scaler_type: str = '') -> Any:
 
             if scaler_type not in SCALER_REGISTRY:
                 raise ValueError(

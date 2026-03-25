@@ -18,10 +18,15 @@ class RobustScaler:
 
         '''
 
+        q_low, q_high = quantile_range
+        if not (0 <= q_low < q_high <= 1):
+            raise ValueError(
+                f"quantile_range must satisfy 0 <= low < high <= 1, "
+                f"got ({q_low}, {q_high})"
+            )
+
         self.medians: dict[str, float] = {}
         self.iqrs: dict[str, float] = {}
-
-        q_low, q_high = quantile_range
 
         for col in x_train.columns:
             if x_train[col].dtype == pl.Datetime or not x_train[col].dtype.is_numeric():

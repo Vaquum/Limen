@@ -20,16 +20,21 @@ class RankGaussScaler:
 
         '''
 
+        if n_quantiles < 1:
+            raise ValueError(
+                f"n_quantiles must be >= 1, got {n_quantiles}"
+            )
+
         self._n_quantiles = n_quantiles
         self._quantiles: dict[str, np.ndarray] = {}
 
         quantile_points = np.linspace(0, 1, n_quantiles + 1)
 
         for col in x_train.columns:
-            if x_train[col].dtype == pl.Datetime or not x_train[col].dtype.is_float():
+            if x_train[col].dtype == pl.Datetime or not x_train[col].dtype.is_numeric():
                 continue
 
-            values = x_train[col].drop_nulls().drop_nans().to_numpy()
+            values = x_train[col].cast(pl.Float64).drop_nulls().drop_nans().to_numpy()
             if len(values) == 0:
                 continue
 
