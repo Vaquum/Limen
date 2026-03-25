@@ -56,6 +56,7 @@ def manifest():
             .done()
 
         .set_scaler(LogRegScaler)
+        .set_feature_ablation()
 
         .with_model(logreg_binary)
     )

@@ -11,6 +11,7 @@ import polars as pl
 
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
+from limen.scalers.registry import SCALER_REGISTRY
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
 PipelineStep = tuple[Callable[..., pl.DataFrame], dict[str, ParamValue]]
@@ -394,6 +395,48 @@ class Manifest:
         self.scaler = make_fitted_scaler(param_name, transform_class)
 
         return self
+
+
+    def set_scaler_from_params(self,
+                               param_name: str = 'scaler_type') -> 'Manifest':
+
+        '''
+        Configure scaler selection from round_params at runtime.
+
+        The scaler class is resolved from the scaler registry using
+        the value of round_params[param_name].
+
+        Args:
+            param_name (str): round_params key that holds the scaler type string
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        def _scaler_factory(data: 'pl.DataFrame',
+                            scaler_type: str = '') -> Any:
+
+            if scaler_type not in SCALER_REGISTRY:
+                if scaler_type == param_name:
+                    raise ValueError(
+                        f"round_params['{param_name}'] is required when using "
+                        f"set_scaler_from_params(). "
+                        f"Available types: {sorted(SCALER_REGISTRY)}"
+                    )
+                raise ValueError(
+                    f"Unknown scaler type '{scaler_type}'. "
+                    f"Available: {sorted(SCALER_REGISTRY)}"
+                )
+            return SCALER_REGISTRY[scaler_type](data)
+
+        self.scaler = (
+            [('_scaler', _scaler_factory, {'scaler_type': param_name})],
+            _apply_fitted_transform,
+            {'fitted_transform': '_scaler'},
+        )
+
+        return self
+
 
     def with_target(self, target_column: str) -> TargetBuilder:
 
@@ -952,10 +995,19 @@ def _apply_scaler(
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     if manifest.scaler:
-        return _apply_fitted_transforms(
+        target_col = manifest.target_column
+        target_data = None
+        if target_col and target_col in data.columns:
+            target_data = data[target_col]
+            data = data.drop(target_col)
+
+        data, all_fitted_params = _apply_fitted_transforms(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
+
+        if target_data is not None:
+            data = data.with_columns(target_data)
 
     return data, all_fitted_params
 
