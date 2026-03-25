@@ -68,3 +68,29 @@ class RobustScaler:
             return df
 
         return df.with_columns(exprs)
+
+
+def inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame:
+
+    '''
+    Reverse the robust scaling transformation.
+
+    Args:
+        df (pl.DataFrame): Scaled data to inverse transform
+        scaler (RobustScaler): Fitted scaler instance with parameters
+
+    Returns:
+        pl.DataFrame: Data in original scale
+    '''
+
+    exprs = []
+    for col in df.columns:
+        if col in scaler.medians:
+            exprs.append(
+                (pl.col(col) * scaler.iqrs[col] + scaler.medians[col]).alias(col)
+            )
+
+    if not exprs:
+        return df
+
+    return df.with_columns(exprs)

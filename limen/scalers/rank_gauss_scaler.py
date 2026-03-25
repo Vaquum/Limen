@@ -71,8 +71,8 @@ class RankGaussScaler:
             values = df[col].to_numpy().astype(np.float64)
             nan_mask = np.isnan(values)
 
-            ranks = np.searchsorted(quantiles, values, side='right')
-            uniform = np.clip(ranks / len(quantiles), eps, 1 - eps)
+            reference = np.linspace(0, 1, len(quantiles))
+            uniform = np.clip(np.interp(values, quantiles, reference), eps, 1 - eps)
             gaussian = norm.ppf(uniform)
             gaussian[nan_mask] = np.nan
 
@@ -82,3 +82,43 @@ class RankGaussScaler:
             return df
 
         return df.with_columns(transformed_cols)
+
+
+def inverse_transform(df: pl.DataFrame, scaler: RankGaussScaler) -> pl.DataFrame:
+
+    '''
+    Reverse the rank-based Gaussian transformation.
+
+    Applies normal CDF to convert Gaussian values back to uniform,
+    then interpolates against stored training quantiles to recover
+    approximate original values. The inverse is approximate because
+    rank-based transforms are lossy.
+
+    Args:
+        df (pl.DataFrame): Gaussian-transformed data
+        scaler (RankGaussScaler): Fitted scaler instance with quantiles
+
+    Returns:
+        pl.DataFrame: Data in approximate original scale
+    '''
+
+    restored_cols: list[pl.Series] = []
+
+    for col, quantiles in scaler._quantiles.items():
+        if col not in df.columns:
+            continue
+
+        gaussian = df[col].to_numpy().astype(np.float64)
+        nan_mask = np.isnan(gaussian)
+
+        uniform = norm.cdf(gaussian)
+        reference = np.linspace(0, 1, len(quantiles))
+        original = np.interp(uniform, reference, quantiles)
+        original[nan_mask] = np.nan
+
+        restored_cols.append(pl.Series(col, original))
+
+    if not restored_cols:
+        return df
+
+    return df.with_columns(restored_cols)
