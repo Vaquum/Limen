@@ -995,10 +995,19 @@ def _apply_scaler(
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     if manifest.scaler:
-        return _apply_fitted_transforms(
+        target_col = manifest.target_column
+        target_data = None
+        if target_col and target_col in data.columns:
+            target_data = data[target_col]
+            data = data.drop(target_col)
+
+        data, all_fitted_params = _apply_fitted_transforms(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
+
+        if target_data is not None:
+            data = data.with_columns(target_data)
 
     return data, all_fitted_params
 
