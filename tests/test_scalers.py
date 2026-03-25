@@ -161,6 +161,34 @@ def _make_manifest_with_scaler_from_params() -> Manifest:
     )
 
 
+def test_robust_scaler_inverse_transform():
+
+    from limen.scalers.robust_scaler import inverse_transform
+    train = _make_train_data()
+    scaler = RobustScaler(train)
+    transformed = scaler.transform(train)
+    restored = inverse_transform(transformed, scaler)
+    assert np.allclose(
+        restored['price'].to_numpy(),
+        train['price'].to_numpy(),
+        atol=1e-10,
+    )
+
+
+def test_rank_gauss_inverse_transform():
+
+    from limen.scalers.rank_gauss_scaler import inverse_transform
+    train = _make_train_data()
+    scaler = RankGaussScaler(train)
+    transformed = scaler.transform(train)
+    restored = inverse_transform(transformed, scaler)
+    assert np.allclose(
+        restored['price'].to_numpy(),
+        train['price'].to_numpy(),
+        atol=0.5,
+    )
+
+
 def test_robust_scaler_invalid_quantile_range():
 
     try:
