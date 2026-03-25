@@ -121,3 +121,68 @@ manifest.set_scaler(LinearScaler)
 # For post-processing (inverse transform)
 original_scale_df = inverse_transform(scaled_df, fitted_scaler)
 ```
+
+### `RobustScaler`
+
+Median and IQR scaling, resilient to outliers. Applies `(x - median) / IQR` per numeric column.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `x_train` | `pl.DataFrame` | Training data |
+| `quantile_range` | `tuple[float, float]` | Lower and upper quantiles for IQR computation |
+
+#### Methods
+- `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply robust scaling
+
+#### Example
+
+```python
+from limen.scalers import RobustScaler
+
+manifest.set_scaler(RobustScaler)
+```
+
+### `RankGaussScaler`
+
+Rank transformation to Gaussian distribution via inverse normal CDF. For each column: ranks values against training quantiles, converts to uniform distribution, then applies inverse normal CDF.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `x_train` | `pl.DataFrame` | Training data |
+| `n_quantiles` | `int` | Number of quantile bins for rank interpolation |
+
+#### Methods
+- `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply rank-to-Gaussian transformation
+
+#### Example
+
+```python
+from limen.scalers import RankGaussScaler
+
+manifest.set_scaler(RankGaussScaler)
+```
+
+## Params-Based Scaler Selection
+
+Use `set_scaler_from_params()` to select the scaler from `round_params` at runtime, enabling scaler type as a perturbation parameter.
+
+```python
+manifest.set_scaler_from_params('scaler_type')
+
+params = {
+    'scaler_type': ['linear', 'robust', 'rank_gauss'],
+}
+```
+
+Available scaler types in the registry:
+
+| Type | Class |
+|------|-------|
+| `'linear'` | `LinearScaler` |
+| `'logreg'` | `LogRegScaler` |
+| `'robust'` | `RobustScaler` |
+| `'rank_gauss'` | `RankGaussScaler` |

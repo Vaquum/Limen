@@ -746,14 +746,41 @@ Set scaler/transform class for data preprocessing. The scaler is fitted on train
 **Available scalers:**
 
 ```python
-from limen.scalers import LinearScaler    # Linear scaling
+from limen.scalers import LinearScaler    # Linear scaling (regex-based column rules)
 from limen.scalers import LogRegScaler    # Logistic regression specific
+from limen.scalers import RobustScaler    # Median + IQR scaling (outlier-resilient)
+from limen.scalers import RankGaussScaler # Rank-to-Gaussian transformation
 ```
+
+See [Scalers](Scalers.md) for detailed documentation on each scaler.
 
 **Example:**
 
 ```python
 .set_scaler(LinearScaler)
+```
+
+### `.set_scaler_from_params(param_name='scaler_type')`
+
+Select scaler type from round_params at runtime, enabling scaler as a perturbation parameter.
+
+**Args:**
+
+| Parameter    | Type  | Description                                       |
+|--------------|-------|---------------------------------------------------|
+| `param_name` | `str` | round_params key that holds the scaler type string |
+
+**Returns:** `Manifest` (self for chaining)
+
+**Available types:** `'linear'`, `'logreg'`, `'robust'`, `'rank_gauss'`
+
+**Example:**
+
+```python
+.set_scaler_from_params('scaler_type')
+
+# In params()
+params = {'scaler_type': ['linear', 'robust', 'rank_gauss']}
 ```
 
 ## Data Dict Extension
