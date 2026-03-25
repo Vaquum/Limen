@@ -159,6 +159,24 @@ def _make_manifest_with_scaler_from_params() -> Manifest:
     )
 
 
+def test_robust_scaler_invalid_quantile_range():
+
+    try:
+        RobustScaler(pl.DataFrame({'a': [1.0, 2.0, 3.0]}), quantile_range=(0.9, 0.1))
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'quantile_range' in str(e)
+
+
+def test_rank_gauss_invalid_n_quantiles():
+
+    try:
+        RankGaussScaler(pl.DataFrame({'a': [1.0, 2.0, 3.0]}), n_quantiles=0)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'n_quantiles' in str(e)
+
+
 def test_scaler_factory_selects_all_types():
 
     manifest = _make_manifest_with_scaler_from_params()

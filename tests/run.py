@@ -239,6 +239,8 @@ from tests.test_scalers import test_rank_gauss_handles_unseen_values
 from tests.test_scalers import test_rank_gauss_preserves_datetime
 from tests.test_scalers import test_rank_gauss_constant_column
 from tests.test_scalers import test_rank_gauss_integer_column
+from tests.test_scalers import test_robust_scaler_invalid_quantile_range
+from tests.test_scalers import test_rank_gauss_invalid_n_quantiles
 from tests.test_scalers import test_robust_scaler_all_null_column
 from tests.test_scalers import test_scaler_factory_selects_all_types
 from tests.test_scalers import test_scaler_factory_unknown_raises
@@ -484,6 +486,8 @@ tests = [
     test_rank_gauss_constant_column,
     test_rank_gauss_integer_column,
     test_robust_scaler_all_null_column,
+    test_robust_scaler_invalid_quantile_range,
+    test_rank_gauss_invalid_n_quantiles,
     test_scaler_factory_selects_all_types,
     test_scaler_factory_unknown_raises,
     test_scaler_factory_registry_has_all,
