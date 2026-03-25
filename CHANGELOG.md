@@ -596,3 +596,9 @@
 - Add conditional feature inclusion via `include_if` round_params key
 - Add `set_feature_ablation()` for random Drop-N feature column ablation with deterministic seeding
 - Rename `FeatureEntry` to `PipelineStep` for pre-split and bar formation pipeline steps
+
+## v1.48.0 on 24th of March, 2026
+
+- Add `RobustScaler` with median and IQR scaling
+- Add `RankGaussScaler` with rank-to-normal Gaussian transformation
+- Add `SCALER_REGISTRY` and `set_scaler_from_params()` for params-based scaler selection
