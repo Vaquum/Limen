@@ -46,7 +46,7 @@ def test_robust_scaler_zero_iqr_guard():
 
     train = pl.DataFrame({
         'constant': [5.0] * 50,
-        'normal': np.random.normal(0, 1, 50),
+        'normal': np.random.RandomState(42).normal(0, 1, 50),
     })
     scaler = RobustScaler(train)
     assert scaler.iqrs['constant'] == 1.0
@@ -64,7 +64,7 @@ def test_robust_scaler_preserves_datetime():
 
 def test_robust_scaler_outlier_resilience():
 
-    base = np.random.normal(100, 5, 99)
+    base = np.random.RandomState(42).normal(100, 5, 99)
     with_outlier = np.append(base, [10000.0])
     train = pl.DataFrame({'val': with_outlier})
     scaler = RobustScaler(train)
@@ -98,7 +98,7 @@ def test_rank_gauss_preserves_rank_order():
 
 def test_rank_gauss_handles_unseen_values():
 
-    train = pl.DataFrame({'val': np.random.normal(0, 1, 100)})
+    train = pl.DataFrame({'val': np.random.RandomState(42).normal(0, 1, 100)})
     scaler = RankGaussScaler(train)
     test = pl.DataFrame({'val': [1000.0, -1000.0]})
     transformed = scaler.transform(test)
