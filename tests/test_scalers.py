@@ -122,6 +122,25 @@ def test_rank_gauss_constant_column():
     assert not np.any(np.isnan(transformed['constant'].to_numpy()))
 
 
+def test_rank_gauss_integer_column():
+
+    train = pl.DataFrame({'int_col': [1, 2, 3, 4, 5] * 20})
+    scaler = RankGaussScaler(train)
+    transformed = scaler.transform(train)
+    assert not np.any(np.isnan(transformed['int_col'].to_numpy()))
+
+
+def test_robust_scaler_all_null_column():
+
+    train = pl.DataFrame({
+        'all_null': pl.Series([None, None, None], dtype=pl.Float64),
+        'normal': [1.0, 2.0, 3.0],
+    })
+    scaler = RobustScaler(train)
+    assert 'all_null' not in scaler.medians
+    assert 'normal' in scaler.medians
+
+
 def _make_manifest_with_scaler_from_params() -> Manifest:
 
     return (Manifest()
