@@ -146,7 +146,7 @@ manifest.set_scaler(RobustScaler)
 
 ### `RankGaussScaler`
 
-Rank transformation to Gaussian distribution via inverse normal CDF. For each column: ranks values against training quantiles, converts to uniform distribution, then applies inverse normal CDF.
+Rank transformation to Gaussian distribution via inverse normal CDF. For each numeric column: ranks values against training quantiles, converts to uniform distribution, then applies inverse normal CDF. Integer columns are cast to float before transformation.
 
 #### Args
 
