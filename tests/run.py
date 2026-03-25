@@ -228,6 +228,19 @@ from tests.test_feature_perturbation import test_ungrouped_features_always_inclu
 from tests.test_feature_perturbation import test_ablation_not_configured_noop
 from tests.test_feature_perturbation import test_feature_groups_string_raises_type_error
 from tests.test_feature_perturbation import test_ablation_invalid_drop_count_raises
+from tests.test_scalers import test_robust_scaler_fit_and_transform
+from tests.test_scalers import test_robust_scaler_custom_quantile_range
+from tests.test_scalers import test_robust_scaler_zero_iqr_guard
+from tests.test_scalers import test_robust_scaler_preserves_datetime
+from tests.test_scalers import test_robust_scaler_outlier_resilience
+from tests.test_scalers import test_rank_gauss_output_approximately_normal
+from tests.test_scalers import test_rank_gauss_preserves_rank_order
+from tests.test_scalers import test_rank_gauss_handles_unseen_values
+from tests.test_scalers import test_rank_gauss_preserves_datetime
+from tests.test_scalers import test_rank_gauss_constant_column
+from tests.test_scalers import test_scaler_factory_selects_all_types
+from tests.test_scalers import test_scaler_factory_unknown_raises
+from tests.test_scalers import test_scaler_factory_registry_has_all
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_trainer import test_trainer_end_to_end
 from tests.test_trainer import test_reconstruction_error_stochastic
@@ -235,6 +248,7 @@ from tests.test_trainer import test_reconstruction_error_tampered_log
 from tests.test_trainer import test_deterministic_validation
 from tests.test_trainer import test_pass2_uses_full_data
 from tests.test_trainer import test_sensor_inference
+from tests.test_trainer import test_trainer_with_feature_ablation
 
 tests = [
     test_param_domain_init,
@@ -456,6 +470,19 @@ tests = [
     test_ablation_not_configured_noop,
     test_feature_groups_string_raises_type_error,
     test_ablation_invalid_drop_count_raises,
+    test_robust_scaler_fit_and_transform,
+    test_robust_scaler_custom_quantile_range,
+    test_robust_scaler_zero_iqr_guard,
+    test_robust_scaler_preserves_datetime,
+    test_robust_scaler_outlier_resilience,
+    test_rank_gauss_output_approximately_normal,
+    test_rank_gauss_preserves_rank_order,
+    test_rank_gauss_handles_unseen_values,
+    test_rank_gauss_preserves_datetime,
+    test_rank_gauss_constant_column,
+    test_scaler_factory_selects_all_types,
+    test_scaler_factory_unknown_raises,
+    test_scaler_factory_registry_has_all,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_trainer_end_to_end,
     test_reconstruction_error_stochastic,
@@ -463,6 +490,7 @@ tests = [
     test_deterministic_validation,
     test_pass2_uses_full_data,
     test_sensor_inference,
+    test_trainer_with_feature_ablation,
 ]
 
 # Configure logging

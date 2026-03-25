@@ -242,3 +242,42 @@ def test_sensor_inference():
         # __call__ delegates to predict()
         result_via_call = sensor(live_data)
         assert result_via_call.keys() == result.keys()
+
+
+def test_trainer_with_feature_ablation():
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir) / 'experiment'
+        params = logreg_sfd.params()
+        params['feature_drop_count'] = [1]
+        params['feature_drop_seed'] = [42]
+        domain = ParamDomain(params)
+        strategy = StubStrategy(domain)
+
+        uel = UniversalExperimentLoop(
+            sfd=logreg_sfd,
+            search_strategy=strategy,
+            experiment_dir=experiment_dir,
+        )
+
+        uel.run(
+            experiment_name='test_ablation',
+            n_permutations=1,
+        )
+
+        # _dropped_features stored in round_data.jsonl
+        trainer = Trainer(experiment_dir, data=uel.data)
+        pid = next(iter(trainer._round_data.keys()))
+        rp = trainer._round_data[pid]['round_params']
+        assert '_dropped_features' in rp
+        assert len(rp['_dropped_features']) == 1
+
+        # Trainer reproduces same drops
+        train_rp = dict(rp)
+        trainer._manifest.prepare_data(uel.data, train_rp)
+        assert train_rp['_dropped_features'] == rp['_dropped_features']
+
+        # Trainer Pass 1 validates with ablation active
+        sensors = trainer.train([pid])
+        assert len(sensors) == 1
+        assert sensors[0].model is not None
