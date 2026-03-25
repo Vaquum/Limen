@@ -136,12 +136,19 @@ Median and IQR scaling, resilient to outliers. Applies `(x - median) / IQR` per 
 #### Methods
 - `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply robust scaling
 
+#### Helper Functions
+- `inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame`: Reverse robust scaling to original scale
+
 #### Example
 
 ```python
 from limen.scalers import RobustScaler
+from limen.scalers.robust_scaler import inverse_transform
 
 manifest.set_scaler(RobustScaler)
+
+# For post-processing (inverse transform)
+original_scale_df = inverse_transform(scaled_df, fitted_scaler)
 ```
 
 ### `RankGaussScaler`
@@ -158,12 +165,21 @@ Rank transformation to Gaussian distribution via inverse normal CDF. For each nu
 #### Methods
 - `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply rank-to-Gaussian transformation
 
+#### Helper Functions
+- `inverse_transform(df: pl.DataFrame, scaler: RankGaussScaler) -> pl.DataFrame`: Reverse Gaussian transformation to approximate original scale
+
+NOTE: The inverse is approximate because rank-based transforms are lossy — multiple original values may map to the same rank.
+
 #### Example
 
 ```python
 from limen.scalers import RankGaussScaler
+from limen.scalers.rank_gauss_scaler import inverse_transform
 
 manifest.set_scaler(RankGaussScaler)
+
+# For post-processing (approximate inverse transform)
+original_scale_df = inverse_transform(scaled_df, fitted_scaler)
 ```
 
 ## Params-Based Scaler Selection
