@@ -30,6 +30,10 @@ class RobustScaler:
             median = x_train[col].median()
             q_lo = x_train[col].quantile(q_low)
             q_hi = x_train[col].quantile(q_high)
+
+            if median is None or q_lo is None or q_hi is None:
+                continue
+
             iqr = q_hi - q_lo
 
             self.medians[col] = median

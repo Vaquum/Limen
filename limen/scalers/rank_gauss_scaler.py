@@ -26,7 +26,7 @@ class RankGaussScaler:
         quantile_points = np.linspace(0, 1, n_quantiles + 1)
 
         for col in x_train.columns:
-            if x_train[col].dtype == pl.Datetime or not x_train[col].dtype.is_numeric():
+            if x_train[col].dtype == pl.Datetime or not x_train[col].dtype.is_float():
                 continue
 
             values = x_train[col].drop_nulls().drop_nans().to_numpy()
