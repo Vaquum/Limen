@@ -417,6 +417,12 @@ class Manifest:
                             scaler_type: str = '') -> Any:
 
             if scaler_type not in SCALER_REGISTRY:
+                if scaler_type == param_name:
+                    raise ValueError(
+                        f"round_params['{param_name}'] is required when using "
+                        f"set_scaler_from_params(). "
+                        f"Available types: {sorted(SCALER_REGISTRY)}"
+                    )
                 raise ValueError(
                     f"Unknown scaler type '{scaler_type}'. "
                     f"Available: {sorted(SCALER_REGISTRY)}"
