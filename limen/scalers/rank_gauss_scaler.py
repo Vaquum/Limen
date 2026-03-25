@@ -38,7 +38,11 @@ class RankGaussScaler:
             if len(values) == 0:
                 continue
 
-            self._quantiles[col] = np.quantile(values, quantile_points)
+            quantiles = np.quantile(values, quantile_points)
+            if quantiles[0] == quantiles[-1]:
+                continue
+
+            self._quantiles[col] = quantiles
 
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
