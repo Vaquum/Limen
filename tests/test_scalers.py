@@ -119,7 +119,9 @@ def test_rank_gauss_constant_column():
     train = pl.DataFrame({'constant': [5.0] * 50})
     scaler = RankGaussScaler(train)
     transformed = scaler.transform(train)
-    assert not np.any(np.isnan(transformed['constant'].to_numpy()))
+    const_vals = transformed['constant'].to_numpy()
+    assert not np.any(np.isnan(const_vals))
+    assert np.allclose(const_vals, 5.0)
 
 
 def test_rank_gauss_integer_column():
