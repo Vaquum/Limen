@@ -552,7 +552,7 @@
 - Add `SanityReducer` pruning strategy with NaN detection and suggestion system (zero-metric, execution timeout, warning detectors)
 - Add advisory suggestion flow to `FeedbackController` — suggestions are logged in audit trail but not dispatched to MSQ
 
-## v1.41.1 on 10th of March, 2026
+## v1.41.1 on 11th of March, 2026
 
 - Add `CorrelationReducer` pruning strategy with wrong-direction removal and low-impact suggestions
 - Add named filter infrastructure to `MSQ` with `set_filter`/`clear_filter` for reversible domain restrictions
@@ -561,7 +561,7 @@
 - Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
 - Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
 
-## v1.41.0 on 11th of March, 2026
+## v1.41.0 on 10th of March, 2026
 
 - Implement 106 TA-Lib indicators in `limen.indicators` and align behavior with TA-Lib references.
 - Add Volume Indicators: `indicators.ad`, `indicators.adosc`, `indicators.mfi`, `indicators.obv`
