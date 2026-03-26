@@ -17,12 +17,15 @@ def _bbands_stddev_expr(
     period: int,
 ) -> pl.Expr:
     mean_sq = (pl.col(price_col) * pl.col(price_col)).rolling_mean(window_size=period)
-    variance = mean_sq - (pl.col(middle_col) * pl.col(middle_col))
+    mean = pl.col(price_col).rolling_mean(window_size=period)
+    variance = mean_sq - (mean * mean)
 
     return (
         pl.when(pl.col(middle_col).is_null())
         .then(None)
         .otherwise(
+            # TA-Lib uses STDDEV(price) for band width regardless of the MA
+            # type used for the middle band, so we preserve that parity here.
             pl.when(variance > BBANDS_STDDEV_FLOOR)
             .then(variance.sqrt())
             .otherwise(BBANDS_STDDEV_FLOOR)
