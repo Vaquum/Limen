@@ -1,54 +1,72 @@
 import polars as pl
+from limen.indicators.ma import ma
+
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+CMP_N_8 = 8
+
+TA_EPSILON = 1e-14
 
 
-def ppo(data: pl.DataFrame,
-        close_col: str = 'close',
-        fast_period: int = 12,
-        slow_period: int = 26,
-        signal_period: int = 9) -> pl.DataFrame:
+def ppo(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    fast_period: int = 12,
+    slow_period: int = 26,
+    ma_type: int = 0,
+) -> pl.DataFrame:
 
     '''
-    Compute Percentage Price Oscillator (PPO) indicator.
+    Compute Percentage Price Oscillator (PPO).
 
     Args:
-        data (pl.DataFrame): Klines dataset with price column
-        close_col (str): Column name for price data
-        fast_period (int): Period for short EMA calculation
-        slow_period (int): Period for long EMA calculation
-        signal_period (int): Period for signal line EMA calculation
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        fast_period (int): Number of periods for fast MA (2..100000)
+        slow_period (int): Number of periods for slow MA (2..100000, must be greater than fast_period)
+        ma_type (int): TA-Lib MA type (0..8)
 
     Returns:
-        pl.DataFrame: The input data with three columns: 'ppo_{fast_period}_{slow_period}', 'ppo_signal_{signal_period}', 'ppo_hist'
+        pl.DataFrame: The input data with a new column 'ppo_{fast_period}_{slow_period}_{ma_type}'
     '''
 
-    alpha_fast = 2.0 / (fast_period + 1)
-    alpha_slow = 2.0 / (slow_period + 1)
-    alpha_signal = 2.0 / (signal_period + 1)
+    if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
+        raise ValueError('fast_period must be between 2 and 100000')
+    if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
+        raise ValueError('slow_period must be between 2 and 100000')
+    if ma_type < 0 or ma_type > CMP_N_8:
+        raise ValueError('ma_type must be between 0 and 8')
+    if slow_period <= fast_period:
+        raise ValueError('slow_period must be greater than fast_period')
 
-    return (
-        data
-        .with_columns([
-            pl.col(close_col)
-                .ewm_mean(alpha=alpha_fast, adjust=False)
-                .alias('__ema_fast'),
-            pl.col(close_col)
-                .ewm_mean(alpha=alpha_slow, adjust=False)
-                .alias('__ema_slow'),
-        ])
-        .with_columns([
-            (
-                (pl.col('__ema_fast') - pl.col('__ema_slow'))
-                / pl.col('__ema_slow') * 100
-            ).alias(f"ppo_{fast_period}_{slow_period}")
-        ])
-        .with_columns([
-            pl.col(f"ppo_{fast_period}_{slow_period}")
-                .ewm_mean(alpha=alpha_signal, adjust=False)
-                .alias(f"ppo_signal_{signal_period}")
-        ])
-        .with_columns([
-            (pl.col(f"ppo_{fast_period}_{slow_period}") - pl.col(f"ppo_signal_{signal_period}"))
-                .alias('ppo_hist')
-        ])
-        .drop(['__ema_fast', '__ema_slow'])
+    out_col = f"ppo_{fast_period}_{slow_period}_{ma_type}"
+    frame = data
+
+    fast_col = f"ma_{fast_period}_{ma_type}"
+    slow_col = f"ma_{slow_period}_{ma_type}"
+
+    frame = ma(
+        frame,
+        price_col=price_col,
+        period=fast_period,
+        ma_type=ma_type,
     )
+    frame = ma(
+        frame,
+        price_col=price_col,
+        period=slow_period,
+        ma_type=ma_type,
+    )
+
+    missing_fast = pl.col(fast_col).is_null() | pl.col(fast_col).is_nan()
+    missing_slow = pl.col(slow_col).is_null() | pl.col(slow_col).is_nan()
+    ppo_expr = (
+        pl.when(missing_fast | missing_slow)
+        .then(None)
+        .when(pl.col(slow_col).abs() >= TA_EPSILON)
+        .then(((pl.col(fast_col) - pl.col(slow_col)) / pl.col(slow_col)) * 100.0)
+        .otherwise(0.0)
+        .alias(out_col)
+    )
+
+    return frame.with_columns(ppo_expr).drop([fast_col, slow_col])

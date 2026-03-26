@@ -17,9 +17,9 @@ def sma_deviation_std(data: pl.DataFrame,
         pl.DataFrame: The input data with a new column named using the pattern 'sma{period}_dev_std'
     '''
 
-    sma_col = f'sma_{period}'
-    dev_col = f'sma{period}_dev'
-    out_col = f'sma{period}_dev_std'
+    sma_col = f"sma_{period}"
+    dev_col = f"sma{period}_dev"
+    out_col = f"sma{period}_dev_std"
 
     return (
         data

@@ -143,6 +143,7 @@ from tests.test_sanity_reducer import test_warning_suggestion
 from tests.test_sanity_reducer import test_warning_no_column
 from tests.test_sanity_reducer import test_suggestion_dedup
 from tests.test_sanity_reducer import test_suggestion_checkpoint_roundtrip
+from tests.test_indicators_vs_talib import test_indicators_vs_talib
 from tests.test_correlation_reducer import test_wrong_direction_removal
 from tests.test_correlation_reducer import test_low_impact_suggestion
 from tests.test_correlation_reducer import test_dedup_across_triggers as test_corr_dedup_across_triggers
@@ -443,6 +444,7 @@ tests = [
     test_account_conviction,
     test_backtest_conviction,
     test_rdop,
+    test_indicators_vs_talib,
     test_xgboost_train_returns_fitted_model,
     test_xgboost_evaluate_returns_all_metric_types,
     test_logreg_train_evaluate_end_to_end,

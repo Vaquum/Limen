@@ -1,52 +1,97 @@
+import numpy as np
 import polars as pl
 
+from limen.indicators._ema import _ema_talib_default_segment
 
-def macd(data: pl.DataFrame,
-         close_col: str = 'close',
-         fast_period: int = 12,
-         slow_period: int = 26,
-         signal_period: int = 9) -> pl.DataFrame:
+CMP_N_100000 = 100000
+CMP_N_2 = 2
+
+MACD_COL = 'macd'
+MACD_SIGNAL_COL = 'macd_signal'
+MACD_HIST_COL = 'macd_hist'
+
+
+def _macd_from_values(
+    values: np.ndarray,
+    fast_period: int,
+    slow_period: int,
+    signal_period: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    n = len(values)
+    out_macd = np.full(n, np.nan, dtype=float)
+    out_signal = np.full(n, np.nan, dtype=float)
+    out_hist = np.full(n, np.nan, dtype=float)
+
+    effective_fast = fast_period
+    effective_slow = slow_period
+    if effective_slow < effective_fast:
+        effective_fast, effective_slow = effective_slow, effective_fast
+
+    lookback_signal = signal_period - 1
+    lookback_total = lookback_signal + (effective_slow - 1)
+    if n <= lookback_total:
+        return out_macd, out_signal, out_hist
+
+    start_idx = lookback_total
+    end_idx = n - 1
+    ema_start_idx = start_idx - lookback_signal
+
+    _, slow_ema = _ema_talib_default_segment(values, effective_slow, ema_start_idx, end_idx)
+    _, fast_ema = _ema_talib_default_segment(values, effective_fast, ema_start_idx, end_idx)
+    macd_buffer = fast_ema - slow_ema
+
+    out_count = n - start_idx
+    out_macd[start_idx:] = macd_buffer[lookback_signal:lookback_signal + out_count]
+
+    _, signal_values = _ema_talib_default_segment(macd_buffer, signal_period, 0, len(macd_buffer) - 1)
+    signal_count = len(signal_values)
+    out_signal[start_idx:start_idx + signal_count] = signal_values
+    out_hist[start_idx:start_idx + signal_count] = out_macd[start_idx:start_idx + signal_count] - signal_values
+
+    return out_macd, out_signal, out_hist
+
+
+def macd(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    fast_period: int = 12,
+    slow_period: int = 26,
+    signal_period: int = 9,
+) -> pl.DataFrame:
 
     '''
-    Compute MACD (Moving Average Convergence Divergence) indicator.
+    Compute Moving Average Convergence/Divergence (MACD).
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'close' column
-        close_col (str): Column name for close prices
-        fast_period (int): Period for fast EMA calculation
-        slow_period (int): Period for slow EMA calculation
-        signal_period (int): Period for signal line EMA calculation
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        fast_period (int): Number of periods for fast EMA (2..100000)
+        slow_period (int): Number of periods for slow EMA (2..100000)
+        signal_period (int): Number of periods for signal EMA (1..100000)
 
     Returns:
-        pl.DataFrame: The input data with three columns: 'macd_{fast_period}_{slow_period}', 'macd_signal_{signal_period}', 'macd_hist'
+        pl.DataFrame: The input data with columns 'macd', 'macd_signal', 'macd_hist'
     '''
 
-    alpha_fast = 2.0 / (fast_period + 1)
-    alpha_slow = 2.0 / (slow_period + 1)
-    alpha_signal = 2.0 / (signal_period + 1)
+    if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
+        raise ValueError('fast_period must be between 2 and 100000')
+    if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
+        raise ValueError('slow_period must be between 2 and 100000')
+    if signal_period < 1 or signal_period > CMP_N_100000:
+        raise ValueError('signal_period must be between 1 and 100000')
 
-    return (
-        data
-        .with_columns([
-            pl.col(close_col)
-              .ewm_mean(alpha=alpha_fast, adjust=False)
-              .alias('__ema_fast'),
-            pl.col(close_col)
-              .ewm_mean(alpha=alpha_slow, adjust=False)
-              .alias('__ema_slow')
-        ])
-        .with_columns([
-            (pl.col('__ema_fast') - pl.col('__ema_slow'))
-              .alias(f"macd_{fast_period}_{slow_period}")
-        ])
-        .with_columns([
-            pl.col(f"macd_{fast_period}_{slow_period}")
-              .ewm_mean(alpha=alpha_signal, adjust=False)
-              .alias(f"macd_signal_{signal_period}")
-        ])
-        .with_columns([
-            (pl.col(f"macd_{fast_period}_{slow_period}") - pl.col(f"macd_signal_{signal_period}"))
-              .alias('macd_hist')
-        ])
-        .drop(['__ema_fast', '__ema_slow'])
+    values = data[price_col].to_numpy().astype(float, copy=False)
+    macd_values, signal_values, hist_values = _macd_from_values(
+        values,
+        fast_period,
+        slow_period,
+        signal_period,
+    )
+
+    return data.with_columns(
+        [
+            pl.Series(name=MACD_COL, values=macd_values),
+            pl.Series(name=MACD_SIGNAL_COL, values=signal_values),
+            pl.Series(name=MACD_HIST_COL, values=hist_values),
+        ]
     )

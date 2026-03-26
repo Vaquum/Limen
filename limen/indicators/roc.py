@@ -1,22 +1,37 @@
 import polars as pl
 
-def roc(data: pl.DataFrame,
-        col: str = 'close',
-        period: int = 12) -> pl.DataFrame:
+
+CMP_N_100000 = 100000
+
+def roc(
+    data: pl.DataFrame,
+    price_col: str = 'close',
+    period: int = 10,
+) -> pl.DataFrame:
 
     '''
-    Compute Rate of Change (ROC) indicator as percentage change.
+    Compute Rate of Change (ROC): ((price / prev_price) - 1) * 100.
 
     Args:
-        data (pl.DataFrame): Klines dataset with price column
-        col (str): Column name for price data
-        period (int): Number of periods for ROC calculation
+        data (pl.DataFrame): Dataset with input price column
+        price_col (str): Column name for input price
+        period (int): Number of periods (1..100000)
 
     Returns:
         pl.DataFrame: The input data with a new column 'roc_{period}'
     '''
 
-    prior = pl.col(col).shift(period)
-    roc_expr = ((pl.col(col) - prior) / prior * 100).alias(f"roc_{period}")
+    if period < 1 or period > CMP_N_100000:
+        raise ValueError('period must be between 1 and 100000')
 
-    return data.with_columns([roc_expr])
+    out_col = f"roc_{period}"
+    trailing = pl.col(price_col).shift(period)
+    roc_expr = (
+        pl.when(pl.int_range(0, pl.len()) < period)
+        .then(None)
+        .when(trailing != 0.0)
+        .then(((pl.col(price_col) / trailing) - 1.0) * 100.0)
+        .otherwise(0.0)
+        .alias(out_col)
+    )
+    return data.with_columns(roc_expr)

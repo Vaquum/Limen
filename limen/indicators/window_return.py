@@ -15,6 +15,6 @@ def window_return(data: pl.DataFrame,
         pl.DataFrame: The input data with a new column named using the pattern 'ret_{period}'
     '''
 
-    col = f'ret_{period}'
+    col = f"ret_{period}"
 
     return data.with_columns(((pl.col('close') / pl.col('close').shift(period)) - 1.0).alias(col))
