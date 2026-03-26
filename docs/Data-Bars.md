@@ -87,11 +87,16 @@ Use `Manifest.set_bar_formation()` to apply these bars inside a manifest-driven 
 ```python
 from limen.data.utils import compute_data_bars
 
+# In params()
+# {'bar_type': ['volume'], 'volume_threshold': [50_000, 100_000]}
+
 manifest.set_bar_formation(
     compute_data_bars,
-    bar_type='volume',
+    bar_type='bar_type',
     volume_threshold='volume_threshold',
 )
 ```
+
+`bar_type` must be present in `round_params` for the bar-formation step to run, so it should be included in `params()`. String values such as `bar_type='bar_type'` and `volume_threshold='volume_threshold'` follow Limen's standard "resolve this from `round_params`" convention.
 
 `compute_data_bars()` currently supports `bar_type` values `base`, `trade`, `volume`, and `liquidity`.

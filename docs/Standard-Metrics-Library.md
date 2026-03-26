@@ -72,10 +72,12 @@ Use it when class presence is unstable across folds or permutations.
 Reference architectures typically call these helpers directly:
 
 ```python
-from limen.metrics import binary_metrics
+from limen.metrics.binary_metrics import binary_metrics
 
 results = binary_metrics(data, preds, probs)
 results['_preds'] = preds
 ```
+
+Import the individual metric functions from their submodules. Today `limen.metrics` re-exports `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` as modules, while `balanced_metric` is re-exported as a callable.
 
 These helpers are intentionally small and composable. Higher-level experiment analytics such as confusion summaries and backtests are handled by `limen.log`, not by this module.

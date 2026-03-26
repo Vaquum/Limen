@@ -384,7 +384,7 @@ Equivalent to TA-Lib MIDPOINT on the chosen series.
 
 #### Returns
 
-`pl.DataFrame`: The input data with a new column 'midpoint_{period}'
+`pl.DataFrame`: The input data with a new column '{col}_midpoint_{period}' (for the default `col='close'`, this is 'close_midpoint_{period}')
 
 ### `typprice`
 
