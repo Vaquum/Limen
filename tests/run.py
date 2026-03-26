@@ -249,6 +249,24 @@ from tests.test_scalers import test_scaler_factory_selects_all_types
 from tests.test_scalers import test_scaler_factory_unknown_raises
 from tests.test_scalers import test_scaler_factory_registry_has_all
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
+from tests.test_fractional_diff import test_fractional_diff_d_zero_copies
+from tests.test_fractional_diff import test_fractional_diff_d_one_equals_first_diff
+from tests.test_fractional_diff import test_fractional_diff_weights_convergence
+from tests.test_fractional_diff import test_fractional_diff_preserves_original_columns
+from tests.test_fractional_diff import test_fractional_diff_cols_none_raises
+from tests.test_fractional_diff import test_fractional_diff_negative_d_raises
+from tests.test_fractional_diff import test_fractional_diff_lazyframe
+from tests.test_fractional_diff import test_adf_test_stationary_series
+from tests.test_fractional_diff import test_adf_test_nonstationary_series
+from tests.test_fractional_diff import test_find_min_d_returns_valid_d
+from tests.test_fractional_diff import test_fractional_diff_empty_dataframe
+from tests.test_fractional_diff import test_fractional_diff_missing_column_warns
+from tests.test_fractional_diff import test_adf_test_empty_series
+from tests.test_fractional_diff import test_adf_test_constant_series
+from tests.test_fractional_diff import test_find_min_d_step_zero_raises
+from tests.test_fractional_diff import test_find_min_d_small_data_skips
+from tests.test_fractional_diff import test_split_validation_rejects_invalid
+from tests.test_fractional_diff import test_fractional_diff_manifest_integration
 from tests.test_trainer import test_trainer_end_to_end
 from tests.test_trainer import test_reconstruction_error_stochastic
 from tests.test_trainer import test_reconstruction_error_tampered_log
@@ -256,6 +274,7 @@ from tests.test_trainer import test_deterministic_validation
 from tests.test_trainer import test_pass2_uses_full_data
 from tests.test_trainer import test_sensor_inference
 from tests.test_trainer import test_trainer_with_feature_ablation
+from tests.test_trainer import test_trainer_with_fractional_diff
 
 tests = [
     test_param_domain_init,
@@ -498,6 +517,24 @@ tests = [
     test_scaler_factory_unknown_raises,
     test_scaler_factory_registry_has_all,
     test_ablation_drop_count_exceeds_eligible_raises,
+    test_fractional_diff_d_zero_copies,
+    test_fractional_diff_d_one_equals_first_diff,
+    test_fractional_diff_weights_convergence,
+    test_fractional_diff_preserves_original_columns,
+    test_fractional_diff_cols_none_raises,
+    test_fractional_diff_negative_d_raises,
+    test_fractional_diff_lazyframe,
+    test_adf_test_stationary_series,
+    test_adf_test_nonstationary_series,
+    test_find_min_d_returns_valid_d,
+    test_fractional_diff_empty_dataframe,
+    test_fractional_diff_missing_column_warns,
+    test_adf_test_empty_series,
+    test_adf_test_constant_series,
+    test_find_min_d_step_zero_raises,
+    test_find_min_d_small_data_skips,
+    test_split_validation_rejects_invalid,
+    test_fractional_diff_manifest_integration,
     test_trainer_end_to_end,
     test_reconstruction_error_stochastic,
     test_reconstruction_error_tampered_log,
@@ -505,6 +542,7 @@ tests = [
     test_pass2_uses_full_data,
     test_sensor_inference,
     test_trainer_with_feature_ablation,
+    test_trainer_with_fractional_diff,
 ]
 
 # Configure logging
