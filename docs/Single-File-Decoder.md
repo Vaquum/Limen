@@ -2,7 +2,7 @@
 
 The Single File Decoder (SFD) is a convenient way to bring together all artifacts related with a model to be used in an experiment into a single file. These files live in [`limen/sfd`](../limen/sfd). Once an SFD is added to the package, it becomes available to be used as input for [`limen.UniversalExperimentLoop`](Universal-Experiment-Loop.md).
 
-There are two categories of SFDs: **Foundational SFDs** are the official reference SFDs provided by Loop (all use manifest-based configuration), while **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation of data preparation and model functions.
+There are two categories of SFDs: **Foundational SFDs** are the official reference SFDs provided by Limen (all use manifest-based configuration), while **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation of data preparation and model functions.
 
 ## SFD Implementation Approaches
 
@@ -49,7 +49,7 @@ Takes no input and returns a dictionary with keys as parameter names, and lists 
 - Individual parameter cannot be aggregate types; lists, tuples, arrays, or objects
 - Parameter values in the `round_params` dictionary returned by `params` have to always be in a list, even if it is a single value.
 
-**NOTE**: Parameters can be used to parametrize other parameters, for example, where one parameter is a function, and another parameter is an input argument to that function. Such higher-order parameters can be an extremely powerful way to make Loop play the song of Bitcoin.
+**NOTE**: Parameters can be used to parametrize other parameters, for example, where one parameter is a function, and another parameter is an input argument to that function. Such higher-order parameters can be an extremely powerful way to make Limen play the song of Bitcoin.
 
 ### Manifest-Based SFDs: `manifest`
 

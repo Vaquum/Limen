@@ -1,6 +1,6 @@
 # Universal Experiment Loop
 
-Universal Experiment Loop (UEL) is an integral part of Loop, and takes as its input data and a Single File Decoder (SFD). `UEL` currently wraps onto itself (i.e. the object `uel.run` yields) all the folds from `Data` to `Backtest`. In other words, all the following folds are wrapped into one workflow `uel.run`:
+Universal Experiment Loop (UEL) is an integral part of Limen, and takes as its input data and a Single File Decoder (SFD). `UEL` currently wraps onto itself (i.e. the object `uel.run` yields) all the folds from `Data` to `Backtest`. In other words, all the following folds are wrapped into one workflow `uel.run`:
 
 - [`Data`](HistoricalData.md)
 - [`Indicator`](Indicators.md)
@@ -25,7 +25,7 @@ In short, the point of parameter sweeping is that since such a practice is possi
 
 **Not only the idea of sweeping through parameters can be extended beyond the model and its hyperparameters, to data fetching, data pre-processing, feature engineering, and all other aspects of classifier development lifecycle, but it can also be extended well beyond input arguments. For example, conditional logic can be handled as parameters, and even individual fragments of code can be fully parametric, and therefore a subject of a parameter sweep.**
 
-In other words, the idea of performing a parameter sweep is equally relevant to all of Loop's folds. This is a crucial key point, and our success depends on understanding it, putting it into practice, and realizing its unrestrained power to yield the most meaningful probabilities for live trading at any given point in time, regardless of the prevailing circumstances.
+In other words, the idea of performing a parameter sweep is equally relevant to all of Limen's folds. This is a crucial key point, and our success depends on understanding it, putting it into practice, and realizing its unrestrained power to yield the most meaningful probabilities for live trading at any given point in time, regardless of the prevailing circumstances.
 
 ## Performing an Experiment
 
@@ -49,7 +49,7 @@ A key point here is that all individual contributors work based on the same unde
 
 An SFD contains all parameters, data preparation code, and model operation codes in a single python file. For example, representing a logistic regression binary classifier.
 
-**Foundational SFDs** are the official reference SFDs provided by Loop (all use manifest-based configuration). **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation. Manifest-based SFDs include a `manifest()` function that configures the entire experiment pipeline and enables automatic data fetching.
+**Foundational SFDs** are the official reference SFDs provided by Limen (all use manifest-based configuration). **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation. Manifest-based SFDs include a `manifest()` function that configures the entire experiment pipeline and enables automatic data fetching.
 
 Read more in [Single File Decoder](Single-File-Decoder.md).
 

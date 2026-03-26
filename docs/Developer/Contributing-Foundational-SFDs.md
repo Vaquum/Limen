@@ -2,11 +2,11 @@
 
 ## Background
 
-With regard to Single File Decoders (SFD), there are two kinds: `foundational` and `custom`.  This document is focused on Foundational SFDs, and sets forth strict requirements for contributing Foundational SFDs into Vaquum Loop.
+With regard to Single File Decoders (SFD), there are two kinds: `foundational` and `custom`.  This document is focused on Foundational SFDs, and sets forth strict requirements for contributing Foundational SFDs into Vaquum Limen.
 
 ## Terminology
 
-The Loop `Foundational SFD` here means two things coming together: The `Foundational SFD` itself coming together with a `Reference Architecture`. 
+The Limen `Foundational SFD` here means two things coming together: The `Foundational SFD` itself coming together with a `Reference Architecture`. 
 
 A canonical example can be found in:
 
@@ -17,7 +17,7 @@ A canonical example can be found in:
 
 The motivation for a Foundational SFD, is to capture honestly and directly, pertaining to a single trainable reference architecture (e.g. LogReg), the state-of-the-art scientific data and literature without adding any out-of-literature innovation to it. 
 
-**Contributing Foundational SFDs is contributing to the beating heart of Loop, it is where the intelligence resides. Rest of Loop is, for the most part, aggregation and transport.**
+**Contributing Foundational SFDs is contributing to the beating heart of Limen, it is where the intelligence resides. Rest of Limen is, for the most part, aggregation and transport.**
 
 **NOTE:** Initially, during January 2026, we want to incorporate 6-8 new Foundational Manifests with their respective underlying reference architectures. https://github.com/Vaquum/Limen/issues/297
 
@@ -28,7 +28,7 @@ The motivation for a Foundational SFD, is to capture honestly and directly, pert
 - `Parameters` are richly exposed
 - All the requirements in the below sections are satisfied
 
-**The test:** Can anyone just run it with Loop in a large scan, and it will yield something meaningful? 
+**The test:** Can anyone just run it with Limen in a large scan, and it will yield something meaningful? 
 
 For a contribution to pass this test, it of course requires sufficient exploration of the parameter space. 
 
@@ -82,7 +82,7 @@ In simple terms, the following constituents can be included in the `manifest` of
 - Transforms
 - Labels
 
-The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Loop. 
+The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Limen. 
 
 Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md)
 
