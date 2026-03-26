@@ -69,8 +69,8 @@ def params():
         'roc_period': [4, 8, 12],
         'q': [0.32, 0.35, 0.37],
         'shift': [-1, -2, -3],
-        'alpha': [1.0, 5.0, 10.0],
-        'use_calibration': [True, False],
+        'C': [0.1, 1.0, 5.0],
+        'class_weight': [0.45, 0.65, 0.85],
     }
 
 def manifest():
@@ -125,7 +125,7 @@ Configure where UEL fetches data for training and testing.
 
 ### `.set_data_source(method, params=None)`
 
-Configure production data source (uses `limen.historical_data.HistoricalData`).
+Configure production data source, typically with methods from `limen.data.HistoricalData`.
 
 **Args:**
 
@@ -139,7 +139,7 @@ Configure production data source (uses `limen.historical_data.HistoricalData`).
 **Available methods:**
 - `HistoricalData.get_spot_klines` - Fetch spot market kline data
 - `HistoricalData.get_futures_klines` - Fetch futures market kline data
-- See `limen.historical_data.HistoricalData` for all available methods
+- See `limen.data.HistoricalData` for all available methods
 
 **Example:**
 
@@ -544,7 +544,7 @@ Configure target variable transformations with optional fitted parameters.
 3. **Test set**: Apply same cutoff (0.032) - don't recompute!
 
 **When to use each:**
-- **`add_fitted_transform`**: Transforms requiring parameters computed from training data (quantiles, normalization bounds, etc.)
+- **`add_fitted_transform`**: Target transforms requiring parameters computed from training data (quantiles, thresholds, bounds, etc.)
 - **`add_transform`**: Simple transforms without learning (shifting, clipping, type casting)
 
 ### `.with_target(target_column)`
@@ -943,19 +943,20 @@ The manifest automatically maps parameters from `round_params` to the model func
 
 ```python
 # Model function signature
-def logreg_binary(data, C=1.0, use_calibration=True, ...):
+def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, ...):
     ...
 
 # In params()
 def params():
     return {
-        'alpha': [1.0, 5.0, 10.0],
-        'use_calibration': [True, False],
+        'C': [0.1, 1.0, 10.0],
+        'class_weight': [0.45, 0.65],
+        'max_iter': [100, 200],
     }
 
 # Manifest
 .with_model(logreg_binary)
-# Parameters 'alpha' and 'use_calibration' automatically mapped!
+# Parameters 'C', 'class_weight', and 'max_iter' automatically mapped!
 ```
 
 ### Model Function Contract
@@ -1044,10 +1045,11 @@ def params():
         'price_range_position_period': [50, 100],
 
         # Model
-        'alpha': [1.0, 5.0, 10.0],
-        'use_calibration': [True, False],
-        'calibration_method': ['sigmoid', 'isotonic'],
-        'pred_threshold': [0.45, 0.50, 0.55],
+        'C': [0.1, 1.0, 5.0],
+        'class_weight': [0.45, 0.65, 0.85],
+        'max_iter': [60, 120, 240],
+        'solver': ['lbfgs', 'liblinear'],
+        'tol': [0.001, 0.01, 0.1],
     }
 
 def manifest():

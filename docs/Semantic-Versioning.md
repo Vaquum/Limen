@@ -1,3 +1,5 @@
+# Semantic Versioning
+
 - **MAJOR** version (`X.y.z`)  
   - Increment when you make **incompatible**, breaking changes.  
   - User code **must** change to work with the new release.
@@ -34,5 +36,4 @@
 
 ## Further Reading
 
-For the full specification and examples, see the official SemVer documentation:  
-https://semver.org/spec/v2.0.0.html  
+For the full specification and examples, see the official [SemVer documentation](https://semver.org/spec/v2.0.0.html).

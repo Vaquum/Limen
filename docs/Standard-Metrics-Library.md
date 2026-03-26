@@ -1,36 +1,83 @@
 # Standard Metrics Library
 
-A lightweight, robust Python library for computing evaluation metrics in machine learning tasks. Focuses on regression and classification (binary/multiclass unified), with optional distributional insights via error quantiles. Built on scikit-learn for reliability.
+Limen's metrics layer provides the low-level evaluation helpers used inside reference-architecture model functions.
 
-**NOTE:** Always use the functions in this library for measurement in `sfd.reference_architecture` model functions. 
+## Public Surface
 
-## Key Features
-- **Regression Metrics**: MAE, RMSE, R², mean error, MAPE (with zero-handling).
-- **Classification Metrics**: Macro-averaged precision, recall, F1, accuracy, AUC (safe OVR/macro), macro FPR.
-- **Unified API**: Single function per task type; supports binary/multiclass seamlessly.
-- **Optional Quantiles**: Add error distribution summaries (0.01, 0.25, 0.5, 0.75, 0.99) for deeper analysis.
-- **Robustness**: Handles edge cases (e.g., zero divisions, single-class data) with fallbacks.
-- **Dependencies**: scikit-learn, numpy (minimal footprint).
+The current public metrics exports are:
 
-## API Reference
+- `binary_metrics`
+- `multiclass_metrics`
+- `continuous_metrics`
+- `balanced_metric`
+- `safe_ovr_auc`
 
-### `regression_metrics(data, y_pred, include_quantiles=False)`
-- **Args**:
-  - `data` (dict): Contains `'y_test'` (array-like).
-  - `y_pred` (array-like): Predicted values.
-  - `include_quantiles` (bool): Include absolute error quantiles.
-- **Returns**: Dict of metrics (rounded to 4 decimals).
-- **Notes**: MAPE skips zeros, reports skipped count. Experimental: Validate on your data.
+These live under `limen.metrics`.
 
-### `classification_metrics(data, y_pred, y_proba=None, include_quantiles=False)`
-- **Args**:
-  - `data` (dict): Contains `'y_test'` (array-like, integer labels).
-  - `y_pred` (array-like): Predicted labels.
-  - `y_proba` (array-like, optional): Probabilities (n_samples, n_classes) for AUC.
-  - `include_quantiles` (bool): Include absolute error quantiles (label distances).
-- **Returns**: Dict of macro-averaged metrics (rounded to 4 decimals).
-- **Notes**: AUC falls back to 0.0 if invalid/missing. Macro FPR generalizes binary FPR.
+## `binary_metrics(data, preds, probs)`
 
-## Examples
-- **Research Insight**: Use quantiles to detect error tails in imbalanced datasets—e.g., high q99 flags outliers for further investigation.
-- **Engineering Workflow**: Integrate into pipelines for quick validation; e.g., monitor macro FPR in production for misclassification trends.
+Compute core binary-classification metrics from `data['y_test']`, predicted labels, and positive-class probabilities.
+
+### Returns
+
+A `dict` with:
+
+- `recall`
+- `precision`
+- `fpr`
+- `auc`
+- `accuracy`
+
+## `multiclass_metrics(data, preds, probs, average='macro')`
+
+Compute multiclass classification metrics from `data['y_test']`, predicted labels, and class probabilities.
+
+### Returns
+
+A `dict` with:
+
+- `precision`
+- `recall`
+- `auc`
+- `accuracy`
+
+## `continuous_metrics(data, preds)`
+
+Compute regression metrics from `data['y_test']` and continuous predictions.
+
+### Returns
+
+A `dict` with:
+
+- `bias`
+- `mae`
+- `rmse`
+- `r2`
+- `mape`
+
+## `balanced_metric(y_true, y_pred)`
+
+Compute Limen's balanced binary score for threshold selection and model evaluation when class balance matters.
+
+Use it when you want a single scalar that penalizes degenerate behavior such as always predicting one class.
+
+## `safe_ovr_auc(y_true, probs)`
+
+Compute one-vs-rest AUC while handling edge cases more safely than a direct raw sklearn call.
+
+Use it when class presence is unstable across folds or permutations.
+
+## Usage
+
+Reference architectures typically call these helpers directly:
+
+```python
+from limen.metrics.binary_metrics import binary_metrics
+
+results = binary_metrics(data, preds, probs)
+results['_preds'] = preds
+```
+
+Import the individual metric functions from their submodules. Today `limen.metrics` re-exports `binary_metrics`, `multiclass_metrics`, and `continuous_metrics` as modules, while `balanced_metric` is re-exported as a callable.
+
+These helpers are intentionally small and composable. Higher-level experiment analytics such as confusion summaries and backtests are handled by `limen.log`, not by this module.

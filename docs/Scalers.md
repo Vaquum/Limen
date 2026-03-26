@@ -182,6 +182,21 @@ manifest.set_scaler(RankGaussScaler)
 original_scale_df = inverse_transform(scaled_df, fitted_scaler)
 ```
 
+### `SCALER_REGISTRY`
+
+Registry mapping scaler type strings to scaler classes.
+
+This is the registry used by `Manifest.set_scaler_from_params()`.
+
+#### Current Entries
+
+| Type | Class |
+|------|-------|
+| `'linear'` | `LinearScaler` |
+| `'logreg'` | `LogRegScaler` |
+| `'robust'` | `RobustScaler` |
+| `'rank_gauss'` | `RankGaussScaler` |
+
 ## Params-Based Scaler Selection
 
 Use `set_scaler_from_params()` to select the scaler from `round_params` at runtime, enabling scaler type as a perturbation parameter.

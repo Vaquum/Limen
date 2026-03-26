@@ -8,10 +8,10 @@ Universal Experiment Loop (UEL) is an integral part of Limen, and takes as its i
 - [`SFD`](Single-File-Decoder.md)
 - [`UEL`](Universal-Experiment-Loop.md)
 - [`Log`](Log.md)
-- `Benchmark`
-- `Backtest`
+- [`Benchmark`](Benchmark.md)
+- [`Backtest`](Backtest.md)
 
-The operation of `uel.run` can be thought of as an advanced parameter sweep, which automatically integrates the parameter sweep results (i.e. `uel.experiment_log`) with benchmarks (i.e. `uel.experiment_confusion_metrics`) and backtest (i.e. `uel.experiment_backtest_results`).
+The operation of `uel.run` can be thought of as an advanced parameter sweep, which automatically integrates the parameter sweep results (i.e. `uel.experiment_log`) with benchmark analytics (i.e. `uel.experiment_confusion_metrics`) and backtest results (i.e. `uel.experiment_backtest_results`).
 
 ## On Parameters
 

@@ -23,10 +23,10 @@ Does **not** own the experiment runner, model training, or persistence (CSV/SQLi
 |------|-------|--------------------|
 | `Log` | `log.py` | Created automatically by UEL after `.run()`; also constructable from a CSV file path |
 | `permutation_prediction_performance(round_id)` | `_permutation_prediction_performance.py` | Get predictions + actuals + price data for one round |
-| `permutation_confusion_metrics(round_id)` | `_permutation_confusion_metrics.py` | Detailed classification stats for one round |
+| `permutation_confusion_metrics(x, round_id)` | `_permutation_confusion_metrics.py` | Detailed classification stats for one round |
 | `experiment_confusion_metrics(target_col)` | `_experiment_confusion_metrics.py` | Aggregated metrics across all rounds |
 | `experiment_backtest_results()` | `_experiment_backtest_results.py` | Backtest stats for every permutation |
-| `experiment_parameter_correlation` | `_experiment_parameter_correlation.py` | Parameter-vs-metric correlation table |
+| `experiment_parameter_correlation(metric, ...)` | `_experiment_parameter_correlation.py` | Parameter-vs-metric correlation table |
 
 ## Dependencies
 

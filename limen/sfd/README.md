@@ -18,10 +18,10 @@ Does **not** own the experiment loop, feature engineering, or metrics — SFDs a
 
 | What | Where | When you'd call it |
 |------|-------|--------------------|
-| `logreg_binary` | `foundational_sfd/logreg_binary.py` | `UniversalExperimentLoop(sfd=logreg_binary)` — LR binary classifier on spot klines |
-| `random_binary` | `foundational_sfd/random_binary.py` | Baseline random-prediction SFD for benchmarking |
-| `xgboost_regressor` | `foundational_sfd/xgboost_regressor.py` | XGBoost regression SFD |
-| `tabpfn_binary` | `foundational_sfd/tabpfn_binary.py` | TabPFN binary classifier (optional — requires `tabpfn` package) |
+| `logreg_binary` | `foundational_sfd/logreg_binary.py` | Re-exported from `limen.sfd` for direct use in `UniversalExperimentLoop` |
+| `random_binary` | `foundational_sfd/random_binary.py` | Re-exported from `limen.sfd` for baseline benchmarking |
+| `xgboost_regressor` | `foundational_sfd/xgboost_regressor.py` | Re-exported from `limen.sfd` for regression experiments |
+| `foundational_sfd.tabpfn_binary` | `foundational_sfd/tabpfn_binary.py` | Optional TabPFN SFD available through the subpackage when `tabpfn` is installed |
 
 ## Dependencies
 

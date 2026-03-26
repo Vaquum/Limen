@@ -2,9 +2,9 @@
 
 ## v0.7.9 on 25th of May, 2025
 
-- Add `klines_size` as input argument to [`get_klines_data`](utils/get_klines_data.py) to define size of window in seconds
-- Rename `n_rows` input parameter to `n_latest` in [`get_trades_data`](utils/get_trades_data.py) for getting latest rows
-- Add `n_sample` input parameter to [`get_trades_data`](utils/get_trades_data.py) for random sampling
+- Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
+- Rename `n_rows` input parameter to `n_latest` in `get_trades_data` for getting latest rows
+- Add `n_sample` input parameter to `get_trades_data` for random sampling
 - Add ability to pass `params`, `prep`, or `model` as input parameters to `limen.UniversalExperimentLoop.run` to allow quickly iterating through development and research workflows without having to compromise `uel` as a base
 
 ## v0.8.0 28th of May, 2025
