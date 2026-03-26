@@ -8,7 +8,7 @@ Vaquum Limen reduces complex and otherwise out-of-reach research, model developm
 
 ## Core Tenets
 
-Vaquum Limen brings every step - data ingestion, feature engineering, machine learning model development, parameter sweep, ensembling, and decision making - into a single closed-loop optimization cycle. This thermodynamic decision signal engine is delivered through one cohesive API and a set of lightweight, single-file templates called SFDs (Single-File Decoder). 
+Vaquum Limen brings every step - data ingestion, feature engineering, machine learning model development, parameter sweep, ensembling, and signal evaluation - into a single closed-loop optimization cycle. This thermodynamic alpha research engine is delivered through one cohesive API and a set of lightweight, single-file templates called SFDs (Single-File Decoder). 
 
 ### Parametric
 
@@ -24,11 +24,11 @@ Read more about the radical benefits of parametrization in [Three Eras of Knowle
 
 ### Closed-Loop
 
-Traditional quantitative pipelines are fragmented—researchers work in silos and hand off static models to engineers, resulting in friction and signal decay. Limen eliminates this fragility by unifying ingestion, feature engineering, and decision-making into a single, continuous continuum.
+Traditional quantitative pipelines are fragmented—researchers work in silos and hand off static models to engineers, resulting in friction and signal decay. Limen eliminates this fragility by unifying ingestion, feature engineering, and signal research into a single, continuous continuum.
 
 The system enforces a feedback loop where realized performance is the only truth.
 
-Because the signal generation environment is identical to the research environment, there is zero translation loss. Live market feedback—specifically the divergence between predicted and realized outcomes—is immediately fed back into the optimization engine. This allows the system to metabolize volatility and evolve its internal logic dynamically, ensuring the strategy deployed is always the strategy tested.
+Because the signal generation environment is tightly aligned with the research environment, there is minimal translation loss. Realized performance and downstream market feedback—specifically the divergence between predicted and realized outcomes—can be fed back into the optimization engine. This allows Limen to metabolize volatility and evolve its internal logic dynamically, ensuring that future research is grounded in observed outcomes.
 
 ### Bitcoin-Only
 
@@ -40,19 +40,18 @@ By treating Bitcoin as the sole first-class asset, Limen bypasses both the noise
 
 ## Architecture
 
-### Three Sub-Systems
+### Two Core Sub-Systems
 
-Vaquum Limen consist of three distinct sub-systems: 
+Vaquum Limen consists of two distinct sub-systems:
 
 - `Experiment` Sub-System
 - `Cohorts` Sub-System
-- `Manager` Sub-System
 
 `Experiment` is the sub-system where alpha is systematically discovered, primarily through the means of comprehensive parameter sweep involving multiple machine learning architectures.
 
 `Cohorts` is the sub-system that harnesses discovered alpha from `Experiment` into curated alpha, primarily through the means of various ensembling and meta-modelling methods.
 
-`Manager` is the sub-system where alpha is crystallized into tradeable decisions, primarily through combining predictive signals with trading directives.
+Trade decisioning does not live inside Limen. Downstream decision logic belongs in Nexus, which consumes Limen outputs and turns decoder cohorts into validated trading decisions.
 
 ### In Practice
 
@@ -72,6 +71,6 @@ All of this is wrapped into a manifest for [Universal Experiment Loop](Universal
 
 Completing an `Experiment` yields several analytical artefacts called [Log](Log.md), namely a parameter sweep log, an advanced interpretation of a confusion matrix, and comphrensive backtest results. 
 
-These artefacts can be then used to create [Cohorts](Regime-Diversified-Opinion-Pools.md). 
+These artefacts can then be used to create [Cohorts](Regime-Diversified-Opinion-Pools.md). 
 
-The `Manager` sub-system is currently being built.
+These cohort outputs can then be passed downstream into Nexus for decisioning and into other Vaquum systems for execution, oversight, and auditability.

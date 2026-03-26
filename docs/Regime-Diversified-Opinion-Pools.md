@@ -1,6 +1,6 @@
 # Regime Diversified Opinion Pools
 
-The Regime Diversified Opinion Pools (RDOP) system provides an intelligent approach to dynamic model selection and prediction aggregation using regime-based clustering. RDOP extends the Loop experiment framework by adding a model diversification layer that adapts to different market regimes, providing more robust predictions by combining multiple models intelligently.
+The Regime Diversified Opinion Pools (RDOP) system provides an intelligent approach to dynamic model selection and prediction aggregation using regime-based clustering. RDOP extends the Limen experiment framework by adding a model diversification layer that adapts to different market regimes, providing more robust predictions by combining multiple models intelligently.
 
 ## Overview
 
@@ -10,7 +10,7 @@ RDOP operates through a two-phase pipeline:
 
 2. **Online Phase**: For new predictions, dynamically selects the appropriate regime pool based on current market conditions and aggregates predictions from multiple models within the pool.
 
-The system integrates seamlessly with existing Loop infrastructure, consuming experiment results and producing aggregated predictions for improved stability and robustness across different market conditions.
+The system integrates seamlessly with existing Limen infrastructure, consuming experiment results and producing aggregated predictions for improved stability and robustness across different market conditions.
 
 ## Offline Pipeline
 
@@ -107,7 +107,11 @@ RDOP extends UEL workflows by providing model-level diversification:
 ```python
 # Standard UEL produces individual model results
 uel = UniversalExperimentLoop(data=train_data, sfd=your_sfd)
-uel.run('training_experiment', n_permutations=500)
+uel.run(
+    'training_experiment',
+    n_permutations=500,
+    prep_each_round=True,
+)
 
 # RDOP consumes UEL results for regime-aware aggregation
 rdop = RegimeDiversifiedOpinionPools(your_sfd)
@@ -124,8 +128,8 @@ Fully supports manifest-based SFDs with Universal Split-First architecture:
 ```python
 # Manifest-based SFD works seamlessly with RDOP
 if hasattr(your_sfd, 'manifest'):
-    manifest = your_sfd.manifest()
-    uel.run('experiment', manifest=manifest)  # RDOP will use same manifest
+    uel = UniversalExperimentLoop(sfd=your_sfd)
+    uel.run('experiment', n_permutations=100, prep_each_round=True)
 ```
 
 ## Architecture Benefits
@@ -141,7 +145,7 @@ if hasattr(your_sfd, 'manifest'):
 - Aggregated confidence scores available for risk management
 
 ### Production Readiness
-- Seamless integration with existing Loop infrastructure
+- Seamless integration with existing Limen infrastructure
 - Efficient caching prevents repeated expensive operations
 - Graceful error handling prevents prediction pipeline failures
 
@@ -151,7 +155,7 @@ if hasattr(your_sfd, 'manifest'):
 import limen
 from limen import sfd, RegimeDiversifiedOpinionPools
 
-# Step 1: Train individual models (existing Loop workflow)
+# Step 1: Train individual models (existing Limen workflow)
 uel = limen.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)
 uel.run('logreg_training', n_permutations=1000, prep_each_round=True)
 confusion_df = uel.experiment_confusion_metrics
@@ -178,4 +182,4 @@ regime_1_predictions = production_predictions['regime_1_prediction']
 # etc.
 ```
 
-The RDOP system enhances Loop's predictive capabilities by adding intelligent model diversification and regime awareness to the standard experimental workflow.
+The RDOP system enhances Limen's predictive capabilities by adding intelligent model diversification and regime awareness to the standard experimental workflow.

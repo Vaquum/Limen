@@ -112,7 +112,11 @@ from limen import sfd
 # Data is automatically fetched from manifest-configured sources
 uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
-uel.run(experiment_name='my_experiment', n_permutations=100)
+uel.run(
+    experiment_name='my_experiment',
+    n_permutations=100,
+    prep_each_round=True,
+)
 ```
 
 ## Data Source Configuration
