@@ -195,4 +195,4 @@ round0_perf = uel._log.permutation_prediction_performance(round_id=0)
 
 ```
 
-The above examples are indicative, refer above in this document for outline of the full features available after `uel.run` completes operation. 
+The above examples are indicative, refer above in this document for outline of the full features available after `uel.run` completes operation.
