@@ -552,15 +552,6 @@
 - Add `SanityReducer` pruning strategy with NaN detection and suggestion system (zero-metric, execution timeout, warning detectors)
 - Add advisory suggestion flow to `FeedbackController` — suggestions are logged in audit trail but not dispatched to MSQ
 
-## v1.41.1 on 11th of March, 2026
-
-- Add `CorrelationReducer` pruning strategy with wrong-direction removal and low-impact suggestions
-- Add named filter infrastructure to `MSQ` with `set_filter`/`clear_filter` for reversible domain restrictions
-- Add declarative filter specs (`FILTER_EXCLUDE_VALUE`, `FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_SAMPLE`) with builder registry in `FeedbackController`
-- Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
-- Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
-- Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
-
 ## v1.41.0 on 10th of March, 2026
 
 - Implement 106 TA-Lib indicators in `limen.indicators` and align behavior with TA-Lib references.
@@ -573,6 +564,15 @@
 - Add Price Transform: `indicators.avgprice`, `indicators.medprice`, `indicators.midpoint`, `indicators.midprice`, `indicators.typprice`, `indicators.wclprice`
 - Add Pattern Recognition (Candlesticks): `indicators.cdl2crows`, `indicators.cdl3blackcrows`, `indicators.cdl3inside`, `indicators.cdl3linestrike`, `indicators.cdl3starsinsouth`, `indicators.cdl3whitesoldiers`, `indicators.cdlabandonedbaby`, `indicators.cdladvancedblock`, `indicators.cdlbelthold`, `indicators.cdlclosingmarubozu`, `indicators.cdlconcealbabyswall`, `indicators.cdlcounterattack`, `indicators.cdldarkcloudcover`, `indicators.cdldoji`, `indicators.cdldragonflydoji`, `indicators.cdlengulfing`, `indicators.cdlgravestonedoji`, `indicators.cdlhammer`, `indicators.cdlhangingman`, `indicators.cdlharami`, `indicators.cdlharamicross`, `indicators.cdlhighwave`, `indicators.cdlhikkake`, `indicators.cdlhikkakemod`, `indicators.cdlhomingpigeon`, `indicators.cdlidentical3crows`, `indicators.cdlinvertedhammer`, `indicators.cdlladderbottom`, `indicators.cdllongleggeddoji`, `indicators.cdllongline`, `indicators.cdlmarubozu`, `indicators.cdlmatchinglow`, `indicators.cdlmathold`, `indicators.cdlonneck`, `indicators.cdlpiercing`, `indicators.cdlrickshawman`, `indicators.cdlrisefall3methods`, `indicators.cdlseparatinglines`, `indicators.cdlshootingstar`, `indicators.cdlshortline`, `indicators.cdlspinningtop`, `indicators.cdlstalledpattern`, `indicators.cdlsticksandwich`, `indicators.cdltakuri`, `indicators.cdlthrusting`, `indicators.cdltristar`, `indicators.cdlunique3river`
 - Add TA-Lib parity test file `tests/test_indicators_vs_talib.py`.
+
+## v1.41.1 on 11th of March, 2026
+
+- Add `CorrelationReducer` pruning strategy with wrong-direction removal and low-impact suggestions
+- Add named filter infrastructure to `MSQ` with `set_filter`/`clear_filter` for reversible domain restrictions
+- Add declarative filter specs (`FILTER_EXCLUDE_VALUE`, `FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_SAMPLE`) with builder registry in `FeedbackController`
+- Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
+- Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
+- Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
 - Add ta-lib to `pyproject.toml` dependencies for testing purpose
 
 ## v1.42.0 on 12th of March, 2026
