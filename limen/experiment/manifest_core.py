@@ -1,6 +1,7 @@
 import copy
 import inspect
 import importlib
+import logging
 import os
 import random
 from collections.abc import Callable
@@ -12,6 +13,8 @@ import polars as pl
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
 from limen.scalers.registry import SCALER_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
 PipelineStep = tuple[Callable[..., pl.DataFrame], dict[str, ParamValue]]
@@ -373,7 +376,15 @@ class Manifest:
 
         Returns:
             Manifest: Self for method chaining
+
+        Raises:
+            ValueError: If train is not positive, or if val or test is negative
         '''
+
+        if train <= 0:
+            raise ValueError('train split ratio must be positive')
+        if val < 0 or test < 0:
+            raise ValueError('val and test split ratios must be non-negative')
 
         self.split_config = (train, val, test)
 
@@ -653,6 +664,37 @@ class Manifest:
             )
 
             split_data[i] = data.drop_nulls()
+
+        non_empty_splits = [s for s in split_data if s.height > 0]
+        if non_empty_splits:
+            reference_cols = non_empty_splits[0].columns
+
+            if len(non_empty_splits) > 1:
+                common_cols = set(reference_cols)
+                for split in non_empty_splits[1:]:
+                    common_cols &= set(split.columns)
+
+                for i, split in enumerate(split_data):
+                    if split.height == 0:
+                        continue
+                    extra = set(split.columns) - common_cols
+                    if extra:
+                        logger.warning(
+                            'Dropping columns %s from split %d — '
+                            'not present in all splits',
+                            sorted(extra), i,
+                        )
+                        ordered_cols = [c for c in split.columns if c in common_cols]
+                        split_data[i] = split.select(ordered_cols)
+                reference_cols = [c for c in reference_cols if c in common_cols]
+
+            for i, split in enumerate(split_data):
+                if split.height == 0:
+                    missing = set(reference_cols) - set(split.columns)
+                    if missing:
+                        split_data[i] = split.with_columns(
+                            [pl.lit(None).alias(c) for c in reference_cols if c in missing]
+                        ).select(reference_cols)
 
         if price_data_for_backtest is not None:
             final_datetimes = split_data[2].select('datetime')
