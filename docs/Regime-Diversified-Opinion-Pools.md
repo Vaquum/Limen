@@ -1,185 +1,144 @@
 # Regime Diversified Opinion Pools
 
-The Regime Diversified Opinion Pools (RDOP) system provides an intelligent approach to dynamic model selection and prediction aggregation using regime-based clustering. RDOP extends the Limen experiment framework by adding a model diversification layer that adapts to different market regimes, providing more robust predictions by combining multiple models intelligently.
+Regime Diversified Opinion Pools (RDOP) is Limen's cohorting layer for selecting and aggregating diversified model pools across performance regimes.
 
-## Overview
+RDOP sits downstream from experiment runs. It consumes experiment analytics, groups strong permutations into regime-specific pools, and then produces one aggregated prediction series per stored regime.
 
-RDOP operates through a two-phase pipeline:
+## What RDOP Does Today
 
-1. **Offline Phase**: Analyzes historical confusion metrics from model experiment results, clusters models into regimes using performance similarity, and performs intra-regime model diversification through PCA-based selection.
+RDOP currently has two explicit phases:
 
-2. **Online Phase**: For new predictions, dynamically selects the appropriate regime pool based on current market conditions and aggregates predictions from multiple models within the pool.
+1. `offline_pipeline()` filters, clusters, and diversifies experiment permutations into regime pools.
+2. `online_pipeline()` reruns the selected permutations on fresh data and adds one aggregated prediction column per regime.
 
-The system integrates seamlessly with existing Limen infrastructure, consuming experiment results and producing aggregated predictions for improved stability and robustness across different market conditions.
+## What RDOP Does Not Do Today
+
+The current implementation does not:
+
+- choose a single active regime automatically
+- collapse regime outputs into one final decision series
+- provide a built-in cache layer
+- provide downstream trade decisioning
+
+Those decisions belong outside Limen.
+
+## `RegimeDiversifiedOpinionPools.__init__`
+
+Create an RDOP instance tied to a single SFD.
+
+### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sfd` | `SingleFileDecoder` | SFD used to retrain and rerun selected permutations |
+| `random_state` | `int \| None` | Random state for clustering and diversification |
+
+### Notes
+
+- If the SFD is manifest-based, RDOP extracts the manifest during initialization.
+- Offline and online phases should use the same SFD family so that selected permutations can be replayed consistently.
 
 ## Offline Pipeline
 
 ### `RegimeDiversifiedOpinionPools.offline_pipeline`
 
-Trains the RDOP system by analyzing historical model performance and creating regime-based model pools.
+Cluster experiment results into regime-specific model pools.
 
 ### Args
 
-| Parameter             | Type              | Description                                                                 |
-|-----------------------|-------------------|-----------------------------------------------------------------------------|
-| `confusion_metrics`   | `pd.DataFrame`    | Pandas dataframe with experiment confusion metrics (output from `uel.experiment_confusion_metrics`) |
-| `perf_cols`          | `list[str]`       | Performance column names to use for filtering and clustering (default: standard metric columns) |
-| `iqr_multiplier`      | `float`           | IQR multiplier for outlier filtering (default: 3.0) |
-| `target_count`        | `int`             | Target number of models to select per regime (default: 100) |
-| `n_pca_components`    | `int`             | Number of PCA components for diversification (default: None, automatic) |
-| `n_pca_clusters`      | `int`             | Number of clusters for PCA-based selection within regimes (default: 8) |
-| `k_regimes`           | `int`             | Number of regimes to detect via clustering (default: 6) |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `confusion_metrics` | `pd.DataFrame` | Experiment confusion-metrics table, typically `uel.experiment_confusion_metrics` |
+| `perf_cols` | `list[str] \| None` | Performance columns used for filtering and clustering |
+| `target_count` | `int` | Target number of selected models per regime |
+| `k_regimes` | `int` | Requested number of regime clusters |
+| `iqr_multiplier` | `float` | IQR multiplier for outlier filtering |
+| `n_pca_components` | `int \| None` | PCA dimension count for diversification |
+| `n_pca_clusters` | `int` | PCA-space cluster count for diversification |
 
 ### Returns
 
-Returns `pl.DataFrame` containing all selected models across regimes with added 'regime' column indicating regime membership.
+`dict[int, pl.DataFrame]`
 
-### Processing Steps
+Each key is a regime id, and each value is the selected permutation table for that regime.
 
-1. **Sanity Filtering**: Removes models with null/invalid performance metrics
-2. **Outlier Filtering**: Removes statistically extreme outliers using IQR method
-3. **Regime Clustering**: Groups models by performance similarity using K-means clustering
-4. **Intra-Regime Diversification**: Uses PCA-space clustering to select diverse representative models within each regime
+### Current Processing Flow
 
-### Error Handling
+1. sanity-filter invalid rows
+2. outlier-filter extreme rows
+3. cluster remaining rows into regimes
+4. diversify each regime pool through PCA-space selection
 
-- If all models fail sanity checks: Returns original metrics with regime 0 (logs warning)
-- If all models removed by outlier filtering: Falls back to sanity-filtered metrics (logs warning)
+### Fallback Behavior
+
+- If sanity filtering removes everything, RDOP falls back to a single regime `0`.
+- If outlier filtering removes everything, RDOP falls back to the sanity-filtered set.
 
 ## Online Pipeline
 
 ### `RegimeDiversifiedOpinionPools.online_pipeline`
 
-Runs predictions through the trained regime pools and aggregates results.
+Rerun the stored regime pools on fresh data and aggregate predictions within each regime.
 
 ### Args
 
-| Parameter                | Type             | Description                                                                |
-|--------------------------|------------------|----------------------------------------------------------------------------|
-| `data`                   | `pl.DataFrame`   | Prediction dataset with standard klines columns |
-| `aggregation_method`     | `str`            | Aggregation method: 'mean', 'median', or 'majority_vote' (default: 'mean') |
-| `aggregation_threshold`  | `float`          | Threshold for binary classification (default: 0.5) |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `pd.DataFrame` | Fresh prediction data |
+| `aggregation_method` | `str` | One of `mean`, `median`, or `majority_vote` |
+| `aggregation_threshold` | `float \| None` | Optional threshold used during aggregation |
 
 ### Returns
 
-Returns `pl.DataFrame` with original data plus aggregated prediction columns:
+`pl.DataFrame`
 
-- `regime_k_prediction`: Aggregated prediction for regime k using specified aggregation method
-- Individual regime predictions are available for analysis and risk management
+The returned frame contains the replayed data plus one aggregated prediction column per stored regime:
 
-### Processing Steps
-
-1. **Model Pool Iteration**: Runs predictions through all models in each trained regime pool
-2. **Intra-Regime Aggregation**: Combines predictions within each regime using specified method
-3. **Regime Identification**: Assigns predictions to market regimes (currently uses regime 0 as placeholder)
+- `regime_0_prediction`
+- `regime_1_prediction`
+- ...
 
 ### Aggregation Methods
 
-- **`mean`**: Average prediction across all models in the regime pool
-- **`median`**: Median prediction for robustness against outliers
-- **`majority_vote`**: Majority voting for categorical predictions
+- `mean`: average regime prediction
+- `median`: median regime prediction
+- `majority_vote`: binary majority vote across models in the regime
 
-## Initialization
-
-### `RegimeDiversifiedOpinionPools.__init__`
-
-Creates the RDOP system instance.
-
-### Args
-
-| Parameter      | Type               | Description                                                                |
-|----------------|--------------------|----------------------------------------------------------------------------|
-| `sfd`          | `SingleFileDecoder`  | SFD to use for individual model experiments (must match offline training) |
-| `random_state` | `int`              | Random state for reproducible clustering and model selection (default: 42) |
-
-### Notes
-
-- Manifest is automatically extracted from SFD during initialization
-- Supports SFDs with or without custom manifest functions
-- Thread-safe for parallel operation after training
-
-## Integration Points
-
-### With Universal Experiment Loop
-
-RDOP extends UEL workflows by providing model-level diversification:
-
-```python
-# Standard UEL produces individual model results
-uel = UniversalExperimentLoop(data=train_data, sfd=your_sfd)
-uel.run(
-    'training_experiment',
-    n_permutations=500,
-    prep_each_round=True,
-)
-
-# RDOP consumes UEL results for regime-aware aggregation
-rdop = RegimeDiversifiedOpinionPools(your_sfd)
-offline_result = rdop.offline_pipeline(uel.experiment_confusion_metrics, k_regimes=3)
-
-# RDOP provides more stable predictions than individual models
-online_result = rdop.online_pipeline(production_data)
-```
-
-### With Experiment Manifest
-
-Fully supports manifest-based SFDs with Universal Split-First architecture:
-
-```python
-# Manifest-based SFD works seamlessly with RDOP
-if hasattr(your_sfd, 'manifest'):
-    uel = UniversalExperimentLoop(sfd=your_sfd)
-    uel.run('experiment', n_permutations=100, prep_each_round=True)
-```
-
-## Architecture Benefits
-
-### Improved Stability
-- Reduces overfitting by combining multiple models
-- Adapts to different market regimes automatically
-- Provides more robust predictions than individual models
-
-### Enhanced Interpretability
-- Clear separation of models by performance similarity
-- Regime identification helps understanding prediction contexts
-- Aggregated confidence scores available for risk management
-
-### Production Readiness
-- Seamless integration with existing Limen infrastructure
-- Efficient caching prevents repeated expensive operations
-- Graceful error handling prevents prediction pipeline failures
-
-## Example: Complete Workflow
+## Example Workflow
 
 ```python
 import limen
-from limen import sfd, RegimeDiversifiedOpinionPools
+from limen import sfd
 
-# Step 1: Train individual models (existing Limen workflow)
-uel = limen.UniversalExperimentLoop(data=train_data, sfd=sfd.foundational_sfd.logreg_binary)
-uel.run('logreg_training', n_permutations=1000, prep_each_round=True)
-confusion_df = uel.experiment_confusion_metrics
-
-# Step 2: Train RDOP diversification system
-rdop = RegimeDiversifiedOpinionPools(sfd.foundational_sfd.logreg_binary)
-regime_pools = rdop.offline_pipeline(
-    confusion_df,
-    k_regimes=5,                  # 5 different market regimes
-    target_count=25,              # 25 models per regime
-    iqr_multiplier=2.5           # Moderate outlier filtering
+uel = limen.UniversalExperimentLoop(
+    data=train_data,
+    sfd=sfd.foundational_sfd.logreg_binary,
 )
 
-# Step 3: Production predictions with regime-aware aggregation
+uel.run(
+    experiment_name='logreg_training',
+    n_permutations=1000,
+    prep_each_round=True,
+)
+
+rdop = limen.RegimeDiversifiedOpinionPools(sfd.foundational_sfd.logreg_binary)
+
+regime_pools = rdop.offline_pipeline(
+    uel.experiment_confusion_metrics,
+    k_regimes=5,
+    target_count=25,
+)
+
 production_predictions = rdop.online_pipeline(
     data=live_kline_data,
-    aggregation_method='median'   # Robust against outliers
+    aggregation_method='median',
 )
-
-# RDOP provides more stable, regime-adapted predictions
-# Access aggregated predictions by regime
-regime_0_predictions = production_predictions['regime_0_prediction']
-regime_1_predictions = production_predictions['regime_1_prediction']
-# etc.
 ```
 
-The RDOP system enhances Limen's predictive capabilities by adding intelligent model diversification and regime awareness to the standard experimental workflow.
+## Interpretation
+
+RDOP is best understood as a cohort-construction layer:
+
+- `Experiment` finds promising permutations
+- `RDOP` groups and diversifies them
+- downstream systems decide how regime-level outputs should be validated and acted on

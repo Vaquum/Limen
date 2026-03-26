@@ -4,7 +4,7 @@ Indicators include common technical indicators, and any other non-compound signa
 
 ## Purpose
 
-There are hundreds of well-known indicators, but they all fall under eight different categories. These are demonstrated in the below table.
+There are hundreds of well-known indicators, but they broadly fall under eight different categories. These are shown in the table below.
 
 | # | Heading | Core question (purpose) | Representative indicators | Notes |
 |---|---------|-------------------------|---------------------------|-------|
@@ -264,6 +264,22 @@ Compute Bollinger Bands using Simple Moving Average (SMA).
 
 `pl.DataFrame`: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
 
+### `bollinger_position`
+
+Compute price position within the Bollinger band range.
+
+Returns `0` at the lower band, `1` at the upper band, and `0.5` at the midpoint.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `pl.DataFrame` | Klines dataset with `close`, `bb_upper`, and `bb_lower` columns |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column `bollinger_position`
+
 ### `cci`
 
 Compute Commodity Channel Index (CCI) using rolling mean and mean deviation.
@@ -351,6 +367,24 @@ Equivalent to TA-Lib MIDPRICE: (rolling_max(high, period) + rolling_min(low, per
 #### Returns
 
 `pl.DataFrame`: The input data with a new column 'midprice_{period}'
+
+### `midpoint`
+
+Compute rolling midpoint of a single column over a window.
+
+Equivalent to TA-Lib MIDPOINT on the chosen series.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `pl.DataFrame` | Klines dataset with the target column |
+| `col` | `str` | Column name to compute midpoint on |
+| `period` | `int` | Number of periods for the rolling window |
+
+#### Returns
+
+`pl.DataFrame`: The input data with a new column '{col}_midpoint_{period}' (for the default `col='close'`, this is 'close_midpoint_{period}')
 
 ### `typprice`
 

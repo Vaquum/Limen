@@ -40,14 +40,15 @@ experiment/
 ├── feedback_controller.py   # Mid-run adaptive search callbacks
 ├── msq.py                   # Mutable Search Queue
 ├── param_domain.py          # Mutable parameter domain + observer pattern
-├── pruning_strategy.py      # Abstract and concrete pruning strategies
+├── reducer/
+│   └── pruning_strategy.py  # Abstract and concrete pruning strategies
 └── search_strategy.py       # Abstract SearchStrategy base class
 ```
 
 ## Gotchas / things to know
 
-- `prep_each_round=True` is **required** for manifest-driven SFMs; UEL will raise if it is `False`.
+- `prep_each_round=True` is **required** for manifest-driven SFDs; UEL will raise if it is `False`.
 - Manifest-driven experiments cannot override `prep` / `model` in `.run()` — only `params` can be overridden.
-- If `LOOP_ENV=test`, UEL auto-fetches data via `manifest.fetch_test_data()` instead of the production data source.
+- UEL auto-fetches through `manifest.fetch_data_for_env()`. If `LOOP_ENV=test` and a test data source is configured, that source is used; otherwise Limen falls back to the production source.
 - Results are appended to `{experiment_name}.csv` incrementally — the file is not overwritten between runs.
-- Signal handlers (`SIGTERM`/`SIGINT`) are registered by `_register_shutdown_handler`; they set `_shutdown_requested=True` for a graceful single-run cutoff. A second signal raises `KeyboardInterrupt` immediately.
+- In MSQ mode, signal handlers (`SIGTERM`/`SIGINT`) are registered for graceful shutdown. A second signal raises `KeyboardInterrupt` immediately.

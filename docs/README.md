@@ -4,7 +4,7 @@
 
 Vaquum Limen reduces complex and otherwise out-of-reach research, model development, and trading signal workflows into one cohesive Python API, powering Bitcoin quants with unparalleled ergonomics and productivity. Limen does not execute trades, and can be used as a source of alpha with any trading system.
 
-**Limen is fully parametric, closed-loop, and Bitcoin-only.** These three core tenets will be explained in the below sections. 
+**Limen is fully parametric, closed-loop, and Bitcoin-only.** These three core tenets are explained in the sections below.
 
 ## Core Tenets
 
@@ -47,17 +47,17 @@ Vaquum Limen consists of two distinct sub-systems:
 - `Experiment` Sub-System
 - `Cohorts` Sub-System
 
-`Experiment` is the sub-system where alpha is systematically discovered, primarily through the means of comprehensive parameter sweep involving multiple machine learning architectures.
+`Experiment` is the sub-system where alpha is systematically discovered, primarily through comprehensive parameter sweep across multiple machine learning architectures.
 
-`Cohorts` is the sub-system that harnesses discovered alpha from `Experiment` into curated alpha, primarily through the means of various ensembling and meta-modelling methods.
+`Cohorts` is the sub-system that turns discovered alpha from `Experiment` into curated alpha, primarily through ensembling and meta-modelling methods.
 
 Trade decisioning does not live inside Limen. Downstream decision logic belongs in Nexus, which consumes Limen outputs and turns decoder cohorts into validated trading decisions.
 
 ### In Practice
 
-`Experiment` starts with [Data](Data-Bars.md), which could be standard, imbalance, or run bars. Data could also be any OHLC data from any source, as long as it contains standard OHLC columns.
+`Experiment` starts with [Data](Data-Bars.md), which can be native kline data, Limen's built-in threshold bars, or any external OHLC data as long as it contains the expected price columns.
 
-`Experiment` then continues with converting data into [Indicators](Indicators.md) and [Features](Features.md). In addition to the built-in ones, indicators and features, any custom polars expression could be used to create independent variables to be used in the `Experiment`.
+`Experiment` then continues by converting data into [Indicators](Indicators.md) and [Features](Features.md). In addition to Limen's built-in indicator and feature library, custom polars expressions can also be used to create independent variables for the `Experiment`.
 
 `Experiment` then continues with applying [Scalers](Scalers.md) and [Transforms](Transforms.md), which again could be some of the built-in ones, or any custom polars expressions.
 
@@ -67,9 +67,9 @@ Everything in `Experiment` is captured in [Single-File Decoder](Single-File-Deco
 2) A locally customized version of one of the built-in SFDs
 3) A completely custom SFD
 
-All of this is wrapped into a manifest for [Universal Experiment Loop](Universal-Experiment-Loop.md), which is basically a comphrensive parameter sweep suite. 
+Manifest-driven SFDs are the standard path into [Universal Experiment Loop](Universal-Experiment-Loop.md), but custom SFDs can also provide explicit `prep()` and `model()` functions. UEL is Limen's parameter-sweep engine.
 
-Completing an `Experiment` yields several analytical artefacts called [Log](Log.md), namely a parameter sweep log, an advanced interpretation of a confusion matrix, and comphrensive backtest results. 
+Completing an `Experiment` yields several analytical artefacts through [Log](Log.md), namely a parameter sweep log, benchmark-style confusion analytics, and backtest results.
 
 These artefacts can then be used to create [Cohorts](Regime-Diversified-Opinion-Pools.md). 
 

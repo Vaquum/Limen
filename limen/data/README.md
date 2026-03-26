@@ -1,18 +1,18 @@
 # `limen.data`
 
-> Fetch, normalise, and prepare historical Binance market data for use in experiments.
+> Fetch, query, and prepare historical Binance market data for use in experiments.
 
 ## Responsibilities
 
-Owns all data ingestion (klines, trades, agg-trades — spot and futures), bar formation from raw tick/trade data, train/val/test splitting, and the helper utilities that glue raw data to the prep pipeline.
+Owns all data ingestion (klines, trades, agg-trades — spot and futures), threshold-based bar formation over kline data, train/val/test splitting, and the helper utilities that glue raw data to the prep pipeline.
 Does **not** own feature engineering, indicators, or model training.
 
 ## Key concepts
 
 - **HistoricalData** – stateful class; each `get_*` call populates `self.data` with a Polars DataFrame and `self.data_columns` with the column list.
-- **Bars** – `standard_bars.py` aggregates tick/trade data into fixed-time or volume bars; accessed via `compute_data_bars`.
+- **Bars** - `standard_bars.py` aggregates consecutive kline rows into threshold bars; accessed via `compute_data_bars`.
 - **Splits** – `splits.py` provides `split_sequential` (ordered train/val/test proportions) and `split_random` (random sampling), plus `split_data_to_prep_output` which converts split DataFrames into the `data_dict` format consumed by the experiment loop.
-- **`_internal`** – private helpers that handle Binance file download (`binance_file_to_polars`) and generic database / API queries (`generic_endpoints`); not part of the public API.
+- **`_internal`** - private helpers that handle Binance file download (`binance_file_to_polars`) and ClickHouse-backed query execution (`generic_endpoints`); not part of the public API.
 
 ## Entry points
 
@@ -47,5 +47,5 @@ data/
 
 - `HistoricalData._get_data_for_test()` reads from `datasets/klines_2h_2020_2025.csv`; this file must exist relative to the working directory when `LOOP_ENV=test`.
 - `get_binance_file()` normalises millisecond timestamps to seconds automatically if the value exceeds `10^13`.
-- The `auth_token` parameter is forwarded to `generic_endpoints` for authenticated database queries; leave `None` for public Binance file access.
+- The `auth_token` parameter is forwarded to `generic_endpoints` for authenticated ClickHouse queries; leave `None` for direct Binance file access.
 - `split_data_to_prep_output` expects all splits to share the same column schema.

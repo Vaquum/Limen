@@ -22,7 +22,7 @@ Does **not** own higher-level feature engineering (that lives in `limen.features
 | `wilder_rsi()` | `wilder_rsi.py` | Wilder RSI — used in most foundational SFDs |
 | `sma()` | `sma.py` | Simple Moving Average |
 | `macd()` | `macd.py` | MACD line and signal |
-| `bollinger_bands()` | `bollinger_bands.py` | Upper/lower bands + bandwidth |
+| `bollinger_bands()` | `bollinger_bands.py` | Upper, middle, and lower Bollinger bands |
 | `ppo()` | `ppo.py` | Percentage Price Oscillator |
 
 ## Dependencies
@@ -35,14 +35,14 @@ Does **not** own higher-level feature engineering (that lives in `limen.features
 indicators/
 ├── atr.py                   # Average True Range (Wilder method)
 ├── body_pct.py              # Candle body as % of total range
-├── bollinger_bands.py       # Bollinger Bands (upper, lower, bandwidth)
+├── bollinger_bands.py       # Bollinger Bands (middle, upper, lower)
 ├── bollinger_position.py    # Price position within Bollinger Bands
 ├── cci.py                   # Commodity Channel Index
 ├── macd.py                  # MACD line and signal line
 ├── midpoint.py              # Midpoint Over Period (TA-Lib MIDPOINT)
 ├── ppo.py                   # Percentage Price Oscillator
 ├── price_change_pct.py      # Bar-over-bar percentage price change
-├── returns.py               # Log or simple returns
+├── returns.py               # Simple percentage returns
 ├── roc.py                   # Rate of Change
 ├── rolling_volatility.py    # Rolling standard deviation of returns
 ├── rsi_sma.py               # RSI smoothed with SMA
@@ -50,11 +50,11 @@ indicators/
 ├── sma_deviation_std.py     # Deviation from SMA in std units
 ├── stochastic_oscillator.py # Stochastic %K and %D
 ├── wilder_rsi.py            # RSI using Wilder smoothing
-└── window_return.py         # Return over a fixed future/past window
+└── window_return.py         # Return over a fixed lookback window
 ```
 
 ## Gotchas / things to know
 
 - Indicators produce `null` values in the first `period - 1` rows; the experiment pipeline calls `drop_nulls()` after feature/indicator transforms, so leading nulls are automatically removed.
 - `ppo` defaults use short/long periods of 12/26; override via keyword arguments in the manifest.
-- `window_return` can compute both forward-looking (target) and backward-looking (feature) returns depending on the sign of the `shift` parameter.
+- `window_return` computes `close / close.shift(period) - 1` over a fixed lookback window.

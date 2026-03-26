@@ -1,6 +1,6 @@
 # Transforms
 
-Transforms are stateless preprocessing operations applied to datasets prior to modeling or exploration. They compute statistics and apply transformations in a single step. They scale, clip, filter, or normalize numeric columns while preserving the core semantics of the data.
+Transforms in Limen are lightweight helpers used during data preparation or model post-processing. Most operate directly on DataFrames, while a smaller subset helps with classifier calibration and threshold selection.
 
 For stateful scalers that fit on training data, see [Scalers](Scalers.md).
 
@@ -81,3 +81,41 @@ Shift a column by a specified number of periods.
 #### Returns
 
 `pl.DataFrame`: DataFrame with shifted column
+
+### `calibrate_classifier`
+
+Apply probability calibration to a fitted classifier and return calibrated probability arrays.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clf` | `Any` | Fitted classifier with `predict_proba` |
+| `x_val` | `np.ndarray` | Validation features used for calibration fitting |
+| `y_val` | `np.ndarray` | Validation labels used for calibration fitting |
+| `x_sets` | `list` | Feature arrays to score after calibration |
+| `method` | `str` | Calibration method, typically `isotonic` or `sigmoid` |
+
+#### Returns
+
+`tuple`: Calibrated positive-class probability arrays for each entry in `x_sets`
+
+### `optimize_binary_threshold`
+
+Sweep validation thresholds and return the best binary decision threshold.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `y_val` | `np.ndarray` | Validation labels |
+| `y_val_proba` | `np.ndarray` | Validation probabilities for the positive class |
+| `threshold_min` | `float` | Minimum threshold to test |
+| `threshold_max` | `float` | Maximum threshold to test |
+| `threshold_step` | `float` | Threshold step size |
+| `default_threshold` | `float` | Fallback threshold |
+| `metric` | `str` | Metric to optimize, such as `balanced`, `f1`, `precision`, or `accuracy` |
+
+#### Returns
+
+`tuple`: `(best_threshold, best_score)`
