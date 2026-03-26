@@ -82,7 +82,7 @@ In simple terms, the following constituents can be included in the `manifest` of
 - Transforms
 - Labels
 
-The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Limen. 
+The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Limen.
 
 Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md)
 
