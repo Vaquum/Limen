@@ -120,7 +120,7 @@ def test_fractional_diff_empty_dataframe():
     assert result.height == 0
 
 
-def test_fractional_diff_missing_column_warns():
+def test_fractional_diff_missing_column_skips():
 
     df = pl.DataFrame({'close': [100.0, 101.0, 102.0]})
     result = fractional_diff(df, d=0.0, cols=['close', 'nonexistent'])

@@ -260,7 +260,7 @@ from tests.test_fractional_diff import test_adf_test_stationary_series
 from tests.test_fractional_diff import test_adf_test_nonstationary_series
 from tests.test_fractional_diff import test_find_min_d_returns_valid_d
 from tests.test_fractional_diff import test_fractional_diff_empty_dataframe
-from tests.test_fractional_diff import test_fractional_diff_missing_column_warns
+from tests.test_fractional_diff import test_fractional_diff_missing_column_skips
 from tests.test_fractional_diff import test_adf_test_empty_series
 from tests.test_fractional_diff import test_adf_test_constant_series
 from tests.test_fractional_diff import test_find_min_d_step_zero_raises
@@ -528,7 +528,7 @@ tests = [
     test_adf_test_nonstationary_series,
     test_find_min_d_returns_valid_d,
     test_fractional_diff_empty_dataframe,
-    test_fractional_diff_missing_column_warns,
+    test_fractional_diff_missing_column_skips,
     test_adf_test_empty_series,
     test_adf_test_constant_series,
     test_find_min_d_step_zero_raises,
