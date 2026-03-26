@@ -20,8 +20,11 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
         threshold (float): Weight truncation threshold
 
     Returns:
-        np.ndarray: Weight vector [w_0, w_1, ..., w_n]
+        np.ndarray: Weight vector [w_n, ..., w_1, w_0], where w_0 = 1.0 is the last element
     '''
+
+    if threshold <= 0:
+        raise ValueError(f"threshold must be positive, got {threshold}")
 
     weights = [1.0]
     k = 1
