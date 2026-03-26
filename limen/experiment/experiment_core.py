@@ -1,13 +1,14 @@
 import csv
+import importlib.metadata
 import json
 import logging
-import os
 import signal
 import sqlite3
 import time
 import warnings
 from collections.abc import Callable
 from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +68,7 @@ class UniversalExperimentLoop:
         if sfd is None:
             raise ValueError('sfd is required')
 
+        self._sfd_module_name = getattr(sfd, '__name__', None)
         self.params = sfd.params()
         self.manifest = None
 
@@ -81,11 +83,7 @@ class UniversalExperimentLoop:
                         'to manifest or pass data explicitly.'
                     )
 
-                env = os.getenv('LOOP_ENV', 'test')
-                if env == 'test' and self.manifest.test_data_source_config is not None:
-                    self.data = self.manifest.fetch_test_data()
-                else:
-                    self.data = self.manifest.fetch_data()
+                self.data = self.manifest.fetch_data_for_env()
             else:
                 self.data = data
 
@@ -383,6 +381,7 @@ class UniversalExperimentLoop:
         elif self._experiment_dir:
             self._guard_stale_artifacts()
             self._initialize_fresh(self._experiment_dir, checkpoint_manager)
+            self._write_metadata(self._experiment_dir)
 
         last_msq_state = msq.get_state()
         last_completed_round = None
@@ -716,7 +715,7 @@ class UniversalExperimentLoop:
 
         artifact_files = [
             'results.csv', 'round_data.jsonl', 'checkpoint.json',
-            'audit.jsonl', 'interventions.json',
+            'audit.jsonl', 'interventions.json', 'metadata.json',
         ]
         existing = [
             f for f in artifact_files
@@ -749,6 +748,41 @@ class UniversalExperimentLoop:
         '''
 
         return checkpoint_manager.initialize_fresh(checkpoint_dir)
+
+
+    def _write_metadata(self, experiment_dir: Path) -> None:
+
+        '''
+        Write metadata.json to experiment directory.
+
+        Args:
+            experiment_dir (Path): Directory to write metadata into
+
+        '''
+
+        if self._sfd_module_name is None:
+            raise ValueError(
+                'Cannot write metadata: SFD module has no __name__ attribute. '
+                'Trainer requires a reimportable SFD module.'
+            )
+
+        metadata = {
+            'sfd_module': self._sfd_module_name,
+            'limen_version': self._get_limen_version(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
+        }
+
+        with (experiment_dir / 'metadata.json').open('w') as f:
+            json.dump(metadata, f, indent=2)
+
+
+    @staticmethod
+    def _get_limen_version() -> str:
+
+        try:
+            return importlib.metadata.version('vaquum_limen')
+        except importlib.metadata.PackageNotFoundError:
+            return 'dev'
 
 
     def _checkpoint(self,

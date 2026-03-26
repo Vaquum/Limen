@@ -565,3 +565,54 @@
 - Add Pattern Recognition (Candlesticks): `indicators.cdl2crows`, `indicators.cdl3blackcrows`, `indicators.cdl3inside`, `indicators.cdl3linestrike`, `indicators.cdl3starsinsouth`, `indicators.cdl3whitesoldiers`, `indicators.cdlabandonedbaby`, `indicators.cdladvancedblock`, `indicators.cdlbelthold`, `indicators.cdlclosingmarubozu`, `indicators.cdlconcealbabyswall`, `indicators.cdlcounterattack`, `indicators.cdldarkcloudcover`, `indicators.cdldragonflydoji`, `indicators.cdlengulfing`, `indicators.cdlgravestonedoji`, `indicators.cdlhammer`, `indicators.cdlhangingman`, `indicators.cdlharami`, `indicators.cdlharamicross`, `indicators.cdlhighwave`, `indicators.cdlhikkake`, `indicators.cdlhikkakemod`, `indicators.cdlhomingpigeon`, `indicators.cdlidentical3crows`, `indicators.cdlinvertedhammer`, `indicators.cdlladderbottom`, `indicators.cdllongleggeddoji`, `indicators.cdllongline`, `indicators.cdlmarubozu`, `indicators.cdlmatchinglow`, `indicators.cdlmathold`, `indicators.cdlonneck`, `indicators.cdlpiercing`, `indicators.cdlrickshawman`, `indicators.cdlrisefall3methods`, `indicators.cdlseparatinglines`, `indicators.cdlshootingstar`, `indicators.cdlshortline`, `indicators.cdlspinningtop`, `indicators.cdlstalledpattern`, `indicators.cdlsticksandwich`, `indicators.cdltakuri`, `indicators.cdlthrusting`, `indicators.cdltristar`, `indicators.cdlunique3river`, `indicators.coldoji`
 - Add TA-Lib parity test file `tests/test_indicators_vs_talib.py`.
 - Add ta-lib to `pyproject.toml` dependencies for testing purpose
+
+## v1.41.1 on 10th of March, 2026
+
+- Add `CorrelationReducer` pruning strategy with wrong-direction removal and low-impact suggestions
+- Add named filter infrastructure to `MSQ` with `set_filter`/`clear_filter` for reversible domain restrictions
+- Add declarative filter specs (`FILTER_EXCLUDE_VALUE`, `FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_SAMPLE`) with builder registry in `FeedbackController`
+- Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
+- Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
+- Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
+
+## v1.42.0 on 12th of March, 2026
+
+- Add `ReferenceModel` abstract base class for class-based reference architecture with shared `_compute_confusion()` and `_compute_backtest()` helpers
+- Refactor `XGBoostRegressor`, `LogRegBinary`, `RandomBinary`, `TabPFNBinary` from standalone functions to classes with `.train()` / `.evaluate()` interface
+- Legacy function wrappers preserved for backward compatibility
+
+## v1.43.0 on 13th of March, 2026
+
+- Add `price_data_for_backtest` to `prepare_data()` output with raw OHLC from test split after bar formation
+- Add `with_params_override()` method to `Manifest` for creating deep copies with overridden split_config or data source parameters
+
+## v1.44.0 on 16th of March, 2026
+
+- Enable inline metrics (`confusion_*`, `backtest_*` columns) in all reference architecture function wrappers by default
+
+## v1.45.0 on 17th of March, 2026
+
+- Add `metadata.json` to experiment directory, written on experiment start with SFD module path and version
+- Add `Trainer` class for retraining selected permutations from a completed experiment
+- Add `Sensor` class as callable wrapper around trained models
+
+## v1.46.0 on 20th of March, 2026
+
+- Add Pass 2 full-data retraining to Trainer with `split_config=(1,0,0)`
+- Add `ReconstructionError` exception raised when Pass 1 metrics deviate beyond tolerance
+- Add `deterministic` class attribute to `ReferenceModel` for per-model tolerance selection
+- Sensor now wraps trained `ReferenceModel` and is callable for inference
+
+## v1.47.0 on 23rd of March, 2026
+
+- Replace `FeatureEntry` tuple with `TransformEntry` dataclass supporting `group` and `include_if` metadata
+- Add feature group filtering via `feature_groups` round_params key
+- Add conditional feature inclusion via `include_if` round_params key
+- Add `set_feature_ablation()` for random Drop-N feature column ablation with deterministic seeding
+- Rename `FeatureEntry` to `PipelineStep` for pre-split and bar formation pipeline steps
+
+## v1.48.0 on 24th of March, 2026
+
+- Add `RobustScaler` with median and IQR scaling
+- Add `RankGaussScaler` with rank-to-normal Gaussian transformation
+- Add `SCALER_REGISTRY` and `set_scaler_from_params()` for params-based scaler selection

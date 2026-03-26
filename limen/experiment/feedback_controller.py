@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any
 
 from limen.experiment.msq import MSQ
+from limen.experiment.reducer.filter_types import FILTER_BUILDERS
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.search_strategy import SearchStrategy
@@ -22,6 +23,39 @@ _SOURCE_ERRORS = (
     OSError,
     json.JSONDecodeError,
 )
+
+
+def _apply_set_filter(msq: MSQ, intervention: dict[str, Any]) -> None:
+
+    '''Validate and apply a set_filter intervention to the MSQ.'''
+
+    filter_type = intervention.get('filter_type')
+    filter_params = intervention.get('filter_params')
+
+    if filter_type not in FILTER_BUILDERS:
+        supported = ', '.join(sorted(FILTER_BUILDERS.keys()))
+        raise ValueError(
+            f"Unknown filter_type '{filter_type}'. Supported types: {supported}"
+        )
+
+    if not isinstance(filter_params, dict):
+        raise ValueError(
+            f"filter_params must be a dict, got {type(filter_params).__name__}"
+        )
+
+    try:
+        condition = FILTER_BUILDERS[filter_type](filter_params)
+    except KeyError as e:
+        raise ValueError(
+            f"filter_params for '{filter_type}' missing required key: {e}"
+        ) from e
+
+    msq.set_filter(
+        intervention['key'],
+        condition,
+        filter_type=filter_type,
+        filter_params=filter_params,
+    )
 
 
 class FeedbackController:
@@ -285,6 +319,8 @@ class FeedbackController:
             'inject': lambda i: msq.inject(i['combo'], prioritize=i.get('prioritize', False)),
             'inject_value': lambda i: msq.inject_value(i['param'], i['value']),
             'trim': lambda i: msq.trim(i['target_count']),
+            'set_filter': lambda i: _apply_set_filter(msq, i),
+            'clear_filter': lambda i: msq.clear_filter(i['key']),
         }
 
         op = intervention['op']

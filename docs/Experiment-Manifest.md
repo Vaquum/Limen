@@ -18,9 +18,10 @@ The manifest enforces a split-first processing pattern:
 
 1. **Split Phase**: Raw data divided into train/validation/test splits
 2. **Bar Formation Phase**: Each split processes bars independently (if configured)
-3. **Feature Engineering Phase**: Indicators and features computed per split
+3. **Feature Engineering Phase**: Indicators and features computed per split (with group filtering and conditional inclusion)
 4. **Target Transformation Phase**: Targets computed with fitted parameters (train) or applied parameters (val/test)
-5. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
+5. **Feature Ablation Phase**: Random feature columns dropped if ablation is configured (runs after target transforms so targets can reference any feature)
+6. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
 
 This architecture ensures no data leakage between splits and maintains reproducible results.
 
@@ -97,7 +98,7 @@ def manifest():
             .done()
 
         # Scaling and model
-        .set_scaler(LogregTransform)
+        .set_scaler(LogRegScaler)
         .with_model(logreg_binary)
     )
 ```
@@ -299,7 +300,7 @@ Set required columns that must be present after bar formation (validation check)
 
 ## Feature Engineering
 
-### `.add_indicator(func, **params)`
+### `.add_indicator(func, group=None, include_if=None, **params)`
 
 Add technical indicator to the pipeline. Indicators are computational functions that derive technical analysis metrics from price/volume data.
 
@@ -308,6 +309,8 @@ Add technical indicator to the pipeline. Indicators are computational functions 
 | Parameter | Type       | Description                        |
 |-----------|------------|------------------------------------|
 | `func`    | `Callable` | Indicator function                 |
+| `group`   | `str \| None` | Perturbation group tag for feature filtering |
+| `include_if` | `str \| None` | round_params key that controls inclusion |
 | `**params`| `dict`     | Parameter mappings from round_params |
 
 **Returns:** `Manifest` (self for chaining)
@@ -354,7 +357,7 @@ Parameters are mapped from `round_params` using string references:
 )
 ```
 
-### `.add_feature(func, **params)`
+### `.add_feature(func, group=None, include_if=None, **params)`
 
 Add feature computation to the pipeline. Features are derived metrics that provide additional context or transformations beyond standard indicators.
 
@@ -363,6 +366,8 @@ Add feature computation to the pipeline. Features are derived metrics that provi
 | Parameter | Type       | Description                        |
 |-----------|------------|------------------------------------|
 | `func`    | `Callable` | Feature function                   |
+| `group`   | `str \| None` | Perturbation group tag for feature filtering |
+| `include_if` | `str \| None` | round_params key that controls inclusion |
 | `**params`| `dict`     | Parameter mappings from round_params |
 
 **Returns:** `Manifest` (self for chaining)
@@ -460,16 +465,62 @@ def custom_momentum(data: pl.LazyFrame, window: int = 20, threshold: float = 0.0
 .add_indicator(custom_momentum, window='momentum_window', threshold='momentum_threshold')
 ```
 
-**In params():**
+### Feature Perturbation
+
+Feature perturbation controls which indicators and features are included in each permutation, enabling systematic exploration of feature subsets.
+
+#### Group Filtering
+
+Tag indicators and features with semantic groups, then select subsets via `feature_groups` in round_params.
 
 ```python
-def params():
-    return {
-        'momentum_window': [10, 20, 30],
-        'momentum_threshold': [0.01, 0.02, 0.03],
-        # ...
-    }
+# Tag indicators with groups
+.add_indicator(roc, group='momentum', period='roc_period')
+.add_indicator(atr, group='volatility', period=14)
+.add_indicator(sma, group='trend', column='close', period=20)
+.add_feature(vwap, group='volume')
+
+# In params: select which groups to include per permutation
+params = {
+    'feature_groups': [['momentum'], ['volatility'], ['momentum', 'volatility', 'trend']],
+}
 ```
+
+If `feature_groups` is not in round_params, all features are included regardless of their group tag. Features with no group tag are always included even when `feature_groups` is set — they are treated as unconditional baseline transforms.
+
+#### Conditional Inclusion
+
+Enable or disable specific features via boolean round_params keys.
+
+```python
+.add_indicator(wilder_rsi, include_if='include_rsi', period=14)
+
+# In params
+params = {'include_rsi': [True, False]}  # creates with/without RSI permutations
+```
+
+If the `include_if` key is absent from round_params, the feature is included by default.
+
+#### Feature Ablation (Drop-N)
+
+Configure via `.set_feature_ablation(drop_count_key, seed_key)`. Randomly drops N feature columns per permutation using a deterministic seed. Operates on columns after all feature transforms are applied.
+
+```python
+manifest = (Manifest()
+    .add_indicator(roc, period=12)
+    .add_indicator(atr, period=14)
+    .add_feature(vwap)
+    .set_feature_ablation()  # uses default keys: 'feature_drop_count', 'feature_drop_seed'
+    # ...
+)
+
+params = {
+    'feature_drop_count': [0, 1, 2],    # drop 0, 1, or 2 feature columns
+    'feature_drop_seed': [42, 43, 44],  # different random subsets
+}
+```
+
+The same `(count, seed)` pair always drops the same columns. If `feature_drop_count` is missing from round_params, it defaults to `0` (no ablation). If `feature_drop_seed` is missing, it defaults to `0` — provide an explicit seed to get different random subsets across permutations. Dropped column names are stored in `round_params['_dropped_features']` for traceability. Only columns added by feature transforms are eligible for dropping — base data columns and bar formation columns are always protected.
 
 ## Target Configuration
 
@@ -695,14 +746,41 @@ Set scaler/transform class for data preprocessing. The scaler is fitted on train
 **Available scalers:**
 
 ```python
-from limen.scalers import LinearScaler    # Linear scaling
+from limen.scalers import LinearScaler    # Linear scaling (regex-based column rules)
 from limen.scalers import LogRegScaler    # Logistic regression specific
+from limen.scalers import RobustScaler    # Median + IQR scaling (outlier-resilient)
+from limen.scalers import RankGaussScaler # Rank-to-Gaussian transformation
 ```
+
+See [Scalers](Scalers.md) for detailed documentation on each scaler.
 
 **Example:**
 
 ```python
 .set_scaler(LinearScaler)
+```
+
+### `.set_scaler_from_params(param_name='scaler_type')`
+
+Select scaler type from round_params at runtime, enabling scaler as a perturbation parameter.
+
+**Args:**
+
+| Parameter    | Type  | Description                                       |
+|--------------|-------|---------------------------------------------------|
+| `param_name` | `str` | round_params key that holds the scaler type string |
+
+**Returns:** `Manifest` (self for chaining)
+
+**Available types:** `'linear'`, `'logreg'`, `'robust'`, `'rank_gauss'`
+
+**Example:**
+
+```python
+.set_scaler_from_params('scaler_type')
+
+# In params()
+params = {'scaler_type': ['linear', 'robust', 'rank_gauss']}
 ```
 
 ## Data Dict Extension
@@ -755,6 +833,64 @@ def add_metadata(data_dict, split_data, round_params, fitted_params):
     return data_dict
 
 .add_to_data_dict(add_metadata)
+```
+
+### Data Dict Keys
+
+`prepare_data()` returns a dictionary with these keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `x_train` | `pl.DataFrame` | Training features |
+| `y_train` | `pl.Series` | Training targets |
+| `x_val` | `pl.DataFrame` | Validation features |
+| `y_val` | `pl.Series` | Validation targets |
+| `x_test` | `pl.DataFrame` | Test features |
+| `y_test` | `pl.Series` | Test targets |
+| `_alignment` | `dict` | Datetime alignment metadata (`first_test_datetime`, `last_test_datetime`, `missing_datetimes`) |
+| `_feature_names` | `list[str]` | Column names including target |
+| `price_data_for_backtest` | `pl.DataFrame` or absent | Raw OHLC from test split with columns `datetime`, `open`, `high`, `low`, `close`. Present only when the test split contains all five columns after bar formation. Row-aligned with `x_test` |
+
+**NOTE:** `price_data_for_backtest` is distinct from `Manifest.compute_test_bars()`. `price_data_for_backtest` is extracted during `prepare_data()` and row-aligned with the final `x_test` for inline backtest metrics during model evaluation. `compute_test_bars()` is used by the Log system for post-hoc reconstruction and returns the full bar-formed test split with all columns.
+
+## Parameter Override
+
+### `.with_params_override(**overrides)`
+
+Create a deep copy of the manifest with overridden parameters. The original manifest is not modified.
+
+**NOTE:** This method is primarily used by the Trainer for two-pass training, where Pass 2 overrides `split_config` to `(1, 0, 0)` to retrain on all available data.
+
+**Args:**
+
+| Parameter       | Type                     | Description                                                    |
+|-----------------|--------------------------|----------------------------------------------------------------|
+| `split_config`  | `tuple[int, int, int]`   | New split ratios (overrides `.set_split_config()`)             |
+| `**kwargs`      | `Any`                    | Data source param overrides (validated against the data source method signature) |
+
+**Returns:** `Manifest` (new deep copy with overridden parameters)
+
+**Raises:** `ValueError` if a key is not `split_config` and not accepted by the data source method
+
+**Example:**
+
+```python
+manifest = Manifest().set_data_source(
+    method=HistoricalData.get_spot_klines,
+    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+).set_split_config(7, 1, 2)
+
+# Override split config for retraining on all data
+retrain_manifest = manifest.with_params_override(split_config=(1, 0, 0))
+
+# Override data source params
+extended_manifest = manifest.with_params_override(
+    start_date_limit='2024-01-01',
+    kline_size=7200,
+)
+
+# Original manifest is unchanged
+assert manifest.split_config == (7, 1, 2)
 ```
 
 ## Model Configuration

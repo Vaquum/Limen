@@ -1,17 +1,42 @@
-import polars as pl
+import copy
 import inspect
 import importlib
-
+import os
+import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
-from collections.abc import Callable
+
+import polars as pl
+
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_sequential
+from limen.scalers.registry import SCALER_REGISTRY
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
-FeatureEntry = tuple[Callable[..., pl.LazyFrame], dict[str, ParamValue]]
+PipelineStep = tuple[Callable[..., pl.DataFrame], dict[str, ParamValue]]
 
 FittedParamsComputationEntry = tuple[str, Callable[..., Any], dict[str, ParamValue]]
+
+
+@dataclass
+class TransformEntry:
+
+    '''Feature or indicator transform with optional perturbation metadata.'''
+
+    func: Callable
+    params: dict[str, ParamValue] = field(default_factory=dict)
+    group: str | None = None
+    include_if: str | None = None
+
+
+@dataclass
+class AblationConfig:
+
+    '''Configuration for random feature ablation (Drop-N).'''
+
+    drop_count_key: str
+    seed_key: str
 
 FittedTransformEntry = tuple[
     list[FittedParamsComputationEntry],
@@ -135,23 +160,34 @@ class Manifest:
 
     data_source_config: DataSourceConfig = None
     test_data_source_config: DataSourceConfig = None
-    pre_split_data_selector: FeatureEntry = None
+    pre_split_data_selector: PipelineStep = None
     split_config: tuple[int, int, int] = (8, 1, 2)
-    bar_formation: FeatureEntry = None
+    bar_formation: PipelineStep = None
     required_bar_columns: list[str] = field(default_factory=list)
-    feature_transforms: list[FeatureEntry] = field(default_factory=list)
+    feature_transforms: list[TransformEntry] = field(default_factory=list)
     target_column: str = None
     target_transforms: list[FittedTransformEntry] = field(default_factory=list)
     scaler: FittedTransformEntry = None
+    ablation_config: AblationConfig | None = None
     data_dict_extension: Callable = None
 
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
 
-    def _add_transform(self, func: Callable, **params: Any) -> 'Manifest':
+    def _add_transform(self,
+                       func: Callable,
+                       group: str | None = None,
+                       include_if: str | None = None,
+                       **params: Any) -> 'Manifest':
 
-        self.feature_transforms.append((func, params))
+        entry = TransformEntry(
+            func=func,
+            params=params,
+            group=group,
+            include_if=include_if,
+        )
+        self.feature_transforms.append(entry)
 
         return self
 
@@ -217,35 +253,63 @@ class Manifest:
 
         return DataSourceResolver.resolve(self.test_data_source_config)
 
-    def add_feature(self, func: Callable, **params: Any) -> 'Manifest':
+    def fetch_data_for_env(self) -> pl.DataFrame:
+
+        '''
+        Fetch data based on LOOP_ENV environment variable.
+
+        Returns:
+            pl.DataFrame: Fetched data from test or production source
+
+        '''
+
+        env = os.getenv('LOOP_ENV', 'test')
+        if env == 'test' and self.test_data_source_config is not None:
+            return self.fetch_test_data()
+        return self.fetch_data()
+
+    def add_feature(self,
+                    func: Callable,
+                    group: str | None = None,
+                    include_if: str | None = None,
+                    **params: Any) -> 'Manifest':
 
         '''
         Add feature transformation to the manifest.
 
         Args:
             func (Callable): Feature transformation function
+            group (str | None): Perturbation group tag for feature filtering
+            include_if (str | None): round_params key that controls inclusion
             **params: Parameters for the transformation
 
         Returns:
             Manifest: Self for method chaining
         '''
 
-        return self._add_transform(func, **params)
+        return self._add_transform(func, group=group, include_if=include_if, **params)
 
-    def add_indicator(self, func: Callable, **params: Any) -> 'Manifest':
+
+    def add_indicator(self,
+                      func: Callable,
+                      group: str | None = None,
+                      include_if: str | None = None,
+                      **params: Any) -> 'Manifest':
 
         '''
         Add indicator transformation to the manifest.
 
         Args:
             func (Callable): Indicator transformation function
+            group (str | None): Perturbation group tag for feature filtering
+            include_if (str | None): round_params key that controls inclusion
             **params: Parameters for the transformation
 
         Returns:
             Manifest: Self for method chaining
         '''
 
-        return self._add_transform(func, **params)
+        return self._add_transform(func, group=group, include_if=include_if, **params)
 
     def set_pre_split_data_selector(self, func: Callable, **params: Any) -> 'Manifest':
 
@@ -332,6 +396,48 @@ class Manifest:
 
         return self
 
+
+    def set_scaler_from_params(self,
+                               param_name: str = 'scaler_type') -> 'Manifest':
+
+        '''
+        Configure scaler selection from round_params at runtime.
+
+        The scaler class is resolved from the scaler registry using
+        the value of round_params[param_name].
+
+        Args:
+            param_name (str): round_params key that holds the scaler type string
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        def _scaler_factory(data: 'pl.DataFrame',
+                            scaler_type: str = '') -> Any:
+
+            if scaler_type not in SCALER_REGISTRY:
+                if scaler_type == param_name:
+                    raise ValueError(
+                        f"round_params['{param_name}'] is required when using "
+                        f"set_scaler_from_params(). "
+                        f"Available types: {sorted(SCALER_REGISTRY)}"
+                    )
+                raise ValueError(
+                    f"Unknown scaler type '{scaler_type}'. "
+                    f"Available: {sorted(SCALER_REGISTRY)}"
+                )
+            return SCALER_REGISTRY[scaler_type](data)
+
+        self.scaler = (
+            [('_scaler', _scaler_factory, {'scaler_type': param_name})],
+            _apply_fitted_transform,
+            {'fitted_transform': '_scaler'},
+        )
+
+        return self
+
+
     def with_target(self, target_column: str) -> TargetBuilder:
 
         '''
@@ -365,6 +471,32 @@ class Manifest:
 
         return self
 
+    def set_feature_ablation(self,
+                             drop_count_key: str = 'feature_drop_count',
+                             seed_key: str = 'feature_drop_seed') -> 'Manifest':
+
+        '''
+        Configure random feature ablation (Drop-N).
+
+        Randomly drops N feature columns per permutation using a
+        deterministic seed from round_params. Runs after feature and
+        target transforms in the prepare_data pipeline.
+
+        Args:
+            drop_count_key (str): round_params key for number of columns to drop
+            seed_key (str): round_params key for random seed
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.ablation_config = AblationConfig(
+            drop_count_key=drop_count_key,
+            seed_key=seed_key,
+        )
+        return self
+
+
     def add_to_data_dict(self, func: Callable) -> 'Manifest':
 
         '''
@@ -382,6 +514,57 @@ class Manifest:
 
         self.data_dict_extension = func
         return self
+
+    def with_params_override(self, **overrides: Any) -> 'Manifest':
+
+        '''
+        Create a deep copy of this manifest with overridden parameters.
+
+        Args:
+            **overrides: Parameters to override. 'split_config' overrides the split
+                ratios directly. All other keys are treated as data source param
+                overrides and are validated against the data source method signature
+
+        Returns:
+            Manifest: New manifest with overridden parameters
+
+        Raises:
+            ValueError: If a key is not 'split_config' and not accepted by the
+                data source method
+        '''
+
+        new_manifest = copy.deepcopy(self)
+
+        if 'split_config' in overrides:
+            sc = overrides['split_config']
+            _split_len = 3
+            if not (isinstance(sc, tuple) and len(sc) == _split_len
+                    and all(isinstance(v, int) and not isinstance(v, bool) for v in sc)):
+                raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
+            if any(v < 0 for v in sc):
+                raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
+            if sum(sc) == 0:
+                raise ValueError('split_config ratios must not all be zero')
+            new_manifest.split_config = sc
+
+        ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
+        if ds_overrides:
+            if new_manifest.data_source_config is None:
+                raise ValueError('Cannot override data source params: no data source configured')
+            method_params = set(inspect.signature(
+                new_manifest.data_source_config.method
+            ).parameters.keys()) - {'self', 'cls'}
+            unknown = set(ds_overrides) - method_params
+            if unknown:
+                raise ValueError(
+                    f"Unknown data source params: {sorted(unknown)}. "
+                    f"Accepted by {new_manifest.data_source_config.method.__name__}: "
+                    f"{sorted(method_params)}"
+                )
+            new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
+            new_manifest.data_source_config.params.update(ds_overrides)
+
+        return new_manifest
 
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: dict[str, Any]) -> pl.DataFrame:
 
@@ -437,7 +620,14 @@ class Manifest:
         all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
         split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
+        price_cols = ['datetime', 'open', 'high', 'low', 'close']
+        test_split = split_data[2]
+        available = [c for c in price_cols if c in test_split.columns]
+        price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
+
         all_fitted_params = {}
+        columns_to_drop: list[str] | None = None
+        pre_transform_columns = frozenset(split_data[0].columns)
 
         for i in range(len(split_data)):
             lazy_data = split_data[i].lazy()
@@ -445,9 +635,16 @@ class Manifest:
             lazy_data = _apply_feature_transforms(self, lazy_data, round_params)
 
             data = lazy_data.collect()
+
             data, all_fitted_params = _apply_target_transforms(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
+
+            if self.ablation_config is not None:
+                data, columns_to_drop = _apply_feature_ablation(
+                    data, self, round_params, columns_to_drop,
+                    pre_transform_columns,
+                )
 
             data = data.drop_nulls()
 
@@ -457,34 +654,40 @@ class Manifest:
 
             split_data[i] = data.drop_nulls()
 
-        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params)
+        if price_data_for_backtest is not None:
+            final_datetimes = split_data[2].select('datetime')
+            price_data_for_backtest = final_datetimes.join(
+                price_data_for_backtest, on='datetime', how='left',
+                maintain_order='left'
+            )
 
-    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
+
+    def resolve_model_kwargs(self, round_params: dict[str, Any]) -> dict[str, Any]:
 
         '''
-        Execute model training and evaluation using configured functions.
+        Resolve model function kwargs from round_params using signature inspection.
+
+        Maps round_params keys to model function parameters, falling back
+        to defaults for unspecified parameters.
 
         Args:
-            data (dict): Prepared data dictionary
-            round_params (Dict[str, Any]): Parameter values for current round
+            round_params (dict[str, Any]): Parameter values for current round
 
         Returns:
-            dict: Results including predictions, metrics, and optional extras
+            dict[str, Any]: Keyword arguments for the model function
 
         Raises:
-            ValueError: If required model function parameters are missing from round_params
+            ValueError: If model function is not configured or required parameters
+                are missing from round_params
 
-        NOTE: Auto-maps parameters from round_params to model function signature.
-        Parameters in round_params override model function defaults.
-        Parameters not in round_params use model function defaults.
-        Required parameters (no defaults) must be in round_params.
         '''
 
         if self.model_function is None:
-            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model().')
+            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model() or resolve_model_kwargs().')
 
         sig = inspect.signature(self.model_function)
-        model_kwargs = {}
+        model_kwargs: dict[str, Any] = {}
 
         for param_name, param_obj in sig.parameters.items():
             if param_name == 'data':
@@ -500,6 +703,31 @@ class Manifest:
                     'It must be provided in round_params.'
                 )
 
+        return model_kwargs
+
+
+    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+
+        '''
+        Execute model training and evaluation using configured functions.
+
+        Args:
+            data (dict): Prepared data dictionary
+            round_params (dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Results including predictions, metrics, and optional extras
+
+        Raises:
+            ValueError: If required model function parameters are missing from round_params
+
+        NOTE: Auto-maps parameters from round_params to model function signature.
+        Parameters in round_params override model function defaults.
+        Parameters not in round_params use model function defaults.
+        Required parameters (no defaults) must be in round_params.
+        '''
+
+        model_kwargs = self.resolve_model_kwargs(round_params)
         round_results = self.model_function(data, **model_kwargs)
 
         return round_results
@@ -608,11 +836,96 @@ def _process_bars(
     return all_datetimes, bar_data
 
 
+def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any]) -> bool:
+
+    if entry.include_if is not None and entry.include_if in round_params:
+        flag = round_params[entry.include_if]
+        if not isinstance(flag, bool):
+            raise TypeError(
+                f"round_params['{entry.include_if}'] must be a bool, got {flag!r}"
+            )
+        if not flag:
+            return False
+
+    if entry.group is None:
+        return True
+
+    feature_groups = round_params.get('feature_groups')
+    if feature_groups is None:
+        return True
+
+    if isinstance(feature_groups, str):
+        raise TypeError(
+            f"round_params['feature_groups'] must be a list, got {feature_groups!r}"
+        )
+
+    return entry.group in feature_groups
+
+
+def _apply_feature_ablation(
+        data: pl.DataFrame,
+        manifest: Manifest,
+        round_params: dict[str, Any],
+        columns_to_drop: list[str] | None,
+        pre_transform_columns: frozenset[str],
+) -> tuple[pl.DataFrame, list[str] | None]:
+
+    '''
+    Drop random feature columns from data for ablation.
+
+    NOTE: Mutates round_params by adding '_dropped_features' key
+    with the sorted list of dropped column names.
+    '''
+
+    config = manifest.ablation_config
+
+    raw_drop_count = round_params.get(config.drop_count_key)
+    drop_count = 0 if raw_drop_count is None else raw_drop_count
+    if not isinstance(drop_count, int) or isinstance(drop_count, bool) or drop_count < 0:
+        raise ValueError(
+            f"round_params['{config.drop_count_key}'] must be a non-negative int, "
+            f"got {raw_drop_count!r}"
+        )
+
+    raw_seed = round_params.get(config.seed_key)
+    seed = 0 if raw_seed is None else raw_seed
+    if not isinstance(seed, int) or isinstance(seed, bool):
+        raise ValueError(
+            f"round_params['{config.seed_key}'] must be an int, got {raw_seed!r}"
+        )
+
+    if drop_count == 0:
+        round_params.pop('_dropped_features', None)
+        return data, None
+
+    if columns_to_drop is None:
+        protected = pre_transform_columns
+        if manifest.target_column:
+            protected = protected | {manifest.target_column}
+        eligible = sorted(
+            c for c in data.columns if c not in protected
+        )
+
+        if drop_count > len(eligible):
+            raise ValueError(
+                f"{config.drop_count_key} ({drop_count}) exceeds "
+                f"eligible feature columns ({len(eligible)})"
+            )
+
+        rng = random.Random(seed)
+        columns_to_drop = rng.sample(eligible, drop_count)
+        round_params['_dropped_features'] = sorted(columns_to_drop)
+
+    return data.drop(columns_to_drop), columns_to_drop
+
+
 def _apply_feature_transforms(manifest: Manifest, lazy_data: pl.LazyFrame, round_params: dict[str, Any]) -> pl.LazyFrame:
 
-    for func, base_params in manifest.feature_transforms:
-        resolved = _resolve_params(base_params, round_params)
-        lazy_data = lazy_data.pipe(func, **resolved)
+    for entry in manifest.feature_transforms:
+        if not _should_include_transform(entry, round_params):
+            continue
+        resolved = _resolve_params(entry.params, round_params)
+        lazy_data = lazy_data.pipe(entry.func, **resolved)
 
     return lazy_data
 
@@ -682,10 +995,19 @@ def _apply_scaler(
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     if manifest.scaler:
-        return _apply_fitted_transforms(
+        target_col = manifest.target_column
+        target_data = None
+        if target_col and target_col in data.columns:
+            target_data = data[target_col]
+            data = data.drop(target_col)
+
+        data, all_fitted_params = _apply_fitted_transforms(
             [manifest.scaler], data, round_params,
             all_fitted_params, is_training
         )
+
+        if target_data is not None:
+            data = data.with_columns(target_data)
 
     return data, all_fitted_params
 
@@ -695,7 +1017,8 @@ def _finalize_to_data_dict(
         split_data: list[pl.DataFrame],
         all_datetimes: list,
         fitted_params: dict[str, Any],
-        round_params: dict[str, Any]
+        round_params: dict[str, Any],
+        price_data_for_backtest: pl.DataFrame | None = None
 ) -> dict:
 
     # Validate all splits have datetime column
@@ -723,6 +1046,9 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     data_dict['_feature_names'] = cols
+
+    if price_data_for_backtest is not None:
+        data_dict['price_data_for_backtest'] = price_data_for_backtest
 
     # Apply data_dict extension if configured
     if manifest.data_dict_extension:

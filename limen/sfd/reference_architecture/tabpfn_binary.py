@@ -1,7 +1,11 @@
+from typing import Any
+
 import numpy as np
+
 from tabpfn import TabPFNClassifier
 
 from limen.metrics.binary_metrics import binary_metrics
+from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.transforms.calibrate_classifier import calibrate_classifier
 from limen.transforms.optimize_binary_threshold import optimize_binary_threshold
 from limen.utils.data_dict_to_numpy import data_dict_to_numpy
@@ -14,6 +18,127 @@ THRESHOLD_MIN = 0.20
 THRESHOLD_MAX = 0.70
 THRESHOLD_STEP = 0.05
 DEFAULT_THRESHOLD = 0.35
+
+
+class TabPFNBinary(ReferenceModel):
+
+    '''TabPFN binary classifier with train/evaluate interface.'''
+
+    deterministic = False
+
+    def __init__(self) -> None:
+
+        super().__init__()
+        self._use_calibration = True
+        self._threshold_metric = 'balanced'
+
+    def train(self, data: dict, **params: Any) -> 'TabPFNBinary':
+
+        '''
+        Train TabPFN classifier on provided data.
+
+        Args:
+            data (dict): Data dictionary with x_train, y_train
+            **params: TabPFN hyperparameters including n_ensemble_configurations, device
+
+        Returns:
+            TabPFNBinary: Self with fitted model stored
+        '''
+
+        self._use_calibration = params.pop('use_calibration', True)
+        self._threshold_metric = params.pop('threshold_metric', 'balanced')
+
+        n_ensemble_configurations = params.pop('n_ensemble_configurations', 4)
+        device = params.pop('device', 'cpu')
+
+        arrays = data_dict_to_numpy(data, ['x_train', 'y_train'])
+
+        self.model = TabPFNClassifier(
+            device=device,
+            n_estimators=n_ensemble_configurations,
+            model_path=TABPFN_MODEL_PATH,
+            ignore_pretraining_limits=True,
+            **params,
+        )
+
+        self.model.fit(arrays['x_train'], arrays['y_train'])
+
+        return self
+
+    def predict(self, data: dict) -> dict:
+
+        '''
+        Compute binary predictions with threshold tuning on validation set.
+
+        Args:
+            data (dict): Data dictionary with x_val, y_val, x_test
+
+        Returns:
+            dict: Prediction results with '_preds', '_probs', 'optimal_threshold',
+                'val_score' keys
+        '''
+
+        arrays = data_dict_to_numpy(data, ['x_val', 'y_val', 'x_test'])
+        x_val = arrays['x_val']
+        y_val = arrays['y_val']
+        x_test = arrays['x_test']
+
+        if self._use_calibration:
+            y_val_proba, y_test_proba = calibrate_classifier(
+                self.model, x_val, y_val, [x_val, x_test], method='isotonic'
+            )
+        else:
+            y_val_proba = self.model.predict_proba(x_val)[:, 1]
+            y_test_proba = self.model.predict_proba(x_test)[:, 1]
+
+        best_threshold, best_score = optimize_binary_threshold(
+            y_val,
+            y_val_proba,
+            threshold_min=THRESHOLD_MIN,
+            threshold_max=THRESHOLD_MAX,
+            threshold_step=THRESHOLD_STEP,
+            default_threshold=DEFAULT_THRESHOLD,
+            metric=self._threshold_metric,
+        )
+
+        y_pred = (y_test_proba >= best_threshold).astype(np.int8)
+
+        return {
+            '_preds': y_pred,
+            '_probs': y_test_proba,
+            'optimal_threshold': best_threshold,
+            'val_score': best_score,
+        }
+
+
+    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+
+        '''
+        Evaluate trained model on test data with threshold tuning.
+
+        Args:
+            data (dict): Data dictionary with x_val, y_val, x_test, y_test,
+                         and optionally price_data_for_backtest
+            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+
+        Returns:
+            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+        '''
+
+        pred_result = self.predict(data)
+        preds = pred_result['_preds']
+        probs = pred_result['_probs']
+
+        results = binary_metrics(data, preds, probs)
+        results['optimal_threshold'] = pred_result['optimal_threshold']
+        results['val_score'] = pred_result['val_score']
+        results['_preds'] = preds
+
+        if inline_metrics:
+            results.update(self._compute_confusion(preds, data['y_test']))
+            results.update(self._compute_backtest(preds, data))
+
+        return results
 
 
 def tabpfn_binary(data: dict,
@@ -33,48 +158,17 @@ def tabpfn_binary(data: dict,
         threshold_metric (str): Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
 
     Returns:
-        dict: Results from binary_metrics with '_preds', 'optimal_threshold', 'val_score' added
+        dict: Results with binary metrics, predictions, inline confusion metrics,
+            backtest metrics when price_data_for_backtest is in data,
+            and 'optimal_threshold', 'val_score'
     '''
 
-    arrays = data_dict_to_numpy(data, ['x_train', 'y_train', 'x_val', 'y_val', 'x_test'])
-    x_train = arrays['x_train']
-    y_train = arrays['y_train']
-    x_val = arrays['x_val']
-    y_val = arrays['y_val']
-    x_test = arrays['x_test']
-
-    clf = TabPFNClassifier(
+    model = TabPFNBinary().train(
+        data,
+        n_ensemble_configurations=n_ensemble_configurations,
         device=device,
-        n_estimators=n_ensemble_configurations,
-        model_path=TABPFN_MODEL_PATH,
-        ignore_pretraining_limits=True
+        use_calibration=use_calibration,
+        threshold_metric=threshold_metric,
     )
 
-    clf.fit(x_train, y_train)
-
-    if use_calibration:
-        y_val_proba, y_test_proba = calibrate_classifier(
-            clf, x_val, y_val, [x_val, x_test], method='isotonic'
-        )
-    else:
-        y_val_proba = clf.predict_proba(x_val)[:, 1]
-        y_test_proba = clf.predict_proba(x_test)[:, 1]
-
-    best_threshold, best_score = optimize_binary_threshold(
-        y_val,
-        y_val_proba,
-        threshold_min=THRESHOLD_MIN,
-        threshold_max=THRESHOLD_MAX,
-        threshold_step=THRESHOLD_STEP,
-        default_threshold=DEFAULT_THRESHOLD,
-        metric=threshold_metric
-    )
-
-    y_pred = (y_test_proba >= best_threshold).astype(np.int8)
-
-    round_results = binary_metrics(data, y_pred, y_test_proba)
-    round_results['_preds'] = y_pred
-    round_results['optimal_threshold'] = best_threshold
-    round_results['val_score'] = best_score
-
-    return round_results
+    return model.evaluate(data, inline_metrics=True)
