@@ -107,7 +107,11 @@ RDOP extends UEL workflows by providing model-level diversification:
 ```python
 # Standard UEL produces individual model results
 uel = UniversalExperimentLoop(data=train_data, sfd=your_sfd)
-uel.run('training_experiment', n_permutations=500)
+uel.run(
+    'training_experiment',
+    n_permutations=500,
+    prep_each_round=True,
+)
 
 # RDOP consumes UEL results for regime-aware aggregation
 rdop = RegimeDiversifiedOpinionPools(your_sfd)
@@ -124,8 +128,8 @@ Fully supports manifest-based SFDs with Universal Split-First architecture:
 ```python
 # Manifest-based SFD works seamlessly with RDOP
 if hasattr(your_sfd, 'manifest'):
-    manifest = your_sfd.manifest()
-    uel.run('experiment', manifest=manifest)  # RDOP will use same manifest
+    uel = UniversalExperimentLoop(sfd=your_sfd)
+    uel.run('experiment', n_permutations=100, prep_each_round=True)
 ```
 
 ## Architecture Benefits

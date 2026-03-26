@@ -33,7 +33,7 @@ Limen is a manifest-driven Bitcoin alpha research engine that turns market data 
 
 # Quick Start
 
-Anyone, with basic Python skills, can go from from nothing to robust tradeable signals in minutes.
+Anyone with basic Python skills can go from nothing to robust tradable signals in minutes.
 
 1) Start by installing the package:
 
@@ -61,11 +61,11 @@ uel.run(experiment_name=f"LogReg-First",
         prep_each_round=True)
 ```
 
-Completing the parameter sweep yields several useful datasets in the `uel.object`: 
+Completing the parameter sweep yields several useful datasets on the `uel` object:
 
-- Parameter Sweep Log
-- Advanced Confusion Matrix
-- Backtest Results
+- `uel.experiment_log` for parameter sweep results
+- `uel.experiment_confusion_metrics` for confusion analytics
+- `uel.experiment_backtest_results` for backtest results
 
 # Contributing
 
