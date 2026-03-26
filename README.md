@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="#value-proposition">Value Proposition</a> •
+  <a href="#capabilities">Capabilities</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#contributing">Contributing</a> •
   <a href="#license">License</a>
