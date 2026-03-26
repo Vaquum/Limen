@@ -695,6 +695,8 @@ class Manifest:
                         split_data[i] = split.with_columns(
                             [pl.lit(None).alias(c) for c in reference_cols if c in missing]
                         ).select(reference_cols)
+                    else:
+                        split_data[i] = split.select(reference_cols)
 
         if price_data_for_backtest is not None:
             final_datetimes = split_data[2].select('datetime')

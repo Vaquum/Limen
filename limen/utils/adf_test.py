@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import polars as pl
-from statsmodels.tsa.stattools import adfuller
 
 
 @dataclass
@@ -39,6 +38,8 @@ def adf_test(series: pl.Series,
             test_statistic=0.0,
             critical_values={},
         )
+    from statsmodels.tsa.stattools import adfuller
+
     try:
         result = adfuller(values, autolag='AIC')
     except (ValueError, np.linalg.LinAlgError):
@@ -50,7 +51,7 @@ def adf_test(series: pl.Series,
         )
 
     return AdfResult(
-        stationary=result[1] < significance_level,
+        stationary=result[1] <= significance_level,
         p_value=result[1],
         test_statistic=result[0],
         critical_values=result[4],

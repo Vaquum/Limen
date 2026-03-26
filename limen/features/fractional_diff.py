@@ -38,10 +38,10 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
     return np.array(weights[::-1])
 
 
-def fractional_diff(data: pl.DataFrame,
+def fractional_diff(data: pl.DataFrame | pl.LazyFrame,
                     d: float = 0.0,
                     cols: list[str] | None = None,
-                    threshold: float = 1e-5) -> pl.DataFrame:
+                    threshold: float = 1e-5) -> pl.DataFrame | pl.LazyFrame:
 
     '''
     Apply Fixed-Width Fractional Differentiation (FFD) to specified columns.
@@ -54,14 +54,15 @@ def fractional_diff(data: pl.DataFrame,
     NOTE: AFML recommends applying to log-transformed prices for best results.
 
     Args:
-        data (pl.DataFrame): Input data
+        data (pl.DataFrame | pl.LazyFrame): Input data
         d (float): Fractional differentiation order (0 = identity copy, 1 = standard diff)
         cols (list[str] | None): Columns to differentiate (required)
         threshold (float): Weight truncation threshold per AFML standard
 
     Returns:
-        pl.DataFrame: Data with new '{col}_fracdiff' columns added.
+        pl.DataFrame | pl.LazyFrame: Data with new '{col}_fracdiff' columns added.
             When d=0, the new columns are copies of the originals.
+            Returns same type as input.
 
     Raises:
         ValueError: If cols is None or empty
