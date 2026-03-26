@@ -23,7 +23,7 @@ Limen is a manifest-driven Bitcoin alpha research engine that turns market data 
 
 - Manifest-driven experiment pipelines
 - Search across models, rules, features, targets, and hyperparameters
-- Dozens of built-in indicators and features for Bitcoin research
+- Extensive built-in indicator and feature library for Bitcoin research
 - Support for both machine learning and rule-based strategy research
 - Bitcoin-native transforms, scaling, and target construction
 - Leakage-safe train, validation, and test workflows
