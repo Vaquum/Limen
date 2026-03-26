@@ -140,29 +140,6 @@ def _stoch_from_arrays(
     return out_slowk, out_slowd
 
 
-def _stoch_component(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
-    fastk_period: int,
-    slowk_period: int,
-    slowk_ma_type: int,
-    slowd_period: int,
-    slowd_ma_type: int,
-    component_index: int,
-) -> np.ndarray:
-    return _stoch_from_arrays(
-        high,
-        low,
-        close,
-        fastk_period,
-        slowk_period,
-        slowk_ma_type,
-        slowd_period,
-        slowd_ma_type,
-    )[component_index]
-
-
 def stoch(
     data: pl.DataFrame,
     high_col: str = 'high',
@@ -204,40 +181,23 @@ def stoch(
     if slowd_ma_type < 0 or slowd_ma_type > CMP_N_8:
         raise ValueError('slowd_ma_type must be between 0 and 8')
 
-    frame = data
-    return frame.with_columns(
+    high_values = data[high_col].to_numpy().astype(float, copy=False)
+    low_values = data[low_col].to_numpy().astype(float, copy=False)
+    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    slowk_values, slowd_values = _stoch_from_arrays(
+        high_values,
+        low_values,
+        close_values,
+        fastk_period,
+        slowk_period,
+        slowk_ma_type,
+        slowd_period,
+        slowd_ma_type,
+    )
+
+    return data.with_columns(
         [
-            pl.struct([high_col, low_col, close_col]).map_batches(
-                lambda s: pl.Series(
-                    _stoch_component(
-                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
-                        fastk_period,
-                        slowk_period,
-                        slowk_ma_type,
-                        slowd_period,
-                        slowd_ma_type,
-                        0,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('stoch_slowk'),
-            pl.struct([high_col, low_col, close_col]).map_batches(
-                lambda s: pl.Series(
-                    _stoch_component(
-                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
-                        fastk_period,
-                        slowk_period,
-                        slowk_ma_type,
-                        slowd_period,
-                        slowd_ma_type,
-                        1,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('stoch_slowd'),
+            pl.Series(name='stoch_slowk', values=slowk_values),
+            pl.Series(name='stoch_slowd', values=slowd_values),
         ]
     )

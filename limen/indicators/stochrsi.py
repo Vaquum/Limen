@@ -41,23 +41,6 @@ def _stochrsi_from_values(
     return out_fastk, out_fastd
 
 
-def _stochrsi_component(
-    values: np.ndarray,
-    period: int,
-    fastk_period: int,
-    fastd_period: int,
-    fastd_ma_type: int,
-    component_index: int,
-) -> np.ndarray:
-    return _stochrsi_from_values(
-        values,
-        period,
-        fastk_period,
-        fastd_period,
-        fastd_ma_type,
-    )[component_index]
-
-
 def stochrsi(
     data: pl.DataFrame,
     price_col: str = 'close',
@@ -91,34 +74,18 @@ def stochrsi(
     if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
         raise ValueError('fastd_ma_type must be between 0 and 8')
 
-    frame = data
-    return frame.with_columns(
+    values = data[price_col].to_numpy().astype(float, copy=False)
+    fastk_values, fastd_values = _stochrsi_from_values(
+        values,
+        period,
+        fastk_period,
+        fastd_period,
+        fastd_ma_type,
+    )
+
+    return data.with_columns(
         [
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _stochrsi_component(
-                        s.to_numpy().astype(float, copy=False),
-                        period,
-                        fastk_period,
-                        fastd_period,
-                        fastd_ma_type,
-                        0,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('stochrsi_fastk'),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _stochrsi_component(
-                        s.to_numpy().astype(float, copy=False),
-                        period,
-                        fastk_period,
-                        fastd_period,
-                        fastd_ma_type,
-                        1,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('stochrsi_fastd'),
+            pl.Series(name='stochrsi_fastk', values=fastk_values),
+            pl.Series(name='stochrsi_fastd', values=fastd_values),
         ]
     )

@@ -23,7 +23,7 @@ def ppo(
         data (pl.DataFrame): Dataset with input price column
         price_col (str): Column name for input price
         fast_period (int): Number of periods for fast MA (2..100000)
-        slow_period (int): Number of periods for slow MA (2..100000)
+        slow_period (int): Number of periods for slow MA (2..100000, must be greater than fast_period)
         ma_type (int): TA-Lib MA type (0..8)
 
     Returns:
@@ -36,28 +36,25 @@ def ppo(
         raise ValueError('slow_period must be between 2 and 100000')
     if ma_type < 0 or ma_type > CMP_N_8:
         raise ValueError('ma_type must be between 0 and 8')
-
-    effective_fast = fast_period
-    effective_slow = slow_period
-    if effective_slow < effective_fast:
-        effective_fast, effective_slow = effective_slow, effective_fast
+    if slow_period <= fast_period:
+        raise ValueError('slow_period must be greater than fast_period')
 
     out_col = f"ppo_{fast_period}_{slow_period}_{ma_type}"
     frame = data
 
-    fast_col = f"ma_{effective_fast}_{ma_type}"
-    slow_col = f"ma_{effective_slow}_{ma_type}"
+    fast_col = f"ma_{fast_period}_{ma_type}"
+    slow_col = f"ma_{slow_period}_{ma_type}"
 
     frame = ma(
         frame,
         price_col=price_col,
-        period=effective_fast,
+        period=fast_period,
         ma_type=ma_type,
     )
     frame = ma(
         frame,
         price_col=price_col,
-        period=effective_slow,
+        period=slow_period,
         ma_type=ma_type,
     )
 

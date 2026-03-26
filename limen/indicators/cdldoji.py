@@ -1,12 +1,12 @@
 import numpy as np
 import polars as pl
 
-COLDOJI_BODY_DOJI_AVG_PERIOD = 10
-COLDOJI_BODY_DOJI_FACTOR = 0.1
-COLDOJI_BODY_DOJI_PERIOD_TOTAL = 0.0
+CDLDOJI_BODY_DOJI_AVG_PERIOD = 10
+CDLDOJI_BODY_DOJI_FACTOR = 0.1
+CDLDOJI_BODY_DOJI_PERIOD_TOTAL = 0.0
 
 
-def _coldoji_impl(
+def _cdldoji_impl(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -25,7 +25,7 @@ def _coldoji_impl(
         close_col (str): Column name for close prices
 
     Returns:
-        pl.DataFrame: The input data with a new column 'coldoji'
+        pl.DataFrame: The input data with a new column 'cdldoji'
     '''
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
@@ -35,15 +35,15 @@ def _coldoji_impl(
     n = len(data)
 
 
-    body_doji_avg_period = COLDOJI_BODY_DOJI_AVG_PERIOD
-    body_doji_factor = COLDOJI_BODY_DOJI_FACTOR
+    body_doji_avg_period = CDLDOJI_BODY_DOJI_AVG_PERIOD
+    body_doji_factor = CDLDOJI_BODY_DOJI_FACTOR
     lookback_total = body_doji_avg_period
 
     out = np.zeros(n, dtype=np.int32)
     if n <= lookback_total:
-        return data.with_columns(pl.Series(name='coldoji', values=out))
+        return data.with_columns(pl.Series(name='cdldoji', values=out))
 
-    body_doji_period_total = COLDOJI_BODY_DOJI_PERIOD_TOTAL
+    body_doji_period_total = CDLDOJI_BODY_DOJI_PERIOD_TOTAL
     body_doji_trailing_idx = lookback_total - body_doji_avg_period
 
     i = body_doji_trailing_idx
@@ -66,10 +66,10 @@ def _coldoji_impl(
         i += 1
         body_doji_trailing_idx += 1
 
-    return data.with_columns(pl.Series(name='coldoji', values=out))
+    return data.with_columns(pl.Series(name='cdldoji', values=out))
 
 
-def coldoji(
+def cdldoji(
     data: pl.DataFrame,
     open_col: str = 'open',
     high_col: str = 'high',
@@ -77,11 +77,11 @@ def coldoji(
     close_col: str = 'close',
 ) -> pl.DataFrame:
 
-    out_col = 'coldoji'
+    out_col = 'cdldoji'
     input_cols = [open_col, high_col, low_col, close_col]
     return data.with_columns(
         pl.struct(input_cols).map_batches(
-            lambda s: _coldoji_impl(
+            lambda s: _cdldoji_impl(
                 pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
                 open_col=open_col,
                 high_col=high_col,

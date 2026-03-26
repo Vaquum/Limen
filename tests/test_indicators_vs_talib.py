@@ -1,7 +1,7 @@
 import talib
 import numpy as np
 from limen.data import HistoricalData
-from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cdladvancedblock, cdlabandonedbaby, cdlbelthold, cdlconcealbabyswall, cdlclosingmarubozu, cdlcounterattack, cdldarkcloudcover, cdldragonflydoji, cdlengulfing, cdlgravestonedoji, cdlhammer, cdlhangingman, cdlharami, cdlharamicross, cdlhighwave, cdlhikkake, cdlhikkakemod, cdlhomingpigeon, cdlidentical3crows, cdlinvertedhammer, cdlladderbottom, cdllongleggeddoji, cdllongline, cdlmarubozu, cdlmatchinglow, cdlmathold, cdlonneck, cdlpiercing, cdlrickshawman, cdlrisefall3methods, cdlseparatinglines, cdlshootingstar, cdlshortline, cdlspinningtop, cdlstalledpattern, cdlsticksandwich, cdltakuri, cdlthrusting, cdltristar, cdlunique3river, cdl2crows, cdl3blackcrows, cdl3inside, cdl3linestrike, cdl3starsinsouth, cdl3whitesoldiers, coldoji, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
+from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cdladvancedblock, cdlabandonedbaby, cdlbelthold, cdlconcealbabyswall, cdlclosingmarubozu, cdlcounterattack, cdldarkcloudcover, cdldoji, cdldragonflydoji, cdlengulfing, cdlgravestonedoji, cdlhammer, cdlhangingman, cdlharami, cdlharamicross, cdlhighwave, cdlhikkake, cdlhikkakemod, cdlhomingpigeon, cdlidentical3crows, cdlinvertedhammer, cdlladderbottom, cdllongleggeddoji, cdllongline, cdlmarubozu, cdlmatchinglow, cdlmathold, cdlonneck, cdlpiercing, cdlrickshawman, cdlrisefall3methods, cdlseparatinglines, cdlshootingstar, cdlshortline, cdlspinningtop, cdlstalledpattern, cdlsticksandwich, cdltakuri, cdlthrusting, cdltristar, cdlunique3river, cdl2crows, cdl3blackcrows, cdl3inside, cdl3linestrike, cdl3starsinsouth, cdl3whitesoldiers, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
 
 
 historical = HistoricalData()
@@ -852,14 +852,14 @@ def test_cdldarkcloudcover():
     verify_indicator_results_match(limen_result, talib_result)
 
 
-def test_coldoji():
-    limen_result = coldoji(
+def test_cdldoji():
+    limen_result = cdldoji(
         SAMPLE_DATA,
         open_col='open',
         high_col='high',
         low_col='low',
         close_col='close',
-    )['coldoji'].to_numpy()
+    )['cdldoji'].to_numpy()
     talib_result = talib.CDLDOJI(
         NUMPY_DATA['open'],
         NUMPY_DATA['high'],
@@ -1932,7 +1932,7 @@ def test_indicators_vs_talib():
         test_cdlconcealbabyswall,
         test_cdlcounterattack,
         test_cdldarkcloudcover,
-        test_coldoji,
+        test_cdldoji,
         test_cdldragonflydoji,
         test_cdlengulfing,
         test_cdlgravestonedoji,

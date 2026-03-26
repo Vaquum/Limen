@@ -124,27 +124,6 @@ def _macdext_from_values(
     return out_macd, out_signal, out_hist
 
 
-def _macdext_component(
-    values: np.ndarray,
-    fast_period: int,
-    fast_ma_type: int,
-    slow_period: int,
-    slow_ma_type: int,
-    signal_period: int,
-    signal_ma_type: int,
-    component_index: int,
-) -> np.ndarray:
-    return _macdext_from_values(
-        values,
-        fast_period,
-        fast_ma_type,
-        slow_period,
-        slow_ma_type,
-        signal_period,
-        signal_ma_type,
-    )[component_index]
-
-
 def macdext(
     data: pl.DataFrame,
     price_col: str = 'close',
@@ -186,53 +165,21 @@ def macdext(
     if signal_ma_type < 0 or signal_ma_type > CMP_N_8:
         raise ValueError('signal_ma_type must be between 0 and 8')
 
-    frame = data
-    return frame.with_columns(
+    values = data[price_col].to_numpy().astype(float, copy=False)
+    macd_values, signal_values, hist_values = _macdext_from_values(
+        values,
+        fast_period,
+        fast_ma_type,
+        slow_period,
+        slow_ma_type,
+        signal_period,
+        signal_ma_type,
+    )
+
+    return data.with_columns(
         [
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macdext_component(
-                        s.to_numpy().astype(float, copy=False),
-                        fast_period,
-                        fast_ma_type,
-                        slow_period,
-                        slow_ma_type,
-                        signal_period,
-                        signal_ma_type,
-                        0,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('macdext'),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macdext_component(
-                        s.to_numpy().astype(float, copy=False),
-                        fast_period,
-                        fast_ma_type,
-                        slow_period,
-                        slow_ma_type,
-                        signal_period,
-                        signal_ma_type,
-                        1,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('macdext_signal'),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macdext_component(
-                        s.to_numpy().astype(float, copy=False),
-                        fast_period,
-                        fast_ma_type,
-                        slow_period,
-                        slow_ma_type,
-                        signal_period,
-                        signal_ma_type,
-                        2,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('macdext_hist'),
+            pl.Series(name='macdext', values=macd_values),
+            pl.Series(name='macdext_signal', values=signal_values),
+            pl.Series(name='macdext_hist', values=hist_values),
         ]
     )

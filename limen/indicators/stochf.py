@@ -126,25 +126,6 @@ def _stochf_from_arrays(
     return out_fastk, out_fastd
 
 
-def _stochf_component(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
-    fastk_period: int,
-    fastd_period: int,
-    fastd_ma_type: int,
-    component_index: int,
-) -> np.ndarray:
-    return _stochf_from_arrays(
-        high,
-        low,
-        close,
-        fastk_period,
-        fastd_period,
-        fastd_ma_type,
-    )[component_index]
-
-
 def stochf(
     data: pl.DataFrame,
     high_col: str = 'high',
@@ -178,36 +159,21 @@ def stochf(
     if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
         raise ValueError('fastd_ma_type must be between 0 and 8')
 
-    frame = data
-    return frame.with_columns(
+    high_values = data[high_col].to_numpy().astype(float, copy=False)
+    low_values = data[low_col].to_numpy().astype(float, copy=False)
+    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    fastk_values, fastd_values = _stochf_from_arrays(
+        high_values,
+        low_values,
+        close_values,
+        fastk_period,
+        fastd_period,
+        fastd_ma_type,
+    )
+
+    return data.with_columns(
         [
-            pl.struct([high_col, low_col, close_col]).map_batches(
-                lambda s: pl.Series(
-                    _stochf_component(
-                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
-                        fastk_period,
-                        fastd_period,
-                        fastd_ma_type,
-                        0,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('stochf_fastk'),
-            pl.struct([high_col, low_col, close_col]).map_batches(
-                lambda s: pl.Series(
-                    _stochf_component(
-                        s.struct.field(high_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(low_col).to_numpy().astype(float, copy=False),
-                        s.struct.field(close_col).to_numpy().astype(float, copy=False),
-                        fastk_period,
-                        fastd_period,
-                        fastd_ma_type,
-                        1,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias('stochf_fastd'),
+            pl.Series(name='stochf_fastk', values=fastk_values),
+            pl.Series(name='stochf_fastd', values=fastd_values),
         ]
     )

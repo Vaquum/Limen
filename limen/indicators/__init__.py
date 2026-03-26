@@ -7,7 +7,7 @@ from limen.indicators.cdlbelthold import cdlbelthold
 from limen.indicators.cdlconcealbabyswall import cdlconcealbabyswall
 from limen.indicators.cdlclosingmarubozu import cdlclosingmarubozu
 from limen.indicators.cdlcounterattack import cdlcounterattack
-from limen.indicators.cdldoji import coldoji
+from limen.indicators.cdldoji import cdldoji
 from limen.indicators.cdldragonflydoji import cdldragonflydoji
 from limen.indicators.cdlgravestonedoji import cdlgravestonedoji
 from limen.indicators.cdlhammer import cdlhammer
@@ -175,7 +175,7 @@ __all__ = [
     'cdltristar',
     'cdlunique3river',
     'cmo',
-    'coldoji',
+    'cdldoji',
     'dema',
     'ema',
     'ht_dcperiod',

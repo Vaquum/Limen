@@ -62,14 +62,6 @@ def _macdfix_from_values(
     return out_macd, out_signal, out_hist
 
 
-def _macdfix_component(
-    values: np.ndarray,
-    signal_period: int,
-    component_index: int,
-) -> np.ndarray:
-    return _macdfix_from_values(values, signal_period)[component_index]
-
-
 def macdfix(
     data: pl.DataFrame,
     price_col: str = 'close',
@@ -91,38 +83,13 @@ def macdfix(
     if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('signal_period must be between 1 and 100000')
 
-    frame = data
-    return frame.with_columns(
+    values = data[price_col].to_numpy().astype(float, copy=False)
+    macd_values, signal_values, hist_values = _macdfix_from_values(values, signal_period)
+
+    return data.with_columns(
         [
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macdfix_component(
-                        s.to_numpy().astype(float, copy=False),
-                        signal_period,
-                        0,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias(MACDFIX_COL),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macdfix_component(
-                        s.to_numpy().astype(float, copy=False),
-                        signal_period,
-                        1,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias(MACDFIX_SIGNAL_COL),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macdfix_component(
-                        s.to_numpy().astype(float, copy=False),
-                        signal_period,
-                        2,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias(MACDFIX_HIST_COL),
+            pl.Series(name=MACDFIX_COL, values=macd_values),
+            pl.Series(name=MACDFIX_SIGNAL_COL, values=signal_values),
+            pl.Series(name=MACDFIX_HIST_COL, values=hist_values),
         ]
     )

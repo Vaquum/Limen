@@ -21,7 +21,8 @@ def _do_hilbert_transform(
     prev_input_side = 'prev_input_even' if is_even else 'prev_input_odd'
 
     arr = state[side]
-    assert isinstance(arr, list)
+    if not isinstance(arr, list):
+        raise TypeError(f"Expected list for state['{side}'], got {type(arr).__name__}")
 
     hilbert_temp_real = 0.0962 * input_value
     var = -arr[hilbert_idx]

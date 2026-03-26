@@ -1049,7 +1049,7 @@ Compute Chande Momentum Oscillator (CMO).
 
 `pl.DataFrame: The input data with a new column 'cmo_{period}'`
 
-### `coldoji`
+### `cdldoji`
 
 Compute Doji candlestick pattern.
 
@@ -1065,7 +1065,7 @@ Compute Doji candlestick pattern.
 
 #### Returns
 
-`pl.DataFrame: The input data with a new column 'coldoji'`
+`pl.DataFrame: The input data with a new column 'cdldoji'`
 
 ### `dema`
 
@@ -1487,7 +1487,7 @@ Compute Percentage Price Oscillator (PPO).
 | `data` | `pl.DataFrame` | Dataset with input price column |
 | `price_col` | `str` | Column name for input price |
 | `fast_period` | `int` | Number of periods for fast MA (2..100000) |
-| `slow_period` | `int` | Number of periods for slow MA (2..100000) |
+| `slow_period` | `int` | Number of periods for slow MA (2..100000, must be greater than `fast_period`) |
 | `ma_type` | `int` | TA-Lib MA type (0..8) |
 
 #### Returns

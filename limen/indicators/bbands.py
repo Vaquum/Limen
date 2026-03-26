@@ -8,7 +8,6 @@ BBANDS_NBDEV_MIN = -3e37
 BBANDS_NBDEV_MAX = 3e37
 BBANDS_MATYPE_MIN = 0
 BBANDS_MATYPE_MAX = 8
-BBANDS_SMA_MATYPE = 0
 BBANDS_STDDEV_FLOOR = 0.0
 
 
@@ -16,15 +15,9 @@ def _bbands_stddev_expr(
     price_col: str,
     middle_col: str,
     period: int,
-    ma_type: int,
 ) -> pl.Expr:
     mean_sq = (pl.col(price_col) * pl.col(price_col)).rolling_mean(window_size=period)
-
-    if ma_type == BBANDS_SMA_MATYPE:
-        variance = mean_sq - (pl.col(middle_col) * pl.col(middle_col))
-    else:
-        mean = pl.col(price_col).rolling_mean(window_size=period)
-        variance = mean_sq - (mean * mean)
+    variance = mean_sq - (pl.col(middle_col) * pl.col(middle_col))
 
     return (
         pl.when(pl.col(middle_col).is_null())
@@ -82,7 +75,6 @@ def bbands(
         price_col=price_col,
         middle_col=middle_col,
         period=period,
-        ma_type=ma_type,
     ).alias('__bbands_stddev')
     frame = frame.with_columns(stddev_expr)
 

@@ -51,16 +51,6 @@ def _macd_from_values(
     return out_macd, out_signal, out_hist
 
 
-def _macd_component(
-    values: np.ndarray,
-    fast_period: int,
-    slow_period: int,
-    signal_period: int,
-    component_index: int,
-) -> np.ndarray:
-    return _macd_from_values(values, fast_period, slow_period, signal_period)[component_index]
-
-
 def macd(
     data: pl.DataFrame,
     price_col: str = 'close',
@@ -90,44 +80,18 @@ def macd(
     if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('signal_period must be between 1 and 100000')
 
-    frame = data
-    return frame.with_columns(
+    values = data[price_col].to_numpy().astype(float, copy=False)
+    macd_values, signal_values, hist_values = _macd_from_values(
+        values,
+        fast_period,
+        slow_period,
+        signal_period,
+    )
+
+    return data.with_columns(
         [
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macd_component(
-                        s.to_numpy().astype(float, copy=False),
-                        fast_period,
-                        slow_period,
-                        signal_period,
-                        0,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias(MACD_COL),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macd_component(
-                        s.to_numpy().astype(float, copy=False),
-                        fast_period,
-                        slow_period,
-                        signal_period,
-                        1,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias(MACD_SIGNAL_COL),
-            pl.col(price_col).map_batches(
-                lambda s: pl.Series(
-                    _macd_component(
-                        s.to_numpy().astype(float, copy=False),
-                        fast_period,
-                        slow_period,
-                        signal_period,
-                        2,
-                    )
-                ),
-                return_dtype=pl.Float64,
-            ).alias(MACD_HIST_COL),
+            pl.Series(name=MACD_COL, values=macd_values),
+            pl.Series(name=MACD_SIGNAL_COL, values=signal_values),
+            pl.Series(name=MACD_HIST_COL, values=hist_values),
         ]
     )

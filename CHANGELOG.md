@@ -552,20 +552,6 @@
 - Add `SanityReducer` pruning strategy with NaN detection and suggestion system (zero-metric, execution timeout, warning detectors)
 - Add advisory suggestion flow to `FeedbackController` — suggestions are logged in audit trail but not dispatched to MSQ
 
-## v1.41.0 on 11rd of March, 2026
-
-- Implement 106 TA-Lib indicators in `limen.indicators` and align behavior with TA-Lib references.
-- Add Volume Indicators: `indicators.ad`, `indicators.adosc`, `indicators.mfi`, `indicators.obv`
-- Add Volatility Indicators: `indicators.atr`, `indicators.bband`, `indicators.natr`, `indicators.trange`
-- Add Momentum Indicators: `indicators.apo`, `indicators.bop`, `indicators.cci`, `indicators.cmo`, `indicators.macd`, `indicators.macdext`, `indicators.macdfix`, `indicators.mom`, `indicators.ppo`, `indicators.roc`, `indicators.rocp`, `indicators.rocr`, `indicators.rocr100`, `indicators.rsi`, `indicators.stoch`, `indicators.stochf`, `indicators.stochrsi`, `indicators.trix`, `indicators.ultosc`, `indicators.willr`
-- Add Overlap Studies: `indicators.dema`, `indicators.ema`, `indicators.ht_trendline`, `indicators.kama`, `indicators.ma`, `indicators.mama`, `indicators.sar`, `indicators.sarext`, `indicators.sma`, `indicators.t3`, `indicators.tema`, `indicators.trima`, `indicators.tsf`, `indicators.wma`
-- Add Cycle Indicators: `indicators.ht_dcperiod`, `indicators.ht_dcphase`, `indicators.ht_phasor`, `indicators.ht_sine`, `indicators.ht_trendmode`
-- Add Statistic Functions: `indicators.linearreg`, `indicators.linearreg_angle`, `indicators.linearreg_intercept`, `indicators.linearreg_slope`, `indicators.stddev`, `indicators.tsf`, `indicators.var`
-- Add Price Transform: `indicators.avgprice`, `indicators.medprice`, `indicators.midpoint`, `indicators.midprice`, `indicators.typprice`, `indicators.wclprice`
-- Add Pattern Recognition (Candlesticks): `indicators.cdl2crows`, `indicators.cdl3blackcrows`, `indicators.cdl3inside`, `indicators.cdl3linestrike`, `indicators.cdl3starsinsouth`, `indicators.cdl3whitesoldiers`, `indicators.cdlabandonedbaby`, `indicators.cdladvancedblock`, `indicators.cdlbelthold`, `indicators.cdlclosingmarubozu`, `indicators.cdlconcealbabyswall`, `indicators.cdlcounterattack`, `indicators.cdldarkcloudcover`, `indicators.cdldragonflydoji`, `indicators.cdlengulfing`, `indicators.cdlgravestonedoji`, `indicators.cdlhammer`, `indicators.cdlhangingman`, `indicators.cdlharami`, `indicators.cdlharamicross`, `indicators.cdlhighwave`, `indicators.cdlhikkake`, `indicators.cdlhikkakemod`, `indicators.cdlhomingpigeon`, `indicators.cdlidentical3crows`, `indicators.cdlinvertedhammer`, `indicators.cdlladderbottom`, `indicators.cdllongleggeddoji`, `indicators.cdllongline`, `indicators.cdlmarubozu`, `indicators.cdlmatchinglow`, `indicators.cdlmathold`, `indicators.cdlonneck`, `indicators.cdlpiercing`, `indicators.cdlrickshawman`, `indicators.cdlrisefall3methods`, `indicators.cdlseparatinglines`, `indicators.cdlshootingstar`, `indicators.cdlshortline`, `indicators.cdlspinningtop`, `indicators.cdlstalledpattern`, `indicators.cdlsticksandwich`, `indicators.cdltakuri`, `indicators.cdlthrusting`, `indicators.cdltristar`, `indicators.cdlunique3river`, `indicators.coldoji`
-- Add TA-Lib parity test file `tests/test_indicators_vs_talib.py`.
-- Add ta-lib to `pyproject.toml` dependencies for testing purpose
-
 ## v1.41.1 on 10th of March, 2026
 
 - Add `CorrelationReducer` pruning strategy with wrong-direction removal and low-impact suggestions
@@ -574,6 +560,20 @@
 - Add `SaturationReducer` pruning strategy with CV-based saturation detection and partial pruning via sample filters
 - Add `FocusReducer` pruning strategy with breakthrough detection, parameter space narrowing, variation injection, and timeout snap-back
 - Add `BudgetReducer` pruning strategy with walltime projection, permutation counting, and random/worst_first trim strategies
+
+## v1.41.0 on 11th of March, 2026
+
+- Implement 106 TA-Lib indicators in `limen.indicators` and align behavior with TA-Lib references.
+- Add Volume Indicators: `indicators.ad`, `indicators.adosc`, `indicators.mfi`, `indicators.obv`
+- Add Volatility Indicators: `indicators.atr`, `indicators.bbands`, `indicators.natr`, `indicators.trange`
+- Add Momentum Indicators: `indicators.apo`, `indicators.bop`, `indicators.cci`, `indicators.cmo`, `indicators.macd`, `indicators.macdext`, `indicators.macdfix`, `indicators.mom`, `indicators.ppo`, `indicators.roc`, `indicators.rocp`, `indicators.rocr`, `indicators.rocr100`, `indicators.rsi`, `indicators.stoch`, `indicators.stochf`, `indicators.stochrsi`, `indicators.trix`, `indicators.ultosc`, `indicators.willr`
+- Add Overlap Studies: `indicators.dema`, `indicators.ema`, `indicators.ht_trendline`, `indicators.kama`, `indicators.ma`, `indicators.mama`, `indicators.sar`, `indicators.sarext`, `indicators.sma`, `indicators.t3`, `indicators.tema`, `indicators.trima`, `indicators.wma`
+- Add Cycle Indicators: `indicators.ht_dcperiod`, `indicators.ht_dcphase`, `indicators.ht_phasor`, `indicators.ht_sine`, `indicators.ht_trendmode`
+- Add Statistic Functions: `indicators.linearreg`, `indicators.linearreg_angle`, `indicators.linearreg_intercept`, `indicators.linearreg_slope`, `indicators.stddev`, `indicators.tsf`, `indicators.var`
+- Add Price Transform: `indicators.avgprice`, `indicators.medprice`, `indicators.midpoint`, `indicators.midprice`, `indicators.typprice`, `indicators.wclprice`
+- Add Pattern Recognition (Candlesticks): `indicators.cdl2crows`, `indicators.cdl3blackcrows`, `indicators.cdl3inside`, `indicators.cdl3linestrike`, `indicators.cdl3starsinsouth`, `indicators.cdl3whitesoldiers`, `indicators.cdlabandonedbaby`, `indicators.cdladvancedblock`, `indicators.cdlbelthold`, `indicators.cdlclosingmarubozu`, `indicators.cdlconcealbabyswall`, `indicators.cdlcounterattack`, `indicators.cdldarkcloudcover`, `indicators.cdldoji`, `indicators.cdldragonflydoji`, `indicators.cdlengulfing`, `indicators.cdlgravestonedoji`, `indicators.cdlhammer`, `indicators.cdlhangingman`, `indicators.cdlharami`, `indicators.cdlharamicross`, `indicators.cdlhighwave`, `indicators.cdlhikkake`, `indicators.cdlhikkakemod`, `indicators.cdlhomingpigeon`, `indicators.cdlidentical3crows`, `indicators.cdlinvertedhammer`, `indicators.cdlladderbottom`, `indicators.cdllongleggeddoji`, `indicators.cdllongline`, `indicators.cdlmarubozu`, `indicators.cdlmatchinglow`, `indicators.cdlmathold`, `indicators.cdlonneck`, `indicators.cdlpiercing`, `indicators.cdlrickshawman`, `indicators.cdlrisefall3methods`, `indicators.cdlseparatinglines`, `indicators.cdlshootingstar`, `indicators.cdlshortline`, `indicators.cdlspinningtop`, `indicators.cdlstalledpattern`, `indicators.cdlsticksandwich`, `indicators.cdltakuri`, `indicators.cdlthrusting`, `indicators.cdltristar`, `indicators.cdlunique3river`
+- Add TA-Lib parity test file `tests/test_indicators_vs_talib.py`.
+- Add ta-lib to `pyproject.toml` dependencies for testing purpose
 
 ## v1.42.0 on 12th of March, 2026
 
