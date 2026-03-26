@@ -492,3 +492,42 @@ Compute Simple Moving Average (SMA) crossover signals.
 #### Returns
 
 `pl.DataFrame`: The input data with new columns 'crossover', and 'signal'
+
+### `fractional_diff`
+
+Apply Fixed-Width Fractional Differentiation (FFD) to achieve stationarity while preserving memory. Based on Lopez de Prado's AFML Chapter 5. Adds new columns with `_fracdiff` suffix — original columns are preserved for indicators that depend on raw values.
+
+NOTE: AFML recommends applying to log-transformed prices for best results.
+
+#### Args
+
+| Parameter   | Type                | Description                                  |
+|-------------|---------------------|----------------------------------------------|
+| `data`      | `pl.DataFrame`      | Input data                                   |
+| `d`         | `float`             | Fractional differentiation order (0 = identity copy) |
+| `cols`      | `list[str] \| None` | Columns to differentiate (required)          |
+| `threshold` | `float`             | Weight truncation threshold (AFML default: 1e-5) |
+
+#### Returns
+
+`pl.DataFrame`: Data with new `{col}_fracdiff` columns added. When d=0, the new columns are copies of the originals
+
+### `find_min_d`
+
+Find the minimum fractional differentiation order that achieves stationarity. Iterates d values and tests each with ADF. Use `adf_test` from `limen.utils` for standalone stationarity testing.
+
+#### Args
+
+| Parameter            | Type           | Description                              |
+|----------------------|----------------|------------------------------------------|
+| `data`               | `pl.DataFrame` | Input data                               |
+| `col`                | `str`          | Column to differentiate and test         |
+| `d_start`            | `float`        | Starting differentiation order           |
+| `d_end`              | `float`        | Maximum differentiation order            |
+| `step`               | `float`        | Increment between tested d values        |
+| `significance_level` | `float`        | ADF test significance threshold          |
+| `threshold`          | `float`        | Weight truncation threshold              |
+
+#### Returns
+
+`float`: Smallest d achieving stationarity, or d_end if none found

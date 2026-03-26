@@ -23,6 +23,8 @@ The manifest enforces a split-first processing pattern:
 5. **Feature Ablation Phase**: Random feature columns dropped if ablation is configured (runs after target transforms so targets can reference any feature)
 6. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
 
+After all phases, a column consistency check ensures all non-empty splits have the same columns. If a feature transform (e.g., fractional differentiation) produces a column in one split but not another (due to insufficient data), that column is dropped from all splits to maintain consistency.
+
 This architecture ensures no data leakage between splits and maintains reproducible results.
 
 ### Philosophy & Trade-offs
@@ -221,7 +223,9 @@ Configure train/validation/test split ratios.
 
 **Returns:** `Manifest` (self for chaining)
 
-**Note:** Ratios are relative (e.g., `7, 1, 2` means 7/10 train, 1/10 val, 2/10 test).
+**Raises:** `ValueError` if train is not positive, or if val or test is negative
+
+**Note:** Ratios are relative (e.g., `7, 1, 2` means 7/10 train, 1/10 val, 2/10 test). Train must be positive. Val and test can be zero (e.g., `(1, 0, 0)` for Trainer Pass 2 retraining on all data).
 
 **Example:**
 
