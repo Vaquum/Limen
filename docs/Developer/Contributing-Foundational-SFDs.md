@@ -2,124 +2,148 @@
 
 ## Background
 
-With regard to Single File Decoders (SFD), there are two kinds: `foundational` and `custom`.  This document is focused on Foundational SFDs, and sets forth strict requirements for contributing Foundational SFDs into Vaquum Limen.
+Foundational SFDs are Limen's reference-grade experiment templates. Each one pairs:
+
+- a `params()` search space
+- a manifest-driven experiment pipeline
+- a reference-architecture model function
+
+This document focuses on contributing new Foundational SFDs to Limen.
 
 ## Terminology
 
-The Limen `Foundational SFD` here means two things coming together: The `Foundational SFD` itself coming together with a `Reference Architecture`. 
+A Foundational SFD has two layers:
 
-A canonical example can be found in:
+1. the Foundational SFD itself
+2. the underlying Reference Architecture
 
-- **Foundational SFD**: https://github.com/Vaquum/Limen/blob/main/limen/sfd/foundational_sfd/logreg_binary.py
-- **Reference Architecture**: https://github.com/Vaquum/Limen/blob/main/limen/sfd/reference_architecture/logreg_binary.py
+A canonical example:
 
-## Motivation
+- Foundational SFD: `limen/sfd/foundational_sfd/logreg_binary.py`
+- Reference Architecture: `limen/sfd/reference_architecture/logreg_binary.py`
 
-The motivation for a Foundational SFD, is to capture honestly and directly, pertaining to a single trainable reference architecture (e.g. LogReg), the state-of-the-art scientific data and literature without adding any out-of-literature innovation to it. 
+The Foundational SFD owns experiment design and parameter exposure. The Reference Architecture owns the train/predict/evaluate model logic.
 
-**Contributing Foundational SFDs is contributing to the beating heart of Limen, it is where the intelligence resides. Rest of Limen is, for the most part, aggregation and transport.**
+## Design Principle
 
-**NOTE:** Initially, during January 2026, we want to incorporate 6-8 new Foundational Manifests with their respective underlying reference architectures. https://github.com/Vaquum/Limen/issues/297
+Foundational SFDs should package the strongest literature-backed version of an approach without baking bespoke workflow logic into the model layer.
+
+That means:
+
+- experiment intelligence belongs primarily in `params()` and `manifest()`
+- model-specific training logic belongs in the Reference Architecture
+- reusable workflow logic should be implemented as shared Limen building blocks, not hidden inside one Foundational SFD
 
 ## Minimal Requirements
 
-- Relies on a `Reference Architecture`
-- Is entirely based on `manifest`
-- `Parameters` are richly exposed
-- All the requirements in the below sections are satisfied
+- relies on a Reference Architecture
+- is manifest-driven
+- exposes a meaningful parameter space
+- is runnable as part of a large Limen scan without custom manual glue
 
-**The test:** Can anyone just run it with Limen in a large scan, and it will yield something meaningful? 
+The practical test is simple: can someone run it inside Limen at scale and get analytically useful output?
 
-For a contribution to pass this test, it of course requires sufficient exploration of the parameter space. 
+## Contribution Surface
 
-## Foundational SFD
+Foundational SFDs can compose the following building blocks:
 
-A `Foundational SFD` is an SFD that composes a design of experiment based on a `Reference Architecture` such as `LogReg`.  
-
-The `Foundational SFD` has two parts: `params` and `manifest` which are always named like so.
-
-The `Reference Architecture` has one part: `model` which is named according to the underlying architecture (e.g. logreg) and the type of decoder it is (e.g. binary), for example, `logreg_binary`. The name must have exactly two parts separated by underscore.
-
-The `manifest` in a `Foundational SFD` can be used to incorporate various `Extensions` into the experiment.
-
-`Extensions` are the primary mean by which the contributing modeller transmits intelligence in to the `Foundational SFD`. 
-
-**NOTE:** how this mode of transmitting intelligence is in stark contrast with the approach where the contributing modeller transmits intelligence into the reference architecture through bespoke workflow code. 
-
-**Here, adding workflow code that is not strictly specific to the `Reference Architecture` is strictly prohibited.** 
-
-If and when the authoritative literature implies additional workflow interventions, these must be called from `limen.utils` and must be generally callable by any reference architecture.
-
-## Extensions
-
-Extensions can include  `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and `Labels`.
-
-`Data` include any input data, for the time being, various market data, framed in various ways.
-
-`Indicators` include common technical indicators, and any other non-compound signal that can be used for training models. Indicators must be contributed to `limen.indicators`.
-
-`Features` are generally speaking more complex than Indicators, and can, for example, involve further refining Indicators or combining several Indicators into a single Feature. The simplest way to understand a `Feature` is that it's something that is not an `Indicator`, but where it is used as a so-called "independent variable". Features must be contributed to `limen.features`.
-
-`Scalers` are stateful preprocessing transformations that fit on training data and then transform any dataset using learned parameters. They follow scikit-learn's convention (e.g., StandardScaler) and are used with `.set_scaler()` in manifests. Scalers must be contributed to `limen.scalers`.
-
-`Transforms` include stateless data transformations that compute statistics and apply transformations in a single step. Transforms must be contributed to `limen.transforms`.
-
-`Labels` include all so-called "dependent variables" and their various manipulations (e.g. confidence gating). Labels must be contributed to `limen.labels`.
-
-`Parameters` include all the parameters to be included in the experiment. These can include controls for Data, Indicators, Features, Scalers, Transforms, Labels, and in the future, even Parameters themselves. Parameters are included in the respective Foundational SFD file.
-
-## SFD Manifest Constituents
-
-In simple terms, the following constituents can be included in the `manifest` of an SFD:
-
-- Manifest
-- Reference Architecture
-- Parameter
 - Data
 - Indicators
 - Features
 - Scalers
 - Transforms
-- Labels
+- Target construction
+- Parameters
 
-The contributing modeller may or may not decide to make contributions to `Data`, `Indicators`, `Features`, `Scalers`, `Transforms`, and/or `Labels`. They may decide to simply use those that are already available in Limen.
+### Data
 
-Full details for working with `SFD Manifest` can be found in [`Experiment-Manifest` documentation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md)
+Data contributions belong under `limen.data`.
 
+### Indicators
 
-## Preparation
+Indicators belong under `limen.indicators`.
 
-Once a Reference Architecture is decided upon, certain requirements must be met:
+### Features
 
-- A comprehensive literature review to understand what kind of `Data` works best  for the Reference Architecture
-- A comprehensive literature review to understand what kind of `Indicators` works best  for the Reference Architecture
-- A comprehensive literature review to understand what kind of `Features` works best  for the Reference Architecture
-- A comprehensive literature review to understand what kind of `Scalers` works best  for the Reference Architecture
-- A comprehensive literature review to understand what kind of `Transforms` works best  for the Reference Architecture
-- A comprehensive literature review to understand what kind of `Labels` works best  for the Reference Architecture
-- A comprehensive literature review to understand what kind of `Params` works best  for the Reference Architecture
+Features belong under `limen.features`.
 
-**NOTE:** These are to be performed as separate research projects, not bundled into one.
+### Scalers
 
-### Research Constraints
+Scalers belong under `limen.scalers`.
 
-- The scope of research requests is pinned down to: quantitative finance, day trading.
-- Three frontier model in their deep research mode is used for initial research
-- At least three frontier models are used for cross-checking findings and for establishing consensus.
+### Transforms
 
-### Deliverables
+Transforms belong under `limen.transforms`.
 
-- A thesis that summarize the findings of the research performed
-- A model card that has the following sections:
-  - Reference Architecture description and links to literature
-  - Indicators that were selected, with justification
-  - Features that were selected, with justification
-  - Scalers that were selected, with justification
-  - Transforms that were selected, with justification
-  - Labels that were selected, with justification
-  - Parameters that were selected, with justification
-  - Future work which points to possible innovation ideas that had emerged during the research
+### Target Construction
 
-## Implementation
+Target construction lives in the manifest through `.with_target()`, fitted parameter computation, and target transforms. In other words, Limen no longer has a separate labels module contribution surface.
 
-Once the above has been comprehensively satisfied, after review of the deliverables, the contributing modeller moves to implementation following the guidelines laid out in: https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md.
+If a new helper is needed for target construction, it should be contributed where it best fits today:
+
+- `limen.features` for target-generating feature helpers such as `quantile_flag`
+- `limen.transforms` for reusable transform helpers
+- shared utility modules only when the logic is genuinely cross-cutting
+
+### Parameters
+
+Parameters live in the Foundational SFD file itself and may control:
+
+- data selection
+- indicators
+- features
+- target construction
+- scalers
+- model behavior
+
+## Manifest Constituents
+
+In practice, a Foundational SFD manifest may include:
+
+- data source configuration
+- split configuration
+- optional bar formation
+- indicators
+- features
+- target construction
+- scaler selection
+- model selection through `.with_model()`
+
+Full manifest details are documented in [Experiment Manifest](../Experiment-Manifest.md).
+
+## Research Expectations
+
+Before implementation, the contributing modeller should understand:
+
+- which data works best for the Reference Architecture
+- which indicators and features are justified
+- which scaling and transform choices are appropriate
+- how the target should be constructed
+- which parameters are worth exposing
+
+These should be treated as explicit research questions, not as one bundled intuition dump.
+
+## Deliverables
+
+Expected deliverables for a serious Foundational SFD proposal:
+
+- a thesis or research summary
+- a model card covering:
+  - Reference Architecture and literature
+  - selected indicators
+  - selected features
+  - selected scalers
+  - selected transforms
+  - target construction
+  - selected parameters
+  - future work
+
+## Implementation Expectations
+
+Once the design is reviewed, implementation should follow the manifest patterns documented in [Experiment Manifest](../Experiment-Manifest.md).
+
+The most important rule is this:
+
+- do not hide general workflow logic inside one Foundational SFD
+
+If a workflow intervention is reusable across architectures, it should be contributed back as a shared Limen building block instead.
