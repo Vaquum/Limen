@@ -4,7 +4,7 @@ Conserved Flux treats the total traded value as conserved "stuff", the way in ph
 
 Renormalization repeatedly coarse-grains the data (60 s → 120 s → 240 s …), just like renormalisation-group steps in physics, and then measures how the statistics look after each zoom.
 
-So CFR (Conserved Flux Renormalization) is a short-hand for “the routine that renormalises trade data while respecting the conserved-flux principle.”
+So CFR (Conserved Flux Renormalization) is shorthand for “the routine that renormalises trade data while respecting the conserved-flux principle.”
 
 ## Conservation Law
 

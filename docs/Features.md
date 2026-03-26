@@ -376,6 +376,24 @@ Mark rows where `col` exceeds the (1 - q) quantile.
 OR
 tuple: (pl.DataFrame, float) if return_cutoff is True
 
+### `compute_quantile_cutoff`
+
+Compute the cutoff value used by `quantile_flag` from training data.
+
+This helper is typically used in manifest target construction through `.fit_param(...)`.
+
+#### Args
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `pl.DataFrame` | Training dataset with the target source column |
+| `col` | `str` | Column name to compute the quantile on |
+| `q` | `float` | Tail parameter in `[0, 1]`; `q=0.1` means use the 90th percentile |
+
+#### Returns
+
+`float`: Cutoff value at the `(1 - q)` quantile
+
 ### `range_pct`
 
 Compute range as percentage of close price (high-low)/close.

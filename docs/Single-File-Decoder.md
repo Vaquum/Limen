@@ -71,18 +71,18 @@ The following sections document custom SFD functions for implementations requiri
 
 Contains all data preparation procedures used in the parameter sweep.
 
-Takes as input data from `limen.HistoricalData.data` and `round_params` which is a dictionary with single value per key. It returns `data_dict`, a  dictionary yielded by `utils.splits.split_data_to_prep_output` where arbitrary key-values can be added before returning the `data_dict`. 
+Takes as input a `pl.DataFrame` from UEL together with `round_params`, which is a dictionary with one value per key. It returns `data_dict`, typically by calling `utils.splits.split_data_to_prep_output(...)` and then optionally appending additional entries before returning.
 
 ##### REQUIREMENTS
 
-- The input must contain at least `historical.data` but must also contain `round_params` when `uel.run(prep_each_round=True)`
+- The input must contain market data and should also accept `round_params` when `uel.run(prep_each_round=True)`
 - The input data must always have `datetime` when it is ingested in `prep`
-- The function must start with `all_datetimes = data['datetime'].to_list()` immediate after declaration
+- Capture `all_datetimes = data['datetime'].to_list()` before dropping rows if you use `split_data_to_prep_output`
 - The column `datetime` must be in data when it is passed to `split_data_to_prep_output`, where it will be automatically removed
 - There must be no randomness; permutation parameters must govern all `prep` operations
  - Prefer deterministic `prep` fully governed by `round_params`. If randomness is required (e.g., sampling), fix seeds parametrically so that per-round reconstruction in `Log` remains aligned with stored predictions.
 
-**NOTE:** If a scaler is fitted as part of `prep`, it can be added to `round_results[_scaler]` for use in subsequent folds.
+**NOTE:** If a scaler is fitted as part of `prep`, it can be added to `data_dict['_scaler']` for use in subsequent folds.
 
 #### `model` 
 

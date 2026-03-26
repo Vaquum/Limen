@@ -12,7 +12,7 @@ Does **not** own raw technical indicators (those live in `limen.indicators`) or 
 - **Feature function** – a callable that accepts a `pl.LazyFrame` (or `pl.DataFrame`) plus keyword parameters and returns an enriched frame with one or more new columns appended.
 - **Regime feature** – binary or ordinal column that classifies the current market state (e.g. `volume_regime`, `ma_slope_regime`, `market_regime`).
 - **Lagged feature** – a past value of any column shifted by N bars, produced by `lag_column` / `lag_columns` / `lag_range`.
-- **Conserved flux renormalisation (CFR)** – normalises a group of features so their sum is constant across rows.
+- **Conserved flux renormalisation (CFR)** - computes multi-scale flux and entropy diagnostics from trade data and joins them back onto bar-level output.
 - **Quantile flag** – binary label derived by comparing a value against a rolling or global quantile cutoff; used as the primary target in many SFDs.
 
 ## Entry points
@@ -35,7 +35,7 @@ features/
 ├── lagged_features.py           # lag_column, lag_columns, lag_range, lag_range_cols
 ├── quantile_flag.py             # quantile_flag, compute_quantile_cutoff
 ├── conserved_flux_renormalization.py
-├── market_regime.py             # Composite regime classification
+├── market_regime.py             # Additional internal regime helper
 ├── volume_regime.py / volume_*.py
 ├── momentum_*.py                # Various momentum composites
 ├── breakout_*.py                # Breakout detection features
@@ -43,7 +43,7 @@ features/
 ├── ichimoku_cloud.py
 ├── vwap.py
 ├── sma_crossover.py / ma_slope_regime.py
-├── feature_aliases.py           # Short-name aliases for common features
+├── feature_aliases.py           # Internal alias helper for composite feature sets
 └── ...                          # ~60 feature files total
 ```
 
@@ -51,5 +51,5 @@ features/
 
 - Feature functions operate on `LazyFrame` when called through the `Manifest` pipeline; prefer lazy-compatible expressions.
 - `compute_quantile_cutoff` must be used as a `fit_param` so the cutoff is computed on **training** data only and then reused on val/test splits.
-- `feature_aliases.py` provides short string aliases for use in param grids; check it before adding duplicate feature files.
+- The package contains additional helper files beyond the default `limen.features` export surface; `market_regime.py` and `feature_aliases.py` are examples of internal helpers that are not re-exported through `__init__.py`.
 - Features that depend on indicator columns (e.g. `atr_sma`) implicitly require those indicators to be added to the manifest first.
