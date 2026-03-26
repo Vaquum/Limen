@@ -4,10 +4,11 @@
   <br>
 </h1>
 
-<h3 align="center">Vaquum Limen is for parametric Bitcoin research and trading signal generation.</h3>
+<h3 align="center">Vaquum Limen turns Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.</h3>
 
 <p align="center">
   <a href="#value-proposition">Value Proposition</a> •
+  <a href="#capabilities">Capabilities</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#contributing">Contributing</a> •
   <a href="#license">License</a>
@@ -16,7 +17,19 @@
 
 # Value Proposition
 
-Vaquum Limen reduces complex and otherwise out-of-reach research, model development, and trading signal workflows into one cohesive Python API, powering Bitcoin quants with unparalleled ergonomics and productivity. Limen does not execute trades, and can be used as a source of alpha with any trading system.
+Limen is a manifest-driven Bitcoin alpha research engine that turns market data into searchable signals, backtested outcomes, and decoder cohorts. It unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works.
+
+# Capabilities
+
+- Manifest-driven experiment pipelines
+- Search across models, rules, features, targets, and hyperparameters
+- Extensive built-in indicator and feature library for Bitcoin research
+- Support for both machine learning and rule-based strategy research
+- Bitcoin-native transforms, scaling, and target construction
+- Leakage-safe train, validation, and test workflows
+- Built-in backtesting, confusion analytics, and parameter diagnostics
+- Decoder cohort construction and regime-diversified model pooling
+- Reproducible runs with checkpointing, resumption, and retraining
 
 # Quick Start
 
