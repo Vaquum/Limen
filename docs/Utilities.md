@@ -10,6 +10,7 @@ They are useful, but they are not the main story of the package. If you are new 
 |---|---|
 | `ParamSpace` | you are on the legacy standard UEL path and need sampled parameter combinations |
 | `data_dict_to_numpy` | you want numpy arrays from the standard Limen `data_dict` |
+| `adf_test` and `AdfResult` | you want a simple stationarity check for a series or for helpers such as `find_min_d` |
 | `confidence_filtering_system` | you want validation-calibrated confidence filtering across multiple models |
 | `log_to_optuna_study` | you want to export an experiment log into an in-memory Optuna study |
 | reporting helpers | you want simple formatted text blocks |
@@ -54,6 +55,25 @@ On a live local manifest-prepared `data_dict` in this repo, it converted:
 - `x_test` to shape `(884, 24)`
 
 This helper is most useful inside sklearn-style or numpy-first model code.
+
+## `adf_test`
+
+`adf_test()` runs an Augmented Dickey-Fuller stationarity test and returns an `AdfResult`.
+
+```python
+from limen.utils import adf_test
+
+result = adf_test(series)
+```
+
+The structured result contains:
+
+- `stationary`
+- `p_value`
+- `test_statistic`
+- `critical_values`
+
+This is the utility layer that [Features](Features.md) now uses for `find_min_d()`.
 
 ## `confidence_filtering_system`
 

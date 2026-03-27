@@ -10,6 +10,7 @@ Use this page when you need to choose between feature helpers, understand their 
 - Some helpers operate on plain kline data only. Others require trade-derived columns such as `maker_ratio`, `no_of_trades`, `price`, or `quantity`.
 - Not every helper is intended as a final predictor. Some are utilities used to build targets or wider feature families.
 - Several regime helpers output compact categorical-style columns such as `regime_ma_slope` or `regime_price_band`.
+- A few helpers return scalar values instead of frames. The main example is `find_min_d`, which searches for a stationarity-preserving fractional-differentiation order.
 
 ## Quick Example
 
@@ -85,6 +86,20 @@ These helpers are mainly used to expand existing columns or define cutoffs for t
 | `compute_quantile_cutoff` | scalar cutoff value | Utility helper, not a DataFrame transform. |
 | `quantile_flag` | `quantile_flag` | Commonly used in targets after computing the cutoff on train only. |
 
+## Stationarity And Long-Memory Helpers
+
+These helpers are useful when you want to reduce non-stationarity while preserving more long-memory structure than a simple first difference would.
+
+| Function | Adds or returns | Notes |
+|---|---|---|
+| `fractional_diff` | one `*_fracdiff` column per selected input column | Applies fixed-width fractional differentiation. Original columns are preserved. |
+| `find_min_d` | scalar `d` value | Iterates over candidate orders and uses the Augmented Dickey-Fuller test to find the smallest stationary order. |
+
+Two practical details matter:
+
+- `fractional_diff` needs `cols=[...]` and writes new columns such as `close_fracdiff`.
+- if one split is too short to produce the same fractional-diff column as another split, Manifest now drops that extra column during split alignment so the final `data_dict` stays consistent.
+
 ## Trade-Shape And Microstructure Features
 
 These helpers need richer data than ordinary OHLCV bars.
@@ -100,9 +115,11 @@ These helpers need richer data than ordinary OHLCV bars.
 - Use a feature when you want structure around those signals, such as lags, regimes, relative position, or multi-step aggregation.
 - Use the lag helpers when the main value is temporal context rather than a new market calculation.
 - Use `compute_quantile_cutoff` and `quantile_flag` when the target boundary itself is part of the split-safe training logic.
+- Use `fractional_diff` when stationarity itself is part of the design problem, not just a preprocessing afterthought.
 
 ## Read Next
 
 - [Indicators](Indicators.md) for lower-level signal primitives
 - [Transforms](Transforms.md) for target shaping and post-model calibration helpers
 - [Experiment Manifest](Experiment-Manifest.md) for how features plug into the split-first manifest pipeline
+- [Utilities](Utilities.md) for the exported `adf_test()` helper that `find_min_d` builds on

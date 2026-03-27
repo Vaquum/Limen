@@ -281,3 +281,38 @@ def test_trainer_with_feature_ablation():
         sensors = trainer.train([pid])
         assert len(sensors) == 1
         assert sensors[0].model is not None
+
+
+def test_trainer_with_fractional_diff():
+
+    from limen.data import HistoricalData
+    h = HistoricalData()
+    h._get_data_for_test(n_rows=20000)
+    large_data = h.data
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir) / 'experiment'
+        params = logreg_sfd.params()
+        params['frac_diff_d'] = [0.4]
+        domain = ParamDomain(params)
+        strategy = StubStrategy(domain)
+
+        uel = UniversalExperimentLoop(
+            sfd=logreg_sfd,
+            search_strategy=strategy,
+            experiment_dir=experiment_dir,
+            data=large_data,
+        )
+
+        uel.run(
+            experiment_name='test_fracdiff',
+            n_permutations=1,
+        )
+
+        trainer = Trainer(experiment_dir, data=large_data)
+        pid = next(iter(trainer._round_data.keys()))
+
+        # Trainer Pass 1 validates with fracdiff active
+        sensors = trainer.train([pid])
+        assert len(sensors) == 1
+        assert sensors[0].model is not None

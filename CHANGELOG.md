@@ -616,3 +616,12 @@
 - Add `RobustScaler` with median and IQR scaling
 - Add `RankGaussScaler` with rank-to-normal Gaussian transformation
 - Add `SCALER_REGISTRY` and `set_scaler_from_params()` for params-based scaler selection
+
+## v1.49.0 on 26th of March, 2026
+
+- Add `fractional_diff` feature using Fixed-Width Fractional Differentiation (FFD) method
+- Add `adf_test` wrapper for Augmented Dickey-Fuller stationarity testing
+- Add `find_min_d` utility for finding minimum differentiation order achieving stationarity
+- Add split validation in `set_split_config` (train must be positive, val/test non-negative)
+- Add column consistency check across splits in `prepare_data`
+- Add `statsmodels` as project dependency

@@ -98,6 +98,10 @@ The execution order is:
 
 This ordering is one of the main reasons to use a manifest: the leak-prevention rules come built in.
 
+The manifest is deliberately opinionated. It forces split-first execution, train-only fitting, and immutable dataframe-style transforms because those guardrails prevent the most common financial-ML mistakes.
+
+There is one more protection step after feature engineering: non-empty splits are aligned to a shared column set before the final `data_dict` is built. If a transform such as `fractional_diff` produces a column in one split but not another because the shorter split lacks enough history, Limen drops that extra column from the non-empty splits so the downstream model still receives a consistent schema.
+
 ## Data Source Configuration
 
 ### `set_data_source(method, params=None)`
@@ -131,6 +135,8 @@ Configure the test data source used when `LOOP_ENV='test'`.
 - the test data source when `LOOP_ENV='test'` and a test source exists
 - the production data source otherwise
 
+If `LOOP_ENV='test'` but no test data source is configured, Limen falls back to the production data source.
+
 That is why foundational SFDs can run locally with no explicit `data=` and still stay pointed at small bundled test data by default.
 
 ## Pipeline Configuration
@@ -144,6 +150,14 @@ Configure the relative split sizes.
 ```
 
 This means 8/11 train, 1/11 validation, and 2/11 test.
+
+Behavior rules:
+
+- `train` must be positive
+- `val` and `test` can be zero but not negative
+- the method raises `ValueError` if those constraints are violated
+
+Allowing zeros is important for retraining workflows such as Trainer Pass 2, where `split_config=(1, 0, 0)` means "fit on all available data."
 
 ### `set_pre_split_data_selector(func, **params)`
 
