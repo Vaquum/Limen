@@ -215,6 +215,18 @@ const docs = [
     sidebarPosition: 4,
   },
   {
+    source: 'docs/Developer/Making-Release.md',
+    dest: 'developer/making-release.md',
+    slug: '/developer/making-release',
+    sidebarPosition: 5,
+  },
+  {
+    source: 'docs/Semantic-Versioning.md',
+    dest: 'developer/semantic-versioning.md',
+    slug: '/developer/semantic-versioning',
+    sidebarPosition: 6,
+  },
+  {
     source: 'limen/data/README.md',
     dest: 'packages/data.md',
     slug: '/packages/data',
