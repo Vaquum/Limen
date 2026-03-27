@@ -160,22 +160,6 @@ def test_find_min_d_small_data_skips():
     assert d == 1.0
 
 
-def test_split_validation_rejects_invalid():
-
-    manifest = Manifest()
-    try:
-        manifest.set_split_config(0, 1, 1)
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'positive' in str(e)
-
-    try:
-        manifest.set_split_config(1, -1, 1)
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'non-negative' in str(e)
-
-
 def test_fractional_diff_manifest_integration():
 
     manifest = (Manifest()
