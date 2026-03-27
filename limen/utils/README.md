@@ -4,6 +4,7 @@
 
 ## Canonical docs
 
+- [Utilities](../../docs/Utilities.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
 - [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
 - [Log](../../docs/Log.md)
@@ -49,6 +50,7 @@ utils/
 
 ## Read next
 
+- [Utilities](../../docs/Utilities.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
 - [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
 - [Single-File Decoder](../../docs/Single-File-Decoder.md)

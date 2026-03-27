@@ -54,6 +54,21 @@ The built-in registry currently maps:
 | `'robust'` | `RobustScaler` |
 | `'rank_gauss'` | `RankGaussScaler` |
 
+The registry itself is also a public export:
+
+```python
+from limen.scalers import SCALER_REGISTRY
+
+sorted(SCALER_REGISTRY)
+```
+
+That is the lookup surface `set_scaler_from_params()` uses under the hood.
+
+On live local manifest-prep runs in this repo, `set_scaler_from_params('scaler_type')` correctly resolved:
+
+- `'robust'` to `RobustScaler`
+- `'rank_gauss'` to `RankGaussScaler`
+
 ## Built-In Scalers
 
 ### `LogRegScaler`

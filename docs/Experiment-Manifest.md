@@ -258,6 +258,105 @@ Use `include_if=` when a transform should only run if a boolean round parameter 
 .add_feature(vwap, include_if='use_vwap')
 ```
 
+## Parameter-Controlled Perturbations
+
+The manifest builder now supports several perturbation-style workflows directly in the declarative surface.
+
+### Feature-group selection
+
+Use `group=` on indicators or features, then pass `feature_groups` in `round_params`.
+
+```python
+.add_indicator(roc, group='momentum', period='roc_period')
+.add_feature(vwap, group='microstructure')
+```
+
+At run time:
+
+```python
+round_params = {'feature_groups': ['momentum']}
+```
+
+Only grouped transforms in the selected families run. Ungrouped transforms still run.
+
+### Conditional feature toggles
+
+Use `include_if=` for boolean on/off switches:
+
+```python
+.add_feature(vwap, include_if='use_vwap')
+```
+
+At run time:
+
+```python
+round_params = {'use_vwap': False}
+```
+
+The transform is skipped.
+
+On a live local manifest-prep run in this repo, `feature_groups=['momentum', 'volatility']` together with `include_roc=False` dropped the grouped `roc` feature while keeping the grouped `vol_5` feature.
+
+### Feature ablation
+
+Use `set_feature_ablation()` to let the manifest randomly drop feature columns after transforms and before scaling.
+
+```python
+manifest.set_feature_ablation()
+```
+
+Then control it from round parameters:
+
+```python
+round_params = {
+    'feature_drop_count': 1,
+    'feature_drop_seed': 42,
+}
+```
+
+Important behavior:
+
+- the manifest mutates `round_params` by adding `_dropped_features`
+- protected columns such as `datetime` and the target are not eligible
+- the same seed reproduces the same dropped columns
+
+On a live local prep run in this repo, `feature_drop_count=1` and `feature_drop_seed=42` produced:
+
+```python
+round_params['_dropped_features'] == ['vol_5']
+```
+
+In artifact-rich runs, that `_dropped_features` payload is stored into `round_data.jsonl`, and [Trainer](Trainer.md) reproduces the same drop set during promotion.
+
+### Scaler choice from parameters
+
+Use `set_scaler_from_params()` when scaler selection itself is part of the search space.
+
+```python
+manifest.set_scaler_from_params('scaler_type')
+
+params = {
+    'scaler_type': ['logreg', 'robust', 'rank_gauss'],
+}
+```
+
+On live local manifest-prep runs in this repo, this resolved correctly to:
+
+- `RobustScaler` when `scaler_type='robust'`
+- `RankGaussScaler` when `scaler_type='rank_gauss'`
+
+### Manifest-level overrides
+
+Use `with_params_override(...)` when you want a manifest clone with structural changes that should not come from the round search itself.
+
+Typical examples:
+
+- `split_config=(1, 0, 0)` for full-data retraining in [Trainer](Trainer.md)
+- `start_date_limit=...` for a controlled data-window variant
+- `n_rows=...` for test or smoke paths
+
+Use round parameters for search-time variation and `with_params_override(...)` for external structural control.
+
 Then in `params()`:
 
 ```python

@@ -5,6 +5,8 @@
 ## Canonical docs
 
 - [Single-File Decoder](../../docs/Single-File-Decoder.md)
+- [Built-In SFDs](../../docs/Built-In-SFDs.md)
+- [Reference Architecture](../../docs/Reference-Architecture.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
 
@@ -55,5 +57,7 @@ sfd/
 ## Read next
 
 - [Single-File Decoder](../../docs/Single-File-Decoder.md)
+- [Built-In SFDs](../../docs/Built-In-SFDs.md)
+- [Reference Architecture](../../docs/Reference-Architecture.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Developer: Contributing Foundational SFDs](../../docs/Developer/Contributing-Foundational-SFDs.md)

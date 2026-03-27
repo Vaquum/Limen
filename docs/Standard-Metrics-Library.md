@@ -39,6 +39,8 @@ from limen.metrics import binary_metrics
 
 you are importing the module, not the function.
 
+This low-level metrics layer also sits underneath [Reference Architecture](Reference-Architecture.md). The class-based models add confusion and backtest fields later; these helpers stay at the smaller task-metric level.
+
 ## `binary_metrics(data, preds, probs)`
 
 Computes the standard binary metrics used by Limen's binary reference models.
@@ -56,6 +58,14 @@ Returns a dictionary with:
 - `fpr`
 - `auc`
 - `accuracy`
+
+On a live local `LogRegBinary.evaluate(..., inline_metrics=False)` run in this repo, this task-metric layer was exactly:
+
+- `accuracy`
+- `auc`
+- `precision`
+- `recall`
+- `fpr`
 
 Example:
 
@@ -121,6 +131,12 @@ This rewards accurate positive calls while penalizing degenerate behavior such a
 
 If there are no positive predictions, it returns `0.0`.
 
+Example:
+
+```python
+score = balanced_metric(y_true, y_pred)
+```
+
 ## `safe_ovr_auc(y_true, probs)`
 
 `safe_ovr_auc()` computes one-vs-rest AUC more defensively than a raw direct multiclass AUC call.
@@ -151,3 +167,4 @@ That is the level of abstraction these helpers are meant for.
 
 - Continue to [Log](Log.md) for experiment-level analysis built on top of these low-level metrics.
 - Continue to [Benchmark](Benchmark.md) for the benchmark layer that uses reconstructed round outputs rather than these raw helper functions directly.
+- Continue to [Reference Architecture](Reference-Architecture.md) for the model layer that wraps these task metrics into richer evaluation payloads.

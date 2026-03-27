@@ -6,6 +6,8 @@
 
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
+- [Advanced Search](../../docs/Advanced-Search.md)
+- [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 - [Trainer](../../docs/Trainer.md)
 
 ## What this package owns
@@ -36,11 +38,14 @@ Does **not** own model architectures, indicators, features, or raw metric helper
 experiment/
 ├── experiment_core.py       # UniversalExperimentLoop
 ├── manifest_core.py         # Manifest and builder components
-├── trainer.py               # Trainer, Sensor, ReconstructionError
 ├── checkpoint_manager.py    # Persist and restore advanced-run state
 ├── feedback_controller.py   # Mid-run adaptive callbacks
 ├── msq.py                   # Mutable Search Queue
 ├── param_domain.py          # Mutable parameter domain
+├── trainer/
+│   ├── trainer.py           # Trainer
+│   ├── sensor.py            # Sensor
+│   └── errors.py            # ReconstructionError
 ├── reducer/
 │   └── pruning_strategy.py  # Pruning interfaces and implementations
 └── search_strategy.py       # SearchStrategy base class
@@ -56,5 +61,7 @@ experiment/
 ## Read next
 
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
+- [Advanced Search](../../docs/Advanced-Search.md)
+- [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Trainer](../../docs/Trainer.md)

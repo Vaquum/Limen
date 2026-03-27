@@ -39,6 +39,7 @@ backtest/
 - The package root currently does not re-export the backtest helpers, so import from the module paths directly.
 - `backtest_snapshot()` is the common analysis path for experiment sweeps because it is simple and fast.
 - `BacktestSequential` is the right tool when you need a ledger and bar-by-bar account transitions.
+- The underlying `Account` supports long and short bookkeeping, but the current sequential backtest loop only executes the long-side `buy` and `sell` path.
 - Snapshot outputs are reported in percent units, while fee and slippage inputs are specified in basis points.
 
 ## Read next

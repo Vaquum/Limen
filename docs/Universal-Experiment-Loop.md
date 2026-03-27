@@ -188,7 +188,7 @@ If you instantiate UEL with a concrete `search_strategy` and an `experiment_dir`
 | `round_data.jsonl` | round params, predictions, and alignment metadata |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |
-| `interventions.json` | reducer interventions |
+| `interventions.json` | optional external intervention file polled by the feedback controller if you create it |
 | `metadata.json` | experiment metadata used by `Trainer` |
 
 This path is what powers checkpointing, resumability, and the [Trainer](Trainer.md) workflow.
@@ -196,6 +196,69 @@ This path is what powers checkpointing, resumability, and the [Trainer](Trainer.
 ### Important scope note
 
 `SearchStrategy` is an abstract extension point in the public package. In other words, the advanced path is available now, but it expects a concrete strategy implementation from your codebase or extension layer.
+
+## One Real Advanced Run
+
+The UEL-facing part of an advanced run looks like this once you already have a concrete `SearchStrategy`:
+
+```python
+import limen
+
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer import BudgetReducer
+
+domain = ParamDomain(limen.sfd.random_binary.params())
+strategy = MiniGrid(domain)  # see Advanced Search for a complete minimal implementation
+
+uel = limen.UniversalExperimentLoop(
+    sfd=limen.sfd.random_binary,
+    search_strategy=strategy,
+    pruning_strategies=[
+        BudgetReducer(max_permutations=4, check_after_pct=0.25),
+    ],
+    feedback_interval=2,
+    checkpoint_interval=3,
+    experiment_dir='advanced-budget',
+)
+
+uel.run(
+    experiment_name='advanced-budget',
+    n_permutations=6,
+)
+```
+
+On a live local run in this repo, that advanced run:
+
+- requested `6` permutations
+- finished with `4` rows in `results.csv`
+- wrote `4` entries to `round_data.jsonl`
+- wrote `1` entry to `audit.jsonl`
+- saved a checkpoint after round `3`
+
+That behavior came from a reducer-triggered trim during the feedback cycle, not from a simple early stop.
+
+## Resume In Practice
+
+Resumption belongs only to the advanced path:
+
+```python
+uel.run(
+    experiment_name='advanced-budget',
+    n_permutations=6,
+    resume=True,
+)
+```
+
+In a live shutdown-and-resume run in this repo:
+
+- the first phase stopped after `2` completed rounds
+- `results.csv` and `round_data.jsonl` each contained `2` entries
+- the resumed phase finished the remaining rounds
+- the final stored round ids were `0, 1, 2, 3`
+
+Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
+
+For the full advanced-search contract, continue to [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md).
 
 ## Common Errors
 

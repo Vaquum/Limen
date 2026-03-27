@@ -110,6 +110,42 @@ This path is useful when you want an explicit sequence of account updates rather
 - `net_short_volume`
 - `net_trade_volume`
 
+## Sequential Ledger Semantics
+
+`BacktestSequential` delegates position bookkeeping to `limen.trading.Account`.
+
+`Account` supports these actions:
+
+- `hold`
+- `buy`
+- `sell`
+- `short`
+- `cover`
+
+and exposes:
+
+- `long_position`
+- `short_position`
+- `net_position`
+
+That said, the current `BacktestSequential.run()` implementation is still a long-only evaluator. It uses:
+
+- `buy`
+- `sell`
+- `hold`
+
+and does not currently open short or cover actions during the backtest loop.
+
+On a live local sequential run in this repo:
+
+- `net_short_volume` remained `0`
+- the action history began `hold, buy, sell, buy, sell, ...`
+
+So the right mental model today is:
+
+- `Account` is capable of both long and short bookkeeping
+- `BacktestSequential.run()` currently exercises only the long side
+
 ## Backtest Versus Benchmark
 
 Benchmark and backtest should be read together, not treated as substitutes.

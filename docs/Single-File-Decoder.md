@@ -178,8 +178,33 @@ Limen ships foundational SFDs under `limen.sfd.foundational_sfd`. These are refe
 
 Custom SFDs are your own experiment modules. They can use the same manifest system, or they can take the custom `prep()` and `model()` path when the workflow demands it.
 
+## Foundational SFDs Versus Reference Architecture
+
+There is one more design split that matters in practice:
+
+| Layer | Owns |
+|---|---|
+| foundational SFD | `params()` plus the packaged manifest |
+| reference architecture | the class-based model contract and the function wrapper used by the manifest |
+
+For example:
+
+- `limen.sfd.foundational_sfd.logreg_binary` packages the experiment
+- `limen.sfd.reference_architecture.logreg_binary` owns the model implementation
+
+This is why [Trainer](Trainer.md) can promote a finished experiment round back into a trained `ReferenceModel`.
+
+On a live local smoke pass in this repo:
+
+- `logreg_binary`, `random_binary`, and `xgboost_regressor` all ran
+- `tabpfn_binary` was unavailable because `tabpfn` was not installed
+
+Use [Built-In SFDs](Built-In-SFDs.md) for the current shipped catalog and [Reference Architecture](Reference-Architecture.md) for the model layer underneath it.
+
 ## Read Next
 
+- Continue to [Built-In SFDs](Built-In-SFDs.md) for the shipped foundational decoder catalog.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline used by most SFDs.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run an SFD.
+- Continue to [Reference Architecture](Reference-Architecture.md) if you are authoring model implementations rather than only packaged decoders.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring new SFDs.

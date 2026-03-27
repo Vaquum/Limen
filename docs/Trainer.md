@@ -106,6 +106,28 @@ Trainer uses the model class's `deterministic` attribute to choose the validatio
 
 This is why promotion is more reliable for deterministic reference models than for intentionally stochastic ones.
 
+## Trainer And The Reference-Architecture Contract
+
+Trainer does not promote arbitrary model objects. It resolves exactly one `ReferenceModel` subclass from the original model module and uses that class for retraining.
+
+That means the promotion stack depends on the [Reference Architecture](Reference-Architecture.md) contract:
+
+- `train(data, **params)`
+- `predict(data)`
+- `evaluate(data, inline_metrics=True)`
+- `deterministic`
+
+On a live local `logreg_binary` promotion run in this repo:
+
+- Pass 1 validation completed with `validation_mismatches == []`
+- the promoted `Sensor.results` included task metrics plus `backtest_*` keys
+- `Sensor.predict()` returned `_preds` and `_probs`
+- the promoted sensor produced predictions for `884` test bars
+
+On a live local `random_binary` promotion run in this repo, Trainer raised `ReconstructionError` because the stochastic rerun did not reproduce the original logged metrics closely enough.
+
+This is expected behavior, not a special case in the docs.
+
 ## `Trainer(experiment_dir, data=None)`
 
 ### Arguments
@@ -173,6 +195,21 @@ Most reference models only need:
 
 Some models may require more. The requirement comes from the underlying model class, not from the `Sensor` wrapper itself.
 
+### What `results` contains
+
+`Sensor.results` comes from the Pass 1 evaluation result, not from a stripped-down inference-only payload.
+
+In a live local logreg promotion run in this repo, the stored keys included:
+
+- `_preds`
+- `accuracy`
+- `auc`
+- `backtest_total_return_net_pct`
+- `backtest_max_drawdown_pct`
+- `backtest_sharpe_per_bar`
+
+That is why `Sensor.results` is useful for provenance and review, while `Sensor.predict()` is the smaller live inference surface.
+
 ## What Trainer Reads From Disk
 
 Trainer uses:
@@ -205,5 +242,6 @@ So the clean mental model is:
 
 ## Read Next
 
+- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and retrains.
 - Continue to [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) if you want to work with diversified pools of selected rounds rather than isolated sensors.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) if you need the run layer that produces `experiment_dir`.

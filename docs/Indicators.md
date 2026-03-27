@@ -60,6 +60,7 @@ These helpers usually take either a single `price_col` or basic OHLC inputs and 
 | `midpoint` | `midpoint_14` | Rolling midpoint of a single `price_col`. |
 | `sma` | `sma_30`, `close_sma_30` | Adds both the canonical and compatibility alias columns. |
 | `ema` | `ema_30` | Exponential moving average. |
+| `wma` | `wma_30` | Weighted moving average. |
 | `dema` | `dema_30` | Double EMA. |
 | `tema` | `tema_30` | Triple EMA. |
 | `trima` | `trima_30` | Triangular moving average. |
@@ -89,6 +90,7 @@ These helpers focus on rate of change, directional persistence, oscillator state
 | `rsi_sma` | `rsi_sma_14` | SMA-based RSI-style helper. |
 | `wilder_rsi` | `wilder_rsi_14` | Wilder-smoothed RSI variant. |
 | `cmo` | `cmo_14` | Chande Momentum Oscillator. |
+| `cci` | `cci_14` | Commodity Channel Index. |
 | `ultosc` | `ultosc_7_14_28` | Ultimate Oscillator over three windows. |
 | `willr` | `willr_14` | Williams %R. |
 | `stoch` | `stoch_slowk`, `stoch_slowd` | TA-Lib stochastic oscillator. |
