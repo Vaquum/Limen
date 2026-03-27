@@ -1,198 +1,285 @@
 # Universal Experiment Loop
 
-Universal Experiment Loop (UEL) is an integral part of Limen, and takes as its input data and a Single File Decoder (SFD). `UEL` currently wraps onto itself (i.e. the object `uel.run` yields) all the folds from `Data` to `Backtest`. In other words, all the following folds are wrapped into one workflow `uel.run`:
+The Universal Experiment Loop (UEL) is Limen's experiment runner. It takes an SFD, executes parameter combinations, streams a CSV log, and then exposes post-run analysis surfaces such as confusion metrics and backtest results.
 
-- [`Data`](Historical-Data.md)
-- [`Indicator`](Indicators.md)
-- [`Feature`](Features.md)
-- [`SFD`](Single-File-Decoder.md)
-- [`UEL`](Universal-Experiment-Loop.md)
-- [`Log`](Log.md)
-- [`Benchmark`](Benchmark.md)
-- [`Backtest`](Backtest.md)
+This is the page to read when you want to answer four practical questions:
 
-The operation of `uel.run` can be thought of as an advanced parameter sweep, which automatically integrates the parameter sweep results (i.e. `uel.experiment_log`) with benchmark analytics (i.e. `uel.experiment_confusion_metrics`) and backtest results (i.e. `uel.experiment_backtest_results`).
+- how to run a first experiment
+- what `UniversalExperimentLoop` actually stores after a run
+- when to use the simple run path versus the advanced artifact-rich path
+- which run-time rules matter for manifest-driven and custom SFDs
 
-## On Parameters
+## Two Execution Modes
 
-Parameters can be thought of as "knobs", as a means to control the direction of the experiment. Therefore, parameters play a crucial role in determining how successful an experiment is. Therefore, it is wise to start with a rich set of parameters, and broad parameter ranges for each parameter. The parameter sweep method is extremely powerful this way; in terms of its potential, it can be imagined as having infinite number of hands, turning an infinite number of knobs at the same time.
+UEL currently has two execution modes.
 
-## The True Meaning of Parameter Sweep
+| Mode | How you enter it | Best for | What you get |
+|---|---|---|---|
+| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | most public examples and straightforward sweeps | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv` |
+| MSQ / artifact-rich path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
 
-It is typically thought that the focus of the parameter sweep is specifically the model hyperparameters, and only these. This led to the bastardized term "hyperparameter optimization". This perspective is extremely limiting and entirely misses the point of parameter sweeping. 
+The standard run path is the right starting point for most readers. The advanced path is real and supported, but it is an extension-oriented surface built around `SearchStrategy`.
 
-In short, the point of parameter sweeping is that since such a practice is possible, and since more or less anything and everything can be readily parametrized, there should be no limit to where this approach can be applied. 
+## First Real Run
 
-**Not only the idea of sweeping through parameters can be extended beyond the model and its hyperparameters, to data fetching, data pre-processing, feature engineering, and all other aspects of classifier development lifecycle, but it can also be extended well beyond input arguments. For example, conditional logic can be handled as parameters, and even individual fragments of code can be fully parametric, and therefore a subject of a parameter sweep.**
-
-In other words, the idea of performing a parameter sweep is equally relevant to all of Limen's folds. This is a crucial key point, and our success depends on understanding it, putting it into practice, and realizing its unrestrained power to yield the most meaningful probabilities for live trading at any given point in time, regardless of the prevailing circumstances.
-
-## Performing an Experiment
-
-The meaning of the term experiment is encapsulated by the below workflow. 
-
-`Choose Data` -> `Choose Indicators` -> `Choose Features` -> `Develop SFD` -> `Run UEL` -> `Analyze Experiment Log` -> `Analyze Experiment Confusion Metrics` -> `Analyze Backtest Results` -> `Refine Parameters` -> `Run UEL` -> `...`
-
-For an SFD to become mature and ready for trading, one must iterate between running `UEL` and refining parameters many times. Generally speaking, even a relatively small parameter space requires thousands or tens of thousands of permutation rounds before meaningful analytical power is unlocked.
-
-## Refining Parameters
-
-Refining parameters can be understood through expanding or contracting parameters or parameter value ranges. 
-
-## Data
-
-A key point here is that all individual contributors work based on the same underlying data. We achieve this by always calling data from the provided (klines) endpoints available through [HistoricalData](Historical-Data.md). If you don't find what you need through these endpoints, [make an issue](https://github.com/Vaquum/Limen/issues/new) that requests the data that you need, or make a PR that commits the proposed change.
-
-**Declarative manifest approach:** Manifest-based SFDs can configure data sources in their manifest, enabling UEL to automatically fetch data. See [Experiment Manifest](Experiment-Manifest.md) for details.
-
-## SFD
-
-An SFD contains all parameters, data preparation code, and model operation codes in a single python file. For example, representing a logistic regression binary classifier.
-
-**Foundational SFDs** are the official reference SFDs provided by Limen (all use manifest-based configuration). **Custom SFDs** are user-defined SFDs with flexibility to use either manifest-based configuration or custom implementation. Manifest-based SFDs include a `manifest()` function that configures the entire experiment pipeline and enables automatic data fetching.
-
-Read more in [Single File Decoder](Single-File-Decoder.md).
-
-## `UniversalExperimentLoop`
-
-Initializes the Universal Experiment Loop.
-
-### Args
-
-**Note:** All arguments are keyword-only (use `data=...`, `sfd=...`).
-
-| Parameter             | Type               | Description                                           |
-|-----------------------|--------------------|-------------------------------------------------------|
-| `data`                | `pl.DataFrame`     | Optional. Experiment data. Required for SFDs using custom functions approach. For manifest-based SFDs, if not provided, data is automatically fetched from configured sources based on `LOOP_ENV` environment variable (defaults to 'test'). |
-| `sfd`                 | `SingleFileDecoder`| The single file decoder to use for the experiment.    |
-| `search_strategy`     | `SearchStrategy`   | Optional. Search strategy for MSQ-based execution. When provided, dispatches to MSQ flow instead of legacy ParamSpace. |
-| `pruning_strategies`  | `list[PruningStrategy]` | Optional. Reducers for feedback-driven pruning during MSQ execution. |
-| `feedback_interval`   | `int`              | Trigger feedback every N rounds (default: 100). |
-| `checkpoint_interval` | `int`              | Save checkpoint every N rounds (default: 1000). |
-| `experiment_dir`      | `str \| Path`      | Optional. Directory for all experiment artifacts. Requires `search_strategy` (MSQ flow). Enables checkpointing, resumption, and [Trainer](Trainer.md) support. |
-| `intra_callback`      | `Callable`         | Optional. Python callback receiving `(log, msq)` at each feedback trigger. |
-
-
-### `run`
-
-Runs the experiment `n_permutations` times.
-
-**NOTE:** For **custom SFDs**, you can override any or all of `params`, `prep`, or `model` by passing them as input arguments. For **foundational SFDs**, the manifest auto-generates `prep` from declarative configuration and specifies `model` via `.with_model()`. When overriding, ensure inputs and returns match the contracts outlined in [Single File Decoder](Single-File-Decoder.md).
-
-### Args
-
-| Parameter                     | Type              | Description                                                                                             |
-|-------------------------------|-------------------|---------------------------------------------------------------------------------------------------------|
-| `experiment_name`             | `str`             | The experiment name. Also used as the CSV filename written in the project root (`<name>.csv`).          |
-| `n_permutations`              | `int`             | Number of permutations to run (default: 10000).                                                         |
-| `prep_each_round`             | `bool`            | If `True`, calls `sfd.prep(data, round_params=...)` on every round. If `False`, calls `sfd.prep(data)` once on the first round. |
-| `random_search`               | `bool`            | If `True`, sample the parameter space randomly; if `False`, iterate deterministically (grid-like).      |
-| `maintain_details_in_params`  | `bool`            | If `True`, injects `_experiment_details` (e.g., current index) into `round_params` for logging, then removes it before writing results. |
-| `context_params`              | `dict`            | Extra context passed into `round_params` for every round (useful for identifiers like symbol, horizon). |
-| `save_to_sqlite`              | `bool`            | If `True`, appends results to SQLite at `/opt/experiments/experiments.sqlite` under table `experiment_name`. |
-| `params`                      | `Callable`        | Optional override for the SFD `params` function. Must return a parameter space dictionary.              |
-| `prep`                        | `Callable`        | Optional override for the SFD `prep` function. Must follow the standard input/output contract.          |
-| `model`                       | `Callable`        | Optional override for the SFD `model` function. Must follow the standard input/output contract.         |
-| `resume`                      | `bool`            | If `True`, resume from an existing checkpoint in `experiment_dir`. Requires `search_strategy` and `experiment_dir`. |
-
-### Returns
-
-Adds artifacts into the `UniversalExperimentLoop` instance and writes streaming logs:
-
-- CSV logging: On the first round, writes a header row to `<experiment_name>.csv`, then appends one result row per round.
-- Optional SQLite logging: If `save_to_sqlite=True`, appends the last written row to `/opt/experiments/experiments.sqlite` under table `experiment_name`.
-
-#### Artifacts on the `UniversalExperimentLoop` instance
-
-- `data`: The `pl.DataFrame` used by the limen (explicitly passed or auto-fetched from manifest)
-- `params`: The parameter space in use (from SFD `params()` or `params` override in `run()`)
-- `prep`: The data preparation function (auto-generated from manifest for manifest-based SFDs, from SFD `prep()` for custom functions approach, or `prep` override in `run()`)
-- `model`: The model function (from manifest via `with_model()` for manifest-based SFDs, from SFD `model()` for custom functions approach, or `model` override in `run()`)
-- `round_params`: `list[dict]` of the actual parameter sets used in each permutation
-- `experiment_log`: `pl.DataFrame` containing accumulated round results (first row created on round 0, then vstacked)
-- `extras`: `list[Any]` of any extra artifacts returned by the SFD (when `round_results` contained an `extras` key)
-- `models`: `list[Any]` of models returned by the SFD (when `round_results` contained a `models` key)
-- `preds`: `list[Any]` predictions captured from the SFD when `round_results['_preds']` is present
-- `scalers`: `list[Any]` scalers captured from SFD `prep` when the data dict includes `_scaler`
-- `_alignment`: `list[dict]` alignment metadata per round, as produced by `utils.splits.split_data_to_prep_output`:
-  - `missing_datetimes`: list of datetimes dropped during prep
-  - `first_test_datetime` / `last_test_datetime`: inclusive test window bounds
-  
-  In addition, UEL now exposes precomputed analysis artifacts and a convenience handle to the internal logger:
-  
-  - `experiment_confusion_metrics`: `pd.DataFrame` produced via `Log.experiment_confusion_metrics('price_change')`
-  - `experiment_backtest_results`: `pd.DataFrame` produced via `Log.experiment_backtest_results()`
-  - `experiment_parameter_correlation`: Convenience reference to `Log.experiment_parameter_correlation`
-  - `_log`: Internal `Log` instance used to compute the above artifacts
-
-
-#### Parameter space
-
-UEL uses `utils.param_space.ParamSpace` to generate `round_params` either via random sampling or deterministic iteration, depending on `random_search`.
-
-#### Log integration
-
-At the end of `run`, UEL constructs an internal `Log` instance and exposes key analysis artifacts directly on the UEL object:
-
-- `self._log = limen.Log(uel_object=self, cols_to_multilabel=<all string columns>)`
-- Precomputed properties set on UEL:
-  - `self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')`
-  - `self.experiment_backtest_results = self._log.experiment_backtest_results()`
-  - `self.experiment_parameter_correlation = self._log.experiment_parameter_correlation`
-
-If you need additional methods, access the internal `Log` via `uel._log` (see [Log](Log.md)):
-- `permutation_prediction_performance(round_id: int) -> pd.DataFrame`
-- `permutation_confusion_metrics(x: str, round_id: int, ...) -> pd.DataFrame`
-- `read_from_file(file_path: str) -> pd.DataFrame` (alternative constructor path)
-
-
-**NOTE**: For fully reproducible post-experiment analysis with `Log`, if using `prep_each_round=True`, make sure that `sfd.prep` is not any random operations, or if you must have random operations, use parametric seeds for round-by-round reproducibility.
-
-### Experiment Directory
-
-When `experiment_dir` is provided, all experiment artifacts are stored under that directory. This enables checkpointing, resumption, and training via [Trainer](Trainer.md).
-
-| File | Description |
-|------|-------------|
-| `results.csv` | Streaming experiment log (one row per round) |
-| `round_data.jsonl` | Per-round parameters, predictions, and alignment metadata |
-| `checkpoint.json` | MSQ, domain, and feedback controller state for resumption |
-| `audit.jsonl` | Feedback controller audit trail |
-| `interventions.json` | Applied interventions from pruning strategies |
-| `metadata.json` | Experiment metadata for [Trainer](Trainer.md) reconstruction |
-
-`metadata.json` is written at experiment start (non-resume runs only) and contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `sfd_module` | `str` | Python module path of the SFD (e.g. `limen.sfd.foundational_sfd.random_binary`) |
-| `limen_version` | `str` | Limen package version at experiment time |
-| `created_at` | `str` | ISO 8601 timestamp of experiment creation |
-
-### Example
+This is the most reliable local example because it uses the bundled test dataset and a built-in manifest-driven SFD.
 
 ```python
 import limen
-from limen import sfd
+from limen.data import HistoricalData
 
-# Manifest-based SFD with auto-fetch
-# Data is automatically fetched from manifest-configured sources
-uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
+historical = HistoricalData()
+historical._get_data_for_test(n_rows=2000)
 
-uel.run(
-    experiment_name='exp_logreg',
-    n_permutations=100,
-    prep_each_round=True,
-    random_search=True,
+uel = limen.UniversalExperimentLoop(
+    data=historical.data,
+    sfd=limen.sfd.logreg_binary,
 )
 
-# Post-run analysis via precomputed artifacts and internal Log
-backtest_df = uel.experiment_backtest_results
-confusion_df = uel.experiment_confusion_metrics
-
-# Compute round-specific results
-round0_perf = uel._log.permutation_prediction_performance(round_id=0)
-
+uel.run(
+    experiment_name='logreg-first',
+    n_permutations=4,
+    prep_each_round=True,
+    random_search=False,
+)
 ```
 
-The above examples are indicative, refer above in this document for outline of the full features available after `uel.run` completes operation.
+After the run you can inspect:
+
+```python
+uel.experiment_log
+uel.experiment_confusion_metrics
+uel.experiment_backtest_results
+```
+
+On a live local run over the bundled test data, that produced:
+
+- `uel.experiment_log` with one row per round
+- `uel.experiment_confusion_metrics` with one row per round
+- `uel.experiment_backtest_results` with one row per round
+- `uel.preds`, `uel.round_params`, and `uel._alignment` for round-level reconstruction
+
+## Constructor Contract
+
+```python
+uel = limen.UniversalExperimentLoop(
+    data=None,
+    sfd=my_sfd,
+    search_strategy=None,
+    experiment_dir=None,
+)
+```
+
+### Core constructor arguments
+
+| Argument | Meaning |
+|---|---|
+| `sfd` | required SFD module |
+| `data` | optional input dataframe; required for custom SFDs, optional for manifest-driven SFDs |
+| `search_strategy` | advanced search hook; enables the MSQ execution path |
+| `experiment_dir` | directory for stored experiment artifacts; meaningful with the advanced path |
+| `pruning_strategies`, `feedback_interval`, `checkpoint_interval`, `intra_callback` | advanced MSQ controls |
+
+### Data behavior
+
+- If the SFD exposes `manifest()` and you do not pass `data=`, UEL fetches data from the manifest.
+- If the SFD is custom and has no manifest, `data=` is required.
+- For manifest-driven SFDs, the data source used by auto-fetch depends on `LOOP_ENV`.
+
+## `run()` Contract
+
+```python
+uel.run(
+    experiment_name='my_experiment',
+    n_permutations=100,
+    prep_each_round=True,
+)
+```
+
+### Core run arguments
+
+| Argument | Meaning |
+|---|---|
+| `experiment_name` | run name and CSV path stem; `my_experiment` writes `my_experiment.csv` |
+| `n_permutations` | number of rounds to execute |
+| `prep_each_round` | whether prep runs every round; required for manifest-driven SFDs |
+| `random_search` | random versus deterministic parameter generation on the standard path |
+| `context_params` | extra static keys injected into every round |
+| `params`, `prep`, `model` | optional overrides for the standard path |
+| `resume` | resume from checkpoint in the advanced path |
+
+### Manifest-driven rules
+
+If the SFD uses `manifest()`:
+
+- `prep_each_round=True` is required
+- `prep=` and `model=` overrides are not allowed
+- `params=` override is allowed
+
+### Custom-SFD rules
+
+If the SFD uses custom `prep()` and `model()`:
+
+- `data=` must be provided when you instantiate UEL
+- `prep_each_round` can be `True` or `False`, depending on whether prep depends on round params
+- `params=`, `prep=`, and `model=` overrides are available on the standard path
+
+## What UEL Stores After A Run
+
+The most important attributes are:
+
+| Attribute | Meaning |
+|---|---|
+| `uel.data` | dataframe used by the run |
+| `uel.params` | parameter space in use |
+| `uel.round_params` | actual parameter values used for each round |
+| `uel.experiment_log` | main round-by-round experiment log |
+| `uel.experiment_confusion_metrics` | confusion-style analysis derived from predictions |
+| `uel.experiment_backtest_results` | backtest-style analysis derived from predictions |
+| `uel.preds` | stored test predictions per round |
+| `uel.scalers` | fitted scalers captured from prep or manifest scaling |
+| `uel._alignment` | alignment metadata per round |
+| `uel._log` | internal `Log` object for deeper analysis |
+
+### Alignment metadata
+
+Each entry in `uel._alignment` includes:
+
+- `missing_datetimes`
+- `first_test_datetime`
+- `last_test_datetime`
+
+This is what lets downstream analysis stay aligned with the actual test window seen by a round.
+
+### Deeper post-run analysis
+
+UEL constructs a `Log` instance automatically at the end of a successful run. That gives you access to methods such as:
+
+- `uel._log.permutation_prediction_performance(round_id=0)`
+- `uel._log.permutation_confusion_metrics('price_change', round_id=0)`
+- `uel.experiment_parameter_correlation('auc')`
+
+## Standard Path Versus Artifact-Rich Path
+
+### Standard Path
+
+The standard path writes a streaming CSV at:
+
+```text
+<experiment_name>.csv
+```
+
+and keeps the full run state in memory on the `uel` object.
+
+This is the path to use for:
+
+- first experiments
+- docs examples
+- quick local research loops
+- simple parameter sweeps
+
+### Artifact-Rich Path
+
+If you instantiate UEL with a concrete `search_strategy` and an `experiment_dir`, Limen stores structured artifacts there.
+
+| File | Meaning |
+|---|---|
+| `results.csv` | streaming round log |
+| `round_data.jsonl` | round params, predictions, and alignment metadata |
+| `checkpoint.json` | checkpoint state for resumption |
+| `audit.jsonl` | feedback-controller audit trail |
+| `interventions.json` | optional external intervention file polled by the feedback controller if you create it |
+| `metadata.json` | experiment metadata used by `Trainer` |
+
+This path is what powers checkpointing, resumability, and the [Trainer](Trainer.md) workflow.
+
+### Important scope note
+
+`SearchStrategy` is an abstract extension point in the public package. In other words, the advanced path is available now, but it expects a concrete strategy implementation from your codebase or extension layer.
+
+## One Real Advanced Run
+
+The UEL-facing part of an advanced run looks like this once you already have a concrete `SearchStrategy`:
+
+```python
+import limen
+
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer import BudgetReducer
+
+domain = ParamDomain(limen.sfd.random_binary.params())
+strategy = MiniGrid(domain)  # see Advanced Search for a complete minimal implementation
+
+uel = limen.UniversalExperimentLoop(
+    sfd=limen.sfd.random_binary,
+    search_strategy=strategy,
+    pruning_strategies=[
+        BudgetReducer(max_permutations=4, check_after_pct=0.25),
+    ],
+    feedback_interval=2,
+    checkpoint_interval=3,
+    experiment_dir='advanced-budget',
+)
+
+uel.run(
+    experiment_name='advanced-budget',
+    n_permutations=6,
+)
+```
+
+On a live local run in this repo, that advanced run:
+
+- requested `6` permutations
+- finished with `4` rows in `results.csv`
+- wrote `4` entries to `round_data.jsonl`
+- wrote `1` entry to `audit.jsonl`
+- saved a checkpoint after round `3`
+
+That behavior came from a reducer-triggered trim during the feedback cycle, not from a simple early stop.
+
+## Resume In Practice
+
+Resumption belongs only to the advanced path:
+
+```python
+uel.run(
+    experiment_name='advanced-budget',
+    n_permutations=6,
+    resume=True,
+)
+```
+
+In a live shutdown-and-resume run in this repo:
+
+- the first phase stopped after `2` completed rounds
+- `results.csv` and `round_data.jsonl` each contained `2` entries
+- the resumed phase finished the remaining rounds
+- the final stored round ids were `0, 1, 2, 3`
+
+Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
+
+For the full advanced-search contract, continue to [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md).
+
+## Common Errors
+
+### Manifest-driven runs require `prep_each_round=True`
+
+If you run a manifest-driven SFD with `prep_each_round=False`, UEL currently raises the exact runtime string `prep_each_round must be True for manifest-driven SFMs`. The `SFM` wording there is legacy runtime text, not current docs terminology. Set `prep_each_round=True`.
+
+### Manifest-driven runs cannot override `prep` or `model`
+
+If you pass `prep=` or `model=` to `run()` for a manifest-driven SFD, UEL currently raises `Cannot override prep/model when SFM has manifest`. That `SFM` wording is also legacy runtime text. Put the logic into the manifest instead, or switch to the custom SFD path.
+
+### Custom SFDs require explicit `data=`
+
+If you instantiate UEL with a custom SFD and omit `data=`, UEL raises `data parameter required for custom SFDs using custom functions approach`.
+
+### Resuming requires a search strategy
+
+Resumption belongs to the advanced path. If you call `run(..., resume=True)` without a search strategy, UEL raises `resume=True is only supported with a search_strategy`.
+
+## Read Next
+
+- Continue to [Log](Log.md) to understand the analysis surfaces built on top of UEL results.
+- Continue to [Experiment Manifest](Experiment-Manifest.md) if you are building a manifest-driven SFD.
+- Continue to [Trainer](Trainer.md) if you are using the artifact-rich path and want to retrain finished rounds into sensors.

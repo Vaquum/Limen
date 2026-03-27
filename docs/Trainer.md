@@ -1,111 +1,247 @@
 # Trainer
 
-The Trainer takes a completed experiment directory and retrains selected permutations. It reads `metadata.json` to reconstruct the SFD manifest and parameters, then uses `round_data.jsonl` to look up the parameter values for each requested permutation.
+`Trainer` is Limen's promotion layer for finished experiment rounds. It takes a completed artifact-rich experiment directory, reconstructs the manifest and round parameters, validates selected permutations, and retrains them into reusable `Sensor` objects.
 
-The output of training is a list of [Sensor](#sensor) instances wrapping trained `ReferenceModel` objects callable for live inference.
+This is the bridge between "a good row in an experiment" and "a trained model object I can carry forward."
+
+## What Trainer Needs
+
+Trainer works only with experiments that were run through the artifact-rich UEL path and wrote an `experiment_dir`.
+
+At minimum, the directory must contain:
+
+- `metadata.json`
+- `round_data.jsonl`
+
+If `results.csv` is also present, Trainer performs Pass 1 validation against the original metrics. If it is missing, Trainer skips validation and proceeds directly to retraining.
 
 ## Prerequisites
 
-- The experiment must have been run with `experiment_dir` set in [UniversalExperimentLoop](Universal-Experiment-Loop.md). This ensures `metadata.json` and `round_data.jsonl` are available for the Trainer to reconstruct the pipeline.
-- The SFD must be **manifest-based** (i.e., it must expose `manifest()` and `params()`). Custom-function SFDs are not supported.
-- The `experiment_dir` must be trusted — the SFD module path from `metadata.json` is imported at runtime.
+- the experiment must have been created with `experiment_dir=...`
+- the SFD must be manifest-driven
+- the experiment directory must be trusted
 
-## 2-Pass Training
+The trust warning matters because Trainer imports the SFD module path stored in `metadata.json`.
 
-Training proceeds in two passes:
+## Typical Workflow
 
-- **Pass 1 — Validation**: Re-runs `manifest.prepare_data()` and `manifest.run_model()` with the original round parameters and compares metrics against the experiment log. Raises `ReconstructionError` if metrics deviate beyond tolerance. This detects pipeline drift between experiment completion and training. If `results.csv` is not present in the experiment directory, validation is skipped and Pass 2 proceeds directly.
-- **Pass 2 — Retraining**: Retrains on the full dataset using `split_config=(1,0,0)` (all data for training, no validation/test split). The model class is resolved from the model function's module and instantiated directly via `.train()`. The resulting trained model is wrapped in a callable Sensor.
+Start from an existing experiment directory:
 
-### Tolerance Thresholds
+```python
+import limen
 
-Tolerance is determined by the model's `deterministic` class attribute:
+trainer = limen.Trainer(
+    experiment_dir='path/to/experiment',
+    data=my_data,  # optional override
+)
 
-| Model Type | Tolerance | Examples |
-|------------|-----------|----------|
-| Deterministic (`deterministic = True`) | Exact match (1e-6 float tolerance) | `LogRegBinary`, `XGBoostRegressor` |
-| Stochastic (`deterministic = False`) | 1% scaled difference (`max(\|orig\|, \|new\|, 1.0)`) | `RandomBinary`, `TabPFNBinary` |
+sensors = trainer.train([0, 7, 19])
+sensor = sensors[0]
 
-### ReconstructionError
+result = sensor.predict({'x_test': live_features})
+```
 
-Raised when Pass 1 validation detects metric deviation beyond tolerance. The error message includes the permutation ID and a list of mismatched metrics with their original and new values.
+In this workflow:
+
+- `Trainer` reconstructs the manifest and round metadata
+- `train([ ... ])` validates and retrains the selected rounds
+- each returned `Sensor` wraps one trained `ReferenceModel`
+
+## Why Trainer Exists
+
+Experiment runs are usually done on train/validation/test splits. Promotion is different: once a round is selected, you usually want to retrain it on all available data before carrying it downstream.
+
+Trainer handles that transition cleanly by:
+
+- reconstructing the original experiment logic
+- validating that the pipeline still reproduces the logged round
+- retraining on all data with `split_config=(1,0,0)`
+
+## Two-Pass Training
+
+### Pass 1: Validation
+
+Trainer reruns:
+
+- `manifest.prepare_data(...)`
+- `manifest.run_model(...)`
+
+with the original round parameters and compares the resulting metrics against the original experiment log.
+
+If the model is deterministic, validation expects an exact match within a very small float tolerance. If the model is stochastic, Trainer uses a looser scaled tolerance.
+
+If validation fails, Trainer raises `ReconstructionError`.
 
 ```python
 from limen import ReconstructionError
 
 try:
-    sensors = trainer.train(permutation_ids=[42])
+    sensors = trainer.train([42])
 except ReconstructionError as e:
-    print(f"Pipeline drift detected: {e}")
+    print(e)
 ```
 
-## `Trainer`
+This is Limen's guard against pipeline drift.
 
-### Args
+### Pass 2: Retraining
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `experiment_dir` | `str \| Path` | Path to completed experiment directory |
-| `data` | `pl.DataFrame \| None` | Optional data override. If None, fetches from manifest data source |
-
-### `train(permutation_ids)`
-
-Runs 2-pass training for selected permutations.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `permutation_ids` | `list[int]` | Round IDs from experiment_log to retrain |
-
-Returns a `list[Sensor]`, one per permutation ID.
-
-Raises `ValueError` if any permutation ID is not found in `round_data.jsonl`.
-Raises `ReconstructionError` if Pass 1 metrics deviate beyond tolerance.
-
-### Usage
+After validation, Trainer deep-copies the manifest with:
 
 ```python
-from limen import Trainer
-
-trainer = Trainer(experiment_dir='path/to/experiment')
-sensors = trainer.train(permutation_ids=[42, 87, 103])
-
-for sensor in sensors:
-    print(sensor.permutation_id, sensor.round_params)
-    prediction = sensor.predict({'x_test': live_features})
+split_config=(1, 0, 0)
 ```
+
+and retrains the resolved `ReferenceModel` on the full dataset.
+
+That trained model is then wrapped in a `Sensor`.
+
+## Deterministic Vs Stochastic Models
+
+Trainer uses the model class's `deterministic` attribute to choose the validation tolerance.
+
+| Model type | Validation style |
+|---|---|
+| `deterministic = True` | near-exact metric match |
+| `deterministic = False` | scaled tolerance for expected randomness |
+
+This is why promotion is more reliable for deterministic reference models than for intentionally stochastic ones.
+
+## Trainer And The Reference-Architecture Contract
+
+Trainer does not promote arbitrary model objects. It resolves exactly one `ReferenceModel` subclass from the original model module and uses that class for retraining.
+
+That means the promotion stack depends on the [Reference Architecture](Reference-Architecture.md) contract:
+
+- `train(data, **params)`
+- `predict(data)`
+- `evaluate(data, inline_metrics=True)`
+- `deterministic`
+
+On a live local `logreg_binary` promotion run in this repo:
+
+- Pass 1 validation completed with `validation_mismatches == []`
+- the promoted `Sensor.results` included task metrics plus `backtest_*` keys
+- `Sensor.predict()` returned `_preds` and `_probs`
+- the promoted sensor produced predictions for `884` test bars
+
+On a live local `random_binary` promotion run in this repo, Trainer raised `ReconstructionError` because the stochastic rerun did not reproduce the original logged metrics closely enough.
+
+This is expected behavior, not a special case in the docs.
+
+## `Trainer(experiment_dir, data=None)`
+
+### Arguments
+
+| Argument | Meaning |
+|---|---|
+| `experiment_dir` | path to the completed experiment directory |
+| `data` | optional dataframe override; if omitted, Trainer fetches data from the reconstructed manifest |
+
+Use `data=` when you already have the exact dataframe you want Trainer to use. Otherwise Trainer falls back to `manifest.fetch_data_for_env()`.
+
+## `train(permutation_ids)`
+
+```python
+sensors = trainer.train([0, 1, 2])
+```
+
+This method:
+
+- verifies that the requested permutation ids exist in `round_data.jsonl`
+- validates them against `results.csv` when available
+- retrains them on all data
+- returns `list[Sensor]`
+
+Raises:
+
+- `ValueError` if a permutation id is missing
+- `ReconstructionError` if validation detects metric drift
 
 ## Sensor
 
-Wraps a trained `ReferenceModel` instance for live inference. Each Sensor stores the permutation ID, round parameters, experiment metadata, and Pass 1 validation results for full traceability.
+A `Sensor` is the promoted form of a trained round.
 
-### Properties
+Each sensor stores:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `permutation_id` | `int` | Round ID from experiment log |
-| `model` | `ReferenceModel` | Trained model instance |
-| `round_params` | `dict` | Parameter values used for this permutation |
-| `metadata` | `dict` | Experiment metadata from metadata.json |
-| `results` | `dict \| None` | Model evaluation results from Pass 1 |
+- `permutation_id`
+- `model`
+- `round_params`
+- `metadata`
+- `results`
 
-### `predict(data)`
-
-Generate predictions from feature data. Most models only require `x_test` in the data dictionary (no labels needed). `TabPFNBinary` additionally requires `x_val` and `y_val` for threshold tuning.
+### Example
 
 ```python
-result = sensor.predict({'x_test': features})
-preds = result['_preds']
+sensor = sensors[0]
+
+print(sensor.permutation_id)
+print(sensor.round_params)
+print(sensor.metadata['sfd_module'])
+
+pred = sensor.predict({'x_test': live_features})
 ```
 
-Sensors are also callable — `sensor(data)` is shorthand for `sensor.predict(data)`.
-
-### Traceability
+Sensors are also callable:
 
 ```python
-# Identify which permutation and model produced this sensor
-print(sensor.permutation_id)           # e.g. 42
-print(sensor.round_params)             # parameter values
-print(sensor.metadata['sfd_module'])   # SFD module path
-print(sensor.model.__class__.__name__) # e.g. 'LogRegBinary'
-print(sensor.results)                  # Pass 1 validation metrics
+pred = sensor({'x_test': live_features})
 ```
+
+### What `predict()` expects
+
+Most reference models only need:
+
+- `x_test`
+
+Some models may require more. The requirement comes from the underlying model class, not from the `Sensor` wrapper itself.
+
+### What `results` contains
+
+`Sensor.results` comes from the Pass 1 evaluation result, not from a stripped-down inference-only payload.
+
+In a live local logreg promotion run in this repo, the stored keys included:
+
+- `_preds`
+- `accuracy`
+- `auc`
+- `backtest_total_return_net_pct`
+- `backtest_max_drawdown_pct`
+- `backtest_sharpe_per_bar`
+
+That is why `Sensor.results` is useful for provenance and review, while `Sensor.predict()` is the smaller live inference surface.
+
+## What Trainer Reads From Disk
+
+Trainer uses:
+
+- `metadata.json` to discover the SFD module and experiment metadata
+- `round_data.jsonl` to load `round_params`, stored predictions, and alignment metadata
+- `results.csv` when available for Pass 1 metric validation
+
+On a live local artifact-rich run in this repo, `metadata.json` contained:
+
+- `sfd_module`
+- `limen_version`
+- `created_at`
+
+and `round_data.jsonl` contained entries with:
+
+- `round_id`
+- `round_params`
+- `preds`
+- `alignment`
+
+## Scope Note
+
+Trainer depends on the artifact-rich UEL path, which in turn depends on a concrete `SearchStrategy`. Limen exposes the `SearchStrategy` abstraction, but it does not ship one canonical production strategy in the public package.
+
+So the clean mental model is:
+
+- UEL artifact-rich runs create the promotion-ready experiment directory
+- Trainer turns selected rounds from that directory into sensors
+
+## Read Next
+
+- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and retrains.
+- Continue to [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) if you want to work with diversified pools of selected rounds rather than isolated sensors.
+- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) if you need the run layer that produces `experiment_dir`.

@@ -1,4 +1,6 @@
 from limen.features.conserved_flux_renormalization import conserved_flux_renormalization
+from limen.features.fractional_diff import find_min_d
+from limen.features.fractional_diff import fractional_diff
 from limen.features.breakout_features import breakout_features
 from limen.features.lagged_features import lag_column
 from limen.features.lagged_features import lag_columns
@@ -38,6 +40,8 @@ __all__ = [
     'distance_from_high',
     'distance_from_low',
     'ema_breakout',
+    'find_min_d',
+    'fractional_diff',
     'gap_high',
     'hh_hl_structure_regime',
     'ichimoku_cloud',

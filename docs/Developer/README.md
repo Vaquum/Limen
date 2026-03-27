@@ -1,13 +1,45 @@
-# Developer Guidelines
+# Developer Home
 
-## General Must-Read Developer Documentation
+This is the starting point for contributing to Limen itself. Use it to find the right maintenance path before you change code, docs, or release metadata.
 
-[Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/)
+For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). Release process and versioning guidance now also live there. Use the pages below for Limen-specific contribution and maintenance rules that still belong in this repo.
 
-## Limen Specific Developer Docs
+## Read This First
 
-### Contributing a Foundational SFD
+Before opening or updating a Limen PR:
 
-Read more about how to contribute Foundational Single-File Decoders in [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md).
+- read the relevant Limen page for the task you are doing
+- check the repo PR template and satisfy every applicable item
+- update docs, changelog, tests, and version metadata when the change requires it
 
+## Route By Task
 
+| If you are doing this | Read this next | Why |
+|---|---|---|
+| changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
+| updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
+| adding a new foundational experiment template | [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md) | Covers research expectations, file ownership, and review criteria for foundational SFDs. |
+| preparing a release or checking release automation | [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) | Uses the shared Vaquum release process that the Limen release script now fetches directly. |
+| deciding how to bump the version | [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md) | Uses the shared Vaquum versioning guidance rather than a repo-local copy. |
+
+## Common Contributor Workflow
+
+1. Understand the affected subsystem and read the canonical page for it.
+2. Make the code change, doc change, or release metadata change together when they belong together.
+3. Run the relevant validation locally.
+4. Review the full GitHub diff yourself before requesting review.
+5. Make sure the PR template items are genuinely true, not just checked.
+
+## Scope Notes
+
+- `/docs` is the canonical public docs layer.
+- `/docs/Developer` is the canonical Limen contributor layer.
+- package `README`s under `/limen` are orientation pages, not the main contributor process docs.
+
+## Read Next
+
+- [Documentation System Contract](Documentation-System.md)
+- [Writing Docstrings](Writing-Docstrings.md)
+- [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)
+- [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md)
+- [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)

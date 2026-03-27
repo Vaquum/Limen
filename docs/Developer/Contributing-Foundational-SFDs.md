@@ -1,149 +1,143 @@
 # Contributing Foundational SFDs
 
-## Background
+This guide covers how to propose and implement a new foundational SFD in Limen.
 
-Foundational SFDs are Limen's reference-grade experiment templates. Each one pairs:
+Foundational SFDs are Limen's reference-grade experiment templates. They are not one-off research scripts. A strong foundational SFD should be reusable, reviewable, and analytically valuable inside a large Limen scan.
+
+## What A Foundational SFD Owns
+
+A foundational SFD usually packages three things:
 
 - a `params()` search space
 - a manifest-driven experiment pipeline
 - a reference-architecture model function
 
-This document focuses on contributing new Foundational SFDs to Limen.
+Canonical example:
 
-## Terminology
+- foundational SFD: `limen/sfd/foundational_sfd/logreg_binary.py`
+- reference architecture: `limen/sfd/reference_architecture/logreg_binary.py`
 
-A Foundational SFD has two layers:
+The foundational SFD owns experiment design and parameter exposure. The reference architecture owns the train, predict, and evaluate logic for the model family itself.
 
-1. the Foundational SFD itself
-2. the underlying Reference Architecture
+## Before You Start
 
-A canonical example:
+Do the research work first. A good foundational SFD proposal should answer:
 
-- Foundational SFD: `limen/sfd/foundational_sfd/logreg_binary.py`
-- Reference Architecture: `limen/sfd/reference_architecture/logreg_binary.py`
+- what problem or modeling thesis this SFD is meant to capture
+- why this reference architecture is the right fit
+- which indicators and features are justified
+- how the target should be constructed
+- which scaler or transform choices belong in the default design
+- which parameters are worth exposing as a real search space
 
-The Foundational SFD owns experiment design and parameter exposure. The Reference Architecture owns the train/predict/evaluate model logic.
+If these answers are still hand-wavy, the design is not ready.
 
-## Design Principle
+## Design Rules
 
-Foundational SFDs should package the strongest literature-backed version of an approach without baking bespoke workflow logic into the model layer.
-
-That means:
-
-- experiment intelligence belongs primarily in `params()` and `manifest()`
-- model-specific training logic belongs in the Reference Architecture
-- reusable workflow logic should be implemented as shared Limen building blocks, not hidden inside one Foundational SFD
-
-## Minimal Requirements
-
-- relies on a Reference Architecture
-- is manifest-driven
-- exposes a meaningful parameter space
-- is runnable as part of a large Limen scan without custom manual glue
-
-The practical test is simple: can someone run it inside Limen at scale and get analytically useful output?
+- Keep the SFD manifest-driven.
+- Put experiment intelligence in `params()` and `manifest()`, not inside bespoke hidden code paths.
+- Put model-specific fitting logic in the reference architecture.
+- If a workflow improvement is reusable, contribute it as a shared Limen building block instead of hiding it inside one SFD.
+- Expose only meaningful search dimensions. A parameter that does not materially change the experiment should not be in `params()`.
 
 ## Contribution Surface
 
-Foundational SFDs can compose the following building blocks:
+A foundational SFD may compose these existing Limen building blocks:
 
-- Data
-- Indicators
-- Features
-- Scalers
-- Transforms
-- Target construction
-- Parameters
-
-### Data
-
-Data contributions belong under `limen.data`.
-
-### Indicators
-
-Indicators belong under `limen.indicators`.
-
-### Features
-
-Features belong under `limen.features`.
-
-### Scalers
-
-Scalers belong under `limen.scalers`.
-
-### Transforms
-
-Transforms belong under `limen.transforms`.
-
-### Target Construction
-
-Target construction lives in the manifest through `.with_target()`, fitted parameter computation, and target transforms. In other words, Limen no longer has a separate labels module contribution surface.
-
-If a new helper is needed for target construction, it should be contributed where it best fits today:
-
-- `limen.features` for target-generating feature helpers such as `quantile_flag`
-- `limen.transforms` for reusable transform helpers
-- shared utility modules only when the logic is genuinely cross-cutting
-
-### Parameters
-
-Parameters live in the Foundational SFD file itself and may control:
-
-- data selection
-- indicators
-- features
-- target construction
-- scalers
-- model behavior
-
-## Manifest Constituents
-
-In practice, a Foundational SFD manifest may include:
-
-- data source configuration
-- split configuration
+- data access and selection
 - optional bar formation
 - indicators
 - features
 - target construction
-- scaler selection
-- model selection through `.with_model()`
+- scalers
+- transforms
+- reference-architecture models
 
-Full manifest details are documented in [Experiment Manifest](../Experiment-Manifest.md).
+If a needed building block does not exist yet, add it in the right package first:
 
-## Research Expectations
+- `limen.data` for retrieval or bar-prep logic
+- `limen.indicators` for low-level signal primitives
+- `limen.features` for derived signals and target helpers
+- `limen.transforms` for lightweight transform helpers
+- `limen.scalers` for train-fitted preprocessing
 
-Before implementation, the contributing modeller should understand:
+## Gold-Standard Shape
 
-- which data works best for the Reference Architecture
-- which indicators and features are justified
-- which scaling and transform choices are appropriate
-- how the target should be constructed
-- which parameters are worth exposing
+A strong foundational SFD should look roughly like this:
 
-These should be treated as explicit research questions, not as one bundled intuition dump.
+```python
+from limen.experiment import Manifest
+from limen.data import HistoricalData
+from limen.sfd.reference_architecture import your_model
+
+
+def params():
+    return {
+        'lookback': [12, 24, 48],
+        'threshold': [0.1, 0.2, 0.3],
+        'scaler_type': ['linear', 'robust'],
+    }
+
+
+def manifest():
+    return (
+        Manifest()
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
+        )
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_split_config(8, 1, 2)
+        .add_indicator(...)
+        .add_feature(...)
+        .with_target(...)
+        .set_scaler_from_params('scaler_type')
+        .with_model(your_model)
+    )
+```
+
+That is not the only valid shape, but it captures the important properties:
+
+- split-first manifest execution
+- explicit parameter exposure
+- reusable shared building blocks
+- no hidden manual glue
+
+## Review Checklist
+
+Before calling a foundational SFD ready for review, check all of the following:
+
+- the thesis is clear and literature-backed or otherwise strongly justified
+- `params()` exposes real search dimensions
+- the manifest is readable and uses shared Limen primitives where possible
+- target construction is split-safe
+- scaler choice is appropriate for the feature surface
+- the reference architecture is the right ownership boundary for model logic
+- docs and docstrings are updated for any new public helpers added along the way
+- the SFD can run inside Limen without custom manual intervention
+
+## Anti-Patterns
+
+Avoid these:
+
+- baking reusable workflow logic into one SFD only
+- turning every implementation detail into a parameter
+- mixing model-family logic into the foundational SFD when it belongs in the reference architecture
+- introducing a new helper in an arbitrary location just because the SFD needs it once
+- writing the SFD around a one-off dataset or private workflow assumption
 
 ## Deliverables
 
-Expected deliverables for a serious Foundational SFD proposal:
+For a serious foundational SFD contribution, expect to provide:
 
-- a thesis or research summary
-- a model card covering:
-  - Reference Architecture and literature
-  - selected indicators
-  - selected features
-  - selected scalers
-  - selected transforms
-  - target construction
-  - selected parameters
-  - future work
+- a short research thesis or rationale
+- the foundational SFD file
+- any new shared helpers the design genuinely requires
+- updated docs for any new public surfaces
+- tests or validation appropriate to the added behavior
 
-## Implementation Expectations
+## Read Next
 
-Once the design is reviewed, implementation should follow the manifest patterns documented in [Experiment Manifest](../Experiment-Manifest.md).
-
-The most important rule is this:
-
-- do not hide general workflow logic inside one Foundational SFD
-
-If a workflow intervention is reusable across architectures, it should be contributed back as a shared Limen building block instead.
+- [Experiment Manifest](../Experiment-Manifest.md)
+- [Single File Decoder](../Single-File-Decoder.md)
+- [Writing Docstrings](Writing-Docstrings.md)

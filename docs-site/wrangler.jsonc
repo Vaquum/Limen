@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "limen",
+  "main": "./src/worker.js",
+  "compatibility_date": "2026-03-27",
+  "routes": [
+    {
+      "pattern": "docs.vaquum.fi",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./build",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

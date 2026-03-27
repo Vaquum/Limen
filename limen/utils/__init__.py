@@ -1,3 +1,5 @@
+from limen.utils.adf_test import AdfResult
+from limen.utils.adf_test import adf_test
 from limen.utils.log_to_optuna_study import log_to_optuna_study
 from limen.metrics.continuous_metrics import continuous_metrics
 from limen.metrics.binary_metrics import binary_metrics
@@ -8,7 +10,9 @@ from limen.utils.confidence_filtering_system import confidence_filtering_system
 from limen.utils.data_dict_to_numpy import data_dict_to_numpy
 
 __all__ = [
+    'AdfResult',
     'ParamSpace',
+    'adf_test',
     'binary_metrics',
     'confidence_filtering_system',
     'continuous_metrics',
