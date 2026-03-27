@@ -66,7 +66,7 @@ def get_git_log_since_last_tag() -> str:
 
 def create_prompt() -> str:
     """Create the prompt for Claude to generate release information."""
-    docs = read_file('docs/Developer/Making-Release.md')
+    docs = read_file('https://raw.githubusercontent.com/Vaquum/dev-docs/refs/heads/main/src/Making-Release.md')
     version = get_current_version()
     git_log = get_git_log_since_last_tag()
     current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
