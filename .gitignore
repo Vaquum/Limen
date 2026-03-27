@@ -54,3 +54,5 @@ Project.md
 
 mcp/
 .cursor/
+.ruff_cache/
+.Agent1
