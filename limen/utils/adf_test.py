@@ -15,6 +15,14 @@ class AdfResult:
     critical_values: dict[str, float]
 
 
+_INCONCLUSIVE = AdfResult(
+    stationary=False,
+    p_value=1.0,
+    test_statistic=0.0,
+    critical_values={},
+)
+
+
 def adf_test(series: pl.Series,
              significance_level: float = 0.05) -> AdfResult:
 
@@ -35,23 +43,14 @@ def adf_test(series: pl.Series,
 
     values = series.drop_nulls().drop_nans().to_numpy()
     if len(values) == 0:
-        return AdfResult(
-            stationary=False,
-            p_value=1.0,
-            test_statistic=0.0,
-            critical_values={},
-        )
+        return _INCONCLUSIVE
+
     from statsmodels.tsa.stattools import adfuller
 
     try:
         result = adfuller(values, autolag='AIC')
     except (ValueError, np.linalg.LinAlgError):
-        return AdfResult(
-            stationary=False,
-            p_value=1.0,
-            test_statistic=0.0,
-            critical_values={},
-        )
+        return _INCONCLUSIVE
 
     return AdfResult(
         stationary=result[1] <= significance_level,

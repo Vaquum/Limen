@@ -5,6 +5,8 @@ import polars as pl
 
 logger = logging.getLogger(__name__)
 
+FRACDIFF_SUFFIX = '_fracdiff'
+
 
 def _get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
 
@@ -83,7 +85,7 @@ def fractional_diff(data: pl.DataFrame,
             if col not in schema_names:
                 logger.warning('Column %s not found, skipping fractional diff', col)
         new_cols = [
-            pl.col(col).cast(pl.Float64).alias(f"{col}_fracdiff")
+            pl.col(col).cast(pl.Float64).alias(f"{col}{FRACDIFF_SUFFIX}")
             for col in cols if col in schema_names
         ]
         if new_cols:
@@ -103,7 +105,7 @@ def fractional_diff(data: pl.DataFrame,
             pl.col(col).cast(pl.Float64).map_batches(
                 lambda s, _w=w: _ffd_convolve(s, _w),
                 return_dtype=pl.Float64,
-            ).alias(f"{col}_fracdiff")
+            ).alias(f"{col}{FRACDIFF_SUFFIX}")
         )
 
     if new_cols:
@@ -169,7 +171,7 @@ def find_min_d(data: pl.DataFrame,
     if step <= 0:
         raise ValueError(f"step must be positive, got {step}")
 
-    fracdiff_col = f"{col}_fracdiff"
+    fracdiff_col = f"{col}{FRACDIFF_SUFFIX}"
 
     d = d_start
     while d <= d_end:
@@ -179,8 +181,8 @@ def find_min_d(data: pl.DataFrame,
             d = round(d + step, 10)
             continue
 
-        series = diffed[fracdiff_col].drop_nulls().drop_nans()
-        if len(series) > 0:
+        series = diffed[fracdiff_col]
+        if series.drop_nulls().len() > 0:
             result = adf_test(series, significance_level=significance_level)
             if result.stationary:
                 return round(d, 10)
