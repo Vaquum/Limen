@@ -34,6 +34,7 @@ node_modules/
 docs-site/.docusaurus/
 docs-site/.generated/
 docs-site/build/
+docs-site/.wrangler/
 
 # Environment variables
 

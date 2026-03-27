@@ -3,7 +3,7 @@
   "productName": "Limen",
   "tagline": "Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.",
   "versionLabel": "latest",
-  "basePath": "/",
+  "basePath": "/limen/",
   "navSections": [
     "Overview",
     "Guides",
