@@ -73,6 +73,9 @@ def fractional_diff(data: pl.DataFrame,
     if d < 0:
         raise ValueError(f"d must be non-negative, got {d}")
 
+    if threshold <= 0:
+        raise ValueError(f"threshold must be positive, got {threshold}")
+
     schema_names = data.collect_schema().names()
 
     if d == 0.0:
