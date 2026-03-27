@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,6 +19,22 @@ def read_file(filepath: str) -> str:
     """Read content from a file."""
     with Path(filepath).open() as f:
         return f.read()
+
+
+URL_FETCH_TIMEOUT = 30
+
+
+def fetch_url(url: str) -> str:
+    """Fetch content from a URL with timeout and error handling."""
+    try:
+        with urllib.request.urlopen(url, timeout=URL_FETCH_TIMEOUT) as response:  # noqa: S310
+            return response.read().decode('utf-8')
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f'HTTP error fetching {url}: {e.code} {e.reason}') from e
+    except urllib.error.URLError as e:
+        if isinstance(e.reason, TimeoutError):
+            raise RuntimeError(f'Timed out fetching {url} after {URL_FETCH_TIMEOUT}s') from e
+        raise RuntimeError(f'URL error fetching {url}: {e.reason}') from e
 
 
 def get_current_version() -> str:
@@ -66,7 +84,7 @@ def get_git_log_since_last_tag() -> str:
 
 def create_prompt() -> str:
     """Create the prompt for Claude to generate release information."""
-    docs = read_file('https://raw.githubusercontent.com/Vaquum/dev-docs/refs/heads/main/src/Making-Release.md')
+    docs = fetch_url('https://raw.githubusercontent.com/Vaquum/dev-docs/refs/heads/main/src/Making-Release.md')
     version = get_current_version()
     git_log = get_git_log_since_last_tag()
     current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
