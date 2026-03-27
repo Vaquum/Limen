@@ -15,6 +15,13 @@ from pathlib import Path
 import anthropic
 
 
+DEFAULT_RELEASE_DOCS_URL = (
+    'https://raw.githubusercontent.com/'
+    'Vaquum/dev-docs/551e77b251dc3e70548b8bcd645d702c8f80e3b6/src/Making-Release.md'
+)
+RELEASE_DOCS_URL = os.getenv('RELEASE_DOCS_URL', DEFAULT_RELEASE_DOCS_URL)
+
+
 def read_file(filepath: str) -> str:
     """Read content from a file."""
     with Path(filepath).open() as f:
@@ -84,7 +91,7 @@ def get_git_log_since_last_tag() -> str:
 
 def create_prompt() -> str:
     """Create the prompt for Claude to generate release information."""
-    docs = fetch_url('https://raw.githubusercontent.com/Vaquum/dev-docs/refs/heads/main/src/Making-Release.md')
+    docs = fetch_url(RELEASE_DOCS_URL)
     version = get_current_version()
     git_log = get_git_log_since_last_tag()
     current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
