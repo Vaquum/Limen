@@ -1,45 +1,48 @@
 # `limen.cohort`
 
-> Select and aggregate a diversified pool of models across market regimes using clustering and ensemble opinion pooling.
+> Build decoder cohorts from finished experiments and aggregate their opinions by regime.
 
-## Responsibilities
+## Canonical docs
 
-Owns the offline model-selection pipeline (filter → cluster → diversify) and the online prediction-aggregation pipeline (re-train selected models, merge predictions, aggregate).
-Does **not** own raw data fetching, individual model training logic, or the base experiment loop — it orchestrates `UniversalExperimentLoop` and `Manifest` for each regime.
+- [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md)
+- [Log](../../docs/Log.md)
 
-## Key concepts
+## What this package owns
 
-- **RegimeDiversifiedOpinionPools (RDOP)** – top-level class; combines offline and online pipelines.
-- **Offline pipeline** – filters outliers from a confusion-metrics DataFrame, clusters models by performance profile (KMeans), then picks a diverse representative subset per regime via PCA + medoid selection.
-- **Online pipeline** – re-runs the selected models on fresh data, collects per-model predictions, then reduces them to a single prediction series per regime via a configurable aggregation strategy.
-- **Regime** – a KMeans cluster of models with similar performance characteristics, identified during offline analysis.
-- **Opinion pooling** – combining multiple model predictions via mean, median, or majority-vote aggregation.
+Owns Limen's RDOP implementation: offline filtering, clustering, diversification, model reloading, and per-regime prediction aggregation.
+Does **not** own the original experiment runs, raw market data, or downstream trading decision logic.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| `RegimeDiversifiedOpinionPools` | `regime_pools.py` | Instantiate with an SFD, then call `.offline_pipeline()` followed by `.online_pipeline()` |
-| `.offline_pipeline()` | `regime_pools.py` | Pass experiment confusion metrics to filter, cluster, and select models per regime |
-| `.online_pipeline()` | `regime_pools.py` | Run selected models on new data and return a DataFrame of per-regime predictions |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `RegimeDiversifiedOpinionPools` | You want the full offline-plus-online cohort workflow | Exported at the package root |
+| `offline_pipeline()` | You want to select representative models by regime from experiment results | Runs before any online inference step |
+| `online_pipeline()` | You want fresh predictions from the selected regime pools | Produces per-regime prediction columns |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** `limen.experiment` (`UniversalExperimentLoop`, `Manifest`) for re-running model experiments per regime
-- **External:** `numpy`, `pandas`, `polars`, `scikit-learn` (KMeans, PCA, StandardScaler)
+- `limen.log` produces the confusion-metrics tables RDOP commonly starts from.
+- `limen.experiment` is reused to rerun or retrain models during the online stage.
+- `Nexus`, downstream from Limen, is where trading decisions belong. This package stops at cohort outputs.
 
 ## Quick orientation
+
 ```text
 cohort/
-└── regime_pools.py   # All RDOP logic: OfflineFilter, OfflineRegime,
-                      # OfflineDiversification, OnlineModelLoader,
-                      # AggregationStrategy, OnlineAggregation,
-                      # RegimeDiversifiedOpinionPools
+└── regime_pools.py   # Offline filtering, clustering, diversification,
+                      # online model loading, aggregation, and RDOP
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- `offline_pipeline()` must be called before `online_pipeline()` — it populates `self.regime_pools`.
-- If all rows are filtered out during sanity/outlier filtering, the pipeline falls back to a single regime (cluster 0) with unfiltered data.
-- `k_regimes` is a ceiling: empty clusters are silently skipped, so fewer than `k_regimes` regimes may be returned.
-- The SFD passed to RDOP must have a `manifest()` method if manifest-driven; otherwise `sfd.prep` / `sfd.model` must exist.
+- `offline_pipeline()` must run before `online_pipeline()`.
+- The implementation currently produces per-regime outputs. It does not add a dynamic regime selector or downstream decision policy by itself.
+- Empty or unstable clustering results are handled conservatively, including fallback to fewer regimes when needed.
+- Manifest-driven SFDs work here, but custom `prep` and `model` SFDs can also work if they expose the required callable surface.
+
+## Read next
+
+- [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md)
+- [Log](../../docs/Log.md)
+- [Trainer](../../docs/Trainer.md)

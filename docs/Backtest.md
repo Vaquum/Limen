@@ -1,10 +1,17 @@
 # Backtest
 
-Backtest is Limen's trading-economics layer. It answers the question: if a decoder's predictions were traded as a simple long-only signal, what would the return profile look like after costs?
+Backtest is Limen's trading-economics layer. It takes prediction outputs and asks the next question after benchmark:
 
-## Current Surface
+if we traded this signal as a simple long-only strategy, what would the return profile look like after costs?
 
-The main backtest outputs are:
+Limen currently exposes two backtest surfaces:
+
+- a vectorized snapshot backtest used throughout the `Log` layer
+- a stateful sequential backtest for ledger-style simulation
+
+## Where Backtest Lives
+
+The most common backtest outputs are:
 
 - `uel.experiment_backtest_results`
 - `uel._log.experiment_backtest_results()`
@@ -13,39 +20,160 @@ The main backtest outputs are:
 
 ## Snapshot Backtest
 
-`backtest_snapshot()` is the default evaluation path used by `Log.experiment_backtest_results()`. It operates on the output of `permutation_prediction_performance()` and computes one result row per experiment round.
+`backtest_snapshot()` is the default backtest path used by `Log.experiment_backtest_results()`.
 
-Current behavior:
+It consumes the per-round table returned by:
+
+```python
+uel._log.permutation_prediction_performance(round_id=0)
+```
+
+and returns one summary row.
+
+### Current assumptions
+
+The current snapshot backtest is intentionally simple and opinionated:
 
 - long-only
 - `prediction == 1` means "in market"
 - no signal shift is applied
+- entry-bar return is based on `price_change / open`
+- continuation-bar return is based on `close_t / close_{t-1} - 1`
 - one round-trip cost is charged per consecutive `1` run
 - outputs are reported in percent units
 
-The summary includes:
+This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
-- trade win rate
-- trade expectancy
-- max drawdown
-- gross and net total return
-- mean win and loss
-- bars total
-- Sharpe per bar
-- bars in market
-- trade count
-- round-trip cost in bps
+### Output columns
+
+Snapshot backtests produce:
+
+- `trade_win_rate_pct`
+- `trade_expectancy_pct`
+- `max_drawdown_pct`
+- `total_return_gross_pct`
+- `total_return_net_pct`
+- `trade_return_mean_win_pct`
+- `trade_return_mean_loss_pct`
+- `bars_total`
+- `sharpe_per_bar`
+- `bars_in_market_pct`
+- `trades_count`
+- `cost_round_trip_bps`
+
+### Typical use
+
+```python
+backtest = uel.experiment_backtest_results
+```
+
+or for one round:
+
+```python
+from limen.backtest.backtest_snapshot import backtest_snapshot
+
+perf = uel._log.permutation_prediction_performance(round_id=0)
+round0_backtest = backtest_snapshot(perf)
+```
+
+Use the experiment-wide table to compare many rounds. Use the single-round snapshot when you want to study a specific permutation.
 
 ## Sequential Backtest
 
-`BacktestSequential` is the stateful alternative. It simulates trades bar by bar using an `Account` object and is useful when you want an explicit ledger-style execution trace instead of the vectorized snapshot summary.
+`BacktestSequential` is the more stateful alternative. It simulates trades bar by bar through a trading `Account` object and returns a small ledger-style metrics summary.
 
-## Where It Fits
+```python
+from limen import BacktestSequential
 
-Backtest comes after benchmark-style prediction analysis. In Limen, a typical evaluation stack is:
+backtest = BacktestSequential(start_usdt=30_000)
+results = backtest.run(
+    actual=perf['actuals'],
+    prediction=perf['predictions'],
+    price_change=perf['price_change'],
+    open_prices=perf['open'],
+    close_prices=perf['close'],
+)
+```
 
-1. experiment log
-2. confusion and benchmark analytics
-3. backtest results
+This path is useful when you want an explicit sequence of account updates rather than the vectorized snapshot summary.
 
-That separation is important because a model can look good on prediction metrics while still producing weak trading economics once position logic and costs are applied.
+### Current sequential outputs
+
+`BacktestSequential.run()` returns:
+
+- `PnL`
+- `win_rate`
+- `max_drawdown`
+- `expected_value`
+- `sharpe_ratio`
+- `net_long_volume`
+- `net_short_volume`
+- `net_trade_volume`
+
+## Sequential Ledger Semantics
+
+`BacktestSequential` delegates position bookkeeping to `limen.trading.Account`.
+
+`Account` supports these actions:
+
+- `hold`
+- `buy`
+- `sell`
+- `short`
+- `cover`
+
+and exposes:
+
+- `long_position`
+- `short_position`
+- `net_position`
+
+That said, the current `BacktestSequential.run()` implementation is still a long-only evaluator. It uses:
+
+- `buy`
+- `sell`
+- `hold`
+
+and does not currently open short or cover actions during the backtest loop.
+
+On a live local sequential run in this repo:
+
+- `net_short_volume` remained `0`
+- the action history began `hold, buy, sell, buy, sell, ...`
+
+So the right mental model today is:
+
+- `Account` is capable of both long and short bookkeeping
+- `BacktestSequential.run()` currently exercises only the long side
+
+## Backtest Versus Benchmark
+
+Benchmark and backtest should be read together, not treated as substitutes.
+
+- benchmark asks whether the signal contains predictive structure
+- backtest asks whether that structure survives a specific trading interpretation
+
+Examples of why the layers diverge:
+
+- a signal can have decent precision but still spend too much time in market
+- a signal can separate TP and FP weakly yet still avoid the worst losses
+- a signal can score well statistically but lose most of its edge once costs are charged
+
+That is why Limen keeps the layers separate in both the API and the docs.
+
+## What Snapshot Backtest Does Not Try To Do
+
+The snapshot backtest is not:
+
+- a venue-aware execution simulator
+- a portfolio allocator
+- a short-selling engine
+- a latency-aware order model
+
+Those concerns belong downstream from Limen or in more specialized evaluation layers.
+
+## Read Next
+
+- Continue to [Trainer](Trainer.md) if you want to promote strong experiment rounds into reusable trained sensors.
+- Continue to [Log](Log.md) for the broader post-run workflow that produces the backtest inputs.
+- Continue to [Benchmark](Benchmark.md) if you want the prediction-quality layer that should usually be inspected before the trading-economics layer.

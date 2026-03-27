@@ -1,252 +1,167 @@
 # Experiment Manifest
 
-## Introduction
+The Experiment Manifest is Limen's declarative pipeline builder. Instead of hand-writing `prep()` and threading every step yourself, you describe how data should be fetched, split, transformed, targeted, scaled, and handed to a model.
 
-The Experiment Manifest provides a declarative system for configuring Limen experiment pipelines. Instead of manually implementing data preparation and model functions, you define your experiment pipeline through a fluent manifest API that handles data fetching, feature engineering, target preparation, and model configuration.
+This is the default path for Limen work because it gives you:
 
-### Key Benefits
+- split-first execution
+- train-only fitting for targets and scalers
+- automatic data fetching
+- cleaner collaboration surfaces
+- reproducible experiment definitions
 
-- **Automatic data fetching**: Configure data sources once, UEL fetches automatically based on environment.
-- **Reproducible experiments**: Entire pipeline configuration in one place.
-- **Universal Split-First architecture**: Data splits before processing, preventing data leakage.
-- **Auto-generated SFD functions**: Manifest generates much of the boilerplate code in the SFD.
-- **Declarative approach**: Clear, readable pipeline definition.
+Use a manifest when you want Limen's opinionated pipeline. Skip it only when the workflow genuinely needs fully custom `prep()` and `model()` functions.
 
-### Universal Split-First Architecture
+## Golden Path Example
 
-The manifest enforces a split-first processing pattern:
-
-1. **Split Phase**: Raw data divided into train/validation/test splits
-2. **Bar Formation Phase**: Each split processes bars independently (if configured)
-3. **Feature Engineering Phase**: Indicators and features computed per split (with group filtering and conditional inclusion)
-4. **Target Transformation Phase**: Targets computed with fitted parameters (train) or applied parameters (val/test)
-5. **Feature Ablation Phase**: Random feature columns dropped if ablation is configured (runs after target transforms so targets can reference any feature)
-6. **Scaling Phase**: Data scaled using fitted scalers (train) or applied scalers (val/test)
-
-After all phases, a column consistency check ensures all non-empty splits have the same columns. If a feature transform (e.g., fractional differentiation) produces a column in one split but not another (due to insufficient data), that column is dropped from all splits to maintain consistency.
-
-This architecture ensures no data leakage between splits and maintains reproducible results.
-
-### Philosophy & Trade-offs
-
-The manifest approach is **deliberately opinionated** to enforce best practices in financial ML:
-
-**Strong Opinions (Enforced):**
-- **Split-first architecture**: Prevents data leakage (cannot fit on full dataset)
-- **Polars LazyFrame**: Enforces lazy evaluation for performance (learning curve)
-- **Immutability**: Functions return new data, don't modify input (functional programming style)
-- **Training-only fitting**: Parameters fitted only on training data (proper ML methodology)
-
-**Benefits:**
-- Prevents critical mistakes (data leakage, improper fitting)
-- Reproducible experiments (declarative configuration)
-- Consistent codebase (standardized patterns)
-- Performance optimizations (lazy evaluation)
-
-**Trade-offs:**
-- Learning curve (Polars API, manifest patterns)
-- Less flexible (harder for non-standard workflows)
-
-**When to use:** Production SFDs, reproducibility-critical work, collaborative projects
-
-**When to skip:** Complex data workflows or external library integration requiring custom functions approach
-
-This is appropriate for financial trading systems where **correctness and reproducibility are paramount**. The opinions are deliberate guardrails, not arbitrary restrictions.
-
-## Quick Start
-
-Here's a complete minimal manifest-based SFD:
+This is a complete manifest-driven SFD in the style Limen uses today.
 
 ```python
-from limen.experiment import Manifest
 from limen.data import HistoricalData
-from limen.indicators import roc
-from limen.features import quantile_flag, compute_quantile_cutoff
-from limen.transforms import shift_column_transform
+from limen.experiment import Manifest
+from limen.features import compute_quantile_cutoff, quantile_flag
+from limen.indicators import atr, ppo, roc, wilder_rsi
+from limen.features import kline_imbalance, vwap
 from limen.scalers import LogRegScaler
 from limen.sfd.reference_architecture import logreg_binary
+from limen.transforms import shift_column_transform
 
 def params():
     return {
-        'roc_period': [4, 8, 12],
-        'q': [0.32, 0.35, 0.37],
         'shift': [-1, -2, -3],
-        'C': [0.1, 1.0, 5.0],
+        'q': [0.35, 0.40, 0.45],
+        'roc_period': [1, 4, 12, 24],
         'class_weight': [0.45, 0.65, 0.85],
+        'C': [0.1, 1.0, 5.0],
+        'max_iter': [60, 120, 180],
+        'solver': ['lbfgs', 'newton-cg'],
+        'tol': [0.001, 0.01],
     }
 
 def manifest():
-    return (Manifest()
-        # Data sources
+    return (
+        Manifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
         )
         .set_test_data_source(method=HistoricalData._get_data_for_test)
-
-        # Split configuration
-        .set_split_config(7, 1, 2)
-
-        # Feature engineering
+        .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
-
-        # Target configuration
+        .add_indicator(atr, period=14)
+        .add_indicator(ppo)
+        .add_indicator(wilder_rsi)
+        .add_feature(vwap)
+        .add_feature(kline_imbalance)
         .with_target('quantile_flag')
             .add_fitted_transform(quantile_flag)
-                .fit_param('_cutoff', compute_quantile_cutoff,
-                          col='roc_{roc_period}', q='q')
-                .with_params(col='roc_{roc_period}', cutoff='_cutoff')
+                .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
+                .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
             .add_transform(shift_column_transform, shift='shift', column='target_column')
             .done()
-
-        # Scaling and model
         .set_scaler(LogRegScaler)
         .with_model(logreg_binary)
     )
 ```
 
-**Usage with UEL:**
+Run it through UEL like this:
 
 ```python
 import limen
 from limen import sfd
 
-# Data is automatically fetched from manifest-configured sources
 uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
 
 uel.run(
-    experiment_name='my_experiment',
-    n_permutations=100,
+    experiment_name='manifest-demo',
+    n_permutations=25,
     prep_each_round=True,
 )
 ```
 
+## How A Manifest Executes
+
+The manifest pipeline is split-first by design. In other words, fitting never happens on the full dataset before the train, validation, and test partitions are created.
+
+The execution order is:
+
+1. fetch raw input data
+2. optionally apply a pre-split selector
+3. split into train, validation, and test
+4. optionally form bars inside each split
+5. apply indicators and features
+6. compute fitted target parameters on train, then apply target transforms across splits
+7. optionally perform feature ablation
+8. fit the scaler on train, then apply it across splits
+9. finalize a standard `data_dict`
+10. run the configured model with round-specific parameters
+
+This ordering is one of the main reasons to use a manifest: the leak-prevention rules come built in.
+
+The manifest is deliberately opinionated. It forces split-first execution, train-only fitting, and immutable dataframe-style transforms because those guardrails prevent the most common financial-ML mistakes.
+
+There is one more protection step after feature engineering: non-empty splits are aligned to a shared column set before the final `data_dict` is built. If a transform such as `fractional_diff` produces a column in one split but not another because the shorter split lacks enough history, Limen drops that extra column from the non-empty splits so the downstream model still receives a consistent schema.
+
 ## Data Source Configuration
 
-Configure where UEL fetches data for training and testing.
+### `set_data_source(method, params=None)`
 
-### `.set_data_source(method, params=None)`
-
-Configure production data source, typically with methods from `limen.data.HistoricalData`.
-
-**Args:**
-
-| Parameter | Type       | Description                                      |
-|-----------|------------|--------------------------------------------------|
-| `method`  | `Callable` | HistoricalData method reference (e.g., `HistoricalData.get_spot_klines`) |
-| `params`  | `dict`     | Parameters to pass to the method                |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Available methods:**
-- `HistoricalData.get_spot_klines` - Fetch spot market kline data
-- `HistoricalData.get_futures_klines` - Fetch futures market kline data
-- See `limen.data.HistoricalData` for all available methods
-
-**Example:**
+Configure the production data source for the manifest.
 
 ```python
 from limen.data import HistoricalData
 
 .set_data_source(
     method=HistoricalData.get_spot_klines,
-    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
+    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
 )
 ```
 
-### `.set_test_data_source(method, params=None)`
+### `set_test_data_source(method, params=None)`
 
-Configure test data source for testing purposes.
-
-**Args:**
-
-| Parameter | Type       | Description                                    |
-|-----------|------------|------------------------------------------------|
-| `method`  | `Callable` | Test data method reference (e.g., `HistoricalData._get_data_for_test`) |
-| `params`  | `dict`     | Parameters to pass to the function (e.g., `{'n_rows': 5000}`) |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Example:**
-
-```python
-from limen.data import HistoricalData
-
-.set_test_data_source(method=HistoricalData._get_data_for_test)
-```
-
-To specify number of rows for testing:
+Configure the test data source used when `LOOP_ENV='test'`.
 
 ```python
 .set_test_data_source(
     method=HistoricalData._get_data_for_test,
-    params={'n_rows': 1000}
+    params={'n_rows': 5000},
 )
 ```
 
-### Environment-Based Data Fetching
+### Environment selection
 
-UEL automatically selects the appropriate data source based on the `LOOP_ENV` environment variable:
+`Manifest.fetch_data_for_env()` uses:
 
-- `LOOP_ENV='test'` (default): Uses test data source (if configured via `.set_test_data_source()`)
-- Any other value: Uses production data source (configured via `.set_data_source()`)
+- the test data source when `LOOP_ENV='test'` and a test source exists
+- the production data source otherwise
 
-**Examples:**
-```bash
-# Uses test data source
-LOOP_ENV='test' python my_experiment.py
+If `LOOP_ENV='test'` but no test data source is configured, Limen falls back to the production data source.
 
-# Uses production data source
-LOOP_ENV='production' python my_experiment.py
+That is why foundational SFDs can run locally with no explicit `data=` and still stay pointed at small bundled test data by default.
 
-# Also uses production data source
-LOOP_ENV='staging' python my_experiment.py
-```
+## Pipeline Configuration
 
-**Fallback behavior:** If `LOOP_ENV='test'` but no test data source is configured, production data source is used.
+### `set_split_config(train, val, test)`
 
-This enables seamless switching between test and production environments without code changes.
-
-## Data Pipeline Configuration
-
-### `.set_split_config(train, val, test)`
-
-Configure train/validation/test split ratios.
-
-**Args:**
-
-| Parameter | Type  | Description              |
-|-----------|-------|--------------------------|
-| `train`   | `int` | Training split ratio     |
-| `val`     | `int` | Validation split ratio   |
-| `test`    | `int` | Test split ratio         |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Raises:** `ValueError` if train is not positive, or if val or test is negative
-
-**Note:** Ratios are relative (e.g., `7, 1, 2` means 7/10 train, 1/10 val, 2/10 test). Train must be positive. Val and test can be zero (e.g., `(1, 0, 0)` for Trainer Pass 2 retraining on all data).
-
-**Example:**
+Configure the relative split sizes.
 
 ```python
-.set_split_config(7, 1, 2)  # 70% train, 10% val, 20% test
+.set_split_config(8, 1, 2)
 ```
 
-### `.set_pre_split_data_selector(func, **params)`
+This means 8/11 train, 1/11 validation, and 2/11 test.
 
-Configure data selection before splitting (e.g., random sampling for faster experiments).
+Behavior rules:
 
-**Args:**
+- `train` must be positive
+- `val` and `test` can be zero but not negative
+- the method raises `ValueError` if those constraints are violated
 
-| Parameter | Type       | Description                        |
-|-----------|------------|------------------------------------|
-| `func`    | `Callable` | Data selector function             |
-| `**params`| `dict`     | Parameter mappings from round_params |
+Allowing zeros is important for retraining workflows such as Trainer Pass 2, where `split_config=(1, 0, 0)` means "fit on all available data."
 
-**Returns:** `Manifest` (self for chaining)
+### `set_pre_split_data_selector(func, **params)`
 
-**Common use case:**
+Optionally select or reduce the raw dataset before splitting.
 
 ```python
 from limen.data.utils import random_slice
@@ -256,995 +171,497 @@ from limen.data.utils import random_slice
     rows='random_slice_size',
     safe_range_low='random_slice_min_pct',
     safe_range_high='random_slice_max_pct',
-    seed='random_seed'
+    seed='random_seed',
 )
+```
+
+Use this when you want smaller or controlled slices of the raw dataset before the normal split-first pipeline begins.
+
+### `set_bar_formation(func, **params)`
+
+Configure threshold-bar formation inside each split.
+
+```python
+from limen.data.utils import compute_data_bars
+
+.set_bar_formation(
+    compute_data_bars,
+    bar_type='bar_type',
+    volume_threshold='volume_threshold',
+)
+```
+
+See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
+
+### `set_required_bar_columns(columns)`
+
+Assert that bar formation still leaves the downstream columns your experiment requires.
+
+```python
+.set_required_bar_columns([
+    'datetime',
+    'open',
+    'high',
+    'low',
+    'close',
+    'volume',
+    'no_of_trades',
+])
+```
+
+This is especially useful when your model or backtest assumes OHLC fields are present after bars have been formed.
+
+## Indicators And Features
+
+`add_indicator()` and `add_feature()` use the same underlying mechanism. Both add transformation steps to the split-first pipeline.
+
+### `add_indicator(func, group=None, include_if=None, **params)`
+
+```python
+.add_indicator(roc, period='roc_period')
+.add_indicator(wilder_rsi)
+```
+
+### `add_feature(func, group=None, include_if=None, **params)`
+
+```python
+.add_feature(vwap)
+.add_feature(kline_imbalance)
+```
+
+### Parameter resolution
+
+Manifest parameters are resolved at run time:
+
+- literal scalars are passed through unchanged
+- a string matching a `round_params` key is looked up from the current round
+- a formatted string like `'roc_{roc_period}'` is interpolated from `round_params`
+- strings starting with `_` are treated as fitted-parameter references when available
+
+That means this:
+
+```python
+.add_indicator(roc, period='roc_period')
+```
+
+becomes:
+
+```python
+roc(data, period=round_params['roc_period'])
+```
+
+for each round.
+
+### Group filtering
+
+Use `group=` to tag transforms into families, then filter by `feature_groups` in `round_params`.
+
+```python
+.add_indicator(roc, group='momentum', period='roc_period')
+.add_indicator(wilder_rsi, group='momentum')
+.add_feature(vwap, group='microstructure')
+```
+
+If `round_params['feature_groups']` is present, only transforms whose group is in that list are applied. Ungrouped transforms still run.
+
+### Conditional inclusion
+
+Use `include_if=` when a transform should only run if a boolean round parameter is true.
+
+```python
+.add_feature(vwap, include_if='use_vwap')
+```
+
+## Parameter-Controlled Perturbations
+
+The manifest builder now supports several perturbation-style workflows directly in the declarative surface.
+
+### Feature-group selection
+
+Use `group=` on indicators or features, then pass `feature_groups` in `round_params`.
+
+```python
+.add_indicator(roc, group='momentum', period='roc_period')
+.add_feature(vwap, group='microstructure')
+```
+
+At run time:
+
+```python
+round_params = {'feature_groups': ['momentum']}
+```
+
+Only grouped transforms in the selected families run. Ungrouped transforms still run.
+
+### Conditional feature toggles
+
+Use `include_if=` for boolean on/off switches:
+
+```python
+.add_feature(vwap, include_if='use_vwap')
+```
+
+At run time:
+
+```python
+round_params = {'use_vwap': False}
+```
+
+The transform is skipped.
+
+On a live local manifest-prep run in this repo, `feature_groups=['momentum', 'volatility']` together with `include_roc=False` dropped the grouped `roc` feature while keeping the grouped `vol_5` feature.
+
+### Feature ablation
+
+Use `set_feature_ablation()` to let the manifest randomly drop feature columns after transforms and before scaling.
+
+```python
+manifest.set_feature_ablation()
+```
+
+Then control it from round parameters:
+
+```python
+round_params = {
+    'feature_drop_count': 1,
+    'feature_drop_seed': 42,
+}
+```
+
+Important behavior:
+
+- the manifest mutates `round_params` by adding `_dropped_features`
+- protected columns such as `datetime` and the target are not eligible
+- the same seed reproduces the same dropped columns
+
+On a live local prep run in this repo, `feature_drop_count=1` and `feature_drop_seed=42` produced:
+
+```python
+round_params['_dropped_features'] == ['vol_5']
+```
+
+In artifact-rich runs, that `_dropped_features` payload is stored into `round_data.jsonl`, and [Trainer](Trainer.md) reproduces the same drop set during promotion.
+
+### Scaler choice from parameters
+
+Use `set_scaler_from_params()` when scaler selection itself is part of the search space.
+
+```python
+manifest.set_scaler_from_params('scaler_type')
+
+params = {
+    'scaler_type': ['logreg', 'robust', 'rank_gauss'],
+}
+```
+
+On live local manifest-prep runs in this repo, this resolved correctly to:
+
+- `RobustScaler` when `scaler_type='robust'`
+- `RankGaussScaler` when `scaler_type='rank_gauss'`
+
+### Manifest-level overrides
+
+Use `with_params_override(...)` when you want a manifest clone with structural changes that should not come from the round search itself.
+
+Typical examples:
+
+- `split_config=(1, 0, 0)` for full-data retraining in [Trainer](Trainer.md)
+- `start_date_limit=...` for a controlled data-window variant
+- `n_rows=...` for test or smoke paths
+
+Use round parameters for search-time variation and `with_params_override(...)` for external structural control.
+
+Then in `params()`:
+
+```python
+{
+    'use_vwap': [True, False],
+}
+```
+
+## Target Configuration
+
+Target construction is handled through `with_target(...)`.
+
+```python
+.with_target('quantile_flag')
+    ...
+    .done()
+```
+
+The target column is placed last before Limen finalizes the `data_dict`.
+
+### `add_fitted_transform(func)`
+
+Use fitted transforms when a target step needs a value computed on the training split first, then reused on validation and test.
+
+```python
+.with_target('quantile_flag')
+    .add_fitted_transform(quantile_flag)
+        .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
+        .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
+    .done()
+```
+
+In that example:
+
+1. `compute_quantile_cutoff(train_data, col='roc_12', q=0.35)` runs on train only
+2. the result is stored as `_quantile_cutoff`
+3. `quantile_flag(..., cutoff=_quantile_cutoff)` is applied to train, validation, and test
+
+This is the manifest-safe way to compute train-only thresholds.
+
+### `add_transform(func, **params)`
+
+Use plain transforms when the step does not need fitted state.
+
+```python
+.with_target('quantile_flag')
+    .add_transform(shift_column_transform, shift='shift', column='target_column')
+    .done()
+```
+
+`target_column` is injected automatically so you can reference the current target name inside the transform block.
+
+### `done()`
+
+Ends the target builder and returns the manifest for further chaining.
+
+## Scaling
+
+### `set_scaler(transform_class, param_name='_scaler')`
+
+Configure a fitted scaler that is instantiated on train and then applied across the splits.
+
+```python
+from limen.scalers import LogRegScaler
+
+.set_scaler(LogRegScaler)
+```
+
+The fitted scaler is stored in the resulting `data_dict` under `_scaler`.
+
+### `set_scaler_from_params(param_name='scaler_type')`
+
+Select a scaler dynamically from `SCALER_REGISTRY` using a round parameter.
+
+```python
+.set_scaler_from_params('scaler_type')
 ```
 
 Then in `params()`:
 
 ```python
-def params():
-    return {
-        'random_slice_size': [10000],
-        'random_slice_min_pct': [0.25],
-        'random_slice_max_pct': [0.75],
-        'random_seed': [42],
-        # ... other params
-    }
-```
-
-### `.set_bar_formation(func, **params)`
-
-Configure optional bar formation (time-based, volume-based, etc.).
-
-**Args:**
-
-| Parameter | Type       | Description                     |
-|-----------|------------|---------------------------------|
-| `func`    | `Callable` | Bar formation function          |
-| `**params`| `dict`     | Parameter mappings              |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Note:** Bar formation is optional. If not configured, raw data is used directly.
-
-### `.set_required_bar_columns(columns)`
-
-Set required columns that must be present after bar formation (validation check).
-
-**Args:**
-
-| Parameter | Type         | Description              |
-|-----------|--------------|--------------------------|
-| `columns` | `List[str]`  | Required column names    |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Example:**
-
-```python
-.set_required_bar_columns(['datetime', 'open', 'high', 'low', 'close', 'volume'])
-```
-
-## Feature Engineering
-
-### `.add_indicator(func, group=None, include_if=None, **params)`
-
-Add technical indicator to the pipeline. Indicators are computational functions that derive technical analysis metrics from price/volume data.
-
-**Args:**
-
-| Parameter | Type       | Description                        |
-|-----------|------------|------------------------------------|
-| `func`    | `Callable` | Indicator function                 |
-| `group`   | `str \| None` | Perturbation group tag for feature filtering |
-| `include_if` | `str \| None` | round_params key that controls inclusion |
-| `**params`| `dict`     | Parameter mappings from round_params |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Import from:** `limen.indicators`
-
-**Available indicators (common ones):**
-
-```python
-from limen.indicators import (
-    roc,              # Rate of Change
-    wilder_rsi,       # Relative Strength Index
-    ppo,              # Percentage Price Oscillator
-    atr,              # Average True Range
-    macd,             # MACD
-    stochastic_oscillator,  # Stochastic Oscillator
-    cci,              # Commodity Channel Index
-    bollinger_bands,  # Bollinger Bands
-    rolling_volatility,  # Rolling Volatility
-    # ... and more in limen/indicators/
-)
-```
-
-**Parameter mapping:**
-
-Parameters are mapped from `round_params` using string references:
-
-```python
-.add_indicator(roc, period='roc_period')
-# When round_params = {'roc_period': 12}, this calls: roc(data, period=12)
-```
-
-**Example:**
-
-```python
-# Single parameter
-.add_indicator(wilder_rsi, period='rsi_period')
-
-# Multiple parameters
-.add_indicator(ppo,
-    fast_period='ppo_fast',
-    slow_period='ppo_slow',
-    signal_period='ppo_signal'
-)
-```
-
-### `.add_feature(func, group=None, include_if=None, **params)`
-
-Add feature computation to the pipeline. Features are derived metrics that provide additional context or transformations beyond standard indicators.
-
-**Args:**
-
-| Parameter | Type       | Description                        |
-|-----------|------------|------------------------------------|
-| `func`    | `Callable` | Feature function                   |
-| `group`   | `str \| None` | Perturbation group tag for feature filtering |
-| `include_if` | `str \| None` | round_params key that controls inclusion |
-| `**params`| `dict`     | Parameter mappings from round_params |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Import from:** `limen.features`
-
-**Available features (common ones):**
-
-```python
-from limen.features import (
-    volume_regime,          # Volume regime classification
-    ichimoku_cloud,         # Ichimoku Cloud
-    trend_strength,         # Trend strength metrics
-    close_position,         # Close position in range
-    gap_high,               # Gap high detection
-    price_range_position,   # Price position in range
-    range_pct,              # Range percentage
-    sma_crossover,          # SMA crossover signals
-    vwap,                   # Volume-Weighted Average Price
-    ema_breakout,           # EMA breakout detection
-    kline_imbalance,        # Kline imbalance metrics
-    # ... and more - check limen/features/__init__.py for full list
-)
-```
-
-**Example:**
-
-```python
-# Simple feature (no parameters)
-.add_feature(close_position)
-
-# Feature with parameters
-.add_feature(volume_regime, lookback='lookback')
-
-# Complex feature
-.add_feature(ichimoku_cloud,
-    tenkan_period='tenkan_period',
-    kijun_period='kijun_period',
-    senkou_b_period='senkou_b_period',
-    displacement='displacement'
-)
-```
-
-### Custom Indicators and Features
-
-You can define custom indicator or feature functions. They must follow this contract:
-
-**Function Signature:**
-
-```python
-def custom_indicator(data: pl.LazyFrame, param1=default1, param2=default2, ...) -> pl.LazyFrame:
-    """
-    Custom indicator implementation.
-
-    Args:
-        data: Polars LazyFrame with input data
-        param1: Parameter with default value
-        param2: Another parameter with default value
-
-    Returns:
-        Polars LazyFrame with new columns added
-    """
-    # Implementation using lazy evaluation
-    return data.with_columns([
-        # ... your computations
-    ])
-```
-
-**Requirements:**
-
-1. **Input**: Must accept `pl.LazyFrame` as first argument
-2. **Output**: Must return `pl.LazyFrame`
-3. **Lazy evaluation**: Use LazyFrame operations (not DataFrame) for performance
-4. **Immutability**: Return new LazyFrame, don't modify input
-5. **Column addition**: Add new columns, don't remove existing ones (use `with_columns`)
-6. **Default parameters**: Provide defaults for all parameters
-
-**Example:**
-
-```python
-import polars as pl
-
-def custom_momentum(data: pl.LazyFrame, window: int = 20, threshold: float = 0.02) -> pl.LazyFrame:
-    """Calculate custom momentum indicator."""
-    return data.with_columns([
-        ((pl.col('close') - pl.col('close').shift(window)) / pl.col('close').shift(window))
-        .alias(f'custom_momentum_{window}'),
-
-        (pl.col(f'custom_momentum_{window}') > threshold)
-        .cast(pl.Int8)
-        .alias(f'momentum_signal_{window}')
-    ])
-
-# Use in manifest
-.add_indicator(custom_momentum, window='momentum_window', threshold='momentum_threshold')
-```
-
-### Feature Perturbation
-
-Feature perturbation controls which indicators and features are included in each permutation, enabling systematic exploration of feature subsets.
-
-#### Group Filtering
-
-Tag indicators and features with semantic groups, then select subsets via `feature_groups` in round_params.
-
-```python
-# Tag indicators with groups
-.add_indicator(roc, group='momentum', period='roc_period')
-.add_indicator(atr, group='volatility', period=14)
-.add_indicator(sma, group='trend', column='close', period=20)
-.add_feature(vwap, group='volume')
-
-# In params: select which groups to include per permutation
-params = {
-    'feature_groups': [['momentum'], ['volatility'], ['momentum', 'volatility', 'trend']],
+{
+    'scaler_type': ['logreg', 'linear', 'robust'],
 }
 ```
 
-If `feature_groups` is not in round_params, all features are included regardless of their group tag. Features with no group tag are always included even when `feature_groups` is set — they are treated as unconditional baseline transforms.
+Use this when scaler choice is itself part of the search space.
 
-#### Conditional Inclusion
+## Model Configuration
 
-Enable or disable specific features via boolean round_params keys.
+### `with_model(model_function)`
+
+Configure the final model function.
 
 ```python
-.add_indicator(wilder_rsi, include_if='include_rsi', period=14)
+from limen.sfd.reference_architecture import logreg_binary
 
-# In params
-params = {'include_rsi': [True, False]}  # creates with/without RSI permutations
+.with_model(logreg_binary)
 ```
 
-If the `include_if` key is absent from round_params, the feature is included by default.
+The model function must accept the prepared `data_dict` as its first argument.
 
-#### Feature Ablation (Drop-N)
-
-Configure via `.set_feature_ablation(drop_count_key, seed_key)`. Randomly drops N feature columns per permutation using a deterministic seed. Operates on columns after all feature transforms are applied.
+All remaining parameters are auto-mapped from `round_params` by signature inspection. For example, if your model function has:
 
 ```python
-manifest = (Manifest()
-    .add_indicator(roc, period=12)
-    .add_indicator(atr, period=14)
-    .add_feature(vwap)
-    .set_feature_ablation()  # uses default keys: 'feature_drop_count', 'feature_drop_seed'
-    # ...
-)
+def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, solver='lbfgs'):
+    ...
+```
 
-params = {
-    'feature_drop_count': [0, 1, 2],    # drop 0, 1, or 2 feature columns
-    'feature_drop_seed': [42, 43, 44],  # different random subsets
+then manifest execution will automatically pull `C`, `class_weight`, `max_iter`, and `solver` from the current round when those keys exist in `round_params`.
+
+Required model parameters with no defaults must be present in the round params or Limen will raise.
+
+## Feature Ablation
+
+### `set_feature_ablation(drop_count_key='feature_drop_count', seed_key='feature_drop_seed')`
+
+Configure deterministic drop-N feature ablation after target construction.
+
+```python
+.set_feature_ablation()
+```
+
+Then in `params()`:
+
+```python
+{
+    'feature_drop_count': [0, 1, 2],
+    'feature_drop_seed': [42],
 }
 ```
 
-The same `(count, seed)` pair always drops the same columns. If `feature_drop_count` is missing from round_params, it defaults to `0` (no ablation). If `feature_drop_seed` is missing, it defaults to `0` — provide an explicit seed to get different random subsets across permutations. Dropped column names are stored in `round_params['_dropped_features']` for traceability. Only columns added by feature transforms are eligible for dropping — base data columns and bar formation columns are always protected.
+This is useful when you want feature robustness to be part of the search itself.
 
-## Target Configuration
+## Data Dict Extension
 
-Configure target variable transformations with optional fitted parameters.
+### `add_to_data_dict(func)`
 
-### Understanding Fitted vs Simple Transforms
-
-**Fitted transforms** learn parameters from training data and apply them to validation/test data. This prevents data leakage.
-
-**Common use case:** Binary classification using a quantile threshold
-- **Wrong**: Compute 75th percentile on full dataset. This results in data leakage!
-- **Right**: Compute 75th percentile on training data only, apply same threshold to val/test data
-
-**Example workflow:**
-1. **Training set**: Compute quantile cutoff (e.g., 75th percentile = 0.032)
-2. **Validation set**: Apply same cutoff (0.032) - don't recompute!
-3. **Test set**: Apply same cutoff (0.032) - don't recompute!
-
-**When to use each:**
-- **`add_fitted_transform`**: Target transforms requiring parameters computed from training data (quantiles, thresholds, bounds, etc.)
-- **`add_transform`**: Simple transforms without learning (shifting, clipping, type casting)
-
-### `.with_target(target_column)`
-
-Begin target transformation configuration. Returns a `TargetBuilder` for chained operations.
-
-**Args:**
-
-| Parameter       | Type  | Description          |
-|-----------------|-------|----------------------|
-| `target_column` | `str` | Target column name   |
-
-**Returns:** `TargetBuilder`
-
-### `TargetBuilder.add_fitted_transform(func)`
-
-Add transformation that learns parameters from training data (e.g., quantile cutoffs, normalization bounds).
-
-**Args:**
-
-| Parameter | Type       | Description           |
-|-----------|------------|-----------------------|
-| `func`    | `Callable` | Transform function    |
-
-**Returns:** `FittedTransformBuilder`
-
-**Workflow:**
+Append custom entries to the finalized `data_dict`.
 
 ```python
-.with_target('my_target')
-    .add_fitted_transform(transformation_function)
-        .fit_param('param_name', compute_function, arg1='value1', ...)
-        .with_params(func_arg1='param1', func_arg2='param2')
-    # ... more transforms
-    .done()
+def extend_data_dict(data_dict, split_data, round_params, fitted_params):
+    data_dict['train_rows'] = split_data[0].height
+    return data_dict
+
+.add_to_data_dict(extend_data_dict)
 ```
 
-### `FittedTransformBuilder.fit_param(param_name, fit_func, **kwargs)`
+Use this when the model needs additional structured inputs that are not part of Limen's standard `x_*` / `y_*` schema.
 
-Define parameter to be fitted on training data.
+## Manifest Overrides
 
-**Args:**
+### `with_params_override(**overrides)`
 
-| Parameter    | Type       | Description                    |
-|--------------|------------|--------------------------------|
-| `param_name` | `str`      | Name of fitted parameter (use `_prefix` convention) |
-| `fit_func`   | `Callable` | Function to compute parameter from training data |
-| `**kwargs`   | `dict`     | Arguments for fit function (supports string interpolation) |
-
-**Returns:** `FittedTransformBuilder` (self for chaining)
-
-**How it works:**
-
-This is **Step 1** of the two-step fitted transform process: defining what to compute FROM training data.
-
-1. **On training split**: `fit_func(train_data, **kwargs)` is called to compute the parameter
-2. **Parameter stored**: Result stored with `param_name` (e.g., `_cutoff = 0.032`)
-3. **On val/test splits**: Same parameter value used (no recomputation!)
-
-**String interpolation:**
-
-Parameter names in `**kwargs` can reference `round_params` using `{param_name}` syntax:
+Create a deep-copied manifest with selected overrides.
 
 ```python
-# In params()
-def params():
-    return {'roc_period': [4, 8, 12], 'q': [0.32, 0.35]}
-
-# In manifest
-.fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-
-# When round_params = {'roc_period': 12, 'q': 0.35}:
-# - col='roc_{roc_period}' → col='roc_12' (string interpolation!)
-# - q='q' → q=0.35 (direct parameter mapping)
-# - Calls: compute_quantile_cutoff(train_data, col='roc_12', q=0.35)
-# - Returns: 0.032 (stored as _cutoff)
+manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
-**Complete workflow example:**
+This is especially useful in retraining workflows where you want to promote a winning round from train/val/test mode into all-data training.
+
+Supported override behavior today:
+
+- `split_config=(...)` overrides the split ratios
+- other keys are interpreted as data-source parameter overrides and are validated against the configured data-source method signature
+
+Example:
 
 ```python
-# Step 1: Define fitted parameter computation
-.fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-
-# Step 2: Pass to transform function (see .with_params() below)
-.with_params(col='roc_{roc_period}', cutoff='_cutoff')
-
-# What happens on each split:
-# Training split:
-#   1. compute_quantile_cutoff(train_data, col='roc_12', q=0.35) → returns 0.032
-#   2. quantile_flag(train_data, col='roc_12', cutoff=0.032)
-#
-# Val/test splits:
-#   1. quantile_flag(val_data, col='roc_12', cutoff=0.032)  # Uses same 0.032!
-#   2. quantile_flag(test_data, col='roc_12', cutoff=0.032) # Uses same 0.032!
+manifest_small = manifest.with_params_override(n_rows=1000)
+manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
-**Naming convention:**
+The original manifest remains unchanged.
 
-Use `_prefix` for fitted parameter names (e.g., `_cutoff`, `_min`, `_max`) to distinguish them from regular parameters.
+## What `prepare_data()` Produces
 
-### `FittedTransformBuilder.with_params(**params)`
+The manifest ultimately builds Limen's standard `data_dict`.
 
-Set parameters for the transform function (may include fitted parameters).
+From a live local preparation pass on the foundational logistic-regression manifest, the resulting keys were:
 
-**Args:**
+- `x_train`, `y_train`
+- `x_val`, `y_val`
+- `x_test`, `y_test`
+- `price_data_for_backtest`
+- `_alignment`
+- `_feature_names`
+- fitted objects such as `_scaler` and fitted target parameters
 
-| Parameter | Type   | Description          |
-|-----------|--------|----------------------|
-| `**params`| `dict` | Parameter mappings for the transform function |
+`price_data_for_backtest` contains the aligned test-window OHLC data used by Limen's backtest layer.
 
-**Returns:** `TargetBuilder`
+## Function Contracts
 
-**How it works:**
+### Indicator and feature functions
 
-This is **Step 2** of the two-step fitted transform process: passing parameters TO the transform function.
+Indicator and feature functions are applied during the feature stage over a Polars lazy pipeline.
 
-- **Fitted parameters**: Reference parameters defined via `.fit_param()` (e.g., `cutoff='_cutoff'`)
-- **Regular parameters**: Map directly from `round_params` (e.g., `col='roc_period'`)
-- **String interpolation**: Supported for dynamic column names (e.g., `col='roc_{roc_period}'`)
+The practical contract is:
 
-**Parameter resolution order:**
+- input: frame with the columns your transform expects
+- output: frame with the new columns added
+- behavior: deterministic with respect to the resolved parameters
 
-1. Check if parameter value starts with `_` → use fitted parameter (e.g., `'_cutoff'` → 0.032)
-2. Check if parameter value is in `round_params` → use that value
-3. Use parameter value literally (for constants)
+If you are adding custom manifest transforms, write them in the same style as Limen's built-ins: accept a frame plus keyword arguments, and return the transformed frame.
 
-**Example:**
+### Fitted parameter computation functions
 
-```python
-# Step 1: Define what to compute
-.fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
+A fitted-parameter compute function is called only on the training split.
 
-# Step 2: Pass computed parameter to transform
-.with_params(col='roc_{roc_period}', cutoff='_cutoff')
-#          ↑ string interpolation     ↑ fitted parameter reference
+The contract is:
 
-# Resolution when round_params = {'roc_period': 12, 'q': 0.35}:
-# - col='roc_{roc_period}' → col='roc_12' (interpolated)
-# - cutoff='_cutoff' → cutoff=0.032 (fitted parameter from training data)
-# Calls: quantile_flag(data, col='roc_12', cutoff=0.032)
-```
+- input: eager `pl.DataFrame` plus resolved kwargs
+- output: one fitted value
 
-### `TargetBuilder.add_transform(func, **params)`
+That fitted value is then stored under the name you gave in `fit_param(...)` and can be referenced later in the target or scaler step.
 
-Add simple transformation without parameter fitting.
+### Target transform functions
 
-**Args:**
+Target transforms operate on eager `pl.DataFrame` objects after the feature stage.
 
-| Parameter | Type       | Description           |
-|-----------|------------|-----------------------|
-| `func`    | `Callable` | Transform function    |
-| `**params`| `dict`     | Parameter mappings    |
+The contract is:
 
-**Returns:** `TargetBuilder` (self for chaining)
+- input: eager `pl.DataFrame` plus resolved kwargs
+- output: transformed `pl.DataFrame`
 
-**Example:**
+Use fitted transforms when the function depends on train-only fitted state. Use plain transforms otherwise.
 
-```python
-from limen.transforms import shift_column_transform
+### Model functions
 
-.add_transform(shift_column_transform, shift='shift', column='target_column')
-```
+The model function configured in `with_model(...)` must:
 
-### `TargetBuilder.done()`
+- accept the finalized `data_dict` as its first argument
+- accept any searched model parameters as named kwargs
+- return a results dictionary compatible with Limen metrics and logging
 
-Complete target configuration and return to main manifest.
+If the model returns `_preds`, UEL stores them in `uel.preds` and the `Log` layer can use them for post-run analysis.
 
-**Returns:** `Manifest`
+## Common Recipes
 
-### Complete Target Example
+### Binary target from a fitted quantile cutoff
+
+This is the most important target recipe in the current Limen style:
 
 ```python
-from limen.features import quantile_flag, compute_quantile_cutoff
-from limen.transforms import shift_column_transform
-
 .with_target('quantile_flag')
-    # Fitted transform: compute quantile cutoff on training data
     .add_fitted_transform(quantile_flag)
-        .fit_param('_cutoff', compute_quantile_cutoff,
-                  col='roc_{roc_period}', q='q')
+        .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
         .with_params(col='roc_{roc_period}', cutoff='_cutoff')
-    # Simple transform: shift target for prediction horizon
     .add_transform(shift_column_transform, shift='shift', column='target_column')
     .done()
 ```
 
-## Scaling
-
-### `.set_scaler(transform_class, param_name='_scaler')`
-
-Set scaler/transform class for data preprocessing. The scaler is fitted on training data and applied to val/test splits.
-
-**Args:**
-
-| Parameter         | Type   | Description                        |
-|-------------------|--------|------------------------------------|
-| `transform_class` | `type` | Transform class                    |
-| `param_name`      | `str`  | Parameter name for fitted scaler (default: '_scaler') |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Available scalers:**
+### Search over feature families
 
 ```python
-from limen.scalers import LinearScaler    # Linear scaling (regex-based column rules)
-from limen.scalers import LogRegScaler    # Logistic regression specific
-from limen.scalers import RobustScaler    # Median + IQR scaling (outlier-resilient)
-from limen.scalers import RankGaussScaler # Rank-to-Gaussian transformation
-```
-
-See [Scalers](Scalers.md) for detailed documentation on each scaler.
-
-**Example:**
-
-```python
-.set_scaler(LinearScaler)
-```
-
-### `.set_scaler_from_params(param_name='scaler_type')`
-
-Select scaler type from round_params at runtime, enabling scaler as a perturbation parameter.
-
-**Args:**
-
-| Parameter    | Type  | Description                                       |
-|--------------|-------|---------------------------------------------------|
-| `param_name` | `str` | round_params key that holds the scaler type string |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Available types:** `'linear'`, `'logreg'`, `'robust'`, `'rank_gauss'`
-
-**Example:**
-
-```python
-.set_scaler_from_params('scaler_type')
-
-# In params()
-params = {'scaler_type': ['linear', 'robust', 'rank_gauss']}
-```
-
-## Data Dict Extension
-
-### `.add_to_data_dict(func)`
-
-Configure function to add custom entries to data_dict after standard preparation.
-
-**Args:**
-
-| Parameter | Type       | Description                                        |
-|-----------|------------|----------------------------------------------------|
-| `func`    | `Callable` | Extension function (see signature below)           |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Function Signature:**
-
-```python
-def extend_data_dict(data_dict: dict,
-                     split_data: dict,
-                     round_params: dict,
-                     fitted_params: dict) -> dict:
-    """
-    Extend data_dict with custom entries.
-
-    Args:
-        data_dict: Base data dict with x_train, y_train, etc.
-        split_data: Full split DataFrames (train_df, val_df, test_df)
-        round_params: Current round parameters
-        fitted_params: Fitted parameters from training data
-
-    Returns:
-        Modified data_dict with additional entries
-    """
-    # Add custom entries
-    data_dict['custom_key'] = custom_value
-    return data_dict
-```
-
-**Use case:** When your model function needs additional data beyond the standard x_train, y_train, x_val, y_val, x_test, y_test.
-
-**Example:**
-
-```python
-def add_metadata(data_dict, split_data, round_params, fitted_params):
-    """Add datetime information to data_dict."""
-    data_dict['train_dates'] = split_data['train_df']['datetime'].to_list()
-    data_dict['test_dates'] = split_data['test_df']['datetime'].to_list()
-    return data_dict
-
-.add_to_data_dict(add_metadata)
-```
-
-### Data Dict Keys
-
-`prepare_data()` returns a dictionary with these keys:
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `x_train` | `pl.DataFrame` | Training features |
-| `y_train` | `pl.Series` | Training targets |
-| `x_val` | `pl.DataFrame` | Validation features |
-| `y_val` | `pl.Series` | Validation targets |
-| `x_test` | `pl.DataFrame` | Test features |
-| `y_test` | `pl.Series` | Test targets |
-| `_alignment` | `dict` | Datetime alignment metadata (`first_test_datetime`, `last_test_datetime`, `missing_datetimes`) |
-| `_feature_names` | `list[str]` | Column names including target |
-| `price_data_for_backtest` | `pl.DataFrame` or absent | Raw OHLC from test split with columns `datetime`, `open`, `high`, `low`, `close`. Present only when the test split contains all five columns after bar formation. Row-aligned with `x_test` |
-
-**NOTE:** `price_data_for_backtest` is distinct from `Manifest.compute_test_bars()`. `price_data_for_backtest` is extracted during `prepare_data()` and row-aligned with the final `x_test` for inline backtest metrics during model evaluation. `compute_test_bars()` is used by the Log system for post-hoc reconstruction and returns the full bar-formed test split with all columns.
-
-## Parameter Override
-
-### `.with_params_override(**overrides)`
-
-Create a deep copy of the manifest with overridden parameters. The original manifest is not modified.
-
-**NOTE:** This method is primarily used by the Trainer for two-pass training, where Pass 2 overrides `split_config` to `(1, 0, 0)` to retrain on all available data.
-
-**Args:**
-
-| Parameter       | Type                     | Description                                                    |
-|-----------------|--------------------------|----------------------------------------------------------------|
-| `split_config`  | `tuple[int, int, int]`   | New split ratios (overrides `.set_split_config()`)             |
-| `**kwargs`      | `Any`                    | Data source param overrides (validated against the data source method signature) |
-
-**Returns:** `Manifest` (new deep copy with overridden parameters)
-
-**Raises:** `ValueError` if a key is not `split_config` and not accepted by the data source method
-
-**Example:**
-
-```python
-manifest = Manifest().set_data_source(
-    method=HistoricalData.get_spot_klines,
-    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
-).set_split_config(7, 1, 2)
-
-# Override split config for retraining on all data
-retrain_manifest = manifest.with_params_override(split_config=(1, 0, 0))
-
-# Override data source params
-extended_manifest = manifest.with_params_override(
-    start_date_limit='2024-01-01',
-    kline_size=7200,
-)
-
-# Original manifest is unchanged
-assert manifest.split_config == (7, 1, 2)
-```
-
-## Model Configuration
-
-### `.with_model(model_function)`
-
-Configure model function for training and evaluation. Parameters are automatically mapped from round_params.
-
-**Args:**
-
-| Parameter        | Type       | Description                              |
-|------------------|------------|------------------------------------------|
-| `model_function` | `Callable` | Model function (see contract below)      |
-
-**Returns:** `Manifest` (self for chaining)
-
-**Import from:** `limen.sfd.reference_architecture`
-
-**Available model functions:**
-
-```python
-from limen.sfd.reference_architecture import (
-    logreg_binary,             # Logistic regression with binary metrics
-    random_binary,             # Random baseline classifier
-    xgboost_regressor,         # XGBoost regressor
-)
-```
-
-**Example:**
-
-```python
-.with_model(logreg_binary)
-```
-
-### Auto-Parameter Mapping
-
-The manifest automatically maps parameters from `round_params` to the model function:
-
-1. Inspects model function signature
-2. For each parameter in model function:
-   - If exists in `round_params`: use that value
-   - Otherwise: use model function's default value
-3. Passes resolved parameters to model function
-
-**Example:**
-
-```python
-# Model function signature
-def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, ...):
-    ...
-
-# In params()
 def params():
     return {
-        'C': [0.1, 1.0, 10.0],
-        'class_weight': [0.45, 0.65],
-        'max_iter': [100, 200],
+        'feature_groups': [['momentum'], ['momentum', 'microstructure']],
+        'roc_period': [4, 8, 12],
     }
 
-# Manifest
-.with_model(logreg_binary)
-# Parameters 'C', 'class_weight', and 'max_iter' automatically mapped!
-```
-
-### Model Function Contract
-
-Model functions must follow this signature:
-
-```python
-def model_name(data: dict, param1=default1, ..., paramN=defaultN) -> dict:
-    """
-    Execute complete ML pipeline: train, validate, test, compute metrics.
-
-    Args:
-        data: Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-        param1: Model-specific parameter with default value
-        ...
-        paramN: Additional model parameters with default values
-
-    Returns:
-        dict: Results dictionary containing:
-            - Scalar metrics (logged to experiment_log)
-            - '_preds' (np.ndarray): Test set predictions
-            - 'models' (optional): Trained model objects
-            - 'extras' (optional): Additional artifacts
-    """
-    # Train model on train set
-    # Validate on val set
-    # Predict on test set
-    # Compute metrics
-
-    return {
-        'accuracy': ...,
-        'precision': ...,
-        # ... other metrics
-        '_preds': predictions_array,
-    }
-```
-
-**Requirements:**
-
-1. Accept `data` dict as first argument
-2. Provide default values for all parameters
-3. Return dict with scalar metrics and `_preds`
-4. Use appropriate metrics helper (`binary_metrics`, `multiclass_metrics`, `continuous_metrics`)
-
-## Complete Reference Example
-
-Here's a comprehensive manifest-based SFD showing most available features:
-
-```python
-from limen.experiment import Manifest
-from limen.data import HistoricalData
-from limen.indicators import roc, ppo, wilder_rsi, atr, rolling_volatility
-from limen.features import (
-    ichimoku_cloud, volume_regime,
-    close_position, trend_strength, gap_high,
-    price_range_position, range_pct, quantile_flag,
-    compute_quantile_cutoff
+manifest = (
+    Manifest()
+    .add_indicator(roc, group='momentum', period='roc_period')
+    .add_feature(vwap, group='microstructure')
 )
-from limen.transforms import shift_column_transform
-from limen.scalers import LinearScaler
-from limen.sfd.reference_architecture import logreg_binary
+```
 
+### Search over scaler choice
+
+```python
 def params():
     return {
-        # Target
-        'roc_period': [1, 4, 8],
-        'q': [0.32, 0.35, 0.37],
-        'shift': [-1, -2, -3],
-
-        # Indicators
-        'ppo_fast': [8, 12],
-        'ppo_slow': [26, 32],
-        'ppo_signal': [9, 12],
-        'rsi_period': [8, 14],
-        'atr_period': [12, 24],
-        'volatility_window': [12, 24],
-
-        # Features
-        'tenkan_period': [9, 14],
-        'kijun_period': [26, 30],
-        'senkou_b_period': [52, 60],
-        'displacement': [26, 30],
-        'lookback': [50, 100],
-        'trend_fast_period': [10, 20],
-        'trend_slow_period': [50, 100],
-        'price_range_position_period': [50, 100],
-
-        # Model
-        'C': [0.1, 1.0, 5.0],
-        'class_weight': [0.45, 0.65, 0.85],
-        'max_iter': [60, 120, 240],
-        'solver': ['lbfgs', 'liblinear'],
-        'tol': [0.001, 0.01, 0.1],
+        'scaler_type': ['logreg', 'robust'],
     }
 
-def manifest():
-    return (Manifest()
-        # Data sources
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
-        )
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
-
-        # Split configuration
-        .set_split_config(6, 2, 2)
-
-        # Required columns validation
-        .set_required_bar_columns(['datetime', 'open', 'high', 'low', 'close'])
-
-        # Indicators
-        .add_indicator(roc, period='roc_period')
-        .add_indicator(ppo, fast_period='ppo_fast', slow_period='ppo_slow',
-                      signal_period='ppo_signal')
-        .add_indicator(wilder_rsi, period='rsi_period')
-        .add_indicator(atr, period='atr_period')
-        .add_indicator(rolling_volatility, column='close', window='volatility_window')
-
-        # Features
-        .add_feature(ichimoku_cloud, tenkan_period='tenkan_period',
-                    kijun_period='kijun_period', senkou_b_period='senkou_b_period',
-                    displacement='displacement')
-        .add_feature(volume_regime, lookback='lookback')
-        .add_feature(close_position)
-        .add_feature(trend_strength, fast_period='trend_fast_period',
-                    slow_period='trend_slow_period')
-        .add_feature(gap_high)
-        .add_feature(price_range_position, period='price_range_position_period')
-        .add_feature(range_pct)
-
-        # Target configuration
-        .with_target('quantile_flag')
-            .add_fitted_transform(quantile_flag)
-                .fit_param('_cutoff', compute_quantile_cutoff,
-                          col='roc_{roc_period}', q='q')
-                .with_params(col='roc_{roc_period}', cutoff='_cutoff')
-            .add_transform(shift_column_transform, shift='shift', column='target_column')
-            .done()
-
-        # Scaler
-        .set_scaler(LinearScaler)
-
-        # Model
-        .with_model(logreg_binary)
-    )
+manifest = Manifest().set_scaler_from_params('scaler_type')
 ```
 
-## Function Contracts Reference
-
-### Indicator/Feature Function Contract
-
-**Signature:**
+### Retrain on all data
 
 ```python
-def indicator_or_feature(data: pl.LazyFrame,
-                         param1=default1,
-                         param2=default2,
-                         ...) -> pl.LazyFrame:
-    """
-    Indicator or feature computation.
-
-    Args:
-        data: Input LazyFrame with market data
-        param1: Parameter with default value
-        param2: Another parameter with default value
-
-    Returns:
-        LazyFrame with new columns added
-    """
-    return data.with_columns([
-        # ... computations using lazy evaluation
-    ])
+manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
-**Requirements:**
+That pattern is central to [Trainer](Trainer.md).
 
-1. **Input type**: `pl.LazyFrame`
-2. **Output type**: `pl.LazyFrame`
-3. **Lazy evaluation**: Use LazyFrame operations (`.with_columns()`, `.select()`, etc.)
-4. **Immutability**: Return new LazyFrame, don't modify input
-5. **Column addition**: Use `.with_columns()` to add, don't remove existing columns
-6. **Default parameters**: All parameters must have default values
-7. **Parameter naming**: Use descriptive names that map to round_params
+## Read Next
 
-### Transform Function Contract
-
-**Signature:**
-
-```python
-def transform_function(data: pl.LazyFrame,
-                       param1=default1,
-                       ...) -> pl.LazyFrame:
-    """
-    Transform function for targets or features.
-
-    Args:
-        data: Input LazyFrame
-        param1: Parameter with default value
-
-    Returns:
-        Transformed LazyFrame
-    """
-    return data.with_columns([...])
-```
-
-**Same requirements as indicator/feature functions.**
-
-### Fitted Parameter Computation Contract
-
-**Signature:**
-
-```python
-def compute_fitted_param(data: pl.DataFrame,
-                         param1=default1,
-                         ...) -> Any:
-    """
-    Compute fitted parameter from training data.
-
-    Args:
-        data: Training DataFrame (not LazyFrame!)
-        param1: Parameter with default value
-
-    Returns:
-        Computed parameter value (scalar, array, etc.)
-    """
-    # Compute and return parameter
-    return computed_value
-```
-
-**Note:** Uses `pl.DataFrame` (not LazyFrame) because fitting requires materialized data.
-
-### Model Function Contract
-
-**Signature:**
-
-```python
-def model_function(data: dict,
-                   param1=default1,
-                   ...,
-                   paramN=defaultN) -> dict:
-    """
-    Complete ML pipeline: train, validate, test, compute metrics.
-
-    Args:
-        data: Dictionary with:
-            - x_train, y_train: Training data
-            - x_val, y_val: Validation data
-            - x_test, y_test: Test data
-        param1: Model parameter with default
-        ...
-        paramN: Additional model parameters with defaults
-
-    Returns:
-        Dictionary with:
-            - Scalar metrics (logged to experiment)
-            - '_preds': np.ndarray of test predictions
-            - 'models' (optional): Trained models
-            - 'extras' (optional): Additional artifacts
-    """
-    # Train model
-    # Validate
-    # Predict on test
-    # Compute metrics using limen.metrics helpers
-
-    from limen.metrics import binary_metrics  # or multiclass_metrics, continuous_metrics
-
-    return binary_metrics(
-        y_true=data['y_test'],
-        y_pred=predictions,
-        y_pred_proba=probabilities,
-        models=trained_models
-    )
-```
-
-**Requirements:**
-
-1. Accept `data` dict as first parameter
-2. All other parameters must have defaults
-3. Return dict from `limen.metrics` helpers
-4. Include `_preds` in return dict for UEL collection
-
----
-
-**For more information:**
-- [Single File Decoder](Single-File-Decoder.md) - SFD structure and requirements
-- [Universal Experiment Loop](Universal-Experiment-Loop.md) - Running experiments
-- Code examples in `limen/sfd/` directory
+- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run a manifest-driven SFD.
+- Continue to [Historical Data](Historical-Data.md) if you need the data surfaces a manifest can point at.
+- Continue to [Data Bars](Data-Bars.md) if bar formation is part of the experiment design.
+- Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.

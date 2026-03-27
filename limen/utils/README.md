@@ -1,48 +1,56 @@
 # `limen.utils`
 
-> Provide cross-cutting utilities for parameter sampling, reporting, confidence filtering, and experiment result export.
+> Hold the smaller cross-cutting helpers that support experiments without belonging to one primary domain package.
 
-## Responsibilities
+## Canonical docs
 
-Owns generic helpers that don't belong to a single domain: hyperparameter space management, formatted report generation, confidence-based prediction filtering, numpy data-dict conversion, and Optuna study export.
-Does **not** own domain-specific logic such as feature engineering, model training, or backtesting.
+- [Utilities](../../docs/Utilities.md)
+- [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
+- [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
+- [Log](../../docs/Log.md)
 
-## Key concepts
+## What this package owns
 
-- **ParamSpace** – samples a fixed-size, deduplicated set of hyperparameter combinations from a `params` dict; used by the legacy `UniversalExperimentLoop.run()` path (the advanced loop uses `ParamDomain` + `SearchStrategy` instead).
-- **confidence_filtering_system** – filters model predictions based on ensemble agreement (prediction variance), retaining only "confident" bars above a calibrated threshold.
-- **data_dict_to_numpy** – converts the `data_dict` produced by the prep pipeline into numpy arrays suitable for sklearn estimators.
-- **log_to_optuna_study** – exports experiment log results into an Optuna `Study` object for further analysis or visualisation.
-- **Reporting helpers** – `format_report_header`, `format_report_section`, `format_report_footer` produce human-readable text blocks for experiment summaries.
+Owns general utilities such as legacy parameter sampling, `data_dict` conversion, confidence filtering, report formatting, and Optuna export helpers.
+Does **not** own the canonical experiment, feature, metric, or backtest surfaces.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| `ParamSpace(params, n_permutations)` | `param_space.py` | Used internally by the basic UEL `.run()` to sample parameter combos |
-| `data_dict_to_numpy(data_dict, ...)` | `data_dict_to_numpy.py` | Inside an SFD model function to get `x_train`, `y_train`, etc. as numpy arrays |
-| `confidence_filtering_system(...)` | `confidence_filtering_system.py` | Post-prediction step to mask low-confidence bars |
-| `log_to_optuna_study(log, ...)` | `log_to_optuna_study.py` | Convert a `Log.experiment_log` to an Optuna study for analysis |
-| `format_report_header/section/footer` | `reporting.py` | Build formatted text summaries of experiment results |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `ParamSpace` | You are on the legacy basic `UEL.run()` path and need permutation sampling | Advanced runs use `SearchStrategy` and `ParamDomain` instead |
+| `data_dict_to_numpy` | You want numpy arrays from the standard Limen `data_dict` | Common inside sklearn-style model functions |
+| `confidence_filtering_system` | You want post-prediction filtering based on model agreement | An optional downstream helper, not part of the main UEL contract |
+| `log_to_optuna_study` | You want to export experiment results into Optuna | Requires optional `optuna` |
+| Reporting helpers | You want formatted text summaries | Utility surface, not a canonical reporting framework |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** `limen.metrics` (re-exported `binary_metrics`, `continuous_metrics`, `safe_ovr_auc` for convenience)
-- **External:** `numpy`, `polars`, `scikit-learn`, `optuna` (for `log_to_optuna_study`)
+- `limen.experiment` uses `ParamSpace` on the legacy run path.
+- `limen.metrics` provides the canonical scoring helpers that this package partially re-exports for convenience.
+- `limen.sfd.reference_architecture` often calls `data_dict_to_numpy`.
 
 ## Quick orientation
+
 ```text
 utils/
-├── param_space.py                   # ParamSpace — deduped hyperparameter sampler
-├── data_dict_to_numpy.py            # Convert data_dict to numpy train/val/test arrays
-├── confidence_filtering_system.py   # Ensemble confidence-based prediction filter
-├── log_to_optuna_study.py           # Export experiment log to Optuna Study
-└── reporting.py                     # Text report formatting helpers
+├── param_space.py                 # Legacy permutation sampler
+├── data_dict_to_numpy.py          # Convert Limen data_dict to numpy arrays
+├── confidence_filtering_system.py # Confidence-based prediction filtering
+├── log_to_optuna_study.py         # Optuna export
+└── reporting.py                   # Text-formatting helpers
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- `ParamSpace` pre-generates all combinations at construction time and removes them as they are consumed; it is exhausted after `n_permutations` calls to `.generate()`.
-- `data_dict_to_numpy` expects the standard `data_dict` schema produced by `split_data_to_prep_output`; keys like `x_train`, `y_train`, `x_val`, `y_val`, `x_test`, `y_test` are extracted automatically.
-- `confidence_filtering_system` requires a list of trained models and validation data; it calibrates a variance threshold so approximately `target_confidence` fraction of predictions are retained.
-- `log_to_optuna_study` requires `optuna` to be installed; it is not a hard dependency of the package.
+- This package is intentionally mixed. If a helper grows into a coherent subsystem, it should usually move out of `utils`.
+- `ParamSpace` is the legacy path, not the long-term abstraction for advanced search.
+- `data_dict_to_numpy` assumes the standard Limen split schema and is most useful inside model code.
+- `optuna` is optional and only required for the study-export helper.
+
+## Read next
+
+- [Utilities](../../docs/Utilities.md)
+- [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
+- [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
+- [Single-File Decoder](../../docs/Single-File-Decoder.md)
