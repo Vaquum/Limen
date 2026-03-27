@@ -38,10 +38,10 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
     return np.array(weights[::-1])
 
 
-def fractional_diff(data: pl.DataFrame | pl.LazyFrame,
+def fractional_diff(data: pl.DataFrame,
                     d: float = 0.0,
                     cols: list[str] | None = None,
-                    threshold: float = 1e-5) -> pl.DataFrame | pl.LazyFrame:
+                    threshold: float = 1e-5) -> pl.DataFrame:
 
     '''
     Apply Fixed-Width Fractional Differentiation (FFD) to specified columns.
@@ -54,15 +54,14 @@ def fractional_diff(data: pl.DataFrame | pl.LazyFrame,
     NOTE: AFML recommends applying to log-transformed prices for best results.
 
     Args:
-        data (pl.DataFrame | pl.LazyFrame): Input data
+        data (pl.DataFrame): Input data
         d (float): Fractional differentiation order (0 = identity copy, 1 = standard diff)
         cols (list[str] | None): Columns to differentiate (required)
         threshold (float): Weight truncation threshold per AFML standard
 
     Returns:
-        pl.DataFrame | pl.LazyFrame: Data with new '{col}_fracdiff' columns added.
+        pl.DataFrame: Data with new '{col}_fracdiff' columns added.
             When d=0, the new columns are copies of the originals.
-            Returns same type as input.
 
     Raises:
         ValueError: If cols is None or empty
@@ -74,65 +73,64 @@ def fractional_diff(data: pl.DataFrame | pl.LazyFrame,
     if d < 0:
         raise ValueError(f"d must be non-negative, got {d}")
 
-    is_lazy = isinstance(data, pl.LazyFrame)
-    df = data.collect() if is_lazy else data
-
-    if df.height == 0:
-        return df.lazy() if is_lazy else df
+    schema_names = data.collect_schema().names()
 
     if d == 0.0:
         for col in cols:
-            if col not in df.columns:
+            if col not in schema_names:
                 logger.warning('Column %s not found, skipping fractional diff', col)
         new_cols = [
-            df[col].cast(pl.Float64).alias(f"{col}_fracdiff")
-            for col in cols if col in df.columns
+            pl.col(col).cast(pl.Float64).alias(f"{col}_fracdiff")
+            for col in cols if col in schema_names
         ]
         if new_cols:
-            df = df.with_columns(new_cols)
-        return df.lazy() if is_lazy else df
+            data = data.with_columns(new_cols)
+        return data
 
     weights = _get_weights_ffd(d, threshold)
-    width = len(weights)
 
-    result_cols: list[pl.Series] = []
-
+    new_cols = []
     for col in cols:
-        if col not in df.columns:
+        if col not in schema_names:
             logger.warning('Column %s not found, skipping fractional diff', col)
             continue
 
-        try:
-            values = df[col].cast(pl.Float64).to_numpy()
-            n = len(values)
-            output = np.full(n, np.nan)
+        w = weights
+        new_cols.append(
+            pl.col(col).cast(pl.Float64).map_batches(
+                lambda s, _w=w: _ffd_convolve(s, _w),
+                return_dtype=pl.Float64,
+            ).alias(f"{col}_fracdiff")
+        )
 
-            if width <= n:
-                output[width - 1:] = np.convolve(values, weights[::-1], mode='valid')
+    if new_cols:
+        data = data.with_columns(new_cols)
 
-            if np.all(np.isnan(output)):
-                logger.warning(
-                    'Fractional diff for column %s (d=%.2f) requires %d rows '
-                    'but split has %d — column %s_fracdiff not added',
-                    col, d, width, n, col,
-                )
-                continue
+    return data
 
-            series = pl.Series(f"{col}_fracdiff", output)
-            result_cols.append(series.fill_nan(None))
-        except (ValueError, TypeError, ArithmeticError):
-            logger.warning(
-                'Fractional diff failed for column %s (d=%.2f) — '
-                'column %s_fracdiff not added',
-                col, d, col,
-                exc_info=True,
-            )
-            continue
 
-    if result_cols:
-        df = df.with_columns(result_cols)
+def _ffd_convolve(series: pl.Series, weights: np.ndarray) -> pl.Series:
 
-    return df.lazy() if is_lazy else df
+    '''
+    Apply FFD convolution to a single series.
+
+    Args:
+        series (pl.Series): Input values
+        weights (np.ndarray): FFD weight vector from _get_weights_ffd
+
+    Returns:
+        pl.Series: Convolved values with leading nulls
+    '''
+
+    values = series.to_numpy()
+    n = len(values)
+    width = len(weights)
+    output = np.full(n, np.nan)
+
+    if width <= n:
+        output[width - 1:] = np.convolve(values, weights[::-1], mode='valid')
+
+    return pl.Series(output).fill_nan(None)
 
 
 def find_min_d(data: pl.DataFrame,
@@ -174,7 +172,7 @@ def find_min_d(data: pl.DataFrame,
     while d <= d_end:
         diffed = fractional_diff(data, d=d, cols=[col], threshold=threshold)
 
-        if fracdiff_col not in diffed.columns:
+        if fracdiff_col not in diffed.collect_schema().names():
             d = round(d + step, 10)
             continue
 
