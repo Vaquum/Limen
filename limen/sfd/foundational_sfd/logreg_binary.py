@@ -1,6 +1,7 @@
-from limen.features import quantile_flag
 from limen.features import compute_quantile_cutoff
+from limen.features import fractional_diff
 from limen.features import kline_imbalance
+from limen.features import quantile_flag
 from limen.features import vwap
 from limen.indicators import wilder_rsi
 from limen.indicators import atr
@@ -17,6 +18,7 @@ def params():
 
     return {
         # data prep parameters
+        'frac_diff_d': [0.0],
         'shift': [-1, -2, -3, -4, -5],
         'q': [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53],
         'roc_period': [1, 4, 12, 24, 144],
@@ -39,6 +41,8 @@ def manifest():
         )
         .set_test_data_source(method=HistoricalData._get_data_for_test)
         .set_split_config(8, 1, 2)
+
+        .add_feature(fractional_diff, d='frac_diff_d', cols=['close'])
 
         .add_indicator(roc, period='roc_period')
         .add_indicator(atr, period=14)
