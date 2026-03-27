@@ -106,7 +106,7 @@ Report vulnerabilities privately through [GitHub Security Advisories](https://gi
 
 If you use Limen for published work, please cite:
 
-Vaquum Limen [Computer software]. (2026). Retrieved from http://github.com/vaquum/limen.
+Vaquum Limen [Computer software]. (2026). Retrieved from https://github.com/Vaquum/Limen.
 
 ## License
 

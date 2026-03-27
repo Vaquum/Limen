@@ -421,13 +421,57 @@ function rewriteLinks(content, fromSource) {
   });
 }
 
+function rewriteOutsideCode(content, transform) {
+  let out = '';
+  let index = 0;
+  let inFence = false;
+  let inInlineCode = false;
+  let plainStart = 0;
+
+  while (index < content.length) {
+    if (content.startsWith('```', index)) {
+      if (plainStart < index) {
+        out += transform(content.slice(plainStart, index));
+      }
+      inFence = !inFence;
+      out += '```';
+      index += 3;
+      plainStart = index;
+      continue;
+    }
+
+    if (!inFence && content[index] === '`') {
+      if (plainStart < index) {
+        out += transform(content.slice(plainStart, index));
+      }
+      inInlineCode = !inInlineCode;
+      out += '`';
+      index += 1;
+      plainStart = index;
+      continue;
+    }
+
+    index += 1;
+  }
+
+  if (plainStart < content.length) {
+    out += transform(content.slice(plainStart));
+  }
+
+  return out;
+}
+
 function normalizeForMdx(content) {
-  return content
-    .replace(/<p align="center">/g, '<div align="center">')
-    .replace(/<\/p>/g, '</div>')
-    .replace(/<br>/g, '<br />')
-    .replace(/<hr>/g, '<hr />')
-    .replace(/<img([^>]*?)(?<!\/)>/g, '<img$1 />');
+  return rewriteOutsideCode(content, (chunk) =>
+    chunk
+      .replace(
+        /<p align="center">([\s\S]*?)<\/p>/g,
+        '<div align="center">$1</div>'
+      )
+      .replace(/<br>/g, '<br />')
+      .replace(/<hr>/g, '<hr />')
+      .replace(/<img([^>]*?)(?<!\/)>/g, '<img$1 />')
+  );
 }
 
 function normalizeReferencePlaceholders(content, doc) {
