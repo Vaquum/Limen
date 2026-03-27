@@ -2,7 +2,7 @@
 
 This is the starting point for contributing to Limen itself. Use it to find the right maintenance path before you change code, docs, or release metadata.
 
-For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). For Limen-specific contribution and maintenance rules, use the pages below as canonical.
+For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). Release process and versioning guidance now also live there. Use the pages below for Limen-specific contribution and maintenance rules that still belong in this repo.
 
 ## Read This First
 
@@ -19,8 +19,8 @@ Before opening or updating a Limen PR:
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
 | adding a new foundational experiment template | [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md) | Covers research expectations, file ownership, and review criteria for foundational SFDs. |
-| preparing a release or checking release automation | [Making a Release](Making-Release.md) | Describes the actual release flow on `main`, preflight checks, and manual fallback. |
-| deciding how to bump the version | [Semantic Versioning](../Semantic-Versioning.md) | Defines Limen's versioning policy and how it maps to actual shipped changes. |
+| preparing a release or checking release automation | [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) | Uses the shared Vaquum release process that the Limen release script now fetches directly. |
+| deciding how to bump the version | [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md) | Uses the shared Vaquum versioning guidance rather than a repo-local copy. |
 
 ## Common Contributor Workflow
 
@@ -41,5 +41,5 @@ Before opening or updating a Limen PR:
 - [Documentation System Contract](Documentation-System.md)
 - [Writing Docstrings](Writing-Docstrings.md)
 - [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)
-- [Making a Release](Making-Release.md)
-- [Semantic Versioning](../Semantic-Versioning.md)
+- [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md)
+- [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)

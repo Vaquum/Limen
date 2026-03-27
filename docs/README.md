@@ -50,7 +50,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 1. Start with [Developer Guidelines](Developer/README.md)
 2. Read the docs contract in [Documentation System](Developer/Documentation-System.md)
 3. Use [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md) for SFD work
-4. Use [Making Release](Developer/Making-Release.md) and [Semantic Versioning](Semantic-Versioning.md) for maintenance work
+4. Use [Making Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) and [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md) for maintenance work
 
 ## How Limen Flows
 
@@ -68,7 +68,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md)
 - `Guides`: [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Experiment Manifest](Experiment-Manifest.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
 - `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
-- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md)
+- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), plus external [Making Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) and [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)
 - `Packages`: the package `README`s under `/limen`, which provide module-level orientation and route back to the canonical docs
 
 ## Product Boundary
