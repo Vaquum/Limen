@@ -1,41 +1,48 @@
 # `limen.backtest`
 
-> Evaluate trading strategies against historical predictions using either a sequential simulation or a vectorised snapshot approach.
+> Evaluate aligned predictions as trading outcomes through either a vectorized snapshot or a sequential simulation.
 
-## Responsibilities
+## Canonical docs
 
-Owns the two backtesting modes used to measure the real-world value of model predictions.
-Does **not** own data fetching, feature engineering, or model training — it only consumes pre-aligned prediction arrays / DataFrames.
+- [Backtest](../../docs/Backtest.md)
+- [Benchmark](../../docs/Benchmark.md)
+- [Log](../../docs/Log.md)
 
-## Key concepts
+## What this package owns
 
-- **BacktestSequential** – bar-by-bar simulation that tracks an `Account` object, applies per-trade fees, and accumulates an equity curve.
-- **backtest_snapshot** – fully vectorised, DataFrame-in / DataFrame-out function that computes performance statistics in a single pass without maintaining state.
-- **Round-trip cost** – `backtest_snapshot` charges one round-trip fee per consecutive run of `prediction == 1`, applied on the exit bar.
-- **Equity curve** – `BacktestSequential` records USDT value after every trade; used to compute max drawdown and Sharpe.
+Owns Limen's two backtest modes and the assumptions they encode.
+Does **not** own signal generation, experiment logging, or raw portfolio bookkeeping beyond what it delegates to `limen.trading`.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| `BacktestSequential` | `backtest_sequential.py` | Instantiate once per experiment round, then call `.run()` with aligned arrays |
-| `backtest_snapshot()` | `backtest_snapshot.py` | Called by `limen.log` to produce per-permutation backtest stats from a predictions DataFrame |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `backtest_snapshot` | You want the fast, vectorized evaluation used across many rounds | Import from `limen.backtest.backtest_snapshot` |
+| `BacktestSequential` | You want bar-by-bar account-state simulation | Import from `limen.backtest.backtest_sequential` |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** `limen.trading` — `BacktestSequential` delegates buy/sell/short/cover ledger tracking to `Account`
-- **External:** `numpy`, `pandas`
+- `limen.log` uses `backtest_snapshot()` to summarize experiment permutations.
+- `limen.trading` provides the `Account` ledger used by the sequential path.
+- `limen.experiment` and `limen.sfd` sit upstream by producing the predictions that backtests consume.
 
 ## Quick orientation
+
 ```text
 backtest/
-├── backtest_sequential.py   # Stateful, bar-by-bar simulation using Account
-└── backtest_snapshot.py     # Stateless, vectorised snapshot evaluator
+├── backtest_snapshot.py     # Vectorized snapshot evaluator
+└── backtest_sequential.py   # Stateful account-based simulation
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- `BacktestSequential` is long-only; a `prediction == 1` triggers a full buy-at-open / sell-at-close within the same bar.
-- `backtest_snapshot` supports a `trades_count_mode` param: `'runs'` counts entry events, `'bars'` counts individual bars-in-market.
-- All percentage outputs from `backtest_snapshot` are in `%` units, not fractions.
-- Fee and slippage in `backtest_snapshot` are in basis points (default: 5 bps each, 20 bps round-trip total).
+- The package root currently does not re-export the backtest helpers, so import from the module paths directly.
+- `backtest_snapshot()` is the common analysis path for experiment sweeps because it is simple and fast.
+- `BacktestSequential` is the right tool when you need a ledger and bar-by-bar account transitions.
+- Snapshot outputs are reported in percent units, while fee and slippage inputs are specified in basis points.
+
+## Read next
+
+- [Backtest](../../docs/Backtest.md)
+- [Benchmark](../../docs/Benchmark.md)
+- [Log](../../docs/Log.md)

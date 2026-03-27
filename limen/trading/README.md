@@ -1,42 +1,43 @@
 # `limen.trading`
 
-> Track virtual portfolio positions (long, short, buy, sell, cover) and compute running account balances.
+> Provide the account ledger used by sequential backtests to track positions and balances over time.
 
-## Responsibilities
+## Canonical docs
 
-Owns the ledger model for a simulated trading account — recording every transaction and maintaining consistent USDT and BTC totals.
-Does **not** own strategy logic, signal generation, or backtesting orchestration — `Account` is a pure bookkeeping primitive consumed by `limen.backtest`.
+- [Backtest](../../docs/Backtest.md)
 
-## Key concepts
+## What this package owns
 
-- **Account** – stateful class; each `update_account()` call appends a new row to the internal ledger and updates cached position totals.
-- **long_position** – net BTC owned from buys minus sells; cached for O(1) access.
-- **short_position** – net BTC borrowed from shorts minus covers; cached for O(1) access.
-- **net_position** – `long_position - short_position`; positive means net long, negative means net short.
-- **Overflow protection** – hard caps at 1 trillion USDT and 1 billion BTC; raises `ValueError` if exceeded.
+Owns the `Account` bookkeeping primitive used by sequential simulations.
+Does **not** own strategy logic, signal generation, or the higher-level backtest orchestration that calls it.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| `Account(start_usdt)` | `account.py` | Instantiate at the start of a backtest run |
-| `account.update_account(action, amount, price_usdt)` | `account.py` | Called after each simulated trade decision |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `Account` | You want a running ledger of long, short, cover, sell, and hold actions | Exported at the package root |
+| `update_account()` | You want to record the next simulated action at a given price | The core mutating method on `Account` |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** consumed by `limen.backtest.BacktestSequential`
-- **External:** `datetime` (stdlib), `math` (stdlib)
+- `limen.backtest.BacktestSequential` is the main consumer of this package.
+- `limen.log` and `limen.backtest.backtest_snapshot` are downstream alternatives when you do not need a full ledger.
 
 ## Quick orientation
+
 ```text
 trading/
-└── account.py   # Account class — ledger, position tracking, overflow guards
+└── account.py   # Account ledger, position tracking, and overflow guards
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- `action` must be one of `'buy'`, `'sell'`, `'short'`, `'cover'`, or `'hold'`.
-- For `'buy'`, `amount` is USDT to spend; for `'sell'`, `amount` is USDT to receive (BTC quantity is derived from `price_usdt`).
-- For `'short'`, `amount` is USDT received from borrowing BTC; for `'cover'`, `amount` is USDT paid to repurchase BTC.
-- `total_btc` tracks **only** the long position (actual BTC owned); it does not subtract borrowed BTC.
-- BTC quantities are stored with 15-decimal precision to minimise floating-point drift over many trades.
+- The ledger supports `buy`, `sell`, `short`, `cover`, and `hold`, even though the common sequential backtest path is long-only.
+- The `amount` semantics differ by action, so callers need to be explicit about whether they are expressing a USDT amount or the implied BTC quantity through price.
+- Cached long and short totals exist for performance and are part of the account's correctness model.
+- Precision and overflow guards are intentional. This package prefers explicit failure over silent drift.
+
+## Read next
+
+- [Backtest](../../docs/Backtest.md)
+- [Log](../../docs/Log.md)

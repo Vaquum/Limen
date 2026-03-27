@@ -1,217 +1,258 @@
 # Log
 
-## `limen.log`
+`Log` is Limen's post-run analysis layer. It sits on top of a finished experiment and turns raw round results into round-level prediction tables, benchmark-style summaries, backtest summaries, and parameter-correlation views.
 
-### `Log`
+In most workflows you do not instantiate it yourself. `UniversalExperimentLoop` creates `uel._log` automatically at the end of a successful run and also exposes the most-used derived tables directly on the `uel` object.
 
-Create Log object state from a UEL object or a log file.
+## Two Ways To Use `Log`
 
-#### Args
+### UEL-backed `Log`
 
-| Parameter             | Type          | Description                           |
-|-----------------------|---------------|---------------------------------------|
-| `uel_object`          | `object | None`      | Source UEL object                      |
-| `file_path`           | `str | None`         | Path to the log file                   |
-| `inverse_scaler`      | `Callable | None`    | Inverse scaler function                |
-| `cols_to_multilabel`  | `list[str] | None`   | Columns to convert to multilabel       |
+This is the normal path.
 
-### `experiment_backtest_results`
+```python
+uel = limen.UniversalExperimentLoop(...)
+uel.run(...)
 
-Compute backtest performance metrics for each round of an experiment. It shows how often your trades win, how much they make on average, how deep the worst drawdowns are, and whether the strategy delivers consistent returns after costs. This lets you see not just if your system works, but how it performs under realistic trading conditions.
+log = uel._log
+```
 
-#### Args
+This mode has access to:
 
-| Parameter               | Type   | Description                         |
-|-------------------------|--------|-------------------------------------|
-| `disable_progress_bar`  | `bool` | Whether to disable the progress bar |
+- the experiment dataframe
+- the round parameters
+- stored predictions
+- alignment metadata
+- prep logic needed to reconstruct per-round test windows
 
-#### Returns
+That is why the full post-run surface works from a UEL-backed `Log`.
 
-`pd.DataFrame`: One-row-per-round table with the following columns.
+### File-backed `Log`
 
-| Column                      | Type     | Brief description (1-line)                                   |
-|-----------------------------|----------|---------------------------------------------------------------|
-| `trade_win_rate_pct`        | float64  | Percentage of trades with positive net return                 |
-| `trade_expectancy_pct`      | float64  | Mean net return per in-market bar (percent units)            |
-| `max_drawdown_pct`          | float64  | Maximum peak-to-trough drawdown from net equity curve        |
-| `total_return_gross_pct`    | float64  | Cumulative gross return across all bars (percent)            |
-| `total_return_net_pct`      | float64  | Cumulative net return including round-trip costs (percent)   |
-| `trade_return_mean_win_pct` | float64  | Mean net return of winning bars (percent)                    |
-| `trade_return_mean_loss_pct`| float64  | Mean net return of losing bars (percent)                     |
-| `bars_total`                | int64    | Total number of evaluated bars                               |
-| `sharpe_per_bar`            | float64  | Mean/SD of net per-bar returns                               |
-| `bars_in_market_pct`        | float64  | Percentage of bars with an active long position              |
-| `trades_count`              | int64    | Count of trades (per selected counting mode)                 |
-| `cost_round_trip_bps`       | int64    | Effective bps charged per round trip (2 × (fee + slippage))  |
+You can also load a CSV log from disk:
 
-### `experiment_confusion_metrics`
+```python
+import limen
 
-Compute confusion metrics for each round of an experiment. One way to think about it is that it tells you if your LONG calls are mostly right (precision), if you catch most of the real LONG cases (recall), how common LONG is, and whether the "wins" (TP) actually look better on your chosen metric x than the "fake wins" (FP). If TP and FP are well separated on x (big Cohen’s d / KS), your LONG signal is not just correct more often—it’s also meaningfully profitable/powerful on the thing you care about.
+log = limen.Log(file_path='my_experiment.csv')
+```
 
-#### Args
+This path is useful when you mainly want the cleaned experiment log itself, or experiment-log-only analysis such as parameter correlation.
 
-| Parameter               | Type   | Description                                       |
-|-------------------------|--------|---------------------------------------------------|
-| `x`                     | `str`  | Column name to compute confusion metrics for      |
-| `disable_progress_bar`  | `bool` | Whether to disable the progress bar               |
+Important limitation:
 
-#### Returns
+- file-backed `Log` does not have `data`, `prep`, `preds`, or `_alignment`
+- methods that reconstruct per-round predictions or test windows require a UEL-backed `Log`
 
-`pd.DataFrame`: One-row-per-round table with confusion and long-only summary with the following columns (identifier columns from round parameters may appear first when present).
+## The Main Post-Run Workflow
 
-| Column                   | Type     | Brief description (1-line)                                          |
-|--------------------------|----------|---------------------------------------------------------------------|
-| `pred_pos_rate_pct`      | float64  | Share of predicted positives                                        |
-| `actual_pos_rate_pct`    | float64  | Share of actual positives                                           |
-| `precision_pct`          | float64  | TP / (TP + FP)                                                      |
-| `recall_pct`             | float64  | TP / (TP + FN)                                                      |
-| `tp_x_mean`              | float64  | Mean of `x` within TP rows                                          |
-| `fp_x_mean`              | float64  | Mean of `x` within FP rows                                          |
-| `tp_x_median`            | float64  | Median of `x` within TP rows                                        |
-| `fp_x_median`            | float64  | Median of `x` within FP rows                                        |
-| `pred_pos_count`         | int64    | Count of predicted positives                                        |
-| `pred_pos_x_mean`        | float64  | Mean of `x` within predicted positives                              |
-| `pred_pos_x_median`      | float64  | Median of `x` within predicted positives                            |
-| `tp_count`               | int64    | True positive count                                                 |
-| `fp_count`               | int64    | False positive count                                                |
-| `tp_fp_cohen_d`          | float64  | Cohen's d effect size between TP and FP `x` distributions           |
-| `tp_fp_ks`               | float64  | KS statistic between TP and FP `x` distributions                    |
-| `x_name`                 | object   | Name of the summarized column                                       |
-| `n_kept`                 | int64    | Rows kept after outlier handling                                    |
+The most common sequence is:
 
-### `experiment_parameter_correlation`
+1. inspect one round's prediction table
+2. compare rounds with benchmark summaries
+3. compare rounds with backtest summaries
+4. inspect which parameters move with your target metric
 
-Compute robust correlations between parameters and a metrics across explicit cohorts. It measures how strongly each feature moves with your chosen metric (e.g., `auc`) within specific slices of the data, using bootstrapping to give stable estimates and confidence intervals. It helps identify features that consistently align with high or low metric values, and how stable those relationships are across the data distribution.
+```python
+log = uel._log
 
-#### Args
+round0 = log.permutation_prediction_performance(round_id=0)
+benchmark = log.experiment_confusion_metrics('price_change')
+backtest = log.experiment_backtest_results()
+correlation = log.experiment_parameter_correlation('auc', min_n=10)
+```
 
-| Parameter          | Type                                | Description                                                 |
-|--------------------|-------------------------------------|-------------------------------------------------------------|
-| `metric`           | `str`                               | Target column to correlate against (e.g., 'auc')            |
-| `sort_key`         | `str \| None`                       | Column used to rank rows before slicing                     |
-| `sort_ascending`   | `bool`                              | Whether to sort ascending when creating cohorts             |
-| `heads`            | `Sequence[float \| int] \| None`    | Cohort sizes; fractions (0, 1] as proportions or integers as counts |
-| `method`           | `str`                               | Correlation method: 'spearman', 'pearson', or 'kendall'     |
-| `n_boot`           | `int`                               | Number of bootstrap resamples per cohort                    |
-| `min_n`            | `int`                               | Minimum cohort size; smaller cohorts are skipped            |
-| `random_state`     | `int`                               | RNG seed for reproducibility                                |
+## `permutation_prediction_performance(round_id)`
 
-#### Returns
+This is the most concrete place to start. It reconstructs a single round's test-period table and joins:
 
-`pd.DataFrame`: MultiIndex rows indexed by ('cohort_pct', 'feature') with the following columns.
+- model predictions
+- actual outcomes
+- hit/miss flags
+- aligned price data
 
-| Column            | Type     | Brief description (1-line)                           |
-|-------------------|----------|------------------------------------------------------|
-| `n_rows`          | int64    | Number of rows in the cohort                         |
-| `corr`            | float64  | Correlation in the cohort                            |
-| `corr_med`        | float64  | Bootstrap median correlation                         |
-| `ci_lo`           | float64  | 2.5% bootstrap quantile of correlation               |
-| `ci_hi`           | float64  | 97.5% bootstrap quantile of correlation              |
-| `sign_stability`  | float64  | Share of bootstrap samples with the median's sign    |
+```python
+perf = uel._log.permutation_prediction_performance(round_id=0)
+```
 
-NOTE: Non-numeric columns are coerced with errors='coerce' and ignored thereafter; constant or all-NaN numeric columns are dropped; rows with NaN in `metric` are dropped prior to sorting and slicing
+The resulting table has these columns:
 
-### `permutation_confusion_metrics`
+- `predictions`
+- `actuals`
+- `hit`
+- `miss`
+- `open`
+- `close`
+- `price_change`
 
-Compute confusion metrics for a single round of an experiment. One way to think about it is that it tells you if your LONG calls are mostly right (precision), if you catch most of the real LONG cases (recall), how common LONG is, and whether the "wins" (TP) actually look better on your chosen metric x than the "fake wins" (FP). If TP and FP are well separated on x (big Cohen’s d / KS), your LONG signal is not just correct more often—it’s also meaningfully profitable/powerful on the thing you care about.
+On a live local run in this repo, the table for one round contained 218 test rows with exactly that schema.
 
-#### Args
+Use this table when you want to understand a round before jumping to summary statistics. It is also the direct input to Limen's snapshot backtest.
 
-| Parameter           | Type                    | Description                                                              |
-|---------------------|-------------------------|--------------------------------------------------------------------------|
-| `x`                 | `str`                   | Column summarized within TP/FP/TN/FN (e.g., predicted_probability or P&L)|
-| `pred_col`          | `str`                   | Binary predictions column                                                |
-| `actual_col`        | `str`                   | Binary actuals column                                                    |
-| `proba_col`         | `str \| None`           | Probabilities to binarize via `threshold` (overrides `pred_col`)         |
-| `threshold`         | `float`                 | Decision threshold for `proba_col`                                       |
-| `outlier_quantiles` | `Sequence[float]`       | (lo, hi) for x outlier handling                                          |
-| `outlier_mode`      | `str`                   | 'filter' to drop outside bounds or 'winsor' to clip                      |
-| `id_cols`           | `dict[str, Any] \| None`| Optional identifiers to prepend (e.g., params)                           |
+## Benchmark Surfaces
 
-#### Returns
+The benchmark layer answers: is the signal making useful directional calls before we translate those calls into trading results?
 
-`pd.DataFrame`: One-row table with the following columns.
+### `experiment_confusion_metrics(x, disable_progress_bar=False)`
 
-| Column                | Type     | Brief description (1-line)                                          |
-|-----------------------|----------|---------------------------------------------------------------------|
-| `pred_pos_rate_pct`   | float64  | Share of predicted positives                                        |
-| `actual_pos_rate_pct` | float64  | Share of actual positives                                           |
-| `precision_pct`       | float64  | TP / (TP + FP)                                                      |
-| `recall_pct`          | float64  | TP / (TP + FN)                                                      |
-| `tp_x_mean`           | float64  | Mean of `x` within TP rows                                          |
-| `fp_x_mean`           | float64  | Mean of `x` within FP rows                                          |
-| `tp_x_median`         | float64  | Median of `x` within TP rows                                        |
-| `fp_x_median`         | float64  | Median of `x` within FP rows                                        |
-| `pred_pos_count`      | int64    | Count of predicted positives                                        |
-| `pred_pos_x_mean`     | float64  | Mean of `x` within predicted positives                              |
-| `pred_pos_x_median`   | float64  | Median of `x` within predicted positives                            |
-| `tp_count`            | int64    | True positive count                                                 |
-| `fp_count`            | int64    | False positive count                                                |
-| `tp_fp_cohen_d`       | float64  | Cohen's d effect size between TP and FP `x` distributions           |
-| `tp_fp_ks`            | float64  | KS statistic between TP and FP `x` distributions                    |
-| `x_name`              | object   | Name of the summarized column                                       |
-| `n_kept`              | int64    | Rows kept after outlier handling                                    |
+Produces one row per round.
 
-### `permutation_prediction_performance`
+```python
+bench = uel._log.experiment_confusion_metrics('price_change')
+```
 
-Create a table of model predictions, actual outcomes, and basic price movement stats for a given experiment round, bar-by-bar. This provides the raw hit/miss information and price data that other evaluation functions (e.g., confusion metrics, backtests) build on.
+This table combines:
 
-#### Args
+- positive-rate diagnostics
+- precision and recall
+- TP and FP counts
+- mean and median of `x` within TP and FP
+- TP-versus-FP separation through Cohen's d and KS
 
-| Parameter  | Type  | Description                                        |
-|------------|-------|----------------------------------------------------|
-| `round_id` | `int` | Round ID (i.e. nth permutation in an experiment)   |
+The same summary is exposed directly on UEL as:
 
-#### Returns
+```python
+uel.experiment_confusion_metrics
+```
 
-`pd.DataFrame`: Table with the following columns.
+because UEL computes:
 
-| Column         | Type     | Brief description (1-line)                |
-|----------------|----------|-------------------------------------------|
-| `predictions`  | int64    | Binary model prediction                   |
-| `actuals`      | int64    | Binary ground truth                       |
-| `hit`          | bool     | True if prediction equals actual          |
-| `miss`         | bool     | True if prediction differs from actual    |
-| `open`         | float64  | Open price for the bar                    |
-| `close`        | float64  | Close price for the bar                   |
-| `price_change` | float64  | `close - open`                            |
+```python
+uel._log.experiment_confusion_metrics('price_change')
+```
 
-### Determinism and per-round reconstruction
+automatically at the end of the run.
 
-`Log` may call your SFD `prep` to reconstruct the per-round test split (e.g., in `permutation_prediction_performance`). To ensure predictions align with reconstructed `actuals` and prices:
+### `permutation_confusion_metrics(x, round_id, ...)`
 
-- Prefer deterministic `prep` logic governed entirely by `round_params` (e.g., fixed seeds for any sampling).
-- Or run UEL with `prep_each_round=True` so the same `round_params` are applied to prep on every round.
+Produces the same style of summary for one specific round.
 
-### Persisting predictions and complex artifacts
+```python
+round0_conf = uel._log.permutation_confusion_metrics(
+    x='price_change',
+    round_id=0,
+)
+```
 
-- To make test-set predictions available for downstream analysis, set `round_results['_preds'] = <numpy_or_array_like>` inside your SFD `model`. UEL will capture these into `uel.preds`, which `Log` uses when building per-round tables.
-- Store complex or large objects (e.g., models, feature importances, intermediate frames) under `round_results['extras']`. These are not flattened into the experiment log but are preserved in `uel.extras` for later access.
+This is the right view when a round looks interesting and you want to inspect its benchmark behavior in isolation.
 
-### `_get_test_data_with_all_cols`
+### Reading the benchmark table
 
-Compute test-period rows with all columns.
+Good questions to ask:
 
-#### Args
+- is `precision_pct` high because the signal is selective, or because it barely predicts positives?
+- does `recall_pct` stay useful, or is the model missing most real positives?
+- are `tp_x_mean` and `tp_x_median` materially better than `fp_x_mean` and `fp_x_median`?
+- is `tp_fp_cohen_d` stable enough to suggest real separation rather than noise?
 
-| Parameter   | Type  | Description |
-|-------------|-------|-------------|
-| `round_id`  | `int` | Round ID    |
+This is exactly why benchmark and backtest are separate in Limen: a round can look statistically interesting before it proves itself economically.
 
-#### Returns
+## Backtest Surface
 
-`pl.DataFrame`: Klines dataset filtered down to the permutation test window
+### `experiment_backtest_results(disable_progress_bar=False)`
 
-### `read_from_file`
+Produces one snapshot backtest row per experiment round.
 
-Create cleaned experiment log DataFrame from file.
+```python
+bt = uel._log.experiment_backtest_results()
+```
 
-#### Args
+The same table is exposed directly on UEL as:
 
-| Parameter    | Type   | Description                          |
-|--------------|--------|--------------------------------------|
-| `file_path`  | `str`  | Path to experiment log CSV file      |
+```python
+uel.experiment_backtest_results
+```
 
-#### Returns
+The current summary columns are:
 
-`pd.DataFrame`: Cleaned log data with whitespace-trimmed object columns
+- `trade_win_rate_pct`
+- `trade_expectancy_pct`
+- `max_drawdown_pct`
+- `total_return_gross_pct`
+- `total_return_net_pct`
+- `trade_return_mean_win_pct`
+- `trade_return_mean_loss_pct`
+- `bars_total`
+- `sharpe_per_bar`
+- `bars_in_market_pct`
+- `trades_count`
+- `cost_round_trip_bps`
+
+Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
+
+## Parameter Correlation Surface
+
+### `experiment_parameter_correlation(metric, ...)`
+
+This method looks for robust relationships between experiment parameters and a chosen metric across explicit cohorts.
+
+```python
+corr = uel.experiment_parameter_correlation(
+    'auc',
+    min_n=10,
+)
+```
+
+The result is a dataframe indexed by:
+
+- `cohort_pct`
+- `feature`
+
+with columns:
+
+- `n_rows`
+- `corr`
+- `corr_med`
+- `ci_lo`
+- `ci_hi`
+- `sign_stability`
+
+This is most useful after a run is large enough to support meaningful cohorts. On tiny runs, the output is still legal but usually too unstable to interpret with confidence.
+
+## Persisting Predictions And Complex Artifacts
+
+If you want `Log` to have enough information for round-level reconstruction:
+
+- store test predictions as `round_results['_preds']`
+- keep prep deterministic with respect to `round_params`
+- use `prep_each_round=True` when the prep stage depends on round parameters
+
+If your model or prep returns large objects that should not be flattened into the experiment log, put them under:
+
+```python
+round_results['extras'] = ...
+```
+
+UEL preserves those in `uel.extras`.
+
+## Determinism Matters
+
+`Log` reconstructs test data by replaying the relevant prep path. That means non-deterministic prep logic can break alignment between:
+
+- stored predictions
+- reconstructed actuals
+- reconstructed prices
+
+For reliable post-run analysis:
+
+- prefer deterministic prep
+- if randomness is necessary, make it explicit in `round_params`
+- use `prep_each_round=True` when round parameters affect preparation
+
+## `read_from_file(file_path)`
+
+`read_from_file()` is the CSV-cleaning helper behind file-backed `Log`.
+
+It:
+
+- removes duplicated header rows that may appear in streamed CSV logs
+- trims whitespace in object columns
+- returns a cleaned pandas dataframe
+
+Use it when you need to recover or inspect an experiment log outside a live UEL object.
+
+## Read Next
+
+- Continue to [Benchmark](Benchmark.md) for the prediction-quality layer built on top of `Log`.
+- Continue to [Backtest](Backtest.md) for the trading-economics layer built on top of `permutation_prediction_performance()`.
+- Continue to [Trainer](Trainer.md) if you want to promote selected experiment rounds into reusable sensors.

@@ -1,494 +1,108 @@
 # Features
 
-Features are more complex than Indicators, and often involve further refining Indicators or combining several Indicators into a single Feature.
+Features sit one layer above indicators. They usually combine, re-express, lag, or contextualize price and volume information into model-ready signals or regime flags.
+
+Use this page when you need to choose between feature helpers, understand their input requirements, or see what each helper adds to a frame. For lower-level signal primitives, see [Indicators](Indicators.md).
+
+## Conventions
+
+- Feature helpers usually append columns and return the original frame with the extra outputs attached.
+- Some helpers operate on plain kline data only. Others require trade-derived columns such as `maker_ratio`, `no_of_trades`, `price`, or `quantity`.
+- Not every helper is intended as a final predictor. Some are utilities used to build targets or wider feature families.
+- Several regime helpers output compact categorical-style columns such as `regime_ma_slope` or `regime_price_band`.
+
+## Quick Example
+
+```python
+from limen.data import HistoricalData
+from limen.experiment import Manifest
+from limen.features import kline_imbalance, vwap
+from limen.indicators import atr, roc
+from limen.sfd.reference_architecture import logreg_binary
+
+
+def manifest():
+    return (
+        Manifest()
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
+        )
+        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_split_config(8, 1, 2)
+        .add_indicator(roc, period='roc_period')
+        .add_indicator(atr, period=14)
+        .add_feature(vwap)
+        .add_feature(kline_imbalance, window='imbalance_window')
+        .with_model(logreg_binary)
+    )
+```
+
+## Kline-Derived Position And Volatility Features
+
+These helpers work directly on bar data and are usually the easiest feature layer to add to a first manifest.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `atr_percent_sma` | `atr_percent_sma` | ATR scaled by close price using SMA smoothing. |
+| `atr_sma` | `atr_sma` | SMA-smoothed ATR variant. |
+| `close_position` | `close_position` | Close location inside the current bar's high-low range. |
+| `distance_from_high` | `distance_from_high` | Distance from a rolling high. |
+| `distance_from_low` | `distance_from_low` | Distance from a rolling low. |
+| `gap_high` | `gap_high` | Current high relative to the previous close. |
+| `price_range_position` | `price_range_position` | Rolling range position over a wider window. |
+| `range_pct` | `range_pct` | Current bar range as a percentage. |
+| `trend_strength` | `trend_strength` | Fast-versus-slow trend strength summary. |
+| `volume_regime` | `volume_regime` | Volume context over a lookback window. |
+| `vwap` | `vwap` | Requires a datetime-like `datetime` column because VWAP resets by trading day. |
+
+## Breakout And Regime Features
+
+These helpers are useful when you want state or structure, not just a continuous numeric series.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `breakout_features` | many lagged breakout columns plus `long_roll_mean`, `long_roll_std`, `short_roll_mean`, `short_roll_std`, `roc_long_12_1`, `roc_short_12_1` | Designed to enrich pre-existing breakout flags. |
+| `breakout_percentile_regime` | `price_range_position`, `regime_breakout_pct` | Uses percentile thresholds over price-range position. |
+| `ema_breakout` | `breakout_ema` | Requires `target_col`; flags price displacement from EMA beyond `breakout_delta`. |
+| `hh_hl_structure_regime` | `regime_hh_hl` | Captures higher-high and higher-low style structure. |
+| `ichimoku_cloud` | `tenkan`, `kijun`, `senkou_a`, `senkou_b`, `chikou` | Full Ichimoku feature set. |
+| `ma_slope_regime` | `regime_ma_slope` | Regime label based on moving-average slope. |
+| `price_vs_band_regime` | `regime_price_band` | Uses price distance relative to a band definition. |
+| `sma_crossover` | `crossover`, `signal` | Compact crossover-state helper. |
+| `window_return_regime` | `ret_24`, `regime_window_return` | Return plus regime thresholding over a window. |
+
+## Lag Helpers And Threshold Utilities
+
+These helpers are mainly used to expand existing columns or define cutoffs for target construction.
+
+| Function | Adds or returns | Notes |
+|---|---|---|
+| `lag_column` | one lagged column such as `close_lag_2` | Requires `col` and `lag`. |
+| `lag_columns` | one lag per listed column | Requires `cols` and `lag`. |
+| `lag_range` | a lag range such as `close_lag_1` through `close_lag_3` | Requires `col`, `start`, and `end`. |
+| `lag_range_cols` | a lag range for each listed column | Requires `cols`, `start`, and `end`. |
+| `compute_quantile_cutoff` | scalar cutoff value | Utility helper, not a DataFrame transform. |
+| `quantile_flag` | `quantile_flag` | Commonly used in targets after computing the cutoff on train only. |
+
+## Trade-Shape And Microstructure Features
+
+These helpers need richer data than ordinary OHLCV bars.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `kline_imbalance` | `imbalance` | Requires `maker_ratio` and `no_of_trades`. Useful when those were carried through data retrieval or bar formation. |
+| `conserved_flux_renormalization` | synthetic OHLCV plus `value_sum`, `vwap`, `flux_rel_std_mean`, `flux_rel_std_var`, `entropy_mean`, `entropy_var`, `Δflux_rms`, `Δentropy_rms` | Works on trade-level `datetime`, `price`, and `quantity`, then rolls those into kline-aligned diagnostics. |
+
+## Choosing Between Indicators And Features
+
+- Use an indicator when you want a direct market calculation such as RSI, ATR, or MACD.
+- Use a feature when you want structure around those signals, such as lags, regimes, relative position, or multi-step aggregation.
+- Use the lag helpers when the main value is temporal context rather than a new market calculation.
+- Use `compute_quantile_cutoff` and `quantile_flag` when the target boundary itself is part of the split-safe training logic.
+
+## Read Next
 
-## `limen.features`
-
-### `atr_percent_sma`
-
-Compute ATR as percentage of close price using Simple Moving Average.
-
-#### Args
-
-| Parameter  | Type             | Description                                        |
-| ---------- | ---------------- | -------------------------------------------------- |
-| `data`   | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
-| `period` | `int`          | Number of periods for ATR calculation              |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'atr_percent_sma'
-
-### `atr_sma`
-
-Compute Average True Range using Simple Moving Average.
-
-NOTE: Different from standard ATR which uses Wilder's smoothing.
-
-#### Args
-
-| Parameter  | Type             | Description                                        |
-| ---------- | ---------------- | -------------------------------------------------- |
-| `data`   | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
-| `period` | `int`          | Number of periods for ATR calculation              |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'atr_sma'
-
-### `breakout_features`
-
-Compute comprehensive breakout-related features including lags, stats, and ROC.
-
-#### Args
-
-| Parameter     | Type             | Description                                            |
-| ------------- | ---------------- | ------------------------------------------------------ |
-| `data`      | `pl.DataFrame` | Klines dataset with breakout signal columns            |
-| `long_col`  | `str`          | Column name for long breakout signals                  |
-| `short_col` | `str`          | Column name for short breakout signals                 |
-| `lookback`  | `int`          | Number of periods for feature calculation              |
-| `horizon`   | `int`          | Number of periods to shift for avoiding lookahead bias |
-| `target`    | `str`          | Target column name for filtering null values           |
-
-#### Returns
-
-`pl.DataFrame`: The input data with multiple breakout feature columns added
-
-### `close_position`
-
-Compute close position within the high-low range as percentage.
-
-#### Args
-
-| Parameter | Type             | Description                                            |
-| --------- | ---------------- | ------------------------------------------------------ |
-| `data`  | `pl.DataFrame` | Klines dataset with 'high', 'low', and 'close' columns |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'close_position'
-
-### `conserved_flux_renormalization`
-
-Compute multi-scale, conserved-flux features and their deviation scores for each k-line—turning raw trade ticks into a six-value fingerprint that flags hours where the dollar flow or trade-size entropy breaks scale-invariant behaviour.
-
-Read more in: [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
-
-#### Args
-
-| Parameter          | Type             | Description                      |
-| ------------------ | ---------------- | -------------------------------- |
-| `trades_df`      | `pl.DataFrame` | The trades DataFrame.            |
-| `kline_interval` | `str`          | The kline interval.              |
-| `base_window_s`  | `int`          | The base window size.            |
-| `levels`         | `int`          | The number of levels to compute. |
-
-#### Returns
-
-`pl.DataFrame`: A klines DataFrame with the CFR features
-
-| Column                | Type         | Brief description (1-line)                                          |
-| --------------------- | ------------ | ------------------------------------------------------------------- |
-| `datetime`          | datetime[ms] | Start timestamp of the k-line window (bucket-aligned).              |
-| `open`              | float64      | First trade price in the window.                                    |
-| `high`              | float64      | Highest trade price in the window.                                  |
-| `low`               | float64      | Lowest trade price in the window.                                   |
-| `close`             | float64      | Last trade price in the window.                                     |
-| `volume`            | float64      | Total BTC traded in the window.                                     |
-| `value_sum`         | float64      | Dollar notional traded ∑ (price × quantity).                      |
-| `vwap`              | float64      | Volume-weighted average price (value_sum / volume).                 |
-| `flux_rel_std_mean` | float64      | Mean relative σ/μ of value-flux across the 6 nested scales.       |
-| `flux_rel_std_var`  | float64      | Variance of that σ/μ ladder (how one scale dominates).            |
-| `entropy_mean`      | float64      | Mean Shannon entropy (bits) of trade-size mix across scales.        |
-| `entropy_var`       | float64      | Variance of the entropy ladder (patchiness of size mix).            |
-| `Δflux_rms`        | float64      | RMS gap from an ideal*flat* flux ladder (0 = scale-neutral flow). |
-| `Δentropy_rms`     | float64      | RMS gap from a perfect 1-bit-per-octave entropy drop.               |
-
-### `distance_from_high`
-
-Compute distance from rolling high as percentage.
-
-#### Args
-
-| Parameter  | Type             | Description                                    |
-| ---------- | ---------------- | ---------------------------------------------- |
-| `data`   | `pl.DataFrame` | Klines dataset with 'high', 'close' columns    |
-| `period` | `int`          | Number of periods for rolling high calculation |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'distance_from_high'
-
-### `distance_from_low`
-
-Compute distance from rolling low as percentage.
-
-#### Args
-
-| Parameter  | Type             | Description                                   |
-| ---------- | ---------------- | --------------------------------------------- |
-| `data`   | `pl.DataFrame` | Klines dataset with 'low', 'close' columns    |
-| `period` | `int`          | Number of periods for rolling low calculation |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'distance_from_low'
-
-### `ema_breakout`
-
-Compute EMA breakout indicator based on price deviation from EMA.
-
-#### Args
-
-| Parameter            | Type             | Description                             |
-| -------------------- | ---------------- | --------------------------------------- |
-| `data`             | `pl.DataFrame` | Klines dataset with price columns       |
-| `target_col`       | `str`          | Column name to analyze for breakouts    |
-| `ema_span`         | `int`          | Period for EMA calculation              |
-| `breakout_delta`   | `float`        | Threshold for breakout detection        |
-| `breakout_horizon` | `int`          | Lookback period for breakout validation |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'breakout_ema'
-
-### `gap_high`
-
-Compute gap between current high and previous close as percentage.
-
-#### Args
-
-| Parameter | Type             | Description                                    |
-| --------- | ---------------- | ---------------------------------------------- |
-| `data`  | `pl.DataFrame` | Klines dataset with 'high' and 'close' columns |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'gap_high'
-
-### `kline_imbalance`
-
-Compute rolling buyer/seller imbalance over klines instead of raw trades.
-
-#### Args
-
-| Parameter  | Type             | Description                                      |
-| ---------- | ---------------- | ------------------------------------------------ |
-| `data`   | `pl.DataFrame` | Klines dataset with 'open' and 'close' columns   |
-| `window` | `int`          | Number of periods for rolling window calculation |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'kline_imbalance'
-
-### Lagged Features
-
-The lagged features module provides a consolidated set of functions for creating lagged versions of columns. All functions are implemented using efficient vectorized Polars expressions.
-
-NOTE: All lag functions are available in `limen.features.lagged_features` and exported through `limen.features`.
-
-#### `lag_range_cols`
-
-Compute multiple lagged versions of multiple columns over a range.
-
-This is the core function that all other lag functions derive from, using fully vectorized Polars expressions for maximum efficiency.
-
-##### Args
-
-| Parameter | Type             | Description                           |
-| --------- | ---------------- | ------------------------------------- |
-| `data`  | `pl.DataFrame` | Klines dataset with specified columns |
-| `cols`  | `list[str]`    | The list of column names to lag       |
-| `start` | `int`          | The start of lag range (inclusive)    |
-| `end`   | `int`          | The end of lag range (inclusive)      |
-
-##### Returns
-
-`pl.DataFrame`: The input data with the lagged columns appended
-
-#### `lag_range`
-
-Compute multiple lagged versions of a column over a range.
-
-##### Args
-
-| Parameter | Type             | Description                          |
-| --------- | ---------------- | ------------------------------------ |
-| `data`  | `pl.DataFrame` | Klines dataset with specified column |
-| `col`   | `str`          | The column name to lag               |
-| `start` | `int`          | The start of lag range (inclusive)   |
-| `end`   | `int`          | The end of lag range (inclusive)     |
-
-##### Returns
-
-`pl.DataFrame`: The input data with the lagged columns appended
-
-#### `lag_columns`
-
-Compute lagged versions of multiple columns.
-
-##### Args
-
-| Parameter | Type             | Description                           |
-| --------- | ---------------- | ------------------------------------- |
-| `data`  | `pl.DataFrame` | Klines dataset with specified columns |
-| `cols`  | `list[str]`    | The list of column names to lag       |
-| `lag`   | `int`          | The number of periods to lag          |
-
-##### Returns
-
-`pl.DataFrame`: The input data with the lagged columns appended
-
-#### `lag_column`
-
-Compute a lagged version of a column.
-
-##### Args
-
-| Parameter | Type              | Description                                       |
-| --------- | ----------------- | ------------------------------------------------- |
-| `data`  | `pl.DataFrame`  | Klines dataset with specified column              |
-| `col`   | `str`           | The column name to lag                            |
-| `lag`   | `int`           | The number of periods to lag                      |
-| `alias` | `str, optional` | New column name. If None, uses alias f"lag_{lag}" |
-
-##### Returns
-
-`pl.DataFrame`: The input data with the lagged column appended
-
-### `price_range_position`
-
-Compute price position within rolling high-low range.
-
-#### Args
-
-| Parameter  | Type             | Description                                        |
-| ---------- | ---------------- | -------------------------------------------------- |
-| `data`   | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
-| `period` | `int`          | Number of periods for rolling range calculation    |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'price_range_position'
-
-### `ma_slope_regime`
-
-Compute regime using the slope of SMA(close, period) with optional normalization.
-
-#### Args
-
-| Parameter          | Type           | Description                                           |
-|--------------------|----------------|-------------------------------------------------------|
-| `data`             | `pl.DataFrame` | Klines dataset with 'close' column                    |
-| `period`           | `int`          | SMA period for the slope                              |
-| `threshold`        | `float`        | Slope threshold; applied after normalization when enabled |
-| `normalize_by_std` | `bool`         | Whether to divide slope by rolling std(period)        |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'regime_ma_slope'
-
-### `price_vs_band_regime`
-
-Compute regime by comparing 'close' to center ± k × band width over a rolling window.
-
-#### Args
-
-| Parameter | Type                          | Description                            |
-|----------|--------------------------------|----------------------------------------|
-| `data`   | `pl.DataFrame`                 | Klines dataset with 'close' column     |
-| `period` | `int`                          | Rolling period for center and band width |
-| `band`   | `Literal['std', 'dev_std']`    | Band width type to use                  |
-| `k`      | `float`                        | Band multiplier applied to the width    |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'regime_price_band'
-
-### `breakout_percentile_regime`
-
-Compute regime classification by percentile position of 'close' within rolling [low, high].
-
-#### Args
-
-| Parameter | Type           | Description                                  |
-|----------|----------------|----------------------------------------------|
-| `data`   | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
-| `period` | `int`          | Rolling window for high/low range            |
-| `p_hi`   | `float`        | Upper percentile threshold in [0, 1]         |
-| `p_lo`   | `float`        | Lower percentile threshold in [0, 1]         |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'regime_breakout_pct'
-
-### `window_return_regime`
-
-Compute regime using windowed return close/close.shift(period) - 1.
-
-#### Args
-
-| Parameter | Type           | Description                                 |
-|----------|----------------|---------------------------------------------|
-| `data`   | `pl.DataFrame` | Klines dataset with 'close' column          |
-| `period` | `int`          | Window length for return calculation        |
-| `r_hi`   | `float`        | Upper threshold for Up regime               |
-| `r_lo`   | `float`        | Lower threshold for Down regime             |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'regime_window_return'
-
-### `hh_hl_structure_regime`
-
-Compute regime by higher-high / higher-low market structure within a rolling window.
-
-#### Args
-
-| Parameter        | Type           | Description                                    |
-|------------------|----------------|------------------------------------------------|
-| `data`           | `pl.DataFrame` | Klines dataset with 'high', 'low' columns      |
-| `window`         | `int`          | Rolling window size for structure count        |
-| `score_threshold`| `int`          | Absolute score threshold for Up/Down classification |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'regime_hh_hl'
-
-### `quantile_flag`
-
-Mark rows where `col` exceeds the (1 - q) quantile.
-
-#### Args
-
-| Parameter         | Type             | Description                                                                                                                                                                        |
-| ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data`          | `pl.DataFrame` | Klines dataset with specified column                                                                                                                                               |
-| `col`           | `str`          | The column name on which to compute the quantile.                                                                                                                                  |
-| `q`             | `float`        | A value in [0,1]; if q = 0.1, use the 90% quantile.                                                                                                                                |
-| `cutoff`        | `float`        | Optional pre-calculated cutoff value. If provided, this value is used instead of calculating from data. This prevents data leakage when applying training thresholds to test data. |
-| `return_cutoff` | `bool`         | If True, returns a tuple (data, cutoff) instead of just the data. Useful for applying the same cutoff to multiple datasets.                                                        |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new UInt8 column "quantile_flag" that is 1 when `col` > cutoff, else 0
-OR
-tuple: (pl.DataFrame, float) if return_cutoff is True
-
-### `compute_quantile_cutoff`
-
-Compute the cutoff value used by `quantile_flag` from training data.
-
-This helper is typically used in manifest target construction through `.fit_param(...)`.
-
-#### Args
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `data` | `pl.DataFrame` | Training dataset with the target source column |
-| `col` | `str` | Column name to compute the quantile on |
-| `q` | `float` | Tail parameter in `[0, 1]`; `q=0.1` means use the 90th percentile |
-
-#### Returns
-
-`float`: Cutoff value at the `(1 - q)` quantile
-
-### `range_pct`
-
-Compute range as percentage of close price (high-low)/close.
-
-#### Args
-
-| Parameter | Type             | Description                                            |
-| --------- | ---------------- | ------------------------------------------------------ |
-| `data`  | `pl.DataFrame` | Klines dataset with 'high', 'low', and 'close' columns |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'range_pct'
-
-### `trend_strength`
-
-Compute trend strength based on moving average divergence.
-
-#### Args
-
-| Parameter       | Type             | Description                                |
-| --------------- | ---------------- | ------------------------------------------ |
-| `data`        | `pl.DataFrame` | Klines dataset with 'close' column         |
-| `fast_period` | `int`          | Number of periods for fast SMA calculation |
-| `slow_period` | `int`          | Number of periods for slow SMA calculation |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'trend_strength'
-
-### `volume_regime`
-
-Compute volume regime (current vs average volume).
-
-#### Args
-
-| Parameter    | Type             | Description                                      |
-| ------------ | ---------------- | ------------------------------------------------ |
-| `data`     | `pl.DataFrame` | Klines dataset with 'volume' column              |
-| `lookback` | `int`          | Number of periods for volume average calculation |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'volume_regime'
-
-### `vwap`
-
-Compute Volume Weighted Average Price (VWAP) for each kline over its trading day.
-
-#### Args
-
-| Parameter      | Type             | Description                                  |
-| -------------- | ---------------- | -------------------------------------------- |
-| `data`       | `pl.DataFrame` | Klines dataset with price and volume columns |
-| `price_col`  | `str`          | Name of the price column                     |
-| `volume_col` | `str`          | Name of the volume column                    |
-
-#### Returns
-
-`pl.DataFrame`: The input data with a new column 'vwap'
-
-### `ichimoku_cloud`
-
-Compute Ichimoku Cloud components for trend and momentum analysis.
-
-#### Args
-
-| Parameter | Type             | Description                                        |
-| --------- | ---------------- | -------------------------------------------------- |
-| `data`  | `pl.DataFrame` | Klines dataset with 'high', 'low', 'close' columns |
-| `tenkan_period`  | `int` | Lookback period for Tenkan-sen |
-| `kijun_period`  | `int` | Lookback period for Kijun-sen |
-| `senkou_b_period`  | `int` | Lookback period for Senkou Span B |
-| `displacement`  | `int` | Number of periods to shift Senkou spans and Chikou span |
-
-#### Returns
-
-`pl.DataFrame`: The input data with new columns: 'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
-
-
-
-### `sma_crossover`
-
-Compute Simple Moving Average (SMA) crossover signals.
-
-#### Args
-
-| Parameter   | Type           | Description                                                  |
-| ----------- | -------------- | ------------------------------------------------------------ |
-| `df`        | `pl.DataFrame` | Klines dataset with 'close' columns                         |
-| `short_window` | `int`          | Number of periods for short-term SMA              |
-| `long_window`    | `int`          | Number of periods for long-term SMA |
-| `crossover_bull`    | `int`          | Value indicating bullish crossover |
-| `crossover_bear`    | `int`          | Value indicating bearish crossover |
-
-#### Returns
-
-`pl.DataFrame`: The input data with new columns 'crossover', and 'signal'
+- [Indicators](Indicators.md) for lower-level signal primitives
+- [Transforms](Transforms.md) for target shaping and post-model calibration helpers
+- [Experiment Manifest](Experiment-Manifest.md) for how features plug into the split-first manifest pipeline

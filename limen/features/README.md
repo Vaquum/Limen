@@ -1,55 +1,56 @@
 # `limen.features`
 
-> Compute derived, higher-level features from OHLCV bar data for use as model inputs.
+> Build higher-level model inputs and target helpers on top of raw bars and indicator columns.
 
-## Responsibilities
+## Canonical docs
 
-Owns the library of feature-engineering functions that transform raw or indicator-enriched bar DataFrames into semantically meaningful columns (regime flags, momentum composites, structural patterns, etc.).
-Does **not** own raw technical indicators (those live in `limen.indicators`) or model training — feature functions are pure Polars `LazyFrame → LazyFrame` (or `DataFrame → DataFrame`) transforms.
+- [Features](../../docs/Features.md)
+- [Conserved Flux Renormalization](../../docs/Conserved-Flux-Renormalization.md)
+- [Experiment Manifest](../../docs/Experiment-Manifest.md)
 
-## Key concepts
+## What this package owns
 
-- **Feature function** – a callable that accepts a `pl.LazyFrame` (or `pl.DataFrame`) plus keyword parameters and returns an enriched frame with one or more new columns appended.
-- **Regime feature** – binary or ordinal column that classifies the current market state (e.g. `volume_regime`, `ma_slope_regime`, `market_regime`).
-- **Lagged feature** – a past value of any column shifted by N bars, produced by `lag_column` / `lag_columns` / `lag_range`.
-- **Conserved flux renormalisation (CFR)** - computes multi-scale flux and entropy diagnostics from trade data and joins them back onto bar-level output.
-- **Quantile flag** – binary label derived by comparing a value against a rolling or global quantile cutoff; used as the primary target in many SFDs.
+Owns the public feature-engineering layer, including regime features, lag helpers, breakout features, target helpers, and trade-shape features like CFR.
+Does **not** own raw technical indicators, feature scaling, or model fitting.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| All public feature functions | `__init__.py` | Add to a `Manifest` via `.add_feature(func, **params)` or call directly in a custom `prep` |
-| `quantile_flag()` | `quantile_flag.py` | Target-generation step in manifest `with_target()` block |
-| `compute_quantile_cutoff()` | `quantile_flag.py` | `fit_param` step that computes the cutoff on train data only |
-| `lag_column()` / `lag_range()` | `lagged_features.py` | Add time-lagged versions of any column |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `limen.features.*` exports | You want feature functions inside a manifest or custom prep pipeline | The package root re-exports the public feature surface |
+| `quantile_flag` | You want a trainable binary target based on a cutoff | Common target helper in manifest-driven SFDs |
+| `compute_quantile_cutoff` | You need the train-only fit parameter that powers `quantile_flag` | Designed to be used through `fit_param` |
+| `lag_column`, `lag_columns`, `lag_range`, `lag_range_cols` | You want lagged versions of existing columns | Useful for both raw and derived features |
+| `conserved_flux_renormalization` | You want trade-derived multi-scale flux diagnostics | Requires trade-level input rather than plain OHLCV bars |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** `limen.indicators` is typically called first in the prep pipeline; feature functions may consume indicator columns
-- **External:** `polars`
+- `limen.indicators` usually runs first and produces columns that many features depend on.
+- `limen.transforms` is commonly used alongside feature generation when building targets.
+- `limen.experiment.Manifest` wires features into the prep pipeline through `.add_feature(...)`.
 
 ## Quick orientation
+
 ```text
 features/
-├── lagged_features.py           # lag_column, lag_columns, lag_range, lag_range_cols
-├── quantile_flag.py             # quantile_flag, compute_quantile_cutoff
-├── conserved_flux_renormalization.py
-├── market_regime.py             # Additional internal regime helper
-├── volume_regime.py / volume_*.py
-├── momentum_*.py                # Various momentum composites
-├── breakout_*.py                # Breakout detection features
-├── distance_from_high.py / distance_from_low.py
-├── ichimoku_cloud.py
-├── vwap.py
-├── sma_crossover.py / ma_slope_regime.py
-├── feature_aliases.py           # Internal alias helper for composite feature sets
-└── ...                          # ~60 feature files total
+├── quantile_flag.py                 # Target helper + train-only cutoff helper
+├── lagged_features.py               # Lag helpers for arbitrary columns
+├── breakout_*.py                    # Breakout and threshold features
+├── volume_*.py, ma_slope_regime.py  # Regime and structure features
+├── distance_from_*.py, range_pct.py # Position and range features
+├── vwap.py, ichimoku_cloud.py       # Higher-level technical composites
+└── conserved_flux_renormalization.py
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- Feature functions operate on `LazyFrame` when called through the `Manifest` pipeline; prefer lazy-compatible expressions.
-- `compute_quantile_cutoff` must be used as a `fit_param` so the cutoff is computed on **training** data only and then reused on val/test splits.
-- The package contains additional helper files beyond the default `limen.features` export surface; `market_regime.py` and `feature_aliases.py` are examples of internal helpers that are not re-exported through `__init__.py`.
-- Features that depend on indicator columns (e.g. `atr_sma`) implicitly require those indicators to be added to the manifest first.
+- The package root exports the public feature surface, but not every helper file in the directory is part of that surface.
+- Most manifest-driven uses run features lazily on `pl.LazyFrame`, so lazy-friendly expressions are the safe default.
+- Train-only target helpers must stay train-only. `compute_quantile_cutoff` is a good example of that pattern.
+- Some features assume earlier indicator columns already exist. The public reference calls these dependencies out.
+
+## Read next
+
+- [Features](../../docs/Features.md)
+- [Conserved Flux Renormalization](../../docs/Conserved-Flux-Renormalization.md)
+- [Experiment Manifest](../../docs/Experiment-Manifest.md)

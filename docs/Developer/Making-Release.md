@@ -1,113 +1,98 @@
 # Making a Release
 
-This guide instructs how to create and publish a new release for the Limen project.
+This page documents how releases actually work in Limen today.
 
-## Release Process Overview
+The important fact is that release creation is automated on pushes to `main`. Maintainers normally prepare the release in the PR by updating version metadata and changelog content, then let the GitHub workflow create the tag and GitHub release after merge.
 
-When you are instructed to create a release, follow these steps precisely:
+## Current Release Model
 
-### 1. Determine the New Version
+On every push to `main`, the workflow in `.github/workflows/pr_post_release.yml` runs `scripts/create_release.py`.
 
-- Read the version from `pyproject.toml` (look for the `version` field in the `[project]` section)
-- Use this version for both the git tag and the release
+That script:
 
-### 2. Create the Git Tag
+1. reads the version from `pyproject.toml`
+2. reads this release guide as part of its prompting instructions
+3. gathers the git log since the latest tag
+4. asks the release model to produce a release title and notes
+5. creates tag `v<version>` if that tag does not already exist
+6. creates the GitHub release for that tag
 
-**CRITICAL**: Always use lowercase `v` prefix for tags (e.g., `v0.0.1`, NOT `V0.0.1`)
+If the tag already exists, the automation exits cleanly without creating a duplicate release.
+
+## What Must Be Ready Before Merge
+
+Before merging a release-bearing PR:
+
+- `pyproject.toml` has the intended new version
+- `CHANGELOG.md` is updated if the change is not docs-only or otherwise non-code
+- docs are updated if public behavior, API, workflow, or outputs changed
+- tests and checks are green
+- the full PR diff has been reviewed carefully
+
+## Version And Tag Rules
+
+- Use the version in `pyproject.toml` as the release version.
+- Tags must always use lowercase `v`, such as `v1.48.0`.
+- Never create uppercase `V` tags.
+- Limen keeps `CHANGELOG.md` in oldest-first order. New release entries should follow that convention.
+
+## Release Notes Rules
+
+The automated release script is prompted from this page, so these rules matter in practice.
+
+Release notes should contain:
+
+- `## Summary`: short bullet points covering the most important shipped changes
+- `## Details`: a fuller narrative explanation of what changed and why it matters
+
+The release title should be a creative lunar-calendar-inspired name, because that is part of the current automated release convention.
+
+## Normal Maintainer Flow
+
+1. Decide the correct version bump using [Semantic Versioning](../Semantic-Versioning.md).
+2. Update `pyproject.toml`.
+3. Update `CHANGELOG.md` if the PR is not docs-only or another non-code change.
+4. Merge to `main`.
+5. Watch the `Automated Release` workflow.
+6. Verify that the tag and GitHub release were created as expected.
+
+## Manual Fallback
+
+Use manual release steps only if the automation fails or if a release needs to be backfilled.
+
+### If the workflow failed before creating the tag
+
+- fix the underlying problem
+- rerun the workflow or re-trigger it through a new push to `main`
+
+### If the tag exists but the GitHub release is missing
+
+Create the release manually for the existing tag:
+
+```bash
+gh release create v<NEW_VERSION> \
+  --title "<RELEASE_NAME>" \
+  --notes-file /path/to/release-notes.md
+```
+
+### If you must create the tag manually
 
 ```bash
 git tag -a v<NEW_VERSION> -m "Release v<NEW_VERSION>"
 git push origin v<NEW_VERSION>
 ```
 
-### 3. Analyze Changes Since Last Release
+Only do this when the automated path is genuinely blocked.
 
-- Use `git log` to identify all commits since the previous release
-- Group changes by type: features, fixes, improvements, documentation, etc.
-- Understand the impact and purpose of each change
+## Failure Cases To Check
 
-### 4. Create Release Name
+- version in `pyproject.toml` was not bumped, so the workflow no-ops because the tag already exists
+- changelog was not updated for a shipped code change
+- tag format is wrong
+- release notes are misleading because the merged git log is incomplete or noisy
+- release workflow failed due to missing secrets or GitHub permissions
 
-The release name should be a creative play on the current lunar calendar animals:
-- Year animal (e.g., Dragon, Snake, Horse, etc.)
-- Month animal
-- Day animal  
-- Hour animal
+## Read Next
 
-Create a poetic, meaningful name that combines these elements. Be creative and thoughtful.
-
-### 5. Craft Release Notes
-
-The release notes must contain two sections:
-
-#### Summary Section
-
-Start with a `## Summary` heading. This section should:
-- Capture the essence of all changes in this release
-- Be concise but complete
-- Highlight the most important changes
-- Use bullet points for clarity
-
-#### Details Section
-
-Follow with a `## Details` heading. This section should:
-- Be written in beautiful, flowing essay style
-- Provide comprehensive coverage of all changes
-- Explain the context and motivation behind major changes
-- Be engaging and informative
-- Maintain technical accuracy while being readable
-
-### 6. Publish the Release
-
-Use the GitHub CLI or API to create the release:
-
-```bash
-gh release create v<NEW_VERSION> \
-  --title "<CREATIVE_RELEASE_NAME>" \
-  --notes "<RELEASE_NOTES>"
-```
-
-Ensure the release is marked as published (not draft).
-
-## Example Release Notes Structure
-
-```markdown
-## Summary
-
-- Added automated release system with Claude Code integration
-- Improved documentation for developers
-- Fixed critical bug in data processing pipeline
-- Enhanced performance by 25% in key operations
-
-## Details
-
-This release marks a significant milestone in the evolution of Limen's development 
-workflow. At its heart lies a newly automated release system, carefully crafted to 
-streamline the path from merged code to published release. This automation doesn't 
-merely save time—it ensures consistency and reduces the cognitive load on maintainers 
-who previously juggled manual release processes.
-
-The documentation improvements reflect our commitment to developer experience. We've 
-expanded the developer guides with clear, actionable instructions that demystify 
-complex workflows. These aren't mere placeholders but thoughtfully written guides 
-born from real-world usage patterns.
-
-On the technical front, we've addressed a critical issue in the data processing 
-pipeline that occasionally led to incorrect results under specific edge conditions. 
-The fix required a careful refactoring of the validation logic, ensuring data 
-integrity without sacrificing performance. Speaking of performance, this release 
-delivers a notable 25% improvement in key operations through algorithmic optimizations 
-and smarter caching strategies.
-
-Together, these changes represent our ongoing dedication to building robust, 
-maintainable, and delightful software.
-```
-
-## Important Notes
-
-- **Tag Format**: ALWAYS use lowercase `v` (e.g., `v1.32.3`, NOT `V1.32.3`)
-- **Completeness**: Analyze ALL commits since the last release
-- **Quality**: Take time to craft beautiful, meaningful release notes
-- **Accuracy**: Ensure technical details are correct
-- **Testing**: Verify the tag was created and pushed successfully
-- **Publishing**: Confirm the release is published and visible on GitHub
+- [Semantic Versioning](../Semantic-Versioning.md)
+- [Developer Home](README.md)

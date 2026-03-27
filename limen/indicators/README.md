@@ -1,60 +1,54 @@
 # `limen.indicators`
 
-> Compute standard technical analysis indicators from OHLCV bar data.
+> Provide the lower-level technical indicator library that manifests and custom prep functions build on.
 
-## Responsibilities
+## Canonical docs
 
-Owns the library of technical indicator functions (moving averages, oscillators, volatility measures, momentum).
-Does **not** own higher-level feature engineering (that lives in `limen.features`) or model training — indicator functions are stateless transforms from a bar DataFrame to an enriched DataFrame.
+- [Indicators](../../docs/Indicators.md)
+- [Experiment Manifest](../../docs/Experiment-Manifest.md)
 
-## Key concepts
+## What this package owns
 
-- **Indicator function** – a callable that accepts a `pl.LazyFrame` and returns it with one or more new indicator columns appended; all parameters are passed as keyword arguments.
-- **Period** – the lookback window used by rolling computations (e.g. RSI period, ATR period); typically a search parameter in the SFD `params()` dict.
-- **Wilder smoothing** – used by `wilder_rsi` and `atr` for exponentially weighted rolling calculations matching the original Wilder definitions.
+Owns the public indicator function library, including moving averages, oscillators, volatility measures, price transforms, and candlestick-pattern helpers.
+Does **not** own higher-level feature engineering, target creation, or model training.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| All public indicator functions | `__init__.py` | Add to a `Manifest` via `.add_indicator(func, **params)` or call directly in a custom `prep` |
-| `atr()` | `atr.py` | Average True Range — commonly used as a volatility baseline |
-| `wilder_rsi()` | `wilder_rsi.py` | Wilder RSI — used in most foundational SFDs |
-| `sma()` | `sma.py` | Simple Moving Average |
-| `macd()` | `macd.py` | MACD line and signal |
-| `bollinger_bands()` | `bollinger_bands.py` | Upper, middle, and lower Bollinger bands |
-| `ppo()` | `ppo.py` | Percentage Price Oscillator |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `limen.indicators.*` exports | You want indicators in a manifest or custom prep pipeline | The package root re-exports the public indicator surface |
+| `sma`, `ema`, `wilder_rsi`, `atr` | You need common directional and volatility baselines | Frequently used in foundational SFDs |
+| `bbands`, `bollinger_bands`, `bollinger_position` | You want band-based regime or position signals | Useful before higher-level feature construction |
+| `macd`, `ppo`, `roc`, `stoch`, `stochrsi` | You need momentum and oscillator families | Most emit multiple columns or parameterized output names |
+| Candlestick helpers like `cdldoji` | You want pattern flags aligned with TA-Lib semantics | Exported at the package root alongside the rest of the library |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** none — this is a leaf module
-- **External:** `polars`
+- `limen.features` typically consumes indicator columns and turns them into more opinionated model inputs.
+- `limen.experiment.Manifest` wires indicators into the prep pipeline through `.add_indicator(...)`.
+- `limen.data` supplies the OHLCV frames that most indicators expect.
 
 ## Quick orientation
+
 ```text
 indicators/
-├── atr.py                   # Average True Range (Wilder method)
-├── body_pct.py              # Candle body as % of total range
-├── bollinger_bands.py       # Bollinger Bands (middle, upper, lower)
-├── bollinger_position.py    # Price position within Bollinger Bands
-├── cci.py                   # Commodity Channel Index
-├── macd.py                  # MACD line and signal line
-├── midpoint.py              # Midpoint Over Period (TA-Lib MIDPOINT)
-├── ppo.py                   # Percentage Price Oscillator
-├── price_change_pct.py      # Bar-over-bar percentage price change
-├── returns.py               # Simple percentage returns
-├── roc.py                   # Rate of Change
-├── rolling_volatility.py    # Rolling standard deviation of returns
-├── rsi_sma.py               # RSI smoothed with SMA
-├── sma.py                   # Simple Moving Average
-├── sma_deviation_std.py     # Deviation from SMA in std units
-├── stochastic_oscillator.py # Stochastic %K and %D
-├── wilder_rsi.py            # RSI using Wilder smoothing
-└── window_return.py         # Return over a fixed lookback window
+├── ma, sma, ema, wma, tema, trima, t3 ...   # Moving averages and trend baselines
+├── rsi, wilder_rsi, cmo, willr, ultosc ...  # Momentum and oscillator families
+├── atr, natr, trange, stddev, var ...       # Volatility and range measures
+├── bbands, bollinger_bands, midpoint ...    # Band and price-position helpers
+├── macd, macdfix, macdext, ppo ...          # Multi-column momentum helpers
+└── cdl*.py                                  # Candlestick pattern detections
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- Indicators produce `null` values in the first `period - 1` rows; the experiment pipeline calls `drop_nulls()` after feature/indicator transforms, so leading nulls are automatically removed.
-- `ppo` defaults use short/long periods of 12/26; override via keyword arguments in the manifest.
-- `window_return` computes `close / close.shift(period) - 1` over a fixed lookback window.
+- Most indicator functions accept a `pl.LazyFrame` and return that frame with one or more appended columns.
+- Leading `null` rows are expected for rolling calculations. Manifest-driven prep drops them after the feature and indicator stage.
+- The public reference should be treated as the canonical list of exported helpers and output-column conventions.
+- Many indicators aim for TA-Lib parity, so naming and behavior are intentionally close to that surface where applicable.
+
+## Read next
+
+- [Indicators](../../docs/Indicators.md)
+- [Features](../../docs/Features.md)
+- [Experiment Manifest](../../docs/Experiment-Manifest.md)

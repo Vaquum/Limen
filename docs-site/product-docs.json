@@ -1,0 +1,15 @@
+{
+  "productId": "limen",
+  "productName": "Limen",
+  "tagline": "Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.",
+  "versionLabel": "latest",
+  "basePath": "/",
+  "navSections": [
+    "Overview",
+    "Guides",
+    "Reference",
+    "Developer",
+    "Packages"
+  ],
+  "sourceRepoUrl": "https://github.com/Vaquum/Limen"
+}

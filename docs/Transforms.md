@@ -1,121 +1,83 @@
 # Transforms
 
-Transforms in Limen are lightweight helpers used during data preparation or model post-processing. Most operate directly on DataFrames, while a smaller subset helps with classifier calibration and threshold selection.
+Transforms in Limen are lightweight helpers used either during data preparation or immediately after model scoring. They are not the same thing as train-fitted scalers.
 
-For stateful scalers that fit on training data, see [Scalers](Scalers.md).
+Use this page when you need to shape a target, clip or normalize a frame in a stateless way, or calibrate a classifier after fitting. For train-only fitted preprocessing, see [Scalers](Scalers.md).
 
-## `limen.transforms`
+## Two Transform Families
 
-### `mad_transform`
+| Family | What it does | Typical place in the pipeline |
+|---|---|---|
+| DataFrame transforms | Modify or filter columns in a `pl.DataFrame` | target building, small preprocessing steps, or split-local shaping |
+| Post-model helpers | Work on fitted classifiers or probability arrays | calibration and threshold selection after model training |
 
-Compute Median Absolute Deviation (MAD) Transform.
+## DataFrame Transforms
 
-#### Args
+These helpers operate on the frame passed into them. They do not carry learned state across splits. If you call them separately on train, validation, and test, each call uses the statistics of the frame it received.
 
-| Parameter  | Type           | Description                 |
-|------------|----------------|-----------------------------|
-| `df`       | `pl.DataFrame` | The input DataFrame         |
-| `time_col` | `str`          | The name of the time column |
+| Function | Behavior | Notes |
+|---|---|---|
+| `mad_transform(df, time_col='datetime')` | rescales numeric columns by median absolute deviation | Leaves the time column untouched. |
+| `winsorize_transform(df, time_col='datetime')` | clips numeric columns to fixed 1% and 99% quantiles | Good when you want to tame outliers without dropping rows. |
+| `quantile_trim_transform(df, time_col='datetime')` | removes rows outside fixed 0.5% and 99.5% bounds across numeric columns | More aggressive than winsorization because rows can disappear. |
+| `zscore_transform(df, time_col='datetime')` | standardizes numeric columns to mean zero and unit variance | Stateless per call, unlike a train-fitted scaler. |
+| `shift_column_transform(data, shift, column)` | shifts one column in place | Common in target construction. Negative values shift forward in time. |
 
-#### Returns
+## Post-Model Helpers
 
-`pl.DataFrame`: The transformed DataFrame
+These helpers are used after a model has already been fitted.
 
-### `winsorize_transform`
+| Function | Returns | Notes |
+|---|---|---|
+| `calibrate_classifier(clf, x_val, y_val, x_sets, method='isotonic')` | a tuple of calibrated positive-class probability arrays | Uses `CalibratedClassifierCV` with `cv='prefit'`. `method` is usually `isotonic` or `sigmoid`. |
+| `optimize_binary_threshold(y_val, y_val_proba, ...)` | `(best_threshold, best_score)` | Sweeps thresholds on validation probabilities and optimizes `balanced`, `f1`, `precision`, or `accuracy`. |
 
-Compute winsorization by clipping numeric columns to fixed quantile bounds.
+## Target-Building Example
 
-#### Args
+```python
+from limen.features import compute_quantile_cutoff, quantile_flag
+from limen.transforms import shift_column_transform
 
-| Parameter  | Type           | Description                                   |
-|------------|----------------|-----------------------------------------------|
-| `df`       | `pl.DataFrame` | Klines dataset with numeric columns to clip   |
-| `time_col` | `str`          | Column name to exclude from numeric transforms |
+(
+    manifest.with_target('quantile_flag')
+    .add_fitted_transform(quantile_flag)
+        .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
+        .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
+    .add_transform(shift_column_transform, shift='shift', column='target_column')
+    .done()
+)
+```
 
-#### Returns
+The important detail is that the fitted parameter comes from the manifest builder, not from state stored inside `quantile_flag` itself.
 
-`pl.DataFrame`: The input data with winsorized numeric columns
+## Calibration Example
 
-### `quantile_trim_transform`
+```python
+from limen.transforms import calibrate_classifier, optimize_binary_threshold
 
-Compute outlier trimming by removing rows outside fixed quantile bounds across numeric columns.
+val_proba_cal, test_proba_cal = calibrate_classifier(
+    clf,
+    x_val=x_val,
+    y_val=y_val,
+    x_sets=[x_val, x_test],
+    method='isotonic',
+)
 
-#### Args
+best_threshold, best_score = optimize_binary_threshold(
+    y_val=y_val,
+    y_val_proba=val_proba_cal,
+    metric='balanced',
+)
+```
 
-| Parameter  | Type           | Description                                   |
-|------------|----------------|-----------------------------------------------|
-| `df`       | `pl.DataFrame` | Klines dataset with numeric columns to trim   |
-| `time_col` | `str`          | Column name to exclude from numeric transforms |
+## Boundaries
 
-#### Returns
+- Use a transform when the operation is lightweight and local to the frame or prediction arrays you already have.
+- Use a scaler when the operation must be fitted on train and then reused unchanged on validation and test.
+- If you need split-safe learned parameters inside a target, compute them through the manifest target builder rather than hiding the fitting inside the transform itself.
 
-`pl.DataFrame`: The input data filtered within bounds for all numeric columns
+## Read Next
 
-### `zscore_transform`
-
-Compute standard Z-score scaling for numeric columns.
-
-#### Args
-
-| Parameter  | Type           | Description                                   |
-|------------|----------------|-----------------------------------------------|
-| `df`       | `pl.DataFrame` | Klines dataset with numeric columns to scale  |
-| `time_col` | `str`          | Column name to exclude from numeric transforms |
-
-#### Returns
-
-`pl.DataFrame`: The input data with Z-scored numeric columns
-
-### `shift_column_transform`
-
-Shift a column by a specified number of periods.
-
-#### Args
-
-| Parameter  | Type           | Description                                   |
-|------------|----------------|-----------------------------------------------|
-| `data`     | `pl.DataFrame` | Input DataFrame                               |
-| `shift`    | `int`          | Number of periods to shift (negative for forward shift) |
-| `column`   | `str`          | Name of column to shift                       |
-
-#### Returns
-
-`pl.DataFrame`: DataFrame with shifted column
-
-### `calibrate_classifier`
-
-Apply probability calibration to a fitted classifier and return calibrated probability arrays.
-
-#### Args
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `clf` | `Any` | Fitted classifier with `predict_proba` |
-| `x_val` | `np.ndarray` | Validation features used for calibration fitting |
-| `y_val` | `np.ndarray` | Validation labels used for calibration fitting |
-| `x_sets` | `list` | Feature arrays to score after calibration |
-| `method` | `str` | Calibration method, typically `isotonic` or `sigmoid` |
-
-#### Returns
-
-`tuple`: Calibrated positive-class probability arrays for each entry in `x_sets`
-
-### `optimize_binary_threshold`
-
-Sweep validation thresholds and return the best binary decision threshold.
-
-#### Args
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `y_val` | `np.ndarray` | Validation labels |
-| `y_val_proba` | `np.ndarray` | Validation probabilities for the positive class |
-| `threshold_min` | `float` | Minimum threshold to test |
-| `threshold_max` | `float` | Maximum threshold to test |
-| `threshold_step` | `float` | Threshold step size |
-| `default_threshold` | `float` | Fallback threshold |
-| `metric` | `str` | Metric to optimize, such as `balanced`, `f1`, `precision`, or `accuracy` |
-
-#### Returns
-
-`tuple`: `(best_threshold, best_score)`
+- [Scalers](Scalers.md) for train-fitted preprocessing
+- [Features](Features.md) for target and regime helpers that often pair with transforms
+- [Experiment Manifest](Experiment-Manifest.md) for where transforms live in the split-first execution order

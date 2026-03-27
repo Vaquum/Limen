@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap');
+
+:root {
+  --vaquum-cyan: #c4e8f4;
+  --vaquum-pink-100: #fce2eb;
+  --vaquum-pink-300: #eaa3c8;
+  --vaquum-pink-500: #dc65a6;
+  --vaquum-coral: #f16068;
+  --vaquum-lilac: #bcabd3;
+  --vaquum-lime: #ddd941;
+  --vaquum-black: #121212;
+  --vaquum-ink: #231f20;
+  --vaquum-gray-700: #444444;
+  --vaquum-gray-500: #808080;
+  --vaquum-gray-300: #d3d3d3;
+  --vaquum-gray-100: #f3f3f3;
+  --vaquum-gray-50: #f8f8f8;
+
+  --ifm-color-primary: #dc65a6;
+  --ifm-color-primary-dark: #d44f98;
+  --ifm-color-primary-darker: #cf438f;
+  --ifm-color-primary-darkest: #b42f76;
+  --ifm-color-primary-light: #e17bb4;
+  --ifm-color-primary-lighter: #e488bc;
+  --ifm-color-primary-lightest: #ebaacb;
+  --ifm-color-success: #ddd941;
+  --ifm-color-info: #c4e8f4;
+  --ifm-background-color: var(--vaquum-gray-50);
+  --ifm-background-surface-color: rgba(248, 248, 248, 0.92);
+  --ifm-navbar-background-color: rgba(248, 248, 248, 0.9);
+  --ifm-footer-background-color: var(--vaquum-ink);
+  --ifm-font-color-base: var(--vaquum-ink);
+  --ifm-heading-color: var(--vaquum-black);
+  --ifm-link-color: var(--vaquum-pink-500);
+  --ifm-link-hover-color: var(--vaquum-coral);
+  --ifm-code-font-size: 94%;
+  --ifm-font-family-base: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --ifm-font-family-monospace: "IBM Plex Mono", "SFMono-Regular", monospace;
+  --ifm-heading-font-family: "Rajdhani", "IBM Plex Sans", sans-serif;
+  --ifm-heading-font-weight: 700;
+  --ifm-line-height-base: 1.65;
+  --ifm-menu-color: var(--vaquum-gray-700);
+  --ifm-menu-color-active: var(--vaquum-black);
+  --ifm-menu-color-background-active: rgba(196, 232, 244, 0.45);
+  --ifm-breadcrumb-color-active: var(--vaquum-black);
+  --ifm-toc-border-color: rgba(35, 31, 32, 0.12);
+  --ifm-global-shadow-lw: 0 12px 30px rgba(18, 18, 18, 0.06);
+  --ifm-global-shadow-md: 0 24px 60px rgba(18, 18, 18, 0.1);
+  --doc-sidebar-width: 320px;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(196, 232, 244, 0.7), transparent 28rem),
+    radial-gradient(circle at top right, rgba(252, 226, 235, 0.85), transparent 22rem),
+    linear-gradient(180deg, var(--vaquum-gray-50) 0%, var(--vaquum-gray-100) 100%);
+}
+
+body {
+  background: transparent;
+}
+
+html[data-theme='dark'] {
+  --ifm-color-primary: #eaa3c8;
+  --ifm-color-primary-dark: #e38dbb;
+  --ifm-color-primary-darker: #df81b4;
+  --ifm-color-primary-darkest: #d05a9d;
+  --ifm-color-primary-light: #f1b9d5;
+  --ifm-color-primary-lighter: #f3c5dc;
+  --ifm-color-primary-lightest: #f8deea;
+  --ifm-background-color: #181516;
+  --ifm-background-surface-color: rgba(35, 31, 32, 0.88);
+  --ifm-navbar-background-color: rgba(18, 18, 18, 0.86);
+  --ifm-footer-background-color: #121212;
+  --ifm-font-color-base: #f3f3f3;
+  --ifm-heading-color: #f8f8f8;
+  --ifm-link-color: #fce2eb;
+  --ifm-link-hover-color: #ddd941;
+  --ifm-menu-color: #d3d3d3;
+  --ifm-menu-color-active: #f8f8f8;
+  --ifm-menu-color-background-active: rgba(220, 101, 166, 0.18);
+  --ifm-toc-border-color: rgba(248, 248, 248, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(220, 101, 166, 0.2), transparent 28rem),
+    radial-gradient(circle at top right, rgba(196, 232, 244, 0.16), transparent 22rem),
+    linear-gradient(180deg, #181516 0%, #121212 100%);
+}
+
+.navbar {
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(35, 31, 32, 0.08);
+}
+
+.footer {
+  border-top: 1px solid rgba(248, 248, 248, 0.08);
+}
+
+.theme-doc-sidebar-container,
+.table-of-contents,
+.pagination-nav,
+.theme-doc-markdown,
+.card,
+.navbar-sidebar {
+  backdrop-filter: blur(10px);
+}
+
+.theme-doc-markdown {
+  background: rgba(248, 248, 248, 0.52);
+  border: 1px solid rgba(35, 31, 32, 0.05);
+  border-radius: 1rem;
+  box-shadow: var(--ifm-global-shadow-lw);
+  padding: 1.5rem;
+}
+
+html[data-theme='dark'] .theme-doc-markdown {
+  background: rgba(35, 31, 32, 0.38);
+  border-color: rgba(248, 248, 248, 0.06);
+}
+
+.theme-doc-markdown header + * {
+  margin-top: 1rem;
+}
+
+.theme-doc-markdown h1,
+.theme-doc-markdown h2,
+.theme-doc-markdown h3,
+.theme-doc-markdown h4,
+.hero__title,
+.navbar__title {
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.theme-doc-markdown h1 {
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
+  line-height: 0.95;
+}
+
+.theme-doc-markdown h2 {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  margin-top: 2.75rem;
+}
+
+.theme-doc-markdown h3 {
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+  margin-top: 2rem;
+}
+
+.theme-doc-markdown a {
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+
+.theme-doc-markdown img {
+  border-radius: 0.75rem;
+}
+
+.theme-code-block,
+pre,
+code,
+kbd {
+  font-family: var(--ifm-font-family-monospace);
+}
+
+pre {
+  border: 1px solid rgba(35, 31, 32, 0.08);
+  box-shadow: var(--ifm-global-shadow-lw);
+}
+
+html[data-theme='dark'] pre {
+  border-color: rgba(248, 248, 248, 0.08);
+}
+
+table {
+  background: rgba(248, 248, 248, 0.7);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+html[data-theme='dark'] table {
+  background: rgba(35, 31, 32, 0.42);
+}
+
+.pagination-nav__link {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(35, 31, 32, 0.07);
+}
+
+html[data-theme='dark'] .pagination-nav__link {
+  border-color: rgba(248, 248, 248, 0.08);
+}
+
+.menu__link--active,
+.table-of-contents__link--active {
+  font-weight: 600;
+}

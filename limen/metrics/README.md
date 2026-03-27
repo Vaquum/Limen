@@ -1,47 +1,52 @@
 # `limen.metrics`
 
-> Compute classification and regression evaluation metrics from model predictions.
+> Score classifier and regressor outputs so experiments can compare permutations on consistent metrics.
 
-## Responsibilities
+## Canonical docs
 
-Owns the library of scoring functions used inside SFD model functions to quantify prediction quality.
-Does **not** own the model itself, data preparation, or results logging — metric functions are pure, stateless computations.
+- [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
 
-## Key concepts
+## What this package owns
 
-- **binary_metrics** – standard binary classification scores (recall, precision, FPR, AUC, accuracy) from `sklearn`.
-- **multiclass_metrics** – weighted/macro precision, recall, and F1 for multi-class problems.
-- **continuous_metrics** – regression metrics (MAE, RMSE, R²) for continuous targets.
-- **safe_ovr_auc** – OvR (One-vs-Rest) AUC that gracefully handles edge cases (single class present, missing classes) without raising.
-- **balanced_metric** – composite score that penalises imbalanced predictions; used to reward models that predict both classes meaningfully.
+Owns the metric helpers used inside model functions and experiment outputs.
+Does **not** own model fitting, prediction generation, experiment logging, or backtesting.
 
-## Entry points
+## Key entry points
 
-| What | Where | When you'd call it |
-|------|-------|--------------------|
-| `binary_metrics(data, preds, probs)` | `binary_metrics.py` | Inside an SFD model function after sklearn `predict` / `predict_proba` |
-| `multiclass_metrics(data, preds, probs)` | `multiclass_metrics.py` | Inside an SFD model function for multi-class classifiers |
-| `continuous_metrics(data, preds)` | `continuous_metrics.py` | Inside an SFD model function for regression targets |
-| `safe_ovr_auc(y_true, probs)` | `safe_ovr_auc.py` | Drop-in replacement for `roc_auc_score` when class presence is not guaranteed |
-| `balanced_metric(data, preds, probs)` | `balanced_metric.py` | Composite scoring function rewarding calibrated, balanced classifiers |
+| Entry point | Use it when | Notes |
+|-------------|-------------|-------|
+| `binary_metrics` | You need binary-classification metrics from predictions and probabilities | Import from `limen.metrics.binary_metrics` for the function form |
+| `multiclass_metrics` | You need macro or weighted metrics for multiclass problems | Import from `limen.metrics.multiclass_metrics` |
+| `continuous_metrics` | You need regression metrics like MAE, RMSE, and R2 | Import from `limen.metrics.continuous_metrics` |
+| `safe_ovr_auc` | You need OvR AUC without blowing up on missing-class edge cases | Import from `limen.metrics.safe_ovr_auc` |
+| `balanced_metric` | You want a single optimization target for balanced binary prediction quality | Exported directly from the package root |
 
-## Dependencies
+## Adjacent modules
 
-- **Internal:** none — this is a leaf module
-- **External:** `scikit-learn` (sklearn.metrics), `numpy`
+- `limen.sfd.reference_architecture` is a common caller of these helpers.
+- `limen.log` and `limen.backtest` evaluate experiment outcomes after the model phase, but they are downstream from these raw metrics.
+- `limen.utils` re-exports a small subset of metrics for convenience on older code paths.
 
 ## Quick orientation
+
 ```text
 metrics/
-├── binary_metrics.py      # Recall, precision, FPR, AUC, accuracy
-├── multiclass_metrics.py  # Weighted/macro P, R, F1 for multi-class
-├── continuous_metrics.py  # MAE, RMSE, R² for regression
-├── safe_ovr_auc.py        # OvR AUC with edge-case handling
-└── balanced_metric.py     # Composite balanced classification score
+├── binary_metrics.py
+├── multiclass_metrics.py
+├── continuous_metrics.py
+├── safe_ovr_auc.py
+└── balanced_metric.py
 ```
 
-## Gotchas / things to know
+## Things to know
 
-- `binary_metrics` expects `data['y_test']` — the standard key used by `split_data_to_prep_output`.
-- `safe_ovr_auc` returns `NaN` (not an exception) when only one class is present in `y_true` or the probability matrix has missing columns.
-- `balanced_metric` is intended as a single-number optimisation target for hyperparameter search; it is not a standard sklearn metric.
+- The clearest import style is function-level imports from each module, even though the package root also exposes part of the surface.
+- `binary_metrics` assumes the standard Limen `data_dict` shape and reads `data['y_test']`.
+- `safe_ovr_auc` returns `NaN` rather than raising when the class structure makes AUC undefined.
+- `balanced_metric` is Limen-specific and should not be described as a standard sklearn metric.
+
+## Read next
+
+- [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
+- [Single-File Decoder](../../docs/Single-File-Decoder.md)
+- [Log](../../docs/Log.md)

@@ -1,205 +1,41 @@
 # Scalers
 
-Scalers are stateful preprocessing transformations that fit on training data and then transform any dataset using the learned parameters. They are used with the `.set_scaler()` method in manifests.
+Scalers are train-fitted preprocessing objects. A manifest fits the scaler on `x_train`, then reuses that fitted state to transform validation and test data without refitting.
 
-## Scaler Convention
+Use this page when you need to choose a scaler, understand how `set_scaler()` and `set_scaler_from_params()` behave, or see the interface a custom scaler must follow.
 
-All scaler classes must follow a standard structure for compatibility with the manifest system and post-processing pipelines.
+## How Scalers Fit In Limen
 
-### Required Structure
+The manifest pipeline is split-first:
 
-**`__init__` method:**
-```python
-def __init__(self, x_train: pl.DataFrame, **kwargs):
-    """
-    Fit the scaler on training data.
+1. fetch and prepare raw data
+2. split into train, validation, and test
+3. build indicators, features, and target columns
+4. fit the configured scaler on `x_train`
+5. apply that exact fitted scaler to `x_val` and `x_test`
 
-    Args:
-        x_train: Training DataFrame to compute scaling parameters
-        **kwargs: Optional configuration parameters
-    """
-    # Compute and store scaling parameters from x_train
-    # Example: self.means = {...}, self.stds = {...}
-```
+That is why scalers live separately from the stateless helpers in [Transforms](Transforms.md).
 
-**`transform` method:**
-```python
-def transform(self, df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Apply scaling transformation using fitted parameters.
+## Choosing A Scaler
 
-    Args:
-        df: DataFrame to transform
+| Scaler | Best fit | Inverse support | Notes |
+|---|---|---|---|
+| `LogRegScaler` | the reference logistic-regression style feature sets used in foundational flows | yes | Uses a fixed per-column rule map. Columns outside the rule map are left alone. |
+| `LinearScaler` | mixed feature sets where regex-based scaling rules are useful | yes | The most flexible built-in scaler. Supports `standard`, `log_standard`, `divide_100`, and `none`. |
+| `RobustScaler` | outlier-heavy numeric features | yes | Uses median and IQR instead of mean and standard deviation. |
+| `RankGaussScaler` | numeric features that benefit from a Gaussianized shape | approximate | The inverse is only approximate because rank-based transforms are lossy. |
 
-    Returns:
-        Transformed DataFrame
-    """
-    # Apply transformation using stored parameters
-```
+## Manifest Usage
 
-**`inverse_transform` helper (optional):**
-```python
-def inverse_transform(df: pl.DataFrame, scaler: YourScaler) -> pl.DataFrame:
-    """
-    Reverse the scaling transformation.
-
-    Args:
-        df: Scaled DataFrame to inverse transform
-        scaler: Fitted scaler instance with parameters
-
-    Returns:
-        DataFrame in original scale
-    """
-    # Reverse the transformation for post-processing
-```
-
-### Why This Convention?
-
-- **Manifest compatibility**: The `.set_scaler()` method expects this interface
-- **Stateful operation**: `__init__` fits on training data, `transform` applies to any data
-- **Post-processing**: `inverse_transform` enables converting predictions back to original scale
-- **Consistency**: All scalers work the same way, making them interchangeable
-
-## `limen.scalers`
-
-### `LogRegScaler`
-
-LogRegScaler class for scaling and inverse scaling data.
-
-#### Args
-
-| Parameter | Type           | Description       |
-|-----------|----------------|-------------------|
-| `x_train` | `pl.DataFrame` | The training data |
-
-#### Methods
-- `transform(df: pl.DataFrame) -> pl.DataFrame`: Transform the data using the scaling rules
-
-#### Helper Functions
-- `inverse_transform(df: pl.DataFrame, scaler: LogRegScaler) -> pl.DataFrame`: Inverse transform the data back to original scale
-
-#### Example
+### Fixed scaler
 
 ```python
 from limen.scalers import LogRegScaler
-from limen.scalers.logreg_scaler import inverse_transform
 
-# In manifest
 manifest.set_scaler(LogRegScaler)
-
-# For post-processing (inverse transform)
-original_scale_df = inverse_transform(scaled_df, fitted_scaler)
 ```
 
-### `LinearScaler`
-
-Linear transformation utility for scaling features using configurable rules.
-
-#### Args
-
-| Parameter | Type                      | Description           |
-|-----------|---------------------------|-----------------------|
-| `x_train` | `pl.DataFrame`            | Training DataFrame    |
-| `rules`   | `dict[str, str] \| None` | Regex-to-rule mapping |
-| `default` | `str`                     | Fallback scaling rule |
-
-#### Methods
-- `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply linear scaling transformation
-
-#### Helper Functions
-- `inverse_transform(df: pl.DataFrame, scaler: LinearScaler) -> pl.DataFrame`: Apply inverse scaling transformation
-
-#### Example
-
-```python
-from limen.scalers import LinearScaler
-from limen.scalers.linear_scaler import inverse_transform
-
-# In manifest
-manifest.set_scaler(LinearScaler)
-
-# For post-processing (inverse transform)
-original_scale_df = inverse_transform(scaled_df, fitted_scaler)
-```
-
-### `RobustScaler`
-
-Median and IQR scaling, resilient to outliers. Applies `(x - median) / IQR` per numeric column.
-
-#### Args
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `x_train` | `pl.DataFrame` | Training data |
-| `quantile_range` | `tuple[float, float]` | Lower and upper quantiles for IQR computation |
-
-#### Methods
-- `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply robust scaling
-
-#### Helper Functions
-- `inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame`: Reverse robust scaling to original scale
-
-#### Example
-
-```python
-from limen.scalers import RobustScaler
-from limen.scalers.robust_scaler import inverse_transform
-
-manifest.set_scaler(RobustScaler)
-
-# For post-processing (inverse transform)
-original_scale_df = inverse_transform(scaled_df, fitted_scaler)
-```
-
-### `RankGaussScaler`
-
-Rank transformation to Gaussian distribution via inverse normal CDF. For each numeric column: ranks values against training quantiles, converts to uniform distribution, then applies inverse normal CDF. Integer columns are cast to float before transformation.
-
-#### Args
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `x_train` | `pl.DataFrame` | Training data |
-| `n_quantiles` | `int` | Number of quantile bins for rank interpolation |
-
-#### Methods
-- `transform(df: pl.DataFrame) -> pl.DataFrame`: Apply rank-to-Gaussian transformation
-
-#### Helper Functions
-- `inverse_transform(df: pl.DataFrame, scaler: RankGaussScaler) -> pl.DataFrame`: Reverse Gaussian transformation to approximate original scale
-
-NOTE: The inverse is approximate because rank-based transforms are lossy — multiple original values may map to the same rank.
-
-#### Example
-
-```python
-from limen.scalers import RankGaussScaler
-from limen.scalers.rank_gauss_scaler import inverse_transform
-
-manifest.set_scaler(RankGaussScaler)
-
-# For post-processing (approximate inverse transform)
-original_scale_df = inverse_transform(scaled_df, fitted_scaler)
-```
-
-### `SCALER_REGISTRY`
-
-Registry mapping scaler type strings to scaler classes.
-
-This is the registry used by `Manifest.set_scaler_from_params()`.
-
-#### Current Entries
-
-| Type | Class |
-|------|-------|
-| `'linear'` | `LinearScaler` |
-| `'logreg'` | `LogRegScaler` |
-| `'robust'` | `RobustScaler` |
-| `'rank_gauss'` | `RankGaussScaler` |
-
-## Params-Based Scaler Selection
-
-Use `set_scaler_from_params()` to select the scaler from `round_params` at runtime, enabling scaler type as a perturbation parameter.
+### Parameterized scaler choice
 
 ```python
 manifest.set_scaler_from_params('scaler_type')
@@ -209,11 +45,88 @@ params = {
 }
 ```
 
-Available scaler types in the registry:
+The built-in registry currently maps:
 
-| Type | Class |
-|------|-------|
+| Key | Class |
+|---|---|
 | `'linear'` | `LinearScaler` |
 | `'logreg'` | `LogRegScaler` |
 | `'robust'` | `RobustScaler` |
 | `'rank_gauss'` | `RankGaussScaler` |
+
+## Built-In Scalers
+
+### `LogRegScaler`
+
+`LogRegScaler(x_train)` uses a fixed column-to-rule mapping tailored to the classic Limen logistic-regression workflow.
+
+- standardizes columns such as `open`, `close`, `atr`, `macd`, `roc`, and `returns`
+- log-standardizes columns such as `volume`, `no_of_trades`, and liquidity fields
+- divides `wilder_rsi` by `100`
+- leaves columns such as `maker_ratio` unchanged
+
+This is the most opinionated scaler in the package. It is a good default for old-style foundational SFDs, but less flexible than `LinearScaler`.
+
+### `LinearScaler`
+
+`LinearScaler(x_train, rules=None, default='standard')` applies regex-driven scaling rules.
+
+It supports:
+
+- `standard`
+- `log_standard`
+- `divide_100`
+- `none`
+
+Use it when you want explicit control over scaling policy or when scaler choice itself is part of the search space.
+
+### `RobustScaler`
+
+`RobustScaler(x_train, quantile_range=(0.25, 0.75))` applies:
+
+```python
+(x - median) / IQR
+```
+
+It skips datetime and non-numeric columns automatically and is usually the safest choice when heavy tails or outliers are distorting standardization.
+
+### `RankGaussScaler`
+
+`RankGaussScaler(x_train, n_quantiles=1000)` maps numeric columns to an approximately Gaussian distribution through quantiles and the inverse normal CDF.
+
+Use it when relative ordering matters more than preserving original spacing. Its inverse transform is approximate, not exact.
+
+## Custom Scaler Contract
+
+All custom scalers should follow the same interface:
+
+```python
+class YourScaler:
+    def __init__(self, x_train: pl.DataFrame, **kwargs):
+        ...
+
+    def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+        ...
+```
+
+Optional inverse helper:
+
+```python
+def inverse_transform(df: pl.DataFrame, scaler: YourScaler) -> pl.DataFrame:
+    ...
+```
+
+That contract is what makes the scaler usable from `Manifest.set_scaler()` and compatible with post-processing flows that need to return to the original scale.
+
+## Practical Notes
+
+- `RobustScaler` and `RankGaussScaler` automatically skip datetime and non-numeric columns.
+- `LogRegScaler` and `LinearScaler` are rule-driven, so only columns matched by their rule sets are transformed.
+- `LinearScaler` is the better choice when new feature names are expected to appear frequently.
+- If a prediction post-processing step needs original scale values, prefer a scaler with a meaningful inverse path.
+
+## Read Next
+
+- [Transforms](Transforms.md) for stateless preprocessing and post-model helpers
+- [Experiment Manifest](Experiment-Manifest.md) for where scaling happens inside the split-first pipeline
+- [Trainer](Trainer.md) for the retraining path that reconstructs manifests and preserves fitted preprocessing behavior

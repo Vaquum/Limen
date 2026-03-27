@@ -1,39 +1,76 @@
 # Semantic Versioning
 
-- **MAJOR** version (`X.y.z`)  
-  - Increment when you make **incompatible**, breaking changes.  
-  - User code **must** change to work with the new release.
+This page defines how Limen should choose version bumps in practice.
 
-- **MINOR** version (`x.Y.z`)  
-  - Increment when you add **backwards-compatible** functionality.  
-  - No existing user code should break.
+The repo workflow is simple:
 
-- **PATCH** version (`x.y.Z`)  
-  - Increment when you make **backwards-compatible bug fixes**.  
-  - Addresses typos, small errors, or performance tweaks without adding features.
+- docs-only and other non-code changes usually do not require a version bump
+- shipped code changes should update `pyproject.toml`
+- releases are created from the version in `pyproject.toml` after merge to `main`
 
----
+## Version Rules
 
-## When to Bump Which Number
+### MAJOR: `X.y.z`
 
-| Change type                                    | Version bump     | Example       |
-|------------------------------------------------|------------------|---------------|
-| Breaking API change                            | MAJOR (e.g. 2.0.0)  | 1.4.2 → **2.0.0** |
-| New feature, fully compatible                   | MINOR (e.g. 1.5.0)  | 1.4.2 → **1.5.0** |
-| Bug fix, documentation update, or typo correction | PATCH (e.g. 1.4.3)  | 1.4.2 → **1.4.3** |
+Use a major bump when a release introduces a breaking change for users of Limen.
 
----
+Typical examples:
 
-## Best Practices
+- changing a public API in a way that requires user code changes
+- removing or renaming public imports without a compatibility path
+- changing core workflow behavior in a way that invalidates existing usage assumptions
+- changing persisted artifact formats or contracts in a breaking way
 
-1. **Start at 1.0.0** once your public API is stable.  
-2. **Pre-1.0.0**: Everything may change.  
-3. **Use git tags** matching your version numbers (e.g. `v1.2.3`).  
-4. Update your `CHANGELOG.md` for each release.  
-5. Automate version checks in CI/CD pipelines.
+### MINOR: `x.Y.z`
 
----
+Use a minor bump when the release adds new backwards-compatible capability.
 
-## Further Reading
+Typical examples:
 
-For the full specification and examples, see the official [SemVer documentation](https://semver.org/spec/v2.0.0.html).
+- new public indicators, features, transforms, or scalers
+- new manifest capabilities that do not break existing manifests
+- new experiment, cohort, trainer, or data-access functionality that extends the surface cleanly
+
+### PATCH: `x.y.Z`
+
+Use a patch bump for backwards-compatible fixes and improvements.
+
+Typical examples:
+
+- bug fixes
+- correctness improvements
+- performance improvements without breaking behavior
+- implementation cleanups that change shipped code but not the public contract
+
+Patch is the default version bump when code changed and neither major nor minor applies.
+
+## Practical Decision Table
+
+| Change type | Version bump |
+|---|---|
+| docs-only or non-code-only change | no version bump in normal practice |
+| backwards-compatible bug fix or improvement | patch |
+| backwards-compatible new capability | minor |
+| breaking change | major |
+
+## Release Hygiene Rules
+
+- Update `pyproject.toml` in the same PR as the shipped change.
+- Update `CHANGELOG.md` in the same PR when the change is not docs-only or another non-code change.
+- Keep `CHANGELOG.md` in oldest-first order.
+- Release tags must use lowercase `v`, such as `v1.48.0`.
+
+## Default Questions To Ask
+
+Before bumping the version, ask:
+
+1. Will an existing Limen user need to change code, config, workflow, or artifact assumptions?
+2. Is this adding a new public capability or only improving an existing one?
+3. Is this code shipping at all, or is it only docs and repo hygiene?
+
+If the answer to the first question is yes, lean major. If not, and the answer to the second is yes, lean minor. Otherwise, patch is usually correct for shipped code.
+
+## Read Next
+
+- [Making a Release](Developer/Making-Release.md)
+- [Developer Home](Developer/README.md)

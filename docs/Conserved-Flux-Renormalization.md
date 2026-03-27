@@ -1,64 +1,144 @@
 # Conserved Flux Renormalization
 
-Conserved Flux treats the total traded value as conserved "stuff", the way in physics mass or charge is treated.
+Conserved Flux Renormalization (CFR) is a trade-data feature that summarizes how traded value and trade-size entropy behave across multiple time scales inside each bar.
 
-Renormalization repeatedly coarse-grains the data (60 s → 120 s → 240 s …), just like renormalisation-group steps in physics, and then measures how the statistics look after each zoom.
+In practical Limen terms, CFR turns raw trades into:
 
-So CFR (Conserved Flux Renormalization) is shorthand for “the routine that renormalises trade data while respecting the conserved-flux principle.”
+- a kline-like frame
+- plus six additional columns that describe multi-scale flow stability and entropy behavior
 
-## Conservation Law
+Use CFR when you want a compact diagnostic of whether trade flow looks scale-stable or anomalous inside each bar.
 
-This statement captures the essential meaning of a conservation law:  
+## Input And Output
 
-"If nothing is being created or destroyed inside the region you’re watching, then whatever amount of stuff flows into it each moment must flow out again.  The same flow rate shows up no matter how finely or broadly you zoom your boundary.”
+### Input
 
-Conservation law is a rule saying that “stuff” (mass, charge, energy, trade value, …) cannot appear from nowhere or disappear into nothing. Because it’s conserved, whatever amount enters a region must either remain stored there or leave; in steady conditions, the incoming and outgoing flows balance exactly.
+`conserved_flux_renormalization()` expects a trade dataframe with at least:
 
-## Renormalization
+- `datetime`
+- `price`
+- `quantity`
 
-In physics, **renormalization** means you keep “zooming out,” folding fine-scale details into coarser blocks, and watch how a system’s key numbers behave at each zoom level.  
+### Output
 
-For market data we do the same trick along the time axis.
+It returns a kline-style dataframe containing:
 
-1. **Pick a base window**  
-   Choose the finest clock slice you trust, e.g.  
-   `Δt = 60 s`.
+- `datetime`
+- `open`, `high`, `low`, `close`
+- `volume`
+- `value_sum`
+- `vwap`
+- `flux_rel_std_mean`
+- `flux_rel_std_var`
+- `entropy_mean`
+- `entropy_var`
+- `Δflux_rms`
+- `Δentropy_rms`
 
-2. **Coarse-grain once**  
-   Merge neighbouring windows to make one twice as long  
-   `60 s → 120 s`; add up the trade values so nothing is lost.
+## Usage
 
-3. **Iterate the merge**  
-   Keep doubling the span:  
-   `120 s → 240 s → 480 s → …` until the whole 1-hour bar is covered.
+```python
+from limen.features.conserved_flux_renormalization import conserved_flux_renormalization
 
-4. **Record two scale-dependent numbers**  
-   * **Flux variability** `σ / μ` — how bursty is the dollar flow at that scale?  
-   * **Size entropy** `H` — how diverse are trade sizes inside that scale?
-
-5. **Compare across scales**  
-   In a well-mixed market both curves stay nearly flat as you zoom.  
-   A spike at one rung means “something special happened at that time-scale.”
-
-Each doubling step is an **RG (renormalization-group) step**, and the pair `(σ / μ , H)` are the scale-dependent “couplings.” CFR compresses the entire ladder into four scalars (mean + variance of each curve) so you can spot hours where the market’s flow stops looking scale-invariant.
-
-## Deviation metrics
-
-Once the 6-scale ladder is built, we compare it to its ideal shape  
-(flat flux curve, 1-bit-per-octave entropy drop) and store the distance in
-**two extra columns**:
-
-| Column | Formula | Interpretation |
-|--------|---------|----------------|
-| `Δflux_rms` | $$\sqrt{\frac1n \sum_{k=0}^{n-1}\!\bigl((\sigma/\mu)_k-\overline{\sigma/\mu}\bigr)^{2}}$$ | Root-mean-square gap between the real flux-variability ladder and a perfectly **flat** line.  \>0.15 ⇒ one time-scale dominates the dollar flow. |
-| `Δentropy_rms` | $$\sqrt{\frac1n \sum_{k=0}^{n-1}\!\bigl(H_k-(H_0-k)\bigr)^{2}}$$ | RMS gap between the real entropy ladder and the ideal **1-bit-per-octave** drop.  \>0.60 ⇒ some scales are dust-filled while others hold blocks. |
-
-*Empirical BTC-spot (1 h) flags*
-
-```text
-Δflux_rms    > 0.15   → bursty or thin-book hour
-Δentropy_rms > 0.60   → patchy size-mix hour
-Trip both               almost certainly anomalous
+cfr_df = conserved_flux_renormalization(
+    trades_df,
+    kline_interval='1h',
+    base_window_s=60,
+    levels=6,
+)
 ```
 
-Δflux_rms and Δentropy_rms are root-mean-square gaps: they take the (e.g., six) scale-by-scale errors, square them, average, and square-root, yielding one always-positive score whose size grows with anomaly strength—so a simple cut (e.g. > 0.15 or > 0.60) cleanly flags bars that break the "ideal" flux or entropy ladder.
+### Parameters
+
+| Parameter | Meaning |
+|---|---|
+| `trades_df` | raw trade dataframe |
+| `kline_interval` | bar interval for the output frame, such as `'1h'` |
+| `base_window_s` | smallest internal coarse-graining window in seconds |
+| `levels` | number of renormalization levels to compute |
+
+## What The CFR Columns Mean
+
+### `flux_rel_std_mean`
+
+Mean relative variability of traded-value flux across the renormalization levels.
+
+### `flux_rel_std_var`
+
+Variance of that flux-variability ladder across levels.
+
+### `entropy_mean`
+
+Mean trade-size entropy across the renormalization levels.
+
+### `entropy_var`
+
+Variance of that entropy ladder across levels.
+
+### `Δflux_rms`
+
+Root-mean-square deviation from an ideal flat flux-variability ladder.
+
+Higher values mean one or more scales dominate the traded-value flow instead of the flow looking scale-stable.
+
+### `Δentropy_rms`
+
+Root-mean-square deviation from an ideal one-bit-per-octave entropy ladder.
+
+Higher values mean trade-size diversity changes unevenly across scales.
+
+## When CFR Is Useful
+
+Good fits:
+
+- anomaly detection in trade flow
+- regime features for microstructure-heavy experiments
+- identifying bars where traded value is concentrated on a few scales
+- identifying bars where trade-size diversity behaves unusually
+
+Poor fits:
+
+- workflows where only OHLCV-level information is available
+- experiments that never touch raw trade data
+- cases where simpler activity features already capture the behavior you care about
+
+## The Intuition
+
+The conserved-flux idea treats traded value as conserved "stuff." Renormalization then asks:
+
+what happens to that flow when we repeatedly zoom out in time?
+
+The function starts from a base window such as 60 seconds and repeatedly coarse-grains the trade stream:
+
+```text
+60s -> 120s -> 240s -> 480s -> ...
+```
+
+At each scale it measures two things:
+
+- how variable the traded-value flux is
+- how diverse the trade sizes are
+
+Instead of returning the entire multi-scale ladder, CFR compresses it into a small set of summary features that can be used directly in downstream research.
+
+## Interpreting The Deviation Metrics
+
+The two most important anomaly-style outputs are:
+
+- `Δflux_rms`
+- `Δentropy_rms`
+
+They measure how far the observed scale ladder is from an idealized reference shape.
+
+As a rough intuition:
+
+- high `Δflux_rms` suggests bursty or scale-concentrated flow
+- high `Δentropy_rms` suggests an uneven or patchy size mix across scales
+- when both are elevated, the bar is more likely to be structurally unusual
+
+These are interpretation aids, not hard universal thresholds.
+
+## Read Next
+
+- Continue to [Features](Features.md) for the broader feature layer CFR belongs to.
+- Continue to [Historical Data](Historical-Data.md) if you need the trade-data surfaces CFR expects upstream.

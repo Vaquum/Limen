@@ -1,76 +1,86 @@
-# Vaquum Limen
+# Limen Docs
 
-## Introduction
+This page is the routing hub for the Limen docs. Use it to choose the right path based on what you are trying to do.
 
-Vaquum Limen reduces complex and otherwise out-of-reach research, model development, and trading signal workflows into one cohesive Python API, powering Bitcoin quants with unparalleled ergonomics and productivity. Limen does not execute trades, and can be used as a source of alpha with any trading system.
+## Limen In One Page
 
-**Limen is fully parametric, closed-loop, and Bitcoin-only.** These three core tenets are explained in the sections below.
+Limen is a Bitcoin alpha research engine for turning market data into experiments, logged analytics, backtests, and decoder cohorts. It keeps the research loop inside one Python system: data preparation, indicators, features, targets, scaling, parameter search, and post-run evaluation.
 
-## Core Tenets
+Limen does not perform downstream trade decisioning or execution. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
 
-Vaquum Limen brings every step - data ingestion, feature engineering, machine learning model development, parameter sweep, ensembling, and signal evaluation - into a single closed-loop optimization cycle. This thermodynamic alpha research engine is delivered through one cohesive API and a set of lightweight, single-file templates called SFDs (Single-File Decoder). 
+## Start Here
 
-### Parametric
+### If You Are New To Limen
 
-Hard-coded assumptions are the enemy of alpha. Limen exposes the entire decision surface—from neural network hyperparameters to ensemble weights—as a tunable, metric-rich environment. This replaces rigid abstractions with granular control, allowing the system to explore the full topology of potential strategies.
+1. Read the [product home page](../README.md)
+2. Learn how data enters Limen in [Historical Data](Historical-Data.md)
+3. Learn how experiments are packaged in [Single-File Decoder](Single-File-Decoder.md)
+4. Learn the standard declarative path in [Experiment Manifest](Experiment-Manifest.md)
+5. Run experiments in [Universal Experiment Loop](Universal-Experiment-Loop.md)
+6. Review outcomes in [Log](Log.md)
 
-The system relentlessly validates a single core hypothesis:
+### If You Want To Author Experiments
 
-"Parameter configuration $X$ will yield Profit $Z$ in live market conditions."
+1. Start with [Single-File Decoder](Single-File-Decoder.md)
+2. Continue to [Experiment Manifest](Experiment-Manifest.md)
+3. Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as your reference layer
+4. Run the search in [Universal Experiment Loop](Universal-Experiment-Loop.md)
+5. Inspect results in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
 
-By treating strategy design as a high-dimensional search problem, Limen moves beyond intuition. It systematically sweeps this vast n-dimensional space, ensuring that every variable is not just chosen, but empirically optimized for survival.
+### If You Want To Review Finished Runs
 
-Read more about the radical benefits of parametrization in [Three Eras of Knowledge Objects](https://medium.com/aecmaster/the-three-eras-of-knowledge-objects-994fa4ed9372).
+1. Start with [Log](Log.md)
+2. Compare model behavior in [Benchmark](Benchmark.md)
+3. Evaluate trading behavior in [Backtest](Backtest.md)
+4. Review helper metrics in [Standard Metrics Library](Standard-Metrics-Library.md)
+5. Continue to [Trainer](Trainer.md) and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) if you are promoting outputs downstream
 
-### Closed-Loop
+### If You Want To Contribute Or Maintain
 
-Traditional quantitative pipelines are fragmented—researchers work in silos and hand off static models to engineers, resulting in friction and signal decay. Limen eliminates this fragility by unifying ingestion, feature engineering, and signal research into a single, continuous continuum.
+1. Start with [Developer Guidelines](Developer/README.md)
+2. Read the docs contract in [Documentation System](Developer/Documentation-System.md)
+3. Use [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md) for SFD work
+4. Use [Making Release](Developer/Making-Release.md) and [Semantic Versioning](Semantic-Versioning.md) for maintenance work
 
-The system enforces a feedback loop where realized performance is the only truth.
+## How Limen Flows
 
-Because the signal generation environment is tightly aligned with the research environment, there is minimal translation loss. Realized performance and downstream market feedback—specifically the divergence between predicted and realized outcomes—can be fed back into the optimization engine. This allows Limen to metabolize volatility and evolve its internal logic dynamically, ensuring that future research is grounded in observed outcomes.
+1. Data enters through [Historical Data](Historical-Data.md) or compatible external OHLC data.
+2. Data can be reshaped with [Data Bars](Data-Bars.md) when threshold bars are the right research surface.
+3. Indicators, features, transforms, and scalers define the research surface.
+4. An experiment is packaged in an [SFD](Single-File-Decoder.md), usually through an [Experiment Manifest](Experiment-Manifest.md).
+5. [Universal Experiment Loop](Universal-Experiment-Loop.md) executes the parameter search.
+6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
+7. [Trainer](Trainer.md) and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) turn finished runs into reusable downstream artefacts.
+8. Those outputs then move downstream into Nexus and the rest of the Vaquum stack.
 
-### Bitcoin-Only
+## Docs Map
 
-Bitcoin is not just another ticker in a dataframe; it is a unique monetary network with distinct microstructure, on-chain dynamics, and volatility profiles. Generic multi-asset platforms pay an "abstraction tax"—they are forced to compromise on feature engineering and model architecture to accommodate thousands of dissimilar assets.
+- `Overview`: [Product Home](../README.md), [this docs hub](README.md)
+- `Guides`: [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Experiment Manifest](Experiment-Manifest.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
+- `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Standard Metrics Library](Standard-Metrics-Library.md)
+- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md)
+- `Packages`: the package `README`s under `/limen`, which provide module-level orientation and route back to the canonical docs
 
-Limen eliminates this compromise. It is purpose-built to exploit the specific idiosyncrasies of the Bitcoin market, unburdened by the compatibility debt of multi-asset support. **Generalization is the dilution of edge.**
+## Product Boundary
 
-By treating Bitcoin as the sole first-class asset, Limen bypasses both the noise of the broader crypto "casino" and the outdated assumptions of traditional finance. The result is a system that optimizes its entire topology around the specific heartbeat of the Bitcoin network.
+### Limen Owns
 
-## Architecture
+- experiment-oriented data access
+- indicator, feature, transform, and scaler composition
+- manifest-driven and custom SFD-based research units
+- parameter sweep and experiment logging
+- benchmark-style analytics and backtesting
+- retraining and cohort construction
 
-### Two Core Sub-Systems
+### Limen Does Not Own
 
-Vaquum Limen consists of two distinct sub-systems:
+- upstream source-of-truth market data infrastructure
+- downstream trade decisioning
+- execution and exchange operations
+- system-wide oversight and audit
 
-- `Experiment` Sub-System
-- `Cohorts` Sub-System
+## Read Next
 
-`Experiment` is the sub-system where alpha is systematically discovered, primarily through comprehensive parameter sweep across multiple machine learning architectures.
-
-`Cohorts` is the sub-system that turns discovered alpha from `Experiment` into curated alpha, primarily through ensembling and meta-modelling methods.
-
-Trade decisioning does not live inside Limen. Downstream decision logic belongs in Nexus, which consumes Limen outputs and turns decoder cohorts into validated trading decisions.
-
-### In Practice
-
-`Experiment` starts with [Data](Data-Bars.md), which can be native kline data, Limen's built-in threshold bars, or any external OHLC data as long as it contains the expected price columns.
-
-`Experiment` then continues by converting data into [Indicators](Indicators.md) and [Features](Features.md). In addition to Limen's built-in indicator and feature library, custom polars expressions can also be used to create independent variables for the `Experiment`.
-
-`Experiment` then continues with applying [Scalers](Scalers.md) and [Transforms](Transforms.md), which again could be some of the built-in ones, or any custom polars expressions.
-
-Everything in `Experiment` is captured in [Single-File Decoder](Single-File-Decoder.md), also called SFD, which could be one of three flavors: 
-
-1) One of the built-in SFDs
-2) A locally customized version of one of the built-in SFDs
-3) A completely custom SFD
-
-Manifest-driven SFDs are the standard path into [Universal Experiment Loop](Universal-Experiment-Loop.md), but custom SFDs can also provide explicit `prep()` and `model()` functions. UEL is Limen's parameter-sweep engine.
-
-Completing an `Experiment` yields several analytical artefacts through [Log](Log.md), namely a parameter sweep log, benchmark-style confusion analytics, and backtest results.
-
-These artefacts can then be used to create [Cohorts](Regime-Diversified-Opinion-Pools.md). 
-
-These cohort outputs can then be passed downstream into Nexus for decisioning and into other Vaquum systems for execution, oversight, and auditability.
+- For a first real run, continue to [Historical Data](Historical-Data.md), then [Single-File Decoder](Single-File-Decoder.md), then [Universal Experiment Loop](Universal-Experiment-Loop.md)
+- For architecture and system boundaries, continue to [Trainer](Trainer.md) and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md)
+- For contributor work, continue to [Developer Guidelines](Developer/README.md)
