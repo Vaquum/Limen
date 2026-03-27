@@ -123,7 +123,7 @@ def test_unknown_override_key_raises() -> None:
         assert 'nonexistent_param' in str(e)
 
 
-def test_split_validation_rejects_invalid():
+def test_split_validation_rejects_invalid() -> None:
 
     manifest = Manifest()
     try:
@@ -137,3 +137,32 @@ def test_split_validation_rejects_invalid():
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'non-negative' in str(e)
+
+
+def test_column_consistency_drops_mismatched_columns() -> None:
+
+    def _size_gated_feature(data: pl.DataFrame) -> pl.DataFrame:
+        collected = data.collect() if hasattr(data, 'collect') else data
+        if collected.height > 50:
+            return data.with_columns(pl.lit(1.0).alias('big_split_col'))
+        return data
+
+    manifest = (Manifest()
+        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_split_config(8, 1, 1)
+        .add_feature(_size_gated_feature)
+        .with_target('outcome')
+            .add_transform(lambda data: data.with_columns(
+                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
+            ))
+            .add_transform(lambda data: data[:-1])
+            .done()
+    )
+    raw_data = manifest.fetch_test_data()
+    data = manifest.prepare_data(raw_data, {})
+
+    train_cols = set(data['x_train'].columns)
+    val_cols = set(data['x_val'].columns)
+    test_cols = set(data['x_test'].columns)
+    assert train_cols == val_cols == test_cols
+    assert 'big_split_col' not in train_cols

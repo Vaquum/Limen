@@ -266,6 +266,7 @@ from tests.test_fractional_diff import test_adf_test_constant_series
 from tests.test_fractional_diff import test_find_min_d_step_zero_raises
 from tests.test_fractional_diff import test_find_min_d_small_data_skips
 from tests.test_manifest_prepare_data import test_split_validation_rejects_invalid
+from tests.test_manifest_prepare_data import test_column_consistency_drops_mismatched_columns
 from tests.test_fractional_diff import test_fractional_diff_manifest_integration
 from tests.test_trainer import test_trainer_end_to_end
 from tests.test_trainer import test_reconstruction_error_stochastic
@@ -534,6 +535,7 @@ tests = [
     test_find_min_d_step_zero_raises,
     test_find_min_d_small_data_skips,
     test_split_validation_rejects_invalid,
+    test_column_consistency_drops_mismatched_columns,
     test_fractional_diff_manifest_integration,
     test_trainer_end_to_end,
     test_reconstruction_error_stochastic,
