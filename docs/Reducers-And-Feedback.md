@@ -188,6 +188,22 @@ All three were:
 
 On the next trigger, changing the file to inject `a=123` produced a second audit entry with the updated file-driven intervention.
 
+## Reducer Registry
+
+All built-in reducers are available via `REDUCER_REGISTRY` for params-based or programmatic selection:
+
+```python
+from limen.experiment.reducer import REDUCER_REGISTRY
+```
+
+| Key | Class |
+|-----|-------|
+| `'budget'` | `BudgetReducer` |
+| `'correlation'` | `CorrelationReducer` |
+| `'focus'` | `FocusReducer` |
+| `'sanity'` | `SanityReducer` |
+| `'saturation'` | `SaturationReducer` |
+
 ## Read Next
 
 - Continue to [Advanced Search](Advanced-Search.md) for the full artifact-rich run path around this feedback system.
