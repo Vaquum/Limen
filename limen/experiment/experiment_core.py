@@ -253,7 +253,7 @@ class UniversalExperimentLoop:
 
             # Handle writing to the DataFrame
             if i == 0:
-                self.experiment_log = pl.DataFrame(round_results)
+                self.experiment_log = pl.DataFrame([round_results])
             else:
                 self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
 
