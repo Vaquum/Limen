@@ -1,9 +1,11 @@
-import itertools
+import random
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.search_strategy import SearchStrategy
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.msq import MSQ
+
+MAX_STUB_COMBOS = 100
 
 
 class StubStrategy(SearchStrategy):
@@ -21,10 +23,25 @@ class StubStrategy(SearchStrategy):
     def _build_combos(self):
         params = self._domain.params
         keys = sorted(params.keys())
-        return [
-            dict(zip(keys, vals, strict=True))
-            for vals in itertools.product(*(params[k] for k in keys))
-        ]
+        sizes = [len(params[k]) for k in keys]
+        total = 1
+        for s in sizes:
+            total *= s
+
+        if total <= MAX_STUB_COMBOS:
+            indices = list(range(total))
+        else:
+            indices = sorted(random.sample(range(total), MAX_STUB_COMBOS))
+
+        combos = []
+        for idx in indices:
+            combo = {}
+            remaining = idx
+            for i, key in enumerate(keys):
+                combo[key] = params[key][remaining % sizes[i]]
+                remaining //= sizes[i]
+            combos.append(combo)
+        return combos
 
     def __next__(self):
         if self._index >= len(self._combos):
