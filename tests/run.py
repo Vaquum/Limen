@@ -249,6 +249,9 @@ from tests.test_scalers import test_scaler_factory_selects_all_types
 from tests.test_scalers import test_scaler_factory_unknown_raises
 from tests.test_scalers import test_scaler_factory_registry_has_all
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
+from tests.test_reducer_factory import test_reducer_registry_has_all_types
+from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
+from tests.test_reducer_factory import test_reducer_registry_unknown_key_raises
 from tests.test_fractional_diff import test_fractional_diff_d_zero_copies
 from tests.test_fractional_diff import test_fractional_diff_d_one_equals_first_diff
 from tests.test_fractional_diff import test_fractional_diff_weights_convergence
@@ -518,6 +521,9 @@ tests = [
     test_scaler_factory_unknown_raises,
     test_scaler_factory_registry_has_all,
     test_ablation_drop_count_exceeds_eligible_raises,
+    test_reducer_registry_has_all_types,
+    test_reducer_registry_maps_to_correct_classes,
+    test_reducer_registry_unknown_key_raises,
     test_fractional_diff_d_zero_copies,
     test_fractional_diff_d_one_equals_first_diff,
     test_fractional_diff_weights_convergence,
