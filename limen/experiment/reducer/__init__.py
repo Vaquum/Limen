@@ -9,6 +9,7 @@ from limen.experiment.reducer.filter_types import FILTER_SAMPLE
 from limen.experiment.reducer.focus_reducer import FocusReducer
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.experiment.reducer.sanity_reducer import SanityReducer
 from limen.experiment.reducer.saturation_reducer import SaturationReducer
 
@@ -18,6 +19,7 @@ __all__ = [
     'FILTER_KEEP_BETWEEN',
     'FILTER_KEEP_VALUES',
     'FILTER_SAMPLE',
+    'REDUCER_REGISTRY',
     'TRIM_RANDOM',
     'TRIM_WORST_FIRST',
     'BudgetReducer',
