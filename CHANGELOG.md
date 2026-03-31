@@ -626,7 +626,7 @@
 - Add column consistency check across splits in `prepare_data`
 - Add `statsmodels` as project dependency
 
-## v1.50.0 on 28th of March, 2026
+## v1.50.0 on 31st of March, 2026
 
 - Add `REDUCER_REGISTRY` for params-based reducer selection
 - Migrate `logreg_binary` SFD to params-based scaler and feature groups
