@@ -918,6 +918,12 @@ def _is_group_active(group: str, round_params: dict[str, Any]) -> bool:
     if feature_groups is None or feature_groups == 'all':
         return True
 
+    if not isinstance(feature_groups, str):
+        raise TypeError(
+            f"round_params['feature_groups'] must be a string, "
+            f"got {type(feature_groups).__name__}"
+        )
+
     return group in feature_groups.split('|')
 
 
