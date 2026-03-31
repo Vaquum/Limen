@@ -31,7 +31,8 @@ class StubStrategy(SearchStrategy):
         if total <= MAX_STUB_COMBOS:
             indices = list(range(total))
         else:
-            indices = sorted(random.sample(range(total), MAX_STUB_COMBOS))
+            rng = random.Random(self._seed)
+            indices = sorted(rng.sample(range(total), MAX_STUB_COMBOS))
 
         combos = []
         for idx in indices:
