@@ -25,11 +25,7 @@ def params():
         # view perturbation
         'scaler_type': ['logreg', 'robust', 'rank_gauss'],
         # feature perturbation
-        'feature_groups': [
-            ['momentum', 'volatility', 'volume'],
-            ['momentum'],
-            ['momentum', 'volatility'],
-        ],
+        'feature_groups': ['all', 'momentum', 'momentum|volatility'],
         # classifier parameters
         'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
         'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
