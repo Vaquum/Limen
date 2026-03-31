@@ -625,3 +625,8 @@
 - Add split validation in `set_split_config` (train must be positive, val/test non-negative)
 - Add column consistency check across splits in `prepare_data`
 - Add `statsmodels` as project dependency
+
+## v1.50.0 on 31st of March, 2026
+
+- Add `REDUCER_REGISTRY` for params-based reducer selection
+- Migrate `logreg_binary` SFD to params-based scaler and feature groups

@@ -227,7 +227,7 @@ from tests.test_feature_perturbation import test_ablation_preserves_datetime_and
 from tests.test_feature_perturbation import test_ablation_consistent_across_splits
 from tests.test_feature_perturbation import test_ungrouped_features_always_included
 from tests.test_feature_perturbation import test_ablation_not_configured_noop
-from tests.test_feature_perturbation import test_feature_groups_string_raises_type_error
+from tests.test_feature_perturbation import test_feature_groups_all_includes_everything
 from tests.test_feature_perturbation import test_ablation_invalid_drop_count_raises
 from tests.test_scalers import test_robust_scaler_fit_and_transform
 from tests.test_scalers import test_robust_scaler_custom_quantile_range
@@ -249,6 +249,9 @@ from tests.test_scalers import test_scaler_factory_selects_all_types
 from tests.test_scalers import test_scaler_factory_unknown_raises
 from tests.test_scalers import test_scaler_factory_registry_has_all
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
+from tests.test_reducer_factory import test_reducer_registry_has_all_types
+from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
+from tests.test_reducer_factory import test_reducer_registry_unknown_key_raises
 from tests.test_fractional_diff import test_fractional_diff_d_zero_copies
 from tests.test_fractional_diff import test_fractional_diff_d_one_equals_first_diff
 from tests.test_fractional_diff import test_fractional_diff_weights_convergence
@@ -496,7 +499,7 @@ tests = [
     test_ablation_consistent_across_splits,
     test_ungrouped_features_always_included,
     test_ablation_not_configured_noop,
-    test_feature_groups_string_raises_type_error,
+    test_feature_groups_all_includes_everything,
     test_ablation_invalid_drop_count_raises,
     test_robust_scaler_fit_and_transform,
     test_robust_scaler_custom_quantile_range,
@@ -518,6 +521,9 @@ tests = [
     test_scaler_factory_unknown_raises,
     test_scaler_factory_registry_has_all,
     test_ablation_drop_count_exceeds_eligible_raises,
+    test_reducer_registry_has_all_types,
+    test_reducer_registry_maps_to_correct_classes,
+    test_reducer_registry_unknown_key_raises,
     test_fractional_diff_d_zero_copies,
     test_fractional_diff_d_one_equals_first_diff,
     test_fractional_diff_weights_convergence,
