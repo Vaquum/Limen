@@ -894,16 +894,37 @@ def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any
     if entry.group is None:
         return True
 
+    return _is_group_active(entry.group, round_params)
+
+
+def _is_group_active(group: str, round_params: dict[str, Any]) -> bool:
+
+    '''
+    Check whether a feature group is active for the current round.
+
+    The 'feature_groups' round param is a pipe-delimited string of
+    active group names. The sentinel value 'all' activates every group.
+    When absent or None, all groups are active by default.
+
+    Args:
+        group (str): Group name to check
+        round_params (dict[str, Any]): Current round parameters
+
+    Returns:
+        bool: Whether the group should be included
+    '''
+
     feature_groups = round_params.get('feature_groups')
-    if feature_groups is None:
+    if feature_groups is None or feature_groups == 'all':
         return True
 
-    if isinstance(feature_groups, str):
+    if not isinstance(feature_groups, str):
         raise TypeError(
-            f"round_params['feature_groups'] must be a list, got {feature_groups!r}"
+            f"round_params['feature_groups'] must be a string, "
+            f"got {type(feature_groups).__name__}"
         )
 
-    return entry.group in feature_groups
+    return group in feature_groups.split('|')
 
 
 def _apply_feature_ablation(

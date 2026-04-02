@@ -262,7 +262,7 @@ Use `group=` to tag transforms into families, then filter by `feature_groups` in
 .add_feature(vwap, group='microstructure')
 ```
 
-If `round_params['feature_groups']` is present, only transforms whose group is in that list are applied. Ungrouped transforms still run.
+If `round_params['feature_groups']` is present, only transforms whose group is in that string are applied. Ungrouped transforms always run. The value is a pipe-delimited string of active group names, or `'all'` to include every group.
 
 ### Conditional inclusion
 
@@ -288,10 +288,12 @@ Use `group=` on indicators or features, then pass `feature_groups` in `round_par
 At run time:
 
 ```python
-round_params = {'feature_groups': ['momentum']}
+round_params = {'feature_groups': 'momentum'}
 ```
 
-Only grouped transforms in the selected families run. Ungrouped transforms still run.
+Use `|` to activate multiple groups: `'momentum|microstructure'`. Use `'all'` to include every group.
+
+Only grouped transforms in the selected families run. Ungrouped transforms always run.
 
 ### Conditional feature toggles
 
@@ -309,7 +311,6 @@ round_params = {'use_vwap': False}
 
 The transform is skipped.
 
-On a live local manifest-prep run in this repo, `feature_groups=['momentum', 'volatility']` together with `include_roc=False` dropped the grouped `roc` feature while keeping the grouped `vol_5` feature.
 
 ### Feature ablation
 
@@ -629,7 +630,7 @@ This is the most important target recipe in the current Limen style:
 ```python
 def params():
     return {
-        'feature_groups': [['momentum'], ['momentum', 'microstructure']],
+        'feature_groups': ['momentum', 'momentum|microstructure'],
         'roc_period': [4, 8, 12],
     }
 

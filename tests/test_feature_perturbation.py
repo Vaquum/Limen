@@ -71,7 +71,7 @@ def test_add_indicator_creates_transform_entry():
 def test_feature_group_filtering_includes_selected():
 
     manifest = _make_manifest_with_groups()
-    data = _prepare(manifest, {'feature_groups': ['momentum']})
+    data = _prepare(manifest, {'feature_groups': 'momentum'})
     columns = list(data['_feature_names'])
     assert 'roc' in columns
     assert 'vol_5' not in columns
@@ -81,7 +81,7 @@ def test_feature_group_filtering_includes_selected():
 def test_feature_group_filtering_multiple_groups():
 
     manifest = _make_manifest_with_groups()
-    data = _prepare(manifest, {'feature_groups': ['momentum', 'trend']})
+    data = _prepare(manifest, {'feature_groups': 'momentum|trend'})
     columns = list(data['_feature_names'])
     assert 'roc' in columns
     assert 'sma_10' in columns
@@ -117,7 +117,7 @@ def test_ungrouped_features_always_included():
             .add_transform(lambda data: data[:-1])
             .done()
     )
-    data = _prepare(manifest, {'feature_groups': ['momentum']})
+    data = _prepare(manifest, {'feature_groups': 'momentum'})
     columns = list(data['_feature_names'])
     assert 'roc' in columns
     assert 'vol_5' in columns
@@ -144,7 +144,7 @@ def test_combined_group_and_include_if():
             .add_transform(lambda data: data[:-1])
             .done()
     )
-    data = _prepare(manifest, {'feature_groups': ['momentum', 'volatility'], 'include_roc': False})
+    data = _prepare(manifest, {'feature_groups': 'momentum|volatility', 'include_roc': False})
     columns = list(data['_feature_names'])
     assert 'roc' not in columns
     assert 'vol_5' in columns
@@ -224,14 +224,14 @@ def test_ablation_not_configured_noop():
     assert '_dropped_features' not in rp
 
 
-def test_feature_groups_string_raises_type_error():
+def test_feature_groups_all_includes_everything():
 
     manifest = _make_manifest_with_groups()
-    try:
-        _prepare(manifest, {'feature_groups': 'momentum'})
-        assert False, 'Expected TypeError'
-    except TypeError as e:
-        assert 'must be a list' in str(e)
+    data = _prepare(manifest, {'feature_groups': 'all'})
+    columns = list(data['_feature_names'])
+    assert 'roc' in columns
+    assert 'vol_5' in columns
+    assert 'sma_10' in columns
 
 
 def test_ablation_invalid_drop_count_raises():
