@@ -256,6 +256,8 @@ def test_grid_large_space_shuffle_no_oom():
     strategy = GridStrategy(domain, shuffle=True, seed=42)
     combos = [next(strategy) for _ in range(100)]
     assert len(combos) == 100
+    combo_tuples = [tuple(sorted(c.items())) for c in combos]
+    assert len(set(combo_tuples)) == 100
 
 
 def test_grid_with_msq():
@@ -287,3 +289,34 @@ def test_strategy_registry_instantiation():
     strategy = STRATEGY_REGISTRY['random'](domain, seed=42)
     combo = next(strategy)
     assert 'a' in combo
+
+
+# --- _compute_param_hash ---
+
+
+def test_param_hash_deterministic():
+
+    domain = _small_domain()
+    strategy = RandomStrategy(domain, seed=42)
+    combo = {'a': 1, 'b': 'x'}
+    h1 = strategy._compute_param_hash(combo)
+    h2 = strategy._compute_param_hash(combo)
+    assert h1 == h2
+
+
+def test_param_hash_key_order_independent():
+
+    domain = _small_domain()
+    strategy = RandomStrategy(domain, seed=42)
+    h1 = strategy._compute_param_hash({'a': 1, 'b': 'x'})
+    h2 = strategy._compute_param_hash({'b': 'x', 'a': 1})
+    assert h1 == h2
+
+
+def test_param_hash_different_combos_differ():
+
+    domain = _small_domain()
+    strategy = RandomStrategy(domain, seed=42)
+    h1 = strategy._compute_param_hash({'a': 1, 'b': 'x'})
+    h2 = strategy._compute_param_hash({'a': 2, 'b': 'x'})
+    assert h1 != h2

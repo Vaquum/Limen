@@ -276,6 +276,9 @@ from tests.test_search_strategies import test_grid_large_space_shuffle_no_oom
 from tests.test_search_strategies import test_grid_with_msq
 from tests.test_search_strategies import test_strategy_registry_contains_all
 from tests.test_search_strategies import test_strategy_registry_instantiation
+from tests.test_search_strategies import test_param_hash_deterministic
+from tests.test_search_strategies import test_param_hash_key_order_independent
+from tests.test_search_strategies import test_param_hash_different_combos_differ
 from tests.test_fractional_diff import test_fractional_diff_d_zero_copies
 from tests.test_fractional_diff import test_fractional_diff_d_one_equals_first_diff
 from tests.test_fractional_diff import test_fractional_diff_weights_convergence
@@ -572,6 +575,9 @@ tests = [
     test_grid_with_msq,
     test_strategy_registry_contains_all,
     test_strategy_registry_instantiation,
+    test_param_hash_deterministic,
+    test_param_hash_key_order_independent,
+    test_param_hash_different_combos_differ,
     test_fractional_diff_d_zero_copies,
     test_fractional_diff_d_one_equals_first_diff,
     test_fractional_diff_weights_convergence,
