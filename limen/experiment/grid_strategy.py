@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import random
 from typing import Any
@@ -27,7 +29,6 @@ class GridStrategy(SearchStrategy):
 
         super().__init__(domain, seed=seed)
         self._shuffle = shuffle
-        self._rng = random.Random(seed) if shuffle else None
         self._rebuild()
 
 
@@ -46,18 +47,16 @@ class GridStrategy(SearchStrategy):
         self._total = math.prod(self._sizes)
         self._current_index = 0
 
+        self._permutation: list[int] | None = None
         if self._shuffle and self._total > 0:
             if self._total <= SHUFFLE_MATERIALIZE_LIMIT:
                 self._permutation = list(range(self._total))
                 rng = random.Random(self._seed)
                 rng.shuffle(self._permutation)
             else:
-                self._permutation = None
                 self._lcg_multiplier, self._lcg_increment = _lcg_params(
                     self._total, self._seed,
                 )
-        else:
-            self._permutation = None
 
 
     def _logical_to_physical(self, logical_index: int) -> int:

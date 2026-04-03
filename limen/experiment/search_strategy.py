@@ -48,7 +48,7 @@ class SearchStrategy(ABC):
     @abstractmethod
     def __next__(self) -> dict[str, Any]:
 
-        '''Generate next combination. Raise StopIteration when exhausted.'''
+        '''Return next parameter combination. Raise StopIteration when exhausted.'''
 
         ...
 
