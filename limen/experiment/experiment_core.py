@@ -660,6 +660,10 @@ class UniversalExperimentLoop:
             )
         self.experiment_log = pl.read_csv(csv_path, n_rows=start_round)
 
+        if '_param_hash' in self.experiment_log.columns:
+            hashes = self.experiment_log['_param_hash'].drop_nulls().to_list()
+            self._search_strategy.rebuild_seen(hashes)
+
         self._truncate_round_data(round_data_path, start_round)
         self.experiment_log.write_csv(csv_path)
 
