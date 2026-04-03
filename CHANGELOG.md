@@ -630,3 +630,13 @@
 
 - Add `REDUCER_REGISTRY` for params-based reducer selection
 - Migrate `logreg_binary` SFD to params-based scaler and feature groups
+
+## v1.51.0 on 2nd of April, 2026
+
+- Add `RandomStrategy` for lazy random parameter sampling with dedup
+- Add `GridStrategy` with index-based modular arithmetic and optional shuffle
+- Add `STRATEGY_REGISTRY` for params-based strategy selection
+- Add `_param_hash` dedup infrastructure to `SearchStrategy` base class
+- Add strategy metadata (`_param_hash`, `_generation_index`, `_search_strategy`) to MSQ yield
+- Add `_seen` set rebuild from experiment log on resume
+- Migrate foundational SFD tests from legacy path to MSQ path
