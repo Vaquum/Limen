@@ -1,0 +1,160 @@
+import math
+import random
+from typing import Any
+
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.search_strategy import SearchStrategy
+
+SHUFFLE_MATERIALIZE_LIMIT = 1_000_000
+
+
+class GridStrategy(SearchStrategy):
+
+    '''
+    Exhaustive enumeration of all parameter combinations.
+
+    Uses index-to-combination modular arithmetic for O(1) memory per
+    sample. Optional shuffle reorders the enumeration with a seeded
+    permutation for better early coverage.
+
+    '''
+
+    def __init__(self,
+                 domain: ParamDomain,
+                 *,
+                 seed: int | None = None,
+                 shuffle: bool = False) -> None:
+
+        super().__init__(domain, seed=seed)
+        self._shuffle = shuffle
+        self._rng = random.Random(seed) if shuffle else None
+        self._rebuild()
+
+
+    @property
+    def is_finite(self) -> bool:
+
+        return True
+
+
+    def _rebuild(self) -> None:
+
+        '''Recompute keys, sizes, total, and permutation from current domain.'''
+
+        self._keys = sorted(self._domain.params.keys())
+        self._sizes = [len(self._domain.params[k]) for k in self._keys]
+        self._total = math.prod(self._sizes)
+        self._current_index = 0
+
+        if self._shuffle and self._total > 0:
+            if self._total <= SHUFFLE_MATERIALIZE_LIMIT:
+                self._permutation = list(range(self._total))
+                rng = random.Random(self._seed)
+                rng.shuffle(self._permutation)
+            else:
+                self._permutation = None
+                self._lcg_multiplier, self._lcg_increment = _lcg_params(
+                    self._total, self._seed,
+                )
+        else:
+            self._permutation = None
+
+
+    def _logical_to_physical(self, logical_index: int) -> int:
+
+        if not self._shuffle:
+            return logical_index
+
+        if self._permutation is not None:
+            return self._permutation[logical_index]
+
+        return _lcg_map(
+            logical_index, self._total,
+            self._lcg_multiplier, self._lcg_increment,
+        )
+
+
+    def _index_to_combo(self, index: int) -> dict[str, Any]:
+
+        '''Convert flat index to parameter combination via modular arithmetic.'''
+
+        combo = {}
+        remaining = index
+        for i, key in enumerate(self._keys):
+            combo[key] = self._domain.params[key][remaining % self._sizes[i]]
+            remaining //= self._sizes[i]
+        return combo
+
+
+    def __next__(self) -> dict[str, Any]:
+
+        if self._current_index >= self._total:
+            raise StopIteration
+
+        physical = self._logical_to_physical(self._current_index)
+        combo = self._index_to_combo(physical)
+        self._current_index += 1
+        self._generated_count += 1
+        self._last_param_hash = None
+        return combo
+
+
+    def on_domain_changed(
+        self, _domain: ParamDomain, _changed_params: list[str],
+    ) -> None:
+
+        self._rebuild()
+
+
+    def get_state(self) -> dict[str, Any]:
+
+        return {
+            'current_index': self._current_index,
+            'generated_count': self._generated_count,
+        }
+
+
+    def set_state(self, state: dict[str, Any]) -> None:
+
+        self._current_index = state['current_index']
+        self._generated_count = state['generated_count']
+
+
+def _lcg_params(n: int, seed: int | None) -> tuple[int, int]:
+
+    '''
+    Compute LCG parameters for a full-period permutation of [0, n).
+
+    Finds a multiplier coprime to n and a seeded increment for
+    a linear congruential generator that visits every index exactly once.
+
+    Args:
+        n (int): Size of the space to permute
+        seed (int | None): Seed for choosing increment
+
+    Returns:
+        tuple[int, int]: (multiplier, increment) for the LCG
+    '''
+
+    multiplier = _find_coprime(n)
+    rng = random.Random(seed)
+    increment = rng.randint(0, n - 1)
+    return multiplier, increment
+
+
+def _find_coprime(n: int) -> int:
+
+    '''Find a value coprime to n that provides good mixing.'''
+
+    candidate = max(2, int(n * 0.6180339887))  # golden ratio fraction
+    while math.gcd(candidate, n) != 1:
+        candidate += 1
+    return candidate
+
+
+def _lcg_map(logical_index: int, n: int,
+             multiplier: int, increment: int) -> int:
+
+    '''Map logical index to physical index via LCG.'''
+
+    return (multiplier * logical_index + increment) % n
