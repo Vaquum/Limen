@@ -9,16 +9,17 @@ from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import random_binary as sfd_module
+from limen.experiment.param_search import GridStrategy
 from limen.experiment.param_search import RandomStrategy
 from tests.stubs.stubs import make_msq
 from tests.stubs.stubs import StubPruningStrategy
 
 
-def _make_uel(**kwargs):
+def _make_uel(strategy_cls=RandomStrategy, **kwargs):
 
     params = sfd_module.params()
     domain = ParamDomain(params)
-    strategy = RandomStrategy(domain, seed=42)
+    strategy = strategy_cls(domain, seed=42)
 
     uel = UniversalExperimentLoop(
         sfd=sfd_module,
@@ -209,14 +210,13 @@ def test_checkpoint_saves_feedback_and_pruning_state():
     assert data['pruning_strategy_states'][0]['active'] is True
 
 
-def test_run_with_msq_shutdown_resume_full_data():
+def _shutdown_resume_full_data(strategy_cls):
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
 
-        # Phase 1: run with shutdown after 2 rounds
-        uel, _, _ = _make_uel(experiment_dir=exp_dir)
+        uel, _, _ = _make_uel(strategy_cls=strategy_cls, experiment_dir=exp_dir)
         original_model = uel.model
         round_count = 0
 
@@ -233,67 +233,55 @@ def test_run_with_msq_shutdown_resume_full_data():
         uel._run_with_msq(
             experiment_name='test_full_data',
             n_permutations=6,
-
             context_params=None,
             resume=False,
         )
 
-        # Verify round_data.jsonl exists with 2 lines
         round_data_path = exp_dir / 'round_data.jsonl'
         assert round_data_path.exists()
         with round_data_path.open('r') as f:
             lines = [line for line in f if line.strip()]
         assert len(lines) == 2
 
-        # Verify results.csv exists with 2 data rows
         csv_path = exp_dir / 'results.csv'
         assert csv_path.exists()
 
-        # Phase 2: resume and complete
-        uel2, _, _ = _make_uel(experiment_dir=exp_dir)
+        uel2, _, _ = _make_uel(strategy_cls=strategy_cls, experiment_dir=exp_dir)
 
         uel2._run_with_msq(
             experiment_name='test_full_data',
             n_permutations=6,
-
             context_params=None,
             resume=True,
         )
 
-        # Full experiment data integrity — counts
         assert uel2.experiment_log.shape[0] == 6
         assert uel2.experiment_log['id'].to_list() == [0, 1, 2, 3, 4, 5]
         assert len(uel2.preds) == 6
         assert len(uel2._alignment) == 6
         assert len(uel2.round_params) == 6
 
-        # round_params content across shutdown boundary
         for rp in uel2.round_params:
             assert 'random_weights' in rp
             assert 'breakout_threshold' in rp
             assert 'shift' in rp
 
-        # preds content across shutdown boundary
         for p in uel2.preds:
             assert len(p) > 0
 
-        # _alignment content across shutdown boundary
         for a in uel2._alignment:
             assert 'first_test_datetime' in a
             assert 'last_test_datetime' in a
             assert 'missing_datetimes' in a
 
-        # JSONL has all 6 rounds after resume completion
         with round_data_path.open('r') as f:
             lines = [line for line in f if line.strip()]
         assert len(lines) == 6
 
-        # CSV has header + 6 data rows
         with csv_path.open('r') as f:
             csv_lines = [line for line in f if line.strip()]
         assert len(csv_lines) == 7
 
-        # _finalize ran successfully with full data
         assert uel2._log is not None
         assert uel2.experiment_confusion_metrics is not None
         assert len(uel2.experiment_confusion_metrics) > 0
@@ -301,6 +289,16 @@ def test_run_with_msq_shutdown_resume_full_data():
         assert len(uel2.experiment_backtest_results) > 0
         corr = uel2.experiment_parameter_correlation('auc', min_n=1)
         assert len(corr) > 0
+
+
+def test_run_with_msq_shutdown_resume_full_data():
+
+    _shutdown_resume_full_data(RandomStrategy)
+
+
+def test_run_with_msq_shutdown_resume_grid():
+
+    _shutdown_resume_full_data(GridStrategy)
 
 
 def test_shutdown_before_any_round_completes():
