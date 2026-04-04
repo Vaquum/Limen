@@ -102,7 +102,7 @@ class SearchStrategy(ABC):
         return False
 
 
-    def _compute_param_hash(self, combo: dict[str, Any]) -> str:
+    def compute_param_hash(self, combo: dict[str, Any]) -> str:
 
         '''
         Compute deterministic SHA-256 hash of a parameter combination.
@@ -134,7 +134,7 @@ class SearchStrategy(ABC):
             bool: True if novel (not seen before)
         '''
 
-        h = self._compute_param_hash(combo)
+        h = self.compute_param_hash(combo)
         if h in self._seen:
             return False
         self._seen.add(h)

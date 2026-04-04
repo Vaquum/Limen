@@ -67,7 +67,7 @@ def test_random_rebuild_seen_from_log():
     domain = _small_domain()
     strategy = RandomStrategy(domain, seed=42)
     combo = next(strategy)
-    h = strategy._compute_param_hash(combo)
+    h = strategy.compute_param_hash(combo)
 
     strategy2 = RandomStrategy(domain, seed=42)
     strategy2.rebuild_seen_from_log([h])
@@ -228,8 +228,8 @@ def test_param_hash_deterministic():
     domain = _small_domain()
     strategy = RandomStrategy(domain, seed=42)
     combo = {'a': 1, 'b': 'x'}
-    h1 = strategy._compute_param_hash(combo)
-    h2 = strategy._compute_param_hash(combo)
+    h1 = strategy.compute_param_hash(combo)
+    h2 = strategy.compute_param_hash(combo)
     assert h1 == h2
     assert len(h1) == 32
     assert all(c in '0123456789abcdef' for c in h1)
@@ -239,8 +239,8 @@ def test_param_hash_key_order_independent():
 
     domain = _small_domain()
     strategy = RandomStrategy(domain, seed=42)
-    h1 = strategy._compute_param_hash({'a': 1, 'b': 'x'})
-    h2 = strategy._compute_param_hash({'b': 'x', 'a': 1})
+    h1 = strategy.compute_param_hash({'a': 1, 'b': 'x'})
+    h2 = strategy.compute_param_hash({'b': 'x', 'a': 1})
     assert h1 == h2
 
 
@@ -248,6 +248,6 @@ def test_param_hash_different_combos_differ():
 
     domain = _small_domain()
     strategy = RandomStrategy(domain, seed=42)
-    h1 = strategy._compute_param_hash({'a': 1, 'b': 'x'})
-    h2 = strategy._compute_param_hash({'a': 2, 'b': 'x'})
+    h1 = strategy.compute_param_hash({'a': 1, 'b': 'x'})
+    h2 = strategy.compute_param_hash({'a': 2, 'b': 'x'})
     assert h1 != h2

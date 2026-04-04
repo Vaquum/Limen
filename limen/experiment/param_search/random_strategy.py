@@ -26,12 +26,6 @@ class RandomStrategy(SearchStrategy):
         self._rng = random.Random(seed)
 
 
-    @property
-    def is_finite(self) -> bool:
-
-        return False
-
-
     def __next__(self) -> dict[str, Any]:
 
         params = self._domain.params
@@ -46,13 +40,6 @@ class RandomStrategy(SearchStrategy):
             f"after {MAX_DEDUP_RETRIES} retries. "
             f"Domain may be nearly exhausted ({len(self._seen)} seen)."
         )
-
-
-    def on_domain_changed(
-        self, _domain: ParamDomain, _changed_params: list[str],
-    ) -> None:
-
-        return
 
 
     def get_state(self) -> dict[str, Any]:
