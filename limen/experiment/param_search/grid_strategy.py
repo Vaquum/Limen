@@ -9,6 +9,7 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 
 GOLDEN_RATIO_CONJUGATE = 0.6180339887498949
 
+
 class GridStrategy(SearchStrategy):
 
     '''
