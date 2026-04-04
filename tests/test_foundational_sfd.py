@@ -7,6 +7,11 @@ from tempfile import TemporaryDirectory
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
+from limen.experiment.reducer import BudgetReducer
+from limen.experiment.reducer import CorrelationReducer
+from limen.experiment.reducer import FocusReducer
+from limen.experiment.reducer import SanityReducer
+from limen.experiment.reducer import SaturationReducer
 
 from tests.utils.cleanup import cleanup_csv_files
 
@@ -14,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_foundational_sfd():
-    '''Test all foundational SFDs via MSQ path with RandomStrategy.'''
+    '''Test all foundational SFDs via MSQ path with RandomStrategy and pruning.'''
 
     foundational_sfds = [
         limen.sfd.foundational_sfd.random_binary,
@@ -30,9 +35,19 @@ def test_foundational_sfd():
                 domain = ParamDomain(sfd_module.params())
                 strategy = RandomStrategy(domain, seed=42)
 
+                pruning_strategies = [
+                    SanityReducer(metric='auc', min_observations=1),
+                    BudgetReducer(max_permutations=10, check_after_pct=0.0),
+                    CorrelationReducer(metric='auc', min_observations=1, n_boot=10),
+                    FocusReducer(metric='auc', breakthrough_threshold=0.5, min_observations=1),
+                    SaturationReducer(metric='auc', min_samples_per_value=1, window_size=2),
+                ]
+
                 uel = limen.UniversalExperimentLoop(
                     sfd=sfd_module,
                     search_strategy=strategy,
+                    pruning_strategies=pruning_strategies,
+                    feedback_interval=1,
                     experiment_dir=experiment_dir,
                 )
 
