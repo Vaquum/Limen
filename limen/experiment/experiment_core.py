@@ -20,7 +20,7 @@ from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 
@@ -662,7 +662,7 @@ class UniversalExperimentLoop:
 
         if '_param_hash' in self.experiment_log.columns:
             hashes = self.experiment_log['_param_hash'].drop_nulls().to_list()
-            self._search_strategy.rebuild_seen(hashes)
+            self._search_strategy.rebuild_seen_from_log(hashes)
 
         self._truncate_round_data(round_data_path, start_round)
         self.experiment_log.write_csv(csv_path)

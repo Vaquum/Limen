@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.random_strategy import RandomStrategy
+from limen.experiment.param_search import RandomStrategy
 
 from tests.utils.cleanup import cleanup_csv_files
 

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search.search_strategy import SearchStrategy
 
 
 class FilterExhaustedError(Exception):
@@ -108,12 +108,8 @@ class MSQ:
         combo = dict(combo)
         combo['_id'] = self._yielded_count
         combo['_injected'] = injected
-        if injected:
-            combo['_param_hash'] = self._strategy._compute_param_hash(combo)
-            combo['_generation_index'] = None
-        else:
-            combo['_param_hash'] = self._strategy.last_param_hash
-            combo['_generation_index'] = self._strategy.generated_count
+        combo['_param_hash'] = self._strategy._compute_param_hash(combo)
+        combo['_generation_index'] = None if injected else self._strategy.generated_count
         combo['_search_strategy'] = type(self._strategy).__name__
         self._yielded_count += 1
         if self._trim_budget is not None:

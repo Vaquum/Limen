@@ -5,10 +5,9 @@ import random
 from typing import Any
 
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search.search_strategy import SearchStrategy
 
-SHUFFLE_MATERIALIZE_LIMIT = 1_000_000
-
+GOLDEN_RATIO_CONJUGATE = 0.6180339887498949
 
 class GridStrategy(SearchStrategy):
 
@@ -16,8 +15,8 @@ class GridStrategy(SearchStrategy):
     Exhaustive enumeration of all parameter combinations.
 
     Uses index-to-combination modular arithmetic for O(1) memory per
-    sample. Optional shuffle reorders the enumeration with a seeded
-    permutation for better early coverage.
+    sample. Optional shuffle reorders the enumeration via LCG
+    (linear congruential generator) for better early coverage.
 
     '''
 
@@ -40,32 +39,23 @@ class GridStrategy(SearchStrategy):
 
     def _rebuild(self) -> None:
 
-        '''Recompute keys, sizes, total, and permutation from current domain.'''
+        '''Recompute keys, sizes, total, and LCG params from current domain.'''
 
         self._keys = sorted(self._domain.params.keys())
         self._sizes = [len(self._domain.params[k]) for k in self._keys]
         self._total = math.prod(self._sizes)
         self._current_index = 0
 
-        self._permutation: list[int] | None = None
         if self._shuffle and self._total > 0:
-            if self._total <= SHUFFLE_MATERIALIZE_LIMIT:
-                self._permutation = list(range(self._total))
-                rng = random.Random(self._seed)
-                rng.shuffle(self._permutation)
-            else:
-                self._lcg_multiplier, self._lcg_increment = _lcg_params(
-                    self._total, self._seed,
-                )
+            self._lcg_multiplier, self._lcg_increment = _lcg_params(
+                self._total, self._seed,
+            )
 
 
-    def _logical_to_physical(self, logical_index: int) -> int:
+    def _permute_index(self, logical_index: int) -> int:
 
         if not self._shuffle:
             return logical_index
-
-        if self._permutation is not None:
-            return self._permutation[logical_index]
 
         return _lcg_map(
             logical_index, self._total,
@@ -90,11 +80,10 @@ class GridStrategy(SearchStrategy):
         if self._current_index >= self._total:
             raise StopIteration
 
-        physical = self._logical_to_physical(self._current_index)
+        physical = self._permute_index(self._current_index)
         combo = self._index_to_combo(physical)
         self._current_index += 1
         self._generated_count += 1
-        self._last_param_hash = None
         return combo
 
 
@@ -145,7 +134,7 @@ def _find_coprime(n: int) -> int:
 
     '''Find a value coprime to n that provides good mixing.'''
 
-    candidate = max(2, int(n * 0.6180339887))  # golden ratio fraction
+    candidate = max(2, int(n * GOLDEN_RATIO_CONJUGATE))
     while math.gcd(candidate, n) != 1:
         candidate += 1
     return candidate

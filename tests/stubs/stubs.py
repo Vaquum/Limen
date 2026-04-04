@@ -1,7 +1,7 @@
 import random
 
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.msq import MSQ
 

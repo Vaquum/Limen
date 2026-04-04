@@ -4,7 +4,7 @@ import random
 from typing import Any
 
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search.search_strategy import SearchStrategy
 
 MAX_DEDUP_RETRIES = 1000
 
@@ -15,7 +15,7 @@ class RandomStrategy(SearchStrategy):
     Lazy random sampling from the parameter domain.
 
     Samples each parameter independently via uniform random choice.
-    Infinite — never raises StopIteration. Uses _is_novel for
+    Infinite — never raises StopIteration. Uses _is_unseen for
     dedup to avoid repeating previously seen combinations.
 
     '''
@@ -37,7 +37,7 @@ class RandomStrategy(SearchStrategy):
         params = self._domain.params
         for _ in range(MAX_DEDUP_RETRIES):
             combo = {k: self._rng.choice(v) for k, v in params.items()}
-            if self._is_novel(combo):
+            if self._is_unseen(combo):
                 self._generated_count += 1
                 return combo
 

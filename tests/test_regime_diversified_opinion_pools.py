@@ -12,7 +12,7 @@ import limen
 from limen import sfd
 from limen import RegimeDiversifiedOpinionPools
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.random_strategy import RandomStrategy
+from limen.experiment.param_search import RandomStrategy
 from tests.utils.cleanup import cleanup_csv_files
 
 logger = logging.getLogger(__name__)

@@ -36,7 +36,6 @@ class SearchStrategy(ABC):
         self._seed = seed
         self._generated_count: int = 0  # subclasses must increment in __next__
         self._seen: set[str] = set()
-        self._last_param_hash: str | None = None
         self._domain.add_observer(self)
 
 
@@ -103,14 +102,6 @@ class SearchStrategy(ABC):
         return False
 
 
-    @property
-    def last_param_hash(self) -> str | None:
-
-        '''Hash of the last generated combination, or None.'''
-
-        return self._last_param_hash
-
-
     def _compute_param_hash(self, combo: dict[str, Any]) -> str:
 
         '''
@@ -120,21 +111,21 @@ class SearchStrategy(ABC):
             combo (dict[str, Any]): Parameter combination
 
         Returns:
-            str: 16-character hex hash
+            str: 32-character hex hash
         '''
 
         canonical = json.dumps(combo, sort_keys=True, default=str)
-        return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+        return hashlib.sha256(canonical.encode()).hexdigest()[:32]
 
 
-    def _is_novel(self, combo: dict[str, Any]) -> bool:
+    def _is_unseen(self, combo: dict[str, Any]) -> bool:
 
         '''
         Check if a combination has been seen before.
 
         Computes the hash, checks against _seen set. If novel, adds
-        to _seen and stores in _last_param_hash. Stochastic strategies
-        call this in __next__ to skip duplicates.
+        to _seen. Stochastic strategies call this in __next__ to
+        skip duplicates.
 
         Args:
             combo (dict[str, Any]): Parameter combination to check
@@ -147,11 +138,10 @@ class SearchStrategy(ABC):
         if h in self._seen:
             return False
         self._seen.add(h)
-        self._last_param_hash = h
         return True
 
 
-    def rebuild_seen(self, hashes: Iterable[str]) -> None:
+    def rebuild_seen_from_log(self, hashes: Iterable[str]) -> None:
 
         '''
         Populate _seen from an iterable of hashes. Used on resume

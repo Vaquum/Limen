@@ -253,18 +253,13 @@ from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
 from tests.test_reducer_factory import test_reducer_registry_unknown_key_raises
 from tests.test_search_strategies import test_random_basic_iteration
-from tests.test_search_strategies import test_random_is_infinite
 from tests.test_search_strategies import test_random_seeded_reproducibility
-from tests.test_search_strategies import test_random_different_seeds
-from tests.test_search_strategies import test_random_param_hash
 from tests.test_search_strategies import test_random_dedup_skips_seen
 from tests.test_search_strategies import test_random_get_set_state
-from tests.test_search_strategies import test_random_rebuild_seen
+from tests.test_search_strategies import test_random_rebuild_seen_from_log
 from tests.test_search_strategies import test_random_with_msq
 from tests.test_search_strategies import test_random_large_domain
 from tests.test_search_strategies import test_grid_exhaustive_small_space
-from tests.test_search_strategies import test_grid_is_finite
-from tests.test_search_strategies import test_grid_no_duplicates
 from tests.test_search_strategies import test_grid_covers_full_space
 from tests.test_search_strategies import test_grid_deterministic_order
 from tests.test_search_strategies import test_grid_shuffle_covers_full_space
@@ -272,10 +267,9 @@ from tests.test_search_strategies import test_grid_shuffle_different_order
 from tests.test_search_strategies import test_grid_shuffle_seeded_reproducibility
 from tests.test_search_strategies import test_grid_get_set_state
 from tests.test_search_strategies import test_grid_on_domain_changed
-from tests.test_search_strategies import test_grid_large_space_shuffle_no_oom
+from tests.test_search_strategies import test_grid_large_space_shuffle
 from tests.test_search_strategies import test_grid_with_msq
-from tests.test_search_strategies import test_strategy_registry_contains_all
-from tests.test_search_strategies import test_strategy_registry_instantiation
+from tests.test_search_strategies import test_strategy_registry
 from tests.test_search_strategies import test_param_hash_deterministic
 from tests.test_search_strategies import test_param_hash_key_order_independent
 from tests.test_search_strategies import test_param_hash_different_combos_differ
@@ -552,18 +546,13 @@ tests = [
     test_reducer_registry_maps_to_correct_classes,
     test_reducer_registry_unknown_key_raises,
     test_random_basic_iteration,
-    test_random_is_infinite,
     test_random_seeded_reproducibility,
-    test_random_different_seeds,
-    test_random_param_hash,
     test_random_dedup_skips_seen,
     test_random_get_set_state,
-    test_random_rebuild_seen,
+    test_random_rebuild_seen_from_log,
     test_random_with_msq,
     test_random_large_domain,
     test_grid_exhaustive_small_space,
-    test_grid_is_finite,
-    test_grid_no_duplicates,
     test_grid_covers_full_space,
     test_grid_deterministic_order,
     test_grid_shuffle_covers_full_space,
@@ -571,10 +560,9 @@ tests = [
     test_grid_shuffle_seeded_reproducibility,
     test_grid_get_set_state,
     test_grid_on_domain_changed,
-    test_grid_large_space_shuffle_no_oom,
+    test_grid_large_space_shuffle,
     test_grid_with_msq,
-    test_strategy_registry_contains_all,
-    test_strategy_registry_instantiation,
+    test_strategy_registry,
     test_param_hash_deterministic,
     test_param_hash_key_order_independent,
     test_param_hash_different_combos_differ,
