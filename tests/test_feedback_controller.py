@@ -109,7 +109,7 @@ def test_apply_intervention_unknown_op():
 
 def test_strategy_update_called():
 
-    msq, strategy, _ = make_msq()
+    msq, strategy, domain = make_msq()
     ps = StubPruningStrategy(interventions=[
         {'op': 'remove_is', 'param': 'a', 'value': 3},
     ])
@@ -120,9 +120,8 @@ def test_strategy_update_called():
 
     fc.trigger(None, msq, strategy, 5)
 
-    assert len(strategy._feedback_calls) == 1
-    assert len(strategy._feedback_calls[0]) == 1
-    assert strategy._feedback_calls[0][0]['op'] == 'remove_is'
+    assert any(i['operation'] == 'remove_is' for i in msq._intervention_log)
+    assert 3 not in domain.params['a']
 
 
 def test_trigger_intervention_file():

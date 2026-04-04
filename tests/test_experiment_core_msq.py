@@ -9,8 +9,8 @@ from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import random_binary as sfd_module
+from limen.experiment.param_search import RandomStrategy
 from tests.stubs.stubs import make_msq
-from tests.stubs.stubs import StubStrategy
 from tests.stubs.stubs import StubPruningStrategy
 
 
@@ -18,7 +18,7 @@ def _make_uel(**kwargs):
 
     params = sfd_module.params()
     domain = ParamDomain(params)
-    strategy = StubStrategy(domain)
+    strategy = RandomStrategy(domain, seed=42)
 
     uel = UniversalExperimentLoop(
         sfd=sfd_module,
@@ -197,7 +197,7 @@ def test_checkpoint_saves_feedback_and_pruning_state():
         cm = CheckpointManager()
 
         cm.save(ckpt_dir, msq, domain, 10, 100,
-                strategy_type='StubStrategy', content_hash='a' * 64,
+                strategy_type='RandomStrategy', content_hash='a' * 64,
                 feedback_controller=fc, pruning_strategies=[ps])
 
         data = cm.load(ckpt_dir)
@@ -323,7 +323,7 @@ def test_resume_fails_without_round_data():
 
     params = sfd_module.params()
     domain = ParamDomain(params)
-    strategy = StubStrategy(domain)
+    strategy = RandomStrategy(domain, seed=42)
     msq = MSQ(strategy, domain, n_permutations=6)
 
     # Advance MSQ 3 rounds
@@ -338,7 +338,7 @@ def test_resume_fails_without_round_data():
         content_hash = CheckpointManager.compute_content_hash(params)
         cm = CheckpointManager(checkpoint_interval=1000)
         cm.save(exp_dir, msq, domain, 2, 6,
-                strategy_type='StubStrategy', content_hash=content_hash)
+                strategy_type='RandomStrategy', content_hash=content_hash)
 
         uel, _, _ = _make_uel(experiment_dir=exp_dir)
 

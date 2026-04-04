@@ -65,5 +65,9 @@ class RandomStrategy(SearchStrategy):
 
     def set_state(self, state: dict[str, Any]) -> None:
 
-        self._rng.setstate(state['rng_state'])
+        rng_state = state['rng_state']
+        # JSON serialization converts tuples to lists; restore tuple structure
+        if isinstance(rng_state, list):
+            rng_state = (rng_state[0], tuple(rng_state[1]), rng_state[2])
+        self._rng.setstate(rng_state)
         self._generated_count = state['generated_count']

@@ -1,6 +1,6 @@
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.msq import MSQ, FilterExhaustedError
-from tests.stubs.stubs import StubStrategy
+from limen.experiment.param_search import GridStrategy
 
 
 def _make_msq(params=None, n_permutations=None):
@@ -8,7 +8,7 @@ def _make_msq(params=None, n_permutations=None):
     if params is None:
         params = {'a': [1, 2], 'b': ['x', 'y']}
     domain = ParamDomain(params)
-    strategy = StubStrategy(domain)
+    strategy = GridStrategy(domain)
     return MSQ(strategy, domain, n_permutations=n_permutations), domain
 
 
@@ -130,7 +130,7 @@ def test_remove_custom():
 def test_filter_exhausted_error():
 
     domain = ParamDomain({'a': list(range(10)), 'b': list(range(10))})
-    strategy = StubStrategy(domain)
+    strategy = GridStrategy(domain)
     msq = MSQ(strategy, domain, max_filter_retries=5)
 
     msq.remove_custom(lambda c: True)
@@ -224,7 +224,7 @@ def test_mismatched_domain_raises():
 
     domain1 = ParamDomain({'a': [1, 2]})
     domain2 = ParamDomain({'a': [1, 2]})
-    strategy = StubStrategy(domain1)
+    strategy = GridStrategy(domain1)
 
     try:
         MSQ(strategy, domain2)
