@@ -631,7 +631,7 @@
 - Add `REDUCER_REGISTRY` for params-based reducer selection
 - Migrate `logreg_binary` SFD to params-based scaler and feature groups
 
-## v1.51.0 on 2nd of April, 2026
+## v1.51.0 on 3rd of April, 2026
 
 - Add `RandomStrategy` for lazy random parameter sampling with dedup
 - Add `GridStrategy` with index-based modular arithmetic and optional shuffle
