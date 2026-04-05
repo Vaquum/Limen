@@ -198,7 +198,7 @@ def test_checkpoint_saves_feedback_and_pruning_state():
         cm = CheckpointManager()
 
         cm.save(ckpt_dir, msq, domain, 10, 100,
-                strategy_type='RandomStrategy', content_hash='a' * 64,
+                strategy_type='GridStrategy', content_hash='a' * 64,
                 feedback_controller=fc, pruning_strategies=[ps])
 
         data = cm.load(ckpt_dir)

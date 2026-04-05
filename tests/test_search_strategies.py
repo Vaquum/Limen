@@ -180,6 +180,9 @@ def test_grid_on_domain_changed():
     assert strategy.generated_count == 2
 
     domain.remove_value('a', 3)
+    assert strategy.generated_count == 0, (
+        '_rebuild must reset generated_count so MSQ.remaining_count stays correct'
+    )
     combos = list(strategy)
     combo_set = {tuple(sorted(c.items())) for c in combos}
     expected = {
