@@ -88,6 +88,21 @@ def test_random_with_msq():
         assert combo['_search_strategy'] == 'RandomStrategy'
 
 
+def test_injected_combo_registered_in_seen():
+
+    domain = _small_domain()
+    strategy = RandomStrategy(domain, seed=42)
+    msq = MSQ(strategy, domain, n_permutations=5)
+
+    injected = {'a': 1, 'b': 'x'}
+    msq.inject(injected)
+    combo = next(msq)
+    assert combo['_injected'] is True
+
+    h = strategy.compute_param_hash(injected)
+    assert h in strategy._seen
+
+
 def test_random_large_domain():
 
     from limen.sfd.foundational_sfd import logreg_binary as sfd
