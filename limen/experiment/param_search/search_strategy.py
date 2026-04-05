@@ -118,14 +118,35 @@ class SearchStrategy(ABC):
         return hashlib.sha256(canonical.encode()).hexdigest()[:32]
 
 
+    def mark_seen(self, combo: dict[str, Any]) -> str:
+
+        '''
+        Register a combination as seen and return its hash.
+
+        Used by MSQ to inform dedup about injected combos that
+        bypass strategy generation.
+
+        Args:
+            combo (dict[str, Any]): Parameter combination
+
+        Returns:
+            str: The computed param hash
+        '''
+
+        h = self.compute_param_hash(combo)
+        self._seen.add(h)
+        return h
+
+
     def _is_unseen(self, combo: dict[str, Any]) -> bool:
 
         '''
         Check if a combination has been seen before.
 
         Computes the hash, checks against _seen set. If novel, adds
-        to _seen. Stochastic strategies call this in __next__ to
-        skip duplicates.
+        to _seen and attaches ``_param_hash`` to the combo for
+        downstream reuse. Stochastic strategies call this in
+        ``__next__`` to skip duplicates.
 
         Args:
             combo (dict[str, Any]): Parameter combination to check
@@ -138,6 +159,7 @@ class SearchStrategy(ABC):
         if h in self._seen:
             return False
         self._seen.add(h)
+        combo['_param_hash'] = h
         return True
 
 
