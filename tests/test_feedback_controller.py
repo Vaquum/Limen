@@ -120,7 +120,7 @@ def test_strategy_update_called():
 
     fc.trigger(None, msq, strategy, 5)
 
-    assert any(i['operation'] == 'remove_is' for i in msq._intervention_log)
+    assert any(i['operation'] == 'remove_is' for i in msq.intervention_log)
     assert 3 not in domain.params['a']
 
 
