@@ -259,6 +259,8 @@ from tests.test_search_strategies import test_random_dedup_skips_seen
 from tests.test_search_strategies import test_random_get_set_state
 from tests.test_search_strategies import test_random_rebuild_seen_from_log
 from tests.test_search_strategies import test_random_with_msq
+from tests.test_search_strategies import test_injected_combo_registered_in_seen
+from tests.test_search_strategies import test_random_on_domain_changed
 from tests.test_search_strategies import test_random_large_domain
 from tests.test_search_strategies import test_grid_exhaustive_small_space
 from tests.test_search_strategies import test_grid_covers_full_space
@@ -553,6 +555,8 @@ tests = [
     test_random_get_set_state,
     test_random_rebuild_seen_from_log,
     test_random_with_msq,
+    test_injected_combo_registered_in_seen,
+    test_random_on_domain_changed,
     test_random_large_domain,
     test_grid_exhaustive_small_space,
     test_grid_covers_full_space,
