@@ -109,7 +109,7 @@ class MSQ:
         combo['_param_hash'] = self._strategy.compute_param_hash(combo)
         combo['_id'] = self._yielded_count
         combo['_injected'] = injected
-        combo['_generation_index'] = None if injected else self._strategy.generated_count
+        combo['_generation_index'] = None if injected else self._strategy.generated_count - 1
         combo['_search_strategy'] = type(self._strategy).__name__
         self._yielded_count += 1
         if self._trim_budget is not None:
