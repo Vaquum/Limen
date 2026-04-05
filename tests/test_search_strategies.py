@@ -82,9 +82,9 @@ def test_random_with_msq():
 
     combos = list(msq)
     assert len(combos) == 3
-    for combo in combos:
+    for i, combo in enumerate(combos):
         assert '_param_hash' in combo
-        assert '_generation_index' in combo
+        assert combo['_generation_index'] == i
         assert combo['_search_strategy'] == 'RandomStrategy'
 
 
