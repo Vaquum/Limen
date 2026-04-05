@@ -112,6 +112,17 @@ def test_random_large_domain():
     assert len(combos) == 100
 
 
+def test_random_on_domain_changed():
+
+    domain = ParamDomain({'a': list(range(50)), 'b': list(range(50))})
+    strategy = RandomStrategy(domain, seed=42)
+    next(strategy)
+
+    domain.remove_value('a', 49)
+    combos = [next(strategy) for _ in range(20)]
+    assert all(c['a'] != 49 for c in combos)
+
+
 def test_grid_exhaustive_small_space():
 
     domain = _small_domain()
