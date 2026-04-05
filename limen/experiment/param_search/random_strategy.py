@@ -29,8 +29,9 @@ class RandomStrategy(SearchStrategy):
     def __next__(self) -> dict[str, Any]:
 
         params = self._domain.params
+        stable_keys = sorted(params)
         for _ in range(MAX_DEDUP_RETRIES):
-            combo = {k: self._rng.choice(v) for k, v in params.items()}
+            combo = {k: self._rng.choice(params[k]) for k in stable_keys}
             if self._is_unseen(combo):
                 self._generated_count += 1
                 return combo
