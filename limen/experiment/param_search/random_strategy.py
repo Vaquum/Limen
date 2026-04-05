@@ -29,7 +29,7 @@ class RandomStrategy(SearchStrategy):
 
     def _refresh_cache(self) -> None:
 
-        '''Cache sorted keys and values from domain to avoid defensive copies.'''
+        '''Snapshot sorted keys and values from domain to avoid repeated defensive copies.'''
 
         params = self._domain.params
         self._stable_keys = sorted(params)
