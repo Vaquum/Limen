@@ -107,6 +107,9 @@ class SearchStrategy(ABC):
         '''
         Compute deterministic SHA-256 hash of a parameter combination.
 
+        Strips ``_``-prefixed metadata keys so the hash is stable
+        regardless of whether the combo has been enriched by MSQ.
+
         Args:
             combo (dict[str, Any]): Parameter combination
 
@@ -114,7 +117,8 @@ class SearchStrategy(ABC):
             str: 32-character hex hash
         '''
 
-        canonical = json.dumps(combo, sort_keys=True, default=str)
+        clean = {k: v for k, v in combo.items() if not k.startswith('_')}
+        canonical = json.dumps(clean, sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode()).hexdigest()[:32]
 
 
