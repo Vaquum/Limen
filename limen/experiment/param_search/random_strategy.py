@@ -24,14 +24,29 @@ class RandomStrategy(SearchStrategy):
 
         super().__init__(domain, seed=seed)
         self._rng = random.Random(seed)
+        self._refresh_cache()
+
+
+    def _refresh_cache(self) -> None:
+
+        '''Cache sorted keys and values from domain to avoid defensive copies.'''
+
+        params = self._domain.params
+        self._stable_keys = sorted(params)
+        self._cached_values = {k: params[k] for k in self._stable_keys}
+
+
+    def on_domain_changed(
+        self, _domain: ParamDomain, _changed_params: list[str],
+    ) -> None:
+
+        self._refresh_cache()
 
 
     def __next__(self) -> dict[str, Any]:
 
-        params = self._domain.params
-        stable_keys = sorted(params)
         for _ in range(MAX_DEDUP_RETRIES):
-            combo = {k: self._rng.choice(params[k]) for k in stable_keys}
+            combo = {k: self._rng.choice(self._cached_values[k]) for k in self._stable_keys}
             if self._is_unseen(combo):
                 self._generated_count += 1
                 return combo

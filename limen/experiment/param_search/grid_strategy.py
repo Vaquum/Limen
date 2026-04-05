@@ -42,8 +42,10 @@ class GridStrategy(SearchStrategy):
 
         '''Recompute keys, sizes, total, and LCG params from current domain.'''
 
-        self._keys = sorted(self._domain.params.keys())
-        self._sizes = [len(self._domain.params[k]) for k in self._keys]
+        params = self._domain.params
+        self._keys = sorted(params.keys())
+        self._values = [params[k] for k in self._keys]
+        self._sizes = [len(v) for v in self._values]
         self._total = math.prod(self._sizes)
         self._current_index = 0
         self._generated_count = 0
@@ -69,11 +71,10 @@ class GridStrategy(SearchStrategy):
 
         '''Convert flat index to parameter combination via modular arithmetic.'''
 
-        params = self._domain.params
         combo = {}
         remaining = index
         for i, key in enumerate(self._keys):
-            combo[key] = params[key][remaining % self._sizes[i]]
+            combo[key] = self._values[i][remaining % self._sizes[i]]
             remaining //= self._sizes[i]
         return combo
 
