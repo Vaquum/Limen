@@ -46,6 +46,7 @@ class GridStrategy(SearchStrategy):
         self._sizes = [len(self._domain.params[k]) for k in self._keys]
         self._total = math.prod(self._sizes)
         self._current_index = 0
+        self._generated_count = 0
 
         if self._shuffle and self._total > 0:
             self._lcg_multiplier, self._lcg_increment = _lcg_params(
