@@ -67,11 +67,13 @@ def test_random_rebuild_seen_from_log():
     domain = _small_domain()
     strategy = RandomStrategy(domain, seed=42)
     combo = next(strategy)
-    h = strategy.compute_param_hash(combo)
+    h = combo['_param_hash']
 
     strategy2 = RandomStrategy(domain, seed=42)
     strategy2.rebuild_seen_from_log([h])
     assert h in strategy2._seen
+    combo2 = next(strategy2)
+    assert combo2['_param_hash'] != h, 'rebuilt _seen must prevent duplicate generation'
 
 
 def test_random_with_msq():
