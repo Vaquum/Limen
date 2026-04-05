@@ -233,7 +233,7 @@ and `round_data.jsonl` contained entries with:
 
 ## Scope Note
 
-Trainer depends on the artifact-rich UEL path, which in turn depends on a concrete `SearchStrategy`. Limen exposes the `SearchStrategy` abstraction, but it does not ship one canonical production strategy in the public package.
+Trainer depends on the artifact-rich UEL path, which in turn depends on a concrete `SearchStrategy`. Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for writing your own.
 
 So the clean mental model is:
 
