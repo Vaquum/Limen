@@ -98,6 +98,13 @@ class GridStrategy(SearchStrategy):
         self._rebuild()
 
 
+    def mark_seen(self, combo: dict[str, Any]) -> str:
+
+        '''Return param hash without registering in _seen. Grid cannot produce duplicates.'''
+
+        return combo.get('_param_hash') or self.compute_param_hash(combo)
+
+
     def get_state(self) -> dict[str, Any]:
 
         return {
