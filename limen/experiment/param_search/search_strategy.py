@@ -107,11 +107,14 @@ class SearchStrategy(ABC):
         '''
         Compute deterministic SHA-256 hash of a parameter combination.
 
-        Strips ``_``-prefixed metadata keys so the hash is stable
-        regardless of whether the combo has been enriched by MSQ.
+        Note:
+            Strips ``_``-prefixed keys because domain params never
+            start with underscore, but log rows include MSQ metadata
+            columns (``_param_hash``, ``_id``, etc.) that must not
+            affect the hash.
 
         Args:
-            combo (dict[str, Any]): Parameter combination
+            combo (dict[str, Any]): Parameter combination or log row
 
         Returns:
             str: 32-character hex hash
