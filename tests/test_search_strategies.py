@@ -37,7 +37,8 @@ def test_random_dedup_skips_seen():
 
     domain = ParamDomain({'a': [1], 'b': [1]})
     strategy = RandomStrategy(domain, seed=42)
-    next(strategy)
+    combo = next(strategy)
+    strategy.mark_seen(combo)
 
     try:
         next(strategy)
