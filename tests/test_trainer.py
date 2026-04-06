@@ -9,7 +9,7 @@ from limen.experiment.trainer import Trainer
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from limen.sfd.foundational_sfd import random_binary as random_sfd
 from limen.sfd.reference_architecture.base import ReferenceModel
-from tests.stubs.stubs import StubStrategy
+from limen.experiment.param_search import RandomStrategy
 
 
 def test_trainer_end_to_end():
@@ -18,7 +18,7 @@ def test_trainer_end_to_end():
         experiment_dir = Path(tmpdir) / 'experiment'
         params = logreg_sfd.params()
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,
@@ -80,7 +80,7 @@ def test_reconstruction_error_stochastic():
         experiment_dir = Path(tmpdir) / 'experiment'
         params = random_sfd.params()
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=random_sfd,
@@ -109,7 +109,7 @@ def test_reconstruction_error_tampered_log():
         experiment_dir = Path(tmpdir) / 'experiment'
         params = logreg_sfd.params()
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,
@@ -145,7 +145,7 @@ def test_deterministic_validation():
         experiment_dir = Path(tmpdir) / 'experiment'
         params = logreg_sfd.params()
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,
@@ -174,7 +174,7 @@ def test_pass2_uses_full_data():
         experiment_dir = Path(tmpdir) / 'experiment'
         params = logreg_sfd.params()
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,
@@ -212,7 +212,7 @@ def test_sensor_inference():
         experiment_dir = Path(tmpdir) / 'experiment'
         params = logreg_sfd.params()
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,
@@ -252,7 +252,7 @@ def test_trainer_with_feature_ablation():
         params['feature_drop_count'] = [1]
         params['feature_drop_seed'] = [42]
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,
@@ -295,7 +295,7 @@ def test_trainer_with_fractional_diff():
         params = logreg_sfd.params()
         params['frac_diff_d'] = [0.4]
         domain = ParamDomain(params)
-        strategy = StubStrategy(domain)
+        strategy = RandomStrategy(domain, seed=42)
 
         uel = UniversalExperimentLoop(
             sfd=logreg_sfd,

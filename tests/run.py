@@ -125,6 +125,7 @@ from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
 from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
+from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
 from tests.test_experiment_core_msq import test_shutdown_before_any_round_completes
 from tests.test_experiment_core_msq import test_resume_fails_without_round_data
 from tests.test_experiment_core_msq import test_preds_none_does_not_crash
@@ -252,6 +253,29 @@ from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eli
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
 from tests.test_reducer_factory import test_reducer_registry_unknown_key_raises
+from tests.test_search_strategies import test_random_basic_iteration
+from tests.test_search_strategies import test_random_seeded_reproducibility
+from tests.test_search_strategies import test_random_dedup_skips_seen
+from tests.test_search_strategies import test_random_get_set_state
+from tests.test_search_strategies import test_random_rebuild_seen_from_log
+from tests.test_search_strategies import test_random_with_msq
+from tests.test_search_strategies import test_injected_combo_registered_in_seen
+from tests.test_search_strategies import test_random_on_domain_changed
+from tests.test_search_strategies import test_random_large_domain
+from tests.test_search_strategies import test_grid_exhaustive_small_space
+from tests.test_search_strategies import test_grid_covers_full_space
+from tests.test_search_strategies import test_grid_deterministic_order
+from tests.test_search_strategies import test_grid_shuffle_covers_full_space
+from tests.test_search_strategies import test_grid_shuffle_different_order
+from tests.test_search_strategies import test_grid_shuffle_seeded_reproducibility
+from tests.test_search_strategies import test_grid_get_set_state
+from tests.test_search_strategies import test_grid_on_domain_changed
+from tests.test_search_strategies import test_grid_large_space_shuffle
+from tests.test_search_strategies import test_grid_with_msq
+from tests.test_search_strategies import test_strategy_registry
+from tests.test_search_strategies import test_param_hash_deterministic
+from tests.test_search_strategies import test_param_hash_key_order_independent
+from tests.test_search_strategies import test_param_hash_different_combos_differ
 from tests.test_fractional_diff import test_fractional_diff_d_zero_copies
 from tests.test_fractional_diff import test_fractional_diff_d_one_equals_first_diff
 from tests.test_fractional_diff import test_fractional_diff_weights_convergence
@@ -382,6 +406,7 @@ tests = [
     test_run_with_msq_checkpoint_trigger,
     test_checkpoint_saves_feedback_and_pruning_state,
     test_run_with_msq_shutdown_resume_full_data,
+    test_run_with_msq_shutdown_resume_grid,
     test_shutdown_before_any_round_completes,
     test_resume_fails_without_round_data,
     test_preds_none_does_not_crash,
@@ -524,6 +549,29 @@ tests = [
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,
     test_reducer_registry_unknown_key_raises,
+    test_random_basic_iteration,
+    test_random_seeded_reproducibility,
+    test_random_dedup_skips_seen,
+    test_random_get_set_state,
+    test_random_rebuild_seen_from_log,
+    test_random_with_msq,
+    test_injected_combo_registered_in_seen,
+    test_random_on_domain_changed,
+    test_random_large_domain,
+    test_grid_exhaustive_small_space,
+    test_grid_covers_full_space,
+    test_grid_deterministic_order,
+    test_grid_shuffle_covers_full_space,
+    test_grid_shuffle_different_order,
+    test_grid_shuffle_seeded_reproducibility,
+    test_grid_get_set_state,
+    test_grid_on_domain_changed,
+    test_grid_large_space_shuffle,
+    test_grid_with_msq,
+    test_strategy_registry,
+    test_param_hash_deterministic,
+    test_param_hash_key_order_independent,
+    test_param_hash_different_combos_differ,
     test_fractional_diff_d_zero_copies,
     test_fractional_diff_d_one_equals_first_diff,
     test_fractional_diff_weights_convergence,

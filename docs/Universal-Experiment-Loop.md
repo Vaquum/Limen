@@ -195,7 +195,7 @@ This path is what powers checkpointing, resumability, and the [Trainer](Trainer.
 
 ### Important scope note
 
-`SearchStrategy` is an abstract extension point in the public package. In other words, the advanced path is available now, but it expects a concrete strategy implementation from your codebase or extension layer.
+Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for writing your own. The advanced path is available now with the built-in strategies or a custom implementation from your codebase.
 
 ## One Real Advanced Run
 
