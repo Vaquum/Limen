@@ -105,7 +105,11 @@ class SearchStrategy(ABC):
     def compute_param_hash(self, combo: dict[str, Any]) -> str:
 
         '''
-        Compute deterministic SHA-256 hash of a parameter combination.
+        Compute deterministic hash of a parameter combination.
+
+        Returns the first 32 hex characters (128 bits) of the SHA-256
+        digest. Truncation is acceptable because the hash is used for
+        dedup, not cryptographic integrity.
 
         Note:
             Strips ``_``-prefixed keys because domain params never
@@ -117,7 +121,7 @@ class SearchStrategy(ABC):
             combo (dict[str, Any]): Parameter combination or log row
 
         Returns:
-            str: 32-character hex hash
+            str: 32-character truncated hex digest
         '''
 
         clean = {k: v for k, v in combo.items() if not k.startswith('_')}
@@ -130,17 +134,17 @@ class SearchStrategy(ABC):
         '''
         Register a combination as seen and return its hash.
 
-        Used by MSQ to inform dedup about injected combos that
-        bypass strategy generation.
+        Called by MSQ after a combo passes filters and is yielded.
+        Reuses ``_param_hash`` if already attached by ``_is_unseen``.
 
         Args:
             combo (dict[str, Any]): Parameter combination
 
         Returns:
-            str: The computed param hash
+            str: The param hash
         '''
 
-        h = self.compute_param_hash(combo)
+        h = combo.get('_param_hash') or self.compute_param_hash(combo)
         self._seen.add(h)
         return h
 
@@ -150,10 +154,10 @@ class SearchStrategy(ABC):
         '''
         Check if a combination has been seen before.
 
-        Computes the hash, checks against _seen set. If novel, adds
-        to _seen and attaches ``_param_hash`` to the combo for
-        downstream reuse. Stochastic strategies call this in
-        ``__next__`` to skip duplicates.
+        Computes the hash, checks against _seen set, and attaches
+        ``_param_hash`` to the combo for downstream reuse. Does not
+        register — registration is deferred to ``mark_seen`` so that
+        combos rejected by MSQ filters remain available.
 
         Args:
             combo (dict[str, Any]): Parameter combination to check
@@ -165,7 +169,6 @@ class SearchStrategy(ABC):
         h = self.compute_param_hash(combo)
         if h in self._seen:
             return False
-        self._seen.add(h)
         combo['_param_hash'] = h
         return True
 
