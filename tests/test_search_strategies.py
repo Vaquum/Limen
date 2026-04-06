@@ -5,6 +5,10 @@ from limen.experiment.param_search import RandomStrategy
 from limen.experiment.param_search import STRATEGY_REGISTRY
 
 
+def _combo_key(c):
+    return tuple(sorted((k, v) for k, v in c.items() if not k.startswith('_')))
+
+
 def _small_domain():
     return ParamDomain({'a': [1, 2], 'b': ['x', 'y']})
 
@@ -140,7 +144,7 @@ def test_grid_covers_full_space():
     domain = _small_domain()
     strategy = GridStrategy(domain)
     combos = list(strategy)
-    combo_set = {tuple(sorted(c.items())) for c in combos}
+    combo_set = {_combo_key(c) for c in combos}
     expected = {
         (('a', 1), ('b', 'x')),
         (('a', 1), ('b', 'y')),
@@ -163,15 +167,15 @@ def test_grid_shuffle_covers_full_space():
     domain = _small_domain()
     strategy = GridStrategy(domain, shuffle=True, seed=42)
     combos = list(strategy)
-    combo_set = {tuple(sorted(c.items())) for c in combos}
+    combo_set = {_combo_key(c) for c in combos}
     assert len(combo_set) == 4
 
 
 def test_grid_shuffle_different_order():
 
     domain = _small_domain()
-    sequential = [tuple(sorted(c.items())) for c in GridStrategy(domain)]
-    shuffled = [tuple(sorted(c.items())) for c in GridStrategy(domain, shuffle=True, seed=42)]
+    sequential = [_combo_key(c) for c in GridStrategy(domain)]
+    shuffled = [_combo_key(c) for c in GridStrategy(domain, shuffle=True, seed=42)]
     assert set(sequential) == set(shuffled)
     assert sequential != shuffled
 
@@ -213,7 +217,7 @@ def test_grid_on_domain_changed():
         '_rebuild must reset generated_count so MSQ.remaining_count stays correct'
     )
     combos = list(strategy)
-    combo_set = {tuple(sorted(c.items())) for c in combos}
+    combo_set = {_combo_key(c) for c in combos}
     expected = {
         (('a', 1), ('b', 'x')),
         (('a', 1), ('b', 'y')),
@@ -230,7 +234,7 @@ def test_grid_large_space_shuffle():
     strategy = GridStrategy(domain, shuffle=True, seed=42)
     combos = [next(strategy) for _ in range(100)]
     assert len(combos) == 100
-    combo_tuples = [tuple(sorted(c.items())) for c in combos]
+    combo_tuples = [_combo_key(c) for c in combos]
     assert len(set(combo_tuples)) == 100
 
 
