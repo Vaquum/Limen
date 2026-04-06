@@ -15,9 +15,11 @@ class GridStrategy(SearchStrategy):
     '''
     Exhaustive enumeration of all parameter combinations.
 
-    Uses index-to-combination modular arithmetic for O(1) memory per
-    sample. Optional shuffle reorders the enumeration via LCG
+    Uses index-to-combination modular arithmetic for O(1) generation
+    per sample. Optional shuffle reorders the enumeration via LCG
     (linear congruential generator) for better early coverage.
+    Memory grows with yielded combos due to _seen tracking, which
+    is acceptable because Grid targets small search spaces.
 
     '''
 
@@ -81,14 +83,15 @@ class GridStrategy(SearchStrategy):
 
     def __next__(self) -> dict[str, Any]:
 
-        if self._current_index >= self._total:
-            raise StopIteration
+        while self._current_index < self._total:
+            physical = self._permute_index(self._current_index)
+            combo = self._index_to_combo(physical)
+            self._current_index += 1
+            if self._is_unseen(combo):
+                self._generated_count += 1
+                return combo
 
-        physical = self._permute_index(self._current_index)
-        combo = self._index_to_combo(physical)
-        self._current_index += 1
-        self._generated_count += 1
-        return combo
+        raise StopIteration
 
 
     def on_domain_changed(
@@ -98,23 +101,30 @@ class GridStrategy(SearchStrategy):
         self._rebuild()
 
 
-    def mark_seen(self, combo: dict[str, Any]) -> str:
-
-        '''Return param hash without registering in _seen. Grid cannot produce duplicates.'''
-
-        return combo.get('_param_hash') or self.compute_param_hash(combo)
-
-
     def get_state(self) -> dict[str, Any]:
 
         return {
             'current_index': self._current_index,
             'generated_count': self._generated_count,
+            'shuffle': self._shuffle,
+            'seed': self._seed,
         }
 
 
     def set_state(self, state: dict[str, Any]) -> None:
 
+        saved_shuffle = state.get('shuffle')
+        saved_seed = state.get('seed')
+        if saved_shuffle is not None and saved_shuffle != self._shuffle:
+            raise ValueError(
+                f"Checkpoint shuffle={saved_shuffle} does not match "
+                f"current shuffle={self._shuffle}."
+            )
+        if saved_seed is not None and saved_seed != self._seed:
+            raise ValueError(
+                f"Checkpoint seed={saved_seed} does not match "
+                f"current seed={self._seed}."
+            )
         self._current_index = state['current_index']
         self._generated_count = state['generated_count']
 
