@@ -3,7 +3,6 @@ import importlib.metadata
 import json
 import logging
 import signal
-import sqlite3
 import time
 import warnings
 from collections.abc import Callable
