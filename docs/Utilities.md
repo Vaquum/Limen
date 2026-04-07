@@ -12,7 +12,6 @@ They are useful, but they are not the main story of the package. If you are new 
 | `data_dict_to_numpy` | you want numpy arrays from the standard Limen `data_dict` |
 | `adf_test` and `AdfResult` | you want a simple stationarity check for a series or for helpers such as `find_min_d` |
 | `confidence_filtering_system` | you want validation-calibrated confidence filtering across multiple models |
-| `log_to_optuna_study` | you want to export an experiment log into an in-memory Optuna study |
 | reporting helpers | you want simple formatted text blocks |
 
 ## `ParamSpace`
@@ -105,32 +104,6 @@ In a live synthetic-model run in this repo with `target_confidence=0.8`, it retu
   - `confidence_score`
 
 Use this as an optional downstream helper, not as part of the core UEL contract.
-
-## `log_to_optuna_study`
-
-`log_to_optuna_study()` converts an experiment log into an in-memory Optuna study.
-
-```python
-from limen.utils import log_to_optuna_study
-
-study = log_to_optuna_study(
-    experiment_log=uel.experiment_log,
-    params=my_sfd.params(),
-    objective='execution_time',
-)
-```
-
-Two behavior rules matter:
-
-- the `objective` column must already exist in `experiment_log`
-- the current implementation always creates a `MINIMIZE` study
-
-That means you should choose an objective where lower is better unless you intentionally want the raw values loaded into a minimizing study.
-
-On a live local export in this repo using `objective='execution_time'`, the study contained:
-
-- `2` trials
-- `direction = MINIMIZE`
 
 ## Reporting Helpers
 
