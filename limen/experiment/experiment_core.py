@@ -120,7 +120,6 @@ class UniversalExperimentLoop:
             random_search: bool = True,
             maintain_details_in_params: bool = False,
             context_params: dict | None = None,
-            save_to_sqlite: bool = False,
             params: Callable | None = None,
             prep: Callable | None = None,
             model: Callable | None = None,
@@ -131,7 +130,7 @@ class UniversalExperimentLoop:
 
         NOTE: When search_strategy was provided to __init__, dispatches to
         _run_with_msq for MSQ-based execution. Legacy parameters
-        (random_search, maintain_details_in_params, save_to_sqlite, params,
+        (random_search, maintain_details_in_params, params,
         prep, model) are ignored in that path.
 
         Args:
@@ -141,7 +140,6 @@ class UniversalExperimentLoop:
             random_search (bool): Whether to use random search or not
             maintain_details_in_params (bool): Whether to maintain experiment details in params
             context_params (dict): The context parameters to use for the experiment
-            save_to_sqlite (bool): Whether to save the results to a SQLite database
             params (Callable | None): Callable that returns the parameters dict
             prep (Callable | None): Callable to prepare the data
             model (Callable | None): Callable to run the model
@@ -154,9 +152,6 @@ class UniversalExperimentLoop:
         self.preds = []
         self.scalers = []
         self._alignment = []
-
-        if save_to_sqlite is True:
-            self.conn = sqlite3.connect('/opt/experiments/experiments.sqlite')
 
         if resume and self._search_strategy is None:
             raise ValueError(
@@ -257,12 +252,6 @@ class UniversalExperimentLoop:
             else:
                 self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
 
-            if save_to_sqlite is True:
-                # Handle writing to the database
-                self.experiment_log.to_pandas().tail(1).to_sql(experiment_name,
-                                                    self.conn,
-                                                    if_exists="append",
-                                                    index=False)
             # Handle writing to the file
             if i == 0:
                 header_colnames = ','.join(list(round_results.keys()))
@@ -272,9 +261,6 @@ class UniversalExperimentLoop:
             log_string = f"{', '.join(map(str, self.experiment_log.row(i)))}\n"
             with Path(experiment_name + '.csv').open('a') as f:
                 f.write(log_string)
-
-        if save_to_sqlite is True:
-            self.conn.close()
 
         self._finalize()
 
