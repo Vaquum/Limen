@@ -213,6 +213,7 @@ from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
+from tests.test_log_read_from_file import test_read_from_file_removes_duplicate_headers_and_trims_object_columns
 from tests.test_feature_perturbation import test_add_indicator_creates_transform_entry
 from tests.test_feature_perturbation import test_feature_group_filtering_includes_selected
 from tests.test_feature_perturbation import test_feature_group_filtering_multiple_groups
@@ -509,6 +510,7 @@ tests = [
     test_override_param_not_in_original_but_in_signature,
     test_unknown_override_key_raises,
     test_inline_and_post_experiment_metrics,
+    test_read_from_file_removes_duplicate_headers_and_trims_object_columns,
     test_add_indicator_creates_transform_entry,
     test_feature_group_filtering_includes_selected,
     test_feature_group_filtering_multiple_groups,
