@@ -1,6 +1,5 @@
 from limen.utils.adf_test import AdfResult
 from limen.utils.adf_test import adf_test
-from limen.utils.log_to_optuna_study import log_to_optuna_study
 from limen.metrics.continuous_metrics import continuous_metrics
 from limen.metrics.binary_metrics import binary_metrics
 from limen.utils.param_space import ParamSpace
@@ -20,6 +19,5 @@ __all__ = [
     'format_report_footer',
     'format_report_header',
     'format_report_section',
-    'log_to_optuna_study',
     'safe_ovr_auc',
 ]
