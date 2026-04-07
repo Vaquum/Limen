@@ -19,11 +19,20 @@ def _read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
 
     with Path(file_path).open() as f:
 
-        lines = [
-            line
-            for i, line in enumerate(f)
-            if i == 0 or not line.startswith('recall')
-        ]
+        header_line = f.readline()
+
+        if header_line:
+            header = header_line.strip()
+            lines = [
+                header_line,
+                *[
+                    line
+                    for line in f
+                    if line.strip() != header
+                ],
+            ]
+        else:
+            lines = []
 
     data = pd.read_csv(StringIO(''.join(lines)))
 
