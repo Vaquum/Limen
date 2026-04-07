@@ -1,6 +1,7 @@
 dev_snippets.py
 .env
 .venv
+.venv-hb
 limen.egg-info
 __pycache__
 **/__pycache__/
