@@ -7,6 +7,7 @@ from limen.experiment import ReconstructionError
 from limen.experiment import Sensor
 from limen.experiment import Trainer
 from limen.experiment import UniversalExperimentLoop
+from limen.cohort import Cohort
 from limen.cohort import RegimeDiversifiedOpinionPools
 
 from limen import features
@@ -25,6 +26,7 @@ __all__ = [
     'Log',
     'Manifest',
     'ReconstructionError',
+    'Cohort',
     'RegimeDiversifiedOpinionPools',
     'Sensor',
     'Trainer',
