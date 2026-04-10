@@ -305,6 +305,23 @@ def test_probability_weighted_predict_single_member_matches_own_thresholded_prob
         assert np.array_equal(y_pred, expected)
 
 
+def test_single_decoder_passthrough_returns_member_preds_unchanged():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort.set_members(sensors)
+
+        y_pred = cohort.predict(x_test)
+        expected = np.asarray(sensors[0].predict({'x_test': x_test})['_preds'])
+
+        assert np.array_equal(y_pred, expected)
+
+
 def test_probability_weighted_predict_requires_members():
 
     with TemporaryDirectory() as tmpdir:

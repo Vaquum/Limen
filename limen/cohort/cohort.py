@@ -131,6 +131,17 @@ class Cohort:
             )
 
         member_input = X if isinstance(X, dict) else {'x_test': X}
+
+        # Single-decoder cohort short-circuit: pass through unchanged predictions.
+        if len(self._members) == 1:
+            result = self._members[0].predict(member_input)
+            if not isinstance(result, dict) or '_preds' not in result:
+                raise ValueError(
+                    'Single-decoder cohort member must return a dict with _preds.'
+                )
+
+            return np.asarray(result['_preds'])
+
         if self.aggregation_mode == 'probability_weighted':
             member_probs: list[np.ndarray] = []
 
