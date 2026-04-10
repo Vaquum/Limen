@@ -1,5 +1,8 @@
 import json
 from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 
 class Cohort:
@@ -110,6 +113,87 @@ class Cohort:
             'probability_weighted' if supports_probabilities else 'majority_vote'
         )
         self.metadata = metadata
+        self._members: list[Any] = []
+
+    def set_members(self, members: list[Any]) -> None:
+
+        if not members:
+            raise ValueError('Cohort members must be a non-empty list.')
+
+        self._members = list(members)
+
+    def predict(self, X: Any) -> np.ndarray:
+
+        if not self._members:
+            raise RuntimeError(
+                'Cohort has no bound decoder members. '
+                'Use set_members(...) before predict().'
+            )
+
+        member_input = X if isinstance(X, dict) else {'x_test': X}
+        if self.aggregation_mode == 'probability_weighted':
+            member_probs: list[np.ndarray] = []
+
+            for member in self._members:
+                result = member.predict(member_input)
+                if not isinstance(result, dict) or '_probs' not in result:
+                    raise ValueError(
+                        'Decoder in probability mode must return a dict with _probs.'
+                    )
+
+                probs = np.asarray(result['_probs'], dtype=float)
+                member_probs.append(probs)
+
+            return self._probability_weighted_vote(member_probs)
+
+        if self.aggregation_mode == 'majority_vote':
+            member_preds: list[np.ndarray] = []
+
+            for member in self._members:
+                result = member.predict(member_input)
+                if not isinstance(result, dict) or '_preds' not in result:
+                    raise ValueError(
+                        'Decoder in majority_vote mode must return a dict with _preds.'
+                    )
+
+                preds = np.asarray(result['_preds'], dtype=float)
+                member_preds.append(preds)
+
+            return self._majority_vote(member_preds)
+
+        raise ValueError(f'Unknown aggregation_mode: {self.aggregation_mode}')
+
+    @staticmethod
+    def _probability_weighted_vote(member_probs: list[np.ndarray]) -> np.ndarray:
+
+        if not member_probs:
+            raise ValueError('member_probs must be a non-empty list.')
+
+        base_shape = member_probs[0].shape
+        for probs in member_probs[1:]:
+            if probs.shape != base_shape:
+                raise ValueError('Decoder outputs must share the same shape.')
+
+        probs_matrix = np.vstack(member_probs)
+        mean_p1 = np.mean(probs_matrix, axis=0)
+
+        return (mean_p1 > 0.5).astype(np.int8)
+
+    @staticmethod
+    def _majority_vote(member_preds: list[np.ndarray]) -> np.ndarray:
+
+        if not member_preds:
+            raise ValueError('member_preds must be a non-empty list.')
+
+        base_shape = member_preds[0].shape
+        for preds in member_preds[1:]:
+            if preds.shape != base_shape:
+                raise ValueError('Decoder outputs must share the same shape.')
+
+        preds_matrix = np.vstack(member_preds)
+        mean_vote = np.mean(preds_matrix, axis=0)
+
+        return (mean_vote > 0.5).astype(np.int8)
 
     @staticmethod
     def _normalize_permutation_id(pid: int | str) -> int | str:

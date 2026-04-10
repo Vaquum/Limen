@@ -2,9 +2,12 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import numpy as np
+
 from limen.cohort import Cohort
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.trainer import Trainer
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from tests.stubs.stubs import StubStrategy
 
@@ -69,6 +72,19 @@ def _patch_round_architecture(experiment_dir: Path,
     with round_data_path.open('w') as f:
         for row in rows:
             f.write(json.dumps(row) + '\n')
+
+
+def _train_real_members_and_input(experiment_dir: Path,
+                                  permutation_ids: list[int]) -> tuple[list, np.ndarray]:
+
+    trainer = Trainer(experiment_dir)
+    sensors = trainer.train(permutation_ids)
+
+    data_dict = trainer._manifest.prepare_data(
+        trainer._data, sensors[0].round_params)
+    x_test = data_dict['x_test']
+
+    return sensors, x_test
 
 
 def test_rejects_when_no_source_provided():
@@ -243,3 +259,96 @@ def test_sets_fallback_mode_for_non_probability_architecture():
         assert cohort.architecture_id == 'xgboost_regressor'
         assert cohort.supports_probabilities is False
         assert cohort.aggregation_mode == 'majority_vote'
+
+
+def test_probability_weighted_predict_aggregates_mean_p1():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=2)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+
+        cohort = Cohort(experiment_log_path=str(
+            exp_dir), permutation_ids=[0, 1])
+        cohort.set_members(sensors)
+
+        y_pred = cohort.predict(x_test)
+
+        member_probs = [
+            np.asarray(sensor.predict({'x_test': x_test})[
+                       '_probs'], dtype=float)
+            for sensor in sensors
+        ]
+        expected = (np.mean(np.vstack(member_probs), axis=0)
+                    > 0.5).astype(np.int8)
+
+        assert np.array_equal(y_pred, expected)
+
+
+def test_probability_weighted_predict_single_member_matches_own_thresholded_probs():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort.set_members(sensors)
+
+        y_pred = cohort.predict(x_test)
+        probs = np.asarray(sensors[0].predict(
+            {'x_test': x_test})['_probs'], dtype=float)
+        expected = (probs > 0.5).astype(np.int8)
+
+        assert np.array_equal(y_pred, expected)
+
+
+def test_probability_weighted_predict_requires_members():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        try:
+            cohort.predict([[1]])
+            assert False, 'Expected RuntimeError'
+        except RuntimeError as e:
+            assert 'no bound decoder members' in str(e)
+
+
+def test_probability_weighted_predict_rejects_majority_vote_mode():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        cohort.set_members(sensors)
+
+        try:
+            y_pred = cohort.predict(x_test)
+            sensor_pred = np.asarray(
+                sensors[0].predict({'x_test': x_test})['_preds'],
+                dtype=float,
+            )
+            expected = (sensor_pred > 0.5).astype(np.int8)
+
+            assert np.array_equal(y_pred, expected)
+        except Exception as e:
+            assert False, f'Expected majority-vote fallback prediction to succeed, got: {e}'
+
+
+def test_majority_vote_tie_returns_zero():
+
+    vote = Cohort._majority_vote([
+        np.array([1, 0, 1, 0], dtype=float),
+        np.array([0, 1, 1, 0], dtype=float),
+    ])
+
+    assert vote.tolist() == [0, 0, 1, 0]
