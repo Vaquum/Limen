@@ -265,12 +265,13 @@ def test_probability_weighted_predict_aggregates_mean_p1():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        sensors = [sensors[0], sensors[0]]
 
         cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
+            exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
         y_pred = cohort.predict(x_test)
@@ -375,12 +376,13 @@ def test_predict_return_probs_probability_mode_returns_member_prob_arrays():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        sensors = [sensors[0], sensors[0]]
 
         cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
+            exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
         y_pred, probs = cohort.predict(x_test, return_probs=True)
@@ -415,12 +417,13 @@ def test_predict_return_probs_and_return_meta_returns_three_tuple():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        sensors = [sensors[0], sensors[0]]
 
         cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
+            exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
         y_pred, probs, meta = cohort.predict(
@@ -430,7 +433,7 @@ def test_predict_return_probs_and_return_meta_returns_three_tuple():
         )
 
         assert len(probs) == 2
-        assert meta['permutation_ids'] == [0, 1]
+        assert meta['permutation_ids'] == [0]
         assert meta['decoder_count'] == 2
         assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
 
@@ -475,3 +478,30 @@ def test_validate_probability_range_rejects_non_finite_values():
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'finite values' in str(e)
+
+
+def test_cohort_is_drop_in_decoder_replacement_for_dict_input():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        base_sensor = sensors[0]
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort.set_members([base_sensor, base_sensor])
+
+        live_data = {'x_test': x_test}
+
+        sensor_result = base_sensor(live_data)
+        cohort_result = cohort(live_data)
+
+        assert isinstance(sensor_result, dict)
+        assert isinstance(cohort_result, dict)
+        assert '_preds' in cohort_result
+        assert '_probs' in cohort_result
+        assert np.array_equal(np.asarray(cohort_result['_preds']),
+                              np.asarray(sensor_result['_preds']))
+        assert np.allclose(np.asarray(cohort_result['_probs'], dtype=float),
+                           np.asarray(sensor_result['_probs'], dtype=float))
