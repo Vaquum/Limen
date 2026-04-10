@@ -4,14 +4,14 @@ from tempfile import TemporaryDirectory
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import random_binary as sfd_module
-from tests.stubs.stubs import StubStrategy
+from limen.experiment.param_search import RandomStrategy
 
 
 def _run_uel(n_permutations: int = 3) -> UniversalExperimentLoop:
 
     params = sfd_module.params()
     domain = ParamDomain(params)
-    strategy = StubStrategy(domain)
+    strategy = RandomStrategy(domain, seed=42)
 
     uel = UniversalExperimentLoop(
         sfd=sfd_module,

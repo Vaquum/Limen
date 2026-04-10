@@ -11,7 +11,7 @@ from limen.experiment.msq import MSQ
 from limen.experiment.reducer.filter_types import FILTER_BUILDERS
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search.search_strategy import SearchStrategy
 
 logger = logging.getLogger(__name__)
 

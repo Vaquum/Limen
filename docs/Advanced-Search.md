@@ -30,7 +30,7 @@ The important mental model is:
 
 ## Minimal Custom `SearchStrategy`
 
-Limen ships the `SearchStrategy` abstraction, not one canonical production strategy. A strategy must at minimum:
+Limen ships two built-in strategies (`GridStrategy` for exhaustive search, `RandomStrategy` for lazy sampling) and the `SearchStrategy` abstraction for writing your own. A strategy must at minimum:
 
 - hold a reference to a shared `ParamDomain`
 - yield dictionaries of round parameters
@@ -43,7 +43,7 @@ This is the smallest practical exhaustive strategy shape:
 import itertools
 
 from limen.experiment.param_domain import ParamDomain
-from limen.experiment.search_strategy import SearchStrategy
+from limen.experiment.param_search import SearchStrategy
 
 
 class MiniGrid(SearchStrategy):
@@ -51,8 +51,8 @@ class MiniGrid(SearchStrategy):
     def is_finite(self):
         return True
 
-    def __init__(self, domain: ParamDomain):
-        super().__init__(domain)
+    def __init__(self, domain: ParamDomain, *, seed: int | None = None):
+        super().__init__(domain, seed=seed)
         self._combos = self._build_combos()
         self._index = 0
 

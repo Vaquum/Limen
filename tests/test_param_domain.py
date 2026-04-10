@@ -27,6 +27,12 @@ def test_param_domain_init_validation():
     except ValueError:
         pass
 
+    try:
+        ParamDomain({'_foo': [1, 2]})
+        assert False, 'Should have raised ValueError for _-prefixed name'
+    except ValueError as e:
+        assert 'reserved' in str(e).lower()
+
 
 def test_param_domain_defensive_copy():
 
