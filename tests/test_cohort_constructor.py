@@ -12,6 +12,12 @@ from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from tests.stubs.stubs import StubStrategy
 
 
+class _RaisingMember:
+
+    def predict(self, _data):
+        raise RuntimeError('member failed during inference')
+
+
 def _run_real_experiment(experiment_dir: Path,
                          n_permutations: int = 2) -> list[int]:
 
@@ -372,6 +378,51 @@ def test_majority_vote_tie_returns_zero():
     assert vote.tolist() == [0, 0, 1, 0]
 
 
+def test_probability_weighted_tie_returns_zero():
+
+    vote = Cohort._probability_weighted_vote([
+        np.array([0.6, 0.4, 0.5], dtype=float),
+        np.array([0.4, 0.6, 0.5], dtype=float),
+    ])
+
+    assert vote.tolist() == [0, 0, 0]
+
+
+def test_majority_vote_multimember_expected_output():
+
+    vote = Cohort._majority_vote([
+        np.array([1, 1, 0, 0], dtype=float),
+        np.array([1, 0, 1, 0], dtype=float),
+        np.array([1, 0, 0, 1], dtype=float),
+    ])
+
+    assert vote.tolist() == [1, 0, 0, 0]
+
+
+def test_probability_weighted_vote_rejects_shape_mismatch():
+
+    try:
+        Cohort._probability_weighted_vote([
+            np.array([0.6, 0.4], dtype=float),
+            np.array([0.4], dtype=float),
+        ])
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'same shape' in str(e)
+
+
+def test_majority_vote_rejects_shape_mismatch():
+
+    try:
+        Cohort._majority_vote([
+            np.array([1, 0], dtype=float),
+            np.array([1], dtype=float),
+        ])
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'same shape' in str(e)
+
+
 def test_predict_return_probs_probability_mode_returns_member_prob_arrays():
 
     with TemporaryDirectory() as tmpdir:
@@ -496,12 +547,34 @@ def test_cohort_is_drop_in_decoder_replacement_for_dict_input():
 
         sensor_result = base_sensor(live_data)
         cohort_result = cohort(live_data)
+        cohort_pred = cohort.predict(live_data)
 
         assert isinstance(sensor_result, dict)
         assert isinstance(cohort_result, dict)
+        assert isinstance(cohort_pred, np.ndarray)
         assert '_preds' in cohort_result
         assert '_probs' in cohort_result
         assert np.array_equal(np.asarray(cohort_result['_preds']),
                               np.asarray(sensor_result['_preds']))
         assert np.allclose(np.asarray(cohort_result['_probs'], dtype=float),
                            np.asarray(sensor_result['_probs'], dtype=float))
+        assert np.array_equal(cohort_pred, np.asarray(sensor_result['_preds']))
+
+
+def test_member_failure_propagates_and_fails_whole_call():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        good_member = sensors[0]
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort.set_members([good_member, _RaisingMember()])
+
+        try:
+            cohort.predict(x_test)
+            assert False, 'Expected RuntimeError'
+        except RuntimeError as e:
+            assert 'member failed during inference' in str(e)

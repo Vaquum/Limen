@@ -138,15 +138,29 @@ class Cohort:
 
         self._members = list(members)
 
-    def __call__(self, data: dict) -> dict | np.ndarray | tuple:
+    def __call__(self, data: dict) -> dict:
 
-        return self.predict(data)
+        if not isinstance(data, dict):
+            raise ValueError(
+                'Cohort.__call__ expects decoder-style dict input.')
+
+        if self.aggregation_mode == 'probability_weighted':
+            preds, probs = self.predict(data, return_probs=True)
+            probs_matrix = np.vstack(
+                [np.asarray(prob, dtype=float) for prob in probs])
+            return {
+                '_preds': preds,
+                '_probs': np.mean(probs_matrix, axis=0),
+            }
+
+        preds = self.predict(data)
+        return {'_preds': preds}
 
     def predict(self,
                 X: Any,
                 *,
                 return_probs: bool = False,
-                return_meta: bool = False) -> np.ndarray | tuple | dict:
+                return_meta: bool = False) -> np.ndarray | tuple:
         '''
         Run cohort members on input data and return aggregated binary predictions.
 
@@ -159,10 +173,8 @@ class Cohort:
                 (placeholder schema) alongside predictions.
 
         Returns:
-            np.ndarray | dict | tuple: Aggregated binary predictions by default.
-                When `X` is decoder-style dict input and no optional return flags
-                are set, returns a decoder-compatible dict with `_preds` (and
-                `_probs` when available). Optional tuple variants are:
+            np.ndarray | tuple: Aggregated binary predictions by default.
+                Optional tuple variants are:
                 - (predictions, probabilities)
                 - (predictions, metadata)
                 - (predictions, probabilities, metadata)
@@ -179,8 +191,7 @@ class Cohort:
                 'Use set_members(...) before predict().'
             )
 
-        decoder_compat = isinstance(X, dict)
-        member_input = X if decoder_compat else {'x_test': X}
+        member_input = X if isinstance(X, dict) else {'x_test': X}
 
         # Single-decoder cohort short-circuit: pass through unchanged predictions.
         if len(self._members) == 1:
@@ -206,7 +217,6 @@ class Cohort:
             return self._format_predict_output(
                 preds,
                 probs,
-                decoder_compat=decoder_compat,
                 return_probs=return_probs,
                 return_meta=return_meta,
             )
@@ -229,7 +239,6 @@ class Cohort:
             return self._format_predict_output(
                 preds,
                 member_probs,
-                decoder_compat=decoder_compat,
                 return_probs=return_probs,
                 return_meta=return_meta,
             )
@@ -251,7 +260,6 @@ class Cohort:
             return self._format_predict_output(
                 preds,
                 None,
-                decoder_compat=decoder_compat,
                 return_probs=return_probs,
                 return_meta=return_meta,
             )
@@ -304,18 +312,10 @@ class Cohort:
                                predictions: np.ndarray,
                                probs: list[np.ndarray] | None,
                                *,
-                               decoder_compat: bool,
                                return_probs: bool,
-                               return_meta: bool) -> np.ndarray | tuple | dict:
+                               return_meta: bool) -> np.ndarray | tuple:
 
         if not return_probs and not return_meta:
-            if decoder_compat:
-                out: dict[str, Any] = {'_preds': predictions}
-                if probs is not None:
-                    probs_matrix = np.vstack(
-                        [np.asarray(prob, dtype=float) for prob in probs])
-                    out['_probs'] = np.mean(probs_matrix, axis=0)
-                return out
             return predictions
 
         out: list[Any] = [predictions]
