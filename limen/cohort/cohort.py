@@ -36,6 +36,22 @@ class Cohort:
                  experiment_id: str | None = None,
                  experiment_log_path: str | None = None,
                  permutation_ids: list[int | str] | None = None) -> None:
+        '''
+        Construct an inference-only Cohort from one experiment source and selected permutations.
+
+        Args:
+            experiment_id (str | None): Experiment identifier used to resolve one
+                experiment directory containing decoder permutations.
+            experiment_log_path (str | None): Explicit path to an experiment
+                directory used to reconstruct selected decoders.
+            permutation_ids (list[int | str] | None): Specific permutation IDs to
+                include. If omitted, all available permutations in the resolved
+                experiment are selected.
+
+        Returns:
+            None
+
+        '''
 
         if experiment_id is None and experiment_log_path is None:
             raise ValueError(
@@ -122,7 +138,34 @@ class Cohort:
 
         self._members = list(members)
 
-    def predict(self, X: Any) -> np.ndarray:
+    def predict(self,
+                X: Any,
+                *,
+                return_probs: bool = False,
+                return_meta: bool = False) -> np.ndarray | tuple:
+        '''
+        Run cohort members on input data and return aggregated binary predictions.
+
+        Args:
+            X (Any): Input batch to score with all cohort members. Accepts either
+                a pre-built model input dict or raw test features.
+            return_probs (bool): Whether to also return raw per-member probability
+                arrays (P(1)). Only valid in probability-weighted mode.
+            return_meta (bool): Whether to also return structured cohort metadata
+                (placeholder schema) alongside predictions.
+
+        Returns:
+            np.ndarray | tuple: Aggregated binary predictions by default. Optional
+                tuple variants are:
+                - (predictions, probabilities)
+                - (predictions, metadata)
+                - (predictions, probabilities, metadata)
+
+        '''
+
+        if return_probs and self.aggregation_mode != 'probability_weighted':
+            raise ValueError(
+                'Probabilities are unavailable for this Cohort architecture.')
 
         if not self._members:
             raise RuntimeError(
@@ -140,7 +183,21 @@ class Cohort:
                     'Single-decoder cohort member must return a dict with _preds.'
                 )
 
-            return np.asarray(result['_preds'])
+            preds = np.asarray(result['_preds'])
+            probs = None
+            if return_probs:
+                if '_probs' not in result:
+                    raise ValueError(
+                        'Decoder in probability mode must return a dict with _probs.'
+                    )
+                probs = [np.asarray(result['_probs'], dtype=float)]
+
+            return self._format_predict_output(
+                preds,
+                probs,
+                return_probs=return_probs,
+                return_meta=return_meta,
+            )
 
         if self.aggregation_mode == 'probability_weighted':
             member_probs: list[np.ndarray] = []
@@ -155,7 +212,13 @@ class Cohort:
                 probs = np.asarray(result['_probs'], dtype=float)
                 member_probs.append(probs)
 
-            return self._probability_weighted_vote(member_probs)
+            preds = self._probability_weighted_vote(member_probs)
+            return self._format_predict_output(
+                preds,
+                member_probs if return_probs else None,
+                return_probs=return_probs,
+                return_meta=return_meta,
+            )
 
         if self.aggregation_mode == 'majority_vote':
             member_preds: list[np.ndarray] = []
@@ -170,7 +233,13 @@ class Cohort:
                 preds = np.asarray(result['_preds'], dtype=float)
                 member_preds.append(preds)
 
-            return self._majority_vote(member_preds)
+            preds = self._majority_vote(member_preds)
+            return self._format_predict_output(
+                preds,
+                None,
+                return_probs=return_probs,
+                return_meta=return_meta,
+            )
 
         raise ValueError(f'Unknown aggregation_mode: {self.aggregation_mode}')
 
@@ -205,6 +274,33 @@ class Cohort:
         mean_vote = np.mean(preds_matrix, axis=0)
 
         return (mean_vote > 0.5).astype(np.int8)
+
+    def _format_predict_output(self,
+                               predictions: np.ndarray,
+                               probs: list[np.ndarray] | None,
+                               *,
+                               return_probs: bool,
+                               return_meta: bool) -> np.ndarray | tuple:
+
+        if not return_probs and not return_meta:
+            return predictions
+
+        out: list[Any] = [predictions]
+        if return_probs:
+            out.append(probs)
+        if return_meta:
+            out.append(self._predict_meta())
+
+        return tuple(out)
+
+    def _predict_meta(self) -> dict[str, Any]:
+
+        return {
+            'permutation_ids': list(self.permutation_ids),
+            'decoder_count': len(self._members),
+            'architecture_id': self.architecture_id,
+            'aggregation_mode': self.aggregation_mode,
+        }
 
     @staticmethod
     def _normalize_permutation_id(pid: int | str) -> int | str:

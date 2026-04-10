@@ -369,3 +369,86 @@ def test_majority_vote_tie_returns_zero():
     ])
 
     assert vote.tolist() == [0, 0, 1, 0]
+
+
+def test_predict_return_probs_probability_mode_returns_member_prob_arrays():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=2)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+
+        cohort = Cohort(experiment_log_path=str(
+            exp_dir), permutation_ids=[0, 1])
+        cohort.set_members(sensors)
+
+        y_pred, probs = cohort.predict(x_test, return_probs=True)
+
+        assert isinstance(probs, list)
+        assert len(probs) == 2
+        assert np.asarray(probs[0]).shape == np.asarray(y_pred).shape
+        assert np.asarray(probs[1]).shape == np.asarray(y_pred).shape
+
+
+def test_predict_return_meta_returns_metadata_placeholder():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort.set_members(sensors)
+
+        y_pred, meta = cohort.predict(x_test, return_meta=True)
+
+        assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
+        assert meta['permutation_ids'] == [0]
+        assert meta['decoder_count'] == 1
+        assert 'architecture_id' in meta
+        assert 'aggregation_mode' in meta
+
+
+def test_predict_return_probs_and_return_meta_returns_three_tuple():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=2)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+
+        cohort = Cohort(experiment_log_path=str(
+            exp_dir), permutation_ids=[0, 1])
+        cohort.set_members(sensors)
+
+        y_pred, probs, meta = cohort.predict(
+            x_test,
+            return_probs=True,
+            return_meta=True,
+        )
+
+        assert len(probs) == 2
+        assert meta['permutation_ids'] == [0, 1]
+        assert meta['decoder_count'] == 2
+        assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
+
+
+def test_predict_return_probs_rejected_in_fallback_mode():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        cohort.set_members(sensors)
+
+        try:
+            cohort.predict(x_test, return_probs=True)
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'Probabilities are unavailable' in str(e)
