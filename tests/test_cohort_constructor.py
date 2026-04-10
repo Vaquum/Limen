@@ -113,8 +113,10 @@ def test_rejects_when_both_sources_provided():
 
 def test_rejects_missing_experiment_log_path():
 
+    missing_path = Path.cwd() / 'does-not-exist-limen-123456'
+
     try:
-        Cohort(experiment_log_path='/tmp/does-not-exist-limen-123456')
+        Cohort(experiment_log_path=str(missing_path))
         assert False, 'Expected FileNotFoundError'
     except FileNotFoundError as e:
         assert 'missing or unreadable' in str(e)

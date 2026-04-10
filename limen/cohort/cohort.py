@@ -30,6 +30,7 @@ class Cohort:
         'lstm',
         'cnn',
     )
+    _VOTE_THRESHOLD = 0.5
 
     def __init__(self,
                  *,
@@ -208,11 +209,10 @@ class Cohort:
                 self._validate_probability_range(single_probs)
                 probs = [single_probs]
 
-            if return_probs:
-                if '_probs' not in result:
-                    raise ValueError(
-                        'Decoder in probability mode must return a dict with _probs.'
-                    )
+            if return_probs and '_probs' not in result:
+                raise ValueError(
+                    'Decoder in probability mode must return a dict with _probs.'
+                )
 
             return self._format_predict_output(
                 preds,
@@ -280,7 +280,7 @@ class Cohort:
         probs_matrix = np.vstack(member_probs)
         mean_p1 = np.mean(probs_matrix, axis=0)
 
-        return (mean_p1 > 0.5).astype(np.int8)
+        return (mean_p1 > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
     @staticmethod
     def _validate_probability_range(probs: np.ndarray) -> None:
@@ -306,7 +306,7 @@ class Cohort:
         preds_matrix = np.vstack(member_preds)
         mean_vote = np.mean(preds_matrix, axis=0)
 
-        return (mean_vote > 0.5).astype(np.int8)
+        return (mean_vote > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
     def _format_predict_output(self,
                                predictions: np.ndarray,
@@ -417,10 +417,7 @@ class Cohort:
 
         normalized = architecture_id.strip().lower()
 
-        if any(hint in normalized for hint in cls._PROBABILITY_CAPABLE_HINTS):
-            return True
-
-        return False
+        return any(hint in normalized for hint in cls._PROBABILITY_CAPABLE_HINTS)
 
     @staticmethod
     def _resolve_experiment_id(experiment_id: str) -> Path:

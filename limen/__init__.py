@@ -22,11 +22,11 @@ from limen import log
 __all__ = [
     'Account',
     'BacktestSequential',
+    'Cohort',
     'HistoricalData',
     'Log',
     'Manifest',
     'ReconstructionError',
-    'Cohort',
     'RegimeDiversifiedOpinionPools',
     'Sensor',
     'Trainer',
