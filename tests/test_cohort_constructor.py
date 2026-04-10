@@ -452,3 +452,26 @@ def test_predict_return_probs_rejected_in_fallback_mode():
             assert False, 'Expected ValueError'
         except ValueError as e:
             assert 'Probabilities are unavailable' in str(e)
+
+
+def test_validate_probability_range_accepts_values_in_unit_interval():
+
+    Cohort._validate_probability_range(np.array([0.0, 0.25, 0.5, 1.0]))
+
+
+def test_validate_probability_range_rejects_out_of_range_values():
+
+    try:
+        Cohort._validate_probability_range(np.array([0.2, 1.1, -0.1]))
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'within [0, 1]' in str(e)
+
+
+def test_validate_probability_range_rejects_non_finite_values():
+
+    try:
+        Cohort._validate_probability_range(np.array([0.2, np.nan, 0.8]))
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'finite values' in str(e)

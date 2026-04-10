@@ -190,7 +190,9 @@ class Cohort:
                     raise ValueError(
                         'Decoder in probability mode must return a dict with _probs.'
                     )
-                probs = [np.asarray(result['_probs'], dtype=float)]
+                single_probs = np.asarray(result['_probs'], dtype=float)
+                self._validate_probability_range(single_probs)
+                probs = [single_probs]
 
             return self._format_predict_output(
                 preds,
@@ -210,6 +212,7 @@ class Cohort:
                     )
 
                 probs = np.asarray(result['_probs'], dtype=float)
+                self._validate_probability_range(probs)
                 member_probs.append(probs)
 
             preds = self._probability_weighted_vote(member_probs)
@@ -258,6 +261,16 @@ class Cohort:
         mean_p1 = np.mean(probs_matrix, axis=0)
 
         return (mean_p1 > 0.5).astype(np.int8)
+
+    @staticmethod
+    def _validate_probability_range(probs: np.ndarray) -> None:
+
+        if not np.isfinite(probs).all():
+            raise ValueError(
+                'Decoder probabilities must be finite values in [0, 1].')
+
+        if np.any((probs < 0.0) | (probs > 1.0)):
+            raise ValueError('Decoder probabilities must lie within [0, 1].')
 
     @staticmethod
     def _majority_vote(member_preds: list[np.ndarray]) -> np.ndarray:
