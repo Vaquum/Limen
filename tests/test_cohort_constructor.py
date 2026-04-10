@@ -217,3 +217,29 @@ def test_rejects_mixed_architecture_selection():
             assert False, 'Expected ValueError'
         except ValueError as e:
             assert 'same architecture' in str(e)
+
+
+def test_sets_probability_mode_for_probability_capable_architecture():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        assert cohort.architecture_id.endswith('logreg_binary')
+        assert cohort.supports_probabilities is True
+        assert cohort.aggregation_mode == 'probability_weighted'
+
+
+def test_sets_fallback_mode_for_non_probability_architecture():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        assert cohort.architecture_id == 'xgboost_regressor'
+        assert cohort.supports_probabilities is False
+        assert cohort.aggregation_mode == 'majority_vote'

@@ -12,6 +12,22 @@ class Cohort:
     separately.
     '''
 
+    _PROBABILITY_CAPABLE_HINTS = (
+        'logreg',
+        'tabpfn',
+        'random_binary',
+        'random forest',
+        'random_forest',
+        'lightgbm',
+        'lgbm',
+        'ridge',
+        'svm',
+        'hmm',
+        'garch',
+        'lstm',
+        'cnn',
+    )
+
     def __init__(self,
                  *,
                  experiment_id: str | None = None,
@@ -80,12 +96,19 @@ class Cohort:
             round_entries,
             metadata,
         )
+        supports_probabilities = self._architecture_supports_probabilities(
+            architecture_id,
+        )
 
         self.experiment_dir = experiment_dir
         self.experiment_id = experiment_id
         self.available_permutation_ids = sorted(available_ids)
         self.permutation_ids = selected_ids
         self.architecture_id = architecture_id
+        self.supports_probabilities = supports_probabilities
+        self.aggregation_mode = (
+            'probability_weighted' if supports_probabilities else 'majority_vote'
+        )
         self.metadata = metadata
 
     @staticmethod
@@ -164,6 +187,16 @@ class Cohort:
             return sfd_module.strip()
 
         return 'unknown_architecture'
+
+    @classmethod
+    def _architecture_supports_probabilities(cls, architecture_id: str) -> bool:
+
+        normalized = architecture_id.strip().lower()
+
+        if any(hint in normalized for hint in cls._PROBABILITY_CAPABLE_HINTS):
+            return True
+
+        return False
 
     @staticmethod
     def _resolve_experiment_id(experiment_id: str) -> Path:
