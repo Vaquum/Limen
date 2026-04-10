@@ -50,7 +50,8 @@ class Cohort:
         with metadata_path.open('r') as f:
             metadata = json.load(f)
 
-        available_ids = self._load_permutation_ids(round_data_path)
+        round_entries = self._load_round_entries(round_data_path)
+        available_ids = set(round_entries.keys())
         if not available_ids:
             raise ValueError('Resolved experiment contains no permutations.')
 
@@ -74,10 +75,17 @@ class Cohort:
 
             selected_ids = normalized
 
+        architecture_id = self._resolve_cohort_architecture(
+            selected_ids,
+            round_entries,
+            metadata,
+        )
+
         self.experiment_dir = experiment_dir
         self.experiment_id = experiment_id
         self.available_permutation_ids = sorted(available_ids)
         self.permutation_ids = selected_ids
+        self.architecture_id = architecture_id
         self.metadata = metadata
 
     @staticmethod
@@ -101,9 +109,9 @@ class Cohort:
         return stripped
 
     @staticmethod
-    def _load_permutation_ids(round_data_path: Path) -> set[int | str]:
+    def _load_round_entries(round_data_path: Path) -> dict[int | str, dict]:
 
-        ids: set[int | str] = set()
+        entries: dict[int | str, dict] = {}
         with round_data_path.open('r') as f:
             for raw_line in f:
                 stripped = raw_line.strip()
@@ -113,9 +121,49 @@ class Cohort:
                 entry = json.loads(stripped)
                 if 'round_id' not in entry:
                     continue
-                ids.add(entry['round_id'])
+                entries[entry['round_id']] = entry
 
-        return ids
+        return entries
+
+    @classmethod
+    def _resolve_cohort_architecture(cls,
+                                     selected_ids: list[int | str],
+                                     round_entries: dict[int | str, dict],
+                                     metadata: dict) -> str:
+
+        architecture_ids = {
+            cls._extract_architecture_id(round_entries[pid], metadata)
+            for pid in selected_ids
+        }
+
+        if len(architecture_ids) != 1:
+            raise ValueError(
+                'All selected permutation_ids must belong to the same architecture.'
+            )
+
+        return next(iter(architecture_ids))
+
+    @staticmethod
+    def _extract_architecture_id(round_entry: dict, metadata: dict) -> str:
+
+        round_params = round_entry.get('round_params', {})
+        for key in (
+            'architecture',
+            'model_architecture',
+            '_architecture',
+            'reference_architecture',
+            'decoder_architecture',
+            'model_name',
+        ):
+            value = round_params.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        sfd_module = metadata.get('sfd_module')
+        if isinstance(sfd_module, str) and sfd_module.strip():
+            return sfd_module.strip()
+
+        return 'unknown_architecture'
 
     @staticmethod
     def _resolve_experiment_id(experiment_id: str) -> Path:
