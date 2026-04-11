@@ -27,6 +27,11 @@ class ParamDomain:
         '''
 
         for k, v in params.items():
+            if k.startswith('_'):
+                raise ValueError(
+                    f"Parameter name '{k}' must not start with '_'. "
+                    f"The '_' prefix is reserved for framework metadata."
+                )
             if not isinstance(v, list) or len(v) == 0:
                 raise ValueError(
                     f"Parameter '{k}' must be a non-empty list, got {v!r}"

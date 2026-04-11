@@ -67,7 +67,7 @@ def test_save_writes_checkpoint_file():
         cm = CheckpointManager()
 
         cm.save(ckpt_dir, msq, domain, 100, 1000,
-                strategy_type='StubStrategy', content_hash='a' * 64)
+                strategy_type='GridStrategy', content_hash='a' * 64)
 
         assert (ckpt_dir / 'checkpoint.json').exists()
 
@@ -105,9 +105,9 @@ def test_validate_passes_when_all_match():
         cm = CheckpointManager()
 
         cm.save(ckpt_dir, msq, domain, 10, 100,
-                strategy_type='StubStrategy', content_hash=content_hash)
+                strategy_type='GridStrategy', content_hash=content_hash)
 
-        result = cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+        result = cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
 
         assert result['metadata']['experiment_round'] == 10
         assert 'msq_state' in result
@@ -124,10 +124,10 @@ def test_validate_raises_on_hash_mismatch():
         cm = CheckpointManager()
 
         cm.save(ckpt_dir, msq, domain, 10, 100,
-                strategy_type='StubStrategy', content_hash='a' * 64)
+                strategy_type='GridStrategy', content_hash='a' * 64)
 
         try:
-            cm.validate(ckpt_dir, content_hash='b' * 64, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash='b' * 64, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'Content hash mismatch' in str(e)
@@ -163,9 +163,9 @@ def test_second_checkpoint_overwrites_first():
         cm = CheckpointManager()
 
         cm.save(ckpt_dir, msq, domain, 100, 1000,
-                strategy_type='StubStrategy', content_hash='a' * 64)
+                strategy_type='GridStrategy', content_hash='a' * 64)
         cm.save(ckpt_dir, msq, domain, 200, 1000,
-                strategy_type='StubStrategy', content_hash='a' * 64)
+                strategy_type='GridStrategy', content_hash='a' * 64)
 
         result = cm.load(ckpt_dir)
 
@@ -226,7 +226,7 @@ def test_validate_raises_on_missing_checkpoint():
         cm = CheckpointManager()
 
         try:
-            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'No checkpoint' in str(e)
@@ -242,7 +242,7 @@ def test_validate_raises_on_corrupt_checkpoint():
         (ckpt_dir / 'checkpoint.json').write_text('not valid json')
 
         try:
-            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'Corrupt' in str(e)
@@ -258,7 +258,7 @@ def test_validate_raises_on_non_dict_checkpoint():
         (ckpt_dir / 'checkpoint.json').write_text('[1, 2, 3]')
 
         try:
-            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'list' in str(e)
@@ -274,7 +274,7 @@ def test_validate_raises_on_missing_metadata_key():
         (ckpt_dir / 'checkpoint.json').write_text('{"msq_state": {}, "domain_state": {}}')
 
         try:
-            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'metadata' in str(e)
@@ -290,7 +290,7 @@ def test_validate_raises_on_invalid_metadata_type():
         (ckpt_dir / 'checkpoint.json').write_text('{"metadata": "not a dict"}')
 
         try:
-            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash='a' * 64, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'metadata' in str(e)
@@ -306,12 +306,12 @@ def test_validate_raises_on_missing_experiment_round():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy", "target_permutations": 100}, '
+            '"strategy_type": "GridStrategy", "target_permutations": 100}, '
             '"msq_state": {}, "domain_state": {}}'
         )
 
         try:
-            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'experiment_round' in str(e)
@@ -327,12 +327,12 @@ def test_validate_raises_on_missing_target_permutations():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy", "experiment_round": 10}, '
+            '"strategy_type": "GridStrategy", "experiment_round": 10}, '
             '"msq_state": {}, "domain_state": {}}'
         )
 
         try:
-            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'target_permutations' in str(e)
@@ -348,12 +348,12 @@ def test_validate_raises_on_invalid_msq_state_type():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy", "experiment_round": 1, "target_permutations": 100}, '
+            '"strategy_type": "GridStrategy", "experiment_round": 1, "target_permutations": 100}, '
             '"msq_state": [], "domain_state": {}}'
         )
 
         try:
-            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'msq_state' in str(e)
@@ -369,12 +369,12 @@ def test_validate_raises_on_invalid_domain_state_type():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy", "experiment_round": 1, "target_permutations": 100}, '
+            '"strategy_type": "GridStrategy", "experiment_round": 1, "target_permutations": 100}, '
             '"msq_state": {}, "domain_state": []}'
         )
 
         try:
-            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'domain_state' in str(e)
@@ -390,12 +390,12 @@ def test_validate_raises_on_missing_msq_state():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy", "experiment_round": 1, "target_permutations": 100}, '
+            '"strategy_type": "GridStrategy", "experiment_round": 1, "target_permutations": 100}, '
             '"domain_state": {}}'
         )
 
         try:
-            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'msq_state' in str(e)
@@ -411,12 +411,12 @@ def test_validate_raises_on_missing_domain_state():
         content_hash = 'a' * 64
         (ckpt_dir / 'checkpoint.json').write_text(
             '{"metadata": {"content_hash": "' + content_hash + '", '
-            '"strategy_type": "StubStrategy", "experiment_round": 1, "target_permutations": 100}, '
+            '"strategy_type": "GridStrategy", "experiment_round": 1, "target_permutations": 100}, '
             '"msq_state": {}}'
         )
 
         try:
-            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='StubStrategy')
+            cm.validate(ckpt_dir, content_hash=content_hash, strategy_type='GridStrategy')
             assert False, 'Should have raised ValueError'
         except ValueError as e:
             assert 'domain_state' in str(e)
@@ -512,11 +512,11 @@ def test_uel_checkpoint_and_resume():
 
         uel._initialize_fresh(ckpt_dir, cm)
         uel._checkpoint(msq, domain, ckpt_dir, cm, 10, 100,
-                        strategy_type='StubStrategy', content_hash=content_hash)
+                        strategy_type='GridStrategy', content_hash=content_hash)
 
         state = uel._resume_from_checkpoint(ckpt_dir, cm,
                                              content_hash=content_hash,
-                                             strategy_type='StubStrategy')
+                                             strategy_type='GridStrategy')
 
     assert state['metadata']['experiment_round'] == 10
     assert state['msq_state']['yielded_count'] == 1

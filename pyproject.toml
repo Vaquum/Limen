@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaquum_limen"
-version = "1.51.0"
+version = "1.53.0"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [
@@ -27,19 +27,11 @@ dependencies = [
   "scipy",
   "statsmodels",
   "tslearn",
-  "optuna",
   "clickhouse_connect",
   "lightgbm",
   "wrangle",
   "pyarrow",
   "numpy>=2.2.6",
-  "matplotlib",
-  "seaborn",
-  "streamlit",
-  "plotly",
-  "ipython",
-  "mcp>=0.1.0",
-  "playwright",
   "ta-lib",
 ]
 

@@ -102,7 +102,6 @@ def query_raw_data(table_name: str,
 
     if not datetime_requested and 'datetime' in polars_df.columns:
         polars_df = polars_df.drop('datetime')
-        polars_df = polars_df.drop('datetime')
 
     if not timestamp_requested and 'timestamp' in polars_df.columns:
         polars_df = polars_df.drop('timestamp')

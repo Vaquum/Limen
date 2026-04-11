@@ -29,7 +29,6 @@
 
 - Improve `n_permutations` handling in `uel.run` so that if `None` the whole space is searched
 - Add `reports.quantiles` for getting quantile ranges for a column
-- Add `log_to_optuna_study` for unlocking Optuna reporting for `uel.log_df`
 - Add several indicators including RSI
 - Add `generators.generate_parameter_range` for convenient params management
 - Add `maintain_details_in_params` as input argument to `uel.run` for keeping experiment info in `sfm.params`
@@ -631,7 +630,26 @@
 - Add `REDUCER_REGISTRY` for params-based reducer selection
 - Migrate `logreg_binary` SFD to params-based scaler and feature groups
 
-## v1.51.0 on 11th of April, 2026
+## v1.51.0 on 3rd of April, 2026
+
+- Add `RandomStrategy` for lazy random parameter sampling with dedup
+- Add `GridStrategy` with index-based modular arithmetic and optional shuffle
+- Add `STRATEGY_REGISTRY` for params-based strategy selection
+- Add `_param_hash` dedup infrastructure to `SearchStrategy` base class
+- Add strategy metadata (`_param_hash`, `_generation_index`, `_search_strategy`) to MSQ yield
+- Add `_seen` set rebuild from experiment log on resume
+- Migrate foundational SFD tests from legacy path to MSQ path
+
+## v1.52.0 on 7th of April, 2026
+
+- Remove `log_to_optuna_study` from `limen.utils` and drop `optuna` from the project dependencies
+- Remove the legacy `save_to_sqlite` path from `UniversalExperimentLoop.run`
+- Remove the unused top-level `reports` export from `limen`
+- Remove legacy non-core dependencies (`matplotlib`, `seaborn`, `streamlit`, `plotly`, `ipython`, `mcp`, and `playwright`) from `pyproject.toml`
+- Replace temp-file based `Log.read_from_file()` loading with in-memory CSV parsing while preserving duplicate-header cleanup
+- Add regression coverage for file-backed log loading and whitespace trimming in `tests.run`
+
+## v1.53.0 on 11th of April, 2026
 
 - Add `Cohort` constructor with strict experiment source resolution and permutation ID validation
 - Enforce single-architecture selection across all requested `permutation_ids`
