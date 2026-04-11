@@ -23,19 +23,17 @@ It does **not** own:
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
-|-------------|-------------|-------|
-| `Cohort` | You want to aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
-| `RegimeDiversifiedOpinionPools` | You want regime-diversified cohort construction and per-regime inference | Full offline + online RDOP workflow |
+| Entry point                       | Use it when                                                                             | Notes                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `Cohort`                        | You want to aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
+| `RegimeDiversifiedOpinionPools` | You want regime-diversified cohort construction and per-regime inference                | Full offline + online RDOP workflow                            |
 
 ## Package map
 
 ```text
 cohort/
 ├── cohort.py                # Cohort constructor + aggregation logic
-├── regime_pools.py          # RDOP implementation
-├── cohort_usecase.py        # Realistic integration/smoke tests for Cohort behavior
-└── cohort_walkthrough.ipynb # Block-based notebook walkthrough with visuals
+└── regime_pools.py          # RDOP implementation
 ```
 
 ## Cohort quick behavior

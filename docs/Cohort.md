@@ -141,16 +141,16 @@ from pathlib import Path
 from limen.cohort import Cohort
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search import GridStrategy
 from limen.experiment.trainer import Trainer
 from limen.sfd.foundational_sfd import logreg_binary as sfd_module
-from tests.stubs.stubs import StubStrategy
 
 experiment_dir = Path('tmp/cohort_docs_example')
 
 # 1) run a real experiment
 params = sfd_module.params()
 domain = ParamDomain(params)
-strategy = StubStrategy(domain)
+strategy = GridStrategy(domain)
 
 uel = UniversalExperimentLoop(
     sfd=sfd_module,
