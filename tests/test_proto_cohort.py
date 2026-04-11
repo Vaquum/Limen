@@ -7,9 +7,9 @@ import numpy as np
 from limen.cohort import Cohort
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search import GridStrategy
 from limen.experiment.trainer import Trainer
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
-from tests.stubs.stubs import StubStrategy
 
 
 class _RaisingMember:
@@ -23,7 +23,7 @@ def _run_real_experiment(experiment_dir: Path,
 
     params = logreg_sfd.params()
     domain = ParamDomain(params)
-    strategy = StubStrategy(domain)
+    strategy = GridStrategy(domain)
 
     uel = UniversalExperimentLoop(
         sfd=logreg_sfd,
@@ -32,7 +32,7 @@ def _run_real_experiment(experiment_dir: Path,
     )
 
     uel.run(
-        experiment_name='test_cohort_constructor',
+        experiment_name='test_proto_cohort',
         n_permutations=n_permutations,
     )
 

@@ -8,7 +8,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.utils.cleanup import cleanup_csv_files
 from tests.utils.cleanup import setup_cleanup_handlers
-
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -305,6 +304,39 @@ from tests.test_trainer import test_pass2_uses_full_data
 from tests.test_trainer import test_sensor_inference
 from tests.test_trainer import test_trainer_with_feature_ablation
 from tests.test_trainer import test_trainer_with_fractional_diff
+from tests.test_proto_cohort import test_rejects_when_no_source_provided
+from tests.test_proto_cohort import test_rejects_when_both_sources_provided
+from tests.test_proto_cohort import test_rejects_missing_experiment_log_path
+from tests.test_proto_cohort import test_defaults_to_all_permutations_when_not_provided
+from tests.test_proto_cohort import test_rejects_empty_permutation_ids
+from tests.test_proto_cohort import test_rejects_duplicate_permutation_ids
+from tests.test_proto_cohort import test_rejects_unknown_permutation_ids
+from tests.test_proto_cohort import test_accepts_string_permutation_ids_when_numeric
+from tests.test_proto_cohort import test_rejects_when_round_data_is_missing
+from tests.test_proto_cohort import test_rejects_unresolvable_experiment_id
+from tests.test_proto_cohort import test_rejects_ambiguous_experiment_id_resolution
+from tests.test_proto_cohort import test_rejects_mixed_architecture_selection
+from tests.test_proto_cohort import test_sets_probability_mode_for_probability_capable_architecture
+from tests.test_proto_cohort import test_sets_fallback_mode_for_non_probability_architecture
+from tests.test_proto_cohort import test_probability_weighted_predict_aggregates_mean_p1
+from tests.test_proto_cohort import test_probability_weighted_predict_single_member_matches_own_thresholded_probs
+from tests.test_proto_cohort import test_single_decoder_passthrough_returns_member_preds_unchanged
+from tests.test_proto_cohort import test_probability_weighted_predict_requires_members
+from tests.test_proto_cohort import test_probability_weighted_predict_rejects_majority_vote_mode
+from tests.test_proto_cohort import test_majority_vote_tie_returns_zero
+from tests.test_proto_cohort import test_probability_weighted_tie_returns_zero
+from tests.test_proto_cohort import test_majority_vote_multimember_expected_output
+from tests.test_proto_cohort import test_probability_weighted_vote_rejects_shape_mismatch
+from tests.test_proto_cohort import test_majority_vote_rejects_shape_mismatch
+from tests.test_proto_cohort import test_predict_return_probs_probability_mode_returns_member_prob_arrays
+from tests.test_proto_cohort import test_predict_return_meta_returns_metadata_placeholder
+from tests.test_proto_cohort import test_predict_return_probs_and_return_meta_returns_three_tuple
+from tests.test_proto_cohort import test_predict_return_probs_rejected_in_fallback_mode
+from tests.test_proto_cohort import test_validate_probability_range_accepts_values_in_unit_interval
+from tests.test_proto_cohort import test_validate_probability_range_rejects_out_of_range_values
+from tests.test_proto_cohort import test_validate_probability_range_rejects_non_finite_values
+from tests.test_proto_cohort import test_cohort_is_drop_in_decoder_replacement_for_dict_input
+from tests.test_proto_cohort import test_member_failure_propagates_and_fails_whole_call
 
 tests = [
     test_param_domain_init,
@@ -603,6 +635,39 @@ tests = [
     test_sensor_inference,
     test_trainer_with_feature_ablation,
     test_trainer_with_fractional_diff,
+    test_rejects_when_no_source_provided,
+    test_rejects_when_both_sources_provided,
+    test_rejects_missing_experiment_log_path,
+    test_defaults_to_all_permutations_when_not_provided,
+    test_rejects_empty_permutation_ids,
+    test_rejects_duplicate_permutation_ids,
+    test_rejects_unknown_permutation_ids,
+    test_accepts_string_permutation_ids_when_numeric,
+    test_rejects_when_round_data_is_missing,
+    test_rejects_unresolvable_experiment_id,
+    test_rejects_ambiguous_experiment_id_resolution,
+    test_rejects_mixed_architecture_selection,
+    test_sets_probability_mode_for_probability_capable_architecture,
+    test_sets_fallback_mode_for_non_probability_architecture,
+    test_probability_weighted_predict_aggregates_mean_p1,
+    test_probability_weighted_predict_single_member_matches_own_thresholded_probs,
+    test_single_decoder_passthrough_returns_member_preds_unchanged,
+    test_probability_weighted_predict_requires_members,
+    test_probability_weighted_predict_rejects_majority_vote_mode,
+    test_majority_vote_tie_returns_zero,
+    test_probability_weighted_tie_returns_zero,
+    test_majority_vote_multimember_expected_output,
+    test_probability_weighted_vote_rejects_shape_mismatch,
+    test_majority_vote_rejects_shape_mismatch,
+    test_predict_return_probs_probability_mode_returns_member_prob_arrays,
+    test_predict_return_meta_returns_metadata_placeholder,
+    test_predict_return_probs_and_return_meta_returns_three_tuple,
+    test_predict_return_probs_rejected_in_fallback_mode,
+    test_validate_probability_range_accepts_values_in_unit_interval,
+    test_validate_probability_range_rejects_out_of_range_values,
+    test_validate_probability_range_rejects_non_finite_values,
+    test_cohort_is_drop_in_decoder_replacement_for_dict_input,
+    test_member_failure_propagates_and_fails_whole_call,
 ]
 
 # Configure logging
