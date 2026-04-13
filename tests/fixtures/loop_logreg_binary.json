@@ -1,0 +1,191 @@
+
+
+{
+    "parameterSpace": {
+        "reference_architecture": [
+            "logreg_binary"
+        ],
+        "input_split_train": [
+            70
+        ],
+        "input_split_val": [
+            15,
+            20
+        ],
+        "input_split_test": [
+            15
+        ],
+        "scaling_method": [
+            "LinearScaler"
+        ],
+        "input_selected_items": [
+            "logreg_binary"
+        ],
+        "input_logreg_binary_frac_diff_d": [
+            0
+        ],
+        "input_logreg_binary_shift": [
+            -1
+        ],
+        "input_logreg_binary_q": [
+            0.35
+        ],
+        "input_logreg_binary_roc_period": [
+            1
+        ],
+        "input_logreg_binary_penalty": [
+            "l2"
+        ],
+        "input_logreg_binary_scaler_type": [
+            "logreg"
+        ],
+        "input_logreg_binary_feature_groups": [
+            "all"
+        ],
+        "input_logreg_binary_class_weight": [
+            0.45
+        ],
+        "input_logreg_binary_c": [
+            0.01
+        ],
+        "input_logreg_binary_max_iter": [
+            30
+        ],
+        "input_logreg_binary_solver": [
+            "lbfgs"
+        ],
+        "input_logreg_binary_tol": [
+            0.001
+        ],
+        "indicator_selected_items": [
+            "bbands"
+        ],
+        "indicator_bbands_price_col": [
+            "close"
+        ],
+        "indicator_bbands_period": [
+            5
+        ],
+        "indicator_bbands_nb_dev_up": [
+            2
+        ],
+        "indicator_bbands_nb_dev_dn": [
+            2
+        ],
+        "indicator_bbands_ma_type": [
+            0
+        ],
+        "feature_selected_items": [
+            "atr_percent_sma"
+        ],
+        "feature_atr_percent_sma_period": [
+            14
+        ],
+        "scaler_selected_items": [
+            "rank_gauss"
+        ],
+        "scaler_rank_gauss_n_quantiles": [
+            1000
+        ],
+        "transform_selected_items": [
+            "mad_transform"
+        ],
+        "transform_mad_transform_time_col": [
+            "datetime"
+        ],
+        "label_selected_items": [
+            "forward_breakout_target"
+        ],
+        "label_forward_breakout_target_forward_periods": [
+            24
+        ],
+        "label_forward_breakout_target_threshold": [
+            0.02
+        ],
+        "label_forward_breakout_target_shift": [
+            -1
+        ]
+    },
+    "referenceArchitecture": "logreg_binary",
+    "inputData": {
+        "selectedItems": [
+            {
+                "id": "fb485f73-a4f9-4f37-93ac-488c6d924d9b",
+                "name": "logreg_binary",
+                "params": {
+                    "frac_diff_d": 0,
+                    "shift": -1,
+                    "q": 0.35,
+                    "roc_period": 1,
+                    "penalty": "l2",
+                    "scaler_type": "logreg",
+                    "feature_groups": "all",
+                    "class_weight": 0.45,
+                    "C": 0.01,
+                    "max_iter": 30,
+                    "solver": "lbfgs",
+                    "tol": 0.001
+                }
+            }
+        ],
+        "splitRatios": {
+            "train": 70,
+            "val": 15,
+            "test": 15
+        }
+    },
+    "indicators": [
+        {
+            "id": "e15ac237-838b-49c3-8e17-7f0de4b1c9f3",
+            "name": "bbands",
+            "params": {
+                "price_col": "close",
+                "period": 5,
+                "nb_dev_up": 2,
+                "nb_dev_dn": 2,
+                "ma_type": 0
+            }
+        }
+    ],
+    "features": [
+        {
+            "id": "a753f45e-ac0b-4324-b582-961cafde24d2",
+            "name": "atr_percent_sma",
+            "params": {
+                "period": 14
+            }
+        }
+    ],
+    "scaler": {
+        "scalingMethod": "LinearScaler",
+        "selectedItems": [
+            {
+                "id": "9924e29f-bc6d-4a91-a57b-400706f4cfc5",
+                "name": "rank_gauss",
+                "params": {
+                    "n_quantiles": 1000
+                }
+            }
+        ]
+    },
+    "transforms": [
+        {
+            "id": "3cb28069-ccb7-48c7-8717-b210bfc6af7f",
+            "name": "mad_transform",
+            "params": {
+                "time_col": "datetime"
+            }
+        }
+    ],
+    "labels": [
+        {
+            "id": "0a631ca2-8e8e-4683-9b0d-fa7a5a4ff9fa",
+            "name": "forward_breakout_target",
+            "params": {
+                "forward_periods": 24,
+                "threshold": 0.02,
+                "shift": -1
+            }
+        }
+    ]
+}
