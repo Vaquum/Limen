@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import json
 import os
 import sys
@@ -13,7 +14,6 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from limen import UniversalExperimentLoop
-from limen.experiment.manifest_core import Manifest, TransformEntry
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
 from limen.scalers import LinearScaler
@@ -30,7 +30,6 @@ from limen.sfd.loop.registry import (
     INDICATOR_REGISTRY,
     MODEL_REGISTRY,
     SCALER_REGISTRY,
-    TRANSFORM_REGISTRY,
 )
 from limen.sfd.reference_architecture import logreg_binary as _logreg_binary_func
 
@@ -56,12 +55,6 @@ def test_registry_feature_resolution():
     # forward_breakout_target is not in limen.features.__all__ — it reaches
     # the registry via the manual additions fallback in registry.py
     assert FEATURE_REGISTRY['forward_breakout_target'] is forward_breakout_target
-
-
-def test_registry_transform_resolution():
-    from limen.transforms import mad_transform
-
-    assert TRANSFORM_REGISTRY['mad_transform'] is mad_transform
 
 
 def test_registry_model_resolution():
@@ -371,6 +364,104 @@ def test_progress_callback_zero_total_no_div_by_zero():
         assert data['percent'] == 0.0
 
 
+def _build_quantile_flag_payload(col: str = 'roc_1', q: float = 0.5) -> dict:
+    # Minimal payload using quantile_flag as the label. We add a roc
+    # indicator so the fitted target can threshold on a mean-reverting
+    # column (`roc_1`) rather than a monotone one like `close` — this
+    # keeps test/train label distributions balanced enough for binary
+    # metrics to compute a full 2x2 confusion matrix.
+    return {
+        'parameterSpace': {
+            'indicator_roc_period': [1],
+            'label_quantile_flag_col': [col],
+            'label_quantile_flag_q': [q],
+        },
+        'referenceArchitecture': 'logreg_binary',
+        'inputData': {'splitRatios': {'train': 70, 'val': 15, 'test': 15}},
+        'indicators': [{'name': 'roc', 'params': {'period': 1}}],
+        'features': [],
+        'labels': [{'name': 'quantile_flag', 'params': {'col': col, 'q': q}}],
+        'scaler': {'scalingMethod': 'LinearScaler'},
+    }
+
+
+def test_quantile_flag_compiles_as_fitted_transform():
+    sfd = LoopSFD(_build_quantile_flag_payload())
+    m = sfd.manifest()
+
+    assert m.target_column == 'quantile_flag'
+    assert len(m.target_transforms) == 1
+
+    fitted_params, func, base_params = m.target_transforms[0]
+
+    # Fitted param is wired to compute_quantile_cutoff with col + q references
+    assert len(fitted_params) == 1
+    fp_name, fp_func, fp_params = fitted_params[0]
+    assert fp_name == '_quantile_cutoff'
+    assert fp_func.__name__ == 'compute_quantile_cutoff'
+    assert fp_params['col'] == 'label_quantile_flag_col'
+    assert fp_params['q'] == 'label_quantile_flag_q'
+
+    # Transform func is quantile_flag with col + fitted cutoff injection
+    assert func.__name__ == 'quantile_flag'
+    assert base_params['col'] == 'label_quantile_flag_col'
+    assert base_params['cutoff'] == '_quantile_cutoff'
+
+
+def test_forward_breakout_label_remains_plain_add_transform():
+    # Regression guard: the non-fitted label path must not route through
+    # the fitted-label branch.
+    sfd = LoopSFD(_load_payload())
+    m = sfd.manifest()
+    fitted_params, func, _base_params = m.target_transforms[0]
+    assert fitted_params == []
+    assert func.__name__ == 'forward_breakout_target'
+
+
+def test_quantile_flag_params_routes_through_round_params():
+    sfd = LoopSFD(_build_quantile_flag_payload(col='roc_1', q=0.3))
+    params = sfd.params()
+    assert params['label_quantile_flag_col'] == ['roc_1']
+    assert params['label_quantile_flag_q'] == [0.3]
+
+
+def test_quantile_flag_end_to_end_with_uel():
+    os.environ['LOOP_ENV'] = 'test'
+
+    payload = _build_quantile_flag_payload(col='roc_1', q=0.5)
+    sfd = LoopSFD(payload)
+
+    domain = ParamDomain(sfd.params())
+    strategy = RandomStrategy(domain, seed=42)
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir) / 'exp'
+        experiment_dir.mkdir(parents=True)
+
+        progress_file = experiment_dir / 'progress.json'
+        progress_cb = make_progress_callback(progress_file, total=2)
+
+        uel = UniversalExperimentLoop(
+            sfd=sfd,
+            search_strategy=strategy,
+            feedback_interval=1,
+            checkpoint_interval=1,
+            experiment_dir=experiment_dir,
+            intra_callback=progress_cb,
+        )
+
+        uel.run(
+            experiment_name=str(experiment_dir / 'run'),
+            n_permutations=2,
+        )
+
+        assert (experiment_dir / 'results.csv').exists()
+        assert (experiment_dir / 'metadata.json').exists()
+        assert progress_file.exists()
+        data = json.loads(progress_file.read_text())
+        assert data['total'] == 2
+
+
 def test_loop_sfd_end_to_end_with_uel():
     # Force test data source path
     os.environ['LOOP_ENV'] = 'test'
@@ -415,7 +506,6 @@ def test_loop_sfd_end_to_end_with_uel():
 _TESTS = [
     test_registry_indicator_resolution,
     test_registry_feature_resolution,
-    test_registry_transform_resolution,
     test_registry_model_resolution,
     test_registry_model_excludes_classes,
     test_registry_scaler_has_linear,
@@ -447,6 +537,10 @@ _TESTS = [
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,
     test_progress_callback_zero_total_no_div_by_zero,
+    test_quantile_flag_compiles_as_fitted_transform,
+    test_forward_breakout_label_remains_plain_add_transform,
+    test_quantile_flag_params_routes_through_round_params,
+    test_quantile_flag_end_to_end_with_uel,
     test_loop_sfd_end_to_end_with_uel,
 ]
 
