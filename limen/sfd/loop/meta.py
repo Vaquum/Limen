@@ -3,7 +3,7 @@
 Mappings that cannot be derived by introspection:
 
 - LABEL_TARGET_COLUMNS: label function name → target column name produced
-- SCALER_NAME_MAP: PascalCase class name (Loop's format) → SCALER_REGISTRY key
+- DATA_SOURCE_REGISTRY: method name string → HistoricalData bound method
 - FITTED_LABELS: label name → fitted-transform wiring (for labels whose
   threshold/cutoff is computed from training data rather than user-specified)
 
@@ -14,6 +14,7 @@ will be removed when RFC-1005 (YAML compiler) lands.
 from collections.abc import Callable
 from typing import Any
 
+from limen.data import HistoricalData
 from limen.features.quantile_flag import compute_quantile_cutoff
 
 
@@ -40,11 +41,9 @@ def get_target_column(label_name: str) -> str:
     return LABEL_TARGET_COLUMNS.get(label_name, label_name)
 
 
-SCALER_NAME_MAP: dict[str, str] = {
-    'LinearScaler': 'linear',
-    'LogRegScaler': 'logreg',
-    'RobustScaler': 'robust',
-    'RankGaussScaler': 'rank_gauss',
+DATA_SOURCE_REGISTRY: dict[str, Callable] = {
+    'get_spot_klines': HistoricalData.get_spot_klines,
+    'get_futures_klines': HistoricalData.get_futures_klines,
 }
 
 
@@ -97,9 +96,9 @@ FITTED_LABELS: dict[str, FittedLabelConfig] = {
 
 
 __all__ = [
+    'DATA_SOURCE_REGISTRY',
     'FITTED_LABELS',
     'LABEL_TARGET_COLUMNS',
-    'SCALER_NAME_MAP',
     'FittedLabelConfig',
     'get_target_column',
 ]

@@ -14,8 +14,8 @@ from typing import Any
 from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.sfd.loop.meta import (
+    DATA_SOURCE_REGISTRY,
     FITTED_LABELS,
-    SCALER_NAME_MAP,
     FittedLabelConfig,
     get_target_column,
 )
@@ -32,6 +32,44 @@ _DEFAULT_DATA_SOURCE: dict[str, Any] = {
     'method': HistoricalData.get_spot_klines,
     'params': {'kline_size': 3600, 'start_date_limit': '2025-01-01'},
 }
+
+
+def _resolve_data_source_from_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+
+    '''
+    Extract a Limen set_data_source(**config) dict from the payload's
+    inputData.selectedItems entry if present.
+
+    Returns None when the payload does not carry a data_source selectedItem,
+    in which case the caller falls back to _DEFAULT_DATA_SOURCE or a
+    constructor override.
+
+    Args:
+        payload (dict): Loop web UI experiment design payload
+
+    Returns:
+        dict | None: {'method': callable, 'params': {...}} or None
+    '''
+
+    input_data = payload.get('inputData') or {}
+    selected_items = input_data.get('selectedItems') or []
+    for item in selected_items:
+        if (item or {}).get('name') != 'data_source':
+            continue
+        raw_params = dict(item.get('params') or {})
+        method_name = raw_params.pop('method', None)
+        if not method_name:
+            return None
+        method = DATA_SOURCE_REGISTRY.get(method_name)
+        if method is None:
+            raise ValueError(
+                f"Unknown data source method '{method_name}'. "
+                f"Known: {sorted(DATA_SOURCE_REGISTRY)}"
+            )
+        # Drop null/empty params so Limen's signature defaults apply
+        resolved_params = {k: v for k, v in raw_params.items() if v is not None}
+        return {'method': method, 'params': resolved_params}
+    return None
 
 
 class LoopSFD:
@@ -52,8 +90,11 @@ class LoopSFD:
                 hyperparam search space. When None, derived from the matching
                 foundational SFD's params() filtered by function signature
             data_source_config (dict | None): Override for the production data
-                source. Must have 'method' and optional 'params' keys. Defaults
-                to HistoricalData.get_spot_klines with kline_size=3600
+                source. Must have 'method' and optional 'params' keys. When
+                None, the data source is extracted from the payload's
+                inputData.selectedItems[0] entry named 'data_source'; if that
+                is also absent, falls back to HistoricalData.get_spot_klines
+                with kline_size=3600
 
         Raises:
             KeyError: If payload's referenceArchitecture is not in MODEL_REGISTRY
@@ -71,10 +112,14 @@ class LoopSFD:
                 self._arch, self._arch_func,
             )
 
-        self._data_source_config = (
-            dict(data_source_config) if data_source_config is not None
-            else dict(_DEFAULT_DATA_SOURCE)
-        )
+        if data_source_config is not None:
+            self._data_source_config = dict(data_source_config)
+        else:
+            payload_config = _resolve_data_source_from_payload(payload)
+            self._data_source_config = (
+                payload_config if payload_config is not None
+                else dict(_DEFAULT_DATA_SOURCE)
+            )
 
         # Required by UniversalExperimentLoop at experiment_core.py:70 and by
         # UEL._write_metadata which raises if the SFD has no __name__
@@ -104,7 +149,8 @@ class LoopSFD:
         Compute a Manifest configured from the Loop payload.
 
         Build order:
-            1. Data source (default or constructor override)
+            1. Data source (from payload.inputData.selectedItems[0] when present,
+               otherwise constructor override or default)
             2. Split config from payload.inputData.splitRatios
             3. Indicators from payload.indicators
             4. Features from payload.features
@@ -112,7 +158,7 @@ class LoopSFD:
                registered in FITTED_LABELS are wired via add_fitted_transform
                so a training-fit param (e.g. a quantile cutoff) is computed
                before the transform runs; other labels use plain add_transform
-            6. Scaler from payload.scaler.scalingMethod
+            6. Scaler from payload.scaler.selectedItems[0].name
             7. Model from payload.referenceArchitecture
 
         Returns:
@@ -161,30 +207,54 @@ class LoopSFD:
 
             m = target_builder.done()
 
-        scaling_method = (self._payload.get('scaler') or {}).get('scalingMethod')
-        if scaling_method:
-            registry_key = SCALER_NAME_MAP.get(scaling_method)
-            if registry_key is None:
+        scaler_name = self._resolve_scaler_name()
+        if scaler_name is not None:
+            scaler_class = SCALER_REGISTRY.get(scaler_name)
+            if scaler_class is None:
                 raise ValueError(
-                    f"Unknown scaler '{scaling_method}'. "
-                    f"Known: {sorted(SCALER_NAME_MAP)}"
+                    f"Unknown scaler '{scaler_name}'. "
+                    f"Known: {sorted(SCALER_REGISTRY)}"
                 )
-            m.set_scaler(SCALER_REGISTRY[registry_key])
+            m.set_scaler(scaler_class)
 
         m.with_model(self._arch_func)
 
         return m
 
+    def _resolve_scaler_name(self) -> str | None:
+
+        '''
+        Read the scaler name (lowercase registry key) from the payload.
+
+        Reads from payload.scaler.selectedItems[0].name. Returns None when
+        no scaler is selected.
+
+        Returns:
+            str | None: Registry key for SCALER_REGISTRY (e.g. 'logreg')
+
+        '''
+
+        scaler = self._payload.get('scaler') or {}
+        selected_items = scaler.get('selectedItems') or []
+        if not selected_items:
+            return None
+        first = selected_items[0] or {}
+        name = first.get('name')
+        if not isinstance(name, str) or not name.strip():
+            return None
+        return name.strip()
+
     def _filtered_parameter_space(self) -> dict[str, list]:
 
         '''
-        Compute parameterSpace with UI-form metadata and reference arch params stripped.
+        Compute parameterSpace with UI-form metadata and out-of-band keys stripped.
 
         Removed keys:
             - *_selected_items (UI form selection metadata)
             - reference_architecture (top-level UI metadata; wired via payload['referenceArchitecture'])
-            - scaling_method (superseded by scaler.scalingMethod)
+            - scaling_method (legacy UI metadata)
             - input_split_* (split config handled via inputData.splitRatios)
+            - input_data_source_* (data source config handled via inputData.selectedItems)
             - input_<arch>_* (reference architecture params, sourced from SFD)
             - scaler_* (defensive: stripped for legacy payloads that carried
               selectedItems-shaped scaler metadata)
@@ -206,6 +276,8 @@ class LoopSFD:
             if key == 'reference_architecture':
                 continue
             if key.startswith('input_split_'):
+                continue
+            if key.startswith('input_data_source_'):
                 continue
             if key.startswith(arch_prefix):
                 continue
