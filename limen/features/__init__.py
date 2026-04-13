@@ -13,6 +13,7 @@ from limen.features.distance_from_high import distance_from_high
 from limen.features.distance_from_low import distance_from_low
 from limen.features.dollar_volume import dollar_volume
 from limen.features.ema_breakout import ema_breakout
+from limen.features.forward_breakout_target import forward_breakout_target
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.features.gap_high import gap_high
@@ -74,6 +75,7 @@ __all__ = [
     'dollar_volume',
     'ema_breakout',
     'find_min_d',
+    'forward_breakout_target',
     'fractional_diff',
     'gap_high',
     'garman_klass_volatility',
