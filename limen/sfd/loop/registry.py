@@ -9,7 +9,6 @@ from collections.abc import Callable
 import limen.features as _feat
 import limen.indicators as _ind
 import limen.sfd.reference_architecture as _arch
-import limen.transforms as _tx
 from limen.features.forward_breakout_target import forward_breakout_target as _forward_breakout_target
 from limen.scalers.registry import SCALER_REGISTRY as _SCALER_REG
 
@@ -30,10 +29,6 @@ INDICATOR_REGISTRY: dict[str, Callable] = {
 FEATURE_REGISTRY: dict[str, Callable] = {
     **{name: getattr(_feat, name) for name in _feat.__all__},
     **_FEATURE_MANUAL_ADDITIONS,
-}
-
-TRANSFORM_REGISTRY: dict[str, Callable] = {
-    name: getattr(_tx, name) for name in _tx.__all__
 }
 
 
@@ -59,5 +54,4 @@ __all__ = [
     'INDICATOR_REGISTRY',
     'MODEL_REGISTRY',
     'SCALER_REGISTRY',
-    'TRANSFORM_REGISTRY',
 ]
