@@ -14,13 +14,14 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from limen import UniversalExperimentLoop
+from limen.data import HistoricalData
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
 from limen.scalers import LinearScaler
 from limen.sfd.loop import LoopSFD
 from limen.sfd.loop.meta import (
+    DATA_SOURCE_REGISTRY,
     LABEL_TARGET_COLUMNS,
-    SCALER_NAME_MAP,
     get_target_column,
 )
 from limen.sfd.loop.progress import make_progress_callback
@@ -48,12 +49,9 @@ def test_registry_indicator_resolution():
 
 
 def test_registry_feature_resolution():
-    from limen.features import atr_percent_sma
-    from limen.features.forward_breakout_target import forward_breakout_target
+    from limen.features import atr_percent_sma, forward_breakout_target
 
     assert FEATURE_REGISTRY['atr_percent_sma'] is atr_percent_sma
-    # forward_breakout_target is not in limen.features.__all__ — it reaches
-    # the registry via the manual additions fallback in registry.py
     assert FEATURE_REGISTRY['forward_breakout_target'] is forward_breakout_target
 
 
@@ -92,11 +90,9 @@ def test_label_meta_table_has_known_label():
     assert 'forward_breakout_target' in LABEL_TARGET_COLUMNS
 
 
-def test_scaler_name_map_completeness():
-    assert SCALER_NAME_MAP['LinearScaler'] == 'linear'
-    assert SCALER_NAME_MAP['LogRegScaler'] == 'logreg'
-    assert SCALER_NAME_MAP['RobustScaler'] == 'robust'
-    assert SCALER_NAME_MAP['RankGaussScaler'] == 'rank_gauss'
+def test_data_source_registry_known_methods():
+    assert DATA_SOURCE_REGISTRY['get_spot_klines'] is HistoricalData.get_spot_klines
+    assert DATA_SOURCE_REGISTRY['get_futures_klines'] is HistoricalData.get_futures_klines
 
 
 def test_reference_defaults_logreg_binary_extracts_model_params():
@@ -185,7 +181,7 @@ def test_loop_sfd_params_excludes_dropped_categories():
     # reference_architecture is top-level UI metadata, not a model hyperparam
     assert 'reference_architecture' not in params
 
-    # scaler_* keys came from selectedItems UI metadata; we use scalingMethod
+    # scaler_* keys (legacy selectedItems metadata) are stripped defensively
     for key in params:
         assert not key.startswith('scaler_'), f"scaler_* key leaked: {key}"
 
@@ -309,7 +305,9 @@ def test_loop_sfd_param_wiring_literal_when_not_in_param_space():
 
 def test_loop_sfd_unknown_scaler_raises():
     payload = _load_payload()
-    payload['scaler']['scalingMethod'] = 'NotARealScaler'
+    payload['scaler'] = {
+        'selectedItems': [{'name': 'not_a_real_scaler', 'params': {}}],
+    }
     sfd = LoopSFD(payload)
     try:
         sfd.manifest()
@@ -317,6 +315,90 @@ def test_loop_sfd_unknown_scaler_raises():
         assert 'Unknown scaler' in str(e)
         return
     raise AssertionError('Expected ValueError for unknown scaler')
+
+
+def test_loop_sfd_scaler_read_from_selected_items():
+    payload = _load_payload()
+    payload['scaler'] = {
+        'selectedItems': [{'name': 'logreg', 'params': {}}],
+    }
+    # Drop any legacy scalingMethod field if present
+    payload['scaler'].pop('scalingMethod', None)
+    sfd = LoopSFD(payload)
+    m = sfd.manifest()
+    assert m.scaler is not None
+
+
+def test_loop_sfd_no_scaler_when_selected_items_empty():
+    payload = _load_payload()
+    payload['scaler'] = {'selectedItems': []}
+    payload['scaler'].pop('scalingMethod', None)
+    sfd = LoopSFD(payload)
+    m = sfd.manifest()
+    assert m.scaler is None
+
+
+def test_loop_sfd_data_source_from_payload_selected_items():
+    payload = _load_payload()
+    payload['inputData']['selectedItems'] = [{
+        'name': 'data_source',
+        'params': {
+            'method': 'get_futures_klines',
+            'kline_size': 7200,
+            'start_date_limit': '2024-06-01',
+        },
+    }]
+    sfd = LoopSFD(payload)
+    assert sfd._data_source_config['method'] is HistoricalData.get_futures_klines
+    assert sfd._data_source_config['params']['kline_size'] == 7200
+    assert sfd._data_source_config['params']['start_date_limit'] == '2024-06-01'
+
+
+def test_loop_sfd_data_source_constructor_override_wins_over_payload():
+    payload = _load_payload()
+    payload['inputData']['selectedItems'] = [{
+        'name': 'data_source',
+        'params': {'method': 'get_futures_klines', 'kline_size': 7200},
+    }]
+    custom = {
+        'method': HistoricalData.get_spot_klines,
+        'params': {'kline_size': 900},
+    }
+    sfd = LoopSFD(payload, data_source_config=custom)
+    assert sfd._data_source_config['method'] is HistoricalData.get_spot_klines
+    assert sfd._data_source_config['params']['kline_size'] == 900
+
+
+def test_loop_sfd_data_source_falls_back_to_default_when_payload_empty():
+    payload = _load_payload()
+    payload['inputData']['selectedItems'] = []
+    sfd = LoopSFD(payload)
+    assert sfd._data_source_config['method'] is HistoricalData.get_spot_klines
+    assert sfd._data_source_config['params']['kline_size'] == 3600
+
+
+def test_loop_sfd_unknown_data_source_method_raises():
+    payload = _load_payload()
+    payload['inputData']['selectedItems'] = [{
+        'name': 'data_source',
+        'params': {'method': 'not_a_real_method'},
+    }]
+    try:
+        LoopSFD(payload)
+    except ValueError as e:
+        assert 'Unknown data source method' in str(e)
+        return
+    raise AssertionError('Expected ValueError for unknown data source method')
+
+
+def test_loop_sfd_params_excludes_input_data_source_keys():
+    payload = _load_payload()
+    payload['parameterSpace']['input_data_source_method'] = ['get_spot_klines']
+    payload['parameterSpace']['input_data_source_kline_size'] = [3600]
+    sfd = LoopSFD(payload)
+    params = sfd.params()
+    for key in params:
+        assert not key.startswith('input_data_source_'), f"leaked: {key}"
 
 
 def test_loop_sfd_unknown_reference_architecture_raises():
@@ -381,7 +463,7 @@ def _build_quantile_flag_payload(col: str = 'roc_1', q: float = 0.5) -> dict:
         'indicators': [{'name': 'roc', 'params': {'period': 1}}],
         'features': [],
         'labels': [{'name': 'quantile_flag', 'params': {'col': col, 'q': q}}],
-        'scaler': {'scalingMethod': 'LinearScaler'},
+        'scaler': {'selectedItems': [{'name': 'linear', 'params': {}}]},
     }
 
 
@@ -513,7 +595,7 @@ _TESTS = [
     test_label_meta_known,
     test_label_meta_fallback_to_name,
     test_label_meta_table_has_known_label,
-    test_scaler_name_map_completeness,
+    test_data_source_registry_known_methods,
     test_reference_defaults_logreg_binary_extracts_model_params,
     test_reference_defaults_constructor_override,
     test_loop_sfd_name_attribute,
@@ -533,6 +615,13 @@ _TESTS = [
     test_loop_sfd_param_wiring_label_params,
     test_loop_sfd_param_wiring_literal_when_not_in_param_space,
     test_loop_sfd_unknown_scaler_raises,
+    test_loop_sfd_scaler_read_from_selected_items,
+    test_loop_sfd_no_scaler_when_selected_items_empty,
+    test_loop_sfd_data_source_from_payload_selected_items,
+    test_loop_sfd_data_source_constructor_override_wins_over_payload,
+    test_loop_sfd_data_source_falls_back_to_default_when_payload_empty,
+    test_loop_sfd_unknown_data_source_method_raises,
+    test_loop_sfd_params_excludes_input_data_source_keys,
     test_loop_sfd_unknown_reference_architecture_raises,
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,
