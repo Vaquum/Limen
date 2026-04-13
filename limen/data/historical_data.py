@@ -124,7 +124,7 @@ class HistoricalData:
         '''
 
         self.data = query_raw_data(
-            table_name='binance_trades',
+            table_name='binance_trades_complete',
             id_col='trade_id',
             select_cols=['trade_id', 'timestamp', 'price', 'quantity', 'is_buyer_maker'],
             month_year=month_year,

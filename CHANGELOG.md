@@ -648,3 +648,7 @@
 - Remove legacy non-core dependencies (`matplotlib`, `seaborn`, `streamlit`, `plotly`, `ipython`, `mcp`, and `playwright`) from `pyproject.toml`
 - Replace temp-file based `Log.read_from_file()` loading with in-memory CSV parsing while preserving duplicate-header cleanup
 - Add regression coverage for file-backed log loading and whitespace trimming in `tests.run`
+
+## v1.53.0 on 13th of April, 2026
+
+- Switch Limen spot raw-trade and kline queries from `tdw.binance_trades` to `tdw.binance_trades_complete` so `HistoricalData` sees the daily overlay view while preserving finalized monthly history

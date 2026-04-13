@@ -149,7 +149,7 @@ def query_klines_data(n_rows: int | None = None,
         db_table = 'FROM tdw.binance_futures_trades '
         id_col = 'futures_trade_id'
     else:
-        db_table = 'FROM tdw.binance_trades '
+        db_table = 'FROM tdw.binance_trades_complete '
         id_col = 'trade_id'
 
     query = (
