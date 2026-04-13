@@ -6,7 +6,7 @@ UniversalExperimentLoop._write_metadata. UEL accepts any object with this
 shape (see limen/experiment/experiment_core.py:70-75).
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
-will be removed when RFC-1005 (YAML compiler) lands. See README.md.
+will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 import logging

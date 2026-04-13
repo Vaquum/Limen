@@ -6,7 +6,7 @@ Two small mappings that cannot be derived by introspection:
 - SCALER_NAME_MAP: PascalCase class name (Loop's format) → SCALER_REGISTRY key
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
-will be removed when RFC-1005 (YAML compiler) lands. See README.md.
+will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 

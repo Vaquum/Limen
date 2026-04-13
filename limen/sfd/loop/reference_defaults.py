@@ -6,7 +6,7 @@ filtered to only those keys that match the reference architecture function's
 signature.
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
-will be removed when RFC-1005 (YAML compiler) lands. See README.md.
+will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 import inspect

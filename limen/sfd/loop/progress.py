@@ -7,7 +7,7 @@ caught (see limen/experiment/feedback_controller.py:240-263), so a callback
 that only writes to disk is safe.
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
-will be removed when RFC-1005 (YAML compiler) lands. See README.md.
+will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 import json

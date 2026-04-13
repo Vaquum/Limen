@@ -10,7 +10,7 @@ The progress callback writes progress.json on every round so a polling
 backend can serve live updates.
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
-will be removed when RFC-1005 (YAML compiler) lands. See README.md.
+will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 import argparse

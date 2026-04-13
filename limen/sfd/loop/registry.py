@@ -1,7 +1,7 @@
 '''Name → callable registries for the Loop payload compiler.
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
-will be removed when RFC-1005 (YAML compiler) lands. See README.md.
+will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 from collections.abc import Callable
