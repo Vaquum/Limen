@@ -14,11 +14,14 @@ will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 import argparse
+import inspect
 import json
 import logging
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -36,6 +39,85 @@ logger = logging.getLogger(__name__)
 
 _DATA_API_AUTH_TOKEN_ENV = 'DATA_API_AUTH_TOKEN'  # noqa: S105 — env var name, not a secret
 _LOOP_ENV = 'LOOP_ENV'
+
+
+def _annotation_accepts_int(annotation: Any) -> bool:
+
+    '''
+    Compute whether a type annotation accepts `int` values.
+
+    Handles plain `int`, `int | None`, `Optional[int]`, and any Union
+    containing int.
+
+    Args:
+        annotation: The annotation object from inspect.Parameter.annotation
+
+    Returns:
+        bool: True if int is a valid value for this annotation
+
+    '''
+
+    if annotation is int:
+        return True
+    args = getattr(annotation, '__args__', None)
+    if args is None:
+        return False
+    return int in args
+
+
+def _coerce_string_params_by_signature(method: Callable,
+                                       params: dict[str, Any]) -> dict[str, Any]:
+
+    '''
+    Compute a params dict with string values coerced to int when the method
+    signature annotates the parameter as int.
+
+    Loop web-form inputs come through as strings (e.g. '3600'), but
+    HistoricalData methods expect typed values (e.g. kline_size: int). Coerce
+    at the edge so the rest of the stack sees correct types, and fail loudly
+    with a clear message when a string value cannot be converted.
+
+    Args:
+        method (Callable): The HistoricalData method about to be called.
+            Its annotations drive the coercion
+        params (dict): Raw params as pulled from the payload
+
+    Returns:
+        dict: Same keys as params, with string values coerced to int where
+            appropriate
+
+    Raises:
+        ValueError: When a string value cannot be converted to the annotated
+            type. The message includes the param name and offending value
+
+    '''
+
+    try:
+        sig = inspect.signature(method)
+    except (TypeError, ValueError):
+        return dict(params)
+
+    coerced: dict[str, Any] = {}
+    for pname, pvalue in params.items():
+        if not isinstance(pvalue, str):
+            coerced[pname] = pvalue
+            continue
+        param_sig = sig.parameters.get(pname)
+        if param_sig is None:
+            coerced[pname] = pvalue
+            continue
+        if not _annotation_accepts_int(param_sig.annotation):
+            coerced[pname] = pvalue
+            continue
+        try:
+            coerced[pname] = int(pvalue)
+        except ValueError as exc:
+            raise ValueError(
+                f"Cannot coerce data source param {pname}={pvalue!r} to int "
+                f"(method {method.__name__} expects "
+                f"{param_sig.annotation}): {exc}"
+            ) from exc
+    return coerced
 
 
 def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
@@ -97,6 +179,12 @@ def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
     auth_token = os.getenv(_DATA_API_AUTH_TOKEN_ENV)
     hd = HistoricalData(auth_token=auth_token)
     method = getattr(hd, method_name)
+
+    # Loop web-form values arrive as strings; coerce to int where the
+    # method signature requires it (e.g. kline_size, n_rows) so the
+    # ClickHouse query assembly downstream gets typed values.
+    fetch_params = _coerce_string_params_by_signature(method, fetch_params)
+
     method(**fetch_params)
 
     return hd.data
