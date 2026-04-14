@@ -9,6 +9,7 @@ NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
 will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
+import re
 from typing import Any
 
 from limen.data import HistoricalData
@@ -120,6 +121,14 @@ class LoopSFD:
                 payload_config if payload_config is not None
                 else dict(_DEFAULT_DATA_SOURCE)
             )
+
+        # Map from foundational-SFD style placeholder names (e.g. 'roc_period')
+        # to the namespaced round_params keys LoopSFD actually produces
+        # (e.g. 'indicator_roc_period'). Used by _rewrite_format_string to
+        # translate user-supplied format strings at compile time so that
+        # Manifest._resolve_params can interpolate them against round_params
+        # at runtime.
+        self._component_alias_map = self._build_component_alias_map()
 
         # Required by UniversalExperimentLoop at experiment_core.py:70 and by
         # UEL._write_metadata which raises if the SFD has no __name__
@@ -297,9 +306,14 @@ class LoopSFD:
         Compute manifest-level params for a component, wiring search params via round_params.
 
         For each parameter:
-            - If the namespaced key ({component_type}_{name}_{param_name}) exists
-              in parameterSpace, the param is passed as a string reference so
-              Manifest._resolve_params will substitute the round_params value
+            - If the value is a format-string template (contains '{...}'),
+              rewrite any placeholders that match the un-namespaced alias of a
+              known component param (e.g. 'roc_period' -> 'indicator_roc_period')
+              and keep it as a literal. Manifest._resolve_params will then
+              interpolate it against round_params at runtime via str.format
+            - Otherwise if the namespaced key ({component_type}_{name}_{param_name})
+              exists in parameterSpace, the param is passed as a string reference
+              so Manifest._resolve_params will substitute the round_params value
               at runtime
             - Otherwise the param is passed as a literal value
 
@@ -316,9 +330,92 @@ class LoopSFD:
         result: dict[str, Any] = {}
         param_space = self._payload.get('parameterSpace') or {}
         for pname, pvalue in params.items():
+            if isinstance(pvalue, str) and '{' in pvalue and '}' in pvalue:
+                # Format strings bypass the parameterSpace-reference path.
+                # Rewrite placeholders to namespaced round_params keys so the
+                # runtime str.format resolves them correctly, then pass as a
+                # literal. If we routed through parameterSpace instead,
+                # _resolve_params would return the value from round_params
+                # terminally (no .format call) and the curly braces would end
+                # up as literal characters in the eventual column name.
+                result[pname] = self._rewrite_format_string(pvalue)
+                continue
             namespaced = f"{component_type}_{name}_{pname}"
             result[pname] = namespaced if namespaced in param_space else pvalue
         return result
+
+    def _build_component_alias_map(self) -> dict[str, str]:
+
+        '''
+        Compute un-namespaced → namespaced alias map from payload components.
+
+        For each indicator/feature/label in the payload, emit an alias that
+        mirrors the foundational-SFD convention ('{component_name}_{param_name}'
+        → 'indicator_{component_name}_{param_name}', etc). This lets users
+        write format strings like 'roc_{roc_period}' that look identical to
+        the foundational SFD style while LoopSFD silently translates them
+        into the round_params namespace.
+
+        Returns:
+            dict[str, str]: Alias map keyed on the un-namespaced placeholder
+                name (e.g. 'roc_period'), valued with the namespaced
+                round_params key (e.g. 'indicator_roc_period')
+
+        '''
+
+        alias_map: dict[str, str] = {}
+        component_groups = (
+            ('indicator', self._payload.get('indicators') or []),
+            ('feature', self._payload.get('features') or []),
+            ('label', self._payload.get('labels') or []),
+        )
+        for component_type, components in component_groups:
+            for component in components:
+                comp_name = (component or {}).get('name')
+                if not comp_name:
+                    continue
+                comp_params = (component or {}).get('params') or {}
+                for param_name in comp_params:
+                    alias = f"{comp_name}_{param_name}"
+                    namespaced = f"{component_type}_{comp_name}_{param_name}"
+                    # First write wins so later components cannot clobber
+                    # earlier aliases if two components happen to share a
+                    # (name, param) pair — unlikely but defensive
+                    alias_map.setdefault(alias, namespaced)
+        return alias_map
+
+    def _rewrite_format_string(self, value: str) -> str:
+
+        '''
+        Compute a format string with un-namespaced placeholders rewritten to namespaced keys.
+
+        For each '{placeholder}' in the input, if 'placeholder' is a key in
+        the component alias map, replace it with '{alias_map[placeholder]}'.
+        Placeholders that are not in the alias map are left unchanged —
+        those may already be namespaced keys (e.g. 'indicator_roc_period')
+        that resolve directly at runtime, or they may be unresolvable and
+        raise KeyError at str.format time (same failure mode as before).
+
+        Args:
+            value (str): A format-string template (may contain 0..N
+                '{name}' placeholders)
+
+        Returns:
+            str: The input with matching placeholders rewritten
+
+        '''
+
+        if not self._component_alias_map:
+            return value
+
+        def _replace(match: re.Match) -> str:
+            placeholder = match.group(1)
+            namespaced = self._component_alias_map.get(placeholder)
+            if namespaced is None:
+                return match.group(0)
+            return '{' + namespaced + '}'
+
+        return re.sub(r'\{([^{}]+)\}', _replace, value)
 
     def _wire_fitted_label(self,
                            target_builder: Any,
