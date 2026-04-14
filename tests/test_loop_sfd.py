@@ -32,7 +32,11 @@ from limen.sfd.loop.registry import (
     MODEL_REGISTRY,
     SCALER_REGISTRY,
 )
-from limen.sfd.loop.run import _fetch_data_from_payload
+from limen.sfd.loop.run import (
+    _annotation_accepts_int,
+    _coerce_string_params_by_signature,
+    _fetch_data_from_payload,
+)
 from limen.sfd.reference_architecture import logreg_binary as _logreg_binary_func
 
 
@@ -597,6 +601,131 @@ def test_fetch_data_no_data_source_item_raises():
     raise AssertionError('Expected ValueError for missing data_source item')
 
 
+def test_annotation_accepts_int_handles_unions_and_plain():
+    def _plain(n: int) -> None: ...
+    def _optional(n: int | None = None) -> None: ...
+    def _string(s: str) -> None: ...
+    def _union(n: int | str = 1) -> None: ...
+    def _unannotated(n) -> None: ...
+
+    import inspect
+    assert _annotation_accepts_int(inspect.signature(_plain).parameters['n'].annotation)
+    assert _annotation_accepts_int(inspect.signature(_optional).parameters['n'].annotation)
+    assert not _annotation_accepts_int(inspect.signature(_string).parameters['s'].annotation)
+    assert _annotation_accepts_int(inspect.signature(_union).parameters['n'].annotation)
+    assert not _annotation_accepts_int(inspect.signature(_unannotated).parameters['n'].annotation)
+
+
+def test_coerce_string_params_by_signature_converts_int_strings():
+    # Uses the real HistoricalData.get_spot_klines signature:
+    #   kline_size: int, n_rows: int | None, start_date_limit: str | None
+    coerced = _coerce_string_params_by_signature(
+        HistoricalData.get_spot_klines,
+        {
+            'kline_size': '3600',
+            'n_rows': '5000',
+            'start_date_limit': '2025-01-01',
+        },
+    )
+    assert coerced['kline_size'] == 3600
+    assert isinstance(coerced['kline_size'], int)
+    assert coerced['n_rows'] == 5000
+    assert isinstance(coerced['n_rows'], int)
+    # String-annotated param is left alone
+    assert coerced['start_date_limit'] == '2025-01-01'
+    assert isinstance(coerced['start_date_limit'], str)
+
+
+def test_coerce_string_params_leaves_non_string_values_alone():
+    coerced = _coerce_string_params_by_signature(
+        HistoricalData.get_spot_klines,
+        {'kline_size': 3600, 'n_rows': None},
+    )
+    assert coerced['kline_size'] == 3600
+    assert coerced['n_rows'] is None
+
+
+def test_coerce_string_params_ignores_unknown_param_names():
+    coerced = _coerce_string_params_by_signature(
+        HistoricalData.get_spot_klines,
+        {'kline_size': '3600', 'bogus_param': 'some_value'},
+    )
+    assert coerced['kline_size'] == 3600
+    assert coerced['bogus_param'] == 'some_value'
+
+
+def test_coerce_string_params_raises_clear_error_on_bad_string():
+    try:
+        _coerce_string_params_by_signature(
+            HistoricalData.get_spot_klines,
+            {'kline_size': 'not_a_number'},
+        )
+    except ValueError as e:
+        msg = str(e)
+        assert 'kline_size' in msg
+        assert 'not_a_number' in msg
+        assert 'get_spot_klines' in msg
+        return
+    raise AssertionError('Expected ValueError for non-numeric string')
+
+
+class _TypedHistoricalDataStub:
+
+    '''Stub with typed get_spot_klines so coercion logic exercises signature inspection.'''
+
+    last_auth_token: str | None = None
+    last_fetch_kwargs: dict | None = None
+
+    def __init__(self, auth_token=None):
+        type(self).last_auth_token = auth_token
+        self.auth_token = auth_token
+        self.data = pl.DataFrame({
+            'datetime': ['2025-01-01T00:00:00'],
+            'open': [100.0], 'high': [101.0], 'low': [99.0], 'close': [100.5],
+            'volume': [1000.0],
+        })
+
+    def get_spot_klines(self,
+                        n_rows: int | None = None,
+                        kline_size: int = 1,
+                        start_date_limit: str | None = None) -> None:
+        type(self).last_fetch_kwargs = {
+            'n_rows': n_rows,
+            'kline_size': kline_size,
+            'start_date_limit': start_date_limit,
+        }
+
+
+def test_fetch_data_coerces_kline_size_string_through_full_path():
+    # Verify the coercion is wired into _fetch_data_from_payload, not just
+    # the helper in isolation.
+    os.environ.pop('LOOP_ENV', None)
+    _TypedHistoricalDataStub.last_auth_token = None
+    _TypedHistoricalDataStub.last_fetch_kwargs = None
+    original = _patch_historical_data(None, stub_cls=_TypedHistoricalDataStub)
+    try:
+        payload = {
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {
+                        'method': 'get_spot_klines',
+                        'kline_size': '3600',
+                        'start_date_limit': '2025-01-01',
+                    },
+                }],
+            },
+        }
+        _fetch_data_from_payload(payload)
+        kwargs = _TypedHistoricalDataStub.last_fetch_kwargs
+        assert kwargs is not None
+        assert kwargs['kline_size'] == 3600
+        assert isinstance(kwargs['kline_size'], int)
+        assert kwargs['start_date_limit'] == '2025-01-01'
+    finally:
+        _restore_historical_data(original)
+
+
 def test_loop_sfd_unknown_reference_architecture_raises():
     payload = _load_payload()
     payload['referenceArchitecture'] = 'not_a_real_arch'
@@ -972,6 +1101,12 @@ _TESTS = [
     test_fetch_data_unknown_method_raises,
     test_fetch_data_missing_method_key_raises,
     test_fetch_data_no_data_source_item_raises,
+    test_annotation_accepts_int_handles_unions_and_plain,
+    test_coerce_string_params_by_signature_converts_int_strings,
+    test_coerce_string_params_leaves_non_string_values_alone,
+    test_coerce_string_params_ignores_unknown_param_names,
+    test_coerce_string_params_raises_clear_error_on_bad_string,
+    test_fetch_data_coerces_kline_size_string_through_full_path,
     test_loop_sfd_unknown_reference_architecture_raises,
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,
