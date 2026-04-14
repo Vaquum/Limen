@@ -16,17 +16,90 @@ will be removed when RFC-1005 (YAML compiler) lands.
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
+import polars as pl
+
 from limen import UniversalExperimentLoop
+from limen.data import HistoricalData
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
 from limen.sfd.loop.loop_sfd import LoopSFD
+from limen.sfd.loop.meta import DATA_SOURCE_REGISTRY
 from limen.sfd.loop.progress import make_progress_callback
 
 
 logger = logging.getLogger(__name__)
+
+
+_DATA_API_AUTH_TOKEN_ENV = 'DATA_API_AUTH_TOKEN'  # noqa: S105 — env var name, not a secret
+_LOOP_ENV = 'LOOP_ENV'
+
+
+def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
+
+    '''
+    Compute the raw DataFrame for an experiment from the payload data source.
+
+    Creates a HistoricalData instance with auth_token sourced from the
+    DATA_API_AUTH_TOKEN environment variable (None when unset), then calls
+    the method named in payload.inputData.selectedItems[0].params.method
+    with the remaining params. HistoricalData methods set self.data rather
+    than returning, so we read it back from the instance.
+
+    When LOOP_ENV=test, falls back to HistoricalData._get_data_for_test to
+    keep local smoke tests runnable without real credentials.
+
+    Args:
+        payload (dict): Loop web UI experiment design payload
+
+    Returns:
+        pl.DataFrame: Raw data ready to pass to UniversalExperimentLoop
+
+    Raises:
+        ValueError: If the payload has no data_source selectedItem, the
+            method key is missing, or the method name is not in
+            DATA_SOURCE_REGISTRY
+
+    '''
+
+    if os.getenv(_LOOP_ENV) == 'test':
+        hd = HistoricalData()
+        hd._get_data_for_test()
+        return hd.data
+
+    items = (payload.get('inputData') or {}).get('selectedItems') or []
+    ds_item = next(
+        (i for i in items if (i or {}).get('name') == 'data_source'),
+        None,
+    )
+    if ds_item is None:
+        raise ValueError(
+            "payload.inputData.selectedItems has no entry with name='data_source'"
+        )
+
+    ds_params = dict(ds_item.get('params') or {})
+    method_name = ds_params.pop('method', None)
+    if method_name is None:
+        raise ValueError(
+            "data_source params missing required key: 'method'"
+        )
+    if method_name not in DATA_SOURCE_REGISTRY:
+        raise ValueError(
+            f"Unknown data source method '{method_name}'. "
+            f"Allowed: {sorted(DATA_SOURCE_REGISTRY)}"
+        )
+
+    fetch_params = {k: v for k, v in ds_params.items() if v is not None}
+
+    auth_token = os.getenv(_DATA_API_AUTH_TOKEN_ENV)
+    hd = HistoricalData(auth_token=auth_token)
+    method = getattr(hd, method_name)
+    method(**fetch_params)
+
+    return hd.data
 
 
 def run_experiment(payload_path: Path,
@@ -57,6 +130,12 @@ def run_experiment(payload_path: Path,
     # Audit copy — survives the run, helps reproduce later
     (experiment_dir / 'payload.json').write_text(payload_text)
 
+    # Fetch data explicitly using the payload's data source config so that
+    # auth_token (from DATA_API_AUTH_TOKEN env) can be injected into
+    # HistoricalData at instance construction time. The fetched DataFrame is
+    # passed to UEL via data=, which bypasses manifest.fetch_data_for_env.
+    raw_data = _fetch_data_from_payload(payload)
+
     sfd = LoopSFD(payload)
 
     domain = ParamDomain(sfd.params())
@@ -67,6 +146,7 @@ def run_experiment(payload_path: Path,
 
     uel = UniversalExperimentLoop(
         sfd=sfd,
+        data=raw_data,
         search_strategy=strategy,
         feedback_interval=1,
         experiment_dir=experiment_dir,
