@@ -703,6 +703,153 @@ def test_quantile_flag_params_routes_through_round_params():
     assert params['label_quantile_flag_q'] == [0.3]
 
 
+def test_component_alias_map_built_from_payload():
+    payload = {
+        'referenceArchitecture': 'logreg_binary',
+        'parameterSpace': {},
+        'inputData': {'splitRatios': {'train': 70, 'val': 15, 'test': 15}},
+        'indicators': [
+            {'name': 'roc', 'params': {'price_col': 'close', 'period': 10}},
+        ],
+        'features': [
+            {'name': 'atr_percent_sma', 'params': {'period': 14}},
+        ],
+        'labels': [
+            {'name': 'quantile_flag', 'params': {'col': 'close', 'q': 0.5}},
+        ],
+    }
+    sfd = LoopSFD(payload)
+    expected = {
+        'roc_price_col': 'indicator_roc_price_col',
+        'roc_period': 'indicator_roc_period',
+        'atr_percent_sma_period': 'feature_atr_percent_sma_period',
+        'quantile_flag_col': 'label_quantile_flag_col',
+        'quantile_flag_q': 'label_quantile_flag_q',
+    }
+    assert sfd._component_alias_map == expected
+
+
+def test_rewrite_format_string_translates_namespaced_placeholder():
+    payload = {
+        'referenceArchitecture': 'logreg_binary',
+        'parameterSpace': {},
+        'inputData': {'splitRatios': {'train': 70, 'val': 15, 'test': 15}},
+        'indicators': [{'name': 'roc', 'params': {'period': 10}}],
+        'features': [],
+        'labels': [],
+    }
+    sfd = LoopSFD(payload)
+    assert sfd._rewrite_format_string('roc_{roc_period}') == 'roc_{indicator_roc_period}'
+
+
+def test_rewrite_format_string_leaves_unknown_placeholder_alone():
+    payload = {
+        'referenceArchitecture': 'logreg_binary',
+        'parameterSpace': {},
+        'inputData': {'splitRatios': {'train': 70, 'val': 15, 'test': 15}},
+        'indicators': [{'name': 'roc', 'params': {'period': 10}}],
+        'features': [],
+        'labels': [],
+    }
+    sfd = LoopSFD(payload)
+    # 'indicator_roc_period' isn't an alias key (it's the namespaced target,
+    # not the un-namespaced source), so the placeholder passes through.
+    # At runtime str.format will resolve it directly against round_params.
+    assert sfd._rewrite_format_string('roc_{indicator_roc_period}') == 'roc_{indicator_roc_period}'
+    # Unknown placeholder: passes through unchanged; would raise KeyError
+    # at runtime str.format time (same failure mode as pre-fix).
+    assert sfd._rewrite_format_string('{totally_unknown}') == '{totally_unknown}'
+
+
+def test_rewrite_format_string_leaves_plain_string_alone():
+    payload = {
+        'referenceArchitecture': 'logreg_binary',
+        'parameterSpace': {},
+        'inputData': {'splitRatios': {'train': 70, 'val': 15, 'test': 15}},
+        'indicators': [{'name': 'roc', 'params': {'period': 10}}],
+        'features': [],
+        'labels': [],
+    }
+    sfd = LoopSFD(payload)
+    assert sfd._rewrite_format_string('close') == 'close'
+    assert sfd._rewrite_format_string('roc_1') == 'roc_1'
+
+
+def test_wire_params_bypasses_parameter_space_for_format_strings():
+    # Even when label_quantile_flag_col IS in parameterSpace, a format-string
+    # valued col must be kept as a literal (post-rewrite) rather than routed
+    # through round_params — otherwise _resolve_params would return the
+    # round_params value terminally without applying .format().
+    payload = {
+        'referenceArchitecture': 'logreg_binary',
+        'parameterSpace': {
+            'indicator_roc_period': [10, 14, 20],
+            'label_quantile_flag_col': ['roc_{roc_period}'],
+            'label_quantile_flag_q': [0.95],
+        },
+        'inputData': {'splitRatios': {'train': 70, 'val': 15, 'test': 15}},
+        'indicators': [{'name': 'roc', 'params': {'price_col': 'close', 'period': 10}}],
+        'features': [],
+        'labels': [
+            {'name': 'quantile_flag', 'params': {'col': 'roc_{roc_period}', 'q': 0.95}},
+        ],
+    }
+    sfd = LoopSFD(payload)
+    m = sfd.manifest()
+    fp, _func, bp = m.target_transforms[0]
+    # The literal format string should survive as-is (rewritten), NOT
+    # collapse to the parameterSpace reference 'label_quantile_flag_col'.
+    assert bp['col'] == 'roc_{indicator_roc_period}'
+    # q is not a format string, so it still routes through round_params as
+    # a reference.
+    assert fp[0][2]['col'] == 'roc_{indicator_roc_period}'
+    assert fp[0][2]['q'] == 'label_quantile_flag_q'
+
+
+def test_failing_payload_end_to_end_with_uel():
+    # Uses the real payload shape that was originally failing:
+    #   - label_quantile_flag_col IS in parameterSpace
+    #   - col uses the un-namespaced {roc_period} placeholder
+    # After the _wire_params fix, the format string is rewritten and
+    # bypasses the parameterSpace-reference path, so .format() resolves
+    # to 'roc_<period>' at runtime.
+    os.environ['LOOP_ENV'] = 'test'
+
+    fixture_path = Path(__file__).parent / 'fixtures' / 'loop_template_test_failing.json'
+    payload = json.loads(fixture_path.read_text())
+
+    sfd = LoopSFD(payload)
+    domain = ParamDomain(sfd.params())
+    strategy = RandomStrategy(domain, seed=42)
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir) / 'exp'
+        experiment_dir.mkdir(parents=True)
+
+        progress_file = experiment_dir / 'progress.json'
+        progress_cb = make_progress_callback(progress_file, total=3)
+
+        uel = UniversalExperimentLoop(
+            sfd=sfd,
+            search_strategy=strategy,
+            feedback_interval=1,
+            checkpoint_interval=1,
+            experiment_dir=experiment_dir,
+            intra_callback=progress_cb,
+        )
+
+        uel.run(
+            experiment_name=str(experiment_dir / 'run'),
+            n_permutations=3,
+        )
+
+        assert (experiment_dir / 'results.csv').exists()
+        assert (experiment_dir / 'metadata.json').exists()
+        assert progress_file.exists()
+        data = json.loads(progress_file.read_text())
+        assert data['total'] == 3
+
+
 def test_quantile_flag_end_to_end_with_uel():
     os.environ['LOOP_ENV'] = 'test'
 
@@ -832,6 +979,12 @@ _TESTS = [
     test_quantile_flag_compiles_as_fitted_transform,
     test_forward_breakout_label_remains_plain_add_transform,
     test_quantile_flag_params_routes_through_round_params,
+    test_component_alias_map_built_from_payload,
+    test_rewrite_format_string_translates_namespaced_placeholder,
+    test_rewrite_format_string_leaves_unknown_placeholder_alone,
+    test_rewrite_format_string_leaves_plain_string_alone,
+    test_wire_params_bypasses_parameter_space_for_format_strings,
+    test_failing_payload_end_to_end_with_uel,
     test_quantile_flag_end_to_end_with_uel,
     test_loop_sfd_end_to_end_with_uel,
 ]

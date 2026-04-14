@@ -1,0 +1,116 @@
+{
+  "parameterSpace": {
+    "reference_architecture": [
+      "logreg_binary"
+    ],
+    "input_split_train": [
+      70
+    ],
+    "input_split_val": [
+      10
+    ],
+    "input_split_test": [
+      20
+    ],
+    "input_selected_items": [
+      "data_source"
+    ],
+    "input_data_source_method": [
+      "get_spot_klines"
+    ],
+    "input_data_source_kline_size": [
+      "3600"
+    ],
+    "input_data_source_start_date_limit": [
+      "2025-01-01"
+    ],
+    "indicator_selected_items": [
+      "roc"
+    ],
+    "indicator_roc_price_col": [
+      "close"
+    ],
+    "indicator_roc_period": [
+      10,
+      14,
+      20
+    ],
+    "feature_selected_items": [
+      "atr_percent_sma"
+    ],
+    "feature_atr_percent_sma_period": [
+      14,
+      10,
+      20
+    ],
+    "scaler_selected_items": [
+      "logreg"
+    ],
+    "label_selected_items": [
+      "quantile_flag"
+    ],
+    "label_quantile_flag_col": [
+      "roc_{roc_period}"
+    ],
+    "label_quantile_flag_q": [
+      0.95
+    ]
+  },
+  "referenceArchitecture": "logreg_binary",
+  "inputData": {
+    "selectedItems": [
+      {
+        "id": "482526c3-a4ed-43f8-817a-d9031bea470b",
+        "name": "data_source",
+        "params": {
+          "method": "get_spot_klines",
+          "kline_size": "3600",
+          "start_date_limit": "2025-01-01"
+        }
+      }
+    ],
+    "splitRatios": {
+      "train": 70,
+      "val": 10,
+      "test": 20
+    }
+  },
+  "indicators": [
+    {
+      "id": "336d23a0-379f-4b8c-82f3-4f3e164ca832",
+      "name": "roc",
+      "params": {
+        "price_col": "close",
+        "period": 10
+      }
+    }
+  ],
+  "features": [
+    {
+      "id": "3be6225c-6cf0-47fa-ad70-fafa528a41b9",
+      "name": "atr_percent_sma",
+      "params": {
+        "period": 14
+      }
+    }
+  ],
+  "scaler": {
+    "selectedItems": [
+      {
+        "id": "5409ea63-ca94-4e68-a312-194ff48d32b1",
+        "name": "logreg",
+        "params": {}
+      }
+    ]
+  },
+  "labels": [
+    {
+      "id": "6cb47661-ddd3-4cb3-a07d-c7c487cb0f2e",
+      "name": "quantile_flag",
+      "params": {
+        "col": "roc_{roc_period}",
+        "q": 0.95
+      }
+    }
+  ]
+}
