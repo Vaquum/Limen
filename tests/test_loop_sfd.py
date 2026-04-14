@@ -32,6 +32,7 @@ from limen.sfd.loop.registry import (
     MODEL_REGISTRY,
     SCALER_REGISTRY,
 )
+from limen.sfd.loop.run import _fetch_data_from_payload
 from limen.sfd.reference_architecture import logreg_binary as _logreg_binary_func
 
 
@@ -401,6 +402,201 @@ def test_loop_sfd_params_excludes_input_data_source_keys():
         assert not key.startswith('input_data_source_'), f"leaked: {key}"
 
 
+class _HistoricalDataStub:
+
+    '''Test double for HistoricalData that records constructor + method calls.'''
+
+    last_auth_token: str | None = None
+    last_method: str | None = None
+    last_fetch_kwargs: dict | None = None
+
+    def __init__(self, auth_token=None):
+        type(self).last_auth_token = auth_token
+        self.auth_token = auth_token
+        self.data = pl.DataFrame({
+            'datetime': ['2025-01-01T00:00:00'],
+            'open': [100.0], 'high': [101.0], 'low': [99.0], 'close': [100.5],
+            'volume': [1000.0],
+        })
+
+    def get_spot_klines(self, **kwargs):
+        type(self).last_method = 'get_spot_klines'
+        type(self).last_fetch_kwargs = dict(kwargs)
+
+    def get_futures_klines(self, **kwargs):
+        type(self).last_method = 'get_futures_klines'
+        type(self).last_fetch_kwargs = dict(kwargs)
+
+    def _get_data_for_test(self, n_rows=None):
+        type(self).last_method = '_get_data_for_test'
+        type(self).last_fetch_kwargs = {'n_rows': n_rows}
+
+
+def _reset_hd_stub():
+    _HistoricalDataStub.last_auth_token = None
+    _HistoricalDataStub.last_method = None
+    _HistoricalDataStub.last_fetch_kwargs = None
+
+
+def _patch_historical_data(monkey_attr_owner, stub_cls=_HistoricalDataStub):
+    import limen.sfd.loop.run as _run_mod
+    original = _run_mod.HistoricalData
+    _run_mod.HistoricalData = stub_cls
+    return original
+
+
+def _restore_historical_data(original):
+    import limen.sfd.loop.run as _run_mod
+    _run_mod.HistoricalData = original
+
+
+def test_fetch_data_auth_token_flows_from_env():
+    os.environ.pop('LOOP_ENV', None)
+    os.environ['DATA_API_AUTH_TOKEN'] = 'test_token_xyz'  # noqa: S105
+    _reset_hd_stub()
+    original = _patch_historical_data(None)
+    try:
+        payload = {
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {
+                        'method': 'get_spot_klines',
+                        'kline_size': 3600,
+                        'start_date_limit': '2025-01-01',
+                    },
+                }],
+            },
+        }
+        data = _fetch_data_from_payload(payload)
+        assert _HistoricalDataStub.last_auth_token == 'test_token_xyz'  # noqa: S105
+        assert _HistoricalDataStub.last_method == 'get_spot_klines'
+        assert _HistoricalDataStub.last_fetch_kwargs == {
+            'kline_size': 3600,
+            'start_date_limit': '2025-01-01',
+        }
+        assert isinstance(data, pl.DataFrame)
+        assert data.height == 1
+    finally:
+        _restore_historical_data(original)
+        os.environ.pop('DATA_API_AUTH_TOKEN', None)
+
+
+def test_fetch_data_auth_token_is_none_when_env_unset():
+    os.environ.pop('LOOP_ENV', None)
+    os.environ.pop('DATA_API_AUTH_TOKEN', None)
+    _reset_hd_stub()
+    original = _patch_historical_data(None)
+    try:
+        payload = {
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {'method': 'get_spot_klines', 'kline_size': 3600},
+                }],
+            },
+        }
+        _fetch_data_from_payload(payload)
+        assert _HistoricalDataStub.last_auth_token is None
+    finally:
+        _restore_historical_data(original)
+
+
+def test_fetch_data_test_env_uses_local_test_dataset():
+    os.environ['LOOP_ENV'] = 'test'
+    _reset_hd_stub()
+    original = _patch_historical_data(None)
+    try:
+        payload = {
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {
+                        'method': 'get_spot_klines',
+                        'kline_size': 3600,
+                    },
+                }],
+            },
+        }
+        _fetch_data_from_payload(payload)
+        assert _HistoricalDataStub.last_method == '_get_data_for_test'
+    finally:
+        _restore_historical_data(original)
+        # Leave LOOP_ENV=test set for subsequent tests (they assume it)
+
+
+def test_fetch_data_strips_none_params():
+    os.environ.pop('LOOP_ENV', None)
+    _reset_hd_stub()
+    original = _patch_historical_data(None)
+    try:
+        payload = {
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {
+                        'method': 'get_spot_klines',
+                        'kline_size': 3600,
+                        'n_rows': None,
+                        'start_date_limit': None,
+                    },
+                }],
+            },
+        }
+        _fetch_data_from_payload(payload)
+        assert 'n_rows' not in _HistoricalDataStub.last_fetch_kwargs
+        assert 'start_date_limit' not in _HistoricalDataStub.last_fetch_kwargs
+        assert _HistoricalDataStub.last_fetch_kwargs == {'kline_size': 3600}
+    finally:
+        _restore_historical_data(original)
+
+
+def test_fetch_data_unknown_method_raises():
+    os.environ.pop('LOOP_ENV', None)
+    try:
+        _fetch_data_from_payload({
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {'method': 'not_a_real_method'},
+                }],
+            },
+        })
+    except ValueError as e:
+        assert 'Unknown data source method' in str(e)
+        return
+    raise AssertionError('Expected ValueError for unknown method')
+
+
+def test_fetch_data_missing_method_key_raises():
+    os.environ.pop('LOOP_ENV', None)
+    try:
+        _fetch_data_from_payload({
+            'inputData': {
+                'selectedItems': [{
+                    'name': 'data_source',
+                    'params': {'kline_size': 3600},
+                }],
+            },
+        })
+    except ValueError as e:
+        assert 'method' in str(e)
+        return
+    raise AssertionError('Expected ValueError for missing method key')
+
+
+def test_fetch_data_no_data_source_item_raises():
+    os.environ.pop('LOOP_ENV', None)
+    try:
+        _fetch_data_from_payload({
+            'inputData': {'selectedItems': []},
+        })
+    except ValueError as e:
+        assert 'data_source' in str(e)
+        return
+    raise AssertionError('Expected ValueError for missing data_source item')
+
+
 def test_loop_sfd_unknown_reference_architecture_raises():
     payload = _load_payload()
     payload['referenceArchitecture'] = 'not_a_real_arch'
@@ -622,6 +818,13 @@ _TESTS = [
     test_loop_sfd_data_source_falls_back_to_default_when_payload_empty,
     test_loop_sfd_unknown_data_source_method_raises,
     test_loop_sfd_params_excludes_input_data_source_keys,
+    test_fetch_data_auth_token_flows_from_env,
+    test_fetch_data_auth_token_is_none_when_env_unset,
+    test_fetch_data_test_env_uses_local_test_dataset,
+    test_fetch_data_strips_none_params,
+    test_fetch_data_unknown_method_raises,
+    test_fetch_data_missing_method_key_raises,
+    test_fetch_data_no_data_source_item_raises,
     test_loop_sfd_unknown_reference_architecture_raises,
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,
