@@ -657,13 +657,13 @@ class Manifest:
                     pre_transform_columns,
                 )
 
-            data = data.drop_nulls()
+            data = data.fill_nan(None).drop_nulls()
 
             data, all_fitted_params = _apply_scaler(
                 self, data, round_params, all_fitted_params, is_training=(i == 0)
             )
 
-            split_data[i] = data.drop_nulls()
+            split_data[i] = data.fill_nan(None).drop_nulls()
 
         non_empty_splits = [s for s in split_data if s.height > 0]
         if non_empty_splits:
