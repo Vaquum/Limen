@@ -16,7 +16,7 @@ Does **not** own indicators, higher-level features, manifests, or model training
 
 | Entry point | Use it when | Notes |
 |-------------|-------------|-------|
-| `HistoricalData` | You need spot or futures klines, trades, or agg-trades | The main public class exported by `limen.data` |
+| `HistoricalData` | You need file-backed BTCUSDT spot klines or raw file ingestion | The main public class exported by `limen.data` |
 | `compute_data_bars()` | You want to aggregate kline rows into threshold bars before feature engineering | Used by manifests through `set_bar_formation()` |
 | `split_sequential()` | You need ordered train/validation/test windows | Used by manifest-driven prep |
 | `split_data_to_prep_output()` | You need the standard `data_dict` structure | Converts split frames into model-ready keys like `x_train` and `y_test` |
@@ -33,8 +33,7 @@ Does **not** own indicators, higher-level features, manifests, or model training
 data/
 ├── historical_data.py              # HistoricalData class
 ├── _internal/
-│   ├── binance_file_to_polars.py   # Binance file download and parsing
-│   └── generic_endpoints.py        # ClickHouse-backed query helpers
+│   └── binance_file_to_polars.py   # Binance archive download and parsing
 ├── bars/
 │   └── standard_bars.py            # Threshold bar implementation
 └── utils/
@@ -45,10 +44,10 @@ data/
 
 ## Things to know
 
-- `HistoricalData` is stateful. Each `get_*` call mutates `self.data` and `self.data_columns`.
+- `HistoricalData` is stateful. Each `get_*` call mutates `self.data` and `self.data_columns`, and also returns the resulting `pl.DataFrame`.
+- `get_spot_klines()` is now file-backed and resolves the latest Hugging Face BTCUSDT 1-minute snapshot by default.
 - `get_binance_file()` normalizes millisecond timestamps automatically when the source file stores them as large integers.
-- `auth_token` is forwarded to the ClickHouse-backed endpoint helpers. Leave it `None` when using direct Binance file access.
-- Test-mode retrieval depends on local dataset fixtures when `LOOP_ENV=test`.
+- `get_any_file()` is the generic loader for local paths and URLs.
 
 ## Read next
 

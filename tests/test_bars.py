@@ -48,7 +48,11 @@ def validate_bars_output(
 
 def test_volume_bars_basic():
     historical = HistoricalData()
-    historical._get_data_for_test(n_rows=5000)
+    historical.get_spot_klines(
+        n_rows=5000,
+        kline_size=7200,
+        file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    )
     data = historical.data
     result = volume_bars(data, volume_threshold=2060000.0)
 
@@ -62,7 +66,11 @@ def test_volume_bars_basic():
 
 def test_trade_bars_basic():
     historical = HistoricalData()
-    historical._get_data_for_test(n_rows=5000)
+    historical.get_spot_klines(
+        n_rows=5000,
+        kline_size=7200,
+        file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    )
     data = historical.data
     result = trade_bars(data, trade_threshold=29000000)
 
@@ -76,7 +84,11 @@ def test_trade_bars_basic():
 
 def test_liquidity_bars_basic():
     historical = HistoricalData()
-    historical._get_data_for_test(n_rows=5000)
+    historical.get_spot_klines(
+        n_rows=5000,
+        kline_size=7200,
+        file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    )
     data = historical.data
     result = liquidity_bars(data, liquidity_threshold=32000000000.0)
 
@@ -86,5 +98,4 @@ def test_liquidity_bars_basic():
     MAX_EXPECTED_BARS = 20
     assert result['base_interval'][0] == EXPECTED_BASE_INTERVAL
     assert MIN_EXPECTED_BARS <= len(result) <= MAX_EXPECTED_BARS, f"Expected 10-20 bars, got {len(result)}"
-
 

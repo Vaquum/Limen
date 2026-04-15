@@ -21,7 +21,10 @@ def manifest():
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL}
+        )
         .set_split_config(3, 1, 1)
         .set_required_bar_columns([
             'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',

@@ -5,7 +5,11 @@ from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cd
 
 
 historical = HistoricalData()
-historical._get_data_for_test(n_rows=1000)
+historical.get_spot_klines(
+    n_rows=1000,
+    kline_size=7200,
+    file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+)
 SAMPLE_DATA = historical.data
 
 NUMPY_DATA = {
