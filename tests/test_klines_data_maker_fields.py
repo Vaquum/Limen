@@ -1,12 +1,12 @@
 from limen.data import HistoricalData
+from tests.utils.historical_data import get_cached_spot_klines_2h
+
 
 def test_klines_data_maker_fields():
 
     historical = HistoricalData()
-    historical.get_spot_klines(
-        kline_size=7200,
-        file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-    )
+    historical.data = get_cached_spot_klines_2h()
+    historical.data_columns = historical.data.columns
     df = historical.data
 
     required_columns = [

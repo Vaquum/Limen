@@ -29,7 +29,7 @@ import limen
 from limen.data import HistoricalData
 
 historical = HistoricalData()
-historical.get_any_file(str(HistoricalData.DEFAULT_TEST_FILE_PATH), n_rows=2000)
+historical.get_spot_klines(kline_size=7200, n_rows=2000)
 
 uel = limen.UniversalExperimentLoop(
     data=historical.data,

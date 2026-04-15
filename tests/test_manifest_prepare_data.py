@@ -3,6 +3,7 @@ import polars as pl
 
 from limen.data import HistoricalData
 from limen.experiment import Manifest
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
 def _make_manifest() -> Manifest:
@@ -13,11 +14,8 @@ def _make_manifest() -> Manifest:
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 5000,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 5000}
         )
         .set_split_config(3, 1, 1)
         .set_required_bar_columns([
@@ -155,11 +153,8 @@ def test_column_consistency_drops_mismatched_columns() -> None:
 
     manifest = (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 5000,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 5000}
         )
         .set_split_config(8, 1, 1)
         .add_feature(_size_gated_feature)

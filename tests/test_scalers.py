@@ -1,11 +1,11 @@
 import numpy as np
 import polars as pl
 
-from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.scalers.rank_gauss_scaler import RankGaussScaler
 from limen.scalers.registry import SCALER_REGISTRY
 from limen.scalers.robust_scaler import RobustScaler
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
 def _make_train_data() -> pl.DataFrame:
@@ -147,11 +147,8 @@ def _make_manifest_with_scaler_from_params() -> Manifest:
 
     return (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 500}
         )
         .set_split_config(3, 1, 1)
         .add_indicator(

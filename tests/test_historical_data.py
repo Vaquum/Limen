@@ -20,14 +20,14 @@ def test_get_any_file_loads_local_csv() -> None:
     assert data["datetime"].is_sorted()
 
 
-def test_get_spot_klines_reaggregates_from_file() -> None:
+def test_get_spot_klines_reaggregates_latest_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
     historical = HistoricalData()
     base = historical.get_any_file(TEST_FILE, n_rows=2)
+    monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
 
     aggregated = historical.get_spot_klines(
         n_rows=1,
         kline_size=14400,
-        file_path_or_url=TEST_FILE,
     )
 
     row = aggregated.row(0, named=True)
@@ -75,8 +75,7 @@ def test_get_spot_klines_reaggregates_from_file() -> None:
 def test_get_spot_klines_rejects_sub_base_intervals() -> None:
     historical = HistoricalData()
 
-    with pytest.raises(ValueError, match="Sub-base aggregation is not supported"):
-        historical.get_spot_klines(
-            kline_size=60,
-            file_path_or_url=TEST_FILE,
-        )
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
+        with pytest.raises(ValueError, match="Sub-base aggregation is not supported"):
+            historical.get_spot_klines(kline_size=60)

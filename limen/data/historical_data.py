@@ -476,7 +476,6 @@ class HistoricalData:
         n_rows: int | None = None,
         kline_size: int = 60,
         start_date_limit: str | None = None,
-        file_path_or_url: str | None = None,
     ) -> pl.DataFrame:
 
         """Load BTCUSDT spot klines from a file and aggregate upward when needed.
@@ -489,8 +488,7 @@ class HistoricalData:
         kline_size = _validate_positive_int(kline_size, "kline_size") or 60
         start_date_limit = _normalize_datetime_literal(start_date_limit, "start_date_limit")
 
-        source = file_path_or_url or self.DEFAULT_SPOT_KLINES_DATASET_REPO
-        base_data = _read_any_file(source, has_header=True)
+        base_data = _read_any_file(self.DEFAULT_SPOT_KLINES_DATASET_REPO, has_header=True)
         base_data = _normalize_generic_frame(base_data)
 
         if start_date_limit is not None:

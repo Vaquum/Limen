@@ -224,7 +224,7 @@ class Manifest:
         Configure test data source for the manifest.
 
         Args:
-            method (Callable): Function reference (e.g., HistoricalData.get_any_file)
+            method (Callable): Function reference (e.g., HistoricalData.get_spot_klines)
             params (dict): Parameters to pass to the function
 
         Returns:

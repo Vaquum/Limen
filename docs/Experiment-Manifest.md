@@ -46,11 +46,8 @@ def manifest():
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
         )
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL,
-                'n_rows': 5000,
-            },
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 7200, 'n_rows': 5000},
         )
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
@@ -129,11 +126,8 @@ Configure the test data source used when `LOOP_ENV='test'`.
 
 ```python
 .set_test_data_source(
-    method=HistoricalData.get_any_file,
-    params={
-        'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL,
-        'n_rows': 5000,
-    },
+    method=HistoricalData.get_spot_klines,
+    params={'kline_size': 7200, 'n_rows': 5000},
 )
 ```
 

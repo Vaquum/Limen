@@ -1,12 +1,12 @@
 import numpy as np
 import polars as pl
 
-from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.features.fractional_diff import _get_weights_ffd
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.utils.adf_test import adf_test
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
 def test_fractional_diff_d_zero_copies():
@@ -164,11 +164,8 @@ def test_fractional_diff_manifest_integration():
 
     manifest = (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 500}
         )
         .set_split_config(3, 1, 1)
         .add_feature(fractional_diff, d=0.4, cols=['close'], threshold=1e-2)

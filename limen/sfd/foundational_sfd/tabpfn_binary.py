@@ -47,11 +47,8 @@ def manifest() -> Manifest:
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL,
-                'n_rows': 1000,
-            }
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 7200, 'n_rows': 1000}
         )
         .set_split_config(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
         .set_required_bar_columns(['datetime', 'open', 'high', 'low', 'close', 'volume'])

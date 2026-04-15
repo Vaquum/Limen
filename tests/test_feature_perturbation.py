@@ -1,20 +1,17 @@
 import numpy as np
 import polars as pl
 
-from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.experiment.manifest_core import TransformEntry
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
 def _make_manifest_with_groups() -> Manifest:
 
     return (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 500}
         )
         .set_split_config(3, 1, 1)
         .add_indicator(
@@ -42,11 +39,8 @@ def _make_manifest_with_include_if() -> Manifest:
 
     return (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 500}
         )
         .set_split_config(3, 1, 1)
         .add_indicator(
@@ -114,11 +108,8 @@ def test_ungrouped_features_always_included():
 
     manifest = (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 500}
         )
         .set_split_config(3, 1, 1)
         .add_indicator(
@@ -145,11 +136,8 @@ def test_combined_group_and_include_if():
 
     manifest = (Manifest()
         .set_test_data_source(
-            method=HistoricalData.get_any_file,
-            params={
-                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
-            }
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 500}
         )
         .set_split_config(3, 1, 1)
         .add_indicator(
