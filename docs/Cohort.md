@@ -37,8 +37,8 @@ Typical path:
 4. create Cohort from experiment source + permutation IDs
 5. bind trained members via `set_members(...)`
 6. infer with either:
-   - `predict(...)` for spec-pure array/tuple outputs
-   - `__call__(...)` for decoder-compatible dict outputs
+   - `predict(...)` for Sensor-compatible dict output (with optional tuple variants)
+   - `__call__(...)` as an alias of `predict(...)`
 
 ## Construction
 
@@ -102,18 +102,24 @@ Aggregation mode is selected at construction based on architecture capability hi
 
 ## Output Contracts
 
-### `predict(X, ...)`
+### `predict(data, ...)`
 
-Spec-pure contract:
+Sensor-compatible contract:
 
-- `predict(X)` → `np.ndarray`
-- `predict(X, return_probs=True)` → `(y_pred, probs)`
-- `predict(X, return_meta=True)` → `(y_pred, meta)`
-- `predict(X, return_probs=True, return_meta=True)` → `(y_pred, probs, meta)`
+- `predict(data)` → `dict` with `'_preds'` and (if available) `'_probs'`
+- `predict(data, return_probs=True)` → `(y_pred, probs)`
+- `predict(data, return_meta=True)` → `(y_pred, meta)`
+- `predict(data, return_probs=True, return_meta=True)` → `(y_pred, probs, meta)`
+
+Input contract:
+
+- canonical input is a decoder-style dict (for example `{'x_test': ...}`)
+- architectures that require additional context (for example TabPFN variants)
+  must be called with a dict that includes required fields such as `x_val`/`y_val`
 
 Where:
 
-- `probs` is a list of per-member probability arrays
+- `probs` is one per-sample probability array (aggregated mean P(1))
 - `meta` currently contains:
   - `permutation_ids`
   - `decoder_count`
@@ -124,14 +130,7 @@ If `return_probs=True` is requested in fallback mode, Cohort raises `ValueError`
 
 ### `__call__(data_dict)`
 
-Decoder-compatible adapter contract:
-
-- input must be decoder-style dict (for example `{'x_test': ...}`)
-- output is dict:
-  - always `'_preds'`
-  - also `'_probs'` in probability mode (aggregated mean P(1))
-
-Use this adapter when integrating Cohort where decoder-like dict output is expected.
+Alias of `predict(data_dict)`, preserving Sensor-style decoder dict behavior.
 
 ## Real End-To-End Example
 
@@ -164,9 +163,11 @@ trainer = Trainer(experiment_dir)
 permutation_ids = [0, 1]
 members = trainer.train(permutation_ids)
 
-# 3) prepare inference input from one selected round schema
-data_dict = trainer._manifest.prepare_data(trainer._data, members[0].round_params)
-x_test = data_dict['x_test']
+# 3) prepare per-member inference payloads (schemas may differ by permutation)
+payloads_by_pid = {}
+for member in members:
+    prepared = trainer._manifest.prepare_data(trainer._data, member.round_params)
+    payloads_by_pid[member.permutation_id] = {'x_test': prepared['x_test']}
 
 # 4) build and bind cohort
 cohort = Cohort(
@@ -175,19 +176,24 @@ cohort = Cohort(
 )
 cohort.set_members(members)
 
-# 5a) spec-pure prediction surface
-y_pred = cohort.predict(x_test)
+# 5a) sensor-compatible prediction surface
+pred = cohort.predict({'_by_permutation_id': payloads_by_pid})
+y_pred = pred['_preds']
 
 # 5b) optional structured returns
 y_pred2, probs, meta = cohort.predict(
-    x_test,
+    {'_by_permutation_id': payloads_by_pid},
     return_probs=True,
     return_meta=True,
 )
 
 # 5c) decoder-compatible adapter
-decoder_result = cohort({'x_test': x_test})
+decoder_result = cohort({'_by_permutation_id': payloads_by_pid})
 ```
+
+If all selected members truly share one schema, you may still pass one common
+decoder payload (for example `{'x_test': ...}`), but heterogeneous cohorts
+should provide per-member payloads as above.
 
 ## Failure Cases And Caveats
 

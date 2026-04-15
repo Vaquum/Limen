@@ -137,44 +137,76 @@ class Cohort:
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
 
-        self._members = list(members)
+        if len(members) != len(self.permutation_ids):
+            raise ValueError(
+                'Cohort member count must match selected permutation_ids count.'
+            )
+
+        by_pid: dict[int | str, Any] = {}
+        for member in members:
+            if not hasattr(member, 'permutation_id'):
+                raise ValueError(
+                    'Each cohort member must expose permutation_id for binding.'
+                )
+
+            pid = self._normalize_permutation_id(
+                getattr(member, 'permutation_id'))
+            if pid in by_pid:
+                raise ValueError(
+                    'Cohort members must have unique permutation_id values.')
+
+            by_pid[pid] = member
+
+            if hasattr(member, 'round_params'):
+                arch = self._extract_architecture_id(
+                    {'round_params': getattr(member, 'round_params')},
+                    self.metadata,
+                )
+                if arch.strip().lower() != self.architecture_id.strip().lower():
+                    raise ValueError(
+                        'Bound members must match cohort architecture_id.'
+                    )
+
+            if hasattr(member, 'metadata'):
+                member_metadata = getattr(member, 'metadata')
+                if isinstance(member_metadata, dict):
+                    cohort_sfd = self.metadata.get('sfd_module')
+                    member_sfd = member_metadata.get('sfd_module')
+                    if cohort_sfd and member_sfd and cohort_sfd != member_sfd:
+                        raise ValueError(
+                            'Bound members must originate from the same experiment family.'
+                        )
+
+        missing = [pid for pid in self.permutation_ids if pid not in by_pid]
+        if missing:
+            raise ValueError(
+                f'Missing bound members for permutation_ids: {missing}'
+            )
+
+        self._members = [by_pid[pid] for pid in self.permutation_ids]
 
     def __call__(self, data: dict) -> dict:
 
-        if not isinstance(data, dict):
-            raise ValueError(
-                'Cohort.__call__ expects decoder-style dict input.')
-
-        if self.aggregation_mode == 'probability_weighted':
-            preds, probs = self.predict(data, return_probs=True)
-            probs_matrix = np.vstack(
-                [np.asarray(prob, dtype=float) for prob in probs])
-            return {
-                '_preds': preds,
-                '_probs': np.mean(probs_matrix, axis=0),
-            }
-
-        preds = self.predict(data)
-        return {'_preds': preds}
+        return self.predict(data)
 
     def predict(self,
                 X: Any,
                 *,
                 return_probs: bool = False,
-                return_meta: bool = False) -> np.ndarray | tuple:
+                return_meta: bool = False) -> dict | tuple:
         '''
         Run cohort members on input data and return aggregated binary predictions.
 
         Args:
-            X (Any): Input batch to score with all cohort members. Accepts either
-                a pre-built model input dict or raw test features.
-            return_probs (bool): Whether to also return raw per-member probability
-                arrays (P(1)). Only valid in probability-weighted mode.
+            X (Any): Decoder-style input dict consumed by member decoders.
+            return_probs (bool): Whether to also return aggregated per-sample
+                probabilities (mean P(1)). Only valid in probability-weighted mode.
             return_meta (bool): Whether to also return structured cohort metadata
                 (placeholder schema) alongside predictions.
 
         Returns:
-            np.ndarray | tuple: Aggregated binary predictions by default.
+            dict | tuple: Sensor-compatible dict by default (`{'_preds': ...}` and
+                optionally `{'_probs': ...}` in probability mode).
                 Optional tuple variants are:
                 - (predictions, probabilities)
                 - (predictions, metadata)
@@ -192,22 +224,34 @@ class Cohort:
                 'Use set_members(...) before predict().'
             )
 
-        member_input = X if isinstance(X, dict) else {'x_test': X}
+        if not isinstance(X, dict):
+            raise ValueError(
+                'Cohort.predict expects decoder-style dict input to remain '
+                'Sensor-compatible.'
+            )
 
-        # Single-decoder cohort short-circuit: pass through unchanged predictions.
+        # Single-decoder cohort short-circuit while preserving cohort binary contract.
         if len(self._members) == 1:
-            result = self._members[0].predict(member_input)
+            member = self._members[0]
+            result = member.predict(self._prepare_member_input(member, X))
             if not isinstance(result, dict) or '_preds' not in result:
                 raise ValueError(
                     'Single-decoder cohort member must return a dict with _preds.'
                 )
 
-            preds = np.asarray(result['_preds'])
+            raw_preds = np.asarray(result['_preds'], dtype=float)
             probs = None
-            if '_probs' in result:
-                single_probs = np.asarray(result['_probs'], dtype=float)
-                self._validate_probability_range(single_probs)
-                probs = [single_probs]
+
+            if self.aggregation_mode == 'probability_weighted':
+                if '_probs' not in result:
+                    raise ValueError(
+                        'Decoder in probability mode must return a dict with _probs.'
+                    )
+                probs = np.asarray(result['_probs'], dtype=float)
+                self._validate_probability_range(probs)
+                preds = (probs > Cohort._VOTE_THRESHOLD).astype(np.int8)
+            else:
+                preds = self._to_binary_votes(raw_preds)
 
             if return_probs and '_probs' not in result:
                 raise ValueError(
@@ -225,7 +269,7 @@ class Cohort:
             member_probs: list[np.ndarray] = []
 
             for member in self._members:
-                result = member.predict(member_input)
+                result = member.predict(self._prepare_member_input(member, X))
                 if not isinstance(result, dict) or '_probs' not in result:
                     raise ValueError(
                         'Decoder in probability mode must return a dict with _probs.'
@@ -236,9 +280,10 @@ class Cohort:
                 member_probs.append(probs)
 
             preds = self._probability_weighted_vote(member_probs)
+            probs = np.mean(np.vstack(member_probs), axis=0)
             return self._format_predict_output(
                 preds,
-                member_probs,
+                probs,
                 return_probs=return_probs,
                 return_meta=return_meta,
             )
@@ -247,14 +292,14 @@ class Cohort:
             member_preds: list[np.ndarray] = []
 
             for member in self._members:
-                result = member.predict(member_input)
+                result = member.predict(self._prepare_member_input(member, X))
                 if not isinstance(result, dict) or '_preds' not in result:
                     raise ValueError(
                         'Decoder in majority_vote mode must return a dict with _preds.'
                     )
 
-                preds = np.asarray(result['_preds'], dtype=float)
-                member_preds.append(preds)
+                raw_preds = np.asarray(result['_preds'], dtype=float)
+                member_preds.append(self._to_binary_votes(raw_preds))
 
             preds = self._majority_vote(member_preds)
             return self._format_predict_output(
@@ -308,18 +353,49 @@ class Cohort:
 
         return (mean_vote > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
+    @staticmethod
+    def _to_binary_votes(preds: np.ndarray) -> np.ndarray:
+
+        return (preds > Cohort._VOTE_THRESHOLD).astype(np.int8)
+
+    def _prepare_member_input(self, member: Any, data: dict) -> dict:
+
+        member_input = dict(data)
+        by_permutation = member_input.pop('_by_permutation_id', None)
+
+        if isinstance(by_permutation, dict) and hasattr(member, 'permutation_id'):
+            pid = self._normalize_permutation_id(
+                getattr(member, 'permutation_id'))
+            if pid in by_permutation:
+                selected = by_permutation[pid]
+                if not isinstance(selected, dict):
+                    raise ValueError(
+                        '_by_permutation_id entries must be decoder-style dict payloads.'
+                    )
+                return dict(selected)
+
+        return member_input
+
     def _format_predict_output(self,
                                predictions: np.ndarray,
-                               probs: list[np.ndarray] | None,
+                               probs: np.ndarray | None,
                                *,
                                return_probs: bool,
-                               return_meta: bool) -> np.ndarray | tuple:
+                               return_meta: bool) -> dict | tuple:
+
+        payload: dict[str, Any] = {'_preds': predictions}
+        if probs is not None:
+            payload['_probs'] = probs
 
         if not return_probs and not return_meta:
-            return predictions
+            return payload
 
         out: list[Any] = [predictions]
         if return_probs:
+            if probs is None:
+                raise ValueError(
+                    'Probabilities are unavailable for this Cohort architecture.'
+                )
             out.append(probs)
         if return_meta:
             out.append(self._predict_meta())

@@ -14,8 +14,39 @@ from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 
 class _RaisingMember:
 
+    permutation_id = 0
+
     def predict(self, _data):
         raise RuntimeError('member failed during inference')
+
+
+class _FallbackContinuousMember:
+
+    def __init__(self,
+                 permutation_id: int,
+                 preds: np.ndarray,
+                 *,
+                 architecture: str = 'xgboost_regressor'):
+
+        self.permutation_id = permutation_id
+        self._preds = np.asarray(preds, dtype=float)
+        self._round_params = {'model_architecture': architecture}
+        self._metadata = {
+            'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}
+
+    @property
+    def round_params(self) -> dict:
+
+        return dict(self._round_params)
+
+    @property
+    def metadata(self) -> dict:
+
+        return dict(self._metadata)
+
+    def predict(self, _data):
+
+        return {'_preds': self._preds.copy()}
 
 
 def _run_real_experiment(experiment_dir: Path,
@@ -255,6 +286,142 @@ def test_sets_probability_mode_for_probability_capable_architecture():
         assert cohort.aggregation_mode == 'probability_weighted'
 
 
+def test_rejects_raw_input_for_sensor_compatible_predict_contract():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        sensors, _x_test = _train_real_members_and_input(exp_dir, [0])
+        cohort.set_members(sensors)
+
+        try:
+            cohort.predict(np.array([[1.0, 2.0]], dtype=float))
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'decoder-style dict input' in str(e)
+
+
+def test_rejects_raw_input_for_dict_required_architecture():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        _patch_round_architecture(exp_dir, {0: 'tabpfn_binary'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        class _StubMember:
+
+            permutation_id = 0
+
+            def predict(self, _data):
+                return {'_preds': np.array([1], dtype=np.int8), '_probs': np.array([0.9], dtype=float)}
+
+        cohort.set_members([_StubMember()])
+
+        try:
+            cohort.predict(np.array([[1.0, 2.0]], dtype=float))
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'decoder-style dict input' in str(e)
+
+
+def test_accepts_dict_input_for_dict_required_architecture():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        _patch_round_architecture(exp_dir, {0: 'tabpfn_binary'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        class _CaptureMember:
+
+            permutation_id = 0
+
+            def __init__(self):
+                self.last_input = None
+
+            def predict(self, data):
+                self.last_input = data
+                return {'_preds': np.array([1], dtype=np.int8), '_probs': np.array([0.9], dtype=float)}
+
+        member = _CaptureMember()
+        cohort.set_members([member])
+
+        data = {
+            'x_test': np.array([[1.0, 2.0]], dtype=float),
+            'x_val': np.array([[0.5, 1.5]], dtype=float),
+            'y_val': np.array([1], dtype=np.int8),
+        }
+        out = cohort.predict(data)
+
+        assert out['_preds'].tolist() == [1]
+        assert member.last_input is data
+
+
+def test_set_members_rejects_count_mismatch():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=2)
+
+        cohort = Cohort(experiment_log_path=str(
+            exp_dir), permutation_ids=[0, 1])
+        sensors, _x_test = _train_real_members_and_input(exp_dir, [0])
+
+        try:
+            cohort.set_members(sensors)
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'count must match' in str(e)
+
+
+def test_set_members_rejects_missing_permutation_id_binding():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        class _NoPidMember:
+
+            def predict(self, _data):
+                return {'_preds': np.array([1], dtype=np.int8)}
+
+        try:
+            cohort.set_members([_NoPidMember()])
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'must expose permutation_id' in str(e)
+
+
+def test_member_specific_payload_is_routed_by_permutation_id():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=2)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+        cohort = Cohort(experiment_log_path=str(
+            exp_dir), permutation_ids=[0, 1])
+        cohort.set_members(sensors)
+
+        routed = {
+            0: {'x_test': x_test[:3]},
+            1: {'x_test': x_test},
+        }
+
+        try:
+            cohort.predict({'x_test': x_test, '_by_permutation_id': routed})
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'same shape' in str(e)
+
+
 def test_sets_fallback_mode_for_non_probability_architecture():
 
     with TemporaryDirectory() as tmpdir:
@@ -273,16 +440,15 @@ def test_probability_weighted_predict_aggregates_mean_p1():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        _run_real_experiment(exp_dir, n_permutations=2)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        sensors = [sensors[0], sensors[0]]
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
 
         cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0])
+            exp_dir), permutation_ids=[0, 1])
         cohort.set_members(sensors)
 
-        y_pred = cohort.predict(x_test)
+        y_pred = cohort.predict({'x_test': x_test})['_preds']
 
         member_probs = [
             np.asarray(sensor.predict({'x_test': x_test})[
@@ -306,7 +472,7 @@ def test_probability_weighted_predict_single_member_matches_own_thresholded_prob
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
-        y_pred = cohort.predict(x_test)
+        y_pred = cohort.predict({'x_test': x_test})['_preds']
         probs = np.asarray(sensors[0].predict(
             {'x_test': x_test})['_probs'], dtype=float)
         expected = (probs > 0.5).astype(np.int8)
@@ -325,7 +491,7 @@ def test_single_decoder_passthrough_returns_member_preds_unchanged():
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
-        y_pred = cohort.predict(x_test)
+        y_pred = cohort.predict({'x_test': x_test})['_preds']
         expected = np.asarray(sensors[0].predict({'x_test': x_test})['_preds'])
 
         assert np.array_equal(y_pred, expected)
@@ -346,28 +512,36 @@ def test_probability_weighted_predict_requires_members():
             assert 'no bound decoder members' in str(e)
 
 
-def test_probability_weighted_predict_rejects_majority_vote_mode():
+def test_majority_vote_uses_binary_votes_for_continuous_fallback_members():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        _run_real_experiment(exp_dir, n_permutations=2)
 
-        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        cohort.set_members(sensors)
+        _patch_round_architecture(
+            exp_dir,
+            {
+                0: 'xgboost_regressor',
+                1: 'xgboost_regressor',
+            },
+        )
+        cohort = Cohort(experiment_log_path=str(
+            exp_dir), permutation_ids=[0, 1])
 
-        try:
-            y_pred = cohort.predict(x_test)
-            sensor_pred = np.asarray(
-                sensors[0].predict({'x_test': x_test})['_preds'],
-                dtype=float,
-            )
-            expected = (sensor_pred > 0.5).astype(np.int8)
+        m0 = _FallbackContinuousMember(
+            0,
+            np.array([0.9, 0.2, 0.8, 0.4], dtype=float),
+        )
+        m1 = _FallbackContinuousMember(
+            1,
+            np.array([0.1, 0.7, 0.6, 0.3], dtype=float),
+        )
+        cohort.set_members([m0, m1])
 
-            assert np.array_equal(y_pred, expected)
-        except Exception as e:
-            assert False, f'Expected majority-vote fallback prediction to succeed, got: {e}'
+        out = cohort.predict({'x_test': np.zeros((4, 2), dtype=float)})
+
+        # Binary votes: m0=[1,0,1,0], m1=[0,1,1,0] => tie,tie,1,0 -> [0,0,1,0]
+        assert out['_preds'].tolist() == [0, 0, 1, 0]
 
 
 def test_majority_vote_tie_returns_zero():
@@ -425,25 +599,22 @@ def test_majority_vote_rejects_shape_mismatch():
         assert 'same shape' in str(e)
 
 
-def test_predict_return_probs_probability_mode_returns_member_prob_arrays():
+def test_predict_return_probs_probability_mode_returns_per_sample_probs():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        _run_real_experiment(exp_dir, n_permutations=2)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        sensors = [sensors[0], sensors[0]]
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
 
         cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0])
+            exp_dir), permutation_ids=[0, 1])
         cohort.set_members(sensors)
 
-        y_pred, probs = cohort.predict(x_test, return_probs=True)
+        y_pred, probs = cohort.predict({'x_test': x_test}, return_probs=True)
 
-        assert isinstance(probs, list)
-        assert len(probs) == 2
-        assert np.asarray(probs[0]).shape == np.asarray(y_pred).shape
-        assert np.asarray(probs[1]).shape == np.asarray(y_pred).shape
+        assert isinstance(probs, np.ndarray)
+        assert np.asarray(probs).shape == np.asarray(y_pred).shape
 
 
 def test_predict_return_meta_returns_metadata_placeholder():
@@ -457,7 +628,7 @@ def test_predict_return_meta_returns_metadata_placeholder():
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
-        y_pred, meta = cohort.predict(x_test, return_meta=True)
+        y_pred, meta = cohort.predict({'x_test': x_test}, return_meta=True)
 
         assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
         assert meta['permutation_ids'] == [0]
@@ -470,23 +641,22 @@ def test_predict_return_probs_and_return_meta_returns_three_tuple():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        _run_real_experiment(exp_dir, n_permutations=2)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        sensors = [sensors[0], sensors[0]]
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
 
         cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0])
+            exp_dir), permutation_ids=[0, 1])
         cohort.set_members(sensors)
 
         y_pred, probs, meta = cohort.predict(
-            x_test,
+            {'x_test': x_test},
             return_probs=True,
             return_meta=True,
         )
 
-        assert len(probs) == 2
-        assert meta['permutation_ids'] == [0]
+        assert isinstance(probs, np.ndarray)
+        assert meta['permutation_ids'] == [0, 1]
         assert meta['decoder_count'] == 2
         assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
 
@@ -500,11 +670,15 @@ def test_predict_return_probs_rejected_in_fallback_mode():
         _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        cohort.set_members(sensors)
+        member = _FallbackContinuousMember(
+            0,
+            np.array([0.9, 0.1], dtype=float),
+        )
+        cohort.set_members([member])
 
         try:
-            cohort.predict(x_test, return_probs=True)
+            cohort.predict(
+                {'x_test': np.zeros((2, 2), dtype=float)}, return_probs=True)
             assert False, 'Expected ValueError'
         except ValueError as e:
             assert 'Probabilities are unavailable' in str(e)
@@ -543,7 +717,7 @@ def test_cohort_is_drop_in_decoder_replacement_for_dict_input():
         base_sensor = sensors[0]
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        cohort.set_members([base_sensor, base_sensor])
+        cohort.set_members([base_sensor])
 
         live_data = {'x_test': x_test}
 
@@ -553,14 +727,15 @@ def test_cohort_is_drop_in_decoder_replacement_for_dict_input():
 
         assert isinstance(sensor_result, dict)
         assert isinstance(cohort_result, dict)
-        assert isinstance(cohort_pred, np.ndarray)
+        assert isinstance(cohort_pred, dict)
         assert '_preds' in cohort_result
         assert '_probs' in cohort_result
         assert np.array_equal(np.asarray(cohort_result['_preds']),
                               np.asarray(sensor_result['_preds']))
         assert np.allclose(np.asarray(cohort_result['_probs'], dtype=float),
                            np.asarray(sensor_result['_probs'], dtype=float))
-        assert np.array_equal(cohort_pred, np.asarray(sensor_result['_preds']))
+        assert np.array_equal(np.asarray(cohort_pred['_preds']),
+                              np.asarray(sensor_result['_preds']))
 
 
 def test_member_failure_propagates_and_fails_whole_call():
@@ -570,13 +745,12 @@ def test_member_failure_propagates_and_fails_whole_call():
         _run_real_experiment(exp_dir, n_permutations=1)
 
         sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        good_member = sensors[0]
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        cohort.set_members([good_member, _RaisingMember()])
+        cohort.set_members([_RaisingMember()])
 
         try:
-            cohort.predict(x_test)
+            cohort.predict({'x_test': x_test})
             assert False, 'Expected RuntimeError'
         except RuntimeError as e:
             assert 'member failed during inference' in str(e)
