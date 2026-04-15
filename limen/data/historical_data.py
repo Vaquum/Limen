@@ -24,6 +24,8 @@ _DEFAULT_TEST_FILE_URL: Final[str] = (
     "https://raw.githubusercontent.com/Vaquum/Limen/refs/heads/main/"
     "datasets/klines_2h_2020_2025.csv"
 )
+_HUGGINGFACE_DATASET_REPO_PART_COUNT: Final[int] = 3
+_MIN_ROWS_TO_INFER_INTERVAL: Final[int] = 2
 
 
 def _is_url(value: str) -> bool:
@@ -136,7 +138,10 @@ def _repo_id_from_huggingface_url(file_path_or_url: str) -> str | None:
         return None
 
     path_parts = [part for part in urlparse(file_path_or_url).path.split("/") if part]
-    if len(path_parts) < 3 or path_parts[0] != "datasets":
+    if (
+        len(path_parts) < _HUGGINGFACE_DATASET_REPO_PART_COUNT
+        or path_parts[0] != "datasets"
+    ):
         return None
 
     if "resolve" in path_parts or "blob" in path_parts:
@@ -255,7 +260,7 @@ def _normalize_generic_frame(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def _base_interval_seconds(data: pl.DataFrame) -> int:
-    if "datetime" not in data.columns or data.height < 2:
+    if "datetime" not in data.columns or data.height < _MIN_ROWS_TO_INFER_INTERVAL:
         raise ValueError("At least two datetime rows are required to infer base interval.")
 
     intervals = data.select(
