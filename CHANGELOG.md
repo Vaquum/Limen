@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.0.0 on 15th of April, 2026
+
+- Replace `HistoricalData`'s ClickHouse-backed surface with a file-backed surface
+- Reduce `HistoricalData` to `get_spot_klines()`, `get_binance_file()`, and `get_any_file()`
+- Make `HistoricalData` methods return `polars.DataFrame` directly while still updating `self.data`
+- Source `get_spot_klines()` from the daily Hugging Face BTCUSDT 1-minute dataset by default
+- Remove `_get_data_for_test()` and update manifests, tests, and docs to use file-based ingestion
+- Remove the old `_internal/generic_endpoints.py` ClickHouse helper
+- Drop the `clickhouse_connect` dependency and declare `requests` explicitly
+- Remove `median` and `iqr` from `get_spot_klines()` output because the canonical dataset no longer carries them
+
 ## v0.7.9 on 25th of May, 2025
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds

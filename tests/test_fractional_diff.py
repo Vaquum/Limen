@@ -163,7 +163,13 @@ def test_find_min_d_small_data_skips():
 def test_fractional_diff_manifest_integration():
 
     manifest = (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={
+                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+                'n_rows': 500,
+            }
+        )
         .set_split_config(3, 1, 1)
         .add_feature(fractional_diff, d=0.4, cols=['close'], threshold=1e-2)
         .with_target('outcome')

@@ -9,7 +9,13 @@ from limen.experiment.manifest_core import TransformEntry
 def _make_manifest_with_groups() -> Manifest:
 
     return (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={
+                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+                'n_rows': 500,
+            }
+        )
         .set_split_config(3, 1, 1)
         .add_indicator(
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
@@ -35,7 +41,13 @@ def _make_manifest_with_groups() -> Manifest:
 def _make_manifest_with_include_if() -> Manifest:
 
     return (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={
+                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+                'n_rows': 500,
+            }
+        )
         .set_split_config(3, 1, 1)
         .add_indicator(
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
@@ -101,7 +113,13 @@ def test_feature_group_absent_includes_all():
 def test_ungrouped_features_always_included():
 
     manifest = (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={
+                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+                'n_rows': 500,
+            }
+        )
         .set_split_config(3, 1, 1)
         .add_indicator(
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
@@ -126,7 +144,13 @@ def test_ungrouped_features_always_included():
 def test_combined_group_and_include_if():
 
     manifest = (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={
+                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+                'n_rows': 500,
+            }
+        )
         .set_split_config(3, 1, 1)
         .add_indicator(
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),

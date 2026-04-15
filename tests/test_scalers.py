@@ -146,7 +146,13 @@ def test_robust_scaler_all_null_column():
 def _make_manifest_with_scaler_from_params() -> Manifest:
 
     return (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=HistoricalData.get_any_file,
+            params={
+                'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+                'n_rows': 500,
+            }
+        )
         .set_split_config(3, 1, 1)
         .add_indicator(
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),

@@ -287,7 +287,11 @@ def test_trainer_with_fractional_diff():
 
     from limen.data import HistoricalData
     h = HistoricalData()
-    h._get_data_for_test(n_rows=20000)
+    h.get_spot_klines(
+        n_rows=20000,
+        kline_size=7200,
+        file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    )
     large_data = h.data
 
     with TemporaryDirectory() as tmpdir:
