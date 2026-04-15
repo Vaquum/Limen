@@ -3,6 +3,7 @@ import polars as pl
 
 from limen.data import HistoricalData
 from limen.experiment import Manifest
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
 def _make_manifest() -> Manifest:
@@ -12,7 +13,10 @@ def _make_manifest() -> Manifest:
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
         )
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_test_data_source(
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 5000}
+        )
         .set_split_config(3, 1, 1)
         .set_required_bar_columns([
             'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',
@@ -143,12 +147,15 @@ def test_column_consistency_drops_mismatched_columns() -> None:
 
     def _size_gated_feature(data: pl.DataFrame) -> pl.DataFrame:
         collected = data.collect() if hasattr(data, 'collect') else data
-        if collected.height > 50:
+        if collected.height > 600:
             return data.with_columns(pl.lit(1.0).alias('big_split_col'))
         return data
 
     manifest = (Manifest()
-        .set_test_data_source(method=HistoricalData._get_data_for_test, params={'n_rows': 500})
+        .set_test_data_source(
+            method=get_cached_spot_klines_2h,
+            params={'n_rows': 5000}
+        )
         .set_split_config(8, 1, 1)
         .add_feature(_size_gated_feature)
         .with_target('outcome')

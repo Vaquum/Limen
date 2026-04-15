@@ -1,142 +1,116 @@
 # Historical Data
 
-`HistoricalData` is Limen's stateful data-access surface. It is the simplest way to get market data into Limen, whether you are fetching spot or futures data from the local ClickHouse-backed query layer, loading a Binance file directly, or using the bundled test dataset for manifest-driven examples.
+`HistoricalData` is Limen's stateful file-backed data surface. It now has exactly three public retrieval methods:
 
-Use this page when you need to answer three questions:
+- `get_spot_klines()`
+- `get_binance_file()`
+- `get_any_file()`
 
-- which retrieval surface fits your experiment
-- what columns that surface gives you
-- how the retrieved data flows into a manifest or a `UniversalExperimentLoop`
+All three return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
 
-## How `HistoricalData` Works
-
-`HistoricalData` is stateful. Each retrieval method populates `historical.data` and updates `historical.data_columns`.
+## How It Works
 
 ```python
 import limen
 
 historical = limen.HistoricalData()
-historical.get_spot_klines(kline_size=3600, start_date_limit='2025-01-01')
+data = historical.get_spot_klines(kline_size=3600, start_date_limit='2025-01-01')
 
-data = historical.data
-columns = historical.data_columns
+assert data is historical.data
 ```
 
-This matters because the methods do not return a long-lived query object. They mutate the `HistoricalData` instance, and the rest of your code reads from that state.
+`HistoricalData` stays stateful for manifest compatibility, but the public methods now also return the loaded frame directly.
 
 ## Current Surface
 
-| Method | Backend | Returns in `historical.data` | Typical use |
+| Method | Backend | Returns | Typical use |
 |---|---|---|---|
-| `get_binance_file()` | direct Binance file download | raw file contents normalized into a `pl.DataFrame` | one-off loading from Binance data files |
-| `get_spot_klines()` | local ClickHouse query | aggregated spot OHLC-style klines | most common experiment input |
-| `get_futures_klines()` | local ClickHouse query | aggregated futures OHLC-style klines | futures-side signal research |
-| `get_spot_trades()` | local ClickHouse query | raw spot trades | trade-level analysis and custom prep |
-| `get_spot_agg_trades()` | local ClickHouse query | raw spot aggregate trades | aggregated trade research |
-| `get_futures_trades()` | local ClickHouse query | raw futures trades | futures microstructure research |
-| `_get_data_for_test()` | local CSV bundled with the repo | sample kline dataset | tests, examples, and local dry runs |
+| `get_spot_klines()` | latest Hugging Face BTCUSDT 1m parquet snapshot | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
+| `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
+| `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
 
-## Access Patterns
+## `get_spot_klines()`
 
-### Kline Retrieval
+`get_spot_klines()` now reads from the BTCUSDT 1-minute dataset published at [vaquum/binance_btcusdt_1m_klines](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines).
 
-`get_spot_klines()` and `get_futures_klines()` are the most common entry points for Limen experiments. They aggregate raw trades into time-based klines inside the query layer.
+By default it resolves the latest snapshot automatically, then aggregates upward from the file when you request a larger interval.
 
 ```python
 from limen.data import HistoricalData
 
 historical = HistoricalData()
-historical.get_spot_klines(
+data = historical.get_spot_klines(
     kline_size=3600,
     start_date_limit='2025-01-01',
 )
-
-data = historical.data
 ```
 
-The returned dataframe contains the columns Limen's built-in manifests usually expect:
+Important rules:
+
+- sub-1-minute klines are not supported
+- `kline_size` must be a multiple of the source file interval
+- the current Hugging Face dataset does not include `median` or `iqr`, so those columns are not returned
+
+Returned columns:
 
 - `datetime`, `open`, `high`, `low`, `close`
-- `mean`, `std`, `median`, `iqr`
+- `mean`, `std`
 - `volume`, `maker_ratio`, `no_of_trades`
 - `open_liquidity`, `high_liquidity`, `low_liquidity`, `close_liquidity`
 - `liquidity_sum`, `maker_volume`, `maker_liquidity`
 
-Use kline retrieval when you want the standard Limen workflow: indicators, features, target shaping, backtests, and optional bar formation.
+## `get_binance_file()`
 
-### Trade Retrieval
-
-The trade endpoints expose raw rows instead of aggregated bars.
-
-```python
-from limen.data import HistoricalData
-
-historical = HistoricalData(auth_token='your-clickhouse-password')
-historical.get_spot_trades(month_year=(3, 2025))
-
-trades = historical.data
-```
-
-For `get_spot_trades()`, `get_spot_agg_trades()`, and `get_futures_trades()`, exactly one of these inputs must be provided:
-
-- `month_year`
-- `n_rows`
-- `n_random`
-
-That contract comes from the underlying query helper and Limen will raise if more than one, or none, are supplied.
-
-Typical output columns are:
-
-- `get_spot_trades()`: `trade_id`, `timestamp`, `price`, `quantity`, `is_buyer_maker`, optional `datetime`
-- `get_spot_agg_trades()`: `agg_trade_id`, `timestamp`, `price`, `quantity`, `is_buyer_maker`, `first_trade_id`, `last_trade_id`, optional `datetime`
-- `get_futures_trades()`: `futures_trade_id`, `timestamp`, `price`, `quantity`, `is_buyer_maker`, optional `datetime`
-
-Use the trade endpoints when you need custom preparation logic, custom aggregation, or non-kline research surfaces.
-
-### Direct Binance File Loading
-
-`get_binance_file()` loads a Binance CSV or ZIP file directly from a URL.
+`get_binance_file()` keeps the same role as before: load a Binance archive directly and normalize its `timestamp` / `datetime` columns.
 
 ```python
 from limen.data import HistoricalData
 
 historical = HistoricalData()
-historical.get_binance_file(
+trades = historical.get_binance_file(
     file_url='https://data.binance.vision/data/spot/monthly/trades/BTCUSDT/BTCUSDT-trades-2025-01.zip',
     has_header=False,
-    columns=['trade_id', 'price', 'quantity', 'quote_qty', 'timestamp', 'is_buyer_maker', 'is_best_match'],
+    columns=[
+        'trade_id', 'price', 'quantity', 'quote_qty',
+        'timestamp', 'is_buyer_maker', 'is_best_match',
+    ],
 )
 ```
 
-This path is useful when you want source-native Binance files instead of the local query layer. Limen normalizes `timestamp` and adds `datetime`.
+Use this when you want Binance source files rather than the curated kline dataset.
 
-### Bundled Test Data
+## `get_any_file()`
 
-`_get_data_for_test()` is the test-only helper used throughout Limen's manifests and tests.
+`get_any_file()` is the generic file ingestion path. It accepts a local path or URL and currently supports:
+
+- `.parquet`
+- `.csv`
+- `.zip`
 
 ```python
 from limen.data import HistoricalData
 
 historical = HistoricalData()
-historical._get_data_for_test(n_rows=5000)
-
-data = historical.data
+data = historical.get_any_file(
+    file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    n_rows=5000,
+)
 ```
 
-This reads from `datasets/klines_2h_2020_2025.csv`. It is the most convenient source for local examples, docs work, and quick smoke tests because it does not require ClickHouse access.
+It is the right choice for:
 
-## Backend Notes
-
-- `get_spot_klines()`, `get_futures_klines()`, `get_spot_trades()`, `get_spot_agg_trades()`, and `get_futures_trades()` use local ClickHouse-backed helpers.
-- `auth_token` is passed through as the ClickHouse password.
-- `get_binance_file()` does not depend on ClickHouse.
-- `_get_data_for_test()` is local and deterministic enough for repeatable docs examples.
-
-If you are writing public examples, prefer `_get_data_for_test()` or an explicit CSV load unless the point of the example is the ClickHouse query surface itself.
+- local fixtures in tests
+- repo-hosted CSV files
+- remote parquet snapshots
+- manifest test data sources
 
 ## Manifest Integration
 
-Most manifest-driven experiments reference `HistoricalData` methods directly instead of fetching data outside the manifest.
+Most manifest-driven experiments should now use:
+
+- `HistoricalData.get_spot_klines` for production data
+- `HistoricalData.get_spot_klines` with a smaller `n_rows` and coarser `kline_size` for lightweight test runs
+- `HistoricalData.get_any_file` only when you intentionally want to load a specific local or remote file
 
 ```python
 from limen.data import HistoricalData
@@ -149,27 +123,20 @@ manifest = (
         params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
     )
     .set_test_data_source(
-        method=HistoricalData._get_data_for_test,
-        params={'n_rows': 5000},
+        method=HistoricalData.get_spot_klines,
+        params={'kline_size': 7200, 'n_rows': 5000},
     )
 )
 ```
 
-In that flow:
-
-- `LOOP_ENV='test'` uses the test data source when one is configured
-- any other `LOOP_ENV` value uses the production data source
-- `UniversalExperimentLoop` fetches the data automatically when you pass a manifest-driven SFD and do not pass `data=` explicitly
-
 ## Choosing The Right Surface
 
-- Use kline methods for most Limen experiments.
-- Use trade methods when you need custom aggregation or trade-level features.
-- Use `get_binance_file()` when you want direct Binance source files.
-- Use `_get_data_for_test()` for examples, docs, and local smoke tests.
+- Use `get_spot_klines()` for most Limen experiments and for manifest test sources that should stay on the public BTCUSDT path.
+- Use `get_binance_file()` when you want direct Binance archives.
+- Use `get_any_file()` for local fixtures, URLs, and generic file-backed ingestion.
 
 ## Read Next
 
-- Continue to [Data Bars](Data-Bars.md) if you want to reshape kline data into threshold bars before feature engineering.
-- Continue to [Single File Decoder](Single-File-Decoder.md) to package the experiment logic that will consume this data.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) to configure data fetching declaratively inside an SFD.
+- [Data Bars](Data-Bars.md)
+- [Single File Decoder](Single-File-Decoder.md)
+- [Experiment Manifest](Experiment-Manifest.md)

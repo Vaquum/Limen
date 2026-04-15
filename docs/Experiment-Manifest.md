@@ -45,7 +45,10 @@ def manifest():
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
         )
-        .set_test_data_source(method=HistoricalData._get_data_for_test)
+        .set_test_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 7200, 'n_rows': 5000},
+        )
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
         .add_indicator(atr, period=14)
@@ -123,8 +126,8 @@ Configure the test data source used when `LOOP_ENV='test'`.
 
 ```python
 .set_test_data_source(
-    method=HistoricalData._get_data_for_test,
-    params={'n_rows': 5000},
+    method=HistoricalData.get_spot_klines,
+    params={'kline_size': 7200, 'n_rows': 5000},
 )
 ```
 
@@ -137,7 +140,8 @@ Configure the test data source used when `LOOP_ENV='test'`.
 
 If `LOOP_ENV='test'` but no test data source is configured, Limen falls back to the production data source.
 
-That is why foundational SFDs can run locally with no explicit `data=` and still stay pointed at small bundled test data by default.
+That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source by default when one is defined.
+To get deterministic, file-backed local behavior, configure `set_test_data_source()` with a pinned local fixture.
 
 ## Pipeline Configuration
 

@@ -10,6 +10,7 @@ from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from limen.sfd.foundational_sfd import random_binary as random_sfd
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.experiment.param_search import RandomStrategy
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
 def test_trainer_end_to_end():
@@ -285,10 +286,7 @@ def test_trainer_with_feature_ablation():
 
 def test_trainer_with_fractional_diff():
 
-    from limen.data import HistoricalData
-    h = HistoricalData()
-    h._get_data_for_test(n_rows=20000)
-    large_data = h.data
+    large_data = get_cached_spot_klines_2h(20000)
 
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir) / 'experiment'
