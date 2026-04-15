@@ -48,7 +48,10 @@ def manifest() -> Manifest:
         )
         .set_test_data_source(
             method=HistoricalData.get_any_file,
-            params={'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL}
+            params={
+                'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL,
+                'n_rows': 1000,
+            }
         )
         .set_split_config(TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
         .set_required_bar_columns(['datetime', 'open', 'high', 'low', 'close', 'volume'])

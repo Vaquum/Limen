@@ -16,7 +16,7 @@ def _make_manifest() -> Manifest:
             method=HistoricalData.get_any_file,
             params={
                 'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
+                'n_rows': 5000,
             }
         )
         .set_split_config(3, 1, 1)
@@ -149,7 +149,7 @@ def test_column_consistency_drops_mismatched_columns() -> None:
 
     def _size_gated_feature(data: pl.DataFrame) -> pl.DataFrame:
         collected = data.collect() if hasattr(data, 'collect') else data
-        if collected.height > 50:
+        if collected.height > 600:
             return data.with_columns(pl.lit(1.0).alias('big_split_col'))
         return data
 
@@ -158,7 +158,7 @@ def test_column_consistency_drops_mismatched_columns() -> None:
             method=HistoricalData.get_any_file,
             params={
                 'file_path_or_url': str(HistoricalData.DEFAULT_TEST_FILE_PATH),
-                'n_rows': 500,
+                'n_rows': 5000,
             }
         )
         .set_split_config(8, 1, 1)

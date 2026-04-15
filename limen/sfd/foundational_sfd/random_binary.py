@@ -23,7 +23,10 @@ def manifest():
         )
         .set_test_data_source(
             method=HistoricalData.get_any_file,
-            params={'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL}
+            params={
+                'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL,
+                'n_rows': 5000,
+            }
         )
         .set_split_config(3, 1, 1)
         .set_required_bar_columns([

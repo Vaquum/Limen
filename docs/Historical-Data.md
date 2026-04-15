@@ -103,6 +103,7 @@ from limen.data import HistoricalData
 historical = HistoricalData()
 data = historical.get_any_file(
     file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    n_rows=5000,
 )
 ```
 
@@ -132,7 +133,10 @@ manifest = (
     )
     .set_test_data_source(
         method=HistoricalData.get_any_file,
-        params={'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL},
+        params={
+            'file_path_or_url': HistoricalData.DEFAULT_TEST_FILE_URL,
+            'n_rows': 5000,
+        },
     )
 )
 ```
