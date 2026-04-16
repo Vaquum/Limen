@@ -55,6 +55,7 @@ jobs:
           mv .coverage coverage-artifacts/coverage.db
 
       - name: Upload coverage artifact
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-data
@@ -83,34 +84,6 @@ jobs:
         run: mv coverage-artifacts/coverage.db .coverage
 
       - name: Publish coverage comment
-        uses: py-cov-action/python-coverage-comment-action@4c2eefcda8b94596768855a80ac94edc61aba669 # v3
-        with:
-          GITHUB_TOKEN: ${{ github.token }}
-
-  publish_coverage_badge_data:
-    name: Publish Coverage Badge Data
-    if: github.event_name == 'push'
-    needs: pr_checks_tests
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: write
-
-    steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
-        with:
-          persist-credentials: true
-
-      - name: Download coverage artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: coverage-data
-          path: coverage-artifacts
-
-      - name: Restore coverage data
-        run: mv coverage-artifacts/coverage.db .coverage
-
-      - name: Publish coverage badge data
         uses: py-cov-action/python-coverage-comment-action@4c2eefcda8b94596768855a80ac94edc61aba669 # v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
