@@ -1,6 +1,6 @@
 # Historical Data
 
-`HistoricalData` is Limen's stateful file-backed data surface. It now has exactly three public retrieval methods:
+`HistoricalData` is Limen's stateful file-backed data surface. It has exactly three public retrieval methods:
 
 - `get_spot_klines()`
 - `get_binance_file()`
@@ -19,21 +19,21 @@ data = historical.get_spot_klines(kline_size=3600, start_date_limit='2025-01-01'
 assert data is historical.data
 ```
 
-`HistoricalData` stays stateful for manifest compatibility, but the public methods now also return the loaded frame directly.
+`HistoricalData` stays stateful for manifest compatibility, and the public methods also return the loaded frame directly.
 
 ## Current Surface
 
 | Method | Backend | Returns | Typical use |
 |---|---|---|---|
-| `get_spot_klines()` | latest Hugging Face BTCUSDT 1m parquet snapshot | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
+| `get_spot_klines()` | Hugging Face BTCUSDT 1m parquet dataset | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
 | `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
 | `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
 
 ## `get_spot_klines()`
 
-`get_spot_klines()` now reads from the BTCUSDT 1-minute dataset published at [vaquum/binance_btcusdt_1m_klines](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines).
+`get_spot_klines()` reads from the BTCUSDT 1-minute dataset published at [vaquum/binance_btcusdt_1m_klines](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines).
 
-By default it resolves the latest snapshot automatically, then aggregates upward from the file when you request a larger interval.
+By default it reads that dataset and aggregates upward when you request a larger interval.
 
 ```python
 from limen.data import HistoricalData
@@ -49,7 +49,6 @@ Important rules:
 
 - sub-1-minute klines are not supported
 - `kline_size` must be a multiple of the source file interval
-- the current Hugging Face dataset does not include `median` or `iqr`, so those columns are not returned
 
 Returned columns:
 
@@ -106,7 +105,7 @@ It is the right choice for:
 
 ## Manifest Integration
 
-Most manifest-driven experiments should now use:
+Most manifest-driven experiments should use:
 
 - `HistoricalData.get_spot_klines` for production data
 - `HistoricalData.get_spot_klines` with a smaller `n_rows` and coarser `kline_size` for lightweight test runs

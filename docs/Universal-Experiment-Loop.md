@@ -22,7 +22,7 @@ The standard run path is the right starting point for most readers. The advanced
 
 ## First Real Run
 
-This is the most reliable local example because it uses the repo test CSV through the new file-backed ingestion path.
+This is the most reliable local example because it uses the file-backed spot-kline path with explicit `kline_size` and `n_rows`.
 
 ```python
 import limen
@@ -52,7 +52,7 @@ uel.experiment_confusion_metrics
 uel.experiment_backtest_results
 ```
 
-On a live local run over the file-backed test data, that produced:
+On a live local run over that file-backed input, that produced:
 
 - `uel.experiment_log` with one row per round
 - `uel.experiment_confusion_metrics` with one row per round

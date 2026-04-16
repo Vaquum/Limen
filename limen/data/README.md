@@ -45,7 +45,7 @@ data/
 ## Things to know
 
 - `HistoricalData` is stateful. Each `get_*` call mutates `self.data` and `self.data_columns`, and also returns the resulting `pl.DataFrame`.
-- `get_spot_klines()` is now file-backed and resolves the latest Hugging Face BTCUSDT 1-minute snapshot by default.
+- `get_spot_klines()` reads the Hugging Face BTCUSDT 1-minute dataset by default.
 - `get_binance_file()` normalizes millisecond timestamps automatically when the source file stores them as large integers.
 - `get_any_file()` is the generic loader for local paths and URLs.
 
