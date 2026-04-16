@@ -13,7 +13,7 @@
   <a href="#first-experiment">First Experiment</a> •
   <a href="#learn-more">Learn More</a>
 </div>
-<br>
+<br />
 <div align="center">
   <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://api.scorecard.dev/projects/github.com/Vaquum/Limen/badge" alt="OpenSSF Scorecard" /></a>
