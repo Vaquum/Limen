@@ -141,7 +141,7 @@ Configure the test data source used when `LOOP_ENV='test'`.
 If `LOOP_ENV='test'` but no test data source is configured, Limen falls back to the production data source.
 
 That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source by default when one is defined.
-To get deterministic, file-backed local behavior, configure `set_test_data_source()` with a pinned local fixture.
+To keep local runs lightweight, configure `set_test_data_source()` with explicit `kline_size` and `n_rows`.
 
 ## Pipeline Configuration
 
