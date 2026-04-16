@@ -34,7 +34,7 @@ def test_large_param_space():
     assert ps.n_permutations == EXPECTED_PERMUTATIONS
     max_elapsed_time = (
         COVERAGE_MAX_ELAPSED_TIME
-        if os.getenv("LIMEN_COVERAGE_RUN") == "1"
+        if os.getenv('LIMEN_COVERAGE_RUN') == '1'
         else DEFAULT_MAX_ELAPSED_TIME
     )
     assert elapsed < max_elapsed_time, (

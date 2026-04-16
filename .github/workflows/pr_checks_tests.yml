@@ -46,7 +46,7 @@ jobs:
 
       - name: Run limen tests with coverage
         env:
-          LIMEN_COVERAGE_RUN: "1"
+          LIMEN_COVERAGE_RUN: '1'
         run: |
           set -x
           python -m coverage run -m tests.run
