@@ -3,7 +3,7 @@
   <a href="https://github.com/Vaquum"><img src="https://github.com/Vaquum/Home/raw/main/assets/Logo.png" alt="Vaquum" width="150" /></a>
   <br />
 </div>
-<br>
+<br />
 <div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.</strong></div>
 
 <div align="center">
