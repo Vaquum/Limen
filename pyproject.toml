@@ -48,6 +48,13 @@ where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
 
+[tool.coverage.run]
+source = ["limen"]
+relative_files = true
+
+[tool.coverage.report]
+omit = ["tests/*"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 88
