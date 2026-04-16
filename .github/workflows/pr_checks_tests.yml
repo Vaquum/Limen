@@ -10,6 +10,9 @@ jobs:
   pr_checks_tests:
     name: PR Checks Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v3
@@ -36,12 +39,19 @@ jobs:
 
       - name: Install limen package (and deps)
         run: |
+          pip install coverage
           pip install -e .
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      - name: Run limen tests (verbose)
+      - name: Run limen tests with coverage
         run: |
           set -x
-          python -u -m tests.run
+          python -m coverage run -m tests.run
+          python -m coverage report --include='limen/*'
+
+      - name: Publish coverage comment and badge data
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
