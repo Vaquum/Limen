@@ -16,8 +16,7 @@
 <br />
 <div align="center">
   <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://api.scorecard.dev/projects/github.com/Vaquum/Limen/badge" alt="OpenSSF Scorecard" /></a>
-  <a href="https://github.com/Vaquum/Limen/tree/python-coverage-comment-action-data"><img src="https://raw.githubusercontent.com/Vaquum/Limen/python-coverage-comment-action-data/badge.svg" alt="Coverage" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://img.shields.io/ossf-scorecard/github.com/Vaquum/Limen?label=openssf+scorecard&amp;style=flat" alt="OpenSSF Scorecard" /></a>
 </div>
 
 <hr />
