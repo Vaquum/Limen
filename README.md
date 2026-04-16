@@ -14,6 +14,10 @@
   <a href="#learn-more">Learn More</a>
 </div>
 
+<div align="center">
+  <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>
+</div>
+
 <hr />
 
 # Limen
