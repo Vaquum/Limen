@@ -6,19 +6,19 @@
 
 <div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.</strong></div>
 
-<div align="center">
+<p align="center">
+  <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>&nbsp;
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://img.shields.io/ossf-scorecard/github.com/Vaquum/Limen?label=openssf+scorecard&amp;style=flat" alt="OpenSSF Scorecard" /></a>&nbsp;
+  <a href="https://github.com/Vaquum/Limen/tree/python-coverage-comment-action-data"><img src="https://raw.githubusercontent.com/Vaquum/Limen/python-coverage-comment-action-data/badge.svg?v=20260416" alt="Coverage" /></a>
+</p>
+
+<p align="center">
   <a href="#limen">Limen</a> •
   <a href="#what-limen-is-not">What Limen Is Not</a> •
   <a href="#capabilities">Capabilities</a> •
   <a href="#first-experiment">First Experiment</a> •
   <a href="#learn-more">Learn More</a>
-</div>
-
-<div align="center">
-  <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://api.scorecard.dev/projects/github.com/Vaquum/Limen/badge" alt="OpenSSF Scorecard" /></a>
-  <a href="https://github.com/Vaquum/Limen/tree/python-coverage-comment-action-data"><img src="https://raw.githubusercontent.com/Vaquum/Limen/python-coverage-comment-action-data/badge.svg" alt="Coverage" /></a>
-</div>
+</p>
 
 <hr />
 
