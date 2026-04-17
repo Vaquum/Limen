@@ -1,5 +1,5 @@
+import pandas as pd
 import polars as pl
-import wrangle
 from typing import Any
 from collections.abc import Callable
 
@@ -55,9 +55,14 @@ class Log:
 
         if cols_to_multilabel is not None:
             for col in cols_to_multilabel:
-                self.experiment_log = wrangle.col_to_multilabel(data=self.experiment_log,
-                                                        col=col,
-                                                        extended_colname=True)
+                temp_cols = pd.get_dummies(self.experiment_log[col])
+                temp_cols.columns = [f"{col}_{i}" for i in temp_cols.columns]
+                self.experiment_log = pd.merge(
+                    self.experiment_log.drop(col, axis=1),
+                    temp_cols,
+                    left_index=True,
+                    right_index=True,
+                )
 
             for col in self.experiment_log.select_dtypes(include=bool):
                 self.experiment_log[col] = self.experiment_log[col].astype(int)
