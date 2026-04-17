@@ -65,10 +65,15 @@ def test_quantile_line_density_counts_recent_line_endings_within_lookback() -> N
         lookback_hours=2,
     )
 
-    assert result['quantile_line_density_48h'].to_list() == [0, 1, 2, 2, 2, 1]
+    density_columns = [
+        column_name for column_name in result.columns if column_name.startswith('quantile_line_density_')
+    ]
+
+    assert density_columns == ['quantile_line_density_48h']
+    assert result[density_columns[0]].to_list() == [0, 1, 2, 2, 2, 1]
 
 
-def test_market_regime_builds_context_columns_and_scores_trending_market_as_favorable() -> None:
+def test_market_regime_keeps_parameterized_smas_and_adds_normalized_aliases() -> None:
     data = pl.DataFrame({
         'close': [100.0 + idx for idx in range(80)],
         'volume': ([100.0] * 40) + ([200.0] * 40),
@@ -83,6 +88,9 @@ def test_market_regime_builds_context_columns_and_scores_trending_market_as_favo
 
     assert 'returns_temp' not in result.columns
     assert {
+        'sma_3',
+        'sma_5',
+        'sma_12',
         'sma_20',
         'sma_50',
         'trend_strength',
