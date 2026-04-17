@@ -43,7 +43,6 @@ def get_target_column(label_name: str) -> str:
 
 DATA_SOURCE_REGISTRY: dict[str, Callable] = {
     'get_spot_klines': HistoricalData.get_spot_klines,
-    'get_futures_klines': HistoricalData.get_futures_klines,
 }
 
 

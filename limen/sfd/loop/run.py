@@ -46,8 +46,9 @@ def _annotation_accepts_int(annotation: Any) -> bool:
     '''
     Compute whether a type annotation accepts `int` values.
 
-    Handles plain `int`, `int | None`, `Optional[int]`, and any Union
-    containing int.
+    Handles plain `int`, `int | None`, `Optional[int]`, any Union containing
+    int, and string annotations produced by `from __future__ import annotations`
+    (e.g. `'int'`, `'int | None'`).
 
     Args:
         annotation: The annotation object from inspect.Parameter.annotation
@@ -59,6 +60,8 @@ def _annotation_accepts_int(annotation: Any) -> bool:
 
     if annotation is int:
         return True
+    if isinstance(annotation, str):
+        return 'int' in [part.strip() for part in annotation.split('|')]
     args = getattr(annotation, '__args__', None)
     if args is None:
         return False

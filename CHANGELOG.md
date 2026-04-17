@@ -743,3 +743,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Add a committed suite runtime budget in `tests/runtime_budget.json` based on recent green `main` CI runs and enforce it in the new `PR Checks Runtime` workflow job
 - Publish the runtime profile as a GitHub Actions artifact and render a runtime job summary with threshold counts and slowest tests during `PR Validation`
 - Add regression coverage for runtime profile emission plus pass/fail runtime-gate behavior without touching `limen/` package code
+
+## v2.4.3 on 22nd of April, 2026
+
+- Add `limen.sfd.loop` subpackage to compile Loop web UI payloads into Limen SFD objects, runnable through UEL
+- Export `forward_breakout_target` from `limen.features`
+- Drop NaN rows alongside nulls in `Manifest.prepare_data`

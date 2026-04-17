@@ -178,7 +178,6 @@ class LoopSFD:
         m = Manifest()
 
         m.set_data_source(**self._data_source_config)
-        m.set_test_data_source(method=HistoricalData._get_data_for_test)
 
         sr = self._payload['inputData']['splitRatios']
         m.set_split_config(sr['train'], sr['val'], sr['test'])

@@ -97,7 +97,6 @@ def test_label_meta_table_has_known_label():
 
 def test_data_source_registry_known_methods():
     assert DATA_SOURCE_REGISTRY['get_spot_klines'] is HistoricalData.get_spot_klines
-    assert DATA_SOURCE_REGISTRY['get_futures_klines'] is HistoricalData.get_futures_klines
 
 
 def test_reference_defaults_logreg_binary_extracts_model_params():
@@ -348,13 +347,13 @@ def test_loop_sfd_data_source_from_payload_selected_items():
     payload['inputData']['selectedItems'] = [{
         'name': 'data_source',
         'params': {
-            'method': 'get_futures_klines',
+            'method': 'get_spot_klines',
             'kline_size': 7200,
             'start_date_limit': '2024-06-01',
         },
     }]
     sfd = LoopSFD(payload)
-    assert sfd._data_source_config['method'] is HistoricalData.get_futures_klines
+    assert sfd._data_source_config['method'] is HistoricalData.get_spot_klines
     assert sfd._data_source_config['params']['kline_size'] == 7200
     assert sfd._data_source_config['params']['start_date_limit'] == '2024-06-01'
 
@@ -363,7 +362,7 @@ def test_loop_sfd_data_source_constructor_override_wins_over_payload():
     payload = _load_payload()
     payload['inputData']['selectedItems'] = [{
         'name': 'data_source',
-        'params': {'method': 'get_futures_klines', 'kline_size': 7200},
+        'params': {'method': 'get_spot_klines', 'kline_size': 7200},
     }]
     custom = {
         'method': HistoricalData.get_spot_klines,
@@ -942,6 +941,10 @@ def test_failing_payload_end_to_end_with_uel():
     # After the _wire_params fix, the format string is rewritten and
     # bypasses the parameterSpace-reference path, so .format() resolves
     # to 'roc_<period>' at runtime.
+    #
+    # The fixture has kline_size as a string in selectedItems (web-form
+    # payload). run.py coerces this before passing data= to UEL. In the
+    # test we mirror that: pre-fetch via the stub and pass data= directly.
     os.environ['LOOP_ENV'] = 'test'
 
     fixture_path = Path(__file__).parent / 'fixtures' / 'loop_template_test_failing.json'
@@ -950,6 +953,27 @@ def test_failing_payload_end_to_end_with_uel():
     sfd = LoopSFD(payload)
     domain = ParamDomain(sfd.params())
     strategy = RandomStrategy(domain, seed=42)
+
+    # Build synthetic data large enough to survive indicator NaN dropping
+    # (roc period up to 20, atr_percent_sma period up to 20) and a
+    # 70/10/20 split. Use a cyclical price series so the roc indicator
+    # oscillates, ensuring both label classes appear in train and test
+    # even at q=0.95.
+    import numpy as np
+    n = 500
+    t = np.linspace(0, 10 * np.pi, n)
+    close = 100.0 + 20.0 * np.sin(t) + np.cumsum(np.random.default_rng(42).normal(0, 0.2, n))
+    rng = np.random.default_rng(0)
+    synthetic_data = pl.DataFrame({
+        'datetime': pl.date_range(
+            pl.date(2024, 1, 1), pl.date(2025, 5, 14), interval='1d', eager=True,
+        ).cast(pl.Datetime('us', 'UTC')),
+        'open': close - rng.uniform(0, 0.5, n),
+        'high': close + rng.uniform(0, 1, n),
+        'low': close - rng.uniform(0, 1, n),
+        'close': close,
+        'volume': rng.uniform(1000, 5000, n),
+    })
 
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir) / 'exp'
@@ -960,6 +984,7 @@ def test_failing_payload_end_to_end_with_uel():
 
         uel = UniversalExperimentLoop(
             sfd=sfd,
+            data=synthetic_data,
             search_strategy=strategy,
             feedback_interval=1,
             checkpoint_interval=1,
