@@ -4,7 +4,7 @@
   <br />
 </div>
 <br />
-<div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.</strong></div>
+<div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.</strong></div>
 
 <div align="center">
   <a href="#limen">Limen</a> •
