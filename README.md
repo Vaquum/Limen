@@ -21,11 +21,13 @@
 
 <hr />
 
-# Limen
+<a id="limen"></a>
 
-Limen is a manifest-driven Bitcoin alpha research engine. It turns market data into searchable experiments, benchmark-style analytics, backtest results, and decoder cohorts.
+# Limen — The Research Engine
 
-Limen brings data preparation, feature construction, target shaping, parameter search, and post-run analysis into one Python workflow. It supports both machine learning and rule-based research, but it stays focused on signal research rather than decisioning or execution.
+*Manifest-driven Bitcoin alpha research engine that turns market data into searchable signals, backtested outcomes, and decoder cohorts.*
+
+Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works. Evolves from Talos, the hyperparameter optimization framework for TensorFlow and Keras cited in over 1,000 scientific papers with zero breaking bugs in six years.
 
 ## What Limen Is Not
 
