@@ -38,7 +38,7 @@ jobs:
 
       - name: Install limen package (and deps)
         run: |
-          pip install coverage
+          pip install coverage pytest
           pip install -e .
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
@@ -63,7 +63,7 @@ jobs:
 
   publish_coverage_pr_comment:
     name: Publish Coverage Comment
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && always()
     needs: pr_checks_tests
     runs-on: ubuntu-latest
     permissions:
@@ -75,15 +75,27 @@ jobs:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: Download coverage artifact
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: coverage-data
           path: coverage-artifacts
 
+      - name: Check coverage artifact presence
+        id: coverage_artifact
+        run: |
+          if [ -f coverage-artifacts/coverage.db ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore coverage data
+        if: steps.coverage_artifact.outputs.available == 'true'
         run: mv coverage-artifacts/coverage.db .coverage
 
       - name: Publish coverage comment
+        if: steps.coverage_artifact.outputs.available == 'true'
         uses: py-cov-action/python-coverage-comment-action@4c2eefcda8b94596768855a80ac94edc61aba669 # v3
         with:
           GITHUB_TOKEN: ${{ github.token }}
