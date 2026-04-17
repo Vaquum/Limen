@@ -27,7 +27,7 @@
 
 *Manifest-driven Bitcoin alpha research engine that turns market data into searchable signals, backtested outcomes, and decoder cohorts.*
 
-Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works. Evolves from Talos, the hyperparameter optimization framework for TensorFlow and Keras cited in over 1,000 scientific papers with zero breaking bugs in six years.
+Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works. It evolves from Talos, the hyperparameter optimization framework for TensorFlow and Keras cited in over 1,000 scientific papers with zero breaking bugs in six years.
 
 ## What Limen Is Not
 
