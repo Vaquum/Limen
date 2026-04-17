@@ -1,4 +1,10 @@
+from datetime import datetime
+from datetime import timedelta
+
 import polars as pl
+import pytest
+
+from limen.data.utils.compute_data_bars import compute_data_bars
 from limen.data.bars import liquidity_bars
 from limen.data.bars import trade_bars
 from limen.data.bars import volume_bars
@@ -47,6 +53,29 @@ def validate_bars_output(
         assert avg_klines_per_bar > 1.0, f"No aggregation detected: {avg_klines_per_bar:.1f} klines per bar"
 
 
+def _make_small_kline_frame() -> pl.DataFrame:
+    start = datetime(2025, 1, 1)
+    rows = []
+
+    for idx in range(4):
+        rows.append({
+            'datetime': start + timedelta(hours=idx),
+            'open': 10.0 + idx,
+            'high': 11.0 + idx,
+            'low': 9.0 + idx,
+            'close': 10.5 + idx,
+            'volume': 100.0 * (idx + 1),
+            'no_of_trades': 10 * (idx + 1),
+            'liquidity_sum': 1000.0 * (idx + 1),
+            'maker_ratio': 0.5,
+            'maker_volume': 50.0 * (idx + 1),
+            'maker_liquidity': 500.0 * (idx + 1),
+            'mean': 10.25 + idx,
+        })
+
+    return pl.DataFrame(rows)
+
+
 def test_volume_bars_basic():
     data = get_cached_spot_klines_2h(5000)
     result = volume_bars(data, volume_threshold=2060000.0)
@@ -81,3 +110,43 @@ def test_liquidity_bars_basic():
     MAX_EXPECTED_BARS = 20
     assert result['base_interval'][0] == EXPECTED_BASE_INTERVAL
     assert MIN_EXPECTED_BARS <= len(result) <= MAX_EXPECTED_BARS, f"Expected 10-20 bars, got {len(result)}"
+
+
+def test_compute_data_bars_base_and_unknown_modes_return_input_unchanged():
+    data = _make_small_kline_frame()
+
+    assert compute_data_bars(data, bar_type='base') is data
+    assert compute_data_bars(data, bar_type='unsupported') is data
+
+
+def test_compute_data_bars_dispatches_to_specific_bar_builders():
+    data = _make_small_kline_frame()
+
+    assert compute_data_bars(
+        data,
+        bar_type='trade',
+        trade_threshold=25,
+    ).equals(trade_bars(data, 25))
+    assert compute_data_bars(
+        data,
+        bar_type='volume',
+        volume_threshold=250.0,
+    ).equals(volume_bars(data, 250.0))
+    assert compute_data_bars(
+        data,
+        bar_type='liquidity',
+        liquidity_threshold=2500.0,
+    ).equals(liquidity_bars(data, 2500.0))
+
+
+def test_compute_data_bars_requires_threshold_for_selected_bar_type():
+    data = _make_small_kline_frame()
+
+    with pytest.raises(ValueError, match='trade_threshold'):
+        compute_data_bars(data, bar_type='trade')
+
+    with pytest.raises(ValueError, match='volume_threshold'):
+        compute_data_bars(data, bar_type='volume')
+
+    with pytest.raises(ValueError, match='liquidity_threshold'):
+        compute_data_bars(data, bar_type='liquidity')
