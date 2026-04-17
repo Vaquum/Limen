@@ -371,7 +371,7 @@ def test_load_round_data_requires_round_data_file() -> None:
         trainer = object.__new__(Trainer)
         trainer._experiment_dir = Path(tmpdir)
 
-        with pytest.raises(FileNotFoundError, match='round_data.jsonl'):
+        with pytest.raises(FileNotFoundError, match=r'round_data\.jsonl'):
             trainer._load_round_data()
 
 

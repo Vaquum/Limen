@@ -134,7 +134,7 @@ def test_get_any_file_validates_requested_row_count_and_column_names() -> None:
     with pytest.raises(TypeError, match='n_rows must be an int'):
         historical.get_any_file(TEST_FILE, n_rows='3')
 
-    with pytest.raises(ValueError, match='Expected .* column names'):
+    with pytest.raises(ValueError, match=r'Expected .* column names'):
         historical.get_any_file(TEST_FILE, columns=['only_one'])
 
 

@@ -222,7 +222,7 @@ def test_rsi_sma_is_neutral_when_recent_gains_and_losses_balance() -> None:
 def test_random_slice_rejects_invalid_safe_range_bounds() -> None:
     data = pl.DataFrame({'value': list(range(10))})
 
-    with pytest.raises(ValueError, match='safe_range_low must be >= 0.0'):
+    with pytest.raises(ValueError, match=r'safe_range_low must be >= 0\.0'):
         random_slice(data, rows=2, safe_range_low=0.8, safe_range_high=0.2)
 
 
