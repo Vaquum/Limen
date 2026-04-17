@@ -1,7 +1,12 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+import types
 
+import pytest
+
+import limen.experiment.trainer.trainer as trainer_module
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.trainer import ReconstructionError
@@ -11,6 +16,32 @@ from limen.sfd.foundational_sfd import random_binary as random_sfd
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.experiment.param_search import RandomStrategy
 from tests.utils.historical_data import get_cached_spot_klines_2h
+
+
+class _ReferenceModelA(ReferenceModel):
+    deterministic = True
+
+    def train(self, data, **kwargs):
+        return self
+
+    def predict(self, data, **kwargs):
+        return {'_preds': []}
+
+    def evaluate(self, data, **kwargs):
+        return {}
+
+
+class _ReferenceModelB(ReferenceModel):
+    deterministic = True
+
+    def train(self, data, **kwargs):
+        return self
+
+    def predict(self, data, **kwargs):
+        return {'_preds': []}
+
+    def evaluate(self, data, **kwargs):
+        return {}
 
 
 def test_trainer_end_to_end():
@@ -314,3 +345,140 @@ def test_trainer_with_fractional_diff():
         sensors = trainer.train([pid])
         assert len(sensors) == 1
         assert sensors[0].model is not None
+
+
+def test_load_round_data_skips_blank_and_malformed_lines() -> None:
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'round_data.jsonl').write_text(
+            '\n'
+            '{"round_id": 0, "round_params": {"alpha": 1}}\n'
+            'not-json\n'
+            '{"round_id": 1, "round_params": {"alpha": 2}}\n'
+        )
+
+        trainer = object.__new__(Trainer)
+        trainer._experiment_dir = experiment_dir
+
+        round_data = trainer._load_round_data()
+
+    assert list(round_data) == [0, 1]
+    assert round_data[1]['round_params'] == {'alpha': 2}
+
+
+def test_load_round_data_requires_round_data_file() -> None:
+    with TemporaryDirectory() as tmpdir:
+        trainer = object.__new__(Trainer)
+        trainer._experiment_dir = Path(tmpdir)
+
+        with pytest.raises(FileNotFoundError, match=r'round_data\.jsonl'):
+            trainer._load_round_data()
+
+
+def test_load_original_log_returns_none_when_results_csv_is_missing() -> None:
+    with TemporaryDirectory() as tmpdir:
+        trainer = object.__new__(Trainer)
+        trainer._experiment_dir = Path(tmpdir)
+
+        assert trainer._load_original_log() is None
+
+
+def test_resolve_model_class_requires_configured_model_function() -> None:
+    trainer = object.__new__(Trainer)
+    trainer._manifest = SimpleNamespace(model_function=None)
+
+    with pytest.raises(ValueError, match='Model function not configured'):
+        trainer._resolve_model_class()
+
+
+def test_resolve_model_class_rejects_modules_without_reference_model_subclasses() -> None:
+    def model_function():
+        return None
+
+    model_function.__module__ = 'dummy.no_model'
+    trainer = object.__new__(Trainer)
+    trainer._manifest = SimpleNamespace(model_function=model_function)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            trainer_module.importlib,
+            'import_module',
+            lambda module_name: types.SimpleNamespace(NotAReferenceModel=object),
+        )
+
+        with pytest.raises(ValueError, match='No ReferenceModel subclass found'):
+            trainer._resolve_model_class()
+
+
+def test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses() -> None:
+    def model_function():
+        return None
+
+    model_function.__module__ = 'dummy.multi_model'
+    trainer = object.__new__(Trainer)
+    trainer._manifest = SimpleNamespace(model_function=model_function)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            trainer_module.importlib,
+            'import_module',
+            lambda module_name: types.SimpleNamespace(
+                ModelA=_ReferenceModelA,
+                ModelB=_ReferenceModelB,
+            ),
+        )
+
+        with pytest.raises(ValueError, match='Multiple ReferenceModel subclasses found'):
+            trainer._resolve_model_class()
+
+
+def test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift() -> None:
+    trainer = object.__new__(Trainer)
+    trainer._original_log = {
+        7: {
+            'id': 7,
+            'param_alpha': 1.0,
+            'accuracy': 0.8000001,
+            'precision': 0.2000001,
+            'label': 'baseline',
+        }
+    }
+    trainer._param_keys = frozenset({'param_alpha'})
+
+    mismatches = trainer._validate_metrics(
+        7,
+        {
+            'id': 7,
+            'param_alpha': 99.0,
+            'accuracy': 0.8000002,
+            'precision': 0.2000002,
+            '_probs': [0.1, 0.9],
+            'label': 'changed-string-is-ignored',
+        },
+        is_deterministic=False,
+    )
+
+    assert mismatches == []
+
+
+def test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches() -> None:
+    trainer = object.__new__(Trainer)
+    trainer._original_log = {
+        3: {
+            'accuracy': 0.80,
+            'precision': 0.20,
+        }
+    }
+    trainer._param_keys = frozenset()
+
+    assert trainer._validate_metrics(99, {'accuracy': 0.5}, True) == [
+        'permutation 99 not found in results.csv'
+    ]
+
+    mismatches = trainer._validate_metrics(
+        3,
+        {'accuracy': 0.81, 'precision': 0.20},
+        is_deterministic=True,
+    )
+
+    assert mismatches == ['accuracy: original=0.8, new=0.81']

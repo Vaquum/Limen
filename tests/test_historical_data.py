@@ -1,8 +1,12 @@
 from math import isclose, sqrt
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import zipfile
 
 import polars as pl
 import pytest
 
+import limen.data.historical_data as historical_module
 from limen.data import HistoricalData
 
 
@@ -20,15 +24,16 @@ def test_get_any_file_loads_local_csv() -> None:
     assert data["datetime"].is_sorted()
 
 
-def test_get_spot_klines_reaggregates_latest_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_spot_klines_reaggregates_latest_dataset() -> None:
     historical = HistoricalData()
     base = historical.get_any_file(TEST_FILE, n_rows=2)
-    monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
 
-    aggregated = historical.get_spot_klines(
-        n_rows=1,
-        kline_size=14400,
-    )
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
+        aggregated = historical.get_spot_klines(
+            n_rows=1,
+            kline_size=14400,
+        )
 
     row = aggregated.row(0, named=True)
     trade_count = int(base["no_of_trades"].sum())
@@ -79,3 +84,90 @@ def test_get_spot_klines_rejects_sub_base_intervals() -> None:
         monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
         with pytest.raises(ValueError, match="Sub-base aggregation is not supported"):
             historical.get_spot_klines(kline_size=60)
+
+
+def test_resolve_file_path_or_url_expands_huggingface_references() -> None:
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            historical_module,
+            '_resolve_huggingface_latest_file',
+            lambda repo_id: f'https://example.com/{repo_id}/latest.parquet',
+        )
+
+        assert historical_module._resolve_file_path_or_url(
+            HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO
+        ) == 'https://example.com/vaquum/binance_btcusdt_1m_klines/latest.parquet'
+        assert historical_module._resolve_file_path_or_url(
+            'https://huggingface.co/datasets/foo/bar'
+        ) == 'https://example.com/foo/bar/latest.parquet'
+        assert historical_module._resolve_file_path_or_url(TEST_FILE) == TEST_FILE
+
+
+def test_get_any_file_loads_zipped_csv_and_derives_datetime_from_timestamp() -> None:
+    with TemporaryDirectory() as tmpdir:
+        csv_path = Path(tmpdir) / 'sample.csv'
+        csv_path.write_text(
+            'timestamp,value\n'
+            '1700000000000,2\n'
+            '1700000100000,3\n'
+        )
+        zip_path = Path(tmpdir) / 'sample.zip'
+
+        with zipfile.ZipFile(zip_path, 'w') as archive:
+            archive.write(csv_path, arcname='nested/sample.csv')
+
+        historical = HistoricalData()
+        data = historical.get_any_file(str(zip_path))
+
+    assert data['timestamp'].dtype == pl.UInt64
+    assert 'datetime' in data.columns
+    assert data['datetime'].is_sorted()
+    assert data['value'].to_list() == [2, 3]
+
+
+def test_get_any_file_validates_requested_row_count_and_column_names() -> None:
+    historical = HistoricalData()
+
+    with pytest.raises(ValueError, match='n_rows must be at least 1'):
+        historical.get_any_file(TEST_FILE, n_rows=0)
+
+    with pytest.raises(TypeError, match='n_rows must be an int'):
+        historical.get_any_file(TEST_FILE, n_rows='3')
+
+    with pytest.raises(ValueError, match=r'Expected .* column names'):
+        historical.get_any_file(TEST_FILE, columns=['only_one'])
+
+
+def test_get_any_file_rejects_unsupported_extensions() -> None:
+    with TemporaryDirectory() as tmpdir:
+        file_path = Path(tmpdir) / 'data.txt'
+        file_path.write_text('not,a,supported,format\n')
+        historical = HistoricalData()
+
+        with pytest.raises(ValueError, match='Unsupported file type'):
+            historical.get_any_file(str(file_path))
+
+
+def test_get_spot_klines_accepts_iso_start_dates_and_rejects_invalid_literals() -> None:
+    baseline = HistoricalData()
+    full_data = baseline.get_any_file(TEST_FILE)
+    cutoff = full_data['datetime'][1]
+    expected = full_data.filter(pl.col('datetime') >= cutoff)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
+
+        historical = HistoricalData()
+        filtered = historical.get_spot_klines(
+            kline_size=7200,
+            start_date_limit=cutoff.strftime('%Y-%m-%dT%H:%M:%S'),
+        )
+
+        assert filtered.height == expected.height
+        assert filtered['datetime'][0] == cutoff
+
+        with pytest.raises(ValueError, match='start_date_limit must match one of'):
+            historical.get_spot_klines(
+                kline_size=7200,
+                start_date_limit='2025/01/01',
+            )

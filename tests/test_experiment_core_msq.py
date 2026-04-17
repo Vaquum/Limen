@@ -2,6 +2,10 @@ import csv
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+
+import pandas as pd
+import pytest
 
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
@@ -11,6 +15,7 @@ from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import random_binary as sfd_module
 from limen.experiment.param_search import GridStrategy
 from limen.experiment.param_search import RandomStrategy
+from limen.log._experiment_parameter_correlation import _experiment_parameter_correlation
 from tests.stubs.stubs import make_msq
 from tests.stubs.stubs import StubPruningStrategy
 
@@ -495,3 +500,97 @@ def test_truncate_round_data_unit():
 
         assert len(remaining) == 3
         assert [e['round_id'] for e in remaining] == [0, 1, 2]
+
+
+def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_orders_cohorts():
+
+    experiment_log = pd.DataFrame({
+        'auc': [0.1, 0.2, 0.3, 0.4, 0.5],
+        'param_up': [1, 2, 3, 4, 5],
+        'param_down': [5, 4, 3, 2, 1],
+        'constant': [7, 7, 7, 7, 7],
+        'label': ['a', 'b', 'c', 'd', 'e'],
+    })
+
+    corr = _experiment_parameter_correlation(
+        SimpleNamespace(experiment_log=experiment_log),
+        'auc',
+        heads=(1.0, 0.6),
+        min_n=2,
+        n_boot=20,
+        random_state=0,
+    )
+
+    assert corr.index.names == ['cohort_pct', 'feature']
+    assert list(corr.columns) == [
+        'n_rows',
+        'corr',
+        'corr_med',
+        'ci_lo',
+        'ci_hi',
+        'sign_stability',
+    ]
+    assert set(corr.xs(100, level='cohort_pct').index.tolist()) == {
+        'param_down',
+        'param_up',
+    }
+    assert 'constant' not in corr.index.get_level_values('feature')
+    assert 'label' not in corr.index.get_level_values('feature')
+    assert corr.loc[(100, 'param_up'), 'corr_med'] == pytest.approx(1.0)
+    assert corr.loc[(100, 'param_down'), 'corr_med'] == pytest.approx(-1.0)
+    assert corr.loc[(60, 'param_up'), 'n_rows'] == 3
+    assert corr['sign_stability'].between(0.0, 1.0).all()
+
+
+def test_experiment_parameter_correlation_validates_metric_and_sort_key_presence():
+
+    experiment_log = pd.DataFrame({
+        'auc': [0.1, 0.2, 0.3],
+        'param': [1, 2, 3],
+    })
+    shim = SimpleNamespace(experiment_log=experiment_log)
+
+    with pytest.raises(ValueError, match='metric "loss" not found'):
+        _experiment_parameter_correlation(shim, 'loss')
+
+    with pytest.raises(ValueError, match='sort_key "missing" not found'):
+        _experiment_parameter_correlation(shim, 'auc', sort_key='missing')
+
+
+def test_experiment_parameter_correlation_requires_numeric_features_after_cleaning():
+
+    experiment_log = pd.DataFrame({
+        'auc': [0.1, 0.2],
+        'constant': [1, 1],
+        'label': ['low', 'high'],
+    })
+
+    with pytest.raises(
+        ValueError,
+        match='No numeric features available',
+    ):
+        _experiment_parameter_correlation(
+            SimpleNamespace(experiment_log=experiment_log),
+            'auc',
+            min_n=1,
+            n_boot=5,
+        )
+
+
+def test_experiment_parameter_correlation_rejects_logs_without_metric_rows():
+
+    experiment_log = pd.DataFrame({
+        'auc': [None, None],
+        'param': [1, 2],
+    })
+
+    with pytest.raises(
+        ValueError,
+        match='No rows remain after dropping NaNs in the metric column',
+    ):
+        _experiment_parameter_correlation(
+            SimpleNamespace(experiment_log=experiment_log),
+            'auc',
+            min_n=1,
+            n_boot=5,
+        )
