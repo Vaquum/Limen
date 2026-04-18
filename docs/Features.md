@@ -60,6 +60,15 @@ These helpers work directly on bar data and are usually the easiest feature laye
 | `volume_regime` | `volume_regime` | Volume context over a lookback window. |
 | `vwap` | `vwap` | Requires a datetime-like `datetime` column because VWAP resets by trading day. |
 
+## Calendar And Cyclical Time Features
+
+These helpers derive time-of-bar context from `datetime` without depending on earlier indicator columns.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `calendar_time_features` | `hour`, `minute`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, `is_weekend` | Adds discrete calendar fields for downstream splits, filters, and rules. |
+| `cyclical_time_features` | `hour_sin`, `hour_cos`, `minute_sin`, `minute_cos`, `weekday_sin`, `weekday_cos`, `day_of_month_sin`, `day_of_month_cos`, `day_of_year_sin`, `day_of_year_cos`, `week_of_year_sin`, `week_of_year_cos`, `month_sin`, `month_cos`, `quarter_sin`, `quarter_cos` | Encodes cyclical calendar fields without introducing artificial ordinal jumps. |
+
 ## Breakout And Regime Features
 
 These helpers are useful when you want state or structure, not just a continuous numeric series.

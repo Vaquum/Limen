@@ -28,15 +28,19 @@ from limen.features.price_vs_band_regime import price_vs_band_regime
 from limen.features.breakout_percentile_regime import breakout_percentile_regime
 from limen.features.window_return_regime import window_return_regime
 from limen.features.hh_hl_structure_regime import hh_hl_structure_regime
+from limen.features.calendar_time_features import calendar_time_features
+from limen.features.cyclical_time_features import cyclical_time_features
 
 __all__ = [
     'atr_percent_sma',
     'atr_sma',
     'breakout_features',
     'breakout_percentile_regime',
+    'calendar_time_features',
     'close_position',
     'compute_quantile_cutoff',
     'conserved_flux_renormalization',
+    'cyclical_time_features',
     'distance_from_high',
     'distance_from_low',
     'ema_breakout',
