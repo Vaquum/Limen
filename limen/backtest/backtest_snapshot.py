@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def backtest_snapshot(df: pd.DataFrame,
                      *,
                      pred_col: str = 'predictions',
@@ -9,21 +10,27 @@ def backtest_snapshot(df: pd.DataFrame,
                      price_change_col: str = 'price_change',
                      fee_bps: float = 5.0,
                      slip_bps: float = 5.0,
-                     trades_count_mode: str = 'bars') -> pd.DataFrame:
+                     trades_count_mode: str = 'runs',
+                     execution_lag_bars: int = 1) -> pd.DataFrame:
 
     '''
-    Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
+    Long-only, HOLD-WHILE-1 evaluation using aligned tradable returns.
     All percentage fields are in % units (not fractions). Sharpe is per bar (unitless).
 
     Takes in output of log.permutation_prediction_performance and returns backtest results.
 
     Logic
-    - Position pos = 1 wherever predictions==1 (no shifting).
+    - By default, a prediction made on row t is executed on row t+1.
+    - Set `execution_lag_bars=0` to reproduce the legacy same-row execution.
+    - Position pos = 1 wherever predictions==1 and lagged price data exists.
     - Entry bar gross return: r_entry = price_change / open  (≈ close/open - 1).
     - Continuation bar gross return: r_cont = close_t / close_{t-1} - 1  (holding across bars).
     - One round-trip cost per *consecutive 1-run*, charged on the run's exit bar.
     - Net per-bar return: R_net = (pos * r_gross) + cost_at_exit_bar.
     - Equity compounds over R_net; drawdown is computed from net equity.
+    - `trade_*` metrics are computed from completed 1-runs by default.
+    - Set `trades_count_mode='bars'` to reproduce the legacy bar-level `trade_*` fields.
+    - `bar_*` metrics are always computed from in-market bars.
 
     Returns a one-row DataFrame with columns (in order):
       [
@@ -34,13 +41,30 @@ def backtest_snapshot(df: pd.DataFrame,
         'total_return_net_pct',
         'trade_return_mean_win_pct',
         'trade_return_mean_loss_pct',
+        'bar_win_rate_pct',
+        'bar_expectancy_pct',
+        'bar_return_mean_win_pct',
+        'bar_return_mean_loss_pct',
+        'tp_mean_return_pct',
+        'fp_mean_return_pct',
+        'tn_mean_return_pct',
+        'fn_mean_return_pct',
+        'mean_kelly_pct',
         'bars_total',
         'sharpe_per_bar',
         'bars_in_market_pct',
+        'bars_in_market_count',
         'trades_count',
+        'trade_runs_count',
         'cost_round_trip_bps',
+        'execution_lag_bars',
       ]
     '''
+
+    if trades_count_mode not in {'runs', 'bars'}:
+        raise ValueError("trades_count_mode must be either 'runs' or 'bars'")
+    if execution_lag_bars < 0:
+        raise ValueError('execution_lag_bars must be >= 0')
 
     df = df.copy()
 
@@ -49,22 +73,29 @@ def backtest_snapshot(df: pd.DataFrame,
     close_px = pd.to_numeric(df[close_col], errors='coerce')
     dpx = pd.to_numeric(df[price_change_col], errors='coerce')  # close - open
 
+    if execution_lag_bars > 0:
+        open_px = open_px.shift(-execution_lag_bars)
+        close_px = close_px.shift(-execution_lag_bars)
+        dpx = dpx.shift(-execution_lag_bars)
+
     pos = (pred == 1) & open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
 
     bars_total = len(df)
+    bars_in_market_count = int(pos.sum())
     bars_in_market_pct = float(pos.mean() * 100.0)
 
-    if trades_count_mode == 'runs':
-        entries = pos & (~pos.shift(1, fill_value=False))
-        trades_count = int(entries.sum())
+    entries = pos & (~pos.shift(1, fill_value=False))
+    trade_runs_count = int(entries.sum())
+    if trades_count_mode == 'bars':
+        trades_count = bars_in_market_count
     else:
-        trades_count = int(pos.sum())
+        trades_count = trade_runs_count
 
-    entry_mask = pos & (~pos.shift(1, fill_value=False))
-    cont_mask  = pos & ( pos.shift(1, fill_value=False))
+    entry_mask = entries
+    cont_mask = pos & (pos.shift(1, fill_value=False))
 
     r_entry = dpx / open_px
-    r_cont  = (close_px / close_px.shift(1)) - 1.0
+    r_cont = (close_px / close_px.shift(1)) - 1.0
 
     R_gross = np.where(entry_mask, r_entry, 0.0) + np.where(cont_mask, r_cont, 0.0)
     R_gross = pd.Series(R_gross, index=df.index).fillna(0.0)
@@ -81,19 +112,76 @@ def backtest_snapshot(df: pd.DataFrame,
     max_drawdown_pct = float((eq_net / peak - 1.0).min() * 100.0)
 
     total_return_gross_pct = float((eq_gross.iloc[-1] - 1.0) * 100.0)
-    total_return_net_pct = float((eq_net.iloc[-1]   - 1.0) * 100.0)
+    total_return_net_pct = float((eq_net.iloc[-1] - 1.0) * 100.0)
 
-    tr = R_net[pos]
-    if tr.size:
-        wins = tr[tr > 0]
-        losses = tr[tr < 0]
-        trade_win_rate_pct = float((wins.size / tr.size) * 100.0)
-        trade_expectancy_pct = float(tr.mean() * 100.0)
-        trade_return_mean_win_pct = float(wins.mean() * 100.0) if wins.size else np.nan
-        trade_return_mean_loss_pct = float(losses.mean() * 100.0) if losses.size else np.nan
+    bar_returns = R_net[pos]
+    if bar_returns.size:
+        bar_wins = bar_returns[bar_returns > 0]
+        bar_losses = bar_returns[bar_returns < 0]
+        bar_win_rate_pct = float((bar_wins.size / bar_returns.size) * 100.0)
+        bar_expectancy_pct = float(bar_returns.mean() * 100.0)
+        bar_return_mean_win_pct = float(bar_wins.mean() * 100.0) if bar_wins.size else np.nan
+        bar_return_mean_loss_pct = float(bar_losses.mean() * 100.0) if bar_losses.size else np.nan
     else:
-        trade_win_rate_pct = trade_expectancy_pct = _trade_return_mean_pct = np.nan
-        trade_return_mean_win_pct = trade_return_mean_loss_pct = np.nan
+        bar_win_rate_pct = np.nan
+        bar_expectancy_pct = np.nan
+        bar_return_mean_win_pct = np.nan
+        bar_return_mean_loss_pct = np.nan
+
+    actual = pd.to_numeric(df['actuals'], errors='coerce') if 'actuals' in df else None
+    aligned_bar_return = (dpx / open_px).replace([np.inf, -np.inf], np.nan)
+    if actual is not None:
+        valid_actual = actual.isin([0, 1]) & aligned_bar_return.notna()
+        m_tp = valid_actual & (pred == 1) & (actual == 1)
+        m_fp = valid_actual & (pred == 1) & (actual == 0)
+        m_tn = valid_actual & (pred == 0) & (actual == 0)
+        m_fn = valid_actual & (pred == 0) & (actual == 1)
+        tp_mean_return_pct = float(aligned_bar_return.loc[m_tp].mean() * 100.0) if m_tp.any() else np.nan
+        fp_mean_return_pct = float(aligned_bar_return.loc[m_fp].mean() * 100.0) if m_fp.any() else np.nan
+        tn_mean_return_pct = float(aligned_bar_return.loc[m_tn].mean() * 100.0) if m_tn.any() else np.nan
+        fn_mean_return_pct = float(aligned_bar_return.loc[m_fn].mean() * 100.0) if m_fn.any() else np.nan
+    else:
+        tp_mean_return_pct = np.nan
+        fp_mean_return_pct = np.nan
+        tn_mean_return_pct = np.nan
+        fn_mean_return_pct = np.nan
+
+    if trade_runs_count:
+        run_ids = entries.cumsum()
+        trade_returns = ((1.0 + R_net[pos]).groupby(run_ids[pos]).prod() - 1.0)
+        trade_wins = trade_returns[trade_returns > 0]
+        trade_losses = trade_returns[trade_returns < 0]
+        trade_win_rate_pct = float((trade_wins.size / trade_returns.size) * 100.0)
+        trade_expectancy_pct = float(trade_returns.mean() * 100.0)
+        trade_return_mean_win_pct = float(trade_wins.mean() * 100.0) if trade_wins.size else np.nan
+        trade_return_mean_loss_pct = float(trade_losses.mean() * 100.0) if trade_losses.size else np.nan
+    else:
+        trade_win_rate_pct = np.nan
+        trade_expectancy_pct = np.nan
+        trade_return_mean_win_pct = np.nan
+        trade_return_mean_loss_pct = np.nan
+
+    if trades_count_mode == 'bars':
+        trade_win_rate_pct = bar_win_rate_pct
+        trade_expectancy_pct = bar_expectancy_pct
+        trade_return_mean_win_pct = bar_return_mean_win_pct
+        trade_return_mean_loss_pct = bar_return_mean_loss_pct
+        kelly_returns = bar_returns
+    else:
+        kelly_returns = trade_returns if trade_runs_count else pd.Series(dtype=float)
+
+    kelly_returns = kelly_returns[kelly_returns != 0]
+    kelly_wins = kelly_returns[kelly_returns > 0]
+    kelly_losses = kelly_returns[kelly_returns < 0]
+    if kelly_wins.size and kelly_losses.size:
+        win_rate = float(kelly_wins.size / kelly_returns.size)
+        loss_rate = float(kelly_losses.size / kelly_returns.size)
+        avg_win = float(kelly_wins.mean())
+        avg_loss = abs(float(kelly_losses.mean()))
+        payout_ratio = avg_win / avg_loss if avg_loss > 0 else np.nan
+        mean_kelly_pct = float((win_rate - (loss_rate / payout_ratio)) * 100.0) if payout_ratio > 0 else np.nan
+    else:
+        mean_kelly_pct = np.nan
 
     mu = float(R_net.mean())
     sd = float(R_net.std(ddof=1))
@@ -108,12 +196,23 @@ def backtest_snapshot(df: pd.DataFrame,
         'total_return_net_pct': round(total_return_net_pct, 1),
         'trade_return_mean_win_pct': round(trade_return_mean_win_pct, 1),
         'trade_return_mean_loss_pct': round(trade_return_mean_loss_pct, 1),
+        'bar_win_rate_pct': round(bar_win_rate_pct, 1),
+        'bar_expectancy_pct': round(bar_expectancy_pct, 3),
+        'bar_return_mean_win_pct': round(bar_return_mean_win_pct, 1),
+        'bar_return_mean_loss_pct': round(bar_return_mean_loss_pct, 1),
+        'tp_mean_return_pct': round(tp_mean_return_pct, 3),
+        'fp_mean_return_pct': round(fp_mean_return_pct, 3),
+        'tn_mean_return_pct': round(tn_mean_return_pct, 3),
+        'fn_mean_return_pct': round(fn_mean_return_pct, 3),
+        'mean_kelly_pct': round(mean_kelly_pct, 3),
         'bars_total': int(bars_total),
         'sharpe_per_bar': round(sharpe_per_bar, 2),
         'bars_in_market_pct': round(bars_in_market_pct, 1),
+        'bars_in_market_count': int(bars_in_market_count),
         'trades_count': int(trades_count),
+        'trade_runs_count': int(trade_runs_count),
         'cost_round_trip_bps': round(2 * (fee_bps + slip_bps)),
+        'execution_lag_bars': int(execution_lag_bars),
     }])
 
     return data
-

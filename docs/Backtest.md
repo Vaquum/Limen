@@ -36,11 +36,14 @@ The current snapshot backtest is intentionally simple and opinionated:
 
 - long-only
 - `prediction == 1` means "in market"
-- no signal shift is applied
+- by default, execution starts on the next bar (`execution_lag_bars=1`)
+- `execution_lag_bars=0` reproduces the legacy same-row execution
 - entry-bar return is based on `price_change / open`
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - one round-trip cost is charged per consecutive `1` run
 - outputs are reported in percent units
+
+This default is meant to align snapshot backtests with the common Limen pattern where a finished bar provides the features for the next decision. If you explicitly want same-row execution, set `execution_lag_bars=0`.
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
@@ -55,11 +58,29 @@ Snapshot backtests produce:
 - `total_return_net_pct`
 - `trade_return_mean_win_pct`
 - `trade_return_mean_loss_pct`
+- `bar_win_rate_pct`
+- `bar_expectancy_pct`
+- `bar_return_mean_win_pct`
+- `bar_return_mean_loss_pct`
+- `tp_mean_return_pct`
+- `fp_mean_return_pct`
+- `tn_mean_return_pct`
+- `fn_mean_return_pct`
+- `mean_kelly_pct`
 - `bars_total`
 - `sharpe_per_bar`
 - `bars_in_market_pct`
+- `bars_in_market_count`
 - `trades_count`
+- `trade_runs_count`
 - `cost_round_trip_bps`
+- `execution_lag_bars`
+
+By default, `trade_*` fields are computed per consecutive `1`-run, which matches the economic idea of one held trade. The `bar_*` fields are always the in-market bar statistics. If you need the legacy bar-level `trade_*` behavior, call `backtest_snapshot(..., trades_count_mode='bars')`.
+
+When `actuals` are present in the input table, snapshot also reports `tp_mean_return_pct`, `fp_mean_return_pct`, `tn_mean_return_pct`, and `fn_mean_return_pct`. These are the mean aligned one-bar returns for each confusion bucket after applying `execution_lag_bars`, before run-level holding logic and transaction costs.
+
+`mean_kelly_pct` is estimated from the active return distribution used by the snapshot mode: per held trade by default, or per in-market bar when `trades_count_mode='bars'`. It uses the empirical win rate together with mean win and mean loss size, and remains `NaN` when the sample does not contain both winners and losers.
 
 ### Typical use
 

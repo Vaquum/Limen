@@ -18,8 +18,14 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
                       'trade_expectancy_pct', 'max_drawdown_pct',
                       'total_return_gross_pct', 'total_return_net_pct',
                       'trade_return_mean_win_pct', 'trade_return_mean_loss_pct',
-                      'bars_total', 'sharpe_per_bar', 'bars_in_market_pct',
-                      'trades_count', 'cost_round_trip_bps'
+                      'bar_win_rate_pct', 'bar_expectancy_pct',
+                      'bar_return_mean_win_pct', 'bar_return_mean_loss_pct',
+                      'tp_mean_return_pct', 'fp_mean_return_pct',
+                      'tn_mean_return_pct', 'fn_mean_return_pct',
+                      'mean_kelly_pct', 'bars_total', 'sharpe_per_bar',
+                      'bars_in_market_pct', 'bars_in_market_count',
+                      'trades_count', 'trade_runs_count', 'cost_round_trip_bps',
+                      'execution_lag_bars'
     '''
 
     all_rows = []
@@ -33,4 +39,3 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
     df_all = pd.concat(all_rows, ignore_index=True)
 
     return df_all
-
