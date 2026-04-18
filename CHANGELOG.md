@@ -676,3 +676,13 @@ Note: add all new changelog entries to the bottom of this file.
 ## v2.1.1 on 18th of April, 2026
 
 - Remove `wrangle` dependency by replacing `wrangle.col_to_multilabel` with inline `pd.get_dummies` in `limen/log/log.py`
+
+## v2.2.0 on 18th of April, 2026
+
+- Add range-based volatility features: `parkinson_volatility`, `garman_klass_volatility`, `rogers_satchell_volatility`, and `yang_zhang_volatility`
+- Add OHLCV liquidity and impact features: `dollar_volume`, `amihud_illiquidity`, `return_per_dollar_volume`, `range_per_dollar_volume`, and `illiquidity_shock`
+- Add realized risk and tail features: `realized_semivariance`, `realized_skewness`, `realized_kurtosis`, `jump_variation_proxy`, `tail_event_intensity`, and `volatility_of_volatility`
+- Add hour-of-week normalized OHLCV features: `relative_volume_seasonality`, `relative_range_seasonality`, and `relative_volatility_seasonality`
+- Add candle-structure and auction-style features: `body_to_range`, `wick_imbalance`, `range_overlap`, `rejection_intensity`, and `absorption_intensity`
+- Add cross-timescale state features: `trend_coherence` and `volatility_term_structure`
+- Add documentation and full behavioral test coverage for the new OHLCV feature families
