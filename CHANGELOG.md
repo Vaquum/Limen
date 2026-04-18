@@ -1,6 +1,6 @@
 # Changelog
 
-## v3.0.0 on 18th of April, 2026
+## v2.1.0 on 18th of April, 2026
 
 - Split time-based feature extraction into `calendar_time_features` and `cyclical_time_features`
 - Remove `time_features`, so `from limen.features.time_features import time_features` no longer works; migrate to `calendar_time_features`, `cyclical_time_features`, or call both if you previously relied on the combined output
