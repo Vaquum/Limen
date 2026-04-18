@@ -69,6 +69,73 @@ These helpers derive time-of-bar context from `datetime` without depending on ea
 | `calendar_time_features` | `hour`, `minute`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, `is_weekend` | Adds discrete calendar fields for downstream splits, filters, and rules. `weekday` uses ISO numbering (`Monday=1` to `Sunday=7`), and `week_of_year` uses ISO week numbering. |
 | `cyclical_time_features` | `hour_sin`, `hour_cos`, `minute_sin`, `minute_cos`, `weekday_sin`, `weekday_cos`, `day_of_month_sin`, `day_of_month_cos`, `day_of_year_sin`, `day_of_year_cos`, `week_of_year_sin`, `week_of_year_cos`, `month_sin`, `month_cos`, `quarter_sin`, `quarter_cos` | Encodes cyclical calendar fields without introducing artificial ordinal jumps. Uses the same ISO conventions as `calendar_time_features`; weekday cycles are phase-aligned with `weekday - 1` before applying sine/cosine. |
 
+## Range-Based Volatility Features
+
+These helpers estimate volatility directly from OHLC structure instead of relying only on close-to-close returns.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `parkinson_volatility` | `parkinson_volatility` | High-low range estimator that ignores close-to-close drift. |
+| `garman_klass_volatility` | `garman_klass_volatility` | OHLC estimator using open, high, low, and close information. |
+| `rogers_satchell_volatility` | `rogers_satchell_volatility` | Drift-robust OHLC volatility estimator. |
+| `yang_zhang_volatility` | `yang_zhang_volatility` | Combines overnight, open-close, and range information into a higher-fidelity volatility estimate. Requires `window > 1`. |
+
+## Liquidity And Impact Features
+
+These helpers translate ordinary OHLCV bars into simple liquidity, impact, and slippage proxies.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `dollar_volume` | `dollar_volume` | Price-times-volume activity proxy using close and volume. |
+| `amihud_illiquidity` | `amihud_illiquidity` | Absolute return per dollar of volume, a compact price-impact proxy. |
+| `return_per_dollar_volume` | `return_per_dollar_volume` | Signed return per dollar of volume, useful when direction matters as much as impact. |
+| `range_per_dollar_volume` | `range_per_dollar_volume` | Bar range scaled by dollar volume. |
+| `illiquidity_shock` | `illiquidity_shock` | Current Amihud-style illiquidity relative to its own trailing mean. |
+
+## Realized Risk And Tail Features
+
+These helpers describe the quality of recent movement, not just its level.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `realized_semivariance` | `upside_semivariance`, `downside_semivariance` | Splits rolling squared returns into upside and downside components. |
+| `realized_skewness` | `realized_skewness` | Rolling skewness of close-to-close returns. |
+| `realized_kurtosis` | `realized_kurtosis` | Rolling kurtosis of close-to-close returns. |
+| `jump_variation_proxy` | `jump_variation_proxy` | Positive gap between realized variance and bipower variation proxy. |
+| `tail_event_intensity` | `tail_event_intensity` | Share of recent bars whose absolute return exceeds a configurable threshold. |
+| `volatility_of_volatility` | `volatility_of_volatility` | Rolling variability of rolling close-to-close return volatility. |
+
+## Seasonality-Normalized Features
+
+These helpers compare current bar behavior to the trailing mean for the same hour of the week.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `relative_volume_seasonality` | `relative_volume_seasonality` | Current volume relative to the trailing baseline for the same hour-of-week bucket. |
+| `relative_range_seasonality` | `relative_range_seasonality` | Current range percentage relative to the trailing hour-of-week baseline. |
+| `relative_volatility_seasonality` | `relative_volatility_seasonality` | Current absolute return magnitude relative to the trailing hour-of-week baseline. |
+
+## Candle Structure And Auction Features
+
+These helpers focus on how a bar moved internally, not just where it finished.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `body_to_range` | `body_to_range` | Absolute candle body size divided by the full bar range. |
+| `wick_imbalance` | `wick_imbalance` | Upper-wick minus lower-wick imbalance as a share of full range. |
+| `range_overlap` | `range_overlap` | Overlap share between the current bar range and the previous bar range. |
+| `rejection_intensity` | `rejection_intensity` | Wick-heavy rejection proxy based on total wick share and directional close location. |
+| `absorption_intensity` | `absorption_intensity` | High-volume, small-body absorption proxy using a trailing shifted volume baseline. |
+
+## Cross-Timescale Context Features
+
+These helpers summarize whether multiple horizons agree or disagree about market state.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `trend_coherence` | `trend_coherence` | Average sign agreement across short, medium, and long return horizons. |
+| `volatility_term_structure` | `volatility_term_structure` | Average ratio between short, medium, and long rolling volatility estimates. |
+
 ## Breakout And Regime Features
 
 These helpers are useful when you want state or structure, not just a continuous numeric series.

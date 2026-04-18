@@ -22,6 +22,12 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 | `compute_quantile_cutoff` | You need the train-only fit parameter that powers `quantile_flag` | Designed to be used through `fit_param` |
 | `lag_column`, `lag_columns`, `lag_range`, `lag_range_cols` | You want lagged versions of existing columns | Useful for both raw and derived features |
 | `calendar_time_features`, `cyclical_time_features` | You want calendar context or cyclical encodings from `datetime` | Time-of-bar features for schedules, regimes, and model inputs |
+| `parkinson_volatility`, `garman_klass_volatility`, `rogers_satchell_volatility`, `yang_zhang_volatility` | You want range-based volatility estimates from OHLC bars | Useful when close-to-close volatility is too coarse |
+| `dollar_volume`, `amihud_illiquidity`, `return_per_dollar_volume`, `range_per_dollar_volume`, `illiquidity_shock` | You want simple liquidity and impact proxies from OHLCV data | Keeps bar-derived liquidity features separate from trade-level microstructure |
+| `realized_semivariance`, `realized_skewness`, `realized_kurtosis`, `jump_variation_proxy`, `tail_event_intensity`, `volatility_of_volatility` | You want asymmetry, jump, and tail context around recent returns | These are useful risk-state features, not just volatility levels |
+| `relative_volume_seasonality`, `relative_range_seasonality`, `relative_volatility_seasonality` | You want current bar behavior normalized against hour-of-week baselines | Helps detect unusually active or quiet bars in a 24/7 market |
+| `body_to_range`, `wick_imbalance`, `range_overlap`, `rejection_intensity`, `absorption_intensity` | You want candle anatomy and auction-style context from plain bars | Focuses on rejection, overlap, and body-versus-wick structure |
+| `trend_coherence`, `volatility_term_structure` | You want short/medium/long horizon agreement features | Summarizes cross-timescale alignment without a large feature bundle |
 | `conserved_flux_renormalization` | You want trade-derived multi-scale flux diagnostics | Requires trade-level input rather than plain OHLCV bars |
 
 ## Adjacent modules
@@ -37,6 +43,10 @@ features/
 ├── quantile_flag.py                 # Target helper + train-only cutoff helper
 ├── lagged_features.py               # Lag helpers for arbitrary columns
 ├── breakout_*.py                    # Breakout and threshold features
+├── *_volatility.py                  # Range-based and higher-order volatility features
+├── *liquidity*.py, dollar_volume.py # Bar-derived liquidity and impact features
+├── *seasonality.py                  # Hour-of-week normalized bar behavior
+├── *intensity.py, *_range.py        # Candle anatomy and auction-style structure
 ├── volume_*.py, ma_slope_regime.py  # Regime and structure features
 ├── *_time_features.py               # Calendar and cyclical time context
 ├── distance_from_*.py, range_pct.py # Position and range features
@@ -50,6 +60,7 @@ features/
 - Most manifest-driven uses run features lazily on `pl.LazyFrame`, so lazy-friendly expressions are the safe default.
 - Train-only target helpers must stay train-only. `compute_quantile_cutoff` is a good example of that pattern.
 - Some features assume earlier indicator columns already exist. The public reference calls these dependencies out.
+- OHLCV-native feature helpers assume bars are already in chronological order before rolling or trailing calculations are applied.
 
 ## Read next
 
