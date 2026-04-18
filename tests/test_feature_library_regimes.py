@@ -19,7 +19,10 @@ from limen.features.regime_multiplier import regime_multiplier
 from limen.features.risk_reward_ratio import risk_reward_ratio
 from limen.features.spread import spread
 from limen.features.spread_percent import spread_percent
-from limen.features.time_features import time_features
+from limen.features import calendar_time_features as exported_calendar_time_features
+from limen.features import cyclical_time_features as exported_cyclical_time_features
+from limen.features.calendar_time_features import calendar_time_features
+from limen.features.cyclical_time_features import cyclical_time_features
 from limen.features.volatility_1h import volatility_1h
 from limen.features.volatility_measure import volatility_measure
 from limen.features.volume_spike import volume_spike
@@ -129,7 +132,7 @@ def test_spread_and_spread_percent_match_same_ratio() -> None:
     assert spread_percent_values == pytest.approx(expected)
 
 
-def test_time_features_extract_hour_minute_and_weekday() -> None:
+def test_calendar_time_features_extract_discrete_fields() -> None:
     data = pl.DataFrame(
         {
             'datetime': [
@@ -139,11 +142,79 @@ def test_time_features_extract_hour_minute_and_weekday() -> None:
         }
     )
 
-    result = time_features(data)
+    result = calendar_time_features(data)
 
+    assert exported_calendar_time_features is calendar_time_features
     assert result['hour'].to_list() == [12, 1]
     assert result['minute'].to_list() == [30, 15]
     assert result['weekday'].to_list() == [5, 6]
+    assert result['day_of_month'].to_list() == [17, 18]
+    assert result['day_of_year'].to_list() == [107, 108]
+    assert result['week_of_year'].to_list() == [16, 16]
+    assert result['month'].to_list() == [4, 4]
+    assert result['quarter'].to_list() == [2, 2]
+    assert result['is_weekend'].to_list() == [0, 1]
+
+
+def test_cyclical_time_features_extract_sine_and_cosine_fields() -> None:
+    data = pl.DataFrame(
+        {
+            'datetime': [
+                datetime(2026, 4, 17, 12, 30),
+                datetime(2026, 4, 18, 1, 15),
+            ]
+        }
+    )
+
+    result = cyclical_time_features(data)
+
+    assert exported_cyclical_time_features is cyclical_time_features
+    assert result['hour_sin'].to_list() == pytest.approx([0.0, math.sin(2.0 * math.pi / 24.0)])
+    assert result['hour_cos'].to_list() == pytest.approx([-1.0, math.cos(2.0 * math.pi / 24.0)])
+    assert result['minute_sin'].to_list() == pytest.approx([0.0, 1.0])
+    assert result['minute_cos'].to_list() == pytest.approx([-1.0, 0.0], abs=1e-12)
+    assert result['weekday_sin'].to_list() == pytest.approx([
+        math.sin(4.0 * 2.0 * math.pi / 7.0),
+        math.sin(5.0 * 2.0 * math.pi / 7.0),
+    ])
+    assert result['weekday_cos'].to_list() == pytest.approx([
+        math.cos(4.0 * 2.0 * math.pi / 7.0),
+        math.cos(5.0 * 2.0 * math.pi / 7.0),
+    ])
+    assert result['day_of_month_sin'].to_list() == pytest.approx([
+        math.sin(16.0 * 2.0 * math.pi / 31.0),
+        math.sin(17.0 * 2.0 * math.pi / 31.0),
+    ])
+    assert result['day_of_month_cos'].to_list() == pytest.approx([
+        math.cos(16.0 * 2.0 * math.pi / 31.0),
+        math.cos(17.0 * 2.0 * math.pi / 31.0),
+    ])
+    assert result['day_of_year_sin'].to_list() == pytest.approx([
+        math.sin(106.0 * 2.0 * math.pi / 366.0),
+        math.sin(107.0 * 2.0 * math.pi / 366.0),
+    ])
+    assert result['day_of_year_cos'].to_list() == pytest.approx([
+        math.cos(106.0 * 2.0 * math.pi / 366.0),
+        math.cos(107.0 * 2.0 * math.pi / 366.0),
+    ])
+    assert result['week_of_year_sin'].to_list() == pytest.approx([
+        math.sin(15.0 * 2.0 * math.pi / 53.0),
+        math.sin(15.0 * 2.0 * math.pi / 53.0),
+    ])
+    assert result['week_of_year_cos'].to_list() == pytest.approx([
+        math.cos(15.0 * 2.0 * math.pi / 53.0),
+        math.cos(15.0 * 2.0 * math.pi / 53.0),
+    ])
+    assert result['month_sin'].to_list() == pytest.approx([
+        math.sin(3.0 * 2.0 * math.pi / 12.0),
+        math.sin(3.0 * 2.0 * math.pi / 12.0),
+    ])
+    assert result['month_cos'].to_list() == pytest.approx([
+        math.cos(3.0 * 2.0 * math.pi / 12.0),
+        math.cos(3.0 * 2.0 * math.pi / 12.0),
+    ])
+    assert result['quarter_sin'].to_list() == pytest.approx([1.0, 1.0])
+    assert result['quarter_cos'].to_list() == pytest.approx([0.0, 0.0], abs=1e-12)
 
 
 def test_volatility_1h_copies_requested_source_column() -> None:

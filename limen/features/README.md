@@ -21,6 +21,7 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 | `quantile_flag` | You want a trainable binary target based on a cutoff | Common target helper in manifest-driven SFDs |
 | `compute_quantile_cutoff` | You need the train-only fit parameter that powers `quantile_flag` | Designed to be used through `fit_param` |
 | `lag_column`, `lag_columns`, `lag_range`, `lag_range_cols` | You want lagged versions of existing columns | Useful for both raw and derived features |
+| `calendar_time_features`, `cyclical_time_features` | You want calendar context or cyclical encodings from `datetime` | Time-of-bar features for schedules, regimes, and model inputs |
 | `conserved_flux_renormalization` | You want trade-derived multi-scale flux diagnostics | Requires trade-level input rather than plain OHLCV bars |
 
 ## Adjacent modules
@@ -37,6 +38,7 @@ features/
 ├── lagged_features.py               # Lag helpers for arbitrary columns
 ├── breakout_*.py                    # Breakout and threshold features
 ├── volume_*.py, ma_slope_regime.py  # Regime and structure features
+├── *_time_features.py               # Calendar and cyclical time context
 ├── distance_from_*.py, range_pct.py # Position and range features
 ├── vwap.py, ichimoku_cloud.py       # Higher-level technical composites
 └── conserved_flux_renormalization.py
