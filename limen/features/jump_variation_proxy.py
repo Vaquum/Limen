@@ -10,11 +10,11 @@ def jump_variation_proxy(
 ) -> pl.DataFrame:
 
     '''
-    Compute a rolling jump-variation proxy from realized variance and bipower variation.
+    Compute a rolling jump-variation proxy from realized variance and aligned bipower variation.
 
     Args:
         data (pl.DataFrame): Klines dataset with a close price column
-        window (int): Number of periods used for the rolling jump proxy
+        window (int): Number of returns used for the rolling jump proxy
         close_col (str): Column name used for log returns
 
     Returns:
@@ -22,19 +22,19 @@ def jump_variation_proxy(
     '''
 
     mu1_inverse_sq = math.pi / 2.0
+    returns = pl.col(close_col).log() - pl.col(close_col).shift(1).log()
+    bipower_products = mu1_inverse_sq * returns.abs() * returns.shift(1).abs()
 
     return (
         data
-        .with_columns((pl.col(close_col).log() - pl.col(close_col).shift(1).log()).alias('_jump_returns'))
+        .with_columns(returns.alias('_jump_returns'))
         .with_columns([
             (pl.col('_jump_returns') ** 2).rolling_sum(window_size=window).alias('_jump_realized_variance'),
             (
-                mu1_inverse_sq
-                * pl.col('_jump_returns').abs()
-                * pl.col('_jump_returns').shift(1).abs()
-            )
-            .rolling_sum(window_size=window)
-            .alias('_jump_bipower_variation'),
+                bipower_products.rolling_sum(window_size=window - 1)
+                if window > 1
+                else pl.lit(None, dtype=pl.Float64)
+            ).alias('_jump_bipower_variation'),
         ])
         .with_columns(
             (

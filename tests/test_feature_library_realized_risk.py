@@ -42,13 +42,17 @@ def test_jump_variation_proxy_matches_manual_realized_minus_bipower_component() 
 
     log_returns = np.log(np.asarray([110.0, 99.0, 118.8]) / np.asarray([100.0, 110.0, 99.0]))
     realized_variance = (log_returns[1] ** 2) + (log_returns[2] ** 2)
-    bipower = (math.pi / 2.0) * (
-        abs(log_returns[1]) * abs(log_returns[0])
-        + abs(log_returns[2]) * abs(log_returns[1])
-    )
+    bipower = (math.pi / 2.0) * abs(log_returns[2]) * abs(log_returns[1])
     expected = max(realized_variance - bipower, 0.0)
 
     assert result['jump_variation_proxy'].to_list()[3] == pytest.approx(expected)
+
+
+def test_jump_variation_proxy_returns_null_when_window_cannot_form_bipower_pairs() -> None:
+    data = pl.DataFrame({'close': [100.0, 110.0, 99.0]})
+    result = jump_variation_proxy(data, window=1)
+
+    assert result['jump_variation_proxy'].to_list() == [None, None, None]
 
 
 def test_tail_event_intensity_lights_up_after_repeated_large_shocks() -> None:
@@ -59,7 +63,7 @@ def test_tail_event_intensity_lights_up_after_repeated_large_shocks() -> None:
     assert values[-1] == pytest.approx(0.5)
 
 
-def test_volatility_of_volatility_matches_nested_population_standard_deviation() -> None:
+def test_volatility_of_volatility_matches_nested_sample_standard_deviation() -> None:
     data = pl.DataFrame({'close': [100.0, 110.0, 121.0, 145.2, 174.24]})
     result = volatility_of_volatility(data, volatility_window=2, window=2)
 

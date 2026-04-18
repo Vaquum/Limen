@@ -103,7 +103,7 @@ These helpers describe the quality of recent movement, not just its level.
 | `realized_kurtosis` | `realized_kurtosis` | Rolling kurtosis of close-to-close returns. |
 | `jump_variation_proxy` | `jump_variation_proxy` | Positive gap between realized variance and bipower variation proxy. |
 | `tail_event_intensity` | `tail_event_intensity` | Share of recent bars whose absolute return exceeds a configurable threshold. |
-| `volatility_of_volatility` | `volatility_of_volatility` | Rolling variability of absolute close-to-close returns. |
+| `volatility_of_volatility` | `volatility_of_volatility` | Rolling variability of rolling close-to-close return volatility. |
 
 ## Seasonality-Normalized Features
 
