@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.1.0 on 18th of April, 2026
+
+- Split time-based feature extraction into `calendar_time_features` and `cyclical_time_features`
+- Add discrete calendar fields including `hour`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, and `is_weekend`
+- Add sine/cosine encodings for cyclical calendar context including hour, minute, weekday, month, quarter, and related date fields
+
 ## v2.0.0 on 15th of April, 2026
 
 - Replace `HistoricalData`'s ClickHouse-backed surface with a file-backed surface
