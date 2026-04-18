@@ -1,22 +1,6 @@
 # Changelog
 
-## v2.1.0 on 18th of April, 2026
-
-- Split time-based feature extraction into `calendar_time_features` and `cyclical_time_features`
-- Remove `time_features`, so `from limen.features.time_features import time_features` no longer works; migrate to `calendar_time_features`, `cyclical_time_features`, or call both if you previously relied on the combined output
-- Add discrete calendar fields including `hour`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, and `is_weekend`
-- Add sine/cosine encodings for cyclical calendar context including hour, minute, weekday, month, quarter, and related date fields
-
-## v2.0.0 on 15th of April, 2026
-
-- Replace `HistoricalData`'s ClickHouse-backed surface with a file-backed surface
-- Reduce `HistoricalData` to `get_spot_klines()`, `get_binance_file()`, and `get_any_file()`
-- Make `HistoricalData` methods return `polars.DataFrame` directly while still updating `self.data`
-- Source `get_spot_klines()` from the daily Hugging Face BTCUSDT 1-minute dataset by default
-- Remove `_get_data_for_test()` and update manifests, tests, and docs to use file-based ingestion
-- Remove the old `_internal/generic_endpoints.py` ClickHouse helper
-- Drop the `clickhouse_connect` dependency and declare `requests` explicitly
-- Remove `median` and `iqr` from `get_spot_klines()` output because the canonical dataset no longer carries them
+Note: add all new changelog entries to the bottom of this file.
 
 ## v0.7.9 on 25th of May, 2025
 
@@ -670,3 +654,25 @@
 ## v1.53.0 on 13th of April, 2026
 
 - Switch Limen spot raw-trade and kline queries from `tdw.binance_trades` to `tdw.binance_trades_complete` so `HistoricalData` sees the daily overlay view while preserving finalized monthly history
+
+## v2.0.0 on 15th of April, 2026
+
+- Replace `HistoricalData`'s ClickHouse-backed surface with a file-backed surface
+- Reduce `HistoricalData` to `get_spot_klines()`, `get_binance_file()`, and `get_any_file()`
+- Make `HistoricalData` methods return `polars.DataFrame` directly while still updating `self.data`
+- Source `get_spot_klines()` from the daily Hugging Face BTCUSDT 1-minute dataset by default
+- Remove `_get_data_for_test()` and update manifests, tests, and docs to use file-based ingestion
+- Remove the old `_internal/generic_endpoints.py` ClickHouse helper
+- Drop the `clickhouse_connect` dependency and declare `requests` explicitly
+- Remove `median` and `iqr` from `get_spot_klines()` output because the canonical dataset no longer carries them
+
+## v2.1.0 on 18th of April, 2026
+
+- Split time-based feature extraction into `calendar_time_features` and `cyclical_time_features`
+- Remove `time_features`, so `from limen.features.time_features import time_features` no longer works; migrate to `calendar_time_features`, `cyclical_time_features`, or call both if you previously relied on the combined output
+- Add discrete calendar fields including `hour`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, and `is_weekend`
+- Add sine/cosine encodings for cyclical calendar context including hour, minute, weekday, month, quarter, and related date fields
+
+## v2.1.1 on 18th of April, 2026
+
+- Remove `wrangle` dependency by replacing `wrangle.col_to_multilabel` with inline `pd.get_dummies` in `limen/log/log.py`
