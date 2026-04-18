@@ -1,6 +1,9 @@
 import polars as pl
 
 
+WEEKEND_START_WEEKDAY = 6
+
+
 def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
 
     '''
@@ -26,5 +29,5 @@ def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
         pl.col('datetime').dt.week().alias('week_of_year'),
         pl.col('datetime').dt.month().alias('month'),
         pl.col('datetime').dt.quarter().alias('quarter'),
-        (weekday >= 6).cast(pl.Int8).alias('is_weekend'),
+        (weekday >= WEEKEND_START_WEEKDAY).cast(pl.Int8).alias('is_weekend'),
     ])
