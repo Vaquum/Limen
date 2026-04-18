@@ -15,7 +15,9 @@ def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input frame with `hour`, `minute`, `weekday`,
             `day_of_month`, `day_of_year`, `week_of_year`, `month`,
-            `quarter`, and `is_weekend` appended
+            `quarter`, and `is_weekend` appended. `weekday` uses ISO
+            numbering with `Monday=1` through `Sunday=7`, and
+            `week_of_year` follows ISO week numbering
     '''
 
     weekday = pl.col('datetime').dt.weekday()
