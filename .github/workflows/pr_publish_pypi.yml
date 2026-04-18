@@ -3,23 +3,77 @@ name: Publish Package to PyPI
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ['Automated Release']
+    types: [completed]
 
 jobs:
+  resolve_release_tag:
+    name: Resolve Release Tag
+    if: |
+      github.event_name == 'release' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout release commit from workflow run
+        if: github.event_name == 'workflow_run'
+        run: git checkout --force "${{ github.event.workflow_run.head_sha }}"
+
+      - name: Fetch all tags
+        run: git fetch --force --tags origin
+
+      - name: Resolve released tag
+        id: resolve
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == 'release' ]]; then
+            tag_name='${{ github.event.release.tag_name }}'
+          else
+            head_sha='${{ github.event.workflow_run.head_sha }}'
+            tag_name="$(git tag --points-at "$head_sha" | sort -V | tail -n 1)"
+
+            if [[ -z "$tag_name" ]]; then
+              echo "No release tag found on commit $head_sha — skipping publish"
+              echo 'tag_name=' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "Resolved tag: $tag_name"
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+
   build_distribution:
     name: Build Distribution
+    needs: resolve_release_tag
+    if: needs.resolve_release_tag.outputs.tag_name != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
       - name: Checkout released tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ needs.resolve_release_tag.outputs.tag_name }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.10"
 
@@ -30,7 +84,7 @@ jobs:
         run: python -m build
 
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: python-package-distributions
           path: dist/
@@ -38,19 +92,21 @@ jobs:
   publish_to_pypi:
     name: Publish Distribution to PyPI
     needs: build_distribution
+    if: needs.build_distribution.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: python-package-distributions
           path: dist/
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
+          skip-existing: true
           user: ${{ secrets.PYPI_USERNAME }}
           password: ${{ secrets.PYPI_PASSWORD }}
