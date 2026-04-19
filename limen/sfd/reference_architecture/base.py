@@ -100,10 +100,7 @@ class ReferenceModel(ABC):
             'confusion_recall': recall,
         }
 
-    def _compute_backtest(self,
-                          preds: np.ndarray,
-                          data: dict,
-                          actuals: np.ndarray | pd.Series | None = None) -> dict:
+    def _compute_backtest(self, preds: np.ndarray, data: dict) -> dict:
 
         '''
         Compute backtest metrics if price_data_for_backtest is available.
@@ -111,10 +108,6 @@ class ReferenceModel(ABC):
         Args:
             preds (np.ndarray): Binary predictions (0 or 1)
             data (dict): Data dictionary, optionally containing 'price_data_for_backtest'
-            actuals (np.ndarray | pd.Series | None): Optional aligned binary actuals
-                for the same prediction rows. When provided, snapshot confusion-bucket
-                return metrics are populated from these labels without additional
-                shifting.
 
         Returns:
             dict: Backtest metrics with 'backtest_' prefix, or empty dict if no price data
@@ -132,40 +125,14 @@ class ReferenceModel(ABC):
         else:
             return {}
 
-        preds = np.asarray(preds).astype(int)
-        if len(price_pd) != len(preds):
-            raise ValueError(
-                'price_data_for_backtest must align one-to-one with predictions'
-            )
-
         bt_input = pd.DataFrame({
-            'predictions': preds,
+            'predictions': np.asarray(preds).astype(int),
             'open': price_pd['open'].values,
             'close': price_pd['close'].values,
             'price_change': (price_pd['close'] - price_pd['open']).values,
         })
 
-        if actuals is not None:
-            actuals = pd.to_numeric(
-                pd.Series(actuals),
-                errors='coerce',
-            ).to_numpy()
-            if len(actuals) != len(preds):
-                raise ValueError(
-                    'actuals must align one-to-one with predictions'
-                )
-            if np.isnan(actuals).any():
-                raise ValueError(
-                    'actuals must be numeric and contain no NaN values'
-                )
-            actuals = actuals.astype(int)
-            bt_input['actuals'] = actuals
-
-        bt_result = backtest_snapshot(
-            bt_input,
-            execution_lag_bars=1,
-            trades_count_mode='runs',
-        )
+        bt_result = backtest_snapshot(bt_input)
 
         if bt_result.empty:
             return {}

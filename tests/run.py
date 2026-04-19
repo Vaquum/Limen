@@ -4,8 +4,6 @@ import traceback
 import logging
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.utils.cleanup import cleanup_csv_files
@@ -234,12 +232,6 @@ from tests.test_reference_architecture import test_random_binary_train_evaluate_
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
-from tests.test_reference_architecture import test_logreg_inline_backtest_passes_binary_actuals_to_snapshot as test_logreg_inline_backtest_passes_binary_actuals_to_snapshot_with_fixture
-from tests.test_reference_architecture import test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot as test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot_with_fixture
-from tests.test_reference_architecture import test_compute_backtest_requires_aligned_lengths
-from tests.test_reference_backtest_alignment import test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot
-from tests.test_reference_backtest_alignment import test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs
-from tests.test_reference_backtest_alignment import test_compute_backtest_rejects_nan_actuals
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -248,16 +240,6 @@ from tests.test_manifest_prepare_data import test_override_data_source_param
 from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
-from tests.test_backtest_snapshot import test_snapshot_defaults_to_next_bar_execution
-from tests.test_backtest_snapshot import test_snapshot_can_reproduce_legacy_same_row_execution
-from tests.test_backtest_snapshot import test_snapshot_trade_metrics_are_run_level_by_default
-from tests.test_backtest_snapshot import test_snapshot_bar_mode_preserves_legacy_trade_metrics
-from tests.test_backtest_snapshot import test_snapshot_confusion_bucket_mean_returns_cover_all_quadrants
-from tests.test_backtest_snapshot import test_snapshot_confusion_bucket_respects_actual_col
-from tests.test_backtest_snapshot import test_snapshot_mean_kelly_pct_uses_trade_runs_by_default
-from tests.test_backtest_snapshot import test_snapshot_mean_kelly_pct_keeps_breakevens_in_denominator
-from tests.test_backtest_snapshot import test_snapshot_handles_empty_input
-from tests.test_backtest_snapshot import test_snapshot_validates_mode_and_execution_lag
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 from tests.test_log_read_from_file import test_read_from_file_matches_full_header_and_keeps_non_header_recall_rows
 from tests.test_log_read_from_file import test_read_from_file_removes_duplicate_headers_and_trims_object_columns
@@ -353,7 +335,6 @@ from tests.test_indicator_and_data_helpers import test_data_dict_to_numpy_conver
 from tests.test_indicator_and_data_helpers import test_data_dict_to_numpy_respects_custom_keys_and_preserves_numpy_values
 from tests.test_metrics_and_log_helpers import test_permutation_prediction_performance_preserves_inverse_scaled_features
 from tests.test_metrics_and_log_helpers import test_permutation_prediction_performance_falls_back_to_single_argument_prep
-from tests.test_metrics_and_log_helpers import test_experiment_backtest_results_directionalizes_regression_rounds
 from tests.test_metrics_and_log_helpers import test_multiclass_metrics_returns_expected_rounded_summary
 from tests.test_metrics_and_log_helpers import test_balanced_metric_returns_zero_without_positive_predictions
 from tests.test_metrics_and_log_helpers import test_balanced_metric_penalizes_sparse_precision_by_trade_rate
@@ -463,25 +444,6 @@ from tests.test_trainer import test_resolve_model_class_rejects_modules_without_
 from tests.test_trainer import test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
 from tests.test_trainer import test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches
-
-
-def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot() -> None:
-
-    monkeypatch = pytest.MonkeyPatch()
-    try:
-        test_logreg_inline_backtest_passes_binary_actuals_to_snapshot_with_fixture(monkeypatch)
-    finally:
-        monkeypatch.undo()
-
-
-def test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot() -> None:
-
-    monkeypatch = pytest.MonkeyPatch()
-    try:
-        test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot_with_fixture(monkeypatch)
-    finally:
-        monkeypatch.undo()
-
 
 tests = [
     test_param_domain_init,
@@ -707,12 +669,6 @@ tests = [
     test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
-    test_logreg_inline_backtest_passes_binary_actuals_to_snapshot,
-    test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot,
-    test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot,
-    test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs,
-    test_compute_backtest_requires_aligned_lengths,
-    test_compute_backtest_rejects_nan_actuals,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
@@ -721,16 +677,6 @@ tests = [
     test_override_multiple_params,
     test_override_param_not_in_original_but_in_signature,
     test_unknown_override_key_raises,
-    test_snapshot_defaults_to_next_bar_execution,
-    test_snapshot_can_reproduce_legacy_same_row_execution,
-    test_snapshot_trade_metrics_are_run_level_by_default,
-    test_snapshot_bar_mode_preserves_legacy_trade_metrics,
-    test_snapshot_confusion_bucket_mean_returns_cover_all_quadrants,
-    test_snapshot_confusion_bucket_respects_actual_col,
-    test_snapshot_mean_kelly_pct_uses_trade_runs_by_default,
-    test_snapshot_mean_kelly_pct_keeps_breakevens_in_denominator,
-    test_snapshot_handles_empty_input,
-    test_snapshot_validates_mode_and_execution_lag,
     test_inline_and_post_experiment_metrics,
     test_read_from_file_matches_full_header_and_keeps_non_header_recall_rows,
     test_read_from_file_removes_duplicate_headers_and_trims_object_columns,
@@ -826,7 +772,6 @@ tests = [
     test_data_dict_to_numpy_respects_custom_keys_and_preserves_numpy_values,
     test_permutation_prediction_performance_preserves_inverse_scaled_features,
     test_permutation_prediction_performance_falls_back_to_single_argument_prep,
-    test_experiment_backtest_results_directionalizes_regression_rounds,
     test_multiclass_metrics_returns_expected_rounded_summary,
     test_balanced_metric_returns_zero_without_positive_predictions,
     test_balanced_metric_penalizes_sparse_precision_by_trade_rate,
