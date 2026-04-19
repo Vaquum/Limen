@@ -34,6 +34,7 @@ def backtest_snapshot(df: pd.DataFrame,
         'total_return_net_pct',
         'trade_return_mean_win_pct',
         'trade_return_mean_loss_pct',
+        'mean_kelly_pct',
         'bars_total',
         'sharpe_per_bar',
         'bars_in_market_pct',
@@ -95,6 +96,25 @@ def backtest_snapshot(df: pd.DataFrame,
         trade_win_rate_pct = trade_expectancy_pct = _trade_return_mean_pct = np.nan
         trade_return_mean_win_pct = trade_return_mean_loss_pct = np.nan
 
+    if trades_count_mode == 'runs':
+        entries = pos & (~pos.shift(1, fill_value=False))
+        run_ids = entries.cumsum()
+        kelly_returns = ((1.0 + R_net[pos]).groupby(run_ids[pos]).prod() - 1.0) if int(entries.sum()) else pd.Series(dtype=float)
+    else:
+        kelly_returns = R_net[pos]
+
+    kelly_wins = kelly_returns[kelly_returns > 0]
+    kelly_losses = kelly_returns[kelly_returns < 0]
+    if kelly_wins.size and kelly_losses.size:
+        win_rate = float(kelly_wins.size / kelly_returns.size)
+        loss_rate = float(kelly_losses.size / kelly_returns.size)
+        avg_win = float(kelly_wins.mean())
+        avg_loss = abs(float(kelly_losses.mean()))
+        payout_ratio = avg_win / avg_loss if avg_loss > 0 else np.nan
+        mean_kelly_pct = float((win_rate - (loss_rate / payout_ratio)) * 100.0) if payout_ratio > 0 else np.nan
+    else:
+        mean_kelly_pct = np.nan
+
     mu = float(R_net.mean())
     sd = float(R_net.std(ddof=1))
 
@@ -108,6 +128,7 @@ def backtest_snapshot(df: pd.DataFrame,
         'total_return_net_pct': round(total_return_net_pct, 1),
         'trade_return_mean_win_pct': round(trade_return_mean_win_pct, 1),
         'trade_return_mean_loss_pct': round(trade_return_mean_loss_pct, 1),
+        'mean_kelly_pct': round(mean_kelly_pct, 3),
         'bars_total': int(bars_total),
         'sharpe_per_bar': round(sharpe_per_bar, 2),
         'bars_in_market_pct': round(bars_in_market_pct, 1),
@@ -116,4 +137,3 @@ def backtest_snapshot(df: pd.DataFrame,
     }])
 
     return data
-

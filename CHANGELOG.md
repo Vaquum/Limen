@@ -701,3 +701,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## v2.3.1 on 19th of April, 2026
 
 - Revert v2.3.0 snapshot backtest alignment and trade metric changes in full, restoring the pre-v2.3.0 behavior and output surface
+
+## v2.3.2 on 19th of April, 2026
+
+- Add `mean_kelly_pct` back to snapshot backtests without changing the restored legacy execution semantics
+- Add TP/FP/TN/FN mean return percentage columns to the existing confusion metrics surfaces, both inline and post-run, using the existing aligned `open` and `price_change` data

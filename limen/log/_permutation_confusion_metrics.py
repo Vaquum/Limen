@@ -5,6 +5,53 @@ from collections.abc import Sequence
 from math import sqrt
 
 
+def _confusion_mean_return_pct(pred: pd.Series,
+                               actual: pd.Series,
+                               open_px: pd.Series,
+                               price_change: pd.Series) -> dict[str, float]:
+    '''
+    Compute mean return percentage for each confusion quadrant.
+
+    Args:
+        pred (pd.Series): Binary predictions
+        actual (pd.Series): Binary actuals
+        open_px (pd.Series): Open prices for the evaluated rows
+        price_change (pd.Series): Close - open for the evaluated rows
+
+    Returns:
+        dict[str, float]: Mean return percentages for TP/FP/TN/FN
+    '''
+
+    pred = pd.to_numeric(pd.Series(np.asarray(pred)), errors='coerce').to_numpy()
+    actual = pd.to_numeric(pd.Series(np.asarray(actual)), errors='coerce').to_numpy()
+    open_px = pd.to_numeric(pd.Series(np.asarray(open_px)), errors='coerce').to_numpy()
+    price_change = pd.to_numeric(pd.Series(np.asarray(price_change)), errors='coerce').to_numpy()
+
+    return_pct = (price_change / open_px) * 100.0
+    valid = (
+        ~np.isnan(pred) &
+        ~np.isnan(actual) &
+        ~np.isnan(open_px) &
+        (open_px != 0) &
+        np.isfinite(return_pct)
+    )
+
+    pred = pred[valid].astype(int)
+    actual = actual[valid].astype(int)
+    return_pct = return_pct[valid]
+
+    def _mean(mask: np.ndarray) -> float:
+        values = return_pct[mask]
+        return round(float(values.mean()), 3) if values.size else np.nan
+
+    return {
+        'tp_mean_return_pct': _mean((pred == 1) & (actual == 1)),
+        'fp_mean_return_pct': _mean((pred == 1) & (actual == 0)),
+        'tn_mean_return_pct': _mean((pred == 0) & (actual == 0)),
+        'fn_mean_return_pct': _mean((pred == 0) & (actual == 1)),
+    }
+
+
 def _permutation_confusion_metrics(self: Any,
                                   x: str,
                                   round_id: int,
@@ -34,7 +81,9 @@ def _permutation_confusion_metrics(self: Any,
         pd.DataFrame: One-row table with columns 'x_name', 'n_kept', 'pred_pos_rate_pct',
                       'actual_pos_rate_pct', 'precision_pct', 'recall_pct', 'pred_pos_count',
                       'tp_count', 'fp_count', 'tp_x_mean', 'tp_x_median', 'fp_x_mean', 'fp_x_median',
-                      'pred_pos_x_mean', 'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks'
+                      'pred_pos_x_mean', 'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks',
+                      'tp_mean_return_pct', 'fp_mean_return_pct', 'tn_mean_return_pct',
+                      'fn_mean_return_pct'
     '''
 
     df = self.permutation_prediction_performance(round_id)
@@ -47,7 +96,7 @@ def _permutation_confusion_metrics(self: Any,
         df[pred_col] = (df[proba_col].astype(float) >= float(threshold)).astype(int)
 
     # Validate required columns
-    for col in (pred_col, actual_col, x):
+    for col in (pred_col, actual_col, x, 'open', 'price_change'):
         if col not in df:
             raise ValueError(f'column "{col}" not found')
 
@@ -136,6 +185,12 @@ def _permutation_confusion_metrics(self: Any,
     fp_x = df.loc[m_fp, x].to_numpy()
     tp_fp_cohen_d = _cohen_d(tp_x, fp_x)
     tp_fp_ks = _ks(tp_x, fp_x)
+    mean_return_pct = _confusion_mean_return_pct(
+        df[pred_col],
+        df[actual_col],
+        df['open'],
+        df['price_change'],
+    )
 
     return pd.DataFrame.from_records([{
         **(id_cols or {}),
@@ -156,5 +211,5 @@ def _permutation_confusion_metrics(self: Any,
         'tp_fp_ks': float(tp_fp_ks),
         'x_name': x,
         'n_kept': int(n),
+        **mean_return_pct,
     }])
-

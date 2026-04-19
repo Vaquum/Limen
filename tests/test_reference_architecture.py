@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from limen.sfd.reference_architecture import XGBoostRegressor
 from limen.sfd.reference_architecture import LogRegBinary
@@ -34,7 +35,7 @@ def _make_data(n=200, binary=False, with_val=True, with_price=True):
 
     if with_price:
         n_test = n - split_val
-        data['price_data_for_backtest'] = pd.DataFrame({
+        data['price_data_for_backtest'] = pl.DataFrame({
             'open': np.random.uniform(100, 200, n_test),
             'high': np.random.uniform(200, 300, n_test),
             'low': np.random.uniform(50, 100, n_test),
@@ -65,11 +66,14 @@ def test_xgboost_evaluate_returns_all_metric_types():
         assert key in results, f"Missing results key: {key}"
 
     for key in ['confusion_tp', 'confusion_fp', 'confusion_tn', 'confusion_fn',
-                'confusion_precision', 'confusion_recall']:
+                'confusion_precision', 'confusion_recall',
+                'confusion_tp_mean_return_pct', 'confusion_fp_mean_return_pct',
+                'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
         assert key in results, f"Missing confusion key: {key}"
 
     for key in ['backtest_trade_win_rate_pct', 'backtest_max_drawdown_pct',
-                'backtest_total_return_net_pct', 'backtest_sharpe_per_bar']:
+                'backtest_total_return_net_pct', 'backtest_sharpe_per_bar',
+                'backtest_mean_kelly_pct']:
         assert key in results, f"Missing backtest key: {key}"
 
     assert '_preds' in results
@@ -77,7 +81,7 @@ def test_xgboost_evaluate_returns_all_metric_types():
 
 def test_logreg_train_evaluate_end_to_end():
 
-    data = _make_data(binary=True, with_price=False)
+    data = _make_data(binary=True, with_price=True)
     model = LogRegBinary().train(data, solver='lbfgs', max_iter=200)
     results = model.evaluate(data)
 
@@ -95,7 +99,7 @@ def test_logreg_train_evaluate_end_to_end():
 
 def test_random_binary_train_evaluate_end_to_end():
 
-    data = _make_data(binary=True, with_price=False)
+    data = _make_data(binary=True, with_price=True)
     model = RandomBinary().train(data, random_weights=0.5)
     results = model.evaluate(data)
 
@@ -113,7 +117,7 @@ def test_tabpfn_train_evaluate_end_to_end():
     if TabPFNBinary is None:
         return
 
-    data = _make_data(binary=True, with_price=False)
+    data = _make_data(binary=True, with_price=True)
     model = TabPFNBinary().train(data, n_ensemble_configurations=2, device='cpu')
     results = model.evaluate(data)
 
