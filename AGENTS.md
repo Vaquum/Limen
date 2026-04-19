@@ -35,7 +35,7 @@
 - Work must happen on a `wa/` branch, never on `main`.
 - A local work branch must track the same-named remote branch.
 - Local-only branches, extra worktrees, and detached-head write work are forbidden.
-- At most one active local WA branch and one unmerged remote WA branch may exist at a time.
+- At most one active local WA branch and one unmerged remote WA branch may exist at a time but can inherit branches from operator as long as one active local branch rule stands
 - Dry compile is required before push.
 - PR and authoritative CI compile are required before merge.
 - Report-back or stand-down requires committed state, a clean tree, and the current branch head present on remote.
