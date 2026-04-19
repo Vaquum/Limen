@@ -693,5 +693,6 @@ Note: add all new changelog entries to the bottom of this file.
 - Change snapshot `trade_*` metrics to run-level by default, add explicit `bar_*` metrics, and retain `trades_count_mode='bars'` for legacy-style bar metrics
 - Apply the new snapshot defaults explicitly to experiment backtest summaries and SFD inline backtest metrics so the behavior change is intentional and visible in outputs
 - Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when aligned `actuals` are available
+- Populate inline snapshot confusion-bucket return metrics from the aligned test labels, with regression SFDs passing directional actuals explicitly
 - Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution with breakeven observations kept in the Kelly sample
 - Add direct snapshot tests to the canonical `python -m tests.run` path and extend docs for the updated snapshot semantics
