@@ -1,6 +1,8 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import math
+
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import random_binary as random_binary_sfd
@@ -59,6 +61,22 @@ def test_inline_and_post_experiment_metrics() -> None:
     assert uel.experiment_backtest_results is not None
     assert len(uel.experiment_backtest_results) > 0
     assert 'mean_kelly_pct' in uel.experiment_backtest_results.columns
+
+    for inline_col, post_col in [
+        ('confusion_tp_mean_return_pct', 'tp_mean_return_pct'),
+        ('confusion_fp_mean_return_pct', 'fp_mean_return_pct'),
+        ('confusion_tn_mean_return_pct', 'tn_mean_return_pct'),
+        ('confusion_fn_mean_return_pct', 'fn_mean_return_pct'),
+    ]:
+        for inline_value, post_value in zip(
+            uel.experiment_log[inline_col].to_list(),
+            uel.experiment_confusion_metrics[post_col].tolist(),
+            strict=True,
+        ):
+            if math.isnan(inline_value) and math.isnan(post_value):
+                continue
+
+            assert inline_value == post_value
 
     assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
         uel.experiment_backtest_results['total_return_net_pct'].tolist()

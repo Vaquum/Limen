@@ -119,6 +119,13 @@ def _permutation_confusion_metrics(self: Any,
     df[pred_col] = df[pred_col].astype(int)
     df[actual_col] = df[actual_col].astype(int)
 
+    mean_return_pct = _confusion_mean_return_pct(
+        df[pred_col],
+        df[actual_col],
+        df['open'],
+        df['price_change'],
+    )
+
     q_lo, q_hi = df[x].quantile(outlier_quantiles)
     if outlier_mode == 'filter':
         df = df[(df[x] >= q_lo) & (df[x] <= q_hi)]
@@ -201,12 +208,6 @@ def _permutation_confusion_metrics(self: Any,
     fp_x = df.loc[m_fp, x].to_numpy()
     tp_fp_cohen_d = _cohen_d(tp_x, fp_x)
     tp_fp_ks = _ks(tp_x, fp_x)
-    mean_return_pct = _confusion_mean_return_pct(
-        df[pred_col],
-        df[actual_col],
-        df['open'],
-        df['price_change'],
-    )
 
     return pd.DataFrame.from_records([{
         **(id_cols or {}),

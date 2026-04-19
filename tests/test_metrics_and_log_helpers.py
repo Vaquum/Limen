@@ -95,6 +95,20 @@ class _DummyConfusionMetricsMissingPriceChange:
         })
 
 
+class _DummyConfusionMetricsOutlierFiltered:
+
+    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+        assert round_id == 0
+        return pd.DataFrame({
+            'predictions': [1, 0, 0, 0, 0],
+            'actuals': [1, 1, 0, 0, 0],
+            'open': [100.0, 100.0, 100.0, 100.0, 100.0],
+            'close': [110.0, 90.0, 105.0, 100.0, 100.0],
+            'price_change': [10.0, -10.0, 5.0, 0.0, 0.0],
+            'x_metric': [1000.0, 0.0, 0.0, 0.0, 0.0],
+        })
+
+
 class _DummyCompletedBarSignal:
 
     def __init__(self) -> None:
@@ -205,6 +219,20 @@ def test_permutation_confusion_metrics_requires_return_columns() -> None:
             round_id=0,
             outlier_quantiles=(0.0, 1.0),
         )
+
+
+def test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows() -> None:
+    result = _permutation_confusion_metrics(
+        _DummyConfusionMetricsOutlierFiltered(),
+        x='x_metric',
+        round_id=0,
+        outlier_quantiles=(0.25, 0.75),
+    ).iloc[0]
+
+    assert result['n_kept'] == 4
+    assert result['tp_x_mean'] == 0.0
+    assert result['tp_mean_return_pct'] == -10.0
+    assert result['fn_mean_return_pct'] == 5.0
 
 
 def test_backtest_snapshot_adds_mean_kelly_pct() -> None:
