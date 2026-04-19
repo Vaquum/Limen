@@ -85,7 +85,7 @@ def test_sample_range_exact_handles_edge_cases():
         sample_range_exact(random.Random(3), 5, 6)
 
 
-def test_sample_range_exact_skips_small_range_fallback_above_sys_maxsize(monkeypatch):
+def test_sample_range_exact_skips_small_range_fallback_above_sys_maxsize():
     class StubRandom:
         def __init__(self) -> None:
             self.values = iter(range(50))
@@ -98,9 +98,12 @@ def test_sample_range_exact_skips_small_range_fallback_above_sys_maxsize(monkeyp
 
     import limen.utils.param_space as param_space_module
 
-    monkeypatch.setattr(param_space_module.sys, 'maxsize', 50)
-
-    assert sample_range_exact(StubRandom(), 100, 50) == list(range(50))
+    previous_maxsize = param_space_module.sys.maxsize
+    try:
+        param_space_module.sys.maxsize = 50
+        assert sample_range_exact(StubRandom(), 100, 50) == list(range(50))
+    finally:
+        param_space_module.sys.maxsize = previous_maxsize
 
 
 def test_sample_range_exact_preserves_prefix_for_huge_ranges():
