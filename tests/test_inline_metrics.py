@@ -3,11 +3,13 @@ from tempfile import TemporaryDirectory
 
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
-from limen.sfd.foundational_sfd import random_binary as sfd_module
+from limen.sfd.foundational_sfd import random_binary as random_binary_sfd
+from limen.sfd.foundational_sfd import xgboost_regressor as xgboost_sfd
 from limen.experiment.param_search import RandomStrategy
 
 
-def _run_uel(n_permutations: int = 3) -> UniversalExperimentLoop:
+def _run_uel(sfd_module=random_binary_sfd,
+             n_permutations: int = 3) -> UniversalExperimentLoop:
 
     params = sfd_module.params()
     domain = ParamDomain(params)
@@ -57,3 +59,14 @@ def test_inline_and_post_experiment_metrics() -> None:
     assert uel.experiment_backtest_results is not None
     assert len(uel.experiment_backtest_results) > 0
     assert 'mean_kelly_pct' in uel.experiment_backtest_results.columns
+
+    assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
+        uel.experiment_backtest_results['total_return_net_pct'].tolist()
+
+
+def test_xgboost_inline_and_post_backtest_metrics_match() -> None:
+
+    uel = _run_uel(sfd_module=xgboost_sfd, n_permutations=1)
+
+    assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
+        uel.experiment_backtest_results['total_return_net_pct'].tolist()

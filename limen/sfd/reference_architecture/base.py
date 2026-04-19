@@ -147,7 +147,7 @@ class ReferenceModel(ABC):
             'price_change': (price_pd['close'] - price_pd['open']).values,
         })
 
-        bt_result = backtest_snapshot(bt_input)
+        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
 
         if bt_result.empty:
             return {}

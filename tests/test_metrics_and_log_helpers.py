@@ -3,8 +3,10 @@ import polars as pl
 import pandas as pd
 import pytest
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+from typing import ClassVar
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.log._experiment_backtest_results import _experiment_backtest_results
 from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics
 from limen.log._permutation_prediction_performance import _permutation_prediction_performance
@@ -92,6 +94,47 @@ class _DummyConfusionMetricsMissingPriceChange:
         })
 
 
+class _DummyCompletedBarSignal:
+
+    def __init__(self) -> None:
+        self.data = None
+        self.round_params = [{}]
+        self.inverse_scaler = None
+        self.scalers = {}
+        # Signal uses the completed current bar and would look perfect if same-row priced.
+        self.preds = [np.array([1, 0, 1, 0])]
+
+    def prep(self, data: object, params: dict) -> dict:
+        _ = data, params
+        return {
+            'x_test': np.array([[1.0], [0.0], [1.0], [0.0]]),
+            # Next-bar direction is the opposite of the current-bar direction.
+            'y_test': np.array([0, 1, 0, 1]),
+        }
+
+    def _get_test_data_with_all_cols(self, round_id: int) -> pd.DataFrame:
+        assert round_id == 0
+        return pd.DataFrame({
+            'open': [100.0, 100.0, 100.0, 100.0],
+            'close': [110.0, 90.0, 110.0, 90.0],
+        })
+
+
+class _DummyRegressionBacktestLog:
+
+    round_params: ClassVar[list[dict]] = [{}]
+
+    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+        assert round_id == 0
+        return pd.DataFrame({
+            'predictions': [0.4, -0.2, 0.7],
+            'actuals': [0.6, -0.1, 0.2],
+            'open': [100.0, 100.0, 100.0],
+            'close': [100.0, 110.0, 90.0],
+            'price_change': [0.0, 10.0, -10.0],
+        })
+
+
 def test_permutation_prediction_performance_preserves_inverse_scaled_features() -> None:
     perf = _permutation_prediction_performance(_DummyPerfWithInverseScaler(), round_id=0)
 
@@ -171,11 +214,104 @@ def test_backtest_snapshot_adds_mean_kelly_pct() -> None:
             'close': [120.0, 100.0, 90.0, 100.0],
             'price_change': [20.0, 0.0, -10.0, 0.0],
         }),
+        execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
     ).iloc[0]
 
     assert result['mean_kelly_pct'] == 25.0
+
+
+def test_backtest_snapshot_executes_on_next_bar() -> None:
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 0, 0],
+            'open': [100.0, 100.0, 100.0],
+            'close': [110.0, 90.0, 100.0],
+            'price_change': [10.0, -10.0, 0.0],
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert result['bars_total'] == 2
+    assert result['trades_count'] == 1
+    assert result['bars_in_market_pct'] == 50.0
+    assert result['total_return_net_pct'] == -10.0
+
+
+def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> None:
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 1, 0],
+            'open': [100.0, 100.0, 110.0],
+            'close': [100.0, 110.0, 121.0],
+            'price_change': [0.0, 10.0, 11.0],
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+        trades_count_mode='runs',
+    ).iloc[0]
+
+    assert result['trades_count'] == 1
+    assert result['total_return_gross_pct'] == 21.0
+    assert result['total_return_net_pct'] == 21.0
+
+
+def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar() -> None:
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 0, 0],
+            'open': [100.0, np.nan, 100.0],
+            'close': [100.0, np.nan, 100.0],
+            'price_change': [0.0, np.nan, 0.0],
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert result['bars_total'] == 1
+    assert result['trades_count'] == 0
+    assert result['total_return_net_pct'] == 0.0
+
+
+def test_completed_bar_signal_proves_next_bar_alignment() -> None:
+    perf = _permutation_prediction_performance(_DummyCompletedBarSignal(), round_id=0)
+
+    same_row = backtest_snapshot(
+        perf,
+        execution_lag_bars=0,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+    next_bar = backtest_snapshot(
+        perf,
+        execution_lag_bars=1,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert same_row['total_return_net_pct'] == 21.0
+    assert next_bar['total_return_net_pct'] == -19.0
+
+
+def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
+    result = _experiment_backtest_results(
+        _DummyRegressionBacktestLog(),
+        disable_progress_bar=True,
+    ).iloc[0]
+
+    expected = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 0, 1],
+            'open': [100.0, 100.0, 100.0],
+            'close': [100.0, 110.0, 90.0],
+            'price_change': [0.0, 10.0, -10.0],
+        }),
+        execution_lag_bars=1,
+    ).iloc[0]
+
+    assert result['total_return_net_pct'] == expected['total_return_net_pct']
 
 
 def test_multiclass_metrics_returns_expected_rounded_summary() -> None:
