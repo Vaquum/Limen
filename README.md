@@ -64,13 +64,10 @@ pip install vaquum_limen
 2. Load data and run a first experiment:
 
 ```python
-import polars as pl
 import limen
 
-data = pl.read_csv(
-    "https://raw.githubusercontent.com/Vaquum/Limen/refs/heads/main/datasets/klines_2h_2020_2025.csv",
-    try_parse_dates=True,
-)
+historical = limen.HistoricalData()
+data = historical.get_spot_klines(kline_size=7200, n_rows=2000)
 
 uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
 
@@ -87,7 +84,7 @@ uel.run(
 - `uel.experiment_confusion_metrics` for confusion analytics
 - `uel.experiment_backtest_results` for backtest results
 
-That path is the simplest way to get a real Limen run on your machine. If you want richer run directories, checkpoints, resumability, and stored round artefacts, continue into the UEL documentation below.
+That path is the simplest way to get a real Limen run on your machine without relying on repo-local fixture files. If you want richer run directories, checkpoints, resumability, and stored round artefacts, continue into the UEL documentation below.
 
 ## Learn More
 

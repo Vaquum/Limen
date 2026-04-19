@@ -723,3 +723,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Fix legacy `ParamSpace` sampling for huge discrete spaces so `n_permutations < total_space` no longer overflows when `total_space > sys.maxsize`
 - Preserve exact legacy `random.sample(range(N), k)` ordering and downstream RNG-state semantics in the huge-space fallback path
 - Add regression coverage for stdlib-equivalent range sampling, large-space reproducibility, prefix stability, and exhaustion behavior on the legacy `ParamSpace` path
+
+## v2.4.0 on 19th of April, 2026
+
+- Remove the repo-root `datasets/` fixture from the supported `HistoricalData` surface
+- Drop `HistoricalData.DEFAULT_TEST_FILE_PATH` and `HistoricalData.DEFAULT_TEST_FILE_URL`
+- Move historical-data regression coverage to a small checked-in test fixture under `tests/fixtures`
+- Update first-run and historical-data examples to use `get_spot_klines()` or explicit caller-owned file paths

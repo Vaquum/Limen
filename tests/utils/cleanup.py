@@ -18,7 +18,7 @@ def cleanup_csv_files():
     """
     Clean up any CSV files created in the project root during testing.
     This function is designed to be safe and only target the project root,
-    not subdirectories like datasets/.
+    not subdirectories.
     """
     project_root = Path.cwd()
 

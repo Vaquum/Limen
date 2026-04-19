@@ -10,7 +10,7 @@ import limen.data.historical_data as historical_module
 from limen.data import HistoricalData
 
 
-TEST_FILE = str(HistoricalData.DEFAULT_TEST_FILE_PATH)
+TEST_FILE = str(Path(__file__).parent / 'fixtures' / 'historical_data_spot_2h.csv')
 
 
 def test_get_any_file_loads_local_csv() -> None:

@@ -162,3 +162,93 @@ Minimal common contract shape preserved from the existing per-task developer con
     }
   ]
 }
+{
+  "github_rules": {
+    "issue_authoring": {
+      "issue_write_requires_explicit_operator_request": true,
+      "issue_write_requires_operator_defined_scope_or_source_material": true,
+      "issue_content_must_not_add_agent_invented_scope_or_requirements": true,
+      "repo_files_must_not_be_modified": true,
+      "codebase_change_forbidden": true
+    },
+    "slice_issue_authority": {
+      "planning_converts_operator_approved_work_into_authoritative_github_slice_issue_before_implementation": true,
+      "chat_level_plans_are_not_official_until_published_into_authoritative_github_slice_issue": true,
+      "authoritative_new_or_replanned_slice_surface": "github_issue",
+      "authoritative_slice_issue_template_path": ".github/ISSUE_TEMPLATE/slice.yml",
+      "slice_number_must_follow_authoritative_issue_sequence": true,
+      "ordered_github_issue_programs_are_authoritative_for_planning_when_present": true,
+      "only_next_ordered_item_may_expand_into_new_slice_unless_explicit_replanning": true,
+      "planning_issue_must_not_restate_generic_task_type_or_global_governance_rules": true,
+      "future_runtime_touching_slice_requires_explicit_observability_scope": true,
+      "future_runtime_touching_slice_requires_canonical_proof_coverage_section": true,
+      "proof_coverage_issue_section_label": "Proof Coverage",
+      "authoritative_issue_or_checkbox_tracker_must_be_updated_when_it_governs_slice_order": true,
+      "slice_must_define_capability_proof_and_guardrail_scope_before_implementation": true,
+      "slice_is_not_ready_until_authoritative_issue_is_in_sync": true,
+      "completed_items_must_be_checked_off_in_issue": true,
+      "closeout_evidence_must_be_linked_not_duplicated": true,
+      "new_governance_or_closeout_work_must_be_recorded_in_authoritative_issue_before_implementation": true,
+      "issue_authoritative_slice_repo_planning_residue_forbidden": true,
+      "required_issue_fields_for_new_or_replanned_slice": [
+        "Slice ID",
+        "Slice Title",
+        "Primary Task Type",
+        "Routing and Dependencies",
+        "Objective, Baseline, and Scope",
+        "Design",
+        "Runtime and Observability Scope",
+        "Proof Coverage",
+        "Capability",
+        "Proof",
+        "Guardrails",
+        "Step Register",
+        "Risks and Open Questions",
+        "Done Means",
+        "Author Checks"
+      ],
+      "required_done_means_checkboxes": [
+        "Capability complete",
+        "Proof complete",
+        "Guardrails complete",
+        "Required gates green",
+        "Required docs updated",
+        "Required closeout state and evidence links are recorded in this issue"
+      ]
+    },
+    "pull_request_discipline": {
+      "pull_request_first_local_test_suite_next": true,
+      "protected_branch": "main",
+      "branch_prefix": "wa/",
+      "repo_mutation_on_main_branch_forbidden": true,
+      "repo_mutation_in_detached_head_forbidden": true,
+      "repo_mutation_in_temp_or_ad_hoc_worktree_forbidden": true,
+      "repo_mutation_outside_single_allowed_local_work_branch_forbidden": true,
+      "only_one_unmerged_local_work_branch_allowed_at_a_time": true,
+      "only_one_agent_authored_open_pr_allowed_at_a_time": true,
+      "local_work_branch_must_track_remote_branch": true,
+      "local_work_branch_must_be_up_to_date_with_remote_branch_before_repo_mutation": true,
+      "local_work_branch_must_be_up_to_date_with_remote_branch_before_terminal_claim": true,
+      "repo_mutation_requires_commit_and_push_before_terminal_claim": true,
+      "repo_mutating_task_requires_open_pr_before_terminal_claim": true,
+      "terminal_report_must_end_with_commit_hash_and_open_pr_url": true,
+      "commit_message_must_follow_conventional_commits": true,
+      "pr_title_must_follow_conventional_commits": true,
+      "pr_title_must_not_mention_codex": true,
+      "draft_pr_for_review_forbidden": true,
+      "max_local_branches_per_role": 1,
+      "max_unmerged_remote_branches_per_role": 1,
+      "max_open_prs_per_role": 1,
+      "direct_push_to_protected_branch": false
+    },
+    "review_flow": {
+      "required_review_request": true,
+      "must_wait_for_review_outcome": true,
+      "runtime_touching_slice_pr_requires_reviewable_issue_proof_coverage": true,
+      "runtime_touching_slice_pr_requires_linked_terminal_proof_plan": true,
+      "must_resolve_all_conversations_before_rerequest": true,
+      "must_rerequest_review_after_conversation_resolution": true,
+      "required_approvals": 1
+    }
+  }
+}
