@@ -147,6 +147,15 @@ Good questions to ask:
 
 This is exactly why benchmark and backtest are separate in Limen: a round can look statistically interesting before it proves itself economically.
 
+When the confusion table includes:
+
+- `tp_mean_return_pct`
+- `fp_mean_return_pct`
+- `tn_mean_return_pct`
+- `fn_mean_return_pct`
+
+those four fields use the same immediate-next-execution-row contract as snapshot backtests for completed-bar pipelines. They are not same-row feature-bar returns.
+
 ## Backtest Surface
 
 ### `experiment_backtest_results(disable_progress_bar=False)`
@@ -179,6 +188,13 @@ The current summary columns are:
 - `cost_round_trip_bps`
 
 Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
+
+Post-run snapshot backtests currently support:
+
+- binary `0/1` predictions directly
+- directional regression scores via sign (`pred > 0` -> long, otherwise flat)
+
+Logged multiclass outputs are not supported on this surface and raise explicitly instead of being silently collapsed.
 
 ## Parameter Correlation Surface
 

@@ -1,4 +1,5 @@
 from typing import Any
+import numpy as np
 import pandas as pd
 import tqdm
 
@@ -14,16 +15,50 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     computing backtest metrics. Post-run snapshot summaries need to mirror that same
     contract so inline and logged backtest results stay identical.
 
-    Assumes non-binary predictions are directional scores whose sign maps to the
-    current long/flat snapshot decision, not probabilities. Because snapshot is
-    long-only today, negative scores are intentionally collapsed to flat here.
+    Supports:
+    - binary 0/1 predictions directly
+    - directional regression scores via sign, mapped to the current long/flat
+      snapshot decision
+
+    Does not support multiclass snapshot backtests. Non-negative integer labels
+    with more than two classes raise explicitly instead of being collapsed.
     '''
 
-    result = df.copy()
-    pred = pd.to_numeric(result['predictions'])
+    def _is_binary(series: pd.Series) -> bool:
+        valid = series.dropna()
+        return valid.empty or valid.isin([0, 1]).all()
 
-    if not pred.dropna().isin([0, 1]).all():
-        result['predictions'] = (pred > 0).astype(int)
+    def _is_unsupported_multiclass(series: pd.Series) -> bool:
+        valid = series.dropna()
+        if valid.empty:
+            return False
+
+        integer_like = np.isclose(valid, np.round(valid)).all()
+        unique_count = pd.Index(np.round(valid).astype(int)).nunique()
+
+        return integer_like and (valid >= 0).all() and unique_count > 2
+
+    result = df.copy()
+    pred = pd.to_numeric(result['predictions'], errors='coerce')
+
+    if 'actuals' in result:
+        actual = pd.to_numeric(result['actuals'], errors='coerce')
+        if _is_unsupported_multiclass(actual):
+            raise ValueError(
+                'snapshot backtest does not support multiclass actuals; '
+                'use binary predictions or directional regression scores'
+            )
+
+    if _is_binary(pred):
+        return result
+
+    if _is_unsupported_multiclass(pred):
+        raise ValueError(
+            'snapshot backtest does not support multiclass predictions; '
+            'use binary predictions or directional regression scores'
+        )
+
+    result['predictions'] = (pred > 0).astype(int)
 
     return result
 

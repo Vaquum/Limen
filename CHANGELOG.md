@@ -712,3 +712,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Fix `backtest_snapshot()` execution alignment for completed-bar pipelines by evaluating prediction row `t` on the immediate next execution row while preserving the existing HOLD-WHILE-1 semantics
 - Apply the same snapshot execution alignment explicitly to inline reference-architecture backtests and post-run experiment backtest summaries
 - `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` in `backtest_snapshot()` are now computed on the tradable evaluation window, so trailing `execution_lag_bars` rows and any non-tradable rows are excluded from denominators
+
+## v2.3.4 on 19th of April, 2026
+
+- Align inline and post-run confusion mean-return metrics to the same immediate-next-execution-row contract used by snapshot backtests for completed-bar pipelines
+- Make post-run snapshot backtests raise explicitly on unsupported multiclass logged outputs while keeping the existing binary and directional-regression contracts
