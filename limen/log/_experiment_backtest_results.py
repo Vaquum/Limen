@@ -28,7 +28,19 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         valid = series.dropna()
         return valid.empty or valid.isin([0, 1]).all()
 
+    def _to_numeric_strict(series: pd.Series, name: str) -> pd.Series:
+        numeric = pd.to_numeric(series, errors='coerce')
+        invalid = numeric.isna() & ~series.isna()
+
+        if invalid.any():
+            raise ValueError(
+                f'snapshot backtest received non-numeric {name} values'
+            )
+
+        return numeric
+
     def _is_unsupported_multiclass(series: pd.Series) -> bool:
+        BINARY_CLASS_COUNT = 2
         valid = series.dropna()
         if valid.empty:
             return False
@@ -36,13 +48,13 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         integer_like = np.isclose(valid, np.round(valid)).all()
         unique_count = pd.Index(np.round(valid).astype(int)).nunique()
 
-        return integer_like and (valid >= 0).all() and unique_count > 2
+        return integer_like and (valid >= 0).all() and unique_count > BINARY_CLASS_COUNT
 
     result = df.copy()
-    pred = pd.to_numeric(result['predictions'], errors='coerce')
+    pred = _to_numeric_strict(result['predictions'], 'prediction')
 
     if 'actuals' in result:
-        actual = pd.to_numeric(result['actuals'], errors='coerce')
+        actual = _to_numeric_strict(result['actuals'], 'actual')
         if _is_unsupported_multiclass(actual):
             raise ValueError(
                 'snapshot backtest does not support multiclass actuals; '

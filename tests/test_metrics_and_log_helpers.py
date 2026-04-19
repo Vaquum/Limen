@@ -325,6 +325,16 @@ def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:
         )
 
 
+def test_prepare_snapshot_backtest_input_rejects_non_numeric_logged_values() -> None:
+    with pytest.raises(ValueError, match='snapshot backtest received non-numeric prediction values'):
+        _prepare_snapshot_backtest_input(
+            pd.DataFrame({
+                'predictions': [1, 'bad', 0],
+                'actuals': [1, 0, 0],
+            })
+        )
+
+
 def test_multiclass_metrics_returns_expected_rounded_summary() -> None:
     data = {'y_test': [0, 1, 2, 0]}
     preds = [0, 2, 1, 0]
