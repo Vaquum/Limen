@@ -253,13 +253,13 @@ class UniversalExperimentLoop:
 
             # Handle writing to the file
             if i == 0:
-                header_colnames = ','.join(list(round_results.keys()))
-                with Path(experiment_name + '.csv').open('a') as f:
-                    f.write(f"{header_colnames}\n")
+                with Path(experiment_name + '.csv').open('a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(round_results.keys())
 
-            log_string = f"{', '.join(map(str, self.experiment_log.row(i)))}\n"
-            with Path(experiment_name + '.csv').open('a') as f:
-                f.write(log_string)
+            with Path(experiment_name + '.csv').open('a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(self.experiment_log.row(i))
 
         self._finalize()
 
