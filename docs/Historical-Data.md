@@ -91,7 +91,7 @@ from limen.data import HistoricalData
 
 historical = HistoricalData()
 data = historical.get_any_file(
-    file_path_or_url=str(HistoricalData.DEFAULT_TEST_FILE_PATH),
+    file_path_or_url='path/to/local/data.parquet',
     n_rows=5000,
 )
 ```

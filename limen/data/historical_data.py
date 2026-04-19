@@ -20,10 +20,6 @@ _SUPPORTED_DATETIME_FORMATS: Final[tuple[str, ...]] = (
 )
 _REMOTE_TIMEOUT_SECONDS: Final[int] = 60
 _DEFAULT_SPOT_DATASET_REPO: Final[str] = 'vaquum/binance_btcusdt_1m_klines'
-_DEFAULT_TEST_FILE_URL: Final[str] = (
-    'https://raw.githubusercontent.com/Vaquum/Limen/refs/heads/main/'
-    'datasets/klines_2h_2020_2025.csv'
-)
 _HUGGINGFACE_DATASET_REPO_PART_COUNT: Final[int] = 3
 _MIN_ROWS_TO_INFER_INTERVAL: Final[int] = 2
 
@@ -421,10 +417,6 @@ class HistoricalData:
     '''Stateful file-backed data access surface for Limen.'''
 
     DEFAULT_SPOT_KLINES_DATASET_REPO: Final[str] = _DEFAULT_SPOT_DATASET_REPO
-    DEFAULT_TEST_FILE_URL: Final[str] = _DEFAULT_TEST_FILE_URL
-    DEFAULT_TEST_FILE_PATH: Final[Path] = (
-        Path(__file__).resolve().parents[2] / 'datasets' / 'klines_2h_2020_2025.csv'
-    )
 
     def __init__(self) -> None:
         self.data = pl.DataFrame()
