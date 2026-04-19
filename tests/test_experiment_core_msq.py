@@ -5,7 +5,6 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 import pandas as pd
-import polars as pl
 import pytest
 
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -321,31 +320,6 @@ def test_shutdown_before_any_round_completes():
         )
 
     assert uel.experiment_log is None
-
-
-def test_run_with_msq_writes_nan_metrics_as_numeric_csv_values() -> None:
-
-    with TemporaryDirectory() as tmpdir:
-        uel, _, _ = _make_uel(experiment_dir=tmpdir)
-        original_model = uel.model
-
-        def model_with_nan_metric(data, round_params):
-            result = original_model(data, round_params)
-            result['backtest_tp_mean_return_pct'] = float('nan')
-            return result
-
-        uel.model = model_with_nan_metric
-
-        uel._run_with_msq(
-            experiment_name=str(Path(tmpdir) / 'test'),
-            n_permutations=2,
-            context_params=None,
-            resume=False,
-        )
-
-        df = pl.read_csv(Path(tmpdir) / 'results.csv')
-
-    assert df.schema['backtest_tp_mean_return_pct'] == pl.Float64
 
 
 def test_resume_fails_without_round_data():

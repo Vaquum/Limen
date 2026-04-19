@@ -153,7 +153,6 @@ from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pr
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
 from tests.test_experiment_core_msq import test_shutdown_before_any_round_completes
-from tests.test_experiment_core_msq import test_run_with_msq_writes_nan_metrics_as_numeric_csv_values
 from tests.test_experiment_core_msq import test_resume_fails_without_round_data
 from tests.test_experiment_core_msq import test_preds_none_does_not_crash
 from tests.test_experiment_core_msq import test_resume_truncates_stale_rounds
@@ -588,7 +587,6 @@ tests = [
     test_run_with_msq_shutdown_resume_full_data,
     test_run_with_msq_shutdown_resume_grid,
     test_shutdown_before_any_round_completes,
-    test_run_with_msq_writes_nan_metrics_as_numeric_csv_values,
     test_resume_fails_without_round_data,
     test_preds_none_does_not_crash,
     test_resume_truncates_stale_rounds,

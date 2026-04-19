@@ -1,5 +1,4 @@
 import csv
-import math
 import importlib.metadata
 import json
 import logging
@@ -446,10 +445,7 @@ class UniversalExperimentLoop:
                 writer = csv.writer(f)
                 if write_header:
                     writer.writerow(round_results.keys())
-                writer.writerow(
-                    self._serialize_csv_value(value)
-                    for value in round_results.values()
-                )
+                writer.writerow(round_results.values())
 
             if round_data_path:
                 self._append_round_data(
@@ -697,20 +693,6 @@ class UniversalExperimentLoop:
             self.experiment_log = self.experiment_log.vstack(batch)
         else:
             self.experiment_log = batch
-
-
-    @staticmethod
-    def _serialize_csv_value(value: Any) -> Any:
-
-        '''Serialize CSV values so all-NaN numeric columns round-trip as numeric.'''
-
-        try:
-            if math.isnan(value):
-                return 'NaN'
-        except TypeError:
-            pass
-
-        return value
 
 
     def _guard_stale_artifacts(self) -> None:
