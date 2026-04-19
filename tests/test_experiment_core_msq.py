@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 import pandas as pd
+import polars as pl
 import pytest
 
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -320,6 +321,23 @@ def test_shutdown_before_any_round_completes():
         )
 
     assert uel.experiment_log is None
+
+
+def test_flush_results_recasts_all_null_resumed_string_columns() -> None:
+
+    shim = SimpleNamespace(
+        experiment_log=pl.DataFrame(
+            {'backtest_tp_mean_return_pct': ['nan', 'nan']},
+            schema={'backtest_tp_mean_return_pct': pl.String},
+        )
+    )
+
+    UniversalExperimentLoop._flush_results(
+        shim,
+        [{'backtest_tp_mean_return_pct': float('nan')}],
+    )
+
+    assert shim.experiment_log.schema['backtest_tp_mean_return_pct'] == pl.Float64
 
 
 def test_resume_fails_without_round_data():

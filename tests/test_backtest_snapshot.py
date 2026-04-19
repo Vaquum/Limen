@@ -30,10 +30,13 @@ def test_snapshot_defaults_to_next_bar_execution() -> None:
     result = backtest_snapshot(data, fee_bps=0.0, slip_bps=0.0).iloc[0]
 
     assert result['execution_lag_bars'] == 1
+    assert result['bars_total'] == 1
     assert result['bars_in_market_count'] == 1
+    assert result['bars_in_market_pct'] == 100.0
     assert result['trade_runs_count'] == 1
     assert result['total_return_net_pct'] == 5.0
     assert result['tp_mean_return_pct'] == 5.0
+    assert math.isnan(result['sharpe_per_bar'])
 
 
 def test_snapshot_can_reproduce_legacy_same_row_execution() -> None:
@@ -124,6 +127,30 @@ def test_snapshot_confusion_bucket_mean_returns_cover_all_quadrants() -> None:
     assert result['fn_mean_return_pct'] == 5.0
 
 
+def test_snapshot_confusion_bucket_respects_actual_col() -> None:
+
+    data = pd.DataFrame({
+        'predictions': [1, 0],
+        'labels': [1, 0],
+        'open': [100.0, 100.0],
+        'close': [110.0, 90.0],
+        'price_change': [10.0, -10.0],
+    })
+
+    result = backtest_snapshot(
+        data,
+        actual_col='labels',
+        fee_bps=0.0,
+        slip_bps=0.0,
+        execution_lag_bars=0,
+    ).iloc[0]
+
+    assert result['tp_mean_return_pct'] == 10.0
+    assert result['tn_mean_return_pct'] == -10.0
+    assert math.isnan(result['fp_mean_return_pct'])
+    assert math.isnan(result['fn_mean_return_pct'])
+
+
 def test_snapshot_mean_kelly_pct_uses_trade_runs_by_default() -> None:
 
     data = pd.DataFrame({
@@ -144,10 +171,51 @@ def test_snapshot_mean_kelly_pct_uses_trade_runs_by_default() -> None:
     assert result['mean_kelly_pct'] == 25.0
 
 
+def test_snapshot_mean_kelly_pct_keeps_breakevens_in_denominator() -> None:
+
+    data = pd.DataFrame({
+        'predictions': [1, 0, 1, 0, 1],
+        'actuals': [1, 0, 0, 0, 0],
+        'open': [100.0, 100.0, 100.0, 100.0, 100.0],
+        'close': [120.0, 100.0, 90.0, 100.0, 100.0],
+        'price_change': [20.0, 0.0, -10.0, 0.0, 0.0],
+    })
+
+    result = backtest_snapshot(
+        data,
+        fee_bps=0.0,
+        slip_bps=0.0,
+        execution_lag_bars=0,
+        trades_count_mode='bars',
+    ).iloc[0]
+
+    assert result['mean_kelly_pct'] == pytest.approx(16.667, abs=1e-3)
+
+
+def test_snapshot_handles_empty_input() -> None:
+
+    data = pd.DataFrame({
+        'predictions': [],
+        'actuals': [],
+        'open': [],
+        'close': [],
+        'price_change': [],
+    })
+
+    result = backtest_snapshot(data).iloc[0]
+
+    assert result['bars_total'] == 0
+    assert result['bars_in_market_count'] == 0
+    assert result['trade_runs_count'] == 0
+    assert math.isnan(result['total_return_net_pct'])
+    assert math.isnan(result['max_drawdown_pct'])
+    assert math.isnan(result['sharpe_per_bar'])
+
+
 def test_snapshot_validates_mode_and_execution_lag() -> None:
 
-    with pytest.raises(ValueError, match="trades_count_mode"):
+    with pytest.raises(ValueError, match='trades_count_mode'):
         backtest_snapshot(_make_snapshot_input(), trades_count_mode='invalid')
 
-    with pytest.raises(ValueError, match="execution_lag_bars"):
+    with pytest.raises(ValueError, match='execution_lag_bars'):
         backtest_snapshot(_make_snapshot_input(), execution_lag_bars=-1)

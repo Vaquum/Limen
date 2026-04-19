@@ -192,6 +192,8 @@ The current summary columns are:
 
 Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
 
+The snapshot defaults behind this table now execute on the next tradable bar and compute `trade_*` fields per held run. That means historical backtest tables produced before this change are not directly comparable under the same `trade_*` column names.
+
 ## Parameter Correlation Surface
 
 ### `experiment_parameter_correlation(metric, ...)`

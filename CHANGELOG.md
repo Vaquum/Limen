@@ -687,10 +687,11 @@ Note: add all new changelog entries to the bottom of this file.
 - Add cross-timescale state features: `trend_coherence` and `volatility_term_structure`
 - Add documentation and full behavioral test coverage for the new OHLCV feature families
 
-## v2.2.1 on 18th of April, 2026
+## v2.3.0 on 18th of April, 2026
 
-- Align `limen.backtest.backtest_snapshot` to execute predictions on the next tradable bar by default, with `execution_lag_bars=0` available for legacy same-row behavior
-- Make snapshot `trade_*` metrics run-level by default, add explicit `bar_*` metrics, and retain `trades_count_mode='bars'` for legacy-style bar metrics
-- Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when `actuals` are available
-- Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution
-- Add tests and docs for the updated snapshot backtest semantics
+- Change snapshot backtests to execute predictions on the next tradable bar by default, with `execution_lag_bars=0` available for legacy same-row behavior
+- Change snapshot `trade_*` metrics to run-level by default, add explicit `bar_*` metrics, and retain `trades_count_mode='bars'` for legacy-style bar metrics
+- Apply the new snapshot defaults explicitly to experiment backtest summaries and SFD inline backtest metrics so the behavior change is intentional and visible in outputs
+- Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when aligned `actuals` are available
+- Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution with breakeven observations kept in the Kelly sample
+- Add direct snapshot tests to the canonical `python -m tests.run` path and extend docs for the updated snapshot semantics

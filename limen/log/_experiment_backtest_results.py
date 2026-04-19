@@ -32,7 +32,11 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
 
     for i in tqdm.tqdm(range(len(self.round_params)), disable=disable_progress_bar):
 
-        result_df = backtest_snapshot(self.permutation_prediction_performance(i))
+        result_df = backtest_snapshot(
+            self.permutation_prediction_performance(i),
+            execution_lag_bars=1,
+            trades_count_mode='runs',
+        )
 
         all_rows.append(result_df)
 

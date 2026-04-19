@@ -38,6 +38,7 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `prediction == 1` means "in market"
 - by default, execution starts on the next bar (`execution_lag_bars=1`)
 - `execution_lag_bars=0` reproduces the legacy same-row execution
+- trailing rows that cannot execute after the lag are dropped from the tradable window
 - entry-bar return is based on `price_change / open`
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - one round-trip cost is charged per consecutive `1` run
@@ -76,11 +77,11 @@ Snapshot backtests produce:
 - `cost_round_trip_bps`
 - `execution_lag_bars`
 
-By default, `trade_*` fields are computed per consecutive `1`-run, which matches the economic idea of one held trade. The `bar_*` fields are always the in-market bar statistics. If you need the legacy bar-level `trade_*` behavior, call `backtest_snapshot(..., trades_count_mode='bars')`.
+By default, `trade_*` fields are computed per consecutive `1`-run, which matches the economic idea of one held trade. The `bar_*` fields are always the in-market bar statistics. This is a behavioral change from the earlier bar-level `trade_*` defaults, so old experiment backtest tables are not directly comparable under the same column names. If you need the legacy bar-level `trade_*` behavior, call `backtest_snapshot(..., trades_count_mode='bars')`.
 
-When `actuals` are present in the input table, snapshot also reports `tp_mean_return_pct`, `fp_mean_return_pct`, `tn_mean_return_pct`, and `fn_mean_return_pct`. These are the mean aligned one-bar returns for each confusion bucket after applying `execution_lag_bars`, before run-level holding logic and transaction costs.
+When `actuals` are present in the input table, or when `actual_col` points to an equivalent label column, snapshot also reports `tp_mean_return_pct`, `fp_mean_return_pct`, `tn_mean_return_pct`, and `fn_mean_return_pct`. These are the mean aligned one-bar returns for each confusion bucket after applying `execution_lag_bars`, before run-level holding logic and transaction costs. If your labels already describe the future execution bar, this alignment is correct. If your labels are coincident with the feature bar instead, the confusion-bucket return columns will refer to a different bar than the label.
 
-`mean_kelly_pct` is estimated from the active return distribution used by the snapshot mode: per held trade by default, or per in-market bar when `trades_count_mode='bars'`. It uses the empirical win rate together with mean win and mean loss size, and remains `NaN` when the sample does not contain both winners and losers.
+`mean_kelly_pct` is estimated from the active return distribution used by the snapshot mode: per held trade by default, or per in-market bar when `trades_count_mode='bars'`. It is the full-Kelly fraction, keeps breakeven observations in the empirical sample, and remains `NaN` when the sample does not contain both winners and losers.
 
 ### Typical use
 

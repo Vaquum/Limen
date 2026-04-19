@@ -5,6 +5,7 @@ import pandas as pd
 def backtest_snapshot(df: pd.DataFrame,
                      *,
                      pred_col: str = 'predictions',
+                     actual_col: str = 'actuals',
                      open_col: str = 'open',
                      close_col: str = 'close',
                      price_change_col: str = 'price_change',
@@ -23,6 +24,8 @@ def backtest_snapshot(df: pd.DataFrame,
     - By default, a prediction made on row t is executed on row t+1.
     - Set `execution_lag_bars=0` to reproduce the legacy same-row execution.
     - Position pos = 1 wherever predictions==1 and lagged price data exists.
+    - `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` are computed on the
+      tradable window only, so the trailing `execution_lag_bars` rows are excluded.
     - Entry bar gross return: r_entry = price_change / open  (≈ close/open - 1).
     - Continuation bar gross return: r_cont = close_t / close_{t-1} - 1  (holding across bars).
     - One round-trip cost per *consecutive 1-run*, charged on the run's exit bar.
@@ -31,6 +34,8 @@ def backtest_snapshot(df: pd.DataFrame,
     - `trade_*` metrics are computed from completed 1-runs by default.
     - Set `trades_count_mode='bars'` to reproduce the legacy bar-level `trade_*` fields.
     - `bar_*` metrics are always computed from in-market bars.
+    - `mean_kelly_pct` reports the full-Kelly fraction for the active return
+      distribution, keeping zero-return observations in the sample denominator.
 
     Returns a one-row DataFrame with columns (in order):
       [
@@ -62,7 +67,7 @@ def backtest_snapshot(df: pd.DataFrame,
     '''
 
     if trades_count_mode not in {'runs', 'bars'}:
-        raise ValueError("trades_count_mode must be either 'runs' or 'bars'")
+        raise ValueError('trades_count_mode must be either \'runs\' or \'bars\'')
     if execution_lag_bars < 0:
         raise ValueError('execution_lag_bars must be >= 0')
 
@@ -78,11 +83,12 @@ def backtest_snapshot(df: pd.DataFrame,
         close_px = close_px.shift(-execution_lag_bars)
         dpx = dpx.shift(-execution_lag_bars)
 
-    pos = (pred == 1) & open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
+    tradable = open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
+    pos = (pred == 1) & tradable
 
-    bars_total = len(df)
+    bars_total = int(tradable.sum())
     bars_in_market_count = int(pos.sum())
-    bars_in_market_pct = float(pos.mean() * 100.0)
+    bars_in_market_pct = float((bars_in_market_count / bars_total) * 100.0) if bars_total else np.nan
 
     entries = pos & (~pos.shift(1, fill_value=False))
     trade_runs_count = int(entries.sum())
@@ -105,14 +111,23 @@ def backtest_snapshot(df: pd.DataFrame,
     cost_bar = pd.Series(np.where(exit_mask, -rt_cost, 0.0), index=df.index)
 
     R_net = (R_gross + cost_bar).fillna(0.0)
-    eq_gross = (1.0 + R_gross).cumprod()
-    eq_net = (1.0 + R_net).cumprod()
-
-    peak = eq_net.cummax()
-    max_drawdown_pct = float((eq_net / peak - 1.0).min() * 100.0)
-
-    total_return_gross_pct = float((eq_gross.iloc[-1] - 1.0) * 100.0)
-    total_return_net_pct = float((eq_net.iloc[-1] - 1.0) * 100.0)
+    tradable_R_gross = R_gross[tradable]
+    tradable_R_net = R_net[tradable]
+    if tradable_R_net.empty:
+        max_drawdown_pct = np.nan
+        total_return_gross_pct = np.nan
+        total_return_net_pct = np.nan
+        sharpe_per_bar = np.nan
+    else:
+        eq_gross = (1.0 + tradable_R_gross).cumprod()
+        eq_net = (1.0 + tradable_R_net).cumprod()
+        peak = eq_net.cummax()
+        max_drawdown_pct = float((eq_net / peak - 1.0).min() * 100.0)
+        total_return_gross_pct = float((eq_gross.iloc[-1] - 1.0) * 100.0)
+        total_return_net_pct = float((eq_net.iloc[-1] - 1.0) * 100.0)
+        mu = float(tradable_R_net.mean())
+        sd = float(tradable_R_net.std(ddof=1))
+        sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
 
     bar_returns = R_net[pos]
     if bar_returns.size:
@@ -128,10 +143,10 @@ def backtest_snapshot(df: pd.DataFrame,
         bar_return_mean_win_pct = np.nan
         bar_return_mean_loss_pct = np.nan
 
-    actual = pd.to_numeric(df['actuals'], errors='coerce') if 'actuals' in df else None
-    aligned_bar_return = (dpx / open_px).replace([np.inf, -np.inf], np.nan)
+    actual = pd.to_numeric(df[actual_col], errors='coerce') if actual_col in df else None
     if actual is not None:
-        valid_actual = actual.isin([0, 1]) & aligned_bar_return.notna()
+        aligned_bar_return = (dpx / open_px).replace([np.inf, -np.inf], np.nan)
+        valid_actual = tradable & actual.isin([0, 1]) & aligned_bar_return.notna()
         m_tp = valid_actual & (pred == 1) & (actual == 1)
         m_fp = valid_actual & (pred == 1) & (actual == 0)
         m_tn = valid_actual & (pred == 0) & (actual == 0)
@@ -170,7 +185,6 @@ def backtest_snapshot(df: pd.DataFrame,
     else:
         kelly_returns = trade_returns if trade_runs_count else pd.Series(dtype=float)
 
-    kelly_returns = kelly_returns[kelly_returns != 0]
     kelly_wins = kelly_returns[kelly_returns > 0]
     kelly_losses = kelly_returns[kelly_returns < 0]
     if kelly_wins.size and kelly_losses.size:
@@ -182,11 +196,6 @@ def backtest_snapshot(df: pd.DataFrame,
         mean_kelly_pct = float((win_rate - (loss_rate / payout_ratio)) * 100.0) if payout_ratio > 0 else np.nan
     else:
         mean_kelly_pct = np.nan
-
-    mu = float(R_net.mean())
-    sd = float(R_net.std(ddof=1))
-
-    sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
 
     data = pd.DataFrame.from_records([{
         'trade_win_rate_pct': round(trade_win_rate_pct, 1),

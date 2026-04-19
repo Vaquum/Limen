@@ -688,8 +688,49 @@ class UniversalExperimentLoop:
         if not accumulator:
             return
 
+        def _is_null_like_string_column(frame: pl.DataFrame, column: str) -> bool:
+
+            series = frame[column]
+            if frame.height == 0:
+                return True
+            if series.null_count() == frame.height:
+                return True
+            if series.dtype != pl.String:
+                return False
+
+            values = series.drop_nulls().to_list()
+            return all(
+                str(value).strip().lower() in {'', 'nan', 'null', 'none'}
+                for value in values
+            )
+
         batch = pl.DataFrame(accumulator)
         if self.experiment_log is not None:
+            for column in set(self.experiment_log.columns) & set(batch.columns):
+                existing_dtype = self.experiment_log.schema[column]
+                incoming_dtype = batch.schema[column]
+                if existing_dtype == incoming_dtype:
+                    continue
+
+                if (
+                    existing_dtype == pl.String
+                    and incoming_dtype != pl.String
+                    and _is_null_like_string_column(self.experiment_log, column)
+                ):
+                    self.experiment_log = self.experiment_log.with_columns(
+                        pl.col(column).cast(incoming_dtype, strict=False)
+                    )
+                    continue
+
+                if (
+                    incoming_dtype == pl.String
+                    and existing_dtype != pl.String
+                    and _is_null_like_string_column(batch, column)
+                ):
+                    batch = batch.with_columns(
+                        pl.col(column).cast(existing_dtype, strict=False)
+                    )
+
             self.experiment_log = self.experiment_log.vstack(batch)
         else:
             self.experiment_log = batch
