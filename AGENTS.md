@@ -160,9 +160,7 @@ Minimal common contract shape preserved from the existing per-task developer con
         "end_to_end_validation_required"
       ]
     }
-  ]
-}
-{
+  ],
   "github_rules": {
     "issue_authoring": {
       "issue_write_requires_explicit_operator_request": true,
