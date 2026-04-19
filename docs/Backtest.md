@@ -83,6 +83,8 @@ When `actuals` are present in the input table, or when `actual_col` points to an
 
 For inline SFD backtests, Limen now passes the already-aligned test labels straight through to snapshot. Binary SFDs use `y_test` as-is, while regression SFDs pass an explicit directional `actuals` series derived from `y_test > 0`.
 
+For experiment/log backtests, Limen applies the same directional convention to regression rounds before calling snapshot, so post-run `backtest_*` columns stay aligned with the inline reference-architecture path.
+
 `mean_kelly_pct` is estimated from the active return distribution used by the snapshot mode: per held trade by default, or per in-market bar when `trades_count_mode='bars'`. It is the full-Kelly fraction, keeps breakeven observations in the empirical sample, and remains `NaN` when the sample does not contain both winners and losers.
 
 ### Typical use

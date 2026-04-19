@@ -4,6 +4,8 @@ import traceback
 import logging
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.utils.cleanup import cleanup_csv_files
@@ -151,6 +153,7 @@ from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pr
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
 from tests.test_experiment_core_msq import test_shutdown_before_any_round_completes
+from tests.test_experiment_core_msq import test_flush_results_recasts_all_null_resumed_string_columns
 from tests.test_experiment_core_msq import test_resume_fails_without_round_data
 from tests.test_experiment_core_msq import test_preds_none_does_not_crash
 from tests.test_experiment_core_msq import test_resume_truncates_stale_rounds
@@ -232,6 +235,12 @@ from tests.test_reference_architecture import test_random_binary_train_evaluate_
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
+from tests.test_reference_architecture import test_logreg_inline_backtest_passes_binary_actuals_to_snapshot as test_logreg_inline_backtest_passes_binary_actuals_to_snapshot_with_fixture
+from tests.test_reference_architecture import test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot as test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot_with_fixture
+from tests.test_reference_architecture import test_compute_backtest_requires_aligned_lengths
+from tests.test_reference_backtest_alignment import test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot
+from tests.test_reference_backtest_alignment import test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs
+from tests.test_reference_backtest_alignment import test_compute_backtest_rejects_nan_actuals
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -345,6 +354,7 @@ from tests.test_indicator_and_data_helpers import test_data_dict_to_numpy_conver
 from tests.test_indicator_and_data_helpers import test_data_dict_to_numpy_respects_custom_keys_and_preserves_numpy_values
 from tests.test_metrics_and_log_helpers import test_permutation_prediction_performance_preserves_inverse_scaled_features
 from tests.test_metrics_and_log_helpers import test_permutation_prediction_performance_falls_back_to_single_argument_prep
+from tests.test_metrics_and_log_helpers import test_experiment_backtest_results_directionalizes_regression_rounds
 from tests.test_metrics_and_log_helpers import test_multiclass_metrics_returns_expected_rounded_summary
 from tests.test_metrics_and_log_helpers import test_balanced_metric_returns_zero_without_positive_predictions
 from tests.test_metrics_and_log_helpers import test_balanced_metric_penalizes_sparse_precision_by_trade_rate
@@ -455,6 +465,25 @@ from tests.test_trainer import test_resolve_model_class_rejects_modules_with_mul
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
 from tests.test_trainer import test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches
 
+
+def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot() -> None:
+
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        test_logreg_inline_backtest_passes_binary_actuals_to_snapshot_with_fixture(monkeypatch)
+    finally:
+        monkeypatch.undo()
+
+
+def test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot() -> None:
+
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot_with_fixture(monkeypatch)
+    finally:
+        monkeypatch.undo()
+
+
 tests = [
     test_param_domain_init,
     test_param_domain_init_validation,
@@ -559,6 +588,7 @@ tests = [
     test_run_with_msq_shutdown_resume_full_data,
     test_run_with_msq_shutdown_resume_grid,
     test_shutdown_before_any_round_completes,
+    test_flush_results_recasts_all_null_resumed_string_columns,
     test_resume_fails_without_round_data,
     test_preds_none_does_not_crash,
     test_resume_truncates_stale_rounds,
@@ -679,6 +709,12 @@ tests = [
     test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
+    test_logreg_inline_backtest_passes_binary_actuals_to_snapshot,
+    test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot,
+    test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot,
+    test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs,
+    test_compute_backtest_requires_aligned_lengths,
+    test_compute_backtest_rejects_nan_actuals,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
@@ -792,6 +828,7 @@ tests = [
     test_data_dict_to_numpy_respects_custom_keys_and_preserves_numpy_values,
     test_permutation_prediction_performance_preserves_inverse_scaled_features,
     test_permutation_prediction_performance_falls_back_to_single_argument_prep,
+    test_experiment_backtest_results_directionalizes_regression_rounds,
     test_multiclass_metrics_returns_expected_rounded_summary,
     test_balanced_metric_returns_zero_without_positive_predictions,
     test_balanced_metric_penalizes_sparse_precision_by_trade_rate,

@@ -146,11 +146,19 @@ class ReferenceModel(ABC):
         })
 
         if actuals is not None:
-            actuals = np.asarray(actuals).astype(int)
+            actuals = pd.to_numeric(
+                pd.Series(actuals),
+                errors='coerce',
+            ).to_numpy()
             if len(actuals) != len(preds):
                 raise ValueError(
                     'actuals must align one-to-one with predictions'
                 )
+            if np.isnan(actuals).any():
+                raise ValueError(
+                    'actuals must be numeric and contain no NaN values'
+                )
+            actuals = actuals.astype(int)
             bt_input['actuals'] = actuals
 
         bt_result = backtest_snapshot(

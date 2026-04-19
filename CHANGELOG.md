@@ -694,5 +694,6 @@ Note: add all new changelog entries to the bottom of this file.
 - Apply the new snapshot defaults explicitly to experiment backtest summaries and SFD inline backtest metrics so the behavior change is intentional and visible in outputs
 - Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when aligned `actuals` are available
 - Populate inline snapshot confusion-bucket return metrics from the aligned test labels, with regression SFDs passing directional actuals explicitly
+- Align regression experiment/log snapshot backtests with the same directional binary convention as inline reference-architecture backtests
 - Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution with breakeven observations kept in the Kelly sample
 - Add direct snapshot tests to the canonical `python -m tests.run` path and extend docs for the updated snapshot semantics
