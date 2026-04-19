@@ -697,3 +697,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Align regression experiment/log snapshot backtests with the same directional binary convention as inline reference-architecture backtests
 - Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution with breakeven observations kept in the Kelly sample
 - Add direct snapshot tests to the canonical `python -m tests.run` path and extend docs for the updated snapshot semantics
+
+## v2.3.1 on 19th of April, 2026
+
+- Revert v2.3.0 snapshot backtest alignment and trade metric changes in full, restoring the pre-v2.3.0 behavior and output surface

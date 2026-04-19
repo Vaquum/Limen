@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 from limen.sfd.reference_architecture import XGBoostRegressor
 from limen.sfd.reference_architecture import LogRegBinary
@@ -147,86 +146,3 @@ def test_train_without_validation_data():
 
     results = model.evaluate(data)
     assert 'rmse' in results
-
-
-def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot(monkeypatch):
-
-    captured = {}
-
-    def _fake_backtest_snapshot(df, **kwargs):
-
-        captured['df'] = df.copy()
-        captured['kwargs'] = kwargs
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
-
-    monkeypatch.setattr(
-        'limen.sfd.reference_architecture.base.backtest_snapshot',
-        _fake_backtest_snapshot,
-    )
-
-    data = _make_data(binary=True, with_price=True)
-    model = LogRegBinary().train(data, solver='lbfgs', max_iter=200)
-    model.evaluate(data)
-
-    assert 'actuals' in captured['df'].columns
-    np.testing.assert_array_equal(
-        captured['df']['actuals'].to_numpy(),
-        np.asarray(data['y_test']).astype(int),
-    )
-    assert captured['kwargs']['execution_lag_bars'] == 1
-    assert captured['kwargs']['trades_count_mode'] == 'runs'
-
-
-def test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot(monkeypatch):
-
-    captured = {}
-
-    def _fake_backtest_snapshot(df, **kwargs):
-
-        captured['df'] = df.copy()
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
-
-    monkeypatch.setattr(
-        'limen.sfd.reference_architecture.base.backtest_snapshot',
-        _fake_backtest_snapshot,
-    )
-
-    data = _make_data(with_price=True)
-    model = XGBoostRegressor().train(
-        data,
-        learning_rate=0.1,
-        n_estimators=10,
-        random_state=42,
-    )
-    model.evaluate(data)
-
-    assert 'actuals' in captured['df'].columns
-    np.testing.assert_array_equal(
-        captured['df']['actuals'].to_numpy(),
-        (np.asarray(data['y_test']) > 0).astype(int),
-    )
-
-
-def test_compute_backtest_requires_aligned_lengths():
-
-    model = LogRegBinary()
-    data = {
-        'price_data_for_backtest': pd.DataFrame({
-            'open': [100.0],
-            'close': [110.0],
-        }),
-    }
-
-    with pytest.raises(ValueError, match='price_data_for_backtest'):
-        model._compute_backtest(
-            np.array([1, 0]),
-            data,
-            actuals=np.array([1, 0]),
-        )
-
-    with pytest.raises(ValueError, match='actuals'):
-        model._compute_backtest(
-            np.array([1]),
-            data,
-            actuals=np.array([1, 0]),
-        )
