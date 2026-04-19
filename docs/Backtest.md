@@ -36,10 +36,12 @@ The current snapshot backtest is intentionally simple and opinionated:
 
 - long-only
 - `prediction == 1` means "in market"
-- no signal shift is applied
+- completed-bar pipelines execute prediction row `t` on the immediate next execution row by default (`execution_lag_bars=1`)
+- `execution_lag_bars=0` gives same-row execution of tradable rows, not the old raw-row denominator behavior
 - entry-bar return is based on `price_change / open`
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - one round-trip cost is charged per consecutive `1` run
+- `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
 - outputs are reported in percent units
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.

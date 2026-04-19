@@ -13,6 +13,10 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     Regression reference architectures directionalize inline with ``preds > 0`` before
     computing backtest metrics. Post-run snapshot summaries need to mirror that same
     contract so inline and logged backtest results stay identical.
+
+    Assumes non-binary predictions are directional scores whose sign maps to the
+    current long/flat snapshot decision, not probabilities. Because snapshot is
+    long-only today, negative scores are intentionally collapsed to flat here.
     '''
 
     result = df.copy()

@@ -243,6 +243,7 @@ from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
+from tests.test_inline_metrics import test_xgboost_inline_and_post_backtest_metrics_match
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_executes_on_next_bar
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_preserves_shifted_hold_while_one_continuation
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar
@@ -687,6 +688,7 @@ tests = [
     test_override_param_not_in_original_but_in_signature,
     test_unknown_override_key_raises,
     test_inline_and_post_experiment_metrics,
+    test_xgboost_inline_and_post_backtest_metrics_match,
     test_backtest_snapshot_executes_on_next_bar,
     test_backtest_snapshot_preserves_shifted_hold_while_one_continuation,
     test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar,
