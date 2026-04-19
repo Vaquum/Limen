@@ -69,9 +69,12 @@ class ParamSpace:
 
     Args:
         params (dict): Dictionary of parameter names and their possible values.
-        n_permutations (int): Number of parameter combinations to sample. Uses
-            exact `random.sample(range(N), k)` semantics even when `N` exceeds
-            the stdlib wrapper's `Py_ssize_t` limit.
+        n_permutations (int): Number of parameter combinations to sample. When
+            this is smaller than the total parameter space, sampling uses exact
+            `random.sample(range(N), k)` semantics, including when `N` exceeds
+            the stdlib wrapper's `Py_ssize_t` limit. When this is greater than
+            or equal to the total parameter space, all combinations are
+            enumerated instead of sampled.
     '''
 
     def __init__(self, params: dict, n_permutations: int) -> None:
