@@ -38,6 +38,10 @@ backtest/
 
 - The package root currently does not re-export the backtest helpers, so import from the module paths directly.
 - `backtest_snapshot()` is the common analysis path for experiment sweeps because it is simple and fast.
+- `backtest_snapshot()` now defaults to next-bar execution (`execution_lag_bars=1`), with `execution_lag_bars=0` available for legacy same-row behavior.
+- Snapshot summary statistics are computed on the tradable window only, so the trailing lagged rows are excluded from `bars_total`, exposure, and Sharpe.
+- Snapshot `trade_*` fields are run-level by default, while `bar_*` fields always expose the in-market bar statistics.
+- `mean_kelly_pct` reports the full-Kelly fraction for the active return distribution and keeps breakeven observations in the sample.
 - `BacktestSequential` is the right tool when you need a ledger and bar-by-bar account transitions.
 - The underlying `Account` supports long and short bookkeeping, but the current sequential backtest loop only executes the long-side `buy` and `sell` path.
 - Snapshot outputs are reported in percent units, while fee and slippage inputs are specified in basis points.

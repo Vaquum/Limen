@@ -172,13 +172,27 @@ The current summary columns are:
 - `total_return_net_pct`
 - `trade_return_mean_win_pct`
 - `trade_return_mean_loss_pct`
+- `bar_win_rate_pct`
+- `bar_expectancy_pct`
+- `bar_return_mean_win_pct`
+- `bar_return_mean_loss_pct`
+- `tp_mean_return_pct`
+- `fp_mean_return_pct`
+- `tn_mean_return_pct`
+- `fn_mean_return_pct`
+- `mean_kelly_pct`
 - `bars_total`
 - `sharpe_per_bar`
 - `bars_in_market_pct`
+- `bars_in_market_count`
 - `trades_count`
+- `trade_runs_count`
 - `cost_round_trip_bps`
+- `execution_lag_bars`
 
 Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
+
+The snapshot defaults behind this table now execute on the next tradable bar and compute `trade_*` fields per held run. That means historical backtest tables produced before this change are not directly comparable under the same `trade_*` column names.
 
 ## Parameter Correlation Surface
 

@@ -1,4 +1,5 @@
 import limen
+import pytest
 import sys
 import traceback
 import logging
@@ -15,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 def test_tabpfn():
     '''Test TabPFN SFD via MSQ path with RandomStrategy.'''
+
+    if limen.sfd.foundational_sfd.tabpfn_binary is None:
+        pytest.skip('tabpfn optional dependency is not installed')
 
     tabpfn_sfds = [
         limen.sfd.foundational_sfd.tabpfn_binary,
