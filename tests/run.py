@@ -234,12 +234,14 @@ from tests.test_reference_architecture import test_random_binary_train_evaluate_
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
-from tests.test_reference_architecture import test_logreg_inline_backtest_passes_binary_actuals_to_snapshot as test_logreg_inline_backtest_passes_binary_actuals_to_snapshot_with_fixture
-from tests.test_reference_architecture import test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot as test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot_with_fixture
+from tests.test_reference_architecture import test_logreg_inline_backtest_does_not_pass_actuals_to_snapshot as test_logreg_inline_backtest_does_not_pass_actuals_to_snapshot_with_fixture
+from tests.test_reference_architecture import test_xgboost_inline_backtest_does_not_pass_actuals_to_snapshot as test_xgboost_inline_backtest_does_not_pass_actuals_to_snapshot_with_fixture
 from tests.test_reference_architecture import test_compute_backtest_requires_aligned_lengths
-from tests.test_reference_backtest_alignment import test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot
-from tests.test_reference_backtest_alignment import test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs
-from tests.test_reference_backtest_alignment import test_compute_backtest_rejects_nan_actuals
+from tests.test_reference_architecture import test_compute_confusion_return_metrics_aligns_next_bar_returns
+from tests.test_reference_architecture import test_compute_confusion_return_metrics_requires_aligned_lengths
+from tests.test_reference_backtest_alignment import test_random_binary_inline_backtest_does_not_pass_actuals_to_snapshot
+from tests.test_reference_backtest_alignment import test_xgboost_inline_backtest_uses_directional_predictions_without_actuals
+from tests.test_reference_backtest_alignment import test_compute_confusion_return_metrics_uses_directional_actuals
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -252,8 +254,6 @@ from tests.test_backtest_snapshot import test_snapshot_defaults_to_next_bar_exec
 from tests.test_backtest_snapshot import test_snapshot_can_reproduce_legacy_same_row_execution
 from tests.test_backtest_snapshot import test_snapshot_trade_metrics_are_run_level_by_default
 from tests.test_backtest_snapshot import test_snapshot_bar_mode_preserves_legacy_trade_metrics
-from tests.test_backtest_snapshot import test_snapshot_confusion_bucket_mean_returns_cover_all_quadrants
-from tests.test_backtest_snapshot import test_snapshot_confusion_bucket_respects_actual_col
 from tests.test_backtest_snapshot import test_snapshot_mean_kelly_pct_uses_trade_runs_by_default
 from tests.test_backtest_snapshot import test_snapshot_mean_kelly_pct_keeps_breakevens_in_denominator
 from tests.test_backtest_snapshot import test_snapshot_handles_empty_input
@@ -465,20 +465,20 @@ from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and
 from tests.test_trainer import test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches
 
 
-def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot() -> None:
+def test_logreg_inline_backtest_does_not_pass_actuals_to_snapshot() -> None:
 
     monkeypatch = pytest.MonkeyPatch()
     try:
-        test_logreg_inline_backtest_passes_binary_actuals_to_snapshot_with_fixture(monkeypatch)
+        test_logreg_inline_backtest_does_not_pass_actuals_to_snapshot_with_fixture(monkeypatch)
     finally:
         monkeypatch.undo()
 
 
-def test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot() -> None:
+def test_xgboost_inline_backtest_does_not_pass_actuals_to_snapshot() -> None:
 
     monkeypatch = pytest.MonkeyPatch()
     try:
-        test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot_with_fixture(monkeypatch)
+        test_xgboost_inline_backtest_does_not_pass_actuals_to_snapshot_with_fixture(monkeypatch)
     finally:
         monkeypatch.undo()
 
@@ -707,12 +707,14 @@ tests = [
     test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
-    test_logreg_inline_backtest_passes_binary_actuals_to_snapshot,
-    test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot,
-    test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot,
-    test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs,
+    test_logreg_inline_backtest_does_not_pass_actuals_to_snapshot,
+    test_random_binary_inline_backtest_does_not_pass_actuals_to_snapshot,
+    test_xgboost_inline_backtest_does_not_pass_actuals_to_snapshot,
+    test_xgboost_inline_backtest_uses_directional_predictions_without_actuals,
     test_compute_backtest_requires_aligned_lengths,
-    test_compute_backtest_rejects_nan_actuals,
+    test_compute_confusion_return_metrics_aligns_next_bar_returns,
+    test_compute_confusion_return_metrics_requires_aligned_lengths,
+    test_compute_confusion_return_metrics_uses_directional_actuals,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
@@ -725,8 +727,6 @@ tests = [
     test_snapshot_can_reproduce_legacy_same_row_execution,
     test_snapshot_trade_metrics_are_run_level_by_default,
     test_snapshot_bar_mode_preserves_legacy_trade_metrics,
-    test_snapshot_confusion_bucket_mean_returns_cover_all_quadrants,
-    test_snapshot_confusion_bucket_respects_actual_col,
     test_snapshot_mean_kelly_pct_uses_trade_runs_by_default,
     test_snapshot_mean_kelly_pct_keeps_breakevens_in_denominator,
     test_snapshot_handles_empty_input,

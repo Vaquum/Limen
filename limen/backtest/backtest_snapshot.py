@@ -34,6 +34,7 @@ def backtest_snapshot(df: pd.DataFrame,
     - `trade_*` metrics are computed from completed 1-runs by default.
     - Set `trades_count_mode='bars'` to reproduce the legacy bar-level `trade_*` fields.
     - `bar_*` metrics are always computed from in-market bars.
+    - Confusion-conditioned return means live on the confusion side, not in snapshot outputs.
     - `mean_kelly_pct` reports the full-Kelly fraction for the active return
       distribution, keeping zero-return observations in the sample denominator.
 
@@ -50,10 +51,6 @@ def backtest_snapshot(df: pd.DataFrame,
         'bar_expectancy_pct',
         'bar_return_mean_win_pct',
         'bar_return_mean_loss_pct',
-        'tp_mean_return_pct',
-        'fp_mean_return_pct',
-        'tn_mean_return_pct',
-        'fn_mean_return_pct',
         'mean_kelly_pct',
         'bars_total',
         'sharpe_per_bar',
@@ -71,6 +68,7 @@ def backtest_snapshot(df: pd.DataFrame,
     if execution_lag_bars < 0:
         raise ValueError('execution_lag_bars must be >= 0')
 
+    _ = actual_col  # kept for call-site compatibility after confusion returns moved out of snapshot
     df = df.copy()
 
     pred = pd.to_numeric(df[pred_col], errors='coerce').fillna(0).astype(int).clip(0, 1)
@@ -143,24 +141,6 @@ def backtest_snapshot(df: pd.DataFrame,
         bar_return_mean_win_pct = np.nan
         bar_return_mean_loss_pct = np.nan
 
-    actual = pd.to_numeric(df[actual_col], errors='coerce') if actual_col in df else None
-    if actual is not None:
-        aligned_bar_return = (dpx / open_px).replace([np.inf, -np.inf], np.nan)
-        valid_actual = tradable & actual.isin([0, 1]) & aligned_bar_return.notna()
-        m_tp = valid_actual & (pred == 1) & (actual == 1)
-        m_fp = valid_actual & (pred == 1) & (actual == 0)
-        m_tn = valid_actual & (pred == 0) & (actual == 0)
-        m_fn = valid_actual & (pred == 0) & (actual == 1)
-        tp_mean_return_pct = float(aligned_bar_return.loc[m_tp].mean() * 100.0) if m_tp.any() else np.nan
-        fp_mean_return_pct = float(aligned_bar_return.loc[m_fp].mean() * 100.0) if m_fp.any() else np.nan
-        tn_mean_return_pct = float(aligned_bar_return.loc[m_tn].mean() * 100.0) if m_tn.any() else np.nan
-        fn_mean_return_pct = float(aligned_bar_return.loc[m_fn].mean() * 100.0) if m_fn.any() else np.nan
-    else:
-        tp_mean_return_pct = np.nan
-        fp_mean_return_pct = np.nan
-        tn_mean_return_pct = np.nan
-        fn_mean_return_pct = np.nan
-
     if trade_runs_count:
         run_ids = entries.cumsum()
         trade_returns = ((1.0 + R_net[pos]).groupby(run_ids[pos]).prod() - 1.0)
@@ -209,10 +189,6 @@ def backtest_snapshot(df: pd.DataFrame,
         'bar_expectancy_pct': round(bar_expectancy_pct, 3),
         'bar_return_mean_win_pct': round(bar_return_mean_win_pct, 1),
         'bar_return_mean_loss_pct': round(bar_return_mean_loss_pct, 1),
-        'tp_mean_return_pct': round(tp_mean_return_pct, 3),
-        'fp_mean_return_pct': round(fp_mean_return_pct, 3),
-        'tn_mean_return_pct': round(tn_mean_return_pct, 3),
-        'fn_mean_return_pct': round(fn_mean_return_pct, 3),
         'mean_kelly_pct': round(mean_kelly_pct, 3),
         'bars_total': int(bars_total),
         'sharpe_per_bar': round(sharpe_per_bar, 2),

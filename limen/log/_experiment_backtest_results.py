@@ -8,25 +8,20 @@ from limen.backtest.backtest_snapshot import backtest_snapshot
 def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
     '''
-    Normalize experiment backtest inputs to the binary snapshot contract.
+    Normalize experiment backtest predictions to the binary snapshot contract.
 
-    Binary SFDs already log 0/1 predictions and actuals. Regression SFDs log
-    continuous values, so for snapshot backtests we convert both sides to the
-    same directional convention used by the inline reference-architecture path.
+    Binary SFDs already log 0/1 predictions. Regression SFDs log continuous
+    values, so for snapshot backtests we convert predictions to the same
+    directional convention used by the inline reference-architecture path.
     '''
 
-    if 'actuals' not in df:
-        return df
-
-    actuals = pd.to_numeric(df['actuals'], errors='coerce')
-    valid_actuals = actuals.dropna()
-    if not valid_actuals.empty and valid_actuals.isin([0, 1]).all():
+    predictions = pd.to_numeric(df['predictions'], errors='coerce')
+    valid_predictions = predictions.dropna()
+    if not valid_predictions.empty and valid_predictions.isin([0, 1]).all():
         return df
 
     normalized = df.copy()
-    predictions = pd.to_numeric(normalized['predictions'], errors='coerce')
     normalized['predictions'] = (predictions > 0).astype(int)
-    normalized['actuals'] = (actuals > 0).astype(int)
 
     return normalized
 
@@ -46,8 +41,6 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
                       'trade_return_mean_win_pct', 'trade_return_mean_loss_pct',
                       'bar_win_rate_pct', 'bar_expectancy_pct',
                       'bar_return_mean_win_pct', 'bar_return_mean_loss_pct',
-                      'tp_mean_return_pct', 'fp_mean_return_pct',
-                      'tn_mean_return_pct', 'fn_mean_return_pct',
                       'mean_kelly_pct', 'bars_total', 'sharpe_per_bar',
                       'bars_in_market_pct', 'bars_in_market_count',
                       'trades_count', 'trade_runs_count', 'cost_round_trip_bps',

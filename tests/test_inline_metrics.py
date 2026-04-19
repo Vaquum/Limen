@@ -39,6 +39,10 @@ def test_inline_and_post_experiment_metrics() -> None:
         assert col in log_cols, f"Missing inline confusion column: {col}"
         assert uel.experiment_log[col].null_count() == 0, f"Null values in {col}"
 
+    for col in ['confusion_tp_mean_return_pct', 'confusion_fp_mean_return_pct',
+                'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
+        assert col in log_cols, f"Missing inline confusion return column: {col}"
+
     for col in ['backtest_trade_win_rate_pct', 'backtest_max_drawdown_pct',
                 'backtest_total_return_net_pct', 'backtest_sharpe_per_bar',
                 'backtest_execution_lag_bars']:

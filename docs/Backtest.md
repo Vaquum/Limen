@@ -63,10 +63,6 @@ Snapshot backtests produce:
 - `bar_expectancy_pct`
 - `bar_return_mean_win_pct`
 - `bar_return_mean_loss_pct`
-- `tp_mean_return_pct`
-- `fp_mean_return_pct`
-- `tn_mean_return_pct`
-- `fn_mean_return_pct`
 - `mean_kelly_pct`
 - `bars_total`
 - `sharpe_per_bar`
@@ -79,11 +75,7 @@ Snapshot backtests produce:
 
 By default, `trade_*` fields are computed per consecutive `1`-run, which matches the economic idea of one held trade. The `bar_*` fields are always the in-market bar statistics. This is a behavioral change from the earlier bar-level `trade_*` defaults, so old experiment backtest tables are not directly comparable under the same column names. If you need the legacy bar-level `trade_*` behavior, call `backtest_snapshot(..., trades_count_mode='bars')`.
 
-When `actuals` are present in the input table, or when `actual_col` points to an equivalent label column, snapshot also reports `tp_mean_return_pct`, `fp_mean_return_pct`, `tn_mean_return_pct`, and `fn_mean_return_pct`. These are the mean aligned one-bar returns for each confusion bucket after applying `execution_lag_bars`, before run-level holding logic and transaction costs. If your labels already describe the future execution bar, this alignment is correct. If your labels are coincident with the feature bar instead, the confusion-bucket return columns will refer to a different bar than the label.
-
-For inline SFD backtests, Limen now passes the already-aligned test labels straight through to snapshot. Binary SFDs use `y_test` as-is, while regression SFDs pass an explicit directional `actuals` series derived from `y_test > 0`.
-
-For experiment/log backtests, Limen applies the same directional convention to regression rounds before calling snapshot, so post-run `backtest_*` columns stay aligned with the inline reference-architecture path.
+Confusion-conditioned return means now live on the confusion side rather than the backtest side. Inline experiment rows expose them as `confusion_tp_mean_return_pct`, `confusion_fp_mean_return_pct`, `confusion_tn_mean_return_pct`, and `confusion_fn_mean_return_pct`. Post-run, use `uel._log.experiment_confusion_metrics('aligned_return_pct')` when you want the same next-bar aligned one-bar return view in the benchmark layer.
 
 `mean_kelly_pct` is estimated from the active return distribution used by the snapshot mode: per held trade by default, or per in-market bar when `trades_count_mode='bars'`. It is the full-Kelly fraction, keeps breakeven observations in the empirical sample, and remains `NaN` when the sample does not contain both winners and losers.
 

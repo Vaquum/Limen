@@ -49,6 +49,7 @@ log/
 - Manifest-aware logs reconstruct the test window with the same bar-formation logic used during the run.
 - The package root re-exports helper functions, but the `Log` class itself lives in `limen.log.log`.
 - A good mental model is that `Log` is the bridge between raw experiment output and higher-level selection decisions.
+- `permutation_confusion_metrics(x='aligned_return_pct')` is the confusion-side path for next-bar TP/FP/TN/FN mean-return analysis.
 
 ## Read next
 

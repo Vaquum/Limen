@@ -149,7 +149,7 @@ def test_train_without_validation_data():
     assert 'rmse' in results
 
 
-def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot(monkeypatch):
+def test_logreg_inline_backtest_does_not_pass_actuals_to_snapshot(monkeypatch):
 
     captured = {}
 
@@ -157,7 +157,7 @@ def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot(monkeypatch):
 
         captured['df'] = df.copy()
         captured['kwargs'] = kwargs
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
+        return pd.DataFrame([{'trade_win_rate_pct': 1.0}])
 
     monkeypatch.setattr(
         'limen.sfd.reference_architecture.base.backtest_snapshot',
@@ -168,23 +168,19 @@ def test_logreg_inline_backtest_passes_binary_actuals_to_snapshot(monkeypatch):
     model = LogRegBinary().train(data, solver='lbfgs', max_iter=200)
     model.evaluate(data)
 
-    assert 'actuals' in captured['df'].columns
-    np.testing.assert_array_equal(
-        captured['df']['actuals'].to_numpy(),
-        np.asarray(data['y_test']).astype(int),
-    )
+    assert 'actuals' not in captured['df'].columns
     assert captured['kwargs']['execution_lag_bars'] == 1
     assert captured['kwargs']['trades_count_mode'] == 'runs'
 
 
-def test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot(monkeypatch):
+def test_xgboost_inline_backtest_does_not_pass_actuals_to_snapshot(monkeypatch):
 
     captured = {}
 
     def _fake_backtest_snapshot(df, **kwargs):
 
         captured['df'] = df.copy()
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
+        return pd.DataFrame([{'trade_win_rate_pct': 1.0}])
 
     monkeypatch.setattr(
         'limen.sfd.reference_architecture.base.backtest_snapshot',
@@ -200,11 +196,7 @@ def test_xgboost_inline_backtest_passes_directional_actuals_to_snapshot(monkeypa
     )
     model.evaluate(data)
 
-    assert 'actuals' in captured['df'].columns
-    np.testing.assert_array_equal(
-        captured['df']['actuals'].to_numpy(),
-        (np.asarray(data['y_test']) > 0).astype(int),
-    )
+    assert 'actuals' not in captured['df'].columns
 
 
 def test_compute_backtest_requires_aligned_lengths():
@@ -221,12 +213,51 @@ def test_compute_backtest_requires_aligned_lengths():
         model._compute_backtest(
             np.array([1, 0]),
             data,
-            actuals=np.array([1, 0]),
         )
 
-    with pytest.raises(ValueError, match='actuals'):
-        model._compute_backtest(
-            np.array([1]),
+def test_compute_confusion_return_metrics_aligns_next_bar_returns() -> None:
+
+    model = LogRegBinary()
+    data = {
+        'price_data_for_backtest': pd.DataFrame({
+            'open': [100.0, 200.0, 100.0, 50.0],
+            'close': [150.0, 210.0, 90.0, 55.0],
+        }),
+    }
+
+    result = model._compute_confusion_return_metrics(
+        np.array([1, 1, 0, 0]),
+        np.array([1, 0, 0, 1]),
+        data,
+        execution_lag_bars=0,
+    )
+
+    assert result['confusion_tp_mean_return_pct'] == 50.0
+    assert result['confusion_fp_mean_return_pct'] == 5.0
+    assert result['confusion_tn_mean_return_pct'] == -10.0
+    assert result['confusion_fn_mean_return_pct'] == 10.0
+
+
+def test_compute_confusion_return_metrics_requires_aligned_lengths() -> None:
+
+    model = LogRegBinary()
+    data = {
+        'price_data_for_backtest': pd.DataFrame({
+            'open': [100.0],
+            'close': [110.0],
+        }),
+    }
+
+    with pytest.raises(ValueError, match='price_data_for_backtest'):
+        model._compute_confusion_return_metrics(
+            np.array([1, 0]),
+            np.array([1, 0]),
             data,
-            actuals=np.array([1, 0]),
+        )
+
+    with pytest.raises(ValueError, match='y_test'):
+        model._compute_confusion_return_metrics(
+            np.array([1]),
+            np.array([1, 0]),
+            data,
         )

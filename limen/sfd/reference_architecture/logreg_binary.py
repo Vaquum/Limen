@@ -74,7 +74,8 @@ class LogRegBinary(ReferenceModel):
 
         if inline_metrics:
             results.update(self._compute_confusion(preds, data['y_test']))
-            results.update(self._compute_backtest(preds, data, actuals=data['y_test']))
+            results.update(self._compute_confusion_return_metrics(preds, data['y_test'], data))
+            results.update(self._compute_backtest(preds, data))
 
         return results
 

@@ -4,6 +4,20 @@ from typing import Any
 from collections.abc import Sequence
 from math import sqrt
 
+ALIGNED_RETURN_PCT_COL = 'aligned_return_pct'
+
+
+def _build_aligned_return_pct(df: pd.DataFrame, execution_lag_bars: int) -> pd.Series:
+
+    open_px = pd.to_numeric(df['open'], errors='coerce')
+    dpx = pd.to_numeric(df['price_change'], errors='coerce')
+
+    if execution_lag_bars > 0:
+        open_px = open_px.shift(-execution_lag_bars)
+        dpx = dpx.shift(-execution_lag_bars)
+
+    return (dpx / open_px).replace([np.inf, -np.inf], np.nan) * 100.0
+
 
 def _permutation_confusion_metrics(self: Any,
                                   x: str,
@@ -15,29 +29,38 @@ def _permutation_confusion_metrics(self: Any,
                                   threshold: float = 0.5,
                                   outlier_quantiles: Sequence[float] = (0.01, 0.99),
                                   outlier_mode: str = 'filter',
+                                  execution_lag_bars: int = 1,
                                   id_cols: dict[str, Any] | None = None) -> pd.DataFrame:
     '''
     Compute a single-row trimmed report for long-only evaluation: precision,
     recall, signal rates, counts and payoffs, and TP–FP separation.
 
     Args:
-        x (str): Column summarized within TP/FP/TN/FN (e.g., predicted_probability or P&L)
+        x (str): Column summarized within TP/FP/TN/FN (e.g., predicted_probability,
+            P&L, or the special value 'aligned_return_pct')
         pred_col (str): Binary predictions column
         actual_col (str): Binary actuals column
         proba_col (str | None): Probabilities to binarize via `threshold` (overrides `pred_col`)
         threshold (float): Decision threshold for `proba_col`
         outlier_quantiles (Sequence[float]): (lo, hi) for x outlier handling
         outlier_mode (str): 'filter' to drop outside bounds or 'winsor' to clip
+        execution_lag_bars (int): Prediction-to-execution lag used when x='aligned_return_pct'
         id_cols (dict[str, Any] | None): Optional identifiers to prepend (e.g., params)
 
     Returns:
         pd.DataFrame: One-row table with columns 'x_name', 'n_kept', 'pred_pos_rate_pct',
                       'actual_pos_rate_pct', 'precision_pct', 'recall_pct', 'pred_pos_count',
                       'tp_count', 'fp_count', 'tp_x_mean', 'tp_x_median', 'fp_x_mean', 'fp_x_median',
-                      'pred_pos_x_mean', 'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks'
+                      'tn_x_mean', 'tn_x_median', 'fn_x_mean', 'fn_x_median', 'pred_pos_x_mean',
+                      'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks'
     '''
 
     df = self.permutation_prediction_performance(round_id)
+
+    if x == ALIGNED_RETURN_PCT_COL:
+        df = df.copy()
+        df[x] = _build_aligned_return_pct(df, execution_lag_bars)
+        df = df[df[x].notna()].copy()
 
     # Optional: binarize from probabilities
     if proba_col is not None:
@@ -147,6 +170,10 @@ def _permutation_confusion_metrics(self: Any,
         'fp_x_mean': float(fp['mean']),
         'tp_x_median': float(tp['median']),
         'fp_x_median': float(fp['median']),
+        'tn_x_mean': float(tn['mean']),
+        'tn_x_median': float(tn['median']),
+        'fn_x_mean': float(fn['mean']),
+        'fn_x_median': float(fn['median']),
         'pred_pos_count': int(pred_pos_count),
         'pred_pos_x_mean': float(pred_pos_mean_x),
         'pred_pos_x_median': float(pred_pos_median_x),
@@ -156,5 +183,11 @@ def _permutation_confusion_metrics(self: Any,
         'tp_fp_ks': float(tp_fp_ks),
         'x_name': x,
         'n_kept': int(n),
+        **({
+            'tp_mean_return_pct': float(tp['mean']),
+            'fp_mean_return_pct': float(fp['mean']),
+            'tn_mean_return_pct': float(tn['mean']),
+            'fn_mean_return_pct': float(fn['mean']),
+            'execution_lag_bars': int(execution_lag_bars),
+        } if x == ALIGNED_RETURN_PCT_COL else {}),
     }])
-

@@ -687,13 +687,19 @@ Note: add all new changelog entries to the bottom of this file.
 - Add cross-timescale state features: `trend_coherence` and `volatility_term_structure`
 - Add documentation and full behavioral test coverage for the new OHLCV feature families
 
+## v2.3.1 on 19th of April, 2026
+
+- Move TP/FP/TN/FN mean return metrics off the snapshot backtest surface and onto the confusion/benchmark side
+- Add inline `confusion_tp_mean_return_pct`, `confusion_fp_mean_return_pct`, `confusion_tn_mean_return_pct`, and `confusion_fn_mean_return_pct`
+- Add `aligned_return_pct` support to post-run confusion metrics so the same next-bar aligned one-bar return view is available after a run
+- Restore `backtest_snapshot()` and inline snapshot backtests to price-only inputs with no label plumbing through the backtest helper
+
 ## v2.3.0 on 18th of April, 2026
 
 - Change snapshot backtests to execute predictions on the next tradable bar by default, with `execution_lag_bars=0` available for legacy same-row behavior
 - Change snapshot `trade_*` metrics to run-level by default, add explicit `bar_*` metrics, and retain `trades_count_mode='bars'` for legacy-style bar metrics
 - Apply the new snapshot defaults explicitly to experiment backtest summaries and SFD inline backtest metrics so the behavior change is intentional and visible in outputs
-- Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when aligned `actuals` are available
-- Populate inline snapshot confusion-bucket return metrics from the aligned test labels, with regression SFDs passing directional actuals explicitly
+- Add confusion-bucket mean return diagnostics for aligned next-bar returns
 - Align regression experiment/log snapshot backtests with the same directional binary convention as inline reference-architecture backtests
 - Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution with breakeven observations kept in the Kelly sample
 - Add direct snapshot tests to the canonical `python -m tests.run` path and extend docs for the updated snapshot semantics

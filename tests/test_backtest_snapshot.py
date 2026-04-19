@@ -10,7 +10,6 @@ def _make_snapshot_input() -> pd.DataFrame:
 
     return pd.DataFrame({
         'predictions': [1, 1, 0],
-        'actuals': [1, 0, 0],
         'open': [100.0, 120.0, 108.0],
         'close': [120.0, 108.0, 108.0],
         'price_change': [20.0, -12.0, 0.0],
@@ -21,7 +20,6 @@ def test_snapshot_defaults_to_next_bar_execution() -> None:
 
     data = pd.DataFrame({
         'predictions': [1, 0],
-        'actuals': [1, 0],
         'open': [100.0, 200.0],
         'close': [150.0, 210.0],
         'price_change': [50.0, 10.0],
@@ -35,7 +33,6 @@ def test_snapshot_defaults_to_next_bar_execution() -> None:
     assert result['bars_in_market_pct'] == 100.0
     assert result['trade_runs_count'] == 1
     assert result['total_return_net_pct'] == 5.0
-    assert result['tp_mean_return_pct'] == 5.0
     assert math.isnan(result['sharpe_per_bar'])
 
 
@@ -43,7 +40,6 @@ def test_snapshot_can_reproduce_legacy_same_row_execution() -> None:
 
     data = pd.DataFrame({
         'predictions': [1, 0],
-        'actuals': [1, 0],
         'open': [100.0, 200.0],
         'close': [150.0, 210.0],
         'price_change': [50.0, 10.0],
@@ -80,10 +76,6 @@ def test_snapshot_trade_metrics_are_run_level_by_default() -> None:
     assert result['bar_expectancy_pct'] == 5.0
     assert result['bar_return_mean_win_pct'] == 20.0
     assert result['bar_return_mean_loss_pct'] == -10.0
-    assert result['tp_mean_return_pct'] == 20.0
-    assert result['fp_mean_return_pct'] == -10.0
-    assert result['tn_mean_return_pct'] == 0.0
-    assert math.isnan(result['fn_mean_return_pct'])
 
 
 def test_snapshot_bar_mode_preserves_legacy_trade_metrics() -> None:
@@ -103,59 +95,10 @@ def test_snapshot_bar_mode_preserves_legacy_trade_metrics() -> None:
     assert result['trade_return_mean_win_pct'] == 20.0
     assert result['trade_return_mean_loss_pct'] == -10.0
 
-
-def test_snapshot_confusion_bucket_mean_returns_cover_all_quadrants() -> None:
-
-    data = pd.DataFrame({
-        'predictions': [1, 1, 0, 0],
-        'actuals': [1, 0, 0, 1],
-        'open': [100.0, 100.0, 100.0, 100.0],
-        'close': [110.0, 90.0, 95.0, 105.0],
-        'price_change': [10.0, -10.0, -5.0, 5.0],
-    })
-
-    result = backtest_snapshot(
-        data,
-        fee_bps=0.0,
-        slip_bps=0.0,
-        execution_lag_bars=0,
-    ).iloc[0]
-
-    assert result['tp_mean_return_pct'] == 10.0
-    assert result['fp_mean_return_pct'] == -10.0
-    assert result['tn_mean_return_pct'] == -5.0
-    assert result['fn_mean_return_pct'] == 5.0
-
-
-def test_snapshot_confusion_bucket_respects_actual_col() -> None:
-
-    data = pd.DataFrame({
-        'predictions': [1, 0],
-        'labels': [1, 0],
-        'open': [100.0, 100.0],
-        'close': [110.0, 90.0],
-        'price_change': [10.0, -10.0],
-    })
-
-    result = backtest_snapshot(
-        data,
-        actual_col='labels',
-        fee_bps=0.0,
-        slip_bps=0.0,
-        execution_lag_bars=0,
-    ).iloc[0]
-
-    assert result['tp_mean_return_pct'] == 10.0
-    assert result['tn_mean_return_pct'] == -10.0
-    assert math.isnan(result['fp_mean_return_pct'])
-    assert math.isnan(result['fn_mean_return_pct'])
-
-
 def test_snapshot_mean_kelly_pct_uses_trade_runs_by_default() -> None:
 
     data = pd.DataFrame({
         'predictions': [1, 0, 1, 0],
-        'actuals': [1, 0, 0, 1],
         'open': [100.0, 100.0, 100.0, 100.0],
         'close': [120.0, 100.0, 90.0, 100.0],
         'price_change': [20.0, 0.0, -10.0, 0.0],
@@ -175,7 +118,6 @@ def test_snapshot_mean_kelly_pct_keeps_breakevens_in_denominator() -> None:
 
     data = pd.DataFrame({
         'predictions': [1, 0, 1, 0, 1],
-        'actuals': [1, 0, 0, 0, 0],
         'open': [100.0, 100.0, 100.0, 100.0, 100.0],
         'close': [120.0, 100.0, 90.0, 100.0, 100.0],
         'price_change': [20.0, 0.0, -10.0, 0.0, 0.0],
@@ -196,7 +138,6 @@ def test_snapshot_handles_empty_input() -> None:
 
     data = pd.DataFrame({
         'predictions': [],
-        'actuals': [],
         'open': [],
         'close': [],
         'price_change': [],

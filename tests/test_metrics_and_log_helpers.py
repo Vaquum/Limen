@@ -6,6 +6,7 @@ from unittest.mock import patch
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from limen.log._experiment_backtest_results import _experiment_backtest_results
+from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics
 from limen.log._permutation_prediction_performance import _permutation_prediction_performance
 from limen.metrics.balanced_metric import balanced_metric
 from limen.metrics.multiclass_metrics import multiclass_metrics
@@ -121,7 +122,7 @@ def test_experiment_backtest_results_directionalizes_regression_rounds() -> None
 
         captured['df'] = df.copy()
         captured['kwargs'] = kwargs
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
+        return pd.DataFrame([{'trade_win_rate_pct': 1.0}])
 
     with patch(
         'limen.log._experiment_backtest_results.backtest_snapshot',
@@ -132,11 +133,37 @@ def test_experiment_backtest_results_directionalizes_regression_rounds() -> None
             disable_progress_bar=True,
         )
 
-    assert result.iloc[0]['tp_mean_return_pct'] == 1.0
+    assert result.iloc[0]['trade_win_rate_pct'] == 1.0
     assert captured['df']['predictions'].tolist() == [1, 0, 1]
-    assert captured['df']['actuals'].tolist() == [1, 0, 0]
     assert captured['kwargs']['execution_lag_bars'] == 1
     assert captured['kwargs']['trades_count_mode'] == 'runs'
+
+
+def test_permutation_confusion_metrics_supports_aligned_return_pct() -> None:
+
+    class _DummyConfusionLog:
+
+        def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+            assert round_id == 0
+            return pd.DataFrame({
+                'predictions': [1, 1, 0, 0, 0],
+                'actuals': [1, 0, 0, 1, 0],
+                'open': [100.0, 100.0, 100.0, 100.0, 100.0],
+                'close': [100.0, 110.0, 90.0, 95.0, 105.0],
+                'price_change': [0.0, 10.0, -10.0, -5.0, 5.0],
+            })
+
+    perf = _permutation_confusion_metrics(
+        _DummyConfusionLog(),
+        x='aligned_return_pct',
+        round_id=0,
+        outlier_quantiles=(0.0, 1.0),
+    )
+
+    assert perf.iloc[0]['tp_mean_return_pct'] == 10.0
+    assert perf.iloc[0]['fp_mean_return_pct'] == -10.0
+    assert perf.iloc[0]['tn_mean_return_pct'] == -5.0
+    assert perf.iloc[0]['fn_mean_return_pct'] == 5.0
 
 
 def test_multiclass_metrics_returns_expected_rounded_summary() -> None:

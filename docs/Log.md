@@ -106,7 +106,7 @@ This table combines:
 - positive-rate diagnostics
 - precision and recall
 - TP and FP counts
-- mean and median of `x` within TP and FP
+- mean and median of `x` within TP, FP, TN, and FN
 - TP-versus-FP separation through Cohen's d and KS
 
 The same summary is exposed directly on UEL as:
@@ -145,6 +145,14 @@ Good questions to ask:
 - are `tp_x_mean` and `tp_x_median` materially better than `fp_x_mean` and `fp_x_median`?
 - is `tp_fp_cohen_d` stable enough to suggest real separation rather than noise?
 
+For aligned next-bar return diagnostics specifically, use:
+
+```python
+conf_ret = uel._log.experiment_confusion_metrics('aligned_return_pct')
+```
+
+This keeps the TP/FP/TN/FN mean-return view on the confusion side instead of mixing it into the snapshot backtest table. Inline experiment rows expose the same idea as `confusion_tp_mean_return_pct`, `confusion_fp_mean_return_pct`, `confusion_tn_mean_return_pct`, and `confusion_fn_mean_return_pct`.
+
 This is exactly why benchmark and backtest are separate in Limen: a round can look statistically interesting before it proves itself economically.
 
 ## Backtest Surface
@@ -176,10 +184,6 @@ The current summary columns are:
 - `bar_expectancy_pct`
 - `bar_return_mean_win_pct`
 - `bar_return_mean_loss_pct`
-- `tp_mean_return_pct`
-- `fp_mean_return_pct`
-- `tn_mean_return_pct`
-- `fn_mean_return_pct`
 - `mean_kelly_pct`
 - `bars_total`
 - `sharpe_per_bar`
@@ -190,7 +194,7 @@ The current summary columns are:
 - `cost_round_trip_bps`
 - `execution_lag_bars`
 
-Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
+Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer. TP/FP/TN/FN-conditioned mean returns are now benchmark/confusion diagnostics rather than backtest outputs.
 
 The snapshot defaults behind this table now execute on the next tradable bar and compute `trade_*` fields per held run. That means historical backtest tables produced before this change are not directly comparable under the same `trade_*` column names.
 

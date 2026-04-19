@@ -86,13 +86,8 @@ class XGBoostRegressor(ReferenceModel):
             pred_direction = (preds > 0).astype(int)
             actual_direction = (y_test > 0).astype(int)
             results.update(self._compute_confusion(pred_direction, actual_direction))
-            results.update(
-                self._compute_backtest(
-                    pred_direction,
-                    data,
-                    actuals=actual_direction,
-                )
-            )
+            results.update(self._compute_confusion_return_metrics(pred_direction, actual_direction, data))
+            results.update(self._compute_backtest(pred_direction, data))
 
         return results
 

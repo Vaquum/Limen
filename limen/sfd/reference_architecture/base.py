@@ -100,10 +100,76 @@ class ReferenceModel(ABC):
             'confusion_recall': recall,
         }
 
+    def _compute_confusion_return_metrics(self,
+                                          preds: np.ndarray,
+                                          y_test: np.ndarray,
+                                          data: dict,
+                                          execution_lag_bars: int = 1) -> dict:
+
+        '''
+        Compute confusion-conditioned aligned one-bar returns if price data is available.
+
+        Args:
+            preds (np.ndarray): Binary predictions (0 or 1)
+            y_test (np.ndarray): Binary true labels (0 or 1)
+            data (dict): Data dictionary, optionally containing 'price_data_for_backtest'
+            execution_lag_bars (int): Number of bars between prediction row and execution row
+
+        Returns:
+            dict: Confusion return metrics with 'confusion_' prefix, or empty dict if no price data
+        '''
+
+        if 'price_data_for_backtest' not in data:
+            return {}
+
+        price_df = data['price_data_for_backtest']
+
+        if isinstance(price_df, pd.DataFrame):
+            price_pd = price_df
+        elif hasattr(price_df, 'to_pandas'):
+            price_pd = price_df.to_pandas()
+        else:
+            return {}
+
+        preds = np.asarray(preds).astype(int)
+        y_test = np.asarray(y_test).astype(int)
+
+        if len(price_pd) != len(preds):
+            raise ValueError(
+                'price_data_for_backtest must align one-to-one with predictions'
+            )
+        if len(y_test) != len(preds):
+            raise ValueError(
+                'y_test must align one-to-one with predictions'
+            )
+
+        open_px = pd.to_numeric(price_pd['open'], errors='coerce')
+        close_px = pd.to_numeric(price_pd['close'], errors='coerce')
+        dpx = close_px - open_px
+
+        if execution_lag_bars > 0:
+            open_px = open_px.shift(-execution_lag_bars)
+            dpx = dpx.shift(-execution_lag_bars)
+
+        aligned_return_pct = ((dpx / open_px).replace([np.inf, -np.inf], np.nan) * 100.0)
+        valid = open_px.notna() & dpx.notna() & (open_px != 0) & aligned_return_pct.notna()
+
+        actual = pd.Series(y_test)
+        pred = pd.Series(preds)
+
+        def _mean(mask: pd.Series) -> float:
+            return round(float(aligned_return_pct.loc[mask].mean()), 3) if mask.any() else np.nan
+
+        return {
+            'confusion_tp_mean_return_pct': _mean(valid & (pred == 1) & (actual == 1)),
+            'confusion_fp_mean_return_pct': _mean(valid & (pred == 1) & (actual == 0)),
+            'confusion_tn_mean_return_pct': _mean(valid & (pred == 0) & (actual == 0)),
+            'confusion_fn_mean_return_pct': _mean(valid & (pred == 0) & (actual == 1)),
+        }
+
     def _compute_backtest(self,
                           preds: np.ndarray,
-                          data: dict,
-                          actuals: np.ndarray | pd.Series | None = None) -> dict:
+                          data: dict) -> dict:
 
         '''
         Compute backtest metrics if price_data_for_backtest is available.
@@ -111,10 +177,6 @@ class ReferenceModel(ABC):
         Args:
             preds (np.ndarray): Binary predictions (0 or 1)
             data (dict): Data dictionary, optionally containing 'price_data_for_backtest'
-            actuals (np.ndarray | pd.Series | None): Optional aligned binary actuals
-                for the same prediction rows. When provided, snapshot confusion-bucket
-                return metrics are populated from these labels without additional
-                shifting.
 
         Returns:
             dict: Backtest metrics with 'backtest_' prefix, or empty dict if no price data
@@ -144,22 +206,6 @@ class ReferenceModel(ABC):
             'close': price_pd['close'].values,
             'price_change': (price_pd['close'] - price_pd['open']).values,
         })
-
-        if actuals is not None:
-            actuals = pd.to_numeric(
-                pd.Series(actuals),
-                errors='coerce',
-            ).to_numpy()
-            if len(actuals) != len(preds):
-                raise ValueError(
-                    'actuals must align one-to-one with predictions'
-                )
-            if np.isnan(actuals).any():
-                raise ValueError(
-                    'actuals must be numeric and contain no NaN values'
-                )
-            actuals = actuals.astype(int)
-            bt_input['actuals'] = actuals
 
         bt_result = backtest_snapshot(
             bt_input,

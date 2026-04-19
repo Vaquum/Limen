@@ -1,10 +1,9 @@
+import math
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-import pytest
 
-from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
 from limen.sfd.reference_architecture import XGBoostRegressor
 from tests.test_reference_architecture import _make_data
@@ -15,14 +14,14 @@ def _assert_snapshot_kwargs(captured: dict) -> None:
     assert captured['kwargs']['trades_count_mode'] == 'runs'
 
 
-def test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot() -> None:
+def test_random_binary_inline_backtest_does_not_pass_actuals_to_snapshot() -> None:
 
     captured = {}
 
     def _fake_backtest_snapshot(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         captured['df'] = df.copy()
         captured['kwargs'] = kwargs
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
+        return pd.DataFrame([{'trade_win_rate_pct': 1.0}])
 
     with patch(
         'limen.sfd.reference_architecture.base.backtest_snapshot',
@@ -32,22 +31,18 @@ def test_random_binary_inline_backtest_passes_binary_actuals_to_snapshot() -> No
         model = RandomBinary().train(data, random_weights=0.5)
         model.evaluate(data)
 
-    assert 'actuals' in captured['df'].columns
-    np.testing.assert_array_equal(
-        captured['df']['actuals'].to_numpy(),
-        np.asarray(data['y_test']).astype(int),
-    )
+    assert 'actuals' not in captured['df'].columns
     _assert_snapshot_kwargs(captured)
 
 
-def test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs() -> None:
+def test_xgboost_inline_backtest_uses_directional_predictions_without_actuals() -> None:
 
     captured = {}
 
     def _fake_backtest_snapshot(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         captured['df'] = df.copy()
         captured['kwargs'] = kwargs
-        return pd.DataFrame([{'tp_mean_return_pct': 1.0}])
+        return pd.DataFrame([{'trade_win_rate_pct': 1.0}])
 
     with patch(
         'limen.sfd.reference_architecture.base.backtest_snapshot',
@@ -62,27 +57,28 @@ def test_xgboost_inline_backtest_passes_directional_actuals_and_kwargs() -> None
         )
         model.evaluate(data)
 
-    assert 'actuals' in captured['df'].columns
-    np.testing.assert_array_equal(
-        captured['df']['actuals'].to_numpy(),
-        (np.asarray(data['y_test']) > 0).astype(int),
-    )
+    assert 'actuals' not in captured['df'].columns
     _assert_snapshot_kwargs(captured)
 
 
-def test_compute_backtest_rejects_nan_actuals() -> None:
+def test_compute_confusion_return_metrics_uses_directional_actuals() -> None:
 
-    model = LogRegBinary()
+    model = XGBoostRegressor()
     data = {
         'price_data_for_backtest': pd.DataFrame({
-            'open': [100.0, 101.0],
-            'close': [110.0, 111.0],
+            'open': [100.0, 100.0, 100.0],
+            'close': [101.0, 99.0, 102.0],
         }),
     }
 
-    with pytest.raises(ValueError, match='actuals must be numeric and contain no NaN values'):
-        model._compute_backtest(
-            np.array([1, 0]),
-            data,
-            actuals=np.array([1.0, np.nan]),
-        )
+    result = model._compute_confusion_return_metrics(
+        np.array([1, 0, 1]),
+        np.array([1, 0, 1]),
+        data,
+        execution_lag_bars=0,
+    )
+
+    assert result['confusion_tp_mean_return_pct'] == 1.5
+    assert result['confusion_tn_mean_return_pct'] == -1.0
+    assert math.isnan(result['confusion_fp_mean_return_pct'])
+    assert math.isnan(result['confusion_fn_mean_return_pct'])
