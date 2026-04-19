@@ -323,21 +323,29 @@ def test_shutdown_before_any_round_completes():
     assert uel.experiment_log is None
 
 
-def test_flush_results_recasts_all_null_resumed_string_columns() -> None:
+def test_run_with_msq_writes_nan_metrics_as_numeric_csv_values() -> None:
 
-    shim = SimpleNamespace(
-        experiment_log=pl.DataFrame(
-            {'backtest_tp_mean_return_pct': ['nan', 'nan']},
-            schema={'backtest_tp_mean_return_pct': pl.String},
+    with TemporaryDirectory() as tmpdir:
+        uel, _, _ = _make_uel(experiment_dir=tmpdir)
+        original_model = uel.model
+
+        def model_with_nan_metric(data, round_params):
+            result = original_model(data, round_params)
+            result['backtest_tp_mean_return_pct'] = float('nan')
+            return result
+
+        uel.model = model_with_nan_metric
+
+        uel._run_with_msq(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=2,
+            context_params=None,
+            resume=False,
         )
-    )
 
-    UniversalExperimentLoop._flush_results(
-        shim,
-        [{'backtest_tp_mean_return_pct': float('nan')}],
-    )
+        df = pl.read_csv(Path(tmpdir) / 'results.csv')
 
-    assert shim.experiment_log.schema['backtest_tp_mean_return_pct'] == pl.Float64
+    assert df.schema['backtest_tp_mean_return_pct'] == pl.Float64
 
 
 def test_resume_fails_without_round_data():
