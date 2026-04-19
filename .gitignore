@@ -62,3 +62,4 @@ mcp/
 .playwright-mcp
 .ruff_cache/
 .Agent1
+venv-codex
