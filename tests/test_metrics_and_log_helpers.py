@@ -241,7 +241,7 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
     assert result['total_return_net_pct'] == 21.0
 
 
-def test_backtest_snapshot_excludes_predictions_without_next_tradable_bar() -> None:
+def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 0],

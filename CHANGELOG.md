@@ -689,7 +689,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v2.3.0 on 18th of April, 2026
 
-- Change snapshot backtests to execute predictions on the next tradable bar by default, with `execution_lag_bars=0` available for legacy same-row behavior
+- Change snapshot backtests to execute predictions on the immediate next execution row by default, with `execution_lag_bars=0` available for legacy same-row behavior
 - Change snapshot `trade_*` metrics to run-level by default, add explicit `bar_*` metrics, and retain `trades_count_mode='bars'` for legacy-style bar metrics
 - Apply the new snapshot defaults explicitly to experiment backtest summaries and SFD inline backtest metrics so the behavior change is intentional and visible in outputs
 - Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when aligned `actuals` are available
@@ -709,5 +709,5 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v2.3.3 on 19th of April, 2026
 
-- Fix `backtest_snapshot()` execution alignment for completed-bar pipelines by evaluating prediction row `t` on the next tradable bar while preserving the existing HOLD-WHILE-1 semantics
+- Fix `backtest_snapshot()` execution alignment for completed-bar pipelines by evaluating prediction row `t` on the immediate next execution row while preserving the existing HOLD-WHILE-1 semantics
 - Apply the same snapshot execution alignment explicitly to inline reference-architecture backtests and post-run experiment backtest summaries
