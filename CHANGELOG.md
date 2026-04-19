@@ -717,3 +717,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Align inline and post-run confusion mean-return metrics to the same immediate-next-execution-row contract used by snapshot backtests for completed-bar pipelines
 - Make post-run snapshot backtests raise explicitly on unsupported multiclass logged outputs while keeping the existing binary and directional-regression contracts
+
+## v2.3.5 on 19th of April, 2026
+
+- Fix legacy `ParamSpace` sampling for huge discrete spaces so `n_permutations < total_space` no longer overflows when `total_space > sys.maxsize`
+- Preserve exact legacy `random.sample(range(N), k)` ordering and downstream RNG-state semantics in the huge-space fallback path
+- Add regression coverage for stdlib-equivalent range sampling, large-space reproducibility, prefix stability, and exhaustion behavior on the legacy `ParamSpace` path
