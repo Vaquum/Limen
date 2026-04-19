@@ -3,6 +3,7 @@ import polars as pl
 import pandas as pd
 import pytest
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+from typing import ClassVar
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.log._experiment_backtest_results import _experiment_backtest_results
@@ -121,7 +122,7 @@ class _DummyCompletedBarSignal:
 
 class _DummyRegressionBacktestLog:
 
-    round_params = [{}]
+    round_params: ClassVar[list[dict]] = [{}]
 
     def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
         assert round_id == 0
