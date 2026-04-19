@@ -66,7 +66,7 @@ def test_sample_range_exact_matches_stdlib_and_preserves_rng_state():
 def test_sample_range_exact_retries_rejected_and_duplicate_draws_in_order():
     class StubRandom:
         def __init__(self) -> None:
-            self.values = iter([130, 7, 7, 9])
+            self.values = iter([127, 7, 7, 9])
 
         def getrandbits(self, _bits: int) -> int:
             return next(self.values)
