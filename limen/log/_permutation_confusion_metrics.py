@@ -8,30 +8,46 @@ from math import sqrt
 def _confusion_mean_return_pct(pred: pd.Series,
                                actual: pd.Series,
                                open_px: pd.Series,
-                               price_change: pd.Series) -> dict[str, float]:
+                               price_change: pd.Series,
+                               *,
+                               execution_lag_bars: int = 1) -> dict[str, float]:
     '''
-    Compute mean return percentage for each confusion quadrant.
+    Compute execution-aligned mean return percentage for each confusion quadrant.
 
     Args:
         pred (pd.Series): Binary predictions
         actual (pd.Series): Binary actuals
-        open_px (pd.Series): Open prices for the evaluated rows
-        price_change (pd.Series): Close - open for the evaluated rows
+        open_px (pd.Series): Open prices for the feature-bar rows
+        price_change (pd.Series): Close - open for the feature-bar rows
+        execution_lag_bars (int): Number of rows forward to evaluate on
 
     Returns:
         dict[str, float]: Mean return percentages for TP/FP/TN/FN
     '''
 
-    pred = pd.to_numeric(pd.Series(np.asarray(pred)), errors='coerce').to_numpy()
-    actual = pd.to_numeric(pd.Series(np.asarray(actual)), errors='coerce').to_numpy()
-    open_px = pd.to_numeric(pd.Series(np.asarray(open_px)), errors='coerce').to_numpy()
-    price_change = pd.to_numeric(pd.Series(np.asarray(price_change)), errors='coerce').to_numpy()
+    if execution_lag_bars < 0:
+        raise ValueError('execution_lag_bars must be >= 0')
+
+    pred = pd.to_numeric(pd.Series(np.asarray(pred)), errors='coerce')
+    actual = pd.to_numeric(pd.Series(np.asarray(actual)), errors='coerce')
+    open_px = pd.to_numeric(pd.Series(np.asarray(open_px)), errors='coerce')
+    price_change = pd.to_numeric(pd.Series(np.asarray(price_change)), errors='coerce')
+
+    if execution_lag_bars:
+        open_px = open_px.shift(-execution_lag_bars)
+        price_change = price_change.shift(-execution_lag_bars)
+
+    pred = pred.to_numpy()
+    actual = actual.to_numpy()
+    open_px = open_px.to_numpy()
+    price_change = price_change.to_numpy()
 
     return_pct = (price_change / open_px) * 100.0
     valid = (
         ~np.isnan(pred) &
         ~np.isnan(actual) &
         ~np.isnan(open_px) &
+        ~np.isnan(price_change) &
         (open_px != 0) &
         np.isfinite(return_pct)
     )
@@ -102,6 +118,13 @@ def _permutation_confusion_metrics(self: Any,
 
     df[pred_col] = df[pred_col].astype(int)
     df[actual_col] = df[actual_col].astype(int)
+
+    mean_return_pct = _confusion_mean_return_pct(
+        df[pred_col],
+        df[actual_col],
+        df['open'],
+        df['price_change'],
+    )
 
     q_lo, q_hi = df[x].quantile(outlier_quantiles)
     if outlier_mode == 'filter':
@@ -185,12 +208,6 @@ def _permutation_confusion_metrics(self: Any,
     fp_x = df.loc[m_fp, x].to_numpy()
     tp_fp_cohen_d = _cohen_d(tp_x, fp_x)
     tp_fp_ks = _ks(tp_x, fp_x)
-    mean_return_pct = _confusion_mean_return_pct(
-        df[pred_col],
-        df[actual_col],
-        df['open'],
-        df['price_change'],
-    )
 
     return pd.DataFrame.from_records([{
         **(id_cols or {}),

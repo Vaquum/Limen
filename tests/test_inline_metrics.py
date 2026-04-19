@@ -1,8 +1,11 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import math
+
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
+from limen.sfd.foundational_sfd import logreg_binary as logreg_binary_sfd
 from limen.sfd.foundational_sfd import random_binary as random_binary_sfd
 from limen.sfd.foundational_sfd import xgboost_regressor as xgboost_sfd
 from limen.experiment.param_search import RandomStrategy
@@ -62,6 +65,27 @@ def test_inline_and_post_experiment_metrics() -> None:
 
     assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
         uel.experiment_backtest_results['total_return_net_pct'].tolist()
+
+
+def test_logreg_inline_and_post_confusion_metrics_match() -> None:
+
+    uel = _run_uel(sfd_module=logreg_binary_sfd, n_permutations=1)
+
+    for inline_col, post_col in [
+        ('confusion_tp_mean_return_pct', 'tp_mean_return_pct'),
+        ('confusion_fp_mean_return_pct', 'fp_mean_return_pct'),
+        ('confusion_tn_mean_return_pct', 'tn_mean_return_pct'),
+        ('confusion_fn_mean_return_pct', 'fn_mean_return_pct'),
+    ]:
+        for inline_value, post_value in zip(
+            uel.experiment_log[inline_col].to_list(),
+            uel.experiment_confusion_metrics[post_col].tolist(),
+            strict=True,
+        ):
+            if math.isnan(inline_value) and math.isnan(post_value):
+                continue
+
+            assert inline_value == post_value
 
 
 def test_xgboost_inline_and_post_backtest_metrics_match() -> None:

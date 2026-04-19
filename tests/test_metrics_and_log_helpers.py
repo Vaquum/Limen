@@ -7,6 +7,7 @@ from typing import ClassVar
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.log._experiment_backtest_results import _experiment_backtest_results
+from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
 from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics
 from limen.log._permutation_prediction_performance import _permutation_prediction_performance
@@ -75,11 +76,11 @@ class _DummyConfusionMetrics:
     def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
         assert round_id == 0
         return pd.DataFrame({
-            'predictions': [1, 1, 0, 0],
-            'actuals': [1, 0, 0, 1],
-            'open': [100.0, 100.0, 100.0, 100.0],
-            'close': [110.0, 90.0, 95.0, 105.0],
-            'price_change': [10.0, -10.0, -5.0, 5.0],
+            'predictions': [1, 1, 0, 0, 0],
+            'actuals': [1, 0, 0, 1, 0],
+            'open': [100.0, 100.0, 100.0, 100.0, 100.0],
+            'close': [150.0, 110.0, 90.0, 95.0, 105.0],
+            'price_change': [50.0, 10.0, -10.0, -5.0, 5.0],
         })
 
 
@@ -91,6 +92,20 @@ class _DummyConfusionMetricsMissingPriceChange:
             'predictions': [1, 1, 0, 0],
             'actuals': [1, 0, 0, 1],
             'open': [100.0, 100.0, 100.0, 100.0],
+        })
+
+
+class _DummyConfusionMetricsOutlierFiltered:
+
+    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+        assert round_id == 0
+        return pd.DataFrame({
+            'predictions': [1, 0, 0, 0, 0],
+            'actuals': [1, 1, 0, 0, 0],
+            'open': [100.0, 100.0, 100.0, 100.0, 100.0],
+            'close': [110.0, 90.0, 105.0, 100.0, 100.0],
+            'price_change': [10.0, -10.0, 5.0, 0.0, 0.0],
+            'x_metric': [1000.0, 0.0, 0.0, 0.0, 0.0],
         })
 
 
@@ -174,8 +189,8 @@ def test_permutation_confusion_metrics_adds_mean_return_pct_columns() -> None:
         outlier_quantiles=(0.0, 1.0),
     ).iloc[0]
 
-    assert result['tp_x_mean'] == 10.0
-    assert result['fp_x_mean'] == -10.0
+    assert result['tp_x_mean'] == 50.0
+    assert result['fp_x_mean'] == 10.0
     assert result['tp_mean_return_pct'] == 10.0
     assert result['fp_mean_return_pct'] == -10.0
     assert result['tn_mean_return_pct'] == -5.0
@@ -184,10 +199,10 @@ def test_permutation_confusion_metrics_adds_mean_return_pct_columns() -> None:
 
 def test_permutation_confusion_metrics_uses_positional_alignment_for_returns() -> None:
     result = _confusion_mean_return_pct(
-        pd.Series([1, 1, 0, 0]),
-        pd.Series([1, 0, 0, 1]),
-        pd.Series([100.0, 100.0, 100.0, 100.0], index=[10, 11, 12, 13]),
-        pd.Series([10.0, -10.0, -5.0, 5.0], index=[10, 11, 12, 13]),
+        pd.Series([1, 1, 0, 0, 0]),
+        pd.Series([1, 0, 0, 1, 0]),
+        pd.Series([100.0, 100.0, 100.0, 100.0, 100.0], index=[10, 11, 12, 13, 14]),
+        pd.Series([50.0, 10.0, -10.0, -5.0, 5.0], index=[10, 11, 12, 13, 14]),
     )
 
     assert result['tp_mean_return_pct'] == 10.0
@@ -204,6 +219,20 @@ def test_permutation_confusion_metrics_requires_return_columns() -> None:
             round_id=0,
             outlier_quantiles=(0.0, 1.0),
         )
+
+
+def test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows() -> None:
+    result = _permutation_confusion_metrics(
+        _DummyConfusionMetricsOutlierFiltered(),
+        x='x_metric',
+        round_id=0,
+        outlier_quantiles=(0.25, 0.75),
+    ).iloc[0]
+
+    assert result['n_kept'] == 4
+    assert np.isnan(result['tp_x_mean'])
+    assert result['tp_mean_return_pct'] == -10.0
+    assert result['fn_mean_return_pct'] == 5.0
 
 
 def test_backtest_snapshot_adds_mean_kelly_pct() -> None:
@@ -312,6 +341,26 @@ def test_experiment_backtest_results_directionalizes_regression_predictions() ->
     ).iloc[0]
 
     assert result['total_return_net_pct'] == expected['total_return_net_pct']
+
+
+def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:
+    with pytest.raises(ValueError, match='snapshot backtest does not support multiclass'):
+        _prepare_snapshot_backtest_input(
+            pd.DataFrame({
+                'predictions': [0, 1, 2],
+                'actuals': [0, 1, 2],
+            })
+        )
+
+
+def test_prepare_snapshot_backtest_input_rejects_non_numeric_logged_values() -> None:
+    with pytest.raises(ValueError, match='snapshot backtest received non-numeric prediction values'):
+        _prepare_snapshot_backtest_input(
+            pd.DataFrame({
+                'predictions': [1, 'bad', 0],
+                'actuals': [1, 0, 0],
+            })
+        )
 
 
 def test_multiclass_metrics_returns_expected_rounded_summary() -> None:
