@@ -5,6 +5,7 @@ import pytest
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.log._experiment_backtest_results import _experiment_backtest_results
 from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics
 from limen.log._permutation_prediction_performance import _permutation_prediction_performance
@@ -115,6 +116,21 @@ class _DummyCompletedBarSignal:
         return pd.DataFrame({
             'open': [100.0, 100.0, 100.0, 100.0],
             'close': [110.0, 90.0, 110.0, 90.0],
+        })
+
+
+class _DummyRegressionBacktestLog:
+
+    round_params = [{}]
+
+    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+        assert round_id == 0
+        return pd.DataFrame({
+            'predictions': [0.4, -0.2, 0.7],
+            'actuals': [0.6, -0.1, 0.2],
+            'open': [100.0, 100.0, 100.0],
+            'close': [100.0, 110.0, 90.0],
+            'price_change': [0.0, 10.0, -10.0],
         })
 
 
@@ -276,6 +292,25 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
 
     assert same_row['total_return_net_pct'] == 21.0
     assert next_bar['total_return_net_pct'] == -19.0
+
+
+def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
+    result = _experiment_backtest_results(
+        _DummyRegressionBacktestLog(),
+        disable_progress_bar=True,
+    ).iloc[0]
+
+    expected = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 0, 1],
+            'open': [100.0, 100.0, 100.0],
+            'close': [100.0, 110.0, 90.0],
+            'price_change': [0.0, 10.0, -10.0],
+        }),
+        execution_lag_bars=1,
+    ).iloc[0]
+
+    assert result['total_return_net_pct'] == expected['total_return_net_pct']
 
 
 def test_multiclass_metrics_returns_expected_rounded_summary() -> None:
