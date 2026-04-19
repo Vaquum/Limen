@@ -19,6 +19,14 @@ from tests.test_account_conviction import test_account_conviction
 from tests.test_backtest_conviction import test_backtest_conviction
 from tests.test_klines_data_maker_fields import test_klines_data_maker_fields
 from tests.test_large_param_space import test_large_param_space
+from tests.test_param_space import test_param_space_large_space_no_longer_overflows_and_is_reproducible
+from tests.test_param_space import test_param_space_large_space_sequences_match_for_both_generation_modes
+from tests.test_param_space import test_param_space_enumerates_full_space_and_returns_none_when_exhausted
+from tests.test_param_space import test_param_space_small_legacy_sequence_is_unchanged
+from tests.test_param_space import test_sample_range_exact_handles_edge_cases
+from tests.test_param_space import test_sample_range_exact_matches_stdlib_and_preserves_rng_state
+from tests.test_param_space import test_sample_range_exact_preserves_prefix_for_huge_ranges
+from tests.test_param_space import test_sample_range_exact_retries_rejected_and_duplicate_draws_in_order
 from tests.test_bars import test_volume_bars_basic
 from tests.test_bars import test_trade_bars_basic
 from tests.test_bars import test_liquidity_bars_basic
@@ -638,6 +646,14 @@ tests = [
     test_budget_set_state_missing_key,
     test_worst_first_maximize_false,
     test_large_param_space,
+    test_sample_range_exact_matches_stdlib_and_preserves_rng_state,
+    test_sample_range_exact_retries_rejected_and_duplicate_draws_in_order,
+    test_sample_range_exact_handles_edge_cases,
+    test_sample_range_exact_preserves_prefix_for_huge_ranges,
+    test_param_space_small_legacy_sequence_is_unchanged,
+    test_param_space_enumerates_full_space_and_returns_none_when_exhausted,
+    test_param_space_large_space_no_longer_overflows_and_is_reproducible,
+    test_param_space_large_space_sequences_match_for_both_generation_modes,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
     test_trade_bars_basic,
