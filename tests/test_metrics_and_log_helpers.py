@@ -230,7 +230,7 @@ def test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows() -
     ).iloc[0]
 
     assert result['n_kept'] == 4
-    assert result['tp_x_mean'] == 0.0
+    assert np.isnan(result['tp_x_mean'])
     assert result['tp_mean_return_pct'] == -10.0
     assert result['fn_mean_return_pct'] == 5.0
 
