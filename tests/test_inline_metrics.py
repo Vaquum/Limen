@@ -57,3 +57,6 @@ def test_inline_and_post_experiment_metrics() -> None:
     assert uel.experiment_backtest_results is not None
     assert len(uel.experiment_backtest_results) > 0
     assert 'mean_kelly_pct' in uel.experiment_backtest_results.columns
+
+    assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
+        uel.experiment_backtest_results['total_return_net_pct'].tolist()

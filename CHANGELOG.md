@@ -706,3 +706,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `mean_kelly_pct` back to snapshot backtests without changing the restored legacy execution semantics
 - Add TP/FP/TN/FN mean return percentage columns to the existing confusion metrics surfaces, both inline and post-run, using the existing aligned `open` and `price_change` data
+
+## v2.3.3 on 19th of April, 2026
+
+- Fix `backtest_snapshot()` execution alignment for completed-bar pipelines by evaluating prediction row `t` on the next tradable bar while preserving the existing HOLD-WHILE-1 semantics
+- Apply the same snapshot execution alignment explicitly to inline reference-architecture backtests and post-run experiment backtest summaries
