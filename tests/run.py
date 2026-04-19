@@ -27,6 +27,7 @@ from tests.test_param_space import test_sample_range_exact_handles_edge_cases
 from tests.test_param_space import test_sample_range_exact_matches_stdlib_and_preserves_rng_state
 from tests.test_param_space import test_sample_range_exact_preserves_prefix_for_huge_ranges
 from tests.test_param_space import test_sample_range_exact_retries_rejected_and_duplicate_draws_in_order
+from tests.test_param_space import test_sample_range_exact_skips_small_range_fallback_above_sys_maxsize
 from tests.test_bars import test_volume_bars_basic
 from tests.test_bars import test_trade_bars_basic
 from tests.test_bars import test_liquidity_bars_basic
@@ -649,6 +650,7 @@ tests = [
     test_sample_range_exact_matches_stdlib_and_preserves_rng_state,
     test_sample_range_exact_retries_rejected_and_duplicate_draws_in_order,
     test_sample_range_exact_handles_edge_cases,
+    test_sample_range_exact_skips_small_range_fallback_above_sys_maxsize,
     test_sample_range_exact_preserves_prefix_for_huge_ranges,
     test_param_space_small_legacy_sequence_is_unchanged,
     test_param_space_enumerates_full_space_and_returns_none_when_exhausted,

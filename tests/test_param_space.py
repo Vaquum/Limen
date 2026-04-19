@@ -85,6 +85,24 @@ def test_sample_range_exact_handles_edge_cases():
         sample_range_exact(random.Random(3), 5, 6)
 
 
+def test_sample_range_exact_skips_small_range_fallback_above_sys_maxsize(monkeypatch):
+    class StubRandom:
+        def __init__(self) -> None:
+            self.values = iter(range(50))
+
+        def getrandbits(self, _bits: int) -> int:
+            return next(self.values)
+
+        def sample(self, _population, _sample_size: int) -> list[int]:
+            raise AssertionError('range fallback should not be used above sys.maxsize')
+
+    import limen.utils.param_space as param_space_module
+
+    monkeypatch.setattr(param_space_module.sys, 'maxsize', 50)
+
+    assert sample_range_exact(StubRandom(), 100, 50) == list(range(50))
+
+
 def test_sample_range_exact_preserves_prefix_for_huge_ranges():
     full_sample = sample_range_exact(random.Random(42), 10**19, 50)
     prefix_sample = sample_range_exact(random.Random(42), 10**19, 10)

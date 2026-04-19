@@ -44,7 +44,7 @@ def sample_range_exact(
             )
         )
 
-    if population_size <= setsize:
+    if population_size <= setsize and population_size <= sys.maxsize:
         return rng.sample(range(population_size), sample_size)
 
     bits = population_size.bit_length()
