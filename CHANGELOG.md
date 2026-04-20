@@ -730,3 +730,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Drop `HistoricalData.DEFAULT_TEST_FILE_PATH` and `HistoricalData.DEFAULT_TEST_FILE_URL`
 - Move historical-data regression coverage to a small checked-in test fixture under `tests/fixtures`
 - Update first-run and historical-data examples to use `get_spot_klines()` or explicit caller-owned file paths
+
+## v2.4.1 on 20th of April, 2026
+
+- Harden standard-path experiment CSV serialization so commas, quotes, and embedded newlines in logged string fields are emitted safely
+- Make standard-path reruns with the same `experiment_name` write the CSV header only when the file is new or empty, preventing duplicate mid-file headers
+- Add regression coverage for special-string round-trips and reruns against an existing standard-path results CSV
