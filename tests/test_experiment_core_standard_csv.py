@@ -75,7 +75,7 @@ def test_standard_run_csv_round_trips_special_string_fields() -> None:
             context_params={'note': note, 'label': label},
         )
 
-        csv_path = Path(f'{experiment_name}.csv')
+        csv_path = Path(f"{experiment_name}.csv")
         with csv_path.open(newline='') as f:
             rows = list(csv.DictReader(f))
 
@@ -83,3 +83,50 @@ def test_standard_run_csv_round_trips_special_string_fields() -> None:
     assert list(rows[0].keys()) == uel.experiment_log.columns
     assert rows[0]['note'] == note
     assert rows[0]['label'] == label
+
+
+def test_standard_run_csv_does_not_append_duplicate_headers_on_rerun() -> None:
+    first_note = 'alpha, "beta"\nline2'
+    second_note = 'omega, "delta"\nline2'
+
+    sfd = SimpleNamespace(
+        params=lambda: {'marker': [0]},
+        prep=_standard_csv_test_prep,
+        model=_standard_csv_test_model,
+    )
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+        first_uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+        first_uel.run(
+            experiment_name=experiment_name,
+            n_permutations=1,
+            prep_each_round=True,
+            random_search=False,
+            context_params={'note': first_note},
+        )
+
+        second_uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+        second_uel.run(
+            experiment_name=experiment_name,
+            n_permutations=1,
+            prep_each_round=True,
+            random_search=False,
+            context_params={'note': second_note},
+        )
+
+        csv_path = Path(f"{experiment_name}.csv")
+        with csv_path.open(newline='') as f:
+            rows = list(csv.DictReader(f))
+
+    assert len(rows) == 2
+    assert rows[0]['note'] == first_note
+    assert rows[1]['note'] == second_note
+    assert rows[1]['id'] != 'id'

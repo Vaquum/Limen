@@ -251,14 +251,13 @@ class UniversalExperimentLoop:
             else:
                 self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
 
-            # Handle writing to the file
-            if i == 0:
-                with Path(experiment_name + '.csv').open('a', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(round_results.keys())
-
-            with Path(experiment_name + '.csv').open('a', newline='') as f:
+            # Match the MSQ path: only write a header when the CSV is new or empty.
+            csv_path = Path(f'{experiment_name}.csv')
+            write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+            with csv_path.open('a', newline='') as f:
                 writer = csv.writer(f)
+                if write_header:
+                    writer.writerow(round_results.keys())
                 writer.writerow(self.experiment_log.row(i))
 
         self._finalize()
