@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "max_total_seconds": 135,
+  "slowest_tests_limit": 10,
+  "threshold_bands_seconds": [
+    1,
+    5,
+    10
+  ],
+  "baseline": {
+    "workflow": "PR Validation",
+    "job": "PR Checks Tests",
+    "step": "Run limen tests with coverage",
+    "sample_count": 12,
+    "window_start": "2026-04-18T05:15:53Z",
+    "window_end": "2026-04-20T07:03:45Z",
+    "observed_average_seconds": 101.83,
+    "observed_median_seconds": 97.0,
+    "observed_min_seconds": 85.0,
+    "observed_max_seconds": 119.0,
+    "headroom_seconds": 16.0,
+    "note": "ceiling = observed_max_seconds + headroom_seconds"
+  }
+}
