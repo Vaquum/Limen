@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 from tests.utils.runtime_tracking import execute_test_suite
 from tests.utils.runtime_tracking import load_runtime_profile
+from tests.utils.runtime_tracking import write_runtime_summary
 
 
 def _make_runtime_logger(name: str) -> logging.Logger:
@@ -179,3 +180,15 @@ def test_runtime_gate_fails_when_profile_exceeds_budget() -> None:
 
     assert result.returncode == 1
     assert 'Runtime budget exceeded' in result.stderr
+
+
+def test_write_runtime_summary_appends_to_existing_summary_file() -> None:
+    with TemporaryDirectory() as tmpdir:
+        summary_path = Path(tmpdir) / 'runtime_summary.md'
+        summary_path.write_text('Existing section\n', encoding='utf-8')
+
+        write_runtime_summary(summary_path, '## Test Runtime\n\n- Total runtime: `1.000s`')
+
+        summary = summary_path.read_text(encoding='utf-8')
+
+    assert summary == 'Existing section\n## Test Runtime\n\n- Total runtime: `1.000s`\n'

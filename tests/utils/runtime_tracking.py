@@ -240,7 +240,8 @@ def render_runtime_summary_markdown(
 
 def write_runtime_summary(summary_file: Path, summary_markdown: str) -> None:
     summary_file.parent.mkdir(parents=True, exist_ok=True)
-    summary_file.write_text(summary_markdown + '\n', encoding='utf-8')
+    with summary_file.open('a', encoding='utf-8') as summary_handle:
+        summary_handle.write(summary_markdown + '\n')
 
 
 def execute_test_suite(

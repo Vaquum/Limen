@@ -18,6 +18,7 @@
     "observed_median_seconds": 97.0,
     "observed_min_seconds": 85.0,
     "observed_max_seconds": 119.0,
-    "headroom_seconds": 16.0
+    "headroom_seconds": 16.0,
+    "note": "ceiling = observed_max_seconds + headroom_seconds"
   }
 }
