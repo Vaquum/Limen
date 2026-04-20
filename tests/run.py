@@ -1,11 +1,12 @@
-import sys
-import time
-import traceback
 import logging
+import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from tests.utils.runtime_tracking import DEFAULT_SLOWEST_TESTS_LIMIT
+from tests.utils.runtime_tracking import execute_test_suite
 from tests.utils.cleanup import cleanup_csv_files
 from tests.utils.cleanup import setup_cleanup_handlers
 
@@ -158,6 +159,9 @@ from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
+from tests.test_runtime_tracking import test_execute_test_suite_writes_profile_and_stops_on_first_failure
+from tests.test_runtime_tracking import test_runtime_gate_writes_summary_and_passes_when_within_budget
+from tests.test_runtime_tracking import test_runtime_gate_fails_when_profile_exceeds_budget
 from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
@@ -573,6 +577,9 @@ tests = [
     test_run_with_msq_checkpoint_trigger,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
+    test_execute_test_suite_writes_profile_and_stops_on_first_failure,
+    test_runtime_gate_writes_summary_and_passes_when_within_budget,
+    test_runtime_gate_fails_when_profile_exceeds_budget,
     test_checkpoint_saves_feedback_and_pruning_state,
     test_run_with_msq_shutdown_resume_full_data,
     test_run_with_msq_shutdown_resume_grid,
@@ -942,24 +949,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-setup_cleanup_handlers()
 
-for test in tests:
+def _runtime_profile_output_path() -> Path | None:
+    configured_path = os.getenv('LIMEN_RUNTIME_PROFILE_PATH')
+    if configured_path:
+        return Path(configured_path)
 
-    try:
-        start_time = time.time()
-        test()
-        end_time = time.time()
-        duration = end_time - start_time
-        logger.info('✅ %s: PASSED (%.3fs)', test.__name__, duration)
+    if os.getenv('LIMEN_COVERAGE_RUN') or os.getenv('CI'):
+        return Path('coverage-artifacts/test_runtime_profile.json')
 
-    except Exception as e:
-        end_time = time.time()
-        duration = end_time - start_time
+    return None
 
-        logger.error('❌ %s: FAILED (%.3fs) - %s', test.__name__, duration, str(e))
-        cleanup_csv_files()
-        traceback.print_exc()
-        sys.exit(1)
 
-cleanup_csv_files()
+def _runtime_slowest_tests_limit() -> int:
+    configured_limit = os.getenv('LIMEN_RUNTIME_SLOWEST_LIMIT')
+    if not configured_limit:
+        return DEFAULT_SLOWEST_TESTS_LIMIT
+
+    parsed_limit = int(configured_limit)
+    if parsed_limit <= 0:
+        raise ValueError('LIMEN_RUNTIME_SLOWEST_LIMIT must be a positive integer')
+
+    return parsed_limit
+
+
+def main() -> int:
+    setup_cleanup_handlers()
+    result = execute_test_suite(
+        tests=tests,
+        logger=logger,
+        profile_output_path=_runtime_profile_output_path(),
+        slowest_tests_limit=_runtime_slowest_tests_limit(),
+    )
+
+    cleanup_csv_files()
+
+    if result.failure_traceback is not None:
+        sys.stderr.write(result.failure_traceback)
+
+    return result.exit_code
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

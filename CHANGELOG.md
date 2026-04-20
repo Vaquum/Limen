@@ -731,6 +731,13 @@ Note: add all new changelog entries to the bottom of this file.
 - Move historical-data regression coverage to a small checked-in test fixture under `tests/fixtures`
 - Update first-run and historical-data examples to use `get_spot_klines()` or explicit caller-owned file paths
 
+## v2.4.2 on 20th of April, 2026
+
+- Add structured runtime profiling to `tests/run.py`, including per-test JSON output, suite totals, and a sorted slowest-tests summary on the canonical coverage-enabled test path
+- Add a committed suite runtime budget in `tests/runtime_budget.json` based on recent green `main` CI runs and enforce it in the new `PR Checks Runtime` workflow job
+- Publish the runtime profile as a GitHub Actions artifact and render a runtime job summary with threshold counts and slowest tests during `PR Validation`
+- Add regression coverage for runtime profile emission plus pass/fail runtime-gate behavior without touching `limen/` package code
+
 ## v2.4.1 on 20th of April, 2026
 
 - Harden standard-path experiment CSV serialization so commas, quotes, and embedded newlines in logged string fields are emitted safely
