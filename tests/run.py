@@ -156,6 +156,8 @@ from tests.test_experiment_core_msq import test_run_with_msq_basic_flow
 from tests.test_experiment_core_msq import test_run_with_msq_context_params
 from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
+from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
+from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
@@ -569,6 +571,8 @@ tests = [
     test_run_with_msq_context_params,
     test_run_with_msq_feedback_trigger,
     test_run_with_msq_checkpoint_trigger,
+    test_standard_run_csv_round_trips_special_string_fields,
+    test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_checkpoint_saves_feedback_and_pruning_state,
     test_run_with_msq_shutdown_resume_full_data,
     test_run_with_msq_shutdown_resume_grid,
