@@ -119,8 +119,8 @@ def prep(data: pl.DataFrame, round_params: dict):
     all_datetimes = data['datetime'].to_list()
 
     prepared = data.with_columns([
-        ((pl.col('close').shift(round_params['shift']) > pl.col('close')).cast(pl.Int8)).alias('target'),
         pl.col('close').pct_change().alias('return_1'),
+        ((pl.col('close').shift(round_params['shift']) > pl.col('close')).cast(pl.Int8)).alias('target'),
     ]).drop_nulls()
 
     splits = split_sequential(prepared, (8, 1, 2))

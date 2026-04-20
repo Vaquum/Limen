@@ -137,7 +137,7 @@ Example:
 score = balanced_metric(y_true, y_pred)
 ```
 
-## `safe_ovr_auc(y_true, probs)`
+## `safe_ovr_auc(y_true, proba)`
 
 `safe_ovr_auc()` computes one-vs-rest AUC more defensively than a raw direct multiclass AUC call.
 
