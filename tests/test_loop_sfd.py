@@ -1,4 +1,3 @@
-# ruff: noqa: E402
 import json
 import sys
 import traceback
@@ -6,11 +5,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import polars as pl
-
-# Allow running this file directly: ensure repo root is on sys.path
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 from limen import UniversalExperimentLoop
 from limen.data import HistoricalData
@@ -442,7 +436,7 @@ def _reset_hd_stub():
     _HistoricalDataStub.last_fetch_kwargs = None
 
 
-def _patch_historical_data(monkey_attr_owner, stub_cls=_HistoricalDataStub):
+def _patch_historical_data(stub_cls=_HistoricalDataStub):
     import limen.sfd.loop.run as _run_mod
     original = _run_mod.HistoricalData
     _run_mod.HistoricalData = stub_cls
@@ -456,7 +450,7 @@ def _restore_historical_data(original):
 
 def test_fetch_data_strips_none_params():
     _reset_hd_stub()
-    original = _patch_historical_data(None)
+    original = _patch_historical_data()
     try:
         payload = {
             'inputData': {
@@ -618,7 +612,7 @@ def test_fetch_data_coerces_kline_size_string_through_full_path():
     # Verify the coercion is wired into _fetch_data_from_payload, not just
     # the helper in isolation.
     _TypedHistoricalDataStub.last_fetch_kwargs = None
-    original = _patch_historical_data(None, stub_cls=_TypedHistoricalDataStub)
+    original = _patch_historical_data(stub_cls=_TypedHistoricalDataStub)
     try:
         payload = {
             'inputData': {
