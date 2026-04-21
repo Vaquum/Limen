@@ -744,7 +744,7 @@ def test_member_failure_propagates_and_fails_whole_call():
         exp_dir = Path(tmpdir) / 'exp'
         _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        _sensors, x_test = _train_real_members_and_input(exp_dir, [0])
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
         cohort.set_members([_RaisingMember()])
