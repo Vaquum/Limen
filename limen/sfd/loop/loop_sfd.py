@@ -9,6 +9,7 @@ NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
 will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
+import inspect
 import re
 from typing import Any
 
@@ -20,7 +21,6 @@ from limen.sfd.loop.meta import (
     FittedLabelConfig,
     get_target_column,
 )
-from limen.sfd.loop.reference_defaults import get_reference_architecture_params
 from limen.sfd.loop.registry import (
     FEATURE_REGISTRY,
     INDICATOR_REGISTRY,
@@ -105,13 +105,16 @@ class LoopSFD:
         self._payload = payload
         self._arch = payload['referenceArchitecture']
         self._arch_func = MODEL_REGISTRY[self._arch]
+        self._sig_param_names = {
+            p.name
+            for p in inspect.signature(self._arch_func).parameters.values()
+            if p.name != 'data'
+        }
 
         if reference_architecture_params is not None:
             self._arch_params = dict(reference_architecture_params)
         else:
-            self._arch_params = get_reference_architecture_params(
-                self._arch, self._arch_func,
-            )
+            self._arch_params = self._build_arch_params()
 
         if data_source_config is not None:
             self._data_source_config = dict(data_source_config)
@@ -252,6 +255,37 @@ class LoopSFD:
             return None
         return name.strip()
 
+    def _build_arch_params(self) -> dict[str, list]:
+
+        '''
+        Compute the model hyperparam search space from the payload.
+
+        All model hyperparameters come from the payload's parameterSpace.
+        Each key is validated against the reference architecture function
+        signature — unknown keys are rejected.
+
+        Raises:
+            ValueError: If a payload-provided arch param value is not a list
+
+        Returns:
+            dict[str, list]: Arch param name → candidate values
+
+        '''
+
+        ps = self._payload.get('parameterSpace') or {}
+        arch_params = {}
+        for key, value in ps.items():
+            if key not in self._sig_param_names:
+                continue
+            if not isinstance(value, list):
+                raise ValueError(
+                    f"parameterSpace['{key}'] must be a list of candidate values, "
+                    f"got {type(value).__name__}"
+                )
+            arch_params[key] = value
+        return arch_params
+
+
     def _filtered_parameter_space(self) -> dict[str, list]:
 
         '''
@@ -264,6 +298,7 @@ class LoopSFD:
             - input_split_* (split config handled via inputData.splitRatios)
             - input_data_source_* (data source config handled via inputData.selectedItems)
             - input_<arch>_* (reference architecture params, sourced from SFD)
+            - bare arch signature keys (model hyperparams — handled via _build_arch_params)
             - scaler_* (defensive: stripped for legacy payloads that carried
               selectedItems-shaped scaler metadata)
             - transform_* (defensive: stripped for legacy payloads that carried
@@ -288,6 +323,8 @@ class LoopSFD:
             if key.startswith('input_data_source_'):
                 continue
             if key.startswith(arch_prefix):
+                continue
+            if key in self._sig_param_names:
                 continue
             if key.startswith('scaler_'):
                 continue
