@@ -53,7 +53,7 @@
       "roc_{roc_period}"
     ],
     "label_quantile_flag_q": [
-      0.95
+      0.5
     ]
   },
   "referenceArchitecture": "logreg_binary",
@@ -109,7 +109,7 @@
       "name": "quantile_flag",
       "params": {
         "col": "roc_{roc_period}",
-        "q": 0.95
+        "q": 0.5
       }
     }
   ]

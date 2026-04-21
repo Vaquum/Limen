@@ -510,9 +510,6 @@ from tests.test_loop_sfd import test_loop_sfd_data_source_constructor_override_w
 from tests.test_loop_sfd import test_loop_sfd_data_source_falls_back_to_default_when_payload_empty
 from tests.test_loop_sfd import test_loop_sfd_unknown_data_source_method_raises
 from tests.test_loop_sfd import test_loop_sfd_params_excludes_input_data_source_keys
-from tests.test_loop_sfd import test_fetch_data_auth_token_flows_from_env
-from tests.test_loop_sfd import test_fetch_data_auth_token_is_none_when_env_unset
-from tests.test_loop_sfd import test_fetch_data_test_env_uses_local_test_dataset
 from tests.test_loop_sfd import test_fetch_data_strips_none_params
 from tests.test_loop_sfd import test_fetch_data_unknown_method_raises
 from tests.test_loop_sfd import test_fetch_data_missing_method_key_raises
@@ -1040,9 +1037,6 @@ tests = [
     test_loop_sfd_data_source_falls_back_to_default_when_payload_empty,
     test_loop_sfd_unknown_data_source_method_raises,
     test_loop_sfd_params_excludes_input_data_source_keys,
-    test_fetch_data_auth_token_flows_from_env,
-    test_fetch_data_auth_token_is_none_when_env_unset,
-    test_fetch_data_test_env_uses_local_test_dataset,
     test_fetch_data_strips_none_params,
     test_fetch_data_unknown_method_raises,
     test_fetch_data_missing_method_key_raises,

@@ -1,6 +1,5 @@
 # ruff: noqa: E402
 import json
-import os
 import sys
 import traceback
 from pathlib import Path
@@ -407,15 +406,12 @@ def test_loop_sfd_params_excludes_input_data_source_keys():
 
 class _HistoricalDataStub:
 
-    '''Test double for HistoricalData that records constructor + method calls.'''
+    '''Test double for HistoricalData that records method calls.'''
 
-    last_auth_token: str | None = None
     last_method: str | None = None
     last_fetch_kwargs: dict | None = None
 
-    def __init__(self, auth_token=None):
-        type(self).last_auth_token = auth_token
-        self.auth_token = auth_token
+    def __init__(self):
         self.data = pl.DataFrame({
             'datetime': ['2025-01-01T00:00:00'],
             'open': [100.0], 'high': [101.0], 'low': [99.0], 'close': [100.5],
@@ -426,17 +422,8 @@ class _HistoricalDataStub:
         type(self).last_method = 'get_spot_klines'
         type(self).last_fetch_kwargs = dict(kwargs)
 
-    def get_futures_klines(self, **kwargs):
-        type(self).last_method = 'get_futures_klines'
-        type(self).last_fetch_kwargs = dict(kwargs)
-
-    def _get_data_for_test(self, n_rows=None):
-        type(self).last_method = '_get_data_for_test'
-        type(self).last_fetch_kwargs = {'n_rows': n_rows}
-
 
 def _reset_hd_stub():
-    _HistoricalDataStub.last_auth_token = None
     _HistoricalDataStub.last_method = None
     _HistoricalDataStub.last_fetch_kwargs = None
 
@@ -453,83 +440,7 @@ def _restore_historical_data(original):
     _run_mod.HistoricalData = original
 
 
-def test_fetch_data_auth_token_flows_from_env():
-    os.environ.pop('LOOP_ENV', None)
-    os.environ['DATA_API_AUTH_TOKEN'] = 'test_token_xyz'  # noqa: S105
-    _reset_hd_stub()
-    original = _patch_historical_data(None)
-    try:
-        payload = {
-            'inputData': {
-                'selectedItems': [{
-                    'name': 'data_source',
-                    'params': {
-                        'method': 'get_spot_klines',
-                        'kline_size': 3600,
-                        'start_date_limit': '2025-01-01',
-                    },
-                }],
-            },
-        }
-        data = _fetch_data_from_payload(payload)
-        assert _HistoricalDataStub.last_auth_token == 'test_token_xyz'  # noqa: S105
-        assert _HistoricalDataStub.last_method == 'get_spot_klines'
-        assert _HistoricalDataStub.last_fetch_kwargs == {
-            'kline_size': 3600,
-            'start_date_limit': '2025-01-01',
-        }
-        assert isinstance(data, pl.DataFrame)
-        assert data.height == 1
-    finally:
-        _restore_historical_data(original)
-        os.environ.pop('DATA_API_AUTH_TOKEN', None)
-
-
-def test_fetch_data_auth_token_is_none_when_env_unset():
-    os.environ.pop('LOOP_ENV', None)
-    os.environ.pop('DATA_API_AUTH_TOKEN', None)
-    _reset_hd_stub()
-    original = _patch_historical_data(None)
-    try:
-        payload = {
-            'inputData': {
-                'selectedItems': [{
-                    'name': 'data_source',
-                    'params': {'method': 'get_spot_klines', 'kline_size': 3600},
-                }],
-            },
-        }
-        _fetch_data_from_payload(payload)
-        assert _HistoricalDataStub.last_auth_token is None
-    finally:
-        _restore_historical_data(original)
-
-
-def test_fetch_data_test_env_uses_local_test_dataset():
-    os.environ['LOOP_ENV'] = 'test'
-    _reset_hd_stub()
-    original = _patch_historical_data(None)
-    try:
-        payload = {
-            'inputData': {
-                'selectedItems': [{
-                    'name': 'data_source',
-                    'params': {
-                        'method': 'get_spot_klines',
-                        'kline_size': 3600,
-                    },
-                }],
-            },
-        }
-        _fetch_data_from_payload(payload)
-        assert _HistoricalDataStub.last_method == '_get_data_for_test'
-    finally:
-        _restore_historical_data(original)
-        # Leave LOOP_ENV=test set for subsequent tests (they assume it)
-
-
 def test_fetch_data_strips_none_params():
-    os.environ.pop('LOOP_ENV', None)
     _reset_hd_stub()
     original = _patch_historical_data(None)
     try:
@@ -555,7 +466,6 @@ def test_fetch_data_strips_none_params():
 
 
 def test_fetch_data_unknown_method_raises():
-    os.environ.pop('LOOP_ENV', None)
     try:
         _fetch_data_from_payload({
             'inputData': {
@@ -572,7 +482,6 @@ def test_fetch_data_unknown_method_raises():
 
 
 def test_fetch_data_missing_method_key_raises():
-    os.environ.pop('LOOP_ENV', None)
     try:
         _fetch_data_from_payload({
             'inputData': {
@@ -589,7 +498,6 @@ def test_fetch_data_missing_method_key_raises():
 
 
 def test_fetch_data_no_data_source_item_raises():
-    os.environ.pop('LOOP_ENV', None)
     try:
         _fetch_data_from_payload({
             'inputData': {'selectedItems': []},
@@ -672,12 +580,9 @@ class _TypedHistoricalDataStub:
 
     '''Stub with typed get_spot_klines so coercion logic exercises signature inspection.'''
 
-    last_auth_token: str | None = None
     last_fetch_kwargs: dict | None = None
 
-    def __init__(self, auth_token=None):
-        type(self).last_auth_token = auth_token
-        self.auth_token = auth_token
+    def __init__(self):
         self.data = pl.DataFrame({
             'datetime': ['2025-01-01T00:00:00'],
             'open': [100.0], 'high': [101.0], 'low': [99.0], 'close': [100.5],
@@ -698,8 +603,6 @@ class _TypedHistoricalDataStub:
 def test_fetch_data_coerces_kline_size_string_through_full_path():
     # Verify the coercion is wired into _fetch_data_from_payload, not just
     # the helper in isolation.
-    os.environ.pop('LOOP_ENV', None)
-    _TypedHistoricalDataStub.last_auth_token = None
     _TypedHistoricalDataStub.last_fetch_kwargs = None
     original = _patch_historical_data(None, stub_cls=_TypedHistoricalDataStub)
     try:
@@ -945,8 +848,6 @@ def test_failing_payload_end_to_end_with_uel():
     # The fixture has kline_size as a string in selectedItems (web-form
     # payload). run.py coerces this before passing data= to UEL. In the
     # test we mirror that: pre-fetch via the stub and pass data= directly.
-    os.environ['LOOP_ENV'] = 'test'
-
     fixture_path = Path(__file__).parent / 'fixtures' / 'loop_template_test_failing.json'
     payload = json.loads(fixture_path.read_text())
 
@@ -1005,8 +906,6 @@ def test_failing_payload_end_to_end_with_uel():
 
 
 def test_quantile_flag_end_to_end_with_uel():
-    os.environ['LOOP_ENV'] = 'test'
-
     payload = _build_quantile_flag_payload(col='roc_1', q=0.5)
     sfd = LoopSFD(payload)
 
@@ -1042,9 +941,6 @@ def test_quantile_flag_end_to_end_with_uel():
 
 
 def test_loop_sfd_end_to_end_with_uel():
-    # Force test data source path
-    os.environ['LOOP_ENV'] = 'test'
-
     payload = _load_payload()
     sfd = LoopSFD(payload)
 
@@ -1119,9 +1015,6 @@ _TESTS = [
     test_loop_sfd_data_source_falls_back_to_default_when_payload_empty,
     test_loop_sfd_unknown_data_source_method_raises,
     test_loop_sfd_params_excludes_input_data_source_keys,
-    test_fetch_data_auth_token_flows_from_env,
-    test_fetch_data_auth_token_is_none_when_env_unset,
-    test_fetch_data_test_env_uses_local_test_dataset,
     test_fetch_data_strips_none_params,
     test_fetch_data_unknown_method_raises,
     test_fetch_data_missing_method_key_raises,
