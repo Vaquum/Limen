@@ -30,6 +30,13 @@ Before opening or updating a Limen PR:
 4. Review the full GitHub diff yourself before requesting review.
 5. Make sure the PR template items are genuinely true, not just checked.
 
+## Test Runtime Budget
+
+- `PR Validation` now publishes a `test-runtime-profile` artifact from the canonical `python -m coverage run -m tests.run` path.
+- `PR Checks Runtime` enforces the suite ceiling committed in `tests/runtime_budget.json`.
+- Update `tests/runtime_budget.json` only when recent green `main` CI runs show a real new baseline, and keep that evidence in the linked issue or PR.
+- Do not raise the budget to absorb avoidable slow tests; everything executed through `tests/run.py` is timed automatically.
+
 ## Scope Notes
 
 - `/docs` is the canonical public docs layer.

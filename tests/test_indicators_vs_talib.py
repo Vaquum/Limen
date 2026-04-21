@@ -1,12 +1,9 @@
 import talib
 import numpy as np
-from limen.data import HistoricalData
 from limen.indicators import ad, adosc, apo, atr, avgprice, bbands, bop, cci, cdladvancedblock, cdlabandonedbaby, cdlbelthold, cdlconcealbabyswall, cdlclosingmarubozu, cdlcounterattack, cdldarkcloudcover, cdldoji, cdldragonflydoji, cdlengulfing, cdlgravestonedoji, cdlhammer, cdlhangingman, cdlharami, cdlharamicross, cdlhighwave, cdlhikkake, cdlhikkakemod, cdlhomingpigeon, cdlidentical3crows, cdlinvertedhammer, cdlladderbottom, cdllongleggeddoji, cdllongline, cdlmarubozu, cdlmatchinglow, cdlmathold, cdlonneck, cdlpiercing, cdlrickshawman, cdlrisefall3methods, cdlseparatinglines, cdlshootingstar, cdlshortline, cdlspinningtop, cdlstalledpattern, cdlsticksandwich, cdltakuri, cdlthrusting, cdltristar, cdlunique3river, cdl2crows, cdl3blackcrows, cdl3inside, cdl3linestrike, cdl3starsinsouth, cdl3whitesoldiers, cmo, dema, ema, ht_dcperiod, ht_dcphase, ht_phasor, ht_sine, ht_trendline, ht_trendmode, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdfix, macdext, mama, medprice, midpoint, midprice, mfi, mom, natr, obv, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma
+from tests.utils.historical_data import get_cached_spot_klines_2h
 
-
-historical = HistoricalData()
-historical._get_data_for_test(n_rows=1000)
-SAMPLE_DATA = historical.data
+SAMPLE_DATA = get_cached_spot_klines_2h(1000)
 
 NUMPY_DATA = {
     'open': SAMPLE_DATA['open'].to_numpy(),

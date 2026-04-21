@@ -3,8 +3,8 @@
   <a href="https://github.com/Vaquum"><img src="https://github.com/Vaquum/Home/raw/main/assets/Logo.png" alt="Vaquum" width="150" /></a>
   <br />
 </div>
-
-<div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.</strong></div>
+<br />
+<div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.</strong></div>
 
 <div align="center">
   <a href="#limen">Limen</a> •
@@ -13,14 +13,21 @@
   <a href="#first-experiment">First Experiment</a> •
   <a href="#learn-more">Learn More</a>
 </div>
+<br />
+<div align="center">
+  <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://img.shields.io/ossf-scorecard/github.com/Vaquum/Limen?label=openssf+scorecard&amp;style=flat" alt="OpenSSF Scorecard" /></a>
+</div>
 
 <hr />
 
-# Limen
+<a id="limen"></a>
 
-Limen is a manifest-driven Bitcoin alpha research engine. It turns market data into searchable experiments, benchmark-style analytics, backtest results, and decoder cohorts.
+# Limen — The Research Engine
 
-Limen brings data preparation, feature construction, target shaping, parameter search, and post-run analysis into one Python workflow. It supports both machine learning and rule-based research, but it stays focused on signal research rather than decisioning or execution.
+*Manifest-driven Bitcoin alpha research engine that turns market data into searchable signals, backtested outcomes, and decoder cohorts.*
+
+Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works. It evolves from Talos, the hyperparameter optimization framework for TensorFlow and Keras cited in over 1,000 scientific papers with zero breaking bugs in six years.
 
 ## What Limen Is Not
 
@@ -57,13 +64,10 @@ pip install vaquum_limen
 2. Load data and run a first experiment:
 
 ```python
-import polars as pl
 import limen
 
-data = pl.read_csv(
-    "https://raw.githubusercontent.com/Vaquum/Limen/refs/heads/main/datasets/klines_2h_2020_2025.csv",
-    try_parse_dates=True,
-)
+historical = limen.HistoricalData()
+data = historical.get_spot_klines(kline_size=7200, n_rows=2000)
 
 uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
 
@@ -80,7 +84,7 @@ uel.run(
 - `uel.experiment_confusion_metrics` for confusion analytics
 - `uel.experiment_backtest_results` for backtest results
 
-That path is the simplest way to get a real Limen run on your machine. If you want richer run directories, checkpoints, resumability, and stored round artefacts, continue into the UEL documentation below.
+That path is the simplest way to get a real Limen run on your machine without relying on repo-local fixture files. If you want richer run directories, checkpoints, resumability, and stored round artefacts, continue into the UEL documentation below.
 
 ## Learn More
 

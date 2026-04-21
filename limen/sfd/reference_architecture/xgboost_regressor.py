@@ -85,7 +85,7 @@ class XGBoostRegressor(ReferenceModel):
             y_test = np.asarray(data['y_test'])
             pred_direction = (preds > 0).astype(int)
             actual_direction = (y_test > 0).astype(int)
-            results.update(self._compute_confusion(pred_direction, actual_direction))
+            results.update(self._compute_confusion(pred_direction, actual_direction, data.get('price_data_for_backtest')))
             results.update(self._compute_backtest(pred_direction, data))
 
         return results

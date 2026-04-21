@@ -1,5 +1,11 @@
+import os
 import time
 from limen.utils.param_space import ParamSpace
+
+
+DEFAULT_MAX_ELAPSED_TIME = 10.0
+COVERAGE_MAX_ELAPSED_TIME = 15.0
+
 
 def test_large_param_space():
     params = {
@@ -20,14 +26,21 @@ def test_large_param_space():
         'scaler': ['standard', 'minmax', 'robust', 'quantile', 'power'],
     }
 
-    start = time.time()
+    start = time.perf_counter()
     EXPECTED_PERMUTATIONS = 1000000
     ps = ParamSpace(params, EXPECTED_PERMUTATIONS)
-    elapsed = time.time() - start
+    elapsed = time.perf_counter() - start
 
     assert ps.n_permutations == EXPECTED_PERMUTATIONS
-    MAX_ELAPSED_TIME = 10.0
-    assert elapsed < MAX_ELAPSED_TIME
+    max_elapsed_time = (
+        COVERAGE_MAX_ELAPSED_TIME
+        if os.getenv('LIMEN_COVERAGE_RUN') == '1'
+        else DEFAULT_MAX_ELAPSED_TIME
+    )
+    assert elapsed < max_elapsed_time, (
+        f"ParamSpace initialization took {elapsed:.2f}s, "
+        f"expected under {max_elapsed_time:.2f}s"
+    )
 
     combo = ps.generate()
     assert set(combo.keys()) == set(params.keys())

@@ -1,14 +1,80 @@
+import math
 import random
+import sys
+from typing import Any
+
 import polars as pl
+
+
+SAMPLE_SELECTION_MIN_SIZE = 21
+SAMPLE_SELECTION_TIPPING_POINT = 5
+SAMPLE_SELECTION_LOG_BASE = 4
+SAMPLE_SELECTION_MULTIPLIER = 3
+
+
+def sample_range_exact(
+    rng: Any,
+    population_size: int,
+    sample_size: int,
+) -> list[int]:
+
+    '''
+    Sample ordered indices with exact `random.sample(range(N), k)` semantics.
+
+    Args:
+        rng (Any): Random provider with `sample()` and `getrandbits()`
+        population_size (int): Size of the conceptual `range(N)` population
+        sample_size (int): Number of unique ordered indices to draw
+
+    Returns:
+        list[int]: Ordered sampled indices matching stdlib range-sampling behavior
+    '''
+
+    # Mirror CPython Lib/random.py for range(N) sampling so huge-space ParamSpace
+    # keeps legacy random.sample semantics even when the wrapper overflows.
+    if not 0 <= sample_size <= population_size:
+        raise ValueError('Sample larger than population or is negative')
+
+    setsize = SAMPLE_SELECTION_MIN_SIZE
+    if sample_size > SAMPLE_SELECTION_TIPPING_POINT:
+        setsize += SAMPLE_SELECTION_LOG_BASE ** math.ceil(
+            math.log(
+                sample_size * SAMPLE_SELECTION_MULTIPLIER,
+                SAMPLE_SELECTION_LOG_BASE,
+            )
+        )
+
+    if population_size <= setsize and population_size <= sys.maxsize:
+        return rng.sample(range(population_size), sample_size)
+
+    bits = population_size.bit_length()
+    get_bits = rng.getrandbits
+    seen: set[int] = set()
+    ordered_indices: list[int] = []
+
+    for _ in range(sample_size):
+        index = get_bits(bits)
+        while index >= population_size or index in seen:
+            index = get_bits(bits)
+        seen.add(index)
+        ordered_indices.append(index)
+
+    return ordered_indices
+
 
 class ParamSpace:
 
     '''
-    Create parameter space manager for hyperparameter sampling.
+    Create a legacy parameter space manager for hyperparameter sampling.
 
     Args:
         params (dict): Dictionary of parameter names and their possible values.
-        n_permutations (int): Number of parameter combinations to sample.
+        n_permutations (int): Number of parameter combinations to sample. When
+            this is smaller than the total parameter space, sampling uses exact
+            `random.sample(range(N), k)` semantics, including when `N` exceeds
+            the stdlib wrapper's `Py_ssize_t` limit. When this is greater than
+            or equal to the total parameter space, all combinations are
+            enumerated instead of sampled.
     '''
 
     def __init__(self, params: dict, n_permutations: int) -> None:
@@ -23,8 +89,10 @@ class ParamSpace:
         # Generate n_permutations unique random indices
         if n_permutations >= self.total_space:
             indices = list(range(self.total_space))
-        else:
+        elif self.total_space <= sys.maxsize:
             indices = random.sample(range(self.total_space), n_permutations)
+        else:
+            indices = sample_range_exact(random, self.total_space, n_permutations)
 
         # Convert indices to parameter combinations
         combos = [self._index_to_combo(idx) for idx in indices]

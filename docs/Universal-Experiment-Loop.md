@@ -22,14 +22,14 @@ The standard run path is the right starting point for most readers. The advanced
 
 ## First Real Run
 
-This is the most reliable local example because it uses the bundled test dataset and a built-in manifest-driven SFD.
+This is the most reliable local example because it uses the file-backed spot-kline path with explicit `kline_size` and `n_rows`.
 
 ```python
 import limen
 from limen.data import HistoricalData
 
 historical = HistoricalData()
-historical._get_data_for_test(n_rows=2000)
+historical.get_spot_klines(kline_size=7200, n_rows=2000)
 
 uel = limen.UniversalExperimentLoop(
     data=historical.data,
@@ -52,7 +52,7 @@ uel.experiment_confusion_metrics
 uel.experiment_backtest_results
 ```
 
-On a live local run over the bundled test data, that produced:
+On a live local run over that file-backed input, that produced:
 
 - `uel.experiment_log` with one row per round
 - `uel.experiment_confusion_metrics` with one row per round

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 
 
 class ReferenceModel(ABC):
@@ -67,7 +68,13 @@ class ReferenceModel(ABC):
 
         ...
 
-    def _compute_confusion(self, preds: np.ndarray, y_test: np.ndarray) -> dict:
+    def _price_data_to_pandas(self, price_data_for_backtest: Any) -> pd.DataFrame:
+        return price_data_for_backtest.to_pandas()
+
+    def _compute_confusion(self,
+                           preds: np.ndarray,
+                           y_test: np.ndarray,
+                           price_data_for_backtest: Any | None = None) -> dict:
 
         '''
         Compute confusion matrix metrics from binary predictions.
@@ -91,7 +98,7 @@ class ReferenceModel(ABC):
         precision = round(tp / (tp + fp), 3) if (tp + fp) > 0 else 0.0
         recall = round(tp / (tp + fn), 3) if (tp + fn) > 0 else 0.0
 
-        return {
+        results = {
             'confusion_tp': tp,
             'confusion_fp': fp,
             'confusion_tn': tn,
@@ -99,6 +106,21 @@ class ReferenceModel(ABC):
             'confusion_precision': precision,
             'confusion_recall': recall,
         }
+
+        if price_data_for_backtest is None:
+            raise ValueError('price_data_for_backtest is required for inline confusion mean return metrics')
+
+        price_pd = self._price_data_to_pandas(price_data_for_backtest)
+
+        confusion_return_pct = _confusion_mean_return_pct(
+            preds,
+            y_test,
+            price_pd['open'],
+            price_pd['close'] - price_pd['open'],
+        )
+        results.update({f'confusion_{k}': v for k, v in confusion_return_pct.items()})
+
+        return results
 
     def _compute_backtest(self, preds: np.ndarray, data: dict) -> dict:
 
@@ -116,14 +138,7 @@ class ReferenceModel(ABC):
         if 'price_data_for_backtest' not in data:
             return {}
 
-        price_df = data['price_data_for_backtest']
-
-        if isinstance(price_df, pd.DataFrame):
-            price_pd = price_df
-        elif hasattr(price_df, 'to_pandas'):
-            price_pd = price_df.to_pandas()
-        else:
-            return {}
+        price_pd = self._price_data_to_pandas(data['price_data_for_backtest'])
 
         bt_input = pd.DataFrame({
             'predictions': np.asarray(preds).astype(int),
@@ -132,7 +147,7 @@ class ReferenceModel(ABC):
             'price_change': (price_pd['close'] - price_pd['open']).values,
         })
 
-        bt_result = backtest_snapshot(bt_input)
+        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
 
         if bt_result.empty:
             return {}

@@ -1,5 +1,7 @@
 # Changelog
 
+Note: add all new changelog entries to the bottom of this file.
+
 ## v0.7.9 on 25th of May, 2025
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -649,7 +651,100 @@
 - Replace temp-file based `Log.read_from_file()` loading with in-memory CSV parsing while preserving duplicate-header cleanup
 - Add regression coverage for file-backed log loading and whitespace trimming in `tests.run`
 
-## v1.53.0 on 11th of April, 2026
+## v1.53.0 on 13th of April, 2026
+
+- Switch Limen spot raw-trade and kline queries from `tdw.binance_trades` to `tdw.binance_trades_complete` so `HistoricalData` sees the daily overlay view while preserving finalized monthly history
+
+## v2.0.0 on 15th of April, 2026
+
+- Replace `HistoricalData`'s ClickHouse-backed surface with a file-backed surface
+- Reduce `HistoricalData` to `get_spot_klines()`, `get_binance_file()`, and `get_any_file()`
+- Make `HistoricalData` methods return `polars.DataFrame` directly while still updating `self.data`
+- Source `get_spot_klines()` from the daily Hugging Face BTCUSDT 1-minute dataset by default
+- Remove `_get_data_for_test()` and update manifests, tests, and docs to use file-based ingestion
+- Remove the old `_internal/generic_endpoints.py` ClickHouse helper
+- Drop the `clickhouse_connect` dependency and declare `requests` explicitly
+- Remove `median` and `iqr` from `get_spot_klines()` output because the canonical dataset no longer carries them
+
+## v2.1.0 on 18th of April, 2026
+
+- Split time-based feature extraction into `calendar_time_features` and `cyclical_time_features`
+- Remove `time_features`, so `from limen.features.time_features import time_features` no longer works; migrate to `calendar_time_features`, `cyclical_time_features`, or call both if you previously relied on the combined output
+- Add discrete calendar fields including `hour`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, and `is_weekend`
+- Add sine/cosine encodings for cyclical calendar context including hour, minute, weekday, month, quarter, and related date fields
+
+## v2.1.1 on 18th of April, 2026
+
+- Remove `wrangle` dependency by replacing `wrangle.col_to_multilabel` with inline `pd.get_dummies` in `limen/log/log.py`
+
+## v2.2.0 on 18th of April, 2026
+
+- Add range-based volatility features: `parkinson_volatility`, `garman_klass_volatility`, `rogers_satchell_volatility`, and `yang_zhang_volatility`
+- Add OHLCV liquidity and impact features: `dollar_volume`, `amihud_illiquidity`, `return_per_dollar_volume`, `range_per_dollar_volume`, and `illiquidity_shock`
+- Add realized risk and tail features: `realized_semivariance`, `realized_skewness`, `realized_kurtosis`, `jump_variation_proxy`, `tail_event_intensity`, and `volatility_of_volatility`
+- Add hour-of-week normalized OHLCV features: `relative_volume_seasonality`, `relative_range_seasonality`, and `relative_volatility_seasonality`
+- Add candle-structure and auction-style features: `body_to_range`, `wick_imbalance`, `range_overlap`, `rejection_intensity`, and `absorption_intensity`
+- Add cross-timescale state features: `trend_coherence` and `volatility_term_structure`
+- Add documentation and full behavioral test coverage for the new OHLCV feature families
+
+## v2.3.0 on 18th of April, 2026
+
+- Change snapshot backtests to execute predictions on the immediate next execution row by default, with `execution_lag_bars=0` available for legacy same-row behavior
+- Change snapshot `trade_*` metrics to run-level by default, add explicit `bar_*` metrics, and retain `trades_count_mode='bars'` for legacy-style bar metrics
+- Apply the new snapshot defaults explicitly to experiment backtest summaries and SFD inline backtest metrics so the behavior change is intentional and visible in outputs
+- Add confusion-bucket mean return columns (`tp/fp/tn/fn_mean_return_pct`) to snapshot backtest summaries when aligned `actuals` are available
+- Populate inline snapshot confusion-bucket return metrics from the aligned test labels, with regression SFDs passing directional actuals explicitly
+- Align regression experiment/log snapshot backtests with the same directional binary convention as inline reference-architecture backtests
+- Add `mean_kelly_pct` to snapshot backtest summaries using the active trade/bar return distribution with breakeven observations kept in the Kelly sample
+- Add direct snapshot tests to the canonical `python -m tests.run` path and extend docs for the updated snapshot semantics
+
+## v2.3.1 on 19th of April, 2026
+
+- Revert v2.3.0 snapshot backtest alignment and trade metric changes in full, restoring the pre-v2.3.0 behavior and output surface
+
+## v2.3.2 on 19th of April, 2026
+
+- Add `mean_kelly_pct` back to snapshot backtests without changing the restored legacy execution semantics
+- Add TP/FP/TN/FN mean return percentage columns to the existing confusion metrics surfaces, both inline and post-run, using the existing aligned `open` and `price_change` data
+
+## v2.3.3 on 19th of April, 2026
+
+- Fix `backtest_snapshot()` execution alignment for completed-bar pipelines by evaluating prediction row `t` on the immediate next execution row while preserving the existing HOLD-WHILE-1 semantics
+- Apply the same snapshot execution alignment explicitly to inline reference-architecture backtests and post-run experiment backtest summaries
+- `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` in `backtest_snapshot()` are now computed on the tradable evaluation window, so trailing `execution_lag_bars` rows and any non-tradable rows are excluded from denominators
+
+## v2.3.4 on 19th of April, 2026
+
+- Align inline and post-run confusion mean-return metrics to the same immediate-next-execution-row contract used by snapshot backtests for completed-bar pipelines
+- Make post-run snapshot backtests raise explicitly on unsupported multiclass logged outputs while keeping the existing binary and directional-regression contracts
+
+## v2.3.5 on 19th of April, 2026
+
+- Fix legacy `ParamSpace` sampling for huge discrete spaces so `n_permutations < total_space` no longer overflows when `total_space > sys.maxsize`
+- Preserve exact legacy `random.sample(range(N), k)` ordering and downstream RNG-state semantics in the huge-space fallback path
+- Add regression coverage for stdlib-equivalent range sampling, large-space reproducibility, prefix stability, and exhaustion behavior on the legacy `ParamSpace` path
+
+## v2.4.0 on 19th of April, 2026
+
+- Remove the repo-root `datasets/` fixture from the supported `HistoricalData` surface
+- Drop `HistoricalData.DEFAULT_TEST_FILE_PATH` and `HistoricalData.DEFAULT_TEST_FILE_URL`
+- Move historical-data regression coverage to a small checked-in test fixture under `tests/fixtures`
+- Update first-run and historical-data examples to use `get_spot_klines()` or explicit caller-owned file paths
+
+## v2.4.1 on 20th of April, 2026
+
+- Harden standard-path experiment CSV serialization so commas, quotes, and embedded newlines in logged string fields are emitted safely
+- Make standard-path reruns with the same `experiment_name` write the CSV header only when the file is new or empty, preventing duplicate mid-file headers
+- Add regression coverage for special-string round-trips and reruns against an existing standard-path results CSV
+
+## v2.4.2 on 20th of April, 2026
+
+- Add structured runtime profiling to `tests/run.py`, including per-test JSON output, suite totals, and a sorted slowest-tests summary on the canonical coverage-enabled test path
+- Add a committed suite runtime budget in `tests/runtime_budget.json` based on recent green `main` CI runs and enforce it in the new `PR Checks Runtime` workflow job
+- Publish the runtime profile as a GitHub Actions artifact and render a runtime job summary with threshold counts and slowest tests during `PR Validation`
+- Add regression coverage for runtime profile emission plus pass/fail runtime-gate behavior without touching `limen/` package code
+
+## v2.5.0 on 21st of April, 2026
 
 - Add `Cohort` constructor with strict experiment source resolution and permutation ID validation
 - Enforce single-architecture selection across all requested `permutation_ids`

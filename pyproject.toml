@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaquum_limen"
-version = "1.53.0"
+version = "2.5.0
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [
@@ -27,12 +27,11 @@ dependencies = [
   "scipy",
   "statsmodels",
   "tslearn",
-  "clickhouse_connect",
   "lightgbm",
-  "wrangle",
   "pyarrow",
   "numpy>=2.2.6",
   "ta-lib",
+  "requests",
 ]
 
 [project.optional-dependencies]
@@ -40,12 +39,20 @@ tabpfn = ["tabpfn>=6"]
 
 [project.urls]
 Homepage = "https://vaquum.fi"
+Documentation = "https://docs.vaquum.fi/limen/"
 Repository = "https://github.com/vaquum/limen"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
+
+[tool.coverage.run]
+source = ["limen"]
+relative_files = true
+
+[tool.coverage.report]
+omit = ["tests/*"]
 
 [tool.ruff]
 target-version = "py310"

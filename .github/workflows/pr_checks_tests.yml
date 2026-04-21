@@ -10,12 +10,14 @@ jobs:
   pr_checks_tests:
     name: PR Checks Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.5.4
+        uses: webfactory/ssh-agent@fc49353b67b2b7c1e0e6a600572d01a69f2672dd # v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
@@ -30,18 +32,160 @@ jobs:
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} &
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
         with:
           python-version: '3.10'
 
       - name: Install limen package (and deps)
         run: |
+          pip install "coverage[toml]" pytest
           pip install -e .
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      - name: Run limen tests (verbose)
+      - name: Run limen tests with coverage
+        env:
+          LIMEN_COVERAGE_RUN: '1'
         run: |
           set -x
-          python -u -m tests.run
+          mkdir -p coverage-artifacts
+          test_exit=0
+          python -m coverage run -m tests.run || test_exit=$?
+          if [ -f .coverage ]; then
+            python -m coverage report
+            mv .coverage coverage-artifacts/coverage.db
+          fi
+          exit $test_exit
+
+      - name: Publish runtime summary
+        if: ${{ always() && hashFiles('coverage-artifacts/test_runtime_profile.json') != '' }}
+        run: |
+          python -m tests.runtime_gate \
+            --profile coverage-artifacts/test_runtime_profile.json \
+            --budget tests/runtime_budget.json \
+            --summary-file "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifact
+        if: ${{ always() && hashFiles('coverage-artifacts/coverage.db') != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-data
+          path: coverage-artifacts/coverage.db
+
+      - name: Upload runtime artifact
+        if: ${{ always() && hashFiles('coverage-artifacts/test_runtime_profile.json') != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-runtime-profile
+          path: coverage-artifacts/test_runtime_profile.json
+
+  pr_checks_runtime:
+    name: PR Checks Runtime
+    if: ${{ always() }}
+    needs: pr_checks_tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+
+      - name: Set up Python
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
+        with:
+          python-version: '3.10'
+
+      - name: Download runtime artifact
+        if: ${{ needs.pr_checks_tests.result == 'success' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: test-runtime-profile
+          path: coverage-artifacts
+
+      - name: Skip runtime enforcement after upstream failure
+        if: ${{ needs.pr_checks_tests.result != 'success' }}
+        run: |
+          {
+            echo "## Test Runtime"
+            echo
+            echo "Skipped runtime enforcement because \`PR Checks Tests\` did not succeed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce suite runtime budget
+        if: ${{ needs.pr_checks_tests.result == 'success' }}
+        run: |
+          python -m tests.runtime_gate \
+            --profile coverage-artifacts/test_runtime_profile.json \
+            --budget tests/runtime_budget.json \
+            --summary-file "$GITHUB_STEP_SUMMARY" \
+            --enforce
+
+  pr_checks_coverage:
+    name: PR Checks Coverage
+    needs: pr_checks_tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+
+      - name: Set up Python
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
+        with:
+          python-version: '3.10'
+
+      - name: Install coverage
+        run: pip install "coverage[toml]"
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: coverage-data
+          path: coverage-artifacts
+
+      - name: Restore coverage data
+        run: mv coverage-artifacts/coverage.db .coverage
+
+      - name: Enforce package coverage floor
+        run: python -m coverage report --fail-under=92
+
+  publish_coverage_pr_comment:
+    name: Publish Coverage Comment
+    if: github.event_name == 'pull_request' && always()
+    needs: pr_checks_tests
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+
+      - name: Download coverage artifact
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: coverage-data
+          path: coverage-artifacts
+
+      - name: Check coverage artifact presence
+        id: coverage_artifact
+        run: |
+          if [ -f coverage-artifacts/coverage.db ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore coverage data
+        if: steps.coverage_artifact.outputs.available == 'true'
+        run: mv coverage-artifacts/coverage.db .coverage
+
+      - name: Publish coverage comment
+        if: steps.coverage_artifact.outputs.available == 'true'
+        uses: py-cov-action/python-coverage-comment-action@4c2eefcda8b94596768855a80ac94edc61aba669 # v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}

@@ -1,7 +1,7 @@
 {
   "productId": "limen",
   "productName": "Limen",
-  "tagline": "Bitcoin market data into searchable alpha, backtested signals, and decoder cohorts.",
+  "tagline": "Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.",
   "versionLabel": "latest",
   "basePath": "/limen/",
   "navSections": [
