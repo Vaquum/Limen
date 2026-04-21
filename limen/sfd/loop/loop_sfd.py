@@ -272,17 +272,31 @@ class LoopSFD:
 
         '''
 
+        # Build a case-insensitive lookup: lowercase param name → actual name
+        # e.g. 'c' → 'C', 'solver' → 'solver'
+        sig_lower = {p.lower(): p for p in self._sig_param_names}
+        arch_prefix = f'reference_architecture_{self._arch}_'
+
         ps = self._payload.get('parameterSpace') or {}
         arch_params = {}
         for key, value in ps.items():
-            if key not in self._sig_param_names:
+            # Accept both bare keys ('C', 'solver') and namespaced keys
+            # ('reference_architecture_logreg_binary_c')
+            if key.startswith(arch_prefix):
+                bare = key[len(arch_prefix):]
+            elif key in self._sig_param_names:
+                bare = key
+            else:
+                continue
+            canonical = sig_lower.get(bare.lower())
+            if canonical is None:
                 continue
             if not isinstance(value, list):
                 raise ValueError(
                     f"parameterSpace['{key}'] must be a list of candidate values, "
                     f"got {type(value).__name__}"
                 )
-            arch_params[key] = value
+            arch_params[canonical] = value
         return arch_params
 
 
@@ -309,7 +323,8 @@ class LoopSFD:
 
         '''
 
-        arch_prefix = f"input_{self._arch}_"
+        old_arch_prefix = f"input_{self._arch}_"
+        ra_prefix = f"reference_architecture_{self._arch}_"
         result: dict[str, list] = {}
         for key, value in (self._payload.get('parameterSpace') or {}).items():
             if key.endswith('_selected_items'):
@@ -322,7 +337,9 @@ class LoopSFD:
                 continue
             if key.startswith('input_data_source_'):
                 continue
-            if key.startswith(arch_prefix):
+            if key.startswith(old_arch_prefix):
+                continue
+            if key.startswith(ra_prefix):
                 continue
             if key in self._sig_param_names:
                 continue
