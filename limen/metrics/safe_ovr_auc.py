@@ -1,14 +1,14 @@
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
-def safe_ovr_auc(y_true: list, proba: list) -> float:
+def safe_ovr_auc(y_true: list, probs: list) -> float:
 
     '''
     Compute one-vs-rest AUC safely handling missing classes.
 
     Args:
         y_true (list): True class labels
-        proba (list): Predicted probabilities with shape (n_samples, n_classes) where each column corresponds to the probability of that class
+        probs (list): Predicted probabilities with shape (n_samples, n_classes) where each column corresponds to the probability of that class
 
     Returns:
         float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
@@ -22,6 +22,6 @@ def safe_ovr_auc(y_true: list, proba: list) -> float:
         neg = ~pos
         if pos.any() and neg.any():  # need both to draw an ROC curve
             aucs.append(
-                roc_auc_score(pos, proba[:, class_to_index[c]])  # use mapped index for class c
+                roc_auc_score(pos, probs[:, class_to_index[c]])  # use mapped index for class c
             )
     return float('nan') if not aucs else np.mean(aucs)

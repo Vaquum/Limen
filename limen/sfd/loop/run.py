@@ -17,7 +17,6 @@ import argparse
 import inspect
 import json
 import logging
-import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -36,9 +35,6 @@ from limen.sfd.loop.progress import make_progress_callback
 
 logger = logging.getLogger(__name__)
 
-
-_DATA_API_AUTH_TOKEN_ENV = 'DATA_API_AUTH_TOKEN'  # noqa: S105 — env var name, not a secret
-_LOOP_ENV = 'LOOP_ENV'
 
 
 def _annotation_accepts_int(annotation: Any) -> bool:
@@ -128,14 +124,9 @@ def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
     '''
     Compute the raw DataFrame for an experiment from the payload data source.
 
-    Creates a HistoricalData instance with auth_token sourced from the
-    DATA_API_AUTH_TOKEN environment variable (None when unset), then calls
-    the method named in payload.inputData.selectedItems[0].params.method
+    Calls the method named in payload.inputData.selectedItems[0].params.method
     with the remaining params. HistoricalData methods set self.data rather
     than returning, so we read it back from the instance.
-
-    When LOOP_ENV=test, falls back to HistoricalData._get_data_for_test to
-    keep local smoke tests runnable without real credentials.
 
     Args:
         payload (dict): Loop web UI experiment design payload
@@ -149,11 +140,6 @@ def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
             DATA_SOURCE_REGISTRY
 
     '''
-
-    if os.getenv(_LOOP_ENV) == 'test':
-        hd = HistoricalData()
-        hd._get_data_for_test()
-        return hd.data
 
     items = (payload.get('inputData') or {}).get('selectedItems') or []
     ds_item = next(
@@ -179,13 +165,11 @@ def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
 
     fetch_params = {k: v for k, v in ds_params.items() if v is not None}
 
-    auth_token = os.getenv(_DATA_API_AUTH_TOKEN_ENV)
-    hd = HistoricalData(auth_token=auth_token)
+    hd = HistoricalData()
     method = getattr(hd, method_name)
 
     # Loop web-form values arrive as strings; coerce to int where the
-    # method signature requires it (e.g. kline_size, n_rows) so the
-    # ClickHouse query assembly downstream gets typed values.
+    # method signature requires it (e.g. kline_size, n_rows).
     fetch_params = _coerce_string_params_by_signature(method, fetch_params)
 
     method(**fetch_params)
@@ -221,10 +205,8 @@ def run_experiment(payload_path: Path,
     # Audit copy — survives the run, helps reproduce later
     (experiment_dir / 'payload.json').write_text(payload_text)
 
-    # Fetch data explicitly using the payload's data source config so that
-    # auth_token (from DATA_API_AUTH_TOKEN env) can be injected into
-    # HistoricalData at instance construction time. The fetched DataFrame is
-    # passed to UEL via data=, which bypasses manifest.fetch_data_for_env.
+    # Fetch data from the payload's data source config and pass it to UEL
+    # via data=, bypassing manifest.fetch_data_for_env.
     raw_data = _fetch_data_from_payload(payload)
 
     sfd = LoopSFD(payload)
