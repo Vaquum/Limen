@@ -149,8 +149,7 @@ class Cohort:
                     'Each cohort member must expose permutation_id for binding.'
                 )
 
-            pid = self._normalize_permutation_id(
-                getattr(member, 'permutation_id'))
+            pid = self._normalize_permutation_id(member.permutation_id)
             if pid in by_pid:
                 raise ValueError(
                     'Cohort members must have unique permutation_id values.')
@@ -159,7 +158,7 @@ class Cohort:
 
             if hasattr(member, 'round_params'):
                 arch = self._extract_architecture_id(
-                    {'round_params': getattr(member, 'round_params')},
+                    {'round_params': member.round_params},
                     self.metadata,
                 )
                 if arch.strip().lower() != self.architecture_id.strip().lower():
@@ -168,7 +167,7 @@ class Cohort:
                     )
 
             if hasattr(member, 'metadata'):
-                member_metadata = getattr(member, 'metadata')
+                member_metadata = member.metadata
                 if isinstance(member_metadata, dict):
                     cohort_sfd = self.metadata.get('sfd_module')
                     member_sfd = member_metadata.get('sfd_module')
@@ -364,8 +363,7 @@ class Cohort:
         by_permutation = member_input.pop('_by_permutation_id', None)
 
         if isinstance(by_permutation, dict) and hasattr(member, 'permutation_id'):
-            pid = self._normalize_permutation_id(
-                getattr(member, 'permutation_id'))
+            pid = self._normalize_permutation_id(member.permutation_id)
             if pid in by_permutation:
                 selected = by_permutation[pid]
                 if not isinstance(selected, dict):
