@@ -280,8 +280,6 @@ class LoopSFD:
         ps = self._payload.get('parameterSpace') or {}
         arch_params = {}
         for key, value in ps.items():
-            # Accept both bare keys ('C', 'solver') and namespaced keys
-            # ('reference_architecture_logreg_binary_c')
             if key.startswith(arch_prefix):
                 bare = key[len(arch_prefix):]
             elif key in self._sig_param_names:
