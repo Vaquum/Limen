@@ -24,7 +24,6 @@ from limen.sfd.loop.meta import (
     get_target_column,
 )
 from limen.sfd.loop.progress import make_progress_callback
-from limen.sfd.loop.reference_defaults import get_reference_architecture_params
 from limen.sfd.loop.registry import (
     FEATURE_REGISTRY,
     INDICATOR_REGISTRY,
@@ -98,27 +97,6 @@ def test_data_source_registry_known_methods():
     assert DATA_SOURCE_REGISTRY['get_spot_klines'] is HistoricalData.get_spot_klines
 
 
-def test_reference_defaults_logreg_binary_extracts_model_params():
-    defaults = get_reference_architecture_params('logreg_binary', _logreg_binary_func)
-
-    # All keys must be valid logreg_binary signature parameter names
-    import inspect
-    sig_names = set(inspect.signature(_logreg_binary_func).parameters)
-    for key in defaults:
-        assert key in sig_names, f"key '{key}' is not in logreg_binary signature"
-
-    # Must include the actual model hyperparams
-    for expected in ('C', 'solver', 'penalty', 'tol', 'max_iter'):
-        assert expected in defaults, f"missing model param '{expected}'"
-
-    # Must NOT include data-prep params from the foundational SFD
-    for excluded in ('frac_diff_d', 'roc_period', 'q', 'shift', 'feature_groups',
-                     'scaler_type'):
-        assert excluded not in defaults, (
-            f"data-prep param '{excluded}' should not leak into reference defaults"
-        )
-
-
 def test_reference_defaults_constructor_override():
     payload = _load_payload()
     custom = {'C': [0.5, 1.0], 'solver': ['liblinear']}
@@ -154,10 +132,14 @@ def test_loop_sfd_params_filters_arch_prefixed_keys():
     sfd = LoopSFD(_load_payload())
     params = sfd.params()
 
-    # input_logreg_binary_* keys must not be in the merged params
+    # Neither old-style (input_logreg_binary_*) nor new-style
+    # (reference_architecture_logreg_binary_*) prefix keys must leak through
     for key in params:
         assert not key.startswith('input_logreg_binary_'), (
-            f"reference architecture prefix key leaked: {key}"
+            f"old-style reference architecture prefix key leaked: {key}"
+        )
+        assert not key.startswith('reference_architecture_logreg_binary_'), (
+            f"new-style reference architecture prefix key leaked: {key}"
         )
 
 
@@ -192,6 +174,13 @@ def test_loop_sfd_params_excludes_dropped_categories():
     for key in params:
         assert not key.startswith('transform_'), f"transform_* key leaked: {key}"
 
+    # reference_architecture_logreg_binary_* keys (new Loop UI format) are
+    # extracted as bare model params and must not appear as component keys
+    for key in params:
+        assert not key.startswith('reference_architecture_logreg_binary_'), (
+            f"reference_architecture_logreg_binary_* key leaked: {key}"
+        )
+
 
 def test_loop_sfd_params_includes_unnamespaced_model_keys():
     sfd = LoopSFD(_load_payload())
@@ -199,6 +188,31 @@ def test_loop_sfd_params_includes_unnamespaced_model_keys():
 
     for expected in ('C', 'solver', 'penalty', 'tol', 'max_iter'):
         assert expected in params, f"expected model param missing: {expected}"
+
+
+def test_loop_sfd_params_extracts_namespaced_arch_params():
+    # Simulate new Loop UI payload format: arch params sent as
+    # reference_architecture_{arch}_{param} with lowercase param names.
+    # LoopSFD must strip the prefix and restore canonical casing (c → C).
+    payload = _load_payload()
+    payload['parameterSpace'].update({
+        'reference_architecture_logreg_binary_c': [0.5, 2.0],
+        'reference_architecture_logreg_binary_solver': ['liblinear'],
+    })
+    # Remove bare keys so only the namespaced versions are present
+    payload['parameterSpace'].pop('C', None)
+    payload['parameterSpace'].pop('solver', None)
+
+    sfd = LoopSFD(payload)
+    params = sfd.params()
+
+    assert params['C'] == [0.5, 2.0], f"expected C=[0.5, 2.0], got {params.get('C')}"
+    assert params['solver'] == ['liblinear']
+    # Namespaced key must not appear as a component param
+    for key in params:
+        assert not key.startswith('reference_architecture_logreg_binary_'), (
+            f"prefix key leaked: {key}"
+        )
 
 
 def test_loop_sfd_manifest_split_config():
@@ -994,7 +1008,6 @@ _TESTS = [
     test_label_meta_fallback_to_name,
     test_label_meta_table_has_known_label,
     test_data_source_registry_known_methods,
-    test_reference_defaults_logreg_binary_extracts_model_params,
     test_reference_defaults_constructor_override,
     test_loop_sfd_name_attribute,
     test_loop_sfd_params_filters_metadata_keys,
@@ -1002,6 +1015,7 @@ _TESTS = [
     test_loop_sfd_params_includes_component_namespaced_keys,
     test_loop_sfd_params_excludes_dropped_categories,
     test_loop_sfd_params_includes_unnamespaced_model_keys,
+    test_loop_sfd_params_extracts_namespaced_arch_params,
     test_loop_sfd_manifest_split_config,
     test_loop_sfd_manifest_target_column,
     test_loop_sfd_manifest_model_function,

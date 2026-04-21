@@ -54,7 +54,13 @@
     ],
     "label_quantile_flag_q": [
       0.5
-    ]
+    ],
+    "reference_architecture_logreg_binary_c": [0.01, 0.1, 1.0],
+    "reference_architecture_logreg_binary_class_weight": [0.45, 0.55],
+    "reference_architecture_logreg_binary_max_iter": [30, 60],
+    "reference_architecture_logreg_binary_penalty": ["l2"],
+    "reference_architecture_logreg_binary_solver": ["lbfgs", "liblinear"],
+    "reference_architecture_logreg_binary_tol": [0.001, 0.01]
   },
   "referenceArchitecture": "logreg_binary",
   "inputData": {

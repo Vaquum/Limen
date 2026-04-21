@@ -484,7 +484,6 @@ from tests.test_loop_sfd import test_label_meta_known
 from tests.test_loop_sfd import test_label_meta_fallback_to_name
 from tests.test_loop_sfd import test_label_meta_table_has_known_label
 from tests.test_loop_sfd import test_data_source_registry_known_methods
-from tests.test_loop_sfd import test_reference_defaults_logreg_binary_extracts_model_params
 from tests.test_loop_sfd import test_reference_defaults_constructor_override
 from tests.test_loop_sfd import test_loop_sfd_name_attribute
 from tests.test_loop_sfd import test_loop_sfd_params_filters_metadata_keys
@@ -492,6 +491,7 @@ from tests.test_loop_sfd import test_loop_sfd_params_filters_arch_prefixed_keys
 from tests.test_loop_sfd import test_loop_sfd_params_includes_component_namespaced_keys
 from tests.test_loop_sfd import test_loop_sfd_params_excludes_dropped_categories
 from tests.test_loop_sfd import test_loop_sfd_params_includes_unnamespaced_model_keys
+from tests.test_loop_sfd import test_loop_sfd_params_extracts_namespaced_arch_params
 from tests.test_loop_sfd import test_loop_sfd_manifest_split_config
 from tests.test_loop_sfd import test_loop_sfd_manifest_target_column
 from tests.test_loop_sfd import test_loop_sfd_manifest_model_function
@@ -1011,7 +1011,6 @@ tests = [
     test_label_meta_fallback_to_name,
     test_label_meta_table_has_known_label,
     test_data_source_registry_known_methods,
-    test_reference_defaults_logreg_binary_extracts_model_params,
     test_reference_defaults_constructor_override,
     test_loop_sfd_name_attribute,
     test_loop_sfd_params_filters_metadata_keys,
@@ -1019,6 +1018,7 @@ tests = [
     test_loop_sfd_params_includes_component_namespaced_keys,
     test_loop_sfd_params_excludes_dropped_categories,
     test_loop_sfd_params_includes_unnamespaced_model_keys,
+    test_loop_sfd_params_extracts_namespaced_arch_params,
     test_loop_sfd_manifest_split_config,
     test_loop_sfd_manifest_target_column,
     test_loop_sfd_manifest_model_function,

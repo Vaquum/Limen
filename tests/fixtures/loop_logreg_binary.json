@@ -1,62 +1,5 @@
-
-
 {
     "parameterSpace": {
-        "reference_architecture": [
-            "logreg_binary"
-        ],
-        "input_split_train": [
-            70
-        ],
-        "input_split_val": [
-            15,
-            20
-        ],
-        "input_split_test": [
-            15
-        ],
-        "scaling_method": [
-            "LinearScaler"
-        ],
-        "input_selected_items": [
-            "logreg_binary"
-        ],
-        "input_logreg_binary_frac_diff_d": [
-            0
-        ],
-        "input_logreg_binary_shift": [
-            -1
-        ],
-        "input_logreg_binary_q": [
-            0.35
-        ],
-        "input_logreg_binary_roc_period": [
-            1
-        ],
-        "input_logreg_binary_penalty": [
-            "l2"
-        ],
-        "input_logreg_binary_scaler_type": [
-            "logreg"
-        ],
-        "input_logreg_binary_feature_groups": [
-            "all"
-        ],
-        "input_logreg_binary_class_weight": [
-            0.45
-        ],
-        "input_logreg_binary_c": [
-            0.01
-        ],
-        "input_logreg_binary_max_iter": [
-            30
-        ],
-        "input_logreg_binary_solver": [
-            "lbfgs"
-        ],
-        "input_logreg_binary_tol": [
-            0.001
-        ],
         "indicator_selected_items": [
             "bbands"
         ],
@@ -105,32 +48,22 @@
         "label_forward_breakout_target_shift": [
             -1
         ],
-        "C": [0.01, 0.1, 1.0],
-        "class_weight": [0.45, 0.55],
-        "max_iter": [30, 60],
-        "penalty": ["l2"],
-        "solver": ["lbfgs", "liblinear"],
-        "tol": [0.001, 0.01]
+        "reference_architecture_logreg_binary_c": [0.01, 0.1, 1.0],
+        "reference_architecture_logreg_binary_class_weight": [0.45, 0.55],
+        "reference_architecture_logreg_binary_max_iter": [30, 60],
+        "reference_architecture_logreg_binary_penalty": ["l2"],
+        "reference_architecture_logreg_binary_solver": ["lbfgs", "liblinear"],
+        "reference_architecture_logreg_binary_tol": [0.001, 0.01]
     },
     "referenceArchitecture": "logreg_binary",
     "inputData": {
         "selectedItems": [
             {
                 "id": "fb485f73-a4f9-4f37-93ac-488c6d924d9b",
-                "name": "logreg_binary",
+                "name": "data_source",
                 "params": {
-                    "frac_diff_d": 0,
-                    "shift": -1,
-                    "q": 0.35,
-                    "roc_period": 1,
-                    "penalty": "l2",
-                    "scaler_type": "logreg",
-                    "feature_groups": "all",
-                    "class_weight": 0.45,
-                    "C": 0.01,
-                    "max_iter": 30,
-                    "solver": "lbfgs",
-                    "tol": 0.001
+                    "method": "get_spot_klines",
+                    "kline_size": 3600
                 }
             }
         ],
@@ -163,7 +96,6 @@
         }
     ],
     "scaler": {
-        "scalingMethod": "LinearScaler",
         "selectedItems": [
             {
                 "id": "9924e29f-bc6d-4a91-a57b-400706f4cfc5",
