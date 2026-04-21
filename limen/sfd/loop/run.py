@@ -42,9 +42,10 @@ def _annotation_accepts_int(annotation: Any) -> bool:
     '''
     Compute whether a type annotation accepts `int` values.
 
-    Handles plain `int`, `int | None`, `Optional[int]`, any Union containing
-    int, and string annotations produced by `from __future__ import annotations`
-    (e.g. `'int'`, `'int | None'`).
+    Handles plain `int`, any Union containing int (e.g. `int | None`), and
+    string annotations with `|`-separated unions (e.g. `'int'`, `'int | None'`)
+    produced by `from __future__ import annotations`. String-form
+    `'Optional[int]'` is not handled.
 
     Args:
         annotation: The annotation object from inspect.Parameter.annotation
