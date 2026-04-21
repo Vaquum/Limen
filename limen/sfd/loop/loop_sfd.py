@@ -311,14 +311,25 @@ class LoopSFD:
         arch_prefix = f'reference_architecture_{self._arch}_'
 
         ps = self._payload.get('parameterSpace') or {}
-        arch_params = {}
+        arch_params: dict[str, list] = {}
+
         for key, value in ps.items():
-            if key.startswith(arch_prefix):
-                bare = key[len(arch_prefix):]
-            elif key in self._sig_param_names:
-                bare = key
-            else:
+            if key not in self._sig_param_names:
                 continue
+            canonical = sig_lower.get(key.lower())
+            if canonical is None:
+                continue
+            if not isinstance(value, list):
+                raise ValueError(
+                    f"parameterSpace['{key}'] must be a list of candidate values, "
+                    f"got {type(value).__name__}"
+                )
+            arch_params[canonical] = value
+
+        for key, value in ps.items():
+            if not key.startswith(arch_prefix):
+                continue
+            bare = key[len(arch_prefix):]
             canonical = sig_lower.get(bare.lower())
             if canonical is None:
                 continue
@@ -328,6 +339,7 @@ class LoopSFD:
                     f"got {type(value).__name__}"
                 )
             arch_params[canonical] = value
+
         return arch_params
 
 
