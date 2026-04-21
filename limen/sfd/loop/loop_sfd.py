@@ -119,8 +119,9 @@ class LoopSFD:
         Args:
             payload (dict): Loop web UI experiment design payload
             reference_architecture_params (dict | None): Override for the model
-                hyperparam search space. When None, derived from the matching
-                foundational SFD's params() filtered by function signature
+                hyperparam search space. When None, derived from the payload's
+                parameterSpace via _build_arch_params(), which extracts keys
+                matching the reference architecture function signature
             data_source_config (dict | None): Override for the production data
                 source. Must have 'method' and optional 'params' keys. When
                 None, the data source is extracted from the payload's
@@ -292,8 +293,9 @@ class LoopSFD:
         Compute the model hyperparam search space from the payload.
 
         All model hyperparameters come from the payload's parameterSpace.
-        Each key is validated against the reference architecture function
-        signature — unknown keys are rejected.
+        Each key is matched against the reference architecture function
+        signature — keys that do not match any signature parameter are silently
+        skipped.
 
         Raises:
             ValueError: If a payload-provided arch param value is not a list
