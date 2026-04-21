@@ -104,7 +104,13 @@
         ],
         "label_forward_breakout_target_shift": [
             -1
-        ]
+        ],
+        "C": [0.01, 0.1, 1.0],
+        "class_weight": [0.45, 0.55],
+        "max_iter": [30, 60],
+        "penalty": ["l2"],
+        "solver": ["lbfgs", "liblinear"],
+        "tol": [0.001, 0.01]
     },
     "referenceArchitecture": "logreg_binary",
     "inputData": {
