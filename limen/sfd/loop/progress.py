@@ -53,7 +53,9 @@ def make_progress_callback(progress_file: Path,
                 'percent': round(100 * completed / total, 2) if total > 0 else 0.0,
                 'updated_at': datetime.now(timezone.utc).isoformat(),
             }
-            progress_file.write_text(json.dumps(payload))
+            tmp = progress_file.with_suffix('.tmp')
+            tmp.write_text(json.dumps(payload))
+            tmp.replace(progress_file)
         except Exception as exc:  # noqa: BLE001
             logger.warning('Progress callback failed: %s', exc)
 

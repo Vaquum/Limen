@@ -35,6 +35,35 @@ _DEFAULT_DATA_SOURCE: dict[str, Any] = {
 }
 
 
+def _coerce_data_source_params(method: Any, params: dict[str, Any]) -> dict[str, Any]:
+
+    try:
+        sig = inspect.signature(method)
+    except (TypeError, ValueError):
+        return dict(params)
+
+    coerced: dict[str, Any] = {}
+    for pname, pvalue in params.items():
+        if not isinstance(pvalue, str):
+            coerced[pname] = pvalue
+            continue
+        param_sig = sig.parameters.get(pname)
+        ann = param_sig.annotation if param_sig else inspect.Parameter.empty
+        if ann is int or (
+            hasattr(ann, '__args__') and int in ann.__args__
+        ):
+            try:
+                coerced[pname] = int(pvalue)
+                continue
+            except (ValueError, TypeError):
+                raise ValueError(
+                    f"Cannot coerce param '{pname}'='{pvalue}' to int "
+                    f"as required by {method.__name__} signature"
+                ) from None
+        coerced[pname] = pvalue
+    return coerced
+
+
 def _resolve_data_source_from_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
 
     '''
@@ -60,15 +89,17 @@ def _resolve_data_source_from_payload(payload: dict[str, Any]) -> dict[str, Any]
         raw_params = dict(item.get('params') or {})
         method_name = raw_params.pop('method', None)
         if not method_name:
-            return None
+            raise ValueError(
+                "data_source item is missing required 'method' key"
+            )
         method = DATA_SOURCE_REGISTRY.get(method_name)
         if method is None:
             raise ValueError(
                 f"Unknown data source method '{method_name}'. "
                 f"Known: {sorted(DATA_SOURCE_REGISTRY)}"
             )
-        # Drop null/empty params so Limen's signature defaults apply
         resolved_params = {k: v for k, v in raw_params.items() if v is not None}
+        resolved_params = _coerce_data_source_params(method, resolved_params)
         return {'method': method, 'params': resolved_params}
     return None
 
