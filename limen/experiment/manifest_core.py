@@ -11,6 +11,7 @@ from typing import Any
 import polars as pl
 
 from limen.data.utils import split_data_to_prep_output
+from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
 from limen.scalers.registry import SCALER_REGISTRY
 
@@ -178,6 +179,8 @@ class Manifest:
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
     _rule_based: bool = field(default=False, init=False, repr=False)
+    _conditions: list = field(default_factory=list, init=False, repr=False)
+    _entry: str | None = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
@@ -483,6 +486,25 @@ class Manifest:
 
         return self
 
+    def with_strategy(self, conditions: list[dict], entry: str) -> 'Manifest':
+
+        '''
+        Configure rule-based strategy conditions and entry signal.
+
+        Args:
+            conditions (list[dict]): List of predicate and compound operator condition configs
+            entry (str): ID of the condition that produces the per-bar position signal
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self._conditions = list(conditions)
+        self._entry = entry
+        self._rule_based = True
+
+        return self
+
     def set_feature_ablation(self,
                              drop_count_key: str = 'feature_drop_count',
                              seed_key: str = 'feature_drop_seed') -> 'Manifest':
@@ -706,6 +728,8 @@ class Manifest:
                 maintain_order='left'
             )
 
+        if self._rule_based:
+            return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
     def resolve_model_kwargs(self, round_params: dict[str, Any]) -> dict[str, Any]:
@@ -1124,5 +1148,32 @@ def _finalize_to_data_dict(
             round_params=round_params,
             fitted_params=fitted_params
         )
+
+    return data_dict
+
+
+def _finalize_rule_based_data(
+        manifest: Manifest,
+        split_data: list[pl.DataFrame],
+        all_datetimes: list,
+        round_params: dict[str, Any],
+) -> dict:
+
+    from limen.sfd.rule_based.predicates import build_predicate  # avoid circular import at module level
+
+    data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
+
+    for condition in manifest._conditions:
+        if 'type' not in condition:
+            continue
+        expr = build_predicate(condition, round_params)
+        col_name = condition['id']
+        for split in ('train', 'val', 'test'):
+            data_dict[split] = data_dict[split].with_columns(expr.alias(col_name))
+
+    data_dict['strategy'] = {
+        'conditions': manifest._conditions,
+        'entry': manifest._entry,
+    }
 
     return data_dict
