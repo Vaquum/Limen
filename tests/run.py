@@ -158,6 +158,19 @@ from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
 from tests.test_splits import test_prep_output_ml_path
 from tests.test_splits import test_rule_based_prep_output_returns_full_dataframes
+from tests.test_predicates import test_threshold
+from tests.test_predicates import test_relative
+from tests.test_predicates import test_crossover_above
+from tests.test_predicates import test_crossover_below
+from tests.test_predicates import test_slope_rising
+from tests.test_predicates import test_slope_falling
+from tests.test_predicates import test_with_persistence
+from tests.test_predicates import test_with_recency
+from tests.test_predicates import test_polars_expr_escape_hatch
+from tests.test_predicates import test_polars_expr_blocks_builtins
+from tests.test_predicates import test_build_predicate_threshold_with_param_substitution
+from tests.test_predicates import test_build_predicate_unknown_type_raises
+from tests.test_predicates import test_threshold_unknown_operator_raises
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_standard_csv import test_standard_run_rechunks_live_log_without_changing_row_output
@@ -675,6 +688,19 @@ tests = [
     test_run_with_msq_checkpoint_trigger,
     test_prep_output_ml_path,
     test_rule_based_prep_output_returns_full_dataframes,
+    test_threshold,
+    test_relative,
+    test_crossover_above,
+    test_crossover_below,
+    test_slope_rising,
+    test_slope_falling,
+    test_with_persistence,
+    test_with_recency,
+    test_polars_expr_escape_hatch,
+    test_polars_expr_blocks_builtins,
+    test_build_predicate_threshold_with_param_substitution,
+    test_build_predicate_unknown_type_raises,
+    test_threshold_unknown_operator_raises,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_standard_run_rechunks_live_log_without_changing_row_output,
