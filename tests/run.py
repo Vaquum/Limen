@@ -156,6 +156,8 @@ from tests.test_experiment_core_msq import test_run_with_msq_basic_flow
 from tests.test_experiment_core_msq import test_run_with_msq_context_params
 from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
+from tests.test_splits import test_prep_output_ml_path
+from tests.test_splits import test_rule_based_prep_output_returns_full_dataframes
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_standard_csv import test_standard_run_rechunks_live_log_without_changing_row_output
@@ -671,6 +673,8 @@ tests = [
     test_run_with_msq_context_params,
     test_run_with_msq_feedback_trigger,
     test_run_with_msq_checkpoint_trigger,
+    test_prep_output_ml_path,
+    test_rule_based_prep_output_returns_full_dataframes,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_standard_run_rechunks_live_log_without_changing_row_output,
