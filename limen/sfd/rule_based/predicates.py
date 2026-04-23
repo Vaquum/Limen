@@ -17,12 +17,10 @@ def _fmt(val: Any, params: dict) -> Any:
     return val.format(**params) if isinstance(val, str) else val
 
 
-def _fmt_num(val: Any, params: dict) -> float:
-    return float(_fmt(val, params))
-
-
-def _fmt_int(val: Any, params: dict) -> int:
-    return int(_fmt(val, params))
+def _op_expr(left: pl.Expr, operator: str, right: Any) -> pl.Expr:
+    if operator not in _OPS:
+        raise ValueError(f'Unknown operator: {operator!r}')
+    return _OPS[operator](left, right)
 
 
 def threshold(column: str, operator: str, value: Any) -> pl.Expr:
@@ -39,9 +37,7 @@ def threshold(column: str, operator: str, value: Any) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
-    if operator not in _OPS:
-        raise ValueError(f'Unknown operator: {operator!r}')
-    return _OPS[operator](pl.col(column), value)
+    return _op_expr(pl.col(column), operator, value)
 
 
 def relative(column: str, operator: str, other_column: str) -> pl.Expr:
@@ -58,9 +54,7 @@ def relative(column: str, operator: str, other_column: str) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
-    if operator not in _OPS:
-        raise ValueError(f'Unknown operator: {operator!r}')
-    return _OPS[operator](pl.col(column), pl.col(other_column))
+    return _op_expr(pl.col(column), operator, pl.col(other_column))
 
 
 def crossover(column: str, other_column: str, direction: str = 'above') -> pl.Expr:
@@ -143,14 +137,14 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
     return expr.cast(pl.Int8).rolling_sum(n) >= 1
 
 
-def polars_expr(expr_string: str, round_params: dict) -> pl.Expr:
+def polars_expr(expr_string: str, params: dict) -> pl.Expr:
 
     '''
     Evaluate a raw polars expression string with parameter substitution.
 
     Args:
         expr_string (str): Polars expression string with optional {param} placeholders
-        round_params (dict): Parameter values for substitution
+        params (dict): Parameter values for substitution
 
     Returns:
         pl.Expr: Evaluated polars expression
@@ -158,7 +152,7 @@ def polars_expr(expr_string: str, round_params: dict) -> pl.Expr:
     NOTE: Uses eval() with restricted globals — __builtins__ is empty, only pl is available.
     '''
 
-    resolved = expr_string.format(**round_params)
+    resolved = expr_string.format(**params)
     return eval(resolved, {'pl': pl, '__builtins__': {}}, {})  # noqa: S307
 
 
@@ -181,7 +175,7 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
         return threshold(
             column=_fmt(condition['column'], round_params),
             operator=condition['operator'],
-            value=_fmt_num(condition['value'], round_params),
+            value=float(_fmt(condition['value'], round_params)),
         )
 
     if ptype == 'relative':
@@ -202,7 +196,7 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
         return slope(
             column=_fmt(condition['column'], round_params),
             direction=condition.get('direction', 'rising'),
-            lookback=_fmt_int(condition.get('lookback', 1), round_params),
+            lookback=int(_fmt(condition.get('lookback', 1), round_params)),
         )
 
     if ptype == 'polars_expr':

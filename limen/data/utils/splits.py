@@ -64,6 +64,17 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = N
     return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds, strict=True)]
 
 
+def _compute_alignment(split_data: list, all_datetimes: list) -> dict:
+    remaining = (split_data[0]['datetime'].to_list()
+                 + split_data[1]['datetime'].to_list()
+                 + split_data[2]['datetime'].to_list())
+    return {
+        'missing_datetimes': sorted(set(all_datetimes) - set(remaining)),
+        'first_test_datetime': split_data[2]['datetime'].min(),
+        'last_test_datetime': split_data[2]['datetime'].max(),
+    }
+
+
 def split_data_to_prep_output(split_data: list,
                               cols: list,
                               all_datetimes: list) -> dict:
@@ -80,12 +91,7 @@ def split_data_to_prep_output(split_data: list,
         dict: Dictionary with train, validation, and test features and targets
     '''
 
-    remaining_datetimes = split_data[0]['datetime'].to_list()
-    remaining_datetimes += split_data[1]['datetime'].to_list()
-    remaining_datetimes += split_data[2]['datetime'].to_list()
-
-    first_test_datetime = split_data[2]['datetime'].min()
-    last_test_datetime = split_data[2]['datetime'].max()
+    alignment = _compute_alignment(split_data, all_datetimes)
 
     split_data[0] = split_data[0].drop('datetime')
     split_data[1] = split_data[1].drop('datetime')
@@ -103,11 +109,7 @@ def split_data_to_prep_output(split_data: list,
                  'x_test': split_data[2][cols[:-1]],
                  'y_test': split_data[2][cols[-1]]}
 
-    data_dict['_alignment'] = {}
-
-    data_dict['_alignment']['missing_datetimes'] = sorted(set(all_datetimes) - set(remaining_datetimes))
-    data_dict['_alignment']['first_test_datetime'] = first_test_datetime
-    data_dict['_alignment']['last_test_datetime'] = last_test_datetime
+    data_dict['_alignment'] = alignment
 
     return data_dict
 
@@ -125,24 +127,11 @@ def split_data_to_rule_based_prep_output(split_data: list, all_datetimes: list) 
         dict: Dictionary with train, val, test full DataFrames and _alignment metadata
     '''
 
-    remaining_datetimes = split_data[0]['datetime'].to_list()
-    remaining_datetimes += split_data[1]['datetime'].to_list()
-    remaining_datetimes += split_data[2]['datetime'].to_list()
-
-    first_test_datetime = split_data[2]['datetime'].min()
-    last_test_datetime = split_data[2]['datetime'].max()
-
-    train = split_data[0].drop('datetime')
-    val = split_data[1].drop('datetime')
-    test = split_data[2].drop('datetime')
+    alignment = _compute_alignment(split_data, all_datetimes)
 
     return {
-        'train': train,
-        'val': val,
-        'test': test,
-        '_alignment': {
-            'missing_datetimes': sorted(set(all_datetimes) - set(remaining_datetimes)),
-            'first_test_datetime': first_test_datetime,
-            'last_test_datetime': last_test_datetime,
-        },
+        'train': split_data[0].drop('datetime'),
+        'val': split_data[1].drop('datetime'),
+        'test': split_data[2].drop('datetime'),
+        '_alignment': alignment,
     }
