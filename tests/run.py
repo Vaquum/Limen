@@ -158,6 +158,11 @@ from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
 from tests.test_splits import test_prep_output_ml_path
 from tests.test_splits import test_rule_based_prep_output_returns_full_dataframes
+from tests.test_manifest_rule_based import test_with_strategy_sets_sentinel_and_returns_self
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_returns_split_dataframes
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_adds_predicate_columns
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_attaches_strategy_config
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_compound_condition_not_added_as_column
 from tests.test_predicates import test_threshold
 from tests.test_predicates import test_relative
 from tests.test_predicates import test_crossover_above
@@ -688,6 +693,11 @@ tests = [
     test_run_with_msq_checkpoint_trigger,
     test_prep_output_ml_path,
     test_rule_based_prep_output_returns_full_dataframes,
+    test_with_strategy_sets_sentinel_and_returns_self,
+    test_prepare_data_rule_based_returns_split_dataframes,
+    test_prepare_data_rule_based_adds_predicate_columns,
+    test_prepare_data_rule_based_attaches_strategy_config,
+    test_prepare_data_rule_based_compound_condition_not_added_as_column,
     test_threshold,
     test_relative,
     test_crossover_above,
