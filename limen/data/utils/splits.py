@@ -110,3 +110,39 @@ def split_data_to_prep_output(split_data: list,
     data_dict['_alignment']['last_test_datetime'] = last_test_datetime
 
     return data_dict
+
+
+def split_data_to_rule_based_prep_output(split_data: list, all_datetimes: list) -> dict:
+
+    '''
+    Compute data preparation output dictionary for rule-based strategies.
+
+    Args:
+        split_data (list): List of three DataFrames representing train, validation, and test splits
+        all_datetimes (list): List of all datetimes
+
+    Returns:
+        dict: Dictionary with train, val, test full DataFrames and _alignment metadata
+    '''
+
+    remaining_datetimes = split_data[0]['datetime'].to_list()
+    remaining_datetimes += split_data[1]['datetime'].to_list()
+    remaining_datetimes += split_data[2]['datetime'].to_list()
+
+    first_test_datetime = split_data[2]['datetime'].min()
+    last_test_datetime = split_data[2]['datetime'].max()
+
+    train = split_data[0].drop('datetime')
+    val = split_data[1].drop('datetime')
+    test = split_data[2].drop('datetime')
+
+    return {
+        'train': train,
+        'val': val,
+        'test': test,
+        '_alignment': {
+            'missing_datetimes': sorted(set(all_datetimes) - set(remaining_datetimes)),
+            'first_test_datetime': first_test_datetime,
+            'last_test_datetime': last_test_datetime,
+        },
+    }

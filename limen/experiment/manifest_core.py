@@ -177,6 +177,7 @@ class Manifest:
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
+    _rule_based: bool = field(default=False, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
