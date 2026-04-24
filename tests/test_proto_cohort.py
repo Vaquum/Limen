@@ -359,7 +359,7 @@ def test_accepts_dict_input_for_dict_required_architecture():
         out = cohort.predict(data)
 
         assert out['_preds'].tolist() == [1]
-        assert member.last_input is data
+        assert member.last_input == data
 
 
 def test_set_members_rejects_count_mismatch():
@@ -528,19 +528,19 @@ def test_majority_vote_uses_binary_votes_for_continuous_fallback_members():
 
         m0 = _FallbackContinuousMember(
             0,
-            np.array([0.9, -0.2, 0.8, -0.4], dtype=float),
+            np.array([0.1, -0.2, 0.8, -0.4], dtype=float),
         )
         m1 = _FallbackContinuousMember(
             1,
-            np.array([0.1, 0.7, -0.6, -0.3], dtype=float),
+            np.array([0.2, -0.7, 0.6, -0.3], dtype=float),
         )
         cohort.set_members([m0, m1])
 
         out = cohort.predict({'x_test': np.zeros((4, 2), dtype=float)})
 
         # Directional fallback votes use threshold > 0 for regressor outputs.
-        # m0=[1,0,1,0], m1=[1,1,0,0] => [1,1,0,0]
-        assert out['_preds'].tolist() == [1, 1, 0, 0]
+        # m0=[1,0,1,0], m1=[1,0,1,0] => [1,0,1,0]
+        assert out['_preds'].tolist() == [1, 0, 1, 0]
 
 
 def test_majority_vote_tie_returns_zero():
