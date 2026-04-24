@@ -154,9 +154,6 @@ def test_train_without_validation_data():
     assert 'rmse' in results
 
 
-# ── RuleBasedStrategy ────────────────────────────────────────────────────────
-
-
 _CONDITIONS_RB = [
     {'id': 'macd_cross', 'type': 'threshold', 'column': 'macd_cross', 'operator': '>', 'value': 0},
     {'id': 'above_ema',  'type': 'threshold', 'column': 'above_ema',  'operator': '>', 'value': 0},

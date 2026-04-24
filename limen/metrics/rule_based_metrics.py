@@ -1,4 +1,3 @@
-import math
 from typing import Any
 
 import numpy as np
@@ -15,7 +14,7 @@ def _count_entries(pos: np.ndarray) -> int:
 
 
 def _round_or_none(x: float, decimals: int = 3) -> float | None:
-    return round(x, decimals) if not math.isnan(x) else None
+    return round(x, decimals) if not np.isnan(x) else None
 
 
 def rule_based_metrics(positions: dict,
@@ -51,15 +50,15 @@ def rule_based_metrics(positions: dict,
     sharpes = [split_bt[s].get('sharpe_per_bar') for s in _SPLITS]
     drawdowns = [split_bt[s].get('max_drawdown_pct') for s in _SPLITS]
 
-    valid_sharpes = [s for s in sharpes if s is not None and not math.isnan(s)]
-    valid_drawdowns = [d for d in drawdowns if d is not None and not math.isnan(d)]
+    valid_sharpes = [s for s in sharpes if s is not None and not np.isnan(s)]
+    valid_drawdowns = [d for d in drawdowns if d is not None and not np.isnan(d)]
 
     sharpe_std = float(np.std(valid_sharpes, ddof=1)) if len(valid_sharpes) >= _MIN_SPLITS else float('nan')
     drawdown_std = float(np.std(valid_drawdowns, ddof=1)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
 
     sharpe_train, sharpe_test = sharpes[0], sharpes[2]
     if (sharpe_train is not None and sharpe_test is not None
-            and not math.isnan(sharpe_train) and abs(sharpe_train) > 0):
+            and not np.isnan(sharpe_train) and abs(sharpe_train) > 0):
         sharpe_degradation = (sharpe_train - sharpe_test) / abs(sharpe_train)
     else:
         sharpe_degradation = float('nan')
@@ -68,8 +67,8 @@ def rule_based_metrics(positions: dict,
     results['drawdown_std'] = _round_or_none(drawdown_std)
     results['sharpe_degradation'] = _round_or_none(sharpe_degradation)
     results['is_stable'] = (
-        not math.isnan(sharpe_std) and sharpe_std < sharpe_std_threshold
-        and not math.isnan(sharpe_degradation) and sharpe_degradation < sharpe_degradation_threshold
+        not np.isnan(sharpe_std) and sharpe_std < sharpe_std_threshold
+        and not np.isnan(sharpe_degradation) and sharpe_degradation < sharpe_degradation_threshold
     )
 
     return results

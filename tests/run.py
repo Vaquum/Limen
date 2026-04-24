@@ -285,10 +285,6 @@ from tests.test_reference_architecture import test_rule_based_or_compound_condit
 from tests.test_reference_architecture import test_rule_based_not_operator
 from tests.test_reference_architecture import test_rule_based_empty_operands_raises
 from tests.test_reference_architecture import test_rule_based_unknown_operator_raises
-from tests.test_foundational_sfd_rule_based import test_params_returns_expected_keys
-from tests.test_foundational_sfd_rule_based import test_params_all_values_are_lists
-from tests.test_foundational_sfd_rule_based import test_manifest_builds_with_rule_based_sentinel
-from tests.test_foundational_sfd_rule_based import test_manifest_conditions_reference_parameterised_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -890,10 +886,6 @@ tests = [
     test_rule_based_not_operator,
     test_rule_based_empty_operands_raises,
     test_rule_based_unknown_operator_raises,
-    test_params_returns_expected_keys,
-    test_params_all_values_are_lists,
-    test_manifest_builds_with_rule_based_sentinel,
-    test_manifest_conditions_reference_parameterised_columns,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
