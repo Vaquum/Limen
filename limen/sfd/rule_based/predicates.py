@@ -149,7 +149,9 @@ def polars_expr(expr_string: str, params: dict) -> pl.Expr:
     Returns:
         pl.Expr: Evaluated polars expression
 
-    NOTE: Uses eval() with restricted globals — __builtins__ is empty, only pl is available.
+    NOTE: Uses eval() — __builtins__: {} is not a true sandbox and can be bypassed via
+        object introspection. Safety depends on the caller validating expr_string before
+        it reaches this function. Never pass unvalidated external input directly.
     '''
 
     resolved = expr_string.format(**params)
