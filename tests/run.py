@@ -281,6 +281,9 @@ from tests.test_reference_architecture import test_rule_based_evaluate_tier3_key
 from tests.test_reference_architecture import test_rule_based_preds_present_probs_absent
 from tests.test_reference_architecture import test_rule_based_is_stable_respects_thresholds
 from tests.test_reference_architecture import test_rule_based_function_returns_flat_dict
+from tests.test_reference_architecture import test_rule_based_or_compound_condition
+from tests.test_reference_architecture import test_rule_based_not_operator
+from tests.test_reference_architecture import test_rule_based_empty_operands_raises
 from tests.test_reference_architecture import test_rule_based_unknown_operator_raises
 from tests.test_foundational_sfd_rule_based import test_params_returns_expected_keys
 from tests.test_foundational_sfd_rule_based import test_params_all_values_are_lists
@@ -883,6 +886,9 @@ tests = [
     test_rule_based_preds_present_probs_absent,
     test_rule_based_is_stable_respects_thresholds,
     test_rule_based_function_returns_flat_dict,
+    test_rule_based_or_compound_condition,
+    test_rule_based_not_operator,
+    test_rule_based_empty_operands_raises,
     test_rule_based_unknown_operator_raises,
     test_params_returns_expected_keys,
     test_params_all_values_are_lists,

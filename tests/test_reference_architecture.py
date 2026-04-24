@@ -233,6 +233,52 @@ def test_rule_based_function_returns_flat_dict():
     assert '_preds' in results
 
 
+def test_rule_based_or_compound_condition():
+    data = _make_rule_based_data()
+    or_strategy = {
+        'conditions': [
+            {'id': 'macd_cross', 'type': 'threshold', 'column': 'macd_cross', 'operator': '>', 'value': 0},
+            {'id': 'above_ema',  'type': 'threshold', 'column': 'above_ema',  'operator': '>', 'value': 0},
+            {'id': 'entry', 'operator': 'or', 'operands': ['macd_cross', 'above_ema']},
+        ],
+        'entry': 'entry',
+    }
+    data['strategy'] = or_strategy
+    results = RuleBasedStrategy().evaluate(data)
+    assert 'num_trades_test' in results
+    assert '_preds' in results
+
+
+def test_rule_based_not_operator():
+    data = _make_rule_based_data()
+    not_strategy = {
+        'conditions': [
+            {'id': 'above_ema', 'type': 'threshold', 'column': 'above_ema', 'operator': '>', 'value': 0},
+            {'id': 'entry', 'operator': 'not', 'operands': ['above_ema']},
+        ],
+        'entry': 'entry',
+    }
+    data['strategy'] = not_strategy
+    results = RuleBasedStrategy().evaluate(data)
+    assert '_preds' in results
+
+
+def test_rule_based_empty_operands_raises():
+    data = _make_rule_based_data()
+    bad_strategy = {
+        'conditions': [
+            {'id': 'entry', 'operator': 'and', 'operands': []},
+        ],
+        'entry': 'entry',
+    }
+    data['strategy'] = bad_strategy
+    try:
+        RuleBasedStrategy().evaluate(data)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'no operands' in str(e)
+
+
 def test_rule_based_unknown_operator_raises():
     data = _make_rule_based_data()
     bad_strategy = {
