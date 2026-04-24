@@ -198,8 +198,10 @@ class Cohort:
 
         Args:
             X (Any): Decoder-style input dict consumed by member decoders.
-            return_probs (bool): Whether to also return aggregated per-sample
-                probabilities (mean P(1)). Only valid in probability-weighted mode.
+            return_probs (bool): Whether to also return per-decoder
+                probabilities as a matrix with shape
+                `(n_members, n_samples)`. Only valid in
+                probability-weighted mode.
             return_meta (bool): Whether to also return structured cohort metadata
                 (placeholder schema) alongside predictions.
 
@@ -229,7 +231,7 @@ class Cohort:
                 'Sensor-compatible.'
             )
 
-        # Single-decoder cohort short-circuit while preserving cohort binary contract.
+        # Single-decoder cohort short-circuit.
         if len(self._members) == 1:
             member = self._members[0]
             result = member.predict(self._prepare_member_input(member, X))
@@ -238,19 +240,32 @@ class Cohort:
                     'Single-decoder cohort member must return a dict with _preds.'
                 )
 
-            raw_preds = np.asarray(result['_preds'], dtype=float)
-            probs = None
-
             if self.aggregation_mode == 'probability_weighted':
                 if '_probs' not in result:
                     raise ValueError(
                         'Decoder in probability mode must return a dict with _probs.'
                     )
+
                 probs = np.asarray(result['_probs'], dtype=float)
                 self._validate_probability_range(probs)
-                preds = (probs > Cohort._VOTE_THRESHOLD).astype(np.int8)
-            else:
-                preds = self._to_binary_votes(raw_preds)
+
+                if not return_probs and not return_meta:
+                    # Preserve exact sensor payload/keys for single-member passthrough.
+                    return dict(result)
+
+                return self._format_predict_output(
+                    np.asarray(result['_preds']),
+                    probs,
+                    return_probs=return_probs,
+                    return_meta=return_meta,
+                    probs_for_return=np.vstack([probs]),
+                )
+
+            raw_preds = np.asarray(result['_preds'], dtype=float)
+            preds = self._to_binary_votes(
+                raw_preds,
+                threshold=self._fallback_vote_threshold(),
+            )
 
             if return_probs and '_probs' not in result:
                 raise ValueError(
@@ -259,7 +274,7 @@ class Cohort:
 
             return self._format_predict_output(
                 preds,
-                probs,
+                None,
                 return_probs=return_probs,
                 return_meta=return_meta,
             )
@@ -279,12 +294,14 @@ class Cohort:
                 member_probs.append(probs)
 
             preds = self._probability_weighted_vote(member_probs)
-            probs = np.mean(np.vstack(member_probs), axis=0)
+            probs_matrix = np.vstack(member_probs)
+            probs = np.mean(probs_matrix, axis=0)
             return self._format_predict_output(
                 preds,
                 probs,
                 return_probs=return_probs,
                 return_meta=return_meta,
+                probs_for_return=probs_matrix,
             )
 
         if self.aggregation_mode == 'majority_vote':
@@ -298,7 +315,12 @@ class Cohort:
                     )
 
                 raw_preds = np.asarray(result['_preds'], dtype=float)
-                member_preds.append(self._to_binary_votes(raw_preds))
+                member_preds.append(
+                    self._to_binary_votes(
+                        raw_preds,
+                        threshold=self._fallback_vote_threshold(),
+                    )
+                )
 
             preds = self._majority_vote(member_preds)
             return self._format_predict_output(
@@ -353,9 +375,16 @@ class Cohort:
         return (mean_vote > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
     @staticmethod
-    def _to_binary_votes(preds: np.ndarray) -> np.ndarray:
+    def _to_binary_votes(preds: np.ndarray, *, threshold: float) -> np.ndarray:
 
-        return (preds > Cohort._VOTE_THRESHOLD).astype(np.int8)
+        return (preds > threshold).astype(np.int8)
+
+    def _fallback_vote_threshold(self) -> float:
+
+        arch = self.architecture_id.strip().lower()
+        if 'regressor' in arch:
+            return 0.0
+        return Cohort._VOTE_THRESHOLD
 
     def _prepare_member_input(self, member: Any, data: dict) -> dict:
 
@@ -379,7 +408,8 @@ class Cohort:
                                probs: np.ndarray | None,
                                *,
                                return_probs: bool,
-                               return_meta: bool) -> dict | tuple:
+                               return_meta: bool,
+                               probs_for_return: np.ndarray | None = None) -> dict | tuple:
 
         payload: dict[str, Any] = {'_preds': predictions}
         if probs is not None:
@@ -390,11 +420,12 @@ class Cohort:
 
         out: list[Any] = [predictions]
         if return_probs:
-            if probs is None:
+            probs_out = probs_for_return if probs_for_return is not None else probs
+            if probs_out is None:
                 raise ValueError(
                     'Probabilities are unavailable for this Cohort architecture.'
                 )
-            out.append(probs)
+            out.append(probs_out)
         if return_meta:
             out.append(self._predict_meta())
 

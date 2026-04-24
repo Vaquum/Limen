@@ -92,6 +92,8 @@ Aggregation mode is selected at construction based on architecture capability hi
 - computes mean P(1) across members
 - converts to class via strict threshold `> 0.5`
 - tie at exactly `0.5` resolves to class `0`
+- for a single-member cohort, preserves the member payload as-is for default
+  dict output (drop-in Sensor behavior)
 
 ### 2) `majority_vote`
 
@@ -119,12 +121,18 @@ Input contract:
 
 Where:
 
-- `probs` is one per-sample probability array (aggregated mean P(1))
+- `probs` is a per-decoder probability matrix with shape
+  `(n_members, n_samples)` in the same order as `permutation_ids`
 - `meta` currently contains:
   - `permutation_ids`
   - `decoder_count`
   - `architecture_id`
   - `aggregation_mode`
+
+Single-member note:
+
+- in probability mode, `predict(data)` returns the member payload unchanged
+  (including any extra keys beyond `_preds` / `_probs`)
 
 If `return_probs=True` is requested in fallback mode, Cohort raises `ValueError`.
 

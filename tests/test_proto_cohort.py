@@ -473,9 +473,7 @@ def test_probability_weighted_predict_single_member_matches_own_thresholded_prob
         cohort.set_members(sensors)
 
         y_pred = cohort.predict({'x_test': x_test})['_preds']
-        probs = np.asarray(sensors[0].predict(
-            {'x_test': x_test})['_probs'], dtype=float)
-        expected = (probs > 0.5).astype(np.int8)
+        expected = np.asarray(sensors[0].predict({'x_test': x_test})['_preds'])
 
         assert np.array_equal(y_pred, expected)
 
@@ -530,18 +528,19 @@ def test_majority_vote_uses_binary_votes_for_continuous_fallback_members():
 
         m0 = _FallbackContinuousMember(
             0,
-            np.array([0.9, 0.2, 0.8, 0.4], dtype=float),
+            np.array([0.9, -0.2, 0.8, -0.4], dtype=float),
         )
         m1 = _FallbackContinuousMember(
             1,
-            np.array([0.1, 0.7, 0.6, 0.3], dtype=float),
+            np.array([0.1, 0.7, -0.6, -0.3], dtype=float),
         )
         cohort.set_members([m0, m1])
 
         out = cohort.predict({'x_test': np.zeros((4, 2), dtype=float)})
 
-        # Binary votes: m0=[1,0,1,0], m1=[0,1,1,0] => tie,tie,1,0 -> [0,0,1,0]
-        assert out['_preds'].tolist() == [0, 0, 1, 0]
+        # Directional fallback votes use threshold > 0 for regressor outputs.
+        # m0=[1,0,1,0], m1=[1,1,0,0] => [1,1,0,0]
+        assert out['_preds'].tolist() == [1, 1, 0, 0]
 
 
 def test_majority_vote_tie_returns_zero():
@@ -614,7 +613,7 @@ def test_predict_return_probs_probability_mode_returns_per_sample_probs():
         y_pred, probs = cohort.predict({'x_test': x_test}, return_probs=True)
 
         assert isinstance(probs, np.ndarray)
-        assert np.asarray(probs).shape == np.asarray(y_pred).shape
+        assert np.asarray(probs).shape == (2, np.asarray(y_pred).shape[0])
 
 
 def test_predict_return_meta_returns_metadata_placeholder():
@@ -656,6 +655,7 @@ def test_predict_return_probs_and_return_meta_returns_three_tuple():
         )
 
         assert isinstance(probs, np.ndarray)
+        assert np.asarray(probs).shape == (2, np.asarray(y_pred).shape[0])
         assert meta['permutation_ids'] == [0, 1]
         assert meta['decoder_count'] == 2
         assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
@@ -736,6 +736,39 @@ def test_cohort_is_drop_in_decoder_replacement_for_dict_input():
                            np.asarray(sensor_result['_probs'], dtype=float))
         assert np.array_equal(np.asarray(cohort_pred['_preds']),
                               np.asarray(sensor_result['_preds']))
+
+
+def test_single_member_probability_mode_preserves_exact_payload_shape_and_keys():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        class _NonTrivialProbMember:
+
+            permutation_id = 0
+
+            def predict(self, _data):
+                return {
+                    '_preds': np.array([0, 1], dtype=np.int8),
+                    '_probs': np.array([0.9, 0.1], dtype=float),
+                    'optimal_threshold': 0.9,
+                    'val_score': 0.123,
+                }
+
+        member = _NonTrivialProbMember()
+        cohort.set_members([member])
+
+        out = cohort.predict({'x_test': np.zeros((2, 2), dtype=float)})
+
+        expected = member.predict({'x_test': np.zeros((2, 2), dtype=float)})
+        assert set(out.keys()) == set(expected.keys())
+        assert np.array_equal(out['_preds'], expected['_preds'])
+        assert np.array_equal(out['_probs'], expected['_probs'])
+        assert out['optimal_threshold'] == expected['optimal_threshold']
+        assert out['val_score'] == expected['val_score']
 
 
 def test_member_failure_propagates_and_fails_whole_call():
