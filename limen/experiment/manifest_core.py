@@ -506,6 +506,7 @@ class Manifest:
             Manifest: Self for method chaining
         '''
 
+        _validate_strategy_config(conditions, entry)
         self._rule_based = RuleBasedConfig(conditions=list(conditions), entry=entry)
 
         return self
@@ -1165,6 +1166,26 @@ def _finalize_to_data_dict(
         )
 
     return data_dict
+
+
+def _validate_strategy_config(conditions: list[dict], entry: str) -> None:
+    known_ids: set[str] = set()
+    for cond in conditions:
+        if 'id' not in cond:
+            raise ValueError(f'Condition missing required "id" field: {cond!r}')
+        if cond['id'] in known_ids:
+            raise ValueError(f'Duplicate condition id: {cond["id"]!r}')
+        known_ids.add(cond['id'])
+    if entry not in known_ids:
+        raise ValueError(f'Entry id {entry!r} not found in conditions')
+    for cond in conditions:
+        if 'type' not in cond:
+            operands = cond.get('operands', [])
+            if not operands:
+                raise ValueError(f'Compound condition {cond["id"]!r} has no operands')
+            for op_id in operands:
+                if op_id not in known_ids:
+                    raise ValueError(f'Operand {op_id!r} in condition {cond["id"]!r} references unknown id')
 
 
 def _finalize_rule_based_data(

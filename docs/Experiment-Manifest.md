@@ -464,6 +464,112 @@ Then in `params()`:
 
 Use this when scaler choice is itself part of the search space.
 
+## Rule-Based Strategy
+
+Use `with_strategy()` when the strategy is expressed as boolean predicate logic over indicator columns — no Python model code required. This path is for rule-based SFDs only and produces a different `data_dict` shape than the ML path.
+
+### `with_strategy(conditions, entry)`
+
+Configure a rule-based strategy from a list of condition config dicts and an entry signal id.
+
+```python
+from limen.sfd.reference_architecture.rule_based import rule_based
+
+conditions = [
+    {'id': 'rsi_oversold', 'type': 'threshold', 'column': 'wilder_rsi_{rsi_period}', 'operator': '<', 'value': '{rsi_threshold}'},
+    {'id': 'above_ema',    'type': 'relative',   'column': 'close', 'operator': '>', 'other_column': 'ema_{ema_period}'},
+    {'id': 'entry',        'operator': 'and',     'operands': ['rsi_oversold', 'above_ema']},
+]
+
+manifest = (
+    Manifest()
+    .add_indicator(wilder_rsi, period='rsi_period')
+    .add_indicator(ema, period='ema_period')
+    .with_strategy(conditions, entry='entry')
+    .with_model(rule_based)
+)
+```
+
+`with_strategy()` validates the config at construction time — it raises `ValueError` if any condition is missing an `id`, if ids are not unique, if `entry` does not refer to a known id, or if compound conditions reference unknown operand ids.
+
+### Condition schema
+
+Each condition is a dict with an `id` field. There are two kinds:
+
+**Leaf conditions** — evaluate directly against data columns. The `type` field determines which predicate function is used:
+
+| type | required fields | description |
+|------|----------------|-------------|
+| `threshold` | `column`, `operator`, `value` | column compared against a constant |
+| `relative` | `column`, `operator`, `other_column` | column compared against another column |
+| `crossover` | `column`, `other_column`, `direction` (`above`/`below`) | cross event, True on the bar of the cross |
+| `slope` | `column`, `direction` (`rising`/`falling`), `lookback` | column rising or falling over a lookback window |
+| `polars_expr` | `expr` | raw polars expression string — see security note below |
+
+**Compound conditions** — combine leaf or other compound conditions using boolean logic:
+
+```python
+{'id': 'entry', 'operator': 'and', 'operands': ['rsi_oversold', 'above_ema']}
+{'id': 'exit',  'operator': 'or',  'operands': ['condition_a', 'condition_b']}
+{'id': 'not_high_vol', 'operator': 'not', 'operands': ['high_vol']}
+```
+
+Supported operators: `and`, `or`, `not`. The `not` operator requires exactly one operand.
+
+### Temporal modifiers
+
+Any leaf condition can be wrapped with a temporal modifier by adding an optional field:
+
+```python
+{'id': 'rsi_oversold', 'type': 'threshold', 'column': 'wilder_rsi_14', 'operator': '<', 'value': 30, 'persistence_n': 3}
+# True only if RSI has been below 30 for 3 consecutive bars
+
+{'id': 'macd_cross', 'type': 'crossover', 'column': 'macd', 'other_column': 'signal', 'recency_n': 5}
+# True if the crossover happened within the last 5 bars
+```
+
+`persistence_n` and `recency_n` are mutually exclusive — only one can be specified per condition.
+
+### Parameter template substitution
+
+Column names and values can reference round parameters using `{param}` placeholders:
+
+```python
+{'id': 'rsi_oversold', 'type': 'threshold', 'column': 'wilder_rsi_{rsi_period}', 'operator': '<', 'value': '{rsi_threshold}'}
+```
+
+These are resolved per round from `round_params`. The corresponding indicator must be added to the manifest so the column is present in the data.
+
+### Restrictions
+
+Rule-based manifests cannot use scalers or feature ablation. Both will raise `ValueError` at data-preparation time:
+
+- `set_scaler()` / `set_scaler_from_params()` — predicates depend on original indicator scales; scaling RSI to `[0,1]` makes threshold comparisons like `< 30` meaningless.
+- `set_feature_ablation()` — predicate columns are derived from specific indicator columns and cannot be randomly dropped.
+
+### What `prepare_data()` produces for rule-based
+
+The rule-based path produces a different `data_dict` than the ML path:
+
+```python
+{
+    'train': pl.DataFrame,   # full indicator DataFrame, no x/y split
+    'val':   pl.DataFrame,
+    'test':  pl.DataFrame,
+    'strategy': {
+        'conditions': [...],  # condition dicts as configured
+        'entry': 'entry',
+    },
+    '_alignment': {...},
+}
+```
+
+Predicate boolean columns are added to each split DataFrame before the dict is assembled. The model receives the full DataFrames and applies the boolean logic tree at evaluation time.
+
+### Security note for `polars_expr`
+
+The `polars_expr` predicate type evaluates an expression string via `eval()`. The sandbox (`__builtins__: {}`) is not a true sandbox. Before passing any externally loaded config through `polars_expr`, validate the expression string — block dangerous tokens (`__`, `import`, `globals`, `exec`, etc.) and enforce a maximum length. The predicate library does this automatically, but the primary safety guarantee must come from the caller's config loading layer.
+
 ## Model Configuration
 
 ### `with_model(model_function)`

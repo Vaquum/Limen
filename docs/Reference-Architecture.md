@@ -53,6 +53,7 @@ Not every model needs every key, but this is the standard Limen shape that the c
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
 | `XGBoostRegressor` | regression | no | requires `xgboost` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |
+| `RuleBasedStrategy` | rule-based long/flat | yes | no training step; boolean predicate logic |
 
 The `deterministic` flag matters because [Trainer](Trainer.md) uses it to choose its validation tolerance.
 
@@ -161,6 +162,38 @@ On a live local logreg trainer run in this repo:
 - the promoted sensor produced predictions for `884` test bars
 
 On a live local `random_binary` trainer run, promotion raised `ReconstructionError` because the stochastic rerun did not reproduce the original logged metrics closely enough.
+
+## `RuleBasedStrategy`
+
+`RuleBasedStrategy` is the reference architecture for rule-based SFDs. It differs from the ML models in two important ways:
+
+- `train()` is a no-op — rule-based strategies have no learnable parameters
+- `evaluate()` runs across all three splits (train/val/test) and returns cross-split stability metrics in addition to per-split backtest metrics
+
+It expects a `data_dict` produced by a manifest configured with `with_strategy()`:
+
+```python
+{
+    'train': pl.DataFrame,  # with pre-computed boolean predicate columns
+    'val':   pl.DataFrame,
+    'test':  pl.DataFrame,
+    'strategy': {'conditions': [...], 'entry': 'entry_id'},
+}
+```
+
+The strategy walks the boolean logic tree defined in `strategy['conditions']`, resolves each leaf condition by reading its pre-computed boolean column from the split DataFrame, and folds compound conditions via AND/OR/NOT. Positions are 0 (flat) or 1 (long) per bar.
+
+### Metrics produced
+
+`evaluate()` returns a flat dict with three tiers:
+
+- **Tier 1** — position stats: `num_trades_{split}`, `position_rate_{split}`
+- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `sharpe_per_bar_train`, `max_drawdown_pct_test`)
+- **Tier 3** — cross-split stability: `sharpe_std`, `drawdown_std`, `sharpe_degradation`, `is_stable`
+
+`is_stable` is `True` when `sharpe_std < sharpe_std_threshold` and `sharpe_degradation < sharpe_degradation_threshold`. Both thresholds are configurable parameters passed through the foundational SFD's `params()` domain.
+
+`_preds` is present; `_probs` is intentionally absent (not applicable to rule-based strategies).
 
 ## Optional Dependencies
 

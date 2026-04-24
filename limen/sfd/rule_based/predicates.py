@@ -12,6 +12,9 @@ _OPS = {
     '!=': lambda a, b: a != b,
 }
 
+_POLARS_EXPR_BLOCKED_TOKENS = ('__', 'import', 'globals', 'locals', 'exec', 'eval', 'open', 'compile')
+_POLARS_EXPR_MAX_LENGTH = 500
+
 
 def _fmt(val: Any, params: dict) -> Any:
     return val.format(**params) if isinstance(val, str) else val
@@ -97,6 +100,8 @@ def crossover(column: str, other_column: str, direction: str = 'above') -> pl.Ex
 
 
 def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
+    if lookback <= 0:
+        raise ValueError(f'lookback must be a positive integer, got {lookback}')
 
     '''
     Detect whether a column is rising or falling over a lookback window.
@@ -120,6 +125,8 @@ def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
 
 
 def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
+    if n <= 0:
+        raise ValueError(f'n must be a positive integer, got {n}')
 
     '''
     Wrap a predicate expression to require it to be True for n consecutive bars.
@@ -136,6 +143,8 @@ def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
 
 
 def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
+    if n <= 0:
+        raise ValueError(f'n must be a positive integer, got {n}')
 
     '''
     Wrap a predicate expression to require it to have been True within the last n bars.
@@ -169,6 +178,11 @@ def polars_expr(expr_string: str, params: dict) -> pl.Expr:
     '''
 
     resolved = expr_string.format(**params)
+    if len(resolved) > _POLARS_EXPR_MAX_LENGTH:
+        raise ValueError(f'polars_expr string exceeds maximum allowed length of {_POLARS_EXPR_MAX_LENGTH} characters')
+    for token in _POLARS_EXPR_BLOCKED_TOKENS:
+        if token in resolved:
+            raise ValueError(f'polars_expr string contains blocked token: {token!r}')
     return eval(resolved, {'pl': pl, '__builtins__': {}}, {})  # noqa: S307
 
 
