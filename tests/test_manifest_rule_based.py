@@ -30,9 +30,9 @@ def test_with_strategy_sets_sentinel_and_returns_self() -> None:
     result = m.with_strategy(_CONDITIONS, entry='entry_signal')
 
     assert result is m
-    assert m._rule_based is True
-    assert m._entry == 'entry_signal'
-    assert m._conditions == _CONDITIONS
+    assert m._strategy is not None
+    assert m._strategy.entry == 'entry_signal'
+    assert m._strategy.conditions == _CONDITIONS
 
 
 def test_prepare_data_rule_based_returns_split_dataframes() -> None:

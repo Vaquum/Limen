@@ -50,6 +50,15 @@ FittedTransformEntry = tuple[
 
 
 @dataclass
+class RuleBasedConfig:
+
+    '''Rule-based strategy configuration: boolean predicate conditions and entry signal id.'''
+
+    conditions: list[dict]
+    entry: str
+
+
+@dataclass
 class DataSourceConfig:
 
     '''Declarative configuration for data fetching in manifests.'''
@@ -178,9 +187,7 @@ class Manifest:
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
-    _rule_based: bool = field(default=False, init=False, repr=False)
-    _conditions: list[dict] = field(default_factory=list, init=False, repr=False)
-    _entry: str | None = field(default=None, init=False, repr=False)
+    _strategy: RuleBasedConfig | None = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
@@ -499,9 +506,7 @@ class Manifest:
             Manifest: Self for method chaining
         '''
 
-        self._conditions = list(conditions)
-        self._entry = entry
-        self._rule_based = True
+        self._strategy = RuleBasedConfig(conditions=list(conditions), entry=entry)
 
         return self
 
@@ -728,7 +733,7 @@ class Manifest:
                 maintain_order='left'
             )
 
-        if self._rule_based:
+        if self._strategy is not None:
             return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
@@ -1163,7 +1168,8 @@ def _finalize_rule_based_data(
 
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
 
-    for condition in manifest._conditions:
+    config = manifest._strategy
+    for condition in config.conditions:
         if 'type' not in condition:
             continue
         expr = build_predicate(condition, round_params)
@@ -1172,8 +1178,8 @@ def _finalize_rule_based_data(
             data_dict[split] = data_dict[split].with_columns(expr.alias(col_name))
 
     data_dict['strategy'] = {
-        'conditions': manifest._conditions,
-        'entry': manifest._entry,
+        'conditions': config.conditions,
+        'entry': config.entry,
     }
 
     return data_dict

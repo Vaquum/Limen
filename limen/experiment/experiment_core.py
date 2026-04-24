@@ -279,7 +279,7 @@ class UniversalExperimentLoop:
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
-        is_rule_based = self.manifest is not None and self.manifest._rule_based
+        is_rule_based = self.manifest is not None and self.manifest._strategy is not None
         self.experiment_confusion_metrics = (
             None if is_rule_based
             else self._log.experiment_confusion_metrics('price_change')
