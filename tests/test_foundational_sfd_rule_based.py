@@ -17,13 +17,13 @@ def test_params_all_values_are_lists() -> None:
 
 def test_manifest_builds_with_rule_based_sentinel() -> None:
     m = rb_module.manifest()
-    assert m._strategy is not None
-    assert m._strategy.entry == 'entry'
+    assert m._rule_based is not None
+    assert m._rule_based.entry == 'entry'
 
 
 def test_manifest_conditions_reference_parameterised_columns() -> None:
     m = rb_module.manifest()
-    leaf_conditions = [c for c in m._strategy.conditions if 'type' in c]
+    leaf_conditions = [c for c in m._rule_based.conditions if 'type' in c]
     all_col_refs = [
         v for c in leaf_conditions for k, v in c.items() if isinstance(v, str)
     ]

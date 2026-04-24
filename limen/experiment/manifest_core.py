@@ -187,7 +187,7 @@ class Manifest:
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
-    _strategy: RuleBasedConfig | None = field(default=None, init=False, repr=False)
+    _rule_based: RuleBasedConfig | None = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
@@ -506,7 +506,7 @@ class Manifest:
             Manifest: Self for method chaining
         '''
 
-        self._strategy = RuleBasedConfig(conditions=list(conditions), entry=entry)
+        self._rule_based = RuleBasedConfig(conditions=list(conditions), entry=entry)
 
         return self
 
@@ -733,7 +733,7 @@ class Manifest:
                 maintain_order='left'
             )
 
-        if self._strategy is not None:
+        if self._rule_based is not None:
             return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
@@ -1168,7 +1168,7 @@ def _finalize_rule_based_data(
 
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
 
-    config = manifest._strategy
+    config = manifest._rule_based
     for condition in config.conditions:
         if 'type' not in condition:
             continue
