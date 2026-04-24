@@ -53,8 +53,8 @@ def rule_based_metrics(positions: dict,
     valid_sharpes = [s for s in sharpes if s is not None and not math.isnan(s)]
     valid_drawdowns = [d for d in drawdowns if d is not None and not math.isnan(d)]
 
-    sharpe_std = float(np.std(valid_sharpes)) if len(valid_sharpes) >= _MIN_SPLITS else float('nan')
-    drawdown_std = float(np.std(valid_drawdowns)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
+    sharpe_std = float(np.std(valid_sharpes, ddof=1)) if len(valid_sharpes) >= _MIN_SPLITS else float('nan')
+    drawdown_std = float(np.std(valid_drawdowns, ddof=1)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
 
     sharpe_train, sharpe_test = sharpes[0], sharpes[2]
     if (sharpe_train is not None and sharpe_test is not None
