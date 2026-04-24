@@ -6,7 +6,10 @@ import os
 import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from limen.sfd.rule_based.config import RuleBasedConfig
 
 import polars as pl
 
@@ -14,7 +17,6 @@ from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
 from limen.scalers.registry import SCALER_REGISTRY
-
 logger = logging.getLogger(__name__)
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
@@ -47,15 +49,6 @@ FittedTransformEntry = tuple[
     Callable[..., pl.LazyFrame],
     dict[str, ParamValue]
 ]
-
-
-@dataclass
-class RuleBasedConfig:
-
-    '''Rule-based strategy configuration: boolean predicate conditions and entry signal id.'''
-
-    conditions: list[dict]
-    entry: str
 
 
 @dataclass
@@ -187,7 +180,7 @@ class Manifest:
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
-    _rule_based: RuleBasedConfig | None = field(default=None, init=False, repr=False)
+    _rule_based: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
@@ -506,7 +499,7 @@ class Manifest:
             Manifest: Self for method chaining
         '''
 
-        _validate_strategy_config(conditions, entry)
+        from limen.sfd.rule_based.config import RuleBasedConfig  # local to avoid circular import
         self._rule_based = RuleBasedConfig(conditions=list(conditions), entry=entry)
 
         return self
@@ -1166,32 +1159,6 @@ def _finalize_to_data_dict(
         )
 
     return data_dict
-
-
-def _validate_strategy_config(conditions: list[dict], entry: str) -> None:
-    known_ids: set[str] = set()
-    for cond in conditions:
-        if 'id' not in cond:
-            raise ValueError(f'Condition missing required "id" field: {cond!r}')
-        if cond['id'] in known_ids:
-            raise ValueError(f'Duplicate condition id: {cond["id"]!r}')
-        known_ids.add(cond['id'])
-    if entry not in known_ids:
-        raise ValueError(f'Entry id {entry!r} not found in conditions')
-    _valid_operators = ('and', 'or', 'not')
-    for cond in conditions:
-        if 'type' not in cond:
-            operator = cond.get('operator')
-            if operator not in _valid_operators:
-                raise ValueError(f'Condition {cond["id"]!r} has unknown operator {operator!r} — must be one of {_valid_operators}')
-            operands = cond.get('operands', [])
-            if not operands:
-                raise ValueError(f'Compound condition {cond["id"]!r} has no operands')
-            if operator == 'not' and len(operands) != 1:
-                raise ValueError(f'NOT condition {cond["id"]!r} must have exactly 1 operand, got {len(operands)}')
-            for op_id in operands:
-                if op_id not in known_ids:
-                    raise ValueError(f'Operand {op_id!r} in condition {cond["id"]!r} references unknown id')
 
 
 def _finalize_rule_based_data(

@@ -96,7 +96,7 @@ class RuleBasedStrategy(ReferenceModel):
         operator = condition['operator']
         if operator not in ('and', 'or', 'not'):
             raise ValueError(f'Unknown logical operator: {operator!r}')
-        operands = [self._resolve(cond_index[op_id], cond_index, df) for op_id in condition['operands']]
+        operands = [self._resolve(cond_index[op_id], cond_index, df) for op_id in condition.get('operands', [])]
         if not operands:
             raise ValueError(f'Compound condition {condition.get("id")!r} has no operands')
         if operator == 'not':
