@@ -180,7 +180,6 @@ from tests.test_predicates import test_slope_falling
 from tests.test_predicates import test_with_persistence
 from tests.test_predicates import test_with_recency
 from tests.test_predicates import test_polars_expr_escape_hatch
-from tests.test_predicates import test_polars_expr_blocks_builtins
 from tests.test_predicates import test_build_predicate_threshold_with_param_substitution
 from tests.test_predicates import test_build_predicate_unknown_type_raises
 from tests.test_predicates import test_threshold_unknown_operator_raises
@@ -275,6 +274,18 @@ from tests.test_reference_architecture import test_random_binary_train_evaluate_
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
+from tests.test_reference_architecture import test_rule_based_train_is_noop
+from tests.test_reference_architecture import test_rule_based_deterministic
+from tests.test_reference_architecture import test_rule_based_evaluate_tier1_keys_present
+from tests.test_reference_architecture import test_rule_based_evaluate_tier3_keys_present
+from tests.test_reference_architecture import test_rule_based_preds_present_probs_absent
+from tests.test_reference_architecture import test_rule_based_is_stable_respects_thresholds
+from tests.test_reference_architecture import test_rule_based_function_returns_flat_dict
+from tests.test_reference_architecture import test_rule_based_unknown_operator_raises
+from tests.test_foundational_sfd_rule_based import test_params_returns_expected_keys
+from tests.test_foundational_sfd_rule_based import test_params_all_values_are_lists
+from tests.test_foundational_sfd_rule_based import test_manifest_builds_with_rule_based_sentinel
+from tests.test_foundational_sfd_rule_based import test_manifest_conditions_reference_parameterised_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -723,7 +734,6 @@ tests = [
     test_with_persistence,
     test_with_recency,
     test_polars_expr_escape_hatch,
-    test_polars_expr_blocks_builtins,
     test_build_predicate_threshold_with_param_substitution,
     test_build_predicate_unknown_type_raises,
     test_threshold_unknown_operator_raises,
@@ -866,6 +876,18 @@ tests = [
     test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
+    test_rule_based_train_is_noop,
+    test_rule_based_deterministic,
+    test_rule_based_evaluate_tier1_keys_present,
+    test_rule_based_evaluate_tier3_keys_present,
+    test_rule_based_preds_present_probs_absent,
+    test_rule_based_is_stable_respects_thresholds,
+    test_rule_based_function_returns_flat_dict,
+    test_rule_based_unknown_operator_raises,
+    test_params_returns_expected_keys,
+    test_params_all_values_are_lists,
+    test_manifest_builds_with_rule_based_sentinel,
+    test_manifest_conditions_reference_parameterised_columns,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,

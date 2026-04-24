@@ -25,6 +25,7 @@ def test_foundational_sfd():
         limen.sfd.foundational_sfd.random_binary,
         limen.sfd.foundational_sfd.xgboost_regressor,
         limen.sfd.foundational_sfd.logreg_binary,
+        limen.sfd.foundational_sfd.rule_based,
     ]
 
     for sfd_module in foundational_sfds:
@@ -55,6 +56,15 @@ def test_foundational_sfd():
                     experiment_name=str(experiment_dir / 'test'),
                     n_permutations=2,
                 )
+
+                if sfd_module is limen.sfd.foundational_sfd.rule_based:
+                    log = uel.experiment_log
+                    assert log is not None, 'experiment_log is None'
+                    assert 'num_trades_test' in log.columns, 'num_trades_test missing from log'
+                    assert 'sharpe_per_bar_test' in log.columns, 'sharpe_per_bar_test missing from log'
+                    assert 'is_stable' in log.columns, 'is_stable missing from log'
+                    assert uel.experiment_confusion_metrics is None, 'experiment_confusion_metrics should be None for rule-based'
+                    assert uel.experiment_backtest_results is None, 'experiment_backtest_results should be None for rule-based'
 
             logger.info('    ✅ %s: PASSED', sfd_module.__name__)
 

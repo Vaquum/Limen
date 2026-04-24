@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
-from limen.sfd.reference_architecture import XGBoostRegressor
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
+from limen.sfd.reference_architecture import RuleBasedStrategy
 from limen.sfd.reference_architecture import TabPFNBinary
+from limen.sfd.reference_architecture import XGBoostRegressor
+from limen.sfd.reference_architecture.rule_based import rule_based
 
 
 def _make_data(n=200, binary=False, with_val=True, with_price=True):
@@ -150,3 +152,99 @@ def test_train_without_validation_data():
 
     results = model.evaluate(data)
     assert 'rmse' in results
+
+
+# ── RuleBasedStrategy ────────────────────────────────────────────────────────
+
+
+_CONDITIONS_RB = [
+    {'id': 'macd_cross', 'type': 'threshold', 'column': 'macd_cross', 'operator': '>', 'value': 0},
+    {'id': 'above_ema',  'type': 'threshold', 'column': 'above_ema',  'operator': '>', 'value': 0},
+    {'id': 'entry', 'operator': 'and', 'operands': ['macd_cross', 'above_ema']},
+]
+
+
+def _make_rule_based_data(n: int = 20) -> dict:
+    pattern = [True, True, False, False] * (n // 4)
+    df = pl.DataFrame({
+        'macd_cross': pattern,
+        'above_ema': ([True, True, True, False] * (n // 4)),
+        'open':  [100.0 + i for i in range(n)],
+        'close': [101.0 + i for i in range(n)],
+    })
+    split = n // 5
+    return {
+        'train': df[:split * 3],
+        'val':   df[split * 3: split * 4],
+        'test':  df[split * 4:],
+        'strategy': {'conditions': _CONDITIONS_RB, 'entry': 'entry'},
+        '_alignment': {},
+    }
+
+
+def test_rule_based_train_is_noop():
+    model = RuleBasedStrategy()
+    data = _make_rule_based_data()
+    result = model.train(data, some_param=1)
+    assert result is model
+    assert model.model is None
+
+
+def test_rule_based_deterministic():
+    assert RuleBasedStrategy.deterministic is True
+
+
+def test_rule_based_evaluate_tier1_keys_present():
+    data = _make_rule_based_data()
+    results = RuleBasedStrategy().train(data).evaluate(data)
+    for key in ('num_trades_train', 'num_trades_val', 'num_trades_test',
+                'position_rate_train', 'position_rate_val', 'position_rate_test'):
+        assert key in results, f'Missing: {key}'
+
+
+def test_rule_based_evaluate_tier3_keys_present():
+    data = _make_rule_based_data()
+    results = RuleBasedStrategy().train(data).evaluate(data)
+    for key in ('sharpe_std', 'drawdown_std', 'sharpe_degradation', 'is_stable'):
+        assert key in results, f'Missing: {key}'
+
+
+def test_rule_based_preds_present_probs_absent():
+    data = _make_rule_based_data()
+    results = RuleBasedStrategy().train(data).evaluate(data)
+    assert '_preds' in results
+    assert '_probs' not in results
+
+
+def test_rule_based_is_stable_respects_thresholds():
+    data = _make_rule_based_data()
+    results_tight = RuleBasedStrategy(sharpe_std_threshold=0.0).train(data).evaluate(data)
+    results_loose = RuleBasedStrategy(sharpe_std_threshold=999.0,
+                                      sharpe_degradation_threshold=999.0).train(data).evaluate(data)
+    assert results_tight['is_stable'] is False
+    assert results_loose['is_stable'] is True
+
+
+def test_rule_based_function_returns_flat_dict():
+    data = _make_rule_based_data()
+    results = rule_based(data)
+    assert 'num_trades_test' in results
+    assert 'is_stable' in results
+    assert '_preds' in results
+
+
+def test_rule_based_unknown_operator_raises():
+    data = _make_rule_based_data()
+    bad_strategy = {
+        'conditions': [
+            {'id': 'sig', 'type': 'threshold', 'column': 'macd_cross', 'operator': '>', 'value': 0},
+            {'id': 'entry', 'operator': 'xor', 'operands': ['sig']},
+        ],
+        'entry': 'entry',
+    }
+    data['strategy'] = bad_strategy
+    try:
+        RuleBasedStrategy().evaluate(data)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'Unknown logical operator' in str(e)
