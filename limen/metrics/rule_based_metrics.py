@@ -3,11 +3,18 @@ import math
 import numpy as np
 
 
+_SPLITS = ('train', 'val', 'test')
+_MIN_SPLITS = 2
+
+
 def _count_entries(pos: np.ndarray) -> int:
     if len(pos) == 0:
         return 0
-    first = 1 if pos[0] == 1 else 0
-    return first + int(np.sum((pos[1:] == 1) & (pos[:-1] == 0)))
+    return int(pos[0] == 1) + int(np.sum(np.diff(pos) > 0))
+
+
+def _round_or_none(x: float, decimals: int = 3) -> float | None:
+    return round(x, decimals) if not math.isnan(x) else None
 
 
 def rule_based_metrics(positions: dict,
@@ -29,25 +36,25 @@ def rule_based_metrics(positions: dict,
     '''
 
     results = {}
+    split_bt: dict[str, dict] = {}
 
-    for split in ('train', 'val', 'test'):
+    for split in _SPLITS:
         pos = np.asarray(positions.get(split, []))
         results[f'num_trades_{split}'] = _count_entries(pos)
         results[f'position_rate_{split}'] = round(float(pos.mean()), 3) if len(pos) > 0 else 0.0
-
-    for split in ('train', 'val', 'test'):
-        for k, v in backtest_results.get(split, {}).items():
+        bt = backtest_results.get(split, {})
+        split_bt[split] = bt
+        for k, v in bt.items():
             results[f'{k}_{split}'] = v
 
-    sharpes = [backtest_results.get(s, {}).get('sharpe_per_bar') for s in ('train', 'val', 'test')]
-    drawdowns = [backtest_results.get(s, {}).get('max_drawdown_pct') for s in ('train', 'val', 'test')]
+    sharpes = [split_bt[s].get('sharpe_per_bar') for s in _SPLITS]
+    drawdowns = [split_bt[s].get('max_drawdown_pct') for s in _SPLITS]
 
     valid_sharpes = [s for s in sharpes if s is not None and not math.isnan(s)]
     valid_drawdowns = [d for d in drawdowns if d is not None and not math.isnan(d)]
 
-    _min_splits = 2
-    sharpe_std = float(np.std(valid_sharpes)) if len(valid_sharpes) >= _min_splits else float('nan')
-    drawdown_std = float(np.std(valid_drawdowns)) if len(valid_drawdowns) >= _min_splits else float('nan')
+    sharpe_std = float(np.std(valid_sharpes)) if len(valid_sharpes) >= _MIN_SPLITS else float('nan')
+    drawdown_std = float(np.std(valid_drawdowns)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
 
     sharpe_train, sharpe_test = sharpes[0], sharpes[2]
     if (sharpe_train is not None and sharpe_test is not None
@@ -56,9 +63,9 @@ def rule_based_metrics(positions: dict,
     else:
         sharpe_degradation = float('nan')
 
-    results['sharpe_std'] = round(sharpe_std, 3) if not math.isnan(sharpe_std) else None
-    results['drawdown_std'] = round(drawdown_std, 3) if not math.isnan(drawdown_std) else None
-    results['sharpe_degradation'] = round(sharpe_degradation, 3) if not math.isnan(sharpe_degradation) else None
+    results['sharpe_std'] = _round_or_none(sharpe_std)
+    results['drawdown_std'] = _round_or_none(drawdown_std)
+    results['sharpe_degradation'] = _round_or_none(sharpe_degradation)
     results['is_stable'] = (
         not math.isnan(sharpe_std) and sharpe_std < sharpe_std_threshold
         and not math.isnan(sharpe_degradation) and sharpe_degradation < sharpe_degradation_threshold
