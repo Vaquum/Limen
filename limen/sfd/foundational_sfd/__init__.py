@@ -1,5 +1,6 @@
 from limen.sfd.foundational_sfd import logreg_binary
 from limen.sfd.foundational_sfd import random_binary
+from limen.sfd.foundational_sfd import rule_based
 from limen.sfd.foundational_sfd import xgboost_regressor
 
 # tabpfn is optional - only import if available
@@ -11,6 +12,7 @@ except ImportError:
 __all__ = [
     'logreg_binary',
     'random_binary',
+    'rule_based',
     'tabpfn_binary',
     'xgboost_regressor',
 ]
