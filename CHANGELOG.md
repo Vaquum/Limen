@@ -744,7 +744,13 @@ Note: add all new changelog entries to the bottom of this file.
 - Publish the runtime profile as a GitHub Actions artifact and render a runtime job summary with threshold counts and slowest tests during `PR Validation`
 - Add regression coverage for runtime profile emission plus pass/fail runtime-gate behavior without touching `limen/` package code
 
-## v2.5.0 on 21st of April, 2026
+## v2.4.3 on 22nd of April, 2026
+
+- Add `limen.sfd.loop` subpackage to compile Loop web UI payloads into Limen SFD objects, runnable through UEL
+- Export `forward_breakout_target` from `limen.features`
+- Drop NaN rows alongside nulls in `Manifest.prepare_data`
+
+## v2.5.0 on 24th of April, 2026
 
 - Add `Cohort` constructor with strict experiment source resolution and permutation ID validation
 - Enforce single-architecture selection across all requested `permutation_ids`

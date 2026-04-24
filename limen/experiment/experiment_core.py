@@ -689,7 +689,9 @@ class UniversalExperimentLoop:
 
         batch = pl.DataFrame(accumulator)
         if self.experiment_log is not None:
-            self.experiment_log = self.experiment_log.vstack(batch)
+            self.experiment_log = pl.concat(
+                [self.experiment_log, batch], how='vertical_relaxed',
+            )
         else:
             self.experiment_log = batch
 
