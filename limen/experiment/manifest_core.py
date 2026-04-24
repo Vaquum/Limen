@@ -179,7 +179,7 @@ class Manifest:
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
     _rule_based: bool = field(default=False, init=False, repr=False)
-    _conditions: list = field(default_factory=list, init=False, repr=False)
+    _conditions: list[dict] = field(default_factory=list, init=False, repr=False)
     _entry: str | None = field(default=None, init=False, repr=False)
 
     def _add_transform(self,

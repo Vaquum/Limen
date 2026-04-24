@@ -94,9 +94,15 @@ class RuleBasedStrategy(ReferenceModel):
         if 'type' in condition:
             return df[condition['id']]
         operator = condition['operator']
-        if operator not in ('and', 'or'):
+        if operator not in ('and', 'or', 'not'):
             raise ValueError(f'Unknown logical operator: {operator!r}')
         operands = [self._resolve(cond_index[op_id], cond_index, df) for op_id in condition['operands']]
+        if not operands:
+            raise ValueError(f'Compound condition {condition.get("id")!r} has no operands')
+        if operator == 'not':
+            if len(operands) != 1:
+                raise ValueError(f'NOT operator requires exactly 1 operand, got {len(operands)}')
+            return ~operands[0]
         result = operands[0]
         for s in operands[1:]:
             result = result & s if operator == 'and' else result | s

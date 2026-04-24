@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import numpy as np
 
@@ -35,7 +36,7 @@ def rule_based_metrics(positions: dict,
         dict: Tier 1 position stats, Tier 2 backtest metrics per split, Tier 3 stability metrics
     '''
 
-    results = {}
+    results: dict[str, Any] = {}
     split_bt: dict[str, dict] = {}
 
     for split in _SPLITS:
