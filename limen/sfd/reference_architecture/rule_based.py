@@ -50,7 +50,7 @@ class RuleBasedStrategy(ReferenceModel):
             dict: {'_preds': np.ndarray} of 0/1 integer positions
         '''
 
-        pos = self._apply_logic(data['test'], data['strategy']).to_numpy().astype(int)
+        pos = self._apply_logic(data['test'], data['strategy']).fill_null(False).to_numpy().astype(int)
         return {'_preds': pos}
 
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:  # noqa: ARG002
@@ -73,7 +73,7 @@ class RuleBasedStrategy(ReferenceModel):
         cond_index = {c['id']: c for c in strategy['conditions']}
 
         for split in ('train', 'val', 'test'):
-            pos = self._resolve(cond_index[strategy['entry']], cond_index, data[split]).to_numpy().astype(int)
+            pos = self._resolve(cond_index[strategy['entry']], cond_index, data[split]).fill_null(False).to_numpy().astype(int)
             positions[split] = pos
             backtest_results[split] = self._backtest_split(data[split], pos)
 

@@ -17,6 +17,20 @@ def _fmt(val: Any, params: dict) -> Any:
     return val.format(**params) if isinstance(val, str) else val
 
 
+def _coerce_value(val: Any) -> Any:
+    if not isinstance(val, str):
+        return val
+    try:
+        return int(val)
+    except ValueError:
+        pass
+    try:
+        return float(val)
+    except ValueError:
+        pass
+    return val
+
+
 def _op_expr(left: pl.Expr, operator: str, right: Any) -> pl.Expr:
     if operator not in _OPS:
         raise ValueError(f'Unknown operator: {operator!r}')
@@ -76,9 +90,9 @@ def crossover(column: str, other_column: str, direction: str = 'above') -> pl.Ex
     other = pl.col(other_column)
 
     if direction == 'above':
-        return (col > other) & (col.shift(1) <= other.shift(1))
+        return ((col > other) & (col.shift(1) <= other.shift(1))).fill_null(False)
     if direction == 'below':
-        return (col < other) & (col.shift(1) >= other.shift(1))
+        return ((col < other) & (col.shift(1) >= other.shift(1))).fill_null(False)
     raise ValueError(f'Unknown crossover direction: {direction!r}')
 
 
@@ -99,9 +113,9 @@ def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
     col = pl.col(column)
 
     if direction == 'rising':
-        return col > col.shift(lookback)
+        return (col > col.shift(lookback)).fill_null(False)
     if direction == 'falling':
-        return col < col.shift(lookback)
+        return (col < col.shift(lookback)).fill_null(False)
     raise ValueError(f'Unknown slope direction: {direction!r}')
 
 
@@ -118,7 +132,7 @@ def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
-    return expr.cast(pl.Int8).rolling_sum(n) == n
+    return (expr.cast(pl.Int8).rolling_sum(n, min_samples=n) == n).fill_null(False)
 
 
 def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
@@ -134,7 +148,7 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
-    return expr.cast(pl.Int8).rolling_sum(n) >= 1
+    return (expr.cast(pl.Int8).rolling_sum(n, min_samples=1) >= 1).fill_null(False)
 
 
 def polars_expr(expr_string: str, params: dict) -> pl.Expr:
@@ -164,7 +178,9 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
     Route a condition config dict to the appropriate predicate function.
 
     Args:
-        condition (dict): Condition config with 'type' key and type-specific fields
+        condition (dict): Condition config with 'type' key and type-specific fields.
+            Optional 'persistence_n' or 'recency_n' fields wrap the result with
+            the corresponding temporal modifier.
         round_params (dict): Parameter values for template substitution
 
     Returns:
@@ -174,34 +190,42 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
     ptype = condition['type']
 
     if ptype == 'threshold':
-        return threshold(
+        expr = threshold(
             column=_fmt(condition['column'], round_params),
             operator=condition['operator'],
-            value=float(_fmt(condition['value'], round_params)),
+            value=_coerce_value(_fmt(condition['value'], round_params)),
         )
 
-    if ptype == 'relative':
-        return relative(
+    elif ptype == 'relative':
+        expr = relative(
             column=_fmt(condition['column'], round_params),
             operator=condition['operator'],
             other_column=_fmt(condition['other_column'], round_params),
         )
 
-    if ptype == 'crossover':
-        return crossover(
+    elif ptype == 'crossover':
+        expr = crossover(
             column=_fmt(condition['column'], round_params),
             other_column=_fmt(condition['other_column'], round_params),
             direction=condition.get('direction', 'above'),
         )
 
-    if ptype == 'slope':
-        return slope(
+    elif ptype == 'slope':
+        expr = slope(
             column=_fmt(condition['column'], round_params),
             direction=condition.get('direction', 'rising'),
             lookback=int(_fmt(condition.get('lookback', 1), round_params)),
         )
 
-    if ptype == 'polars_expr':
-        return polars_expr(condition['expr'], round_params)
+    elif ptype == 'polars_expr':
+        expr = polars_expr(condition['expr'], round_params)
 
-    raise ValueError(f'Unknown predicate type: {ptype!r}')
+    else:
+        raise ValueError(f'Unknown predicate type: {ptype!r}')
+
+    if 'persistence_n' in condition:
+        expr = with_persistence(expr, int(condition['persistence_n']))
+    elif 'recency_n' in condition:
+        expr = with_recency(expr, int(condition['recency_n']))
+
+    return expr
