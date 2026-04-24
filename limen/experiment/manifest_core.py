@@ -1178,11 +1178,17 @@ def _validate_strategy_config(conditions: list[dict], entry: str) -> None:
         known_ids.add(cond['id'])
     if entry not in known_ids:
         raise ValueError(f'Entry id {entry!r} not found in conditions')
+    _valid_operators = ('and', 'or', 'not')
     for cond in conditions:
         if 'type' not in cond:
+            operator = cond.get('operator')
+            if operator not in _valid_operators:
+                raise ValueError(f'Condition {cond["id"]!r} has unknown operator {operator!r} — must be one of {_valid_operators}')
             operands = cond.get('operands', [])
             if not operands:
                 raise ValueError(f'Compound condition {cond["id"]!r} has no operands')
+            if operator == 'not' and len(operands) != 1:
+                raise ValueError(f'NOT condition {cond["id"]!r} must have exactly 1 operand, got {len(operands)}')
             for op_id in operands:
                 if op_id not in known_ids:
                     raise ValueError(f'Operand {op_id!r} in condition {cond["id"]!r} references unknown id')

@@ -100,8 +100,6 @@ def crossover(column: str, other_column: str, direction: str = 'above') -> pl.Ex
 
 
 def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
-    if lookback <= 0:
-        raise ValueError(f'lookback must be a positive integer, got {lookback}')
 
     '''
     Detect whether a column is rising or falling over a lookback window.
@@ -115,6 +113,9 @@ def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
+    if lookback <= 0:
+        raise ValueError(f'lookback must be a positive integer, got {lookback}')
+
     col = pl.col(column)
 
     if direction == 'rising':
@@ -125,8 +126,6 @@ def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
 
 
 def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
-    if n <= 0:
-        raise ValueError(f'n must be a positive integer, got {n}')
 
     '''
     Wrap a predicate expression to require it to be True for n consecutive bars.
@@ -139,12 +138,13 @@ def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
+    if n <= 0:
+        raise ValueError(f'n must be a positive integer, got {n}')
+
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=n) == n).fill_null(False)
 
 
 def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
-    if n <= 0:
-        raise ValueError(f'n must be a positive integer, got {n}')
 
     '''
     Wrap a predicate expression to require it to have been True within the last n bars.
@@ -156,6 +156,9 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
     Returns:
         pl.Expr: Boolean expression
     '''
+
+    if n <= 0:
+        raise ValueError(f'n must be a positive integer, got {n}')
 
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=1) >= 1).fill_null(False)
 
@@ -183,7 +186,10 @@ def polars_expr(expr_string: str, params: dict) -> pl.Expr:
     for token in _POLARS_EXPR_BLOCKED_TOKENS:
         if token in resolved:
             raise ValueError(f'polars_expr string contains blocked token: {token!r}')
-    return eval(resolved, {'pl': pl, '__builtins__': {}}, {})  # noqa: S307
+    result = eval(resolved, {'pl': pl, '__builtins__': {}}, {})  # noqa: S307
+    if not isinstance(result, pl.Expr):
+        raise ValueError(f'polars_expr must evaluate to a polars Expr, got {type(result).__name__!r}')
+    return result
 
 
 def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
@@ -237,6 +243,8 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
     else:
         raise ValueError(f'Unknown predicate type: {ptype!r}')
 
+    if 'persistence_n' in condition and 'recency_n' in condition:
+        raise ValueError(f'Condition {condition.get("id")!r} cannot specify both persistence_n and recency_n')
     if 'persistence_n' in condition:
         expr = with_persistence(expr, int(condition['persistence_n']))
     elif 'recency_n' in condition:
