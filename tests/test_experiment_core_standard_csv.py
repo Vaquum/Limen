@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import polars as pl
 
+from limen.experiment import experiment_core
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.data.utils.splits import split_data_to_prep_output
 from limen.data.utils.splits import split_sequential
@@ -130,3 +131,43 @@ def test_standard_run_csv_does_not_append_duplicate_headers_on_rerun() -> None:
     assert rows[0]['note'] == first_note
     assert rows[1]['note'] == second_note
     assert rows[1]['id'] != 'id'
+
+
+def test_standard_run_rechunks_live_log_without_changing_row_output() -> None:
+    original_threshold = experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD
+    experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD = 4
+
+    try:
+        sfd = SimpleNamespace(
+            params=lambda: {'marker': list(range(10))},
+            prep=_standard_csv_test_prep,
+            model=_standard_csv_test_model,
+        )
+
+        with TemporaryDirectory() as tmpdir:
+            experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+            uel = UniversalExperimentLoop(
+                data=_make_standard_csv_test_data(),
+                sfd=sfd,
+            )
+            uel.run(
+                experiment_name=experiment_name,
+                n_permutations=10,
+                prep_each_round=True,
+                random_search=False,
+            )
+
+            csv_path = Path(f"{experiment_name}.csv")
+            with csv_path.open(newline='') as f:
+                rows = list(csv.DictReader(f))
+
+        assert uel.experiment_log.height == 10
+        assert uel.experiment_log.n_chunks() <= 4
+        assert uel.experiment_log['id'].to_list() == list(range(10))
+        assert uel.experiment_log['marker'].to_list() == list(range(10))
+        assert len(rows) == 10
+        assert [int(row['id']) for row in rows] == list(range(10))
+        assert [int(row['marker']) for row in rows] == list(range(10))
+    finally:
+        experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD = original_threshold

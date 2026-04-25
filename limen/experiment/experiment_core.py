@@ -25,6 +25,8 @@ from limen.log.log import Log
 
 logger = logging.getLogger(__name__)
 
+STANDARD_RUN_LOG_RECHUNK_THRESHOLD = 500
+
 
 class UniversalExperimentLoop:
 
@@ -259,6 +261,9 @@ class UniversalExperimentLoop:
                 if write_header:
                     writer.writerow(round_results.keys())
                 writer.writerow(self.experiment_log.row(i))
+
+            if self.experiment_log.n_chunks() > STANDARD_RUN_LOG_RECHUNK_THRESHOLD:
+                self.experiment_log = self.experiment_log.rechunk()
 
         self._finalize()
 

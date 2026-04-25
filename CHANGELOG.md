@@ -769,3 +769,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Return `Cohort.predict(..., return_probs=True)` probability traces in sample-major order `(n_samples, n_members)` so per-bar cohort inspection matches the supported consumer contract
 - Add regression coverage for sample-major probability traces, `permutation_ids` column ordering, and single-member fallback vote conversion on the canonical `tests.run` path
+
+## v2.5.2 on 25th of April, 2026
+
+- Compact the legacy standard-path `experiment_log` during long-running `UniversalExperimentLoop.run()` executions so repeated one-row `vstack()` growth does not degrade throughput as chunk fragmentation accumulates
+- Preserve the existing live in-memory log and live CSV write behavior while keeping the standard-path log physically compact with an internal rechunk threshold
+- Add regression coverage proving standard-path row ordering and CSV output stay intact while live log chunk growth remains bounded after threshold crossings
