@@ -566,7 +566,9 @@ from tests.test_proto_cohort import test_validate_probability_range_rejects_non_
 from tests.test_proto_cohort import test_cohort_is_drop_in_decoder_replacement_for_dict_input
 from tests.test_proto_cohort import test_member_failure_propagates_and_fails_whole_call
 from tests.test_proto_cohort import test_predict_return_probs_probability_mode_returns_per_sample_probs
+from tests.test_proto_cohort import test_predict_return_probs_single_member_returns_sample_major_column
 from tests.test_proto_cohort import test_majority_vote_uses_binary_votes_for_continuous_fallback_members
+from tests.test_proto_cohort import test_single_member_fallback_predict_returns_binary_votes
 
 tests = [
     test_param_domain_init,
@@ -1113,12 +1115,14 @@ tests = [
     test_single_decoder_passthrough_returns_member_preds_unchanged,
     test_probability_weighted_predict_requires_members,
     test_predict_return_probs_probability_mode_returns_per_sample_probs,
+    test_predict_return_probs_single_member_returns_sample_major_column,
     test_majority_vote_tie_returns_zero,
     test_probability_weighted_tie_returns_zero,
     test_majority_vote_multimember_expected_output,
     test_probability_weighted_vote_rejects_shape_mismatch,
     test_majority_vote_rejects_shape_mismatch,
     test_majority_vote_uses_binary_votes_for_continuous_fallback_members,
+    test_single_member_fallback_predict_returns_binary_votes,
     test_predict_return_meta_returns_metadata_placeholder,
     test_predict_return_probs_and_return_meta_returns_three_tuple,
     test_predict_return_probs_rejected_in_fallback_mode,
