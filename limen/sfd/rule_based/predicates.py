@@ -17,7 +17,15 @@ _POLARS_EXPR_MAX_LENGTH = 500
 
 
 def _fmt(val: Any, params: dict) -> Any:
-    return val.format(**params) if isinstance(val, str) else val
+    if not isinstance(val, str):
+        return val
+    try:
+        return val.format(**params)
+    except KeyError as e:
+        raise ValueError(
+            f'Template placeholder {e} not found in round_params — '
+            f'available keys: {sorted(params)}'
+        ) from e
 
 
 def _coerce_value(val: Any) -> Any:

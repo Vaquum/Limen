@@ -642,6 +642,18 @@ class Manifest:
             dict: Final data dictionary ready for model training
         '''
 
+        if self._rule_based is not None:
+            if self.scaler is not None:
+                raise ValueError(
+                    'Scalers cannot be used with rule-based SFDs — predicates depend on '
+                    'original indicator scales and produce incorrect signals on scaled values.'
+                )
+            if self.ablation_config is not None:
+                raise ValueError(
+                    'Feature ablation cannot be used with rule-based SFDs — predicate '
+                    'columns are derived from specific indicator columns.'
+                )
+
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
             resolved = _resolve_params(base_params, round_params)
@@ -728,16 +740,6 @@ class Manifest:
             )
 
         if self._rule_based is not None:
-            if self.scaler is not None:
-                raise ValueError(
-                    'Scalers cannot be used with rule-based SFDs — predicates depend on '
-                    'original indicator scales and produce incorrect signals on scaled values.'
-                )
-            if self.ablation_config is not None:
-                raise ValueError(
-                    'Feature ablation cannot be used with rule-based SFDs — predicate '
-                    'columns are derived from specific indicator columns.'
-                )
             return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
@@ -1173,13 +1175,14 @@ def _finalize_rule_based_data(
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
 
     config = manifest._rule_based
-    for condition in config.conditions:
-        if 'type' not in condition:
-            continue
-        expr = build_predicate(condition, round_params)
-        col_name = condition['id']
+    predicate_exprs = [
+        build_predicate(condition, round_params).fill_null(False).alias(condition['id'])
+        for condition in config.conditions
+        if 'type' in condition
+    ]
+    if predicate_exprs:
         for split in ('train', 'val', 'test'):
-            data_dict[split] = data_dict[split].with_columns(expr.fill_null(False).alias(col_name))
+            data_dict[split] = data_dict[split].with_columns(predicate_exprs)
 
     data_dict['strategy'] = {
         'conditions': config.conditions,
