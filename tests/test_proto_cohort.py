@@ -608,12 +608,40 @@ def test_predict_return_probs_probability_mode_returns_per_sample_probs():
 
         cohort = Cohort(experiment_log_path=str(
             exp_dir), permutation_ids=[0, 1])
+        cohort.set_members(list(reversed(sensors)))
+
+        by_pid = {sensor.permutation_id: sensor for sensor in sensors}
+        y_pred, probs = cohort.predict({'x_test': x_test}, return_probs=True)
+
+        member_probs = np.column_stack([
+            np.asarray(by_pid[pid].predict({'x_test': x_test})['_probs'], dtype=float)
+            for pid in cohort.permutation_ids
+        ])
+
+        assert isinstance(probs, np.ndarray)
+        assert np.asarray(probs).shape == (np.asarray(y_pred).shape[0], 2)
+        assert np.allclose(np.asarray(probs, dtype=float), member_probs)
+
+
+def test_predict_return_probs_single_member_returns_sample_major_column():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
         cohort.set_members(sensors)
 
         y_pred, probs = cohort.predict({'x_test': x_test}, return_probs=True)
+        expected_probs = np.asarray(
+            sensors[0].predict({'x_test': x_test})['_probs'],
+            dtype=float,
+        )[:, None]
 
-        assert isinstance(probs, np.ndarray)
-        assert np.asarray(probs).shape == (2, np.asarray(y_pred).shape[0])
+        assert np.asarray(probs).shape == (np.asarray(y_pred).shape[0], 1)
+        assert np.allclose(np.asarray(probs, dtype=float), expected_probs)
 
 
 def test_predict_return_meta_returns_metadata_placeholder():
@@ -655,7 +683,7 @@ def test_predict_return_probs_and_return_meta_returns_three_tuple():
         )
 
         assert isinstance(probs, np.ndarray)
-        assert np.asarray(probs).shape == (2, np.asarray(y_pred).shape[0])
+        assert np.asarray(probs).shape == (np.asarray(y_pred).shape[0], 2)
         assert meta['permutation_ids'] == [0, 1]
         assert meta['decoder_count'] == 2
         assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]

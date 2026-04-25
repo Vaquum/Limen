@@ -122,7 +122,7 @@ Input contract:
 Where:
 
 - `probs` is a per-decoder probability matrix with shape
-  `(n_members, n_samples)` in the same order as `permutation_ids`
+  `(n_samples, n_members)` in the same order as `permutation_ids`
 - `meta` currently contains:
   - `permutation_ids`
   - `decoder_count`

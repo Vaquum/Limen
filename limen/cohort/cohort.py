@@ -200,7 +200,7 @@ class Cohort:
             X (Any): Decoder-style input dict consumed by member decoders.
             return_probs (bool): Whether to also return per-decoder
                 probabilities as a matrix with shape
-                `(n_members, n_samples)`. Only valid in
+                `(n_samples, n_members)`. Only valid in
                 probability-weighted mode.
             return_meta (bool): Whether to also return structured cohort metadata
                 (placeholder schema) alongside predictions.
@@ -258,7 +258,7 @@ class Cohort:
                     probs,
                     return_probs=return_probs,
                     return_meta=return_meta,
-                    probs_for_return=np.vstack([probs]),
+                    probs_for_return=probs[:, None],
                 )
 
             raw_preds = np.asarray(result['_preds'], dtype=float)
@@ -301,7 +301,7 @@ class Cohort:
                 probs,
                 return_probs=return_probs,
                 return_meta=return_meta,
-                probs_for_return=probs_matrix,
+                probs_for_return=probs_matrix.T,
             )
 
         if self.aggregation_mode == 'majority_vote':
