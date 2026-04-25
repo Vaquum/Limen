@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "max_total_seconds": 135,
+  "max_total_seconds": 180,
   "slowest_tests_limit": 10,
   "threshold_bands_seconds": [
     1,

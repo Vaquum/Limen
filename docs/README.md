@@ -36,7 +36,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 2. Compare model behavior in [Benchmark](Benchmark.md)
 3. Evaluate trading behavior in [Backtest](Backtest.md)
 4. Review helper metrics in [Standard Metrics Library](Standard-Metrics-Library.md) and [Reference Architecture](Reference-Architecture.md)
-5. Continue to [Trainer](Trainer.md) and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) if you are promoting outputs downstream
+5. Continue to [Trainer](Trainer.md), [Cohort](Cohort.md), and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) if you are promoting outputs downstream
 
 ### If You Want To Extend Limen
 
@@ -61,12 +61,13 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 5. [Universal Experiment Loop](Universal-Experiment-Loop.md) executes the search, with [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md) extending the artifact-rich path.
 6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
 7. [Trainer](Trainer.md) and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) turn finished runs into reusable downstream artefacts.
-8. Those outputs then move downstream into Nexus and the rest of the Vaquum stack.
+8. [Cohort](Cohort.md) defines the ensemble inference surface for multi-member decoder aggregation.
+9. Those outputs then move downstream into Nexus and the rest of the Vaquum stack.
 
 ## Docs Map
 
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md)
-- `Guides`: [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Experiment Manifest](Experiment-Manifest.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
+- `Guides`: [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Experiment Manifest](Experiment-Manifest.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
 - `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
 - `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), plus external [Making Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) and [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)
 - `Packages`: the package `README`s under `/limen`, which provide module-level orientation and route back to the canonical docs
@@ -92,6 +93,6 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ## Read Next
 
 - For a first real run, continue to [Historical Data](Historical-Data.md), then [Single-File Decoder](Single-File-Decoder.md), then [Universal Experiment Loop](Universal-Experiment-Loop.md)
-- For architecture and system boundaries, continue to [Trainer](Trainer.md) and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md)
+- For architecture and system boundaries, continue to [Trainer](Trainer.md), [Cohort](Cohort.md), and [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md)
 - For the extension layer, continue to [Built-In SFDs](Built-In-SFDs.md), [Reference Architecture](Reference-Architecture.md), and [Advanced Search](Advanced-Search.md)
 - For contributor work, continue to [Developer Guidelines](Developer/README.md)

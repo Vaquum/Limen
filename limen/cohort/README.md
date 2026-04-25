@@ -1,48 +1,69 @@
 # `limen.cohort`
 
-> Build decoder cohorts from finished experiments and aggregate their opinions by regime.
+> Inference-time cohort surfaces for aggregating decoder outputs from completed Limen experiments.
 
 ## Canonical docs
 
+- [Cohort](../../docs/Cohort.md)
 - [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md)
-- [Log](../../docs/Log.md)
+- [Trainer](../../docs/Trainer.md)
 
 ## What this package owns
 
-Owns Limen's RDOP implementation: offline filtering, clustering, diversification, model reloading, and per-regime prediction aggregation.
-Does **not** own the original experiment runs, raw market data, or downstream trading decision logic.
+This package owns two cohort-level inference surfaces:
+
+1. `Cohort` for direct multi-member aggregation from one experiment + selected permutations
+2. `RegimeDiversifiedOpinionPools` (RDOP) for regime-aware pool construction and per-regime aggregation
+
+It does **not** own:
+
+- experiment search execution (owned by `limen.experiment`)
+- raw market data infrastructure
+- downstream decisioning/execution logic (outside Limen)
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
-|-------------|-------------|-------|
-| `RegimeDiversifiedOpinionPools` | You want the full offline-plus-online cohort workflow | Exported at the package root |
-| `offline_pipeline()` | You want to select representative models by regime from experiment results | Runs before any online inference step |
-| `online_pipeline()` | You want fresh predictions from the selected regime pools | Produces per-regime prediction columns |
+| Entry point                       | Use it when                                                                             | Notes                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `Cohort`                        | You want to aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
+| `RegimeDiversifiedOpinionPools` | You want regime-diversified cohort construction and per-regime inference                | Full offline + online RDOP workflow                            |
 
-## Adjacent modules
-
-- `limen.log` produces the confusion-metrics tables RDOP commonly starts from.
-- `limen.experiment` is reused to rerun or retrain models during the online stage.
-- `Nexus`, downstream from Limen, is where trading decisions belong. This package stops at cohort outputs.
-
-## Quick orientation
+## Package map
 
 ```text
 cohort/
-└── regime_pools.py   # Offline filtering, clustering, diversification,
-                      # online model loading, aggregation, and RDOP
+├── cohort.py                # Cohort constructor + aggregation logic
+└── regime_pools.py          # RDOP implementation
 ```
 
-## Things to know
+## Cohort quick behavior
 
-- `offline_pipeline()` must run before `online_pipeline()`.
-- The implementation currently produces per-regime outputs. It does not add a dynamic regime selector or downstream decision policy by itself.
-- Empty or unstable clustering results are handled conservatively, including fallback to fewer regimes when needed.
-- Manifest-driven SFDs work here, but custom `prep` and `model` SFDs can also work if they expose the required callable surface.
+- Construct from exactly one experiment source (`experiment_id` or `experiment_log_path`)
+- Validate selected `permutation_ids` and enforce single-architecture selection
+- Infer aggregation mode from architecture capability:
+  - `probability_weighted` when probability output is supported
+  - `majority_vote` fallback otherwise
+- `predict(...)` returns ndarray/tuple contract
+- `__call__(...)` returns decoder-compatible dict contract
+
+See [Cohort](../../docs/Cohort.md) for full contract and examples.
+
+## RDOP quick behavior
+
+- `offline_pipeline()` selects and diversifies candidate models by regime
+- `online_pipeline()` loads selected models and emits per-regime outputs
+- Intended for regime-aware downstream usage, not direct execution decisions
+
+See [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md).
+
+## Adjacent modules
+
+- `limen.experiment` provides experiment logs, Trainer, and Sensor reconstruction used by Cohort flows
+- `limen.log` provides analysis surfaces commonly used before RDOP selection
+- `limen.sfd` and reference architectures define member model output behavior
 
 ## Read next
 
+- [Cohort](../../docs/Cohort.md)
 - [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md)
-- [Log](../../docs/Log.md)
 - [Trainer](../../docs/Trainer.md)

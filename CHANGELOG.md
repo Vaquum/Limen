@@ -749,3 +749,18 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen.sfd.loop` subpackage to compile Loop web UI payloads into Limen SFD objects, runnable through UEL
 - Export `forward_breakout_target` from `limen.features`
 - Drop NaN rows alongside nulls in `Manifest.prepare_data`
+
+## v2.5.0 on 24th of April, 2026
+
+- Add `Cohort` constructor with strict experiment source resolution and permutation ID validation
+- Enforce single-architecture selection across all requested `permutation_ids`
+- Set Cohort aggregation mode at construction from architecture capability hints
+- Add `Cohort.predict()` probability-weighted aggregation path with tie-to-0 behavior
+- Add `Cohort.predict()` majority-vote fallback aggregation path with tie-to-0 behavior
+- Add single-decoder passthrough short-circuit for direct member prediction parity
+- Add `return_probs` option in `predict()` for per-member P(1) outputs
+- Add `return_meta` option in `predict()` for structured inference metadata
+- Add probability range validation on decoder `_probs` outputs
+- Raise explicit error when `return_probs=True` is requested in fallback mode
+- Add comprehensive Cohort tests for constructor validation, aggregation behavior, passthrough behavior, and output-option contracts
+- Add integration test coverage validating Cohort as a decoder-compatible replacement at inference

@@ -56,6 +56,19 @@ Not every model needs every key, but this is the standard Limen shape that the c
 
 The `deterministic` flag matters because [Trainer](Trainer.md) uses it to choose its validation tolerance.
 
+## Probability Support for Cohort
+
+For Cohort, “probability” always means **P(1)**: the probability that the positive class is `1`.
+
+Architectures that expose valid P(1) may use Cohort's probability-weighted aggregation path. Architectures that do not expose valid P(1) use Cohort's majority-vote fallback path instead.
+
+| Architecture | Returns probabilities P(1) | Cohort mode | Notes |
+|---|---:|---|---|
+| `LogRegBinary` | yes | probability | `predict()` returns `_probs = predict_proba(... )[:, 1]`, which is directly the class-1 probability P(1). |
+| `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
+| `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability, optionally calibrated with isotonic calibration before thresholding. This is compatible with P(1). |
+| `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
+
 ## `predict()` Versus `evaluate()`
 
 `predict()` is the small inference surface. For the built-in binary models it returns:
