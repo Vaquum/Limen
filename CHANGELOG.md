@@ -764,3 +764,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Raise explicit error when `return_probs=True` is requested in fallback mode
 - Add comprehensive Cohort tests for constructor validation, aggregation behavior, passthrough behavior, and output-option contracts
 - Add integration test coverage validating Cohort as a decoder-compatible replacement at inference
+
+## v2.5.1 on 25th of April, 2026
+
+- Return `Cohort.predict(..., return_probs=True)` probability traces in sample-major order `(n_samples, n_members)` so per-bar cohort inspection matches the supported consumer contract
+- Add regression coverage for sample-major probability traces, `permutation_ids` column ordering, and single-member fallback vote conversion on the canonical `tests.run` path

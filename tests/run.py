@@ -568,6 +568,7 @@ from tests.test_proto_cohort import test_member_failure_propagates_and_fails_who
 from tests.test_proto_cohort import test_predict_return_probs_probability_mode_returns_per_sample_probs
 from tests.test_proto_cohort import test_predict_return_probs_single_member_returns_sample_major_column
 from tests.test_proto_cohort import test_majority_vote_uses_binary_votes_for_continuous_fallback_members
+from tests.test_proto_cohort import test_single_member_fallback_predict_returns_binary_votes
 
 tests = [
     test_param_domain_init,
@@ -1121,6 +1122,7 @@ tests = [
     test_probability_weighted_vote_rejects_shape_mismatch,
     test_majority_vote_rejects_shape_mismatch,
     test_majority_vote_uses_binary_votes_for_continuous_fallback_members,
+    test_single_member_fallback_predict_returns_binary_votes,
     test_predict_return_meta_returns_metadata_placeholder,
     test_predict_return_probs_and_return_meta_returns_three_tuple,
     test_predict_return_probs_rejected_in_fallback_mode,

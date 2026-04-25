@@ -543,6 +543,26 @@ def test_majority_vote_uses_binary_votes_for_continuous_fallback_members():
         assert out['_preds'].tolist() == [1, 0, 1, 0]
 
 
+def test_single_member_fallback_predict_returns_binary_votes():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _run_real_experiment(exp_dir, n_permutations=1)
+
+        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+        member = _FallbackContinuousMember(
+            0,
+            np.array([0.2, -0.3, 1.1, 0.0], dtype=float),
+        )
+        cohort.set_members([member])
+
+        out = cohort.predict({'x_test': np.zeros((4, 2), dtype=float)})
+
+        assert out['_preds'].tolist() == [1, 0, 1, 0]
+
+
 def test_majority_vote_tie_returns_zero():
 
     vote = Cohort._majority_vote([
