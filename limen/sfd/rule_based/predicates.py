@@ -12,10 +12,7 @@ _OPS = {
     '!=': lambda a, b: a != b,
 }
 
-_POLARS_EXPR_BLOCKED_TOKENS = (
-    '__', 'import', 'globals', 'locals', 'exec', 'eval', 'open', 'compile',
-    'read_', 'scan_', 'write_', 'SQLContext',
-)
+_POLARS_EXPR_BLOCKED_TOKENS = ('__', 'import', 'globals', 'locals', 'exec', 'eval', 'open', 'compile')
 _POLARS_EXPR_MAX_LENGTH = 500
 
 

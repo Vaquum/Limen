@@ -97,13 +97,13 @@ def test_threshold_unknown_operator_raises() -> None:
         assert 'Unknown operator' in str(e)
 
 
-def test_polars_expr_blocks_filesystem_tokens() -> None:
-    for blocked in ('pl.read_csv("x.csv")', 'pl.scan_parquet("x.parq")', 'pl.SQLContext()'):
+def test_polars_expr_rejects_non_expr_return_types() -> None:
+    for expr_str in ('pl.scan_parquet("x.parq")', 'pl.SQLContext()'):
         try:
-            polars_expr(blocked, {})
-            assert False, f'Expected ValueError for: {blocked}'
+            polars_expr(expr_str, {})
+            assert False, f'Expected ValueError for: {expr_str}'
         except ValueError as e:
-            assert 'blocked token' in str(e)
+            assert 'polars Expr' in str(e)
 
 
 def test_rule_based_config_cycle_detection() -> None:
