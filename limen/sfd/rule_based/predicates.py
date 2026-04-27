@@ -191,7 +191,13 @@ def polars_expr(expr_string: str, params: dict) -> pl.Expr:
         it reaches this function. Never pass unvalidated external input directly.
     '''
 
-    resolved = expr_string.format(**params)
+    try:
+        resolved = expr_string.format(**params)
+    except KeyError as e:
+        raise ValueError(
+            f'polars_expr missing template parameter {e} — '
+            f'available keys: {sorted(params)}'
+        ) from e
     if len(resolved) > _POLARS_EXPR_MAX_LENGTH:
         raise ValueError(f'polars_expr string exceeds maximum allowed length of {_POLARS_EXPR_MAX_LENGTH} characters')
     for token in _POLARS_EXPR_BLOCKED_TOKENS:
