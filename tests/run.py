@@ -171,6 +171,8 @@ from tests.test_manifest_rule_based import test_prepare_data_rule_based_returns_
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_adds_predicate_columns
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_attaches_strategy_config
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_compound_condition_not_added_as_column
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_scaler
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_ablation
 from tests.test_predicates import test_threshold
 from tests.test_predicates import test_relative
 from tests.test_predicates import test_crossover_above
@@ -277,10 +279,7 @@ from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
 from tests.test_reference_architecture import test_rule_based_train_is_noop
-from tests.test_reference_architecture import test_rule_based_deterministic
-from tests.test_reference_architecture import test_rule_based_evaluate_tier1_keys_present
-from tests.test_reference_architecture import test_rule_based_evaluate_tier3_keys_present
-from tests.test_reference_architecture import test_rule_based_preds_present_probs_absent
+from tests.test_reference_architecture import test_rule_based_evaluate_returns_expected_metrics
 from tests.test_reference_architecture import test_rule_based_is_stable_respects_thresholds
 from tests.test_reference_architecture import test_rule_based_function_returns_flat_dict
 from tests.test_reference_architecture import test_rule_based_or_compound_condition
@@ -726,6 +725,8 @@ tests = [
     test_prepare_data_rule_based_adds_predicate_columns,
     test_prepare_data_rule_based_attaches_strategy_config,
     test_prepare_data_rule_based_compound_condition_not_added_as_column,
+    test_prepare_data_rule_based_rejects_scaler,
+    test_prepare_data_rule_based_rejects_ablation,
     test_threshold,
     test_relative,
     test_crossover_above,
@@ -880,10 +881,7 @@ tests = [
     test_train_with_validation_data,
     test_train_without_validation_data,
     test_rule_based_train_is_noop,
-    test_rule_based_deterministic,
-    test_rule_based_evaluate_tier1_keys_present,
-    test_rule_based_evaluate_tier3_keys_present,
-    test_rule_based_preds_present_probs_absent,
+    test_rule_based_evaluate_returns_expected_metrics,
     test_rule_based_is_stable_respects_thresholds,
     test_rule_based_function_returns_flat_dict,
     test_rule_based_or_compound_condition,
