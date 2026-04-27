@@ -69,3 +69,24 @@ def test_prepare_data_rule_based_compound_condition_not_added_as_column() -> Non
 
     for split in ('train', 'val', 'test'):
         assert 'entry_signal' not in data[split].columns
+
+
+def test_prepare_data_rule_based_rejects_scaler() -> None:
+    from limen.scalers.robust_scaler import RobustScaler
+    m = Manifest().with_strategy(_CONDITIONS, entry='entry_signal').set_scaler(RobustScaler)
+    try:
+        m.prepare_data(_make_raw_data(), {})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'Scalers cannot be used' in str(e)
+
+
+def test_prepare_data_rule_based_rejects_ablation() -> None:
+    m = (Manifest()
+         .with_strategy(_CONDITIONS, entry='entry_signal')
+         .set_feature_ablation(drop_count_key='drop_n', seed_key='seed'))
+    try:
+        m.prepare_data(_make_raw_data(), {})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'Feature ablation cannot be used' in str(e)

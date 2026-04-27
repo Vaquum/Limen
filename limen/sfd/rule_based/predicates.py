@@ -246,8 +246,6 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
     else:
         raise ValueError(f'Unknown predicate type: {ptype!r}')
 
-    if 'persistence_n' in condition and 'recency_n' in condition:
-        raise ValueError(f'Condition {condition.get("id")!r} cannot specify both persistence_n and recency_n')
     if 'persistence_n' in condition:
         expr = with_persistence(expr, int(condition['persistence_n']))
     elif 'recency_n' in condition:

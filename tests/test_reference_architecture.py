@@ -187,29 +187,22 @@ def test_rule_based_train_is_noop():
     assert model.model is None
 
 
-def test_rule_based_deterministic():
+def test_rule_based_evaluate_returns_expected_metrics():
     assert RuleBasedStrategy.deterministic is True
-
-
-def test_rule_based_evaluate_tier1_keys_present():
     data = _make_rule_based_data()
     results = RuleBasedStrategy().train(data).evaluate(data)
-    for key in ('num_trades_train', 'num_trades_val', 'num_trades_test',
-                'position_rate_train', 'position_rate_val', 'position_rate_test'):
-        assert key in results, f'Missing: {key}'
 
+    for split in ('train', 'val', 'test'):
+        assert isinstance(results[f'num_trades_{split}'], int)
+        rate = results[f'position_rate_{split}']
+        assert 0.0 <= rate <= 1.0
 
-def test_rule_based_evaluate_tier3_keys_present():
-    data = _make_rule_based_data()
-    results = RuleBasedStrategy().train(data).evaluate(data)
-    for key in ('sharpe_std', 'drawdown_std', 'sharpe_degradation', 'is_stable'):
-        assert key in results, f'Missing: {key}'
+    assert isinstance(results['sharpe_std'], float)
+    assert isinstance(results['drawdown_std'], float)
+    assert isinstance(results['sharpe_degradation'], float)
+    assert isinstance(results['is_stable'], bool)
 
-
-def test_rule_based_preds_present_probs_absent():
-    data = _make_rule_based_data()
-    results = RuleBasedStrategy().train(data).evaluate(data)
-    assert '_preds' in results
+    assert isinstance(results['_preds'], np.ndarray)
     assert '_probs' not in results
 
 
@@ -225,9 +218,9 @@ def test_rule_based_is_stable_respects_thresholds():
 def test_rule_based_function_returns_flat_dict():
     data = _make_rule_based_data()
     results = rule_based(data)
-    assert 'num_trades_test' in results
-    assert 'is_stable' in results
-    assert '_preds' in results
+    assert isinstance(results['num_trades_test'], int)
+    assert isinstance(results['is_stable'], bool)
+    assert isinstance(results['_preds'], np.ndarray)
 
 
 def test_rule_based_or_compound_condition():
