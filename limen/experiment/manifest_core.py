@@ -6,14 +6,17 @@ import os
 import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from limen.sfd.rule_based.config import RuleBasedConfig
 
 import polars as pl
 
 from limen.data.utils import split_data_to_prep_output
+from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
 from limen.scalers.registry import SCALER_REGISTRY
-
 logger = logging.getLogger(__name__)
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
@@ -177,6 +180,7 @@ class Manifest:
     model_function: Callable = None
     model_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
+    _rule_based: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
@@ -482,6 +486,24 @@ class Manifest:
 
         return self
 
+    def with_strategy(self, conditions: list[dict], entry: str) -> 'Manifest':
+
+        '''
+        Configure rule-based strategy conditions and entry signal.
+
+        Args:
+            conditions (list[dict]): List of predicate and compound operator condition configs
+            entry (str): ID of the condition that produces the per-bar position signal
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        from limen.sfd.rule_based.config import RuleBasedConfig  # local to avoid circular import
+        self._rule_based = RuleBasedConfig(conditions=list(conditions), entry=entry)
+
+        return self
+
     def set_feature_ablation(self,
                              drop_count_key: str = 'feature_drop_count',
                              seed_key: str = 'feature_drop_seed') -> 'Manifest':
@@ -620,6 +642,18 @@ class Manifest:
             dict: Final data dictionary ready for model training
         '''
 
+        if self._rule_based is not None:
+            if self.scaler is not None:
+                raise ValueError(
+                    'Scalers cannot be used with rule-based SFDs — predicates depend on '
+                    'original indicator scales and produce incorrect signals on scaled values.'
+                )
+            if self.ablation_config is not None:
+                raise ValueError(
+                    'Feature ablation cannot be used with rule-based SFDs — predicate '
+                    'columns are derived from specific indicator columns.'
+                )
+
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
             resolved = _resolve_params(base_params, round_params)
@@ -705,6 +739,8 @@ class Manifest:
                 maintain_order='left'
             )
 
+        if self._rule_based is not None:
+            return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
     def resolve_model_kwargs(self, round_params: dict[str, Any]) -> dict[str, Any]:
@@ -1123,5 +1159,41 @@ def _finalize_to_data_dict(
             round_params=round_params,
             fitted_params=fitted_params
         )
+
+    return data_dict
+
+
+def _finalize_rule_based_data(
+        manifest: Manifest,
+        split_data: list[pl.DataFrame],
+        all_datetimes: list,
+        round_params: dict[str, Any],
+) -> dict:
+
+    from limen.sfd.rule_based.predicates import build_predicate  # avoid circular import at module level
+
+    data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
+
+    config = manifest._rule_based
+    predicate_conditions = [c for c in config.conditions if 'type' in c]
+    predicate_ids = [c['id'] for c in predicate_conditions]
+    predicate_exprs = [
+        build_predicate(condition, round_params).fill_null(False).alias(condition['id'])
+        for condition in predicate_conditions
+    ]
+    if predicate_exprs:
+        for split in ('train', 'val', 'test'):
+            collisions = sorted(set(data_dict[split].columns) & set(predicate_ids))
+            if collisions:
+                raise ValueError(
+                    f'Rule-based condition ids collide with existing columns in {split!r} split: '
+                    f'{collisions}. Rename the affected conditions.'
+                )
+            data_dict[split] = data_dict[split].with_columns(predicate_exprs)
+
+    data_dict['strategy'] = {
+        'conditions': config.conditions,
+        'entry': config.entry,
+    }
 
     return data_dict

@@ -3,6 +3,8 @@ from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.sfd.reference_architecture.logreg_binary import logreg_binary
 from limen.sfd.reference_architecture.random_binary import RandomBinary
 from limen.sfd.reference_architecture.random_binary import random_binary
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+from limen.sfd.reference_architecture.rule_based import rule_based
 from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor
 from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
@@ -18,10 +20,12 @@ __all__ = [
     'LogRegBinary',
     'RandomBinary',
     'ReferenceModel',
+    'RuleBasedStrategy',
     'TabPFNBinary',
     'XGBoostRegressor',
     'logreg_binary',
     'random_binary',
+    'rule_based',
     'tabpfn_binary',
     'xgboost_regressor',
 ]

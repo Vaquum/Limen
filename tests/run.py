@@ -156,6 +156,40 @@ from tests.test_experiment_core_msq import test_run_with_msq_basic_flow
 from tests.test_experiment_core_msq import test_run_with_msq_context_params
 from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
+from tests.test_splits import test_prep_output_ml_path
+from tests.test_splits import test_rule_based_prep_output_returns_full_dataframes
+from tests.test_rule_based_metrics import test_num_trades_counts_entries_not_bars
+from tests.test_rule_based_metrics import test_position_rate
+from tests.test_rule_based_metrics import test_backtest_metrics_flattened_with_split_suffix
+from tests.test_rule_based_metrics import test_sharpe_std_and_drawdown_std
+from tests.test_rule_based_metrics import test_sharpe_degradation
+from tests.test_rule_based_metrics import test_is_stable_true_when_within_thresholds
+from tests.test_rule_based_metrics import test_is_stable_false_when_sharpe_std_exceeds_threshold
+from tests.test_rule_based_metrics import test_missing_backtest_results_degrade_gracefully
+from tests.test_manifest_rule_based import test_with_strategy_sets_sentinel_and_returns_self
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_returns_split_dataframes
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_adds_predicate_columns
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_attaches_strategy_config
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_compound_condition_not_added_as_column
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_scaler
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_ablation
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_condition_id_colliding_with_column
+from tests.test_predicates import test_threshold
+from tests.test_predicates import test_relative
+from tests.test_predicates import test_crossover_above
+from tests.test_predicates import test_crossover_below
+from tests.test_predicates import test_slope_rising
+from tests.test_predicates import test_slope_falling
+from tests.test_predicates import test_with_persistence
+from tests.test_predicates import test_with_recency
+from tests.test_predicates import test_sql_expr_escape_hatch
+from tests.test_predicates import test_build_predicate_threshold_with_param_substitution
+from tests.test_predicates import test_build_predicate_unknown_type_raises
+from tests.test_predicates import test_threshold_unknown_operator_raises
+from tests.test_predicates import test_sql_expr_missing_param_raises
+from tests.test_predicates import test_rule_based_config_cycle_detection
+from tests.test_predicates import test_rule_based_config_operands_must_be_list
+from tests.test_predicates import test_rule_based_config_operand_elements_must_be_strings
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_standard_csv import test_standard_run_rechunks_live_log_without_changing_row_output
@@ -247,6 +281,14 @@ from tests.test_reference_architecture import test_random_binary_train_evaluate_
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_train_with_validation_data
 from tests.test_reference_architecture import test_train_without_validation_data
+from tests.test_reference_architecture import test_rule_based_train_is_noop
+from tests.test_reference_architecture import test_rule_based_evaluate_returns_expected_metrics
+from tests.test_reference_architecture import test_rule_based_is_stable_respects_thresholds
+from tests.test_reference_architecture import test_rule_based_function_returns_flat_dict
+from tests.test_reference_architecture import test_rule_based_or_compound_condition
+from tests.test_reference_architecture import test_rule_based_not_operator
+from tests.test_reference_architecture import test_rule_based_empty_operands_raises
+from tests.test_reference_architecture import test_rule_based_unknown_operator_raises
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -671,6 +713,40 @@ tests = [
     test_run_with_msq_context_params,
     test_run_with_msq_feedback_trigger,
     test_run_with_msq_checkpoint_trigger,
+    test_prep_output_ml_path,
+    test_rule_based_prep_output_returns_full_dataframes,
+    test_num_trades_counts_entries_not_bars,
+    test_position_rate,
+    test_backtest_metrics_flattened_with_split_suffix,
+    test_sharpe_std_and_drawdown_std,
+    test_sharpe_degradation,
+    test_is_stable_true_when_within_thresholds,
+    test_is_stable_false_when_sharpe_std_exceeds_threshold,
+    test_missing_backtest_results_degrade_gracefully,
+    test_with_strategy_sets_sentinel_and_returns_self,
+    test_prepare_data_rule_based_returns_split_dataframes,
+    test_prepare_data_rule_based_adds_predicate_columns,
+    test_prepare_data_rule_based_attaches_strategy_config,
+    test_prepare_data_rule_based_compound_condition_not_added_as_column,
+    test_prepare_data_rule_based_rejects_scaler,
+    test_prepare_data_rule_based_rejects_ablation,
+    test_prepare_data_rule_based_rejects_condition_id_colliding_with_column,
+    test_threshold,
+    test_relative,
+    test_crossover_above,
+    test_crossover_below,
+    test_slope_rising,
+    test_slope_falling,
+    test_with_persistence,
+    test_with_recency,
+    test_sql_expr_escape_hatch,
+    test_build_predicate_threshold_with_param_substitution,
+    test_build_predicate_unknown_type_raises,
+    test_threshold_unknown_operator_raises,
+    test_sql_expr_missing_param_raises,
+    test_rule_based_config_cycle_detection,
+    test_rule_based_config_operands_must_be_list,
+    test_rule_based_config_operand_elements_must_be_strings,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_standard_run_rechunks_live_log_without_changing_row_output,
@@ -810,6 +886,14 @@ tests = [
     test_tabpfn_train_evaluate_end_to_end,
     test_train_with_validation_data,
     test_train_without_validation_data,
+    test_rule_based_train_is_noop,
+    test_rule_based_evaluate_returns_expected_metrics,
+    test_rule_based_is_stable_respects_thresholds,
+    test_rule_based_function_returns_flat_dict,
+    test_rule_based_or_compound_condition,
+    test_rule_based_not_operator,
+    test_rule_based_empty_operands_raises,
+    test_rule_based_unknown_operator_raises,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,

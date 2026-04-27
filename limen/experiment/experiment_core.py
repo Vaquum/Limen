@@ -279,8 +279,15 @@ class UniversalExperimentLoop:
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
-        self.experiment_confusion_metrics = self._log.experiment_confusion_metrics('price_change')
-        self.experiment_backtest_results = self._log.experiment_backtest_results()
+        is_rule_based = self.manifest is not None and self.manifest._rule_based is not None
+        self.experiment_confusion_metrics = (
+            None if is_rule_based
+            else self._log.experiment_confusion_metrics('price_change')
+        )
+        self.experiment_backtest_results = (
+            None if is_rule_based
+            else self._log.experiment_backtest_results()
+        )
         self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
 
 
