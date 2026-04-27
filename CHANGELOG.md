@@ -779,7 +779,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v2.5.3 on 27th of April, 2026
 
 - Add rule-based SFD framework (RFC-1014): boolean predicate logic over TA indicators producing per-bar long/flat signals without writing Python code
-- Add predicate library (`limen.sfd.rule_based.predicates`) with threshold, relative, crossover, slope, and polars_expr escape-hatch types plus persistence and recency temporal modifiers
+- Add predicate library (`limen.sfd.rule_based.predicates`) with threshold, relative, crossover, slope, and `sql_expr` escape-hatch types plus persistence and recency temporal modifiers
 - Add `Manifest.with_strategy()` builder for rule-based strategy configuration with per-round predicate template substitution
 - Add `RuleBasedStrategy` reference architecture with no-op training, boolean logic tree evaluation, and per-split backtesting
 - Add `rule_based_metrics` computing Tier 1 position stats, Tier 2 per-split backtest metrics, and Tier 3 cross-split stability metrics (`sharpe_std`, `drawdown_std`, `sharpe_degradation`, `is_stable`)
