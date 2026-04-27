@@ -25,6 +25,29 @@ def _validate_leaf(cond: dict) -> None:
         raise ValueError(f'Condition {cond["id"]!r} cannot specify both persistence_n and recency_n')
 
 
+def _detect_cycles(conditions: list[dict]) -> None:
+    adj: dict[str, list[str]] = {
+        c['id']: (c.get('operands', []) if 'type' not in c else [])
+        for c in conditions
+    }
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def _dfs(node_id: str) -> None:
+        visiting.add(node_id)
+        for dep in adj[node_id]:
+            if dep in visiting:
+                raise ValueError(f'Cyclic reference detected: {dep!r} is part of a cycle')
+            if dep not in visited:
+                _dfs(dep)
+        visiting.discard(node_id)
+        visited.add(node_id)
+
+    for cond_id in adj:
+        if cond_id not in visited:
+            _dfs(cond_id)
+
+
 def _validate_compound(cond: dict, known_ids: set[str]) -> None:
     operator = cond.get('operator')
     if operator not in _VALID_OPERATORS:
@@ -71,3 +94,5 @@ class RuleBasedConfig:
                 _validate_leaf(cond)
             else:
                 _validate_compound(cond, known_ids)
+
+        _detect_cycles(self.conditions)

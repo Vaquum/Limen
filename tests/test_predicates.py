@@ -1,5 +1,6 @@
 import polars as pl
 
+from limen.sfd.rule_based.config import RuleBasedConfig
 from limen.sfd.rule_based.predicates import build_predicate
 from limen.sfd.rule_based.predicates import crossover
 from limen.sfd.rule_based.predicates import polars_expr
@@ -94,3 +95,25 @@ def test_threshold_unknown_operator_raises() -> None:
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'Unknown operator' in str(e)
+
+
+def test_polars_expr_blocks_filesystem_tokens() -> None:
+    for blocked in ('pl.read_csv("x.csv")', 'pl.scan_parquet("x.parq")', 'pl.SQLContext()'):
+        try:
+            polars_expr(blocked, {})
+            assert False, f'Expected ValueError for: {blocked}'
+        except ValueError as e:
+            assert 'blocked token' in str(e)
+
+
+def test_rule_based_config_cycle_detection() -> None:
+    conditions = [
+        {'id': 'a', 'type': 'threshold', 'column': 'x', 'operator': '>', 'value': 0},
+        {'id': 'b', 'operator': 'and', 'operands': ['a', 'c']},
+        {'id': 'c', 'operator': 'and', 'operands': ['b']},
+    ]
+    try:
+        RuleBasedConfig(conditions=conditions, entry='b')
+        assert False, 'Expected ValueError for cyclic reference'
+    except ValueError as e:
+        assert 'Cyclic' in str(e) or 'cycle' in str(e).lower()

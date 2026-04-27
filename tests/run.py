@@ -183,6 +183,8 @@ from tests.test_predicates import test_polars_expr_escape_hatch
 from tests.test_predicates import test_build_predicate_threshold_with_param_substitution
 from tests.test_predicates import test_build_predicate_unknown_type_raises
 from tests.test_predicates import test_threshold_unknown_operator_raises
+from tests.test_predicates import test_polars_expr_blocks_filesystem_tokens
+from tests.test_predicates import test_rule_based_config_cycle_detection
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_standard_csv import test_standard_run_rechunks_live_log_without_changing_row_output
@@ -736,6 +738,8 @@ tests = [
     test_build_predicate_threshold_with_param_substitution,
     test_build_predicate_unknown_type_raises,
     test_threshold_unknown_operator_raises,
+    test_polars_expr_blocks_filesystem_tokens,
+    test_rule_based_config_cycle_detection,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_standard_run_rechunks_live_log_without_changing_row_output,
