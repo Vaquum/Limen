@@ -90,3 +90,16 @@ def test_prepare_data_rule_based_rejects_ablation() -> None:
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'Feature ablation cannot be used' in str(e)
+
+
+def test_prepare_data_rule_based_rejects_condition_id_colliding_with_column() -> None:
+    colliding_conditions = [
+        {'id': 'rsi_14', 'type': 'threshold', 'column': 'rsi_14', 'operator': '<', 'value': 30},
+        {'id': 'entry_signal', 'operator': 'and', 'operands': ['rsi_14']},
+    ]
+    m = Manifest().with_strategy(colliding_conditions, entry='entry_signal')
+    try:
+        m.prepare_data(_make_raw_data(), {})
+        assert False, 'Expected ValueError for column name collision'
+    except ValueError as e:
+        assert 'collide' in str(e).lower()

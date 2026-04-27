@@ -115,3 +115,27 @@ def test_rule_based_config_cycle_detection() -> None:
         assert False, 'Expected ValueError for cyclic reference'
     except ValueError as e:
         assert 'Cyclic' in str(e) or 'cycle' in str(e).lower()
+
+
+def test_rule_based_config_operands_must_be_list() -> None:
+    conditions = [
+        {'id': 'a', 'type': 'threshold', 'column': 'x', 'operator': '>', 'value': 0},
+        {'id': 'b', 'operator': 'and', 'operands': 'a'},
+    ]
+    try:
+        RuleBasedConfig(conditions=conditions, entry='b')
+        assert False, 'Expected ValueError for non-list operands'
+    except ValueError as e:
+        assert 'list' in str(e).lower()
+
+
+def test_rule_based_config_operand_elements_must_be_strings() -> None:
+    conditions = [
+        {'id': 'a', 'type': 'threshold', 'column': 'x', 'operator': '>', 'value': 0},
+        {'id': 'b', 'operator': 'and', 'operands': ['a', 42]},
+    ]
+    try:
+        RuleBasedConfig(conditions=conditions, entry='b')
+        assert False, 'Expected ValueError for non-string operand'
+    except ValueError as e:
+        assert 'string' in str(e).lower() or 'str' in str(e).lower()

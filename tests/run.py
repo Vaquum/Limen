@@ -173,6 +173,7 @@ from tests.test_manifest_rule_based import test_prepare_data_rule_based_attaches
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_compound_condition_not_added_as_column
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_scaler
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_ablation
+from tests.test_manifest_rule_based import test_prepare_data_rule_based_rejects_condition_id_colliding_with_column
 from tests.test_predicates import test_threshold
 from tests.test_predicates import test_relative
 from tests.test_predicates import test_crossover_above
@@ -187,6 +188,8 @@ from tests.test_predicates import test_build_predicate_unknown_type_raises
 from tests.test_predicates import test_threshold_unknown_operator_raises
 from tests.test_predicates import test_sql_expr_missing_param_raises
 from tests.test_predicates import test_rule_based_config_cycle_detection
+from tests.test_predicates import test_rule_based_config_operands_must_be_list
+from tests.test_predicates import test_rule_based_config_operand_elements_must_be_strings
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_standard_csv import test_standard_run_rechunks_live_log_without_changing_row_output
@@ -727,6 +730,7 @@ tests = [
     test_prepare_data_rule_based_compound_condition_not_added_as_column,
     test_prepare_data_rule_based_rejects_scaler,
     test_prepare_data_rule_based_rejects_ablation,
+    test_prepare_data_rule_based_rejects_condition_id_colliding_with_column,
     test_threshold,
     test_relative,
     test_crossover_above,
@@ -741,6 +745,8 @@ tests = [
     test_threshold_unknown_operator_raises,
     test_sql_expr_missing_param_raises,
     test_rule_based_config_cycle_detection,
+    test_rule_based_config_operands_must_be_list,
+    test_rule_based_config_operand_elements_must_be_strings,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_standard_run_rechunks_live_log_without_changing_row_output,

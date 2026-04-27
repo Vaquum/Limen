@@ -55,6 +55,11 @@ def _validate_compound(cond: dict, known_ids: set[str]) -> None:
             f'Condition {cond["id"]!r} has unknown operator {operator!r} — must be one of {_VALID_OPERATORS}'
         )
     operands = cond.get('operands', [])
+    if not isinstance(operands, (list, tuple)):
+        raise ValueError(
+            f'Compound condition {cond["id"]!r} operands must be a list of id strings, '
+            f'got {type(operands).__name__!r}'
+        )
     if not operands:
         raise ValueError(f'Compound condition {cond["id"]!r} has no operands')
     if operator == 'not' and len(operands) != 1:
@@ -62,6 +67,10 @@ def _validate_compound(cond: dict, known_ids: set[str]) -> None:
             f'NOT condition {cond["id"]!r} must have exactly 1 operand, got {len(operands)}'
         )
     for op_id in operands:
+        if not isinstance(op_id, str):
+            raise ValueError(
+                f'Operand in condition {cond["id"]!r} must be a string id, got {type(op_id).__name__!r}'
+            )
         if op_id not in known_ids:
             raise ValueError(f'Operand {op_id!r} in condition {cond["id"]!r} references unknown id')
 

@@ -1175,13 +1175,20 @@ def _finalize_rule_based_data(
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
 
     config = manifest._rule_based
+    predicate_conditions = [c for c in config.conditions if 'type' in c]
+    predicate_ids = [c['id'] for c in predicate_conditions]
     predicate_exprs = [
         build_predicate(condition, round_params).fill_null(False).alias(condition['id'])
-        for condition in config.conditions
-        if 'type' in condition
+        for condition in predicate_conditions
     ]
     if predicate_exprs:
         for split in ('train', 'val', 'test'):
+            collisions = sorted(set(data_dict[split].columns) & set(predicate_ids))
+            if collisions:
+                raise ValueError(
+                    f'Rule-based condition ids collide with existing columns in {split!r} split: '
+                    f'{collisions}. Rename the affected conditions.'
+                )
             data_dict[split] = data_dict[split].with_columns(predicate_exprs)
 
     data_dict['strategy'] = {
