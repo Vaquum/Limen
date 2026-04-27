@@ -504,7 +504,7 @@ Each condition is a dict with an `id` field. There are two kinds:
 | `relative` | `column`, `operator`, `other_column` | column compared against another column |
 | `crossover` | `column`, `other_column`, `direction` (`above`/`below`) | cross event, True on the bar of the cross |
 | `slope` | `column`, `direction` (`rising`/`falling`), `lookback` | column rising or falling over a lookback window |
-| `polars_expr` | `expr` | raw polars expression string — see security note below |
+| `sql_expr` | `expr` | SQL expression string — column names referenced directly, no `pl.col()` wrapper needed |
 
 **Compound conditions** — combine leaf or other compound conditions using boolean logic:
 
@@ -566,9 +566,16 @@ The rule-based path produces a different `data_dict` than the ML path:
 
 Predicate boolean columns are added to each split DataFrame before the dict is assembled. The model receives the full DataFrames and applies the boolean logic tree at evaluation time.
 
-### Security note for `polars_expr`
+### `sql_expr` escape hatch
 
-The `polars_expr` predicate type evaluates an expression string via `eval()`. The sandbox (`__builtins__: {}`) is not a true sandbox. Before passing any externally loaded config through `polars_expr`, validate the expression string — block dangerous tokens (`__`, `import`, `globals`, `exec`, etc.) and enforce a maximum length. The predicate library does this automatically, but the primary safety guarantee must come from the caller's config loading layer.
+The `sql_expr` predicate type parses a SQL expression string via `pl.sql_expr()`. Column names are referenced directly without wrappers:
+
+```python
+{'id': 'volume_spike', 'type': 'sql_expr', 'expr': 'volume > avg_volume_20 * {multiplier}'}
+{'id': 'ratio_check',  'type': 'sql_expr', 'expr': '(close - sma_200) / sma_200 > {pct_threshold}'}
+```
+
+This is the safe alternative to writing Python code — the polars SQL parser rejects IO operations and arbitrary function calls by design. Parameter substitution works identically to other predicate types using `{param}` placeholders.
 
 ## Model Configuration
 

@@ -8,7 +8,7 @@ _LEAF_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     'relative':    ('column', 'operator', 'other_column'),
     'crossover':   ('column', 'other_column'),
     'slope':       ('column',),
-    'polars_expr': ('expr',),
+    'sql_expr':    ('expr',),
 }
 
 

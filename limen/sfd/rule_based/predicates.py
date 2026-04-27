@@ -12,9 +12,6 @@ _OPS = {
     '!=': lambda a, b: a != b,
 }
 
-_POLARS_EXPR_BLOCKED_TOKENS = ('__', 'import', 'globals', 'locals', 'exec', 'eval', 'open', 'compile')
-_POLARS_EXPR_MAX_LENGTH = 500
-
 
 def _fmt(val: Any, params: dict) -> Any:
     if not isinstance(val, str):
@@ -171,39 +168,31 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=1) >= 1).fill_null(False)
 
 
-def polars_expr(expr_string: str, params: dict) -> pl.Expr:
+def sql_expr(expr_string: str, params: dict) -> pl.Expr:
 
     '''
-    Evaluate a raw polars expression string with parameter substitution.
+    Parse a SQL expression string with parameter substitution into a polars expression.
+
+    Column names are referenced directly without wrappers — e.g.
+    'volume > avg_volume_20 * 2.0' rather than 'pl.col(...)'.
+    Parameter placeholders use Python format syntax: 'rsi_14 < {rsi_threshold}'.
 
     Args:
-        expr_string (str): Polars expression string with optional {param} placeholders
+        expr_string (str): SQL expression string with optional {param} placeholders
         params (dict): Parameter values for substitution
 
     Returns:
-        pl.Expr: Evaluated polars expression
-
-    NOTE: Uses eval() — __builtins__: {} is not a true sandbox and can be bypassed via
-        object introspection. Safety depends on the caller validating expr_string before
-        it reaches this function. Never pass unvalidated external input directly.
+        pl.Expr: Polars expression
     '''
 
     try:
         resolved = expr_string.format(**params)
     except KeyError as e:
         raise ValueError(
-            f'polars_expr missing template parameter {e} — '
+            f'sql_expr missing template parameter {e} — '
             f'available keys: {sorted(params)}'
         ) from e
-    if len(resolved) > _POLARS_EXPR_MAX_LENGTH:
-        raise ValueError(f'polars_expr string exceeds maximum allowed length of {_POLARS_EXPR_MAX_LENGTH} characters')
-    for token in _POLARS_EXPR_BLOCKED_TOKENS:
-        if token in resolved:
-            raise ValueError(f'polars_expr string contains blocked token: {token!r}')
-    result = eval(resolved, {'pl': pl, '__builtins__': {}}, {})  # noqa: S307
-    if not isinstance(result, pl.Expr):
-        raise ValueError(f'polars_expr must evaluate to a polars Expr, got {type(result).__name__!r}')
-    return result
+    return pl.sql_expr(resolved)
 
 
 def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
@@ -251,8 +240,8 @@ def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
             lookback=int(_fmt(condition.get('lookback', 1), round_params)),
         )
 
-    elif ptype == 'polars_expr':
-        expr = polars_expr(condition['expr'], round_params)
+    elif ptype == 'sql_expr':
+        expr = sql_expr(condition['expr'], round_params)
 
     else:
         raise ValueError(f'Unknown predicate type: {ptype!r}')

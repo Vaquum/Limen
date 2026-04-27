@@ -3,7 +3,7 @@ import polars as pl
 from limen.sfd.rule_based.config import RuleBasedConfig
 from limen.sfd.rule_based.predicates import build_predicate
 from limen.sfd.rule_based.predicates import crossover
-from limen.sfd.rule_based.predicates import polars_expr
+from limen.sfd.rule_based.predicates import sql_expr
 from limen.sfd.rule_based.predicates import relative
 from limen.sfd.rule_based.predicates import slope
 from limen.sfd.rule_based.predicates import threshold
@@ -68,11 +68,10 @@ def test_with_recency() -> None:
     assert result[3] is False
 
 
-def test_polars_expr_escape_hatch() -> None:
+def test_sql_expr_escape_hatch() -> None:
     df = pl.DataFrame({'volume': [100.0, 300.0], 'avg_vol': [200.0, 200.0]})
-    expr = polars_expr("pl.col('volume') > pl.col('avg_vol') * {multiplier}", {'multiplier': 1.2})
+    expr = sql_expr('volume > avg_vol * {multiplier}', {'multiplier': 1.2})
     assert _eval(expr, df) == [False, True]
-
 
 
 def test_build_predicate_threshold_with_param_substitution() -> None:
@@ -97,13 +96,12 @@ def test_threshold_unknown_operator_raises() -> None:
         assert 'Unknown operator' in str(e)
 
 
-def test_polars_expr_rejects_non_expr_return_types() -> None:
-    for expr_str in ('pl.scan_parquet("x.parq")', 'pl.SQLContext()'):
-        try:
-            polars_expr(expr_str, {})
-            assert False, f'Expected ValueError for: {expr_str}'
-        except ValueError as e:
-            assert 'polars Expr' in str(e)
+def test_sql_expr_missing_param_raises() -> None:
+    try:
+        sql_expr('volume > {threshold}', {})
+        assert False, 'Expected ValueError for missing param'
+    except ValueError as e:
+        assert 'missing template parameter' in str(e)
 
 
 def test_rule_based_config_cycle_detection() -> None:

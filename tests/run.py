@@ -179,11 +179,11 @@ from tests.test_predicates import test_slope_rising
 from tests.test_predicates import test_slope_falling
 from tests.test_predicates import test_with_persistence
 from tests.test_predicates import test_with_recency
-from tests.test_predicates import test_polars_expr_escape_hatch
+from tests.test_predicates import test_sql_expr_escape_hatch
 from tests.test_predicates import test_build_predicate_threshold_with_param_substitution
 from tests.test_predicates import test_build_predicate_unknown_type_raises
 from tests.test_predicates import test_threshold_unknown_operator_raises
-from tests.test_predicates import test_polars_expr_rejects_non_expr_return_types
+from tests.test_predicates import test_sql_expr_missing_param_raises
 from tests.test_predicates import test_rule_based_config_cycle_detection
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_trips_special_string_fields
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
@@ -734,11 +734,11 @@ tests = [
     test_slope_falling,
     test_with_persistence,
     test_with_recency,
-    test_polars_expr_escape_hatch,
+    test_sql_expr_escape_hatch,
     test_build_predicate_threshold_with_param_substitution,
     test_build_predicate_unknown_type_raises,
     test_threshold_unknown_operator_raises,
-    test_polars_expr_rejects_non_expr_return_types,
+    test_sql_expr_missing_param_raises,
     test_rule_based_config_cycle_detection,
     test_standard_run_csv_round_trips_special_string_fields,
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
