@@ -794,6 +794,6 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v2.5.5 on 28th of April, 2026
 
-- Enforce strict direct snapshot backtest input contracts for non-empty data, binary `0/1` predictions, and `price_change == close - open`
+- Enforce strict direct snapshot backtest input contracts for non-empty data, binary `0/1` predictions, numeric price columns, and `price_change == close - open`
 - Remove the snapshot bars-count mode so `trades_count` and `mean_kelly_pct` are always computed from compounded consecutive in-market runs
-- Add direct snapshot regression coverage for empty input, invalid predictions, missing predictions, and inconsistent `price_change`
+- Add direct snapshot regression coverage for empty input, invalid predictions, missing predictions, non-numeric prices, and inconsistent `price_change`

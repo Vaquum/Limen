@@ -325,6 +325,18 @@ def test_backtest_snapshot_rejects_missing_predictions() -> None:
         )
 
 
+def test_backtest_snapshot_rejects_non_numeric_price_values() -> None:
+    with pytest.raises(ValueError, match='open, close, and price_change must be numeric'):
+        backtest_snapshot(
+            pd.DataFrame({
+                'predictions': [1, 0, 0],
+                'open': [100.0, 'bad', 100.0],
+                'close': [101.0, 102.0, 100.0],
+                'price_change': [1.0, 2.0, 0.0],
+            })
+        )
+
+
 def test_backtest_snapshot_rejects_inconsistent_price_change() -> None:
     with pytest.raises(ValueError, match='price_change must equal close - open'):
         backtest_snapshot(

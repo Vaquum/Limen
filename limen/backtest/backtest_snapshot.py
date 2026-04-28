@@ -23,6 +23,7 @@ def backtest_snapshot(df: pd.DataFrame,
     Logic
     - Predictions are shifted forward by `execution_lag_bars` onto the execution bar sequence.
     - Position pos = 1 wherever the lagged predictions==1 on a tradable execution row.
+    - Price columns must be numeric; missing price rows are treated as non-tradable gaps.
     - Entry bar gross return: r_entry = price_change / open  (≈ close/open - 1).
     - Continuation bar gross return: r_cont = close_t / close_{t-1} - 1  (holding across bars).
     - Fee/slippage costs are applied multiplicatively on entry and exit fills.
@@ -64,9 +65,12 @@ def backtest_snapshot(df: pd.DataFrame,
         raise ValueError('predictions must contain only 0 or 1')
 
     pred = pred.astype(int)
-    open_px = pd.to_numeric(df[open_col], errors='coerce')
-    close_px = pd.to_numeric(df[close_col], errors='coerce')
-    dpx = pd.to_numeric(df[price_change_col], errors='coerce')
+    try:
+        open_px = pd.to_numeric(df[open_col], errors='raise')
+        close_px = pd.to_numeric(df[close_col], errors='raise')
+        dpx = pd.to_numeric(df[price_change_col], errors='raise')
+    except (TypeError, ValueError) as exc:
+        raise ValueError('open, close, and price_change must be numeric') from exc
 
     price_check_mask = open_px.notna() & close_px.notna() & dpx.notna()
     expected_dpx = close_px - open_px

@@ -40,6 +40,7 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `prediction == 1` means "in market"; `prediction == 0` means flat
 - completed-bar pipelines execute prediction row `t` on the immediate next execution row by default (`execution_lag_bars=1`)
 - `execution_lag_bars=0` gives same-row execution of tradable rows, not the old raw-row denominator behavior
+- price columns must be numeric; missing price rows are treated as non-tradable gaps
 - entry-bar return is based on `price_change / open`
 - `price_change` must match `close - open` when all three fields are present
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
