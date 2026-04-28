@@ -190,6 +190,12 @@ class UniversalExperimentLoop:
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
 
+        if self._experiment_dir is not None:
+            self._experiment_dir.mkdir(parents=True, exist_ok=True)
+            csv_path = self._experiment_dir / f'{Path(experiment_name).name}.csv'
+        else:
+            csv_path = Path(f'{experiment_name}.csv')
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time
@@ -254,7 +260,6 @@ class UniversalExperimentLoop:
                 self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
 
             # Match the MSQ path: only write a header when the CSV is new or empty.
-            csv_path = Path(f'{experiment_name}.csv')
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             with csv_path.open('a', newline='') as f:
                 writer = csv.writer(f)

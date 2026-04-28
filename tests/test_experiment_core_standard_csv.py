@@ -1,4 +1,5 @@
 import csv
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -126,6 +127,64 @@ def test_standard_run_csv_does_not_append_duplicate_headers_on_rerun() -> None:
         csv_path = Path(f"{experiment_name}.csv")
         with csv_path.open(newline='') as f:
             rows = list(csv.DictReader(f))
+
+    assert len(rows) == 2
+    assert rows[0]['note'] == first_note
+    assert rows[1]['note'] == second_note
+    assert rows[1]['id'] != 'id'
+
+
+def test_standard_run_csv_uses_experiment_dir() -> None:
+    first_note = 'alpha'
+    second_note = 'omega'
+
+    sfd = SimpleNamespace(
+        params=lambda: {'marker': [0]},
+        prep=_standard_csv_test_prep,
+        model=_standard_csv_test_model,
+    )
+
+    cwd = Path.cwd()
+    with TemporaryDirectory() as tmpdir:
+        os.chdir(tmpdir)
+        try:
+            experiment_dir = Path('output')
+            experiment_name = 'experiment_test'
+
+            first_uel = UniversalExperimentLoop(
+                data=_make_standard_csv_test_data(),
+                sfd=sfd,
+                experiment_dir=experiment_dir,
+            )
+            first_uel.run(
+                experiment_name=experiment_name,
+                n_permutations=1,
+                prep_each_round=True,
+                random_search=False,
+                context_params={'note': first_note},
+            )
+
+            second_uel = UniversalExperimentLoop(
+                data=_make_standard_csv_test_data(),
+                sfd=sfd,
+                experiment_dir=experiment_dir,
+            )
+            second_uel.run(
+                experiment_name=experiment_name,
+                n_permutations=1,
+                prep_each_round=True,
+                random_search=False,
+                context_params={'note': second_note},
+            )
+
+            csv_path = experiment_dir / f'{experiment_name}.csv'
+            with csv_path.open(newline='') as f:
+                rows = list(csv.DictReader(f))
+
+            assert csv_path.exists()
+            assert not Path(f'{experiment_name}.csv').exists()
+        finally:
+            os.chdir(cwd)
 
     assert len(rows) == 2
     assert rows[0]['note'] == first_note
