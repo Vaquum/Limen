@@ -2,6 +2,7 @@
 
 Invocation:
     python -m limen.sfd.loop.run <payload.json> --out <experiment_dir> --n <N>
+        [--snapshot-fee-bps <bps>] [--snapshot-slip-bps <bps>]
 
 The runner owns the experiment directory: it creates the dir, copies the
 payload there as an audit trail, then hands the dir to UEL which writes all
@@ -25,6 +26,8 @@ from typing import Any
 import polars as pl
 
 from limen import UniversalExperimentLoop
+from limen.backtest.backtest_snapshot import DEFAULT_FEE_BPS
+from limen.backtest.backtest_snapshot import DEFAULT_SLIP_BPS
 from limen.data import HistoricalData
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
@@ -181,7 +184,9 @@ def _fetch_data_from_payload(payload: dict) -> pl.DataFrame:
 def run_experiment(payload_path: Path,
                    experiment_dir: Path,
                    n_permutations: int = 100,
-                   seed: int = 42) -> None:
+                   seed: int = 42,
+                   snapshot_fee_bps: float = DEFAULT_FEE_BPS,
+                   snapshot_slip_bps: float = DEFAULT_SLIP_BPS) -> None:
 
     '''
     Compute and execute a Loop experiment from a JSON payload file.
@@ -192,6 +197,8 @@ def run_experiment(payload_path: Path,
             Created if missing
         n_permutations (int): Number of parameter combinations to try
         seed (int): Random seed for the search strategy
+        snapshot_fee_bps (float): Snapshot fee cost in basis points per fill
+        snapshot_slip_bps (float): Snapshot slippage cost in basis points per fill
 
     '''
 
@@ -235,6 +242,8 @@ def run_experiment(payload_path: Path,
     uel.run(
         experiment_name=str(experiment_dir / 'run'),
         n_permutations=n_permutations,
+        snapshot_fee_bps=snapshot_fee_bps,
+        snapshot_slip_bps=snapshot_slip_bps,
     )
 
     logger.info('Experiment complete: %s', experiment_dir)
@@ -285,6 +294,18 @@ def main(argv: list[str] | None = None) -> int:
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         help='Logging level (default: INFO)',
     )
+    parser.add_argument(
+        '--snapshot-fee-bps',
+        type=float,
+        default=DEFAULT_FEE_BPS,
+        help=f"Snapshot fee cost in bps per fill (default: {DEFAULT_FEE_BPS:g})",
+    )
+    parser.add_argument(
+        '--snapshot-slip-bps',
+        type=float,
+        default=DEFAULT_SLIP_BPS,
+        help=f"Snapshot slippage cost in bps per fill (default: {DEFAULT_SLIP_BPS:g})",
+    )
 
     args = parser.parse_args(argv)
 
@@ -299,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
             experiment_dir=args.out,
             n_permutations=args.n,
             seed=args.seed,
+            snapshot_fee_bps=args.snapshot_fee_bps,
+            snapshot_slip_bps=args.snapshot_slip_bps,
         )
     except Exception:
         logger.exception('Experiment failed')

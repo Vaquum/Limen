@@ -14,6 +14,8 @@ from typing import Any
 import polars as pl
 from tqdm import tqdm
 
+from limen.backtest.backtest_snapshot import DEFAULT_FEE_BPS
+from limen.backtest.backtest_snapshot import DEFAULT_SLIP_BPS
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
@@ -113,6 +115,8 @@ class UniversalExperimentLoop:
         self._checkpoint_interval = checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
+        self._snapshot_fee_bps = DEFAULT_FEE_BPS
+        self._snapshot_slip_bps = DEFAULT_SLIP_BPS
 
     def run(self,
             experiment_name: str,
@@ -124,6 +128,8 @@ class UniversalExperimentLoop:
             params: Callable | None = None,
             prep: Callable | None = None,
             model: Callable | None = None,
+            snapshot_fee_bps: float = DEFAULT_FEE_BPS,
+            snapshot_slip_bps: float = DEFAULT_SLIP_BPS,
             resume: bool = False) -> None:
 
         '''
@@ -144,10 +150,14 @@ class UniversalExperimentLoop:
             params (Callable | None): Callable that returns the parameters dict
             prep (Callable | None): Callable to prepare the data
             model (Callable | None): Callable to run the model
+            snapshot_fee_bps (float): Snapshot fee cost in basis points per fill
+            snapshot_slip_bps (float): Snapshot slippage cost in basis points per fill
             resume (bool): Whether to resume from an existing checkpoint
 
         '''
 
+        self._snapshot_fee_bps = float(snapshot_fee_bps)
+        self._snapshot_slip_bps = float(snapshot_slip_bps)
         self.round_params = []
         self.models = []
         self.preds = []
@@ -210,6 +220,10 @@ class UniversalExperimentLoop:
 
             if prep_each_round is True or i == 0:
                 data_dict = self.prep(self.data, round_params=round_params)
+
+            if self.manifest is not None:
+                data_dict['_snapshot_fee_bps'] = self._snapshot_fee_bps
+                data_dict['_snapshot_slip_bps'] = self._snapshot_slip_bps
 
             # Perform the model training and evaluation
             round_results = self.model(data=data_dict, round_params=round_params)
@@ -286,7 +300,10 @@ class UniversalExperimentLoop:
         )
         self.experiment_backtest_results = (
             None if is_rule_based
-            else self._log.experiment_backtest_results()
+            else self._log.experiment_backtest_results(
+                fee_bps=self._snapshot_fee_bps,
+                slip_bps=self._snapshot_slip_bps,
+            )
         )
         self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
 
@@ -415,6 +432,9 @@ class UniversalExperimentLoop:
             with warnings.catch_warnings(record=True) as caught:
                 warnings.simplefilter('always')
                 data_dict = self.prep(self.data, round_params=sfd_params)
+                if self.manifest is not None:
+                    data_dict['_snapshot_fee_bps'] = self._snapshot_fee_bps
+                    data_dict['_snapshot_slip_bps'] = self._snapshot_slip_bps
                 round_results = self.model(
                     data=data_dict, round_params=sfd_params,
                 )

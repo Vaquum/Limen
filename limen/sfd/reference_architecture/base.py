@@ -5,6 +5,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from limen.backtest.backtest_snapshot import DEFAULT_FEE_BPS
+from limen.backtest.backtest_snapshot import DEFAULT_SLIP_BPS
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 
@@ -138,6 +140,8 @@ class ReferenceModel(ABC):
         if 'price_data_for_backtest' not in data:
             return {}
 
+        fee_bps = float(data.get('_snapshot_fee_bps', DEFAULT_FEE_BPS))
+        slip_bps = float(data.get('_snapshot_slip_bps', DEFAULT_SLIP_BPS))
         price_pd = self._price_data_to_pandas(data['price_data_for_backtest'])
 
         bt_input = pd.DataFrame({
@@ -147,7 +151,12 @@ class ReferenceModel(ABC):
             'price_change': (price_pd['close'] - price_pd['open']).values,
         })
 
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
+        bt_result = backtest_snapshot(
+            bt_input,
+            execution_lag_bars=1,
+            fee_bps=fee_bps,
+            slip_bps=slip_bps,
+        )
 
         if bt_result.empty:
             return {}

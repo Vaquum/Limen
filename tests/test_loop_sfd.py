@@ -28,6 +28,7 @@ from limen.sfd.loop.run import (
     _annotation_accepts_int,
     _coerce_string_params_by_signature,
     _fetch_data_from_payload,
+    main,
 )
 from limen.sfd.reference_architecture import logreg_binary as _logreg_binary_func
 
@@ -634,6 +635,47 @@ def test_fetch_data_coerces_kline_size_string_through_full_path():
         assert kwargs['start_date_limit'] == '2025-01-01'
     finally:
         _restore_historical_data(original)
+
+
+def test_loop_run_accepts_snapshot_cost_arguments():
+    import limen.sfd.loop.run as _run_mod
+
+    calls = {}
+    original = _run_mod.run_experiment
+
+    def fake_run_experiment(payload_path: Path,
+                            experiment_dir: Path,
+                            n_permutations: int = 100,
+                            seed: int = 42,
+                            snapshot_fee_bps: float = 5.0,
+                            snapshot_slip_bps: float = 5.0) -> None:
+        calls['payload_path'] = payload_path
+        calls['experiment_dir'] = experiment_dir
+        calls['n_permutations'] = n_permutations
+        calls['seed'] = seed
+        calls['snapshot_fee_bps'] = snapshot_fee_bps
+        calls['snapshot_slip_bps'] = snapshot_slip_bps
+
+    _run_mod.run_experiment = fake_run_experiment
+    try:
+        with TemporaryDirectory() as tmpdir:
+            code = main([
+                str(_FIXTURE_PATH),
+                '--out', str(Path(tmpdir) / 'exp'),
+                '--n', '2',
+                '--seed', '7',
+                '--snapshot-fee-bps', '12.5',
+                '--snapshot-slip-bps', '3.5',
+            ])
+    finally:
+        _run_mod.run_experiment = original
+
+    assert code == 0
+    assert calls['payload_path'] == _FIXTURE_PATH
+    assert calls['n_permutations'] == 2
+    assert calls['seed'] == 7
+    assert calls['snapshot_fee_bps'] == 12.5
+    assert calls['snapshot_slip_bps'] == 3.5
 
 
 def test_loop_sfd_unknown_reference_architecture_raises():

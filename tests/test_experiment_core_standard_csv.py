@@ -44,6 +44,8 @@ def _standard_csv_test_prep(
 
 def _standard_csv_test_model(data: dict, round_params: dict) -> dict:
     _ = round_params
+    assert '_snapshot_fee_bps' not in data
+    assert '_snapshot_slip_bps' not in data
     preds = data['y_test'].to_list()
     return {
         'accuracy': 1.0,
