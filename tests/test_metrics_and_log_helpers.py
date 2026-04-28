@@ -279,7 +279,6 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-        trades_count_mode='runs',
     ).iloc[0]
 
     assert result['trades_count'] == 1
@@ -288,6 +287,66 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
     assert result['trade_win_rate_pct'] == 100.0
     assert result['trade_expectancy_pct'] == 21.0
     assert result['trade_return_mean_win_pct'] == 21.0
+
+
+def test_backtest_snapshot_rejects_empty_input() -> None:
+    with pytest.raises(ValueError, match='backtest_snapshot requires at least one row'):
+        backtest_snapshot(
+            pd.DataFrame({
+                'predictions': [],
+                'open': [],
+                'close': [],
+                'price_change': [],
+            })
+        )
+
+
+def test_backtest_snapshot_rejects_non_binary_predictions() -> None:
+    with pytest.raises(ValueError, match='predictions must contain only 0 or 1'):
+        backtest_snapshot(
+            pd.DataFrame({
+                'predictions': [1, 2, 0],
+                'open': [100.0, 100.0, 100.0],
+                'close': [101.0, 102.0, 100.0],
+                'price_change': [1.0, 2.0, 0.0],
+            })
+        )
+
+
+def test_backtest_snapshot_rejects_missing_predictions() -> None:
+    with pytest.raises(ValueError, match='predictions must contain only 0 or 1'):
+        backtest_snapshot(
+            pd.DataFrame({
+                'predictions': [1, np.nan, 0],
+                'open': [100.0, 100.0, 100.0],
+                'close': [101.0, 102.0, 100.0],
+                'price_change': [1.0, 2.0, 0.0],
+            })
+        )
+
+
+def test_backtest_snapshot_rejects_non_numeric_price_values() -> None:
+    with pytest.raises(ValueError, match='open, close, and price_change must be numeric'):
+        backtest_snapshot(
+            pd.DataFrame({
+                'predictions': [1, 0, 0],
+                'open': [100.0, 'bad', 100.0],
+                'close': [101.0, 102.0, 100.0],
+                'price_change': [1.0, 2.0, 0.0],
+            })
+        )
+
+
+def test_backtest_snapshot_rejects_inconsistent_price_change() -> None:
+    with pytest.raises(ValueError, match='price_change must equal close - open'):
+        backtest_snapshot(
+            pd.DataFrame({
+                'predictions': [1, 0, 0],
+                'open': [100.0, 100.0, 100.0],
+                'close': [101.0, 102.0, 100.0],
+                'price_change': [1.0, 1.0, 0.0],
+            })
+        )
 
 
 def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
