@@ -58,7 +58,7 @@ def manifest():
         .add_feature(vwap, group='volume')
         .add_feature(kline_imbalance, group='volume')
 
-        .with_target('quantile_flag')
+        .with_target_label('quantile_flag')
             .add_fitted_transform(quantile_flag)
                 .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
@@ -68,5 +68,5 @@ def manifest():
         .set_scaler_from_params('scaler_type')
         .set_feature_ablation()
 
-        .with_model(logreg_binary)
+        .with_reference_architecture(logreg_binary)
     )

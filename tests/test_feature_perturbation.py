@@ -26,7 +26,7 @@ def _make_manifest_with_groups() -> Manifest:
             lambda df: df.with_columns(pl.col('close').rolling_mean(10).alias('sma_10')),
             group='trend',
         )
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))
@@ -47,7 +47,7 @@ def _make_manifest_with_include_if() -> Manifest:
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
             include_if='include_roc',
         )
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))
@@ -119,7 +119,7 @@ def test_ungrouped_features_always_included():
         .add_indicator(
             lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')),
         )
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))
@@ -149,7 +149,7 @@ def test_combined_group_and_include_if():
             lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')),
             group='volatility',
         )
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))

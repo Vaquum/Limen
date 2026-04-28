@@ -56,14 +56,14 @@ def manifest():
         .add_indicator(wilder_rsi)
         .add_feature(vwap)
         .add_feature(kline_imbalance)
-        .with_target('quantile_flag')
+        .with_target_label('quantile_flag')
             .add_fitted_transform(quantile_flag)
                 .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
             .add_transform(shift_column_transform, shift='shift', column='target_column')
             .done()
         .set_scaler(LogRegScaler)
-        .with_model(logreg_binary)
+        .with_reference_architecture(logreg_binary)
     )
 ```
 
@@ -122,7 +122,7 @@ from limen.data import HistoricalData
 
 ### `set_test_data_source(method, params=None)`
 
-Configure the test data source used when `LOOP_ENV='test'`.
+Configure the test data source used when `test_mode=True` is passed to `UniversalExperimentLoop`.
 
 ```python
 .set_test_data_source(
@@ -131,16 +131,12 @@ Configure the test data source used when `LOOP_ENV='test'`.
 )
 ```
 
-### Environment selection
+### Data source selection
 
-`Manifest.fetch_data_for_env()` uses:
+Pass `test_mode=True` to `UniversalExperimentLoop` to fetch from the test data source instead of the production source.
+When `test_mode=True` and a test data source is configured, `fetch_test_data()` is called; otherwise `fetch_data()` is used.
 
-- the test data source when `LOOP_ENV='test'` and a test source exists
-- the production data source otherwise
-
-If `LOOP_ENV='test'` but no test data source is configured, Limen falls back to the production data source.
-
-That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source by default when one is defined.
+That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source.
 To keep local runs lightweight, configure `set_test_data_source()` with explicit `kline_size` and `n_rows`.
 
 ## Pipeline Configuration
@@ -386,10 +382,10 @@ Then in `params()`:
 
 ## Target Configuration
 
-Target construction is handled through `with_target(...)`.
+Target construction is handled through `with_target_label(...)`.
 
 ```python
-.with_target('quantile_flag')
+.with_target_label('quantile_flag')
     ...
     .done()
 ```
@@ -401,7 +397,7 @@ The target column is placed last before Limen finalizes the `data_dict`.
 Use fitted transforms when a target step needs a value computed on the training split first, then reused on validation and test.
 
 ```python
-.with_target('quantile_flag')
+.with_target_label('quantile_flag')
     .add_fitted_transform(quantile_flag)
         .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
         .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
@@ -421,7 +417,7 @@ This is the manifest-safe way to compute train-only thresholds.
 Use plain transforms when the step does not need fitted state.
 
 ```python
-.with_target('quantile_flag')
+.with_target_label('quantile_flag')
     .add_transform(shift_column_transform, shift='shift', column='target_column')
     .done()
 ```
@@ -486,7 +482,7 @@ manifest = (
     .add_indicator(wilder_rsi, period='rsi_period')
     .add_indicator(ema, period='ema_period')
     .with_strategy(conditions, entry='entry')
-    .with_model(rule_based)
+    .with_reference_architecture(rule_based)
 )
 ```
 
@@ -579,14 +575,14 @@ This is the safe alternative to writing Python code — the polars SQL parser re
 
 ## Model Configuration
 
-### `with_model(model_function)`
+### `with_reference_architecture(architecture_function)`
 
 Configure the final model function.
 
 ```python
 from limen.sfd.reference_architecture import logreg_binary
 
-.with_model(logreg_binary)
+.with_reference_architecture(logreg_binary)
 ```
 
 The model function must accept the prepared `data_dict` as its first argument.
@@ -719,7 +715,7 @@ Use fitted transforms when the function depends on train-only fitted state. Use 
 
 ### Model functions
 
-The model function configured in `with_model(...)` must:
+The architecture function configured in `with_reference_architecture(...)` must:
 
 - accept the finalized `data_dict` as its first argument
 - accept any searched model parameters as named kwargs
@@ -734,7 +730,7 @@ If the model returns `_preds`, UEL stores them in `uel.preds` and the `Log` laye
 This is the most important target recipe in the current Limen style:
 
 ```python
-.with_target('quantile_flag')
+.with_target_label('quantile_flag')
     .add_fitted_transform(quantile_flag)
         .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
         .with_params(col='roc_{roc_period}', cutoff='_cutoff')

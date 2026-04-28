@@ -39,7 +39,7 @@ from limen.features import compute_quantile_cutoff, quantile_flag
 from limen.transforms import shift_column_transform
 
 (
-    manifest.with_target('quantile_flag')
+    manifest.with_target_label('quantile_flag')
     .add_fitted_transform(quantile_flag)
         .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
         .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')

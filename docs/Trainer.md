@@ -137,7 +137,7 @@ This is expected behavior, not a special case in the docs.
 | `experiment_dir` | path to the completed experiment directory |
 | `data` | optional dataframe override; if omitted, Trainer fetches data from the reconstructed manifest |
 
-Use `data=` when you already have the exact dataframe you want Trainer to use. Otherwise Trainer falls back to `manifest.fetch_data_for_env()`.
+Use `data=` when you already have the exact dataframe you want Trainer to use. Otherwise Trainer falls back to `manifest.fetch_data()`.
 
 ## `train(permutation_ids)`
 

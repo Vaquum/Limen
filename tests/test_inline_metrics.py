@@ -21,6 +21,7 @@ def _run_uel(sfd_module=random_binary_sfd,
     uel = UniversalExperimentLoop(
         sfd=sfd_module,
         search_strategy=strategy,
+        test_mode=True,
     )
 
     with TemporaryDirectory() as tmpdir:

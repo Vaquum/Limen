@@ -74,12 +74,12 @@ def manifest():
             'order_flow_imbalance',
             'stoch_k',
         ], lag=1)
-        .with_target('next_return')
+        .with_target_label('next_return')
             .add_transform(
                 lambda df: df.with_columns([
                     (((pl.col('close').shift(-1) - pl.col('close')) / pl.col('close')) * 100).alias('next_return')
                 ])
             )
             .done()
-        .with_model(xgboost_regressor)
+        .with_reference_architecture(xgboost_regressor)
     )

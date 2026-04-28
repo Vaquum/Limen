@@ -37,7 +37,7 @@ def manifest():
         .add_indicator(atr, period=14)
         .add_indicator(ppo)
         .add_indicator(wilder_rsi)
-        .with_model(logreg_binary)
+        .with_reference_architecture(logreg_binary)
     )
 ```
 

@@ -209,6 +209,7 @@ from tests.test_experiment_core_msq import test_experiment_parameter_correlation
 from tests.test_experiment_core_msq import test_experiment_parameter_correlation_validates_metric_and_sort_key_presence
 from tests.test_experiment_core_msq import test_experiment_parameter_correlation_requires_numeric_features_after_cleaning
 from tests.test_experiment_core_msq import test_experiment_parameter_correlation_rejects_logs_without_metric_rows
+from tests.test_experiment_core_msq import test_uel_test_mode_routes_to_test_data_source
 from tests.test_sanity_reducer import test_nan_above_threshold
 from tests.test_sanity_reducer import test_min_observations_gate
 from tests.test_sanity_reducer import test_early_returns
@@ -519,7 +520,7 @@ from tests.test_trainer import test_trainer_with_fractional_diff
 from tests.test_trainer import test_load_round_data_skips_blank_and_malformed_lines
 from tests.test_trainer import test_load_round_data_requires_round_data_file
 from tests.test_trainer import test_load_original_log_returns_none_when_results_csv_is_missing
-from tests.test_trainer import test_resolve_model_class_requires_configured_model_function
+from tests.test_trainer import test_resolve_model_class_requires_configured_architecture_function
 from tests.test_trainer import test_resolve_model_class_rejects_modules_without_reference_model_subclasses
 from tests.test_trainer import test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
@@ -544,7 +545,7 @@ from tests.test_loop_sfd import test_loop_sfd_params_includes_unnamespaced_model
 from tests.test_loop_sfd import test_loop_sfd_params_extracts_namespaced_arch_params
 from tests.test_loop_sfd import test_loop_sfd_manifest_split_config
 from tests.test_loop_sfd import test_loop_sfd_manifest_target_column
-from tests.test_loop_sfd import test_loop_sfd_manifest_model_function
+from tests.test_loop_sfd import test_loop_sfd_manifest_architecture_function
 from tests.test_loop_sfd import test_loop_sfd_manifest_scaler_set
 from tests.test_loop_sfd import test_loop_sfd_manifest_feature_transforms_order
 from tests.test_loop_sfd import test_loop_sfd_ignores_payload_transforms
@@ -774,6 +775,7 @@ tests = [
     test_experiment_parameter_correlation_validates_metric_and_sort_key_presence,
     test_experiment_parameter_correlation_requires_numeric_features_after_cleaning,
     test_experiment_parameter_correlation_rejects_logs_without_metric_rows,
+    test_uel_test_mode_routes_to_test_data_source,
     test_nan_above_threshold,
     test_early_returns,
     test_min_observations_gate,
@@ -1132,7 +1134,7 @@ tests = [
     test_load_round_data_skips_blank_and_malformed_lines,
     test_load_round_data_requires_round_data_file,
     test_load_original_log_returns_none_when_results_csv_is_missing,
-    test_resolve_model_class_requires_configured_model_function,
+    test_resolve_model_class_requires_configured_architecture_function,
     test_resolve_model_class_rejects_modules_without_reference_model_subclasses,
     test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses,
     test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift,
@@ -1157,7 +1159,7 @@ tests = [
     test_loop_sfd_params_extracts_namespaced_arch_params,
     test_loop_sfd_manifest_split_config,
     test_loop_sfd_manifest_target_column,
-    test_loop_sfd_manifest_model_function,
+    test_loop_sfd_manifest_architecture_function,
     test_loop_sfd_manifest_scaler_set,
     test_loop_sfd_manifest_feature_transforms_order,
     test_loop_sfd_ignores_payload_transforms,

@@ -50,6 +50,7 @@ def test_foundational_sfd():
                     pruning_strategies=pruning_strategies,
                     feedback_interval=1,
                     experiment_dir=experiment_dir,
+                    test_mode=True,
                 )
 
                 uel.run(

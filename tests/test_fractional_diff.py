@@ -169,7 +169,7 @@ def test_fractional_diff_manifest_integration():
         )
         .set_split_config(3, 1, 1)
         .add_feature(fractional_diff, d=0.4, cols=['close'], threshold=1e-2)
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))

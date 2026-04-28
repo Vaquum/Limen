@@ -134,7 +134,7 @@ This is the same contract that `Trainer` eventually relies on when it promotes f
 Most foundational manifests call the function wrapper:
 
 ```python
-.with_model(logreg_binary)
+.with_reference_architecture(logreg_binary)
 ```
 
 That wrapper typically:

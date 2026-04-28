@@ -237,7 +237,7 @@ class LoopSFD:
             label_func = FEATURE_REGISTRY[label_name]
             target_col = get_target_column(label_name)
             user_params = label.get('params', {}) or {}
-            target_builder = m.with_target(target_col)
+            target_builder = m.with_target_label(target_col)
 
             fitted_config = FITTED_LABELS.get(label_name)
             if fitted_config is not None:
@@ -260,7 +260,7 @@ class LoopSFD:
                 )
             m.set_scaler(scaler_class)
 
-        m.with_model(self._arch_func)
+        m.with_reference_architecture(self._arch_func)
 
         return m
 
@@ -529,7 +529,7 @@ class LoopSFD:
         `.add_fitted_transform().fit_param().with_params()` calls.
 
         Args:
-            target_builder: Limen TargetBuilder returned from .with_target()
+            target_builder: Limen TargetBuilder returned from .with_target_label()
             label_func (Callable): The label function (from FEATURE_REGISTRY)
             label_name (str): Label name as used in the payload
             user_params (dict): Label params from the payload entry

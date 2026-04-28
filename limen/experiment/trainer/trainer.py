@@ -86,7 +86,7 @@ class Trainer:
         if data is not None:
             self._data = data
         else:
-            self._data = self._manifest.fetch_data_for_env()
+            self._data = self._manifest.fetch_data()
 
 
     def _load_round_data(self) -> dict[int, dict[str, Any]]:
@@ -167,13 +167,13 @@ class Trainer:
 
         '''
 
-        if self._manifest.model_function is None:
+        if self._manifest.architecture_function is None:
             raise ValueError(
-                'Model function not configured on manifest. '
+                'Architecture function not configured on manifest. '
                 'Cannot resolve model class.'
             )
 
-        module_name = self._manifest.model_function.__module__
+        module_name = self._manifest.architecture_function.__module__
         module = importlib.import_module(module_name)
 
         classes = [
