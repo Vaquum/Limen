@@ -285,6 +285,42 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
     assert result['trades_count'] == 1
     assert result['total_return_gross_pct'] == 21.0
     assert result['total_return_net_pct'] == 21.0
+    assert result['trade_win_rate_pct'] == 100.0
+    assert result['trade_expectancy_pct'] == 21.0
+    assert result['trade_return_mean_win_pct'] == 21.0
+
+
+def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1],
+            'open': [100.0],
+            'close': [100.0],
+            'price_change': [0.0],
+        }),
+        execution_lag_bars=0,
+        fee_bps=50.0,
+        slip_bps=50.0,
+    ).iloc[0]
+
+    assert result['cost_round_trip_bps'] == 198
+    assert result['trade_expectancy_pct'] == -1.983
+
+
+def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1],
+            'open': [100.0],
+            'close': [90.0],
+            'price_change': [-10.0],
+        }),
+        execution_lag_bars=0,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert result['max_drawdown_pct'] == -10.0
 
 
 def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar() -> None:
