@@ -35,13 +35,17 @@ and returns one summary row.
 The current snapshot backtest is intentionally simple and opinionated:
 
 - long-only
-- `prediction == 1` means "in market"
+- direct snapshot predictions must already be binary `0/1`
+- invalid or missing direct snapshot predictions raise instead of being coerced
+- `prediction == 1` means "in market"; `prediction == 0` means flat
 - completed-bar pipelines execute prediction row `t` on the immediate next execution row by default (`execution_lag_bars=1`)
 - `execution_lag_bars=0` gives same-row execution of tradable rows, not the old raw-row denominator behavior
 - entry-bar return is based on `price_change / open`
+- `price_change` must match `close - open` when all three fields are present
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - fee and slippage costs are applied multiplicatively on entry and exit fills
 - `trade_*` metrics are computed from compounded consecutive `1` runs
+- `trades_count` counts consecutive in-market runs, not in-market bars
 - `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
 - outputs are reported in percent units
 

@@ -791,3 +791,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Apply snapshot backtest fee and slippage costs multiplicatively on entry and exit fills while preserving the fixed bps cost abstraction
 - Compute snapshot `trade_*` metrics from compounded HOLD-WHILE-1 trade runs instead of individual in-market bars
 - Seed snapshot max drawdown with starting equity so first-trade losses register against the initial high-water mark
+
+## v2.5.5 on 28th of April, 2026
+
+- Enforce strict direct snapshot backtest input contracts for non-empty data, binary `0/1` predictions, and `price_change == close - open`
+- Remove the snapshot bars-count mode so `trades_count` and `mean_kelly_pct` are always computed from compounded consecutive in-market runs
+- Add direct snapshot regression coverage for empty input, invalid predictions, missing predictions, and inconsistent `price_change`

@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 
+PRICE_CHANGE_RTOL = 1e-09
+PRICE_CHANGE_ATOL = 1e-12
+
 def backtest_snapshot(df: pd.DataFrame,
                      *,
                      pred_col: str = 'predictions',
@@ -9,8 +12,7 @@ def backtest_snapshot(df: pd.DataFrame,
                      price_change_col: str = 'price_change',
                      execution_lag_bars: int = 1,
                      fee_bps: float = 5.0,
-                     slip_bps: float = 5.0,
-                     trades_count_mode: str = 'bars') -> pd.DataFrame:
+                     slip_bps: float = 5.0) -> pd.DataFrame:
 
     '''
     Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
@@ -47,13 +49,35 @@ def backtest_snapshot(df: pd.DataFrame,
 
     df = df.copy()
 
+    if df.empty:
+        raise ValueError('backtest_snapshot requires at least one row')
+
     if execution_lag_bars < 0:
         raise ValueError('execution_lag_bars must be >= 0')
 
-    pred = pd.to_numeric(df[pred_col], errors='coerce').fillna(0).astype(int).clip(0, 1)
+    try:
+        pred = pd.to_numeric(df[pred_col], errors='raise')
+    except (TypeError, ValueError) as exc:
+        raise ValueError('predictions must contain only 0 or 1') from exc
+
+    if pred.isna().any() or (~pred.isin([0, 1])).any():
+        raise ValueError('predictions must contain only 0 or 1')
+
+    pred = pred.astype(int)
     open_px = pd.to_numeric(df[open_col], errors='coerce')
     close_px = pd.to_numeric(df[close_col], errors='coerce')
-    dpx = pd.to_numeric(df[price_change_col], errors='coerce')  # close - open
+    dpx = pd.to_numeric(df[price_change_col], errors='coerce')
+
+    price_check_mask = open_px.notna() & close_px.notna() & dpx.notna()
+    expected_dpx = close_px - open_px
+
+    if price_check_mask.any() and not np.isclose(
+        dpx[price_check_mask],
+        expected_dpx[price_check_mask],
+        rtol=PRICE_CHANGE_RTOL,
+        atol=PRICE_CHANGE_ATOL,
+    ).all():
+        raise ValueError('price_change must equal close - open')
 
     tradable = open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
     execution_rows = pd.Series(False, index=df.index)
@@ -70,10 +94,7 @@ def backtest_snapshot(df: pd.DataFrame,
     entry_mask = pos & (~pos.shift(1, fill_value=False))
     cont_mask  = pos & ( pos.shift(1, fill_value=False))
 
-    if trades_count_mode == 'runs':
-        trades_count = int(entry_mask.sum())
-    else:
-        trades_count = int(pos.sum())
+    trades_count = int(entry_mask.sum())
 
     r_entry = dpx / open_px
     r_cont  = (close_px / close_px.shift(1)) - 1.0
@@ -117,7 +138,7 @@ def backtest_snapshot(df: pd.DataFrame,
         trade_win_rate_pct = trade_expectancy_pct = np.nan
         trade_return_mean_win_pct = trade_return_mean_loss_pct = np.nan
 
-    kelly_returns = trade_returns if trades_count_mode == 'runs' else R_net[pos]
+    kelly_returns = trade_returns
 
     kelly_wins = kelly_returns[kelly_returns > 0]
     kelly_losses = kelly_returns[kelly_returns < 0]
