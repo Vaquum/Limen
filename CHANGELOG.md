@@ -791,3 +791,4 @@ Note: add all new changelog entries to the bottom of this file.
 - Apply snapshot backtest fee and slippage costs multiplicatively on entry and exit fills while preserving the fixed bps cost abstraction
 - Compute snapshot `trade_*` metrics from compounded HOLD-WHILE-1 trade runs instead of individual in-market bars
 - Seed snapshot max drawdown with starting equity so first-trade losses register against the initial high-water mark
+- Run PR test SSH tunnel setup only when the required SSH secrets are available
