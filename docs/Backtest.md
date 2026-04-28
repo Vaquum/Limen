@@ -41,7 +41,6 @@ The current snapshot backtest is intentionally simple and opinionated:
 - entry-bar return is based on `price_change / open`
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - fee and slippage costs are applied multiplicatively on entry and exit fills
-- fee and slippage default to `5.0` bps per fill and can be passed as snapshot run inputs
 - `trade_*` metrics are computed from compounded consecutive `1` runs
 - `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
 - outputs are reported in percent units
@@ -77,7 +76,7 @@ or for one round:
 from limen.backtest.backtest_snapshot import backtest_snapshot
 
 perf = uel._log.permutation_prediction_performance(round_id=0)
-round0_backtest = backtest_snapshot(perf, fee_bps=5.0, slip_bps=5.0)
+round0_backtest = backtest_snapshot(perf)
 ```
 
 Use the experiment-wide table to compare many rounds. Use the single-round snapshot when you want to study a specific permutation.

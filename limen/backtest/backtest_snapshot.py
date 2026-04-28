@@ -1,10 +1,6 @@
 import numpy as np
 import pandas as pd
 
-DEFAULT_FEE_BPS = 5.0
-DEFAULT_SLIP_BPS = 5.0
-
-
 def backtest_snapshot(df: pd.DataFrame,
                      *,
                      pred_col: str = 'predictions',
@@ -12,8 +8,8 @@ def backtest_snapshot(df: pd.DataFrame,
                      close_col: str = 'close',
                      price_change_col: str = 'price_change',
                      execution_lag_bars: int = 1,
-                     fee_bps: float = DEFAULT_FEE_BPS,
-                     slip_bps: float = DEFAULT_SLIP_BPS,
+                     fee_bps: float = 5.0,
+                     slip_bps: float = 5.0,
                      trades_count_mode: str = 'bars') -> pd.DataFrame:
 
     '''

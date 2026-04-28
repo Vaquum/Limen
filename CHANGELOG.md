@@ -789,7 +789,5 @@ Note: add all new changelog entries to the bottom of this file.
 ## v2.5.4 on 28th of April, 2026
 
 - Apply snapshot backtest fee and slippage costs multiplicatively on entry and exit fills while preserving the fixed bps cost abstraction
-- Allow snapshot fee and slippage bps to be passed through log, UEL run, and Loop CLI snapshot inputs
-- Run PR test SSH tunnel setup only when the required SSH secrets are available
 - Compute snapshot `trade_*` metrics from compounded HOLD-WHILE-1 trade runs instead of individual in-market bars
 - Seed snapshot max drawdown with starting equity so first-trade losses register against the initial high-water mark

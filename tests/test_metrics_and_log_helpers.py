@@ -379,30 +379,6 @@ def test_experiment_backtest_results_directionalizes_regression_predictions() ->
     assert result['total_return_net_pct'] == expected['total_return_net_pct']
 
 
-def test_experiment_backtest_results_accepts_snapshot_cost_inputs() -> None:
-    result = _experiment_backtest_results(
-        _DummyRegressionBacktestLog(),
-        disable_progress_bar=True,
-        fee_bps=50.0,
-        slip_bps=50.0,
-    ).iloc[0]
-
-    expected = backtest_snapshot(
-        pd.DataFrame({
-            'predictions': [1, 0, 1],
-            'open': [100.0, 100.0, 100.0],
-            'close': [100.0, 110.0, 90.0],
-            'price_change': [0.0, 10.0, -10.0],
-        }),
-        execution_lag_bars=1,
-        fee_bps=50.0,
-        slip_bps=50.0,
-    ).iloc[0]
-
-    assert result['cost_round_trip_bps'] == 198
-    assert result['total_return_net_pct'] == expected['total_return_net_pct']
-
-
 def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:
     with pytest.raises(ValueError, match='snapshot backtest does not support multiclass'):
         _prepare_snapshot_backtest_input(

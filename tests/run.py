@@ -276,7 +276,6 @@ from tests.test_budget_reducer import test_set_state_missing_key as test_budget_
 from tests.test_budget_reducer import test_worst_first_maximize_false
 from tests.test_reference_architecture import test_xgboost_train_returns_fitted_model
 from tests.test_reference_architecture import test_xgboost_evaluate_returns_all_metric_types
-from tests.test_reference_architecture import test_reference_backtest_uses_snapshot_cost_config
 from tests.test_reference_architecture import test_logreg_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_random_binary_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
@@ -310,7 +309,6 @@ from tests.test_metrics_and_log_helpers import test_backtest_snapshot_drawdown_i
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar
 from tests.test_metrics_and_log_helpers import test_completed_bar_signal_proves_next_bar_alignment
 from tests.test_metrics_and_log_helpers import test_experiment_backtest_results_directionalizes_regression_predictions
-from tests.test_metrics_and_log_helpers import test_experiment_backtest_results_accepts_snapshot_cost_inputs
 from tests.test_metrics_and_log_helpers import test_permutation_confusion_metrics_adds_mean_return_pct_columns
 from tests.test_metrics_and_log_helpers import test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows
 from tests.test_metrics_and_log_helpers import test_permutation_confusion_metrics_uses_positional_alignment_for_returns
@@ -566,7 +564,6 @@ from tests.test_loop_sfd import test_coerce_string_params_leaves_non_string_valu
 from tests.test_loop_sfd import test_coerce_string_params_ignores_unknown_param_names
 from tests.test_loop_sfd import test_coerce_string_params_raises_clear_error_on_bad_string
 from tests.test_loop_sfd import test_fetch_data_coerces_kline_size_string_through_full_path
-from tests.test_loop_sfd import test_loop_run_accepts_snapshot_cost_arguments
 from tests.test_loop_sfd import test_loop_sfd_unknown_reference_architecture_raises
 from tests.test_loop_sfd import test_progress_callback_writes_json
 from tests.test_loop_sfd import test_progress_callback_handles_none_log
@@ -886,7 +883,6 @@ tests = [
     test_indicators_vs_talib,
     test_xgboost_train_returns_fitted_model,
     test_xgboost_evaluate_returns_all_metric_types,
-    test_reference_backtest_uses_snapshot_cost_config,
     test_logreg_train_evaluate_end_to_end,
     test_random_binary_train_evaluate_end_to_end,
     test_tabpfn_train_evaluate_end_to_end,
@@ -920,7 +916,6 @@ tests = [
     test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar,
     test_completed_bar_signal_proves_next_bar_alignment,
     test_experiment_backtest_results_directionalizes_regression_predictions,
-    test_experiment_backtest_results_accepts_snapshot_cost_inputs,
     test_permutation_confusion_metrics_adds_mean_return_pct_columns,
     test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows,
     test_permutation_confusion_metrics_uses_positional_alignment_for_returns,
@@ -1176,7 +1171,6 @@ tests = [
     test_coerce_string_params_ignores_unknown_param_names,
     test_coerce_string_params_raises_clear_error_on_bad_string,
     test_fetch_data_coerces_kline_size_string_through_full_path,
-    test_loop_run_accepts_snapshot_cost_arguments,
     test_loop_sfd_unknown_reference_architecture_raises,
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,

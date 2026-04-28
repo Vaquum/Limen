@@ -158,12 +158,12 @@ those four fields use the same immediate-next-execution-row contract as snapshot
 
 ## Backtest Surface
 
-### `experiment_backtest_results(disable_progress_bar=False, fee_bps=5.0, slip_bps=5.0)`
+### `experiment_backtest_results(disable_progress_bar=False)`
 
 Produces one snapshot backtest row per experiment round.
 
 ```python
-bt = uel._log.experiment_backtest_results(fee_bps=5.0, slip_bps=5.0)
+bt = uel._log.experiment_backtest_results()
 ```
 
 The same table is exposed directly on UEL as:

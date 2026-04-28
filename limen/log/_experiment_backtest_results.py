@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from limen.backtest.backtest_snapshot import DEFAULT_FEE_BPS
-from limen.backtest.backtest_snapshot import DEFAULT_SLIP_BPS
 from limen.backtest.backtest_snapshot import backtest_snapshot
 
 
@@ -77,18 +75,13 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def _experiment_backtest_results(self: Any,
-                                 disable_progress_bar: bool = False,
-                                 fee_bps: float = DEFAULT_FEE_BPS,
-                                 slip_bps: float = DEFAULT_SLIP_BPS) -> pd.DataFrame:
+def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) -> pd.DataFrame:
 
     '''
     Compute backtest results for each round of an experiment.
 
     Args:
         disable_progress_bar (bool): Whether to disable the progress bar
-        fee_bps (float): Fee cost in basis points per fill
-        slip_bps (float): Slippage cost in basis points per fill
 
     Returns:
         pd.DataFrame: One-row-per-round table with columns 'trade_win_rate_pct',
@@ -107,8 +100,6 @@ def _experiment_backtest_results(self: Any,
         result_df = backtest_snapshot(
             perf,
             execution_lag_bars=1,
-            fee_bps=fee_bps,
-            slip_bps=slip_bps,
         )
 
         all_rows.append(result_df)

@@ -81,26 +81,6 @@ def test_xgboost_evaluate_returns_all_metric_types():
     assert '_preds' in results
 
 
-def test_reference_backtest_uses_snapshot_cost_config():
-    data = {
-        'price_data_for_backtest': pl.DataFrame({
-            'open': [100.0, 100.0],
-            'high': [100.0, 100.0],
-            'low': [100.0, 100.0],
-            'close': [100.0, 100.0],
-            'datetime': pd.date_range('2025-01-01', periods=2, freq='h'),
-        }),
-        '_snapshot_fee_bps': 50.0,
-        '_snapshot_slip_bps': 50.0,
-    }
-
-    result = LogRegBinary()._compute_backtest(np.array([1, 0]), data)
-
-    assert result['backtest_cost_round_trip_bps'] == 198
-    assert result['backtest_trade_expectancy_pct'] == -1.983
-    assert result['backtest_total_return_net_pct'] == -2.0
-
-
 def test_logreg_train_evaluate_end_to_end():
 
     data = _make_data(binary=True, with_price=True)

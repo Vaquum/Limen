@@ -5,8 +5,6 @@ import pandas as pd
 import polars as pl
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
-from limen.backtest.backtest_snapshot import DEFAULT_FEE_BPS
-from limen.backtest.backtest_snapshot import DEFAULT_SLIP_BPS
 from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -73,18 +71,11 @@ class RuleBasedStrategy(ReferenceModel):
         backtest_results: dict[str, dict] = {}
         strategy = data['strategy']
         cond_index = {c['id']: c for c in strategy['conditions']}
-        fee_bps = float(data.get('_snapshot_fee_bps', DEFAULT_FEE_BPS))
-        slip_bps = float(data.get('_snapshot_slip_bps', DEFAULT_SLIP_BPS))
 
         for split in ('train', 'val', 'test'):
             pos = self._resolve(cond_index[strategy['entry']], cond_index, data[split]).fill_null(False).to_numpy().astype(int)
             positions[split] = pos
-            backtest_results[split] = self._backtest_split(
-                data[split],
-                pos,
-                fee_bps=fee_bps,
-                slip_bps=slip_bps,
-            )
+            backtest_results[split] = self._backtest_split(data[split], pos)
 
         results = rule_based_metrics(
             positions,
@@ -117,12 +108,7 @@ class RuleBasedStrategy(ReferenceModel):
             result = result & s if operator == 'and' else result | s
         return result
 
-    def _backtest_split(self,
-                        df: pl.DataFrame,
-                        positions: np.ndarray,
-                        *,
-                        fee_bps: float = DEFAULT_FEE_BPS,
-                        slip_bps: float = DEFAULT_SLIP_BPS) -> dict:
+    def _backtest_split(self, df: pl.DataFrame, positions: np.ndarray) -> dict:
         if 'open' not in df.columns or 'close' not in df.columns:
             return {}
         open_arr = df['open'].to_numpy().astype(float)
@@ -133,12 +119,7 @@ class RuleBasedStrategy(ReferenceModel):
             'close': close_arr,
             'price_change': close_arr - open_arr,
         })
-        bt_result = backtest_snapshot(
-            bt_input,
-            execution_lag_bars=1,
-            fee_bps=fee_bps,
-            slip_bps=slip_bps,
-        )
+        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
         if bt_result.empty:
             return {}
         return bt_result.iloc[0].to_dict()
