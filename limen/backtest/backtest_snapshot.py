@@ -23,8 +23,8 @@ def backtest_snapshot(df: pd.DataFrame,
     - Position pos = 1 wherever the lagged predictions==1 on a tradable execution row.
     - Entry bar gross return: r_entry = price_change / open  (≈ close/open - 1).
     - Continuation bar gross return: r_cont = close_t / close_{t-1} - 1  (holding across bars).
-    - One round-trip cost per *consecutive 1-run*, charged on the run's exit bar.
-    - Net per-bar return: R_net = (pos * r_gross) + cost_at_exit_bar.
+    - Fee/slippage costs are applied multiplicatively on entry and exit fills.
+    - Trade metrics are computed from compounded consecutive 1-run returns.
     - Equity compounds over R_net; drawdown is computed from net equity.
 
     Returns a one-row DataFrame with columns (in order):
@@ -67,14 +67,13 @@ def backtest_snapshot(df: pd.DataFrame,
     bars_total = int(eval_mask.sum())
     bars_in_market_pct = float((pos.sum() / bars_total) * 100.0) if bars_total else np.nan
 
-    if trades_count_mode == 'runs':
-        entries = pos & (~pos.shift(1, fill_value=False))
-        trades_count = int(entries.sum())
-    else:
-        trades_count = int(pos.sum())
-
     entry_mask = pos & (~pos.shift(1, fill_value=False))
     cont_mask  = pos & ( pos.shift(1, fill_value=False))
+
+    if trades_count_mode == 'runs':
+        trades_count = int(entry_mask.sum())
+    else:
+        trades_count = int(pos.sum())
 
     r_entry = dpx / open_px
     r_cont  = (close_px / close_px.shift(1)) - 1.0
@@ -82,38 +81,43 @@ def backtest_snapshot(df: pd.DataFrame,
     R_gross = np.where(entry_mask, r_entry, 0.0) + np.where(cont_mask, r_cont, 0.0)
     R_gross = pd.Series(R_gross, index=df.index).fillna(0.0)
 
-    rt_cost = 2.0 * (fee_bps + slip_bps) / 10_000.0
-    exit_mask = pos & (~pos.shift(-1, fill_value=False))
-    cost_bar = pd.Series(np.where(exit_mask, -rt_cost, 0.0), index=df.index)
+    fee = fee_bps / 10_000.0
+    slip = slip_bps / 10_000.0
+    entry_mult = (1.0 - fee) / (1.0 + slip)
+    exit_mult = (1.0 - fee) * (1.0 - slip)
 
-    R_net = (R_gross + cost_bar).fillna(0.0)
+    exit_mask = pos & (~pos.shift(-1, fill_value=False))
+    cost_mult = pd.Series(1.0, index=df.index)
+    cost_mult.loc[entry_mask] *= entry_mult
+    cost_mult.loc[exit_mask] *= exit_mult
+
+    R_net = (((1.0 + R_gross) * cost_mult) - 1.0).fillna(0.0)
     eq_gross = (1.0 + R_gross).cumprod()
     eq_net = (1.0 + R_net).cumprod()
 
-    peak = eq_net.cummax()
+    peak = eq_net.cummax().clip(lower=1.0)
     max_drawdown_pct = float((eq_net / peak - 1.0).min() * 100.0)
 
     total_return_gross_pct = float((eq_gross.iloc[-1] - 1.0) * 100.0)
     total_return_net_pct = float((eq_net.iloc[-1]   - 1.0) * 100.0)
 
-    tr = R_net[pos]
-    if tr.size:
-        wins = tr[tr > 0]
-        losses = tr[tr < 0]
-        trade_win_rate_pct = float((wins.size / tr.size) * 100.0)
-        trade_expectancy_pct = float(tr.mean() * 100.0)
+    run_ids = entry_mask.cumsum()
+    trade_returns = (
+        (1.0 + R_net[pos]).groupby(run_ids[pos]).prod() - 1.0
+    ) if entry_mask.any() else pd.Series(dtype=float)
+
+    if trade_returns.size:
+        wins = trade_returns[trade_returns > 0]
+        losses = trade_returns[trade_returns < 0]
+        trade_win_rate_pct = float((wins.size / trade_returns.size) * 100.0)
+        trade_expectancy_pct = float(trade_returns.mean() * 100.0)
         trade_return_mean_win_pct = float(wins.mean() * 100.0) if wins.size else np.nan
         trade_return_mean_loss_pct = float(losses.mean() * 100.0) if losses.size else np.nan
     else:
         trade_win_rate_pct = trade_expectancy_pct = np.nan
         trade_return_mean_win_pct = trade_return_mean_loss_pct = np.nan
 
-    if trades_count_mode == 'runs':
-        entries = pos & (~pos.shift(1, fill_value=False))
-        run_ids = entries.cumsum()
-        kelly_returns = ((1.0 + R_net[pos]).groupby(run_ids[pos]).prod() - 1.0) if int(entries.sum()) else pd.Series(dtype=float)
-    else:
-        kelly_returns = R_net[pos]
+    kelly_returns = trade_returns if trades_count_mode == 'runs' else R_net[pos]
 
     kelly_wins = kelly_returns[kelly_returns > 0]
     kelly_losses = kelly_returns[kelly_returns < 0]
@@ -146,7 +150,7 @@ def backtest_snapshot(df: pd.DataFrame,
         'sharpe_per_bar': round(sharpe_per_bar, 2),
         'bars_in_market_pct': round(bars_in_market_pct, 1),
         'trades_count': int(trades_count),
-        'cost_round_trip_bps': round(2 * (fee_bps + slip_bps)),
+        'cost_round_trip_bps': round((1.0 - (entry_mult * exit_mult)) * 10_000),
     }])
 
     return data

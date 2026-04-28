@@ -40,7 +40,8 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `execution_lag_bars=0` gives same-row execution of tradable rows, not the old raw-row denominator behavior
 - entry-bar return is based on `price_change / open`
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
-- one round-trip cost is charged per consecutive `1` run
+- fee and slippage costs are applied multiplicatively on entry and exit fills
+- `trade_*` metrics are computed from compounded consecutive `1` runs
 - `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
 - outputs are reported in percent units
 
