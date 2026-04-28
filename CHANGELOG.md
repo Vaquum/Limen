@@ -797,3 +797,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Enforce strict direct snapshot backtest input contracts for non-empty data, binary `0/1` predictions, numeric price columns, and `price_change == close - open`
 - Remove the snapshot bars-count mode so `trades_count` and `mean_kelly_pct` are always computed from compounded consecutive in-market runs
 - Add direct snapshot regression coverage for empty input, invalid predictions, missing predictions, non-numeric prices, and inconsistent `price_change`
+
+## v2.5.6 on 28th of April, 2026
+
+- Make standard-path `UniversalExperimentLoop` writes honor `experiment_dir` by storing `<experiment_name>.csv` under the requested directory
+- Preserve legacy standard-path CSV placement when `experiment_dir` is not set and keep MSQ artifact filenames unchanged
+- Add regression coverage for standard-path `experiment_dir` CSV placement and rerun header behavior

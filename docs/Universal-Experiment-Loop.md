@@ -15,7 +15,7 @@ UEL currently has two execution modes.
 
 | Mode | How you enter it | Best for | What you get |
 |---|---|---|---|
-| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | most public examples and straightforward sweeps | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv` |
+| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | most public examples and straightforward sweeps | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when `experiment_dir` is set |
 | MSQ / artifact-rich path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
 
 The standard run path is the right starting point for most readers. The advanced path is real and supported, but it is an extension-oriented surface built around `SearchStrategy`.
@@ -77,7 +77,7 @@ uel = limen.UniversalExperimentLoop(
 | `sfd` | required SFD module |
 | `data` | optional input dataframe; required for custom SFDs, optional for manifest-driven SFDs |
 | `search_strategy` | advanced search hook; enables the MSQ execution path |
-| `experiment_dir` | directory for stored experiment artifacts; meaningful with the advanced path |
+| `experiment_dir` | optional directory for stored run outputs; standard runs write their CSV there, and advanced runs write their artifact set there |
 | `pruning_strategies`, `feedback_interval`, `checkpoint_interval`, `intra_callback` | advanced MSQ controls |
 
 ### Data behavior
@@ -100,7 +100,7 @@ uel.run(
 
 | Argument | Meaning |
 |---|---|
-| `experiment_name` | run name and CSV path stem; `my_experiment` writes `my_experiment.csv` |
+| `experiment_name` | run name and CSV path stem; `my_experiment` writes `my_experiment.csv`, or `experiment_dir/my_experiment.csv` when `experiment_dir` is set on the standard path |
 | `n_permutations` | number of rounds to execute |
 | `prep_each_round` | whether prep runs every round; required for manifest-driven SFDs |
 | `random_search` | random versus deterministic parameter generation on the standard path |
@@ -169,6 +169,12 @@ The standard path writes a streaming CSV at:
 <experiment_name>.csv
 ```
 
+When `experiment_dir` is set, the standard path writes:
+
+```text
+<experiment_dir>/<experiment_name>.csv
+```
+
 and keeps the full run state in memory on the `uel` object.
 
 This is the path to use for:
@@ -180,7 +186,7 @@ This is the path to use for:
 
 ### Artifact-Rich Path
 
-If you instantiate UEL with a concrete `search_strategy` and an `experiment_dir`, Limen stores structured artifacts there.
+If you instantiate UEL with a concrete `search_strategy` and an `experiment_dir`, Limen stores structured artifacts there. This path uses `results.csv` as the round log filename rather than `<experiment_name>.csv`.
 
 | File | Meaning |
 |---|---|
