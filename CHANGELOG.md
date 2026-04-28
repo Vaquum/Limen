@@ -785,3 +785,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `rule_based_metrics` computing Tier 1 position stats, Tier 2 per-split backtest metrics, and Tier 3 cross-split stability metrics (`sharpe_std`, `drawdown_std`, `sharpe_degradation`, `is_stable`)
 - Add `limen.sfd.foundational_sfd.rule_based` foundational SFD with RSI oversold + EMA trend filter strategy and sweepable parameter domain
 - Guard `UEL._finalize()` so ML-specific metrics (`experiment_confusion_metrics`, `experiment_backtest_results`) are set to `None` for rule-based runs
+
+## v2.5.4 on 28th of April, 2026
+
+- Apply snapshot backtest fee and slippage costs multiplicatively on entry and exit fills while preserving the fixed bps cost abstraction
+- Compute snapshot `trade_*` metrics from compounded HOLD-WHILE-1 trade runs instead of individual in-market bars
+- Seed snapshot max drawdown with starting equity so first-trade losses register against the initial high-water mark
+- Run PR test SSH tunnel setup only when the required SSH secrets are available
