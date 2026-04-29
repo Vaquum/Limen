@@ -15,12 +15,9 @@ def _roc_series(values: list[float]) -> pl.DataFrame:
     return pl.DataFrame({'roc_1': values})
 
 
-# --- QuantileBinaryTarget ---
-
 def test_quantile_binary_fits_cutoff_on_train() -> None:
     train = _roc_series([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
     t = QuantileBinaryTarget(train, 'flag', source_column='roc_1', quantile=0.3)
-    # Top 30% of [0.1..1.0]: cutoff = quantile(0.7) = 0.7
     assert abs(t.cutoff - 0.7) < 1e-6
 
 
@@ -61,7 +58,6 @@ def test_quantile_binary_target_column_named_correctly() -> None:
 
 
 def test_quantile_binary_cutoff_is_training_only() -> None:
-    # Cutoff must be computed from train and reused on val/test unchanged
     train = _roc_series([0.1, 0.2, 0.3])
     val = _roc_series([0.8, 0.9, 1.0])
     t = QuantileBinaryTarget(train, 'flag', source_column='roc_1', quantile=0.3)
@@ -70,15 +66,11 @@ def test_quantile_binary_cutoff_is_training_only() -> None:
     assert t.cutoff == cutoff_after_train
 
 
-# --- ForwardBreakoutTarget ---
-
 def test_forward_breakout_labels_above_threshold() -> None:
     close = [100.0, 103.0, 100.0, 101.0, 100.0]
     data = _close_series(close)
     t = ForwardBreakoutTarget(data, 'breakout')
     result = t.transform(data, forward_periods=1, threshold=0.02, shift=0)
-    # Bar 0: (103-100)/100 = 3% >= 2% → 1
-    # Bar 1: (100-103)/103 < 0 → 0
     assert result['breakout'][0] == 1
     assert result['breakout'][1] == 0
 
@@ -91,8 +83,8 @@ def test_forward_breakout_shift_applied() -> None:
     unshifted = t.transform(data, forward_periods=1, threshold=0.02, shift=0)
     shifted = t.transform(data, forward_periods=1, threshold=0.02, shift=-1)
     # shift(-1): shifted[i] == unshifted[i+1]
-    assert unshifted['breakout'][2] == 1   # bar 2 is a breakout
-    assert shifted['breakout'][1] == 1     # after shift it appears one bar earlier
+    assert unshifted['breakout'][2] == 1
+    assert shifted['breakout'][1] == 1
 
 
 def test_forward_breakout_default_shift_is_minus_one() -> None:
@@ -110,8 +102,6 @@ def test_forward_breakout_target_column_named_correctly() -> None:
     result = t.transform(data, forward_periods=1, threshold=0.01, shift=0)
     assert 'fwd_label' in result.columns
 
-
-# --- ThresholdBinaryTarget ---
 
 def test_threshold_binary_labels_above_threshold() -> None:
     data = pl.DataFrame({'rsi': [20.0, 50.0, 80.0]})
@@ -137,14 +127,12 @@ def test_threshold_binary_shift_applied() -> None:
     assert unshifted['flag'][1] == shifted['flag'][0]
 
 
-# --- NextReturnTarget ---
-
 def test_next_return_computes_percentage_return() -> None:
     data = _close_series([100.0, 110.0, 99.0])
     t = NextReturnTarget(data, 'ret')
     result = t.transform(data, periods=1, scale=100.0)
-    assert abs(result['ret'][0] - 10.0) < 1e-6   # (110-100)/100 * 100
-    assert abs(result['ret'][1] - (-10.0)) < 1e-6  # (99-110)/110 * 100
+    assert abs(result['ret'][0] - 10.0) < 1e-6
+    assert abs(result['ret'][1] - (-10.0)) < 1e-6
 
 
 def test_next_return_respects_periods() -> None:
@@ -168,8 +156,6 @@ def test_next_return_target_column_named_correctly() -> None:
     result = t.transform(data)
     assert 'next_ret' in result.columns
 
-
-# --- Manifest.with_target_class integration ---
 
 def _make_split_data() -> list[pl.DataFrame]:
     roc = [float(i) / 10 for i in range(20)]
@@ -233,8 +219,6 @@ def test_with_target_class_no_config_when_not_called() -> None:
     m = Manifest()
     assert m.target_class_config is None
 
-
-# --- Manifest.with_target_function integration ---
 
 def test_with_target_function_sets_target_column() -> None:
     def my_func(data: pl.DataFrame) -> pl.DataFrame:
