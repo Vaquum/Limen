@@ -44,11 +44,10 @@ Manifest-driven SFDs expose `manifest()` instead of custom `prep()` and `model()
 ```python
 from limen.data import HistoricalData
 from limen.experiment import Manifest
-from limen.features import compute_quantile_cutoff, quantile_flag
 from limen.indicators import roc
 from limen.scalers import LogRegScaler
 from limen.sfd.reference_architecture import logreg_binary
-from limen.transforms import shift_column_transform
+from limen.targets import QuantileBinaryTarget
 
 def params():
     return {
@@ -72,12 +71,12 @@ def manifest():
         )
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
-        .with_target_label('quantile_flag')
-            .add_fitted_transform(quantile_flag)
-                .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-                .with_params(col='roc_{roc_period}', cutoff='_cutoff')
-            .add_transform(shift_column_transform, shift='shift', column='target_column')
-            .done()
+        .with_target_class(
+            'quantile_flag',
+            QuantileBinaryTarget,
+            fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
+            transform_params={'shift': 'shift'},
+        )
         .set_scaler(LogRegScaler)
         .with_reference_architecture(logreg_binary)
     )

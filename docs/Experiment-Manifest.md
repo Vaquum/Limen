@@ -19,12 +19,11 @@ This is a complete manifest-driven SFD in the style Limen uses today.
 ```python
 from limen.data import HistoricalData
 from limen.experiment import Manifest
-from limen.features import compute_quantile_cutoff, quantile_flag
-from limen.indicators import atr, ppo, roc, wilder_rsi
 from limen.features import kline_imbalance, vwap
+from limen.indicators import atr, ppo, roc, wilder_rsi
 from limen.scalers import LogRegScaler
 from limen.sfd.reference_architecture import logreg_binary
-from limen.transforms import shift_column_transform
+from limen.targets import QuantileBinaryTarget
 
 def params():
     return {
@@ -56,12 +55,12 @@ def manifest():
         .add_indicator(wilder_rsi)
         .add_feature(vwap)
         .add_feature(kline_imbalance)
-        .with_target_label('quantile_flag')
-            .add_fitted_transform(quantile_flag)
-                .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-                .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
-            .add_transform(shift_column_transform, shift='shift', column='target_column')
-            .done()
+        .with_target_class(
+            'quantile_flag',
+            QuantileBinaryTarget,
+            fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
+            transform_params={'shift': 'shift'},
+        )
         .set_scaler(LogRegScaler)
         .with_reference_architecture(logreg_binary)
     )
@@ -382,51 +381,22 @@ Then in `params()`:
 
 ## Target Configuration
 
-Target construction is handled through `with_target_label(...)`.
+Target construction uses `with_target_class()` from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
 
 ```python
-.with_target_label('quantile_flag')
-    ...
-    .done()
+from limen.targets import QuantileBinaryTarget
+
+.with_target_class(
+    'quantile_flag',
+    QuantileBinaryTarget,
+    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
+    transform_params={'shift': 'shift'},
+)
 ```
+
+`fit_params` are forwarded to `__init__` on the training split. `transform_params` are forwarded to `transform()` on every split. Both support round-param references (`'q'` resolves to the current round's `q` value).
 
 The target column is placed last before Limen finalizes the `data_dict`.
-
-### `add_fitted_transform(func)`
-
-Use fitted transforms when a target step needs a value computed on the training split first, then reused on validation and test.
-
-```python
-.with_target_label('quantile_flag')
-    .add_fitted_transform(quantile_flag)
-        .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-        .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
-    .done()
-```
-
-In that example:
-
-1. `compute_quantile_cutoff(train_data, col='roc_12', q=0.35)` runs on train only
-2. the result is stored as `_quantile_cutoff`
-3. `quantile_flag(..., cutoff=_quantile_cutoff)` is applied to train, validation, and test
-
-This is the manifest-safe way to compute train-only thresholds.
-
-### `add_transform(func, **params)`
-
-Use plain transforms when the step does not need fitted state.
-
-```python
-.with_target_label('quantile_flag')
-    .add_transform(shift_column_transform, shift='shift', column='target_column')
-    .done()
-```
-
-`target_column` is injected automatically so you can reference the current target name inside the transform block.
-
-### `done()`
-
-Ends the target builder and returns the manifest for further chaining.
 
 ## Scaling
 
@@ -727,15 +697,15 @@ If the model returns `_preds`, UEL stores them in `uel.preds` and the `Log` laye
 
 ### Binary target from a fitted quantile cutoff
 
-This is the most important target recipe in the current Limen style:
-
 ```python
-.with_target_label('quantile_flag')
-    .add_fitted_transform(quantile_flag)
-        .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-        .with_params(col='roc_{roc_period}', cutoff='_cutoff')
-    .add_transform(shift_column_transform, shift='shift', column='target_column')
-    .done()
+from limen.targets import QuantileBinaryTarget
+
+.with_target_class(
+    'quantile_flag',
+    QuantileBinaryTarget,
+    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
+    transform_params={'shift': 'shift'},
+)
 ```
 
 ### Search over feature families

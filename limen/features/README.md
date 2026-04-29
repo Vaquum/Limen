@@ -18,8 +18,6 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 | Entry point | Use it when | Notes |
 |-------------|-------------|-------|
 | `limen.features.*` exports | You want feature functions inside a manifest or custom prep pipeline | The package root re-exports the public feature surface |
-| `quantile_flag` | You want a trainable binary target based on a cutoff | Common target helper in manifest-driven SFDs |
-| `compute_quantile_cutoff` | You need the train-only fit parameter that powers `quantile_flag` | Designed to be used through `fit_param` |
 | `lag_column`, `lag_columns`, `lag_range`, `lag_range_cols` | You want lagged versions of existing columns | Useful for both raw and derived features |
 | `calendar_time_features`, `cyclical_time_features` | You want calendar context or cyclical encodings from `datetime` | Time-of-bar features for schedules, regimes, and model inputs |
 | `parkinson_volatility`, `garman_klass_volatility`, `rogers_satchell_volatility`, `yang_zhang_volatility` | You want range-based volatility estimates from OHLC bars | Useful when close-to-close volatility is too coarse |
@@ -40,7 +38,6 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 
 ```text
 features/
-├── quantile_flag.py                 # Target helper + train-only cutoff helper
 ├── lagged_features.py               # Lag helpers for arbitrary columns
 ├── breakout_*.py                    # Breakout and threshold features
 ├── *_volatility.py                  # Range-based and higher-order volatility features
@@ -58,7 +55,6 @@ features/
 
 - The package root exports the public feature surface, but not every helper file in the directory is part of that surface.
 - Most manifest-driven uses run features lazily on `pl.LazyFrame`, so lazy-friendly expressions are the safe default.
-- Train-only target helpers must stay train-only. `compute_quantile_cutoff` is a good example of that pattern.
 - Some features assume earlier indicator columns already exist. The public reference calls these dependencies out.
 - OHLCV-native feature helpers assume bars are already in chronological order before rolling or trailing calculations are applied.
 
