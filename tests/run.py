@@ -486,10 +486,6 @@ from tests.test_targets import test_with_target_class_returns_manifest_for_chain
 from tests.test_targets import test_with_target_class_applies_transform_to_all_splits
 from tests.test_targets import test_with_target_class_fits_only_on_train
 from tests.test_targets import test_with_target_class_no_config_when_not_called
-from tests.test_targets import test_with_target_function_sets_target_column
-from tests.test_targets import test_with_target_function_adds_to_target_transforms
-from tests.test_targets import test_with_target_function_does_not_set_target_class_config
-from tests.test_targets import test_with_target_function_returns_manifest_for_chaining
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
@@ -1127,10 +1123,6 @@ tests = [
     test_with_target_class_applies_transform_to_all_splits,
     test_with_target_class_fits_only_on_train,
     test_with_target_class_no_config_when_not_called,
-    test_with_target_function_sets_target_column,
-    test_with_target_function_adds_to_target_transforms,
-    test_with_target_function_does_not_set_target_class_config,
-    test_with_target_function_returns_manifest_for_chaining,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,

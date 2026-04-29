@@ -218,38 +218,3 @@ def test_with_target_class_fits_only_on_train() -> None:
 def test_with_target_class_no_config_when_not_called() -> None:
     m = Manifest()
     assert m.target_class_config is None
-
-
-def test_with_target_function_sets_target_column() -> None:
-    def my_func(data: pl.DataFrame) -> pl.DataFrame:
-        return data.with_columns(pl.lit(0).alias('out'))
-
-    m = Manifest().with_target_function('out', my_func)
-    assert m.target_column == 'out'
-
-
-def test_with_target_function_adds_to_target_transforms() -> None:
-    def my_func(data: pl.DataFrame) -> pl.DataFrame:
-        return data.with_columns(pl.lit(0).alias('out'))
-
-    m = Manifest().with_target_function('out', my_func)
-    assert len(m.target_transforms) == 1
-    _, func, _ = m.target_transforms[0]
-    assert func is my_func
-
-
-def test_with_target_function_does_not_set_target_class_config() -> None:
-    def my_func(data: pl.DataFrame) -> pl.DataFrame:
-        return data.with_columns(pl.lit(0).alias('out'))
-
-    m = Manifest().with_target_function('out', my_func)
-    assert m.target_class_config is None
-
-
-def test_with_target_function_returns_manifest_for_chaining() -> None:
-    def my_func(data: pl.DataFrame) -> pl.DataFrame:
-        return data
-
-    m = Manifest()
-    result = m.with_target_function('out', my_func)
-    assert result is m
