@@ -24,7 +24,7 @@ def _make_manifest() -> Manifest:
             'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',
             'no_of_trades'
         ])
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))
@@ -44,7 +44,7 @@ def _make_shifted_target_manifest() -> Manifest:
 
     return (Manifest()
         .set_split_config(3, 1, 4)
-        .with_target('target')
+        .with_target_label('target')
             .add_transform(lambda data: data.with_columns(
                 (pl.col('close') > pl.col('open')).cast(pl.Int8).alias('target')
             ))
@@ -247,7 +247,7 @@ def test_column_consistency_drops_mismatched_columns() -> None:
         )
         .set_split_config(8, 1, 1)
         .add_feature(_size_gated_feature)
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))

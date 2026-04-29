@@ -54,5 +54,5 @@ def manifest() -> Manifest:
         .add_indicator(wilder_rsi, period='rsi_period', group='momentum')
         .add_indicator(ema, period='ema_period', group='trend')
         .with_strategy(_CONDITIONS, entry='entry')
-        .with_model(rule_based)
+        .with_reference_architecture(rule_based)
     )

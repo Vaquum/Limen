@@ -84,7 +84,7 @@ uel = limen.UniversalExperimentLoop(
 
 - If the SFD exposes `manifest()` and you do not pass `data=`, UEL fetches data from the manifest.
 - If the SFD is custom and has no manifest, `data=` is required.
-- For manifest-driven SFDs, the data source used by auto-fetch depends on `LOOP_ENV`.
+- For manifest-driven SFDs, the data source used is `fetch_data()` by default; pass `test_mode=True` to use the test data source.
 
 ## `run()` Contract
 

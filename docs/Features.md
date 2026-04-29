@@ -38,7 +38,7 @@ def manifest():
         .add_indicator(atr, period=14)
         .add_feature(vwap)
         .add_feature(kline_imbalance, window='imbalance_window')
-        .with_model(logreg_binary)
+        .with_reference_architecture(logreg_binary)
     )
 ```
 

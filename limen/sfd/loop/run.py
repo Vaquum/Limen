@@ -207,7 +207,7 @@ def run_experiment(payload_path: Path,
     (experiment_dir / 'payload.json').write_text(payload_text)
 
     # Fetch data from the payload's data source config and pass it to UEL
-    # via data=, bypassing manifest.fetch_data_for_env.
+    # via data=, bypassing manifest.fetch_data().
     raw_data = _fetch_data_from_payload(payload)
 
     sfd = LoopSFD(payload)

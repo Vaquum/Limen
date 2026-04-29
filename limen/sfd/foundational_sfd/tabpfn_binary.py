@@ -68,7 +68,7 @@ def manifest() -> Manifest:
 
         .add_indicator(bollinger_position)
 
-        .with_target('forward_breakout')
+        .with_target_label('forward_breakout')
             .add_transform(forward_breakout_target,
                 forward_periods='forward_periods',
                 threshold='threshold_pct',
@@ -76,5 +76,5 @@ def manifest() -> Manifest:
             )
             .done()
 
-        .with_model(tabpfn_binary)
+        .with_reference_architecture(tabpfn_binary)
     )

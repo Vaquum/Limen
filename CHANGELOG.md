@@ -803,3 +803,11 @@ Note: add all new changelog entries to the bottom of this file.
 - Make standard-path `UniversalExperimentLoop` writes honor `experiment_dir` by storing `<experiment_name>.csv` under the requested directory
 - Preserve legacy standard-path CSV placement when `experiment_dir` is not set and keep MSQ artifact filenames unchanged
 - Add regression coverage for standard-path `experiment_dir` CSV placement and rerun header behavior
+
+## v3.0.0 on 29th of April, 2026
+
+- Rename `Manifest.with_model()` to `with_reference_architecture()` and fields `model_function` → `architecture_function`, `model_params` → `architecture_params` for RFC-1004 alignment
+- Rename `Manifest.with_target()` to `with_target_label()` for RFC-1004 alignment
+- Remove `Manifest.fetch_data_for_env()` and `LOOP_ENV` environment variable dispatch
+- Add `test_mode: bool = False` to `UniversalExperimentLoop.__init__()`: when `True` and a test data source is configured, `fetch_test_data()` is used instead of `fetch_data()`
+- Trainer now always calls `manifest.fetch_data()` directly when no explicit data is provided

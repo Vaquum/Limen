@@ -221,10 +221,10 @@ def test_loop_sfd_manifest_target_column():
     assert m.target_column == 'forward_breakout'
 
 
-def test_loop_sfd_manifest_model_function():
+def test_loop_sfd_manifest_architecture_function():
     sfd = LoopSFD(_load_payload())
     m = sfd.manifest()
-    assert m.model_function is _logreg_binary_func
+    assert m.architecture_function is _logreg_binary_func
 
 
 def test_loop_sfd_manifest_scaler_set():
@@ -1012,7 +1012,7 @@ _TESTS = [
     test_loop_sfd_params_extracts_namespaced_arch_params,
     test_loop_sfd_manifest_split_config,
     test_loop_sfd_manifest_target_column,
-    test_loop_sfd_manifest_model_function,
+    test_loop_sfd_manifest_architecture_function,
     test_loop_sfd_manifest_scaler_set,
     test_loop_sfd_manifest_feature_transforms_order,
     test_loop_sfd_ignores_payload_transforms,

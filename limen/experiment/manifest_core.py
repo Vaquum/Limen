@@ -2,7 +2,6 @@ import copy
 import inspect
 import importlib
 import logging
-import os
 import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -177,8 +176,8 @@ class Manifest:
     ablation_config: AblationConfig | None = None
     data_dict_extension: Callable = None
 
-    model_function: Callable = None
-    model_params: dict[str, ParamValue] = field(default_factory=dict)
+    architecture_function: Callable = None
+    architecture_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
     _rule_based: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
 
@@ -259,21 +258,6 @@ class Manifest:
             raise ValueError('No test data source configured')
 
         return DataSourceResolver.resolve(self.test_data_source_config)
-
-    def fetch_data_for_env(self) -> pl.DataFrame:
-
-        '''
-        Fetch data based on LOOP_ENV environment variable.
-
-        Returns:
-            pl.DataFrame: Fetched data from test or production source
-
-        '''
-
-        env = os.getenv('LOOP_ENV', 'test')
-        if env == 'test' and self.test_data_source_config is not None:
-            return self.fetch_test_data()
-        return self.fetch_data()
 
     def add_feature(self,
                     func: Callable,
@@ -453,7 +437,7 @@ class Manifest:
         return self
 
 
-    def with_target(self, target_column: str) -> TargetBuilder:
+    def with_target_label(self, target_column: str) -> TargetBuilder:
 
         '''
         Start building target transformations with context.
@@ -467,22 +451,22 @@ class Manifest:
 
         return TargetBuilder(self, target_column)
 
-    def with_model(self, model_function: Callable) -> 'Manifest':
+    def with_reference_architecture(self, architecture_function: Callable) -> 'Manifest':
 
         '''
-        Configure model function for training and evaluation.
+        Configure reference architecture function for training and evaluation.
 
         Args:
-            model_function (Callable): Model function that takes (data, **params) and returns results
+            architecture_function (Callable): Architecture function that takes (data, **params) and returns results
 
         Returns:
             Manifest: Self for method chaining
 
-        NOTE: The model function should accept data dict and return results dict with metrics and predictions.
-        Parameters are auto-mapped from round_params based on model function signature.
+        NOTE: The architecture function should accept data dict and return results dict with metrics and predictions.
+        Parameters are auto-mapped from round_params based on function signature.
         '''
 
-        self.model_function = model_function
+        self.architecture_function = architecture_function
 
         return self
 
@@ -763,10 +747,10 @@ class Manifest:
 
         '''
 
-        if self.model_function is None:
-            raise ValueError('Model function not configured. Use .with_model(model_function) before run_model() or resolve_model_kwargs().')
+        if self.architecture_function is None:
+            raise ValueError('Architecture function not configured. Use .with_reference_architecture(func) before run_model() or resolve_model_kwargs().')
 
-        sig = inspect.signature(self.model_function)
+        sig = inspect.signature(self.architecture_function)
         model_kwargs: dict[str, Any] = {}
 
         for param_name, param_obj in sig.parameters.items():
@@ -808,7 +792,7 @@ class Manifest:
         '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
-        round_results = self.model_function(data, **model_kwargs)
+        round_results = self.architecture_function(data, **model_kwargs)
 
         return round_results
 

@@ -155,7 +155,7 @@ def _make_manifest_with_scaler_from_params() -> Manifest:
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
         )
         .set_scaler_from_params('scaler_type')
-        .with_target('outcome')
+        .with_target_label('outcome')
             .add_transform(lambda data: data.with_columns(
                 pl.Series('outcome', np.random.randint(0, 2, size=data.height))
             ))

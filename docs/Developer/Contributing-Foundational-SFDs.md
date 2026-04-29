@@ -93,9 +93,9 @@ def manifest():
         .set_split_config(8, 1, 2)
         .add_indicator(...)
         .add_feature(...)
-        .with_target(...)
+        .with_target_label(...)
         .set_scaler_from_params('scaler_type')
-        .with_model(your_model)
+        .with_reference_architecture(your_model)
     )
 ```
 

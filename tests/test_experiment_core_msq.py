@@ -4,6 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
+import polars as pl
+
 import pandas as pd
 import pytest
 
@@ -20,7 +22,7 @@ from tests.stubs.stubs import make_msq
 from tests.stubs.stubs import StubPruningStrategy
 
 
-def _make_uel(strategy_cls=RandomStrategy, **kwargs):
+def _make_uel(strategy_cls=RandomStrategy, test_mode=True, **kwargs):
 
     params = sfd_module.params()
     domain = ParamDomain(params)
@@ -33,6 +35,7 @@ def _make_uel(strategy_cls=RandomStrategy, **kwargs):
         checkpoint_interval=kwargs.get('checkpoint_interval', 1000),
         experiment_dir=kwargs.get('experiment_dir'),
         intra_callback=kwargs.get('intra_callback'),
+        test_mode=test_mode,
     )
     return uel, strategy, domain
 
@@ -594,3 +597,80 @@ def test_experiment_parameter_correlation_rejects_logs_without_metric_rows():
             min_n=1,
             n_boot=5,
         )
+
+
+def test_uel_test_mode_routes_to_test_data_source():
+
+    _stub_data = pl.DataFrame({'x': [1, 2, 3]})
+    fetched = []
+
+    class _FakeManifest:
+        data_source_config = object()
+        test_data_source_config = object()
+
+        def architecture_function(self, data, **kw):
+            return {}
+
+        def fetch_data(self):
+            fetched.append('fetch_data')
+            return _stub_data
+
+        def fetch_test_data(self):
+            fetched.append('fetch_test_data')
+            return _stub_data
+
+    class _FakeSfd:
+        def params(self):
+            return {'x': [1, 2]}
+
+        def manifest(self):
+            return _FakeManifest()
+
+    params = _FakeSfd().params()
+    domain = ParamDomain(params)
+    strategy = RandomStrategy(domain, seed=42)
+
+    UniversalExperimentLoop(
+        sfd=_FakeSfd(),
+        search_strategy=strategy,
+        test_mode=True,
+    )
+    assert fetched == ['fetch_test_data']
+
+    fetched.clear()
+    UniversalExperimentLoop(
+        sfd=_FakeSfd(),
+        search_strategy=strategy,
+        test_mode=False,
+    )
+    assert fetched == ['fetch_data']
+
+    class _FakeManifestNoTestSource:
+        data_source_config = object()
+        test_data_source_config = None
+
+        def architecture_function(self, data, **kw):
+            return {}
+
+        def fetch_data(self):
+            fetched.append('fetch_data')
+            return _stub_data
+
+        def fetch_test_data(self):
+            fetched.append('fetch_test_data')
+            return _stub_data
+
+    class _FakeSfdNoTestSource:
+        def params(self):
+            return {'x': [1, 2]}
+
+        def manifest(self):
+            return _FakeManifestNoTestSource()
+
+    fetched.clear()
+    UniversalExperimentLoop(
+        sfd=_FakeSfdNoTestSource(),
+        search_strategy=strategy,
+        test_mode=True,
+    )
+    assert fetched == ['fetch_data']

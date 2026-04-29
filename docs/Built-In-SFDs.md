@@ -106,7 +106,7 @@ uel.run(
 )
 ```
 
-If you omit `data=`, the manifest fetches data according to its configured data source and `LOOP_ENV`.
+If you omit `data=`, the manifest fetches data using `fetch_data()`. Pass `test_mode=True` to UEL to use the test data source instead.
 
 ## How To Choose
 

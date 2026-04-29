@@ -41,7 +41,8 @@ class UniversalExperimentLoop:
                  feedback_interval: int = 100,
                  checkpoint_interval: int = 1000,
                  experiment_dir: str | Path | None = None,
-                 intra_callback: Callable[[Any, MSQ], None] | None = None) -> None:
+                 intra_callback: Callable[[Any, MSQ], None] | None = None,
+                 test_mode: bool = False) -> None:
 
         '''
         Initialize the UniversalExperimentLoop.
@@ -63,6 +64,7 @@ class UniversalExperimentLoop:
             checkpoint_interval (int): Save checkpoint every N rounds
             experiment_dir (str | Path | None): Directory for all experiment artifacts
             intra_callback (Callable | None): Python callback receiving (log, msq)
+            test_mode (bool): When True and data is None, fetch from test_data_source_config instead of production
 
         '''
 
@@ -84,17 +86,20 @@ class UniversalExperimentLoop:
                         'to manifest or pass data explicitly.'
                     )
 
-                self.data = self.manifest.fetch_data_for_env()
+                if test_mode and self.manifest.test_data_source_config is not None:
+                    self.data = self.manifest.fetch_test_data()
+                else:
+                    self.data = self.manifest.fetch_data()
             else:
                 self.data = data
 
-            if hasattr(self.manifest, 'model_function') and self.manifest.model_function:
+            if getattr(self.manifest, 'architecture_function', None) is not None:
                 self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
                 self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
             else:
                 raise ValueError(
-                    'Manifest without model_function is not supported. '
-                    'Use .with_model(model_func) in your manifest.'
+                    'Manifest without architecture_function is not supported. '
+                    'Use .with_reference_architecture(func) in your manifest.'
                 )
         else:
             if data is None:

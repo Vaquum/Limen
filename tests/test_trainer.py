@@ -56,6 +56,7 @@ def test_trainer_end_to_end():
             sfd=logreg_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -118,6 +119,7 @@ def test_reconstruction_error_stochastic():
             sfd=random_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -147,6 +149,7 @@ def test_reconstruction_error_tampered_log():
             sfd=logreg_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -183,6 +186,7 @@ def test_deterministic_validation():
             sfd=logreg_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -212,6 +216,7 @@ def test_pass2_uses_full_data():
             sfd=logreg_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -250,6 +255,7 @@ def test_sensor_inference():
             sfd=logreg_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -290,6 +296,7 @@ def test_trainer_with_feature_ablation():
             sfd=logreg_sfd,
             search_strategy=strategy,
             experiment_dir=experiment_dir,
+            test_mode=True,
         )
 
         uel.run(
@@ -383,21 +390,21 @@ def test_load_original_log_returns_none_when_results_csv_is_missing() -> None:
         assert trainer._load_original_log() is None
 
 
-def test_resolve_model_class_requires_configured_model_function() -> None:
+def test_resolve_model_class_requires_configured_architecture_function() -> None:
     trainer = object.__new__(Trainer)
-    trainer._manifest = SimpleNamespace(model_function=None)
+    trainer._manifest = SimpleNamespace(architecture_function=None)
 
-    with pytest.raises(ValueError, match='Model function not configured'):
+    with pytest.raises(ValueError, match='Architecture function not configured'):
         trainer._resolve_model_class()
 
 
 def test_resolve_model_class_rejects_modules_without_reference_model_subclasses() -> None:
-    def model_function():
+    def architecture_function():
         return None
 
-    model_function.__module__ = 'dummy.no_model'
+    architecture_function.__module__ = 'dummy.no_model'
     trainer = object.__new__(Trainer)
-    trainer._manifest = SimpleNamespace(model_function=model_function)
+    trainer._manifest = SimpleNamespace(architecture_function=architecture_function)
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(
@@ -411,12 +418,12 @@ def test_resolve_model_class_rejects_modules_without_reference_model_subclasses(
 
 
 def test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses() -> None:
-    def model_function():
+    def architecture_function():
         return None
 
-    model_function.__module__ = 'dummy.multi_model'
+    architecture_function.__module__ = 'dummy.multi_model'
     trainer = object.__new__(Trainer)
-    trainer._manifest = SimpleNamespace(model_function=model_function)
+    trainer._manifest = SimpleNamespace(architecture_function=architecture_function)
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(

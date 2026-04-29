@@ -72,14 +72,14 @@ def manifest():
         )
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
-        .with_target('quantile_flag')
+        .with_target_label('quantile_flag')
             .add_fitted_transform(quantile_flag)
                 .fit_param('_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
                 .with_params(col='roc_{roc_period}', cutoff='_cutoff')
             .add_transform(shift_column_transform, shift='shift', column='target_column')
             .done()
         .set_scaler(LogRegScaler)
-        .with_model(logreg_binary)
+        .with_reference_architecture(logreg_binary)
     )
 ```
 
