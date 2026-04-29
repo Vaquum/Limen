@@ -223,8 +223,6 @@ class LoopSFD:
             wired = self._wire_params('feature', feat['name'], feat.get('params', {}))
             m.add_feature(func, **wired)
 
-        # Label becomes the target transform via the class-based target API.
-        # TARGET_LABEL_REGISTRY maps label name → target class + param aliases.
         labels = self._payload.get('labels', []) or []
         if labels:
             label = labels[0]
@@ -248,8 +246,8 @@ class LoopSFD:
 
             m.with_target_class(
                 target_col, entry.target_class,
-                fit_params=fit_params or None,
-                transform_params=transform_params or None,
+                fit_params=fit_params,
+                transform_params=transform_params,
             )
 
         scaler_name = self._resolve_scaler_name()

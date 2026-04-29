@@ -55,7 +55,6 @@ class TargetClassConfig:
 
     '''Configuration for a class-based target transform.'''
 
-    target_name: str
     target_class: type
     fit_params: dict[str, Any] = field(default_factory=dict)
     transform_params: dict[str, Any] = field(default_factory=dict)
@@ -489,7 +488,6 @@ class Manifest:
 
         self.target_column = target_name
         self.target_class_config = TargetClassConfig(
-            target_name=target_name,
             target_class=target_class,
             fit_params=fit_params or {},
             transform_params=transform_params or {},
@@ -1128,13 +1126,14 @@ def _apply_class_based_target(
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     config = manifest.target_class_config
-    instance_key = f'_target_cls_{config.target_name}'
+    target_name = manifest.target_column
+    instance_key = f'_target_cls_{target_name}'
 
     if is_training:
         resolved_fit = _resolve_params(config.fit_params, round_params)
         instance = config.target_class(
             train_data=data,
-            target_name=config.target_name,
+            target_name=target_name,
             **resolved_fit
         )
         all_fitted_params[instance_key] = instance

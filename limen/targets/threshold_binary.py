@@ -36,13 +36,9 @@ class ThresholdBinaryTarget:
             pl.DataFrame: Data with target column added
         '''
 
-        result = data.with_columns(
+        return data.with_columns(
             (pl.col(self.source_column) > self.threshold)
                 .cast(pl.UInt8)
+                .shift(shift)
                 .alias(self.target_name)
         )
-        if shift != 0:
-            result = result.with_columns(
-                pl.col(self.target_name).shift(shift).alias(self.target_name)
-            )
-        return result

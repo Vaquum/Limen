@@ -36,11 +36,6 @@ class ForwardBreakoutTarget:
 
         future_price = pl.col('close').shift(-forward_periods)
         forward_return = (future_price - pl.col('close')) / pl.col('close')
-        result = data.with_columns(
-            (forward_return >= threshold).cast(pl.UInt8).alias(self.target_name)
+        return data.with_columns(
+            (forward_return >= threshold).cast(pl.UInt8).shift(shift).alias(self.target_name)
         )
-        if shift != 0:
-            result = result.with_columns(
-                pl.col(self.target_name).shift(shift).alias(self.target_name)
-            )
-        return result
