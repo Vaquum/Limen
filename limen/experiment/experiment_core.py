@@ -93,7 +93,7 @@ class UniversalExperimentLoop:
             else:
                 self.data = data
 
-            if self.manifest.architecture_function is not None:
+            if getattr(self.manifest, 'architecture_function', None) is not None:
                 self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
                 self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
             else:
