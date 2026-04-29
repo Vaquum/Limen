@@ -68,7 +68,7 @@ def manifest() -> Manifest:
 
         .add_indicator(bollinger_position)
 
-        .with_target_class(
+        .with_target_label(
             'forward_breakout',
             ForwardBreakoutTarget,
             transform_params={'forward_periods': 'forward_periods', 'threshold': 'threshold_pct', 'shift': -1},

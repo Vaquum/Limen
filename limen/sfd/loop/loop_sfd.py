@@ -197,7 +197,7 @@ class LoopSFD:
             2. Split config from payload.inputData.splitRatios
             3. Indicators from payload.indicators
             4. Features from payload.features
-            5. Label as target transform (first label only) via with_target_class()
+            5. Label as target transform (first label only) via with_target_label()
             6. Scaler from payload.scaler.selectedItems[0].name
             7. Model from payload.referenceArchitecture
 
@@ -244,7 +244,7 @@ class LoopSFD:
                 if payload_key in wired
             }
 
-            m.with_target_class(
+            m.with_target_label(
                 target_col, entry.target_class,
                 fit_params=fit_params,
                 transform_params=transform_params,

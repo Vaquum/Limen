@@ -119,55 +119,6 @@ class DataSourceResolver:
         raise ValueError(f"Unsupported callable type: {type(method)}")
 
 
-class TargetBuilder:
-
-    '''Helper class for building target transformations with context.'''
-
-    def __init__(self, manifest: 'Manifest', target_column: str) -> None:
-
-        self.manifest = manifest
-        self.target_column = target_column
-        self.manifest.target_column = target_column
-
-    def add_fitted_transform(self, func: Callable) -> 'FittedTransformBuilder':
-
-        return FittedTransformBuilder(self.manifest, func)
-
-    def add_transform(self, func: Callable, **params: Any) -> 'TargetBuilder':
-
-        entry = ([], func, params)
-        self.manifest.target_transforms.append(entry)
-        return self
-
-    def done(self) -> 'Manifest':
-
-        return self.manifest
-
-
-class FittedTransformBuilder:
-
-    '''Helper class for building fitted transforms with parameter fitting.'''
-
-    def __init__(self, manifest: 'Manifest', func: Callable) -> None:
-
-        self.manifest = manifest
-        self.func = func
-        self.fitted_params: list[FittedParamsComputationEntry] = []
-
-    def fit_param(self, name: str, compute_func: Callable, **params: Any) -> 'FittedTransformBuilder':
-
-        self.fitted_params.append((name, compute_func, params))
-
-        return self
-
-    def with_params(self, **params: Any) -> 'TargetBuilder':
-
-        entry = (self.fitted_params, self.func, params)
-        self.manifest.target_transforms.append(entry)
-
-        return TargetBuilder(self.manifest, self.manifest.target_column)
-
-
 @dataclass
 class Manifest:
 
@@ -181,7 +132,6 @@ class Manifest:
     required_bar_columns: list[str] = field(default_factory=list)
     feature_transforms: list[TransformEntry] = field(default_factory=list)
     target_column: str = None
-    target_transforms: list[FittedTransformEntry] = field(default_factory=list)
     target_class_config: TargetClassConfig | None = None
     scaler: FittedTransformEntry = None
     ablation_config: AblationConfig | None = None
@@ -448,21 +398,7 @@ class Manifest:
         return self
 
 
-    def with_target_label(self, target_column: str) -> TargetBuilder:
-
-        '''
-        Start building target transformations with context.
-
-        Args:
-            target_column (str): Name of target column
-
-        Returns:
-            TargetBuilder: Builder for target transformations
-        '''
-
-        return TargetBuilder(self, target_column)
-
-    def with_target_class(self,
+    def with_target_label(self,
                           target_name: str,
                           target_class: type,
                           fit_params: dict[str, Any] | None = None,
@@ -708,9 +644,10 @@ class Manifest:
 
             data = lazy_data.collect()
 
-            data, all_fitted_params = _apply_target_transforms(
-                self, data, round_params, all_fitted_params, is_training=(i == 0)
-            )
+            if self.target_class_config is not None:
+                data, all_fitted_params = _apply_class_based_target(
+                    self, data, round_params, all_fitted_params, is_training=(i == 0)
+                )
 
             if self.ablation_config is not None:
                 data, columns_to_drop = _apply_feature_ablation(
@@ -1123,27 +1060,6 @@ def _apply_class_based_target(
     data = instance.transform(data, **resolved_transform)
 
     return data, all_fitted_params
-
-
-def _apply_target_transforms(
-        manifest: Manifest,
-        data: pl.DataFrame,
-        round_params: dict[str, Any],
-        all_fitted_params: dict[str, Any],
-        is_training: bool
-) -> tuple[pl.DataFrame, dict[str, Any]]:
-
-    if manifest.target_class_config is not None:
-        return _apply_class_based_target(manifest, data, round_params, all_fitted_params, is_training)
-
-    enhanced_round_params = round_params.copy()
-    if manifest.target_column:
-        enhanced_round_params['target_column'] = manifest.target_column
-
-    return _apply_fitted_transforms(
-        manifest.target_transforms, data, enhanced_round_params,
-        all_fitted_params, is_training
-    )
 
 
 def _apply_scaler(

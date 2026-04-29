@@ -56,7 +56,7 @@ def manifest():
         .add_feature(vwap, group='volume')
         .add_feature(kline_imbalance, group='volume')
 
-        .with_target_class(
+        .with_target_label(
             'quantile_flag',
             QuantileBinaryTarget,
             fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},

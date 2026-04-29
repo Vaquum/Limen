@@ -1,9 +1,7 @@
-import numpy as np
-import polars as pl
-
 from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.sfd.reference_architecture import random_binary
+from limen.targets import RandomBinaryTarget
 
 
 def params():
@@ -30,11 +28,6 @@ def manifest():
             'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',
             'no_of_trades'
         ])
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
         .with_reference_architecture(random_binary)
     )

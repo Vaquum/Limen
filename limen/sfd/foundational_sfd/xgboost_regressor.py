@@ -75,6 +75,6 @@ def manifest():
             'order_flow_imbalance',
             'stoch_k',
         ], lag=1)
-        .with_target_class('next_return', NextReturnTarget)
+        .with_target_label('next_return', NextReturnTarget)
         .with_reference_architecture(xgboost_regressor)
     )
