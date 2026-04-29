@@ -12,6 +12,8 @@ class ThresholdBinaryTarget:
                  threshold: float) -> None:
 
         '''
+        Store the fixed threshold; no fitting is performed.
+
         Args:
             train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
             target_name (str): Name of the target column to create

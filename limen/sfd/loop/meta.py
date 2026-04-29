@@ -36,7 +36,6 @@ def get_target_column(label_name: str) -> str:
         str: The target column name. Falls back to label_name itself when no
             explicit override is registered (works for labels like quantile_flag
             whose function name matches the column name they produce)
-
     '''
 
     return LABEL_TARGET_COLUMNS.get(label_name, label_name)

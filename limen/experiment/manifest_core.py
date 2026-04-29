@@ -425,8 +425,8 @@ class Manifest:
         self.target_column = target_name
         self.target_class_config = TargetClassConfig(
             target_class=target_class,
-            fit_params=fit_params or {},
-            transform_params=transform_params or {},
+            fit_params=dict(fit_params) if fit_params else {},
+            transform_params=dict(transform_params) if transform_params else {},
         )
         return self
 
@@ -1041,6 +1041,20 @@ def _apply_class_based_target(
         is_training: bool
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
+    '''
+    Fit or reuse the configured target class and apply it to the split.
+
+    Args:
+        manifest (Manifest): Manifest holding the target class config
+        data (pl.DataFrame): Split DataFrame to transform
+        round_params (dict[str, Any]): Current round parameters for template resolution
+        all_fitted_params (dict[str, Any]): Shared store for fitted instances across splits
+        is_training (bool): Whether this is the training split; fits the instance if True
+
+    Returns:
+        tuple[pl.DataFrame, dict[str, Any]]: Transformed data and updated fitted params
+    '''
+
     config = manifest.target_class_config
     target_name = manifest.target_column
     instance_key = f'_target_cls_{target_name}'
@@ -1054,6 +1068,10 @@ def _apply_class_based_target(
         )
         all_fitted_params[instance_key] = instance
     else:
+        if instance_key not in all_fitted_params:
+            raise RuntimeError(
+                f"Target instance '{instance_key}' not found — training split must run before validation/test."
+            )
         instance = all_fitted_params[instance_key]
 
     resolved_transform = _resolve_params(config.transform_params, round_params)
