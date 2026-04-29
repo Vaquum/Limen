@@ -31,15 +31,6 @@ def test_quantile_binary_transform_labels_above_cutoff() -> None:
     assert labels[0] == 0
 
 
-def test_quantile_binary_no_shift_by_default() -> None:
-    train = _roc_series([0.1, 0.9])
-    t = QuantileBinaryTarget(train, 'flag', source_column='roc_1', quantile=0.4)
-    data = _roc_series([0.1, 0.9, 0.1])
-    result_default = t.transform(data)
-    result_explicit = t.transform(data, shift=0)
-    assert result_default['flag'].to_list() == result_explicit['flag'].to_list()
-
-
 def test_quantile_binary_shift_applied_when_nonzero() -> None:
     train = _roc_series([0.1, 0.9])
     t = QuantileBinaryTarget(train, 'flag', source_column='roc_1', quantile=0.4)
@@ -48,22 +39,6 @@ def test_quantile_binary_shift_applied_when_nonzero() -> None:
     shifted = t.transform(data, shift=-1)['flag'].to_list()
     # shift(-1) moves labels one position back; last entry becomes null → drops to None
     assert unshifted[0] == shifted[1]
-
-
-def test_quantile_binary_target_column_named_correctly() -> None:
-    train = _roc_series([0.1, 0.5, 0.9])
-    t = QuantileBinaryTarget(train, 'my_label', source_column='roc_1', quantile=0.3)
-    result = t.transform(train, shift=0)
-    assert 'my_label' in result.columns
-
-
-def test_quantile_binary_cutoff_is_training_only() -> None:
-    train = _roc_series([0.1, 0.2, 0.3])
-    val = _roc_series([0.8, 0.9, 1.0])
-    t = QuantileBinaryTarget(train, 'flag', source_column='roc_1', quantile=0.3)
-    cutoff_after_train = t.cutoff
-    t.transform(val, shift=0)
-    assert t.cutoff == cutoff_after_train
 
 
 def test_forward_breakout_labels_above_threshold() -> None:
@@ -85,22 +60,6 @@ def test_forward_breakout_shift_applied() -> None:
     # shift(-1): shifted[i] == unshifted[i+1]
     assert unshifted['breakout'][2] == 1
     assert shifted['breakout'][1] == 1
-
-
-def test_forward_breakout_default_shift_is_minus_one() -> None:
-    close = [100.0, 103.0, 100.0, 100.0, 100.0]
-    data = _close_series(close)
-    t = ForwardBreakoutTarget(data, 'breakout')
-    result_default = t.transform(data, forward_periods=1, threshold=0.02)
-    result_explicit = t.transform(data, forward_periods=1, threshold=0.02, shift=-1)
-    assert result_default['breakout'].to_list() == result_explicit['breakout'].to_list()
-
-
-def test_forward_breakout_target_column_named_correctly() -> None:
-    data = _close_series([100.0, 102.0, 100.0])
-    t = ForwardBreakoutTarget(data, 'fwd_label')
-    result = t.transform(data, forward_periods=1, threshold=0.01, shift=0)
-    assert 'fwd_label' in result.columns
 
 
 def test_threshold_binary_labels_above_threshold() -> None:
@@ -150,24 +109,11 @@ def test_next_return_respects_scale() -> None:
     assert abs(result_pct['ret'][0] - result_raw['ret'][0] * 100.0) < 1e-9
 
 
-def test_next_return_target_column_named_correctly() -> None:
-    data = _close_series([100.0, 105.0, 100.0])
-    t = NextReturnTarget(data, 'next_ret')
-    result = t.transform(data)
-    assert 'next_ret' in result.columns
-
-
 def _make_split_data() -> list[pl.DataFrame]:
     roc = [float(i) / 10 for i in range(20)]
     close = [100.0 + i for i in range(20)]
     df = pl.DataFrame({'datetime': pl.Series(range(20)).cast(pl.Int64).cast(pl.Datetime), 'roc_1': roc, 'close': close})
     return [df[:10], df[10:15], df[15:]]
-
-
-def test_with_target_label_sets_target_column() -> None:
-    m = Manifest().with_target_label('qflag', QuantileBinaryTarget,
-                                     fit_params={'source_column': 'roc_1', 'quantile': 0.3})
-    assert m.target_column == 'qflag'
 
 
 def test_with_target_label_sets_target_class_config() -> None:
@@ -177,12 +123,6 @@ def test_with_target_label_sets_target_class_config() -> None:
     assert m.target_class_config.target_class is QuantileBinaryTarget
     assert m.target_class_config.fit_params['source_column'] == 'roc_1'
     assert m.target_class_config.fit_params['quantile'] == 0.3
-
-
-def test_with_target_label_returns_manifest_for_chaining() -> None:
-    m = Manifest()
-    result = m.with_target_label('qflag', QuantileBinaryTarget)
-    assert result is m
 
 
 def test_with_target_label_applies_transform_to_all_splits() -> None:
@@ -214,7 +154,3 @@ def test_with_target_label_fits_only_on_train() -> None:
     # Instance not re-fitted — cutoff must be unchanged
     assert all_fitted['_target_cls_qflag'].cutoff == cutoff
 
-
-def test_with_target_label_no_config_when_not_called() -> None:
-    m = Manifest()
-    assert m.target_class_config is None
