@@ -17,6 +17,8 @@ from limen.sfd.loop.meta import (
     LABEL_TARGET_COLUMNS,
     get_target_column,
 )
+from limen.targets import ForwardBreakoutTarget
+from limen.targets import QuantileBinaryTarget
 from limen.sfd.loop.progress import make_progress_callback
 from limen.sfd.loop.registry import (
     FEATURE_REGISTRY,
@@ -46,10 +48,11 @@ def test_registry_indicator_resolution():
 
 
 def test_registry_feature_resolution():
-    from limen.features import atr_percent_sma, forward_breakout_target
+    from limen.features import atr_percent_sma
 
     assert FEATURE_REGISTRY['atr_percent_sma'] is atr_percent_sma
-    assert FEATURE_REGISTRY['forward_breakout_target'] is forward_breakout_target
+    assert 'forward_breakout_target' not in FEATURE_REGISTRY
+    assert 'quantile_flag' not in FEATURE_REGISTRY
 
 
 def test_registry_model_resolution():
@@ -263,13 +266,12 @@ def test_loop_sfd_ignores_payload_transforms():
     assert 'mad_transform' not in target_names
 
 
-def test_loop_sfd_manifest_label_in_target_transforms():
+def test_loop_sfd_manifest_label_in_target_class_config():
     sfd = LoopSFD(_load_payload())
     m = sfd.manifest()
 
-    funcs = [entry[1] for entry in m.target_transforms]
-    func_names = [getattr(f, '__name__', repr(f)) for f in funcs]
-    assert 'forward_breakout_target' in func_names
+    assert m.target_class_config is not None
+    assert m.target_class_config.target_class is ForwardBreakoutTarget
 
 
 def test_loop_sfd_param_wiring_uses_namespaced_reference():
@@ -289,15 +291,11 @@ def test_loop_sfd_param_wiring_label_params():
     sfd = LoopSFD(_load_payload())
     m = sfd.manifest()
 
-    # Target transforms are tuples (fitted_params, func, params)
-    label_entry = next(
-        e for e in m.target_transforms
-        if getattr(e[1], '__name__', '') == 'forward_breakout_target'
-    )
-    label_params = label_entry[2]
-    assert label_params['forward_periods'] == 'label_forward_breakout_target_forward_periods'
-    assert label_params['threshold'] == 'label_forward_breakout_target_threshold'
-    assert label_params['shift'] == 'label_forward_breakout_target_shift'
+    cfg = m.target_class_config
+    assert cfg is not None
+    assert cfg.transform_params['forward_periods'] == 'label_forward_breakout_target_forward_periods'
+    assert cfg.transform_params['threshold'] == 'label_forward_breakout_target_threshold'
+    assert cfg.transform_params['shift'] == 'label_forward_breakout_target_shift'
 
 
 def test_loop_sfd_param_wiring_literal_when_not_in_param_space():
@@ -707,37 +705,24 @@ def _build_quantile_flag_payload(col: str = 'roc_1', q: float = 0.5) -> dict:
     }
 
 
-def test_quantile_flag_compiles_as_fitted_transform():
+def test_quantile_flag_compiles_as_target_class():
     sfd = LoopSFD(_build_quantile_flag_payload())
     m = sfd.manifest()
 
     assert m.target_column == 'quantile_flag'
-    assert len(m.target_transforms) == 1
-
-    fitted_params, func, base_params = m.target_transforms[0]
-
-    # Fitted param is wired to compute_quantile_cutoff with col + q references
-    assert len(fitted_params) == 1
-    fp_name, fp_func, fp_params = fitted_params[0]
-    assert fp_name == '_quantile_cutoff'
-    assert fp_func.__name__ == 'compute_quantile_cutoff'
-    assert fp_params['col'] == 'label_quantile_flag_col'
-    assert fp_params['q'] == 'label_quantile_flag_q'
-
-    # Transform func is quantile_flag with col + fitted cutoff injection
-    assert func.__name__ == 'quantile_flag'
-    assert base_params['col'] == 'label_quantile_flag_col'
-    assert base_params['cutoff'] == '_quantile_cutoff'
+    assert m.target_class_config is not None
+    assert m.target_class_config.target_class is QuantileBinaryTarget
+    assert m.target_class_config.fit_params['source_column'] == 'label_quantile_flag_col'
+    assert m.target_class_config.fit_params['quantile'] == 'label_quantile_flag_q'
 
 
-def test_forward_breakout_label_remains_plain_add_transform():
-    # Regression guard: the non-fitted label path must not route through
-    # the fitted-label branch.
+def test_forward_breakout_label_compiles_as_target_class():
     sfd = LoopSFD(_load_payload())
     m = sfd.manifest()
-    fitted_params, func, _base_params = m.target_transforms[0]
-    assert fitted_params == []
-    assert func.__name__ == 'forward_breakout_target'
+
+    assert m.target_class_config is not None
+    assert m.target_class_config.target_class is ForwardBreakoutTarget
+    assert m.target_class_config.transform_params['forward_periods'] == 'label_forward_breakout_target_forward_periods'
 
 
 def test_quantile_flag_params_routes_through_round_params():
@@ -840,14 +825,13 @@ def test_wire_params_bypasses_parameter_space_for_format_strings():
     }
     sfd = LoopSFD(payload)
     m = sfd.manifest()
-    fp, _func, bp = m.target_transforms[0]
+    cfg = m.target_class_config
     # The literal format string should survive as-is (rewritten), NOT
     # collapse to the parameterSpace reference 'label_quantile_flag_col'.
-    assert bp['col'] == 'roc_{indicator_roc_period}'
+    assert cfg.fit_params['source_column'] == 'roc_{indicator_roc_period}'
     # q is not a format string, so it still routes through round_params as
     # a reference.
-    assert fp[0][2]['col'] == 'roc_{indicator_roc_period}'
-    assert fp[0][2]['q'] == 'label_quantile_flag_q'
+    assert cfg.fit_params['quantile'] == 'label_quantile_flag_q'
 
 
 def test_failing_payload_end_to_end_with_uel():
@@ -1016,7 +1000,7 @@ _TESTS = [
     test_loop_sfd_manifest_scaler_set,
     test_loop_sfd_manifest_feature_transforms_order,
     test_loop_sfd_ignores_payload_transforms,
-    test_loop_sfd_manifest_label_in_target_transforms,
+    test_loop_sfd_manifest_label_in_target_class_config,
     test_loop_sfd_param_wiring_uses_namespaced_reference,
     test_loop_sfd_param_wiring_label_params,
     test_loop_sfd_param_wiring_literal_when_not_in_param_space,
@@ -1042,8 +1026,8 @@ _TESTS = [
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,
     test_progress_callback_zero_total_no_div_by_zero,
-    test_quantile_flag_compiles_as_fitted_transform,
-    test_forward_breakout_label_remains_plain_add_transform,
+    test_quantile_flag_compiles_as_target_class,
+    test_forward_breakout_label_compiles_as_target_class,
     test_quantile_flag_params_routes_through_round_params,
     test_component_alias_map_built_from_payload,
     test_rewrite_format_string_translates_namespaced_placeholder,

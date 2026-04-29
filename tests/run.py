@@ -463,6 +463,33 @@ from tests.test_scalers import test_robust_scaler_all_null_column
 from tests.test_scalers import test_scaler_factory_selects_all_types
 from tests.test_scalers import test_scaler_factory_unknown_raises
 from tests.test_scalers import test_scaler_factory_registry_has_all
+from tests.test_targets import test_quantile_binary_fits_cutoff_on_train
+from tests.test_targets import test_quantile_binary_transform_labels_above_cutoff
+from tests.test_targets import test_quantile_binary_no_shift_by_default
+from tests.test_targets import test_quantile_binary_shift_applied_when_nonzero
+from tests.test_targets import test_quantile_binary_target_column_named_correctly
+from tests.test_targets import test_quantile_binary_cutoff_is_training_only
+from tests.test_targets import test_forward_breakout_labels_above_threshold
+from tests.test_targets import test_forward_breakout_shift_applied
+from tests.test_targets import test_forward_breakout_default_shift_is_minus_one
+from tests.test_targets import test_forward_breakout_target_column_named_correctly
+from tests.test_targets import test_threshold_binary_labels_above_threshold
+from tests.test_targets import test_threshold_binary_threshold_is_fixed
+from tests.test_targets import test_threshold_binary_shift_applied
+from tests.test_targets import test_next_return_computes_percentage_return
+from tests.test_targets import test_next_return_respects_periods
+from tests.test_targets import test_next_return_respects_scale
+from tests.test_targets import test_next_return_target_column_named_correctly
+from tests.test_targets import test_with_target_class_sets_target_column
+from tests.test_targets import test_with_target_class_sets_target_class_config
+from tests.test_targets import test_with_target_class_returns_manifest_for_chaining
+from tests.test_targets import test_with_target_class_applies_transform_to_all_splits
+from tests.test_targets import test_with_target_class_fits_only_on_train
+from tests.test_targets import test_with_target_class_no_config_when_not_called
+from tests.test_targets import test_with_target_function_sets_target_column
+from tests.test_targets import test_with_target_function_adds_to_target_transforms
+from tests.test_targets import test_with_target_function_does_not_set_target_class_config
+from tests.test_targets import test_with_target_function_returns_manifest_for_chaining
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
@@ -549,7 +576,7 @@ from tests.test_loop_sfd import test_loop_sfd_manifest_architecture_function
 from tests.test_loop_sfd import test_loop_sfd_manifest_scaler_set
 from tests.test_loop_sfd import test_loop_sfd_manifest_feature_transforms_order
 from tests.test_loop_sfd import test_loop_sfd_ignores_payload_transforms
-from tests.test_loop_sfd import test_loop_sfd_manifest_label_in_target_transforms
+from tests.test_loop_sfd import test_loop_sfd_manifest_label_in_target_class_config
 from tests.test_loop_sfd import test_loop_sfd_param_wiring_uses_namespaced_reference
 from tests.test_loop_sfd import test_loop_sfd_param_wiring_label_params
 from tests.test_loop_sfd import test_loop_sfd_param_wiring_literal_when_not_in_param_space
@@ -575,8 +602,8 @@ from tests.test_loop_sfd import test_loop_sfd_unknown_reference_architecture_rai
 from tests.test_loop_sfd import test_progress_callback_writes_json
 from tests.test_loop_sfd import test_progress_callback_handles_none_log
 from tests.test_loop_sfd import test_progress_callback_zero_total_no_div_by_zero
-from tests.test_loop_sfd import test_quantile_flag_compiles_as_fitted_transform
-from tests.test_loop_sfd import test_forward_breakout_label_remains_plain_add_transform
+from tests.test_loop_sfd import test_quantile_flag_compiles_as_target_class
+from tests.test_loop_sfd import test_forward_breakout_label_compiles_as_target_class
 from tests.test_loop_sfd import test_quantile_flag_params_routes_through_round_params
 from tests.test_loop_sfd import test_component_alias_map_built_from_payload
 from tests.test_loop_sfd import test_rewrite_format_string_translates_namespaced_placeholder
@@ -1077,6 +1104,33 @@ tests = [
     test_scaler_factory_selects_all_types,
     test_scaler_factory_unknown_raises,
     test_scaler_factory_registry_has_all,
+    test_quantile_binary_fits_cutoff_on_train,
+    test_quantile_binary_transform_labels_above_cutoff,
+    test_quantile_binary_no_shift_by_default,
+    test_quantile_binary_shift_applied_when_nonzero,
+    test_quantile_binary_target_column_named_correctly,
+    test_quantile_binary_cutoff_is_training_only,
+    test_forward_breakout_labels_above_threshold,
+    test_forward_breakout_shift_applied,
+    test_forward_breakout_default_shift_is_minus_one,
+    test_forward_breakout_target_column_named_correctly,
+    test_threshold_binary_labels_above_threshold,
+    test_threshold_binary_threshold_is_fixed,
+    test_threshold_binary_shift_applied,
+    test_next_return_computes_percentage_return,
+    test_next_return_respects_periods,
+    test_next_return_respects_scale,
+    test_next_return_target_column_named_correctly,
+    test_with_target_class_sets_target_column,
+    test_with_target_class_sets_target_class_config,
+    test_with_target_class_returns_manifest_for_chaining,
+    test_with_target_class_applies_transform_to_all_splits,
+    test_with_target_class_fits_only_on_train,
+    test_with_target_class_no_config_when_not_called,
+    test_with_target_function_sets_target_column,
+    test_with_target_function_adds_to_target_transforms,
+    test_with_target_function_does_not_set_target_class_config,
+    test_with_target_function_returns_manifest_for_chaining,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,
@@ -1163,7 +1217,7 @@ tests = [
     test_loop_sfd_manifest_scaler_set,
     test_loop_sfd_manifest_feature_transforms_order,
     test_loop_sfd_ignores_payload_transforms,
-    test_loop_sfd_manifest_label_in_target_transforms,
+    test_loop_sfd_manifest_label_in_target_class_config,
     test_loop_sfd_param_wiring_uses_namespaced_reference,
     test_loop_sfd_param_wiring_label_params,
     test_loop_sfd_param_wiring_literal_when_not_in_param_space,
@@ -1189,8 +1243,8 @@ tests = [
     test_progress_callback_writes_json,
     test_progress_callback_handles_none_log,
     test_progress_callback_zero_total_no_div_by_zero,
-    test_quantile_flag_compiles_as_fitted_transform,
-    test_forward_breakout_label_remains_plain_add_transform,
+    test_quantile_flag_compiles_as_target_class,
+    test_forward_breakout_label_compiles_as_target_class,
     test_quantile_flag_params_routes_through_round_params,
     test_component_alias_map_built_from_payload,
     test_rewrite_format_string_translates_namespaced_placeholder,
