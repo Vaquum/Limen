@@ -5,6 +5,7 @@ from limen.experiment import Manifest
 from limen.features.fractional_diff import _get_weights_ffd
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
+from limen.targets import RandomBinaryTarget
 from limen.utils.adf_test import adf_test
 from tests.utils.historical_data import get_cached_spot_klines_2h
 
@@ -169,12 +170,7 @@ def test_fractional_diff_manifest_integration():
         )
         .set_split_config(3, 1, 1)
         .add_feature(fractional_diff, d=0.4, cols=['close'], threshold=1e-2)
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
     raw_data = manifest.fetch_test_data()
     data = manifest.prepare_data(raw_data, {})

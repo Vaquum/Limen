@@ -480,12 +480,12 @@ from tests.test_targets import test_next_return_computes_percentage_return
 from tests.test_targets import test_next_return_respects_periods
 from tests.test_targets import test_next_return_respects_scale
 from tests.test_targets import test_next_return_target_column_named_correctly
-from tests.test_targets import test_with_target_class_sets_target_column
-from tests.test_targets import test_with_target_class_sets_target_class_config
-from tests.test_targets import test_with_target_class_returns_manifest_for_chaining
-from tests.test_targets import test_with_target_class_applies_transform_to_all_splits
-from tests.test_targets import test_with_target_class_fits_only_on_train
-from tests.test_targets import test_with_target_class_no_config_when_not_called
+from tests.test_targets import test_with_target_label_sets_target_column
+from tests.test_targets import test_with_target_label_sets_target_class_config
+from tests.test_targets import test_with_target_label_returns_manifest_for_chaining
+from tests.test_targets import test_with_target_label_applies_transform_to_all_splits
+from tests.test_targets import test_with_target_label_fits_only_on_train
+from tests.test_targets import test_with_target_label_no_config_when_not_called
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
@@ -1117,12 +1117,12 @@ tests = [
     test_next_return_respects_periods,
     test_next_return_respects_scale,
     test_next_return_target_column_named_correctly,
-    test_with_target_class_sets_target_column,
-    test_with_target_class_sets_target_class_config,
-    test_with_target_class_returns_manifest_for_chaining,
-    test_with_target_class_applies_transform_to_all_splits,
-    test_with_target_class_fits_only_on_train,
-    test_with_target_class_no_config_when_not_called,
+    test_with_target_label_sets_target_column,
+    test_with_target_label_sets_target_class_config,
+    test_with_target_label_returns_manifest_for_chaining,
+    test_with_target_label_applies_transform_to_all_splits,
+    test_with_target_label_fits_only_on_train,
+    test_with_target_label_no_config_when_not_called,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,

@@ -164,14 +164,14 @@ def _make_split_data() -> list[pl.DataFrame]:
     return [df[:10], df[10:15], df[15:]]
 
 
-def test_with_target_class_sets_target_column() -> None:
-    m = Manifest().with_target_class('qflag', QuantileBinaryTarget,
+def test_with_target_label_sets_target_column() -> None:
+    m = Manifest().with_target_label('qflag', QuantileBinaryTarget,
                                      fit_params={'source_column': 'roc_1', 'quantile': 0.3})
     assert m.target_column == 'qflag'
 
 
-def test_with_target_class_sets_target_class_config() -> None:
-    m = Manifest().with_target_class('qflag', QuantileBinaryTarget,
+def test_with_target_label_sets_target_class_config() -> None:
+    m = Manifest().with_target_label('qflag', QuantileBinaryTarget,
                                      fit_params={'source_column': 'roc_1', 'quantile': 0.3})
     assert m.target_class_config is not None
     assert m.target_class_config.target_class is QuantileBinaryTarget
@@ -179,16 +179,16 @@ def test_with_target_class_sets_target_class_config() -> None:
     assert m.target_class_config.fit_params['quantile'] == 0.3
 
 
-def test_with_target_class_returns_manifest_for_chaining() -> None:
+def test_with_target_label_returns_manifest_for_chaining() -> None:
     m = Manifest()
-    result = m.with_target_class('qflag', QuantileBinaryTarget)
+    result = m.with_target_label('qflag', QuantileBinaryTarget)
     assert result is m
 
 
-def test_with_target_class_applies_transform_to_all_splits() -> None:
+def test_with_target_label_applies_transform_to_all_splits() -> None:
     splits = _make_split_data()
     m = Manifest()
-    m.with_target_class('qflag', QuantileBinaryTarget,
+    m.with_target_label('qflag', QuantileBinaryTarget,
                          fit_params={'source_column': 'roc_1', 'quantile': 0.3})
 
     from limen.experiment.manifest_core import _apply_class_based_target
@@ -198,10 +198,10 @@ def test_with_target_class_applies_transform_to_all_splits() -> None:
         assert 'qflag' in result.columns
 
 
-def test_with_target_class_fits_only_on_train() -> None:
+def test_with_target_label_fits_only_on_train() -> None:
     splits = _make_split_data()
     m = Manifest()
-    m.with_target_class('qflag', QuantileBinaryTarget,
+    m.with_target_label('qflag', QuantileBinaryTarget,
                          fit_params={'source_column': 'roc_1', 'quantile': 0.3})
 
     from limen.experiment.manifest_core import _apply_class_based_target
@@ -215,6 +215,6 @@ def test_with_target_class_fits_only_on_train() -> None:
     assert all_fitted['_target_cls_qflag'].cutoff == cutoff
 
 
-def test_with_target_class_no_config_when_not_called() -> None:
+def test_with_target_label_no_config_when_not_called() -> None:
     m = Manifest()
     assert m.target_class_config is None

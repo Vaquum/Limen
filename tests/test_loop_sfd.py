@@ -251,19 +251,15 @@ def test_loop_sfd_manifest_feature_transforms_order():
 
 def test_loop_sfd_ignores_payload_transforms():
     # The payload's transforms[] array is intentionally ignored in this
-    # iteration. Verify mad_transform from the fixture appears in neither
-    # feature_transforms nor target_transforms.
+    # iteration. Verify mad_transform from the fixture does not appear in
+    # feature_transforms.
     sfd = LoopSFD(_load_payload())
     m = sfd.manifest()
 
     feature_names = [
         getattr(e.func, '__name__', '') for e in m.feature_transforms
     ]
-    target_names = [
-        getattr(e[1], '__name__', '') for e in m.target_transforms
-    ]
     assert 'mad_transform' not in feature_names
-    assert 'mad_transform' not in target_names
 
 
 def test_loop_sfd_manifest_label_in_target_class_config():

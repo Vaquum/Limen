@@ -23,8 +23,6 @@ def test_pre_split_random_selector():
             seed='random_seed'
         )
         .set_split_config(6, 2, 2)
-        .with_target_label('target')
-            .done()
     )
 
     round_params = {
