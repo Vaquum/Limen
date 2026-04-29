@@ -93,7 +93,7 @@ def manifest():
         .set_split_config(8, 1, 2)
         .add_indicator(...)
         .add_feature(...)
-        .with_target_class(...)
+        .with_target_label(...)
         .set_scaler_from_params('scaler_type')
         .with_reference_architecture(your_model)
     )
@@ -143,4 +143,5 @@ For a serious foundational SFD contribution, expect to provide:
 
 - [Experiment Manifest](../Experiment-Manifest.md)
 - [Single File Decoder](../Single-File-Decoder.md)
+- [Targets](../Targets.md)
 - [Writing Docstrings](Writing-Docstrings.md)

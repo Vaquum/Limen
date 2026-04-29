@@ -37,7 +37,7 @@ These helpers are used after a model has already been fitted.
 ```python
 from limen.targets import QuantileBinaryTarget
 
-manifest.with_target_class(
+manifest.with_target_label(
     'quantile_flag',
     QuantileBinaryTarget,
     fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},

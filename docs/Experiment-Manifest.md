@@ -55,7 +55,7 @@ def manifest():
         .add_indicator(wilder_rsi)
         .add_feature(vwap)
         .add_feature(kline_imbalance)
-        .with_target_class(
+        .with_target_label(
             'quantile_flag',
             QuantileBinaryTarget,
             fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
@@ -381,12 +381,12 @@ Then in `params()`:
 
 ## Target Configuration
 
-Target construction uses `with_target_class()` from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
+Target construction uses `with_target_label()` from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
 
 ```python
 from limen.targets import QuantileBinaryTarget
 
-.with_target_class(
+.with_target_label(
     'quantile_flag',
     QuantileBinaryTarget,
     fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
@@ -397,6 +397,8 @@ from limen.targets import QuantileBinaryTarget
 `fit_params` are forwarded to `__init__` on the training split. `transform_params` are forwarded to `transform()` on every split. Both support round-param references (`'q'` resolves to the current round's `q` value).
 
 The target column is placed last before Limen finalizes the `data_dict`.
+
+See [Targets](Targets.md) for the full reference including all built-in target classes and the custom target class convention.
 
 ## Scaling
 
@@ -700,7 +702,7 @@ If the model returns `_preds`, UEL stores them in `uel.preds` and the `Log` laye
 ```python
 from limen.targets import QuantileBinaryTarget
 
-.with_target_class(
+.with_target_label(
     'quantile_flag',
     QuantileBinaryTarget,
     fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
@@ -748,4 +750,4 @@ That pattern is central to [Trainer](Trainer.md).
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run a manifest-driven SFD.
 - Continue to [Historical Data](Historical-Data.md) if you need the data surfaces a manifest can point at.
 - Continue to [Data Bars](Data-Bars.md) if bar formation is part of the experiment design.
-- Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.
+- Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.

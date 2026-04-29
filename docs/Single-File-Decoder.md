@@ -71,7 +71,7 @@ def manifest():
         )
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
-        .with_target_class(
+        .with_target_label(
             'quantile_flag',
             QuantileBinaryTarget,
             fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
