@@ -4,6 +4,7 @@ from limen.experiment import Manifest
 from limen.targets import ForwardBreakoutTarget
 from limen.targets import NextReturnTarget
 from limen.targets import QuantileBinaryTarget
+from limen.targets import RandomBinaryTarget
 from limen.targets import ThresholdBinaryTarget
 
 
@@ -37,8 +38,9 @@ def test_quantile_binary_shift_applied_when_nonzero() -> None:
     data = _roc_series([0.9, 0.1, 0.9])
     unshifted = t.transform(data, shift=0)['flag'].to_list()
     shifted = t.transform(data, shift=-1)['flag'].to_list()
-    # shift(-1) moves labels one position back; last entry becomes null → drops to None
+    # shift(-1) moves labels one position back; last entry becomes null → None
     assert unshifted[0] == shifted[1]
+    assert shifted[-1] is None
 
 
 def test_forward_breakout_labels_above_threshold() -> None:
@@ -153,4 +155,13 @@ def test_with_target_label_fits_only_on_train() -> None:
     splits[1], all_fitted = _apply_class_based_target(m, splits[1], {}, all_fitted, is_training=False)
     # Instance not re-fitted — cutoff must be unchanged
     assert all_fitted['_target_cls_qflag'].cutoff == cutoff
+
+
+def test_random_binary_target_adds_column_with_binary_values() -> None:
+    data = pl.DataFrame({'close': [1.0, 2.0, 3.0, 4.0, 5.0]})
+    t = RandomBinaryTarget(data, 'noise')
+    result = t.transform(data)
+    assert 'noise' in result.columns
+    assert set(result['noise'].to_list()).issubset({0, 1})
+    assert result.height == data.height
 
