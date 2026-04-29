@@ -11,6 +11,7 @@ from limen.features.range_pct import range_pct
 from limen.features.volume_ratio import volume_ratio
 from limen.features.sma_ratios import sma_ratios
 from limen.features.lagged_features import lag_columns
+from limen.targets import NextReturnTarget
 from limen.sfd.reference_architecture import xgboost_regressor
 
 
@@ -74,12 +75,6 @@ def manifest():
             'order_flow_imbalance',
             'stoch_k',
         ], lag=1)
-        .with_target_label('next_return')
-            .add_transform(
-                lambda df: df.with_columns([
-                    (((pl.col('close').shift(-1) - pl.col('close')) / pl.col('close')) * 100).alias('next_return')
-                ])
-            )
-            .done()
+        .with_target_class('next_return', NextReturnTarget)
         .with_reference_architecture(xgboost_regressor)
     )

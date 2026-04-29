@@ -10,7 +10,7 @@ prediction threshold that balances signal quality with trade frequency.
 from limen.experiment import Manifest
 from limen.data import HistoricalData
 from limen.indicators import roc, wilder_rsi, rolling_volatility, bollinger_bands, bollinger_position
-from limen.features.forward_breakout_target import forward_breakout_target
+from limen.targets import ForwardBreakoutTarget
 from limen.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
 
 
@@ -68,13 +68,11 @@ def manifest() -> Manifest:
 
         .add_indicator(bollinger_position)
 
-        .with_target_label('forward_breakout')
-            .add_transform(forward_breakout_target,
-                forward_periods='forward_periods',
-                threshold='threshold_pct',
-                shift=-1
-            )
-            .done()
+        .with_target_class(
+            'forward_breakout',
+            ForwardBreakoutTarget,
+            transform_params={'forward_periods': 'forward_periods', 'threshold': 'threshold_pct', 'shift': -1},
+        )
 
         .with_reference_architecture(tabpfn_binary)
     )

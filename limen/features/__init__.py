@@ -13,7 +13,6 @@ from limen.features.distance_from_high import distance_from_high
 from limen.features.distance_from_low import distance_from_low
 from limen.features.dollar_volume import dollar_volume
 from limen.features.ema_breakout import ema_breakout
-from limen.features.forward_breakout_target import forward_breakout_target
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.features.gap_high import gap_high
@@ -31,8 +30,6 @@ from limen.features.ma_slope_regime import ma_slope_regime
 from limen.features.parkinson_volatility import parkinson_volatility
 from limen.features.price_range_position import price_range_position
 from limen.features.price_vs_band_regime import price_vs_band_regime
-from limen.features.quantile_flag import compute_quantile_cutoff
-from limen.features.quantile_flag import quantile_flag
 from limen.features.range_overlap import range_overlap
 from limen.features.range_pct import range_pct
 from limen.features.range_per_dollar_volume import range_per_dollar_volume
@@ -67,7 +64,6 @@ __all__ = [
     'breakout_percentile_regime',
     'calendar_time_features',
     'close_position',
-    'compute_quantile_cutoff',
     'conserved_flux_renormalization',
     'cyclical_time_features',
     'distance_from_high',
@@ -75,7 +71,6 @@ __all__ = [
     'dollar_volume',
     'ema_breakout',
     'find_min_d',
-    'forward_breakout_target',
     'fractional_diff',
     'gap_high',
     'garman_klass_volatility',
@@ -92,7 +87,6 @@ __all__ = [
     'parkinson_volatility',
     'price_range_position',
     'price_vs_band_regime',
-    'quantile_flag',
     'range_overlap',
     'range_pct',
     'range_per_dollar_volume',

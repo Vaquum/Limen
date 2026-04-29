@@ -4,18 +4,19 @@ Mappings that cannot be derived by introspection:
 
 - LABEL_TARGET_COLUMNS: label function name → target column name produced
 - DATA_SOURCE_REGISTRY: method name string → HistoricalData bound method
-- FITTED_LABELS: label name → fitted-transform wiring (for labels whose
-  threshold/cutoff is computed from training data rather than user-specified)
+- TARGET_LABEL_REGISTRY: label name → target class wiring (maps payload param
+  names to target class __init__ and transform() param names)
 
 NOTE: This module is part of the temporary `limen.sfd.loop` subpackage that
 will be removed when RFC-1005 (YAML compiler) lands.
 '''
 
 from collections.abc import Callable
-from typing import Any
+from dataclasses import dataclass, field
 
 from limen.data import HistoricalData
-from limen.features.quantile_flag import compute_quantile_cutoff
+from limen.targets import ForwardBreakoutTarget
+from limen.targets import QuantileBinaryTarget
 
 
 LABEL_TARGET_COLUMNS: dict[str, str] = {
@@ -46,58 +47,43 @@ DATA_SOURCE_REGISTRY: dict[str, Callable] = {
 }
 
 
-class FittedLabelConfig:
+@dataclass
+class TargetLabelEntry:
 
     '''
-    Wiring specification for a label that requires a fitted transform.
+    Registry entry mapping a Loop payload label name to a target class.
 
-    Fitted labels compute a per-run parameter from the training split
-    (e.g. a quantile cutoff) before being applied. The manifest builder
-    expresses this via `.add_fitted_transform().fit_param().with_params()`.
-
-    Attributes:
-        compute_func: Callable that takes (data, **compute_params) and
-            returns a scalar. Called once on the training split
-        fitted_param_name: Name of the computed value in round_params.
-            Must start with underscore to mark it as internal
-        compute_param_keys: Names of user params (from the payload label
-            entry) that must be forwarded to compute_func
-        apply_param_keys: Names of user params that are forwarded to the
-            label function itself at transform time. The fitted param is
-            always injected as `cutoff` (keyed on fitted_param_name)
-        apply_fitted_as: The keyword argument name under which the fitted
-            param is passed to the label function
+    fit_param_aliases maps payload param names to the corresponding keyword
+    arguments in the target class __init__ (after train_data and target_name).
+    transform_param_aliases maps payload param names to transform() arguments.
+    Params not listed in either alias dict are not forwarded.
     '''
 
-    def __init__(self,
-                 compute_func: Callable[..., Any],
-                 fitted_param_name: str,
-                 compute_param_keys: tuple[str, ...],
-                 apply_param_keys: tuple[str, ...],
-                 apply_fitted_as: str) -> None:
-
-        self.compute_func = compute_func
-        self.fitted_param_name = fitted_param_name
-        self.compute_param_keys = compute_param_keys
-        self.apply_param_keys = apply_param_keys
-        self.apply_fitted_as = apply_fitted_as
+    target_class: type
+    fit_param_aliases: dict[str, str] = field(default_factory=dict)
+    transform_param_aliases: dict[str, str] = field(default_factory=dict)
 
 
-FITTED_LABELS: dict[str, FittedLabelConfig] = {
-    'quantile_flag': FittedLabelConfig(
-        compute_func=compute_quantile_cutoff,
-        fitted_param_name='_quantile_cutoff',
-        compute_param_keys=('col', 'q'),
-        apply_param_keys=('col',),
-        apply_fitted_as='cutoff',
+TARGET_LABEL_REGISTRY: dict[str, TargetLabelEntry] = {
+    'quantile_flag': TargetLabelEntry(
+        target_class=QuantileBinaryTarget,
+        fit_param_aliases={'col': 'source_column', 'q': 'quantile'},
+    ),
+    'forward_breakout_target': TargetLabelEntry(
+        target_class=ForwardBreakoutTarget,
+        transform_param_aliases={
+            'forward_periods': 'forward_periods',
+            'threshold': 'threshold',
+            'shift': 'shift',
+        },
     ),
 }
 
 
 __all__ = [
     'DATA_SOURCE_REGISTRY',
-    'FITTED_LABELS',
     'LABEL_TARGET_COLUMNS',
-    'FittedLabelConfig',
+    'TARGET_LABEL_REGISTRY',
+    'TargetLabelEntry',
     'get_target_column',
 ]

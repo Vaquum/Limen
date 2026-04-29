@@ -1,13 +1,11 @@
-from limen.features import compute_quantile_cutoff
 from limen.features import fractional_diff
 from limen.features import kline_imbalance
-from limen.features import quantile_flag
 from limen.features import vwap
 from limen.indicators import atr
 from limen.indicators import ppo
 from limen.indicators import roc
 from limen.indicators import wilder_rsi
-from limen.transforms import shift_column_transform
+from limen.targets import QuantileBinaryTarget
 from limen.experiment import Manifest
 from limen.sfd.reference_architecture import logreg_binary
 from limen.data import HistoricalData
@@ -58,12 +56,12 @@ def manifest():
         .add_feature(vwap, group='volume')
         .add_feature(kline_imbalance, group='volume')
 
-        .with_target_label('quantile_flag')
-            .add_fitted_transform(quantile_flag)
-                .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-                .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
-            .add_transform(shift_column_transform, shift='shift', column='target_column')
-            .done()
+        .with_target_class(
+            'quantile_flag',
+            QuantileBinaryTarget,
+            fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
+            transform_params={'shift': 'shift'},
+        )
 
         .set_scaler_from_params('scaler_type')
         .set_feature_ablation()

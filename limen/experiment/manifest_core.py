@@ -51,6 +51,17 @@ FittedTransformEntry = tuple[
 
 
 @dataclass
+class TargetClassConfig:
+
+    '''Configuration for a class-based target transform.'''
+
+    target_name: str
+    target_class: type
+    fit_params: dict[str, Any] = field(default_factory=dict)
+    transform_params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class DataSourceConfig:
 
     '''Declarative configuration for data fetching in manifests.'''
@@ -172,6 +183,7 @@ class Manifest:
     feature_transforms: list[TransformEntry] = field(default_factory=list)
     target_column: str = None
     target_transforms: list[FittedTransformEntry] = field(default_factory=list)
+    target_class_config: TargetClassConfig | None = None
     scaler: FittedTransformEntry = None
     ablation_config: AblationConfig | None = None
     data_dict_extension: Callable = None
@@ -450,6 +462,60 @@ class Manifest:
         '''
 
         return TargetBuilder(self, target_column)
+
+    def with_target_class(self,
+                          target_name: str,
+                          target_class: type,
+                          fit_params: dict[str, Any] | None = None,
+                          transform_params: dict[str, Any] | None = None) -> 'Manifest':
+
+        '''
+        Configure a class-based target transform.
+
+        The class must accept (train_data, target_name, **fit_params) in __init__
+        and expose transform(data, **transform_params) -> pl.DataFrame.
+        Fitting happens once on the training split; the fitted instance is reused
+        for validation and test splits.
+
+        Args:
+            target_name (str): Name of the target column to create
+            target_class (type): Target class following the TargetTransform interface
+            fit_params (dict[str, Any]): Parameters forwarded to __init__ after train_data and target_name
+            transform_params (dict[str, Any]): Parameters forwarded to transform()
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.target_column = target_name
+        self.target_class_config = TargetClassConfig(
+            target_name=target_name,
+            target_class=target_class,
+            fit_params=fit_params or {},
+            transform_params=transform_params or {},
+        )
+        return self
+
+    def with_target_function(self, target_name: str, func: Callable, **params: Any) -> 'Manifest':
+
+        '''
+        Configure a function-based target transform (no fitting step).
+
+        The function receives (data: pl.DataFrame, **params) and returns pl.DataFrame.
+        Parameter values are resolved against round_params at execution time.
+
+        Args:
+            target_name (str): Name of the target column to create
+            func (Callable): Transform function applied to each split
+            **params (Any): Parameters for the transform function
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.target_column = target_name
+        self.target_transforms.append(([], func, params))
+        return self
 
     def with_reference_architecture(self, architecture_function: Callable) -> 'Manifest':
 
@@ -1053,6 +1119,34 @@ def _apply_fitted_transforms(
     return data, all_fitted_params
 
 
+def _apply_class_based_target(
+        manifest: Manifest,
+        data: pl.DataFrame,
+        round_params: dict[str, Any],
+        all_fitted_params: dict[str, Any],
+        is_training: bool
+) -> tuple[pl.DataFrame, dict[str, Any]]:
+
+    config = manifest.target_class_config
+    instance_key = f'_target_cls_{config.target_name}'
+
+    if is_training:
+        resolved_fit = _resolve_params(config.fit_params, round_params)
+        instance = config.target_class(
+            train_data=data,
+            target_name=config.target_name,
+            **resolved_fit
+        )
+        all_fitted_params[instance_key] = instance
+    else:
+        instance = all_fitted_params[instance_key]
+
+    resolved_transform = _resolve_params(config.transform_params, round_params)
+    data = instance.transform(data, **resolved_transform)
+
+    return data, all_fitted_params
+
+
 def _apply_target_transforms(
         manifest: Manifest,
         data: pl.DataFrame,
@@ -1060,6 +1154,9 @@ def _apply_target_transforms(
         all_fitted_params: dict[str, Any],
         is_training: bool
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
+
+    if manifest.target_class_config is not None:
+        return _apply_class_based_target(manifest, data, round_params, all_fitted_params, is_training)
 
     enhanced_round_params = round_params.copy()
     if manifest.target_column:

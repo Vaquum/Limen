@@ -17,8 +17,7 @@ from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.sfd.loop.meta import (
     DATA_SOURCE_REGISTRY,
-    FITTED_LABELS,
-    FittedLabelConfig,
+    TARGET_LABEL_REGISTRY,
     get_target_column,
 )
 from limen.sfd.loop.registry import (
@@ -198,10 +197,7 @@ class LoopSFD:
             2. Split config from payload.inputData.splitRatios
             3. Indicators from payload.indicators
             4. Features from payload.features
-            5. Label as target transform (first label only). Labels
-               registered in FITTED_LABELS are wired via add_fitted_transform
-               so a training-fit param (e.g. a quantile cutoff) is computed
-               before the transform runs; other labels use plain add_transform
+            5. Label as target transform (first label only) via with_target_class()
             6. Scaler from payload.scaler.selectedItems[0].name
             7. Model from payload.referenceArchitecture
 
@@ -227,28 +223,34 @@ class LoopSFD:
             wired = self._wire_params('feature', feat['name'], feat.get('params', {}))
             m.add_feature(func, **wired)
 
-        # Label becomes the target transform. Fitted labels (see
-        # FITTED_LABELS in meta.py) are wired via add_fitted_transform
-        # so compute_func runs on the training split before apply.
+        # Label becomes the target transform via the class-based target API.
+        # TARGET_LABEL_REGISTRY maps label name → target class + param aliases.
         labels = self._payload.get('labels', []) or []
         if labels:
             label = labels[0]
             label_name = label['name']
-            label_func = FEATURE_REGISTRY[label_name]
             target_col = get_target_column(label_name)
             user_params = label.get('params', {}) or {}
-            target_builder = m.with_target_label(target_col)
 
-            fitted_config = FITTED_LABELS.get(label_name)
-            if fitted_config is not None:
-                target_builder = self._wire_fitted_label(
-                    target_builder, label_func, label_name, user_params, fitted_config,
-                )
-            else:
-                wired = self._wire_params('label', label_name, user_params)
-                target_builder = target_builder.add_transform(label_func, **wired)
+            entry = TARGET_LABEL_REGISTRY[label_name]
+            wired = self._wire_params('label', label_name, user_params)
 
-            m = target_builder.done()
+            fit_params = {
+                class_key: wired[payload_key]
+                for payload_key, class_key in entry.fit_param_aliases.items()
+                if payload_key in wired
+            }
+            transform_params = {
+                class_key: wired[payload_key]
+                for payload_key, class_key in entry.transform_param_aliases.items()
+                if payload_key in wired
+            }
+
+            m.with_target_class(
+                target_col, entry.target_class,
+                fit_params=fit_params or None,
+                transform_params=transform_params or None,
+            )
 
         scaler_name = self._resolve_scaler_name()
         if scaler_name is not None:
@@ -512,51 +514,5 @@ class LoopSFD:
             return '{' + namespaced + '}'
 
         return re.sub(r'\{([^{}]+)\}', _replace, value)
-
-    def _wire_fitted_label(self,
-                           target_builder: Any,
-                           label_func: Any,
-                           label_name: str,
-                           user_params: dict[str, Any],
-                           config: FittedLabelConfig) -> Any:
-
-        '''
-        Wire a fitted-transform label onto the target builder.
-
-        The fitted label pattern computes a scalar from the training split
-        (e.g. a quantile cutoff) before applying the label function. This
-        method translates the FittedLabelConfig into
-        `.add_fitted_transform().fit_param().with_params()` calls.
-
-        Args:
-            target_builder: Limen TargetBuilder returned from .with_target_label()
-            label_func (Callable): The label function (from FEATURE_REGISTRY)
-            label_name (str): Label name as used in the payload
-            user_params (dict): Label params from the payload entry
-            config (FittedLabelConfig): Wiring spec from FITTED_LABELS
-
-        Returns:
-            TargetBuilder ready for .done()
-
-        Raises:
-            KeyError: If a key listed in compute_param_keys is missing from
-                user_params
-
-        '''
-
-        wired = self._wire_params('label', label_name, user_params)
-
-        compute_params = {key: wired[key] for key in config.compute_param_keys}
-
-        apply_params = {key: wired[key] for key in config.apply_param_keys}
-        apply_params[config.apply_fitted_as] = config.fitted_param_name
-
-        return (
-            target_builder
-            .add_fitted_transform(label_func)
-            .fit_param(config.fitted_param_name, config.compute_func, **compute_params)
-            .with_params(**apply_params)
-        )
-
 
 __all__ = ['LoopSFD']
