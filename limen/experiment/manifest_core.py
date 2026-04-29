@@ -494,27 +494,6 @@ class Manifest:
         )
         return self
 
-    def with_target_function(self, target_name: str, func: Callable, **params: Any) -> 'Manifest':
-
-        '''
-        Configure a function-based target transform (no fitting step).
-
-        The function receives (data: pl.DataFrame, **params) and returns pl.DataFrame.
-        Parameter values are resolved against round_params at execution time.
-
-        Args:
-            target_name (str): Name of the target column to create
-            func (Callable): Transform function applied to each split
-            **params (Any): Parameters for the transform function
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        self.target_column = target_name
-        self.target_transforms.append(([], func, params))
-        return self
-
     def with_reference_architecture(self, architecture_function: Callable) -> 'Manifest':
 
         '''
