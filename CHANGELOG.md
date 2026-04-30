@@ -814,7 +814,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v3.0.1 on 29th of April, 2026
 
-- Add `limen.targets` module with `QuantileBinaryTarget`, `ForwardBreakoutTarget`, `ThresholdBinaryTarget`, `NextReturnTarget`, and `RandomBinaryTarget` class-based target transforms following the fit-on-train, transform-on-all-splits pattern
+- Add `limen.targets` module with `QuantileBinaryTarget`, `ForwardBreakoutTarget`, `ThresholdBinaryTarget`, `NextReturnTarget`, `RandomBinaryTarget`, and `IdentityTarget` class-based target transforms following the fit-on-train, transform-on-all-splits pattern
 - Add `Manifest.with_target_label()` builder method for declarative target configuration; add `TargetClassConfig` dataclass and `_apply_class_based_target()` helper; harden with defensive copy of params and `RuntimeError` on wrong split order
 - Migrate `logreg_binary`, `tabpfn_binary`, and `xgboost_regressor` foundational SFDs to `with_target_label()`
 - Remove `compute_quantile_cutoff`, `quantile_flag`, and `forward_breakout_target` from `limen.features` (target computation is not a feature transform)
