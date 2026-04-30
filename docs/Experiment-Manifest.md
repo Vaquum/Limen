@@ -381,7 +381,7 @@ Then in `params()`:
 
 ## Target Configuration
 
-Target construction uses `with_target_label()` from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
+Target construction uses `Manifest.with_target_label()` with a class from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
 
 ```python
 from limen.targets import QuantileBinaryTarget
