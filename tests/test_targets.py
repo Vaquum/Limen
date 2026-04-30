@@ -2,6 +2,7 @@ import polars as pl
 
 from limen.experiment import Manifest
 from limen.targets import ForwardBreakoutTarget
+from limen.targets import IdentityTarget
 from limen.targets import NextReturnTarget
 from limen.targets import QuantileBinaryTarget
 from limen.targets import RandomBinaryTarget
@@ -164,4 +165,31 @@ def test_random_binary_target_adds_column_with_binary_values() -> None:
     assert 'noise' in result.columns
     assert set(result['noise'].to_list()).issubset({0, 1})
     assert result.height == data.height
+
+
+def test_identity_target_returns_data_unchanged() -> None:
+    data = pl.DataFrame({'feature': [1.0, 2.0, 3.0], 'label': [0, 1, 0]})
+    t = IdentityTarget(data, 'label')
+    result = t.transform(data)
+    assert result.equals(data)
+
+
+def test_identity_target_raises_when_column_missing_on_init() -> None:
+    data = pl.DataFrame({'feature': [1.0, 2.0]})
+    try:
+        IdentityTarget(data, 'label')
+        assert False, 'expected ValueError'
+    except ValueError as e:
+        assert 'label' in str(e)
+
+
+def test_identity_target_raises_when_column_missing_on_transform() -> None:
+    train = pl.DataFrame({'feature': [1.0, 2.0], 'label': [0, 1]})
+    t = IdentityTarget(train, 'label')
+    data_without_label = pl.DataFrame({'feature': [3.0, 4.0]})
+    try:
+        t.transform(data_without_label)
+        assert False, 'expected ValueError'
+    except ValueError as e:
+        assert 'label' in str(e)
 

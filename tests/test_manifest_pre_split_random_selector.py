@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from limen.experiment import Manifest
 from limen.data.utils import random_slice
+from limen.targets import IdentityTarget
 
 
 def test_pre_split_random_selector():
@@ -23,6 +24,7 @@ def test_pre_split_random_selector():
             seed='random_seed'
         )
         .set_split_config(6, 2, 2)
+        .with_target_label('target', IdentityTarget)
     )
 
     round_params = {

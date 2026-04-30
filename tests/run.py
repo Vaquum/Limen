@@ -478,6 +478,9 @@ from tests.test_targets import test_with_target_label_sets_target_class_config
 from tests.test_targets import test_with_target_label_applies_transform_to_all_splits
 from tests.test_targets import test_with_target_label_fits_only_on_train
 from tests.test_targets import test_random_binary_target_adds_column_with_binary_values
+from tests.test_targets import test_identity_target_returns_data_unchanged
+from tests.test_targets import test_identity_target_raises_when_column_missing_on_init
+from tests.test_targets import test_identity_target_raises_when_column_missing_on_transform
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
@@ -1046,6 +1049,9 @@ tests = [
     test_with_target_label_applies_transform_to_all_splits,
     test_with_target_label_fits_only_on_train,
     test_random_binary_target_adds_column_with_binary_values,
+    test_identity_target_returns_data_unchanged,
+    test_identity_target_raises_when_column_missing_on_init,
+    test_identity_target_raises_when_column_missing_on_transform,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,
