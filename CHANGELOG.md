@@ -819,3 +819,12 @@ Note: add all new changelog entries to the bottom of this file.
 - Migrate `logreg_binary`, `tabpfn_binary`, and `xgboost_regressor` foundational SFDs to `with_target_class()`
 - Migrate Loop SFD from `FittedLabelConfig`/`FITTED_LABELS` to `TargetLabelEntry`/`TARGET_LABEL_REGISTRY` backed by the new target classes
 - Remove `compute_quantile_cutoff`, `quantile_flag`, and `forward_breakout_target` from `limen.features` (target computation is not a feature transform)
+
+## v3.0.2 on 30th of April, 2026
+
+- Rename `Manifest.with_target_class()` to `with_target_label()` for clearer domain language
+- Remove old `with_target_label()` builder pattern (`TargetBuilder`, `FittedTransformBuilder`, `target_transforms`), `with_target_function()`, and `set_target_column()`
+- Add `RandomBinaryTarget` to `limen.targets` as a noise benchmark target class
+- Add `docs/Targets.md` documenting all five target classes and the custom target class convention
+- Harden `_apply_class_based_target()`: defensive copy of `fit_params`/`transform_params` in `with_target_label()`; raise `RuntimeError` if validation/test split runs before training split
+- Remove `limen.sfd.loop` temporary integration package (superseded by RFC-1005 YAML compiler)
