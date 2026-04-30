@@ -15,6 +15,7 @@ from limen import indicators
 from limen import metrics
 from limen import sfd
 from limen import scalers
+from limen import targets
 from limen import transforms
 from limen import utils
 from limen import log
@@ -37,6 +38,7 @@ __all__ = [
     'metrics',
     'scalers',
     'sfd',
+    'targets',
     'transforms',
     'utils'
 ]

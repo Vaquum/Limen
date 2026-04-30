@@ -51,6 +51,16 @@ FittedTransformEntry = tuple[
 
 
 @dataclass
+class TargetClassConfig:
+
+    '''Configuration for a class-based target transform.'''
+
+    target_class: type
+    fit_params: dict[str, ParamValue] = field(default_factory=dict)
+    transform_params: dict[str, ParamValue] = field(default_factory=dict)
+
+
+@dataclass
 class DataSourceConfig:
 
     '''Declarative configuration for data fetching in manifests.'''
@@ -109,55 +119,6 @@ class DataSourceResolver:
         raise ValueError(f"Unsupported callable type: {type(method)}")
 
 
-class TargetBuilder:
-
-    '''Helper class for building target transformations with context.'''
-
-    def __init__(self, manifest: 'Manifest', target_column: str) -> None:
-
-        self.manifest = manifest
-        self.target_column = target_column
-        self.manifest.target_column = target_column
-
-    def add_fitted_transform(self, func: Callable) -> 'FittedTransformBuilder':
-
-        return FittedTransformBuilder(self.manifest, func)
-
-    def add_transform(self, func: Callable, **params: Any) -> 'TargetBuilder':
-
-        entry = ([], func, params)
-        self.manifest.target_transforms.append(entry)
-        return self
-
-    def done(self) -> 'Manifest':
-
-        return self.manifest
-
-
-class FittedTransformBuilder:
-
-    '''Helper class for building fitted transforms with parameter fitting.'''
-
-    def __init__(self, manifest: 'Manifest', func: Callable) -> None:
-
-        self.manifest = manifest
-        self.func = func
-        self.fitted_params: list[FittedParamsComputationEntry] = []
-
-    def fit_param(self, name: str, compute_func: Callable, **params: Any) -> 'FittedTransformBuilder':
-
-        self.fitted_params.append((name, compute_func, params))
-
-        return self
-
-    def with_params(self, **params: Any) -> 'TargetBuilder':
-
-        entry = (self.fitted_params, self.func, params)
-        self.manifest.target_transforms.append(entry)
-
-        return TargetBuilder(self.manifest, self.manifest.target_column)
-
-
 @dataclass
 class Manifest:
 
@@ -170,8 +131,8 @@ class Manifest:
     bar_formation: PipelineStep = None
     required_bar_columns: list[str] = field(default_factory=list)
     feature_transforms: list[TransformEntry] = field(default_factory=list)
-    target_column: str = None
-    target_transforms: list[FittedTransformEntry] = field(default_factory=list)
+    target_column: str | None = None
+    target_class_config: TargetClassConfig | None = None
     scaler: FittedTransformEntry = None
     ablation_config: AblationConfig | None = None
     data_dict_extension: Callable = None
@@ -437,19 +398,38 @@ class Manifest:
         return self
 
 
-    def with_target_label(self, target_column: str) -> TargetBuilder:
+    def with_target_label(self,
+                          target_name: str,
+                          target_class: type,
+                          fit_params: dict[str, Any] | None = None,
+                          transform_params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
-        Start building target transformations with context.
+        Configure a class-based target transform.
+
+        The class must accept (train_data, target_name, **fit_params) in __init__
+        and expose transform(data, **transform_params) -> pl.DataFrame.
+        Fitting happens once on the training split; the fitted instance is reused
+        for validation and test splits.
 
         Args:
-            target_column (str): Name of target column
+            target_name (str): Name of the target column to create
+            target_class (type): Target class whose __init__ accepts (train_data, target_name, **fit_params)
+                and whose transform() accepts (data, **transform_params) returning a pl.DataFrame
+            fit_params (dict[str, ParamValue]): Parameters forwarded to __init__ after train_data and target_name
+            transform_params (dict[str, ParamValue]): Parameters forwarded to transform()
 
         Returns:
-            TargetBuilder: Builder for target transformations
+            Manifest: Self for method chaining
         '''
 
-        return TargetBuilder(self, target_column)
+        self.target_column = target_name
+        self.target_class_config = TargetClassConfig(
+            target_class=target_class,
+            fit_params=dict(fit_params) if fit_params else {},
+            transform_params=dict(transform_params) if transform_params else {},
+        )
+        return self
 
     def with_reference_architecture(self, architecture_function: Callable) -> 'Manifest':
 
@@ -665,9 +645,10 @@ class Manifest:
 
             data = lazy_data.collect()
 
-            data, all_fitted_params = _apply_target_transforms(
-                self, data, round_params, all_fitted_params, is_training=(i == 0)
-            )
+            if self.target_class_config is not None:
+                data, all_fitted_params = _apply_class_based_target(
+                    self, data, round_params, all_fitted_params, is_training=(i == 0)
+                )
 
             if self.ablation_config is not None:
                 data, columns_to_drop = _apply_feature_ablation(
@@ -1053,7 +1034,7 @@ def _apply_fitted_transforms(
     return data, all_fitted_params
 
 
-def _apply_target_transforms(
+def _apply_class_based_target(
         manifest: Manifest,
         data: pl.DataFrame,
         round_params: dict[str, Any],
@@ -1061,14 +1042,43 @@ def _apply_target_transforms(
         is_training: bool
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
-    enhanced_round_params = round_params.copy()
-    if manifest.target_column:
-        enhanced_round_params['target_column'] = manifest.target_column
+    '''
+    Fit or reuse the configured target class and apply it to the split.
 
-    return _apply_fitted_transforms(
-        manifest.target_transforms, data, enhanced_round_params,
-        all_fitted_params, is_training
-    )
+    Args:
+        manifest (Manifest): Manifest holding the target class config
+        data (pl.DataFrame): Split DataFrame to transform
+        round_params (dict[str, Any]): Current round parameters for template resolution
+        all_fitted_params (dict[str, Any]): Shared store for fitted instances across splits
+        is_training (bool): Whether this is the training split; fits the instance if True
+
+    Returns:
+        tuple[pl.DataFrame, dict[str, Any]]: Transformed data and updated fitted params
+    '''
+
+    config = manifest.target_class_config
+    target_name = manifest.target_column
+    instance_key = f'_target_cls_{target_name}'
+
+    if is_training:
+        resolved_fit = _resolve_params(config.fit_params, round_params)
+        instance = config.target_class(
+            train_data=data,
+            target_name=target_name,
+            **resolved_fit
+        )
+        all_fitted_params[instance_key] = instance
+    else:
+        if instance_key not in all_fitted_params:
+            raise RuntimeError(
+                f"Target instance '{instance_key}' not found — training split must run before validation/test."
+            )
+        instance = all_fitted_params[instance_key]
+
+    resolved_transform = _resolve_params(config.transform_params, round_params)
+    data = instance.transform(data, **resolved_transform)
+
+    return data, all_fitted_params
 
 
 def _apply_scaler(

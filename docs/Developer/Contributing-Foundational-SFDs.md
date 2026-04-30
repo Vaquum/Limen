@@ -143,4 +143,5 @@ For a serious foundational SFD contribution, expect to provide:
 
 - [Experiment Manifest](../Experiment-Manifest.md)
 - [Single File Decoder](../Single-File-Decoder.md)
+- [Targets](../Targets.md)
 - [Writing Docstrings](Writing-Docstrings.md)

@@ -4,7 +4,8 @@ import polars as pl
 from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
-from limen.transforms import shift_column_transform
+from limen.targets import RandomBinaryTarget
+from limen.targets import ThresholdBinaryTarget
 from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
@@ -24,12 +25,7 @@ def _make_manifest() -> Manifest:
             'datetime', 'high', 'low', 'close', 'volume', 'maker_ratio',
             'no_of_trades'
         ])
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
 
 
@@ -44,12 +40,12 @@ def _make_shifted_target_manifest() -> Manifest:
 
     return (Manifest()
         .set_split_config(3, 1, 4)
-        .with_target_label('target')
-            .add_transform(lambda data: data.with_columns(
-                (pl.col('close') > pl.col('open')).cast(pl.Int8).alias('target')
-            ))
-            .add_transform(shift_column_transform, shift=-1, column='target_column')
-            .done()
+        .add_indicator(lambda df: df.with_columns(
+            (pl.col('close') - pl.col('open')).alias('close_minus_open')
+        ))
+        .with_target_label('target', ThresholdBinaryTarget,
+            fit_params={'source_column': 'close_minus_open', 'threshold': 0.0},
+            transform_params={'shift': -1})
     )
 
 
@@ -247,12 +243,7 @@ def test_column_consistency_drops_mismatched_columns() -> None:
         )
         .set_split_config(8, 1, 1)
         .add_feature(_size_gated_feature)
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
     raw_data = manifest.fetch_test_data()
     data = manifest.prepare_data(raw_data, {})

@@ -463,6 +463,24 @@ from tests.test_scalers import test_robust_scaler_all_null_column
 from tests.test_scalers import test_scaler_factory_selects_all_types
 from tests.test_scalers import test_scaler_factory_unknown_raises
 from tests.test_scalers import test_scaler_factory_registry_has_all
+from tests.test_targets import test_quantile_binary_fits_cutoff_on_train
+from tests.test_targets import test_quantile_binary_transform_labels_above_cutoff
+from tests.test_targets import test_quantile_binary_shift_applied_when_nonzero
+from tests.test_targets import test_forward_breakout_labels_above_threshold
+from tests.test_targets import test_forward_breakout_shift_applied
+from tests.test_targets import test_threshold_binary_labels_above_threshold
+from tests.test_targets import test_threshold_binary_threshold_is_fixed
+from tests.test_targets import test_threshold_binary_shift_applied
+from tests.test_targets import test_next_return_computes_percentage_return
+from tests.test_targets import test_next_return_respects_periods
+from tests.test_targets import test_next_return_respects_scale
+from tests.test_targets import test_with_target_label_sets_target_class_config
+from tests.test_targets import test_with_target_label_applies_transform_to_all_splits
+from tests.test_targets import test_with_target_label_fits_only_on_train
+from tests.test_targets import test_random_binary_target_adds_column_with_binary_values
+from tests.test_targets import test_identity_target_returns_data_unchanged
+from tests.test_targets import test_identity_target_raises_when_column_missing_on_init
+from tests.test_targets import test_identity_target_raises_when_column_missing_on_transform
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
@@ -525,67 +543,6 @@ from tests.test_trainer import test_resolve_model_class_rejects_modules_without_
 from tests.test_trainer import test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
 from tests.test_trainer import test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches
-from tests.test_loop_sfd import test_registry_indicator_resolution
-from tests.test_loop_sfd import test_registry_feature_resolution
-from tests.test_loop_sfd import test_registry_model_resolution
-from tests.test_loop_sfd import test_registry_model_excludes_classes
-from tests.test_loop_sfd import test_registry_scaler_has_linear
-from tests.test_loop_sfd import test_registry_unknown_name_raises
-from tests.test_loop_sfd import test_label_meta_known
-from tests.test_loop_sfd import test_label_meta_fallback_to_name
-from tests.test_loop_sfd import test_label_meta_table_has_known_label
-from tests.test_loop_sfd import test_data_source_registry_known_methods
-from tests.test_loop_sfd import test_reference_defaults_constructor_override
-from tests.test_loop_sfd import test_loop_sfd_name_attribute
-from tests.test_loop_sfd import test_loop_sfd_params_filters_metadata_keys
-from tests.test_loop_sfd import test_loop_sfd_params_filters_arch_prefixed_keys
-from tests.test_loop_sfd import test_loop_sfd_params_includes_component_namespaced_keys
-from tests.test_loop_sfd import test_loop_sfd_params_excludes_dropped_categories
-from tests.test_loop_sfd import test_loop_sfd_params_includes_unnamespaced_model_keys
-from tests.test_loop_sfd import test_loop_sfd_params_extracts_namespaced_arch_params
-from tests.test_loop_sfd import test_loop_sfd_manifest_split_config
-from tests.test_loop_sfd import test_loop_sfd_manifest_target_column
-from tests.test_loop_sfd import test_loop_sfd_manifest_architecture_function
-from tests.test_loop_sfd import test_loop_sfd_manifest_scaler_set
-from tests.test_loop_sfd import test_loop_sfd_manifest_feature_transforms_order
-from tests.test_loop_sfd import test_loop_sfd_ignores_payload_transforms
-from tests.test_loop_sfd import test_loop_sfd_manifest_label_in_target_transforms
-from tests.test_loop_sfd import test_loop_sfd_param_wiring_uses_namespaced_reference
-from tests.test_loop_sfd import test_loop_sfd_param_wiring_label_params
-from tests.test_loop_sfd import test_loop_sfd_param_wiring_literal_when_not_in_param_space
-from tests.test_loop_sfd import test_loop_sfd_unknown_scaler_raises
-from tests.test_loop_sfd import test_loop_sfd_scaler_read_from_selected_items
-from tests.test_loop_sfd import test_loop_sfd_no_scaler_when_selected_items_empty
-from tests.test_loop_sfd import test_loop_sfd_data_source_from_payload_selected_items
-from tests.test_loop_sfd import test_loop_sfd_data_source_constructor_override_wins_over_payload
-from tests.test_loop_sfd import test_loop_sfd_data_source_falls_back_to_default_when_payload_empty
-from tests.test_loop_sfd import test_loop_sfd_unknown_data_source_method_raises
-from tests.test_loop_sfd import test_loop_sfd_params_excludes_input_data_source_keys
-from tests.test_loop_sfd import test_fetch_data_strips_none_params
-from tests.test_loop_sfd import test_fetch_data_unknown_method_raises
-from tests.test_loop_sfd import test_fetch_data_missing_method_key_raises
-from tests.test_loop_sfd import test_fetch_data_no_data_source_item_raises
-from tests.test_loop_sfd import test_annotation_accepts_int_handles_unions_and_plain
-from tests.test_loop_sfd import test_coerce_string_params_by_signature_converts_int_strings
-from tests.test_loop_sfd import test_coerce_string_params_leaves_non_string_values_alone
-from tests.test_loop_sfd import test_coerce_string_params_ignores_unknown_param_names
-from tests.test_loop_sfd import test_coerce_string_params_raises_clear_error_on_bad_string
-from tests.test_loop_sfd import test_fetch_data_coerces_kline_size_string_through_full_path
-from tests.test_loop_sfd import test_loop_sfd_unknown_reference_architecture_raises
-from tests.test_loop_sfd import test_progress_callback_writes_json
-from tests.test_loop_sfd import test_progress_callback_handles_none_log
-from tests.test_loop_sfd import test_progress_callback_zero_total_no_div_by_zero
-from tests.test_loop_sfd import test_quantile_flag_compiles_as_fitted_transform
-from tests.test_loop_sfd import test_forward_breakout_label_remains_plain_add_transform
-from tests.test_loop_sfd import test_quantile_flag_params_routes_through_round_params
-from tests.test_loop_sfd import test_component_alias_map_built_from_payload
-from tests.test_loop_sfd import test_rewrite_format_string_translates_namespaced_placeholder
-from tests.test_loop_sfd import test_rewrite_format_string_leaves_unknown_placeholder_alone
-from tests.test_loop_sfd import test_rewrite_format_string_leaves_plain_string_alone
-from tests.test_loop_sfd import test_wire_params_bypasses_parameter_space_for_format_strings
-from tests.test_loop_sfd import test_failing_payload_end_to_end_with_uel
-from tests.test_loop_sfd import test_quantile_flag_end_to_end_with_uel
-from tests.test_loop_sfd import test_loop_sfd_end_to_end_with_uel
 from tests.test_proto_cohort import test_rejects_when_no_source_provided
 from tests.test_proto_cohort import test_rejects_when_both_sources_provided
 from tests.test_proto_cohort import test_rejects_missing_experiment_log_path
@@ -1077,6 +1034,24 @@ tests = [
     test_scaler_factory_selects_all_types,
     test_scaler_factory_unknown_raises,
     test_scaler_factory_registry_has_all,
+    test_quantile_binary_fits_cutoff_on_train,
+    test_quantile_binary_transform_labels_above_cutoff,
+    test_quantile_binary_shift_applied_when_nonzero,
+    test_forward_breakout_labels_above_threshold,
+    test_forward_breakout_shift_applied,
+    test_threshold_binary_labels_above_threshold,
+    test_threshold_binary_threshold_is_fixed,
+    test_threshold_binary_shift_applied,
+    test_next_return_computes_percentage_return,
+    test_next_return_respects_periods,
+    test_next_return_respects_scale,
+    test_with_target_label_sets_target_class_config,
+    test_with_target_label_applies_transform_to_all_splits,
+    test_with_target_label_fits_only_on_train,
+    test_random_binary_target_adds_column_with_binary_values,
+    test_identity_target_returns_data_unchanged,
+    test_identity_target_raises_when_column_missing_on_init,
+    test_identity_target_raises_when_column_missing_on_transform,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,
@@ -1139,67 +1114,6 @@ tests = [
     test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses,
     test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift,
     test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches,
-    test_registry_indicator_resolution,
-    test_registry_feature_resolution,
-    test_registry_model_resolution,
-    test_registry_model_excludes_classes,
-    test_registry_scaler_has_linear,
-    test_registry_unknown_name_raises,
-    test_label_meta_known,
-    test_label_meta_fallback_to_name,
-    test_label_meta_table_has_known_label,
-    test_data_source_registry_known_methods,
-    test_reference_defaults_constructor_override,
-    test_loop_sfd_name_attribute,
-    test_loop_sfd_params_filters_metadata_keys,
-    test_loop_sfd_params_filters_arch_prefixed_keys,
-    test_loop_sfd_params_includes_component_namespaced_keys,
-    test_loop_sfd_params_excludes_dropped_categories,
-    test_loop_sfd_params_includes_unnamespaced_model_keys,
-    test_loop_sfd_params_extracts_namespaced_arch_params,
-    test_loop_sfd_manifest_split_config,
-    test_loop_sfd_manifest_target_column,
-    test_loop_sfd_manifest_architecture_function,
-    test_loop_sfd_manifest_scaler_set,
-    test_loop_sfd_manifest_feature_transforms_order,
-    test_loop_sfd_ignores_payload_transforms,
-    test_loop_sfd_manifest_label_in_target_transforms,
-    test_loop_sfd_param_wiring_uses_namespaced_reference,
-    test_loop_sfd_param_wiring_label_params,
-    test_loop_sfd_param_wiring_literal_when_not_in_param_space,
-    test_loop_sfd_unknown_scaler_raises,
-    test_loop_sfd_scaler_read_from_selected_items,
-    test_loop_sfd_no_scaler_when_selected_items_empty,
-    test_loop_sfd_data_source_from_payload_selected_items,
-    test_loop_sfd_data_source_constructor_override_wins_over_payload,
-    test_loop_sfd_data_source_falls_back_to_default_when_payload_empty,
-    test_loop_sfd_unknown_data_source_method_raises,
-    test_loop_sfd_params_excludes_input_data_source_keys,
-    test_fetch_data_strips_none_params,
-    test_fetch_data_unknown_method_raises,
-    test_fetch_data_missing_method_key_raises,
-    test_fetch_data_no_data_source_item_raises,
-    test_annotation_accepts_int_handles_unions_and_plain,
-    test_coerce_string_params_by_signature_converts_int_strings,
-    test_coerce_string_params_leaves_non_string_values_alone,
-    test_coerce_string_params_ignores_unknown_param_names,
-    test_coerce_string_params_raises_clear_error_on_bad_string,
-    test_fetch_data_coerces_kline_size_string_through_full_path,
-    test_loop_sfd_unknown_reference_architecture_raises,
-    test_progress_callback_writes_json,
-    test_progress_callback_handles_none_log,
-    test_progress_callback_zero_total_no_div_by_zero,
-    test_quantile_flag_compiles_as_fitted_transform,
-    test_forward_breakout_label_remains_plain_add_transform,
-    test_quantile_flag_params_routes_through_round_params,
-    test_component_alias_map_built_from_payload,
-    test_rewrite_format_string_translates_namespaced_placeholder,
-    test_rewrite_format_string_leaves_unknown_placeholder_alone,
-    test_rewrite_format_string_leaves_plain_string_alone,
-    test_wire_params_bypasses_parameter_space_for_format_strings,
-    test_failing_payload_end_to_end_with_uel,
-    test_quantile_flag_end_to_end_with_uel,
-    test_loop_sfd_end_to_end_with_uel,
     test_rejects_when_no_source_provided,
     test_rejects_when_both_sources_provided,
     test_rejects_missing_experiment_log_path,

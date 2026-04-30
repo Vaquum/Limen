@@ -35,20 +35,17 @@ These helpers are used after a model has already been fitted.
 ## Target-Building Example
 
 ```python
-from limen.features import compute_quantile_cutoff, quantile_flag
-from limen.transforms import shift_column_transform
+from limen.targets import QuantileBinaryTarget
 
-(
-    manifest.with_target_label('quantile_flag')
-    .add_fitted_transform(quantile_flag)
-        .fit_param('_quantile_cutoff', compute_quantile_cutoff, col='roc_{roc_period}', q='q')
-        .with_params(col='roc_{roc_period}', cutoff='_quantile_cutoff')
-    .add_transform(shift_column_transform, shift='shift', column='target_column')
-    .done()
+manifest.with_target_label(
+    'quantile_flag',
+    QuantileBinaryTarget,
+    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
+    transform_params={'shift': 'shift'},
 )
 ```
 
-The important detail is that the fitted parameter comes from the manifest builder, not from state stored inside `quantile_flag` itself.
+The important detail is that `QuantileBinaryTarget.__init__` computes the cutoff on the training split only; `transform()` reuses the stored cutoff on validation and test without refitting.
 
 ## Calibration Example
 

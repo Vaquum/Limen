@@ -1,8 +1,8 @@
-import numpy as np
 import polars as pl
 
 from limen.experiment import Manifest
 from limen.experiment.manifest_core import TransformEntry
+from limen.targets import RandomBinaryTarget
 from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
@@ -26,12 +26,7 @@ def _make_manifest_with_groups() -> Manifest:
             lambda df: df.with_columns(pl.col('close').rolling_mean(10).alias('sma_10')),
             group='trend',
         )
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
 
 
@@ -47,12 +42,7 @@ def _make_manifest_with_include_if() -> Manifest:
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
             include_if='include_roc',
         )
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
 
 
@@ -119,12 +109,7 @@ def test_ungrouped_features_always_included():
         .add_indicator(
             lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')),
         )
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
     data = _prepare(manifest, {'feature_groups': 'momentum'})
     columns = list(data['_feature_names'])
@@ -149,12 +134,7 @@ def test_combined_group_and_include_if():
             lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')),
             group='volatility',
         )
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
     data = _prepare(manifest, {'feature_groups': 'momentum|volatility', 'include_roc': False})
     columns = list(data['_feature_names'])

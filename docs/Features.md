@@ -162,8 +162,6 @@ These helpers are mainly used to expand existing columns or define cutoffs for t
 | `lag_columns` | one lag per listed column | Requires `cols` and `lag`. |
 | `lag_range` | a lag range such as `close_lag_1` through `close_lag_3` | Requires `col`, `start`, and `end`. |
 | `lag_range_cols` | a lag range for each listed column | Requires `cols`, `start`, and `end`. |
-| `compute_quantile_cutoff` | scalar cutoff value | Utility helper, not a DataFrame transform. |
-| `quantile_flag` | `quantile_flag` | Commonly used in targets after computing the cutoff on train only. |
 
 ## Stationarity And Long-Memory Helpers
 
@@ -193,7 +191,6 @@ These helpers need richer data than ordinary OHLCV bars.
 - Use an indicator when you want a direct market calculation such as RSI, ATR, or MACD.
 - Use a feature when you want structure around those signals, such as lags, regimes, relative position, or multi-step aggregation.
 - Use the lag helpers when the main value is temporal context rather than a new market calculation.
-- Use `compute_quantile_cutoff` and `quantile_flag` when the target boundary itself is part of the split-safe training logic.
 - Use `fractional_diff` when stationarity itself is part of the design problem, not just a preprocessing afterthought.
 
 ## Read Next

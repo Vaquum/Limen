@@ -1,10 +1,11 @@
-import numpy as np
 import polars as pl
+import numpy as np
 
 from limen.experiment import Manifest
 from limen.scalers.rank_gauss_scaler import RankGaussScaler
 from limen.scalers.registry import SCALER_REGISTRY
 from limen.scalers.robust_scaler import RobustScaler
+from limen.targets import RandomBinaryTarget
 from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
@@ -155,12 +156,7 @@ def _make_manifest_with_scaler_from_params() -> Manifest:
             lambda df: df.with_columns((pl.col('close').pct_change()).alias('roc')),
         )
         .set_scaler_from_params('scaler_type')
-        .with_target_label('outcome')
-            .add_transform(lambda data: data.with_columns(
-                pl.Series('outcome', np.random.randint(0, 2, size=data.height))
-            ))
-            .add_transform(lambda data: data[:-1])
-            .done()
+        .with_target_label('outcome', RandomBinaryTarget)
     )
 
 

@@ -811,3 +811,13 @@ Note: add all new changelog entries to the bottom of this file.
 - Remove `Manifest.fetch_data_for_env()` and `LOOP_ENV` environment variable dispatch
 - Add `test_mode: bool = False` to `UniversalExperimentLoop.__init__()`: when `True` and a test data source is configured, `fetch_test_data()` is used instead of `fetch_data()`
 - Trainer now always calls `manifest.fetch_data()` directly when no explicit data is provided
+
+## v3.0.1 on 29th of April, 2026
+
+- Add `limen.targets` module with `QuantileBinaryTarget`, `ForwardBreakoutTarget`, `ThresholdBinaryTarget`, `NextReturnTarget`, `RandomBinaryTarget`, and `IdentityTarget` class-based target transforms following the fit-on-train, transform-on-all-splits pattern
+- Add `Manifest.with_target_label()` builder method for declarative target configuration; add `TargetClassConfig` dataclass and `_apply_class_based_target()` helper; harden with defensive copy of params and `RuntimeError` on wrong split order
+- Migrate `logreg_binary`, `tabpfn_binary`, and `xgboost_regressor` foundational SFDs to `with_target_label()`
+- Remove `compute_quantile_cutoff`, `quantile_flag`, and `forward_breakout_target` from `limen.features` (target computation is not a feature transform)
+- Remove `with_target_function()`, old `with_target_label()` builder pattern (`TargetBuilder`, `FittedTransformBuilder`, `target_transforms`), and `set_target_column()`
+- Add `docs/Targets.md` documenting all six built-in target classes and the custom target class convention
+- Remove `limen.sfd.loop` temporary integration package (superseded by RFC-1005 YAML compiler)
