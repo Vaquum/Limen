@@ -131,7 +131,7 @@ class Manifest:
     bar_formation: PipelineStep = None
     required_bar_columns: list[str] = field(default_factory=list)
     feature_transforms: list[TransformEntry] = field(default_factory=list)
-    target_column: str = None
+    target_column: str | None = None
     target_class_config: TargetClassConfig | None = None
     scaler: FittedTransformEntry = None
     ablation_config: AblationConfig | None = None
@@ -414,9 +414,10 @@ class Manifest:
 
         Args:
             target_name (str): Name of the target column to create
-            target_class (type): Target class following the TargetTransform interface
-            fit_params (dict[str, Any]): Parameters forwarded to __init__ after train_data and target_name
-            transform_params (dict[str, Any]): Parameters forwarded to transform()
+            target_class (type): Target class whose __init__ accepts (train_data, target_name, **fit_params)
+                and whose transform() accepts (data, **transform_params) returning a pl.DataFrame
+            fit_params (dict[str, ParamValue]): Parameters forwarded to __init__ after train_data and target_name
+            transform_params (dict[str, ParamValue]): Parameters forwarded to transform()
 
         Returns:
             Manifest: Self for method chaining
