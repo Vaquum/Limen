@@ -819,5 +819,5 @@ Note: add all new changelog entries to the bottom of this file.
 - Migrate `logreg_binary`, `tabpfn_binary`, and `xgboost_regressor` foundational SFDs to `with_target_label()`
 - Remove `compute_quantile_cutoff`, `quantile_flag`, and `forward_breakout_target` from `limen.features` (target computation is not a feature transform)
 - Remove `with_target_function()`, old `with_target_label()` builder pattern (`TargetBuilder`, `FittedTransformBuilder`, `target_transforms`), and `set_target_column()`
-- Add `docs/Targets.md` documenting all five target classes and the custom target class convention
+- Add `docs/Targets.md` documenting all six built-in target classes and the custom target class convention
 - Remove `limen.sfd.loop` temporary integration package (superseded by RFC-1005 YAML compiler)
