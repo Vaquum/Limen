@@ -40,6 +40,7 @@ manifest.with_target_label(
 | `ForwardBreakoutTarget` | binary `UInt8` | no | `shift=-1` | Positive label if price rises at least `threshold` over the next `forward_periods` bars. |
 | `NextReturnTarget` | continuous `Float64` | no | n/a | Percentage return over the next N bars. Use with regression architectures. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
+| `IdentityTarget` | existing column | no | none | Target column already present in the data. Validates the column exists on every split. |
 
 ## Reference
 
@@ -142,6 +143,20 @@ Produces uniformly random binary labels. No fitting step. Use as a noise benchma
 
 ```python
 .with_target_label('outcome', RandomBinaryTarget)
+```
+
+No parameters.
+
+### `IdentityTarget`
+
+```python
+IdentityTarget(train_data, target_name)
+```
+
+For when the target column is already present in the data. Validates that the column exists on the training split and on every subsequent split. The data is returned unchanged; no new column is added.
+
+```python
+.with_target_label('label', IdentityTarget)
 ```
 
 No parameters.
