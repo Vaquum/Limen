@@ -14,6 +14,7 @@ import logging
 import math
 import random
 import sys
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +76,12 @@ RAW_MARKET_COLUMNS = {
 }
 EV_RETURN_COLUMN = "ev_forward_return"
 EPSILON = 1e-12
+MIN_BINARY_CLASSES = 2
+MIN_PAYOFF_EDGE_COUNT = 3
+MIN_PAYOFF_BUCKET_ROWS = 10
+MIN_PAYOFF_TOTAL_ROWS = 50
+ISOTONIC_MIN_ROWS = 4000
+COST_ROUND_TRIP_MULTIPLIER = 2.0
 BACKTEST_METRIC_KEYS = [
     "trade_win_rate_pct",
     "trade_expectancy_pct",
@@ -263,13 +270,13 @@ def _model_columns(frame: pl.DataFrame) -> list[str]:
 
 
 def _safe_auc(y_true: np.ndarray, probs: np.ndarray) -> float:
-    if np.unique(y_true).size < 2:
+    if np.unique(y_true).size < MIN_BINARY_CLASSES:
         return math.nan
     return float(roc_auc_score(y_true, probs))
 
 
 def _safe_log_loss(y_true: np.ndarray, probs: np.ndarray) -> float:
-    if np.unique(y_true).size < 2:
+    if np.unique(y_true).size < MIN_BINARY_CLASSES:
         return math.nan
     return float(log_loss(y_true, np.clip(probs, 1e-6, 1.0 - 1e-6), labels=[0, 1]))
 
@@ -281,7 +288,7 @@ def _expected_calibration_error(
 ) -> float:
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
-    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
+    for lo, hi in pairwise(edges):
         if hi == 1.0:
             mask = (probs >= lo) & (probs <= hi)
         else:
@@ -330,13 +337,13 @@ def _bucketed_payoff_estimates(
         np.full_like(test_probs, fallback_loss, dtype=float),
     )
     mask = np.isfinite(val_probs) & np.isfinite(val_returns)
-    if bucket_count <= 1 or mask.sum() < max(50, bucket_count * 10):
+    if bucket_count <= 1 or mask.sum() < max(MIN_PAYOFF_TOTAL_ROWS, bucket_count * MIN_PAYOFF_BUCKET_ROWS):
         return fallback
 
     probs = val_probs[mask]
     returns = val_returns[mask]
     edges = np.unique(np.quantile(probs, np.linspace(0.0, 1.0, bucket_count + 1)))
-    if edges.size < 3:
+    if edges.size < MIN_PAYOFF_EDGE_COUNT:
         return fallback
 
     bucket_ids = np.digitize(probs, edges[1:-1], right=True)
@@ -344,7 +351,7 @@ def _bucketed_payoff_estimates(
     losses = np.full(edges.size - 1, fallback_loss, dtype=float)
     for bucket in range(edges.size - 1):
         bucket_returns = returns[bucket_ids == bucket]
-        if bucket_returns.size < 10:
+        if bucket_returns.size < MIN_PAYOFF_BUCKET_ROWS:
             continue
         gains[bucket], losses[bucket] = _scalar_payoff_estimates(
             bucket_returns,
@@ -383,7 +390,7 @@ def _apply_sigmoid_calibration(
     scores: list[np.ndarray],
     calibration_c: float,
 ) -> list[np.ndarray]:
-    if np.unique(y_val).size < 2:
+    if np.unique(y_val).size < MIN_BINARY_CLASSES:
         return [1.0 / (1.0 + np.exp(-score)) for score in scores]
 
     calibrator = LogisticRegression(C=calibration_c, solver="lbfgs", max_iter=1000)
@@ -396,7 +403,7 @@ def _apply_isotonic_calibration(
     y_val: np.ndarray,
     scores: list[np.ndarray],
 ) -> list[np.ndarray]:
-    if np.unique(y_val).size < 2 or y_val.size < 4000:
+    if np.unique(y_val).size < MIN_BINARY_CLASSES or y_val.size < ISOTONIC_MIN_ROWS:
         return [1.0 / (1.0 + np.exp(-score)) for score in scores]
 
     calibrator = IsotonicRegression(out_of_bounds="clip")
@@ -551,7 +558,6 @@ def ev_logreg_binary(
         )
 
     val_returns = _to_numpy(data["x_val"][EV_RETURN_COLUMN]).astype(float).ravel()
-    test_returns = _to_numpy(data["x_test"][EV_RETURN_COLUMN]).astype(float).ravel()
     gain_hat, loss_hat = _bucketed_payoff_estimates(
         val_probs,
         val_returns,
@@ -562,7 +568,10 @@ def ev_logreg_binary(
 
     shrunk_test_probs = 0.5 + (prob_shrinkage * (test_probs - 0.5))
     cost_multiplier = _cost_multiplier(data["x_val"], data["x_test"])
-    cost = (2.0 * (fee_bps + (slippage_bps * cost_multiplier))) / 10_000.0
+    cost = (
+        COST_ROUND_TRIP_MULTIPLIER
+        * (fee_bps + (slippage_bps * cost_multiplier))
+    ) / 10_000.0
     test_ev = (
         (shrunk_test_probs * gain_hat)
         - ((1.0 - shrunk_test_probs) * loss_hat)
