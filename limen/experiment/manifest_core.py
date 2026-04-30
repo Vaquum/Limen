@@ -56,8 +56,8 @@ class TargetClassConfig:
     '''Configuration for a class-based target transform.'''
 
     target_class: type
-    fit_params: dict[str, Any] = field(default_factory=dict)
-    transform_params: dict[str, Any] = field(default_factory=dict)
+    fit_params: dict[str, ParamValue] = field(default_factory=dict)
+    transform_params: dict[str, ParamValue] = field(default_factory=dict)
 
 
 @dataclass
