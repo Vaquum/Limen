@@ -14,7 +14,7 @@ from limen.sfd.reference_architecture import logreg_binary
 from limen.targets import QuantileBinaryTarget
 
 
-def params():
+def params() -> dict:
 
     return {
         # data prep parameters
@@ -43,7 +43,7 @@ def params():
     }
 
 
-def manifest():
+def manifest() -> Manifest:
 
     return (Manifest()
         .set_data_source(

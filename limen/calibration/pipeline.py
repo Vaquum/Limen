@@ -31,7 +31,7 @@ class ThresholdOptimizerProtocol(Protocol):
 
 def apply_calibrated_predict(model: Any,
                               config: 'CalibrationConfig',
-                              data: dict) -> dict:
+                              data: dict[str, Any]) -> dict:
 
     '''
     Apply calibration and threshold optimisation to a fitted model's predictions.
@@ -42,16 +42,14 @@ def apply_calibrated_predict(model: Any,
         data (dict): Data dictionary with x_val, y_val, x_test keys
 
     Returns:
-        dict: Prediction results with '_preds', '_probs', 'optimal_threshold', 'val_score'
+        dict: Results with '_preds', '_probs', 'optimal_threshold' and 'val_score'
+            (val_score is None when no threshold_func is configured)
     '''
 
-    if config.calibration_func is not None:
-        fitted = config.calibration_func(model, data['x_val'], data['y_val'], **config.calibration_params)
-        val_proba = fitted.predict_proba(data['x_val'])[:, 1]
-        test_proba = fitted.predict_proba(data['x_test'])[:, 1]
-    else:
-        val_proba = model.predict_proba(data['x_val'])[:, 1]
-        test_proba = model.predict_proba(data['x_test'])[:, 1]
+    fitted = (config.calibration_func(model, data['x_val'], data['y_val'], **config.calibration_params)
+              if config.calibration_func is not None else model)
+    val_proba = fitted.predict_proba(data['x_val'])[:, 1]
+    test_proba = fitted.predict_proba(data['x_test'])[:, 1]
 
     if config.threshold_func is not None:
         threshold, score = config.threshold_func(data['y_val'], val_proba, **config.threshold_params)
