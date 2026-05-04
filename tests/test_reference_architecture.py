@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
+from limen.calibration import grid_threshold_optimizer
+from limen.calibration import sklearn_probability_calibrator
+from limen.experiment import CalibrationConfig
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
 from limen.sfd.reference_architecture import RuleBasedStrategy
@@ -119,8 +122,13 @@ def test_tabpfn_train_evaluate_end_to_end():
     if TabPFNBinary is None:
         return
 
+    config = CalibrationConfig(
+        calibration_func=sklearn_probability_calibrator,
+        calibration_params={'method': 'isotonic'},
+        threshold_func=grid_threshold_optimizer,
+    )
     data = _make_data(binary=True, with_price=True)
-    model = TabPFNBinary().train(data, n_ensemble_configurations=2, device='cpu')
+    model = TabPFNBinary(prediction_calibration_config=config).train(data, n_ensemble_configurations=2, device='cpu')
     results = model.evaluate(data)
 
     for key in ['recall', 'precision', 'fpr', 'auc', 'accuracy']:

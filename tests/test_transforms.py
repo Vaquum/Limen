@@ -1,9 +1,7 @@
-import numpy as np
 import polars as pl
 import pytest
 
 from limen.transforms.mad_transform import mad_transform
-from limen.transforms.optimize_binary_threshold import optimize_binary_threshold
 from limen.transforms.quantile_trim_transform import quantile_trim_transform
 from limen.transforms.winsorize_transform import winsorize_transform
 from limen.transforms.zscore_transform import zscore_transform
@@ -84,31 +82,3 @@ def test_numeric_transforms_leave_non_numeric_frames_unchanged() -> None:
         assert transform(data).equals(data)
 
 
-def test_optimize_binary_threshold_picks_best_balanced_threshold() -> None:
-    y_val = np.asarray([0, 1, 1, 0], dtype=np.int8)
-    y_val_proba = np.asarray([0.2, 0.8, 0.52, 0.45])
-
-    threshold, score = optimize_binary_threshold(
-        y_val,
-        y_val_proba,
-        threshold_min=0.2,
-        threshold_max=0.7,
-        threshold_step=0.1,
-    )
-
-    assert threshold == pytest.approx(0.5)
-    assert score == pytest.approx(np.sqrt(0.5))
-
-
-def test_optimize_binary_threshold_returns_default_when_all_thresholds_predict_zero() -> None:
-    threshold, score = optimize_binary_threshold(
-        np.asarray([0, 1, 1, 0], dtype=np.int8),
-        np.asarray([0.01, 0.02, 0.03, 0.04]),
-        threshold_min=0.2,
-        threshold_max=0.3,
-        threshold_step=0.1,
-        default_threshold=0.35,
-    )
-
-    assert threshold == 0.35
-    assert score == -1.0
