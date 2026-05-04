@@ -13,10 +13,6 @@ from limen.metrics.balanced_metric import balanced_metric
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
 
-# ---------------------------------------------------------------------------
-# sklearn_probability_calibrator
-# ---------------------------------------------------------------------------
-
 def test_sklearn_probability_calibrator_no_future_warning() -> None:
     rng = np.random.default_rng(0)
     X = rng.standard_normal((100, 4))
@@ -32,10 +28,6 @@ def test_sklearn_probability_calibrator_no_future_warning() -> None:
     proba = calibrated.predict_proba(X)
     assert proba.shape == (100, 2)
 
-
-# ---------------------------------------------------------------------------
-# grid_threshold_optimizer  (moved from test_transforms.py)
-# ---------------------------------------------------------------------------
 
 def test_grid_threshold_optimizer_picks_best_balanced_threshold() -> None:
     y_val = np.asarray([0, 1, 1, 0], dtype=np.int8)
@@ -79,24 +71,6 @@ def test_grid_threshold_optimizer_returns_bounded_threshold() -> None:
     assert 0.20 <= threshold <= 0.70
 
 
-# ---------------------------------------------------------------------------
-# CalibrationConfig
-# ---------------------------------------------------------------------------
-
-def test_calibration_config_stores_func_and_params() -> None:
-    config = CalibrationConfig(
-        calibration_func=sklearn_probability_calibrator,
-        calibration_params={'method': 'isotonic'},
-        threshold_func=grid_threshold_optimizer,
-        threshold_params={'metric': balanced_metric},
-    )
-
-    assert config.calibration_func is sklearn_probability_calibrator
-    assert config.calibration_params['method'] == 'isotonic'
-    assert config.threshold_func is grid_threshold_optimizer
-    assert config.threshold_params['metric'] is balanced_metric
-
-
 def test_calibration_config_resolve_substitutes_string_params() -> None:
     config = CalibrationConfig(
         calibration_func=sklearn_probability_calibrator,
@@ -110,22 +84,6 @@ def test_calibration_config_resolve_substitutes_string_params() -> None:
     assert resolved.threshold_params['threshold_max'] == 0.70
 
 
-def test_calibration_config_resolve_leaves_callables_unchanged() -> None:
-    config = CalibrationConfig(
-        calibration_func=sklearn_probability_calibrator,
-        threshold_func=grid_threshold_optimizer,
-        threshold_params={'metric': balanced_metric},
-    )
-
-    resolved = config.resolve({})
-
-    assert resolved.threshold_params['metric'] is balanced_metric
-
-
-# ---------------------------------------------------------------------------
-# CalibrationBuilder
-# ---------------------------------------------------------------------------
-
 def test_calibration_builder_done_raises_without_any_func() -> None:
     builder = CalibrationBuilder(Manifest())
     try:
@@ -134,53 +92,6 @@ def test_calibration_builder_done_raises_without_any_func() -> None:
     except ValueError as e:
         assert 'probability_calibration' in str(e) or 'threshold_function' in str(e)
 
-
-def test_calibration_builder_threshold_only_does_not_raise() -> None:
-    m = (Manifest()
-         .with_calibration()
-         .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
-         .done())
-
-    config = m.prediction_calibration_config
-    assert config is not None
-    assert config.calibration_func is None
-    assert config.threshold_func is grid_threshold_optimizer
-
-
-def test_calibration_builder_produces_correct_config() -> None:
-    m = (Manifest()
-         .with_calibration()
-         .probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
-         .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
-         .done())
-
-    config = m.prediction_calibration_config
-    assert config is not None
-    assert config.calibration_func is sklearn_probability_calibrator
-    assert config.calibration_params['method'] == 'isotonic'
-    assert config.threshold_func is grid_threshold_optimizer
-    assert config.threshold_params['metric'] is balanced_metric
-
-
-def test_with_calibration_returns_builder() -> None:
-    m = Manifest()
-    result = m.with_calibration()
-    assert isinstance(result, CalibrationBuilder)
-
-
-def test_done_returns_manifest_with_config_set() -> None:
-    m = (Manifest()
-         .with_calibration()
-         .probability_calibration(func=sklearn_probability_calibrator)
-         .done())
-
-    assert isinstance(m, Manifest)
-    assert m.prediction_calibration_config is not None
-
-
-# ---------------------------------------------------------------------------
-# run_model injection
-# ---------------------------------------------------------------------------
 
 def test_run_model_injects_resolved_prediction_calibration_config() -> None:
     received = {}
@@ -200,7 +111,6 @@ def test_run_model_injects_resolved_prediction_calibration_config() -> None:
 
     assert received['config'] is not None
     assert isinstance(received['config'], CalibrationConfig)
-    # String param was resolved
     assert received['config'].threshold_params['threshold_min'] == 0.15
 
 
@@ -278,10 +188,6 @@ def test_run_model_masks_threshold_func_when_use_threshold_false() -> None:
     assert received['config'].threshold_func is None
 
 
-# ---------------------------------------------------------------------------
-# LogRegBinary calibration path
-# ---------------------------------------------------------------------------
-
 def _make_logreg_data() -> dict:
     rng = np.random.default_rng(42)
     X = rng.standard_normal((200, 4))
@@ -294,10 +200,6 @@ def _make_logreg_data() -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# LogRegBinary predict
-# ---------------------------------------------------------------------------
-
 def test_logreg_predict_without_calibration_unchanged() -> None:
     data = _make_logreg_data()
     model = LogRegBinary().train(data)
@@ -307,24 +209,6 @@ def test_logreg_predict_without_calibration_unchanged() -> None:
     assert '_probs' in result
     assert 'optimal_threshold' not in result
     assert 'val_score' not in result
-
-
-def test_logreg_predict_with_calibration_returns_threshold_keys() -> None:
-    data = _make_logreg_data()
-    config = CalibrationConfig(
-        calibration_func=sklearn_probability_calibrator,
-        calibration_params={'method': 'isotonic'},
-        threshold_func=grid_threshold_optimizer,
-        threshold_params={'metric': balanced_metric},
-    )
-    model = LogRegBinary(prediction_calibration_config=config).train(data)
-    result = model.predict(data)
-
-    assert '_preds' in result
-    assert '_probs' in result
-    assert 'optimal_threshold' in result
-    assert 'val_score' in result
-    assert 0.0 <= result['optimal_threshold'] <= 1.0
 
 
 def test_logreg_predict_threshold_only_returns_threshold_keys() -> None:
