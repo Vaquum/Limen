@@ -1,17 +1,15 @@
-#!/usr/bin/env python3
-'''
-TabPFN Dynamic Breakout Classifier
-Binary classification with validation-based dynamic threshold tuning.
-
-Uses balanced metric (precision * sqrt(trade_rate)) to find optimal
-prediction threshold that balances signal quality with trade frequency.
-'''
-
-from limen.experiment import Manifest
+from limen.calibration import grid_threshold_optimizer
+from limen.calibration import sklearn_probability_calibrator
 from limen.data import HistoricalData
-from limen.indicators import roc, wilder_rsi, rolling_volatility, bollinger_bands, bollinger_position
-from limen.targets import ForwardBreakoutTarget
+from limen.experiment import Manifest
+from limen.indicators import bollinger_bands
+from limen.indicators import bollinger_position
+from limen.indicators import roc
+from limen.indicators import rolling_volatility
+from limen.indicators import wilder_rsi
+from limen.metrics.balanced_metric import balanced_metric
 from limen.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
+from limen.targets import ForwardBreakoutTarget
 
 
 TRAIN_SPLIT = 50
@@ -29,8 +27,6 @@ def params() -> dict[str, list]:
         # Model params
         'n_ensemble_configurations': [4, 8],
         'device': ['cpu'],
-        'use_calibration': [True, False],
-        'threshold_metric': ['balanced', 'f1', 'precision'],
 
         # Indicator params
         'rsi_period': [7, 14, 21],
@@ -75,4 +71,9 @@ def manifest() -> Manifest:
         )
 
         .with_reference_architecture(tabpfn_binary)
+
+        .with_calibration()
+        .probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
+        .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
+        .done()
     )

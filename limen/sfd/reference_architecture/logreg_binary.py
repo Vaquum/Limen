@@ -1,9 +1,13 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
+
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import CalibrationConfig
 
 
 class LogRegBinary(ReferenceModel):
@@ -11,6 +15,11 @@ class LogRegBinary(ReferenceModel):
     '''Logistic regression binary classifier with train/evaluate interface.'''
 
     deterministic = True
+
+    def __init__(self, prediction_calibration_config: 'CalibrationConfig | None' = None) -> None:
+
+        super().__init__()
+        self.prediction_calibration_config = prediction_calibration_config
 
     def train(self, data: dict, **params: Any) -> 'LogRegBinary':
 
@@ -24,6 +33,10 @@ class LogRegBinary(ReferenceModel):
         Returns:
             LogRegBinary: Self with fitted model stored
         '''
+
+        prediction_calibration_config = params.pop('prediction_calibration_config', None)
+        if prediction_calibration_config is not None:
+            self.prediction_calibration_config = prediction_calibration_config
 
         class_weight = params.pop('class_weight', None)
         if class_weight is not None:
@@ -40,15 +53,37 @@ class LogRegBinary(ReferenceModel):
         Compute binary predictions from feature data.
 
         Args:
-            data (dict): Data dictionary with x_test
+            data (dict): Data dictionary with x_val, y_val, x_test
 
         Returns:
-            dict: Prediction results with '_preds' and '_probs' keys
+            dict: Prediction results with '_preds' and '_probs' keys; calibrated path
+                also includes 'optimal_threshold' and 'val_score'
         '''
+
+        if self.prediction_calibration_config is not None:
+            config = self.prediction_calibration_config
+            if config.calibration_func is not None:
+                fitted = config.calibration_func(
+                    self.model, data['x_val'], data['y_val'],
+                    **config.calibration_params,
+                )
+                val_proba = fitted.predict_proba(data['x_val'])[:, 1]
+                test_proba = fitted.predict_proba(data['x_test'])[:, 1]
+            else:
+                val_proba = self.model.predict_proba(data['x_val'])[:, 1]
+                test_proba = self.model.predict_proba(data['x_test'])[:, 1]
+            if config.threshold_func is not None:
+                threshold, score = config.threshold_func(
+                    data['y_val'], val_proba, **config.threshold_params
+                )
+            else:
+                threshold, score = 0.5, None
+            preds = (test_proba >= threshold).astype(np.int8)
+            return {'_preds': preds, '_probs': test_proba,
+                    'optimal_threshold': threshold, 'val_score': score}
 
         preds = self.model.predict(data['x_test'])
         probs = self.model.predict_proba(data['x_test'])[:, 1]
-
         return {'_preds': preds, '_probs': probs}
 
 
@@ -72,6 +107,10 @@ class LogRegBinary(ReferenceModel):
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds
 
+        if 'optimal_threshold' in pred_result:
+            results['optimal_threshold'] = pred_result['optimal_threshold']
+            results['val_score'] = pred_result['val_score']
+
         if inline_metrics:
             results.update(self._compute_confusion(preds, data['y_test'], data.get('price_data_for_backtest')))
             results.update(self._compute_backtest(preds, data))
@@ -92,7 +131,8 @@ def logreg_binary(data: dict,
                   max_iter: int = 100,
                   verbose: int = 0,
                   warm_start: bool = False,
-                  n_jobs: int = -1) -> dict:
+                  n_jobs: int = -1,
+                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
     '''
     Compute logistic regression binary predictions and evaluation metrics.
@@ -112,13 +152,14 @@ def logreg_binary(data: dict,
         verbose (int): Verbosity level
         warm_start (bool): Whether to reuse previous solution
         n_jobs (int): Number of parallel jobs
+        prediction_calibration_config (CalibrationConfig | None): Optional calibration config
 
     Returns:
         dict: Results with binary metrics, predictions, inline confusion metrics,
             and backtest metrics when price_data_for_backtest is in data
     '''
 
-    model = LogRegBinary().train(
+    model = LogRegBinary(prediction_calibration_config=prediction_calibration_config).train(
         data,
         solver=solver,
         penalty=penalty,

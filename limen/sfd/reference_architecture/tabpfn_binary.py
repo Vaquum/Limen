@@ -1,4 +1,4 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -6,18 +6,13 @@ from tabpfn import TabPFNClassifier
 
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.transforms.calibrate_classifier import calibrate_classifier
-from limen.transforms.optimize_binary_threshold import optimize_binary_threshold
 from limen.utils.data_dict_to_numpy import data_dict_to_numpy
 
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import CalibrationConfig
 
-# TabPFN model checkpoint - auto-downloaded by tabpfn library on first use
+
 TABPFN_MODEL_PATH = 'tabpfn-v2-classifier-v2_default.ckpt'
-
-THRESHOLD_MIN = 0.20
-THRESHOLD_MAX = 0.70
-THRESHOLD_STEP = 0.05
-DEFAULT_THRESHOLD = 0.35
 
 
 class TabPFNBinary(ReferenceModel):
@@ -26,11 +21,10 @@ class TabPFNBinary(ReferenceModel):
 
     deterministic = False
 
-    def __init__(self) -> None:
+    def __init__(self, prediction_calibration_config: 'CalibrationConfig | None' = None) -> None:
 
         super().__init__()
-        self._use_calibration = True
-        self._threshold_metric = 'balanced'
+        self.prediction_calibration_config = prediction_calibration_config
 
     def train(self, data: dict, **params: Any) -> 'TabPFNBinary':
 
@@ -45,8 +39,9 @@ class TabPFNBinary(ReferenceModel):
             TabPFNBinary: Self with fitted model stored
         '''
 
-        self._use_calibration = params.pop('use_calibration', True)
-        self._threshold_metric = params.pop('threshold_metric', 'balanced')
+        prediction_calibration_config = params.pop('prediction_calibration_config', None)
+        if prediction_calibration_config is not None:
+            self.prediction_calibration_config = prediction_calibration_config
 
         n_ensemble_configurations = params.pop('n_ensemble_configurations', 4)
         device = params.pop('device', 'cpu')
@@ -68,14 +63,14 @@ class TabPFNBinary(ReferenceModel):
     def predict(self, data: dict) -> dict:
 
         '''
-        Compute binary predictions with threshold tuning on validation set.
+        Compute binary predictions with optional calibration and threshold tuning.
 
         Args:
             data (dict): Data dictionary with x_val, y_val, x_test
 
         Returns:
-            dict: Prediction results with '_preds', '_probs', 'optimal_threshold',
-                'val_score' keys
+            dict: Prediction results with '_preds' and '_probs' keys; calibrated path
+                also includes 'optimal_threshold' and 'val_score'
         '''
 
         arrays = data_dict_to_numpy(data, ['x_val', 'y_val', 'x_test'])
@@ -83,38 +78,37 @@ class TabPFNBinary(ReferenceModel):
         y_val = arrays['y_val']
         x_test = arrays['x_test']
 
-        if self._use_calibration:
-            y_val_proba, y_test_proba = calibrate_classifier(
-                self.model, x_val, y_val, [x_val, x_test], method='isotonic'
-            )
-        else:
-            y_val_proba = self.model.predict_proba(x_val)[:, 1]
-            y_test_proba = self.model.predict_proba(x_test)[:, 1]
+        if self.prediction_calibration_config is not None:
+            config = self.prediction_calibration_config
+            if config.calibration_func is not None:
+                fitted = config.calibration_func(
+                    self.model, x_val, y_val,
+                    **config.calibration_params,
+                )
+                val_proba = fitted.predict_proba(x_val)[:, 1]
+                test_proba = fitted.predict_proba(x_test)[:, 1]
+            else:
+                val_proba = self.model.predict_proba(x_val)[:, 1]
+                test_proba = self.model.predict_proba(x_test)[:, 1]
+            if config.threshold_func is not None:
+                threshold, score = config.threshold_func(
+                    y_val, val_proba, **config.threshold_params
+                )
+            else:
+                threshold, score = 0.5, None
+            preds = (test_proba >= threshold).astype(np.int8)
+            return {'_preds': preds, '_probs': test_proba,
+                    'optimal_threshold': threshold, 'val_score': score}
 
-        best_threshold, best_score = optimize_binary_threshold(
-            y_val,
-            y_val_proba,
-            threshold_min=THRESHOLD_MIN,
-            threshold_max=THRESHOLD_MAX,
-            threshold_step=THRESHOLD_STEP,
-            default_threshold=DEFAULT_THRESHOLD,
-            metric=self._threshold_metric,
-        )
-
-        y_pred = (y_test_proba >= best_threshold).astype(np.int8)
-
-        return {
-            '_preds': y_pred,
-            '_probs': y_test_proba,
-            'optimal_threshold': best_threshold,
-            'val_score': best_score,
-        }
+        y_test_proba = self.model.predict_proba(x_test)[:, 1]
+        y_pred = self.model.predict(x_test).astype(np.int8)
+        return {'_preds': y_pred, '_probs': y_test_proba}
 
 
     def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
 
         '''
-        Evaluate trained model on test data with threshold tuning.
+        Evaluate trained model on test data.
 
         Args:
             data (dict): Data dictionary with x_val, y_val, x_test, y_test,
@@ -130,9 +124,11 @@ class TabPFNBinary(ReferenceModel):
         probs = pred_result['_probs']
 
         results = binary_metrics(data, preds, probs)
-        results['optimal_threshold'] = pred_result['optimal_threshold']
-        results['val_score'] = pred_result['val_score']
         results['_preds'] = preds
+
+        if 'optimal_threshold' in pred_result:
+            results['optimal_threshold'] = pred_result['optimal_threshold']
+            results['val_score'] = pred_result['val_score']
 
         if inline_metrics:
             results.update(self._compute_confusion(preds, data['y_test'], data.get('price_data_for_backtest')))
@@ -144,31 +140,27 @@ class TabPFNBinary(ReferenceModel):
 def tabpfn_binary(data: dict,
                   n_ensemble_configurations: int = 4,
                   device: str = 'cpu',
-                  use_calibration: bool = True,
-                  threshold_metric: str = 'balanced') -> dict:
+                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
     '''
-    Compute TabPFN binary classification with dynamic threshold tuning on validation set.
+    Compute TabPFN binary classification with optional calibration and threshold tuning.
 
     Args:
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
         n_ensemble_configurations (int): Number of ensemble configurations for TabPFN
         device (str): Device to run on ('cpu' or 'cuda')
-        use_calibration (bool): Whether to apply isotonic calibration on validation set
-        threshold_metric (str): Metric to optimize ('f1', 'precision', 'accuracy', 'balanced')
+        prediction_calibration_config (CalibrationConfig | None): Optional calibration config
 
     Returns:
         dict: Results with binary metrics, predictions, inline confusion metrics,
             backtest metrics when price_data_for_backtest is in data,
-            and 'optimal_threshold', 'val_score'
+            and optionally 'optimal_threshold', 'val_score' when calibration is configured
     '''
 
-    model = TabPFNBinary().train(
+    model = TabPFNBinary(prediction_calibration_config=prediction_calibration_config).train(
         data,
         n_ensemble_configurations=n_ensemble_configurations,
         device=device,
-        use_calibration=use_calibration,
-        threshold_metric=threshold_metric,
     )
 
     return model.evaluate(data, inline_metrics=True)

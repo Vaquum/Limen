@@ -1,0 +1,26 @@
+from typing import Any
+
+import numpy as np
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.frozen import FrozenEstimator
+
+
+def sklearn_probability_calibrator(clf: Any,
+                                    x_val: np.ndarray,
+                                    y_val: np.ndarray,
+                                    method: str = 'isotonic') -> Any:
+
+    '''
+    Fit isotonic or sigmoid calibration on a pre-fitted classifier.
+
+    Args:
+        clf: Pre-fitted classifier with predict_proba method
+        x_val (np.ndarray): Validation features for calibration fitting
+        y_val (np.ndarray): Validation labels for calibration fitting
+        method (str): Calibration method ('isotonic' or 'sigmoid')
+
+    Returns:
+        Any: Fitted calibrated classifier with predict_proba method
+    '''
+
+    return CalibratedClassifierCV(FrozenEstimator(clf), method=method).fit(x_val, y_val)
