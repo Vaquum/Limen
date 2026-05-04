@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from sklearn.linear_model import LogisticRegression
 
+from limen.calibration import apply_calibrated_predict
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -61,26 +61,7 @@ class LogRegBinary(ReferenceModel):
         '''
 
         if self.prediction_calibration_config is not None:
-            config = self.prediction_calibration_config
-            if config.calibration_func is not None:
-                fitted = config.calibration_func(
-                    self.model, data['x_val'], data['y_val'],
-                    **config.calibration_params,
-                )
-                val_proba = fitted.predict_proba(data['x_val'])[:, 1]
-                test_proba = fitted.predict_proba(data['x_test'])[:, 1]
-            else:
-                val_proba = self.model.predict_proba(data['x_val'])[:, 1]
-                test_proba = self.model.predict_proba(data['x_test'])[:, 1]
-            if config.threshold_func is not None:
-                threshold, score = config.threshold_func(
-                    data['y_val'], val_proba, **config.threshold_params
-                )
-            else:
-                threshold, score = 0.5, None
-            preds = (test_proba >= threshold).astype(np.int8)
-            return {'_preds': preds, '_probs': test_proba,
-                    'optimal_threshold': threshold, 'val_score': score}
+            return apply_calibrated_predict(self.model, self.prediction_calibration_config, data)
 
         preds = self.model.predict(data['x_test'])
         probs = self.model.predict_proba(data['x_test'])[:, 1]

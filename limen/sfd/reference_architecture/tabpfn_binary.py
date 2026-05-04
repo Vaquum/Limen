@@ -4,6 +4,7 @@ import numpy as np
 
 from tabpfn import TabPFNClassifier
 
+from limen.calibration import apply_calibrated_predict
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.utils.data_dict_to_numpy import data_dict_to_numpy
@@ -73,35 +74,11 @@ class TabPFNBinary(ReferenceModel):
                 also includes 'optimal_threshold' and 'val_score'
         '''
 
-        arrays = data_dict_to_numpy(data, ['x_val', 'y_val', 'x_test'])
-        x_val = arrays['x_val']
-        y_val = arrays['y_val']
-        x_test = arrays['x_test']
-
         if self.prediction_calibration_config is not None:
-            config = self.prediction_calibration_config
-            if config.calibration_func is not None:
-                fitted = config.calibration_func(
-                    self.model, x_val, y_val,
-                    **config.calibration_params,
-                )
-                val_proba = fitted.predict_proba(x_val)[:, 1]
-                test_proba = fitted.predict_proba(x_test)[:, 1]
-            else:
-                val_proba = self.model.predict_proba(x_val)[:, 1]
-                test_proba = self.model.predict_proba(x_test)[:, 1]
-            if config.threshold_func is not None:
-                threshold, score = config.threshold_func(
-                    y_val, val_proba, **config.threshold_params
-                )
-            else:
-                threshold, score = 0.5, None
-            preds = (test_proba >= threshold).astype(np.int8)
-            return {'_preds': preds, '_probs': test_proba,
-                    'optimal_threshold': threshold, 'val_score': score}
+            return apply_calibrated_predict(self.model, self.prediction_calibration_config, data)
 
-        y_test_proba = self.model.predict_proba(x_test)[:, 1]
-        y_pred = self.model.predict(x_test).astype(np.int8)
+        y_test_proba = self.model.predict_proba(data['x_test'])[:, 1]
+        y_pred = self.model.predict(data['x_test']).astype(np.int8)
         return {'_preds': y_pred, '_probs': y_test_proba}
 
 

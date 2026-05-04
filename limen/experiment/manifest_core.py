@@ -7,6 +7,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from limen.calibration.pipeline import CalibratorProtocol
+from limen.calibration.pipeline import ThresholdOptimizerProtocol
+
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
 
@@ -65,9 +68,9 @@ class CalibrationConfig:
 
     '''Stores probability calibration and threshold function references with their params.'''
 
-    calibration_func: Callable | None = None
+    calibration_func: CalibratorProtocol | None = None
     calibration_params: dict[str, Any] = field(default_factory=dict)
-    threshold_func: Callable | None = None
+    threshold_func: ThresholdOptimizerProtocol | None = None
     threshold_params: dict[str, Any] = field(default_factory=dict)
 
     def resolve(self, round_params: dict[str, Any]) -> 'CalibrationConfig':
@@ -89,12 +92,12 @@ class CalibrationBuilder:
     def __init__(self, manifest: 'Manifest') -> None:
 
         self._manifest = manifest
-        self._calibration_func: Callable | None = None
+        self._calibration_func: CalibratorProtocol | None = None
         self._calibration_params: dict[str, Any] = {}
-        self._threshold_func: Callable | None = None
+        self._threshold_func: ThresholdOptimizerProtocol | None = None
         self._threshold_params: dict[str, Any] = {}
 
-    def probability_calibration(self, func: Callable, **params: Any) -> 'CalibrationBuilder':
+    def probability_calibration(self, func: CalibratorProtocol, **params: Any) -> 'CalibrationBuilder':
 
         '''
         Configure the probability calibration function.
@@ -111,7 +114,7 @@ class CalibrationBuilder:
         self._calibration_params = params
         return self
 
-    def threshold_function(self, func: Callable, **params: Any) -> 'CalibrationBuilder':
+    def threshold_function(self, func: ThresholdOptimizerProtocol, **params: Any) -> 'CalibrationBuilder':
 
         '''
         Configure the threshold optimisation function.
