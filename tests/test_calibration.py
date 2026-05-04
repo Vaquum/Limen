@@ -294,6 +294,10 @@ def _make_logreg_data() -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# LogRegBinary predict
+# ---------------------------------------------------------------------------
+
 def test_logreg_predict_without_calibration_unchanged() -> None:
     data = _make_logreg_data()
     model = LogRegBinary().train(data)
