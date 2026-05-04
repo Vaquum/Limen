@@ -1,15 +1,8 @@
 # Transforms
 
-Transforms in Limen are lightweight helpers used either during data preparation or immediately after model scoring. They are not the same thing as train-fitted scalers.
+Transforms in Limen are lightweight helpers used during data preparation or target construction. They are not the same thing as train-fitted scalers. For probability calibration and threshold optimization, see `limen.calibration`.
 
-Use this page when you need to shape a target, clip or normalize a frame in a stateless way, or calibrate a classifier after fitting. For train-only fitted preprocessing, see [Scalers](Scalers.md).
-
-## Two Transform Families
-
-| Family | What it does | Typical place in the pipeline |
-|---|---|---|
-| DataFrame transforms | Modify or filter columns in a `pl.DataFrame` | target building, small preprocessing steps, or split-local shaping |
-| Post-model helpers | Work on fitted classifiers or probability arrays | calibration and threshold selection after model training |
+Use this page when you need to shape a target, clip or normalize a frame in a stateless way. For train-only fitted preprocessing, see [Scalers](Scalers.md).
 
 ## DataFrame Transforms
 
@@ -22,15 +15,6 @@ These helpers operate on the frame passed into them. They do not carry learned s
 | `quantile_trim_transform(df, time_col='datetime')` | removes rows outside fixed 0.5% and 99.5% bounds across numeric columns | More aggressive than winsorization because rows can disappear. |
 | `zscore_transform(df, time_col='datetime')` | standardizes numeric columns to mean zero and unit variance | Stateless per call, unlike a train-fitted scaler. |
 | `shift_column_transform(data, shift, column)` | shifts one column in place | Common in target construction. Negative values shift forward in time. |
-
-## Post-Model Helpers
-
-These helpers are used after a model has already been fitted.
-
-| Function | Returns | Notes |
-|---|---|---|
-| `calibrate_classifier(clf, x_val, y_val, x_sets, method='isotonic')` | a tuple of calibrated positive-class probability arrays | Uses `CalibratedClassifierCV` with `cv='prefit'`. `method` is usually `isotonic` or `sigmoid`. |
-| `optimize_binary_threshold(y_val, y_val_proba, ...)` | `(best_threshold, best_score)` | Sweeps thresholds on validation probabilities and optimizes `balanced`, `f1`, `precision`, or `accuracy`. |
 
 ## Target-Building Example
 
@@ -47,31 +31,12 @@ manifest.with_target_label(
 
 The important detail is that `QuantileBinaryTarget.__init__` computes the cutoff on the training split only; `transform()` reuses the stored cutoff on validation and test without refitting.
 
-## Calibration Example
-
-```python
-from limen.transforms import calibrate_classifier, optimize_binary_threshold
-
-val_proba_cal, test_proba_cal = calibrate_classifier(
-    clf,
-    x_val=x_val,
-    y_val=y_val,
-    x_sets=[x_val, x_test],
-    method='isotonic',
-)
-
-best_threshold, best_score = optimize_binary_threshold(
-    y_val=y_val,
-    y_val_proba=val_proba_cal,
-    metric='balanced',
-)
-```
-
 ## Boundaries
 
 - Use a transform when the operation is lightweight and local to the frame or prediction arrays you already have.
 - Use a scaler when the operation must be fitted on train and then reused unchanged on validation and test.
 - If you need split-safe learned parameters inside a target, compute them through the manifest target builder rather than hiding the fitting inside the transform itself.
+- For probability calibration and threshold selection after model training, use `limen.calibration` and the manifest's `with_calibration()` builder.
 
 ## Read Next
 
