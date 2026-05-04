@@ -821,3 +821,11 @@ Note: add all new changelog entries to the bottom of this file.
 - Remove `with_target_function()`, old `with_target_label()` builder pattern (`TargetBuilder`, `FittedTransformBuilder`, `target_transforms`), and `set_target_column()`
 - Add `docs/Targets.md` documenting all six built-in target classes and the custom target class convention
 - Remove `limen.sfd.loop` temporary integration package (superseded by RFC-1005 YAML compiler)
+
+## v3.0.2 on 30th of April, 2026
+
+- Add `limen.calibration` submodule with `sklearn_probability_calibrator` (deprecation-free `FrozenEstimator`-based isotonic/sigmoid calibration) and `grid_threshold_optimizer` (vectorized bounded grid sweep returning `(threshold, score)`)
+- Add `CalibrationConfig` dataclass and `CalibrationBuilder` fluent builder to `limen.experiment.manifest_core`; `Manifest.with_calibration()` chains into `.probability_calibration()`, `.threshold_function()`, `.done()`; `run_model()` resolves and injects `prediction_calibration_config` into the architecture call
+- Add calibration support to `LogRegBinary` and `TabPFNBinary` reference architectures via `prediction_calibration_config` constructor param; `optimal_threshold` and `val_score` are added to results only when calibration is configured
+- Remove `calibrate_classifier` and `optimize_binary_threshold` from `limen.transforms` (moved to `limen.calibration`)
+- **Behavior change**: `TabPFNBinary` no longer calibrates by default; calibration must be declared explicitly via `Manifest.with_calibration()`; the `use_calibration` and `threshold_metric` search params are removed from the TabPFN foundational SFD
