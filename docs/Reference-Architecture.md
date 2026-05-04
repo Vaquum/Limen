@@ -67,15 +67,22 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 |---|---:|---|---|
 | `LogRegBinary` | yes | probability | `predict()` returns `_probs = predict_proba(... )[:, 1]`, which is directly the class-1 probability P(1). |
 | `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
-| `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability, optionally calibrated with isotonic calibration before thresholding. This is compatible with P(1). |
+| `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimised before `_preds` are produced. This is compatible with P(1). |
 | `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
 
 ## `predict()` Versus `evaluate()`
 
-`predict()` is the small inference surface. For the built-in binary models it returns:
+`predict()` is the small inference surface. For the built-in binary models it always returns:
 
 - `_preds`
 - `_probs`
+
+When a `CalibrationConfig` is configured on the manifest and injected into the architecture, `predict()` additionally returns:
+
+- `optimal_threshold` — the threshold chosen by the optimizer (or `0.5` when only probability calibration is configured)
+- `val_score` — the metric score at that threshold; `None` when no threshold function is set
+
+`evaluate()` passes these keys through into the results dict alongside the standard binary metrics.
 
 `evaluate()` is the richer offline evaluation surface.
 

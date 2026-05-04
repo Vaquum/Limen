@@ -208,6 +208,11 @@ In a live local logreg promotion run in this repo, the stored keys included:
 - `backtest_max_drawdown_pct`
 - `backtest_sharpe_per_bar`
 
+When the promoted round used calibration, `results` also includes:
+
+- `optimal_threshold` — the threshold chosen during the validation pass
+- `val_score` — the metric score at that threshold
+
 That is why `Sensor.results` is useful for provenance and review, while `Sensor.predict()` is the smaller live inference surface.
 
 ## What Trainer Reads From Disk
