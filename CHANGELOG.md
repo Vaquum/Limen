@@ -824,11 +824,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v3.0.2 on 30th of April, 2026
 
-- Add `limen.calibration` submodule with `sklearn_probability_calibrator` (deprecation-free `FrozenEstimator`-based isotonic/sigmoid calibration) and `grid_threshold_optimizer` (vectorized bounded grid sweep returning `(threshold, score)`)
-- Add `CalibrationConfig` dataclass and `CalibrationBuilder` fluent builder to `limen.experiment.manifest_core`; `Manifest.with_calibration()` chains into `.probability_calibration()`, `.threshold_function()`, `.done()`; `run_model()` resolves and injects `prediction_calibration_config` into the architecture call
-- Add calibration support to `LogRegBinary` and `TabPFNBinary` reference architectures via `prediction_calibration_config` constructor param; `optimal_threshold` and `val_score` are added to results only when calibration is configured
-- Add `CalibratorProtocol` and `ThresholdOptimizerProtocol` in `limen.calibration.pipeline` as explicit callable contracts for custom calibrators and threshold optimizers; `CalibrationConfig` and `CalibrationBuilder` now use these protocol types instead of bare `Callable`
-- Add `apply_calibrated_predict(model, config, data)` in `limen.calibration.pipeline` centralising the four-path calibration logic; `LogRegBinary` and `TabPFNBinary` `predict()` delegate to it
-- Remove `calibrate_classifier` and `optimize_binary_threshold` from `limen.transforms` (moved to `limen.calibration`)
-- Fix CSV column alignment in `UniversalExperimentLoop` when rounds return variable result keys (e.g. raw-model rounds omitting `optimal_threshold`); fix graceful shutdown when joblib workers are killed by SIGINT during a round
-- **Behavior change**: `TabPFNBinary` no longer calibrates by default; calibration must be declared explicitly via `Manifest.with_calibration()`; the `use_calibration` and `threshold_metric` search params are removed from the TabPFN foundational SFD
+- Add `limen.calibration` submodule with sklearn-based probability calibration and vectorised grid threshold optimisation utilities
+- Add `CalibrationBuilder` fluent API to `Manifest` for declarative calibration configuration; supports four modes — raw model, calibration-only, threshold-only, or both — controlled by per-round flags
+- Add explicit callable protocols for plug-and-play custom calibrators and threshold optimisers
+- Add calibration support to `LogRegBinary` and `TabPFNBinary` reference architectures; results include `optimal_threshold` and `val_score` when calibration is configured
+- Remove old calibration utilities from `limen.transforms` (superseded by `limen.calibration`)
+- Fix CSV column alignment when rounds return variable result keys; fix graceful shutdown on SIGINT during a round
+
