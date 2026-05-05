@@ -29,8 +29,8 @@ def grid_threshold_optimizer(y_val: np.ndarray,
         tuple[float, float]: (best_threshold, best_score)
     '''
 
-    n_steps = round((threshold_max - threshold_min) / threshold_step) + 1
-    thresholds = np.linspace(threshold_min, threshold_max, n_steps)
+    thresholds = np.arange(threshold_min, threshold_max + threshold_step, threshold_step)
+    thresholds = np.minimum(thresholds, threshold_max)
     preds_matrix = (val_proba[:, None] >= thresholds).astype(np.int8)
     valid_mask = preds_matrix.sum(axis=0) > 0
     if not valid_mask.any():

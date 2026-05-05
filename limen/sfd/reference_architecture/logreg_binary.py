@@ -88,9 +88,8 @@ class LogRegBinary(ReferenceModel):
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds
 
-        if 'optimal_threshold' in pred_result:
-            results['optimal_threshold'] = pred_result['optimal_threshold']
-            results['val_score'] = pred_result['val_score']
+        results['optimal_threshold'] = pred_result.get('optimal_threshold')
+        results['val_score'] = pred_result.get('val_score')
 
         if inline_metrics:
             results.update(self._compute_confusion(preds, data['y_test'], data.get('price_data_for_backtest')))
