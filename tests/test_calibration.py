@@ -127,6 +127,21 @@ def test_run_model_no_injection_when_calibration_not_set() -> None:
     assert 'prediction_calibration_config' not in received['kwargs']
 
 
+def test_resolve_model_kwargs_forwards_round_params_to_var_keyword_arch() -> None:
+    received = {}
+
+    def mock_arch(data: dict, **kwargs) -> dict:
+        received['kwargs'] = kwargs
+        return {}
+
+    m = Manifest().with_reference_architecture(mock_arch)
+    m.run_model({}, {'n_estimators': 100, 'device': 'cpu', '_id': 0})
+
+    assert received['kwargs']['n_estimators'] == 100
+    assert received['kwargs']['device'] == 'cpu'
+    assert '_id' not in received['kwargs']
+
+
 def test_run_model_no_injection_when_both_flags_false() -> None:
     received = {}
 

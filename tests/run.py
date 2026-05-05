@@ -438,6 +438,7 @@ from tests.test_calibration import test_run_model_masks_calibration_func_when_us
 from tests.test_calibration import test_run_model_masks_threshold_func_when_use_threshold_false
 from tests.test_calibration import test_logreg_predict_without_calibration_unchanged
 from tests.test_calibration import test_logreg_predict_threshold_only_returns_threshold_keys
+from tests.test_calibration import test_resolve_model_kwargs_forwards_round_params_to_var_keyword_arch
 from tests.test_feature_perturbation import test_add_indicator_creates_transform_entry
 from tests.test_feature_perturbation import test_feature_group_filtering_includes_selected
 from tests.test_feature_perturbation import test_feature_group_filtering_multiple_groups
@@ -1020,6 +1021,7 @@ tests = [
     test_run_model_masks_threshold_func_when_use_threshold_false,
     test_logreg_predict_without_calibration_unchanged,
     test_logreg_predict_threshold_only_returns_threshold_keys,
+    test_resolve_model_kwargs_forwards_round_params_to_var_keyword_arch,
     test_add_indicator_creates_transform_entry,
     test_feature_group_filtering_includes_selected,
     test_feature_group_filtering_multiple_groups,
