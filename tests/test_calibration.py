@@ -93,6 +93,23 @@ def test_calibration_builder_done_raises_without_any_func() -> None:
         assert 'probability_calibration' in str(e) or 'threshold_function' in str(e)
 
 
+def test_run_model_raises_when_arch_cannot_accept_calibration_config() -> None:
+    def mock_arch(data: dict) -> dict:
+        return {}
+
+    m = (Manifest()
+         .with_reference_architecture(mock_arch)
+         .with_calibration()
+         .threshold_function(func=grid_threshold_optimizer)
+         .done())
+
+    try:
+        m.run_model({}, {})
+        assert False, 'expected ValueError'
+    except ValueError as e:
+        assert 'prediction_calibration_config' in str(e)
+
+
 def test_run_model_injects_resolved_prediction_calibration_config() -> None:
     received = {}
 

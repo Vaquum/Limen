@@ -431,6 +431,7 @@ from tests.test_calibration import test_grid_threshold_optimizer_returns_default
 from tests.test_calibration import test_grid_threshold_optimizer_returns_bounded_threshold
 from tests.test_calibration import test_calibration_config_resolve_substitutes_string_params
 from tests.test_calibration import test_calibration_builder_done_raises_without_any_func
+from tests.test_calibration import test_run_model_raises_when_arch_cannot_accept_calibration_config
 from tests.test_calibration import test_run_model_injects_resolved_prediction_calibration_config
 from tests.test_calibration import test_run_model_no_injection_when_calibration_not_set
 from tests.test_calibration import test_run_model_no_injection_when_both_flags_false
@@ -1014,6 +1015,7 @@ tests = [
     test_grid_threshold_optimizer_returns_bounded_threshold,
     test_calibration_config_resolve_substitutes_string_params,
     test_calibration_builder_done_raises_without_any_func,
+    test_run_model_raises_when_arch_cannot_accept_calibration_config,
     test_run_model_injects_resolved_prediction_calibration_config,
     test_run_model_no_injection_when_calibration_not_set,
     test_run_model_no_injection_when_both_flags_false,
