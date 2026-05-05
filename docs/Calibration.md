@@ -148,14 +148,16 @@ The two protocols are independent. You can mix Limen's built-in calibrator with 
 
 ## What Gets Added to Results
 
-When calibration is configured and at least one of `use_calibration`/`use_threshold` is `True`, the model results will include two extra keys:
+When calibration is configured, `evaluate()` always includes these two keys so the experiment log schema stays stable across rounds (e.g. when `use_calibration`/`use_threshold` are searched as `[True, False]`):
 
 | Key | Type | Meaning |
 |---|---|---|
-| `optimal_threshold` | `float` | the threshold chosen by the optimizer (or `0.5` if only calibration is configured) |
-| `val_score` | `float` or `None` | the metric score at that threshold; `None` when no threshold function is set |
+| `optimal_threshold` | `float` or `None` | the threshold chosen by the optimizer (`None` when calibration is off for this round) |
+| `val_score` | `float` or `None` | the metric score at that threshold; `None` when no threshold function ran |
 
 These appear in the experiment log alongside the standard binary metrics and are accessible in `Sensor.results` after promotion.
+
+NOTE: `predict()` only includes these keys when calibration is active for the round. `evaluate()` always emits them to ensure every row in the CSV has a consistent schema.
 
 `_preds` are computed using `optimal_threshold`: a test observation is predicted positive when its probability is at or above the threshold.
 
