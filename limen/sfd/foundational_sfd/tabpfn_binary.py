@@ -1,6 +1,7 @@
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.data import HistoricalData
+from limen.experiment import MLManifest
 from limen.experiment import Manifest
 from limen.indicators import bollinger_bands
 from limen.indicators import bollinger_position
@@ -37,7 +38,7 @@ def params() -> dict[str, list]:
 
 def manifest() -> Manifest:
 
-    return (Manifest()
+    return (MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}

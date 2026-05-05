@@ -2,7 +2,9 @@ from limen.data import HistoricalData
 from limen.log.log import Log
 from limen.trading import Account
 from limen.backtest.backtest_sequential import BacktestSequential
+from limen.experiment import MLManifest
 from limen.experiment import Manifest
+from limen.experiment import RuleBasedManifest
 from limen.experiment import ReconstructionError
 from limen.experiment import Sensor
 from limen.experiment import Trainer
@@ -26,9 +28,11 @@ __all__ = [
     'Cohort',
     'HistoricalData',
     'Log',
+    'MLManifest',
     'Manifest',
     'ReconstructionError',
     'RegimeDiversifiedOpinionPools',
+    'RuleBasedManifest',
     'Sensor',
     'Trainer',
     'UniversalExperimentLoop',
