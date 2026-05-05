@@ -53,7 +53,7 @@ def manifest():
 
 `sklearn_probability_calibrator` wraps sklearn's `CalibratedClassifierCV` with `FrozenEstimator` to avoid the deprecation that came with sklearn 1.6. It accepts `method='isotonic'` (default) or `method='sigmoid'`.
 
-`grid_threshold_optimizer` sweeps a bounded range of thresholds, scores each with the chosen metric, and returns the best one. `balanced_metric` is Limen's built-in geometric mean of precision and recall, appropriate for imbalanced binary targets.
+`grid_threshold_optimizer` sweeps a bounded range of thresholds, scores each with the chosen metric, and returns the best one. `balanced_metric` is Limen's built-in `precision * sqrt(trade_rate)` score, which balances signal quality with trade frequency — appropriate when both accuracy and trading activity matter.
 
 ## Threshold-Only Path
 
