@@ -821,3 +821,13 @@ Note: add all new changelog entries to the bottom of this file.
 - Remove `with_target_function()`, old `with_target_label()` builder pattern (`TargetBuilder`, `FittedTransformBuilder`, `target_transforms`), and `set_target_column()`
 - Add `docs/Targets.md` documenting all six built-in target classes and the custom target class convention
 - Remove `limen.sfd.loop` temporary integration package (superseded by RFC-1005 YAML compiler)
+
+## v3.0.2 on 30th of April, 2026
+
+- Add `limen.calibration` submodule with sklearn-based probability calibration and vectorised grid threshold optimisation utilities
+- Add `CalibrationBuilder` fluent API to `Manifest` for declarative calibration configuration; supports four modes — raw model, calibration-only, threshold-only, or both — controlled by per-round flags
+- Add explicit callable protocols for plug-and-play custom calibrators and threshold optimisers
+- Add calibration support to `LogRegBinary` and `TabPFNBinary` reference architectures; results include `optimal_threshold` and `val_score` when calibration is configured
+- Remove old calibration utilities from `limen.transforms` (superseded by `limen.calibration`)
+- Fix CSV column alignment when rounds return variable result keys; fix graceful shutdown on SIGINT during a round
+

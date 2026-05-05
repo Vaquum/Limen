@@ -44,8 +44,11 @@ It currently combines:
 - indicators such as `roc`, `atr`, `ppo`, and `wilder_rsi`
 - features such as `vwap` and `kline_imbalance`
 - a fitted quantile-based target
-- `LogRegScaler`
+- scaler selection from params (`logreg`, `robust`, `rank_gauss`)
 - the `LogRegBinary` reference model
+- `CalibrationBuilder` with `sklearn_probability_calibrator` and `grid_threshold_optimizer`
+
+The calibration search space includes `use_calibration`, `use_threshold`, `cal_method`, `threshold_min`, `threshold_max`, and `threshold_step`, giving a full grid of calibration modes within a single experiment run.
 
 On a live local smoke run over the bundled test dataset in this repo, it prepared:
 
@@ -85,6 +88,8 @@ It requires `xgboost`.
 ## `tabpfn_binary`
 
 `tabpfn_binary` is an optional packaged SFD. It only becomes available when `tabpfn` is installed.
+
+It uses `CalibrationBuilder` with the same probability calibration and threshold optimisation wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.
 
 That optional status matters at import time and in local documentation examples. In a live local smoke pass in this repo, it was unavailable because `tabpfn` was not installed.
 

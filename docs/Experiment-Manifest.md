@@ -570,6 +570,61 @@ then manifest execution will automatically pull `C`, `class_weight`, `max_iter`,
 
 Required model parameters with no defaults must be present in the round params or Limen will raise.
 
+## Calibration
+
+### `with_calibration()`
+
+Opens a `CalibrationBuilder` for configuring probability calibration and threshold optimisation. Call `.done()` to finalize and return to the manifest.
+
+```python
+from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
+from limen.metrics.balanced_metric import balanced_metric
+
+.with_reference_architecture(logreg_binary)
+.with_calibration()
+.probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
+.threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
+.done()
+```
+
+### `CalibrationBuilder.probability_calibration(func, **params)`
+
+Configure the probability calibration step. `func` receives `(clf, x_val, y_val, **params)` and must return a fitted object with `predict_proba()`. Extra keyword arguments are forwarded to `func`; string values matching `round_params` keys are substituted at runtime.
+
+### `CalibrationBuilder.threshold_function(func, **params)`
+
+Configure the threshold optimisation step. `func` receives `(y_val, val_proba, **params)` and must return `(threshold, score)`. Extra keyword arguments are forwarded the same way.
+
+### `CalibrationBuilder.done()`
+
+Finalises the config and returns the manifest. Raises `ValueError` if neither `probability_calibration()` nor `threshold_function()` was called first.
+
+### Four modes
+
+The two optional steps give a 2×2 grid of calibration modes, controlled by per-round flags:
+
+| `use_calibration` | `use_threshold` | Behavior |
+|---|---|---|
+| True | True | calibrate → optimize threshold |
+| True | False | calibrate → decide at 0.5 |
+| False | True | raw probabilities → optimize threshold |
+| False | False | no calibration injected |
+
+Both flags default to `True`. Add `'use_calibration': [True, False]` and `'use_threshold': [True, False]` to `params()` to compare all four modes within a single experiment.
+
+### String param resolution
+
+Calibration params support the same resolution convention as the rest of the manifest. String values are looked up from `round_params` at runtime; non-string values pass through unchanged:
+
+```python
+.probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
+.threshold_function(func=grid_threshold_optimizer,
+                    metric=balanced_metric,          # callable — passes through unchanged
+                    threshold_min='threshold_min')   # string → round_params lookup
+```
+
+See [Calibration](Calibration.md) for the full reference including custom calibrators and threshold optimisers.
+
 ## Feature Ablation
 
 ### `set_feature_ablation(drop_count_key='feature_drop_count', seed_key='feature_drop_seed')`
@@ -748,6 +803,7 @@ That pattern is central to [Trainer](Trainer.md).
 ## Read Next
 
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run a manifest-driven SFD.
+- Continue to [Calibration](Calibration.md) for the full calibration reference including custom calibrators, threshold optimisers, and all four calibration modes.
 - Continue to [Historical Data](Historical-Data.md) if you need the data surfaces a manifest can point at.
 - Continue to [Data Bars](Data-Bars.md) if bar formation is part of the experiment design.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.

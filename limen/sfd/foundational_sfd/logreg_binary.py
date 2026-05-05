@@ -1,3 +1,7 @@
+from limen.calibration import grid_threshold_optimizer
+from limen.calibration import sklearn_probability_calibrator
+from limen.data import HistoricalData
+from limen.experiment import Manifest
 from limen.features import fractional_diff
 from limen.features import kline_imbalance
 from limen.features import vwap
@@ -5,13 +9,12 @@ from limen.indicators import atr
 from limen.indicators import ppo
 from limen.indicators import roc
 from limen.indicators import wilder_rsi
-from limen.targets import QuantileBinaryTarget
-from limen.experiment import Manifest
+from limen.metrics.balanced_metric import balanced_metric
 from limen.sfd.reference_architecture import logreg_binary
-from limen.data import HistoricalData
+from limen.targets import QuantileBinaryTarget
 
 
-def params():
+def params() -> dict:
 
     return {
         # data prep parameters
@@ -24,6 +27,13 @@ def params():
         'scaler_type': ['logreg', 'robust', 'rank_gauss'],
         # feature perturbation
         'feature_groups': ['all', 'momentum', 'momentum|volatility'],
+        # calibration parameters
+        'use_calibration': [True, False],
+        'use_threshold': [True, False],
+        'cal_method': ['isotonic', 'sigmoid'],
+        'threshold_min': [0.20, 0.25, 0.30],
+        'threshold_max': [0.60, 0.65, 0.70],
+        'threshold_step': [0.05, 0.10],
         # classifier parameters
         'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
         'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
@@ -33,7 +43,7 @@ def params():
     }
 
 
-def manifest():
+def manifest() -> Manifest:
 
     return (Manifest()
         .set_data_source(
@@ -67,4 +77,12 @@ def manifest():
         .set_feature_ablation()
 
         .with_reference_architecture(logreg_binary)
+
+        .with_calibration()
+        .probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
+        .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric,
+                            threshold_min='threshold_min',
+                            threshold_max='threshold_max',
+                            threshold_step='threshold_step')
+        .done()
     )

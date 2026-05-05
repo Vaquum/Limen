@@ -393,6 +393,11 @@ class UniversalExperimentLoop:
         last_completed_round = None
         results_accumulator: list[dict[str, Any]] = []
 
+        csv_header: list[str] | None = None
+        if csv_path.exists() and csv_path.stat().st_size > 0:
+            with csv_path.open('r', newline='') as f:
+                csv_header = next(csv.reader(f), None)
+
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
             current_round = round_params['_id']
 
@@ -422,12 +427,31 @@ class UniversalExperimentLoop:
             if context_params is not None:
                 sfd_params.update(context_params)
 
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter('always')
-                data_dict = self.prep(self.data, round_params=sfd_params)
-                round_results = self.model(
-                    data=data_dict, round_params=sfd_params,
-                )
+            try:
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter('always')
+                    data_dict = self.prep(self.data, round_params=sfd_params)
+                    round_results = self.model(
+                        data=data_dict, round_params=sfd_params,
+                    )
+            except KeyboardInterrupt:
+                if self._shutdown_requested:
+                    logger.info(
+                        'Round %d interrupted by shutdown — checkpointing at round %d',
+                        current_round,
+                        last_completed_round if last_completed_round is not None else -1,
+                    )
+                    if self._experiment_dir and last_completed_round is not None:
+                        msq.set_state(last_msq_state)
+                        self._checkpoint(
+                            msq, domain, self._experiment_dir, checkpoint_manager,
+                            last_completed_round, n_permutations,
+                            strategy_type=strategy_type, content_hash=content_hash,
+                            feedback_controller=feedback_controller,
+                            pruning_strategies=self._pruning_strategies,
+                        )
+                    break
+                raise
 
             round_results['_warnings'] = (
                 json.dumps([str(w.message) for w in caught])
@@ -465,8 +489,18 @@ class UniversalExperimentLoop:
             with csv_path.open('a', newline='') as f:
                 writer = csv.writer(f)
                 if write_header:
-                    writer.writerow(round_results.keys())
-                writer.writerow(round_results.values())
+                    csv_header = list(round_results.keys())
+                    writer.writerow(csv_header)
+                writer.writerow([
+                    '' if (v := round_results.get(col)) is None else v
+                    for col in csv_header
+                ])
+                extra_keys = set(round_results) - set(csv_header)
+                if extra_keys:
+                    logger.warning(
+                        'Round %d result keys not in CSV header — values dropped: %s',
+                        current_round, sorted(extra_keys),
+                    )
 
             if round_data_path:
                 self._append_round_data(

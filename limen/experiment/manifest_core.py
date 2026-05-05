@@ -7,6 +7,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from limen.calibration.pipeline import CalibratorProtocol
+from limen.calibration.pipeline import ThresholdOptimizerProtocol
+
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
 
@@ -58,6 +61,97 @@ class TargetClassConfig:
     target_class: type
     fit_params: dict[str, ParamValue] = field(default_factory=dict)
     transform_params: dict[str, ParamValue] = field(default_factory=dict)
+
+
+@dataclass
+class CalibrationConfig:
+
+    '''Stores probability calibration and threshold function references with their params.'''
+
+    calibration_func: CalibratorProtocol | None = None
+    calibration_params: dict[str, Any] = field(default_factory=dict)
+    threshold_func: ThresholdOptimizerProtocol | None = None
+    threshold_params: dict[str, Any] = field(default_factory=dict)
+
+    def resolve(self, round_params: dict[str, Any]) -> 'CalibrationConfig':
+
+        '''Return a new config with string params resolved from round_params.'''
+
+        return CalibrationConfig(
+            calibration_func=self.calibration_func,
+            calibration_params=_resolve_params(self.calibration_params, round_params),
+            threshold_func=self.threshold_func,
+            threshold_params=_resolve_params(self.threshold_params, round_params),
+        )
+
+
+class CalibrationBuilder:
+
+    '''Fluent builder for calibration configuration.'''
+
+    def __init__(self, manifest: 'Manifest') -> None:
+
+        self._manifest = manifest
+        self._calibration_func: CalibratorProtocol | None = None
+        self._calibration_params: dict[str, Any] = {}
+        self._threshold_func: ThresholdOptimizerProtocol | None = None
+        self._threshold_params: dict[str, Any] = {}
+
+    def probability_calibration(self, func: CalibratorProtocol, **params: Any) -> 'CalibrationBuilder':
+
+        '''
+        Configure the probability calibration function.
+
+        Args:
+            func (Callable): Calibration function with signature (clf, x_val, y_val, **params) -> fitted model
+            **params: Extra keyword arguments forwarded to func; string values matching round_params keys are resolved at runtime
+
+        Returns:
+            CalibrationBuilder: Self for method chaining
+        '''
+
+        self._calibration_func = func
+        self._calibration_params = params
+        return self
+
+    def threshold_function(self, func: ThresholdOptimizerProtocol, **params: Any) -> 'CalibrationBuilder':
+
+        '''
+        Configure the threshold optimisation function.
+
+        Args:
+            func (Callable): Threshold function with signature (y_val, val_proba, **params) -> tuple[float, float]
+            **params: Extra keyword arguments forwarded to func; string values matching round_params keys are resolved at runtime
+
+        Returns:
+            CalibrationBuilder: Self for method chaining
+        '''
+
+        self._threshold_func = func
+        self._threshold_params = params
+        return self
+
+    def done(self) -> 'Manifest':
+
+        '''
+        Finalise calibration configuration and return the manifest.
+
+        Returns:
+            Manifest: The parent manifest with prediction_calibration_config set
+
+        Raises:
+            ValueError: If neither probability_calibration() nor threshold_function() was called before done()
+        '''
+
+        if self._calibration_func is None and self._threshold_func is None:
+            raise ValueError('at least one of probability_calibration() or threshold_function() must be called before done()')
+        self._manifest.prediction_calibration_config = CalibrationConfig(
+            calibration_func=self._calibration_func,
+            calibration_params=dict(self._calibration_params),
+            threshold_func=self._threshold_func,
+            threshold_params=dict(self._threshold_params),
+        )
+        return self._manifest
 
 
 @dataclass
@@ -140,6 +234,7 @@ class Manifest:
     architecture_function: Callable = None
     architecture_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
+    prediction_calibration_config: CalibrationConfig | None = None
     _rule_based: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
@@ -450,6 +545,19 @@ class Manifest:
 
         return self
 
+    def with_calibration(self) -> 'CalibrationBuilder':
+
+        '''
+        Begin fluent calibration configuration.
+
+        Returns:
+            CalibrationBuilder: Builder for configuring probability calibration and threshold optimisation
+
+        NOTE: Call .probability_calibration(), optionally .threshold_function(), then .done() to finalise.
+        '''
+
+        return CalibrationBuilder(self)
+
     def with_strategy(self, conditions: list[dict], entry: str) -> 'Manifest':
 
         '''
@@ -733,9 +841,15 @@ class Manifest:
 
         sig = inspect.signature(self.architecture_function)
         model_kwargs: dict[str, Any] = {}
+        has_var_keyword = any(
+            p.kind == inspect.Parameter.VAR_KEYWORD
+            for p in sig.parameters.values()
+        )
 
         for param_name, param_obj in sig.parameters.items():
             if param_name == 'data':
+                continue
+            if param_obj.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
                 continue
 
             if param_name in round_params:
@@ -747,6 +861,11 @@ class Manifest:
                     f"Missing required parameter '{param_name}' for model function. "
                     'It must be provided in round_params.'
                 )
+
+        if has_var_keyword:
+            for k, v in round_params.items():
+                if not k.startswith('_') and k not in model_kwargs:
+                    model_kwargs[k] = v
 
         return model_kwargs
 
@@ -773,6 +892,32 @@ class Manifest:
         '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
+        if self.prediction_calibration_config is not None:
+            use_calibration = round_params.get('use_calibration', True)
+            use_threshold = round_params.get('use_threshold', True)
+            if use_calibration or use_threshold:
+                arch_sig = inspect.signature(self.architecture_function)
+                accepts_config = (
+                    'prediction_calibration_config' in arch_sig.parameters
+                    or any(
+                        p.kind == inspect.Parameter.VAR_KEYWORD
+                        for p in arch_sig.parameters.values()
+                    )
+                )
+                if not accepts_config:
+                    raise ValueError(
+                        'Calibration is configured but the architecture function does not '
+                        'accept `prediction_calibration_config`. Add it as a named parameter '
+                        'or use **kwargs.'
+                    )
+                resolved = self.prediction_calibration_config.resolve(round_params)
+                config = CalibrationConfig(
+                    calibration_func=resolved.calibration_func if use_calibration else None,
+                    calibration_params=resolved.calibration_params,
+                    threshold_func=resolved.threshold_func if use_threshold else None,
+                    threshold_params=resolved.threshold_params,
+                )
+                model_kwargs['prediction_calibration_config'] = config
         round_results = self.architecture_function(data, **model_kwargs)
 
         return round_results
