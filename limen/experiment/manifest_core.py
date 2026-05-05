@@ -1341,24 +1341,21 @@ def _align_split_columns(split_data: list[pl.DataFrame]) -> list[pl.DataFrame]:
 
 
 def _finalize_to_data_dict(
-        manifest: Manifest,
+        manifest: 'MLManifest',
         split_data: list[pl.DataFrame],
         all_datetimes: list,
         fitted_params: dict[str, Any],
         round_params: dict[str, Any],
-        price_data_for_backtest: pl.DataFrame | None = None
+        price_data_for_backtest: pl.DataFrame | None = None,
 ) -> dict:
 
-    # Validate all splits have datetime column
     for i, split_df in enumerate(split_data):
         assert 'datetime' in split_df.columns, f"Split {i} missing 'datetime' column"
 
-    # Ensure target_column is last column in all splits
     if manifest.target_column:
         for i, split_df in enumerate(split_data):
             cols = list(split_df.columns)
             if manifest.target_column in cols:
-                # Move target_column to end
                 cols.remove(manifest.target_column)
                 cols.append(manifest.target_column)
                 split_data[i] = split_df.select(cols)
@@ -1369,7 +1366,6 @@ def _finalize_to_data_dict(
 
     data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
 
-    # Add fitted parameters to data_dict
     for param_name, param_value in fitted_params.items():
         data_dict[param_name] = param_value
 
@@ -1378,7 +1374,6 @@ def _finalize_to_data_dict(
     if price_data_for_backtest is not None:
         data_dict['price_data_for_backtest'] = price_data_for_backtest
 
-    # Apply data_dict extension if configured
     if manifest.data_dict_extension:
         data_dict = manifest.data_dict_extension(
             data_dict=data_dict,
