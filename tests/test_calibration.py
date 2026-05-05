@@ -117,14 +117,14 @@ def test_run_model_injects_resolved_prediction_calibration_config() -> None:
 def test_run_model_no_injection_when_calibration_not_set() -> None:
     received = {}
 
-    def mock_arch(data: dict) -> dict:
-        received['kwargs'] = {}
+    def mock_arch(data: dict, **kwargs) -> dict:
+        received['kwargs'] = kwargs
         return {}
 
     m = Manifest().with_reference_architecture(mock_arch)
     m.run_model({}, {})
 
-    assert 'prediction_calibration_config' not in received.get('kwargs', {})
+    assert 'prediction_calibration_config' not in received['kwargs']
 
 
 def test_run_model_no_injection_when_both_flags_false() -> None:
