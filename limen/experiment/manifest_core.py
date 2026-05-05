@@ -841,6 +841,10 @@ class Manifest:
 
         sig = inspect.signature(self.architecture_function)
         model_kwargs: dict[str, Any] = {}
+        has_var_keyword = any(
+            p.kind == inspect.Parameter.VAR_KEYWORD
+            for p in sig.parameters.values()
+        )
 
         for param_name, param_obj in sig.parameters.items():
             if param_name == 'data':
@@ -857,6 +861,11 @@ class Manifest:
                     f"Missing required parameter '{param_name}' for model function. "
                     'It must be provided in round_params.'
                 )
+
+        if has_var_keyword:
+            for k, v in round_params.items():
+                if not k.startswith('_') and k not in model_kwargs:
+                    model_kwargs[k] = v
 
         return model_kwargs
 
