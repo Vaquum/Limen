@@ -896,6 +896,20 @@ class Manifest:
             use_calibration = round_params.get('use_calibration', True)
             use_threshold = round_params.get('use_threshold', True)
             if use_calibration or use_threshold:
+                arch_sig = inspect.signature(self.architecture_function)
+                accepts_config = (
+                    'prediction_calibration_config' in arch_sig.parameters
+                    or any(
+                        p.kind == inspect.Parameter.VAR_KEYWORD
+                        for p in arch_sig.parameters.values()
+                    )
+                )
+                if not accepts_config:
+                    raise ValueError(
+                        'Calibration is configured but the architecture function does not '
+                        'accept `prediction_calibration_config`. Add it as a named parameter '
+                        'or use **kwargs.'
+                    )
                 resolved = self.prediction_calibration_config.resolve(round_params)
                 config = CalibrationConfig(
                     calibration_func=resolved.calibration_func if use_calibration else None,
