@@ -8,6 +8,7 @@ from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment.manifest_core import CalibrationBuilder
 from limen.experiment.manifest_core import CalibrationConfig
+from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.metrics.balanced_metric import balanced_metric
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
@@ -85,7 +86,7 @@ def test_calibration_config_resolve_substitutes_string_params() -> None:
 
 
 def test_calibration_builder_done_raises_without_any_func() -> None:
-    builder = CalibrationBuilder(Manifest())
+    builder = CalibrationBuilder(MLManifest())
     try:
         builder.done()
         assert False, 'expected ValueError'
@@ -97,7 +98,7 @@ def test_run_model_raises_when_arch_cannot_accept_calibration_config() -> None:
     def mock_arch(data: dict) -> dict:
         return {}
 
-    m = (Manifest()
+    m = (MLManifest()
          .with_reference_architecture(mock_arch)
          .with_calibration()
          .threshold_function(func=grid_threshold_optimizer)
@@ -117,7 +118,7 @@ def test_run_model_injects_resolved_prediction_calibration_config() -> None:
         received['config'] = prediction_calibration_config
         return {}
 
-    m = (Manifest()
+    m = (MLManifest()
          .with_reference_architecture(mock_arch)
          .with_calibration()
          .probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
@@ -166,7 +167,7 @@ def test_run_model_no_injection_when_both_flags_false() -> None:
         received['config'] = prediction_calibration_config
         return {}
 
-    m = (Manifest()
+    m = (MLManifest()
          .with_reference_architecture(mock_arch)
          .with_calibration()
          .probability_calibration(func=sklearn_probability_calibrator)
@@ -185,7 +186,7 @@ def test_run_model_masks_calibration_func_when_use_calibration_false() -> None:
         received['config'] = prediction_calibration_config
         return {}
 
-    m = (Manifest()
+    m = (MLManifest()
          .with_reference_architecture(mock_arch)
          .with_calibration()
          .probability_calibration(func=sklearn_probability_calibrator)
@@ -206,7 +207,7 @@ def test_run_model_masks_threshold_func_when_use_threshold_false() -> None:
         received['config'] = prediction_calibration_config
         return {}
 
-    m = (Manifest()
+    m = (MLManifest()
          .with_reference_architecture(mock_arch)
          .with_calibration()
          .probability_calibration(func=sklearn_probability_calibrator)

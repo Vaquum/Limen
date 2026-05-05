@@ -1,14 +1,14 @@
 import polars as pl
 
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.experiment.manifest_core import TransformEntry
 from limen.targets import RandomBinaryTarget
 from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
-def _make_manifest_with_groups() -> Manifest:
+def _make_manifest_with_groups() -> MLManifest:
 
-    return (Manifest()
+    return (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 500}
@@ -30,9 +30,9 @@ def _make_manifest_with_groups() -> Manifest:
     )
 
 
-def _make_manifest_with_include_if() -> Manifest:
+def _make_manifest_with_include_if() -> MLManifest:
 
-    return (Manifest()
+    return (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 500}
@@ -56,7 +56,7 @@ def _prepare(manifest, round_params=None):
 
 def test_add_indicator_creates_transform_entry():
 
-    manifest = Manifest().add_indicator(lambda x: x, group='momentum', period=14)
+    manifest = MLManifest().add_indicator(lambda x: x, group='momentum', period=14)
     assert len(manifest.feature_transforms) == 1
     entry = manifest.feature_transforms[0]
     assert isinstance(entry, TransformEntry)
@@ -96,7 +96,7 @@ def test_feature_group_absent_includes_all():
 
 def test_ungrouped_features_always_included():
 
-    manifest = (Manifest()
+    manifest = (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 500}
@@ -119,7 +119,7 @@ def test_ungrouped_features_always_included():
 
 def test_combined_group_and_include_if():
 
-    manifest = (Manifest()
+    manifest = (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 500}

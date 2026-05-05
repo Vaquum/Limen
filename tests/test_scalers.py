@@ -1,7 +1,7 @@
 import polars as pl
 import numpy as np
 
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.scalers.rank_gauss_scaler import RankGaussScaler
 from limen.scalers.registry import SCALER_REGISTRY
 from limen.scalers.robust_scaler import RobustScaler
@@ -144,9 +144,9 @@ def test_robust_scaler_all_null_column():
     assert 'normal' in scaler.medians
 
 
-def _make_manifest_with_scaler_from_params() -> Manifest:
+def _make_manifest_with_scaler_from_params() -> MLManifest:
 
-    return (Manifest()
+    return (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 500}

@@ -1,7 +1,7 @@
 import numpy as np
 import polars as pl
 
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.features.fractional_diff import _get_weights_ffd
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
@@ -163,7 +163,7 @@ def test_find_min_d_small_data_skips():
 
 def test_fractional_diff_manifest_integration():
 
-    manifest = (Manifest()
+    manifest = (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 500}
