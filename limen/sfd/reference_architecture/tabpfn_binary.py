@@ -74,11 +74,13 @@ class TabPFNBinary(ReferenceModel):
                 also includes 'optimal_threshold' and 'val_score'
         '''
 
-        if self.prediction_calibration_config is not None:
-            return apply_calibrated_predict(self.model, self.prediction_calibration_config, data)
+        arrays = data_dict_to_numpy(data, ['x_val', 'y_val', 'x_test'])
 
-        y_test_proba = self.model.predict_proba(data['x_test'])[:, 1]
-        y_pred = self.model.predict(data['x_test']).astype(np.int8)
+        if self.prediction_calibration_config is not None:
+            return apply_calibrated_predict(self.model, self.prediction_calibration_config, arrays)
+
+        y_test_proba = self.model.predict_proba(arrays['x_test'])[:, 1]
+        y_pred = self.model.predict(arrays['x_test']).astype(np.int8)
         return {'_preds': y_pred, '_probs': y_test_proba}
 
 

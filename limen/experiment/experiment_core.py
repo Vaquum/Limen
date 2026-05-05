@@ -434,7 +434,7 @@ class UniversalExperimentLoop:
                     round_results = self.model(
                         data=data_dict, round_params=sfd_params,
                     )
-            except Exception:
+            except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
                         'Round %d interrupted by shutdown — checkpointing at round %d',
@@ -495,6 +495,12 @@ class UniversalExperimentLoop:
                     '' if (v := round_results.get(col)) is None else v
                     for col in csv_header
                 ])
+                extra_keys = set(round_results) - set(csv_header)
+                if extra_keys:
+                    logger.warning(
+                        'Round %d result keys not in CSV header — values dropped: %s',
+                        current_round, sorted(extra_keys),
+                    )
 
             if round_data_path:
                 self._append_round_data(

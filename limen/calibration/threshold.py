@@ -31,10 +31,12 @@ def grid_threshold_optimizer(y_val: np.ndarray,
 
     thresholds = np.arange(threshold_min, threshold_max + threshold_step, threshold_step)
     preds_matrix = (val_proba[:, None] >= thresholds).astype(np.int8)
-    scores = np.array([metric(y_val, preds_matrix[:, i]) for i in range(len(thresholds))])
-
-    best_idx = int(np.argmax(scores))
-    if scores[best_idx] <= 0.0:
+    valid_mask = preds_matrix.sum(axis=0) > 0
+    if not valid_mask.any():
         return default_threshold, 0.0
 
-    return float(thresholds[best_idx]), float(scores[best_idx])
+    valid_thresholds = thresholds[valid_mask]
+    valid_preds = preds_matrix[:, valid_mask]
+    scores = np.array([metric(y_val, valid_preds[:, i]) for i in range(len(valid_thresholds))])
+    best_idx = int(np.argmax(scores))
+    return float(valid_thresholds[best_idx]), float(scores[best_idx])
