@@ -839,3 +839,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `docs/TechnicalDebt.md` with TD-001 documenting residual `import_module` fallback hardening needed before live-trade deploy
 - Update `docs/Trainer.md` to describe the two-stage SFD load, path-traversal validator, and trust contract on `experiment_dir`
 - Add 3 test groups in `tests/test_trainer.py` pinning the SFD loader contract
+
+## v3.0.4 on 6th of May, 2026
+
+- Split the manifest class into a shared base with separate ML and rule-based subclasses; all foundational SFDs retain the same uniform interface
+- `Manifest.prepare_data()` now raises `NotImplementedError` — replace any direct `Manifest()` usage for data preparation with `MLManifest()` (ML pipelines) or `RuleBasedManifest()` (rule-based pipelines)

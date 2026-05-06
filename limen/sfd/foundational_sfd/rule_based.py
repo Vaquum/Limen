@@ -1,5 +1,6 @@
 from limen.data import HistoricalData
 from limen.experiment import Manifest
+from limen.experiment import RuleBasedManifest
 from limen.indicators import ema
 from limen.indicators import wilder_rsi
 from limen.sfd.reference_architecture.rule_based import rule_based
@@ -41,7 +42,7 @@ def params() -> dict:
 
 def manifest() -> Manifest:
 
-    return (Manifest()
+    return (RuleBasedManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},

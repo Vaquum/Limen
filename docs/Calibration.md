@@ -29,13 +29,13 @@ The minimum setup: add `with_calibration()` to the manifest.
 
 ```python
 from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.metrics.balanced_metric import balanced_metric
 from limen.sfd.reference_architecture import logreg_binary
 
 def manifest():
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(...)
         .set_split_config(8, 1, 2)
         .add_indicator(...)
@@ -82,7 +82,7 @@ def params():
 
 def manifest():
     return (
-        Manifest()
+        MLManifest()
         ...
         .with_calibration()
         .probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
@@ -177,7 +177,7 @@ The optimizer returns the `default_threshold` with score `0.0` when every candid
 
 - `limen/calibration/` — `sklearn_probability_calibrator`, `grid_threshold_optimizer`, `apply_calibrated_predict`, `CalibratorProtocol`, `ThresholdOptimizerProtocol`
 - `limen.experiment.CalibrationConfig` — the resolved config dataclass injected into the architecture
-- `limen.experiment.CalibrationBuilder` — the fluent builder returned by `Manifest.with_calibration()`
+- `CalibrationBuilder` — the fluent builder returned by `MLManifest.with_calibration()`; not a public import, obtain it only via the fluent chain
 
 ## Read Next
 

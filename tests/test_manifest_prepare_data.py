@@ -2,16 +2,16 @@ import numpy as np
 import polars as pl
 
 from limen.data import HistoricalData
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from limen.targets import RandomBinaryTarget
 from limen.targets import ThresholdBinaryTarget
 from tests.utils.historical_data import get_cached_spot_klines_2h
 
 
-def _make_manifest() -> Manifest:
+def _make_manifest() -> MLManifest:
 
-    return (Manifest()
+    return (MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
@@ -29,16 +29,16 @@ def _make_manifest() -> Manifest:
     )
 
 
-def _prepare_data_with_manifest(manifest: Manifest) -> dict:
+def _prepare_data_with_manifest(manifest: MLManifest) -> dict:
 
     raw_data = manifest.fetch_test_data()
     round_params = {'bar_type': 'base'}
     return manifest.prepare_data(raw_data, round_params)
 
 
-def _make_shifted_target_manifest() -> Manifest:
+def _make_shifted_target_manifest() -> MLManifest:
 
-    return (Manifest()
+    return (MLManifest()
         .set_split_config(3, 1, 4)
         .add_indicator(lambda df: df.with_columns(
             (pl.col('close') - pl.col('open')).alias('close_minus_open')
@@ -214,7 +214,7 @@ def test_unknown_override_key_raises() -> None:
 
 def test_split_validation_rejects_invalid() -> None:
 
-    manifest = Manifest()
+    manifest = MLManifest()
     try:
         manifest.set_split_config(0, 1, 1)
         assert False, 'Expected ValueError'
@@ -236,7 +236,7 @@ def test_column_consistency_drops_mismatched_columns() -> None:
             return data.with_columns(pl.lit(1.0).alias('big_split_col'))
         return data
 
-    manifest = (Manifest()
+    manifest = (MLManifest()
         .set_test_data_source(
             method=get_cached_spot_klines_2h,
             params={'n_rows': 5000}

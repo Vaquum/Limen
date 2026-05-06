@@ -1,7 +1,7 @@
 import polars as pl
 import numpy as np
 from datetime import datetime, timedelta
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.data.utils import random_slice
 from limen.targets import IdentityTarget
 
@@ -15,7 +15,7 @@ def test_pre_split_random_selector():
         'target': np.random.randn(1000)
     })
 
-    manifest = (Manifest()
+    manifest = (MLManifest()
         .set_pre_split_data_selector(
             random_slice,
             rows='random_slice_size',

@@ -89,8 +89,13 @@ class CalibrationBuilder:
 
     '''Fluent builder for calibration configuration.'''
 
-    def __init__(self, manifest: 'Manifest') -> None:
+    def __init__(self, manifest: 'MLManifest') -> None:
 
+        if not isinstance(manifest, MLManifest):
+            raise ValueError(
+                f'CalibrationBuilder requires an MLManifest, got {type(manifest).__name__}. '
+                'Use MLManifest().with_calibration() to configure calibration.'
+            )
         self._manifest = manifest
         self._calibration_func: CalibratorProtocol | None = None
         self._calibration_params: dict[str, Any] = {}
@@ -131,13 +136,13 @@ class CalibrationBuilder:
         self._threshold_params = params
         return self
 
-    def done(self) -> 'Manifest':
+    def done(self) -> 'MLManifest':
 
         '''
         Finalise calibration configuration and return the manifest.
 
         Returns:
-            Manifest: The parent manifest with prediction_calibration_config set
+            MLManifest: The parent manifest with prediction_calibration_config set
 
         Raises:
             ValueError: If neither probability_calibration() nor threshold_function() was called before done()
@@ -216,7 +221,7 @@ class DataSourceResolver:
 @dataclass
 class Manifest:
 
-    '''Defines manifest for Loop experiments.'''
+    '''Base manifest with shared data pipeline configuration for Loop experiments.'''
 
     data_source_config: DataSourceConfig = None
     test_data_source_config: DataSourceConfig = None
@@ -227,15 +232,10 @@ class Manifest:
     feature_transforms: list[TransformEntry] = field(default_factory=list)
     target_column: str | None = None
     target_class_config: TargetClassConfig | None = None
-    scaler: FittedTransformEntry = None
-    ablation_config: AblationConfig | None = None
-    data_dict_extension: Callable = None
 
     architecture_function: Callable = None
     architecture_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
-    prediction_calibration_config: CalibrationConfig | None = None
-    _rule_based: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable,
@@ -434,65 +434,6 @@ class Manifest:
 
         return self
 
-    def set_scaler(self, transform_class: Any, param_name: str = '_scaler') -> 'Manifest':
-
-        '''
-        Set scaler transformation using make_fitted_scaler.
-
-        Args:
-            transform_class: Transform class to use for scaling
-            param_name (str): Parameter name for fitted scaler
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        self.scaler = make_fitted_scaler(param_name, transform_class)
-
-        return self
-
-
-    def set_scaler_from_params(self,
-                               param_name: str = 'scaler_type') -> 'Manifest':
-
-        '''
-        Configure scaler selection from round_params at runtime.
-
-        The scaler class is resolved from the scaler registry using
-        the value of round_params[param_name].
-
-        Args:
-            param_name (str): round_params key that holds the scaler type string
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        def _scaler_factory(data: 'pl.DataFrame',
-                            scaler_type: str = '') -> Any:
-
-            if scaler_type not in SCALER_REGISTRY:
-                if scaler_type == param_name:
-                    raise ValueError(
-                        f"round_params['{param_name}'] is required when using "
-                        f"set_scaler_from_params(). "
-                        f"Available types: {sorted(SCALER_REGISTRY)}"
-                    )
-                raise ValueError(
-                    f"Unknown scaler type '{scaler_type}'. "
-                    f"Available: {sorted(SCALER_REGISTRY)}"
-                )
-            return SCALER_REGISTRY[scaler_type](data)
-
-        self.scaler = (
-            [('_scaler', _scaler_factory, {'scaler_type': param_name})],
-            _apply_fitted_transform,
-            {'fitted_transform': '_scaler'},
-        )
-
-        return self
-
-
     def with_target_label(self,
                           target_name: str,
                           target_class: type,
@@ -543,81 +484,6 @@ class Manifest:
 
         self.architecture_function = architecture_function
 
-        return self
-
-    def with_calibration(self) -> 'CalibrationBuilder':
-
-        '''
-        Begin fluent calibration configuration.
-
-        Returns:
-            CalibrationBuilder: Builder for configuring probability calibration and threshold optimisation
-
-        NOTE: Call .probability_calibration(), optionally .threshold_function(), then .done() to finalise.
-        '''
-
-        return CalibrationBuilder(self)
-
-    def with_strategy(self, conditions: list[dict], entry: str) -> 'Manifest':
-
-        '''
-        Configure rule-based strategy conditions and entry signal.
-
-        Args:
-            conditions (list[dict]): List of predicate and compound operator condition configs
-            entry (str): ID of the condition that produces the per-bar position signal
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        from limen.sfd.rule_based.config import RuleBasedConfig  # local to avoid circular import
-        self._rule_based = RuleBasedConfig(conditions=list(conditions), entry=entry)
-
-        return self
-
-    def set_feature_ablation(self,
-                             drop_count_key: str = 'feature_drop_count',
-                             seed_key: str = 'feature_drop_seed') -> 'Manifest':
-
-        '''
-        Configure random feature ablation (Drop-N).
-
-        Randomly drops N feature columns per permutation using a
-        deterministic seed from round_params. Runs after feature and
-        target transforms in the prepare_data pipeline.
-
-        Args:
-            drop_count_key (str): round_params key for number of columns to drop
-            seed_key (str): round_params key for random seed
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        self.ablation_config = AblationConfig(
-            drop_count_key=drop_count_key,
-            seed_key=seed_key,
-        )
-        return self
-
-
-    def add_to_data_dict(self, func: Callable) -> 'Manifest':
-
-        '''
-        Configure data_dict extension function to add custom entries after data preparation.
-
-        Args:
-            func (Callable): Extension function with signature (data_dict, split_data, round_params, fitted_params) -> dict
-
-        Returns:
-            Manifest: Self for method chaining
-
-        NOTE: The extension function receives the base data_dict and full split DataFrames.
-        It should modify and return the data_dict with any additional custom entries needed by the model.
-        '''
-
-        self.data_dict_extension = func
         return self
 
     def with_params_override(self, **overrides: Any) -> 'Manifest':
@@ -704,117 +570,16 @@ class Manifest:
     ) -> dict:
 
         '''
-        Compute final data dictionary from raw data using manifest configuration.
+        Interface method — implemented by MLManifest and RuleBasedManifest.
 
-        Args:
-            raw_data (pl.DataFrame): Raw input dataset
-            round_params (Dict[str, Any]): Parameter values for current round
-
-        Returns:
-            dict: Final data dictionary ready for model training
+        Raises:
+            NotImplementedError: Always. Construct MLManifest or RuleBasedManifest instead of Manifest directly.
         '''
 
-        if self._rule_based is not None:
-            if self.scaler is not None:
-                raise ValueError(
-                    'Scalers cannot be used with rule-based SFDs — predicates depend on '
-                    'original indicator scales and produce incorrect signals on scaled values.'
-                )
-            if self.ablation_config is not None:
-                raise ValueError(
-                    'Feature ablation cannot be used with rule-based SFDs — predicate '
-                    'columns are derived from specific indicator columns.'
-                )
-
-        if self.pre_split_data_selector:
-            func, base_params = self.pre_split_data_selector
-            resolved = _resolve_params(base_params, round_params)
-            raw_data = func(raw_data, **resolved)
-
-        split_data = split_sequential(raw_data, self.split_config)
-
-        datetime_bar_pairs = [_process_bars(self, split, round_params) for split in split_data]
-        all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
-        split_data = [bar_data for _, bar_data in datetime_bar_pairs]
-
-        price_cols = ['datetime', 'open', 'high', 'low', 'close']
-        test_split = split_data[2]
-        available = [c for c in price_cols if c in test_split.columns]
-        price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
-
-        all_fitted_params = {}
-        columns_to_drop: list[str] | None = None
-        pre_transform_columns = frozenset(split_data[0].columns)
-
-        for i in range(len(split_data)):
-            lazy_data = split_data[i].lazy()
-
-            lazy_data = _apply_feature_transforms(self, lazy_data, round_params)
-
-            data = lazy_data.collect()
-
-            if self.target_class_config is not None:
-                data, all_fitted_params = _apply_class_based_target(
-                    self, data, round_params, all_fitted_params, is_training=(i == 0)
-                )
-
-            if self.ablation_config is not None:
-                data, columns_to_drop = _apply_feature_ablation(
-                    data, self, round_params, columns_to_drop,
-                    pre_transform_columns,
-                )
-
-            data = data.fill_nan(None).drop_nulls()
-
-            data, all_fitted_params = _apply_scaler(
-                self, data, round_params, all_fitted_params, is_training=(i == 0)
-            )
-
-            split_data[i] = data.fill_nan(None).drop_nulls()
-
-        non_empty_splits = [s for s in split_data if s.height > 0]
-        if non_empty_splits:
-            reference_cols = non_empty_splits[0].columns
-
-            if len(non_empty_splits) > 1:
-                common_cols = set(reference_cols)
-                for split in non_empty_splits[1:]:
-                    common_cols &= set(split.columns)
-
-                for i, split in enumerate(split_data):
-                    if split.height == 0:
-                        continue
-                    extra = set(split.columns) - common_cols
-                    if extra:
-                        logger.warning(
-                            'Dropping columns %s from split %d — '
-                            'not present in all splits',
-                            sorted(extra), i,
-                        )
-                        ordered_cols = [c for c in split.columns if c in common_cols]
-                        split_data[i] = split.select(ordered_cols)
-                reference_cols = [c for c in reference_cols if c in common_cols]
-
-            for i, split in enumerate(split_data):
-                if split.height == 0:
-                    missing = set(reference_cols) - set(split.columns)
-                    if missing:
-                        split_data[i] = split.with_columns(
-                            [pl.lit(None).alias(c) for c in reference_cols if c in missing]
-                        ).select(reference_cols)
-                    else:
-                        split_data[i] = split.select(reference_cols)
-
-        if price_data_for_backtest is not None:
-            final_datetimes = split_data[2].select('datetime')
-            price_data_for_backtest = final_datetimes.join(
-                price_data_for_backtest, on='datetime', how='left',
-                maintain_order='left'
-            )
-
-        if self._rule_based is not None:
-            return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
-        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
+        raise NotImplementedError(
+            f'{type(self).__name__} must implement prepare_data(). '
+            'Use MLManifest for ML pipelines or RuleBasedManifest for rule-based pipelines.'
+        )
 
     def resolve_model_kwargs(self, round_params: dict[str, Any]) -> dict[str, Any]:
 
@@ -892,6 +657,204 @@ class Manifest:
         '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
+        return self.architecture_function(data, **model_kwargs)
+
+
+@dataclass
+class MLManifest(Manifest):
+
+    '''Manifest for ML pipelines with scaler, ablation, and calibration support.'''
+
+    scaler: FittedTransformEntry = None
+    ablation_config: AblationConfig | None = None
+    data_dict_extension: Callable = None
+    prediction_calibration_config: CalibrationConfig | None = None
+
+    def set_scaler(self, transform_class: Any, param_name: str = '_scaler') -> 'MLManifest':
+
+        '''
+        Set scaler transformation using make_fitted_scaler.
+
+        Args:
+            transform_class: Transform class to use for scaling
+            param_name (str): Parameter name for fitted scaler
+
+        Returns:
+            MLManifest: Self for method chaining
+        '''
+
+        self.scaler = make_fitted_scaler(param_name, transform_class)
+
+        return self
+
+
+    def set_scaler_from_params(self,
+                               param_name: str = 'scaler_type') -> 'MLManifest':
+
+        '''
+        Configure scaler selection from round_params at runtime.
+
+        The scaler class is resolved from the scaler registry using
+        the value of round_params[param_name].
+
+        Args:
+            param_name (str): round_params key that holds the scaler type string
+
+        Returns:
+            MLManifest: Self for method chaining
+        '''
+
+        def _scaler_factory(data: 'pl.DataFrame',
+                            scaler_type: str = '') -> Any:
+
+            if scaler_type not in SCALER_REGISTRY:
+                if scaler_type == param_name:
+                    raise ValueError(
+                        f"round_params['{param_name}'] is required when using "
+                        f"set_scaler_from_params(). "
+                        f"Available types: {sorted(SCALER_REGISTRY)}"
+                    )
+                raise ValueError(
+                    f"Unknown scaler type '{scaler_type}'. "
+                    f"Available: {sorted(SCALER_REGISTRY)}"
+                )
+            return SCALER_REGISTRY[scaler_type](data)
+
+        self.scaler = (
+            [('_scaler', _scaler_factory, {'scaler_type': param_name})],
+            _apply_fitted_transform,
+            {'fitted_transform': '_scaler'},
+        )
+
+        return self
+
+    def set_feature_ablation(self,
+                             drop_count_key: str = 'feature_drop_count',
+                             seed_key: str = 'feature_drop_seed') -> 'MLManifest':
+
+        '''
+        Configure random feature ablation (Drop-N).
+
+        Randomly drops N feature columns per permutation using a
+        deterministic seed from round_params. Runs after feature and
+        target transforms in the prepare_data pipeline.
+
+        Args:
+            drop_count_key (str): round_params key for number of columns to drop
+            seed_key (str): round_params key for random seed
+
+        Returns:
+            MLManifest: Self for method chaining
+        '''
+
+        self.ablation_config = AblationConfig(
+            drop_count_key=drop_count_key,
+            seed_key=seed_key,
+        )
+        return self
+
+
+    def add_to_data_dict(self, func: Callable) -> 'MLManifest':
+
+        '''
+        Configure data_dict extension function to add custom entries after data preparation.
+
+        Args:
+            func (Callable): Extension function with signature (data_dict, split_data, round_params, fitted_params) -> dict
+
+        Returns:
+            MLManifest: Self for method chaining
+
+        NOTE: The extension function receives the base data_dict and full split DataFrames.
+        It should modify and return the data_dict with any additional custom entries needed by the model.
+        '''
+
+        self.data_dict_extension = func
+        return self
+
+    def with_calibration(self) -> 'CalibrationBuilder':
+
+        '''
+        Begin fluent calibration configuration.
+
+        Returns:
+            CalibrationBuilder: Builder for configuring probability calibration and threshold optimisation
+
+        NOTE: Call .probability_calibration(), optionally .threshold_function(), then .done() to finalise.
+        '''
+
+        return CalibrationBuilder(self)
+
+    def prepare_data(
+        self,
+        raw_data: pl.DataFrame,
+        round_params: dict[str, Any]
+    ) -> dict:
+
+        '''
+        Compute final data dictionary from raw data using the ML pipeline.
+
+        Args:
+            raw_data (pl.DataFrame): Raw input dataset
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Final data dictionary ready for model training
+        '''
+
+        split_data, all_datetimes, price_data_for_backtest = _run_prepare_setup(self, raw_data, round_params)
+
+        all_fitted_params: dict[str, Any] = {}
+        columns_to_drop: list[str] | None = None
+        pre_transform_columns = frozenset(split_data[0].columns)
+
+        for i, split in enumerate(split_data):
+            lazy = split.lazy()
+            lazy = _apply_feature_transforms(self, lazy, round_params)
+            data = lazy.collect()
+
+            if self.target_class_config is not None:
+                data, all_fitted_params = _apply_class_based_target(
+                    self, data, round_params, all_fitted_params, i == 0
+                )
+
+            if self.ablation_config is not None:
+                data, columns_to_drop = _apply_feature_ablation(
+                    data, self, round_params, columns_to_drop, pre_transform_columns,
+                )
+
+            data = data.fill_nan(None).drop_nulls()
+            data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, i == 0)
+            split_data[i] = data.fill_nan(None).drop_nulls()
+
+        split_data = _align_split_columns(split_data)
+
+        if price_data_for_backtest is not None:
+            final_datetimes = split_data[2].select('datetime')
+            price_data_for_backtest = final_datetimes.join(
+                price_data_for_backtest, on='datetime', how='left',
+                maintain_order='left'
+            )
+
+        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
+
+    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+
+        '''
+        Execute model training and evaluation, injecting resolved calibration config when configured.
+
+        Args:
+            data (dict): Prepared data dictionary
+            round_params (dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Results including predictions, metrics, and optional extras
+
+        NOTE: Calibration injection honours use_calibration and use_threshold round_params flags
+        (both default True). Setting either to False masks that step while keeping the other active.
+        '''
+
+        model_kwargs = self.resolve_model_kwargs(round_params)
         if self.prediction_calibration_config is not None:
             use_calibration = round_params.get('use_calibration', True)
             use_threshold = round_params.get('use_threshold', True)
@@ -918,10 +881,77 @@ class Manifest:
                     threshold_params=resolved.threshold_params,
                 )
                 model_kwargs['prediction_calibration_config'] = config
-        round_results = self.architecture_function(data, **model_kwargs)
+        return self.architecture_function(data, **model_kwargs)
 
-        return round_results
 
+@dataclass
+class RuleBasedManifest(Manifest):
+
+    '''Manifest for rule-based pipelines with predicate conditions and entry signals.'''
+
+    strategy: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
+
+    def with_strategy(self, conditions: list[dict], entry: str) -> 'RuleBasedManifest':
+
+        '''
+        Configure rule-based strategy conditions and entry signal.
+
+        Args:
+            conditions (list[dict]): List of predicate and compound operator condition configs
+            entry (str): ID of the condition that produces the per-bar position signal
+
+        Returns:
+            RuleBasedManifest: Self for method chaining
+        '''
+
+        from limen.sfd.rule_based.config import RuleBasedConfig  # local to avoid circular import
+        self.strategy = RuleBasedConfig(conditions=list(conditions), entry=entry)
+
+        return self
+
+    def prepare_data(
+        self,
+        raw_data: pl.DataFrame,
+        round_params: dict[str, Any]
+    ) -> dict:
+
+        '''
+        Compute final data dictionary from raw data using the rule-based pipeline.
+
+        Args:
+            raw_data (pl.DataFrame): Raw input dataset
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Final data dictionary ready for model training
+        '''
+
+        if self.strategy is None:
+            raise ValueError(
+                'RuleBasedManifest.prepare_data() called without a strategy. '
+                'Call with_strategy(conditions, entry=...) before running.'
+            )
+
+        split_data, all_datetimes, _ = _run_prepare_setup(self, raw_data, round_params)
+
+        all_fitted_params: dict[str, Any] = {}
+
+        for i, split in enumerate(split_data):
+            lazy = split.lazy()
+            lazy = _apply_feature_transforms(self, lazy, round_params)
+            data = lazy.collect()
+
+            if self.target_class_config is not None:
+                data, all_fitted_params = _apply_class_based_target(
+                    self, data, round_params, all_fitted_params, i == 0
+                )
+
+            data = data.fill_nan(None).drop_nulls()
+            split_data[i] = data.fill_nan(None).drop_nulls()
+
+        split_data = _align_split_columns(split_data)
+
+        return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.DataFrame:
@@ -1252,25 +1282,87 @@ def _apply_scaler(
     return data, all_fitted_params
 
 
-def _finalize_to_data_dict(
+def _run_prepare_setup(
         manifest: Manifest,
+        raw_data: pl.DataFrame,
+        round_params: dict[str, Any],
+) -> tuple[list[pl.DataFrame], list, pl.DataFrame | None]:
+
+    if manifest.pre_split_data_selector:
+        func, base_params = manifest.pre_split_data_selector
+        resolved = _resolve_params(base_params, round_params)
+        raw_data = func(raw_data, **resolved)
+
+    split_data = split_sequential(raw_data, manifest.split_config)
+
+    datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
+    all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
+    split_data = [bar_data for _, bar_data in datetime_bar_pairs]
+
+    price_cols = ['datetime', 'open', 'high', 'low', 'close']
+    test_split = split_data[2]
+    available = [c for c in price_cols if c in test_split.columns]
+    price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
+
+    return split_data, all_datetimes, price_data_for_backtest
+
+
+def _align_split_columns(split_data: list[pl.DataFrame]) -> list[pl.DataFrame]:
+
+    non_empty_splits = [s for s in split_data if s.height > 0]
+    if not non_empty_splits:
+        return split_data
+
+    reference_cols = non_empty_splits[0].columns
+
+    if len(non_empty_splits) > 1:
+        common_cols = set(reference_cols)
+        for split in non_empty_splits[1:]:
+            common_cols &= set(split.columns)
+
+        for i, split in enumerate(split_data):
+            if split.height == 0:
+                continue
+            extra = set(split.columns) - common_cols
+            if extra:
+                logger.warning(
+                    'Dropping columns %s from split %d — '
+                    'not present in all splits',
+                    sorted(extra), i,
+                )
+                ordered_cols = [c for c in split.columns if c in common_cols]
+                split_data[i] = split.select(ordered_cols)
+        reference_cols = [c for c in reference_cols if c in common_cols]
+
+    for i, split in enumerate(split_data):
+        if split.height == 0:
+            missing = set(reference_cols) - set(split.columns)
+            if missing:
+                split_data[i] = split.with_columns(
+                    [pl.lit(None).alias(c) for c in reference_cols if c in missing]
+                ).select(reference_cols)
+            else:
+                split_data[i] = split.select(reference_cols)
+
+    return split_data
+
+
+def _finalize_to_data_dict(
+        manifest: 'MLManifest',
         split_data: list[pl.DataFrame],
         all_datetimes: list,
         fitted_params: dict[str, Any],
         round_params: dict[str, Any],
-        price_data_for_backtest: pl.DataFrame | None = None
+        price_data_for_backtest: pl.DataFrame | None = None,
 ) -> dict:
 
-    # Validate all splits have datetime column
     for i, split_df in enumerate(split_data):
         assert 'datetime' in split_df.columns, f"Split {i} missing 'datetime' column"
 
-    # Ensure target_column is last column in all splits
     if manifest.target_column:
         for i, split_df in enumerate(split_data):
             cols = list(split_df.columns)
             if manifest.target_column in cols:
-                # Move target_column to end
                 cols.remove(manifest.target_column)
                 cols.append(manifest.target_column)
                 split_data[i] = split_df.select(cols)
@@ -1281,7 +1373,6 @@ def _finalize_to_data_dict(
 
     data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
 
-    # Add fitted parameters to data_dict
     for param_name, param_value in fitted_params.items():
         data_dict[param_name] = param_value
 
@@ -1290,7 +1381,6 @@ def _finalize_to_data_dict(
     if price_data_for_backtest is not None:
         data_dict['price_data_for_backtest'] = price_data_for_backtest
 
-    # Apply data_dict extension if configured
     if manifest.data_dict_extension:
         data_dict = manifest.data_dict_extension(
             data_dict=data_dict,
@@ -1303,7 +1393,7 @@ def _finalize_to_data_dict(
 
 
 def _finalize_rule_based_data(
-        manifest: Manifest,
+        manifest: RuleBasedManifest,
         split_data: list[pl.DataFrame],
         all_datetimes: list,
         round_params: dict[str, Any],
@@ -1313,7 +1403,7 @@ def _finalize_rule_based_data(
 
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
 
-    config = manifest._rule_based
+    config = manifest.strategy
     predicate_conditions = [c for c in config.conditions if 'type' in c]
     predicate_ids = [c['id'] for c in predicate_conditions]
     predicate_exprs = [

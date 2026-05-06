@@ -22,6 +22,7 @@ from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
+from limen.experiment.manifest_core import RuleBasedManifest
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +290,7 @@ class UniversalExperimentLoop:
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
-        is_rule_based = self.manifest is not None and self.manifest._rule_based is not None
+        is_rule_based = isinstance(self.manifest, RuleBasedManifest)
         self.experiment_confusion_metrics = (
             None if is_rule_based
             else self._log.experiment_confusion_metrics('price_change')

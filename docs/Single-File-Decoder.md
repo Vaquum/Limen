@@ -44,6 +44,7 @@ Manifest-driven SFDs expose `manifest()` instead of custom `prep()` and `model()
 ```python
 from limen.data import HistoricalData
 from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.indicators import roc
 from limen.scalers import LogRegScaler
 from limen.sfd.reference_architecture import logreg_binary
@@ -58,9 +59,9 @@ def params():
         'class_weight': [0.45, 0.65, 0.85],
     }
 
-def manifest():
+def manifest() -> Manifest:
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},

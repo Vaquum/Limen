@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.data import HistoricalData
+from limen.experiment import MLManifest
 from limen.experiment import Manifest
 from limen.indicators.window_return import window_return
 from limen.indicators.sma import sma
@@ -32,10 +33,10 @@ def params():
     }
 
 
-def manifest():
+def manifest() -> Manifest:
 
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
