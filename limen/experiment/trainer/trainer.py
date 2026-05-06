@@ -111,6 +111,13 @@ class Trainer:
         when no such file exists (built-in SFDs referenced by fully
         qualified package path).
 
+        Rejects any name whose dot-separated segments are not valid
+        Python identifiers, so `..`, `/`, `\\`, leading/trailing dots
+        and empty segments cannot escape `experiment_dir` via the
+        local-file branch (TD-001 documents the residual hardening
+        needed on the `import_module` fallback's site-packages
+        surface).
+
         Args:
             sfd_module_name (str): Module name from metadata.json
 
@@ -118,10 +125,23 @@ class Trainer:
             ModuleType: The loaded SFD module
 
         Raises:
-            ImportError: If the experiment-local file cannot be loaded
-                or the name cannot be resolved on `sys.path`
+            ValueError: If `sfd_module_name` is not a dotted sequence
+                of valid Python identifiers
+            ImportError: If `spec_from_file_location` cannot build a
+                spec for the experiment-local file, or if
+                `import_module` cannot resolve the name on `sys.path`
+            Exception: Any exception raised by the SFD module's own
+                top-level code during `exec_module` is propagated
 
         '''
+
+        segments = sfd_module_name.split('.')
+        if not sfd_module_name or not all(seg.isidentifier() for seg in segments):
+            msg = (
+                f"sfd_module name {sfd_module_name!r} is not a dotted "
+                f"sequence of valid Python identifiers"
+            )
+            raise ValueError(msg)
 
         sfd_path = self._experiment_dir / f'{sfd_module_name}.py'
         if sfd_path.is_file():

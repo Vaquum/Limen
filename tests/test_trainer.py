@@ -565,3 +565,40 @@ def test_trainer_falls_back_to_import_module_when_no_local_sfd_file() -> None:
         )
 
         assert trainer._param_keys == frozenset(logreg_sfd.params().keys())
+
+
+@pytest.mark.parametrize('bad_name', [
+    '../etc/passwd',
+    '..',
+    '/etc/passwd',
+    'foo/bar',
+    'foo\\bar',
+    'foo..bar',
+    '.leading_dot',
+    'trailing_dot.',
+    '',
+    '1starts_with_digit',
+    'has space',
+])
+def test_trainer_rejects_path_traversal_and_invalid_module_names(bad_name: str) -> None:
+
+    '''
+    Pin the path-traversal hardening: `_load_sfd_module` must reject
+    any `sfd_module` name that is not a dotted sequence of valid
+    Python identifiers, before either the local-file or import_module
+    branch runs.
+    '''
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({'sfd_module': bad_name}),
+        )
+        (experiment_dir / 'round_data.jsonl').write_text('')
+
+        with pytest.raises(ValueError, match='not a dotted sequence'):
+            Trainer(
+                experiment_dir,
+                data=pl.DataFrame({'x': [1, 2, 3]}),
+            )

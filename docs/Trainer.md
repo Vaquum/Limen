@@ -21,7 +21,18 @@ If `results.csv` is also present, Trainer performs Pass 1 validation against the
 - the SFD must be manifest-driven
 - the experiment directory must be trusted
 
-The trust warning matters because Trainer imports the SFD module path stored in `metadata.json`.
+The trust warning matters because Trainer imports the SFD module path stored in `metadata.json` and executes its top-level code.
+
+## SFD Module Resolution
+
+`Trainer.__init__` reads `metadata.json["sfd_module"]` and resolves it in two stages:
+
+1. **Experiment-local file** — if `<experiment_dir>/<sfd_module>.py` exists, it is loaded via `importlib.util.spec_from_file_location` + `module_from_spec`. The SFD module is **not** added to `sys.path` and is **not** registered in `sys.modules` under its bare name, so each Trainer construction loads the SFD freshly without polluting global import state. This is the path used by self-contained experiment bundles produced by tools like Praxis's `trainer_prep.py`.
+2. **`importlib.import_module` fallback** — if no experiment-local file is present, the name is passed to `importlib.import_module` and resolved against `sys.path` like any other Python import. This is the legacy path used by experiments referencing built-in SFDs by fully-qualified package path (e.g. `limen.sfd.foundational_sfd.logreg_binary`).
+
+Names are validated up-front: `sfd_module` must be a dotted sequence of valid Python identifiers (`name.split('.')` and `str.isidentifier()` per segment). Anything else — `..`, `/`, `\`, leading/trailing dots, empty segments — raises `ValueError` before either branch runs, so a malicious `metadata.json` cannot path-traverse out of `experiment_dir` via the local-file branch.
+
+The `import_module` fallback still trusts any module name that resolves on `sys.path`, including arbitrary site-packages modules. That residual surface is documented as TD-001 in [`docs/TechnicalDebt.md`](TechnicalDebt.md) and should be tightened (e.g. allowlisted) before any live-trading deploy where the upstream bundle pipeline is not under the same trust boundary as the deploy operator.
 
 ## Typical Workflow
 
