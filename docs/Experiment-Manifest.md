@@ -12,13 +12,22 @@ This is the default path for Limen work because it gives you:
 
 Use a manifest when you want Limen's opinionated pipeline. Skip it only when the workflow genuinely needs fully custom `prep()` and `model()` functions.
 
+## Manifest Types
+
+There are two manifest subclasses:
+
+- **`MLManifest`** — for ML pipelines. Supports indicators, features, targets, scalers, ablation, and calibration.
+- **`RuleBasedManifest`** — for rule-based pipelines. Supports indicators and features, plus `with_strategy()` for predicate-driven entry signals. Does not support scalers or ablation.
+
+Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass.
+
 ## Golden Path Example
 
 This is a complete manifest-driven SFD in the style Limen uses today.
 
 ```python
 from limen.data import HistoricalData
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.features import kline_imbalance, vwap
 from limen.indicators import atr, ppo, roc, wilder_rsi
 from limen.scalers import LogRegScaler
@@ -37,9 +46,9 @@ def params():
         'tol': [0.001, 0.01],
     }
 
-def manifest():
+def manifest() -> Manifest:
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -441,6 +450,7 @@ Use `with_strategy()` when the strategy is expressed as boolean predicate logic 
 Configure a rule-based strategy from a list of condition config dicts and an entry signal id.
 
 ```python
+from limen.experiment import RuleBasedManifest
 from limen.sfd.reference_architecture.rule_based import rule_based
 
 conditions = [
@@ -450,7 +460,7 @@ conditions = [
 ]
 
 manifest = (
-    Manifest()
+    RuleBasedManifest()
     .add_indicator(wilder_rsi, period='rsi_period')
     .add_indicator(ema, period='ema_period')
     .with_strategy(conditions, entry='entry')
@@ -775,7 +785,7 @@ def params():
     }
 
 manifest = (
-    Manifest()
+    MLManifest()
     .add_indicator(roc, group='momentum', period='roc_period')
     .add_feature(vwap, group='microstructure')
 )
@@ -789,7 +799,7 @@ def params():
         'scaler_type': ['logreg', 'robust'],
     }
 
-manifest = Manifest().set_scaler_from_params('scaler_type')
+manifest = MLManifest().set_scaler_from_params('scaler_type')
 ```
 
 ### Retrain on all data

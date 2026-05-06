@@ -66,8 +66,9 @@ If a needed building block does not exist yet, add it in the right package first
 A strong foundational SFD should look roughly like this:
 
 ```python
-from limen.experiment import Manifest
 from limen.data import HistoricalData
+from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.sfd.reference_architecture import your_model
 
 
@@ -79,9 +80,9 @@ def params():
     }
 
 
-def manifest():
+def manifest() -> Manifest:
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -98,6 +99,8 @@ def manifest():
         .with_reference_architecture(your_model)
     )
 ```
+
+The return type is always `Manifest` (the base class) even though the body constructs `MLManifest`. This keeps the interface uniform across all foundational SFDs. For rule-based SFDs, use `RuleBasedManifest` instead — it provides `with_strategy()` and does not expose scalers or ablation.
 
 That is not the only valid shape, but it captures the important properties:
 
