@@ -27,6 +27,7 @@ This is a complete manifest-driven SFD in the style Limen uses today.
 
 ```python
 from limen.data import HistoricalData
+from limen.experiment import Manifest
 from limen.experiment import MLManifest
 from limen.features import kline_imbalance, vwap
 from limen.indicators import atr, ppo, roc, wilder_rsi
