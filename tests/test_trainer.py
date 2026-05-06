@@ -1,9 +1,11 @@
 import json
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import types
 
+import polars as pl
 import pytest
 
 import limen.experiment.trainer.trainer as trainer_module
@@ -489,3 +491,77 @@ def test_validate_metrics_reports_missing_permutations_and_large_deterministic_m
     )
 
     assert mismatches == ['accuracy: original=0.8, new=0.81']
+
+
+_SELF_CONTAINED_SFD_SOURCE = '''
+from types import SimpleNamespace
+
+
+def manifest():
+    return SimpleNamespace(architecture_function=None)
+
+
+def params():
+    return {'alpha': 0.5}
+'''
+
+
+def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> None:
+
+    '''
+    Pin the self-contained-experiment contract: Trainer(experiment_dir)
+    must succeed when the SFD .py lives inside experiment_dir and is
+    referenced by bare module name in metadata.json, even though that
+    name is not on sys.path.
+    '''
+
+    sys_path_before = list(sys.path)
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        sfd_module_name = 'isolated_sfd_for_trainer_test'
+
+        (experiment_dir / f'{sfd_module_name}.py').write_text(
+            _SELF_CONTAINED_SFD_SOURCE,
+        )
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({'sfd_module': sfd_module_name}),
+        )
+        (experiment_dir / 'round_data.jsonl').write_text('')
+
+        trainer = Trainer(
+            experiment_dir,
+            data=pl.DataFrame({'x': [1, 2, 3]}),
+        )
+
+        assert trainer._param_keys == frozenset({'alpha'})
+        assert trainer._manifest.architecture_function is None
+
+    assert sys.path == sys_path_before
+    assert sfd_module_name not in sys.modules
+
+
+def test_trainer_falls_back_to_import_module_when_no_local_sfd_file() -> None:
+
+    '''
+    Built-in / packaged SFDs referenced by fully-qualified package
+    name must continue to work via importlib.import_module when no
+    `<sfd_module_name>.py` exists inside experiment_dir.
+    '''
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({
+                'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary',
+            }),
+        )
+        (experiment_dir / 'round_data.jsonl').write_text('')
+
+        trainer = Trainer(
+            experiment_dir,
+            data=pl.DataFrame({'x': [1, 2, 3]}),
+        )
+
+        assert trainer._param_keys == frozenset(logreg_sfd.params().keys())

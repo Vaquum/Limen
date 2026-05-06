@@ -1,8 +1,10 @@
 import importlib
+import importlib.util
 import inspect
 import json
 import logging
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import polars as pl
@@ -40,9 +42,18 @@ class Trainer:
         '''
         Create a Trainer from a completed experiment directory.
 
-        NOTE: experiment_dir must be trusted. The SFD module path stored
-        in metadata.json is imported via importlib.import_module(), which
-        executes arbitrary code from that module.
+        The SFD module named by `metadata.json["sfd_module"]` is loaded
+        in two stages: first the experiment_dir is searched for a file
+        of the same name (`<sfd_module>.py`); only when that file is
+        absent is the name resolved via `importlib.import_module` against
+        `sys.path` (the legacy mode for built-in SFDs referenced by a
+        fully-qualified package path). The experiment-local path is the
+        forward-looking contract — `trainer_prep.py`-style flows can
+        ship the SFD inside the experiment_dir and the Trainer becomes
+        self-sufficient with no operator-side `PYTHONPATH` wiring.
+
+        NOTE: experiment_dir must be trusted. The SFD module is imported
+        as Python and executes arbitrary code from that module.
 
         Args:
             experiment_dir (str | Path): Path to completed experiment directory
@@ -69,7 +80,7 @@ class Trainer:
             )
 
         sfd_module_name = self._metadata['sfd_module']
-        sfd = importlib.import_module(sfd_module_name)
+        sfd = self._load_sfd_module(sfd_module_name)
 
         if not hasattr(sfd, 'manifest') or not hasattr(sfd, 'params'):
             raise ValueError(
@@ -87,6 +98,44 @@ class Trainer:
             self._data = data
         else:
             self._data = self._manifest.fetch_data()
+
+
+    def _load_sfd_module(self, sfd_module_name: str) -> ModuleType:
+
+        '''
+        Load the SFD module by name.
+
+        Prefers a `<sfd_module_name>.py` file inside `experiment_dir`
+        (self-contained experiment), falls back to
+        `importlib.import_module(sfd_module_name)` against `sys.path`
+        when no such file exists (built-in SFDs referenced by fully
+        qualified package path).
+
+        Args:
+            sfd_module_name (str): Module name from metadata.json
+
+        Returns:
+            ModuleType: The loaded SFD module
+
+        Raises:
+            ImportError: If the experiment-local file cannot be loaded
+                or the name cannot be resolved on `sys.path`
+
+        '''
+
+        sfd_path = self._experiment_dir / f'{sfd_module_name}.py'
+        if sfd_path.is_file():
+            spec = importlib.util.spec_from_file_location(
+                sfd_module_name, sfd_path,
+            )
+            if spec is None or spec.loader is None:
+                raise ImportError(
+                    f"Cannot create import spec for SFD file {sfd_path}"
+                )
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+        return importlib.import_module(sfd_module_name)
 
 
     def _load_round_data(self) -> dict[int, dict[str, Any]]:
