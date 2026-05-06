@@ -565,14 +565,10 @@ class Manifest:
     ) -> dict:
 
         '''
-        Compute final data dictionary from raw data using manifest configuration.
+        Interface method — implemented by MLManifest and RuleBasedManifest.
 
-        Args:
-            raw_data (pl.DataFrame): Raw input dataset
-            round_params (Dict[str, Any]): Parameter values for current round
-
-        Returns:
-            dict: Final data dictionary ready for model training
+        Raises:
+            NotImplementedError: Always. Construct MLManifest or RuleBasedManifest instead of Manifest directly.
         '''
 
         raise NotImplementedError(
@@ -924,6 +920,12 @@ class RuleBasedManifest(Manifest):
         Returns:
             dict: Final data dictionary ready for model training
         '''
+
+        if self.strategy is None:
+            raise ValueError(
+                'RuleBasedManifest.prepare_data() called without a strategy. '
+                'Call with_strategy(conditions, entry=...) before running.'
+            )
 
         split_data, all_datetimes, _ = _run_prepare_setup(self, raw_data, round_params)
 
