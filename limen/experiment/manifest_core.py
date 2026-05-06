@@ -91,6 +91,11 @@ class CalibrationBuilder:
 
     def __init__(self, manifest: 'MLManifest') -> None:
 
+        if not isinstance(manifest, MLManifest):
+            raise ValueError(
+                f'CalibrationBuilder requires an MLManifest, got {type(manifest).__name__}. '
+                'Use MLManifest().with_calibration() to configure calibration.'
+            )
         self._manifest = manifest
         self._calibration_func: CalibratorProtocol | None = None
         self._calibration_params: dict[str, Any] = {}

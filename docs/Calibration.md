@@ -177,7 +177,7 @@ The optimizer returns the `default_threshold` with score `0.0` when every candid
 
 - `limen/calibration/` — `sklearn_probability_calibrator`, `grid_threshold_optimizer`, `apply_calibrated_predict`, `CalibratorProtocol`, `ThresholdOptimizerProtocol`
 - `limen.experiment.CalibrationConfig` — the resolved config dataclass injected into the architecture
-- `limen.experiment.CalibrationBuilder` — the fluent builder returned by `Manifest.with_calibration()`
+- `CalibrationBuilder` — the fluent builder returned by `MLManifest.with_calibration()`; not a public import, obtain it only via the fluent chain
 
 ## Read Next
 
