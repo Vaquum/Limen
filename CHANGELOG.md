@@ -831,3 +831,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Remove old calibration utilities from `limen.transforms` (superseded by `limen.calibration`)
 - Fix CSV column alignment when rounds return variable result keys; fix graceful shutdown on SIGINT during a round
 
+
+## v3.0.3 on 6th of May, 2026
+
+- Add self-contained-experiment SFD load path to [`Trainer.__init__`](limen/experiment/trainer/trainer.py); the new `_load_sfd_module` helper prefers a `<sfd_module_name>.py` file inside `experiment_dir` (loaded via `importlib.util.spec_from_file_location` + `module_from_spec`, no `sys.path` mutation) and falls back to `importlib.import_module` only when no such file exists. Forward-looking flows that ship the SFD inside the experiment_dir (e.g. `trainer_prep.py`-style bundle preparation for paper-trade deploy) now Just Work without operator-side `PYTHONPATH` wiring; built-in SFDs referenced by fully-qualified package path continue to load via the legacy fallback unchanged
+- Add 2 tests pinning the contract — [`test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation`](tests/test_trainer.py) stages a tmp dir with a custom SFD `.py` + bare module name and asserts `Trainer(...)` succeeds with `sys.path` and `sys.modules` unchanged on exit; [`test_trainer_falls_back_to_import_module_when_no_local_sfd_file`](tests/test_trainer.py) stages a tmp dir referencing `limen.sfd.foundational_sfd.logreg_binary` by package path and asserts the legacy import path still works
+- Bump version to `3.0.3`
