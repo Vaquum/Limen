@@ -19,7 +19,7 @@ There are two manifest subclasses:
 - **`MLManifest`** — for ML pipelines. Supports indicators, features, targets, scalers, ablation, and calibration.
 - **`RuleBasedManifest`** — for rule-based pipelines. Supports indicators and features, plus `with_strategy()` for predicate-driven entry signals. Does not support scalers or ablation.
 
-Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass.
+Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass. `Manifest` itself is not meant to be instantiated directly — its `prepare_data()` raises `NotImplementedError`.
 
 ## Golden Path Example
 
