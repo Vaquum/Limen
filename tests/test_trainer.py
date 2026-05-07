@@ -555,7 +555,7 @@ def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> No
     assert sys.path == sys_path_before
 
 
-def test_trainer_load_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
+def test_trainer_loads_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
 
     '''
     If the SFD module raises during exec_module, the partially
@@ -592,7 +592,7 @@ def test_trainer_load_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
             sys.modules[sfd_module_name] = previous
 
 
-def test_trainer_load_sfd_restores_previous_sys_modules_entry_on_exec_failure() -> None:
+def test_trainer_loads_sfd_restores_previous_sys_modules_entry_on_exec_failure() -> None:
 
     '''
     If a different module was already registered under
