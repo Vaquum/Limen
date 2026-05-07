@@ -844,3 +844,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Split the manifest class into a shared base with separate ML and rule-based subclasses; all foundational SFDs retain the same uniform interface
 - `Manifest.prepare_data()` now raises `NotImplementedError` — replace any direct `Manifest()` usage for data preparation with `MLManifest()` (ML pipelines) or `RuleBasedManifest()` (rule-based pipelines)
+
+## v3.0.5 on 7th of May, 2026
+
+- `Trainer._load_sfd_module` now registers the experiment-local SFD module in `sys.modules` under its bare name so downstream `importlib.import_module(name)` lookups (notably `_resolve_model_class` re-importing `architecture_function.__module__`) resolve to the same module instance; the registration is rolled back if `exec_module` raises so a partially-initialised module is never visible
+- Fix self-contained bundles (e.g. `trainer_prep.py`-produced `BtcLogRegEVSFD`-style experiment_dirs whose architecture function is defined inside the SFD file) failing sensor wiring with `ModuleNotFoundError`
