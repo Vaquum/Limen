@@ -850,3 +850,9 @@ Note: add all new changelog entries to the bottom of this file.
 - `Trainer._load_sfd_module` registers the experiment-local SFD module in `sys.modules` so `_resolve_model_class`'s `importlib.import_module(architecture_function.__module__)` resolves to the same instance
 - Save-and-restore semantics on `exec_module` failure: any prior `sys.modules` entry under the same name is preserved
 - Fixes self-contained bundles (architecture function defined inside the SFD file) failing sensor wiring with `ModuleNotFoundError`
+
+## v3.0.6 on 7th of May, 2026
+
+- Rename spot-kline row limiting to `row_count_limit`; keep `n_rows` as a legacy alias
+- Make row limiting return the latest rows after filtering and aggregation
+- Add `end_date_limit` and reject `row_count_limit` when both date limits define a closed window

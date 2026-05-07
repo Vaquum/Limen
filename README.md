@@ -67,7 +67,7 @@ pip install vaquum_limen
 import limen
 
 historical = limen.HistoricalData()
-data = historical.get_spot_klines(kline_size=7200, n_rows=2000)
+data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
 
 uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
 

@@ -193,12 +193,12 @@ def test_override_multiple_params() -> None:
 def test_override_param_not_in_original_but_in_signature() -> None:
 
     manifest = _make_manifest()
-    assert 'n_rows' not in manifest.data_source_config.params
+    assert 'row_count_limit' not in manifest.data_source_config.params
 
-    new_manifest = manifest.with_params_override(n_rows=5000)
+    new_manifest = manifest.with_params_override(row_count_limit=5000)
 
-    assert new_manifest.data_source_config.params['n_rows'] == 5000
-    assert 'n_rows' not in manifest.data_source_config.params
+    assert new_manifest.data_source_config.params['row_count_limit'] == 5000
+    assert 'row_count_limit' not in manifest.data_source_config.params
 
 
 def test_unknown_override_key_raises() -> None:

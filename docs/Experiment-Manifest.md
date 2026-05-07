@@ -56,7 +56,7 @@ def manifest() -> Manifest:
         )
         .set_test_data_source(
             method=HistoricalData.get_spot_klines,
-            params={'kline_size': 7200, 'n_rows': 5000},
+            params={'kline_size': 7200, 'row_count_limit': 5000},
         )
         .set_split_config(8, 1, 2)
         .add_indicator(roc, period='roc_period')
@@ -136,7 +136,7 @@ Configure the test data source used when `test_mode=True` is passed to `Universa
 ```python
 .set_test_data_source(
     method=HistoricalData.get_spot_klines,
-    params={'kline_size': 7200, 'n_rows': 5000},
+    params={'kline_size': 7200, 'row_count_limit': 5000},
 )
 ```
 
@@ -146,7 +146,7 @@ Pass `test_mode=True` to `UniversalExperimentLoop` to fetch from the test data s
 When `test_mode=True` and a test data source is configured, `fetch_test_data()` is called; otherwise `fetch_data()` is used.
 
 That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source.
-To keep local runs lightweight, configure `set_test_data_source()` with explicit `kline_size` and `n_rows`.
+To keep local runs lightweight, configure `set_test_data_source()` with explicit `kline_size` and `row_count_limit`.
 
 ## Pipeline Configuration
 
@@ -377,7 +377,7 @@ Typical examples:
 
 - `split_config=(1, 0, 0)` for full-data retraining in [Trainer](Trainer.md)
 - `start_date_limit=...` for a controlled data-window variant
-- `n_rows=...` for test or smoke paths
+- `row_count_limit=...` for test or smoke paths
 
 Use round parameters for search-time variation and `with_params_override(...)` for external structural control.
 
@@ -693,7 +693,7 @@ Supported override behavior today:
 Example:
 
 ```python
-manifest_small = manifest.with_params_override(n_rows=1000)
+manifest_small = manifest.with_params_override(row_count_limit=1000)
 manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 

@@ -16,23 +16,27 @@ TEST_FILE = str(Path(__file__).parent / 'fixtures' / 'historical_data_spot_2h.cs
 def test_get_any_file_loads_local_csv() -> None:
     historical = HistoricalData()
 
-    data = historical.get_any_file(TEST_FILE, n_rows=3)
+    full_data = historical.get_any_file(TEST_FILE)
+    data = historical.get_any_file(TEST_FILE, row_count_limit=2)
+    legacy_data = historical.get_any_file(TEST_FILE, n_rows=2)
 
     assert isinstance(data, pl.DataFrame)
-    assert data.height == 3
+    assert data.height == 2
+    assert data["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
+    assert legacy_data["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
     assert data.columns == historical.data_columns
     assert data["datetime"].is_sorted()
 
 
 def test_get_spot_klines_reaggregates_latest_dataset() -> None:
     historical = HistoricalData()
-    base = historical.get_any_file(TEST_FILE, n_rows=2)
+    base = historical.get_any_file(TEST_FILE).head(2)
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
         aggregated = historical.get_spot_klines(
-            n_rows=1,
             kline_size=14400,
+            end_date_limit=base["datetime"][1].strftime('%Y-%m-%dT%H:%M:%S'),
         )
 
     row = aggregated.row(0, named=True)
@@ -75,6 +79,25 @@ def test_get_spot_klines_reaggregates_latest_dataset() -> None:
     assert row["maker_liquidity"] == round(base["maker_liquidity"].sum(), 1)
     assert "median" not in aggregated.columns
     assert "iqr" not in aggregated.columns
+
+
+def test_get_spot_klines_row_count_limit_returns_latest_rows() -> None:
+    historical = HistoricalData()
+    full_data = historical.get_any_file(TEST_FILE)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
+        limited = historical.get_spot_klines(
+            row_count_limit=2,
+            kline_size=7200,
+        )
+        legacy_limited = historical.get_spot_klines(
+            n_rows=2,
+            kline_size=7200,
+        )
+
+    assert limited["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
+    assert legacy_limited["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
 
 
 def test_get_spot_klines_rejects_sub_base_intervals() -> None:
@@ -128,11 +151,14 @@ def test_get_any_file_loads_zipped_csv_and_derives_datetime_from_timestamp() -> 
 def test_get_any_file_validates_requested_row_count_and_column_names() -> None:
     historical = HistoricalData()
 
-    with pytest.raises(ValueError, match='n_rows must be at least 1'):
-        historical.get_any_file(TEST_FILE, n_rows=0)
+    with pytest.raises(ValueError, match='row_count_limit must be at least 1'):
+        historical.get_any_file(TEST_FILE, row_count_limit=0)
 
-    with pytest.raises(TypeError, match='n_rows must be an int'):
-        historical.get_any_file(TEST_FILE, n_rows='3')
+    with pytest.raises(TypeError, match='row_count_limit must be an int'):
+        historical.get_any_file(TEST_FILE, row_count_limit='3')
+
+    with pytest.raises(ValueError, match='Only one of row_count_limit and n_rows'):
+        historical.get_any_file(TEST_FILE, row_count_limit=1, n_rows=1)
 
     with pytest.raises(ValueError, match=r'Expected .* column names'):
         historical.get_any_file(TEST_FILE, columns=['only_one'])
@@ -148,11 +174,12 @@ def test_get_any_file_rejects_unsupported_extensions() -> None:
             historical.get_any_file(str(file_path))
 
 
-def test_get_spot_klines_accepts_iso_start_dates_and_rejects_invalid_literals() -> None:
+def test_get_spot_klines_accepts_iso_date_limits_and_rejects_invalid_literals() -> None:
     baseline = HistoricalData()
     full_data = baseline.get_any_file(TEST_FILE)
     cutoff = full_data['datetime'][1]
-    expected = full_data.filter(pl.col('datetime') >= cutoff)
+    expected_start = full_data.filter(pl.col('datetime') >= cutoff)
+    expected_end = full_data.filter(pl.col('datetime') <= cutoff)
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
@@ -163,11 +190,47 @@ def test_get_spot_klines_accepts_iso_start_dates_and_rejects_invalid_literals() 
             start_date_limit=cutoff.strftime('%Y-%m-%dT%H:%M:%S'),
         )
 
-        assert filtered.height == expected.height
+        assert filtered.height == expected_start.height
         assert filtered['datetime'][0] == cutoff
+
+        filtered = historical.get_spot_klines(
+            kline_size=7200,
+            end_date_limit=cutoff.strftime('%Y-%m-%dT%H:%M:%S'),
+        )
+
+        assert filtered.height == expected_end.height
+        assert filtered['datetime'][-1] == cutoff
+
+        filtered = historical.get_spot_klines(
+            kline_size=7200,
+            end_date_limit='2020-01-01',
+        )
+
+        assert filtered.height == full_data.height
+        assert filtered['datetime'][-1] == full_data['datetime'][-1]
 
         with pytest.raises(ValueError, match='start_date_limit must match one of'):
             historical.get_spot_klines(
                 kline_size=7200,
                 start_date_limit='2025/01/01',
+            )
+
+        with pytest.raises(ValueError, match='end_date_limit must match one of'):
+            historical.get_spot_klines(
+                kline_size=7200,
+                end_date_limit='2025/01/01',
+            )
+
+
+def test_get_spot_klines_rejects_row_limit_with_closed_date_window() -> None:
+    historical = HistoricalData()
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(HistoricalData, "DEFAULT_SPOT_KLINES_DATASET_REPO", TEST_FILE)
+        with pytest.raises(ValueError, match='row_count_limit must be None'):
+            historical.get_spot_klines(
+                row_count_limit=1,
+                kline_size=7200,
+                start_date_limit='2020-01-01',
+                end_date_limit='2020-01-02',
             )
