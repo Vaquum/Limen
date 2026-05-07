@@ -18,10 +18,12 @@ def test_get_any_file_loads_local_csv() -> None:
 
     full_data = historical.get_any_file(TEST_FILE)
     data = historical.get_any_file(TEST_FILE, row_count_limit=2)
+    legacy_data = historical.get_any_file(TEST_FILE, n_rows=2)
 
     assert isinstance(data, pl.DataFrame)
     assert data.height == 2
     assert data["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
+    assert legacy_data["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
     assert data.columns == historical.data_columns
     assert data["datetime"].is_sorted()
 
@@ -89,8 +91,13 @@ def test_get_spot_klines_row_count_limit_returns_latest_rows() -> None:
             row_count_limit=2,
             kline_size=7200,
         )
+        legacy_limited = historical.get_spot_klines(
+            n_rows=2,
+            kline_size=7200,
+        )
 
     assert limited["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
+    assert legacy_limited["datetime"].to_list() == full_data["datetime"].tail(2).to_list()
 
 
 def test_get_spot_klines_rejects_sub_base_intervals() -> None:
@@ -193,6 +200,14 @@ def test_get_spot_klines_accepts_iso_date_limits_and_rejects_invalid_literals() 
 
         assert filtered.height == expected_end.height
         assert filtered['datetime'][-1] == cutoff
+
+        filtered = historical.get_spot_klines(
+            kline_size=7200,
+            end_date_limit='2020-01-01',
+        )
+
+        assert filtered.height == full_data.height
+        assert filtered['datetime'][-1] == full_data['datetime'][-1]
 
         with pytest.raises(ValueError, match='start_date_limit must match one of'):
             historical.get_spot_klines(

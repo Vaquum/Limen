@@ -29,13 +29,20 @@ def _is_url(value: str) -> bool:
     return parsed.scheme in {'http', 'https'}
 
 
-def _normalize_datetime_literal(value: str | None, field_name: str) -> str | None:
+def _normalize_datetime_literal(
+    value: str | None,
+    field_name: str,
+    *,
+    end_of_day: bool = False,
+) -> str | None:
     if value is None:
         return None
 
     for fmt in _SUPPORTED_DATETIME_FORMATS:
         try:
             parsed = datetime.strptime(value, fmt)
+            if end_of_day and fmt == '%Y-%m-%d':
+                parsed = parsed.replace(hour=23, minute=59, second=59)
             return parsed.strftime('%Y-%m-%d %H:%M:%S')
         except ValueError:
             continue
@@ -498,7 +505,11 @@ class HistoricalData:
         row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
         kline_size = _validate_positive_int(kline_size, 'kline_size') or 60
         start_date_limit = _normalize_datetime_literal(start_date_limit, 'start_date_limit')
-        end_date_limit = _normalize_datetime_literal(end_date_limit, 'end_date_limit')
+        end_date_limit = _normalize_datetime_literal(
+            end_date_limit,
+            'end_date_limit',
+            end_of_day=True,
+        )
         if (
             start_date_limit is not None
             and end_date_limit is not None

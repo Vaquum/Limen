@@ -50,6 +50,7 @@ Important rules:
 - sub-1-minute klines are not supported
 - `kline_size` must be a multiple of the source file interval
 - `row_count_limit` returns the latest rows after date filtering and aggregation
+- date-only `end_date_limit` values include the full named day
 - `start_date_limit` and `end_date_limit` may define a closed window only when `row_count_limit` is unset
 
 Returned columns:
