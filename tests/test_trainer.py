@@ -521,7 +521,7 @@ def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> No
 
     sys_path_before = list(sys.path)
     sfd_module_name = 'isolated_sfd_for_trainer_test'
-    sys.modules.pop(sfd_module_name, None)
+    previous = sys.modules.pop(sfd_module_name, None)
 
     try:
         with TemporaryDirectory() as tmpdir:
@@ -547,7 +547,10 @@ def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> No
             assert registered is not None
             assert importlib.import_module(sfd_module_name) is registered
     finally:
-        sys.modules.pop(sfd_module_name, None)
+        if previous is None:
+            sys.modules.pop(sfd_module_name, None)
+        else:
+            sys.modules[sfd_module_name] = previous
 
     assert sys.path == sys_path_before
 
@@ -556,11 +559,12 @@ def test_trainer_load_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
 
     '''
     If the SFD module raises during exec_module, the partially
-    initialised module must not remain in sys.modules.
+    initialised module must not remain in sys.modules and any
+    previous entry under the same name must be restored.
     '''
 
     sfd_module_name = 'broken_sfd_for_trainer_test'
-    sys.modules.pop(sfd_module_name, None)
+    previous = sys.modules.pop(sfd_module_name, None)
 
     try:
         with TemporaryDirectory() as tmpdir:
@@ -582,7 +586,50 @@ def test_trainer_load_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
 
             assert sfd_module_name not in sys.modules
     finally:
-        sys.modules.pop(sfd_module_name, None)
+        if previous is None:
+            sys.modules.pop(sfd_module_name, None)
+        else:
+            sys.modules[sfd_module_name] = previous
+
+
+def test_trainer_load_sfd_restores_previous_sys_modules_entry_on_exec_failure() -> None:
+
+    '''
+    If a different module was already registered under
+    `sfd_module_name`, an `exec_module` failure must restore that
+    prior entry instead of leaving the slot empty.
+    '''
+
+    sfd_module_name = 'preexisting_sfd_for_trainer_test'
+    sentinel = types.ModuleType(sfd_module_name)
+    sentinel.__limen_test_sentinel__ = True
+    saved = sys.modules.get(sfd_module_name)
+    sys.modules[sfd_module_name] = sentinel
+
+    try:
+        with TemporaryDirectory() as tmpdir:
+            experiment_dir = Path(tmpdir)
+
+            (experiment_dir / f'{sfd_module_name}.py').write_text(
+                'raise RuntimeError("intentional sfd boom")\n',
+            )
+            (experiment_dir / 'metadata.json').write_text(
+                json.dumps({'sfd_module': sfd_module_name}),
+            )
+            (experiment_dir / 'round_data.jsonl').write_text('')
+
+            with pytest.raises(RuntimeError, match='intentional sfd boom'):
+                Trainer(
+                    experiment_dir,
+                    data=pl.DataFrame({'x': [1, 2, 3]}),
+                )
+
+            assert sys.modules.get(sfd_module_name) is sentinel
+    finally:
+        if saved is None:
+            sys.modules.pop(sfd_module_name, None)
+        else:
+            sys.modules[sfd_module_name] = saved
 
 
 def test_trainer_falls_back_to_import_module_when_no_local_sfd_file() -> None:

@@ -847,5 +847,6 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v3.0.5 on 7th of May, 2026
 
-- `Trainer._load_sfd_module` now registers the experiment-local SFD module in `sys.modules` under its bare name so downstream `importlib.import_module(name)` lookups (notably `_resolve_model_class` re-importing `architecture_function.__module__`) resolve to the same module instance; the registration is rolled back if `exec_module` raises so a partially-initialised module is never visible
-- Fix self-contained bundles (e.g. `trainer_prep.py`-produced `BtcLogRegEVSFD`-style experiment_dirs whose architecture function is defined inside the SFD file) failing sensor wiring with `ModuleNotFoundError`
+- `Trainer._load_sfd_module` registers the experiment-local SFD module in `sys.modules` so `_resolve_model_class`'s `importlib.import_module(architecture_function.__module__)` resolves to the same instance
+- Save-and-restore semantics on `exec_module` failure: any prior `sys.modules` entry under the same name is preserved
+- Fixes self-contained bundles (architecture function defined inside the SFD file) failing sensor wiring with `ModuleNotFoundError`

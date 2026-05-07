@@ -123,9 +123,12 @@ class Trainer:
         registration, a self-contained bundle whose architecture
         function is defined in the SFD file itself fails sensor
         wiring with `ModuleNotFoundError` at the
-        `_resolve_model_class` call. If `exec_module` raises, the
-        registration is rolled back so a partially-initialised
-        module is never visible to other code.
+        `_resolve_model_class` call. If `exec_module` raises, any
+        prior `sys.modules` entry under that name is restored (or
+        the key removed if there was no prior entry) so a partially
+        initialised module is never visible to other code and an
+        unrelated module that happened to share the name is not
+        clobbered.
 
         Rejects any name whose dot-separated segments are not valid
         Python identifiers, so `..`, `/`, `\\`, leading/trailing dots
@@ -169,11 +172,15 @@ class Trainer:
                     f"Cannot create import spec for SFD file {sfd_path}"
                 )
             module = importlib.util.module_from_spec(spec)
+            previous = sys.modules.get(sfd_module_name)
             sys.modules[sfd_module_name] = module
             try:
                 spec.loader.exec_module(module)
             except BaseException:
-                sys.modules.pop(sfd_module_name, None)
+                if previous is None:
+                    sys.modules.pop(sfd_module_name, None)
+                else:
+                    sys.modules[sfd_module_name] = previous
                 raise
             return module
         return importlib.import_module(sfd_module_name)
