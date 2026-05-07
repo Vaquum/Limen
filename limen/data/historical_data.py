@@ -59,6 +59,19 @@ def _validate_positive_int(value: int | None, field_name: str) -> int | None:
     return value
 
 
+def _resolve_row_count_limit(
+    row_count_limit: int | None,
+    n_rows: int | None,
+) -> int | None:
+    row_count_limit = _validate_positive_int(row_count_limit, 'row_count_limit')
+    n_rows = _validate_positive_int(n_rows, 'n_rows')
+
+    if row_count_limit is not None and n_rows is not None:
+        raise ValueError('Only one of row_count_limit and n_rows may be set.')
+
+    return row_count_limit if row_count_limit is not None else n_rows
+
+
 def _validate_columns(df: pl.DataFrame, columns: list[str] | None) -> pl.DataFrame:
     if columns is None:
         return df
@@ -162,9 +175,7 @@ def _read_any_file(
     *,
     has_header: bool = True,
     columns: list[str] | None = None,
-    n_rows: int | None = None,
 ) -> pl.DataFrame:
-    n_rows = _validate_positive_int(n_rows, 'n_rows')
     resolved_source = _resolve_file_path_or_url(file_path_or_url)
     source_path = urlparse(resolved_source).path if _is_url(resolved_source) else resolved_source
     suffix = Path(source_path).suffix.lower()
@@ -182,9 +193,6 @@ def _read_any_file(
         )
 
     df = _validate_columns(df, columns)
-    if n_rows is not None:
-        df = df.head(n_rows)
-
     return df
 
 
@@ -446,39 +454,60 @@ class HistoricalData:
         file_path_or_url: str,
         has_header: bool = True,
         columns: list[str] | None = None,
+        row_count_limit: int | None = None,
+        *,
         n_rows: int | None = None,
     ) -> pl.DataFrame:
 
         '''Load a local path or URL into Polars.
 
-        Supported file types are `.parquet`, `.csv`, and `.zip`.
+        Supported file types are `.parquet`, `.csv`, and `.zip`. Row limits
+        return the latest rows. `n_rows` is accepted as a legacy alias.
         '''
+
+        row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
 
         data = _read_any_file(
             file_path_or_url,
             has_header=has_header,
             columns=columns,
-            n_rows=n_rows,
         )
         data = _normalize_generic_frame(data)
+        if row_count_limit is not None:
+            data = data.tail(row_count_limit)
+
         return self._store(data)
 
     def get_spot_klines(
         self,
-        n_rows: int | None = None,
+        row_count_limit: int | None = None,
         kline_size: int = 60,
         start_date_limit: str | None = None,
+        end_date_limit: str | None = None,
+        *,
+        n_rows: int | None = None,
     ) -> pl.DataFrame:
 
         '''Load BTCUSDT spot klines from a file and aggregate upward when needed.
 
         By default this resolves the latest daily snapshot from the Hugging Face
-        dataset repo `vaquum/binance_btcusdt_1m_klines`.
+        dataset repo `vaquum/binance_btcusdt_1m_klines`. Row limits return the
+        latest rows. `n_rows` is accepted as a legacy alias.
         '''
 
-        n_rows = _validate_positive_int(n_rows, 'n_rows')
+        row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
         kline_size = _validate_positive_int(kline_size, 'kline_size') or 60
         start_date_limit = _normalize_datetime_literal(start_date_limit, 'start_date_limit')
+        end_date_limit = _normalize_datetime_literal(end_date_limit, 'end_date_limit')
+        if (
+            start_date_limit is not None
+            and end_date_limit is not None
+            and row_count_limit is not None
+        ):
+            raise ValueError(
+                'row_count_limit must be None when both start_date_limit '
+                'and end_date_limit are set.'
+            )
 
         base_data = _read_any_file(self.DEFAULT_SPOT_KLINES_DATASET_REPO, has_header=True)
         base_data = _normalize_generic_frame(base_data)
@@ -491,9 +520,17 @@ class HistoricalData:
                 pl.col('datetime') >= pl.lit(start_datetime)
             )
 
+        if end_date_limit is not None:
+            end_datetime = datetime.strptime(
+                end_date_limit, '%Y-%m-%d %H:%M:%S'
+            ).replace(tzinfo=timezone.utc)
+            base_data = base_data.filter(
+                pl.col('datetime') <= pl.lit(end_datetime)
+            )
+
         data = _aggregate_spot_klines(base_data, kline_size)
 
-        if n_rows is not None:
-            data = data.head(n_rows)
+        if row_count_limit is not None:
+            data = data.tail(row_count_limit)
 
         return self._store(data)

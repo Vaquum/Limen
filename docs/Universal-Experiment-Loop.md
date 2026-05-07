@@ -22,14 +22,14 @@ The standard run path is the right starting point for most readers. The advanced
 
 ## First Real Run
 
-This is the most reliable local example because it uses the file-backed spot-kline path with explicit `kline_size` and `n_rows`.
+This is the most reliable local example because it uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
 
 ```python
 import limen
 from limen.data import HistoricalData
 
 historical = HistoricalData()
-historical.get_spot_klines(kline_size=7200, n_rows=2000)
+historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
 
 uel = limen.UniversalExperimentLoop(
     data=historical.data,

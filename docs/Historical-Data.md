@@ -49,6 +49,8 @@ Important rules:
 
 - sub-1-minute klines are not supported
 - `kline_size` must be a multiple of the source file interval
+- `row_count_limit` returns the latest rows after date filtering and aggregation
+- `start_date_limit` and `end_date_limit` may define a closed window only when `row_count_limit` is unset
 
 Returned columns:
 
@@ -92,7 +94,7 @@ from limen.data import HistoricalData
 historical = HistoricalData()
 data = historical.get_any_file(
     file_path_or_url='path/to/local/data.parquet',
-    n_rows=5000,
+    row_count_limit=5000,
 )
 ```
 
@@ -108,7 +110,7 @@ It is the right choice for:
 Most manifest-driven experiments should use:
 
 - `HistoricalData.get_spot_klines` for production data
-- `HistoricalData.get_spot_klines` with a smaller `n_rows` and coarser `kline_size` for lightweight test runs
+- `HistoricalData.get_spot_klines` with a smaller `row_count_limit` and coarser `kline_size` for lightweight test runs
 - `HistoricalData.get_any_file` only when you intentionally want to load a specific local or remote file
 
 ```python
@@ -123,7 +125,7 @@ manifest = (
     )
     .set_test_data_source(
         method=HistoricalData.get_spot_klines,
-        params={'kline_size': 7200, 'n_rows': 5000},
+        params={'kline_size': 7200, 'row_count_limit': 5000},
     )
 )
 ```
