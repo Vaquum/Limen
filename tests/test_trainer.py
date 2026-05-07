@@ -1,3 +1,4 @@
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -512,33 +513,76 @@ def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> No
     Pin the self-contained-experiment contract: Trainer(experiment_dir)
     must succeed when the SFD .py lives inside experiment_dir and is
     referenced by bare module name in metadata.json, even though that
-    name is not on sys.path.
+    name is not on sys.path. The loaded module must be registered in
+    sys.modules under the bare name so downstream
+    importlib.import_module(name) lookups (e.g. _resolve_model_class)
+    resolve to the same module instance.
     '''
 
     sys_path_before = list(sys.path)
+    sfd_module_name = 'isolated_sfd_for_trainer_test'
+    sys.modules.pop(sfd_module_name, None)
 
-    with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir)
-        sfd_module_name = 'isolated_sfd_for_trainer_test'
+    try:
+        with TemporaryDirectory() as tmpdir:
+            experiment_dir = Path(tmpdir)
 
-        (experiment_dir / f'{sfd_module_name}.py').write_text(
-            _SELF_CONTAINED_SFD_SOURCE,
-        )
-        (experiment_dir / 'metadata.json').write_text(
-            json.dumps({'sfd_module': sfd_module_name}),
-        )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+            (experiment_dir / f'{sfd_module_name}.py').write_text(
+                _SELF_CONTAINED_SFD_SOURCE,
+            )
+            (experiment_dir / 'metadata.json').write_text(
+                json.dumps({'sfd_module': sfd_module_name}),
+            )
+            (experiment_dir / 'round_data.jsonl').write_text('')
 
-        trainer = Trainer(
-            experiment_dir,
-            data=pl.DataFrame({'x': [1, 2, 3]}),
-        )
+            trainer = Trainer(
+                experiment_dir,
+                data=pl.DataFrame({'x': [1, 2, 3]}),
+            )
 
-        assert trainer._param_keys == frozenset({'alpha'})
-        assert trainer._manifest.architecture_function is None
+            assert trainer._param_keys == frozenset({'alpha'})
+            assert trainer._manifest.architecture_function is None
+
+            registered = sys.modules.get(sfd_module_name)
+            assert registered is not None
+            assert importlib.import_module(sfd_module_name) is registered
+    finally:
+        sys.modules.pop(sfd_module_name, None)
 
     assert sys.path == sys_path_before
-    assert sfd_module_name not in sys.modules
+
+
+def test_trainer_load_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
+
+    '''
+    If the SFD module raises during exec_module, the partially
+    initialised module must not remain in sys.modules.
+    '''
+
+    sfd_module_name = 'broken_sfd_for_trainer_test'
+    sys.modules.pop(sfd_module_name, None)
+
+    try:
+        with TemporaryDirectory() as tmpdir:
+            experiment_dir = Path(tmpdir)
+
+            (experiment_dir / f'{sfd_module_name}.py').write_text(
+                'raise RuntimeError("intentional sfd boom")\n',
+            )
+            (experiment_dir / 'metadata.json').write_text(
+                json.dumps({'sfd_module': sfd_module_name}),
+            )
+            (experiment_dir / 'round_data.jsonl').write_text('')
+
+            with pytest.raises(RuntimeError, match='intentional sfd boom'):
+                Trainer(
+                    experiment_dir,
+                    data=pl.DataFrame({'x': [1, 2, 3]}),
+                )
+
+            assert sfd_module_name not in sys.modules
+    finally:
+        sys.modules.pop(sfd_module_name, None)
 
 
 def test_trainer_falls_back_to_import_module_when_no_local_sfd_file() -> None:

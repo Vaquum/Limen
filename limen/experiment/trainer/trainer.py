@@ -3,6 +3,7 @@ import importlib.util
 import inspect
 import json
 import logging
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -111,6 +112,21 @@ class Trainer:
         when no such file exists (built-in SFDs referenced by fully
         qualified package path).
 
+        After loading via the experiment-local branch the resulting
+        module is registered in `sys.modules` under `sfd_module_name`
+        before `exec_module` runs. This allows downstream code that
+        resolves the SFD's classes/functions by name — most notably
+        `Trainer._resolve_model_class`, which re-imports the
+        architecture function's module via
+        `importlib.import_module(architecture_function.__module__)` —
+        to see the same module instance loaded here. Without the
+        registration, a self-contained bundle whose architecture
+        function is defined in the SFD file itself fails sensor
+        wiring with `ModuleNotFoundError` at the
+        `_resolve_model_class` call. If `exec_module` raises, the
+        registration is rolled back so a partially-initialised
+        module is never visible to other code.
+
         Rejects any name whose dot-separated segments are not valid
         Python identifiers, so `..`, `/`, `\\`, leading/trailing dots
         and empty segments cannot escape `experiment_dir` via the
@@ -153,7 +169,12 @@ class Trainer:
                     f"Cannot create import spec for SFD file {sfd_path}"
                 )
             module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            sys.modules[sfd_module_name] = module
+            try:
+                spec.loader.exec_module(module)
+            except BaseException:
+                sys.modules.pop(sfd_module_name, None)
+                raise
             return module
         return importlib.import_module(sfd_module_name)
 
