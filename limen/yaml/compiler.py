@@ -1,0 +1,191 @@
+from typing import Any
+
+from limen.experiment.manifest_core import MLManifest
+from limen.experiment.manifest_core import Manifest
+from limen.experiment.manifest_core import RuleBasedManifest
+from limen.yaml.resolver import resolve
+
+
+def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
+
+    '''
+    Build a Manifest from a validated YAML experiment dict.
+
+    Branches on sfd.manifest.type to instantiate MLManifest or RuleBasedManifest.
+
+    Args:
+        yaml_dict (dict): Validated YAML dict from validator.validate()
+
+    Returns:
+        Manifest: Configured MLManifest or RuleBasedManifest
+
+    Raises:
+        ValueError: If manifest type is unknown or required fields are missing
+
+    '''
+
+    m = yaml_dict['sfd']['manifest']
+    manifest_type = m['type']
+
+    if manifest_type == 'ml':
+        return _build_ml_manifest(m)
+    if manifest_type == 'rule_based':
+        return _build_rule_based_manifest(m)
+    raise ValueError(f"Unknown manifest type '{manifest_type}'")
+
+
+def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
+
+    manifest = MLManifest()
+
+    ds = m['data_source']
+    manifest.set_data_source(
+        method=resolve(ds['method']),
+        params=dict(ds.get('params') or {}),
+    )
+
+    tds = m.get('test_data_source')
+    if tds is not None:
+        manifest.set_test_data_source(
+            method=resolve(tds['method']),
+            params=dict(tds.get('params') or {}),
+        )
+
+    sc = m['split_config']
+    manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+
+    cols = m.get('required_columns')
+    if cols is not None:
+        manifest.set_required_bar_columns(list(cols))
+
+    psds = m.get('pre_split_data_selector')
+    if psds is not None:
+        manifest.set_pre_split_data_selector(
+            resolve(psds['func']),
+            **dict(psds.get('params') or {}),
+        )
+
+    bf = m.get('bar_formation')
+    if bf is not None:
+        manifest.set_bar_formation(
+            resolve(bf['func']),
+            **dict(bf.get('params') or {}),
+        )
+
+    for item in m.get('indicators') or []:
+        manifest.add_indicator(resolve(item['func']), **dict(item.get('params') or {}))
+
+    for item in m.get('features') or []:
+        manifest.add_feature(resolve(item['func']), **dict(item.get('params') or {}))
+
+    scaler = m.get('scaler')
+    if scaler is not None:
+        if 'from_params' in scaler:
+            manifest.set_scaler_from_params(param_name=scaler['from_params'])
+        else:
+            manifest.set_scaler(resolve(scaler['class']))
+
+    fa = m.get('feature_ablation')
+    if fa is not None:
+        manifest.set_feature_ablation(
+            drop_count_key=fa.get('drop_count_key', 'feature_drop_count'),
+            seed_key=fa.get('seed_key', 'feature_drop_seed'),
+        )
+
+    t = m['target']
+    manifest.with_target_label(
+        target_name=t['name'],
+        target_class=resolve(t['class']),
+        fit_params=dict(t.get('fit_params') or {}),
+        transform_params=dict(t.get('transform_params') or {}),
+    )
+
+    dde = m.get('data_dict_extension')
+    if dde is not None:
+        manifest.add_to_data_dict(resolve(dde['func']))
+
+    manifest.with_reference_architecture(resolve(m['reference_architecture']))
+
+    cal = m.get('calibration')
+    if cal is not None:
+        builder = manifest.with_calibration()
+        prob = cal.get('probability_calibration')
+        if prob is not None:
+            builder.probability_calibration(
+                func=resolve(prob['func']),
+                **dict(prob.get('params') or {}),
+            )
+        thresh = cal.get('threshold_function')
+        if thresh is not None:
+            builder.threshold_function(
+                func=resolve(thresh['func']),
+                **dict(thresh.get('params') or {}),
+            )
+        builder.done()
+
+    po = m.get('params_override')
+    if po is not None:
+        manifest.with_params_override(**dict(po))
+
+    mp = m.get('metrics_params')
+    if mp is not None:
+        manifest.metrics_params = dict(mp)
+
+    return manifest
+
+
+def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
+
+    manifest = RuleBasedManifest()
+
+    ds = m['data_source']
+    manifest.set_data_source(
+        method=resolve(ds['method']),
+        params=dict(ds.get('params') or {}),
+    )
+
+    tds = m.get('test_data_source')
+    if tds is not None:
+        manifest.set_test_data_source(
+            method=resolve(tds['method']),
+            params=dict(tds.get('params') or {}),
+        )
+
+    sc = m['split_config']
+    manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+
+    cols = m.get('required_columns')
+    if cols is not None:
+        manifest.set_required_bar_columns(list(cols))
+
+    strat = m['strategy']
+    conditions = [dict(c) for c in strat['conditions']]
+    manifest.with_strategy(conditions=conditions, entry=strat['entry'])
+
+    manifest.with_reference_architecture(resolve(m['reference_architecture']))
+
+    return manifest
+
+
+class CompiledSFD:
+
+    '''SFD-compatible object built from a validated YAML experiment dict.'''
+
+    def __init__(self, yaml_dict: dict[str, Any]) -> None:
+
+        self._yaml = yaml_dict
+        self._manifest_cache: Manifest | None = None
+
+    def params(self) -> dict[str, list[Any]]:
+
+        '''Return the parameter search space.'''
+
+        return dict(self._yaml['sfd']['params'])
+
+    def manifest(self) -> Manifest:
+
+        '''Return the compiled Manifest, built once and cached.'''
+
+        if self._manifest_cache is None:
+            self._manifest_cache = build_manifest(self._yaml)
+        return self._manifest_cache

@@ -32,7 +32,12 @@ dependencies = [
   "numpy>=2.2.6",
   "ta-lib",
   "requests",
+  "ruamel.yaml>=0.18",
+  "click>=8.0",
 ]
+
+[project.scripts]
+limen = "limen.cli.main:cli"
 
 [project.optional-dependencies]
 tabpfn = ["tabpfn>=6"]

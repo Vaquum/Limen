@@ -1,0 +1,120 @@
+schema_version: "1.0"
+
+metadata:
+  name: logreg_binary_experiment
+  limen_version: "3.0.5"
+  mode: development
+  description: Logistic regression binary classifier with calibration and feature perturbation
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+        start_date_limit: "2025-01-01"
+
+    test_data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 7200
+        n_rows: 5000
+
+    split_config:
+      train: 8
+      val: 1
+      test: 2
+
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: roc_period
+          group: momentum
+      - func: limen.indicators.atr
+        params:
+          period: 14
+          group: volatility
+      - func: limen.indicators.ppo
+        params:
+          group: momentum
+      - func: limen.indicators.wilder_rsi
+        params:
+          group: momentum
+
+    features:
+      - func: limen.features.fractional_diff
+        params:
+          d: frac_diff_d
+          cols:
+            - close
+      - func: limen.features.vwap
+        params:
+          group: volume
+      - func: limen.features.kline_imbalance
+        params:
+          group: volume
+
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: "roc_{roc_period}"
+        quantile: q
+      transform_params:
+        shift: shift
+
+    scaler:
+      from_params: scaler_type
+
+    feature_ablation:
+      drop_count_key: feature_drop_count
+      seed_key: feature_drop_seed
+
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: cal_method
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+          threshold_min: threshold_min
+          threshold_max: threshold_max
+          threshold_step: threshold_step
+
+  params:
+    # data prep
+    frac_diff_d: [0.0]
+    shift: [-1, -2, -3, -4, -5]
+    q: [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53]
+    roc_period: [1, 4, 12, 24, 144]
+    penalty: [l2]
+    # view perturbation
+    scaler_type: [logreg, robust, rank_gauss]
+    # feature perturbation
+    feature_groups: [all, momentum, "momentum|volatility"]
+    # calibration
+    use_calibration: [true, false]
+    use_threshold: [true, false]
+    cal_method: [isotonic, sigmoid]
+    threshold_min: [0.20, 0.25, 0.30]
+    threshold_max: [0.60, 0.65, 0.70]
+    threshold_step: [0.05, 0.10]
+    # classifier
+    class_weight: [0.45, 0.55, 0.65, 0.75, 0.85]
+    C: [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+    max_iter: [30, 60, 90, 120, 180, 240]
+    solver: [lbfgs, newton-cg, liblinear, sag, newton-cholesky]
+    tol: [0.001, 0.01, 0.03, 0.1, 0.3]
+
+uel:
+  n_permutations: 50
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

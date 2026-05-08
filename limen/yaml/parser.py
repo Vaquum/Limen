@@ -1,0 +1,70 @@
+from pathlib import Path
+from typing import Any
+
+from ruamel.yaml import YAML
+from ruamel.yaml.constructor import DuplicateKeyError
+
+from limen.yaml.errors import YAMLError
+
+
+def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
+
+    '''
+    Parse a YAML experiment file into a dict with line number tracking.
+
+    Args:
+        source (str | Path): Path to the YAML file or raw YAML string
+
+    Returns:
+        tuple[dict, list[YAMLError]]: Parsed dict and list of parse errors (empty on success)
+
+    '''
+
+    errors: list[YAMLError] = []
+    yaml = YAML()
+    yaml.preserve_quotes = True
+
+    try:
+        if isinstance(source, Path) or (isinstance(source, str) and '\n' not in source):
+            path = Path(source)
+            content = path.read_text(encoding='utf-8')
+        else:
+            content = source
+
+        result = yaml.load(content)
+
+        if result is None:
+            errors.append(YAMLError(
+                message='YAML file is empty',
+                path='',
+                suggestion='Add required fields: schema_version, metadata, sfd, uel',
+            ))
+            return {}, errors
+
+        if not isinstance(result, dict):
+            errors.append(YAMLError(
+                message=f'Expected a YAML mapping at root, got {type(result).__name__}',
+                path='',
+            ))
+            return {}, errors
+
+        return dict(result), errors
+
+    except DuplicateKeyError as exc:
+        errors.append(YAMLError(
+            message=f'Duplicate key: {exc}',
+            path='',
+        ))
+        return {}, errors
+
+    except Exception as exc:  # noqa: BLE001
+        mark = getattr(exc, 'problem_mark', None)
+        line = (mark.line + 1) if mark else None
+        col = (mark.column + 1) if mark else None
+        errors.append(YAMLError(
+            message=str(exc),
+            path='',
+            line=line,
+            column=col,
+        ))
+        return {}, errors
