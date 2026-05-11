@@ -3,7 +3,29 @@ from typing import Any
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
+from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
+
+
+def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
+
+    '''
+    Resolve any string values that are valid limen.* paths to their Python objects.
+
+    Leaves non-resolvable strings (e.g. round_params keys like 'threshold_min') unchanged.
+
+    Args:
+        params (dict): Raw params dict from YAML
+
+    Returns:
+        dict: Params with callable paths resolved to Python objects
+
+    '''
+
+    return {
+        k: (resolve(v) if isinstance(v, str) and is_resolvable(v) else v)
+        for k, v in params.items()
+    }
 
 
 def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
@@ -113,13 +135,13 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
         if prob is not None:
             builder.probability_calibration(
                 func=resolve(prob['func']),
-                **dict(prob.get('params') or {}),
+                **_resolve_func_params(dict(prob.get('params') or {})),
             )
         thresh = cal.get('threshold_function')
         if thresh is not None:
             builder.threshold_function(
                 func=resolve(thresh['func']),
-                **dict(thresh.get('params') or {}),
+                **_resolve_func_params(dict(thresh.get('params') or {})),
             )
         builder.done()
 
