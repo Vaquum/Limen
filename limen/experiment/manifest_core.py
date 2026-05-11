@@ -1157,7 +1157,14 @@ def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dic
             if value.startswith('_') or value in round_params:
                 resolved[key] = round_params[value]
             elif '{' in value and '}' in value:
-                resolved[key] = value.format(**round_params)
+                import re as _re
+                m = _re.fullmatch(r'\{(\w+)\}', value.strip())
+                if m:
+                    # pure {param_name} reference — direct lookup preserves type (float, int, bool)
+                    resolved[key] = round_params.get(m.group(1), value)
+                else:
+                    # template string like "roc_{roc_period}" — format produces a string
+                    resolved[key] = value.format(**round_params)
             else:
                 resolved[key] = value
         else:
