@@ -1,3 +1,5 @@
+import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -60,19 +62,22 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     experiment_name: str = yaml_dict['metadata']['name']
     n_permutations: int = uel_cfg.get('n_permutations', 10000)
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
-    experiment_dir: str | None = uel_cfg.get('experiment_dir')
     test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
 
-    search_strategy = _build_search_strategy(uel_cfg, sfd_cfg)
+    results_dir = _build_results_dir(uel_cfg, experiment_name)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(yaml_path, results_dir / yaml_path.name)
 
+    search_strategy = _build_search_strategy(uel_cfg, sfd_cfg)
     compiled = CompiledSFD(yaml_dict)
 
     click.echo(f"Running '{experiment_name}' ({n_permutations} permutations) ...")
+    click.echo(f"  Results → {results_dir}")
 
     uel = UniversalExperimentLoop(
         sfd=compiled,
         search_strategy=search_strategy,
-        experiment_dir=experiment_dir,
+        experiment_dir=results_dir,
         test_mode=test_mode,
     )
 
@@ -82,11 +87,27 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         prep_each_round=prep_each_round,
     )
 
+    output_format: str = uel_cfg.get('output_format', 'csv')
+    if output_format == 'parquet' and uel.experiment_log is not None:
+        parquet_path = results_dir / 'results.parquet'
+        uel.experiment_log.write_parquet(str(parquet_path))
+        click.echo(f"  Parquet → {parquet_path}")
+
     click.secho('  ✓ Experiment complete', fg='green')
 
-    _save_results(uel, uel_cfg, experiment_name)
-
     return True
+
+
+def _build_results_dir(uel_cfg: dict[str, Any], experiment_name: str) -> Path:
+
+    output_path_template: str = uel_cfg.get('output_path', './results/{name}_{datetime}')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return Path(
+        output_path_template
+        .replace('{name}', experiment_name)
+        .replace('{datetime}', timestamp)
+        .replace('{timestamp}', timestamp)
+    )
 
 
 def _build_search_strategy(uel_cfg: dict[str, Any],
@@ -101,37 +122,3 @@ def _build_search_strategy(uel_cfg: dict[str, Any],
     if strategy_type == 'grid':
         return GridStrategy(domain)
     return RandomStrategy(domain)
-
-
-def _save_results(uel: UniversalExperimentLoop,
-                  uel_cfg: dict[str, Any],
-                  experiment_name: str) -> None:
-
-    from datetime import datetime
-
-    output_format: str = uel_cfg.get('output_format', 'csv')
-    output_path_template: str = uel_cfg.get(
-        'output_path', './results/{name}_{datetime}'
-    )
-
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_path = Path(
-        output_path_template
-        .replace('{name}', experiment_name)
-        .replace('{datetime}', timestamp)
-        .replace('{timestamp}', timestamp)
-    )
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    if not hasattr(uel, 'experiment_log') or uel.experiment_log is None:
-        return
-
-    log = uel.experiment_log
-    file_path = output_path / f'results.{output_format}'
-
-    if output_format == 'parquet':
-        log.write_parquet(str(file_path))
-    else:
-        log.write_csv(str(file_path))
-
-    click.echo(f"  Results saved to {file_path}")

@@ -197,6 +197,7 @@ class CompiledSFD:
 
         self._yaml = yaml_dict
         self._manifest_cache: Manifest | None = None
+        self.__name__ = f"yaml:{yaml_dict['metadata']['name']}"
 
     def params(self) -> dict[str, list[Any]]:
 
