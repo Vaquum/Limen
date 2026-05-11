@@ -30,7 +30,7 @@ sfd:
     indicators:
       - func: limen.indicators.roc
         params:
-          period: roc_period
+          period: "{roc_period}"
           group: momentum
       - func: limen.indicators.atr
         params:
@@ -46,7 +46,7 @@ sfd:
     features:
       - func: limen.features.fractional_diff
         params:
-          d: frac_diff_d
+          d: "{frac_diff_d}"
           cols:
             - close
       - func: limen.features.vwap
@@ -61,9 +61,9 @@ sfd:
       class: limen.targets.QuantileBinaryTarget
       fit_params:
         source_column: "roc_{roc_period}"
-        quantile: q
+        quantile: "{q}"
       transform_params:
-        shift: shift
+        shift: "{shift}"
 
     scaler:
       from_params: scaler_type
@@ -78,14 +78,14 @@ sfd:
       probability_calibration:
         func: limen.calibration.sklearn_probability_calibrator
         params:
-          method: cal_method
+          method: "{cal_method}"
       threshold_function:
         func: limen.calibration.grid_threshold_optimizer
         params:
           metric: limen.metrics.balanced_metric.balanced_metric
-          threshold_min: threshold_min
-          threshold_max: threshold_max
-          threshold_step: threshold_step
+          threshold_min: "{threshold_min}"
+          threshold_max: "{threshold_max}"
+          threshold_step: "{threshold_step}"
 
   params:
     # data prep
@@ -98,6 +98,8 @@ sfd:
     scaler_type: [logreg, robust, rank_gauss]
     # feature perturbation
     feature_groups: [all, momentum, "momentum|volatility"]
+    feature_drop_count: [0]
+    feature_drop_seed: [42]
     # calibration
     use_calibration: [true, false]
     use_threshold: [true, false]
