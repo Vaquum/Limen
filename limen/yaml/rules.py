@@ -1,0 +1,523 @@
+import inspect
+import re
+from typing import Any
+
+from limen.yaml.errors import YAMLError
+from limen.yaml.resolver import is_resolvable
+from limen.yaml.resolver import resolve
+
+
+def get_at(d: dict[str, Any], path: str) -> tuple[bool, Any]:
+
+    '''
+    Traverse a dot-notation path into a nested dict.
+
+    Args:
+        d (dict): The dict to traverse
+        path (str): Dot-separated key path e.g. 'sfd.manifest.type'
+
+    Returns:
+        tuple[bool, Any]: (found, value) — found is False if any key is missing
+
+    '''
+
+    current: Any = d
+    for part in path.split('.'):
+        if not isinstance(current, dict) or part not in current:
+            return False, None
+        current = current[part]
+    return True, current
+
+
+class Required:
+
+    '''Field must exist and optionally match expected_type.'''
+
+    def __init__(self,
+                 path: str,
+                 expected_type: type | None = None,
+                 suggestion: str | None = None) -> None:
+
+        self._path = path
+        self._type = expected_type
+        self._suggestion = suggestion
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, self._path)
+        label = self._path.split('.')[-1]
+
+        if not found or value is None:
+            errors.append(YAMLError(
+                message=f"Missing required field '{label}'",
+                path=self._path,
+                suggestion=self._suggestion,
+            ))
+            return
+
+        if self._type and not isinstance(value, self._type):
+            errors.append(YAMLError(
+                message=f"'{label}' must be a {self._type.__name__}",
+                path=self._path,
+            ))
+
+
+class OneOf:
+
+    '''Field value must be one of the allowed choices.'''
+
+    def __init__(self,
+                 path: str,
+                 choices: set,
+                 suggestion: str | None = None) -> None:
+
+        self._path = path
+        self._choices = choices
+        self._suggestion = suggestion or f"Use one of: {', '.join(sorted(str(c) for c in choices))}"
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, self._path)
+        if not found or value is None:
+            return
+        if value not in self._choices:
+            errors.append(YAMLError(
+                message=f"Invalid value '{value}'",
+                path=self._path,
+                suggestion=self._suggestion,
+            ))
+
+
+class Resolvable:
+
+    '''Field value must be an importable limen.* path.'''
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, self._path)
+        if not found or not isinstance(value, str):
+            return
+        if not is_resolvable(value):
+            errors.append(YAMLError(
+                message=f"Cannot resolve '{value}'",
+                path=self._path,
+                suggestion='Path must be within an allowed limen.* namespace',
+            ))
+
+
+class NoUnknownKeys:
+
+    '''All keys at path must be in the known set; extras become warnings.'''
+
+    def __init__(self, path: str, known: set, severity: str = 'warning') -> None:
+
+        self._path = path
+        self._known = known
+        self._severity = severity
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, self._path)
+        if not found or not isinstance(value, dict):
+            return
+        for key in value:
+            if key not in self._known:
+                target = warnings if self._severity == 'warning' else errors
+                target.append(YAMLError(
+                    message=f"Unknown field '{key}'",
+                    path=f"{self._path}.{key}",
+                ))
+
+
+class When:
+
+    '''Apply child rules only when condition_path equals condition_value.'''
+
+    def __init__(self,
+                 condition_path: str,
+                 condition_value: Any,
+                 rules: list) -> None:
+
+        self._condition_path = condition_path
+        self._condition_value = condition_value
+        self._rules = rules
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, self._condition_path)
+        if found and value == self._condition_value:
+            for rule in self._rules:
+                rule.check(yaml_dict, errors, warnings)
+
+
+class WarnIfPresent:
+
+    '''Emit a warning for each key in keys that exists at path.'''
+
+    def __init__(self, path: str, keys: set, message_template: str) -> None:
+
+        self._path = path
+        self._keys = keys
+        self._message_template = message_template
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              _errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, self._path)
+        if not found or not isinstance(value, dict):
+            return
+        for key in self._keys:
+            if key in value:
+                warnings.append(YAMLError(
+                    message=self._message_template.format(key=key),
+                    path=f"{self._path}.{key}",
+                ))
+
+
+class SchemaVersion:
+
+    '''schema_version must be a string; warn if it differs from current_version.'''
+
+    def __init__(self, current_version: str) -> None:
+        self._version = current_version
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None:
+
+        version = yaml_dict.get('schema_version')
+        if not isinstance(version, str):
+            errors.append(YAMLError(
+                message="'schema_version' must be a string",
+                path='schema_version',
+                suggestion=f'Set schema_version: "{self._version}"',
+            ))
+            return
+        if version != self._version:
+            warnings.append(YAMLError(
+                message=f"schema_version '{version}' != current version '{self._version}'",
+                path='schema_version',
+                suggestion=f'Update schema_version to "{self._version}"',
+            ))
+
+
+class DataSource:
+
+    '''Validate data_source (required) and test_data_source (optional) blocks.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+
+        for section in ('data_source', 'test_data_source'):
+            src = manifest.get(section)
+            if src is None:
+                if section == 'data_source':
+                    errors.append(YAMLError(
+                        message=f"Missing required field '{section}'",
+                        path=f'sfd.manifest.{section}',
+                    ))
+                continue
+
+            if not isinstance(src, dict):
+                errors.append(YAMLError(
+                    message=f"'{section}' must be a mapping",
+                    path=f'sfd.manifest.{section}',
+                ))
+                continue
+
+            if 'method' not in src:
+                errors.append(YAMLError(
+                    message="Missing required field 'method'",
+                    path=f'sfd.manifest.{section}.method',
+                ))
+                continue
+
+            method = src['method']
+            if isinstance(method, str) and not is_resolvable(method):
+                errors.append(YAMLError(
+                    message=f"Cannot resolve data source method '{method}'",
+                    path=f'sfd.manifest.{section}.method',
+                    suggestion='Path must be within an allowed limen.* namespace',
+                ))
+
+
+class FuncList:
+
+    '''Validate a list of {{func, params}} dicts at a given manifest path.'''
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, items = get_at(yaml_dict, self._path)
+        if not found or items is None:
+            return
+        if not isinstance(items, list):
+            errors.append(YAMLError(message=f"'{self._path}' must be a list", path=self._path))
+            return
+
+        for i, item in enumerate(items):
+            if not isinstance(item, dict):
+                errors.append(YAMLError(
+                    message='Each entry must be a mapping with a func key',
+                    path=f'{self._path}[{i}]',
+                ))
+                continue
+            if 'func' not in item:
+                errors.append(YAMLError(
+                    message="Missing required field 'func'",
+                    path=f'{self._path}[{i}].func',
+                ))
+                continue
+            func = item['func']
+            if isinstance(func, str) and not is_resolvable(func):
+                errors.append(YAMLError(
+                    message=f"Cannot resolve func '{func}'",
+                    path=f'{self._path}[{i}].func',
+                    suggestion='Path must be within an allowed limen.* namespace',
+                ))
+
+
+class ConditionsList:
+
+    '''Validate the rule_based strategy conditions list structure.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        strategy = ((yaml_dict.get('sfd') or {}).get('manifest') or {}).get('strategy')
+        if not isinstance(strategy, dict):
+            return
+
+        conditions = strategy.get('conditions')
+        if not isinstance(conditions, list):
+            return
+
+        for i, cond in enumerate(conditions):
+            if not isinstance(cond, dict):
+                errors.append(YAMLError(
+                    message='Each condition must be a mapping',
+                    path=f'sfd.manifest.strategy.conditions[{i}]',
+                ))
+                continue
+            for key in ('name', 'type', 'expression'):
+                if key not in cond:
+                    errors.append(YAMLError(
+                        message=f"Missing required field '{key}'",
+                        path=f'sfd.manifest.strategy.conditions[{i}].{key}',
+                    ))
+
+
+class SfdParams:
+
+    '''Every value in sfd.params must be a non-empty list.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        params = (yaml_dict.get('sfd') or {}).get('params')
+        if not isinstance(params, dict):
+            errors.append(YAMLError(
+                message="'sfd.params' must be a mapping",
+                path='sfd.params',
+                suggestion='Each key maps to a list of values, e.g. lookback: [12, 24, 48]',
+            ))
+            return
+
+        for key, values in params.items():
+            if not isinstance(values, list):
+                errors.append(YAMLError(
+                    message=f"Parameter '{key}' must be a list of values",
+                    path=f'sfd.params.{key}',
+                    suggestion=f'Change to {key}: [{values}]',
+                ))
+
+
+def _extract_param_refs(obj: Any) -> set[str]:
+
+    refs: set[str] = set()
+    _walk_refs(obj, refs)
+    return refs
+
+
+def _walk_refs(obj: Any, refs: set[str]) -> None:
+
+    if isinstance(obj, str):
+        for match in re.finditer(r'\{(\w+)\}', obj):
+            refs.add(match.group(1))
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            _walk_refs(v, refs)
+    elif isinstance(obj, list):
+        for item in obj:
+            _walk_refs(item, refs)
+
+
+class CalibrationCrossRef:
+
+    '''
+    For each value in calibration params blocks:
+    {param_name} references must exist in sfd.params; limen.* paths must be resolvable.
+    '''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None:
+
+        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        cal = manifest.get('calibration')
+        if not isinstance(cal, dict):
+            return
+
+        sfd_params = set((yaml_dict.get('sfd') or {}).get('params') or {})
+
+        for section_name in ('probability_calibration', 'threshold_function'):
+            section = cal.get(section_name)
+            if not isinstance(section, dict):
+                continue
+
+            func = section.get('func')
+            if isinstance(func, str) and not is_resolvable(func):
+                errors.append(YAMLError(
+                    message=f"Cannot resolve calibration func '{func}'",
+                    path=f'sfd.manifest.calibration.{section_name}.func',
+                    suggestion='Path must be within an allowed limen.* namespace',
+                ))
+
+            params = section.get('params') or {}
+            if not isinstance(params, dict):
+                continue
+
+            for key, value in params.items():
+                param_path = f'sfd.manifest.calibration.{section_name}.params.{key}'
+                if not isinstance(value, str):
+                    continue
+                m = re.fullmatch(r'\{(\w+)\}', value.strip())
+                if m:
+                    ref_key = m.group(1)
+                    if ref_key not in sfd_params:
+                        errors.append(YAMLError(
+                            message=f"Calibration param '{key}' references '{{{ref_key}}}' which is not in sfd.params",
+                            path=param_path,
+                            suggestion=f"Add '{ref_key}' to sfd.params",
+                        ))
+                elif not is_resolvable(value):
+                    warnings.append(YAMLError(
+                        message=f"Calibration param '{key}' value '{value}' is neither a limen.* path nor a {{param_name}} reference",
+                        path=param_path,
+                        suggestion='Use a limen.* path or a {param_name} reference e.g. "{cal_method}"',
+                    ))
+
+
+class ParamCoverage:
+
+    '''
+    Every key in sfd.params must be accounted for by one of:
+    a {param_name} reference in the manifest, a parameter in the reference
+    architecture signature, or a meta-param implied by a manifest block.
+
+    NOTE: If the architecture accepts **kwargs coverage cannot be determined — check is skipped.
+    Unused params produce warnings, not errors.
+    '''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              _errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None:
+
+        sfd = yaml_dict.get('sfd') or {}
+        sfd_params = set((sfd.get('params') or {}).keys())
+        if not sfd_params:
+            return
+
+        manifest = sfd.get('manifest') or {}
+        manifest_refs = _extract_param_refs(manifest)
+
+        arch_path = manifest.get('reference_architecture')
+        arch_params: set[str] = set()
+        if isinstance(arch_path, str) and is_resolvable(arch_path):
+            try:
+                sig = inspect.signature(resolve(arch_path))
+                for name, param in sig.parameters.items():
+                    if name == 'data':
+                        continue
+                    if param.kind == inspect.Parameter.VAR_KEYWORD:
+                        return
+                    arch_params.add(name)
+            except (TypeError, ValueError):
+                return
+
+        meta_params: set[str] = set()
+        if manifest.get('calibration'):
+            meta_params.update({'use_calibration', 'use_threshold'})
+        if manifest.get('indicators') or manifest.get('features'):
+            meta_params.add('feature_groups')
+        if isinstance(manifest.get('feature_ablation'), dict):
+            fa = manifest['feature_ablation']
+            for field in ('drop_count_key', 'seed_key'):
+                if isinstance(fa.get(field), str):
+                    meta_params.add(fa[field])
+        if isinstance(manifest.get('scaler'), dict):
+            fp = manifest['scaler'].get('from_params')
+            if isinstance(fp, str):
+                meta_params.add(fp)
+
+        valid = manifest_refs | arch_params | meta_params
+
+        for key in sfd_params:
+            if key not in valid:
+                warnings.append(YAMLError(
+                    message=f"Param '{key}' in sfd.params is not referenced in the manifest or architecture",
+                    path=f'sfd.params.{key}',
+                    suggestion=f"Remove it or add a {{{key}}} reference in the manifest",
+                ))
+
+
+class RuleEngine:
+
+    '''Run a list of rules against a yaml_dict, collecting errors and warnings.'''
+
+    def __init__(self, rules: list) -> None:
+        self._rules = rules
+
+    def run(self,
+            yaml_dict: dict[str, Any],
+            errors: list[YAMLError],
+            warnings: list[YAMLError]) -> None:
+
+        for rule in self._rules:
+            rule.check(yaml_dict, errors, warnings)
