@@ -81,9 +81,7 @@ def validate(yaml_file: Path) -> None:
 @click.argument('yaml_file', type=click.Path(exists=True, path_type=Path))
 @click.option('--dry-run', is_flag=True, default=False,
               help='Validate and compile only — do not execute the experiment.')
-@click.option('--production', is_flag=True, default=False,
-              help='Force production mode, overriding metadata.mode: development in the YAML.')
-def run(yaml_file: Path, dry_run: bool, production: bool) -> None:
+def run(yaml_file: Path, dry_run: bool) -> None:
 
     '''
     Validate, compile, and run a YAML experiment file.
@@ -98,14 +96,13 @@ def run(yaml_file: Path, dry_run: bool, production: bool) -> None:
       6. Save results to the configured output path
 
     \b
-    Mode behaviour:
-      metadata.mode: development   Uses test data (HuggingFace), small dataset
-      metadata.mode: production    Uses live data source configured in the manifest
-      --production flag            Overrides development mode without editing the YAML
+    Mode behaviour is controlled by metadata.mode in the YAML:
+      development    Uses test data (HuggingFace), small dataset
+      production     Uses live data source configured in the manifest
 
     \b
     Output:
-      Results are written to ./results/{name}_{timestamp}/results.csv by default.
+      Results are written to ./results/{name}_{datetime}/results.csv by default.
       Override with uel.output_path and uel.output_format in the YAML.
 
     \b
@@ -115,9 +112,7 @@ def run(yaml_file: Path, dry_run: bool, production: bool) -> None:
     Examples:
       limen run experiment.yaml
       limen run --dry-run experiment.yaml
-      limen run --production experiment.yaml
-      limen run --production --dry-run experiment.yaml
     '''
 
-    ok = run_experiment(yaml_file, dry_run=dry_run, production=production)
+    ok = run_experiment(yaml_file, dry_run=dry_run)
     raise SystemExit(0 if ok else 1)
