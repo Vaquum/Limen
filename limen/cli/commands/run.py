@@ -61,6 +61,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     n_permutations: int = uel_cfg.get('n_permutations', 10000)
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     experiment_dir: str | None = uel_cfg.get('experiment_dir')
+    test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
 
     search_strategy = _build_search_strategy(uel_cfg, sfd_cfg)
 
@@ -72,6 +73,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         sfd=compiled,
         search_strategy=search_strategy,
         experiment_dir=experiment_dir,
+        test_mode=test_mode,
     )
 
     uel.run(
