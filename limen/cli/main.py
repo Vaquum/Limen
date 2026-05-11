@@ -26,9 +26,11 @@ def validate(yaml_file: Path) -> None:
 @click.argument('yaml_file', type=click.Path(exists=True, path_type=Path))
 @click.option('--dry-run', is_flag=True, default=False,
               help='Validate only — do not execute the experiment')
-def run(yaml_file: Path, dry_run: bool) -> None:
+@click.option('--production', is_flag=True, default=False,
+              help='Force production mode, overriding metadata.mode in the YAML')
+def run(yaml_file: Path, dry_run: bool, production: bool) -> None:
 
     '''Validate, compile, and run a YAML experiment file.'''
 
-    ok = run_experiment(yaml_file, dry_run=dry_run)
+    ok = run_experiment(yaml_file, dry_run=dry_run, production=production)
     raise SystemExit(0 if ok else 1)

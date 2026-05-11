@@ -12,7 +12,9 @@ from limen.yaml.parser import parse
 from limen.yaml.validator import validate
 
 
-def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
+def run_experiment(yaml_path: Path,
+                   dry_run: bool = False,
+                   production: bool = False) -> bool:
 
     '''
     Validate, compile, and execute a YAML experiment file.
@@ -20,6 +22,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     Args:
         yaml_path (Path): Path to the YAML experiment file
         dry_run (bool): When True, validate only — do not execute
+        production (bool): When True, force production mode regardless of metadata.mode
 
     Returns:
         bool: True on success, False on validation failure
@@ -61,7 +64,10 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     n_permutations: int = uel_cfg.get('n_permutations', 10000)
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     experiment_dir: str | None = uel_cfg.get('experiment_dir')
-    test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
+    yaml_mode: str = yaml_dict['metadata'].get('mode', 'development')
+    test_mode: bool = False if production else yaml_mode == 'development'
+    if production and yaml_mode == 'development':
+        click.secho('  ⚠ --production flag overrides metadata.mode=development', fg='yellow')
 
     search_strategy = _build_search_strategy(uel_cfg, sfd_cfg)
 
