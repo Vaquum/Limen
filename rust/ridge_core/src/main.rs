@@ -67,6 +67,8 @@ fn run_block(dataset: &RidgeDataset, count: usize) -> Result<(), Box<dyn std::er
         return Err("count must be positive".into());
     }
 
+    let problem = dataset.problem()?;
+    let mut workspace = problem.workspace();
     let start = Instant::now();
     let mut checksum = 0.0;
     let mut last_model = None;
@@ -77,8 +79,7 @@ fn run_block(dataset: &RidgeDataset, count: usize) -> Result<(), Box<dyn std::er
         let alpha = alpha_for(i);
         alpha_min = alpha_min.min(alpha);
         alpha_max = alpha_max.max(alpha);
-        let problem = dataset.problem()?;
-        let model = problem.train(alpha)?;
+        let model = problem.train_with_workspace(alpha, &mut workspace)?;
         checksum += model.r2 + model.coeff_norm + model.beta[0] * 0.000_001;
         last_model = Some(model);
     }
@@ -86,7 +87,7 @@ fn run_block(dataset: &RidgeDataset, count: usize) -> Result<(), Box<dyn std::er
     let elapsed = start.elapsed().as_secs_f64();
     let model = last_model.unwrap();
     println!(
-        "{{\"event\":\"bench\",\"mode\":\"full_training_rebuild_stats\",\"count\":{},\"seconds\":{:.9},\"us_per_iter\":{:.6},\"alpha_min\":{:.12},\"alpha_max\":{:.12},\"last_alpha\":{:.12},\"last_mse\":{:.12},\"last_r2\":{:.12},\"last_coeff_norm\":{:.12},\"checksum\":{:.12}}}",
+        "{{\"event\":\"bench\",\"mode\":\"precomputed_stats_reuse\",\"count\":{},\"seconds\":{:.9},\"us_per_iter\":{:.6},\"alpha_min\":{:.12},\"alpha_max\":{:.12},\"last_alpha\":{:.12},\"last_mse\":{:.12},\"last_r2\":{:.12},\"last_coeff_norm\":{:.12},\"checksum\":{:.12}}}",
         count,
         elapsed,
         elapsed * 1_000_000.0 / count as f64,

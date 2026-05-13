@@ -40,6 +40,12 @@ pub struct RidgeModel {
     pub coeff_norm: f64,
 }
 
+#[derive(Debug, Clone)]
+pub struct RidgeWorkspace {
+    system: Vec<f64>,
+    solution: Vec<f64>,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct WorkingSet {
     pub input_matrix_bytes: usize,
@@ -127,6 +133,61 @@ impl RidgeDataset {
     pub fn cols(&self) -> usize {
         self.cols
     }
+
+    pub fn mean_absolute_error(&self, beta: &[f64]) -> Result<f64, RidgeError> {
+        if beta.len() != self.cols + 1 {
+            return Err(RidgeError::InvalidInput(format!(
+                "beta length {} does not match cols+1 {}",
+                beta.len(),
+                self.cols + 1
+            )));
+        }
+        if self.cols == 12 {
+            return Ok(self.mean_absolute_error_12(beta));
+        }
+
+        Ok(self.mean_absolute_error_generic(beta))
+    }
+
+    fn mean_absolute_error_generic(&self, beta: &[f64]) -> f64 {
+        let mut total = 0.0;
+        for row in 0..self.rows {
+            let mut pred = beta[0];
+            let row_offset = row * self.cols;
+            for col in 0..self.cols {
+                pred += self.x[row_offset + col] * beta[col + 1];
+            }
+            total += (pred - self.y[row]).abs();
+        }
+        total / self.rows as f64
+    }
+
+    fn mean_absolute_error_12(&self, beta: &[f64]) -> f64 {
+        let mut total = 0.0;
+        let x = self.x.as_ptr();
+        let y = self.y.as_ptr();
+        let b = beta.as_ptr();
+        for row in 0..self.rows {
+            let i = row * 12;
+            let pred = unsafe {
+                *b.add(0)
+                    + *x.add(i) * *b.add(1)
+                    + *x.add(i + 1) * *b.add(2)
+                    + *x.add(i + 2) * *b.add(3)
+                    + *x.add(i + 3) * *b.add(4)
+                    + *x.add(i + 4) * *b.add(5)
+                    + *x.add(i + 5) * *b.add(6)
+                    + *x.add(i + 6) * *b.add(7)
+                    + *x.add(i + 7) * *b.add(8)
+                    + *x.add(i + 8) * *b.add(9)
+                    + *x.add(i + 9) * *b.add(10)
+                    + *x.add(i + 10) * *b.add(11)
+                    + *x.add(i + 11) * *b.add(12)
+            };
+            total += (pred - unsafe { *y.add(row) }).abs();
+        }
+        total / self.rows as f64
+    }
 }
 
 impl RidgeProblem {
@@ -193,17 +254,16 @@ impl RidgeProblem {
     }
 
     pub fn train(&self, alpha: f64) -> Result<RidgeModel, RidgeError> {
-        if !alpha.is_finite() || alpha < 0.0 {
-            return Err(RidgeError::InvalidInput(format!("invalid alpha {alpha}")));
-        }
+        let mut workspace = self.workspace();
+        self.train_with_workspace(alpha, &mut workspace)
+    }
 
-        let dim = self.cols + 1;
-        let mut system = self.gram.clone();
-        for idx in 1..dim {
-            system[idx * dim + idx] += alpha;
-        }
-
-        let beta = solve_linear(system, self.rhs.clone(), dim)?;
+    pub fn train_with_workspace(
+        &self,
+        alpha: f64,
+        workspace: &mut RidgeWorkspace,
+    ) -> Result<RidgeModel, RidgeError> {
+        let beta = self.coefficients_with_workspace(alpha, workspace)?.to_vec();
         let mse = self.sse(&beta).max(0.0) / self.rows as f64;
         let tss = (self.y_sq_sum - (self.y_sum * self.y_sum / self.rows as f64)).max(0.0);
         let r2 = if tss > 0.0 {
@@ -220,6 +280,31 @@ impl RidgeProblem {
             r2,
             coeff_norm,
         })
+    }
+
+    pub fn coefficients_with_workspace<'a>(
+        &self,
+        alpha: f64,
+        workspace: &'a mut RidgeWorkspace,
+    ) -> Result<&'a [f64], RidgeError> {
+        if !alpha.is_finite() || alpha < 0.0 {
+            return Err(RidgeError::InvalidInput(format!("invalid alpha {alpha}")));
+        }
+
+        let dim = self.cols + 1;
+        workspace.reset(dim)?;
+        workspace.system.copy_from_slice(&self.gram);
+        workspace.solution.copy_from_slice(&self.rhs);
+        for idx in 1..dim {
+            workspace.system[idx * dim + idx] += alpha;
+        }
+
+        solve_linear_in_place(&mut workspace.system, &mut workspace.solution, dim)?;
+        Ok(&workspace.solution)
+    }
+
+    pub fn workspace(&self) -> RidgeWorkspace {
+        RidgeWorkspace::new(self.cols + 1)
     }
 
     pub fn working_set(&self) -> WorkingSet {
@@ -249,6 +334,26 @@ impl RidgeProblem {
         }
 
         self.y_sq_sum - 2.0 * beta_rhs + beta_gram_beta
+    }
+}
+
+impl RidgeWorkspace {
+    pub fn new(dim: usize) -> Self {
+        Self {
+            system: vec![0.0; dim * dim],
+            solution: vec![0.0; dim],
+        }
+    }
+
+    fn reset(&mut self, dim: usize) -> Result<(), RidgeError> {
+        let system_len = checked_mul(dim, dim, "normal equation matrix overflow")?;
+        if self.system.len() != system_len {
+            self.system.resize(system_len, 0.0);
+        }
+        if self.solution.len() != dim {
+            self.solution.resize(dim, 0.0);
+        }
+        Ok(())
     }
 }
 
@@ -346,52 +451,42 @@ fn read_f64(bytes: &[u8], offset: &mut usize) -> f64 {
     value
 }
 
-fn solve_linear(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Result<Vec<f64>, RidgeError> {
+fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], n: usize) -> Result<(), RidgeError> {
     let eps = 1e-12;
-    for col in 0..n {
-        let mut pivot = col;
-        let mut pivot_abs = a[col * n + col].abs();
-        for row in (col + 1)..n {
-            let candidate = a[row * n + col].abs();
-            if candidate > pivot_abs {
-                pivot = row;
-                pivot_abs = candidate;
+
+    for row in 0..n {
+        for col in 0..=row {
+            let mut sum = a[row * n + col];
+            for k in 0..col {
+                sum -= a[row * n + k] * a[col * n + k];
             }
-        }
 
-        if pivot_abs < eps {
-            return Err(RidgeError::SingularMatrix);
-        }
-
-        if pivot != col {
-            for k in col..n {
-                a.swap(col * n + k, pivot * n + k);
-            }
-            b.swap(col, pivot);
-        }
-
-        let diag = a[col * n + col];
-        for k in col..n {
-            a[col * n + k] /= diag;
-        }
-        b[col] /= diag;
-
-        for row in 0..n {
             if row == col {
-                continue;
+                if sum <= eps {
+                    return Err(RidgeError::SingularMatrix);
+                }
+                a[row * n + col] = sum.sqrt();
+            } else {
+                a[row * n + col] = sum / a[col * n + col];
             }
-            let factor = a[row * n + col];
-            if factor == 0.0 {
-                continue;
-            }
-            for k in col..n {
-                a[row * n + k] -= factor * a[col * n + k];
-            }
-            b[row] -= factor * b[col];
         }
     }
 
-    Ok(b)
+    for row in 0..n {
+        for col in 0..row {
+            b[row] -= a[row * n + col] * b[col];
+        }
+        b[row] /= a[row * n + row];
+    }
+
+    for row in (0..n).rev() {
+        for col in (row + 1)..n {
+            b[row] -= a[col * n + row] * b[col];
+        }
+        b[row] /= a[row * n + row];
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -436,5 +531,21 @@ mod tests {
             assert!(alpha.is_finite());
             assert!(alpha > 0.0);
         }
+    }
+
+    #[test]
+    fn fixed_width_mae_matches_generic_path() {
+        let rows = 4;
+        let cols = 12;
+        let x: Vec<f64> = (0..rows * cols)
+            .map(|idx| (idx as f64 - 11.0) / 7.0)
+            .collect();
+        let y: Vec<f64> = (0..rows).map(|idx| idx as f64 * 0.25 - 0.5).collect();
+        let beta: Vec<f64> = (0..=cols).map(|idx| idx as f64 * 0.03125 - 0.2).collect();
+        let dataset = RidgeDataset::from_row_major(rows, cols, &x, &y).unwrap();
+
+        let generic = dataset.mean_absolute_error_generic(&beta);
+        let fixed = dataset.mean_absolute_error_12(&beta);
+        assert!((generic - fixed).abs() < f64::EPSILON);
     }
 }
