@@ -39,6 +39,7 @@ manifest.with_target_label(
 | `ThresholdBinaryTarget` | binary `UInt8` | no | `shift=-1` | Positive label above a fixed numeric threshold. |
 | `ForwardBreakoutTarget` | binary `UInt8` | no | `shift=-1` | Positive label if price rises at least `threshold` over the next `forward_periods` bars. |
 | `NextReturnTarget` | continuous `Float64` | no | n/a | Percentage return over the next N bars. Use with regression architectures. |
+| `NextBarUpTarget` | binary `UInt8` | no | none | Positive label if the next close is higher than the current close. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
 | `IdentityTarget` | existing column | no | none | Target column already present in the data. Validates the column exists on every split. |
 
@@ -132,6 +133,20 @@ Produces a continuous target as the percentage return over the next N bars. Use 
 |---|---|---|
 | `periods` | `int` | Look-ahead window in bars; default `1` |
 | `scale` | `float` | Multiplier applied to the raw return; default `100.0` |
+
+### `NextBarUpTarget`
+
+```python
+NextBarUpTarget(train_data, target_name)
+```
+
+Produces a binary target named `next_bar_up`: `1` when the next close is higher than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by the manifest preparation pipeline.
+
+```python
+.with_target_label('next_bar_up', NextBarUpTarget)
+```
+
+No parameters.
 
 ### `RandomBinaryTarget`
 

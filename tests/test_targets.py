@@ -1,8 +1,10 @@
 import polars as pl
 
+from limen.experiment import MLManifest
 from limen.experiment import Manifest
 from limen.targets import ForwardBreakoutTarget
 from limen.targets import IdentityTarget
+from limen.targets import NextBarUpTarget
 from limen.targets import NextReturnTarget
 from limen.targets import QuantileBinaryTarget
 from limen.targets import RandomBinaryTarget
@@ -112,6 +114,36 @@ def test_next_return_respects_scale() -> None:
     assert abs(result_pct['ret'][0] - result_raw['ret'][0] * 100.0) < 1e-9
 
 
+def test_next_bar_up_labels_next_close_above_current_close() -> None:
+    data = _close_series([100.0, 101.0, 100.0, 100.0])
+    t = NextBarUpTarget(data, 'next_bar_up')
+    result = t.transform(data)
+    assert result['next_bar_up'].to_list() == [1, 0, 0, None]
+
+
+def test_next_bar_up_manifest_pipeline_adds_target() -> None:
+    raw_data = pl.DataFrame({
+        'datetime': pl.datetime_range(
+            start=pl.datetime(2025, 1, 1, 0, 0, 0),
+            end=pl.datetime(2025, 1, 1, 7, 0, 0),
+            interval='1h',
+            eager=True,
+        ),
+        'close': [100.0, 101.0, 100.0, 102.0, 100.0, 99.0, 100.0, 101.0],
+    })
+    manifest = (
+        MLManifest()
+        .set_split_config(4, 2, 2)
+        .with_target_label('next_bar_up', NextBarUpTarget)
+    )
+
+    data = manifest.prepare_data(raw_data, {'bar_type': 'base'})
+
+    assert data['y_train'].to_list() == [1, 0, 1]
+    assert data['y_val'].to_list() == [0]
+    assert data['y_test'].to_list() == [1]
+
+
 def _make_split_data() -> list[pl.DataFrame]:
     roc = [float(i) / 10 for i in range(20)]
     close = [100.0 + i for i in range(20)]
@@ -192,4 +224,3 @@ def test_identity_target_raises_when_column_missing_on_transform() -> None:
         assert False, 'expected ValueError'
     except ValueError as e:
         assert 'label' in str(e)
-

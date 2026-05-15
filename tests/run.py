@@ -489,6 +489,8 @@ from tests.test_targets import test_threshold_binary_shift_applied
 from tests.test_targets import test_next_return_computes_percentage_return
 from tests.test_targets import test_next_return_respects_periods
 from tests.test_targets import test_next_return_respects_scale
+from tests.test_targets import test_next_bar_up_labels_next_close_above_current_close
+from tests.test_targets import test_next_bar_up_manifest_pipeline_adds_target
 from tests.test_targets import test_with_target_label_sets_target_class_config
 from tests.test_targets import test_with_target_label_applies_transform_to_all_splits
 from tests.test_targets import test_with_target_label_fits_only_on_train
@@ -1075,6 +1077,8 @@ tests = [
     test_next_return_computes_percentage_return,
     test_next_return_respects_periods,
     test_next_return_respects_scale,
+    test_next_bar_up_labels_next_close_above_current_close,
+    test_next_bar_up_manifest_pipeline_adds_target,
     test_with_target_label_sets_target_class_config,
     test_with_target_label_applies_transform_to_all_splits,
     test_with_target_label_fits_only_on_train,
