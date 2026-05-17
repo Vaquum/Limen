@@ -1,5 +1,6 @@
 # Data utilities module
 from limen.data.utils.compute_data_bars import compute_data_bars
+from limen.data.utils.splits import split_by_dates
 from limen.data.utils.splits import split_data_to_prep_output
 from limen.data.utils.splits import split_data_to_rule_based_prep_output
 from limen.data.utils.splits import split_sequential
@@ -9,6 +10,7 @@ from limen.data.utils.random_slice import random_slice
 __all__ = [
     'compute_data_bars',
     'random_slice',
+    'split_by_dates',
     'split_data_to_prep_output',
     'split_data_to_rule_based_prep_output',
     'split_random',

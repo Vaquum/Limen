@@ -64,6 +64,46 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = N
     return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds, strict=True)]
 
 
+def split_by_dates(
+    data: pl.DataFrame,
+    train_start: object, train_end: object,
+    val_start: object, val_end: object,
+    test_start: object, test_end: object,
+) -> list[pl.DataFrame]:
+
+    '''
+    Split a datetime-indexed DataFrame into train/val/test by half-open
+    date windows [start, end).
+
+    Each window selects its rows independently. No row from outside all
+    three windows enters any split, and no row appears in more than one
+    split (windows are non-overlapping by the ordering contract on
+    `Manifest.set_split_dates`). The split boundary lands on the
+    `datetime` value itself, not on a row count that drifts with
+    upstream feature trimming — use this when the temporal split must
+    be exact (e.g. honouring a deployment date), in preference to the
+    ratio-based `split_sequential`.
+
+    Args:
+        data (pl.DataFrame): Input data; must have a `datetime` column
+        train_start: Train window start (inclusive)
+        train_end:   Train window end (exclusive)
+        val_start:   Val window start (inclusive)
+        val_end:     Val window end (exclusive)
+        test_start:  Test window start (inclusive)
+        test_end:    Test window end (exclusive)
+
+    Returns:
+        list[pl.DataFrame]: three DataFrames in train, val, test order
+    '''
+
+    return [
+        data.filter((pl.col('datetime') >= train_start) & (pl.col('datetime') < train_end)),
+        data.filter((pl.col('datetime') >= val_start)   & (pl.col('datetime') < val_end)),
+        data.filter((pl.col('datetime') >= test_start)  & (pl.col('datetime') < test_end)),
+    ]
+
+
 def _compute_alignment(split_data: list, all_datetimes: list) -> dict:
     remaining = (split_data[0]['datetime'].to_list()
                  + split_data[1]['datetime'].to_list()

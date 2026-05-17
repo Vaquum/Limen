@@ -1,8 +1,13 @@
-import polars as pl
+from datetime import datetime
 
+import polars as pl
+import pytest
+
+from limen.data.utils.splits import split_by_dates
 from limen.data.utils.splits import split_data_to_prep_output
 from limen.data.utils.splits import split_data_to_rule_based_prep_output
 from limen.data.utils.splits import split_sequential
+from limen.experiment.manifest_core import MLManifest
 
 
 def _make_splits() -> tuple[list[pl.DataFrame], list]:
@@ -46,3 +51,136 @@ def test_rule_based_prep_output_returns_full_dataframes() -> None:
         assert 'target' in result[split].columns
     assert 'missing_datetimes' in result['_alignment']
     assert result['_alignment']['missing_datetimes'] == []
+
+
+def _make_daily_df(start: datetime, end: datetime) -> pl.DataFrame:
+    return pl.DataFrame({
+        'datetime': pl.datetime_range(start=start, end=end, interval='1d', eager=True),
+    }).with_columns(pl.int_range(0, pl.len()).alias('feature'))
+
+
+def test_split_by_dates_returns_three_dataframes_in_order() -> None:
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+
+    splits = split_by_dates(
+        df,
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    assert len(splits) == 3
+    train, val, test = splits
+    assert train['datetime'].min() == datetime(2024, 1, 1)
+    assert train['datetime'].max() == datetime(2024, 6, 30)
+    assert val['datetime'].min() == datetime(2024, 7, 1)
+    assert val['datetime'].max() == datetime(2024, 9, 30)
+    assert test['datetime'].min() == datetime(2024, 10, 1)
+    assert test['datetime'].max() == datetime(2024, 12, 31)
+
+
+def test_split_by_dates_no_row_loss_when_windows_are_contiguous() -> None:
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+    total = df.height
+
+    splits = split_by_dates(
+        df,
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    assert sum(s.height for s in splits) == total
+
+
+def test_split_by_dates_no_row_overlap_at_window_boundary() -> None:
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+
+    splits = split_by_dates(
+        df,
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    train, val, test = splits
+    train_dts = set(train['datetime'].to_list())
+    val_dts = set(val['datetime'].to_list())
+    test_dts = set(test['datetime'].to_list())
+    assert not (train_dts & val_dts)
+    assert not (val_dts & test_dts)
+    assert not (train_dts & test_dts)
+
+
+def test_split_by_dates_drops_rows_in_gaps_between_windows() -> None:
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+
+    splits = split_by_dates(
+        df,
+        datetime(2024, 1, 1), datetime(2024, 6, 1),
+        datetime(2024, 7, 1), datetime(2024, 9, 1),
+        datetime(2024, 10, 1), datetime(2024, 12, 1),
+    )
+
+    expected_train = 31 + 29 + 31 + 30 + 31
+    expected_val = 31 + 31
+    expected_test = 31 + 30
+    assert splits[0].height == expected_train
+    assert splits[1].height == expected_val
+    assert splits[2].height == expected_test
+
+
+def test_set_split_dates_stores_bounds_in_order() -> None:
+    m = MLManifest().set_split_dates(
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    assert m.split_dates == (
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+
+def test_set_split_dates_rejects_out_of_order_bounds() -> None:
+    with pytest.raises(ValueError, match='train_end'):
+        MLManifest().set_split_dates(
+            datetime(2024, 7, 1), datetime(2024, 1, 1),
+            datetime(2024, 7, 1), datetime(2024, 10, 1),
+            datetime(2024, 10, 1), datetime(2025, 1, 1),
+        )
+
+
+def test_set_split_dates_rejects_val_before_train_end() -> None:
+    with pytest.raises(ValueError, match='val_start'):
+        MLManifest().set_split_dates(
+            datetime(2024, 1, 1), datetime(2024, 8, 1),
+            datetime(2024, 7, 1), datetime(2024, 10, 1),
+            datetime(2024, 10, 1), datetime(2025, 1, 1),
+        )
+
+
+def test_set_split_dates_allows_gaps_between_adjacent_windows() -> None:
+    MLManifest().set_split_dates(
+        datetime(2024, 1, 1), datetime(2024, 6, 1),
+        datetime(2024, 7, 1), datetime(2024, 9, 1),
+        datetime(2024, 10, 1), datetime(2024, 12, 1),
+    )
+
+
+def test_set_split_dates_does_not_mutate_split_config() -> None:
+    m = MLManifest()
+    original_split_config = m.split_config
+    m.set_split_dates(
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+    assert m.split_config == original_split_config
+    assert m.split_dates is not None
+
+
+def test_manifest_default_split_dates_is_none() -> None:
+    assert MLManifest().split_dates is None

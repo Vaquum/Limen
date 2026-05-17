@@ -886,3 +886,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add Parkinson-volatility normalized return labeling with prior-bar sigma shift, dirty OHLC row filtering, zero-volatility nulling, and train-split Parkinson-to-close volatility sanity gate
 - Document the downstream-only bucketing contract for `vol_normalized_return`: fit train `q33`/`q66` of `abs(z)`, persist boundaries, and never refit online
 - Export the canonical outcome targets from `limen.targets` and add direct plus manifest-path regression coverage
+
+## v3.2.0 on 17th of May, 2026
+
+- Add `Manifest.set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end)` and `limen.data.utils.split_by_dates` for absolute-date splits. When `split_dates` is set it takes precedence over `split_config` in both `_run_prepare_setup` (used by `MLManifest.prepare_data` and `RuleBasedManifest.prepare_data`) and `Manifest.compute_test_bars`; otherwise the existing ratio-based `split_sequential` path runs unchanged. Windows are half-open `[start, end)` and the setter validates non-decreasing ordering (`train_start ≤ train_end ≤ val_start ≤ val_end ≤ test_start ≤ test_end`) so non-overlap is mechanical; gaps between adjacent windows are allowed and any rows in those gaps are intentionally excluded from all three splits. Use this when temporal split boundaries must land exactly on the datetime (e.g. honouring a deployment date with no look-ahead leak), in preference to the ratio-based split whose boundary drifts with upstream feature trim.
