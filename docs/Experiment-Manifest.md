@@ -466,6 +466,34 @@ Then in `params()`:
 
 Use this when scaler choice is itself part of the search space.
 
+## PCA Compression
+
+### `set_pca_compression(enabled_param='auto_pca', n_components_param='pca_k', scaler_param_name='_scaler', component_prefix='pc_')`
+
+Configure optional PCA feature compression for ML manifests.
+
+```python
+from limen.scalers import RobustScaler
+
+manifest = (
+    MLManifest()
+    .set_scaler(RobustScaler)
+    .set_pca_compression()
+)
+```
+
+When `round_params[enabled_param]` is absent or `False`, the manifest uses the
+current scaled feature surface unchanged.
+
+When it is `True`, `round_params[n_components_param]` must be an integer. The
+manifest fits full-SVD PCA on the train split only, then applies that frozen
+rotation to validation and test. `x_train`, `x_val`, and `x_test` are replaced
+with `pc_*` columns; no parallel raw-feature dataset is retained.
+
+PCA compression requires the configured fitted scaler to be `RobustScaler`.
+The PCA input is assumed to be stationary upstream. Limen does not run
+stationarity shims or tests in this path.
+
 ## Rule-Based Strategy
 
 Use `with_strategy()` when the strategy is expressed as boolean predicate logic over indicator columns — no Python model code required. This path is for rule-based SFDs only and produces a different `data_dict` shape than the ML path.

@@ -321,6 +321,13 @@ from tests.test_manifest_prepare_data import test_override_data_source_param
 from tests.test_manifest_prepare_data import test_override_multiple_params
 from tests.test_manifest_prepare_data import test_override_param_not_in_original_but_in_signature
 from tests.test_manifest_prepare_data import test_unknown_override_key_raises
+from tests.test_manifest_prepare_data import test_pca_compression_flag_off_matches_current_scaled_output
+from tests.test_manifest_prepare_data import test_pca_compression_replaces_feature_surface_when_enabled
+from tests.test_manifest_prepare_data import test_pca_compression_allows_empty_future_splits
+from tests.test_manifest_prepare_data import test_pca_compression_fits_on_train_only
+from tests.test_manifest_prepare_data import test_pca_compression_requires_robust_scaler
+from tests.test_manifest_prepare_data import test_pca_compression_rejects_invalid_k
+from tests.test_manifest_prepare_data import test_pca_compression_rejects_nonnumeric_features
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 from tests.test_inline_metrics import test_logreg_inline_and_post_confusion_metrics_match
 from tests.test_inline_metrics import test_xgboost_inline_and_post_backtest_metrics_match
@@ -1177,6 +1184,13 @@ tests = [
     test_find_min_d_small_data_skips,
     test_split_validation_rejects_invalid,
     test_column_consistency_drops_mismatched_columns,
+    test_pca_compression_flag_off_matches_current_scaled_output,
+    test_pca_compression_replaces_feature_surface_when_enabled,
+    test_pca_compression_allows_empty_future_splits,
+    test_pca_compression_fits_on_train_only,
+    test_pca_compression_requires_robust_scaler,
+    test_pca_compression_rejects_invalid_k,
+    test_pca_compression_rejects_nonnumeric_features,
     test_fractional_diff_manifest_integration,
     test_trainer_end_to_end,
     test_reconstruction_error_stochastic,

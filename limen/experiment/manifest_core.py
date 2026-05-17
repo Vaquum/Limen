@@ -15,12 +15,15 @@ from limen.calibration.pipeline import ThresholdOptimizerProtocol
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
 
+import numpy as np
 import polars as pl
+from sklearn.decomposition import PCA
 
 from limen.data.utils import split_by_dates
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
+from limen.scalers.robust_scaler import RobustScaler
 from limen.scalers.registry import SCALER_REGISTRY
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,18 @@ class AblationConfig:
 
     drop_count_key: str
     seed_key: str
+
+
+@dataclass
+class PCACompressionConfig:
+
+    '''Configuration for optional manifest-level PCA feature compression.'''
+
+    enabled_param: str
+    n_components_param: str
+    scaler_param_name: str
+    component_prefix: str
+
 
 FittedTransformEntry = tuple[
     list[FittedParamsComputationEntry],
@@ -759,6 +774,7 @@ class MLManifest(Manifest):
 
     scaler: FittedTransformEntry = None
     ablation_config: AblationConfig | None = None
+    pca_compression_config: PCACompressionConfig | None = None
     data_dict_extension: Callable = None
     prediction_calibration_config: CalibrationConfig | None = None
 
@@ -846,6 +862,43 @@ class MLManifest(Manifest):
         return self
 
 
+    def set_pca_compression(self,
+                            enabled_param: str = 'auto_pca',
+                            n_components_param: str = 'pca_k',
+                            scaler_param_name: str = '_scaler',
+                            component_prefix: str = 'pc_') -> 'MLManifest':
+
+        '''
+        Configure optional PCA compression over the finalized feature surface.
+
+        Args:
+            enabled_param (str): round_params key that enables PCA when True
+            n_components_param (str): round_params key for PCA component count
+            scaler_param_name (str): fitted RobustScaler key in data_dict
+            component_prefix (str): Prefix for emitted component columns
+
+        Returns:
+            MLManifest: Self for method chaining
+        '''
+
+        for name, value in {
+            'enabled_param': enabled_param,
+            'n_components_param': n_components_param,
+            'scaler_param_name': scaler_param_name,
+            'component_prefix': component_prefix,
+        }.items():
+            if not isinstance(value, str) or not value:
+                raise TypeError(f'{name} must be a non-empty string')
+
+        self.pca_compression_config = PCACompressionConfig(
+            enabled_param=enabled_param,
+            n_components_param=n_components_param,
+            scaler_param_name=scaler_param_name,
+            component_prefix=component_prefix,
+        )
+        return self
+
+
     def add_to_data_dict(self, func: Callable) -> 'MLManifest':
 
         '''
@@ -920,6 +973,9 @@ class MLManifest(Manifest):
             split_data[i] = data.fill_nan(None).drop_nulls()
 
         split_data = _align_split_columns(split_data)
+        split_data, all_fitted_params = _apply_pca_compression(
+            self, split_data, round_params, all_fitted_params
+        )
 
         if price_data_for_backtest is not None:
             final_datetimes = split_data[2].select('datetime')
@@ -1372,6 +1428,126 @@ def _apply_scaler(
             data = data.with_columns(target_data)
 
     return data, all_fitted_params
+
+
+def _apply_pca_compression(
+        manifest: 'MLManifest',
+        split_data: list[pl.DataFrame],
+        round_params: dict[str, Any],
+        all_fitted_params: dict[str, Any],
+) -> tuple[list[pl.DataFrame], dict[str, Any]]:
+
+    config = manifest.pca_compression_config
+    if config is None:
+        return split_data, all_fitted_params
+
+    enabled = round_params.get(config.enabled_param, False)
+    if not isinstance(enabled, bool):
+        raise TypeError(
+            f"round_params['{config.enabled_param}'] must be a bool, got {enabled!r}"
+        )
+    if not enabled:
+        return split_data, all_fitted_params
+
+    if config.n_components_param not in round_params:
+        raise ValueError(
+            f"round_params['{config.n_components_param}'] is required when "
+            f"round_params['{config.enabled_param}'] is True"
+        )
+
+    scaler = all_fitted_params.get(config.scaler_param_name)
+    if not isinstance(scaler, RobustScaler):
+        raise ValueError(
+            'PCA compression requires a fitted limen.scalers.RobustScaler. '
+            'Configure .set_scaler(RobustScaler) or use scaler_type="robust".'
+        )
+
+    target_col = manifest.target_column
+    excluded_cols = {'datetime', target_col}
+    feature_cols = [col for col in split_data[0].columns if col not in excluded_cols]
+    _validate_pca_feature_columns(split_data, feature_cols)
+
+    k = round_params[config.n_components_param]
+    if not isinstance(k, int) or isinstance(k, bool):
+        raise ValueError(
+            f"round_params['{config.n_components_param}'] must be an int, got {k!r}"
+        )
+    if k < 1 or k > len(feature_cols):
+        raise ValueError(
+            f"round_params['{config.n_components_param}'] must be between 1 "
+            f"and the feature count ({len(feature_cols)}), got {k}"
+        )
+    if k > split_data[0].height:
+        raise ValueError(
+            f"round_params['{config.n_components_param}'] must be no larger than "
+            f'the train row count ({split_data[0].height}), got {k}'
+        )
+
+    pca = PCA(n_components=k, svd_solver='full', whiten=False)
+    component_cols = [f'{config.component_prefix}{i}' for i in range(k)]
+    train_components = pca.fit_transform(split_data[0].select(feature_cols).to_numpy())
+
+    transformed_splits = [
+        _build_pca_split(
+            split_data[0], train_components, component_cols, target_col
+        )
+    ]
+    for split in split_data[1:]:
+        if split.height == 0:
+            components = np.empty((0, k))
+        else:
+            components = pca.transform(split.select(feature_cols).to_numpy())
+        transformed_splits.append(
+            _build_pca_split(split, components, component_cols, target_col)
+        )
+
+    all_fitted_params['_pca'] = pca
+    all_fitted_params['_pca_input_feature_names'] = feature_cols
+    all_fitted_params['_pca_feature_names'] = component_cols
+    all_fitted_params['_pca_n_components'] = k
+
+    return transformed_splits, all_fitted_params
+
+
+def _validate_pca_feature_columns(
+        split_data: list[pl.DataFrame],
+        feature_cols: list[str],
+) -> None:
+
+    if not feature_cols:
+        raise ValueError('PCA compression requires at least one feature column')
+
+    for split_idx, split in enumerate(split_data):
+        if split.height == 0:
+            continue
+        non_numeric = [
+            col for col in feature_cols
+            if not split[col].dtype.is_numeric()
+        ]
+        if non_numeric:
+            raise ValueError(
+                f'PCA compression requires numeric feature columns; '
+                f'split {split_idx} has non-numeric columns: {non_numeric}'
+            )
+
+
+def _build_pca_split(
+        source: pl.DataFrame,
+        components: Any,
+        component_cols: list[str],
+        target_col: str | None,
+) -> pl.DataFrame:
+
+    component_data = {
+        col: components[:, idx]
+        for idx, col in enumerate(component_cols)
+    }
+    out = source.select('datetime').hstack(pl.DataFrame(component_data))
+
+    if target_col and target_col in source.columns:
+        out = out.with_columns(source[target_col])
+
+    return out
 
 
 def _run_prepare_setup(
