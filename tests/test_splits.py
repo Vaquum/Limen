@@ -184,3 +184,44 @@ def test_set_split_dates_does_not_mutate_split_config() -> None:
 
 def test_manifest_default_split_dates_is_none() -> None:
     assert MLManifest().split_dates is None
+
+
+def test_compute_test_bars_returns_test_window_on_date_path() -> None:
+    '''
+    compute_test_bars must return exactly the test-window rows when
+    split_dates is set, and must do so without materialising the train
+    and val DataFrames (perf-regression guard from the date path).
+    '''
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+
+    m = MLManifest().set_split_dates(
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    # compute_test_bars needs bar_formation to do _process_bars; without
+    # it the helper just returns the test slice unchanged. We assert on
+    # the slice contents, not the bar shape.
+    test_bars = m.compute_test_bars(df, {})
+
+    assert test_bars['datetime'].min() == datetime(2024, 10, 1)
+    assert test_bars['datetime'].max() == datetime(2024, 12, 31)
+    assert test_bars.height == 31 + 30 + 31
+
+
+def test_compute_test_bars_still_works_on_ratio_path() -> None:
+    '''
+    Sanity guard: the ratio path through compute_test_bars must keep
+    working unchanged after the date-path optimisation.
+    '''
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+    total = df.height
+
+    m = MLManifest().set_split_config(8, 1, 2)
+    test_bars = m.compute_test_bars(df, {})
+
+    expected_train = int(total * 8 / 11)
+    expected_val = int(total * 1 / 11)
+    expected_test = total - expected_train - expected_val
+    assert test_bars.height == expected_test

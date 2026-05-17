@@ -619,8 +619,18 @@ class Manifest:
             resolved = _resolve_params(base_params, round_params)
             raw_data = func(raw_data, **resolved)
 
-        split_data = _resolve_split(self, raw_data)
-        test_split = split_data[2]
+        # compute_test_bars consumes only split_data[2], so materialising all
+        # three windows here would do 2x wasted filter work on the date path
+        # (3x O(N) filters vs the legacy O(1) slice, with two thirds discarded).
+        # The Log system calls this per round; the waste compounds. Take the
+        # one slice we actually need.
+        if self.split_dates is not None:
+            *_, test_start, test_end = self.split_dates
+            test_split = raw_data.filter(
+                (pl.col('datetime') >= test_start) & (pl.col('datetime') < test_end)
+            )
+        else:
+            test_split = split_sequential(raw_data, self.split_config)[2]
         _, test_bar_data = _process_bars(self, test_split, round_params)
 
         return test_bar_data
