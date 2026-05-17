@@ -326,6 +326,8 @@ from tests.test_manifest_prepare_data import test_pca_compression_replaces_featu
 from tests.test_manifest_prepare_data import test_pca_compression_allows_empty_future_splits
 from tests.test_manifest_prepare_data import test_pca_compression_fits_on_train_only
 from tests.test_manifest_prepare_data import test_pca_compression_requires_robust_scaler
+from tests.test_manifest_prepare_data import test_pca_compression_requires_configured_scaler
+from tests.test_manifest_prepare_data import test_pca_compression_reports_scaler_param_mismatch
 from tests.test_manifest_prepare_data import test_pca_compression_rejects_invalid_k
 from tests.test_manifest_prepare_data import test_pca_compression_rejects_nonnumeric_features
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
@@ -1189,6 +1191,8 @@ tests = [
     test_pca_compression_allows_empty_future_splits,
     test_pca_compression_fits_on_train_only,
     test_pca_compression_requires_robust_scaler,
+    test_pca_compression_requires_configured_scaler,
+    test_pca_compression_reports_scaler_param_mismatch,
     test_pca_compression_rejects_invalid_k,
     test_pca_compression_rejects_nonnumeric_features,
     test_fractional_diff_manifest_integration,

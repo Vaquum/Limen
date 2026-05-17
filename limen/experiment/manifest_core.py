@@ -9,9 +9,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from limen.calibration.pipeline import CalibratorProtocol
-from limen.calibration.pipeline import ThresholdOptimizerProtocol
-
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
 
@@ -19,6 +16,8 @@ import numpy as np
 import polars as pl
 from sklearn.decomposition import PCA
 
+from limen.calibration.pipeline import CalibratorProtocol
+from limen.calibration.pipeline import ThresholdOptimizerProtocol
 from limen.data.utils import split_by_dates
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_data_to_rule_based_prep_output
@@ -1456,10 +1455,18 @@ def _apply_pca_compression(
         )
 
     scaler = all_fitted_params.get(config.scaler_param_name)
+    if scaler is None:
+        raise ValueError(
+            'PCA compression could not find a fitted scaler at '
+            f"all_fitted_params['{config.scaler_param_name}']. "
+            'Configure .set_scaler(RobustScaler), or pass a matching '
+            'scaler_param_name to .set_pca_compression().'
+        )
     if not isinstance(scaler, RobustScaler):
         raise ValueError(
-            'PCA compression requires a fitted limen.scalers.RobustScaler. '
-            'Configure .set_scaler(RobustScaler) or use scaler_type="robust".'
+            'PCA compression requires a fitted RobustScaler at '
+            f"all_fitted_params['{config.scaler_param_name}'], got "
+            f'{type(scaler).__name__}.'
         )
 
     target_col = manifest.target_column

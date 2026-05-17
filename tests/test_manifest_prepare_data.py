@@ -388,6 +388,49 @@ def test_pca_compression_requires_robust_scaler() -> None:
         assert 'RobustScaler' in str(e)
 
 
+def test_pca_compression_requires_configured_scaler() -> None:
+
+    manifest = (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_pca_compression()
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+
+    try:
+        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert "all_fitted_params['_scaler']" in str(e)
+        assert 'set_scaler(RobustScaler)' in str(e)
+
+
+def test_pca_compression_reports_scaler_param_mismatch() -> None:
+
+    manifest = (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_scaler(RobustScaler, param_name='custom_scaler')
+        .set_pca_compression()
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+
+    try:
+        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert "all_fitted_params['_scaler']" in str(e)
+        assert 'scaler_param_name' in str(e)
+
+
 def test_pca_compression_rejects_invalid_k() -> None:
 
     manifest = _make_pca_manifest()
