@@ -1,6 +1,10 @@
 import polars as pl
 
-from limen.indicators.rsi import rsi
+from limen.indicators.rsi import _rsi_from_values
+
+
+CMP_N_100000 = 100000
+CMP_N_2 = 2
 
 
 def wilder_rsi(data: pl.DataFrame,
@@ -17,6 +21,18 @@ def wilder_rsi(data: pl.DataFrame,
         pl.DataFrame: The input data with a new column 'wilder_rsi_{period}'
     '''
 
-    return rsi(data, price_col='close', period=period).rename(
-        {f'rsi_{period}': f'wilder_rsi_{period}'}
+    if period < CMP_N_2 or period > CMP_N_100000:
+        raise ValueError('period must be between 2 and 100000')
+
+    out_col = f'wilder_rsi_{period}'
+    return data.with_columns(
+        pl.col('close').map_batches(
+            lambda s: pl.Series(
+                _rsi_from_values(
+                    s.to_numpy().astype(float, copy=False),
+                    period,
+                )
+            ),
+            return_dtype=pl.Float64,
+        ).alias(out_col)
     )
