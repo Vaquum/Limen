@@ -3,6 +3,8 @@ import inspect
 import importlib
 import logging
 import random
+from datetime import date
+from itertools import pairwise
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
 
 import polars as pl
 
+from limen.data.utils import split_by_dates
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
@@ -227,6 +230,7 @@ class Manifest:
     test_data_source_config: DataSourceConfig = None
     pre_split_data_selector: PipelineStep = None
     split_config: tuple[int, int, int] = (8, 1, 2)
+    split_dates: tuple | None = None
     bar_formation: PipelineStep = None
     required_bar_columns: list[str] = field(default_factory=list)
     feature_transforms: list[TransformEntry] = field(default_factory=list)
@@ -434,6 +438,79 @@ class Manifest:
 
         return self
 
+    def set_split_dates(
+        self,
+        train_start: date, train_end: date,
+        val_start: date, val_end: date,
+        test_start: date, test_end: date,
+    ) -> 'Manifest':
+
+        '''
+        Pin train, val, and test windows to absolute `datetime` bounds.
+
+        When set, takes precedence over `set_split_config` ratios in
+        `prepare_data` and `compute_test_bars`: the split runs on the
+        raw data (in `_run_prepare_setup`, before the per-split feature
+        transforms) and each row's slice assignment is fixed by which
+        window its `datetime` falls into. Subsequent per-split feature
+        engineering can trim rows independently within each slice but
+        cannot move rows between slices, so the train / val / test
+        datetime bounds are honoured exactly. `with_params_override(
+        split_config=...)` clears `split_dates` so the ratio override
+        path remains usable.
+
+        Use when the boundaries between train, val, and test must be
+        specific dates (e.g. honouring a deployment date) rather than
+        proportions of the raw row count. Use `set_split_config` for
+        the ratio-based split when an absolute date is not required.
+
+        Windows are half-open `[start, end)`. Ordering must satisfy
+        `train_start <= train_end <= val_start <= val_end <= test_start <= test_end`;
+        gaps between adjacent windows are allowed and any rows that fall
+        into those gaps are intentionally excluded from all three splits.
+
+        Args:
+            train_start (date | datetime): Train window start (inclusive)
+            train_end   (date | datetime): Train window end (exclusive)
+            val_start   (date | datetime): Val window start (inclusive)
+            val_end     (date | datetime): Val window end (exclusive)
+            test_start  (date | datetime): Test window start (inclusive)
+            test_end    (date | datetime): Test window end (exclusive)
+
+        Returns:
+            Manifest: Self for method chaining
+
+        Raises:
+            TypeError: If any bound is not a `date` or `datetime` instance
+            ValueError: If the six bounds are not in non-decreasing order
+        '''
+
+        bounds = [
+            ('train_start', train_start), ('train_end', train_end),
+            ('val_start', val_start), ('val_end', val_end),
+            ('test_start', test_start), ('test_end', test_end),
+        ]
+        for name, value in bounds:
+            if not isinstance(value, date):
+                raise TypeError(
+                    f'{name} must be a date or datetime instance, '
+                    f'got {type(value).__name__}: {value!r}'
+                )
+        for (a_name, a), (b_name, b) in pairwise(bounds):
+            if a > b:
+                raise ValueError(
+                    f'{a_name}={a!r} must be <= {b_name}={b!r}; bounds must be '
+                    'in non-decreasing order (gaps between adjacent windows allowed)'
+                )
+
+        self.split_dates = (
+            train_start, train_end,
+            val_start, val_end,
+            test_start, test_end,
+        )
+
+        return self
+
     def with_target_label(self,
                           target_name: str,
                           target_class: type,
@@ -517,6 +594,11 @@ class Manifest:
             if sum(sc) == 0:
                 raise ValueError('split_config ratios must not all be zero')
             new_manifest.split_config = sc
+            # Ratio override supersedes a previously-pinned date split.
+            # Without this, _resolve_split would keep using split_dates and
+            # the override would silently no-op (e.g. Trainer.train_sensors
+            # passing (1, 0, 0) to retrain on all available data).
+            new_manifest.split_dates = None
 
         ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
         if ds_overrides:
@@ -557,8 +639,18 @@ class Manifest:
             resolved = _resolve_params(base_params, round_params)
             raw_data = func(raw_data, **resolved)
 
-        split_data = split_sequential(raw_data, self.split_config)
-        test_split = split_data[2]
+        # compute_test_bars consumes only split_data[2], so materialising all
+        # three windows here would do 2x wasted filter work on the date path
+        # (3x O(N) filters vs the legacy O(1) slice, with two thirds discarded).
+        # The Log system calls this per round; the waste compounds. Take the
+        # one slice we actually need.
+        if self.split_dates is not None:
+            *_, test_start, test_end = self.split_dates
+            test_split = raw_data.filter(
+                (pl.col('datetime') >= test_start) & (pl.col('datetime') < test_end)
+            )
+        else:
+            test_split = split_sequential(raw_data, self.split_config)[2]
         _, test_bar_data = _process_bars(self, test_split, round_params)
 
         return test_bar_data
@@ -1293,7 +1385,7 @@ def _run_prepare_setup(
         resolved = _resolve_params(base_params, round_params)
         raw_data = func(raw_data, **resolved)
 
-    split_data = split_sequential(raw_data, manifest.split_config)
+    split_data = _resolve_split(manifest, raw_data)
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
     all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
@@ -1305,6 +1397,27 @@ def _run_prepare_setup(
     price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
 
     return split_data, all_datetimes, price_data_for_backtest
+
+
+def _resolve_split(manifest: 'Manifest', raw_data: pl.DataFrame) -> list[pl.DataFrame]:
+
+    '''
+    Pick between the date-based and ratio-based splitters.
+
+    When `manifest.split_dates` is set (via `set_split_dates`), it takes
+    precedence: the split filters `raw_data` by datetime windows so
+    each row's slice assignment is fixed by its datetime value before
+    the per-split feature transforms run. Otherwise the existing
+    ratio split (`split_sequential` over `manifest.split_config`)
+    applies. The output is the same `[train, val, test]` list shape
+    in either case, so every downstream invariant (per-split feature
+    atomicity, one-way scaler fit, column alignment,
+    `_compute_alignment` reading `split_data[2]`) operates identically.
+    '''
+
+    if manifest.split_dates is not None:
+        return split_by_dates(raw_data, *manifest.split_dates)
+    return split_sequential(raw_data, manifest.split_config)
 
 
 def _align_split_columns(split_data: list[pl.DataFrame]) -> list[pl.DataFrame]:

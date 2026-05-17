@@ -1,6 +1,7 @@
 import polars as pl
 
 from collections.abc import Sequence
+from datetime import date
 from itertools import accumulate
 
 
@@ -62,6 +63,60 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = N
     starts = [0, *bounds[:-1]]
 
     return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds, strict=True)]
+
+
+def split_by_dates(
+    data: pl.DataFrame,
+    train_start: date, train_end: date,
+    val_start: date, val_end: date,
+    test_start: date, test_end: date,
+) -> list[pl.DataFrame]:
+
+    '''
+    Split a datetime-indexed DataFrame into train/val/test by half-open
+    date windows `[start, end)`.
+
+    Each window selects its rows independently. No row from outside all
+    three windows enters any split, and no row appears in more than one
+    split when windows are non-overlapping (the ordering contract that
+    `Manifest.set_split_dates` enforces). Use when the train / val /
+    test boundaries must be specific dates rather than proportions of
+    the input row count — paired with `Manifest.set_split_dates`, this
+    is the splitter the manifest pipeline uses on its date path.
+
+    Args:
+        data (pl.DataFrame): Input data; must have a `datetime` column
+        train_start (date | datetime): Train window start (inclusive)
+        train_end   (date | datetime): Train window end (exclusive)
+        val_start   (date | datetime): Val window start (inclusive)
+        val_end     (date | datetime): Val window end (exclusive)
+        test_start  (date | datetime): Test window start (inclusive)
+        test_end    (date | datetime): Test window end (exclusive)
+
+    Returns:
+        list[pl.DataFrame]: three DataFrames in train, val, test order
+
+    Raises:
+        TypeError: If any bound is not a `date` or `datetime` instance
+    '''
+
+    bounds = (train_start, train_end, val_start, val_end, test_start, test_end)
+    for name, value in zip(
+        ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'),
+        bounds,
+        strict=True,
+    ):
+        if not isinstance(value, date):
+            raise TypeError(
+                f'{name} must be a date or datetime instance, '
+                f'got {type(value).__name__}: {value!r}'
+            )
+
+    return [
+        data.filter((pl.col('datetime') >= train_start) & (pl.col('datetime') < train_end)),
+        data.filter((pl.col('datetime') >= val_start)   & (pl.col('datetime') < val_end)),
+        data.filter((pl.col('datetime') >= test_start)  & (pl.col('datetime') < test_end)),
+    ]
 
 
 def _compute_alignment(split_data: list, all_datetimes: list) -> dict:

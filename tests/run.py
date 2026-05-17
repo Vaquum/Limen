@@ -160,6 +160,24 @@ from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
 from tests.test_splits import test_prep_output_ml_path
 from tests.test_splits import test_rule_based_prep_output_returns_full_dataframes
+from tests.test_splits import test_split_by_dates_returns_three_dataframes_in_order
+from tests.test_splits import test_split_by_dates_no_row_loss_when_windows_are_contiguous
+from tests.test_splits import test_split_by_dates_no_row_overlap_at_window_boundary
+from tests.test_splits import test_split_by_dates_drops_rows_in_gaps_between_windows
+from tests.test_splits import test_set_split_dates_stores_bounds_in_order
+from tests.test_splits import test_set_split_dates_rejects_out_of_order_bounds
+from tests.test_splits import test_set_split_dates_rejects_val_before_train_end
+from tests.test_splits import test_set_split_dates_allows_gaps_between_adjacent_windows
+from tests.test_splits import test_set_split_dates_does_not_mutate_split_config
+from tests.test_splits import test_manifest_default_split_dates_is_none
+from tests.test_splits import test_compute_test_bars_returns_test_window_on_date_path
+from tests.test_splits import test_compute_test_bars_still_works_on_ratio_path
+from tests.test_splits import test_prepare_data_honours_split_dates_at_real_call_site
+from tests.test_splits import test_prepare_data_ratio_path_unchanged_when_split_dates_unset
+from tests.test_splits import test_with_params_override_split_config_clears_split_dates
+from tests.test_splits import test_with_params_override_non_split_config_keeps_split_dates
+from tests.test_splits import test_set_split_dates_rejects_non_date_bounds
+from tests.test_splits import test_split_by_dates_rejects_non_date_bounds
 from tests.test_rule_based_metrics import test_num_trades_counts_entries_not_bars
 from tests.test_rule_based_metrics import test_position_rate
 from tests.test_rule_based_metrics import test_backtest_metrics_flattened_with_split_suffix
@@ -703,6 +721,24 @@ tests = [
     test_run_with_msq_checkpoint_trigger,
     test_prep_output_ml_path,
     test_rule_based_prep_output_returns_full_dataframes,
+    test_split_by_dates_returns_three_dataframes_in_order,
+    test_split_by_dates_no_row_loss_when_windows_are_contiguous,
+    test_split_by_dates_no_row_overlap_at_window_boundary,
+    test_split_by_dates_drops_rows_in_gaps_between_windows,
+    test_set_split_dates_stores_bounds_in_order,
+    test_set_split_dates_rejects_out_of_order_bounds,
+    test_set_split_dates_rejects_val_before_train_end,
+    test_set_split_dates_allows_gaps_between_adjacent_windows,
+    test_set_split_dates_does_not_mutate_split_config,
+    test_manifest_default_split_dates_is_none,
+    test_compute_test_bars_returns_test_window_on_date_path,
+    test_compute_test_bars_still_works_on_ratio_path,
+    test_prepare_data_honours_split_dates_at_real_call_site,
+    test_prepare_data_ratio_path_unchanged_when_split_dates_unset,
+    test_with_params_override_split_config_clears_split_dates,
+    test_with_params_override_non_split_config_keeps_split_dates,
+    test_set_split_dates_rejects_non_date_bounds,
+    test_split_by_dates_rejects_non_date_bounds,
     test_num_trades_counts_entries_not_bars,
     test_position_rate,
     test_backtest_metrics_flattened_with_split_suffix,
