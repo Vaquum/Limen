@@ -200,6 +200,8 @@ def _ht_trendline_from_values(values: np.ndarray) -> np.ndarray:
         idx = today
         temp_real = 0.0
         for _ in range(dc_period_int):
+            if idx < 0:
+                break
             temp_real += values[idx]
             idx -= 1
 

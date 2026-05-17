@@ -25,10 +25,10 @@ def active_quantile_count(data: pl.DataFrame,
     events = []
     for line in long_lines_q:
         events.append((line['start_idx'], 1))
-        events.append((line['end_idx'], -1))
+        events.append((line['end_idx'] + 1, -1))
     for line in short_lines_q:
         events.append((line['start_idx'], 1))
-        events.append((line['end_idx'], -1))
+        events.append((line['end_idx'] + 1, -1))
     if not events:
         return data.with_columns([pl.lit(0).alias('active_quantile_count')])
 

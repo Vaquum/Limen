@@ -2,6 +2,7 @@ import polars as pl
 from limen.indicators.sma import sma
 
 DEFAULT_SMA_PERIODS = [5, 10, 20, 50]
+EPSILON = 1e-10
 
 
 def sma_ratios(data: pl.DataFrame, periods: list | None = None, price_col: str = 'close') -> pl.DataFrame:
@@ -31,7 +32,7 @@ def sma_ratios(data: pl.DataFrame, periods: list | None = None, price_col: str =
 
         # Add ratio column
         df = df.with_columns([
-            (pl.col(price_col) / pl.col(sma_col)).alias(f'sma_{period}_ratio')
+            (pl.col(price_col) / (pl.col(sma_col) + EPSILON)).alias(f'sma_{period}_ratio')
         ])
 
     return df

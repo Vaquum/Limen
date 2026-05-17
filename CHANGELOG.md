@@ -856,3 +856,26 @@ Note: add all new changelog entries to the bottom of this file.
 - Rename spot-kline row limiting to `row_count_limit`; keep `n_rows` as a legacy alias
 - Make row limiting return the latest rows after filtering and aggregation
 - Add `end_date_limit` and reject `row_count_limit` when both date limits define a closed window
+
+## v3.1.0 on 17th of May, 2026
+
+- Fix look-ahead leak in `limen.features.ichimoku_cloud` `senkou_a`/`senkou_b` by changing `shift(-displacement)` to `shift(displacement)`
+- Move `ema_breakout` from `limen.features` to `limen.targets.EmaBreakoutTarget` (forward-looking label)
+- Move `exit_quality` from `limen.features` to `limen.targets.ExitQualityTarget` (post-trade outcome label)
+- Move `risk_reward_ratio` from `limen.features` to `limen.targets.RiskRewardRatioTarget` (consumes forward-looking columns)
+- Unify `limen.features.active_quantile_count` half-open interval to `end_idx + 1` matching `active_lines`
+- Unify `limen.features.hours_since_big_move` boundary to `<=` matching `hours_since_quantile_line`
+- Parameterize `limen.features.quantile_line_density` output column name as `quantile_line_density_{lookback_hours}h`
+- Reseed `limen.indicators.wilder_rsi` via canonical `rsi` implementation
+- Fix `limen.indicators.bollinger_bands` to use population stddev (`ddof=0`) matching `bbands` and TA-Lib
+- Add flat-window zero guard to `limen.indicators.stochastic_oscillator` matching `stoch`/`stochf`
+- Guard `limen.features.conserved_flux_renormalization` against zero/null mean flux
+- Remove silent `except (ValueError, IndexError)` suffix fallback from `limen.features.breakout_features`
+- Add EPSILON guard to divisions in `range_pct`, `spread`, `spread_percent`, `sma_ratios`, `trend_strength`, `volume_ratio`, `volume_regime`, `volume_spike` (ratio branch), `volume_trend`, `volume_weight`, `vwap`, `close_to_extremes` features and `body_pct` indicator
+- Add negative-index break to inner accumulator loop in `limen.indicators.ht_trendline` and `limen.indicators.ht_trendmode`
+- Update `tests/test_feature_library_primitives.py::test_ichimoku_cloud_builds_shifted_components` to the corrected leak-free senkou values
+- Update `tests/test_feature_library_context.py::test_active_quantile_count_tracks_quantile_filtered_spans` and `test_quantile_line_density_counts_recent_line_endings_within_lookback` to reflect unified boundary and parameterized column name
+- Move `test_ema_breakout_labels_future_moves_above_ema_threshold`, `test_exit_quality_distinguishes_good_bad_and_neutral_exits`, `test_risk_reward_ratio_uses_absolute_drawdown_with_epsilon_guard` to `tests/test_targets.py` against the new target classes
+- Update `docs/Features.md` to drop the moved `ema_breakout` row and `docs/Targets.md` to document `EmaBreakoutTarget`, `ExitQualityTarget`, `RiskRewardRatioTarget`
+- Raise `tests/runtime_budget.json` ceiling from 180s to 195s to accommodate the small per-test overhead introduced by the added `when/then/EPSILON` guards across the indicator/feature surface
+- `ExitQualityTarget` and `RiskRewardRatioTarget` drop their forward-looking source columns (`exit_reason`, `exit_net_return` and `capturable_breakout`, `max_drawdown` respectively) after computing the target so they cannot re-enter `x_train`/`x_val`/`x_test` via the manifest's all-columns-except-target convention

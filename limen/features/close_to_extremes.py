@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def close_to_extremes(data: pl.DataFrame) -> pl.DataFrame:
 
@@ -14,6 +16,6 @@ def close_to_extremes(data: pl.DataFrame) -> pl.DataFrame:
     '''
 
     return data.with_columns([
-        ((pl.col('close') - pl.col('high')) / pl.col('high')).alias('close_to_high'),
-        ((pl.col('close') - pl.col('low')) / pl.col('low')).alias('close_to_low')
+        ((pl.col('close') - pl.col('high')) / (pl.col('high') + EPSILON)).alias('close_to_high'),
+        ((pl.col('close') - pl.col('low')) / (pl.col('low') + EPSILON)).alias('close_to_low')
     ])

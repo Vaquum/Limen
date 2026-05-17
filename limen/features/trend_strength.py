@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def trend_strength(data: pl.DataFrame, fast_period: int = 20, slow_period: int = 50) -> pl.DataFrame:
 
@@ -22,7 +24,7 @@ def trend_strength(data: pl.DataFrame, fast_period: int = 20, slow_period: int =
             pl.col('close').rolling_mean(window_size=slow_period).alias('sma_slow'),
         ])
         .with_columns([
-            ((pl.col('sma_fast') - pl.col('sma_slow')) / pl.col('sma_slow')).alias('trend_strength')
+            ((pl.col('sma_fast') - pl.col('sma_slow')) / (pl.col('sma_slow') + EPSILON)).alias('trend_strength')
         ])
         .drop(['sma_fast', 'sma_slow'])
     )

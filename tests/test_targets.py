@@ -1,11 +1,15 @@
 import polars as pl
+import pytest
 
 from limen.experiment import Manifest
+from limen.targets import EmaBreakoutTarget
+from limen.targets import ExitQualityTarget
 from limen.targets import ForwardBreakoutTarget
 from limen.targets import IdentityTarget
 from limen.targets import NextReturnTarget
 from limen.targets import QuantileBinaryTarget
 from limen.targets import RandomBinaryTarget
+from limen.targets import RiskRewardRatioTarget
 from limen.targets import ThresholdBinaryTarget
 
 
@@ -192,4 +196,42 @@ def test_identity_target_raises_when_column_missing_on_transform() -> None:
         assert False, 'expected ValueError'
     except ValueError as e:
         assert 'label' in str(e)
+
+
+def test_ema_breakout_target_labels_future_moves_above_ema_threshold() -> None:
+    data = pl.DataFrame({'close': [10.0, 10.0, 20.0, 20.0]})
+    t = EmaBreakoutTarget(data, 'breakout_ema')
+    result = t.transform(data, target_col='close', ema_span=2, breakout_delta=0.1, breakout_horizon=1)
+
+    assert result['breakout_ema'].to_list() == [0, 1, 1, None]
+
+
+def test_exit_quality_target_distinguishes_good_bad_and_neutral_exits() -> None:
+    data = pl.DataFrame(
+        {
+            'exit_reason': ['target_hit', 'stop_loss', 'timeout', 'timeout'],
+            'exit_net_return': [0.2, -0.4, -0.1, 0.1],
+        }
+    )
+    t = ExitQualityTarget(data, 'exit_quality')
+    result = t.transform(data)
+
+    assert result['exit_quality'].to_list() == pytest.approx([1.0, 0.2, 0.2, 0.5])
+    assert 'exit_reason' not in result.columns
+    assert 'exit_net_return' not in result.columns
+
+
+def test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard() -> None:
+    data = pl.DataFrame(
+        {
+            'capturable_breakout': [0.5, 1.0],
+            'max_drawdown': [-0.1, 0.0],
+        }
+    )
+    t = RiskRewardRatioTarget(data, 'risk_reward_ratio')
+    result = t.transform(data)
+
+    assert result['risk_reward_ratio'].to_list() == pytest.approx([0.5 / 0.101, 1000.0])
+    assert 'capturable_breakout' not in result.columns
+    assert 'max_drawdown' not in result.columns
 

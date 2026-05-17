@@ -91,14 +91,11 @@ def _breakout_roc(data: pl.DataFrame,
         pl.DataFrame: The input data with new ROC columns
     '''
 
-    try:
-        current_lag = int(long_col.rsplit('-', 1)[-1])
-        next_lag = int(next_long_col.rsplit('-', 1)[-1])
-        base_lag = min(current_lag, next_lag)
-        lag_diff = abs(current_lag - next_lag)
-        suffix = f"_{base_lag}_{lag_diff}"
-    except (ValueError, IndexError):
-        suffix = ''
+    current_lag = int(long_col.rsplit('-', 1)[-1])
+    next_lag = int(next_long_col.rsplit('-', 1)[-1])
+    base_lag = min(current_lag, next_lag)
+    lag_diff = abs(current_lag - next_lag)
+    suffix = f"_{base_lag}_{lag_diff}"
 
     return data.with_columns([
         pl.when(pl.col(long_col) != 0)
@@ -145,14 +142,11 @@ def breakout_features(data: pl.DataFrame,
 
     df = _breakout_roc(df, current_long_col, current_short_col, next_long_col, next_short_col)
 
-    try:
-        current_lag = int(current_long_col.rsplit('-', 1)[-1])
-        next_lag = int(next_long_col.rsplit('-', 1)[-1])
-        base_lag = min(current_lag, next_lag)
-        lag_diff = abs(current_lag - next_lag)
-        roc_suffix = f"_{base_lag}_{lag_diff}"
-    except (ValueError, IndexError):
-        roc_suffix = ""
+    current_lag = int(current_long_col.rsplit('-', 1)[-1])
+    next_lag = int(next_long_col.rsplit('-', 1)[-1])
+    base_lag = min(current_lag, next_lag)
+    lag_diff = abs(current_lag - next_lag)
+    roc_suffix = f"_{base_lag}_{lag_diff}"
 
     cols = [f"long_t-{i}"  for i in range(horizon, horizon + lookback)] \
          + [f"short_t-{i}" for i in range(horizon, horizon + lookback)] \

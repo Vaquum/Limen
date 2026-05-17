@@ -32,11 +32,11 @@ def bollinger_bands(
               .alias(sma_col),
 
             (pl.col(price_col).rolling_mean(window)
-             + num_std * pl.col(price_col).rolling_std(window))
+             + num_std * pl.col(price_col).rolling_std(window, ddof=0))
              .alias(upper_col),
 
             (pl.col(price_col).rolling_mean(window)
-             - num_std * pl.col(price_col).rolling_std(window))
+             - num_std * pl.col(price_col).rolling_std(window, ddof=0))
              .alias(lower_col),
         ])
     )

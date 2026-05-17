@@ -144,7 +144,6 @@ These helpers are useful when you want state or structure, not just a continuous
 |---|---|---|
 | `breakout_features` | many lagged breakout columns plus `long_roll_mean`, `long_roll_std`, `short_roll_mean`, `short_roll_std`, `roc_long_12_1`, `roc_short_12_1` | Designed to enrich pre-existing breakout flags. |
 | `breakout_percentile_regime` | `price_range_position`, `regime_breakout_pct` | Uses percentile thresholds over price-range position. |
-| `ema_breakout` | `breakout_ema` | Requires `target_col`; flags price displacement from EMA beyond `breakout_delta`. |
 | `hh_hl_structure_regime` | `regime_hh_hl` | Captures higher-high and higher-low style structure. |
 | `ichimoku_cloud` | `tenkan`, `kijun`, `senkou_a`, `senkou_b`, `chikou` | Full Ichimoku feature set. |
 | `ma_slope_regime` | `regime_ma_slope` | Regime label based on moving-average slope. |

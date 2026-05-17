@@ -1,6 +1,7 @@
 import polars as pl
 from limen.indicators.sma import sma
 
+EPSILON = 1e-10
 
 
 def volume_weight(data: pl.DataFrame,
@@ -25,6 +26,6 @@ def volume_weight(data: pl.DataFrame,
     df = df.rename({f'volume_sma_{period}': 'volume_ma'})
 
     return df.with_columns([
-        (pl.col('volume') / pl.col('volume_ma')).clip(volume_weight_min, volume_weight_max).alias('volume_weight')
+        (pl.col('volume') / (pl.col('volume_ma') + EPSILON)).clip(volume_weight_min, volume_weight_max).alias('volume_weight')
     ])
 

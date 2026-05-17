@@ -49,7 +49,7 @@ def test_active_quantile_count_tracks_quantile_filtered_spans() -> None:
         short_lines_q=[{'start_idx': 2, 'end_idx': 4}],
     )
 
-    assert result['active_quantile_count'].to_list() == [0, 1, 2, 1, 0, 0]
+    assert result['active_quantile_count'].to_list() == [0, 1, 2, 2, 1, 0]
 
 
 def test_quantile_line_density_counts_recent_line_endings_within_lookback() -> None:
@@ -69,7 +69,7 @@ def test_quantile_line_density_counts_recent_line_endings_within_lookback() -> N
         column_name for column_name in result.columns if column_name.startswith('quantile_line_density_')
     ]
 
-    assert density_columns == ['quantile_line_density_48h']
+    assert density_columns == ['quantile_line_density_2h']
     assert result[density_columns[0]].to_list() == [0, 1, 2, 2, 2, 1]
 
 

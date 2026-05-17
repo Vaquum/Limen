@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def volume_spike(data: pl.DataFrame, period: int = 20, use_zscore: bool = False) -> pl.DataFrame:
 
@@ -18,10 +20,10 @@ def volume_spike(data: pl.DataFrame, period: int = 20, use_zscore: bool = False)
     if use_zscore:
         return data.with_columns([
             ((pl.col('volume') - pl.col('volume').rolling_mean(window_size=period)) /
-             (pl.col('volume').rolling_std(window_size=period) + 1e-10))
+             (pl.col('volume').rolling_std(window_size=period) + EPSILON))
             .alias('volume_spike')
         ])
     return data.with_columns([
-        (pl.col('volume') / pl.col('volume').rolling_mean(window_size=period))
+        (pl.col('volume') / (pl.col('volume').rolling_mean(window_size=period) + EPSILON))
         .alias('volume_spike')
     ])

@@ -116,7 +116,10 @@ def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: i
         MIN_BINS_FOR_STATS = 2
         if bins.height < MIN_BINS_FOR_STATS:
             continue
-        rel_std.append(float(bins['flux'].std(ddof=0) / bins['flux'].mean()))
+        flux_mean = bins['flux'].mean()
+        if flux_mean == 0.0 or flux_mean is None:
+            continue
+        rel_std.append(float(bins['flux'].std(ddof=0) / flux_mean))
         ent.append(float(bins['entropy'].mean()))
 
     return np.array(rel_std), np.array(ent)
