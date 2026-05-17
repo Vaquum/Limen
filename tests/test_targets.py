@@ -1,16 +1,22 @@
+import math
+
 import polars as pl
 import pytest
 
+from limen.experiment import MLManifest
 from limen.experiment import Manifest
 from limen.targets import EmaBreakoutTarget
 from limen.targets import ExitQualityTarget
 from limen.targets import ForwardBreakoutTarget
 from limen.targets import IdentityTarget
+from limen.targets import NextBarDownTarget
+from limen.targets import NextBarUpTarget
 from limen.targets import NextReturnTarget
 from limen.targets import QuantileBinaryTarget
 from limen.targets import RandomBinaryTarget
 from limen.targets import RiskRewardRatioTarget
 from limen.targets import ThresholdBinaryTarget
+from limen.targets import VolNormalizedReturnTarget
 
 
 def _close_series(values: list[float]) -> pl.DataFrame:
@@ -19,6 +25,36 @@ def _close_series(values: list[float]) -> pl.DataFrame:
 
 def _roc_series(values: list[float]) -> pl.DataFrame:
     return pl.DataFrame({'roc_1': values})
+
+
+def _constant_vol_bars(n_rows: int = 8,
+                       log_return: float = 0.01,
+                       range_scale: float = 1.0) -> pl.DataFrame:
+    rows = []
+    price = 100.0
+    log_range = abs(log_return) * math.sqrt(4.0 * math.log(2.0)) * range_scale
+    for _ in range(n_rows):
+        open_price = price
+        close_price = open_price * math.exp(log_return)
+        rows.append({
+            'open': open_price,
+            'high': open_price * math.exp(log_range),
+            'low': open_price,
+            'close': close_price,
+        })
+        price = close_price
+    return pl.DataFrame(rows)
+
+
+def _with_hourly_datetime(data: pl.DataFrame) -> pl.DataFrame:
+    return data.with_columns(
+        pl.datetime_range(
+            start=pl.datetime(2025, 1, 1, 0, 0, 0),
+            end=pl.datetime(2025, 1, 1, data.height - 1, 0, 0),
+            interval='1h',
+            eager=True,
+        ).alias('datetime')
+    ).select(['datetime', *data.columns])
 
 
 def test_quantile_binary_fits_cutoff_on_train() -> None:
@@ -114,6 +150,92 @@ def test_next_return_respects_scale() -> None:
     result_pct = t.transform(data, periods=1, scale=100.0)
     result_raw = t.transform(data, periods=1, scale=1.0)
     assert abs(result_pct['ret'][0] - result_raw['ret'][0] * 100.0) < 1e-9
+
+
+def test_next_bar_up_labels_next_close_above_current_close() -> None:
+    data = _close_series([100.0, 101.0, 100.0, 100.0])
+    t = NextBarUpTarget(data, 'next_bar_up')
+    result = t.transform(data)
+    assert result['next_bar_up'].to_list() == [1, 0, 0, None]
+
+
+def test_next_bar_down_labels_next_close_below_current_close() -> None:
+    data = _close_series([100.0, 101.0, 100.0, 100.0])
+    t = NextBarDownTarget(data, 'next_bar_down')
+    result = t.transform(data)
+    assert result['next_bar_down'].to_list() == [0, 1, 0, None]
+
+
+def test_vol_normalized_return_matches_unit_parkinson_ratio() -> None:
+    data = _constant_vol_bars(n_rows=6, log_return=0.01)
+    t = VolNormalizedReturnTarget(data, 'vol_normalized_return', halflife=2, min_periods=2)
+    result = t.transform(data)
+
+    assert result['vol_normalized_return'].to_list()[:2] == [None, None]
+    assert result['vol_normalized_return'].to_list()[2:] == pytest.approx([1.0, 1.0, 1.0, 1.0])
+
+
+def test_vol_normalized_return_uses_prior_sigma_for_current_return() -> None:
+    data = _constant_vol_bars(n_rows=6, log_return=0.01)
+    mutated_rows = data.to_dicts()
+    mutated_rows[2]['high'] *= 100.0
+    mutated = pl.DataFrame(mutated_rows)
+
+    t = VolNormalizedReturnTarget(data, 'vol_normalized_return', halflife=2, min_periods=2)
+    baseline = t.transform(data)['vol_normalized_return'].to_list()
+    changed = t.transform(mutated)['vol_normalized_return'].to_list()
+
+    assert changed[2] == pytest.approx(baseline[2])
+    assert changed[3] != pytest.approx(baseline[3])
+
+
+def test_vol_normalized_return_drops_dirty_ohlc_bars() -> None:
+    data = _constant_vol_bars(n_rows=6, log_return=0.01)
+    dirty_rows = data.to_dicts()
+    dirty_rows[2]['high'] = max(dirty_rows[2]['open'], dirty_rows[2]['close']) - 0.01
+    dirty_rows[4]['low'] = min(dirty_rows[4]['open'], dirty_rows[4]['close']) + 0.01
+    dirty = pl.DataFrame(dirty_rows)
+
+    t = VolNormalizedReturnTarget(data, 'vol_normalized_return', halflife=2, min_periods=1)
+    result = t.transform(dirty)
+
+    assert result.height == data.height - 2
+
+
+def test_vol_normalized_return_rejects_bad_training_sigma_ratio() -> None:
+    data = _constant_vol_bars(n_rows=6, log_return=0.01, range_scale=2.0)
+
+    with pytest.raises(ValueError, match='outside'):
+        VolNormalizedReturnTarget(data, 'vol_normalized_return', halflife=2, min_periods=2)
+
+
+def test_canonical_decoder_outcomes_run_through_manifest() -> None:
+    raw_up = _with_hourly_datetime(_constant_vol_bars(n_rows=12, log_return=0.01))
+    raw_down = _with_hourly_datetime(_constant_vol_bars(n_rows=12, log_return=-0.01))
+
+    up = (
+        MLManifest()
+        .set_split_config(6, 3, 3)
+        .with_target_label('next_bar_up', NextBarUpTarget)
+    ).prepare_data(raw_up, {'bar_type': 'base'})
+    down = (
+        MLManifest()
+        .set_split_config(6, 3, 3)
+        .with_target_label('next_bar_down', NextBarDownTarget)
+    ).prepare_data(raw_down, {'bar_type': 'base'})
+    normalized = (
+        MLManifest()
+        .set_split_config(6, 3, 3)
+        .with_target_label(
+            'vol_normalized_return',
+            VolNormalizedReturnTarget,
+            fit_params={'halflife': 2, 'min_periods': 1},
+        )
+    ).prepare_data(raw_up, {'bar_type': 'base'})
+
+    assert up['y_train'].to_list() == [1, 1, 1, 1, 1]
+    assert down['y_train'].to_list() == [1, 1, 1, 1, 1]
+    assert normalized['y_train'].to_list() == pytest.approx([1.0, 1.0, 1.0, 1.0, 1.0])
 
 
 def _make_split_data() -> list[pl.DataFrame]:
@@ -234,4 +356,3 @@ def test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard() ->
     assert result['risk_reward_ratio'].to_list() == pytest.approx([0.5 / 0.101, 1000.0])
     assert 'capturable_breakout' not in result.columns
     assert 'max_drawdown' not in result.columns
-

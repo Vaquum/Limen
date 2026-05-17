@@ -879,3 +879,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Update `docs/Features.md` to drop the moved `ema_breakout` row and `docs/Targets.md` to document `EmaBreakoutTarget`, `ExitQualityTarget`, `RiskRewardRatioTarget`
 - Raise `tests/runtime_budget.json` ceiling from 180s to 195s to accommodate the small per-test overhead introduced by the added `when/then/EPSILON` guards across the indicator/feature surface
 - `ExitQualityTarget` and `RiskRewardRatioTarget` drop their forward-looking source columns (`exit_reason`, `exit_net_return` and `capturable_breakout`, `max_drawdown` respectively) after computing the target so they cannot re-enter `x_train`/`x_val`/`x_test` via the manifest's all-columns-except-target convention
+
+## v3.1.1 on 17th of May, 2026
+
+- Add canonical decoder outcome targets `NextBarUpTarget`, `NextBarDownTarget`, and `VolNormalizedReturnTarget`
+- Add Parkinson-volatility normalized return labeling with prior-bar sigma shift, dirty OHLC row filtering, zero-volatility nulling, and train-split Parkinson-to-close volatility sanity gate
+- Document the downstream-only bucketing contract for `vol_normalized_return`: fit train `q33`/`q66` of `abs(z)`, persist boundaries, and never refit online
+- Export the canonical outcome targets from `limen.targets` and add direct plus manifest-path regression coverage

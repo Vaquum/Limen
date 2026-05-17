@@ -39,7 +39,10 @@ manifest.with_target_label(
 | `ThresholdBinaryTarget` | binary `UInt8` | no | `shift=-1` | Positive label above a fixed numeric threshold. |
 | `ForwardBreakoutTarget` | binary `UInt8` | no | `shift=-1` | Positive label if price rises at least `threshold` over the next `forward_periods` bars. |
 | `EmaBreakoutTarget` | binary `UInt8` | no | n/a | Positive label if price `breakout_horizon` bars ahead exceeds EMA by `breakout_delta`. |
+| `NextBarUpTarget` | binary `UInt8` | no | none | Canonical up decoder outcome: positive label if the next close is higher. |
+| `NextBarDownTarget` | binary `UInt8` | no | none | Canonical down decoder outcome: positive label if the next close is lower. |
 | `NextReturnTarget` | continuous `Float64` | no | n/a | Percentage return over the next N bars. Use with regression architectures. |
+| `VolNormalizedReturnTarget` | continuous `Float64` | yes — train sanity gate | none | Canonical return decoder outcome: log return divided by prior Parkinson volatility. |
 | `RiskRewardRatioTarget` | continuous `Float64` | no | n/a | Ratio of `capturable_breakout` to absolute `max_drawdown` per row. |
 | `ExitQualityTarget` | continuous `Float64` | no | n/a | Categorical score for closed trades based on `exit_reason` and `exit_net_return`. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
@@ -158,6 +161,63 @@ Produces a continuous target as the percentage return over the next N bars. Use 
 |---|---|---|
 | `periods` | `int` | Look-ahead window in bars; default `1` |
 | `scale` | `float` | Multiplier applied to the raw return; default `100.0` |
+
+### `NextBarUpTarget`
+
+```python
+NextBarUpTarget(train_data, target_name)
+```
+
+Produces a binary target named `next_bar_up`: `1` when the next close is higher than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by manifest preparation.
+
+```python
+.with_target_label('next_bar_up', NextBarUpTarget)
+```
+
+No parameters.
+
+### `NextBarDownTarget`
+
+```python
+NextBarDownTarget(train_data, target_name)
+```
+
+Produces a binary target named `next_bar_down`: `1` when the next close is lower than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by manifest preparation.
+
+```python
+.with_target_label('next_bar_down', NextBarDownTarget)
+```
+
+No parameters.
+
+### `VolNormalizedReturnTarget`
+
+```python
+VolNormalizedReturnTarget(train_data, target_name, high_col='high', low_col='low', open_col='open', close_col='close', halflife=50, min_periods=150)
+```
+
+Produces a continuous target named `vol_normalized_return`. The target is `log(close / close.shift(1)) / sigma.shift(1)`, where `sigma` is the EWMA Parkinson volatility from `(log(high / low) ** 2) / (4 * ln(2))`. The one-bar sigma shift prevents the current bar range from entering the current return label.
+
+Dirty OHLC rows are dropped before target construction when `high < max(open, close)` or `low > min(open, close)`. Zero volatility is converted to null, not epsilon.
+
+```python
+.with_target_label(
+    'vol_normalized_return',
+    VolNormalizedReturnTarget,
+    fit_params={'halflife': 50, 'min_periods': 150},
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `high_col` | `str` | High price column; default `'high'` |
+| `low_col` | `str` | Low price column; default `'low'` |
+| `open_col` | `str` | Open price column used for dirty-bar filtering; default `'open'` |
+| `close_col` | `str` | Close price column; default `'close'` |
+| `halflife` | `int` | EWMA half-life in bars; default `50` |
+| `min_periods` | `int` | Warmup before volatility is emitted; default `150` |
+
+The training split must pass the Parkinson-to-close volatility sanity gate: median `sigma_P / sigma_C2C` must be within `[0.9, 1.1]`. Bucketing is deliberately downstream: fit `q33`/`q66` of `abs(vol_normalized_return)` on train, persist the boundaries, and load them at inference instead of refitting online.
 
 ### `RiskRewardRatioTarget`
 
