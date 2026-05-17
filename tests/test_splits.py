@@ -334,42 +334,35 @@ def test_with_params_override_non_split_config_keeps_split_dates() -> None:
     assert overridden.data_source_config.params['kline_size'] == 7200
 
 
-@pytest.mark.parametrize('bad_value', [
-    '2024-01-01',     # string
-    1704067200,       # epoch int
-    1704067200.0,     # epoch float
-    None,             # null
-])
-def test_set_split_dates_rejects_non_date_bounds(bad_value: object) -> None:
+def test_set_split_dates_rejects_non_date_bounds() -> None:
     '''
     `set_split_dates` accepts only `date`/`datetime` instances. Passing
     a comparable-but-wrong type (string, int, float, None) must raise
     `TypeError` at the API boundary, not fail later inside Polars.
     '''
-    with pytest.raises(TypeError, match='train_start'):
-        MLManifest().set_split_dates(
-            bad_value, datetime(2024, 7, 1),
-            datetime(2024, 7, 1), datetime(2024, 10, 1),
-            datetime(2024, 10, 1), datetime(2025, 1, 1),
-        )
+    bad_values = ['2024-01-01', 1704067200, 1704067200.0, None]
+    for bad_value in bad_values:
+        with pytest.raises(TypeError, match='train_start'):
+            MLManifest().set_split_dates(
+                bad_value, datetime(2024, 7, 1),
+                datetime(2024, 7, 1), datetime(2024, 10, 1),
+                datetime(2024, 10, 1), datetime(2025, 1, 1),
+            )
 
 
-@pytest.mark.parametrize('bad_value', [
-    '2024-01-01',
-    1704067200,
-    None,
-])
-def test_split_by_dates_rejects_non_date_bounds(bad_value: object) -> None:
+def test_split_by_dates_rejects_non_date_bounds() -> None:
     '''
     `split_by_dates` is exported as a public helper so it has to
     validate its own bounds at the boundary too - mirroring what
     `set_split_dates` does for callers who go through the manifest.
     '''
     df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
-    with pytest.raises(TypeError, match='train_start'):
-        split_by_dates(
-            df,
-            bad_value, datetime(2024, 7, 1),
-            datetime(2024, 7, 1), datetime(2024, 10, 1),
-            datetime(2024, 10, 1), datetime(2025, 1, 1),
-        )
+    bad_values = ['2024-01-01', 1704067200, None]
+    for bad_value in bad_values:
+        with pytest.raises(TypeError, match='train_start'):
+            split_by_dates(
+                df,
+                bad_value, datetime(2024, 7, 1),
+                datetime(2024, 7, 1), datetime(2024, 10, 1),
+                datetime(2024, 10, 1), datetime(2025, 1, 1),
+            )
