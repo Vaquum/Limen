@@ -877,4 +877,4 @@ Note: add all new changelog entries to the bottom of this file.
 - Update `tests/test_feature_library_context.py::test_active_quantile_count_tracks_quantile_filtered_spans` and `test_quantile_line_density_counts_recent_line_endings_within_lookback` to reflect unified boundary and parameterized column name
 - Move `test_ema_breakout_labels_future_moves_above_ema_threshold`, `test_exit_quality_distinguishes_good_bad_and_neutral_exits`, `test_risk_reward_ratio_uses_absolute_drawdown_with_epsilon_guard` to `tests/test_targets.py` against the new target classes
 - Update `docs/Features.md` to drop the moved `ema_breakout` row and `docs/Targets.md` to document `EmaBreakoutTarget`, `ExitQualityTarget`, `RiskRewardRatioTarget`
-- Raise `tests/runtime_budget.json` ceiling from 180s to 200s to accommodate the small per-test overhead introduced by the added `when/then/EPSILON` guards across the indicator/feature surface
+- Raise `tests/runtime_budget.json` ceiling from 180s to 195s to accommodate the small per-test overhead introduced by the added `when/then/EPSILON` guards across the indicator/feature surface
