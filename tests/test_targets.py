@@ -217,6 +217,8 @@ def test_exit_quality_target_distinguishes_good_bad_and_neutral_exits() -> None:
     result = t.transform(data)
 
     assert result['exit_quality'].to_list() == pytest.approx([1.0, 0.2, 0.2, 0.5])
+    assert 'exit_reason' not in result.columns
+    assert 'exit_net_return' not in result.columns
 
 
 def test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard() -> None:
@@ -230,4 +232,6 @@ def test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard() ->
     result = t.transform(data)
 
     assert result['risk_reward_ratio'].to_list() == pytest.approx([0.5 / 0.101, 1000.0])
+    assert 'capturable_breakout' not in result.columns
+    assert 'max_drawdown' not in result.columns
 

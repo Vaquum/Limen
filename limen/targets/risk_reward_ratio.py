@@ -35,4 +35,4 @@ class RiskRewardRatioTarget:
         return data.with_columns(
             (pl.col('capturable_breakout') / (pl.col('max_drawdown').abs() + EPSILON))
                 .alias(self.target_name)
-        )
+        ).drop(['capturable_breakout', 'max_drawdown'])

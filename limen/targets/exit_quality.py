@@ -44,4 +44,4 @@ class ExitQualityTarget:
                 .then(pl.lit(exit_quality_low))
                 .otherwise(pl.lit(exit_quality_medium))
                 .alias(self.target_name)
-        )
+        ).drop(['exit_reason', 'exit_net_return'])
