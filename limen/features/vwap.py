@@ -1,5 +1,8 @@
 import polars as pl
 
+EPSILON = 1e-10
+
+
 def vwap(data: pl.DataFrame,
          price_col: str = 'close',
          volume_col: str = 'volume') -> pl.DataFrame:
@@ -33,7 +36,7 @@ def vwap(data: pl.DataFrame,
                 .alias('__cum_vol')
         ])
         .with_columns([
-            (pl.col('__cum_pv') / pl.col('__cum_vol'))
+            (pl.col('__cum_pv') / (pl.col('__cum_vol') + EPSILON))
                 .alias('vwap')
         ])
         .drop(['__date', '__cum_pv', '__cum_vol'])

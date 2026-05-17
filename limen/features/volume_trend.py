@@ -1,6 +1,8 @@
 import polars as pl
 from limen.indicators.sma import sma
 
+EPSILON = 1e-10
+
 
 def volume_trend(data: pl.DataFrame, short_period: int = 12, long_period: int = 48) -> pl.DataFrame:
 
@@ -27,6 +29,6 @@ def volume_trend(data: pl.DataFrame, short_period: int = 12, long_period: int = 
         data = sma(data, 'volume', long_period)
 
     return data.with_columns([
-        (pl.col(short_sma_col) / pl.col(long_sma_col))
+        (pl.col(short_sma_col) / (pl.col(long_sma_col) + EPSILON))
         .alias('volume_trend')
     ])

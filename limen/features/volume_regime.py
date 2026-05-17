@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
 
@@ -21,7 +23,7 @@ def volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
             pl.col('volume').rolling_mean(window_size=lookback//4).alias('volume_recent'),
         ])
         .with_columns([
-            (pl.col('volume_recent') / pl.col('volume_avg')).alias('volume_regime')
+            (pl.col('volume_recent') / (pl.col('volume_avg') + EPSILON)).alias('volume_regime')
         ])
         .drop(['volume_avg', 'volume_recent'])
     )

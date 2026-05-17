@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def range_pct(data: pl.DataFrame) -> pl.DataFrame:
 
@@ -13,4 +15,4 @@ def range_pct(data: pl.DataFrame) -> pl.DataFrame:
         pl.DataFrame: The input data with a new column 'range_pct'
     '''
 
-    return data.with_columns(((pl.col('high') - pl.col('low')) / pl.col('close')).alias('range_pct'))
+    return data.with_columns(((pl.col('high') - pl.col('low')) / (pl.col('close') + EPSILON)).alias('range_pct'))

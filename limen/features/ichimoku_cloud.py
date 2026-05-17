@@ -33,10 +33,10 @@ def ichimoku_cloud(
             ((pl.col('high').rolling_max(kijun_period) + pl.col('low').rolling_min(kijun_period)) / 2).alias('kijun')
         )
         .with_columns(
-            ((pl.col('tenkan') + pl.col('kijun')) / 2).shift(-displacement).alias('senkou_a')
+            ((pl.col('tenkan') + pl.col('kijun')) / 2).shift(displacement).alias('senkou_a')
         )
         .with_columns(
-            ((pl.col('high').rolling_max(senkou_b_period) + pl.col('low').rolling_min(senkou_b_period)) / 2).shift(-displacement).alias('senkou_b')
+            ((pl.col('high').rolling_max(senkou_b_period) + pl.col('low').rolling_min(senkou_b_period)) / 2).shift(displacement).alias('senkou_b')
         )
         .with_columns(
             pl.col('close').shift(displacement).alias('chikou')

@@ -30,11 +30,16 @@ def stochastic_oscillator(
             pl.col('low').rolling_min(window_k).alias(lowest_col)
         ])
         .with_columns(
-            (
+            pl.when(pl.int_range(0, pl.len()) < (window_k - 1))
+            .then(None)
+            .when(pl.col(highest_col) - pl.col(lowest_col) != 0.0)
+            .then(
                 (pl.col('close') - pl.col(lowest_col))
                 / (pl.col(highest_col) - pl.col(lowest_col))
                 * 100
-            ).alias(k_col)
+            )
+            .otherwise(0.0)
+            .alias(k_col)
         )
         .with_columns(
             pl.col(k_col).rolling_mean(window_d).alias(d_col)

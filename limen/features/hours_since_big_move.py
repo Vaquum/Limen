@@ -34,7 +34,7 @@ def hours_since_big_move(data: pl.DataFrame,
     ptr = -1
 
     for idx in range(n_rows):
-        while ptr + 1 < len(ended) and ended[ptr + 1] < idx:
+        while ptr + 1 < len(ended) and ended[ptr + 1] <= idx:
             ptr += 1
 
         if ptr >= 0:

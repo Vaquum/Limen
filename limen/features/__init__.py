@@ -12,7 +12,6 @@ from limen.features.cyclical_time_features import cyclical_time_features
 from limen.features.distance_from_high import distance_from_high
 from limen.features.distance_from_low import distance_from_low
 from limen.features.dollar_volume import dollar_volume
-from limen.features.ema_breakout import ema_breakout
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.features.gap_high import gap_high
@@ -69,7 +68,6 @@ __all__ = [
     'distance_from_high',
     'distance_from_low',
     'dollar_volume',
-    'ema_breakout',
     'find_min_d',
     'fractional_diff',
     'gap_high',

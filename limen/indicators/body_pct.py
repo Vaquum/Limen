@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def body_pct(data: pl.DataFrame) -> pl.DataFrame:
 
@@ -13,4 +15,4 @@ def body_pct(data: pl.DataFrame) -> pl.DataFrame:
         pl.DataFrame: The input data with a new column 'body_pct'
     '''
 
-    return data.with_columns(((pl.col('close') - pl.col('open')) / pl.col('open')).alias('body_pct'))
+    return data.with_columns(((pl.col('close') - pl.col('open')) / (pl.col('open') + EPSILON)).alias('body_pct'))

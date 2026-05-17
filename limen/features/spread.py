@@ -1,5 +1,7 @@
 import polars as pl
 
+EPSILON = 1e-10
+
 
 def spread(df: pl.DataFrame) -> pl.DataFrame:
     '''
@@ -13,5 +15,5 @@ def spread(df: pl.DataFrame) -> pl.DataFrame:
     '''
 
     return df.with_columns([
-        ((pl.col('high') - pl.col('low')) / pl.col('close')).alias('spread')
+        ((pl.col('high') - pl.col('low')) / (pl.col('close') + EPSILON)).alias('spread')
     ])

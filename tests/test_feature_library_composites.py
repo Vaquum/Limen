@@ -4,7 +4,6 @@ import numpy as np
 import polars as pl
 import pytest
 
-from limen.features.ema_breakout import ema_breakout
 from limen.features.entry_score_microstructure import entry_score_microstructure
 from limen.features.feature_aliases import feature_aliases
 from limen.features.hh_hl_structure_regime import hh_hl_structure_regime
@@ -163,13 +162,6 @@ def test_entry_score_microstructure_switches_weights_by_regime() -> None:
         ],
         rel=1e-6,
     )
-
-
-def test_ema_breakout_labels_future_moves_above_ema_threshold() -> None:
-    data = pl.DataFrame({'close': [10.0, 10.0, 20.0, 20.0]})
-    result = ema_breakout(data, target_col='close', ema_span=2, breakout_delta=0.1, breakout_horizon=1)
-
-    assert result['breakout_ema'].to_list() == [0, 1, 1]
 
 
 def test_hh_hl_structure_regime_detects_up_flat_and_down_windows() -> None:

@@ -9,14 +9,12 @@ from limen.features.close_to_extremes import close_to_extremes
 from limen.features.dynamic_stop_loss import dynamic_stop_loss
 from limen.features.dynamic_target import dynamic_target
 from limen.features.ema_alignment import ema_alignment
-from limen.features.exit_quality import exit_quality
 from limen.features.log_returns import log_returns
 from limen.features.micro_momentum import micro_momentum
 from limen.features.momentum_weight import momentum_weight
 from limen.features.position_in_candle import position_in_candle
 from limen.features.position_in_range import position_in_range
 from limen.features.regime_multiplier import regime_multiplier
-from limen.features.risk_reward_ratio import risk_reward_ratio
 from limen.features.spread import spread
 from limen.features.spread_percent import spread_percent
 from limen.features import calendar_time_features as exported_calendar_time_features
@@ -70,19 +68,6 @@ def test_dynamic_target_clips_volatility_adjusted_targets() -> None:
     result = dynamic_target(data, base_min_breakout=10.0, target_volatility_multiplier=1.0)
 
     assert result['dynamic_target'].to_list() == pytest.approx([6.0, 14.0, 10.0])
-
-
-def test_exit_quality_distinguishes_good_bad_and_neutral_exits() -> None:
-    data = pl.DataFrame(
-        {
-            'exit_reason': ['target_hit', 'stop_loss', 'timeout', 'timeout'],
-            'exit_net_return': [0.2, -0.4, -0.1, 0.1],
-        }
-    )
-
-    result = exit_quality(data)
-
-    assert result['exit_quality'].to_list() == pytest.approx([1.0, 0.2, 0.2, 0.5])
 
 
 def test_log_returns_uses_log_ratio_of_consecutive_prices() -> None:
@@ -249,19 +234,6 @@ def test_position_in_candle_matches_range_fraction() -> None:
     result = position_in_candle(OHLC)
 
     assert result['position_in_candle'].to_list() == pytest.approx([0.5, 2.0 / 3.0, 0.75, 0.75])
-
-
-def test_risk_reward_ratio_uses_absolute_drawdown_with_epsilon_guard() -> None:
-    data = pl.DataFrame(
-        {
-            'capturable_breakout': [0.5, 1.0],
-            'max_drawdown': [-0.1, 0.0],
-        }
-    )
-
-    result = risk_reward_ratio(data)
-
-    assert result['risk_reward_ratio'].to_list() == pytest.approx([0.5 / 0.101, 1000.0])
 
 
 def test_volume_spike_supports_ratio_and_zscore_modes() -> None:

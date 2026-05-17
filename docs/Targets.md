@@ -38,7 +38,10 @@ manifest.with_target_label(
 | `QuantileBinaryTarget` | binary `UInt8` | yes — quantile cutoff | `shift=0` | Positive label above the top-N quantile of the source column. |
 | `ThresholdBinaryTarget` | binary `UInt8` | no | `shift=-1` | Positive label above a fixed numeric threshold. |
 | `ForwardBreakoutTarget` | binary `UInt8` | no | `shift=-1` | Positive label if price rises at least `threshold` over the next `forward_periods` bars. |
+| `EmaBreakoutTarget` | binary `UInt8` | no | n/a | Positive label if price `breakout_horizon` bars ahead exceeds EMA by `breakout_delta`. |
 | `NextReturnTarget` | continuous `Float64` | no | n/a | Percentage return over the next N bars. Use with regression architectures. |
+| `RiskRewardRatioTarget` | continuous `Float64` | no | n/a | Ratio of `capturable_breakout` to absolute `max_drawdown` per row. |
+| `ExitQualityTarget` | continuous `Float64` | no | n/a | Categorical score for closed trades based on `exit_reason` and `exit_net_return`. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
 | `IdentityTarget` | existing column | no | none | Target column already present in the data. Validates the column exists on every split. |
 
@@ -112,6 +115,29 @@ Labels a bar as positive if the close price rises by at least `threshold` over t
 | `threshold` | `float` | Minimum return for positive label; default `0.02` (2%) |
 | `shift` | `int` | Additional shift applied after labeling; default `-1` |
 
+### `EmaBreakoutTarget`
+
+```python
+EmaBreakoutTarget(train_data, target_name)
+```
+
+Labels a bar as positive if the price `breakout_horizon` bars ahead exceeds the EMA of `target_col` by at least `breakout_delta`. No fitting step.
+
+```python
+.with_target_label(
+    'breakout_ema',
+    EmaBreakoutTarget,
+    transform_params={'target_col': 'close', 'ema_span': 30, 'breakout_delta': 0.2, 'breakout_horizon': 3},
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `target_col` | `str` | Column name to analyze for breakouts; default `'close'` |
+| `ema_span` | `int` | Period for EMA calculation; default `30` |
+| `breakout_delta` | `float` | Minimum EMA-relative displacement for positive label; default `0.2` |
+| `breakout_horizon` | `int` | Forward window in bars; default `3` |
+
 ### `NextReturnTarget`
 
 ```python
@@ -132,6 +158,42 @@ Produces a continuous target as the percentage return over the next N bars. Use 
 |---|---|---|
 | `periods` | `int` | Look-ahead window in bars; default `1` |
 | `scale` | `float` | Multiplier applied to the raw return; default `100.0` |
+
+### `RiskRewardRatioTarget`
+
+```python
+RiskRewardRatioTarget(train_data, target_name)
+```
+
+Computes `capturable_breakout / (|max_drawdown| + 0.001)` per row. Expects both columns to be available on every split. No fitting step.
+
+```python
+.with_target_label('rr_ratio', RiskRewardRatioTarget)
+```
+
+No parameters.
+
+### `ExitQualityTarget`
+
+```python
+ExitQualityTarget(train_data, target_name)
+```
+
+Scores closed trades as high, low, or medium based on `exit_reason` and `exit_net_return`. Expects both columns to be available on every split. No fitting step.
+
+```python
+.with_target_label(
+    'exit_quality',
+    ExitQualityTarget,
+    transform_params={'exit_quality_high': 1.0, 'exit_quality_low': 0.2, 'exit_quality_medium': 0.5},
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `exit_quality_high` | `float` | Score for profitable `target_hit` or `trailing_stop` exits; default `1.0` |
+| `exit_quality_low` | `float` | Score for `stop_loss` or unprofitable `timeout` exits; default `0.2` |
+| `exit_quality_medium` | `float` | Score for neutral exits; default `0.5` |
 
 ### `RandomBinaryTarget`
 

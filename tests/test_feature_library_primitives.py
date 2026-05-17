@@ -121,8 +121,8 @@ def test_ichimoku_cloud_builds_shifted_components() -> None:
 
     assert result['tenkan'].to_list() == [None, 10.0, 11.5, 13.0, 15.0]
     assert result['kijun'].to_list() == [None, None, 11.0, 12.5, 14.0]
-    assert result['senkou_a'].to_list() == [None, 11.25, 12.75, 14.5, None]
-    assert result['senkou_b'].to_list() == [None, None, 12.0, 13.5, None]
+    assert result['senkou_a'].to_list() == [None, None, None, 11.25, 12.75]
+    assert result['senkou_b'].to_list() == [None, None, None, None, 12.0]
     assert result['chikou'].to_list() == [None, 9.0, 11.0, 13.0, 15.0]
 
 
