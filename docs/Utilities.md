@@ -12,6 +12,7 @@ They are useful, but they are not the main story of the package. If you are new 
 | `data_dict_to_numpy` | you want numpy arrays from the standard Limen `data_dict` |
 | `adf_test` and `AdfResult` | you want a simple stationarity check for a series or for helpers such as `find_min_d` |
 | `confidence_filtering_system` | you want validation-calibrated confidence filtering across multiple models |
+| `split_by_dates` | you want absolute-datetime train / val / test splits (the helper backing `Manifest.set_split_dates`) |
 | reporting helpers | you want simple formatted text blocks |
 
 ## `ParamSpace`
@@ -104,6 +105,32 @@ In a live synthetic-model run in this repo with `target_confidence=0.8`, it retu
   - `confidence_score`
 
 Use this as an optional downstream helper, not as part of the core UEL contract.
+
+## `split_by_dates`
+
+`split_by_dates()` partitions a datetime-indexed `polars.DataFrame` into train, val, and test by half-open `[start, end)` datetime windows. It is the helper that `Manifest.set_split_dates` calls when `split_dates` is configured; it is also exported for direct use when the splitter is needed outside the manifest pipeline.
+
+```python
+from datetime import datetime
+from limen.data.utils import split_by_dates
+
+train, val, test = split_by_dates(
+    df,
+    datetime(2024, 1, 1), datetime(2024, 7, 1),
+    datetime(2024, 7, 1), datetime(2024, 10, 1),
+    datetime(2024, 10, 1), datetime(2025, 1, 1),
+)
+```
+
+Behavior rules:
+
+- Each window selects its rows independently. No row from outside all three windows enters any split.
+- When windows are non-overlapping (the ordering contract `set_split_dates` enforces), no row appears in more than one split.
+- Gaps between adjacent windows are allowed; rows that fall inside a gap are intentionally excluded from all three splits.
+- Every bound must be a `date` or `datetime` instance. Strings, ints, and floats raise `TypeError` at the API boundary.
+- The input `DataFrame` must have a `datetime` column.
+
+Prefer `Manifest.set_split_dates` inside the experiment pipeline — it pairs the splitter with the manifest's ordering validation and `with_params_override` clearance contract. Use `split_by_dates` directly when the manifest pipeline is not in play.
 
 ## Reporting Helpers
 

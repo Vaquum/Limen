@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import polars as pl
 import pytest
 
@@ -8,6 +9,7 @@ from limen.data.utils.splits import split_data_to_prep_output
 from limen.data.utils.splits import split_data_to_rule_based_prep_output
 from limen.data.utils.splits import split_sequential
 from limen.experiment.manifest_core import MLManifest
+from limen.targets import RandomBinaryTarget
 
 
 def _make_splits() -> tuple[list[pl.DataFrame], list]:
@@ -225,3 +227,149 @@ def test_compute_test_bars_still_works_on_ratio_path() -> None:
     expected_val = int(total * 1 / 11)
     expected_test = total - expected_train - expected_val
     assert test_bars.height == expected_test
+
+
+def _make_prepare_data_manifest() -> MLManifest:
+    return (MLManifest()
+        .set_data_source(method=lambda: None, params={})
+        .with_target_label('outcome', RandomBinaryTarget)
+    )
+
+
+def test_prepare_data_honours_split_dates_at_real_call_site() -> None:
+    '''
+    Drive `MLManifest.prepare_data` with `split_dates` set and assert the
+    per-slice datetime bounds match the configured windows exactly. This
+    pins the date-path through `_run_prepare_setup` -> `_resolve_split`
+    -> `_finalize_to_data_dict`, not just `split_by_dates` in isolation.
+    '''
+    np.random.seed(0)
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+
+    manifest = _make_prepare_data_manifest().set_split_dates(
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    data = manifest.prepare_data(df, {'bar_type': 'base'})
+
+    expected_train = 31 + 29 + 31 + 30 + 31 + 30
+    expected_val = 31 + 31 + 30
+    expected_test = 31 + 30 + 31
+
+    assert data['x_train'].height == expected_train
+    assert data['x_val'].height == expected_val
+    assert data['x_test'].height == expected_test
+    assert data['y_train'].name == 'outcome'
+    assert data['_alignment']['first_test_datetime'] == datetime(2024, 10, 1)
+    assert data['_alignment']['last_test_datetime'] == datetime(2024, 12, 31)
+    assert data['_alignment']['missing_datetimes'] == []
+
+
+def test_prepare_data_ratio_path_unchanged_when_split_dates_unset() -> None:
+    '''
+    Sanity guard: the ratio path through `prepare_data` keeps working
+    when `split_dates` is not configured (the default).
+    '''
+    np.random.seed(0)
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+    total = df.height
+
+    manifest = _make_prepare_data_manifest().set_split_config(8, 1, 2)
+    data = manifest.prepare_data(df, {'bar_type': 'base'})
+
+    expected_train = int(total * 8 / 11)
+    expected_val = int(total * 1 / 11)
+    expected_test = total - expected_train - expected_val
+    assert data['x_train'].height == expected_train
+    assert data['x_val'].height == expected_val
+    assert data['x_test'].height == expected_test
+
+
+def test_with_params_override_split_config_clears_split_dates() -> None:
+    '''
+    `with_params_override(split_config=...)` must clear any
+    previously-pinned `split_dates` so the ratio override actually
+    takes effect downstream. Without this, `_resolve_split` would
+    keep using `split_dates` and the override would silently no-op
+    (e.g. `Trainer.train_sensors` passing `(1, 0, 0)` to retrain
+    sensors on the full data set).
+    '''
+    base = MLManifest().set_split_dates(
+        datetime(2024, 1, 1), datetime(2024, 7, 1),
+        datetime(2024, 7, 1), datetime(2024, 10, 1),
+        datetime(2024, 10, 1), datetime(2025, 1, 1),
+    )
+
+    overridden = base.with_params_override(split_config=(1, 0, 0))
+
+    assert overridden.split_config == (1, 0, 0)
+    assert overridden.split_dates is None
+    # Original manifest is untouched (deep copy)
+    assert base.split_dates is not None
+    assert base.split_config == (8, 1, 2)
+
+
+def test_with_params_override_non_split_config_keeps_split_dates() -> None:
+    '''
+    Overriding a data-source param (anything other than `split_config`)
+    must NOT clear `split_dates` - the date pin is still in force.
+    '''
+    base = (MLManifest()
+        .set_data_source(
+            method=lambda kline_size=3600: None,
+            params={'kline_size': 3600},
+        )
+        .set_split_dates(
+            datetime(2024, 1, 1), datetime(2024, 7, 1),
+            datetime(2024, 7, 1), datetime(2024, 10, 1),
+            datetime(2024, 10, 1), datetime(2025, 1, 1),
+        )
+    )
+
+    overridden = base.with_params_override(kline_size=7200)
+
+    assert overridden.split_dates == base.split_dates
+    assert overridden.data_source_config.params['kline_size'] == 7200
+
+
+@pytest.mark.parametrize('bad_value', [
+    '2024-01-01',     # string
+    1704067200,       # epoch int
+    1704067200.0,     # epoch float
+    None,             # null
+])
+def test_set_split_dates_rejects_non_date_bounds(bad_value: object) -> None:
+    '''
+    `set_split_dates` accepts only `date`/`datetime` instances. Passing
+    a comparable-but-wrong type (string, int, float, None) must raise
+    `TypeError` at the API boundary, not fail later inside Polars.
+    '''
+    with pytest.raises(TypeError, match='train_start'):
+        MLManifest().set_split_dates(
+            bad_value, datetime(2024, 7, 1),
+            datetime(2024, 7, 1), datetime(2024, 10, 1),
+            datetime(2024, 10, 1), datetime(2025, 1, 1),
+        )
+
+
+@pytest.mark.parametrize('bad_value', [
+    '2024-01-01',
+    1704067200,
+    None,
+])
+def test_split_by_dates_rejects_non_date_bounds(bad_value: object) -> None:
+    '''
+    `split_by_dates` is exported as a public helper so it has to
+    validate its own bounds at the boundary too - mirroring what
+    `set_split_dates` does for callers who go through the manifest.
+    '''
+    df = _make_daily_df(datetime(2024, 1, 1), datetime(2024, 12, 31))
+    with pytest.raises(TypeError, match='train_start'):
+        split_by_dates(
+            df,
+            bad_value, datetime(2024, 7, 1),
+            datetime(2024, 7, 1), datetime(2024, 10, 1),
+            datetime(2024, 10, 1), datetime(2025, 1, 1),
+        )

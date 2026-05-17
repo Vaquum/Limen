@@ -168,6 +168,30 @@ Behavior rules:
 
 Allowing zeros is important for retraining workflows such as Trainer Pass 2, where `split_config=(1, 0, 0)` means "fit on all available data."
 
+### `set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end)`
+
+Pin the train, val, and test windows to absolute `datetime` bounds, in preference to ratio-based splits whose absolute boundary depends on the input row count.
+
+```python
+from datetime import datetime
+
+.set_split_dates(
+    datetime(2024, 1, 1), datetime(2024, 7, 1),
+    datetime(2024, 7, 1), datetime(2024, 10, 1),
+    datetime(2024, 10, 1), datetime(2025, 1, 1),
+)
+```
+
+Behavior rules:
+
+- Windows are half-open `[start, end)`. A row enters a split iff its `datetime` falls inside that window.
+- Ordering must satisfy `train_start <= train_end <= val_start <= val_end <= test_start <= test_end`. Gaps between adjacent windows are allowed; rows inside a gap are intentionally excluded from all three splits.
+- Every bound must be a `date` or `datetime` instance. Strings, ints, and floats raise `TypeError` at the API boundary.
+- When `split_dates` is set it takes precedence over `set_split_config` in both `prepare_data` and `compute_test_bars`. The split runs on the raw data (before per-split feature transforms), so transforms can still drop rows inside a slice but cannot move rows across slice boundaries.
+- `with_params_override(split_config=...)` clears any previously-pinned `split_dates`, so the retraining override (e.g. `Trainer.train_sensors` passing `(1, 0, 0)`) is never silently shadowed by an earlier date pin.
+
+Use this when the train / val / test boundaries must land on specific datetimes (e.g. honouring a deployment date), and `set_split_config` when proportions of the row count are the natural way to express the split.
+
 ### `set_pre_split_data_selector(func, **params)`
 
 Optionally select or reduce the raw dataset before splitting.

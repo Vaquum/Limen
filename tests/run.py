@@ -172,6 +172,12 @@ from tests.test_splits import test_set_split_dates_does_not_mutate_split_config
 from tests.test_splits import test_manifest_default_split_dates_is_none
 from tests.test_splits import test_compute_test_bars_returns_test_window_on_date_path
 from tests.test_splits import test_compute_test_bars_still_works_on_ratio_path
+from tests.test_splits import test_prepare_data_honours_split_dates_at_real_call_site
+from tests.test_splits import test_prepare_data_ratio_path_unchanged_when_split_dates_unset
+from tests.test_splits import test_with_params_override_split_config_clears_split_dates
+from tests.test_splits import test_with_params_override_non_split_config_keeps_split_dates
+from tests.test_splits import test_set_split_dates_rejects_non_date_bounds
+from tests.test_splits import test_split_by_dates_rejects_non_date_bounds
 from tests.test_rule_based_metrics import test_num_trades_counts_entries_not_bars
 from tests.test_rule_based_metrics import test_position_rate
 from tests.test_rule_based_metrics import test_backtest_metrics_flattened_with_split_suffix
@@ -727,6 +733,12 @@ tests = [
     test_manifest_default_split_dates_is_none,
     test_compute_test_bars_returns_test_window_on_date_path,
     test_compute_test_bars_still_works_on_ratio_path,
+    test_prepare_data_honours_split_dates_at_real_call_site,
+    test_prepare_data_ratio_path_unchanged_when_split_dates_unset,
+    test_with_params_override_split_config_clears_split_dates,
+    test_with_params_override_non_split_config_keeps_split_dates,
+    test_set_split_dates_rejects_non_date_bounds,
+    test_split_by_dates_rejects_non_date_bounds,
     test_num_trades_counts_entries_not_bars,
     test_position_rate,
     test_backtest_metrics_flattened_with_split_suffix,
