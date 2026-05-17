@@ -3,6 +3,8 @@ import polars as pl
 
 from limen.data import HistoricalData
 from limen.experiment import MLManifest
+from limen.scalers.linear_scaler import LinearScaler
+from limen.scalers.robust_scaler import RobustScaler
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from limen.targets import RandomBinaryTarget
 from limen.targets import ThresholdBinaryTarget
@@ -47,6 +49,41 @@ def _make_shifted_target_manifest() -> MLManifest:
             fit_params={'source_column': 'close_minus_open', 'threshold': 0.0},
             transform_params={'shift': -1})
     )
+
+
+def _make_pca_manifest() -> MLManifest:
+
+    return (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_scaler(RobustScaler)
+        .set_pca_compression()
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+
+
+def _make_pca_raw_data(n: int = 40) -> pl.DataFrame:
+
+    idx = np.arange(n, dtype=float)
+    close = 100.0 + idx * 0.7 + np.sin(idx / 3.0)
+    open_ = close - 0.3
+    return pl.DataFrame({
+        'datetime': pl.datetime_range(
+            start=pl.datetime(2025, 1, 1, 0, 0, 0),
+            end=pl.datetime(2025, 1, 2, 15, 0, 0),
+            interval='1h',
+            eager=True,
+        )[:n],
+        'open': open_,
+        'high': close + 1.0,
+        'low': open_ - 1.0,
+        'close': close,
+        'volume': 1000.0 + idx * 10.0,
+    })
 
 
 def test_price_data_for_backtest_has_ohlc_columns() -> None:
@@ -253,3 +290,168 @@ def test_column_consistency_drops_mismatched_columns() -> None:
     test_cols = set(data['x_test'].columns)
     assert train_cols == val_cols == test_cols
     assert 'big_split_col' not in train_cols
+
+
+def test_pca_compression_flag_off_matches_current_scaled_output() -> None:
+
+    raw_data = _make_pca_raw_data()
+    base_manifest = (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_scaler(RobustScaler)
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+    pca_manifest = _make_pca_manifest()
+
+    expected = base_manifest.prepare_data(raw_data, {})
+    actual = pca_manifest.prepare_data(raw_data, {})
+
+    assert actual['x_train'].equals(expected['x_train'])
+    assert actual['x_val'].equals(expected['x_val'])
+    assert actual['x_test'].equals(expected['x_test'])
+    assert '_pca' not in actual
+
+
+def test_pca_compression_replaces_feature_surface_when_enabled() -> None:
+
+    data = _make_pca_manifest().prepare_data(
+        _make_pca_raw_data(),
+        {'auto_pca': True, 'pca_k': 2},
+    )
+
+    assert data['x_train'].columns == ['pc_0', 'pc_1']
+    assert data['x_val'].columns == ['pc_0', 'pc_1']
+    assert data['x_test'].columns == ['pc_0', 'pc_1']
+    assert data['_pca_input_feature_names'] == [
+        'open', 'high', 'low', 'close', 'volume'
+    ]
+    assert data['_pca_feature_names'] == ['pc_0', 'pc_1']
+    assert data['_pca_n_components'] == 2
+
+
+def test_pca_compression_allows_empty_future_splits() -> None:
+
+    manifest = _make_pca_manifest().set_split_config(1, 0, 0)
+    data = manifest.prepare_data(
+        _make_pca_raw_data(),
+        {'auto_pca': True, 'pca_k': 2},
+    )
+
+    assert data['x_train'].columns == ['pc_0', 'pc_1']
+    assert data['x_val'].columns == ['pc_0', 'pc_1']
+    assert data['x_test'].columns == ['pc_0', 'pc_1']
+    assert data['x_val'].height == 0
+    assert data['x_test'].height == 0
+
+
+def test_pca_compression_fits_on_train_only() -> None:
+
+    base = _make_pca_raw_data()
+    shifted_future = base.with_columns(
+        pl.when(pl.arange(0, base.height) >= 24)
+        .then(pl.col('close') * 10.0)
+        .otherwise(pl.col('close'))
+        .alias('close')
+    )
+
+    manifest_a = _make_pca_manifest()
+    manifest_b = _make_pca_manifest()
+    data_a = manifest_a.prepare_data(base, {'auto_pca': True, 'pca_k': 2})
+    data_b = manifest_b.prepare_data(shifted_future, {'auto_pca': True, 'pca_k': 2})
+
+    assert np.allclose(data_a['_pca'].components_, data_b['_pca'].components_)
+    assert data_a['x_train'].equals(data_b['x_train'])
+
+
+def test_pca_compression_requires_robust_scaler() -> None:
+
+    manifest = (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_scaler(LinearScaler)
+        .set_pca_compression()
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+
+    try:
+        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'RobustScaler' in str(e)
+
+
+def test_pca_compression_requires_configured_scaler() -> None:
+
+    manifest = (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_pca_compression()
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+
+    try:
+        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert "all_fitted_params['_scaler']" in str(e)
+        assert 'set_scaler(RobustScaler)' in str(e)
+
+
+def test_pca_compression_reports_scaler_param_mismatch() -> None:
+
+    manifest = (MLManifest()
+        .set_split_config(3, 1, 1)
+        .set_scaler(RobustScaler, param_name='custom_scaler')
+        .set_pca_compression()
+        .with_target_label(
+            'target',
+            ThresholdBinaryTarget,
+            fit_params={'source_column': 'close', 'threshold': 108.0},
+            transform_params={'shift': 0},
+        )
+    )
+
+    try:
+        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert "all_fitted_params['_scaler']" in str(e)
+        assert 'scaler_param_name' in str(e)
+
+
+def test_pca_compression_rejects_invalid_k() -> None:
+
+    manifest = _make_pca_manifest()
+    raw_data = _make_pca_raw_data()
+
+    for bad_k in [True, 0, 6]:
+        try:
+            manifest.prepare_data(raw_data, {'auto_pca': True, 'pca_k': bad_k})
+            assert False, f'Expected ValueError for {bad_k!r}'
+        except ValueError as e:
+            assert 'pca_k' in str(e)
+
+
+def test_pca_compression_rejects_nonnumeric_features() -> None:
+
+    manifest = (_make_pca_manifest()
+        .add_feature(lambda df: df.with_columns(pl.lit('x').alias('symbol')))
+    )
+
+    try:
+        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'non-numeric' in str(e)

@@ -890,3 +890,10 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.2.0 on 17th of May, 2026
 
 - Add `Manifest.set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end)` and `limen.data.utils.split_by_dates` for absolute-date train/val/test splits. When `split_dates` is set it takes precedence over `split_config` in both `_run_prepare_setup` (used by `MLManifest.prepare_data` and `RuleBasedManifest.prepare_data`) and `Manifest.compute_test_bars`; otherwise the existing ratio-based `split_sequential` path runs unchanged. Windows are half-open `[start, end)` and the setter validates non-decreasing ordering (`train_start <= train_end <= val_start <= val_end <= test_start <= test_end`) so non-overlap is mechanical; gaps between adjacent windows are allowed and any rows in those gaps are intentionally excluded from all three splits. Use this when temporal split boundaries must land on specific datetimes (e.g. honouring a deployment date), in preference to ratio-based splits whose absolute boundary depends on the input row count. `with_params_override(split_config=...)` clears any previously-pinned `split_dates` so a downstream ratio override (e.g. `Trainer.train_sensors` retraining on all data via `(1, 0, 0)`) is never silently shadowed by an earlier date pin. Both `set_split_dates` and `split_by_dates` validate that every bound is a `date` / `datetime` instance at the API boundary; non-datetime values raise `TypeError` rather than failing later inside Polars.
+
+## v3.2.1 on 17th of May, 2026
+
+- Add optional `MLManifest.set_pca_compression(...)` for manifest-level PCA feature compression after existing scaling and split-column alignment
+- When enabled, PCA requires a fitted `RobustScaler`, fits on train only, projects validation and test with the frozen rotation, and replaces `x_train`/`x_val`/`x_test` with `pc_*` columns
+- Preserve current behavior when PCA is not configured or when its enable flag is absent or false
+- Store only fitted PCA transform state and feature-name audit metadata; no parallel raw-feature dataset is retained
