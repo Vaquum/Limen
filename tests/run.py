@@ -486,6 +486,13 @@ from tests.test_targets import test_threshold_binary_shift_applied
 from tests.test_targets import test_next_return_computes_percentage_return
 from tests.test_targets import test_next_return_respects_periods
 from tests.test_targets import test_next_return_respects_scale
+from tests.test_targets import test_next_bar_up_labels_next_close_above_current_close
+from tests.test_targets import test_next_bar_down_labels_next_close_below_current_close
+from tests.test_targets import test_vol_normalized_return_matches_unit_parkinson_ratio
+from tests.test_targets import test_vol_normalized_return_uses_prior_sigma_for_current_return
+from tests.test_targets import test_vol_normalized_return_drops_dirty_ohlc_bars
+from tests.test_targets import test_vol_normalized_return_rejects_bad_training_sigma_ratio
+from tests.test_targets import test_canonical_decoder_outcomes_run_through_manifest
 from tests.test_targets import test_with_target_label_sets_target_class_config
 from tests.test_targets import test_with_target_label_applies_transform_to_all_splits
 from tests.test_targets import test_with_target_label_fits_only_on_train
@@ -1072,6 +1079,13 @@ tests = [
     test_next_return_computes_percentage_return,
     test_next_return_respects_periods,
     test_next_return_respects_scale,
+    test_next_bar_up_labels_next_close_above_current_close,
+    test_next_bar_down_labels_next_close_below_current_close,
+    test_vol_normalized_return_matches_unit_parkinson_ratio,
+    test_vol_normalized_return_uses_prior_sigma_for_current_return,
+    test_vol_normalized_return_drops_dirty_ohlc_bars,
+    test_vol_normalized_return_rejects_bad_training_sigma_ratio,
+    test_canonical_decoder_outcomes_run_through_manifest,
     test_with_target_label_sets_target_class_config,
     test_with_target_label_applies_transform_to_all_splits,
     test_with_target_label_fits_only_on_train,
