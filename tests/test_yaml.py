@@ -425,3 +425,18 @@ def test_validate_warning_for_unknown_key_in_split_config() -> None:
     yaml_dict['sfd']['manifest']['split_config']['typo_key'] = 1
     result = validate(yaml_dict)
     assert any('typo_key' in w.message for w in result.warnings)
+
+
+def test_validate_passes_valid_rule_based_yaml() -> None:
+    yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
+    result = validate(yaml_dict)
+    assert result.valid
+    assert result.errors == []
+
+
+def test_validate_error_for_empty_sfd_param_list() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params']['roc_period'] = []
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('roc_period' in e.message for e in result.errors)

@@ -51,6 +51,8 @@ from tests.test_yaml import test_git_error_carries_path_and_message
 from tests.test_yaml import test_validate_passes_valid_yaml_with_split_dates
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
+from tests.test_yaml import test_validate_passes_valid_rule_based_yaml
+from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
 from tests.test_cli import test_cli_validate_parse_error_exits_1
@@ -972,6 +974,8 @@ tests = [
     test_validate_passes_valid_yaml_with_split_dates,
     test_validate_warning_for_unknown_key_in_data_source,
     test_validate_warning_for_unknown_key_in_split_config,
+    test_validate_passes_valid_rule_based_yaml,
+    test_validate_error_for_empty_sfd_param_list,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
     test_cli_validate_parse_error_exits_1,
