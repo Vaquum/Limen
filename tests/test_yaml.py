@@ -1,3 +1,4 @@
+from datetime import date
 from textwrap import dedent
 
 from limen.calibration import grid_threshold_optimizer
@@ -173,7 +174,7 @@ def test_validate_error_for_missing_required_field() -> None:
     del yaml_dict['sfd']['manifest']['split_config']
     result = validate(yaml_dict)
     assert not result.valid
-    assert any('split_config' in e.path for e in result.errors)
+    assert any('split_config' in e.message for e in result.errors)
 
 
 def test_validate_error_for_calibration_param_ref_not_in_sfd_params() -> None:
@@ -330,3 +331,45 @@ def test_compiled_sfd_manifest_is_cached() -> None:
 def test_compiled_sfd_manifest_is_ml_manifest() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     assert isinstance(CompiledSFD(yaml_dict).manifest(), MLManifest)
+
+
+def test_validate_error_when_both_split_config_and_split_dates_present() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_dates'] = {
+        'train_start': '2022-01-01', 'train_end': '2022-07-01',
+        'val_start': '2022-07-01', 'val_end': '2022-10-01',
+        'test_start': '2022-10-01', 'test_end': '2023-01-01',
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('split_config' in e.message and 'split_dates' in e.message for e in result.errors)
+
+
+def test_validate_error_when_neither_split_config_nor_split_dates_present() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['sfd']['manifest']['split_config']
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('split_config' in e.message or 'split_dates' in e.message for e in result.errors)
+
+
+def test_build_manifest_split_dates_calls_set_split_dates() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['sfd']['manifest']['split_config']
+    yaml_dict['sfd']['manifest']['split_dates'] = {
+        'train_start': '2022-01-01', 'train_end': '2022-07-01',
+        'val_start': '2022-07-01', 'val_end': '2022-10-01',
+        'test_start': '2022-10-01', 'test_end': '2023-01-01',
+    }
+    manifest = build_manifest(yaml_dict)
+    assert manifest.split_dates is not None
+    assert manifest.split_dates[0] == date.fromisoformat('2022-01-01')
+    assert manifest.split_dates[5] == date.fromisoformat('2023-01-01')
+
+
+def test_build_manifest_pca_compression_configured() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pca_compression'] = {}
+    manifest = build_manifest(yaml_dict)
+    assert isinstance(manifest, MLManifest)
+    assert manifest.pca_compression_config is not None

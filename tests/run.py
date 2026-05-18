@@ -40,6 +40,10 @@ from tests.test_yaml import test_compiled_sfd_name_is_yaml_prefixed
 from tests.test_yaml import test_compiled_sfd_params_are_non_empty_lists
 from tests.test_yaml import test_compiled_sfd_manifest_is_cached
 from tests.test_yaml import test_compiled_sfd_manifest_is_ml_manifest
+from tests.test_yaml import test_validate_error_when_both_split_config_and_split_dates_present
+from tests.test_yaml import test_validate_error_when_neither_split_config_nor_split_dates_present
+from tests.test_yaml import test_build_manifest_split_dates_calls_set_split_dates
+from tests.test_yaml import test_build_manifest_pca_compression_configured
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -943,6 +947,10 @@ tests = [
     test_compiled_sfd_params_are_non_empty_lists,
     test_compiled_sfd_manifest_is_cached,
     test_compiled_sfd_manifest_is_ml_manifest,
+    test_validate_error_when_both_split_config_and_split_dates_present,
+    test_validate_error_when_neither_split_config_nor_split_dates_present,
+    test_build_manifest_split_dates_calls_set_split_dates,
+    test_build_manifest_pca_compression_configured,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
