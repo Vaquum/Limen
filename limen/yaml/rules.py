@@ -1,10 +1,23 @@
 import inspect
 import re
 from typing import Any
+from typing import Protocol
 
 from limen.yaml.errors import YAMLError
 from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
+
+_SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
+
+
+class Rule(Protocol):
+
+    '''Protocol that all validation rules must satisfy.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              warnings: list[YAMLError]) -> None: ...
 
 
 def get_at(d: dict[str, Any], path: str) -> tuple[bool, Any]:
@@ -151,7 +164,7 @@ class When:
     def __init__(self,
                  condition_path: str,
                  condition_value: Any,
-                 rules: list) -> None:
+                 rules: list[Rule]) -> None:
 
         self._condition_path = condition_path
         self._condition_value = condition_value
@@ -343,8 +356,6 @@ class SplitSpec:
 
     '''Exactly one of split_config (ratio) or split_dates (absolute) must be present.'''
 
-    _DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
-
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
@@ -397,7 +408,7 @@ class SplitSpec:
                     path='sfd.manifest.split_dates',
                 ))
                 return
-            for key in self._DATE_KEYS:
+            for key in _SPLIT_DATE_KEYS:
                 if key not in sd:
                     errors.append(YAMLError(
                         message=f"Missing required field '{key}'",
@@ -435,26 +446,6 @@ class SfdParams:
                     path=f'sfd.params.{key}',
                     suggestion=f'Change to {key}: [{values}]',
                 ))
-
-
-def _extract_param_refs(obj: Any) -> set[str]:
-
-    refs: set[str] = set()
-    _walk_refs(obj, refs)
-    return refs
-
-
-def _walk_refs(obj: Any, refs: set[str]) -> None:
-
-    if isinstance(obj, str):
-        for match in re.finditer(r'\{(\w+)\}', obj):
-            refs.add(match.group(1))
-    elif isinstance(obj, dict):
-        for v in obj.values():
-            _walk_refs(v, refs)
-    elif isinstance(obj, list):
-        for item in obj:
-            _walk_refs(item, refs)
 
 
 class CalibrationCrossRef:
@@ -536,7 +527,7 @@ class ParamCoverage:
             return
 
         manifest = sfd.get('manifest') or {}
-        manifest_refs = _extract_param_refs(manifest)
+        manifest_refs = self._extract_param_refs(manifest)
 
         arch_path = manifest.get('reference_architecture')
         arch_params: set[str] = set()
@@ -583,12 +574,32 @@ class ParamCoverage:
                     suggestion=f"Remove it or add a {{{key}}} reference in the manifest",
                 ))
 
+    @staticmethod
+    def _extract_param_refs(obj: Any) -> set[str]:
+
+        refs: set[str] = set()
+        ParamCoverage._walk_refs(obj, refs)
+        return refs
+
+    @staticmethod
+    def _walk_refs(obj: Any, refs: set[str]) -> None:
+
+        if isinstance(obj, str):
+            for match in re.finditer(r'\{(\w+)\}', obj):
+                refs.add(match.group(1))
+        elif isinstance(obj, dict):
+            for v in obj.values():
+                ParamCoverage._walk_refs(v, refs)
+        elif isinstance(obj, list):
+            for item in obj:
+                ParamCoverage._walk_refs(item, refs)
+
 
 class RuleEngine:
 
     '''Run a list of rules against a yaml_dict, collecting errors and warnings.'''
 
-    def __init__(self, rules: list) -> None:
+    def __init__(self, rules: list[Rule]) -> None:
         self._rules = rules
 
     def run(self,
