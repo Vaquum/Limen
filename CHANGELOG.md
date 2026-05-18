@@ -897,3 +897,10 @@ Note: add all new changelog entries to the bottom of this file.
 - When enabled, PCA requires a fitted `RobustScaler`, fits on train only, projects validation and test with the frozen rotation, and replaces `x_train`/`x_val`/`x_test` with `pc_*` columns
 - Preserve current behavior when PCA is not configured or when its enable flag is absent or false
 - Store only fitted PCA transform state and feature-name audit metadata; no parallel raw-feature dataset is retained
+
+## v3.2.2 on 18th of May, 2026
+
+- Replace snapshot backtest output with the 22-column decoder metric ledger: quantiles for edge per signal, net trade PnL, cost drag, rolling net return, return on exposure, drawdown depth, and drawdown duration, plus `cvar_95_return_bps`
+- Report return and risk outputs in basis points and carry `datetime` through prediction-performance and reference-architecture backtest inputs for clock-window metrics
+- Update rule-based stability output to use `drawdown_std_bps`, with legacy Sharpe thresholds retained only for call compatibility
+- Update backtest, log, reference-architecture, and trainer docs plus regression coverage for the new ledger surface
