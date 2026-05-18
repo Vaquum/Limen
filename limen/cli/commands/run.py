@@ -39,12 +39,14 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
 
     result = validate(yaml_dict)
     for e in result.errors:
+        location = f' (line {e.line})' if e.line else ''
         path = f'  [{e.path}]' if e.path else ''
         suggestion = f'\n    → {e.suggestion}' if e.suggestion else ''
-        click.secho(f'  ERROR{path}: {e.message}{suggestion}', fg='red')
+        click.secho(f'  ERROR{path}{location}: {e.message}{suggestion}', fg='red')
     for w in result.warnings:
+        location = f' (line {w.line})' if w.line else ''
         path = f'  [{w.path}]' if w.path else ''
-        click.secho(f'  WARN{path}: {w.message}', fg='yellow')
+        click.secho(f'  WARN{path}{location}: {w.message}', fg='yellow')
 
     if not result.valid:
         click.secho(f'  ✗ {len(result.errors)} validation error(s) — aborting', fg='red')
@@ -106,7 +108,6 @@ def _build_results_dir(uel_cfg: dict[str, Any], experiment_name: str) -> Path:
         output_path_template
         .replace('{name}', experiment_name)
         .replace('{datetime}', timestamp)
-        .replace('{timestamp}', timestamp)
     )
 
 
@@ -114,7 +115,7 @@ def _build_search_strategy(uel_cfg: dict[str, Any],
                             sfd_cfg: dict[str, Any]) -> RandomStrategy | GridStrategy:
 
     strategy_cfg = uel_cfg.get('search_strategy', {})
-    strategy_type = strategy_cfg.get('type', 'random') if strategy_cfg else 'random'
+    strategy_type = strategy_cfg.get('type', 'random')
     # ruamel.yaml returns CommentedMap/CommentedSeq — convert to plain Python types
     params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}
     domain = ParamDomain(params)

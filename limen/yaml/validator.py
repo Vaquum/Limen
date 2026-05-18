@@ -109,7 +109,6 @@ _MAIN_ENGINE = RuleEngine([
     CalibrationCrossRef(),
     ParamCoverage(),
 
-    Required('uel', dict),
     Required('uel.n_permutations', int),
     OneOf('uel.search_strategy.type', VALID_SEARCH_STRATEGY_TYPES),
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),

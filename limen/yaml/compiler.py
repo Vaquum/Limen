@@ -3,7 +3,7 @@ from typing import Any
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
-from limen.yaml.resolver import is_resolvable
+from limen.yaml.errors import ResolutionError
 from limen.yaml.resolver import resolve
 
 
@@ -22,10 +22,16 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
 
     '''
 
-    return {
-        k: (resolve(v) if isinstance(v, str) and is_resolvable(v) else v)
-        for k, v in params.items()
-    }
+    result = {}
+    for k, v in params.items():
+        if isinstance(v, str):
+            try:
+                result[k] = resolve(v)
+            except ResolutionError:
+                result[k] = v
+        else:
+            result[k] = v
+    return result
 
 
 def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
@@ -143,7 +149,8 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
                 func=resolve(thresh['func']),
                 **_resolve_func_params(dict(thresh.get('params') or {})),
             )
-        builder.done()
+        if prob is not None or thresh is not None:
+            builder.done()
 
     po = m.get('params_override')
     if po is not None:
@@ -203,7 +210,7 @@ class CompiledSFD:
 
         '''Return the parameter search space.'''
 
-        return dict(self._yaml['sfd']['params'])
+        return {k: list(v) for k, v in self._yaml['sfd']['params'].items()}
 
     def manifest(self) -> Manifest:
 
