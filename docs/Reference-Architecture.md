@@ -196,11 +196,11 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 
 - **Tier 1** — position stats: `num_trades_{split}`, `position_rate_{split}`
 - **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `sharpe_per_bar_train`, `max_drawdown_bps_test`)
-- **Tier 3** — cross-split stability: `sharpe_std`, `drawdown_std`, `sharpe_degradation`, `is_stable`
+- **Tier 3** — cross-split stability: `sharpe_std`, `drawdown_std_bps`, `sharpe_degradation`, `is_stable`
 
 `is_stable` is `True` when `sharpe_std < sharpe_std_threshold` and `sharpe_degradation < sharpe_degradation_threshold`. Both thresholds are configurable parameters passed through the foundational SFD's `params()` domain.
 
-**NOTE:** Tier 2 and Tier 3 metrics require `open` and `close` columns in the split DataFrames to run the backtest. When those columns are absent, per-split backtest results are empty and the Tier 3 stability keys (`sharpe_std`, `drawdown_std`, `sharpe_degradation`) are returned as `None` with `is_stable` falling back to `False`.
+**NOTE:** Tier 2 and Tier 3 metrics require `open` and `close` columns in the split DataFrames to run the backtest. When those columns are absent, per-split backtest results are empty and the Tier 3 stability keys (`sharpe_std`, `drawdown_std_bps`, `sharpe_degradation`) are returned as `None` with `is_stable` falling back to `False`.
 
 `_preds` is present; `_probs` is intentionally absent (not applicable to rule-based strategies).
 

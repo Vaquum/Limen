@@ -47,12 +47,12 @@ def test_backtest_metrics_flattened_with_split_suffix() -> None:
     assert result['max_drawdown_bps_test'] == -8.0
 
 
-def test_sharpe_std_and_drawdown_std() -> None:
+def test_sharpe_std_and_drawdown_std_bps() -> None:
     positions = _make_positions([1], [1], [1])
     bt = _make_backtest(1.0, 1.0, 1.0, -5.0, -5.0, -5.0)
     result = rule_based_metrics(positions, bt)
     assert result['sharpe_std'] == 0.0
-    assert result['drawdown_std'] == 0.0
+    assert result['drawdown_std_bps'] == 0.0
 
 
 def test_sharpe_degradation() -> None:
@@ -80,6 +80,6 @@ def test_missing_backtest_results_degrade_gracefully() -> None:
     positions = _make_positions([1], [1], [1])
     result = rule_based_metrics(positions, {})
     assert result['sharpe_std'] is None
-    assert result['drawdown_std'] is None
+    assert result['drawdown_std_bps'] is None
     assert result['sharpe_degradation'] is None
     assert result['is_stable'] is False

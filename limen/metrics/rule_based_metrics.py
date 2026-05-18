@@ -54,7 +54,7 @@ def rule_based_metrics(positions: dict,
     valid_drawdowns = [d for d in drawdowns if d is not None and not np.isnan(d)]
 
     sharpe_std = float(np.std(valid_sharpes, ddof=1)) if len(valid_sharpes) >= _MIN_SPLITS else float('nan')
-    drawdown_std = float(np.std(valid_drawdowns, ddof=1)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
+    drawdown_std_bps = float(np.std(valid_drawdowns, ddof=1)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
 
     sharpe_train, sharpe_test = sharpes[0], sharpes[2]
     if (sharpe_train is not None and sharpe_test is not None
@@ -64,7 +64,7 @@ def rule_based_metrics(positions: dict,
         sharpe_degradation = float('nan')
 
     results['sharpe_std'] = _round_or_none(sharpe_std)
-    results['drawdown_std'] = _round_or_none(drawdown_std)
+    results['drawdown_std_bps'] = _round_or_none(drawdown_std_bps)
     results['sharpe_degradation'] = _round_or_none(sharpe_degradation)
     results['is_stable'] = (
         not np.isnan(sharpe_std) and sharpe_std < sharpe_std_threshold

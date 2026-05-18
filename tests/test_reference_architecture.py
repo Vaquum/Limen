@@ -206,7 +206,7 @@ def test_rule_based_evaluate_returns_expected_metrics():
         assert 0.0 <= rate <= 1.0
 
     assert isinstance(results['sharpe_std'], float)
-    assert isinstance(results['drawdown_std'], float)
+    assert isinstance(results['drawdown_std_bps'], float)
     assert isinstance(results['sharpe_degradation'], float)
     assert isinstance(results['is_stable'], bool)
 

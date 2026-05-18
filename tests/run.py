@@ -181,7 +181,7 @@ from tests.test_splits import test_split_by_dates_rejects_non_date_bounds
 from tests.test_rule_based_metrics import test_num_trades_counts_entries_not_bars
 from tests.test_rule_based_metrics import test_position_rate
 from tests.test_rule_based_metrics import test_backtest_metrics_flattened_with_split_suffix
-from tests.test_rule_based_metrics import test_sharpe_std_and_drawdown_std
+from tests.test_rule_based_metrics import test_sharpe_std_and_drawdown_std_bps
 from tests.test_rule_based_metrics import test_sharpe_degradation
 from tests.test_rule_based_metrics import test_is_stable_true_when_within_thresholds
 from tests.test_rule_based_metrics import test_is_stable_false_when_sharpe_std_exceeds_threshold
@@ -751,7 +751,7 @@ tests = [
     test_num_trades_counts_entries_not_bars,
     test_position_rate,
     test_backtest_metrics_flattened_with_split_suffix,
-    test_sharpe_std_and_drawdown_std,
+    test_sharpe_std_and_drawdown_std_bps,
     test_sharpe_degradation,
     test_is_stable_true_when_within_thresholds,
     test_is_stable_false_when_sharpe_std_exceeds_threshold,

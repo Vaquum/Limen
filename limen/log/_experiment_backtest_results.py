@@ -88,8 +88,8 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
                       'trade_expectancy_bps', 'max_drawdown_bps',
                       'total_return_gross_bps', 'total_return_net_bps',
                       'trade_return_mean_win_bps', 'trade_return_mean_loss_bps',
-                      'bars_total', 'sharpe_per_bar', 'bars_in_market_bps',
-                      'trades_count', 'cost_round_trip_bps'
+                      'mean_kelly_bps', 'bars_total', 'sharpe_per_bar',
+                      'bars_in_market_bps', 'trades_count', 'cost_round_trip_bps'
     '''
 
     all_rows = []
