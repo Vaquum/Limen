@@ -18,6 +18,11 @@ from limen.yaml.rules import SplitSpec
 from limen.yaml.rules import WarnIfPresent
 from limen.yaml.rules import When
 from limen.yaml.rules import get_at
+from limen.yaml.schema import CALIBRATION_FUNC_OPTIONAL
+from limen.yaml.schema import CALIBRATION_FUNC_REQUIRED
+from limen.yaml.schema import CALIBRATION_OPTIONAL
+from limen.yaml.schema import DATA_SOURCE_REQUIRED
+from limen.yaml.schema import FEATURE_ABLATION_OPTIONAL
 from limen.yaml.schema import MANIFEST_OPTIONAL_SHARED
 from limen.yaml.schema import MANIFEST_REQUIRED
 from limen.yaml.schema import METADATA_OPTIONAL
@@ -27,6 +32,13 @@ from limen.yaml.schema import ML_MANIFEST_REQUIRED
 from limen.yaml.schema import PCA_COMPRESSION_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_REQUIRED
+from limen.yaml.schema import SCALER_EXPLICIT_OPTIONAL
+from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
+from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
+from limen.yaml.schema import SEARCH_STRATEGY_REQUIRED
+from limen.yaml.schema import SPLIT_CONFIG_REQUIRED
+from limen.yaml.schema import SPLIT_DATES_REQUIRED
+from limen.yaml.schema import STRATEGY_REQUIRED
 from limen.yaml.schema import TARGET_OPTIONAL
 from limen.yaml.schema import TARGET_REQUIRED
 from limen.yaml.schema import UEL_OPTIONAL
@@ -70,7 +82,12 @@ _MAIN_ENGINE = RuleEngine([
     OneOf('sfd.manifest.type', VALID_MANIFEST_TYPES),
 
     DataSource(),
+    NoUnknownKeys('sfd.manifest.data_source', DATA_SOURCE_REQUIRED),
+    NoUnknownKeys('sfd.manifest.test_data_source', DATA_SOURCE_REQUIRED),
+
     SplitSpec(),
+    NoUnknownKeys('sfd.manifest.split_config', SPLIT_CONFIG_REQUIRED),
+    NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED),
 
     Required('sfd.manifest.reference_architecture', str),
 
@@ -81,7 +98,15 @@ _MAIN_ENGINE = RuleEngine([
         NoUnknownKeys('sfd.manifest.target', TARGET_REQUIRED | TARGET_OPTIONAL, severity='error'),
         FuncList('sfd.manifest.indicators'),
         FuncList('sfd.manifest.features'),
+        NoUnknownKeys('sfd.manifest.scaler',
+                      SCALER_EXPLICIT_REQUIRED | SCALER_EXPLICIT_OPTIONAL | SCALER_FROM_PARAMS_REQUIRED),
+        NoUnknownKeys('sfd.manifest.feature_ablation', FEATURE_ABLATION_OPTIONAL),
         NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL),
+        NoUnknownKeys('sfd.manifest.calibration', CALIBRATION_OPTIONAL),
+        NoUnknownKeys('sfd.manifest.calibration.probability_calibration',
+                      CALIBRATION_FUNC_REQUIRED | CALIBRATION_FUNC_OPTIONAL),
+        NoUnknownKeys('sfd.manifest.calibration.threshold_function',
+                      CALIBRATION_FUNC_REQUIRED | CALIBRATION_FUNC_OPTIONAL),
         NoUnknownKeys(
             'sfd.manifest',
             MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
@@ -93,6 +118,7 @@ _MAIN_ENGINE = RuleEngine([
         Required('sfd.manifest.strategy.conditions', list),
         Required('sfd.manifest.strategy.entry', str),
         ConditionsList(),
+        NoUnknownKeys('sfd.manifest.strategy', STRATEGY_REQUIRED),
         WarnIfPresent(
             'sfd.manifest',
             ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
@@ -110,6 +136,7 @@ _MAIN_ENGINE = RuleEngine([
 
     Required('uel.n_permutations', int),
     OneOf('uel.search_strategy.type', VALID_SEARCH_STRATEGY_TYPES),
+    NoUnknownKeys('uel.search_strategy', SEARCH_STRATEGY_REQUIRED),
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
     NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
 ])

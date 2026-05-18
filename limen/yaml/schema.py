@@ -44,7 +44,6 @@ TARGET_OPTIONAL = {'fit_params', 'transform_params'}
 STRATEGY_REQUIRED = {'conditions', 'entry'}
 CONDITION_REQUIRED = {'name', 'type', 'expression'}
 CONDITION_OPTIONAL = {'params'}
-VALID_CONDITION_TYPES = {'polars_lambda'}
 
 SCALER_EXPLICIT_REQUIRED = {'class'}
 SCALER_EXPLICIT_OPTIONAL = {'params'}
