@@ -10,6 +10,9 @@ from limen.metrics.balanced_metric import balanced_metric
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
+from limen.yaml.errors import GitError
+from limen.yaml.errors import ValidationError
+from limen.yaml.errors import YAMLError
 from limen.yaml.parser import parse
 from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
@@ -373,3 +376,52 @@ def test_build_manifest_pca_compression_configured() -> None:
     manifest = build_manifest(yaml_dict)
     assert isinstance(manifest, MLManifest)
     assert manifest.pca_compression_config is not None
+
+
+def test_parse_empty_yaml_returns_error() -> None:
+    _, errors = parse('# no content\n')
+    assert any('empty' in e.message.lower() for e in errors)
+
+
+def test_parse_non_mapping_root_returns_error() -> None:
+    _, errors = parse('- item1\n- item2\n')
+    assert len(errors) > 0
+
+
+def test_validation_error_carries_errors_and_formats_message() -> None:
+    errors = [YAMLError(message='missing field', path='sfd.manifest')]
+    exc = ValidationError(errors)
+    assert exc.errors is errors
+    assert 'missing field' in str(exc)
+
+
+def test_git_error_carries_path_and_message() -> None:
+    exc = GitError(path='exp.yaml', message='not a git repo')
+    assert exc.path == 'exp.yaml'
+    assert 'not a git repo' in str(exc)
+
+
+def test_validate_passes_valid_yaml_with_split_dates() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['sfd']['manifest']['split_config']
+    yaml_dict['sfd']['manifest']['split_dates'] = {
+        'train_start': '2022-01-01', 'train_end': '2022-07-01',
+        'val_start': '2022-07-01', 'val_end': '2022-10-01',
+        'test_start': '2022-10-01', 'test_end': '2023-01-01',
+    }
+    result = validate(yaml_dict)
+    assert result.valid
+
+
+def test_validate_warning_for_unknown_key_in_data_source() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_source']['typo_key'] = 'value'
+    result = validate(yaml_dict)
+    assert any('typo_key' in w.message for w in result.warnings)
+
+
+def test_validate_warning_for_unknown_key_in_split_config() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_config']['typo_key'] = 1
+    result = validate(yaml_dict)
+    assert any('typo_key' in w.message for w in result.warnings)

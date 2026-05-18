@@ -44,6 +44,20 @@ from tests.test_yaml import test_validate_error_when_both_split_config_and_split
 from tests.test_yaml import test_validate_error_when_neither_split_config_nor_split_dates_present
 from tests.test_yaml import test_build_manifest_split_dates_calls_set_split_dates
 from tests.test_yaml import test_build_manifest_pca_compression_configured
+from tests.test_yaml import test_parse_empty_yaml_returns_error
+from tests.test_yaml import test_parse_non_mapping_root_returns_error
+from tests.test_yaml import test_validation_error_carries_errors_and_formats_message
+from tests.test_yaml import test_git_error_carries_path_and_message
+from tests.test_yaml import test_validate_passes_valid_yaml_with_split_dates
+from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
+from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
+from tests.test_cli import test_cli_validate_valid_yaml_exits_0
+from tests.test_cli import test_cli_validate_shows_valid_checkmark
+from tests.test_cli import test_cli_validate_parse_error_exits_1
+from tests.test_cli import test_cli_validate_schema_error_exits_1_and_shows_error
+from tests.test_cli import test_cli_run_dry_run_valid_yaml_exits_0
+from tests.test_cli import test_cli_run_dry_run_shows_dry_run_message
+from tests.test_cli import test_cli_run_dry_run_parse_error_exits_1
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -951,6 +965,20 @@ tests = [
     test_validate_error_when_neither_split_config_nor_split_dates_present,
     test_build_manifest_split_dates_calls_set_split_dates,
     test_build_manifest_pca_compression_configured,
+    test_parse_empty_yaml_returns_error,
+    test_parse_non_mapping_root_returns_error,
+    test_validation_error_carries_errors_and_formats_message,
+    test_git_error_carries_path_and_message,
+    test_validate_passes_valid_yaml_with_split_dates,
+    test_validate_warning_for_unknown_key_in_data_source,
+    test_validate_warning_for_unknown_key_in_split_config,
+    test_cli_validate_valid_yaml_exits_0,
+    test_cli_validate_shows_valid_checkmark,
+    test_cli_validate_parse_error_exits_1,
+    test_cli_validate_schema_error_exits_1_and_shows_error,
+    test_cli_run_dry_run_valid_yaml_exits_0,
+    test_cli_run_dry_run_shows_dry_run_message,
+    test_cli_run_dry_run_parse_error_exits_1,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
