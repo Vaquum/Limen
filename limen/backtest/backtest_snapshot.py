@@ -17,7 +17,8 @@ def backtest_snapshot(df: pd.DataFrame,
 
     '''
     Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
-    All ratio fields are in basis points. Sharpe is per bar (unitless).
+    All ratio fields use basis points, including bounded proportions:
+    0.5 is reported as 5000.0 bps. Sharpe is per bar (unitless).
 
     Takes in output of log.permutation_prediction_performance and returns backtest results.
 

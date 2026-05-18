@@ -174,6 +174,8 @@ uel.experiment_backtest_results
 
 The current summary columns are:
 
+All ratio columns use basis points, including bounded proportions (`0.5` is `5000.0` bps).
+
 - `trade_win_rate_bps`
 - `trade_expectancy_bps`
 - `max_drawdown_bps`

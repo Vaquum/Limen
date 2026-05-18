@@ -48,7 +48,7 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `trade_*` metrics are computed from compounded consecutive `1` runs
 - `trades_count` counts consecutive in-market runs, not in-market bars
 - `bars_total`, `bars_in_market_bps`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
-- ratio outputs are reported in basis points
+- all ratio outputs use basis points, including bounded proportions (`0.5` is `5000.0` bps)
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
