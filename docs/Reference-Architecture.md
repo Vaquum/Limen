@@ -107,9 +107,9 @@ With `inline_metrics=True`, `evaluate()` adds:
 
 On that same live local run, `LogRegBinary.evaluate(..., inline_metrics=True)` added keys such as:
 
-- `backtest_total_return_net_pct`
-- `backtest_max_drawdown_pct`
-- `backtest_sharpe_per_bar`
+- `backtest_edge_per_signal_bps_p50`
+- `backtest_trade_pnl_net_bps_p50`
+- `backtest_cvar_95_return_bps`
 - `confusion_tp`
 - `confusion_fp`
 - `confusion_precision`
@@ -195,12 +195,12 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 `evaluate()` returns a flat dict with three tiers:
 
 - **Tier 1** — position stats: `num_trades_{split}`, `position_rate_{split}`
-- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `sharpe_per_bar_train`, `max_drawdown_pct_test`)
-- **Tier 3** — cross-split stability: `sharpe_std`, `drawdown_std`, `sharpe_degradation`, `is_stable`
+- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `trade_pnl_net_bps_p50_train`, `drawdown_depth_bps_p5_test`)
+- **Tier 3** — cross-split diagnostics: `drawdown_std_bps`, `is_stable`
 
-`is_stable` is `True` when `sharpe_std < sharpe_std_threshold` and `sharpe_degradation < sharpe_degradation_threshold`. Both thresholds are configurable parameters passed through the foundational SFD's `params()` domain.
+`is_stable` is `False` until a replacement stability rule is defined against the new decoder-level ledger.
 
-**NOTE:** Tier 2 and Tier 3 metrics require `open` and `close` columns in the split DataFrames to run the backtest. When those columns are absent, per-split backtest results are empty and the Tier 3 stability keys (`sharpe_std`, `drawdown_std`, `sharpe_degradation`) are returned as `None` with `is_stable` falling back to `False`.
+**NOTE:** Tier 2 and Tier 3 metrics require `open` and `close` columns in the split DataFrames to run the backtest. When those columns are absent, per-split backtest results are empty and `drawdown_std_bps` is returned as `None` with `is_stable` falling back to `False`.
 
 `_preds` is present; `_probs` is intentionally absent (not applicable to rule-based strategies).
 

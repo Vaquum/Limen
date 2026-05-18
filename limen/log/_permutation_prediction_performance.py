@@ -12,7 +12,7 @@ def _permutation_prediction_performance(self: Any,
         round_id (int): Round ID (i.e. nth permutation in an experiment)
 
     Returns:
-        pd.DataFrame: Table with columns 'predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change'
+        pd.DataFrame: Table with predictions, actuals, hit/miss, datetime, open, close, and price_change
     '''
 
     try:
@@ -31,6 +31,8 @@ def _permutation_prediction_performance(self: Any,
     perf_df['miss'] = perf_df['predictions'] != perf_df['actuals']
 
     price_df = self._get_test_data_with_all_cols(round_id)
+    if 'datetime' in price_df.columns:
+        perf_df['datetime'] = price_df['datetime']
     perf_df['open'] = price_df['open']
     perf_df['close'] = price_df['close']
     perf_df['price_change'] = price_df['close'] - price_df['open']

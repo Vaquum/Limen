@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
+from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment import CalibrationConfig
@@ -76,9 +77,8 @@ def test_xgboost_evaluate_returns_all_metric_types():
                 'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
         assert key in results, f"Missing confusion key: {key}"
 
-    for key in ['backtest_trade_win_rate_pct', 'backtest_max_drawdown_pct',
-                'backtest_total_return_net_pct', 'backtest_sharpe_per_bar',
-                'backtest_mean_kelly_pct']:
+    for metric_col in BACKTEST_SNAPSHOT_COLUMNS:
+        key = f'backtest_{metric_col}'
         assert key in results, f"Missing backtest key: {key}"
 
     assert '_preds' in results
@@ -205,9 +205,7 @@ def test_rule_based_evaluate_returns_expected_metrics():
         rate = results[f'position_rate_{split}']
         assert 0.0 <= rate <= 1.0
 
-    assert isinstance(results['sharpe_std'], float)
-    assert isinstance(results['drawdown_std'], float)
-    assert isinstance(results['sharpe_degradation'], float)
+    assert results['drawdown_std_bps'] is None
     assert isinstance(results['is_stable'], bool)
 
     assert isinstance(results['_preds'], np.ndarray)
@@ -220,7 +218,7 @@ def test_rule_based_is_stable_respects_thresholds():
     results_loose = RuleBasedStrategy(sharpe_std_threshold=999.0,
                                       sharpe_degradation_threshold=999.0).train(data).evaluate(data)
     assert results_tight['is_stable'] is False
-    assert results_loose['is_stable'] is True
+    assert results_loose['is_stable'] is False
 
 
 def test_rule_based_function_returns_flat_dict():

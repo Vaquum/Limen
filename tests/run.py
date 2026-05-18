@@ -181,10 +181,8 @@ from tests.test_splits import test_split_by_dates_rejects_non_date_bounds
 from tests.test_rule_based_metrics import test_num_trades_counts_entries_not_bars
 from tests.test_rule_based_metrics import test_position_rate
 from tests.test_rule_based_metrics import test_backtest_metrics_flattened_with_split_suffix
-from tests.test_rule_based_metrics import test_sharpe_std_and_drawdown_std
-from tests.test_rule_based_metrics import test_sharpe_degradation
-from tests.test_rule_based_metrics import test_is_stable_true_when_within_thresholds
-from tests.test_rule_based_metrics import test_is_stable_false_when_sharpe_std_exceeds_threshold
+from tests.test_rule_based_metrics import test_drawdown_std_bps
+from tests.test_rule_based_metrics import test_is_stable_false_without_legacy_sharpe_surface
 from tests.test_rule_based_metrics import test_missing_backtest_results_degrade_gracefully
 from tests.test_manifest_rule_based import test_with_strategy_sets_sentinel_and_returns_self
 from tests.test_manifest_rule_based import test_prepare_data_rule_based_returns_split_dataframes
@@ -333,6 +331,7 @@ from tests.test_manifest_prepare_data import test_pca_compression_rejects_nonnum
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 from tests.test_inline_metrics import test_logreg_inline_and_post_confusion_metrics_match
 from tests.test_inline_metrics import test_xgboost_inline_and_post_backtest_metrics_match
+from tests.test_metrics_and_log_helpers import test_backtest_snapshot_emits_metric_ledger_columns
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_executes_on_next_bar
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_preserves_shifted_hold_while_one_continuation
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_applies_costs_multiplicatively_per_fill
@@ -751,10 +750,8 @@ tests = [
     test_num_trades_counts_entries_not_bars,
     test_position_rate,
     test_backtest_metrics_flattened_with_split_suffix,
-    test_sharpe_std_and_drawdown_std,
-    test_sharpe_degradation,
-    test_is_stable_true_when_within_thresholds,
-    test_is_stable_false_when_sharpe_std_exceeds_threshold,
+    test_drawdown_std_bps,
+    test_is_stable_false_without_legacy_sharpe_surface,
     test_missing_backtest_results_degrade_gracefully,
     test_with_strategy_sets_sentinel_and_returns_self,
     test_prepare_data_rule_based_returns_split_dataframes,
@@ -944,6 +941,7 @@ tests = [
     test_inline_and_post_experiment_metrics,
     test_logreg_inline_and_post_confusion_metrics_match,
     test_xgboost_inline_and_post_backtest_metrics_match,
+    test_backtest_snapshot_emits_metric_ledger_columns,
     test_backtest_snapshot_executes_on_next_bar,
     test_backtest_snapshot_preserves_shifted_hold_while_one_continuation,
     test_backtest_snapshot_applies_costs_multiplicatively_per_fill,

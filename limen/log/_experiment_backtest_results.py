@@ -84,12 +84,7 @@ def _experiment_backtest_results(self: Any, disable_progress_bar: bool = False) 
         disable_progress_bar (bool): Whether to disable the progress bar
 
     Returns:
-        pd.DataFrame: One-row-per-round table with columns 'trade_win_rate_pct',
-                      'trade_expectancy_pct', 'max_drawdown_pct',
-                      'total_return_gross_pct', 'total_return_net_pct',
-                      'trade_return_mean_win_pct', 'trade_return_mean_loss_pct',
-                      'bars_total', 'sharpe_per_bar', 'bars_in_market_pct',
-                      'trades_count', 'cost_round_trip_bps'
+        pd.DataFrame: One-row-per-round table with BACKTEST_SNAPSHOT_COLUMNS
     '''
 
     all_rows = []
