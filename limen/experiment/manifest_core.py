@@ -3,6 +3,7 @@ import inspect
 import importlib
 import logging
 import random
+import re
 from datetime import date
 from itertools import pairwise
 from collections.abc import Callable
@@ -1157,8 +1158,7 @@ def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dic
             if value.startswith('_') or value in round_params:
                 resolved[key] = round_params[value]
             elif '{' in value and '}' in value:
-                import re as _re
-                m = _re.fullmatch(r'\{(\w+)\}', value.strip())
+                m = re.fullmatch(r'\{(\w+)\}', value.strip())
                 if m:
                     # pure {param_name} reference — direct lookup preserves type (float, int, bool)
                     resolved[key] = round_params.get(m.group(1), value)
