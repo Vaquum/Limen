@@ -9,6 +9,14 @@ from limen.yaml.resolver import resolve
 
 _SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
 
+_CONDITION_LEAF_FIELDS: dict[str, tuple[str, ...]] = {
+    'threshold':  ('column', 'operator', 'value'),
+    'relative':   ('column', 'operator', 'other_column'),
+    'crossover':  ('column', 'other_column'),
+    'slope':      ('column',),
+    'sql_expr':   ('expr',),
+}
+
 
 class Rule(Protocol):
 
@@ -344,12 +352,32 @@ class ConditionsList:
                     path=f'sfd.manifest.strategy.conditions[{i}]',
                 ))
                 continue
-            for key in ('name', 'type', 'expression'):
+            for key in ('id', 'name'):
                 if key not in cond:
                     errors.append(YAMLError(
                         message=f"Missing required field '{key}'",
                         path=f'sfd.manifest.strategy.conditions[{i}].{key}',
                     ))
+            if 'type' in cond:
+                ptype = cond['type']
+                if ptype not in _CONDITION_LEAF_FIELDS:
+                    errors.append(YAMLError(
+                        message=f"Unknown condition type '{ptype}'",
+                        path=f'sfd.manifest.strategy.conditions[{i}].type',
+                        suggestion=f"Use one of: {', '.join(sorted(_CONDITION_LEAF_FIELDS))}",
+                    ))
+                else:
+                    for key in _CONDITION_LEAF_FIELDS[ptype]:
+                        if key not in cond:
+                            errors.append(YAMLError(
+                                message=f"Missing required field '{key}' for '{ptype}' condition",
+                                path=f'sfd.manifest.strategy.conditions[{i}].{key}',
+                            ))
+            elif 'operands' not in cond:
+                errors.append(YAMLError(
+                    message="Condition must have either 'type' (leaf) or 'operands' (composite)",
+                    path=f'sfd.manifest.strategy.conditions[{i}]',
+                ))
 
 
 class SplitSpec:
@@ -440,11 +468,11 @@ class SfdParams:
             return
 
         for key, values in params.items():
-            if not isinstance(values, list):
+            if not isinstance(values, list) or len(values) == 0:
                 errors.append(YAMLError(
-                    message=f"Parameter '{key}' must be a list of values",
+                    message=f"Parameter '{key}' must be a non-empty list of values",
                     path=f'sfd.params.{key}',
-                    suggestion=f'Change to {key}: [{values}]',
+                    suggestion=f'Add at least one value, e.g. {key}: [1]',
                 ))
 
 

@@ -12,8 +12,8 @@ METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags'}
 
 SFD_REQUIRED = {'manifest', 'params'}
 
-MANIFEST_REQUIRED = {'type', 'data_source', 'split_config', 'reference_architecture'}
-MANIFEST_OPTIONAL_SHARED = {'test_data_source', 'required_columns', 'split_dates'}
+MANIFEST_REQUIRED = {'type', 'data_source', 'reference_architecture'}
+MANIFEST_OPTIONAL_SHARED = {'test_data_source', 'required_columns', 'split_config', 'split_dates'}
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {
@@ -42,8 +42,8 @@ TARGET_REQUIRED = {'name', 'class'}
 TARGET_OPTIONAL = {'fit_params', 'transform_params'}
 
 STRATEGY_REQUIRED = {'conditions', 'entry'}
-CONDITION_REQUIRED = {'name', 'type', 'expression'}
-CONDITION_OPTIONAL = {'params'}
+CONDITION_REQUIRED = {'id', 'name'}
+CONDITION_OPTIONAL = {'params', 'persistence_n', 'recency_n'}
 
 SCALER_EXPLICIT_REQUIRED = {'class'}
 SCALER_EXPLICIT_OPTIONAL = {'params'}
