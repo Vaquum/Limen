@@ -83,11 +83,15 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         test_mode=test_mode,
     )
 
-    uel.run(
-        experiment_name=experiment_name,
-        n_permutations=n_permutations,
-        prep_each_round=prep_each_round,
-    )
+    try:
+        uel.run(
+            experiment_name=experiment_name,
+            n_permutations=n_permutations,
+            prep_each_round=prep_each_round,
+        )
+    except Exception as exc:  # noqa: BLE001
+        click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
+        return False
 
     output_format: str = uel_cfg.get('output_format', 'csv')
     if output_format == 'parquet' and uel.experiment_log is not None:
