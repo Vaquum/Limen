@@ -48,7 +48,7 @@ def rule_based_metrics(positions: dict,
             results[f'{k}_{split}'] = v
 
     sharpes = [split_bt[s].get('sharpe_per_bar') for s in _SPLITS]
-    drawdowns = [split_bt[s].get('max_drawdown_pct') for s in _SPLITS]
+    drawdowns = [split_bt[s].get('max_drawdown_bps') for s in _SPLITS]
 
     valid_sharpes = [s for s in sharpes if s is not None and not np.isnan(s)]
     valid_drawdowns = [d for d in drawdowns if d is not None and not np.isnan(d)]

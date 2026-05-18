@@ -47,8 +47,8 @@ The current snapshot backtest is intentionally simple and opinionated:
 - fee and slippage costs are applied multiplicatively on entry and exit fills
 - `trade_*` metrics are computed from compounded consecutive `1` runs
 - `trades_count` counts consecutive in-market runs, not in-market bars
-- `bars_total`, `bars_in_market_pct`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
-- outputs are reported in percent units
+- `bars_total`, `bars_in_market_bps`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
+- ratio outputs are reported in basis points
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
@@ -56,16 +56,17 @@ This makes snapshot backtests fast and comparable across rounds, but it also mea
 
 Snapshot backtests produce:
 
-- `trade_win_rate_pct`
-- `trade_expectancy_pct`
-- `max_drawdown_pct`
-- `total_return_gross_pct`
-- `total_return_net_pct`
-- `trade_return_mean_win_pct`
-- `trade_return_mean_loss_pct`
+- `trade_win_rate_bps`
+- `trade_expectancy_bps`
+- `max_drawdown_bps`
+- `total_return_gross_bps`
+- `total_return_net_bps`
+- `trade_return_mean_win_bps`
+- `trade_return_mean_loss_bps`
+- `mean_kelly_bps`
 - `bars_total`
 - `sharpe_per_bar`
-- `bars_in_market_pct`
+- `bars_in_market_bps`
 - `trades_count`
 - `cost_round_trip_bps`
 

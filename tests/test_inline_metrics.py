@@ -49,12 +49,12 @@ def test_inline_and_post_experiment_metrics() -> None:
                 'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
         assert col in log_cols, f"Missing inline confusion return column: {col}"
 
-    for col in ['backtest_trade_win_rate_pct', 'backtest_max_drawdown_pct',
-                'backtest_total_return_net_pct', 'backtest_sharpe_per_bar']:
+    for col in ['backtest_trade_win_rate_bps', 'backtest_max_drawdown_bps',
+                'backtest_total_return_net_bps', 'backtest_sharpe_per_bar']:
         assert col in log_cols, f"Missing inline backtest column: {col}"
         assert uel.experiment_log[col].null_count() == 0, f"Null values in {col}"
 
-    assert 'backtest_mean_kelly_pct' in log_cols
+    assert 'backtest_mean_kelly_bps' in log_cols
 
     assert uel.experiment_confusion_metrics is not None
     assert len(uel.experiment_confusion_metrics) > 0
@@ -62,10 +62,10 @@ def test_inline_and_post_experiment_metrics() -> None:
         assert col in uel.experiment_confusion_metrics.columns, f"Missing confusion metric column: {col}"
     assert uel.experiment_backtest_results is not None
     assert len(uel.experiment_backtest_results) > 0
-    assert 'mean_kelly_pct' in uel.experiment_backtest_results.columns
+    assert 'mean_kelly_bps' in uel.experiment_backtest_results.columns
 
-    assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
-        uel.experiment_backtest_results['total_return_net_pct'].tolist()
+    assert uel.experiment_log['backtest_total_return_net_bps'].to_list() == \
+        uel.experiment_backtest_results['total_return_net_bps'].tolist()
 
 
 def test_logreg_inline_and_post_confusion_metrics_match() -> None:
@@ -93,5 +93,5 @@ def test_xgboost_inline_and_post_backtest_metrics_match() -> None:
 
     uel = _run_uel(sfd_module=xgboost_sfd, n_permutations=1)
 
-    assert uel.experiment_log['backtest_total_return_net_pct'].to_list() == \
-        uel.experiment_backtest_results['total_return_net_pct'].tolist()
+    assert uel.experiment_log['backtest_total_return_net_bps'].to_list() == \
+        uel.experiment_backtest_results['total_return_net_bps'].tolist()

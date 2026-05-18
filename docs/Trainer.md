@@ -215,8 +215,8 @@ In a live local logreg promotion run in this repo, the stored keys included:
 - `_preds`
 - `accuracy`
 - `auc`
-- `backtest_total_return_net_pct`
-- `backtest_max_drawdown_pct`
+- `backtest_total_return_net_bps`
+- `backtest_max_drawdown_bps`
 - `backtest_sharpe_per_bar`
 
 When the promoted round used calibration, `results` also includes:

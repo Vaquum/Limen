@@ -235,7 +235,7 @@ def test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows() -
     assert result['fn_mean_return_pct'] == 5.0
 
 
-def test_backtest_snapshot_adds_mean_kelly_pct() -> None:
+def test_backtest_snapshot_adds_mean_kelly_bps() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 1, 0],
@@ -248,7 +248,7 @@ def test_backtest_snapshot_adds_mean_kelly_pct() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['mean_kelly_pct'] == 25.0
+    assert result['mean_kelly_bps'] == 2500.0
 
 
 def test_backtest_snapshot_executes_on_next_bar() -> None:
@@ -265,8 +265,8 @@ def test_backtest_snapshot_executes_on_next_bar() -> None:
 
     assert result['bars_total'] == 2
     assert result['trades_count'] == 1
-    assert result['bars_in_market_pct'] == 50.0
-    assert result['total_return_net_pct'] == -10.0
+    assert result['bars_in_market_bps'] == 5000.0
+    assert result['total_return_net_bps'] == -1000.0
 
 
 def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> None:
@@ -282,11 +282,11 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
     ).iloc[0]
 
     assert result['trades_count'] == 1
-    assert result['total_return_gross_pct'] == 21.0
-    assert result['total_return_net_pct'] == 21.0
-    assert result['trade_win_rate_pct'] == 100.0
-    assert result['trade_expectancy_pct'] == 21.0
-    assert result['trade_return_mean_win_pct'] == 21.0
+    assert result['total_return_gross_bps'] == 2100.0
+    assert result['total_return_net_bps'] == 2100.0
+    assert result['trade_win_rate_bps'] == 10000.0
+    assert result['trade_expectancy_bps'] == 2100.0
+    assert result['trade_return_mean_win_bps'] == 2100.0
 
 
 def test_backtest_snapshot_rejects_empty_input() -> None:
@@ -363,7 +363,7 @@ def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
     ).iloc[0]
 
     assert result['cost_round_trip_bps'] == 198
-    assert result['trade_expectancy_pct'] == -1.983
+    assert result['trade_expectancy_bps'] == -198.3
 
 
 def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
@@ -379,7 +379,7 @@ def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['max_drawdown_pct'] == -10.0
+    assert result['max_drawdown_bps'] == -1000.0
 
 
 def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar() -> None:
@@ -396,7 +396,7 @@ def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_ba
 
     assert result['bars_total'] == 1
     assert result['trades_count'] == 0
-    assert result['total_return_net_pct'] == 0.0
+    assert result['total_return_net_bps'] == 0.0
 
 
 def test_completed_bar_signal_proves_next_bar_alignment() -> None:
@@ -415,8 +415,8 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert same_row['total_return_net_pct'] == 21.0
-    assert next_bar['total_return_net_pct'] == -19.0
+    assert same_row['total_return_net_bps'] == 2100.0
+    assert next_bar['total_return_net_bps'] == -1900.0
 
 
 def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
@@ -435,7 +435,7 @@ def test_experiment_backtest_results_directionalizes_regression_predictions() ->
         execution_lag_bars=1,
     ).iloc[0]
 
-    assert result['total_return_net_pct'] == expected['total_return_net_pct']
+    assert result['total_return_net_bps'] == expected['total_return_net_bps']
 
 
 def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:

@@ -76,9 +76,9 @@ def test_xgboost_evaluate_returns_all_metric_types():
                 'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
         assert key in results, f"Missing confusion key: {key}"
 
-    for key in ['backtest_trade_win_rate_pct', 'backtest_max_drawdown_pct',
-                'backtest_total_return_net_pct', 'backtest_sharpe_per_bar',
-                'backtest_mean_kelly_pct']:
+    for key in ['backtest_trade_win_rate_bps', 'backtest_max_drawdown_bps',
+                'backtest_total_return_net_bps', 'backtest_sharpe_per_bar',
+                'backtest_mean_kelly_bps']:
         assert key in results, f"Missing backtest key: {key}"
 
     assert '_preds' in results

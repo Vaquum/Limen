@@ -107,8 +107,8 @@ With `inline_metrics=True`, `evaluate()` adds:
 
 On that same live local run, `LogRegBinary.evaluate(..., inline_metrics=True)` added keys such as:
 
-- `backtest_total_return_net_pct`
-- `backtest_max_drawdown_pct`
+- `backtest_total_return_net_bps`
+- `backtest_max_drawdown_bps`
 - `backtest_sharpe_per_bar`
 - `confusion_tp`
 - `confusion_fp`
@@ -195,7 +195,7 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 `evaluate()` returns a flat dict with three tiers:
 
 - **Tier 1** — position stats: `num_trades_{split}`, `position_rate_{split}`
-- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `sharpe_per_bar_train`, `max_drawdown_pct_test`)
+- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `sharpe_per_bar_train`, `max_drawdown_bps_test`)
 - **Tier 3** — cross-split stability: `sharpe_std`, `drawdown_std`, `sharpe_degradation`, `is_stable`
 
 `is_stable` is `True` when `sharpe_std < sharpe_std_threshold` and `sharpe_degradation < sharpe_degradation_threshold`. Both thresholds are configurable parameters passed through the foundational SFD's `params()` domain.

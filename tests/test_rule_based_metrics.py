@@ -14,9 +14,9 @@ def _make_positions(train, val, test):
 def _make_backtest(sharpe_train, sharpe_val, sharpe_test,
                    drawdown_train, drawdown_val, drawdown_test):
     return {
-        'train': {'sharpe_per_bar': sharpe_train, 'max_drawdown_pct': drawdown_train},
-        'val':   {'sharpe_per_bar': sharpe_val,   'max_drawdown_pct': drawdown_val},
-        'test':  {'sharpe_per_bar': sharpe_test,  'max_drawdown_pct': drawdown_test},
+        'train': {'sharpe_per_bar': sharpe_train, 'max_drawdown_bps': drawdown_train},
+        'val':   {'sharpe_per_bar': sharpe_val,   'max_drawdown_bps': drawdown_val},
+        'test':  {'sharpe_per_bar': sharpe_test,  'max_drawdown_bps': drawdown_test},
     }
 
 
@@ -44,7 +44,7 @@ def test_backtest_metrics_flattened_with_split_suffix() -> None:
     assert 'sharpe_per_bar_val' in result
     assert 'sharpe_per_bar_test' in result
     assert result['sharpe_per_bar_train'] == 1.0
-    assert result['max_drawdown_pct_test'] == -8.0
+    assert result['max_drawdown_bps_test'] == -8.0
 
 
 def test_sharpe_std_and_drawdown_std() -> None:

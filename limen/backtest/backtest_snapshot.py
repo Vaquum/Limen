@@ -3,6 +3,7 @@ import pandas as pd
 
 PRICE_CHANGE_RTOL = 1e-09
 PRICE_CHANGE_ATOL = 1e-12
+BPS_PER_UNIT = 10_000.0
 
 def backtest_snapshot(df: pd.DataFrame,
                      *,
@@ -16,7 +17,7 @@ def backtest_snapshot(df: pd.DataFrame,
 
     '''
     Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
-    All percentage fields are in % units (not fractions). Sharpe is per bar (unitless).
+    All ratio fields are in basis points. Sharpe is per bar (unitless).
 
     Takes in output of log.permutation_prediction_performance and returns backtest results.
 
@@ -32,17 +33,17 @@ def backtest_snapshot(df: pd.DataFrame,
 
     Returns a one-row DataFrame with columns (in order):
       [
-        'trade_win_rate_pct',
-        'trade_expectancy_pct',
-        'max_drawdown_pct',
-        'total_return_gross_pct',
-        'total_return_net_pct',
-        'trade_return_mean_win_pct',
-        'trade_return_mean_loss_pct',
-        'mean_kelly_pct',
+        'trade_win_rate_bps',
+        'trade_expectancy_bps',
+        'max_drawdown_bps',
+        'total_return_gross_bps',
+        'total_return_net_bps',
+        'trade_return_mean_win_bps',
+        'trade_return_mean_loss_bps',
+        'mean_kelly_bps',
         'bars_total',
         'sharpe_per_bar',
-        'bars_in_market_pct',
+        'bars_in_market_bps',
         'trades_count',
         'cost_round_trip_bps',
       ]
@@ -93,7 +94,7 @@ def backtest_snapshot(df: pd.DataFrame,
     pos = (pred == 1) & eval_mask
 
     bars_total = int(eval_mask.sum())
-    bars_in_market_pct = float((pos.sum() / bars_total) * 100.0) if bars_total else np.nan
+    bars_in_market_bps = float((pos.sum() / bars_total) * BPS_PER_UNIT) if bars_total else np.nan
 
     entry_mask = pos & (~pos.shift(1, fill_value=False))
     cont_mask  = pos & ( pos.shift(1, fill_value=False))
@@ -106,8 +107,8 @@ def backtest_snapshot(df: pd.DataFrame,
     R_gross = np.where(entry_mask, r_entry, 0.0) + np.where(cont_mask, r_cont, 0.0)
     R_gross = pd.Series(R_gross, index=df.index).fillna(0.0)
 
-    fee = fee_bps / 10_000.0
-    slip = slip_bps / 10_000.0
+    fee = fee_bps / BPS_PER_UNIT
+    slip = slip_bps / BPS_PER_UNIT
     entry_mult = (1.0 - fee) / (1.0 + slip)
     exit_mult = (1.0 - fee) * (1.0 - slip)
 
@@ -121,10 +122,10 @@ def backtest_snapshot(df: pd.DataFrame,
     eq_net = (1.0 + R_net).cumprod()
 
     peak = eq_net.cummax().clip(lower=1.0)
-    max_drawdown_pct = float((eq_net / peak - 1.0).min() * 100.0)
+    max_drawdown_bps = float((eq_net / peak - 1.0).min() * BPS_PER_UNIT)
 
-    total_return_gross_pct = float((eq_gross.iloc[-1] - 1.0) * 100.0)
-    total_return_net_pct = float((eq_net.iloc[-1]   - 1.0) * 100.0)
+    total_return_gross_bps = float((eq_gross.iloc[-1] - 1.0) * BPS_PER_UNIT)
+    total_return_net_bps = float((eq_net.iloc[-1]   - 1.0) * BPS_PER_UNIT)
 
     run_ids = entry_mask.cumsum()
     trade_returns = (
@@ -134,13 +135,13 @@ def backtest_snapshot(df: pd.DataFrame,
     if trade_returns.size:
         wins = trade_returns[trade_returns > 0]
         losses = trade_returns[trade_returns < 0]
-        trade_win_rate_pct = float((wins.size / trade_returns.size) * 100.0)
-        trade_expectancy_pct = float(trade_returns.mean() * 100.0)
-        trade_return_mean_win_pct = float(wins.mean() * 100.0) if wins.size else np.nan
-        trade_return_mean_loss_pct = float(losses.mean() * 100.0) if losses.size else np.nan
+        trade_win_rate_bps = float((wins.size / trade_returns.size) * BPS_PER_UNIT)
+        trade_expectancy_bps = float(trade_returns.mean() * BPS_PER_UNIT)
+        trade_return_mean_win_bps = float(wins.mean() * BPS_PER_UNIT) if wins.size else np.nan
+        trade_return_mean_loss_bps = float(losses.mean() * BPS_PER_UNIT) if losses.size else np.nan
     else:
-        trade_win_rate_pct = trade_expectancy_pct = np.nan
-        trade_return_mean_win_pct = trade_return_mean_loss_pct = np.nan
+        trade_win_rate_bps = trade_expectancy_bps = np.nan
+        trade_return_mean_win_bps = trade_return_mean_loss_bps = np.nan
 
     kelly_returns = trade_returns
 
@@ -152,9 +153,9 @@ def backtest_snapshot(df: pd.DataFrame,
         avg_win = float(kelly_wins.mean())
         avg_loss = abs(float(kelly_losses.mean()))
         payout_ratio = avg_win / avg_loss if avg_loss > 0 else np.nan
-        mean_kelly_pct = float((win_rate - (loss_rate / payout_ratio)) * 100.0) if payout_ratio > 0 else np.nan
+        mean_kelly_bps = float((win_rate - (loss_rate / payout_ratio)) * BPS_PER_UNIT) if payout_ratio > 0 else np.nan
     else:
-        mean_kelly_pct = np.nan
+        mean_kelly_bps = np.nan
 
     eval_returns = R_net[eval_mask]
     mu = float(eval_returns.mean()) if eval_returns.size else np.nan
@@ -163,19 +164,19 @@ def backtest_snapshot(df: pd.DataFrame,
     sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
 
     data = pd.DataFrame.from_records([{
-        'trade_win_rate_pct': round(trade_win_rate_pct, 1),
-        'trade_expectancy_pct': round(trade_expectancy_pct, 3),
-        'max_drawdown_pct': round(max_drawdown_pct, 1),
-        'total_return_gross_pct': round(total_return_gross_pct, 1),
-        'total_return_net_pct': round(total_return_net_pct, 1),
-        'trade_return_mean_win_pct': round(trade_return_mean_win_pct, 1),
-        'trade_return_mean_loss_pct': round(trade_return_mean_loss_pct, 1),
-        'mean_kelly_pct': round(mean_kelly_pct, 3),
+        'trade_win_rate_bps': round(trade_win_rate_bps, 1),
+        'trade_expectancy_bps': round(trade_expectancy_bps, 1),
+        'max_drawdown_bps': round(max_drawdown_bps, 1),
+        'total_return_gross_bps': round(total_return_gross_bps, 1),
+        'total_return_net_bps': round(total_return_net_bps, 1),
+        'trade_return_mean_win_bps': round(trade_return_mean_win_bps, 1),
+        'trade_return_mean_loss_bps': round(trade_return_mean_loss_bps, 1),
+        'mean_kelly_bps': round(mean_kelly_bps, 1),
         'bars_total': int(bars_total),
         'sharpe_per_bar': round(sharpe_per_bar, 2),
-        'bars_in_market_pct': round(bars_in_market_pct, 1),
+        'bars_in_market_bps': round(bars_in_market_bps, 1),
         'trades_count': int(trades_count),
-        'cost_round_trip_bps': round((1.0 - (entry_mult * exit_mult)) * 10_000),
+        'cost_round_trip_bps': round((1.0 - (entry_mult * exit_mult)) * BPS_PER_UNIT),
     }])
 
     return data
