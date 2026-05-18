@@ -46,9 +46,8 @@ The current snapshot backtest is intentionally simple and opinionated:
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - fee and slippage costs are applied multiplicatively on entry and exit fills
 - `trade_*` metrics are computed from compounded consecutive `1` runs
-- `trades_count` counts consecutive in-market runs, not in-market bars
-- `bars_total`, `bars_in_market_bps`, and `sharpe_per_bar` are computed on the tradable evaluation rows only
-- all ratio outputs use basis points, including bounded proportions (`0.5` is `5000.0` bps)
+- output metrics are quantiles over their declared substrate
+- return and ratio outputs are basis-point scaled
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
@@ -56,19 +55,14 @@ This makes snapshot backtests fast and comparable across rounds, but it also mea
 
 Snapshot backtests produce:
 
-- `trade_win_rate_bps`
-- `trade_expectancy_bps`
-- `max_drawdown_bps`
-- `total_return_gross_bps`
-- `total_return_net_bps`
-- `trade_return_mean_win_bps`
-- `trade_return_mean_loss_bps`
-- `mean_kelly_bps`
-- `bars_total`
-- `sharpe_per_bar`
-- `bars_in_market_bps`
-- `trades_count`
-- `cost_round_trip_bps`
+- `edge_per_signal_bps_p5`, `edge_per_signal_bps_p50`, `edge_per_signal_bps_p95`
+- `trade_pnl_net_bps_p5`, `trade_pnl_net_bps_p50`, `trade_pnl_net_bps_p95`
+- `cost_drag_bps_p5`, `cost_drag_bps_p50`, `cost_drag_bps_p95`
+- `rolling_return_net_bps_p5`, `rolling_return_net_bps_p50`, `rolling_return_net_bps_p95`
+- `return_on_exposure_p5`, `return_on_exposure_p50`, `return_on_exposure_p95`
+- `drawdown_depth_bps_p5`, `drawdown_depth_bps_p50`, `drawdown_depth_bps_p95`
+- `drawdown_duration_days_p5`, `drawdown_duration_days_p50`, `drawdown_duration_days_p95`
+- `cvar_95_return_bps`
 
 ### Typical use
 

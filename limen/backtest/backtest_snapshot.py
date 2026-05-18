@@ -4,6 +4,111 @@ import pandas as pd
 PRICE_CHANGE_RTOL = 1e-09
 PRICE_CHANGE_ATOL = 1e-12
 BPS_PER_UNIT = 10_000.0
+BACKTEST_SNAPSHOT_COLUMNS = [
+    'edge_per_signal_bps_p5',
+    'edge_per_signal_bps_p50',
+    'edge_per_signal_bps_p95',
+    'trade_pnl_net_bps_p5',
+    'trade_pnl_net_bps_p50',
+    'trade_pnl_net_bps_p95',
+    'cost_drag_bps_p5',
+    'cost_drag_bps_p50',
+    'cost_drag_bps_p95',
+    'rolling_return_net_bps_p5',
+    'rolling_return_net_bps_p50',
+    'rolling_return_net_bps_p95',
+    'return_on_exposure_p5',
+    'return_on_exposure_p50',
+    'return_on_exposure_p95',
+    'drawdown_depth_bps_p5',
+    'drawdown_depth_bps_p50',
+    'drawdown_depth_bps_p95',
+    'drawdown_duration_days_p5',
+    'drawdown_duration_days_p50',
+    'drawdown_duration_days_p95',
+    'cvar_95_return_bps',
+]
+
+
+def _finite_values(values: pd.Series | np.ndarray | list[float]) -> np.ndarray:
+    arr = pd.to_numeric(pd.Series(values), errors='coerce').to_numpy(dtype=float)
+    return arr[np.isfinite(arr)]
+
+
+def _quantiles(values: pd.Series | np.ndarray | list[float], decimals: int = 1) -> tuple[float, float, float]:
+    arr = _finite_values(values)
+    if arr.size == 0:
+        return (np.nan, np.nan, np.nan)
+    return tuple(round(float(np.quantile(arr, q)), decimals) for q in (0.05, 0.50, 0.95))
+
+
+def _clock_window_returns(
+        df: pd.DataFrame,
+        eval_mask: pd.Series,
+        pos: pd.Series,
+        R_net: pd.Series,
+        datetime_col: str,
+        clock_window: str) -> tuple[pd.Series, pd.Series]:
+
+    if datetime_col not in df:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+
+    dt = pd.to_datetime(df[datetime_col], errors='coerce')
+    mask = eval_mask & dt.notna()
+    if not mask.any():
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+
+    windows = dt[mask].dt.floor(clock_window)
+    window_returns = (1.0 + R_net[mask]).groupby(windows).prod() - 1.0
+    exposure = pos[mask].astype(float).groupby(windows).mean()
+    return_on_exposure = (window_returns / exposure).where(exposure > 0) * BPS_PER_UNIT
+
+    return window_returns * BPS_PER_UNIT, return_on_exposure
+
+
+def _drawdown_episode_metrics(
+        eq_net: pd.Series,
+        eval_mask: pd.Series,
+        df: pd.DataFrame,
+        datetime_col: str) -> tuple[list[float], list[float]]:
+
+    eq = eq_net[eval_mask]
+    if eq.empty:
+        return [], []
+
+    drawdown = (eq / eq.cummax().clip(lower=1.0)) - 1.0
+    timestamps = (
+        pd.to_datetime(df.loc[eq.index, datetime_col], errors='coerce')
+        if datetime_col in df
+        else pd.Series(pd.NaT, index=eq.index)
+    )
+
+    depths_bps: list[float] = []
+    durations_days: list[float] = []
+    in_drawdown = False
+    start_time = pd.NaT
+    trough = 0.0
+
+    for idx, dd in drawdown.items():
+        ts = timestamps.loc[idx]
+        if dd < 0 and not in_drawdown:
+            in_drawdown = True
+            start_time = ts
+            trough = float(dd)
+        elif dd < 0:
+            trough = min(trough, float(dd))
+        elif in_drawdown:
+            depths_bps.append(trough * BPS_PER_UNIT)
+            if pd.notna(start_time) and pd.notna(ts):
+                durations_days.append(float((ts - start_time) / pd.Timedelta(days=1)))
+            in_drawdown = False
+            start_time = pd.NaT
+            trough = 0.0
+
+    if in_drawdown:
+        depths_bps.append(trough * BPS_PER_UNIT)
+
+    return depths_bps, durations_days
 
 def backtest_snapshot(df: pd.DataFrame,
                      *,
@@ -11,14 +116,16 @@ def backtest_snapshot(df: pd.DataFrame,
                      open_col: str = 'open',
                      close_col: str = 'close',
                      price_change_col: str = 'price_change',
+                     datetime_col: str = 'datetime',
                      execution_lag_bars: int = 1,
+                     clock_window: str = '1D',
                      fee_bps: float = 5.0,
                      slip_bps: float = 5.0) -> pd.DataFrame:
 
     '''
     Long-only, HOLD-WHILE-1 evaluation using pre-aligned intrabar returns.
-    All ratio fields use basis points, including bounded proportions:
-    0.5 is reported as 5000.0 bps. Sharpe is per bar (unitless).
+    Emits the decoder-level metric ledger used before market replay.
+    Return and ratio outputs are basis-point scaled.
 
     Takes in output of log.permutation_prediction_performance and returns backtest results.
 
@@ -33,21 +140,7 @@ def backtest_snapshot(df: pd.DataFrame,
     - Equity compounds over R_net; drawdown is computed from net equity.
 
     Returns a one-row DataFrame with columns (in order):
-      [
-        'trade_win_rate_bps',
-        'trade_expectancy_bps',
-        'max_drawdown_bps',
-        'total_return_gross_bps',
-        'total_return_net_bps',
-        'trade_return_mean_win_bps',
-        'trade_return_mean_loss_bps',
-        'mean_kelly_bps',
-        'bars_total',
-        'sharpe_per_bar',
-        'bars_in_market_bps',
-        'trades_count',
-        'cost_round_trip_bps',
-      ]
+      BACKTEST_SNAPSHOT_COLUMNS
     '''
 
     df = df.copy()
@@ -94,13 +187,8 @@ def backtest_snapshot(df: pd.DataFrame,
     eval_mask = execution_rows & tradable
     pos = (pred == 1) & eval_mask
 
-    bars_total = int(eval_mask.sum())
-    bars_in_market_bps = float((pos.sum() / bars_total) * BPS_PER_UNIT) if bars_total else np.nan
-
     entry_mask = pos & (~pos.shift(1, fill_value=False))
     cont_mask  = pos & ( pos.shift(1, fill_value=False))
-
-    trades_count = int(entry_mask.sum())
 
     r_entry = dpx / open_px
     r_cont  = (close_px / close_px.shift(1)) - 1.0
@@ -119,65 +207,49 @@ def backtest_snapshot(df: pd.DataFrame,
     cost_mult.loc[exit_mask] *= exit_mult
 
     R_net = (((1.0 + R_gross) * cost_mult) - 1.0).fillna(0.0)
-    eq_gross = (1.0 + R_gross).cumprod()
     eq_net = (1.0 + R_net).cumprod()
 
-    peak = eq_net.cummax().clip(lower=1.0)
-    max_drawdown_bps = float((eq_net / peak - 1.0).min() * BPS_PER_UNIT)
-
-    total_return_gross_bps = float((eq_gross.iloc[-1] - 1.0) * BPS_PER_UNIT)
-    total_return_net_bps = float((eq_net.iloc[-1]   - 1.0) * BPS_PER_UNIT)
-
     run_ids = entry_mask.cumsum()
-    trade_returns = (
+    trade_pnl_net = (
         (1.0 + R_net[pos]).groupby(run_ids[pos]).prod() - 1.0
     ) if entry_mask.any() else pd.Series(dtype=float)
+    trade_pnl_gross = (
+        (1.0 + R_gross[pos]).groupby(run_ids[pos]).prod() - 1.0
+    ) if entry_mask.any() else pd.Series(dtype=float)
 
-    if trade_returns.size:
-        wins = trade_returns[trade_returns > 0]
-        losses = trade_returns[trade_returns < 0]
-        trade_win_rate_bps = float((wins.size / trade_returns.size) * BPS_PER_UNIT)
-        trade_expectancy_bps = float(trade_returns.mean() * BPS_PER_UNIT)
-        trade_return_mean_win_bps = float(wins.mean() * BPS_PER_UNIT) if wins.size else np.nan
-        trade_return_mean_loss_bps = float(losses.mean() * BPS_PER_UNIT) if losses.size else np.nan
+    edge_per_signal = R_gross[pos] * BPS_PER_UNIT
+    trade_pnl_net_bps = trade_pnl_net * BPS_PER_UNIT
+    cost_drag_bps = (trade_pnl_gross - trade_pnl_net) * BPS_PER_UNIT
+    rolling_return_net_bps, return_on_exposure = _clock_window_returns(
+        df, eval_mask, pos, R_net, datetime_col, clock_window
+    )
+    drawdown_depth_bps, drawdown_duration_days = _drawdown_episode_metrics(
+        eq_net, eval_mask, df, datetime_col
+    )
+
+    cvar_values = _finite_values(rolling_return_net_bps)
+    if cvar_values.size:
+        cvar_cutoff = np.quantile(cvar_values, 0.05)
+        cvar_95_return_bps = round(float(cvar_values[cvar_values <= cvar_cutoff].mean()), 1)
     else:
-        trade_win_rate_bps = trade_expectancy_bps = np.nan
-        trade_return_mean_win_bps = trade_return_mean_loss_bps = np.nan
+        cvar_95_return_bps = np.nan
 
-    kelly_returns = trade_returns
+    data: dict[str, float] = {}
+    for prefix, values, decimals in [
+        ('edge_per_signal_bps', edge_per_signal, 1),
+        ('trade_pnl_net_bps', trade_pnl_net_bps, 1),
+        ('cost_drag_bps', cost_drag_bps, 1),
+        ('rolling_return_net_bps', rolling_return_net_bps, 1),
+        ('return_on_exposure', return_on_exposure, 1),
+        ('drawdown_depth_bps', drawdown_depth_bps, 1),
+        ('drawdown_duration_days', drawdown_duration_days, 3),
+    ]:
+        p5, p50, p95 = _quantiles(values, decimals)
+        data[f'{prefix}_p5'] = p5
+        data[f'{prefix}_p50'] = p50
+        data[f'{prefix}_p95'] = p95
 
-    kelly_wins = kelly_returns[kelly_returns > 0]
-    kelly_losses = kelly_returns[kelly_returns < 0]
-    if kelly_wins.size and kelly_losses.size:
-        win_rate = float(kelly_wins.size / kelly_returns.size)
-        loss_rate = float(kelly_losses.size / kelly_returns.size)
-        avg_win = float(kelly_wins.mean())
-        avg_loss = abs(float(kelly_losses.mean()))
-        payout_ratio = avg_win / avg_loss if avg_loss > 0 else np.nan
-        mean_kelly_bps = float((win_rate - (loss_rate / payout_ratio)) * BPS_PER_UNIT) if payout_ratio > 0 else np.nan
-    else:
-        mean_kelly_bps = np.nan
+    data['cvar_95_return_bps'] = cvar_95_return_bps
+    data = {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}
 
-    eval_returns = R_net[eval_mask]
-    mu = float(eval_returns.mean()) if eval_returns.size else np.nan
-    sd = float(eval_returns.std(ddof=1)) if eval_returns.size > 1 else np.nan
-
-    sharpe_per_bar = float(mu / sd) if sd > 0 else np.nan
-
-    data = pd.DataFrame.from_records([{
-        'trade_win_rate_bps': round(trade_win_rate_bps, 1),
-        'trade_expectancy_bps': round(trade_expectancy_bps, 1),
-        'max_drawdown_bps': round(max_drawdown_bps, 1),
-        'total_return_gross_bps': round(total_return_gross_bps, 1),
-        'total_return_net_bps': round(total_return_net_bps, 1),
-        'trade_return_mean_win_bps': round(trade_return_mean_win_bps, 1),
-        'trade_return_mean_loss_bps': round(trade_return_mean_loss_bps, 1),
-        'mean_kelly_bps': round(mean_kelly_bps, 1),
-        'bars_total': int(bars_total),
-        'sharpe_per_bar': round(sharpe_per_bar, 2),
-        'bars_in_market_bps': round(bars_in_market_bps, 1),
-        'trades_count': int(trades_count),
-        'cost_round_trip_bps': round((1.0 - (entry_mult * exit_mult)) * BPS_PER_UNIT),
-    }])
-
-    return data
+    return pd.DataFrame.from_records([data])

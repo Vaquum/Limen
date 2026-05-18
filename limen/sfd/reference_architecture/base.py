@@ -140,12 +140,16 @@ class ReferenceModel(ABC):
 
         price_pd = self._price_data_to_pandas(data['price_data_for_backtest'])
 
-        bt_input = pd.DataFrame({
+        bt_input_data = {
             'predictions': np.asarray(preds).astype(int),
             'open': price_pd['open'].values,
             'close': price_pd['close'].values,
             'price_change': (price_pd['close'] - price_pd['open']).values,
-        })
+        }
+        if 'datetime' in price_pd:
+            bt_input_data['datetime'] = price_pd['datetime'].values
+
+        bt_input = pd.DataFrame(bt_input_data)
 
         bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
 
