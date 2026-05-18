@@ -13,7 +13,7 @@ METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags'}
 SFD_REQUIRED = {'manifest', 'params'}
 
 MANIFEST_REQUIRED = {'type', 'data_source', 'split_config', 'reference_architecture'}
-MANIFEST_OPTIONAL_SHARED = {'test_data_source', 'required_columns'}
+MANIFEST_OPTIONAL_SHARED = {'test_data_source', 'required_columns', 'split_dates'}
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {
@@ -25,6 +25,7 @@ ML_MANIFEST_OPTIONAL = {
     'feature_ablation',
     'data_dict_extension',
     'calibration',
+    'pca_compression',
     'params_override',
     'metrics_params',
 }
@@ -35,6 +36,7 @@ RULE_BASED_MANIFEST_OPTIONAL: set[str] = set()
 DATA_SOURCE_REQUIRED = {'method', 'params'}
 
 SPLIT_CONFIG_REQUIRED = {'train', 'val', 'test'}
+SPLIT_DATES_REQUIRED = {'train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'}
 
 TARGET_REQUIRED = {'name', 'class'}
 TARGET_OPTIONAL = {'fit_params', 'transform_params'}
@@ -49,6 +51,7 @@ SCALER_EXPLICIT_OPTIONAL = {'params'}
 SCALER_FROM_PARAMS_REQUIRED = {'from_params'}
 
 FEATURE_ABLATION_OPTIONAL = {'drop_count_key', 'seed_key'}
+PCA_COMPRESSION_OPTIONAL = {'enabled_param', 'n_components_param', 'scaler_param_name', 'component_prefix'}
 
 CALIBRATION_OPTIONAL = {'probability_calibration', 'threshold_function'}
 CALIBRATION_FUNC_REQUIRED = {'func'}

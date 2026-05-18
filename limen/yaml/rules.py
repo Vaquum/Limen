@@ -339,6 +339,77 @@ class ConditionsList:
                     ))
 
 
+class SplitSpec:
+
+    '''Exactly one of split_config (ratio) or split_dates (absolute) must be present.'''
+
+    _DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        has_config = 'split_config' in manifest
+        has_dates = 'split_dates' in manifest
+
+        if has_config and has_dates:
+            errors.append(YAMLError(
+                message="Cannot specify both 'split_config' and 'split_dates' — use one or the other",
+                path='sfd.manifest',
+                suggestion="Remove 'split_config' to use absolute-date splits, or remove 'split_dates' to use ratio splits",
+            ))
+            return
+
+        if not has_config and not has_dates:
+            errors.append(YAMLError(
+                message="One of 'split_config' or 'split_dates' is required",
+                path='sfd.manifest',
+                suggestion='Add split_config: {train: 8, val: 1, test: 2} or split_dates: {train_start: ..., ...}',
+            ))
+            return
+
+        if has_config:
+            sc = manifest['split_config']
+            if not isinstance(sc, dict):
+                errors.append(YAMLError(
+                    message="'split_config' must be a mapping",
+                    path='sfd.manifest.split_config',
+                ))
+                return
+            for key in ('train', 'val', 'test'):
+                if key not in sc:
+                    errors.append(YAMLError(
+                        message=f"Missing required field '{key}'",
+                        path=f'sfd.manifest.split_config.{key}',
+                    ))
+                elif not isinstance(sc[key], int):
+                    errors.append(YAMLError(
+                        message=f"'{key}' must be an int",
+                        path=f'sfd.manifest.split_config.{key}',
+                    ))
+        else:
+            sd = manifest['split_dates']
+            if not isinstance(sd, dict):
+                errors.append(YAMLError(
+                    message="'split_dates' must be a mapping",
+                    path='sfd.manifest.split_dates',
+                ))
+                return
+            for key in self._DATE_KEYS:
+                if key not in sd:
+                    errors.append(YAMLError(
+                        message=f"Missing required field '{key}'",
+                        path=f'sfd.manifest.split_dates.{key}',
+                    ))
+                elif not isinstance(sd[key], str):
+                    errors.append(YAMLError(
+                        message=f"'{key}' must be a date string (e.g. '2022-01-01')",
+                        path=f'sfd.manifest.split_dates.{key}',
+                    ))
+
+
 class SfdParams:
 
     '''Every value in sfd.params must be a non-empty list.'''
@@ -495,6 +566,12 @@ class ParamCoverage:
             fp = manifest['scaler'].get('from_params')
             if isinstance(fp, str):
                 meta_params.add(fp)
+        if isinstance(manifest.get('pca_compression'), dict):
+            pca = manifest['pca_compression']
+            for field in ('enabled_param', 'n_components_param'):
+                val = pca.get(field)
+                if isinstance(val, str):
+                    meta_params.add(val)
 
         valid = manifest_refs | arch_params | meta_params
 

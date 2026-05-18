@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from limen.experiment.manifest_core import MLManifest
@@ -62,6 +63,23 @@ def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
     raise ValueError(f"Unknown manifest type '{manifest_type}'")
 
 
+def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
+
+    sd = m.get('split_dates')
+    if sd is not None:
+        manifest.set_split_dates(
+            date.fromisoformat(sd['train_start']),
+            date.fromisoformat(sd['train_end']),
+            date.fromisoformat(sd['val_start']),
+            date.fromisoformat(sd['val_end']),
+            date.fromisoformat(sd['test_start']),
+            date.fromisoformat(sd['test_end']),
+        )
+    else:
+        sc = m['split_config']
+        manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+
+
 def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
 
     manifest = MLManifest()
@@ -79,8 +97,7 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
             params=dict(tds.get('params') or {}),
         )
 
-    sc = m['split_config']
-    manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+    _apply_split(manifest, m)
 
     cols = m.get('required_columns')
     if cols is not None:
@@ -119,6 +136,10 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
             drop_count_key=fa.get('drop_count_key', 'feature_drop_count'),
             seed_key=fa.get('seed_key', 'feature_drop_seed'),
         )
+
+    pca = m.get('pca_compression')
+    if pca is not None:
+        manifest.set_pca_compression(**dict(pca))
 
     t = m['target']
     manifest.with_target_label(
@@ -180,8 +201,7 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
             params=dict(tds.get('params') or {}),
         )
 
-    sc = m['split_config']
-    manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+    _apply_split(manifest, m)
 
     cols = m.get('required_columns')
     if cols is not None:

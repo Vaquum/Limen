@@ -14,6 +14,7 @@ from limen.yaml.rules import Required
 from limen.yaml.rules import RuleEngine
 from limen.yaml.rules import SchemaVersion
 from limen.yaml.rules import SfdParams
+from limen.yaml.rules import SplitSpec
 from limen.yaml.rules import WarnIfPresent
 from limen.yaml.rules import When
 from limen.yaml.rules import get_at
@@ -23,6 +24,7 @@ from limen.yaml.schema import METADATA_OPTIONAL
 from limen.yaml.schema import METADATA_REQUIRED
 from limen.yaml.schema import ML_MANIFEST_OPTIONAL
 from limen.yaml.schema import ML_MANIFEST_REQUIRED
+from limen.yaml.schema import PCA_COMPRESSION_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_REQUIRED
 from limen.yaml.schema import TARGET_OPTIONAL
@@ -68,11 +70,7 @@ _MAIN_ENGINE = RuleEngine([
     OneOf('sfd.manifest.type', VALID_MANIFEST_TYPES),
 
     DataSource(),
-
-    Required('sfd.manifest.split_config', dict),
-    Required('sfd.manifest.split_config.train', int),
-    Required('sfd.manifest.split_config.val', int),
-    Required('sfd.manifest.split_config.test', int),
+    SplitSpec(),
 
     Required('sfd.manifest.reference_architecture', str),
 
@@ -83,6 +81,7 @@ _MAIN_ENGINE = RuleEngine([
         NoUnknownKeys('sfd.manifest.target', TARGET_REQUIRED | TARGET_OPTIONAL, severity='error'),
         FuncList('sfd.manifest.indicators'),
         FuncList('sfd.manifest.features'),
+        NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL),
         NoUnknownKeys(
             'sfd.manifest',
             MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
