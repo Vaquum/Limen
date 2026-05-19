@@ -905,7 +905,19 @@ Note: add all new changelog entries to the bottom of this file.
 - Update rule-based stability output to use `drawdown_std_bps`, with legacy Sharpe thresholds retained only for call compatibility
 - Update backtest, log, reference-architecture, and trainer docs plus regression coverage for the new ledger surface
 
-## v3.4.0 on 19th of May, 2026
+## v3.4.0 on 20th of May, 2026
 
 - Use the native Hugging Face BTCUSDT 15m, 30m, 1h, 2h, and 4h kline datasets for matching `HistoricalData.get_spot_klines(kline_size=...)` calls
 - Preserve the existing 1m-source aggregation path for all other `kline_size` values and for custom `DEFAULT_SPOT_KLINES_DATASET_REPO` overrides
+
+## v3.5.0 on 20th of May, 2026
+
+- Add `limen/yaml/` module: YAML experiment definition format with parser, resolver, schema, validator, and compiler
+- Add `limen/cli/` entry point with `limen validate` and `limen run` CLI commands (Click); `limen run --dry-run` validates and compiles without executing
+- YAML experiments are fully declarative: `sfd.manifest` compiles to `MLManifest` or `RuleBasedManifest`; `sfd.params` defines the parameter search space; `uel` configures the `UniversalExperimentLoop`
+- `{param_name}` syntax passes round_param references through as strings at compile time; `limen.*` dotted paths are resolved to callables
+- Validator collects all errors without fail-fast: required fields, schema version, resolvable `limen.*` paths, param coverage, calibration cross-references
+- `split_config` (ratio-based) and `split_dates` (absolute ISO-date bounds) are mutually exclusive alternatives in the manifest; exactly one is required
+- `pca_compression` optional dict in the manifest wires `MLManifest.set_pca_compression()` with all four params defaulted
+- `logreg_binary.yaml` template added to `limen/yaml/templates/`
+- Results directory copies the source YAML for reproducibility; `uel.output_path` supports `{name}` and `{datetime}` placeholders

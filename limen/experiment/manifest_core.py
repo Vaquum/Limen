@@ -3,6 +3,7 @@ import inspect
 import importlib
 import logging
 import random
+import re
 from datetime import date
 from itertools import pairwise
 from collections.abc import Callable
@@ -1157,7 +1158,12 @@ def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dic
             if value.startswith('_') or value in round_params:
                 resolved[key] = round_params[value]
             elif '{' in value and '}' in value:
-                resolved[key] = value.format(**round_params)
+                m = re.fullmatch(r'\{(\w+)\}', value.strip())
+                if m:
+                    resolved[key] = round_params[m.group(1)]
+                else:
+                    # template string like "roc_{roc_period}" — format produces a string
+                    resolved[key] = value.format(**round_params)
             else:
                 resolved[key] = value
         else:

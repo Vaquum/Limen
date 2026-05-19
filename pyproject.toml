@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaquum_limen"
-version = "3.4.0"
+version = "3.5.0"
 description = "Bitcoin-first research and trading platform."
 readme = "README.md"
 authors = [
@@ -32,7 +32,12 @@ dependencies = [
   "numpy>=2.2.6",
   "ta-lib",
   "requests",
+  "ruamel.yaml>=0.18",
+  "click>=8.0",
 ]
+
+[project.scripts]
+limen = "limen.cli.main:cli"
 
 [project.optional-dependencies]
 tabpfn = ["tabpfn>=6"]
@@ -46,6 +51,9 @@ Repository = "https://github.com/vaquum/limen"
 where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
+
+[tool.setuptools.package-data]
+limen = ["yaml/templates/*.yaml"]
 
 [tool.coverage.run]
 source = ["limen"]
