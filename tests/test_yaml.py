@@ -796,3 +796,77 @@ def test_validate_error_for_uel_prep_each_round_explicit_null() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('prep_each_round' in e.path for e in result.errors)
+
+
+def test_validate_error_for_calibration_section_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration'] = {
+        'probability_calibration': 'isotonic'
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('probability_calibration' in e.path for e in result.errors)
+
+
+def test_validate_error_for_calibration_params_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration'] = {
+        'probability_calibration': {
+            'func': 'limen.calibration.sklearn_probability_calibrator',
+            'params': 'isotonic',
+        }
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('probability_calibration.params' in e.path for e in result.errors)
+
+
+def test_validate_error_for_feature_ablation_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['feature_ablation'] = 'all'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('feature_ablation' in e.path for e in result.errors)
+
+
+def test_validate_error_for_pca_compression_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pca_compression'] = 'auto'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('pca_compression' in e.path for e in result.errors)
+
+
+def test_validate_error_for_params_override_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['params_override'] = 'bad'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('params_override' in e.path for e in result.errors)
+
+
+def test_validate_error_for_metrics_params_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['metrics_params'] = 42
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('metrics_params' in e.path for e in result.errors)
+
+
+def test_validate_error_for_indicator_param_limen_module_path() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['params']['metric'] = 'limen.metrics'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('indicators' in e.path for e in result.errors)
+
+
+def test_validate_error_for_single_func_block_param_limen_module_path() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pre_split_data_selector'] = {
+        'func': 'limen.data.HistoricalData.get_spot_klines',
+        'params': {'metric': 'limen.metrics'},
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('pre_split_data_selector' in e.path for e in result.errors)
