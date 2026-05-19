@@ -4,6 +4,8 @@ from typing import Any
 
 from limen.yaml.errors import YAMLError
 from limen.yaml.rules import CalibrationCrossRef
+from limen.yaml.rules import CalibrationPresence
+from limen.yaml.rules import NameSlug
 from limen.yaml.rules import ConditionsList
 from limen.yaml.rules import DataSource
 from limen.yaml.rules import FuncList
@@ -74,6 +76,8 @@ _MAIN_ENGINE = RuleEngine([
     SchemaVersion(VERSION),
 
     Required('metadata.name', str),
+    NameSlug(),
+    Required('metadata.mode', str),
     OneOf('metadata.mode', VALID_MODES),
     NoUnknownKeys('metadata', METADATA_REQUIRED | METADATA_OPTIONAL),
 
@@ -132,6 +136,7 @@ _MAIN_ENGINE = RuleEngine([
     ]),
 
     SfdParams(),
+    CalibrationPresence(),
     CalibrationCrossRef(),
     ParamCoverage(),
 

@@ -51,6 +51,29 @@ def get_at(d: dict[str, Any], path: str) -> tuple[bool, Any]:
     return True, current
 
 
+_NAME_SLUG_RE = re.compile(r'^[A-Za-z0-9_-]+$')
+
+
+class NameSlug:
+
+    '''metadata.name must be a safe slug (alphanumeric, underscores, hyphens only).'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, value = get_at(yaml_dict, 'metadata.name')
+        if not found or not isinstance(value, str):
+            return
+        if not _NAME_SLUG_RE.match(value):
+            errors.append(YAMLError(
+                message=f"'metadata.name' must contain only letters, digits, underscores, or hyphens (got '{value}')",
+                path='metadata.name',
+                suggestion='Use a safe name e.g. my_experiment_v2',
+            ))
+
+
 class Required:
 
     '''Field must exist and optionally match expected_type.'''
@@ -486,6 +509,27 @@ class SfdParams:
                 ))
 
 
+class CalibrationPresence:
+
+    '''If calibration is present, at least one of probability_calibration or threshold_function must be set.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        cal = manifest.get('calibration')
+        if not isinstance(cal, dict):
+            return
+        if cal.get('probability_calibration') is None and cal.get('threshold_function') is None:
+            errors.append(YAMLError(
+                message="'calibration' block is empty — add at least 'probability_calibration' or 'threshold_function'",
+                path='sfd.manifest.calibration',
+                suggestion='Add probability_calibration: {func: ...} or threshold_function: {func: ...}',
+            ))
+
+
 class CalibrationCrossRef:
 
     '''
@@ -496,7 +540,7 @@ class CalibrationCrossRef:
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
-              warnings: list[YAMLError]) -> None:
+              _warnings: list[YAMLError]) -> None:
 
         manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
         cal = manifest.get('calibration')
@@ -535,11 +579,11 @@ class CalibrationCrossRef:
                             path=param_path,
                             suggestion=f"Add '{ref_key}' to sfd.params",
                         ))
-                elif not is_resolvable(value):
-                    warnings.append(YAMLError(
-                        message=f"Calibration param '{key}' value '{value}' is neither a limen.* path nor a {{param_name}} reference",
+                elif value.startswith('limen.') and not is_resolvable(value):
+                    errors.append(YAMLError(
+                        message=f"Cannot resolve calibration param '{key}' limen.* path '{value}'",
                         path=param_path,
-                        suggestion='Use a limen.* path or a {param_name} reference e.g. "{cal_method}"',
+                        suggestion='Path must be within an allowed limen.* namespace',
                     ))
 
 
