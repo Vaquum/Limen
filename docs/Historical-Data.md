@@ -25,15 +25,15 @@ assert data is historical.data
 
 | Method | Backend | Returns | Typical use |
 |---|---|---|---|
-| `get_spot_klines()` | Hugging Face BTCUSDT 1m parquet dataset | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
+| `get_spot_klines()` | Hugging Face BTCUSDT parquet datasets | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
 | `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
 | `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
 
 ## `get_spot_klines()`
 
-`get_spot_klines()` reads from the BTCUSDT 1-minute dataset published at [vaquum/binance_btcusdt_1m_klines](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines).
+`get_spot_klines()` reads from the BTCUSDT datasets published on Hugging Face.
 
-By default it reads that dataset and aggregates upward when you request a larger interval.
+By default it reads native [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines) dataset before aggregating upward.
 
 ```python
 from limen.data import HistoricalData

@@ -20,6 +20,13 @@ _SUPPORTED_DATETIME_FORMATS: Final[tuple[str, ...]] = (
 )
 _REMOTE_TIMEOUT_SECONDS: Final[int] = 60
 _DEFAULT_SPOT_DATASET_REPO: Final[str] = 'vaquum/binance_btcusdt_1m_klines'
+_SPOT_DATASET_REPOS_BY_KLINE_SIZE: Final[dict[int, str]] = {
+    900: 'vaquum/binance_btcusdt_15m_klines',
+    1800: 'vaquum/binance_btcusdt_30m_klines',
+    3600: 'vaquum/binance_btcusdt_1h_klines',
+    7200: 'vaquum/binance_btcusdt_2h_klines',
+    14400: 'vaquum/binance_btcusdt_4h_klines',
+}
 _HUGGINGFACE_DATASET_REPO_PART_COUNT: Final[int] = 3
 _MIN_ROWS_TO_INFER_INTERVAL: Final[int] = 2
 
@@ -167,14 +174,24 @@ def _repo_id_from_huggingface_url(file_path_or_url: str) -> str | None:
 
 
 def _resolve_file_path_or_url(file_path_or_url: str) -> str:
-    if file_path_or_url == _DEFAULT_SPOT_DATASET_REPO:
-        return _resolve_huggingface_latest_file(_DEFAULT_SPOT_DATASET_REPO)
+    if (
+        file_path_or_url == _DEFAULT_SPOT_DATASET_REPO
+        or file_path_or_url in _SPOT_DATASET_REPOS_BY_KLINE_SIZE.values()
+    ):
+        return _resolve_huggingface_latest_file(file_path_or_url)
 
     repo_id = _repo_id_from_huggingface_url(file_path_or_url)
     if repo_id is not None:
         return _resolve_huggingface_latest_file(repo_id)
 
     return file_path_or_url
+
+
+def _spot_dataset_repo_for_kline_size(kline_size: int, configured_repo: str) -> str:
+    if configured_repo != _DEFAULT_SPOT_DATASET_REPO:
+        return configured_repo
+
+    return _SPOT_DATASET_REPOS_BY_KLINE_SIZE.get(kline_size, configured_repo)
 
 
 def _read_any_file(
@@ -497,9 +514,10 @@ class HistoricalData:
 
         '''Load BTCUSDT spot klines from a file and aggregate upward when needed.
 
-        By default this resolves the latest daily snapshot from the Hugging Face
-        dataset repo `vaquum/binance_btcusdt_1m_klines`. Row limits return the
-        latest rows. `n_rows` is accepted as a legacy alias.
+        By default this resolves the latest snapshot from the Hugging Face
+        BTCUSDT 15m, 30m, 1h, 2h, or 4h kline dataset when `kline_size` matches.
+        Other intervals use the 1m dataset and aggregate upward. Row limits
+        return the latest rows. `n_rows` is accepted as a legacy alias.
         '''
 
         row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
@@ -520,7 +538,11 @@ class HistoricalData:
                 'and end_date_limit are set.'
             )
 
-        base_data = _read_any_file(self.DEFAULT_SPOT_KLINES_DATASET_REPO, has_header=True)
+        dataset_repo = _spot_dataset_repo_for_kline_size(
+            kline_size,
+            self.DEFAULT_SPOT_KLINES_DATASET_REPO,
+        )
+        base_data = _read_any_file(dataset_repo, has_header=True)
         base_data = _normalize_generic_frame(base_data)
 
         if start_date_limit is not None:

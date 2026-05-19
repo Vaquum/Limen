@@ -52,6 +52,7 @@ from tests.test_regime_pools_helpers import test_rdop_online_pipeline_attaches_p
 from tests.test_historical_data import test_get_any_file_loads_local_csv
 from tests.test_historical_data import test_get_spot_klines_reaggregates_latest_dataset
 from tests.test_historical_data import test_get_spot_klines_row_count_limit_returns_latest_rows
+from tests.test_historical_data import test_get_spot_klines_uses_native_huggingface_sources
 from tests.test_historical_data import test_get_spot_klines_rejects_sub_base_intervals
 from tests.test_historical_data import test_resolve_file_path_or_url_expands_huggingface_references
 from tests.test_historical_data import test_get_any_file_loads_zipped_csv_and_derives_datetime_from_timestamp
@@ -905,6 +906,7 @@ tests = [
     test_get_any_file_loads_local_csv,
     test_get_spot_klines_reaggregates_latest_dataset,
     test_get_spot_klines_row_count_limit_returns_latest_rows,
+    test_get_spot_klines_uses_native_huggingface_sources,
     test_get_spot_klines_rejects_sub_base_intervals,
     test_resolve_file_path_or_url_expands_huggingface_references,
     test_get_any_file_loads_zipped_csv_and_derives_datetime_from_timestamp,
