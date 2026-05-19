@@ -61,7 +61,7 @@ def validate(yaml_file: Path) -> None:
       - Schema version
       - All limen.* paths are resolvable (funcs, classes, methods)
       - Parameter lists are non-empty
-      - Split config sums and types
+      - Split config types and valid ranges (train > 0, val/test >= 0)
       - Search strategy and output format values
 
     \b
@@ -103,7 +103,8 @@ def run(yaml_file: Path, dry_run: bool) -> None:
     \b
     Output:
       Results are written to ./results/{name}_{datetime}/results.csv by default.
-      Override with uel.output_path and uel.output_format in the YAML.
+      Set uel.output_format: parquet to also write results.parquet.
+      Override the output path with uel.output_path in the YAML.
 
     \b
     Exits 0 on success, 1 on validation failure or runtime error.

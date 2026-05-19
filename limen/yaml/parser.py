@@ -10,10 +10,10 @@ from limen.yaml.errors import YAMLError
 def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
 
     '''
-    Parse a YAML experiment file into a dict with line number tracking.
+    Parse a YAML experiment file or string into a dict.
 
     Args:
-        source (str | Path): Path to the YAML file or raw YAML string
+        source (str | Path): Path instance to read from disk, or raw YAML string
 
     Returns:
         tuple[dict, list[YAMLError]]: Parsed dict and list of parse errors (empty on success)
