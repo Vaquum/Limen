@@ -135,10 +135,10 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
         manifest.set_bar_formation(resolve(bf['func']), **dict(bf.get('params') or {}))
 
     for item in m.get('indicators') or []:
-        manifest.add_indicator(resolve(item['func']), **dict(item.get('params') or {}))
+        manifest.add_indicator(resolve(item['func']), **_resolve_func_params(dict(item.get('params') or {})))
 
     for item in m.get('features') or []:
-        manifest.add_feature(resolve(item['func']), **dict(item.get('params') or {}))
+        manifest.add_feature(resolve(item['func']), **_resolve_func_params(dict(item.get('params') or {})))
 
 
 def _apply_scaler(manifest: MLManifest, m: dict[str, Any]) -> None:
