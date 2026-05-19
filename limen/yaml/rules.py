@@ -11,14 +11,6 @@ from limen.yaml.resolver import resolve
 
 _SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
 
-def _is_iso_date(value: str) -> bool:
-    try:
-        date.fromisoformat(value)
-        return True
-    except ValueError:
-        return False
-
-
 _PARAM_REF_RE = re.compile(r'\{(\w+)\}')
 
 
@@ -779,26 +771,27 @@ class CalibrationCrossRef:
 class ParamCoverage:
 
     '''
-    Every key in sfd.params must be accounted for by one of:
-    a {param_name} reference in the manifest, a parameter in the reference
+    Cross-validate sfd.params against manifest {param_name} references.
+
+    Forward check (errors): every {ref} in the manifest must be defined in sfd.params.
+    Reverse check (warnings): every key in sfd.params must be referenced in the manifest,
     architecture signature, or a meta-param implied by a manifest block.
 
     NOTE: If the architecture accepts **kwargs coverage cannot be determined — check is skipped.
-    Unused params produce warnings, not errors.
     '''
 
     def check(self,
               yaml_dict: dict[str, Any],
-              _errors: list[YAMLError],
+              errors: list[YAMLError],
               warnings: list[YAMLError]) -> None:
 
         sfd = yaml_dict.get('sfd') or {}
         sfd_params = set((sfd.get('params') or {}).keys())
-        if not sfd_params:
-            return
-
         manifest = sfd.get('manifest') or {}
         manifest_refs = self._extract_param_refs(manifest)
+
+        if not sfd_params and not manifest_refs:
+            return
 
         arch_path = manifest.get('reference_architecture')
         arch_params: set[str] = set()
@@ -831,6 +824,14 @@ class ParamCoverage:
             pca = manifest['pca_compression']
             meta_params.add(pca.get('enabled_param') or 'auto_pca')
             meta_params.add(pca.get('n_components_param') or 'pca_k')
+
+        for ref in sorted(manifest_refs):
+            if ref not in sfd_params and ref not in arch_params and ref not in meta_params:
+                errors.append(YAMLError(
+                    message=f"Manifest references '{{{ref}}}' but '{ref}' is not defined in sfd.params",
+                    path='sfd.manifest',
+                    suggestion=f"Add '{ref}' to sfd.params",
+                ))
 
         valid = manifest_refs | arch_params | meta_params
 

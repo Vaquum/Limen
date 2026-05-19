@@ -1,5 +1,4 @@
 import importlib
-from collections.abc import Callable
 from typing import Any
 
 from limen.yaml.errors import ResolutionError
@@ -20,16 +19,16 @@ ALLOWED_NAMESPACES = [
 ]
 
 
-def resolve(path: str) -> Callable[..., Any] | type:
+def resolve(path: str) -> Any:
 
     '''
-    Resolve a dotted path string to a Python callable or class.
+    Resolve a dotted path string to a Python object.
 
     Args:
         path (str): Fully qualified dotted path, e.g. 'limen.indicators.roc'
 
     Returns:
-        Callable | type: The resolved Python object
+        Any: The resolved Python object (callable, class, or module)
 
     Raises:
         ResolutionError: If the path is not in an allowed namespace or cannot be imported
@@ -50,7 +49,7 @@ def resolve(path: str) -> Callable[..., Any] | type:
             obj = importlib.import_module(module_path)
             for attr in attrs:
                 obj = getattr(obj, attr)
-            return obj  # type: ignore[return-value]
+            return obj
         except (ImportError, AttributeError):
             continue
 
