@@ -63,6 +63,12 @@ from tests.test_yaml import test_validate_error_for_invalid_split_date_format
 from tests.test_yaml import test_validate_error_for_split_config_train_zero
 from tests.test_yaml import test_validate_error_for_split_config_negative_val
 from tests.test_yaml import test_validate_error_for_split_dates_out_of_order
+from tests.test_yaml import test_validate_error_for_unresolvable_reference_architecture
+from tests.test_yaml import test_validate_error_for_unresolvable_target_class
+from tests.test_yaml import test_validate_error_for_scaler_missing_both_from_params_and_class
+from tests.test_yaml import test_validate_error_for_scaler_with_both_from_params_and_class
+from tests.test_yaml import test_validate_error_for_calibration_func_missing
+from tests.test_yaml import test_validate_error_for_data_source_params_not_a_mapping
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -997,6 +1003,12 @@ tests = [
     test_validate_error_for_split_config_train_zero,
     test_validate_error_for_split_config_negative_val,
     test_validate_error_for_split_dates_out_of_order,
+    test_validate_error_for_unresolvable_reference_architecture,
+    test_validate_error_for_unresolvable_target_class,
+    test_validate_error_for_scaler_missing_both_from_params_and_class,
+    test_validate_error_for_scaler_with_both_from_params_and_class,
+    test_validate_error_for_calibration_func_missing,
+    test_validate_error_for_data_source_params_not_a_mapping,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,

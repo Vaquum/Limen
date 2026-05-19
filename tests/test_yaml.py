@@ -524,3 +524,54 @@ def test_validate_error_for_empty_calibration_block() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('calibration' in e.message for e in result.errors)
+
+
+def test_validate_error_for_unresolvable_reference_architecture() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.nonexistent_arch'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('reference_architecture' in e.path for e in result.errors)
+
+
+def test_validate_error_for_unresolvable_target_class() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['target']['class'] = 'limen.targets.NoSuchTarget'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('target.class' in e.path for e in result.errors)
+
+
+def test_validate_error_for_scaler_missing_both_from_params_and_class() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['scaler'] = {'unknown_key': 'value'}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('scaler' in e.path and 'from_params' in e.message for e in result.errors)
+
+
+def test_validate_error_for_scaler_with_both_from_params_and_class() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['scaler'] = {
+        'from_params': 'scaler_type',
+        'class': 'limen.scalers.StandardScaler',
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('scaler' in e.path and 'both' in e.message for e in result.errors)
+
+
+def test_validate_error_for_calibration_func_missing() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration']['probability_calibration'] = {'params': {}}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('probability_calibration.func' in e.path for e in result.errors)
+
+
+def test_validate_error_for_data_source_params_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_source']['params'] = ['not', 'a', 'dict']
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('data_source.params' in e.path for e in result.errors)
