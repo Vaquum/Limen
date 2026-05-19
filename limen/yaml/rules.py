@@ -19,6 +19,27 @@ def _is_iso_date(value: str) -> bool:
         return False
 
 
+def _check_callable_path(value: str, path: str, errors: list[YAMLError]) -> None:
+
+    '''Resolve value and emit an error if it cannot be resolved or does not resolve to a callable.'''
+
+    try:
+        obj = resolve(value)
+    except Exception:  # noqa: BLE001
+        errors.append(YAMLError(
+            message=f"Cannot resolve '{value}'",
+            path=path,
+            suggestion='Path must be within an allowed limen.* namespace',
+        ))
+        return
+    if not callable(obj):
+        errors.append(YAMLError(
+            message=f"'{value}' resolves to a module, not a callable or class",
+            path=path,
+            suggestion='Specify a callable function or class',
+        ))
+
+
 _CONDITION_LEAF_FIELDS: dict[str, tuple[str, ...]] = {
     'threshold':  ('column', 'operator', 'value'),
     'relative':   ('column', 'operator', 'other_column'),
@@ -163,21 +184,7 @@ class Resolvable:
         found, value = get_at(yaml_dict, self._path)
         if not found or not isinstance(value, str):
             return
-        try:
-            obj = resolve(value)
-        except Exception:  # noqa: BLE001
-            errors.append(YAMLError(
-                message=f"Cannot resolve '{value}'",
-                path=self._path,
-                suggestion='Path must be within an allowed limen.* namespace',
-            ))
-            return
-        if not callable(obj):
-            errors.append(YAMLError(
-                message=f"'{value}' resolves to a module, not a callable or class",
-                path=self._path,
-                suggestion='Specify a callable function or class, e.g. limen.sfd.reference_architecture.logreg_binary',
-            ))
+        _check_callable_path(value, self._path, errors)
 
 
 class NoUnknownKeys:
@@ -321,12 +328,8 @@ class DataSource:
                 continue
 
             method = src['method']
-            if isinstance(method, str) and not is_resolvable(method):
-                errors.append(YAMLError(
-                    message=f"Cannot resolve data source method '{method}'",
-                    path=f'sfd.manifest.{section}.method',
-                    suggestion='Path must be within an allowed limen.* namespace',
-                ))
+            if isinstance(method, str):
+                _check_callable_path(method, f'sfd.manifest.{section}.method', errors)
 
             params = src.get('params')
             if params is not None and not isinstance(params, dict):
@@ -369,12 +372,8 @@ class FuncList:
                 ))
                 continue
             func = item['func']
-            if isinstance(func, str) and not is_resolvable(func):
-                errors.append(YAMLError(
-                    message=f"Cannot resolve func '{func}'",
-                    path=f'{self._path}[{i}].func',
-                    suggestion='Path must be within an allowed limen.* namespace',
-                ))
+            if isinstance(func, str):
+                _check_callable_path(func, f'{self._path}[{i}].func', errors)
             params = item.get('params')
             if params is not None and not isinstance(params, dict):
                 errors.append(YAMLError(
@@ -411,12 +410,8 @@ class SingleFuncBlock:
             ))
             return
         func = block['func']
-        if isinstance(func, str) and not is_resolvable(func):
-            errors.append(YAMLError(
-                message=f"Cannot resolve func '{func}'",
-                path=f'{self._path}.func',
-                suggestion='Path must be within an allowed limen.* namespace',
-            ))
+        if isinstance(func, str):
+            _check_callable_path(func, f'{self._path}.func', errors)
         params = block.get('params')
         if params is not None and not isinstance(params, dict):
             errors.append(YAMLError(
@@ -615,7 +610,13 @@ class ScalerSpec:
 
         manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
         scaler = manifest.get('scaler')
+        if scaler is None:
+            return
         if not isinstance(scaler, dict):
+            errors.append(YAMLError(
+                message=f"'scaler' must be a mapping (got {type(scaler).__name__})",
+                path='sfd.manifest.scaler',
+            ))
             return
         has_from_params = 'from_params' in scaler
         has_class = 'class' in scaler
@@ -670,7 +671,13 @@ class CalibrationPresence:
 
         manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
         cal = manifest.get('calibration')
+        if cal is None:
+            return
         if not isinstance(cal, dict):
+            errors.append(YAMLError(
+                message=f"'calibration' must be a mapping (got {type(cal).__name__})",
+                path='sfd.manifest.calibration',
+            ))
             return
         if cal.get('probability_calibration') is None and cal.get('threshold_function') is None:
             errors.append(YAMLError(

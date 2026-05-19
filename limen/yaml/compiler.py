@@ -13,7 +13,8 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
     '''
     Resolve any string values that are valid limen.* paths to their Python objects.
 
-    Leaves non-resolvable strings (e.g. round_params keys like 'threshold_min') unchanged.
+    limen.* strings are resolved eagerly and raise ResolutionError on failure.
+    Other strings (round_params refs like '{threshold_min}', literals) are passed through unchanged.
 
     Args:
         params (dict): Raw params dict from YAML
@@ -25,13 +26,15 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
 
     result = {}
     for k, v in params.items():
-        if isinstance(v, str):
+        if not isinstance(v, str):
+            result[k] = v
+        elif v.startswith('limen.'):
+            result[k] = resolve(v)
+        else:
             try:
                 result[k] = resolve(v)
             except ResolutionError:
                 result[k] = v
-        else:
-            result[k] = v
     return result
 
 
