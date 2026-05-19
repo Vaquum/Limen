@@ -870,3 +870,26 @@ def test_validate_error_for_single_func_block_param_limen_module_path() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('pre_split_data_selector' in e.path for e in result.errors)
+
+
+def test_validate_error_for_manifest_ref_not_in_sfd_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['params']['period'] = '{unknown_param}'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('unknown_param' in e.message for e in result.errors)
+
+
+def test_validate_no_error_when_manifest_ref_is_in_sfd_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['params']['period'] = '{new_param}'
+    yaml_dict['sfd']['params']['new_param'] = [1, 2, 3]
+    result = validate(yaml_dict)
+    assert not any('new_param' in e.message for e in result.errors)
+
+
+def test_resolve_returns_any_object_not_just_callable() -> None:
+    # resolve() can return modules, not just callables/classes
+    import inspect
+    obj = resolve('limen.indicators')
+    assert inspect.ismodule(obj)
