@@ -40,9 +40,22 @@ def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
     return (yaml_dict.get('sfd') or {}).get('manifest') or {}
 
 
-def _check_func_block(block: dict[str, Any], base_path: str, errors: list[YAMLError]) -> None:
+_FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
+
+
+def _check_func_block(block: dict[str, Any],
+                      base_path: str,
+                      errors: list[YAMLError],
+                      warnings: list[YAMLError]) -> None:
 
     '''Validate func (required, callable) and optional params mapping on a {func, params?} block.'''
+
+    for key in block:
+        if key not in _FUNC_BLOCK_KNOWN_KEYS:
+            warnings.append(YAMLError(
+                message=f"Unknown field '{key}'",
+                path=f'{base_path}.{key}',
+            ))
 
     func = block.get('func')
     if func is None:
@@ -383,7 +396,7 @@ class FuncList:
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
-              _warnings: list[YAMLError]) -> None:
+              warnings: list[YAMLError]) -> None:
 
         found, items = get_at(yaml_dict, self._path)
         if not found or items is None:
@@ -399,7 +412,7 @@ class FuncList:
                     path=f'{self._path}[{i}]',
                 ))
                 continue
-            _check_func_block(item, f'{self._path}[{i}]', errors)
+            _check_func_block(item, f'{self._path}[{i}]', errors, warnings)
 
 
 class SingleFuncBlock:
@@ -412,7 +425,7 @@ class SingleFuncBlock:
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
-              _warnings: list[YAMLError]) -> None:
+              warnings: list[YAMLError]) -> None:
 
         found, block = get_at(yaml_dict, self._path)
         if not found or block is None:
@@ -420,7 +433,7 @@ class SingleFuncBlock:
         if not isinstance(block, dict):
             errors.append(YAMLError(message=f"'{self._path}' must be a mapping", path=self._path))
             return
-        _check_func_block(block, self._path, errors)
+        _check_func_block(block, self._path, errors, warnings)
 
 
 class RequiredColumnsSpec:
@@ -883,6 +896,34 @@ class BlockSpec:
                 errors.append(YAMLError(
                     message=f"'{path}' must be a mapping (got {type(value).__name__})",
                     path=path,
+                ))
+
+
+class ParamKeyFields:
+
+    '''Validate that param-key fields within a block are non-empty strings when present.'''
+
+    def __init__(self, path: str, *fields: str) -> None:
+        self._path = path
+        self._fields = fields
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, block = get_at(yaml_dict, self._path)
+        if not found or not isinstance(block, dict):
+            return
+        for field_name in self._fields:
+            if field_name not in block:
+                continue
+            value = block[field_name]
+            if not isinstance(value, str) or not value:
+                errors.append(YAMLError(
+                    message=f"'{field_name}' must be a non-empty string",
+                    path=f'{self._path}.{field_name}',
+                    suggestion=f"Use a param name string, e.g. {field_name}: my_param_name",
                 ))
 
 

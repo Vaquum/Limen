@@ -13,6 +13,7 @@ from limen.yaml.rules import NameSlug
 from limen.yaml.rules import NoUnknownKeys
 from limen.yaml.rules import OneOf
 from limen.yaml.rules import ParamCoverage
+from limen.yaml.rules import ParamKeyFields
 from limen.yaml.rules import Required
 from limen.yaml.rules import RequiredColumnsSpec
 from limen.yaml.rules import Resolvable
@@ -126,7 +127,9 @@ _MAIN_ENGINE = RuleEngine([
             'sfd.manifest.metrics_params',
         ),
         NoUnknownKeys('sfd.manifest.feature_ablation', FEATURE_ABLATION_OPTIONAL),
+        ParamKeyFields('sfd.manifest.feature_ablation', 'drop_count_key', 'seed_key'),
         NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL, severity='error'),
+        ParamKeyFields('sfd.manifest.pca_compression', 'enabled_param', 'n_components_param', 'scaler_param_name', 'component_prefix'),
         NoUnknownKeys('sfd.manifest.calibration', CALIBRATION_OPTIONAL),
         NoUnknownKeys('sfd.manifest.calibration.probability_calibration',
                       CALIBRATION_FUNC_REQUIRED | CALIBRATION_FUNC_OPTIONAL),
