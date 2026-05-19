@@ -53,6 +53,10 @@ from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
 from tests.test_yaml import test_validate_passes_valid_rule_based_yaml
 from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
+from tests.test_yaml import test_validate_error_for_missing_mode
+from tests.test_yaml import test_validate_error_for_unsafe_metadata_name
+from tests.test_yaml import test_validate_no_warning_for_literal_calibration_param
+from tests.test_yaml import test_validate_error_for_empty_calibration_block
 from tests.test_yaml import test_parse_single_line_string_parses_as_yaml_not_path
 from tests.test_yaml import test_is_resolvable_returns_false_for_namespace_prefix_collision
 from tests.test_yaml import test_validate_error_for_invalid_split_date_format
@@ -980,6 +984,10 @@ tests = [
     test_validate_warning_for_unknown_key_in_split_config,
     test_validate_passes_valid_rule_based_yaml,
     test_validate_error_for_empty_sfd_param_list,
+    test_validate_error_for_missing_mode,
+    test_validate_error_for_unsafe_metadata_name,
+    test_validate_no_warning_for_literal_calibration_param,
+    test_validate_error_for_empty_calibration_block,
     test_parse_single_line_string_parses_as_yaml_not_path,
     test_is_resolvable_returns_false_for_namespace_prefix_collision,
     test_validate_error_for_invalid_split_date_format,

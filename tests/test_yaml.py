@@ -464,3 +464,34 @@ def test_validate_error_for_empty_sfd_param_list() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('roc_period' in e.message for e in result.errors)
+
+
+def test_validate_error_for_missing_mode() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['metadata']['mode']
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('mode' in e.message for e in result.errors)
+
+
+def test_validate_error_for_unsafe_metadata_name() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['metadata']['name'] = '../attack'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('metadata.name' in e.path for e in result.errors)
+
+
+def test_validate_no_warning_for_literal_calibration_param() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration']['probability_calibration']['params']['method'] = 'isotonic'
+    result = validate(yaml_dict)
+    assert not any('isotonic' in w.message for w in result.warnings)
+
+
+def test_validate_error_for_empty_calibration_block() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration'] = {}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('calibration' in e.message for e in result.errors)
