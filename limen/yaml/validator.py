@@ -13,9 +13,11 @@ from limen.yaml.rules import NoUnknownKeys
 from limen.yaml.rules import OneOf
 from limen.yaml.rules import ParamCoverage
 from limen.yaml.rules import Required
+from limen.yaml.rules import RequiredColumnsSpec
 from limen.yaml.rules import Resolvable
 from limen.yaml.rules import RuleEngine
 from limen.yaml.rules import ScalerSpec
+from limen.yaml.rules import SingleFuncBlock
 from limen.yaml.rules import SchemaVersion
 from limen.yaml.rules import SfdParams
 from limen.yaml.rules import SplitSpec
@@ -93,6 +95,7 @@ _MAIN_ENGINE = RuleEngine([
     NoUnknownKeys('sfd.manifest.test_data_source', DATA_SOURCE_REQUIRED | DATA_SOURCE_OPTIONAL),
 
     SplitSpec(),
+    RequiredColumnsSpec(),
     NoUnknownKeys('sfd.manifest.split_config', SPLIT_CONFIG_REQUIRED),
     NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED),
 
@@ -107,11 +110,14 @@ _MAIN_ENGINE = RuleEngine([
         NoUnknownKeys('sfd.manifest.target', TARGET_REQUIRED | TARGET_OPTIONAL, severity='error'),
         FuncList('sfd.manifest.indicators'),
         FuncList('sfd.manifest.features'),
+        SingleFuncBlock('sfd.manifest.pre_split_data_selector'),
+        SingleFuncBlock('sfd.manifest.bar_formation'),
+        SingleFuncBlock('sfd.manifest.data_dict_extension'),
         NoUnknownKeys('sfd.manifest.scaler',
                       SCALER_EXPLICIT_REQUIRED | SCALER_EXPLICIT_OPTIONAL | SCALER_FROM_PARAMS_REQUIRED),
         ScalerSpec(),
         NoUnknownKeys('sfd.manifest.feature_ablation', FEATURE_ABLATION_OPTIONAL),
-        NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL),
+        NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL, severity='error'),
         NoUnknownKeys('sfd.manifest.calibration', CALIBRATION_OPTIONAL),
         NoUnknownKeys('sfd.manifest.calibration.probability_calibration',
                       CALIBRATION_FUNC_REQUIRED | CALIBRATION_FUNC_OPTIONAL),

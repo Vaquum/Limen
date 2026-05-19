@@ -150,7 +150,7 @@ class OneOf:
 
 class Resolvable:
 
-    '''Field value must be an importable limen.* path.'''
+    '''Field value must be an importable limen.* path that resolves to a callable or class.'''
 
     def __init__(self, path: str) -> None:
         self._path = path
@@ -163,11 +163,20 @@ class Resolvable:
         found, value = get_at(yaml_dict, self._path)
         if not found or not isinstance(value, str):
             return
-        if not is_resolvable(value):
+        try:
+            obj = resolve(value)
+        except Exception:  # noqa: BLE001
             errors.append(YAMLError(
                 message=f"Cannot resolve '{value}'",
                 path=self._path,
                 suggestion='Path must be within an allowed limen.* namespace',
+            ))
+            return
+        if not callable(obj):
+            errors.append(YAMLError(
+                message=f"'{value}' resolves to a module, not a callable or class",
+                path=self._path,
+                suggestion='Specify a callable function or class, e.g. limen.sfd.reference_architecture.logreg_binary',
             ))
 
 
@@ -371,6 +380,76 @@ class FuncList:
                 errors.append(YAMLError(
                     message=f"'params' must be a mapping (got {type(params).__name__})",
                     path=f'{self._path}[{i}].params',
+                ))
+
+
+class SingleFuncBlock:
+
+    '''When a {func, params?} block is present, validate func is present and resolvable.'''
+
+    def __init__(self, path: str) -> None:
+        self._path = path
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        found, block = get_at(yaml_dict, self._path)
+        if not found or block is None:
+            return
+        if not isinstance(block, dict):
+            errors.append(YAMLError(
+                message=f"'{self._path}' must be a mapping",
+                path=self._path,
+            ))
+            return
+        if 'func' not in block:
+            errors.append(YAMLError(
+                message="Missing required field 'func'",
+                path=f'{self._path}.func',
+            ))
+            return
+        func = block['func']
+        if isinstance(func, str) and not is_resolvable(func):
+            errors.append(YAMLError(
+                message=f"Cannot resolve func '{func}'",
+                path=f'{self._path}.func',
+                suggestion='Path must be within an allowed limen.* namespace',
+            ))
+        params = block.get('params')
+        if params is not None and not isinstance(params, dict):
+            errors.append(YAMLError(
+                message=f"'params' must be a mapping (got {type(params).__name__})",
+                path=f'{self._path}.params',
+            ))
+
+
+class RequiredColumnsSpec:
+
+    '''When required_columns is present, it must be a non-empty list of strings.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        cols = manifest.get('required_columns')
+        if cols is None:
+            return
+        if not isinstance(cols, list):
+            errors.append(YAMLError(
+                message=f"'required_columns' must be a list (got {type(cols).__name__})",
+                path='sfd.manifest.required_columns',
+                suggestion="Use a list of column name strings, e.g. required_columns: [open, high, low, close]",
+            ))
+            return
+        for i, item in enumerate(cols):
+            if not isinstance(item, str):
+                errors.append(YAMLError(
+                    message=f"'required_columns[{i}]' must be a string (got {type(item).__name__})",
+                    path=f'sfd.manifest.required_columns[{i}]',
                 ))
 
 
@@ -716,10 +795,8 @@ class ParamCoverage:
                 meta_params.add(fp)
         if isinstance(manifest.get('pca_compression'), dict):
             pca = manifest['pca_compression']
-            for field in ('enabled_param', 'n_components_param'):
-                val = pca.get(field)
-                if isinstance(val, str):
-                    meta_params.add(val)
+            meta_params.add(pca.get('enabled_param') or 'auto_pca')
+            meta_params.add(pca.get('n_components_param') or 'pca_k')
 
         valid = manifest_refs | arch_params | meta_params
 

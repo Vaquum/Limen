@@ -104,6 +104,8 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
     cols = m.get('required_columns')
     if cols is not None:
+        if not isinstance(cols, list):
+            raise ValueError(f"'required_columns' must be a list, got {type(cols).__name__}")
         manifest.set_required_bar_columns(list(cols))
 
 
