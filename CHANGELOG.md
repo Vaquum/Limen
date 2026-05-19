@@ -904,3 +904,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Report return and risk outputs in basis points and carry `datetime` through prediction-performance and reference-architecture backtest inputs for clock-window metrics
 - Update rule-based stability output to use `drawdown_std_bps`, with legacy Sharpe thresholds retained only for call compatibility
 - Update backtest, log, reference-architecture, and trainer docs plus regression coverage for the new ledger surface
+
+## v3.4.0 on 19th of May, 2026
+
+- Use the native Hugging Face BTCUSDT 15m, 30m, 1h, 2h, and 4h kline datasets for matching `HistoricalData.get_spot_klines(kline_size=...)` calls
+- Preserve the existing 1m-source aggregation path for all other `kline_size` values and for custom `DEFAULT_SPOT_KLINES_DATASET_REPO` overrides
