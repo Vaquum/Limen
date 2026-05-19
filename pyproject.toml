@@ -52,6 +52,9 @@ where = ["."]
 include = ["limen*"]
 exclude = ["tests*", "scripts*"]
 
+[tool.setuptools.package-data]
+limen = ["yaml/templates/*.yaml"]
+
 [tool.coverage.run]
 source = ["limen"]
 relative_files = true
