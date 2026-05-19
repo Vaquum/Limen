@@ -1,6 +1,7 @@
 import inspect
 import re
 from datetime import date
+from itertools import pairwise
 from typing import Any
 from typing import Protocol
 
@@ -9,6 +10,14 @@ from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
 
 _SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
+
+def _is_iso_date(value: str) -> bool:
+    try:
+        date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+
 
 _CONDITION_LEAF_FIELDS: dict[str, tuple[str, ...]] = {
     'threshold':  ('column', 'operator', 'value'),
@@ -452,6 +461,17 @@ class SplitSpec:
                         message=f"'{key}' must be an int",
                         path=f'sfd.manifest.split_config.{key}',
                     ))
+                elif key == 'train' and sc[key] <= 0:
+                    errors.append(YAMLError(
+                        message=f"'train' must be > 0 (got {sc[key]})",
+                        path='sfd.manifest.split_config.train',
+                        suggestion='Use a positive integer e.g. train: 8',
+                    ))
+                elif key in ('val', 'test') and sc[key] < 0:
+                    errors.append(YAMLError(
+                        message=f"'{key}' must be >= 0 (got {sc[key]})",
+                        path=f'sfd.manifest.split_config.{key}',
+                    ))
         else:
             sd = manifest['split_dates']
             if not isinstance(sd, dict):
@@ -479,6 +499,16 @@ class SplitSpec:
                             message=f"'{key}' is not a valid ISO-8601 date (got '{sd[key]}')",
                             path=f'sfd.manifest.split_dates.{key}',
                             suggestion="Use format 'YYYY-MM-DD', e.g. '2022-01-01'",
+                        ))
+            parsed = {k: date.fromisoformat(sd[k]) for k in _SPLIT_DATE_KEYS
+                      if isinstance(sd.get(k), str) and _is_iso_date(sd[k])}
+            if len(parsed) == len(_SPLIT_DATE_KEYS):
+                for (a_key, a_val), (b_key, b_val) in pairwise(parsed.items()):
+                    if a_val > b_val:
+                        errors.append(YAMLError(
+                            message=f"split_dates must be non-decreasing: '{a_key}' ({a_val}) > '{b_key}' ({b_val})",
+                            path='sfd.manifest.split_dates',
+                            suggestion='Ensure train_start <= train_end <= val_start <= val_end <= test_start <= test_end',
                         ))
 
 
@@ -632,9 +662,8 @@ class ParamCoverage:
             meta_params.add('feature_groups')
         if isinstance(manifest.get('feature_ablation'), dict):
             fa = manifest['feature_ablation']
-            for field in ('drop_count_key', 'seed_key'):
-                if isinstance(fa.get(field), str):
-                    meta_params.add(fa[field])
+            meta_params.add(fa.get('drop_count_key') or 'feature_drop_count')
+            meta_params.add(fa.get('seed_key') or 'feature_drop_seed')
         if isinstance(manifest.get('scaler'), dict):
             fp = manifest['scaler'].get('from_params')
             if isinstance(fp, str):
