@@ -5,6 +5,7 @@ from itertools import pairwise
 from typing import Any
 from typing import Protocol
 
+from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import YAMLError
 from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
@@ -20,7 +21,7 @@ def _check_callable_path(value: str, path: str, errors: list[YAMLError]) -> None
 
     try:
         obj = resolve(value)
-    except Exception:  # noqa: BLE001 — resolve() wraps ImportError, AttributeError, etc.
+    except ResolutionError:
         errors.append(YAMLError(
             message=f"Cannot resolve '{value}'",
             path=path,
