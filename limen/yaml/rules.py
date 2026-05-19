@@ -231,7 +231,7 @@ class Resolvable:
 
 class NoUnknownKeys:
 
-    '''All keys at path must be in the known set; extras become warnings.'''
+    '''All keys at path must be in the known set; extras become warnings or errors depending on severity.'''
 
     def __init__(self, path: str, known: set, severity: str = 'warning') -> None:
 
