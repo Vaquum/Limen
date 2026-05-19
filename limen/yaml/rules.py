@@ -330,6 +330,11 @@ class DataSource:
             method = src['method']
             if isinstance(method, str):
                 _check_callable_path(method, f'sfd.manifest.{section}.method', errors)
+            else:
+                errors.append(YAMLError(
+                    message=f"'method' must be a string (got {type(method).__name__})",
+                    path=f'sfd.manifest.{section}.method',
+                ))
 
             params = src.get('params')
             if params is not None and not isinstance(params, dict):
@@ -374,6 +379,11 @@ class FuncList:
             func = item['func']
             if isinstance(func, str):
                 _check_callable_path(func, f'{self._path}[{i}].func', errors)
+            else:
+                errors.append(YAMLError(
+                    message=f"'func' must be a string (got {type(func).__name__})",
+                    path=f'{self._path}[{i}].func',
+                ))
             params = item.get('params')
             if params is not None and not isinstance(params, dict):
                 errors.append(YAMLError(
@@ -412,6 +422,11 @@ class SingleFuncBlock:
         func = block['func']
         if isinstance(func, str):
             _check_callable_path(func, f'{self._path}.func', errors)
+        else:
+            errors.append(YAMLError(
+                message=f"'func' must be a string (got {type(func).__name__})",
+                path=f'{self._path}.func',
+            ))
         params = block.get('params')
         if params is not None and not isinstance(params, dict):
             errors.append(YAMLError(
@@ -631,6 +646,14 @@ class ScalerSpec:
                 message="'scaler' cannot have both 'from_params' and 'class' — use one or the other",
                 path='sfd.manifest.scaler',
             ))
+        else:
+            key = 'from_params' if has_from_params else 'class'
+            val = scaler[key]
+            if not isinstance(val, str) or not val:
+                errors.append(YAMLError(
+                    message=f"'scaler.{key}' must be a non-empty string",
+                    path=f'sfd.manifest.scaler.{key}',
+                ))
 
 
 class SfdParams:
@@ -717,11 +740,12 @@ class CalibrationCrossRef:
                     message=f"Missing required field 'func' in calibration '{section_name}'",
                     path=f'sfd.manifest.calibration.{section_name}.func',
                 ))
-            elif isinstance(func, str) and not is_resolvable(func):
+            elif isinstance(func, str):
+                _check_callable_path(func, f'sfd.manifest.calibration.{section_name}.func', errors)
+            else:
                 errors.append(YAMLError(
-                    message=f"Cannot resolve calibration func '{func}'",
+                    message=f"'func' must be a string (got {type(func).__name__})",
                     path=f'sfd.manifest.calibration.{section_name}.func',
-                    suggestion='Path must be within an allowed limen.* namespace',
                 ))
 
             params = section.get('params') or {}
@@ -834,6 +858,40 @@ class ParamCoverage:
         elif isinstance(obj, list):
             for item in obj:
                 ParamCoverage._walk_refs(item, refs)
+
+
+class UelSpec:
+
+    '''Type checks for optional uel fields that the CLI assumes are specific types.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        uel = yaml_dict.get('uel') or {}
+
+        ss = uel.get('search_strategy')
+        if ss is not None and not isinstance(ss, dict):
+            errors.append(YAMLError(
+                message=f"'uel.search_strategy' must be a mapping (got {type(ss).__name__})",
+                path='uel.search_strategy',
+                suggestion='Use search_strategy:\n  type: random',
+            ))
+
+        op = uel.get('output_path')
+        if op is not None and not isinstance(op, str):
+            errors.append(YAMLError(
+                message=f"'uel.output_path' must be a string (got {type(op).__name__})",
+                path='uel.output_path',
+            ))
+
+        per = uel.get('prep_each_round')
+        if per is not None and not isinstance(per, bool):
+            errors.append(YAMLError(
+                message=f"'uel.prep_each_round' must be a bool (got {type(per).__name__})",
+                path='uel.prep_each_round',
+            ))
 
 
 class RuleEngine:
