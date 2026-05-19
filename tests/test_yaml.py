@@ -632,3 +632,49 @@ def test_validate_no_unused_param_warning_for_pca_defaults() -> None:
     yaml_dict['sfd']['params']['pca_k'] = [5, 10]
     result = validate(yaml_dict)
     assert not any(w.path in ('sfd.params.auto_pca', 'sfd.params.pca_k') for w in result.warnings)
+
+
+def test_validate_error_for_data_source_method_resolving_to_module() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_source']['method'] = 'limen.data'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('module' in e.message for e in result.errors)
+
+
+def test_validate_error_for_indicator_func_resolving_to_module() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['func'] = 'limen.indicators'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('module' in e.message for e in result.errors)
+
+
+def test_validate_error_for_scaler_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['scaler'] = 'logreg'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('scaler' in e.path and 'mapping' in e.message for e in result.errors)
+
+
+def test_validate_error_for_calibration_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration'] = 'isotonic'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('calibration' in e.path and 'mapping' in e.message for e in result.errors)
+
+
+def test_resolve_func_params_raises_on_unresolvable_limen_path() -> None:
+    from limen.yaml.errors import ResolutionError
+    try:
+        _resolve_func_params({'metric': 'limen.metrics.nonexistent_function'})
+        assert False, 'Expected ResolutionError'
+    except ResolutionError:
+        pass
+
+
+def test_resolve_func_params_preserves_non_limen_string_on_resolution_failure() -> None:
+    resolved = _resolve_func_params({'key': 'some_literal_value'})
+    assert resolved['key'] == 'some_literal_value'
