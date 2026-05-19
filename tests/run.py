@@ -69,6 +69,13 @@ from tests.test_yaml import test_validate_error_for_scaler_missing_both_from_par
 from tests.test_yaml import test_validate_error_for_scaler_with_both_from_params_and_class
 from tests.test_yaml import test_validate_error_for_calibration_func_missing
 from tests.test_yaml import test_validate_error_for_data_source_params_not_a_mapping
+from tests.test_yaml import test_validate_error_for_reference_architecture_resolving_to_module
+from tests.test_yaml import test_validate_error_for_pre_split_data_selector_missing_func
+from tests.test_yaml import test_validate_error_for_bar_formation_missing_func
+from tests.test_yaml import test_validate_error_for_data_dict_extension_missing_func
+from tests.test_yaml import test_validate_error_for_pca_compression_unknown_key
+from tests.test_yaml import test_validate_error_for_required_columns_not_a_list
+from tests.test_yaml import test_validate_no_unused_param_warning_for_pca_defaults
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -1009,6 +1016,13 @@ tests = [
     test_validate_error_for_scaler_with_both_from_params_and_class,
     test_validate_error_for_calibration_func_missing,
     test_validate_error_for_data_source_params_not_a_mapping,
+    test_validate_error_for_reference_architecture_resolving_to_module,
+    test_validate_error_for_pre_split_data_selector_missing_func,
+    test_validate_error_for_bar_formation_missing_func,
+    test_validate_error_for_data_dict_extension_missing_func,
+    test_validate_error_for_pca_compression_unknown_key,
+    test_validate_error_for_required_columns_not_a_list,
+    test_validate_no_unused_param_warning_for_pca_defaults,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,

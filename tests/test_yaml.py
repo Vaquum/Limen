@@ -575,3 +575,60 @@ def test_validate_error_for_data_source_params_not_a_mapping() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('data_source.params' in e.path for e in result.errors)
+
+
+def test_validate_error_for_reference_architecture_resolving_to_module() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('module' in e.message for e in result.errors)
+
+
+def test_validate_error_for_pre_split_data_selector_missing_func() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pre_split_data_selector'] = {'params': {}}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('pre_split_data_selector.func' in e.path for e in result.errors)
+
+
+def test_validate_error_for_bar_formation_missing_func() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['bar_formation'] = {'params': {}}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('bar_formation.func' in e.path for e in result.errors)
+
+
+def test_validate_error_for_data_dict_extension_missing_func() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_dict_extension'] = {}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('data_dict_extension.func' in e.path for e in result.errors)
+
+
+def test_validate_error_for_pca_compression_unknown_key() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pca_compression'] = {'enabled_param': 'auto_pca', 'bogus_key': 1}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('bogus_key' in e.message for e in result.errors)
+
+
+def test_validate_error_for_required_columns_not_a_list() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['required_columns'] = 'close'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('required_columns' in e.path for e in result.errors)
+
+
+def test_validate_no_unused_param_warning_for_pca_defaults() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pca_compression'] = {}
+    yaml_dict['sfd']['params']['auto_pca'] = [True, False]
+    yaml_dict['sfd']['params']['pca_k'] = [5, 10]
+    result = validate(yaml_dict)
+    assert not any(w.path in ('sfd.params.auto_pca', 'sfd.params.pca_k') for w in result.warnings)
