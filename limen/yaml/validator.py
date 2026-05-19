@@ -21,6 +21,7 @@ from limen.yaml.rules import get_at
 from limen.yaml.schema import CALIBRATION_FUNC_OPTIONAL
 from limen.yaml.schema import CALIBRATION_FUNC_REQUIRED
 from limen.yaml.schema import CALIBRATION_OPTIONAL
+from limen.yaml.schema import DATA_SOURCE_OPTIONAL
 from limen.yaml.schema import DATA_SOURCE_REQUIRED
 from limen.yaml.schema import FEATURE_ABLATION_OPTIONAL
 from limen.yaml.schema import MANIFEST_OPTIONAL_SHARED
@@ -82,8 +83,8 @@ _MAIN_ENGINE = RuleEngine([
     OneOf('sfd.manifest.type', VALID_MANIFEST_TYPES),
 
     DataSource(),
-    NoUnknownKeys('sfd.manifest.data_source', DATA_SOURCE_REQUIRED),
-    NoUnknownKeys('sfd.manifest.test_data_source', DATA_SOURCE_REQUIRED),
+    NoUnknownKeys('sfd.manifest.data_source', DATA_SOURCE_REQUIRED | DATA_SOURCE_OPTIONAL),
+    NoUnknownKeys('sfd.manifest.test_data_source', DATA_SOURCE_REQUIRED | DATA_SOURCE_OPTIONAL),
 
     SplitSpec(),
     NoUnknownKeys('sfd.manifest.split_config', SPLIT_CONFIG_REQUIRED),

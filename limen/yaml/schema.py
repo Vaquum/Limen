@@ -7,8 +7,8 @@ VALID_SEARCH_STRATEGY_TYPES = {'random', 'grid'}
 
 TOP_LEVEL_REQUIRED = {'schema_version', 'metadata', 'sfd', 'uel'}
 
-METADATA_REQUIRED = {'name', 'limen_version', 'mode'}
-METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags'}
+METADATA_REQUIRED = {'name', 'mode'}
+METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags', 'limen_version'}
 
 SFD_REQUIRED = {'manifest', 'params'}
 
@@ -33,7 +33,8 @@ ML_MANIFEST_OPTIONAL = {
 RULE_BASED_MANIFEST_REQUIRED = {'strategy'}
 RULE_BASED_MANIFEST_OPTIONAL: set[str] = set()
 
-DATA_SOURCE_REQUIRED = {'method', 'params'}
+DATA_SOURCE_REQUIRED = {'method'}
+DATA_SOURCE_OPTIONAL = {'params'}
 
 SPLIT_CONFIG_REQUIRED = {'train', 'val', 'test'}
 SPLIT_DATES_REQUIRED = {'train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'}
@@ -46,7 +47,7 @@ CONDITION_REQUIRED = {'id', 'name'}
 CONDITION_OPTIONAL = {'params', 'persistence_n', 'recency_n'}
 
 SCALER_EXPLICIT_REQUIRED = {'class'}
-SCALER_EXPLICIT_OPTIONAL = {'params'}
+SCALER_EXPLICIT_OPTIONAL: set[str] = set()
 SCALER_FROM_PARAMS_REQUIRED = {'from_params'}
 
 FEATURE_ABLATION_OPTIONAL = {'drop_count_key', 'seed_key'}

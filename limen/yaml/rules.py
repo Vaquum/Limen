@@ -1,5 +1,6 @@
 import inspect
 import re
+from datetime import date
 from typing import Any
 from typing import Protocol
 
@@ -447,6 +448,15 @@ class SplitSpec:
                         message=f"'{key}' must be a date string (e.g. '2022-01-01')",
                         path=f'sfd.manifest.split_dates.{key}',
                     ))
+                else:
+                    try:
+                        date.fromisoformat(sd[key])
+                    except ValueError:
+                        errors.append(YAMLError(
+                            message=f"'{key}' is not a valid ISO-8601 date (got '{sd[key]}')",
+                            path=f'sfd.manifest.split_dates.{key}',
+                            suggestion="Use format 'YYYY-MM-DD', e.g. '2022-01-01'",
+                        ))
 
 
 class SfdParams:
