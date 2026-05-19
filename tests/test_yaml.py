@@ -680,6 +680,14 @@ def test_resolve_func_params_preserves_non_limen_string_on_resolution_failure() 
     assert resolved['key'] == 'some_literal_value'
 
 
+def test_resolve_func_params_raises_on_limen_module_path() -> None:
+    try:
+        _resolve_func_params({'metric': 'limen.metrics'})
+        assert False, 'Expected ValueError'
+    except ValueError:
+        pass
+
+
 def test_validate_error_for_non_string_data_source_method() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['data_source']['method'] = 42
@@ -764,3 +772,27 @@ def test_validate_error_for_scaler_from_params_non_string() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('scaler' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_search_strategy_explicit_null() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = None
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('search_strategy' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_output_path_explicit_null() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['output_path'] = None
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('output_path' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_prep_each_round_explicit_null() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['prep_each_round'] = None
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('prep_each_round' in e.path for e in result.errors)

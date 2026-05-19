@@ -92,6 +92,10 @@ from tests.test_yaml import test_validate_error_for_uel_output_path_not_a_string
 from tests.test_yaml import test_validate_error_for_uel_prep_each_round_not_a_bool
 from tests.test_yaml import test_validate_error_for_scaler_from_params_empty_string
 from tests.test_yaml import test_validate_error_for_scaler_from_params_non_string
+from tests.test_yaml import test_resolve_func_params_raises_on_limen_module_path
+from tests.test_yaml import test_validate_error_for_uel_search_strategy_explicit_null
+from tests.test_yaml import test_validate_error_for_uel_output_path_explicit_null
+from tests.test_yaml import test_validate_error_for_uel_prep_each_round_explicit_null
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -1055,6 +1059,10 @@ tests = [
     test_validate_error_for_uel_prep_each_round_not_a_bool,
     test_validate_error_for_scaler_from_params_empty_string,
     test_validate_error_for_scaler_from_params_non_string,
+    test_resolve_func_params_raises_on_limen_module_path,
+    test_validate_error_for_uel_search_strategy_explicit_null,
+    test_validate_error_for_uel_output_path_explicit_null,
+    test_validate_error_for_uel_prep_each_round_explicit_null,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
