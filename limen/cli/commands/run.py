@@ -124,6 +124,10 @@ def _build_search_strategy(uel_cfg: dict[str, Any],
                             sfd_cfg: dict[str, Any]) -> RandomStrategy | GridStrategy:
 
     strategy_cfg = uel_cfg.get('search_strategy', {})
+    if not isinstance(strategy_cfg, dict):
+        raise ValueError(
+            f"'uel.search_strategy' must be a mapping, got {type(strategy_cfg).__name__}"
+        )
     strategy_type = strategy_cfg.get('type', 'random')
     # ruamel.yaml returns CommentedMap/CommentedSeq — convert to plain Python types
     params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}

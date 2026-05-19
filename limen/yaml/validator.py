@@ -19,6 +19,7 @@ from limen.yaml.rules import RuleEngine
 from limen.yaml.rules import ScalerSpec
 from limen.yaml.rules import SingleFuncBlock
 from limen.yaml.rules import SchemaVersion
+from limen.yaml.rules import UelSpec
 from limen.yaml.rules import SfdParams
 from limen.yaml.rules import SplitSpec
 from limen.yaml.rules import WarnIfPresent
@@ -113,6 +114,7 @@ _MAIN_ENGINE = RuleEngine([
         SingleFuncBlock('sfd.manifest.pre_split_data_selector'),
         SingleFuncBlock('sfd.manifest.bar_formation'),
         SingleFuncBlock('sfd.manifest.data_dict_extension'),
+        NoUnknownKeys('sfd.manifest.data_dict_extension', {'func'}, severity='error'),
         NoUnknownKeys('sfd.manifest.scaler',
                       SCALER_EXPLICIT_REQUIRED | SCALER_EXPLICIT_OPTIONAL | SCALER_FROM_PARAMS_REQUIRED),
         ScalerSpec(),
@@ -156,6 +158,7 @@ _MAIN_ENGINE = RuleEngine([
     NoUnknownKeys('uel.search_strategy', SEARCH_STRATEGY_REQUIRED),
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
     NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
+    UelSpec(),
 ])
 
 
