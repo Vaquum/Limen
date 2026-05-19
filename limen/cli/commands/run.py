@@ -55,6 +55,11 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     click.secho('  ✓ Valid', fg='green')
 
     if dry_run:
+        try:
+            CompiledSFD(yaml_dict).manifest()
+        except Exception as exc:  # noqa: BLE001
+            click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
+            return False
         click.echo('  Dry run — skipping execution')
         return True
 
