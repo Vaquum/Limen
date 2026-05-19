@@ -437,6 +437,35 @@ def test_validate_error_for_invalid_split_date_format() -> None:
     assert any('train_start' in e.message for e in result.errors)
 
 
+def test_validate_error_for_split_config_train_zero() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_config']['train'] = 0
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('train' in e.message for e in result.errors)
+
+
+def test_validate_error_for_split_config_negative_val() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_config']['val'] = -1
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('val' in e.message for e in result.errors)
+
+
+def test_validate_error_for_split_dates_out_of_order() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['sfd']['manifest']['split_config']
+    yaml_dict['sfd']['manifest']['split_dates'] = {
+        'train_start': '2022-07-01', 'train_end': '2022-01-01',
+        'val_start': '2022-07-01', 'val_end': '2022-10-01',
+        'test_start': '2022-10-01', 'test_end': '2023-01-01',
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('non-decreasing' in e.message for e in result.errors)
+
+
 def test_validate_warning_for_unknown_key_in_data_source() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['data_source']['typo_key'] = 'value'

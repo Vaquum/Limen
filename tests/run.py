@@ -60,6 +60,9 @@ from tests.test_yaml import test_validate_error_for_empty_calibration_block
 from tests.test_yaml import test_parse_single_line_string_parses_as_yaml_not_path
 from tests.test_yaml import test_is_resolvable_returns_false_for_namespace_prefix_collision
 from tests.test_yaml import test_validate_error_for_invalid_split_date_format
+from tests.test_yaml import test_validate_error_for_split_config_train_zero
+from tests.test_yaml import test_validate_error_for_split_config_negative_val
+from tests.test_yaml import test_validate_error_for_split_dates_out_of_order
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -991,6 +994,9 @@ tests = [
     test_parse_single_line_string_parses_as_yaml_not_path,
     test_is_resolvable_returns_false_for_namespace_prefix_collision,
     test_validate_error_for_invalid_split_date_format,
+    test_validate_error_for_split_config_train_zero,
+    test_validate_error_for_split_config_negative_val,
+    test_validate_error_for_split_dates_out_of_order,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
