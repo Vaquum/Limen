@@ -36,7 +36,7 @@ def resolve(path: str) -> Callable[..., Any] | type:
 
     '''
 
-    if not any(path.startswith(ns) for ns in ALLOWED_NAMESPACES):
+    if not any(path == ns or path.startswith(ns + '.') for ns in ALLOWED_NAMESPACES):
         raise ResolutionError(path, ALLOWED_NAMESPACES)
 
     # Try progressively shorter module paths to support class method paths
