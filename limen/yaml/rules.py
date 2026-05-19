@@ -34,7 +34,7 @@ def _check_callable_path(value: str, path: str, errors: list[YAMLError]) -> None
         return
     if not callable(obj):
         errors.append(YAMLError(
-            message=f"'{value}' resolves to a module, not a callable or class",
+            message=f"'{value}' resolves to {type(obj).__name__}, not a callable or class",
             path=path,
             suggestion='Specify a callable function or class',
         ))
@@ -765,12 +765,8 @@ class CalibrationCrossRef:
                             path=param_path,
                             suggestion=f"Add '{ref_key}' to sfd.params",
                         ))
-                elif value.startswith('limen.') and not is_resolvable(value):
-                    errors.append(YAMLError(
-                        message=f"Cannot resolve calibration param '{key}' limen.* path '{value}'",
-                        path=param_path,
-                        suggestion='Path must be within an allowed limen.* namespace',
-                    ))
+                elif value.startswith('limen.'):
+                    _check_callable_path(value, param_path, errors)
 
 
 class ParamCoverage:
@@ -872,7 +868,7 @@ class UelSpec:
         uel = yaml_dict.get('uel') or {}
 
         ss = uel.get('search_strategy')
-        if ss is not None and not isinstance(ss, dict):
+        if 'search_strategy' in uel and not isinstance(ss, dict):
             errors.append(YAMLError(
                 message=f"'uel.search_strategy' must be a mapping (got {type(ss).__name__})",
                 path='uel.search_strategy',
@@ -880,14 +876,14 @@ class UelSpec:
             ))
 
         op = uel.get('output_path')
-        if op is not None and not isinstance(op, str):
+        if 'output_path' in uel and not isinstance(op, str):
             errors.append(YAMLError(
                 message=f"'uel.output_path' must be a string (got {type(op).__name__})",
                 path='uel.output_path',
             ))
 
         per = uel.get('prep_each_round')
-        if per is not None and not isinstance(per, bool):
+        if 'prep_each_round' in uel and not isinstance(per, bool):
             errors.append(YAMLError(
                 message=f"'uel.prep_each_round' must be a bool (got {type(per).__name__})",
                 path='uel.prep_each_round',

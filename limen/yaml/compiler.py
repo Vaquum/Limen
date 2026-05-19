@@ -29,7 +29,12 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(v, str):
             result[k] = v
         elif v.startswith('limen.'):
-            result[k] = resolve(v)
+            resolved = resolve(v)
+            if not callable(resolved):
+                raise ValueError(
+                    f"'{v}' resolves to {type(resolved).__name__}, not a callable"
+                )
+            result[k] = resolved
         else:
             try:
                 result[k] = resolve(v)

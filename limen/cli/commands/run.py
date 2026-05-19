@@ -81,14 +81,13 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     click.echo(f"Running '{experiment_name}' ({n_permutations} permutations) ...")
     click.echo(f"  Results → {results_dir}")
 
-    uel = UniversalExperimentLoop(
-        sfd=compiled,
-        search_strategy=search_strategy,
-        experiment_dir=results_dir,
-        test_mode=test_mode,
-    )
-
     try:
+        uel = UniversalExperimentLoop(
+            sfd=compiled,
+            search_strategy=search_strategy,
+            experiment_dir=results_dir,
+            test_mode=test_mode,
+        )
         uel.run(
             experiment_name=experiment_name,
             n_permutations=n_permutations,
