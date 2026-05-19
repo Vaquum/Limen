@@ -558,6 +558,37 @@ def test_validate_error_for_pca_compression_unknown_key() -> None:
     assert any('bogus_key' in e.message for e in result.errors)
 
 
+def test_validate_error_for_feature_ablation_key_field_invalid_value() -> None:
+    for field_name, value in [('drop_count_key', 123), ('drop_count_key', ''), ('seed_key', None)]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['feature_ablation'] = {field_name: value}
+        result = validate(yaml_dict)
+        assert not result.valid, f'feature_ablation.{field_name}={value!r} should be invalid'
+        assert any(field_name in e.path for e in result.errors)
+
+
+def test_validate_error_for_pca_compression_key_field_invalid_value() -> None:
+    for field_name, value in [('enabled_param', 123), ('enabled_param', ''), ('n_components_param', False)]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['pca_compression'] = {field_name: value}
+        result = validate(yaml_dict)
+        assert not result.valid, f'pca_compression.{field_name}={value!r} should be invalid'
+        assert any(field_name in e.path for e in result.errors)
+
+
+def test_validate_warning_for_unknown_key_in_func_block() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['unexpected_key'] = 'value'
+    result = validate(yaml_dict)
+    assert any('unexpected_key' in w.message for w in result.warnings)
+
+
+def test_validate_no_warning_for_func_block_with_only_known_keys() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    result = validate(yaml_dict)
+    assert not any('indicators[0]' in w.path and 'Unknown' in w.message for w in result.warnings)
+
+
 def test_validate_error_for_required_columns_not_a_list() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['required_columns'] = 'close'

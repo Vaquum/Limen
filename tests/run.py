@@ -58,6 +58,10 @@ from tests.test_yaml import test_validate_error_for_calibration_param_ref_not_in
 from tests.test_yaml import test_validate_no_warning_for_literal_calibration_param
 from tests.test_yaml import test_validate_error_for_optional_manifest_block_not_a_mapping
 from tests.test_yaml import test_validate_error_for_pca_compression_unknown_key
+from tests.test_yaml import test_validate_error_for_feature_ablation_key_field_invalid_value
+from tests.test_yaml import test_validate_error_for_pca_compression_key_field_invalid_value
+from tests.test_yaml import test_validate_warning_for_unknown_key_in_func_block
+from tests.test_yaml import test_validate_no_warning_for_func_block_with_only_known_keys
 from tests.test_yaml import test_validate_error_for_required_columns_not_a_list
 from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_key
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
@@ -1011,6 +1015,10 @@ tests = [
     test_validate_no_warning_for_literal_calibration_param,
     test_validate_error_for_optional_manifest_block_not_a_mapping,
     test_validate_error_for_pca_compression_unknown_key,
+    test_validate_error_for_feature_ablation_key_field_invalid_value,
+    test_validate_error_for_pca_compression_key_field_invalid_value,
+    test_validate_warning_for_unknown_key_in_func_block,
+    test_validate_no_warning_for_func_block_with_only_known_keys,
     test_validate_error_for_required_columns_not_a_list,
     test_validate_error_for_data_dict_extension_unknown_key,
     test_validate_error_for_uel_search_strategy_wrong_type,
