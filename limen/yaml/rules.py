@@ -19,13 +19,16 @@ def _is_iso_date(value: str) -> bool:
         return False
 
 
+_PARAM_REF_RE = re.compile(r'\{(\w+)\}')
+
+
 def _check_callable_path(value: str, path: str, errors: list[YAMLError]) -> None:
 
     '''Resolve value and emit an error if it cannot be resolved or does not resolve to a callable.'''
 
     try:
         obj = resolve(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — resolve() wraps ImportError, AttributeError, etc.
         errors.append(YAMLError(
             message=f"Cannot resolve '{value}'",
             path=path,
@@ -38,6 +41,39 @@ def _check_callable_path(value: str, path: str, errors: list[YAMLError]) -> None
             path=path,
             suggestion='Specify a callable function or class',
         ))
+
+
+def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
+    return (yaml_dict.get('sfd') or {}).get('manifest') or {}
+
+
+def _check_func_block(block: dict[str, Any], base_path: str, errors: list[YAMLError]) -> None:
+
+    '''Validate func (required, callable) and optional params mapping on a {func, params?} block.'''
+
+    func = block.get('func')
+    if func is None:
+        errors.append(YAMLError(message="Missing required field 'func'", path=f'{base_path}.func'))
+        return
+    if isinstance(func, str):
+        _check_callable_path(func, f'{base_path}.func', errors)
+    else:
+        errors.append(YAMLError(
+            message=f"'func' must be a string (got {type(func).__name__})",
+            path=f'{base_path}.func',
+        ))
+    params = block.get('params')
+    if params is None:
+        return
+    if not isinstance(params, dict):
+        errors.append(YAMLError(
+            message=f"'params' must be a mapping (got {type(params).__name__})",
+            path=f'{base_path}.params',
+        ))
+        return
+    for k, v in params.items():
+        if isinstance(v, str) and v.startswith('limen.'):
+            _check_callable_path(v, f'{base_path}.params.{k}', errors)
 
 
 _CONDITION_LEAF_FIELDS: dict[str, tuple[str, ...]] = {
@@ -301,12 +337,12 @@ class DataSource:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        manifest = _get_manifest(yaml_dict)
 
-        for section in ('data_source', 'test_data_source'):
+        for section, required in (('data_source', True), ('test_data_source', False)):
             src = manifest.get(section)
             if src is None:
-                if section == 'data_source':
+                if required:
                     errors.append(YAMLError(
                         message=f"Missing required field '{section}'",
                         path=f'sfd.manifest.{section}',
@@ -370,30 +406,7 @@ class FuncList:
                     path=f'{self._path}[{i}]',
                 ))
                 continue
-            if 'func' not in item:
-                errors.append(YAMLError(
-                    message="Missing required field 'func'",
-                    path=f'{self._path}[{i}].func',
-                ))
-                continue
-            func = item['func']
-            if isinstance(func, str):
-                _check_callable_path(func, f'{self._path}[{i}].func', errors)
-            else:
-                errors.append(YAMLError(
-                    message=f"'func' must be a string (got {type(func).__name__})",
-                    path=f'{self._path}[{i}].func',
-                ))
-            params = item.get('params')
-            if params is not None and not isinstance(params, dict):
-                errors.append(YAMLError(
-                    message=f"'params' must be a mapping (got {type(params).__name__})",
-                    path=f'{self._path}[{i}].params',
-                ))
-            elif isinstance(params, dict):
-                for k, v in params.items():
-                    if isinstance(v, str) and v.startswith('limen.'):
-                        _check_callable_path(v, f'{self._path}[{i}].params.{k}', errors)
+            _check_func_block(item, f'{self._path}[{i}]', errors)
 
 
 class SingleFuncBlock:
@@ -412,35 +425,9 @@ class SingleFuncBlock:
         if not found or block is None:
             return
         if not isinstance(block, dict):
-            errors.append(YAMLError(
-                message=f"'{self._path}' must be a mapping",
-                path=self._path,
-            ))
+            errors.append(YAMLError(message=f"'{self._path}' must be a mapping", path=self._path))
             return
-        if 'func' not in block:
-            errors.append(YAMLError(
-                message="Missing required field 'func'",
-                path=f'{self._path}.func',
-            ))
-            return
-        func = block['func']
-        if isinstance(func, str):
-            _check_callable_path(func, f'{self._path}.func', errors)
-        else:
-            errors.append(YAMLError(
-                message=f"'func' must be a string (got {type(func).__name__})",
-                path=f'{self._path}.func',
-            ))
-        params = block.get('params')
-        if params is not None and not isinstance(params, dict):
-            errors.append(YAMLError(
-                message=f"'params' must be a mapping (got {type(params).__name__})",
-                path=f'{self._path}.params',
-            ))
-        elif isinstance(params, dict):
-            for k, v in params.items():
-                if isinstance(v, str) and v.startswith('limen.'):
-                    _check_callable_path(v, f'{self._path}.params.{k}', errors)
+        _check_func_block(block, self._path, errors)
 
 
 class RequiredColumnsSpec:
@@ -452,7 +439,7 @@ class RequiredColumnsSpec:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        manifest = _get_manifest(yaml_dict)
         cols = manifest.get('required_columns')
         if cols is None:
             return
@@ -532,7 +519,7 @@ class SplitSpec:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        manifest = _get_manifest(yaml_dict)
         has_config = 'split_config' in manifest
         has_dates = 'split_dates' in manifest
 
@@ -590,6 +577,7 @@ class SplitSpec:
                     path='sfd.manifest.split_dates',
                 ))
                 return
+            parsed: dict[str, date] = {}
             for key in _SPLIT_DATE_KEYS:
                 if key not in sd:
                     errors.append(YAMLError(
@@ -603,15 +591,13 @@ class SplitSpec:
                     ))
                 else:
                     try:
-                        date.fromisoformat(sd[key])
+                        parsed[key] = date.fromisoformat(sd[key])
                     except ValueError:
                         errors.append(YAMLError(
                             message=f"'{key}' is not a valid ISO-8601 date (got '{sd[key]}')",
                             path=f'sfd.manifest.split_dates.{key}',
                             suggestion="Use format 'YYYY-MM-DD', e.g. '2022-01-01'",
                         ))
-            parsed = {k: date.fromisoformat(sd[k]) for k in _SPLIT_DATE_KEYS
-                      if isinstance(sd.get(k), str) and _is_iso_date(sd[k])}
             if len(parsed) == len(_SPLIT_DATE_KEYS):
                 for (a_key, a_val), (b_key, b_val) in pairwise(parsed.items()):
                     if a_val > b_val:
@@ -631,7 +617,7 @@ class ScalerSpec:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        manifest = _get_manifest(yaml_dict)
         scaler = manifest.get('scaler')
         if scaler is None:
             return
@@ -700,7 +686,7 @@ class CalibrationPresence:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        manifest = _get_manifest(yaml_dict)
         cal = manifest.get('calibration')
         if cal is None:
             return
@@ -730,12 +716,13 @@ class CalibrationCrossRef:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        sfd = yaml_dict.get('sfd') or {}
+        manifest = (sfd.get('manifest') or {})
         cal = manifest.get('calibration')
         if not isinstance(cal, dict):
             return
 
-        sfd_params = set((yaml_dict.get('sfd') or {}).get('params') or {})
+        sfd_params = set(sfd.get('params') or {})
 
         for section_name in ('probability_calibration', 'threshold_function'):
             section = cal.get(section_name)
@@ -776,7 +763,7 @@ class CalibrationCrossRef:
                 param_path = f'sfd.manifest.calibration.{section_name}.params.{key}'
                 if not isinstance(value, str):
                     continue
-                m = re.fullmatch(r'\{(\w+)\}', value.strip())
+                m = _PARAM_REF_RE.fullmatch(value.strip())
                 if m:
                     ref_key = m.group(1)
                     if ref_key not in sfd_params:
@@ -866,7 +853,7 @@ class ParamCoverage:
     def _walk_refs(obj: Any, refs: set[str]) -> None:
 
         if isinstance(obj, str):
-            for match in re.finditer(r'\{(\w+)\}', obj):
+            for match in _PARAM_REF_RE.finditer(obj):
                 refs.add(match.group(1))
         elif isinstance(obj, dict):
             for v in obj.values():
@@ -897,6 +884,13 @@ class BlockSpec:
                 ))
 
 
+_UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
+    ('search_strategy', dict, 'Use search_strategy:\n  type: random'),
+    ('output_path',     str,  None),
+    ('prep_each_round', bool, None),
+]
+
+
 class UelSpec:
 
     '''Type checks for optional uel fields that the CLI assumes are specific types.'''
@@ -907,28 +901,16 @@ class UelSpec:
               _warnings: list[YAMLError]) -> None:
 
         uel = yaml_dict.get('uel') or {}
-
-        ss = uel.get('search_strategy')
-        if 'search_strategy' in uel and not isinstance(ss, dict):
-            errors.append(YAMLError(
-                message=f"'uel.search_strategy' must be a mapping (got {type(ss).__name__})",
-                path='uel.search_strategy',
-                suggestion='Use search_strategy:\n  type: random',
-            ))
-
-        op = uel.get('output_path')
-        if 'output_path' in uel and not isinstance(op, str):
-            errors.append(YAMLError(
-                message=f"'uel.output_path' must be a string (got {type(op).__name__})",
-                path='uel.output_path',
-            ))
-
-        per = uel.get('prep_each_round')
-        if 'prep_each_round' in uel and not isinstance(per, bool):
-            errors.append(YAMLError(
-                message=f"'uel.prep_each_round' must be a bool (got {type(per).__name__})",
-                path='uel.prep_each_round',
-            ))
+        for field, expected, suggestion in _UEL_TYPE_CHECKS:
+            if field not in uel:
+                continue
+            value = uel[field]
+            if not isinstance(value, expected):
+                errors.append(YAMLError(
+                    message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
+                    path=f'uel.{field}',
+                    suggestion=suggestion,
+                ))
 
 
 class RuleEngine:
