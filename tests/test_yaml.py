@@ -678,3 +678,89 @@ def test_resolve_func_params_raises_on_unresolvable_limen_path() -> None:
 def test_resolve_func_params_preserves_non_limen_string_on_resolution_failure() -> None:
     resolved = _resolve_func_params({'key': 'some_literal_value'})
     assert resolved['key'] == 'some_literal_value'
+
+
+def test_validate_error_for_non_string_data_source_method() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_source']['method'] = 42
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('data_source.method' in e.path for e in result.errors)
+
+
+def test_validate_error_for_non_string_indicator_func() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['func'] = 123
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('indicators' in e.path for e in result.errors)
+
+
+def test_validate_error_for_non_string_pre_split_data_selector_func() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['pre_split_data_selector'] = {'func': 99}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('pre_split_data_selector' in e.path for e in result.errors)
+
+
+def test_validate_error_for_calibration_func_not_a_string() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['calibration'] = {
+        'probability_calibration': {'func': 42, 'params': {}}
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('calibration' in e.path for e in result.errors)
+
+
+def test_validate_error_for_data_dict_extension_unknown_key() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_dict_extension'] = {
+        'func': 'limen.data.HistoricalData.get_spot_klines',
+        'params': {},
+        'extra_key': 'bad',
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('data_dict_extension' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_search_strategy_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = 'random'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('search_strategy' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_output_path_not_a_string() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['output_path'] = 123
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('output_path' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_prep_each_round_not_a_bool() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['prep_each_round'] = 'yes'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('prep_each_round' in e.path for e in result.errors)
+
+
+def test_validate_error_for_scaler_from_params_empty_string() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['scaler'] = {'from_params': ''}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('scaler' in e.path for e in result.errors)
+
+
+def test_validate_error_for_scaler_from_params_non_string() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['scaler'] = {'from_params': 42}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('scaler' in e.path for e in result.errors)
