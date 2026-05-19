@@ -149,6 +149,12 @@ def test_parse_malformed_yaml_returns_errors() -> None:
     assert len(errors) > 0
 
 
+def test_parse_single_line_string_parses_as_yaml_not_path() -> None:
+    yaml_dict, errors = parse('schema_version: "1.0"')
+    assert errors == []
+    assert yaml_dict.get('schema_version') == '1.0'
+
+
 def test_is_resolvable_returns_true_for_limen_path() -> None:
     assert is_resolvable('limen.indicators.roc')
     assert is_resolvable('limen.data.HistoricalData.get_spot_klines')
@@ -159,6 +165,11 @@ def test_is_resolvable_returns_false_for_non_limen_path() -> None:
     assert not is_resolvable('os.path.join')
     assert not is_resolvable('not_a_module.foo')
     assert not is_resolvable('{threshold_min}')
+
+
+def test_is_resolvable_returns_false_for_namespace_prefix_collision() -> None:
+    assert not is_resolvable('limen.database.something')
+    assert not is_resolvable('limen.datax.something')
 
 
 def test_resolve_returns_callable_for_limen_path() -> None:
@@ -411,6 +422,19 @@ def test_validate_passes_valid_yaml_with_split_dates() -> None:
     }
     result = validate(yaml_dict)
     assert result.valid
+
+
+def test_validate_error_for_invalid_split_date_format() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['sfd']['manifest']['split_config']
+    yaml_dict['sfd']['manifest']['split_dates'] = {
+        'train_start': '01/01/2022', 'train_end': '2022-07-01',
+        'val_start': '2022-07-01', 'val_end': '2022-10-01',
+        'test_start': '2022-10-01', 'test_end': '2023-01-01',
+    }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('train_start' in e.message for e in result.errors)
 
 
 def test_validate_warning_for_unknown_key_in_data_source() -> None:

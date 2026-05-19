@@ -61,3 +61,12 @@ def test_cli_run_dry_run_parse_error_exits_1() -> None:
         Path('exp.yaml').write_text('sfd: [unclosed')
         result = runner.invoke(cli, ['run', '--dry-run', 'exp.yaml'])
         assert result.exit_code == 1
+
+
+def test_cli_run_dry_run_valid_yaml_shows_dry_run_complete() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        result = runner.invoke(cli, ['run', '--dry-run', 'exp.yaml'])
+        assert result.exit_code == 0
+        assert 'Dry run' in result.output

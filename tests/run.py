@@ -53,6 +53,10 @@ from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
 from tests.test_yaml import test_validate_passes_valid_rule_based_yaml
 from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
+from tests.test_yaml import test_parse_single_line_string_parses_as_yaml_not_path
+from tests.test_yaml import test_is_resolvable_returns_false_for_namespace_prefix_collision
+from tests.test_yaml import test_validate_error_for_invalid_split_date_format
+from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
 from tests.test_cli import test_cli_validate_parse_error_exits_1
@@ -976,6 +980,10 @@ tests = [
     test_validate_warning_for_unknown_key_in_split_config,
     test_validate_passes_valid_rule_based_yaml,
     test_validate_error_for_empty_sfd_param_list,
+    test_parse_single_line_string_parses_as_yaml_not_path,
+    test_is_resolvable_returns_false_for_namespace_prefix_collision,
+    test_validate_error_for_invalid_split_date_format,
+    test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
     test_cli_validate_parse_error_exits_1,
