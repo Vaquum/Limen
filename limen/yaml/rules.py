@@ -319,6 +319,13 @@ class DataSource:
                     suggestion='Path must be within an allowed limen.* namespace',
                 ))
 
+            params = src.get('params')
+            if params is not None and not isinstance(params, dict):
+                errors.append(YAMLError(
+                    message=f"'params' in '{section}' must be a mapping",
+                    path=f'sfd.manifest.{section}.params',
+                ))
+
 
 class FuncList:
 
@@ -358,6 +365,12 @@ class FuncList:
                     message=f"Cannot resolve func '{func}'",
                     path=f'{self._path}[{i}].func',
                     suggestion='Path must be within an allowed limen.* namespace',
+                ))
+            params = item.get('params')
+            if params is not None and not isinstance(params, dict):
+                errors.append(YAMLError(
+                    message=f"'params' must be a mapping (got {type(params).__name__})",
+                    path=f'{self._path}[{i}].params',
                 ))
 
 
@@ -512,6 +525,34 @@ class SplitSpec:
                         ))
 
 
+class ScalerSpec:
+
+    '''When scaler is present as a dict, exactly one of from_params or class must be set.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        manifest = (yaml_dict.get('sfd') or {}).get('manifest') or {}
+        scaler = manifest.get('scaler')
+        if not isinstance(scaler, dict):
+            return
+        has_from_params = 'from_params' in scaler
+        has_class = 'class' in scaler
+        if not has_from_params and not has_class:
+            errors.append(YAMLError(
+                message="'scaler' must have either 'from_params' or 'class'",
+                path='sfd.manifest.scaler',
+                suggestion="Use 'from_params: param_name' or 'class: limen.scalers.StandardScaler'",
+            ))
+        elif has_from_params and has_class:
+            errors.append(YAMLError(
+                message="'scaler' cannot have both 'from_params' and 'class' — use one or the other",
+                path='sfd.manifest.scaler',
+            ))
+
+
 class SfdParams:
 
     '''Every value in sfd.params must be a non-empty list.'''
@@ -585,7 +626,12 @@ class CalibrationCrossRef:
                 continue
 
             func = section.get('func')
-            if isinstance(func, str) and not is_resolvable(func):
+            if func is None:
+                errors.append(YAMLError(
+                    message=f"Missing required field 'func' in calibration '{section_name}'",
+                    path=f'sfd.manifest.calibration.{section_name}.func',
+                ))
+            elif isinstance(func, str) and not is_resolvable(func):
                 errors.append(YAMLError(
                     message=f"Cannot resolve calibration func '{func}'",
                     path=f'sfd.manifest.calibration.{section_name}.func',

@@ -128,11 +128,17 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
 
     psds = m.get('pre_split_data_selector')
     if psds is not None:
-        manifest.set_pre_split_data_selector(resolve(psds['func']), **dict(psds.get('params') or {}))
+        manifest.set_pre_split_data_selector(
+            resolve(psds['func']),
+            **_resolve_func_params(dict(psds.get('params') or {})),
+        )
 
     bf = m.get('bar_formation')
     if bf is not None:
-        manifest.set_bar_formation(resolve(bf['func']), **dict(bf.get('params') or {}))
+        manifest.set_bar_formation(
+            resolve(bf['func']),
+            **_resolve_func_params(dict(bf.get('params') or {})),
+        )
 
     for item in m.get('indicators') or []:
         manifest.add_indicator(resolve(item['func']), **_resolve_func_params(dict(item.get('params') or {})))

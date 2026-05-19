@@ -5,15 +5,17 @@ from typing import Any
 from limen.yaml.errors import YAMLError
 from limen.yaml.rules import CalibrationCrossRef
 from limen.yaml.rules import CalibrationPresence
-from limen.yaml.rules import NameSlug
 from limen.yaml.rules import ConditionsList
 from limen.yaml.rules import DataSource
 from limen.yaml.rules import FuncList
+from limen.yaml.rules import NameSlug
 from limen.yaml.rules import NoUnknownKeys
 from limen.yaml.rules import OneOf
 from limen.yaml.rules import ParamCoverage
 from limen.yaml.rules import Required
+from limen.yaml.rules import Resolvable
 from limen.yaml.rules import RuleEngine
+from limen.yaml.rules import ScalerSpec
 from limen.yaml.rules import SchemaVersion
 from limen.yaml.rules import SfdParams
 from limen.yaml.rules import SplitSpec
@@ -95,16 +97,19 @@ _MAIN_ENGINE = RuleEngine([
     NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED),
 
     Required('sfd.manifest.reference_architecture', str),
+    Resolvable('sfd.manifest.reference_architecture'),
 
     When('sfd.manifest.type', 'ml', [
         Required('sfd.manifest.target', dict),
         Required('sfd.manifest.target.name', str),
         Required('sfd.manifest.target.class', str),
+        Resolvable('sfd.manifest.target.class'),
         NoUnknownKeys('sfd.manifest.target', TARGET_REQUIRED | TARGET_OPTIONAL, severity='error'),
         FuncList('sfd.manifest.indicators'),
         FuncList('sfd.manifest.features'),
         NoUnknownKeys('sfd.manifest.scaler',
                       SCALER_EXPLICIT_REQUIRED | SCALER_EXPLICIT_OPTIONAL | SCALER_FROM_PARAMS_REQUIRED),
+        ScalerSpec(),
         NoUnknownKeys('sfd.manifest.feature_ablation', FEATURE_ABLATION_OPTIONAL),
         NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL),
         NoUnknownKeys('sfd.manifest.calibration', CALIBRATION_OPTIONAL),
