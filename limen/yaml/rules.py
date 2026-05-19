@@ -390,6 +390,10 @@ class FuncList:
                     message=f"'params' must be a mapping (got {type(params).__name__})",
                     path=f'{self._path}[{i}].params',
                 ))
+            elif isinstance(params, dict):
+                for k, v in params.items():
+                    if isinstance(v, str) and v.startswith('limen.'):
+                        _check_callable_path(v, f'{self._path}[{i}].params.{k}', errors)
 
 
 class SingleFuncBlock:
@@ -433,6 +437,10 @@ class SingleFuncBlock:
                 message=f"'params' must be a mapping (got {type(params).__name__})",
                 path=f'{self._path}.params',
             ))
+        elif isinstance(params, dict):
+            for k, v in params.items():
+                if isinstance(v, str) and v.startswith('limen.'):
+                    _check_callable_path(v, f'{self._path}.params.{k}', errors)
 
 
 class RequiredColumnsSpec:
@@ -731,7 +739,13 @@ class CalibrationCrossRef:
 
         for section_name in ('probability_calibration', 'threshold_function'):
             section = cal.get(section_name)
+            if section is None:
+                continue
             if not isinstance(section, dict):
+                errors.append(YAMLError(
+                    message=f"'calibration.{section_name}' must be a mapping (got {type(section).__name__})",
+                    path=f'sfd.manifest.calibration.{section_name}',
+                ))
                 continue
 
             func = section.get('func')
@@ -748,8 +762,14 @@ class CalibrationCrossRef:
                     path=f'sfd.manifest.calibration.{section_name}.func',
                 ))
 
-            params = section.get('params') or {}
+            params = section.get('params')
+            if params is None:
+                continue
             if not isinstance(params, dict):
+                errors.append(YAMLError(
+                    message=f"'calibration.{section_name}.params' must be a mapping (got {type(params).__name__})",
+                    path=f'sfd.manifest.calibration.{section_name}.params',
+                ))
                 continue
 
             for key, value in params.items():
@@ -854,6 +874,27 @@ class ParamCoverage:
         elif isinstance(obj, list):
             for item in obj:
                 ParamCoverage._walk_refs(item, refs)
+
+
+class BlockSpec:
+
+    '''Emit an error for each listed path that is present but not a mapping.'''
+
+    def __init__(self, *paths: str) -> None:
+        self._paths = paths
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        for path in self._paths:
+            found, value = get_at(yaml_dict, path)
+            if found and value is not None and not isinstance(value, dict):
+                errors.append(YAMLError(
+                    message=f"'{path}' must be a mapping (got {type(value).__name__})",
+                    path=path,
+                ))
 
 
 class UelSpec:

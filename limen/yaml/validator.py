@@ -3,6 +3,7 @@ from dataclasses import field
 from typing import Any
 
 from limen.yaml.errors import YAMLError
+from limen.yaml.rules import BlockSpec
 from limen.yaml.rules import CalibrationCrossRef
 from limen.yaml.rules import CalibrationPresence
 from limen.yaml.rules import ConditionsList
@@ -118,6 +119,12 @@ _MAIN_ENGINE = RuleEngine([
         NoUnknownKeys('sfd.manifest.scaler',
                       SCALER_EXPLICIT_REQUIRED | SCALER_EXPLICIT_OPTIONAL | SCALER_FROM_PARAMS_REQUIRED),
         ScalerSpec(),
+        BlockSpec(
+            'sfd.manifest.feature_ablation',
+            'sfd.manifest.pca_compression',
+            'sfd.manifest.params_override',
+            'sfd.manifest.metrics_params',
+        ),
         NoUnknownKeys('sfd.manifest.feature_ablation', FEATURE_ABLATION_OPTIONAL),
         NoUnknownKeys('sfd.manifest.pca_compression', PCA_COMPRESSION_OPTIONAL, severity='error'),
         NoUnknownKeys('sfd.manifest.calibration', CALIBRATION_OPTIONAL),
