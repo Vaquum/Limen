@@ -25,9 +25,8 @@ def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
     yaml.preserve_quotes = True
 
     try:
-        if isinstance(source, Path) or (isinstance(source, str) and '\n' not in source):
-            path = Path(source)
-            content = path.read_text(encoding='utf-8')
+        if isinstance(source, Path):
+            content = source.read_text(encoding='utf-8')
         else:
             content = source
 
