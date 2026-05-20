@@ -90,12 +90,7 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
 
     manifest = RuleBasedManifest()
     _apply_base(manifest, m)
-    for item in m.get('indicators') or []:
-        manifest.add_indicator(
-            resolve(item['func']),
-            include_if=item.get('include_if'),
-            **_resolve_func_params(dict(item.get('params') or {})),
-        )
+    _apply_indicators(manifest, m)
     strat = m['strategy']
     manifest.with_strategy(
         conditions=[dict(c) for c in strat['conditions']],
@@ -103,6 +98,16 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
     )
     manifest.with_reference_architecture(resolve(m['reference_architecture']))
     return manifest
+
+
+def _apply_indicators(manifest: Manifest, m: dict[str, Any]) -> None:
+
+    for item in m.get('indicators') or []:
+        manifest.add_indicator(
+            resolve(item['func']),
+            include_if=item.get('include_if'),
+            **_resolve_func_params(dict(item.get('params') or {})),
+        )
 
 
 def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
@@ -156,12 +161,7 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
             **_resolve_func_params(dict(bf.get('params') or {})),
         )
 
-    for item in m.get('indicators') or []:
-        manifest.add_indicator(
-            resolve(item['func']),
-            include_if=item.get('include_if'),
-            **_resolve_func_params(dict(item.get('params') or {})),
-        )
+    _apply_indicators(manifest, m)
 
     for item in m.get('features') or []:
         manifest.add_feature(
