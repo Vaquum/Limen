@@ -856,6 +856,7 @@ class ParamCoverage:
                 include_if_keys.add(item['include_if'])
         meta_params.update(include_if_keys)
 
+        sfd_param_values = sfd.get('params') or {}
         for key in sorted(include_if_keys):
             if key not in sfd_params:
                 errors.append(YAMLError(
@@ -863,6 +864,14 @@ class ParamCoverage:
                     path='sfd.manifest',
                     suggestion=f"Add '{key}' to sfd.params",
                 ))
+            else:
+                values = sfd_param_values.get(key) or []
+                if not all(isinstance(v, bool) for v in values):
+                    errors.append(YAMLError(
+                        message=f"'include_if: {key}' — sfd.params['{key}'] must contain only boolean values (true/false)",
+                        path=f'sfd.params.{key}',
+                        suggestion=f"Change '{key}' values to [true] or [true, false]",
+                    ))
 
         for ref in sorted(manifest_refs):
             if ref not in sfd_params and ref not in arch_params and ref not in meta_params:
