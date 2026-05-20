@@ -1,0 +1,74 @@
+schema_version: "1.0"
+
+metadata:
+  name: rule_based_experiment
+  limen_version: "3.5.2"
+  mode: development
+  description: Rule-based strategy using RSI oversold and EMA trend filter
+
+sfd:
+  manifest:
+    type: rule_based
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+        start_date_limit: "2025-01-01"
+
+    test_data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 7200
+        n_rows: 5000
+
+    split_config:
+      train: 8
+      val: 1
+      test: 2
+
+    indicators:
+      - func: limen.indicators.wilder_rsi
+        params:
+          period: "{rsi_period}"
+          group: momentum
+      - func: limen.indicators.ema
+        params:
+          period: "{ema_period}"
+          group: trend
+
+    strategy:
+      conditions:
+        - id: rsi_oversold
+          name: RSI oversold
+          type: threshold
+          column: "wilder_rsi_{rsi_period}"
+          operator: "<"
+          value: "{rsi_threshold}"
+        - id: above_ema
+          name: Price above EMA
+          type: relative
+          column: close
+          operator: ">"
+          other_column: "ema_{ema_period}"
+        - id: entry
+          name: Entry signal
+          operator: and
+          operands:
+            - rsi_oversold
+            - above_ema
+      entry: entry
+
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+
+  params:
+    rsi_period: [7, 14, 21]
+    rsi_threshold: [20, 25, 30, 35]
+    ema_period: [50, 100, 200]
+
+uel:
+  n_permutations: 50
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

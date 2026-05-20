@@ -146,6 +146,7 @@ _MAIN_ENGINE = RuleEngine([
         Required('sfd.manifest.strategy.conditions', list),
         Required('sfd.manifest.strategy.entry', str),
         ConditionsList(),
+        FuncList('sfd.manifest.indicators'),
         NoUnknownKeys('sfd.manifest.strategy', STRATEGY_REQUIRED),
         WarnIfPresent(
             'sfd.manifest',

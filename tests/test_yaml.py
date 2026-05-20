@@ -124,7 +124,7 @@ _MINIMAL_RULE_BASED_YAML = dedent('''\
               name: rsi_low
               type: threshold
               column: rsi
-              operator: lt
+              operator: "<"
               value: 30
           entry: rsi_low
         reference_architecture: limen.sfd.reference_architecture.rule_based
@@ -247,6 +247,16 @@ def test_validate_passes_valid_rule_based_yaml() -> None:
     result = validate(yaml_dict)
     assert result.valid
     assert result.errors == []
+
+
+def test_validate_error_for_invalid_indicator_func_in_rule_based_manifest() -> None:
+    yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
+    yaml_dict['sfd']['manifest']['indicators'] = [
+        {'func': 'limen.indicators.does_not_exist', 'params': {'period': 14}},
+    ]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('does_not_exist' in e.message for e in result.errors)
 
 
 def test_validate_passes_valid_yaml_with_split_dates() -> None:
@@ -867,6 +877,52 @@ def test_build_manifest_rule_based_strategy_and_architecture_wired() -> None:
     manifest = build_manifest(yaml_dict)
     assert manifest.strategy is not None
     assert callable(manifest.architecture_function)
+
+
+def test_build_manifest_rule_based_indicators_wired() -> None:
+    from limen.indicators import wilder_rsi
+    yaml = dedent('''\
+        schema_version: "1.0"
+        metadata:
+          name: rule_exp
+          mode: development
+        sfd:
+          manifest:
+            type: rule_based
+            data_source:
+              method: limen.data.HistoricalData.get_spot_klines
+              params:
+                kline_size: 3600
+            split_config:
+              train: 8
+              val: 1
+              test: 2
+            indicators:
+              - func: limen.indicators.wilder_rsi
+                params:
+                  period: 14
+            strategy:
+              conditions:
+                - id: rsi_low
+                  name: rsi_low
+                  type: threshold
+                  column: wilder_rsi_14
+                  operator: "<"
+                  value: 30
+              entry: rsi_low
+            reference_architecture: limen.sfd.reference_architecture.rule_based
+          params:
+            dummy_param: [1, 2]
+        uel:
+          n_permutations: 2
+          search_strategy:
+            type: random
+          output_format: csv
+    ''')
+    yaml_dict, _ = parse(yaml)
+    manifest = build_manifest(yaml_dict)
+    assert len(manifest.feature_transforms) == 1
+    assert manifest.feature_transforms[0].func is wilder_rsi
 
 
 def test_compiled_sfd_name_is_yaml_prefixed() -> None:

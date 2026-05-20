@@ -1,0 +1,114 @@
+schema_version: "1.0"
+
+metadata:
+  name: xgboost_regressor_experiment
+  limen_version: "3.5.2"
+  mode: development
+  description: XGBoost regressor predicting next-period return with feature perturbation
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+        start_date_limit: "2025-01-01"
+
+    test_data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 7200
+        n_rows: 5000
+
+    split_config:
+      train: 8
+      val: 1
+      test: 2
+
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+          group: momentum
+      - func: limen.indicators.window_return
+        params:
+          period: 5
+          group: momentum
+      - func: limen.indicators.window_return
+        params:
+          period: 20
+          group: momentum
+      - func: limen.indicators.rolling_volatility
+        params:
+          column: close
+          window: 20
+          group: volatility
+      - func: limen.indicators.sma
+        params:
+          column: volume
+          period: 20
+          group: volume
+      - func: limen.indicators.stochastic_oscillator
+        params:
+          group: momentum
+      - func: limen.indicators.body_pct
+        params:
+          group: structure
+
+    features:
+      - func: limen.features.range_pct
+        params:
+          group: structure
+      - func: limen.features.volume_ratio.volume_ratio
+        params:
+          period: 20
+          group: volume
+      - func: limen.features.sma_ratios.sma_ratios
+        params:
+          periods: [10, 50]
+          price_col: close
+          group: trend
+
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+      transform_params:
+        periods: 1
+        scale: 100.0
+
+    scaler:
+      class: limen.scalers.RobustScaler
+
+    feature_ablation:
+      drop_count_key: feature_drop_count
+      seed_key: feature_drop_seed
+
+    reference_architecture: limen.sfd.reference_architecture.xgboost_regressor
+
+  params:
+    # feature perturbation
+    feature_groups: [all, momentum, volatility, "momentum|volume", "momentum|volume|structure"]
+    feature_drop_count: [0]
+    feature_drop_seed: [42]
+    # model
+    learning_rate: [0.01, 0.02, 0.03]
+    max_depth: [2, 3, 4]
+    n_estimators: [300, 500, 700]
+    min_child_weight: [5, 10, 20]
+    subsample: [0.5, 0.6, 0.7]
+    colsample_bytree: [0.5, 0.6, 0.7]
+    gamma: [0.1, 0.5, 1.0]
+    reg_alpha: [0.1, 0.5, 1.0]
+    reg_lambda: [1.0, 5.0, 10.0]
+    objective: ["reg:squarederror"]
+    booster: [gbtree]
+    early_stopping_rounds: [50]
+
+uel:
+  n_permutations: 50
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
