@@ -43,7 +43,8 @@ class UniversalExperimentLoop:
                  checkpoint_interval: int = 1000,
                  experiment_dir: str | Path | None = None,
                  intra_callback: Callable[[Any, MSQ], None] | None = None,
-                 test_mode: bool = False) -> None:
+                 test_mode: bool = False,
+                 yaml_reference: dict | None = None) -> None:
 
         '''
         Initialize the UniversalExperimentLoop.
@@ -66,6 +67,7 @@ class UniversalExperimentLoop:
             experiment_dir (str | Path | None): Directory for all experiment artifacts
             intra_callback (Callable | None): Python callback receiving (log, msq)
             test_mode (bool): When True and data is None, fetch from test_data_source_config instead of production
+            yaml_reference (dict | None): Parsed YAML experiment dict — stored in metadata.json for reproducibility
 
         '''
 
@@ -119,6 +121,7 @@ class UniversalExperimentLoop:
         self._checkpoint_interval = checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
+        self._yaml_reference = yaml_reference
 
     def run(self,
             experiment_name: str,
@@ -818,6 +821,8 @@ class UniversalExperimentLoop:
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
         }
+        if self._yaml_reference is not None:
+            metadata['yaml_reference'] = self._yaml_reference
 
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)

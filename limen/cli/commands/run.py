@@ -81,12 +81,18 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     click.echo(f"Running '{experiment_name}' ({n_permutations} permutations) ...")
     click.echo(f"  Results → {results_dir}")
 
+    feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
+    checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
+
     try:
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,
             experiment_dir=results_dir,
             test_mode=test_mode,
+            feedback_interval=feedback_interval,
+            checkpoint_interval=checkpoint_interval,
+            yaml_reference=dict(yaml_dict),
         )
         uel.run(
             experiment_name=experiment_name,

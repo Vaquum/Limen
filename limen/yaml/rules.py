@@ -46,12 +46,14 @@ _FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
 def _check_func_block(block: dict[str, Any],
                       base_path: str,
                       errors: list[YAMLError],
-                      warnings: list[YAMLError]) -> None:
+                      warnings: list[YAMLError],
+                      extra_known_keys: frozenset[str] = frozenset()) -> None:
 
     '''Validate func (required, callable) and optional params mapping on a {func, params?} block.'''
 
+    known = _FUNC_BLOCK_KNOWN_KEYS | extra_known_keys
     for key in block:
-        if key not in _FUNC_BLOCK_KNOWN_KEYS:
+        if key not in known:
             warnings.append(YAMLError(
                 message=f"Unknown field '{key}'",
                 path=f'{base_path}.{key}',
@@ -412,7 +414,15 @@ class FuncList:
                     path=f'{self._path}[{i}]',
                 ))
                 continue
-            _check_func_block(item, f'{self._path}[{i}]', errors, warnings)
+            _check_func_block(item, f'{self._path}[{i}]', errors, warnings,
+                               extra_known_keys=frozenset({'include_if'}))
+            if 'include_if' in item:
+                val = item['include_if']
+                if not isinstance(val, str) or not val:
+                    errors.append(YAMLError(
+                        message="'include_if' must be a non-empty string (a round_params key)",
+                        path=f'{self._path}[{i}].include_if',
+                    ))
 
 
 class SingleFuncBlock:
@@ -928,9 +938,11 @@ class ParamKeyFields:
 
 
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
-    ('search_strategy', dict, 'Use search_strategy:\n  type: random'),
-    ('output_path',     str,  None),
-    ('prep_each_round', bool, None),
+    ('search_strategy',    dict, 'Use search_strategy:\n  type: random'),
+    ('output_path',        str,  None),
+    ('prep_each_round',    bool, None),
+    ('feedback_interval',  int,  None),
+    ('checkpoint_interval', int, None),
 ]
 
 
