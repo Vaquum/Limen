@@ -927,3 +927,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `include_if` support on indicators and features in YAML manifests — a round_params key name that gates feature inclusion at runtime
 - YAML validator type-checks `uel.feedback_interval` and `uel.checkpoint_interval` as integers
 - `UniversalExperimentLoop` accepts `yaml_reference` dict and stores it in `metadata.json` for reproducibility; wired automatically by `limen run`
+
+## v3.5.2 on 20th of May, 2026
+
+- Add `tabpfn_binary.yaml`, `xgboost_regressor.yaml`, and `rule_based.yaml` YAML experiment templates
+- Rule-based YAML manifests now support `indicators` — wired into `RuleBasedManifest.feature_transforms` at compile time
+- Fix `body_pct` registered as indicator (not feature) in the `xgboost_regressor` foundational SFD
