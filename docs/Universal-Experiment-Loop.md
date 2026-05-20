@@ -79,6 +79,7 @@ uel = limen.UniversalExperimentLoop(
 | `search_strategy` | advanced search hook; enables the MSQ execution path |
 | `experiment_dir` | optional directory for stored run outputs; standard runs write their CSV there, and advanced runs write their artifact set there |
 | `pruning_strategies`, `feedback_interval`, `checkpoint_interval`, `intra_callback` | advanced MSQ controls |
+| `yaml_reference` | optional parsed YAML dict stored verbatim in `metadata.json` for reproducibility |
 
 ### Data behavior
 
