@@ -90,6 +90,12 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
 
     manifest = RuleBasedManifest()
     _apply_base(manifest, m)
+    for item in m.get('indicators') or []:
+        manifest.add_indicator(
+            resolve(item['func']),
+            include_if=item.get('include_if'),
+            **_resolve_func_params(dict(item.get('params') or {})),
+        )
     strat = m['strategy']
     manifest.with_strategy(
         conditions=[dict(c) for c in strat['conditions']],
