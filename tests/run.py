@@ -64,6 +64,8 @@ from tests.test_yaml import test_validate_warning_for_unknown_key_in_func_block
 from tests.test_yaml import test_validate_no_warning_for_func_block_with_only_known_keys
 from tests.test_yaml import test_validate_no_warning_for_include_if_on_indicator
 from tests.test_yaml import test_validate_error_for_include_if_invalid_value
+from tests.test_yaml import test_validate_no_error_when_include_if_key_is_in_sfd_params
+from tests.test_yaml import test_validate_error_when_include_if_key_not_in_sfd_params
 from tests.test_yaml import test_validate_error_for_required_columns_not_a_list
 from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_key
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
@@ -80,6 +82,7 @@ from tests.test_yaml import test_build_manifest_split_config_tuple_is_correct
 from tests.test_yaml import test_build_manifest_split_dates_calls_set_split_dates
 from tests.test_yaml import test_build_manifest_indicator_include_if_stored_on_entry
 from tests.test_yaml import test_build_manifest_indicator_include_if_none_when_absent
+from tests.test_yaml import test_build_manifest_feature_include_if_stored_on_entry
 from tests.test_yaml import test_build_manifest_indicator_round_param_ref_passes_through_as_string
 from tests.test_yaml import test_build_manifest_feature_round_param_ref_passes_through_as_string
 from tests.test_yaml import test_build_manifest_target_fit_params_preserve_refs_and_template_strings
@@ -1027,6 +1030,8 @@ tests = [
     test_validate_no_warning_for_func_block_with_only_known_keys,
     test_validate_no_warning_for_include_if_on_indicator,
     test_validate_error_for_include_if_invalid_value,
+    test_validate_no_error_when_include_if_key_is_in_sfd_params,
+    test_validate_error_when_include_if_key_not_in_sfd_params,
     test_validate_error_for_required_columns_not_a_list,
     test_validate_error_for_data_dict_extension_unknown_key,
     test_validate_error_for_uel_search_strategy_wrong_type,
@@ -1048,6 +1053,7 @@ tests = [
     test_build_manifest_split_dates_calls_set_split_dates,
     test_build_manifest_indicator_include_if_stored_on_entry,
     test_build_manifest_indicator_include_if_none_when_absent,
+    test_build_manifest_feature_include_if_stored_on_entry,
     test_build_manifest_indicator_round_param_ref_passes_through_as_string,
     test_build_manifest_feature_round_param_ref_passes_through_as_string,
     test_build_manifest_target_fit_params_preserve_refs_and_template_strings,
