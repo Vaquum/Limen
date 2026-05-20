@@ -41,6 +41,7 @@ def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
 
 
 _FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
+_FUNC_LIST_EXTRA_KNOWN_KEYS = frozenset({'include_if'})
 
 
 def _check_func_block(block: dict[str, Any],
@@ -415,7 +416,7 @@ class FuncList:
                 ))
                 continue
             _check_func_block(item, f'{self._path}[{i}]', errors, warnings,
-                               extra_known_keys=frozenset({'include_if'}))
+                               extra_known_keys=_FUNC_LIST_EXTRA_KNOWN_KEYS)
             if 'include_if' in item:
                 val = item['include_if']
                 if not isinstance(val, str) or not val:
@@ -938,10 +939,10 @@ class ParamKeyFields:
 
 
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
-    ('search_strategy',    dict, 'Use search_strategy:\n  type: random'),
-    ('output_path',        str,  None),
-    ('prep_each_round',    bool, None),
-    ('feedback_interval',  int,  None),
+    ('search_strategy', dict, 'Use search_strategy:\n  type: random'),
+    ('output_path', str, None),
+    ('prep_each_round', bool, None),
+    ('feedback_interval', int, None),
     ('checkpoint_interval', int, None),
 ]
 
