@@ -1,3 +1,4 @@
+import copy
 import csv
 import importlib.metadata
 import json
@@ -121,7 +122,7 @@ class UniversalExperimentLoop:
         self._checkpoint_interval = checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
-        self._yaml_reference = yaml_reference
+        self._yaml_reference = copy.deepcopy(yaml_reference)
 
     def run(self,
             experiment_name: str,

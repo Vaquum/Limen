@@ -850,6 +850,20 @@ class ParamCoverage:
             meta_params.add(pca.get('enabled_param') or 'auto_pca')
             meta_params.add(pca.get('n_components_param') or 'pca_k')
 
+        include_if_keys: set[str] = set()
+        for item in (manifest.get('indicators') or []) + (manifest.get('features') or []):
+            if isinstance(item, dict) and isinstance(item.get('include_if'), str):
+                include_if_keys.add(item['include_if'])
+        meta_params.update(include_if_keys)
+
+        for key in sorted(include_if_keys):
+            if key not in sfd_params:
+                errors.append(YAMLError(
+                    message=f"'include_if: {key}' references '{key}' but '{key}' is not defined in sfd.params",
+                    path='sfd.manifest',
+                    suggestion=f"Add '{key}' to sfd.params",
+                ))
+
         for ref in sorted(manifest_refs):
             if ref not in sfd_params and ref not in arch_params and ref not in meta_params:
                 errors.append(YAMLError(
@@ -961,7 +975,7 @@ class UelSpec:
             if field not in uel:
                 continue
             value = uel[field]
-            if not isinstance(value, expected):
+            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
                 errors.append(YAMLError(
                     message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
                     path=f'uel.{field}',
