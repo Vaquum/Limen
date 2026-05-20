@@ -66,6 +66,7 @@ from tests.test_yaml import test_validate_no_warning_for_include_if_on_indicator
 from tests.test_yaml import test_validate_error_for_include_if_invalid_value
 from tests.test_yaml import test_validate_no_error_when_include_if_key_is_in_sfd_params
 from tests.test_yaml import test_validate_error_when_include_if_key_not_in_sfd_params
+from tests.test_yaml import test_validate_error_when_include_if_param_values_are_not_bool
 from tests.test_yaml import test_validate_error_for_required_columns_not_a_list
 from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_key
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
@@ -1032,6 +1033,7 @@ tests = [
     test_validate_error_for_include_if_invalid_value,
     test_validate_no_error_when_include_if_key_is_in_sfd_params,
     test_validate_error_when_include_if_key_not_in_sfd_params,
+    test_validate_error_when_include_if_param_values_are_not_bool,
     test_validate_error_for_required_columns_not_a_list,
     test_validate_error_for_data_dict_extension_unknown_key,
     test_validate_error_for_uel_search_strategy_wrong_type,

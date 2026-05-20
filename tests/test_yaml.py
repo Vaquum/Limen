@@ -771,6 +771,16 @@ def test_validate_error_when_include_if_key_not_in_sfd_params() -> None:
     assert any('use_roc' in e.message for e in result.errors)
 
 
+def test_validate_error_when_include_if_param_values_are_not_bool() -> None:
+    for bad_values in [[1, 0], ['yes', 'no'], [1]]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['indicators'][0]['include_if'] = 'use_roc'
+        yaml_dict['sfd']['params']['use_roc'] = bad_values
+        result = validate(yaml_dict)
+        assert not result.valid, f'use_roc={bad_values!r} should be invalid'
+        assert any('use_roc' in e.path for e in result.errors)
+
+
 def test_build_manifest_indicator_round_param_ref_passes_through_as_string() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     manifest = build_manifest(yaml_dict)
