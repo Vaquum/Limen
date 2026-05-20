@@ -1,0 +1,127 @@
+schema_version: "1.0"
+
+metadata:
+  name: tabpfn_binary_experiment
+  limen_version: "3.5.1"
+  mode: development
+  description: TabPFN binary classifier with calibration, feature ablation, and explicit scaler
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+        start_date_limit: "2025-01-01"
+
+    test_data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 7200
+        n_rows: 1000
+
+    split_config:
+      train: 50
+      val: 20
+      test: 30
+
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: 1
+          group: momentum
+      - func: limen.indicators.roc
+        params:
+          period: 4
+          group: momentum
+      - func: limen.indicators.roc
+        params:
+          period: 12
+          group: momentum
+      - func: limen.indicators.rolling_volatility
+        params:
+          column: close
+          window: 12
+          group: volatility
+      - func: limen.indicators.wilder_rsi
+        params:
+          period: "{rsi_period}"
+          group: momentum
+      - func: limen.indicators.bollinger_bands
+        params:
+          price_col: close
+          window: "{bb_window}"
+          num_std: "{bb_std}"
+          group: volatility
+      - func: limen.indicators.bollinger_position
+        params:
+          group: volatility
+
+    features:
+      - func: limen.features.fractional_diff
+        params:
+          d: 0.5
+          cols:
+            - close
+
+    target:
+      name: forward_breakout
+      class: limen.targets.ForwardBreakoutTarget
+      transform_params:
+        forward_periods: "{forward_periods}"
+        threshold: "{threshold_pct}"
+        shift: -1
+
+    scaler:
+      class: limen.scalers.RobustScaler
+
+    feature_ablation:
+      drop_count_key: feature_drop_count
+      seed_key: feature_drop_seed
+
+    reference_architecture: limen.sfd.reference_architecture.tabpfn_binary
+
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: "{cal_method}"
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+          threshold_min: "{threshold_min}"
+          threshold_max: "{threshold_max}"
+          threshold_step: "{threshold_step}"
+
+  params:
+    # target
+    forward_periods: [2, 4, 6, 8, 12, 24]
+    threshold_pct: [0.005, 0.0075, 0.01, 0.015, 0.02, 0.03]
+    # indicators
+    rsi_period: [7, 14, 21]
+    bb_window: [10, 20, 30]
+    bb_std: [1.5, 2.0, 2.5]
+    # feature perturbation
+    feature_groups: [all, momentum, volatility, "momentum|volatility"]
+    feature_drop_count: [0]
+    feature_drop_seed: [42]
+    # calibration
+    use_calibration: [true, false]
+    use_threshold: [true, false]
+    cal_method: [isotonic, sigmoid]
+    threshold_min: [0.20, 0.25, 0.30]
+    threshold_max: [0.60, 0.65, 0.70]
+    threshold_step: [0.05]
+    # model
+    n_ensemble_configurations: [4, 8, 16]
+    device: [cpu]
+
+uel:
+  n_permutations: 50
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
