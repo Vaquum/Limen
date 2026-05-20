@@ -932,4 +932,3 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `tabpfn_binary.yaml`, `xgboost_regressor.yaml`, and `rule_based.yaml` YAML experiment templates
 - Rule-based YAML manifests now support `indicators` — wired into `RuleBasedManifest.feature_transforms` at compile time
-- Fix `body_pct` registered as indicator (not feature) in the `xgboost_regressor` foundational SFD
