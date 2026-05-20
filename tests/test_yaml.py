@@ -124,7 +124,7 @@ _MINIMAL_RULE_BASED_YAML = dedent('''\
               name: rsi_low
               type: threshold
               column: rsi
-              operator: lt
+              operator: "<"
               value: 30
           entry: rsi_low
         reference_architecture: limen.sfd.reference_architecture.rule_based
@@ -247,6 +247,16 @@ def test_validate_passes_valid_rule_based_yaml() -> None:
     result = validate(yaml_dict)
     assert result.valid
     assert result.errors == []
+
+
+def test_validate_error_for_invalid_indicator_func_in_rule_based_manifest() -> None:
+    yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
+    yaml_dict['sfd']['manifest']['indicators'] = [
+        {'func': 'limen.indicators.does_not_exist', 'params': {'period': 14}},
+    ]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('does_not_exist' in e.message for e in result.errors)
 
 
 def test_validate_passes_valid_yaml_with_split_dates() -> None:
@@ -897,7 +907,7 @@ def test_build_manifest_rule_based_indicators_wired() -> None:
                   name: rsi_low
                   type: threshold
                   column: wilder_rsi_14
-                  operator: lt
+                  operator: "<"
                   value: 30
               entry: rsi_low
             reference_architecture: limen.sfd.reference_architecture.rule_based
