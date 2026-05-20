@@ -54,7 +54,7 @@ def manifest() -> Manifest:
         .add_indicator(sma, column='maker_ratio', period=10)
         .add_indicator(sma, column='no_of_trades', period=20)
         .add_indicator(stochastic_oscillator)
-        .add_feature(body_pct)
+        .add_indicator(body_pct)
         .add_feature(range_pct)
         .add_feature(volume_ratio, period=20)
         .add_feature(sma_ratios, periods=[10, 50], price_col='close')
