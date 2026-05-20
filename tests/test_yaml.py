@@ -589,6 +589,22 @@ def test_validate_no_warning_for_func_block_with_only_known_keys() -> None:
     assert not any('indicators[0]' in w.path and 'Unknown' in w.message for w in result.warnings)
 
 
+def test_validate_no_warning_for_include_if_on_indicator() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['include_if'] = 'use_roc'
+    result = validate(yaml_dict)
+    assert not any('include_if' in w.message for w in result.warnings)
+
+
+def test_validate_error_for_include_if_invalid_value() -> None:
+    for value in [123, '']:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['features'][0]['include_if'] = value
+        result = validate(yaml_dict)
+        assert not result.valid, f'include_if={value!r} should be invalid'
+        assert any('include_if' in e.path for e in result.errors)
+
+
 def test_validate_error_for_required_columns_not_a_list() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['required_columns'] = 'close'
@@ -634,6 +650,24 @@ def test_validate_error_for_uel_prep_each_round_wrong_type() -> None:
         result = validate(yaml_dict)
         assert not result.valid
         assert any('prep_each_round' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_feedback_interval_wrong_type() -> None:
+    for value in ['100', None, True]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['uel']['feedback_interval'] = value
+        result = validate(yaml_dict)
+        assert not result.valid, f'feedback_interval={value!r} should be invalid'
+        assert any('feedback_interval' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_checkpoint_interval_wrong_type() -> None:
+    for value in ['500', None, True]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['uel']['checkpoint_interval'] = value
+        result = validate(yaml_dict)
+        assert not result.valid, f'checkpoint_interval={value!r} should be invalid'
+        assert any('checkpoint_interval' in e.path for e in result.errors)
 
 
 def test_validate_error_for_manifest_ref_not_in_sfd_params() -> None:
@@ -694,6 +728,57 @@ def test_build_manifest_split_dates_calls_set_split_dates() -> None:
     assert manifest.split_dates is not None
     assert manifest.split_dates[0] == date.fromisoformat('2022-01-01')
     assert manifest.split_dates[5] == date.fromisoformat('2023-01-01')
+
+
+def test_build_manifest_indicator_include_if_stored_on_entry() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['include_if'] = 'use_roc'
+    manifest = build_manifest(yaml_dict)
+    roc_entry = next(e for e in manifest.feature_transforms if 'roc' in e.func.__name__)
+    assert roc_entry.include_if == 'use_roc'
+
+
+def test_build_manifest_indicator_include_if_none_when_absent() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    manifest = build_manifest(yaml_dict)
+    roc_entry = next(e for e in manifest.feature_transforms if 'roc' in e.func.__name__)
+    assert roc_entry.include_if is None
+
+
+def test_build_manifest_feature_include_if_stored_on_entry() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['features'][0]['include_if'] = 'use_frac_diff'
+    yaml_dict['sfd']['params']['use_frac_diff'] = [True, False]
+    manifest = build_manifest(yaml_dict)
+    fd_entry = next(e for e in manifest.feature_transforms if 'fractional' in e.func.__name__)
+    assert fd_entry.include_if == 'use_frac_diff'
+
+
+def test_validate_no_error_when_include_if_key_is_in_sfd_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['include_if'] = 'use_roc'
+    yaml_dict['sfd']['params']['use_roc'] = [True, False]
+    result = validate(yaml_dict)
+    assert result.valid
+    assert not any('use_roc' in e.message for e in result.errors)
+
+
+def test_validate_error_when_include_if_key_not_in_sfd_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['indicators'][0]['include_if'] = 'use_roc'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('use_roc' in e.message for e in result.errors)
+
+
+def test_validate_error_when_include_if_param_values_are_not_bool() -> None:
+    for bad_values in [[1, 0], ['yes', 'no'], [1]]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['indicators'][0]['include_if'] = 'use_roc'
+        yaml_dict['sfd']['params']['use_roc'] = bad_values
+        result = validate(yaml_dict)
+        assert not result.valid, f'use_roc={bad_values!r} should be invalid'
+        assert any('use_roc' in e.path for e in result.errors)
 
 
 def test_build_manifest_indicator_round_param_ref_passes_through_as_string() -> None:

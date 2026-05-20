@@ -921,3 +921,9 @@ Note: add all new changelog entries to the bottom of this file.
 - `pca_compression` optional dict in the manifest wires `MLManifest.set_pca_compression()` with all four params defaulted
 - `logreg_binary.yaml` template added to `limen/yaml/templates/`
 - Results directory copies the source YAML for reproducibility; `uel.output_path` supports `{name}` and `{datetime}` placeholders
+
+## v3.5.1 on 20th of May, 2026
+
+- Add `include_if` support on indicators and features in YAML manifests — a round_params key name that gates feature inclusion at runtime
+- YAML validator type-checks `uel.feedback_interval` and `uel.checkpoint_interval` as integers
+- `UniversalExperimentLoop` accepts `yaml_reference` dict and stores it in `metadata.json` for reproducibility; wired automatically by `limen run`

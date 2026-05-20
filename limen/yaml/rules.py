@@ -41,17 +41,20 @@ def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
 
 
 _FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
+_FUNC_LIST_EXTRA_KNOWN_KEYS = frozenset({'include_if'})
 
 
 def _check_func_block(block: dict[str, Any],
                       base_path: str,
                       errors: list[YAMLError],
-                      warnings: list[YAMLError]) -> None:
+                      warnings: list[YAMLError],
+                      extra_known_keys: frozenset[str] = frozenset()) -> None:
 
     '''Validate func (required, callable) and optional params mapping on a {func, params?} block.'''
 
+    known = _FUNC_BLOCK_KNOWN_KEYS | extra_known_keys
     for key in block:
-        if key not in _FUNC_BLOCK_KNOWN_KEYS:
+        if key not in known:
             warnings.append(YAMLError(
                 message=f"Unknown field '{key}'",
                 path=f'{base_path}.{key}',
@@ -412,7 +415,15 @@ class FuncList:
                     path=f'{self._path}[{i}]',
                 ))
                 continue
-            _check_func_block(item, f'{self._path}[{i}]', errors, warnings)
+            _check_func_block(item, f'{self._path}[{i}]', errors, warnings,
+                               extra_known_keys=_FUNC_LIST_EXTRA_KNOWN_KEYS)
+            if 'include_if' in item:
+                val = item['include_if']
+                if not isinstance(val, str) or not val:
+                    errors.append(YAMLError(
+                        message="'include_if' must be a non-empty string (a round_params key)",
+                        path=f'{self._path}[{i}].include_if',
+                    ))
 
 
 class SingleFuncBlock:
@@ -839,6 +850,29 @@ class ParamCoverage:
             meta_params.add(pca.get('enabled_param') or 'auto_pca')
             meta_params.add(pca.get('n_components_param') or 'pca_k')
 
+        include_if_keys: set[str] = set()
+        for item in (manifest.get('indicators') or []) + (manifest.get('features') or []):
+            if isinstance(item, dict) and isinstance(item.get('include_if'), str):
+                include_if_keys.add(item['include_if'])
+        meta_params.update(include_if_keys)
+
+        sfd_param_values = sfd.get('params') or {}
+        for key in sorted(include_if_keys):
+            if key not in sfd_params:
+                errors.append(YAMLError(
+                    message=f"'include_if: {key}' references '{key}' but '{key}' is not defined in sfd.params",
+                    path='sfd.manifest',
+                    suggestion=f"Add '{key}' to sfd.params",
+                ))
+            else:
+                values = sfd_param_values.get(key) or []
+                if not all(isinstance(v, bool) for v in values):
+                    errors.append(YAMLError(
+                        message=f"'include_if: {key}' — sfd.params['{key}'] must contain only boolean values (true/false)",
+                        path=f'sfd.params.{key}',
+                        suggestion=f"Change '{key}' values to [true] or [true, false]",
+                    ))
+
         for ref in sorted(manifest_refs):
             if ref not in sfd_params and ref not in arch_params and ref not in meta_params:
                 errors.append(YAMLError(
@@ -929,8 +963,10 @@ class ParamKeyFields:
 
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
     ('search_strategy', dict, 'Use search_strategy:\n  type: random'),
-    ('output_path',     str,  None),
+    ('output_path', str, None),
     ('prep_each_round', bool, None),
+    ('feedback_interval', int, None),
+    ('checkpoint_interval', int, None),
 ]
 
 
@@ -948,7 +984,7 @@ class UelSpec:
             if field not in uel:
                 continue
             value = uel[field]
-            if not isinstance(value, expected):
+            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
                 errors.append(YAMLError(
                     message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
                     path=f'uel.{field}',
