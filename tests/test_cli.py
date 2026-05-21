@@ -1,8 +1,12 @@
+import json
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
 from limen.cli.main import cli
+from limen.yaml.parser import parse
 from tests.test_yaml import _MINIMAL_ML_YAML
 
 
@@ -147,3 +151,101 @@ def test_cli_init_refuses_to_overwrite_existing_file() -> None:
         assert result.exit_code == 1
         assert 'already exists' in result.output
         assert Path('my_exp.yaml').read_text() == 'existing content'
+
+
+# ---------------------------------------------------------------------------
+# run --resume
+# ---------------------------------------------------------------------------
+
+def _make_results_dir(yaml_reference: dict | None = None,
+                      target_permutations: int = 10) -> Path:
+    tmp = Path(tempfile.mkdtemp())
+    if yaml_reference is not None:
+        metadata = {'sfd_module': 'yaml:test_exp', 'yaml_reference': yaml_reference}
+        (tmp / 'metadata.json').write_text(json.dumps(metadata))
+    checkpoint = {
+        'metadata': {
+            'experiment_round': 5,
+            'target_permutations': target_permutations,
+            'strategy_type': 'random',
+            'content_hash': 'abc',
+        },
+        'msq_state': {},
+        'domain_state': {},
+    }
+    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    return tmp
+
+
+def test_cli_run_resume_exits_0_on_success() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict))
+    runner = CliRunner()
+    with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
+        mock_uel.return_value.run.return_value = None
+        result = runner.invoke(cli, ['run', '--resume', str(results_dir)])
+    assert result.exit_code == 0
+
+
+def test_cli_run_resume_calls_uel_run_with_resume_true() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict), target_permutations=20)
+    runner = CliRunner()
+    with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
+        mock_uel.return_value.run.return_value = None
+        runner.invoke(cli, ['run', '--resume', str(results_dir)])
+    _, kwargs = mock_uel.return_value.run.call_args
+    assert kwargs.get('resume') is True
+    assert kwargs.get('n_permutations') == 20
+
+
+def test_cli_run_resume_errors_when_no_metadata_json() -> None:
+    tmp = Path(tempfile.mkdtemp())
+    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                               'strategy_type': 'random', 'content_hash': 'x'},
+                  'msq_state': {}, 'domain_state': {}}
+    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'metadata.json' in result.output
+
+
+def test_cli_run_resume_errors_when_no_yaml_reference() -> None:
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / 'metadata.json').write_text(json.dumps({'sfd_module': 'some.sfd'}))
+    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                               'strategy_type': 'random', 'content_hash': 'x'},
+                  'msq_state': {}, 'domain_state': {}}
+    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'yaml_reference' in result.output
+
+
+def test_cli_run_resume_errors_when_no_checkpoint_json() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': dict(yaml_dict)}))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'checkpoint.json' in result.output
+
+
+def test_cli_run_resume_and_yaml_file_together_exits_1() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict))
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        result = runner.invoke(cli, ['run', 'exp.yaml', '--resume', str(results_dir)])
+    assert result.exit_code == 1
+    assert 'Cannot specify both' in result.output
+
+
+def test_cli_run_no_args_exits_1() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run'])
+    assert result.exit_code == 1

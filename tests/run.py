@@ -118,6 +118,13 @@ from tests.test_cli import test_cli_init_shows_success_message
 from tests.test_cli import test_cli_init_without_template_lists_templates_and_exits_1
 from tests.test_cli import test_cli_init_unknown_template_exits_1
 from tests.test_cli import test_cli_init_refuses_to_overwrite_existing_file
+from tests.test_cli import test_cli_run_resume_exits_0_on_success
+from tests.test_cli import test_cli_run_resume_calls_uel_run_with_resume_true
+from tests.test_cli import test_cli_run_resume_errors_when_no_metadata_json
+from tests.test_cli import test_cli_run_resume_errors_when_no_yaml_reference
+from tests.test_cli import test_cli_run_resume_errors_when_no_checkpoint_json
+from tests.test_cli import test_cli_run_resume_and_yaml_file_together_exits_1
+from tests.test_cli import test_cli_run_no_args_exits_1
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1113,6 +1120,13 @@ tests = [
     test_cli_init_without_template_lists_templates_and_exits_1,
     test_cli_init_unknown_template_exits_1,
     test_cli_init_refuses_to_overwrite_existing_file,
+    test_cli_run_resume_exits_0_on_success,
+    test_cli_run_resume_calls_uel_run_with_resume_true,
+    test_cli_run_resume_errors_when_no_metadata_json,
+    test_cli_run_resume_errors_when_no_yaml_reference,
+    test_cli_run_resume_errors_when_no_checkpoint_json,
+    test_cli_run_resume_and_yaml_file_together_exits_1,
+    test_cli_run_no_args_exits_1,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
