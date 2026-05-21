@@ -12,6 +12,7 @@ from limen.metrics.balanced_metric import balanced_metric
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
+from limen.yaml.compiler import build_search_strategy
 from limen.yaml.errors import GitError
 from limen.yaml.errors import ValidationError
 from limen.yaml.errors import YAMLError
@@ -973,3 +974,23 @@ def test_compiled_sfd_manifest_is_cached() -> None:
 def test_compiled_sfd_manifest_is_ml_manifest() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     assert isinstance(CompiledSFD(yaml_dict).manifest(), MLManifest)
+
+
+def test_build_search_strategy_raises_for_unknown_type() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = {'type': 'bayesian'}
+    try:
+        build_search_strategy(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert 'bayesian' in str(exc)
+
+
+def test_build_search_strategy_raises_for_non_mapping_strategy() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = 'random'
+    try:
+        build_search_strategy(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert 'mapping' in str(exc)
