@@ -125,6 +125,11 @@ from tests.test_cli import test_cli_run_resume_errors_when_no_yaml_reference
 from tests.test_cli import test_cli_run_resume_errors_when_no_checkpoint_json
 from tests.test_cli import test_cli_run_resume_and_yaml_file_together_exits_1
 from tests.test_cli import test_cli_run_no_args_exits_1
+from tests.test_cli import test_cli_run_dry_run_and_resume_together_exits_1
+from tests.test_cli import test_cli_run_resume_errors_when_checkpoint_missing_metadata_key
+from tests.test_cli import test_cli_run_resume_errors_when_metadata_json_is_invalid_json
+from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict
+from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1127,6 +1132,11 @@ tests = [
     test_cli_run_resume_errors_when_no_checkpoint_json,
     test_cli_run_resume_and_yaml_file_together_exits_1,
     test_cli_run_no_args_exits_1,
+    test_cli_run_dry_run_and_resume_together_exits_1,
+    test_cli_run_resume_errors_when_checkpoint_missing_metadata_key,
+    test_cli_run_resume_errors_when_metadata_json_is_invalid_json,
+    test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict,
+    test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,

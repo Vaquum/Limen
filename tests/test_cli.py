@@ -257,3 +257,42 @@ def test_cli_run_resume_errors_when_checkpoint_missing_metadata_key() -> None:
     result = runner.invoke(cli, ['run', '--resume', str(tmp)])
     assert result.exit_code == 1
     assert 'checkpoint' in result.output.lower()
+
+
+def test_cli_run_resume_errors_when_metadata_json_is_invalid_json() -> None:
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / 'metadata.json').write_text('not valid json {{{')
+    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                               'strategy_type': 'random', 'content_hash': 'x'},
+                  'msq_state': {}, 'domain_state': {}}
+    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'metadata.json' in result.output
+
+
+def test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict() -> None:
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': 'not-a-dict'}))
+    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                               'strategy_type': 'random', 'content_hash': 'x'},
+                  'msq_state': {}, 'domain_state': {}}
+    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'yaml_reference' in result.output
+
+
+def test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name() -> None:
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': {'sfd': {}}}))
+    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                               'strategy_type': 'random', 'content_hash': 'x'},
+                  'msq_state': {}, 'domain_state': {}}
+    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'metadata.name' in result.output
