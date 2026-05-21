@@ -126,6 +126,9 @@ def run(yaml_file: Path | None, dry_run: bool, resume: Path | None) -> None:
         if yaml_file is not None:
             click.secho('Cannot specify both a YAML file and --resume.', fg='red')
             raise SystemExit(1)
+        if dry_run:
+            click.secho('--dry-run has no effect with --resume.', fg='red')
+            raise SystemExit(1)
         ok = run_resume(resume)
     elif yaml_file is not None:
         ok = run_experiment(yaml_file, dry_run=dry_run)
@@ -166,7 +169,7 @@ def init(output: Path, template: str | None) -> None:
     \b
     Examples:
       limen init my_experiment.yaml --template logreg_binary
-      limen init                                  # lists available templates
+      limen init my_experiment.yaml               # lists templates when --template omitted
     '''
 
     ok = run_init(output, template)

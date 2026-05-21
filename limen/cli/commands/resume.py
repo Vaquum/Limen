@@ -107,6 +107,6 @@ def _load_target_permutations(results_dir: Path) -> int | None:
     try:
         data = CheckpointManager().load(results_dir)
         return int(data['metadata']['target_permutations'])
-    except ValueError as exc:
+    except (ValueError, KeyError) as exc:
         click.secho(f'  ✗ Cannot load checkpoint: {exc}', fg='red')
         return None
