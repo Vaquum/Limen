@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_binary_experiment
-  limen_version: "3.5.0"
+  limen_version: "3.6.0"
   mode: development
   description: Logistic regression binary classifier with calibration and feature perturbation
 
