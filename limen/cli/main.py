@@ -2,6 +2,8 @@ from pathlib import Path
 
 import click
 
+from limen.cli.commands.init import run_init
+from limen.cli.commands.list_templates import run_list_templates
 from limen.cli.commands.run import run_experiment
 from limen.cli.commands.validate import run_validate
 
@@ -116,4 +118,41 @@ def run(yaml_file: Path, dry_run: bool) -> None:
     '''
 
     ok = run_experiment(yaml_file, dry_run=dry_run)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command('list-templates')
+def list_templates() -> None:
+
+    '''
+    List all available YAML experiment templates.
+
+    \b
+    Examples:
+      limen list-templates
+    '''
+
+    run_list_templates()
+
+
+@cli.command()
+@click.argument('output', type=click.Path(path_type=Path))
+@click.option('--template', default=None,
+              help='Template name to scaffold from (e.g. logreg_binary).')
+def init(output: Path, template: str | None) -> None:
+
+    '''
+    Scaffold a new YAML experiment file from a template.
+
+    \b
+    Copies the selected template to OUTPUT and sets metadata.name
+    to the output filename stem.
+
+    \b
+    Examples:
+      limen init my_experiment.yaml --template logreg_binary
+      limen init                                  # lists available templates
+    '''
+
+    ok = run_init(output, template)
     raise SystemExit(0 if ok else 1)
