@@ -104,11 +104,10 @@ def test_cli_init_creates_file_from_template() -> None:
 
 
 def test_cli_init_sets_metadata_name_to_output_stem() -> None:
-    import yaml
     runner = CliRunner()
     with runner.isolated_filesystem():
         runner.invoke(cli, ['init', 'my_exp.yaml', '--template', 'logreg_binary'])
-        d = yaml.safe_load(Path('my_exp.yaml').read_text())
+        d, _ = parse(Path('my_exp.yaml'))
         assert d['metadata']['name'] == 'my_exp'
 
 
