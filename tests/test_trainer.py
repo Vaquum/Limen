@@ -640,7 +640,10 @@ def test_trainer_wraps_yaml_resolution_error(monkeypatch) -> None:
             return {'alpha': [1]}
 
         def manifest(self):
-            raise trainer_module.ResolutionError('bad reference')
+            raise trainer_module.ResolutionError(
+                'bad.reference',
+                ['limen'],
+            )
 
     monkeypatch.setattr(trainer_module, 'CompiledSFD', FakeCompiledSFD)
 
