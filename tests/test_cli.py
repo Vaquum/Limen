@@ -144,6 +144,25 @@ def test_cli_init_refuses_to_overwrite_existing_file() -> None:
         assert Path('my_exp.yaml').read_text() == 'existing content'
 
 
+def test_cli_init_rejects_invalid_slug_stem() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my exp.yaml', '--template', 'logreg_binary'])
+        assert result.exit_code == 1
+        assert 'my exp' in result.output
+
+
+def test_cli_init_metadata_name_not_updated_in_non_metadata_fields() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp.yaml', '--template', 'rule_based'])
+        assert result.exit_code == 0
+        d, _ = parse(Path('my_exp.yaml'))
+        assert d['metadata']['name'] == 'my_exp'
+        text = Path('my_exp.yaml').read_text()
+        assert 'name: "RSI oversold"' in text or 'name: RSI oversold' in text
+
+
 def _make_results_dir(yaml_reference: dict | None = None,
                       target_permutations: int = 10) -> tempfile.TemporaryDirectory:
     td = tempfile.TemporaryDirectory()

@@ -121,6 +121,8 @@ from tests.test_cli import test_cli_init_shows_success_message
 from tests.test_cli import test_cli_init_without_template_lists_templates_and_exits_1
 from tests.test_cli import test_cli_init_unknown_template_exits_1
 from tests.test_cli import test_cli_init_refuses_to_overwrite_existing_file
+from tests.test_cli import test_cli_init_rejects_invalid_slug_stem
+from tests.test_cli import test_cli_init_metadata_name_not_updated_in_non_metadata_fields
 from tests.test_cli import test_cli_run_resume_exits_0_on_success
 from tests.test_cli import test_cli_run_resume_calls_uel_run_with_resume_true
 from tests.test_cli import test_cli_run_resume_errors_when_no_metadata_json
@@ -1131,6 +1133,8 @@ tests = [
     test_cli_init_without_template_lists_templates_and_exits_1,
     test_cli_init_unknown_template_exits_1,
     test_cli_init_refuses_to_overwrite_existing_file,
+    test_cli_init_rejects_invalid_slug_stem,
+    test_cli_init_metadata_name_not_updated_in_non_metadata_fields,
     test_cli_run_resume_exits_0_on_success,
     test_cli_run_resume_calls_uel_run_with_resume_true,
     test_cli_run_resume_errors_when_no_metadata_json,
