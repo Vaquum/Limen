@@ -1,3 +1,4 @@
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from sklearn.linear_model import LogisticRegression
@@ -8,6 +9,26 @@ from limen.sfd.reference_architecture.base import ReferenceModel
 
 if TYPE_CHECKING:
     from limen.experiment.manifest_core import CalibrationConfig
+
+
+def _resolve_class_weight(class_weight: Any) -> Any:
+
+    '''Preserve legacy numeric shorthand while allowing sklearn-native values.'''
+
+    if isinstance(class_weight, (int, float)) and not isinstance(class_weight, bool):
+        return {0: class_weight, 1: 1}
+    return class_weight
+
+
+def _drop_removed_sklearn_params(params: dict[str, Any]) -> dict[str, Any]:
+
+    '''Drop compatibility params removed by the installed sklearn version.'''
+
+    supported = set(inspect.signature(LogisticRegression).parameters)
+    cleaned = dict(params)
+    for name in {'multi_class'} - supported:
+        cleaned.pop(name, None)
+    return cleaned
 
 
 class LogRegBinary(ReferenceModel):
@@ -38,10 +59,10 @@ class LogRegBinary(ReferenceModel):
         if prediction_calibration_config is not None:
             self.prediction_calibration_config = prediction_calibration_config
 
-        class_weight = params.pop('class_weight', None)
-        if class_weight is not None:
-            params['class_weight'] = {0: class_weight, 1: 1}
+        if 'class_weight' in params:
+            params['class_weight'] = _resolve_class_weight(params['class_weight'])
 
+        params = _drop_removed_sklearn_params(params)
         self.model = LogisticRegression(**params)
         self.model.fit(data['x_train'], data['y_train'])
 
@@ -106,12 +127,14 @@ def logreg_binary(data: dict,
                   C: float = 1.0,
                   fit_intercept: bool = True,
                   intercept_scaling: float = 1,
-                  class_weight: str | dict | None = None,
+                  class_weight: float | str | dict | None = None,
                   random_state: int = 42,
                   max_iter: int = 100,
+                  multi_class: str = 'deprecated',
                   verbose: int = 0,
                   warm_start: bool = False,
                   n_jobs: int = -1,
+                  l1_ratio: float | None = None,
                   prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
     '''
@@ -126,12 +149,15 @@ def logreg_binary(data: dict,
         C (float): Inverse of regularization strength
         fit_intercept (bool): Whether to fit intercept
         intercept_scaling (float): Intercept scaling
-        class_weight (str or dict): Class weights
+        class_weight (float, str, or dict): Class weights. Numeric values keep the
+            legacy `{0: value, 1: 1}` shorthand; strings/dicts pass through to sklearn.
         random_state (int): Random seed
         max_iter (int): Maximum iterations
+        multi_class (str): Multiclass handling passthrough
         verbose (int): Verbosity level
         warm_start (bool): Whether to reuse previous solution
         n_jobs (int): Number of parallel jobs
+        l1_ratio (float | None): Elastic-net mixing parameter
         prediction_calibration_config (CalibrationConfig | None): Optional calibration config
 
     Returns:
@@ -151,9 +177,11 @@ def logreg_binary(data: dict,
         class_weight=class_weight,
         random_state=random_state,
         max_iter=max_iter,
+        multi_class=multi_class,
         verbose=verbose,
         warm_start=warm_start,
         n_jobs=n_jobs,
+        l1_ratio=l1_ratio,
     )
 
     return model.evaluate(data, inline_metrics=True)

@@ -23,7 +23,6 @@ def params() -> dict:
         'shift': [-1, -2, -3, -4, -5],
         'q': [0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53],
         'roc_period': [1, 4, 12, 24, 144],
-        'penalty': ['l2'],
         # view perturbation
         'scaler_type': ['logreg', 'robust', 'rank_gauss'],
         # feature perturbation
@@ -36,11 +35,21 @@ def params() -> dict:
         'threshold_max': [0.60, 0.65, 0.70],
         'threshold_step': [0.05, 0.10],
         # classifier parameters
-        'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
-        'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
-        'max_iter': [30, 60, 90, 120, 180, 240],
         'solver': ['lbfgs', 'newton-cg', 'liblinear', 'sag', 'newton-cholesky'],
+        'penalty': ['l2'],
+        'dual': [False],
         'tol': [0.001, 0.01, 0.03, 0.1, 0.3],
+        'C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+        'fit_intercept': [True, False],
+        'intercept_scaling': [1.0],
+        'class_weight': [0.45, 0.55, 0.65, 0.75, 0.85],
+        'random_state': [42],
+        'max_iter': [30, 60, 90, 120, 180, 240],
+        'multi_class': ['deprecated'],
+        'verbose': [0],
+        'warm_start': [False],
+        'n_jobs': [-1],
+        'l1_ratio': [None],
     }
 
 

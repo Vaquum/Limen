@@ -48,6 +48,8 @@ It currently combines:
 - the `LogRegBinary` reference model
 - `CalibrationBuilder` with `sklearn_probability_calibrator` and `grid_threshold_optimizer`
 
+The classifier parameter surface mirrors the sklearn `LogisticRegression` constructor through manifest params: `solver`, `penalty`, `dual`, `tol`, `C`, `fit_intercept`, `intercept_scaling`, `class_weight`, `random_state`, `max_iter`, `multi_class`, `verbose`, `warm_start`, `n_jobs`, and `l1_ratio`.
+
 The calibration search space includes `use_calibration`, `use_threshold`, `cal_method`, `threshold_min`, `threshold_max`, and `threshold_step`, giving a full grid of calibration modes within a single experiment run.
 
 On a live local smoke run over the bundled test dataset in this repo, it prepared:
