@@ -949,3 +949,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `HistoricalData.get_spot_dollar_klines()` for Vaquum Hugging Face BTCUSDT dollar-bar snapshots
 - Resolve native 100k, 1M, 2M, 4M, 8M, 15M, 16M, 30M, 32M, 60M, 120M, and 240M dollar-bar datasets directly, with non-native multiples aggregating from the largest lower native dollar-bar source
 - Normalize dollar-bar snapshots to the existing Limen OHLCV-plus-liquidity schema and repair the current HF second-encoded datetime export to UTC `datetime`
+
+## v3.9.0 on 21st of May, 2026
+
+- Add the missing feature and target surface from issue #535, including per-feature modules for rolling z-score, native microstructure, calendar session, structural OHLCV, range volatility, and realized-risk helpers
+- Add `ForwardVolNormalizedReturnTarget` for forward log-return labels normalized by current Parkinson volatility
+- Route new regression coverage into the existing feature-library and target test suites
+- Require code-changing PRs to include both a CHANGELOG entry and package version update

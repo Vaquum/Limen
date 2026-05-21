@@ -16,6 +16,7 @@
 -> You stick with minimal highly readable code.
 -> Your code is highly maintainable.
 -> You document the development journey in CHANGELOG.md using semantic versioning.
+-> If code changed, PR must include CHANGELOG and version update.
 -> You use previous CHANGELOG.md entries as indication of the form and style.
 -> You write minimal, clinical code. 
 -> You never make unnecessary changes.

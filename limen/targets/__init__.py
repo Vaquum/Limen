@@ -1,6 +1,7 @@
 from limen.targets.ema_breakout import EmaBreakoutTarget
 from limen.targets.exit_quality import ExitQualityTarget
 from limen.targets.forward_breakout import ForwardBreakoutTarget
+from limen.targets.forward_vol_normalized_return import ForwardVolNormalizedReturnTarget
 from limen.targets.identity import IdentityTarget
 from limen.targets.next_bar_down import NextBarDownTarget
 from limen.targets.next_bar_up import NextBarUpTarget
@@ -15,6 +16,7 @@ __all__ = [
     'EmaBreakoutTarget',
     'ExitQualityTarget',
     'ForwardBreakoutTarget',
+    'ForwardVolNormalizedReturnTarget',
     'IdentityTarget',
     'NextBarDownTarget',
     'NextBarUpTarget',

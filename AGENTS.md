@@ -38,6 +38,7 @@
 - At most one active local WA branch and one unmerged remote WA branch may exist at a time but can inherit branches from operator as long as one active local branch rule stands
 - Start the local dry compile or test runner before push; while it runs, push the committed branch and open or update the PR.
 - PR and authoritative CI compile are required before merge.
+- If code changed, PR must include CHANGELOG and version update.
 - Report-back or stand-down requires committed state, a clean tree, and the current branch head present on remote.
 - Machine contracts override prose and repo folklore.
 
@@ -232,6 +233,7 @@ Minimal common contract shape preserved from the existing per-task developer con
       "local_work_branch_must_be_up_to_date_with_remote_branch_before_terminal_claim": true,
       "repo_mutation_requires_commit_and_push_before_terminal_claim": true,
       "repo_mutating_task_requires_open_pr_before_terminal_claim": true,
+      "code_change_pr_requires_changelog_and_version_update": true,
       "terminal_report_must_end_with_commit_hash_and_open_pr_url": true,
       "commit_message_must_follow_conventional_commits": true,
       "pr_title_must_follow_conventional_commits": true,

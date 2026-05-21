@@ -4,12 +4,32 @@ import numpy as np
 import polars as pl
 import pytest
 
+from limen.features.downside_volatility_ratio import downside_volatility_ratio
 from limen.features.jump_variation_proxy import jump_variation_proxy
 from limen.features.realized_kurtosis import realized_kurtosis
 from limen.features.realized_semivariance import realized_semivariance
 from limen.features.realized_skewness import realized_skewness
+from limen.features.return_autocorrelation import return_autocorrelation
+from limen.features.return_volatility_correlation import return_volatility_correlation
 from limen.features.tail_event_intensity import tail_event_intensity
+from limen.features.volume_volatility_correlation import volume_volatility_correlation
 from limen.features.volatility_of_volatility import volatility_of_volatility
+
+
+PARKINSON_SCALE = 4.0 * math.log(2.0)
+
+
+def _bars_with_parkinson_variance(variance: list[float]) -> pl.DataFrame:
+    log_ranges = [math.sqrt(value * PARKINSON_SCALE) for value in variance]
+    return pl.DataFrame(
+        {
+            'open': [1.0] * len(variance),
+            'high': [math.exp(value) for value in log_ranges],
+            'low': [1.0] * len(variance),
+            'close': [1.0] * len(variance),
+            'volume': [float(idx + 1) for idx in range(len(variance))],
+        }
+    )
 
 
 def test_realized_semivariance_separates_upside_and_downside_return_energy() -> None:
@@ -75,3 +95,47 @@ def test_volatility_of_volatility_matches_nested_sample_standard_deviation() -> 
     expected = np.std(base_vols[1:], ddof=1)
 
     assert result['volatility_of_volatility'].to_list()[-1] == pytest.approx(expected)
+
+
+def test_structural_correlation_features_match_manual_formulas() -> None:
+    variance_data = _bars_with_parkinson_variance([1.0, 2.0, 3.0, 4.0, 5.0])
+    return_data = variance_data.with_columns(
+        pl.Series('close', [1.0, 2.0, 6.0, 24.0, 120.0])
+    )
+    alternating_returns = pl.DataFrame(
+        {
+            'close': [100.0, 110.0, 99.0, 108.9, 98.01],
+            'high': [110.0] * 5,
+            'low': [90.0] * 5,
+            'volume': [1.0, 2.0, 3.0, 4.0, 5.0],
+        }
+    )
+    directional_data = pl.DataFrame(
+        {
+            'open': [10.0, 10.0, 10.0, 10.0, 10.0],
+            'high': [12.0, 12.0, 12.0, 12.0, 12.0],
+            'low': [8.0, 8.0, 8.0, 8.0, 8.0],
+            'close': [10.0, 11.0, 12.0, 11.0, 10.0],
+            'volume': [100.0, 200.0, 100.0, 50.0, 100.0],
+        }
+    )
+
+    assert return_autocorrelation(
+        alternating_returns,
+        window=3,
+    )['return_autocorrelation'].to_list()[-1] == pytest.approx(-1.0)
+    assert volume_volatility_correlation(
+        variance_data,
+        window=3,
+    )['volume_volatility_correlation'].to_list()[-1] == pytest.approx(1.0)
+    assert return_volatility_correlation(
+        return_data,
+        window=3,
+    )['return_volatility_correlation'].to_list()[-1] == pytest.approx(1.0)
+    assert downside_volatility_ratio(
+        directional_data,
+        window=3,
+    )['downside_volatility_ratio'].to_list()[3:] == pytest.approx([
+        0.2754758218741462,
+        0.6479217603911981,
+    ])

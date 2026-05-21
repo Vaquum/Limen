@@ -50,15 +50,23 @@ These helpers work directly on bar data and are usually the easiest feature laye
 |---|---|---|
 | `atr_percent_sma` | `atr_percent_sma` | ATR scaled by close price using SMA smoothing. |
 | `atr_sma` | `atr_sma` | SMA-smoothed ATR variant. |
-| `close_position` | `close_position` | Close location inside the current bar's high-low range. |
+| `close_position` | `close_position` | Close location inside the current bar's high-low range. Accepts `window`; `1` preserves single-bar behavior. |
+| `close_position_rolling` | `close_position_rolling` | Rolling mean of close location inside the high-low range. |
+| `close_ma_distance_atr` | `close_ma_distance_atr` | Close-to-SMA distance normalized by SMA-smoothed true range. |
+| `distance_from_ma` | `distance_from_ma` | Close distance from its rolling moving average. |
 | `distance_from_high` | `distance_from_high` | Distance from a rolling high. |
 | `distance_from_low` | `distance_from_low` | Distance from a rolling low. |
 | `gap_high` | `gap_high` | Current high relative to the previous close. |
+| `kaufman_efficiency_ratio` | `kaufman_efficiency_ratio` | Directional displacement divided by the rolling path length. |
+| `narrow_range` | `narrow_range` | Current range divided by trailing maximum range. |
 | `price_range_position` | `price_range_position` | Rolling range position over a wider window. |
 | `range_pct` | `range_pct` | Current bar range as a percentage. |
+| `stochastic_k_abs` | `stochastic_k_abs` | Absolute distance between stochastic %K and 0.5. |
 | `trend_strength` | `trend_strength` | Fast-versus-slow trend strength summary. |
+| `volume_to_range` | `volume_to_range` | Rolling mean volume per unit of high-low range. |
 | `volume_regime` | `volume_regime` | Volume context over a lookback window. |
 | `vwap` | `vwap` | Requires a datetime-like `datetime` column because VWAP resets by trading day. |
+| `wick_proportion` | `wick_proportion` | Rolling mean wick share of full candle range. |
 
 ## Calendar And Cyclical Time Features
 
@@ -66,8 +74,10 @@ These helpers derive time-of-bar context from `datetime` without depending on ea
 
 | Function | Adds by default | Notes |
 |---|---|---|
-| `calendar_time_features` | `hour`, `minute`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, `is_weekend` | Adds discrete calendar fields for downstream splits, filters, and rules. `weekday` uses ISO numbering (`Monday=1` to `Sunday=7`), and `week_of_year` uses ISO week numbering. |
+| `calendar_time_features` | `hour`, `minute`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, `half_of_year`, `is_weekend` | Adds discrete calendar fields for downstream splits, filters, and rules. `weekday` uses ISO numbering (`Monday=1` to `Sunday=7`), and `week_of_year` uses ISO week numbering. |
 | `cyclical_time_features` | `hour_sin`, `hour_cos`, `minute_sin`, `minute_cos`, `weekday_sin`, `weekday_cos`, `day_of_month_sin`, `day_of_month_cos`, `day_of_year_sin`, `day_of_year_cos`, `week_of_year_sin`, `week_of_year_cos`, `month_sin`, `month_cos`, `quarter_sin`, `quarter_cos` | Encodes cyclical calendar fields without introducing artificial ordinal jumps. Uses the same ISO conventions as `calendar_time_features`; weekday cycles are phase-aligned with `weekday - 1` before applying sine/cosine. |
+| `is_funding_hour` | `is_funding_hour` | Parameterized funding-cadence hour indicator; default hours are `0`, `8`, and `16`. |
+| `is_us_open_hour` | `is_us_open_hour` | Parameterized US open-hour indicator; default hour is `14`. |
 
 ## Range-Based Volatility Features
 
@@ -76,8 +86,11 @@ These helpers estimate volatility directly from OHLC structure instead of relyin
 | Function | Adds by default | Notes |
 |---|---|---|
 | `parkinson_volatility` | `parkinson_volatility` | High-low range estimator that ignores close-to-close drift. |
+| `parkinson_vol_of_vol` | `parkinson_vol_of_vol` | Rolling standard deviation of Parkinson variance. |
 | `garman_klass_volatility` | `garman_klass_volatility` | OHLC estimator using open, high, low, and close information. |
 | `rogers_satchell_volatility` | `rogers_satchell_volatility` | Drift-robust OHLC volatility estimator. |
+| `volatility_ratio` | `volatility_ratio` | Short rolling Parkinson variance divided by long rolling Parkinson variance. |
+| `volatility_spike` | `volatility_spike` | Current Parkinson variance divided by its fixed-lag value. |
 | `yang_zhang_volatility` | `yang_zhang_volatility` | Combines overnight, open-close, and range information into a higher-fidelity volatility estimate. Requires `window > 1`. |
 
 ## Liquidity And Impact Features
@@ -91,6 +104,15 @@ These helpers translate ordinary OHLCV bars into simple liquidity, impact, and s
 | `return_per_dollar_volume` | `return_per_dollar_volume` | Signed return per dollar of volume, useful when direction matters as much as impact. |
 | `range_per_dollar_volume` | `range_per_dollar_volume` | Bar range scaled by dollar volume. |
 | `illiquidity_shock` | `illiquidity_shock` | Current Amihud-style illiquidity relative to its own trailing mean. |
+| `liquidity_drop` | `liquidity_drop` | Current LOB liquidity divided by fixed-lag LOB liquidity. |
+| `liquidity_range` | `liquidity_range` | Rolling mean high-liquidity to low-liquidity ratio. |
+| `maker_liquidity_share` | `maker_liquidity_share` | Maker liquidity divided by total liquidity. |
+| `maker_volume_share` | `maker_volume_share` | Maker volume divided by total volume. |
+| `maker_volume_ratio` | `maker_volume_ratio` | Rolling mean maker-volume share. |
+| `taker_imbalance_ratio` | `taker_imbalance_ratio` | Rolling mean absolute taker imbalance as a share of volume. |
+| `trade_density` | `trade_density` | Rolling mean number of trades per unit of volume. |
+| `trade_imbalance` | `trade_imbalance` | Rolling maker volume divided by rolling total volume. |
+| `trade_size_ratio` | `trade_size_ratio` | Short average trade size divided by long average trade size. |
 
 ## Realized Risk And Tail Features
 
@@ -99,11 +121,15 @@ These helpers describe the quality of recent movement, not just its level.
 | Function | Adds by default | Notes |
 |---|---|---|
 | `realized_semivariance` | `upside_semivariance`, `downside_semivariance` | Splits rolling squared returns into upside and downside components. |
+| `downside_volatility_ratio` | `downside_volatility_ratio` | Rolling downside squared-return share of total squared returns. |
 | `realized_skewness` | `realized_skewness` | Rolling skewness of close-to-close returns. |
 | `realized_kurtosis` | `realized_kurtosis` | Rolling kurtosis of close-to-close returns. |
 | `jump_variation_proxy` | `jump_variation_proxy` | Positive gap between realized variance and bipower variation proxy. |
 | `tail_event_intensity` | `tail_event_intensity` | Share of recent bars whose absolute return exceeds a configurable threshold. |
 | `volatility_of_volatility` | `volatility_of_volatility` | Rolling variability of rolling close-to-close return volatility. |
+| `return_autocorrelation` | `return_autocorrelation` | Rolling correlation between returns and one-bar lagged returns. |
+| `return_volatility_correlation` | `return_volatility_correlation` | Rolling correlation between returns and Parkinson variance. |
+| `volume_volatility_correlation` | `volume_volatility_correlation` | Rolling correlation between volume and Parkinson variance. |
 
 ## Seasonality-Normalized Features
 
@@ -161,6 +187,7 @@ These helpers are mainly used to expand existing columns or define cutoffs for t
 | `lag_columns` | one lag per listed column | Requires `cols` and `lag`. |
 | `lag_range` | a lag range such as `close_lag_1` through `close_lag_3` | Requires `col`, `start`, and `end`. |
 | `lag_range_cols` | a lag range for each listed column | Requires `cols`, `start`, and `end`. |
+| `rolling_zscore` | configurable `*_zscore_*` column | Applies `identity`, `log1p`, or `abs` before rolling z-score standardization. |
 
 ## Stationarity And Long-Memory Helpers
 
