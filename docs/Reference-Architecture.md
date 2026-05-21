@@ -49,7 +49,7 @@ Not every model needs every key, but this is the standard Limen shape that the c
 
 | Class | Task shape | Deterministic | Notes |
 |---|---|---|---|
-| `LogRegBinary` | binary classification | yes | sklearn logistic regression wrapper |
+| `LogRegBinary` | binary classification | yes | sklearn logistic regression wrapper; manifest wrapper exposes constructor params |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
 | `XGBoostRegressor` | regression | no | requires `xgboost` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |

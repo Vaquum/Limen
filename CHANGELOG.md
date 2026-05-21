@@ -932,3 +932,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `tabpfn_binary.yaml`, `xgboost_regressor.yaml`, and `rule_based.yaml` YAML experiment templates
 - Rule-based YAML manifests now support `indicators` — wired into `RuleBasedManifest.feature_transforms` at compile time
+
+## v3.6.0 on 21st of May, 2026
+
+- Expose the full sklearn `LogisticRegression` constructor surface through the `logreg_binary` reference-architecture wrapper
+- Add the same LogReg model parameters to the foundational SFD `params()` and `logreg_binary.yaml` template so Python and YAML manifests stay aligned
+- Preserve the legacy numeric `class_weight` shorthand while allowing sklearn-native string and dict values

@@ -1,16 +1,21 @@
+import inspect
+
 import numpy as np
 import pandas as pd
 import polars as pl
+from sklearn.linear_model import LogisticRegression
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment import CalibrationConfig
+from limen.sfd.foundational_sfd import logreg_binary as foundational_logreg_binary
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
 from limen.sfd.reference_architecture import RuleBasedStrategy
 from limen.sfd.reference_architecture import TabPFNBinary
 from limen.sfd.reference_architecture import XGBoostRegressor
+from limen.sfd.reference_architecture import logreg_binary
 from limen.sfd.reference_architecture.rule_based import rule_based
 
 
@@ -100,6 +105,43 @@ def test_logreg_train_evaluate_end_to_end():
     assert results['confusion_fp'] + results['confusion_tn'] == int((data['y_test'] == 0).sum())
 
     assert '_preds' in results
+
+
+def test_logreg_wrapper_exposes_sklearn_constructor_params():
+
+    sklearn_params = set(inspect.signature(LogisticRegression).parameters)
+    wrapper_params = set(inspect.signature(logreg_binary).parameters) - {
+        'data',
+        'prediction_calibration_config',
+    }
+
+    assert sklearn_params <= wrapper_params
+
+
+def test_logreg_foundational_params_cover_wrapper_model_surface():
+
+    model_params = set(inspect.signature(logreg_binary).parameters) - {
+        'data',
+        'prediction_calibration_config',
+    }
+
+    assert model_params <= set(foundational_logreg_binary.params())
+
+
+def test_logreg_numeric_class_weight_preserves_legacy_shorthand():
+
+    data = _make_data(binary=True, with_price=False)
+    model = LogRegBinary().train(data, solver='lbfgs', max_iter=200, class_weight=0.45)
+
+    assert model.model.class_weight == {0: 0.45, 1: 1}
+
+
+def test_logreg_class_weight_accepts_sklearn_native_values():
+
+    data = _make_data(binary=True, with_price=False)
+    model = LogRegBinary().train(data, solver='lbfgs', max_iter=200, class_weight='balanced')
+
+    assert model.model.class_weight == 'balanced'
 
 
 def test_random_binary_train_evaluate_end_to_end():

@@ -631,6 +631,8 @@ def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, solver='lbfgs'):
 
 then manifest execution will automatically pull `C`, `class_weight`, `max_iter`, and `solver` from the current round when those keys exist in `round_params`.
 
+The built-in `logreg_binary` SFD uses this same path for the full sklearn logistic-regression constructor surface, so model tuning stays in `params()` rather than hidden inside the architecture.
+
 Required model parameters with no defaults must be present in the round params or Limen will raise.
 
 ## Calibration
