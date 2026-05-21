@@ -76,10 +76,6 @@ def test_cli_run_dry_run_valid_yaml_shows_dry_run_complete() -> None:
         assert 'Dry run' in result.output
 
 
-# ---------------------------------------------------------------------------
-# list-templates
-# ---------------------------------------------------------------------------
-
 def test_cli_list_templates_exits_0() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ['list-templates'])
@@ -98,10 +94,6 @@ def test_cli_list_templates_shows_descriptions() -> None:
     result = runner.invoke(cli, ['list-templates'])
     assert 'Logistic regression' in result.output
 
-
-# ---------------------------------------------------------------------------
-# init
-# ---------------------------------------------------------------------------
 
 def test_cli_init_creates_file_from_template() -> None:
     runner = CliRunner()
@@ -152,10 +144,6 @@ def test_cli_init_refuses_to_overwrite_existing_file() -> None:
         assert 'already exists' in result.output
         assert Path('my_exp.yaml').read_text() == 'existing content'
 
-
-# ---------------------------------------------------------------------------
-# run --resume
-# ---------------------------------------------------------------------------
 
 def _make_results_dir(yaml_reference: dict | None = None,
                       target_permutations: int = 10) -> Path:
