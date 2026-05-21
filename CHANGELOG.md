@@ -957,6 +957,15 @@ Note: add all new changelog entries to the bottom of this file.
 - Route new regression coverage into the existing feature-library and target test suites
 - Require code-changing PRs to include both a CHANGELOG entry and package version update
 
+
+## v3.9.1 on 21st of May, 2026
+
+- Make `Trainer` reconstruct YAML CLI experiment artifacts directly from `metadata.json["yaml_reference"]`, so `sfd_module: yaml:<name>` metadata no longer blocks promotion.
+
+## v3.9.2 on 21st of May, 2026
+
+- Wrap YAML reference resolution failures in `Trainer` as stable `ValueError` messages that point to `metadata.json["yaml_reference"]`.
+
 ## v3.10.0 on 21st of May, 2026
 
 - Add `limen list-templates` CLI command — lists all available YAML experiment templates with descriptions

@@ -13,6 +13,8 @@ import polars as pl
 from limen.experiment.trainer.errors import ReconstructionError
 from limen.experiment.trainer.sensor import Sensor
 from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.yaml.compiler import CompiledSFD
+from limen.yaml.errors import ResolutionError
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +45,20 @@ class Trainer:
         '''
         Create a Trainer from a completed experiment directory.
 
-        The SFD module named by `metadata.json["sfd_module"]` is loaded
-        in two stages: first the experiment_dir is searched for a file
-        of the same name (`<sfd_module>.py`); only when that file is
-        absent is the name resolved via `importlib.import_module` against
-        `sys.path` (the legacy mode for built-in SFDs referenced by a
-        fully-qualified package path). The experiment-local path is the
-        forward-looking contract — `trainer_prep.py`-style flows can
-        ship the SFD inside the experiment_dir and the Trainer becomes
-        self-sufficient with no operator-side `PYTHONPATH` wiring.
+        If metadata.json includes `yaml_reference`, Trainer rebuilds the
+        SFD from that declarative YAML payload without importing or
+        executing an experiment-provided SFD module. Otherwise, the SFD
+        module named by
+        `metadata.json["sfd_module"]` is loaded in two stages: first the
+        experiment_dir is searched for a file of the same name
+        (`<sfd_module>.py`); only when that file is absent is the name
+        resolved via `importlib.import_module` against `sys.path` (the
+        legacy mode for built-in SFDs referenced by a fully-qualified
+        package path).
 
-        NOTE: experiment_dir must be trusted. The SFD module is imported
-        as Python and executes arbitrary code from that module.
+        NOTE: experiment_dir must be trusted when the Python SFD module
+        path is used. That path imports Python and executes arbitrary code
+        from the module.
 
         Args:
             experiment_dir (str | Path): Path to completed experiment directory
@@ -75,13 +79,28 @@ class Trainer:
                 f"Only experiments created with experiment_dir support training."
             ) from None
 
-        if 'sfd_module' not in self._metadata:
-            raise ValueError(
-                'metadata.json missing required key: sfd_module'
-            )
+        yaml_reference = self._metadata.get('yaml_reference')
+        if yaml_reference is not None:
+            if not isinstance(yaml_reference, dict):
+                raise ValueError(
+                    'metadata.json key \'yaml_reference\' must be an object'
+                )
+            sfd_module_name = self._metadata.get('sfd_module', 'yaml_reference')
+            try:
+                sfd = CompiledSFD(yaml_reference)
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    'metadata.json key \'yaml_reference\' is not a valid '
+                    'YAML SFD reference'
+                ) from exc
+        else:
+            if 'sfd_module' not in self._metadata:
+                raise ValueError(
+                    'metadata.json missing required key: sfd_module'
+                )
 
-        sfd_module_name = self._metadata['sfd_module']
-        sfd = self._load_sfd_module(sfd_module_name)
+            sfd_module_name = self._metadata['sfd_module']
+            sfd = self._load_sfd_module(sfd_module_name)
 
         if not hasattr(sfd, 'manifest') or not hasattr(sfd, 'params'):
             raise ValueError(
@@ -89,8 +108,16 @@ class Trainer:
                 f"params(). Trainer requires a manifest-based SFD."
             )
 
-        self._manifest = sfd.manifest()
-        params = sfd.params()
+        try:
+            self._manifest = sfd.manifest()
+            params = sfd.params()
+        except (KeyError, ResolutionError, TypeError, ValueError) as exc:
+            if yaml_reference is not None:
+                raise ValueError(
+                    'metadata.json key \'yaml_reference\' is not a valid '
+                    'YAML SFD reference'
+                ) from exc
+            raise
         self._param_keys = frozenset(params.keys())
         self._round_data = self._load_round_data()
         self._original_log = self._load_original_log()
