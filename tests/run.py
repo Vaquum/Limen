@@ -109,6 +109,15 @@ from tests.test_cli import test_cli_validate_schema_error_exits_1_and_shows_erro
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_exits_0
 from tests.test_cli import test_cli_run_dry_run_shows_dry_run_message
 from tests.test_cli import test_cli_run_dry_run_parse_error_exits_1
+from tests.test_cli import test_cli_list_templates_exits_0
+from tests.test_cli import test_cli_list_templates_shows_all_template_names
+from tests.test_cli import test_cli_list_templates_shows_descriptions
+from tests.test_cli import test_cli_init_creates_file_from_template
+from tests.test_cli import test_cli_init_sets_metadata_name_to_output_stem
+from tests.test_cli import test_cli_init_shows_success_message
+from tests.test_cli import test_cli_init_without_template_lists_templates_and_exits_1
+from tests.test_cli import test_cli_init_unknown_template_exits_1
+from tests.test_cli import test_cli_init_refuses_to_overwrite_existing_file
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1095,6 +1104,15 @@ tests = [
     test_cli_run_dry_run_valid_yaml_exits_0,
     test_cli_run_dry_run_shows_dry_run_message,
     test_cli_run_dry_run_parse_error_exits_1,
+    test_cli_list_templates_exits_0,
+    test_cli_list_templates_shows_all_template_names,
+    test_cli_list_templates_shows_descriptions,
+    test_cli_init_creates_file_from_template,
+    test_cli_init_sets_metadata_name_to_output_stem,
+    test_cli_init_shows_success_message,
+    test_cli_init_without_template_lists_templates_and_exits_1,
+    test_cli_init_unknown_template_exits_1,
+    test_cli_init_refuses_to_overwrite_existing_file,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
