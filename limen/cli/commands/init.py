@@ -73,7 +73,7 @@ def run_init(output: Path, template_name: str | None) -> bool:
 
 def _update_experiment_name(path: Path, name: str) -> bool:
 
-    text = path.read_text()
+    text = path.read_text(encoding='utf-8')
     lines = text.splitlines(keepends=True)
     in_metadata = False
     replaced = False
@@ -95,5 +95,5 @@ def _update_experiment_name(path: Path, name: str) -> bool:
             break
 
     if replaced:
-        path.write_text(''.join(lines))
+        path.write_text(''.join(lines), encoding='utf-8')
     return replaced

@@ -89,7 +89,7 @@ def _load_yaml_reference(results_dir: Path) -> dict[str, Any] | None:
         return None
 
     try:
-        metadata = json.loads(metadata_path.read_text())
+        metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
     except (json.JSONDecodeError, OSError) as exc:
         click.secho(f"  ✗ Cannot read metadata.json: {exc}", fg='red')
         return None
