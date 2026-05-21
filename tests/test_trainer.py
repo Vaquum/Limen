@@ -629,6 +629,44 @@ def test_trainer_rejects_malformed_yaml_reference(yaml_reference) -> None:
             )
 
 
+def test_trainer_wraps_yaml_resolution_error(monkeypatch) -> None:
+
+    class FakeCompiledSFD:
+
+        def __init__(self, _yaml_reference):
+            pass
+
+        def params(self):
+            return {'alpha': [1]}
+
+        def manifest(self):
+            raise trainer_module.ResolutionError(
+                'bad.reference',
+                ['limen'],
+            )
+
+    monkeypatch.setattr(trainer_module, 'CompiledSFD', FakeCompiledSFD)
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({
+                'sfd_module': 'yaml:yaml_exp',
+                'yaml_reference': {
+                    'metadata': {'name': 'yaml_exp'},
+                    'sfd': {'params': {'alpha': [1]}},
+                },
+            }),
+        )
+        (experiment_dir / 'round_data.jsonl').write_text('')
+
+        with pytest.raises(ValueError, match='yaml_reference'):
+            Trainer(
+                experiment_dir,
+                data=pl.DataFrame({'x': [1, 2, 3]}),
+            )
+
+
 def test_trainer_loads_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
 
     '''
