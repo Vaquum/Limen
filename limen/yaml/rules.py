@@ -686,6 +686,12 @@ class SfdParams:
             return
 
         for key, values in params.items():
+            if key.startswith('_'):
+                errors.append(YAMLError(
+                    message=f"Parameter name '{key}' must not start with '_'",
+                    path=f'sfd.params.{key}',
+                    suggestion="The '_' prefix is reserved for framework metadata. Rename the parameter.",
+                ))
             if not isinstance(values, list) or len(values) == 0:
                 errors.append(YAMLError(
                     message=f"Parameter '{key}' must be a non-empty list of values",
