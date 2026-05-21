@@ -14,6 +14,7 @@ from limen.experiment.trainer.errors import ReconstructionError
 from limen.experiment.trainer.sensor import Sensor
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.errors import ResolutionError
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,9 @@ class Trainer:
         Create a Trainer from a completed experiment directory.
 
         If metadata.json includes `yaml_reference`, Trainer rebuilds the
-        SFD from that declarative YAML payload and does not import or exec
-        Python for SFD reconstruction. Otherwise, the SFD module named by
+        SFD from that declarative YAML payload without importing or
+        executing an experiment-provided SFD module. Otherwise, the SFD
+        module named by
         `metadata.json["sfd_module"]` is loaded in two stages: first the
         experiment_dir is searched for a file of the same name
         (`<sfd_module>.py`); only when that file is absent is the name
@@ -109,7 +111,7 @@ class Trainer:
         try:
             self._manifest = sfd.manifest()
             params = sfd.params()
-        except (KeyError, TypeError, ValueError) as exc:
+        except (KeyError, ResolutionError, TypeError, ValueError) as exc:
             if yaml_reference is not None:
                 raise ValueError(
                     'metadata.json key \'yaml_reference\' is not a valid '
