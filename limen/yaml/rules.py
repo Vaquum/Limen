@@ -686,6 +686,13 @@ class SfdParams:
             return
 
         for key, values in params.items():
+            if not isinstance(key, str):
+                errors.append(YAMLError(
+                    message=f"Parameter name '{key}' must be a string",
+                    path='sfd.params',
+                    suggestion='Use a plain string key, e.g. lookback: [12, 24, 48]',
+                ))
+                continue
             if key.startswith('_'):
                 errors.append(YAMLError(
                     message=f"Parameter name '{key}' must not start with '_'",
