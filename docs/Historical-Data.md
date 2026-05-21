@@ -1,12 +1,13 @@
 # Historical Data
 
-`HistoricalData` is Limen's stateful file-backed data surface. It has exactly three public retrieval methods:
+`HistoricalData` is Limen's stateful file-backed data surface. It has four public retrieval methods:
 
 - `get_spot_klines()`
+- `get_spot_dollar_klines()`
 - `get_binance_file()`
 - `get_any_file()`
 
-All three return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
+All four return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
 
 ## How It Works
 
@@ -26,6 +27,7 @@ assert data is historical.data
 | Method | Backend | Returns | Typical use |
 |---|---|---|---|
 | `get_spot_klines()` | Hugging Face BTCUSDT parquet datasets | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
+| `get_spot_dollar_klines()` | Hugging Face BTCUSDT dollar-bar parquet datasets | BTCUSDT spot dollar bars as `pl.DataFrame` | event-time experiments |
 | `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
 | `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
 
@@ -33,7 +35,7 @@ assert data is historical.data
 
 `get_spot_klines()` reads from the BTCUSDT datasets published on Hugging Face.
 
-By default it reads native [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines) dataset before aggregating upward.
+By default it reads native [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines), [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the 1m dataset before aggregating upward.
 
 ```python
 from limen.data import HistoricalData
@@ -60,6 +62,30 @@ Returned columns:
 - `volume`, `maker_ratio`, `no_of_trades`
 - `open_liquidity`, `high_liquidity`, `low_liquidity`, `close_liquidity`
 - `liquidity_sum`, `maker_volume`, `maker_liquidity`
+
+## `get_spot_dollar_klines()`
+
+`get_spot_dollar_klines()` reads BTCUSDT dollar bars from Vaquum Hugging Face datasets.
+
+It reads native [1M](https://huggingface.co/datasets/vaquum/binance_btcusdt_1M_dollar_klines), [15M](https://huggingface.co/datasets/vaquum/binance_btcusdt_15M_dollar_klines), [30M](https://huggingface.co/datasets/vaquum/binance_btcusdt_30M_dollar_klines), [60M](https://huggingface.co/datasets/vaquum/binance_btcusdt_60M_dollar_klines), [120M](https://huggingface.co/datasets/vaquum/binance_btcusdt_120M_dollar_klines), or [240M](https://huggingface.co/datasets/vaquum/binance_btcusdt_240M_dollar_klines) datasets for matching `dollar_bar_size` values. Other multiples use the largest available lower dollar-bar source and aggregate upward.
+
+```python
+from limen.data import HistoricalData
+
+historical = HistoricalData()
+data = historical.get_spot_dollar_klines(
+    dollar_bar_size=30_000_000,
+    start_date_limit='2025-01-01',
+)
+```
+
+Important rules:
+
+- `dollar_bar_size` must be a positive integer
+- supported native sizes are resolved directly instead of deriving from the 1-minute kline file
+- non-native sizes must be multiples of the selected source dollar-bar size
+- returned `datetime` is the dollar bar start time
+- returned columns match `get_spot_klines()` for manifest compatibility
 
 ## `get_binance_file()`
 
@@ -111,6 +137,7 @@ It is the right choice for:
 Most manifest-driven experiments should use:
 
 - `HistoricalData.get_spot_klines` for production data
+- `HistoricalData.get_spot_dollar_klines` for event-time dollar-bar production data
 - `HistoricalData.get_spot_klines` with a smaller `row_count_limit` and coarser `kline_size` for lightweight test runs
 - `HistoricalData.get_any_file` only when you intentionally want to load a specific local or remote file
 
@@ -134,6 +161,7 @@ manifest = (
 ## Choosing The Right Surface
 
 - Use `get_spot_klines()` for most Limen experiments and for manifest test sources that should stay on the public BTCUSDT path.
+- Use `get_spot_dollar_klines()` when market activity, not wall-clock time, should define each row.
 - Use `get_binance_file()` when you want direct Binance archives.
 - Use `get_any_file()` for local fixtures, URLs, and generic file-backed ingestion.
 

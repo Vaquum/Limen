@@ -943,3 +943,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `CausalRollingRobustScaler` to `limen.scalers` — a robust scaler that computes each row's median and IQR from a strictly trailing rolling window (`.shift(1)`, no look-ahead) and falls back to train-fitted statistics during warmup
 - Register the new scaler in `SCALER_REGISTRY` under the key `causal_rolling_robust`
+
+## v3.8.0 on 21st of May, 2026
+
+- Add `HistoricalData.get_spot_dollar_klines()` for Vaquum Hugging Face BTCUSDT dollar-bar snapshots
+- Resolve native 100k, 1M, 2M, 4M, 8M, 15M, 16M, 30M, 32M, 60M, 120M, and 240M dollar-bar datasets directly, with non-native multiples aggregating from the largest lower native dollar-bar source
+- Normalize dollar-bar snapshots to the existing Limen OHLCV-plus-liquidity schema and repair the current HF second-encoded datetime export to UTC `datetime`

@@ -40,6 +40,42 @@ def _spot_frame(interval_seconds: int) -> pl.DataFrame:
     })
 
 
+def _dollar_frame(
+    dollar_bar_size: int,
+    *,
+    second_encoded_datetimes: bool = False,
+) -> pl.DataFrame:
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    datetimes = [start + timedelta(hours=idx) for idx in range(4)]
+    if second_encoded_datetimes:
+        datetimes = [
+            datetime.fromtimestamp(dt.timestamp() / 1000, tz=timezone.utc)
+            for dt in datetimes
+        ]
+
+    return pl.DataFrame({
+        'start_datetime': datetimes,
+        'end_datetime': [dt + timedelta(minutes=30) for dt in datetimes],
+        'dollar_bar_id': [0, 1, 2, 3],
+        'open': [1.0, 2.0, 3.0, 4.0],
+        'high': [2.0, 3.0, 4.0, 5.0],
+        'low': [0.5, 1.5, 2.5, 3.5],
+        'close': [1.5, 2.5, 3.5, 4.5],
+        'mean': [1.25, 2.25, 3.25, 4.25],
+        'std': [0.1, 0.2, 0.3, 0.4],
+        'volume': [10.0, 20.0, 30.0, 40.0],
+        'maker_ratio': [0.4, 0.5, 0.6, 0.7],
+        'no_of_trades': [2, 4, 6, 8],
+        'open_liquidity': [100.0, 200.0, 300.0, 400.0],
+        'high_liquidity': [110.0, 210.0, 310.0, 410.0],
+        'low_liquidity': [90.0, 190.0, 290.0, 390.0],
+        'close_liquidity': [105.0, 205.0, 305.0, 405.0],
+        'liquidity_sum': [float(dollar_bar_size)] * 4,
+        'maker_volume': [4.0, 10.0, 18.0, 28.0],
+        'maker_liquidity': [400.0, 1000.0, 1800.0, 2800.0],
+    })
+
+
 def test_get_any_file_loads_local_csv() -> None:
     historical = HistoricalData()
 
@@ -129,22 +165,22 @@ def test_get_spot_klines_row_count_limit_returns_latest_rows() -> None:
 
 def test_get_spot_klines_uses_native_huggingface_sources() -> None:
     resolved_repos: list[str] = []
+    native_repos = {
+        60: HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO,
+        900: 'vaquum/binance_btcusdt_15m_klines',
+        1800: 'vaquum/binance_btcusdt_30m_klines',
+        3600: 'vaquum/binance_btcusdt_1h_klines',
+        7200: 'vaquum/binance_btcusdt_2h_klines',
+        14400: 'vaquum/binance_btcusdt_4h_klines',
+    }
 
     with TemporaryDirectory() as tmpdir:
         paths = {
-            HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO: Path(tmpdir) / '1m.parquet',
-            'vaquum/binance_btcusdt_15m_klines': Path(tmpdir) / '15m.parquet',
-            'vaquum/binance_btcusdt_30m_klines': Path(tmpdir) / '30m.parquet',
-            'vaquum/binance_btcusdt_1h_klines': Path(tmpdir) / '1h.parquet',
-            'vaquum/binance_btcusdt_2h_klines': Path(tmpdir) / '2h.parquet',
-            'vaquum/binance_btcusdt_4h_klines': Path(tmpdir) / '4h.parquet',
+            repo_id: Path(tmpdir) / f'{kline_size}.parquet'
+            for kline_size, repo_id in native_repos.items()
         }
-        _spot_frame(60).write_parquet(paths[HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO])
-        _spot_frame(900).write_parquet(paths['vaquum/binance_btcusdt_15m_klines'])
-        _spot_frame(1800).write_parquet(paths['vaquum/binance_btcusdt_30m_klines'])
-        _spot_frame(3600).write_parquet(paths['vaquum/binance_btcusdt_1h_klines'])
-        _spot_frame(7200).write_parquet(paths['vaquum/binance_btcusdt_2h_klines'])
-        _spot_frame(14400).write_parquet(paths['vaquum/binance_btcusdt_4h_klines'])
+        for kline_size, repo_id in native_repos.items():
+            _spot_frame(kline_size).write_parquet(paths[repo_id])
 
         def fake_resolve_latest(repo_id: str) -> str:
             resolved_repos.append(repo_id)
@@ -158,6 +194,7 @@ def test_get_spot_klines_uses_native_huggingface_sources() -> None:
                 fake_resolve_latest,
             )
 
+            one_minute = historical.get_spot_klines(kline_size=60)
             quarter_hour = historical.get_spot_klines(kline_size=900)
             half_hour = historical.get_spot_klines(kline_size=1800)
             one_hour = historical.get_spot_klines(kline_size=3600)
@@ -166,6 +203,7 @@ def test_get_spot_klines_uses_native_huggingface_sources() -> None:
             fallback = historical.get_spot_klines(kline_size=300)
 
     assert resolved_repos == [
+        HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO,
         'vaquum/binance_btcusdt_15m_klines',
         'vaquum/binance_btcusdt_30m_klines',
         'vaquum/binance_btcusdt_1h_klines',
@@ -173,12 +211,180 @@ def test_get_spot_klines_uses_native_huggingface_sources() -> None:
         'vaquum/binance_btcusdt_4h_klines',
         HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO,
     ]
+    assert one_minute.height == 2
     assert quarter_hour.height == 2
     assert half_hour.height == 2
     assert one_hour.height == 2
     assert two_hour.height == 2
     assert four_hour.height == 2
     assert fallback.height == 1
+    assert len(set(native_repos.values())) == 6
+
+
+def test_get_spot_dollar_klines_uses_native_huggingface_sources() -> None:
+    resolved_repos: list[str] = []
+    native_repos = {
+        1_000_000: 'vaquum/binance_btcusdt_1M_dollar_klines',
+        15_000_000: 'vaquum/binance_btcusdt_15M_dollar_klines',
+        30_000_000: 'vaquum/binance_btcusdt_30M_dollar_klines',
+        60_000_000: 'vaquum/binance_btcusdt_60M_dollar_klines',
+        120_000_000: 'vaquum/binance_btcusdt_120M_dollar_klines',
+        240_000_000: 'vaquum/binance_btcusdt_240M_dollar_klines',
+    }
+
+    with TemporaryDirectory() as tmpdir:
+        paths = {
+            repo_id: Path(tmpdir) / f'{dollar_bar_size}.parquet'
+            for dollar_bar_size, repo_id in native_repos.items()
+        }
+        for dollar_bar_size, repo_id in native_repos.items():
+            _dollar_frame(dollar_bar_size).write_parquet(paths[repo_id])
+
+        def fake_resolve_latest(repo_id: str) -> str:
+            resolved_repos.append(repo_id)
+            return str(paths[repo_id])
+
+        historical = HistoricalData()
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                historical_module,
+                '_resolve_huggingface_latest_file',
+                fake_resolve_latest,
+            )
+
+            results = [
+                historical.get_spot_dollar_klines(dollar_bar_size=dollar_bar_size)
+                for dollar_bar_size in native_repos
+            ]
+            fallback = historical.get_spot_dollar_klines(
+                dollar_bar_size=3_000_000,
+            )
+
+    assert resolved_repos == [
+        *native_repos.values(),
+        HistoricalData.DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO,
+    ]
+    assert all(result.height == 4 for result in results)
+    assert fallback.height == 2
+    assert fallback['liquidity_sum'].to_list() == [3_000_000.0, 1_000_000.0]
+    assert 'start_datetime' not in fallback.columns
+    assert 'dollar_bar_id' not in fallback.columns
+    assert len(set(native_repos.values())) == 6
+
+
+def test_get_spot_dollar_klines_repairs_second_encoded_huggingface_datetimes() -> None:
+    with TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / '1m-dollar.parquet'
+        _dollar_frame(
+            1_000_000,
+            second_encoded_datetimes=True,
+        ).write_parquet(path)
+
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                HistoricalData,
+                'DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO',
+                str(path),
+            )
+            historical = HistoricalData()
+            data = historical.get_spot_dollar_klines(
+                dollar_bar_size=1_000_000,
+                start_date_limit='2020-01-01T02:00:00',
+            )
+
+    assert data.height == 2
+    assert data['datetime'][0] == datetime(2020, 1, 1, 2, tzinfo=timezone.utc)
+    assert data['datetime'].dt.year().to_list() == [2020, 2020]
+
+
+def test_get_spot_dollar_klines_repairs_only_second_encoded_datetime_rows() -> None:
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    starts = [start + timedelta(hours=idx) for idx in range(4)]
+    ends = [dt + timedelta(minutes=30) for dt in starts]
+    mixed_starts = [
+        datetime.fromtimestamp(starts[0].timestamp() / 1000, tz=timezone.utc),
+        starts[1],
+        datetime.fromtimestamp(starts[2].timestamp() / 1000, tz=timezone.utc),
+        starts[3],
+    ]
+    mixed_ends = [
+        datetime.fromtimestamp(ends[0].timestamp() / 1000, tz=timezone.utc),
+        ends[1],
+        datetime.fromtimestamp(ends[2].timestamp() / 1000, tz=timezone.utc),
+        ends[3],
+    ]
+
+    with TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / '1m-dollar.parquet'
+        _dollar_frame(1_000_000).with_columns([
+            pl.Series('start_datetime', mixed_starts),
+            pl.Series('end_datetime', mixed_ends),
+        ]).write_parquet(path)
+
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                HistoricalData,
+                'DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO',
+                str(path),
+            )
+            historical = HistoricalData()
+            data = historical.get_spot_dollar_klines(dollar_bar_size=1_000_000)
+
+    assert data['datetime'].to_list() == starts
+
+
+def test_get_spot_dollar_klines_rejects_sub_base_intervals() -> None:
+    data = historical_module._normalize_spot_dollar_klines(_dollar_frame(1_000_000))
+
+    with pytest.raises(ValueError, match='Sub-base aggregation is not supported'):
+        historical_module._aggregate_spot_dollar_klines(
+            data,
+            500_000,
+            1_000_000,
+        )
+
+
+def test_get_spot_dollar_klines_rejects_non_multiple_sizes() -> None:
+    data = historical_module._normalize_spot_dollar_klines(_dollar_frame(1_000_000))
+
+    with pytest.raises(ValueError, match='must be a multiple'):
+        historical_module._aggregate_spot_dollar_klines(
+            data,
+            2_500_000,
+            1_000_000,
+        )
+
+
+def test_get_spot_dollar_klines_resets_aggregate_groups_by_day() -> None:
+    starts = [
+        datetime(2020, 1, 1, 22, tzinfo=timezone.utc),
+        datetime(2020, 1, 1, 23, tzinfo=timezone.utc),
+        datetime(2020, 1, 2, 0, tzinfo=timezone.utc),
+        datetime(2020, 1, 2, 1, tzinfo=timezone.utc),
+    ]
+
+    with TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / '1m-dollar.parquet'
+        _dollar_frame(1_000_000).with_columns([
+            pl.Series('start_datetime', starts),
+            pl.Series(
+                'end_datetime',
+                [dt + timedelta(minutes=30) for dt in starts],
+            ),
+        ]).write_parquet(path)
+
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                HistoricalData,
+                'DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO',
+                str(path),
+            )
+            historical = HistoricalData()
+            data = historical.get_spot_dollar_klines(dollar_bar_size=3_000_000)
+
+    assert data.height == 2
+    assert data['datetime'].to_list() == [starts[0], starts[2]]
+    assert data['liquidity_sum'].to_list() == [2_000_000.0, 2_000_000.0]
 
 
 def test_get_spot_klines_rejects_sub_base_intervals() -> None:
@@ -216,6 +422,12 @@ def test_resolve_file_path_or_url_expands_huggingface_references() -> None:
         assert historical_module._resolve_file_path_or_url(
             'vaquum/binance_btcusdt_4h_klines'
         ) == 'https://example.com/vaquum/binance_btcusdt_4h_klines/latest.parquet'
+        assert historical_module._resolve_file_path_or_url(
+            'vaquum/binance_btcusdt_240M_dollar_klines'
+        ) == (
+            'https://example.com/vaquum/binance_btcusdt_240M_dollar_klines/'
+            'latest.parquet'
+        )
         assert historical_module._resolve_file_path_or_url(
             'https://huggingface.co/datasets/foo/bar'
         ) == 'https://example.com/foo/bar/latest.parquet'
