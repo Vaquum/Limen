@@ -35,7 +35,7 @@ assert data is historical.data
 
 `get_spot_klines()` reads from the BTCUSDT datasets published on Hugging Face.
 
-By default it reads native [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines) dataset before aggregating upward.
+By default it reads native [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines), [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the 1m dataset before aggregating upward.
 
 ```python
 from limen.data import HistoricalData
@@ -67,7 +67,7 @@ Returned columns:
 
 `get_spot_dollar_klines()` reads BTCUSDT dollar bars from Vaquum Hugging Face datasets.
 
-It reads native [100k](https://huggingface.co/datasets/vaquum/binance_btcusdt_100k_dollar_klines), [1M](https://huggingface.co/datasets/vaquum/binance_btcusdt_1M_dollar_klines), [2M](https://huggingface.co/datasets/vaquum/binance_btcusdt_2m_dollar_klines), [4M](https://huggingface.co/datasets/vaquum/binance_btcusdt_4m_dollar_klines), [8M](https://huggingface.co/datasets/vaquum/binance_btcusdt_8m_dollar_klines), [15M](https://huggingface.co/datasets/vaquum/binance_btcusdt_15M_dollar_klines), [16M](https://huggingface.co/datasets/vaquum/binance_btcusdt_16m_dollar_klines), [30M](https://huggingface.co/datasets/vaquum/binance_btcusdt_30M_dollar_klines), [32M](https://huggingface.co/datasets/vaquum/binance_btcusdt_32m_dollar_klines), [60M](https://huggingface.co/datasets/vaquum/binance_btcusdt_60M_dollar_klines), [120M](https://huggingface.co/datasets/vaquum/binance_btcusdt_120M_dollar_klines), or [240M](https://huggingface.co/datasets/vaquum/binance_btcusdt_240M_dollar_klines) datasets for matching `dollar_bar_size` values. Other multiples use the largest available lower dollar-bar source and aggregate upward.
+It reads native [1M](https://huggingface.co/datasets/vaquum/binance_btcusdt_1M_dollar_klines), [15M](https://huggingface.co/datasets/vaquum/binance_btcusdt_15M_dollar_klines), [30M](https://huggingface.co/datasets/vaquum/binance_btcusdt_30M_dollar_klines), [60M](https://huggingface.co/datasets/vaquum/binance_btcusdt_60M_dollar_klines), [120M](https://huggingface.co/datasets/vaquum/binance_btcusdt_120M_dollar_klines), or [240M](https://huggingface.co/datasets/vaquum/binance_btcusdt_240M_dollar_klines) datasets for matching `dollar_bar_size` values. Other multiples use the largest available lower dollar-bar source and aggregate upward.
 
 ```python
 from limen.data import HistoricalData

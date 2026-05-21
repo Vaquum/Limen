@@ -165,22 +165,22 @@ def test_get_spot_klines_row_count_limit_returns_latest_rows() -> None:
 
 def test_get_spot_klines_uses_native_huggingface_sources() -> None:
     resolved_repos: list[str] = []
+    native_repos = {
+        60: HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO,
+        900: 'vaquum/binance_btcusdt_15m_klines',
+        1800: 'vaquum/binance_btcusdt_30m_klines',
+        3600: 'vaquum/binance_btcusdt_1h_klines',
+        7200: 'vaquum/binance_btcusdt_2h_klines',
+        14400: 'vaquum/binance_btcusdt_4h_klines',
+    }
 
     with TemporaryDirectory() as tmpdir:
         paths = {
-            HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO: Path(tmpdir) / '1m.parquet',
-            'vaquum/binance_btcusdt_15m_klines': Path(tmpdir) / '15m.parquet',
-            'vaquum/binance_btcusdt_30m_klines': Path(tmpdir) / '30m.parquet',
-            'vaquum/binance_btcusdt_1h_klines': Path(tmpdir) / '1h.parquet',
-            'vaquum/binance_btcusdt_2h_klines': Path(tmpdir) / '2h.parquet',
-            'vaquum/binance_btcusdt_4h_klines': Path(tmpdir) / '4h.parquet',
+            repo_id: Path(tmpdir) / f'{kline_size}.parquet'
+            for kline_size, repo_id in native_repos.items()
         }
-        _spot_frame(60).write_parquet(paths[HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO])
-        _spot_frame(900).write_parquet(paths['vaquum/binance_btcusdt_15m_klines'])
-        _spot_frame(1800).write_parquet(paths['vaquum/binance_btcusdt_30m_klines'])
-        _spot_frame(3600).write_parquet(paths['vaquum/binance_btcusdt_1h_klines'])
-        _spot_frame(7200).write_parquet(paths['vaquum/binance_btcusdt_2h_klines'])
-        _spot_frame(14400).write_parquet(paths['vaquum/binance_btcusdt_4h_klines'])
+        for kline_size, repo_id in native_repos.items():
+            _spot_frame(kline_size).write_parquet(paths[repo_id])
 
         def fake_resolve_latest(repo_id: str) -> str:
             resolved_repos.append(repo_id)
@@ -194,6 +194,7 @@ def test_get_spot_klines_uses_native_huggingface_sources() -> None:
                 fake_resolve_latest,
             )
 
+            one_minute = historical.get_spot_klines(kline_size=60)
             quarter_hour = historical.get_spot_klines(kline_size=900)
             half_hour = historical.get_spot_klines(kline_size=1800)
             one_hour = historical.get_spot_klines(kline_size=3600)
@@ -202,6 +203,7 @@ def test_get_spot_klines_uses_native_huggingface_sources() -> None:
             fallback = historical.get_spot_klines(kline_size=300)
 
     assert resolved_repos == [
+        HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO,
         'vaquum/binance_btcusdt_15m_klines',
         'vaquum/binance_btcusdt_30m_klines',
         'vaquum/binance_btcusdt_1h_klines',
@@ -209,26 +211,22 @@ def test_get_spot_klines_uses_native_huggingface_sources() -> None:
         'vaquum/binance_btcusdt_4h_klines',
         HistoricalData.DEFAULT_SPOT_KLINES_DATASET_REPO,
     ]
+    assert one_minute.height == 2
     assert quarter_hour.height == 2
     assert half_hour.height == 2
     assert one_hour.height == 2
     assert two_hour.height == 2
     assert four_hour.height == 2
     assert fallback.height == 1
+    assert len(set(native_repos.values())) == 6
 
 
 def test_get_spot_dollar_klines_uses_native_huggingface_sources() -> None:
     resolved_repos: list[str] = []
     native_repos = {
-        100_000: 'vaquum/binance_btcusdt_100k_dollar_klines',
         1_000_000: 'vaquum/binance_btcusdt_1M_dollar_klines',
-        2_000_000: 'vaquum/binance_btcusdt_2m_dollar_klines',
-        4_000_000: 'vaquum/binance_btcusdt_4m_dollar_klines',
-        8_000_000: 'vaquum/binance_btcusdt_8m_dollar_klines',
         15_000_000: 'vaquum/binance_btcusdt_15M_dollar_klines',
-        16_000_000: 'vaquum/binance_btcusdt_16m_dollar_klines',
         30_000_000: 'vaquum/binance_btcusdt_30M_dollar_klines',
-        32_000_000: 'vaquum/binance_btcusdt_32m_dollar_klines',
         60_000_000: 'vaquum/binance_btcusdt_60M_dollar_klines',
         120_000_000: 'vaquum/binance_btcusdt_120M_dollar_klines',
         240_000_000: 'vaquum/binance_btcusdt_240M_dollar_klines',
@@ -271,6 +269,7 @@ def test_get_spot_dollar_klines_uses_native_huggingface_sources() -> None:
     assert fallback['liquidity_sum'].to_list() == [3_000_000.0, 1_000_000.0]
     assert 'start_datetime' not in fallback.columns
     assert 'dollar_bar_id' not in fallback.columns
+    assert len(set(native_repos.values())) == 6
 
 
 def test_get_spot_dollar_klines_repairs_second_encoded_huggingface_datetimes() -> None:

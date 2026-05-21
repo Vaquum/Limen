@@ -24,6 +24,7 @@ _DEFAULT_SPOT_DOLLAR_DATASET_REPO: Final[str] = (
     'vaquum/binance_btcusdt_1M_dollar_klines'
 )
 _SPOT_DATASET_REPOS_BY_KLINE_SIZE: Final[dict[int, str]] = {
+    60: 'vaquum/binance_btcusdt_1m_klines',
     900: 'vaquum/binance_btcusdt_15m_klines',
     1800: 'vaquum/binance_btcusdt_30m_klines',
     3600: 'vaquum/binance_btcusdt_1h_klines',
@@ -31,15 +32,9 @@ _SPOT_DATASET_REPOS_BY_KLINE_SIZE: Final[dict[int, str]] = {
     14400: 'vaquum/binance_btcusdt_4h_klines',
 }
 _SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE: Final[dict[int, str]] = {
-    100_000: 'vaquum/binance_btcusdt_100k_dollar_klines',
     1_000_000: 'vaquum/binance_btcusdt_1M_dollar_klines',
-    2_000_000: 'vaquum/binance_btcusdt_2m_dollar_klines',
-    4_000_000: 'vaquum/binance_btcusdt_4m_dollar_klines',
-    8_000_000: 'vaquum/binance_btcusdt_8m_dollar_klines',
     15_000_000: 'vaquum/binance_btcusdt_15M_dollar_klines',
-    16_000_000: 'vaquum/binance_btcusdt_16m_dollar_klines',
     30_000_000: 'vaquum/binance_btcusdt_30M_dollar_klines',
-    32_000_000: 'vaquum/binance_btcusdt_32m_dollar_klines',
     60_000_000: 'vaquum/binance_btcusdt_60M_dollar_klines',
     120_000_000: 'vaquum/binance_btcusdt_120M_dollar_klines',
     240_000_000: 'vaquum/binance_btcusdt_240M_dollar_klines',
@@ -718,8 +713,8 @@ class HistoricalData:
         '''Load BTCUSDT spot klines from a file and aggregate upward when needed.
 
         By default this resolves the latest snapshot from the Hugging Face
-        BTCUSDT 15m, 30m, 1h, 2h, or 4h kline dataset when `kline_size` matches.
-        Other intervals use the 1m dataset and aggregate upward. Row limits
+        BTCUSDT 1m, 15m, 30m, 1h, 2h, or 4h kline dataset when `kline_size`
+        matches. Other intervals use the 1m dataset and aggregate upward. Row limits
         return the latest rows. `n_rows` is accepted as a legacy alias.
         '''
 
