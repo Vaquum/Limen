@@ -39,11 +39,16 @@ class CausalRollingRobustScaler:
             raise ValueError(f"window must be >= 2, got {window}")
         if clip <= 0:
             raise ValueError(f"clip must be > 0, got {clip}")
+        if not (1 <= min_samples <= window):
+            raise ValueError(
+                f"min_samples must satisfy 1 <= min_samples <= window ({window}), "
+                f"got {min_samples}"
+            )
 
         self.window = window
         self.quantile_range = quantile_range
         self.clip = clip
-        self.min_samples = max(1, min(min_samples, window))
+        self.min_samples = min_samples
 
         self.medians: dict[str, float] = {}
         self.iqrs: dict[str, float] = {}

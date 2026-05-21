@@ -257,6 +257,17 @@ def test_causal_rolling_robust_scaler_invalid_quantile_range():
         assert 'quantile_range' in str(e)
 
 
+def test_causal_rolling_robust_scaler_invalid_min_samples():
+
+    try:
+        CausalRollingRobustScaler(
+            pl.DataFrame({'a': [1.0, 2.0, 3.0]}), window=10, min_samples=50,
+        )
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'min_samples' in str(e)
+
+
 def _make_manifest_with_scaler_from_params() -> MLManifest:
 
     return (MLManifest()
