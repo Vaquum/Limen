@@ -237,3 +237,24 @@ def test_cli_run_no_args_exits_1() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ['run'])
     assert result.exit_code == 1
+
+
+def test_cli_run_dry_run_and_resume_together_exits_1() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--dry-run', '--resume', str(results_dir)])
+    assert result.exit_code == 1
+    assert 'dry-run' in result.output
+
+
+def test_cli_run_resume_errors_when_checkpoint_missing_metadata_key() -> None:
+    tmp = Path(tempfile.mkdtemp())
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': dict(yaml_dict)}))
+    # checkpoint exists but is missing the metadata key entirely
+    (tmp / 'checkpoint.json').write_text(json.dumps({'msq_state': {}, 'domain_state': {}}))
+    runner = CliRunner()
+    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+    assert result.exit_code == 1
+    assert 'checkpoint' in result.output.lower()
