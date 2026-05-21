@@ -20,6 +20,9 @@ _SUPPORTED_DATETIME_FORMATS: Final[tuple[str, ...]] = (
 )
 _REMOTE_TIMEOUT_SECONDS: Final[int] = 60
 _DEFAULT_SPOT_DATASET_REPO: Final[str] = 'vaquum/binance_btcusdt_1m_klines'
+_DEFAULT_SPOT_DOLLAR_DATASET_REPO: Final[str] = (
+    'vaquum/binance_btcusdt_1M_dollar_klines'
+)
 _SPOT_DATASET_REPOS_BY_KLINE_SIZE: Final[dict[int, str]] = {
     900: 'vaquum/binance_btcusdt_15m_klines',
     1800: 'vaquum/binance_btcusdt_30m_klines',
@@ -27,8 +30,29 @@ _SPOT_DATASET_REPOS_BY_KLINE_SIZE: Final[dict[int, str]] = {
     7200: 'vaquum/binance_btcusdt_2h_klines',
     14400: 'vaquum/binance_btcusdt_4h_klines',
 }
+_SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE: Final[dict[int, str]] = {
+    100_000: 'vaquum/binance_btcusdt_100k_dollar_klines',
+    1_000_000: 'vaquum/binance_btcusdt_1M_dollar_klines',
+    2_000_000: 'vaquum/binance_btcusdt_2m_dollar_klines',
+    4_000_000: 'vaquum/binance_btcusdt_4m_dollar_klines',
+    8_000_000: 'vaquum/binance_btcusdt_8m_dollar_klines',
+    15_000_000: 'vaquum/binance_btcusdt_15M_dollar_klines',
+    16_000_000: 'vaquum/binance_btcusdt_16m_dollar_klines',
+    30_000_000: 'vaquum/binance_btcusdt_30M_dollar_klines',
+    32_000_000: 'vaquum/binance_btcusdt_32m_dollar_klines',
+    60_000_000: 'vaquum/binance_btcusdt_60M_dollar_klines',
+    120_000_000: 'vaquum/binance_btcusdt_120M_dollar_klines',
+    240_000_000: 'vaquum/binance_btcusdt_240M_dollar_klines',
+}
+_HUGGINGFACE_DATASET_REPOS: Final[frozenset[str]] = frozenset({
+    _DEFAULT_SPOT_DATASET_REPO,
+    _DEFAULT_SPOT_DOLLAR_DATASET_REPO,
+    *_SPOT_DATASET_REPOS_BY_KLINE_SIZE.values(),
+    *_SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE.values(),
+})
 _HUGGINGFACE_DATASET_REPO_PART_COUNT: Final[int] = 3
 _MIN_ROWS_TO_INFER_INTERVAL: Final[int] = 2
+_DATETIME_REPAIR_YEAR_CUTOFF: Final[int] = 2000
 
 
 def _is_url(value: str) -> bool:
@@ -174,10 +198,7 @@ def _repo_id_from_huggingface_url(file_path_or_url: str) -> str | None:
 
 
 def _resolve_file_path_or_url(file_path_or_url: str) -> str:
-    if (
-        file_path_or_url == _DEFAULT_SPOT_DATASET_REPO
-        or file_path_or_url in _SPOT_DATASET_REPOS_BY_KLINE_SIZE.values()
-    ):
+    if file_path_or_url in _HUGGINGFACE_DATASET_REPOS:
         return _resolve_huggingface_latest_file(file_path_or_url)
 
     repo_id = _repo_id_from_huggingface_url(file_path_or_url)
@@ -192,6 +213,31 @@ def _spot_dataset_repo_for_kline_size(kline_size: int, configured_repo: str) -> 
         return configured_repo
 
     return _SPOT_DATASET_REPOS_BY_KLINE_SIZE.get(kline_size, configured_repo)
+
+
+def _spot_dollar_dataset_repo_for_bar_size(
+    dollar_bar_size: int,
+    configured_repo: str,
+) -> tuple[str, int | None]:
+    if configured_repo != _DEFAULT_SPOT_DOLLAR_DATASET_REPO:
+        return configured_repo, None
+
+    if dollar_bar_size in _SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE:
+        return (
+            _SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE[dollar_bar_size],
+            dollar_bar_size,
+        )
+
+    source_sizes = [
+        source_size
+        for source_size in _SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE
+        if source_size <= dollar_bar_size and dollar_bar_size % source_size == 0
+    ]
+    if not source_sizes:
+        return configured_repo, 1_000_000
+
+    source_size = max(source_sizes)
+    return _SPOT_DOLLAR_DATASET_REPOS_BY_BAR_SIZE[source_size], source_size
 
 
 def _read_any_file(
@@ -220,38 +266,63 @@ def _read_any_file(
     return df
 
 
-def _normalize_datetime_column(df: pl.DataFrame) -> pl.DataFrame:
-    if 'datetime' not in df.columns:
+def _normalize_datetime_column_by_name(
+    df: pl.DataFrame,
+    column_name: str,
+) -> pl.DataFrame:
+    if column_name not in df.columns:
         return df
 
-    datetime_dtype = df.schema['datetime']
+    datetime_dtype = df.schema[column_name]
 
     if datetime_dtype == pl.Utf8:
         return df.with_columns(
-            pl.col('datetime')
+            pl.col(column_name)
             .str.to_datetime(strict=False, time_unit='ms')
             .dt.replace_time_zone('UTC')
-            .alias('datetime')
+            .alias(column_name)
         )
 
     if datetime_dtype == pl.Date:
         return df.with_columns(
-            pl.col('datetime')
+            pl.col(column_name)
             .cast(pl.Datetime('ms'))
             .dt.replace_time_zone('UTC')
-            .alias('datetime')
+            .alias(column_name)
         )
 
     if isinstance(datetime_dtype, pl.Datetime):
-        expr = pl.col('datetime').dt.cast_time_unit('ms')
+        expr = pl.col(column_name).dt.cast_time_unit('ms')
         if datetime_dtype.time_zone is None:
             expr = expr.dt.replace_time_zone('UTC')
         else:
             expr = expr.dt.convert_time_zone('UTC')
 
-        return df.with_columns(expr.alias('datetime'))
+        return df.with_columns(expr.alias(column_name))
 
     return df
+
+
+def _normalize_datetime_column(df: pl.DataFrame) -> pl.DataFrame:
+    return _normalize_datetime_column_by_name(df, 'datetime')
+
+
+def _repair_second_encoded_datetime_column(
+    df: pl.DataFrame,
+    column_name: str,
+) -> pl.DataFrame:
+    if column_name not in df.columns or not isinstance(df.schema[column_name], pl.Datetime):
+        return df
+
+    minimum = df.select(pl.col(column_name).min()).item()
+    if minimum is None or minimum.year >= _DATETIME_REPAIR_YEAR_CUTOFF:
+        return df
+
+    return df.with_columns(
+        (pl.col(column_name).dt.epoch('ms') * 1000)
+        .cast(pl.Datetime('ms', time_zone='UTC'))
+        .alias(column_name)
+    )
 
 
 def _normalize_timestamp_column(df: pl.DataFrame) -> pl.DataFrame:
@@ -317,6 +388,28 @@ def _round_spot_kline_columns(data: pl.DataFrame) -> pl.DataFrame:
     ])
 
 
+def _canonical_spot_kline_columns() -> list[str]:
+    return [
+        'datetime',
+        'open',
+        'high',
+        'low',
+        'close',
+        'mean',
+        'std',
+        'volume',
+        'maker_ratio',
+        'no_of_trades',
+        'open_liquidity',
+        'high_liquidity',
+        'low_liquidity',
+        'close_liquidity',
+        'liquidity_sum',
+        'maker_volume',
+        'maker_liquidity',
+    ]
+
+
 def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
     required_columns = {
         'datetime',
@@ -359,25 +452,7 @@ def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
             f"({base_interval} seconds)."
         )
 
-    canonical_columns = [
-        'datetime',
-        'open',
-        'high',
-        'low',
-        'close',
-        'mean',
-        'std',
-        'volume',
-        'maker_ratio',
-        'no_of_trades',
-        'open_liquidity',
-        'high_liquidity',
-        'low_liquidity',
-        'close_liquidity',
-        'liquidity_sum',
-        'maker_volume',
-        'maker_liquidity',
-    ]
+    canonical_columns = _canonical_spot_kline_columns()
 
     if kline_size == base_interval:
         return _round_spot_kline_columns(data.select(canonical_columns))
@@ -444,11 +519,148 @@ def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
     return _round_spot_kline_columns(aggregated)
 
 
+def _normalize_spot_dollar_klines(data: pl.DataFrame) -> pl.DataFrame:
+    for column_name in ('start_datetime', 'end_datetime', 'datetime'):
+        data = _normalize_datetime_column_by_name(data, column_name)
+        data = _repair_second_encoded_datetime_column(data, column_name)
+
+    if 'datetime' not in data.columns and 'start_datetime' in data.columns:
+        data = data.with_columns(pl.col('start_datetime').alias('datetime'))
+
+    required_columns = set(_canonical_spot_kline_columns())
+    missing_columns = sorted(required_columns.difference(data.columns))
+    if missing_columns:
+        raise ValueError(
+            'Spot dollar kline aggregation requires these columns in the source file: '
+            + ', '.join(missing_columns)
+        )
+
+    return (
+        data
+        .select(_canonical_spot_kline_columns())
+        .sort('datetime')
+    )
+
+
+def _spot_dollar_group_ids(
+    data: pl.DataFrame,
+    dollar_bar_size: int,
+) -> list[int]:
+    groups: list[int] = []
+    group_id = 0
+    running_liquidity = 0.0
+    current_date = None
+
+    for row in data.iter_rows(named=True):
+        row_date = row['datetime'].date()
+        if current_date is not None and row_date != current_date:
+            group_id += 1
+            running_liquidity = 0.0
+
+        current_date = row_date
+        running_liquidity += row['liquidity_sum']
+        groups.append(group_id)
+
+        if running_liquidity >= dollar_bar_size:
+            group_id += 1
+            running_liquidity = 0.0
+
+    return groups
+
+
+def _aggregate_spot_dollar_klines(
+    data: pl.DataFrame,
+    dollar_bar_size: int,
+    source_dollar_bar_size: int | None,
+) -> pl.DataFrame:
+    data = _normalize_spot_dollar_klines(data)
+
+    if source_dollar_bar_size is not None:
+        if dollar_bar_size < source_dollar_bar_size:
+            raise ValueError(
+                f"dollar_bar_size={dollar_bar_size} is smaller than the source "
+                f"file dollar bar size ({source_dollar_bar_size}). Sub-base "
+                'aggregation is not supported.'
+            )
+
+        if dollar_bar_size % source_dollar_bar_size != 0:
+            raise ValueError(
+                f"dollar_bar_size={dollar_bar_size} must be a multiple of the "
+                f"source file dollar bar size ({source_dollar_bar_size})."
+            )
+
+        if dollar_bar_size == source_dollar_bar_size:
+            return _round_spot_kline_columns(data)
+
+    grouped = data.with_columns(
+        pl.Series(
+            name='_dollar_group',
+            values=_spot_dollar_group_ids(data, dollar_bar_size),
+        )
+    )
+
+    weighted = grouped.with_columns([
+        (
+            pl.col('mean') * pl.col('no_of_trades').cast(pl.Float64)
+        ).alias('_mean_weighted_sum'),
+        (
+            (pl.col('std').pow(2) + pl.col('mean').pow(2))
+            * pl.col('no_of_trades').cast(pl.Float64)
+        ).alias('_sum_of_squares'),
+        (
+            pl.col('maker_ratio') * pl.col('no_of_trades').cast(pl.Float64)
+        ).alias('_maker_ratio_weighted_sum'),
+    ])
+
+    no_of_trades_sum = pl.col('no_of_trades').sum().cast(pl.Float64)
+    mean_expr = pl.col('_mean_weighted_sum').sum() / no_of_trades_sum
+    variance_expr = (
+        pl.col('_sum_of_squares').sum() / no_of_trades_sum
+    ) - mean_expr.pow(2)
+
+    aggregated = (
+        weighted
+        .group_by('_dollar_group', maintain_order=True)
+        .agg([
+            pl.col('datetime').first().alias('datetime'),
+            pl.col('open').first().alias('open'),
+            pl.col('high').max().alias('high'),
+            pl.col('low').min().alias('low'),
+            pl.col('close').last().alias('close'),
+            mean_expr.alias('mean'),
+            pl.when(variance_expr < 0)
+            .then(0.0)
+            .otherwise(variance_expr)
+            .sqrt()
+            .alias('std'),
+            pl.col('volume').sum().alias('volume'),
+            (
+                pl.col('_maker_ratio_weighted_sum').sum() / no_of_trades_sum
+            ).alias('maker_ratio'),
+            pl.col('no_of_trades').sum().alias('no_of_trades'),
+            pl.col('open_liquidity').first().alias('open_liquidity'),
+            pl.col('high_liquidity').max().alias('high_liquidity'),
+            pl.col('low_liquidity').min().alias('low_liquidity'),
+            pl.col('close_liquidity').last().alias('close_liquidity'),
+            pl.col('liquidity_sum').sum().alias('liquidity_sum'),
+            pl.col('maker_volume').sum().alias('maker_volume'),
+            pl.col('maker_liquidity').sum().alias('maker_liquidity'),
+        ])
+        .select(_canonical_spot_kline_columns())
+        .sort('datetime')
+    )
+
+    return _round_spot_kline_columns(aggregated)
+
+
 class HistoricalData:
 
     '''Stateful file-backed data access surface for Limen.'''
 
     DEFAULT_SPOT_KLINES_DATASET_REPO: Final[str] = _DEFAULT_SPOT_DATASET_REPO
+    DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO: Final[str] = (
+        _DEFAULT_SPOT_DOLLAR_DATASET_REPO
+    )
 
     def __init__(self) -> None:
         self.data = pl.DataFrame()
@@ -562,6 +774,79 @@ class HistoricalData:
             )
 
         data = _aggregate_spot_klines(base_data, kline_size)
+
+        if row_count_limit is not None:
+            data = data.tail(row_count_limit)
+
+        return self._store(data)
+
+    def get_spot_dollar_klines(
+        self,
+        row_count_limit: int | None = None,
+        dollar_bar_size: int = 1_000_000,
+        start_date_limit: str | None = None,
+        end_date_limit: str | None = None,
+        *,
+        n_rows: int | None = None,
+    ) -> pl.DataFrame:
+
+        '''Load BTCUSDT spot dollar klines from Hugging Face snapshots.
+
+        Native Vaquum dollar-bar datasets are used when `dollar_bar_size`
+        matches a published snapshot. Other supported multiples use the
+        largest available lower-resolution dollar-bar source and aggregate
+        upward. Row limits return the latest rows. `n_rows` is accepted as a
+        legacy alias.
+        '''
+
+        row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
+        dollar_bar_size = (
+            _validate_positive_int(dollar_bar_size, 'dollar_bar_size') or 1_000_000
+        )
+        start_date_limit = _normalize_datetime_literal(start_date_limit, 'start_date_limit')
+        end_date_limit = _normalize_datetime_literal(
+            end_date_limit,
+            'end_date_limit',
+            end_of_day=True,
+        )
+        if (
+            start_date_limit is not None
+            and end_date_limit is not None
+            and row_count_limit is not None
+        ):
+            raise ValueError(
+                'row_count_limit must be None when both start_date_limit '
+                'and end_date_limit are set.'
+            )
+
+        dataset_repo, source_dollar_bar_size = _spot_dollar_dataset_repo_for_bar_size(
+            dollar_bar_size,
+            self.DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO,
+        )
+        base_data = _read_any_file(dataset_repo, has_header=True)
+        base_data = _normalize_spot_dollar_klines(base_data)
+
+        if start_date_limit is not None:
+            start_datetime = datetime.strptime(
+                start_date_limit, '%Y-%m-%d %H:%M:%S'
+            ).replace(tzinfo=timezone.utc)
+            base_data = base_data.filter(
+                pl.col('datetime') >= pl.lit(start_datetime)
+            )
+
+        if end_date_limit is not None:
+            end_datetime = datetime.strptime(
+                end_date_limit, '%Y-%m-%d %H:%M:%S'
+            ).replace(tzinfo=timezone.utc)
+            base_data = base_data.filter(
+                pl.col('datetime') <= pl.lit(end_datetime)
+            )
+
+        data = _aggregate_spot_dollar_klines(
+            base_data,
+            dollar_bar_size,
+            source_dollar_bar_size,
+        )
 
         if row_count_limit is not None:
             data = data.tail(row_count_limit)
