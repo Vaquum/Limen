@@ -81,7 +81,7 @@ def validate(yaml_file: Path) -> None:
 
 
 @cli.command()
-@click.argument('yaml_file', type=click.Path(path_type=Path), required=False, default=None)
+@click.argument('yaml_file', type=click.Path(exists=True, path_type=Path), required=False, default=None)
 @click.option('--dry-run', is_flag=True, default=False,
               help='Validate and compile only — do not execute the experiment.')
 @click.option('--resume', type=click.Path(exists=True, file_okay=False, path_type=Path),

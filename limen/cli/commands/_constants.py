@@ -1,5 +1,4 @@
+from importlib.util import find_spec
 from pathlib import Path
 
-import limen.yaml as _limen_yaml
-
-TEMPLATES_DIR = Path(_limen_yaml.__file__).parent / 'templates'
+TEMPLATES_DIR = Path(find_spec('limen.yaml').origin).parent / 'templates'
