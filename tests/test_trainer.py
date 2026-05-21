@@ -603,14 +603,21 @@ def test_trainer_reconstructs_yaml_artifact_from_metadata_reference(monkeypatch)
     assert trainer._param_keys == frozenset({'alpha'})
 
 
-def test_trainer_rejects_malformed_yaml_reference() -> None:
+@pytest.mark.parametrize(
+    'yaml_reference',
+    [
+        [],
+        {'metadata': {'name': 'yaml_exp'}, 'sfd': {}},
+    ],
+)
+def test_trainer_rejects_malformed_yaml_reference(yaml_reference) -> None:
 
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir)
         (experiment_dir / 'metadata.json').write_text(
             json.dumps({
                 'sfd_module': 'yaml:yaml_exp',
-                'yaml_reference': [],
+                'yaml_reference': yaml_reference,
             }),
         )
         (experiment_dir / 'round_data.jsonl').write_text('')
