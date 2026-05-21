@@ -36,6 +36,7 @@ from tests.test_yaml import test_validate_error_for_split_config_invalid_value
 from tests.test_yaml import test_validate_error_for_missing_mode
 from tests.test_yaml import test_validate_error_for_unsafe_metadata_name
 from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
+from tests.test_yaml import test_validate_error_for_underscore_prefixed_sfd_param
 from tests.test_yaml import test_validate_warning_for_unused_sfd_param
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
@@ -1040,6 +1041,7 @@ tests = [
     test_validate_error_for_missing_mode,
     test_validate_error_for_unsafe_metadata_name,
     test_validate_error_for_empty_sfd_param_list,
+    test_validate_error_for_underscore_prefixed_sfd_param,
     test_validate_warning_for_unused_sfd_param,
     test_validate_warning_for_unknown_key_in_data_source,
     test_validate_warning_for_unknown_key_in_split_config,

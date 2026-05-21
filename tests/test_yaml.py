@@ -379,6 +379,14 @@ def test_validate_error_for_empty_sfd_param_list() -> None:
     assert any('roc_period' in e.message for e in result.errors)
 
 
+def test_validate_error_for_underscore_prefixed_sfd_param() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params']['_internal'] = [1, 2, 3]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('_internal' in e.message for e in result.errors)
+
+
 def test_validate_warning_for_unused_sfd_param() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['params']['orphan_param'] = [1, 2, 3]
