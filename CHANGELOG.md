@@ -956,3 +956,9 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `ForwardVolNormalizedReturnTarget` for forward log-return labels normalized by current Parkinson volatility
 - Route new regression coverage into the existing feature-library and target test suites
 - Require code-changing PRs to include both a CHANGELOG entry and package version update
+
+## v3.10.0 on 21st of May, 2026
+
+- Add `limen list-templates` CLI command — lists all available YAML experiment templates with descriptions
+- Add `limen init <output.yaml> --template <name>` CLI command — scaffolds a new experiment file from a template
+- Add `limen run --resume <results-dir>` CLI command — resumes an experiment from a checkpoint directory using `yaml_reference` and `target_permutations` from the checkpoint
