@@ -145,8 +145,9 @@ def test_cli_init_refuses_to_overwrite_existing_file() -> None:
 
 
 def _make_results_dir(yaml_reference: dict | None = None,
-                      target_permutations: int = 10) -> Path:
-    tmp = Path(tempfile.mkdtemp())
+                      target_permutations: int = 10) -> tempfile.TemporaryDirectory:
+    td = tempfile.TemporaryDirectory()
+    tmp = Path(td.name)
     if yaml_reference is not None:
         metadata = {'sfd_module': 'yaml:test_exp', 'yaml_reference': yaml_reference}
         (tmp / 'metadata.json').write_text(json.dumps(metadata))
@@ -161,75 +162,78 @@ def _make_results_dir(yaml_reference: dict | None = None,
         'domain_state': {},
     }
     (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    return tmp
+    return td
 
 
 def test_cli_run_resume_exits_0_on_success() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict))
-    runner = CliRunner()
-    with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
-        mock_uel.return_value.run.return_value = None
-        result = runner.invoke(cli, ['run', '--resume', str(results_dir)])
-    assert result.exit_code == 0
+    with _make_results_dir(yaml_reference=dict(yaml_dict)) as _tmpdir:
+        runner = CliRunner()
+        with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
+            mock_uel.return_value.run.return_value = None
+            result = runner.invoke(cli, ['run', '--resume', _tmpdir])
+        assert result.exit_code == 0
 
 
 def test_cli_run_resume_calls_uel_run_with_resume_true() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict), target_permutations=20)
-    runner = CliRunner()
-    with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
-        mock_uel.return_value.run.return_value = None
-        runner.invoke(cli, ['run', '--resume', str(results_dir)])
-    _, kwargs = mock_uel.return_value.run.call_args
+    with _make_results_dir(yaml_reference=dict(yaml_dict), target_permutations=20) as _tmpdir:
+        runner = CliRunner()
+        with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
+            mock_uel.return_value.run.return_value = None
+            runner.invoke(cli, ['run', '--resume', _tmpdir])
+        _, kwargs = mock_uel.return_value.run.call_args
     assert kwargs.get('resume') is True
     assert kwargs.get('n_permutations') == 20
 
 
 def test_cli_run_resume_errors_when_no_metadata_json() -> None:
-    tmp = Path(tempfile.mkdtemp())
-    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
-                               'strategy_type': 'random', 'content_hash': 'x'},
-                  'msq_state': {}, 'domain_state': {}}
-    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'metadata.json' in result.output
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                                   'strategy_type': 'random', 'content_hash': 'x'},
+                      'msq_state': {}, 'domain_state': {}}
+        (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'metadata.json' in result.output
 
 
 def test_cli_run_resume_errors_when_no_yaml_reference() -> None:
-    tmp = Path(tempfile.mkdtemp())
-    (tmp / 'metadata.json').write_text(json.dumps({'sfd_module': 'some.sfd'}))
-    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
-                               'strategy_type': 'random', 'content_hash': 'x'},
-                  'msq_state': {}, 'domain_state': {}}
-    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'yaml_reference' in result.output
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        (tmp / 'metadata.json').write_text(json.dumps({'sfd_module': 'some.sfd'}))
+        checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                                   'strategy_type': 'random', 'content_hash': 'x'},
+                      'msq_state': {}, 'domain_state': {}}
+        (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'yaml_reference' in result.output
 
 
 def test_cli_run_resume_errors_when_no_checkpoint_json() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    tmp = Path(tempfile.mkdtemp())
-    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': dict(yaml_dict)}))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'checkpoint' in result.output.lower()
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': dict(yaml_dict)}))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'checkpoint' in result.output.lower()
 
 
 def test_cli_run_resume_and_yaml_file_together_exits_1() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict))
-    runner = CliRunner()
-    with runner.isolated_filesystem():
-        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
-        result = runner.invoke(cli, ['run', 'exp.yaml', '--resume', str(results_dir)])
-    assert result.exit_code == 1
-    assert 'Cannot specify both' in result.output
+    with _make_results_dir(yaml_reference=dict(yaml_dict)) as _tmpdir:
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+            result = runner.invoke(cli, ['run', 'exp.yaml', '--resume', _tmpdir])
+        assert result.exit_code == 1
+        assert 'Cannot specify both' in result.output
 
 
 def test_cli_run_no_args_exits_1() -> None:
@@ -240,59 +244,62 @@ def test_cli_run_no_args_exits_1() -> None:
 
 def test_cli_run_dry_run_and_resume_together_exits_1() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    results_dir = _make_results_dir(yaml_reference=dict(yaml_dict))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--dry-run', '--resume', str(results_dir)])
-    assert result.exit_code == 1
-    assert 'dry-run' in result.output
+    with _make_results_dir(yaml_reference=dict(yaml_dict)) as _tmpdir:
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--dry-run', '--resume', _tmpdir])
+        assert result.exit_code == 1
+        assert 'dry-run' in result.output
 
 
 def test_cli_run_resume_errors_when_checkpoint_missing_metadata_key() -> None:
-    tmp = Path(tempfile.mkdtemp())
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': dict(yaml_dict)}))
-    # checkpoint exists but is missing the metadata key entirely
-    (tmp / 'checkpoint.json').write_text(json.dumps({'msq_state': {}, 'domain_state': {}}))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'checkpoint' in result.output.lower()
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': dict(yaml_dict)}))
+        (tmp / 'checkpoint.json').write_text(json.dumps({'msq_state': {}, 'domain_state': {}}))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'checkpoint' in result.output.lower()
 
 
 def test_cli_run_resume_errors_when_metadata_json_is_invalid_json() -> None:
-    tmp = Path(tempfile.mkdtemp())
-    (tmp / 'metadata.json').write_text('not valid json {{{')
-    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
-                               'strategy_type': 'random', 'content_hash': 'x'},
-                  'msq_state': {}, 'domain_state': {}}
-    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'metadata.json' in result.output
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        (tmp / 'metadata.json').write_text('not valid json {{{')
+        checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                                   'strategy_type': 'random', 'content_hash': 'x'},
+                      'msq_state': {}, 'domain_state': {}}
+        (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'metadata.json' in result.output
 
 
 def test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict() -> None:
-    tmp = Path(tempfile.mkdtemp())
-    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': 'not-a-dict'}))
-    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
-                               'strategy_type': 'random', 'content_hash': 'x'},
-                  'msq_state': {}, 'domain_state': {}}
-    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'yaml_reference' in result.output
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': 'not-a-dict'}))
+        checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                                   'strategy_type': 'random', 'content_hash': 'x'},
+                      'msq_state': {}, 'domain_state': {}}
+        (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'yaml_reference' in result.output
 
 
 def test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name() -> None:
-    tmp = Path(tempfile.mkdtemp())
-    (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': {'sfd': {}}}))
-    checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
-                               'strategy_type': 'random', 'content_hash': 'x'},
-                  'msq_state': {}, 'domain_state': {}}
-    (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    runner = CliRunner()
-    result = runner.invoke(cli, ['run', '--resume', str(tmp)])
-    assert result.exit_code == 1
-    assert 'metadata.name' in result.output
+    with tempfile.TemporaryDirectory() as _tmpdir:
+        tmp = Path(_tmpdir)
+        (tmp / 'metadata.json').write_text(json.dumps({'yaml_reference': {'sfd': {}}}))
+        checkpoint = {'metadata': {'experiment_round': 1, 'target_permutations': 10,
+                                   'strategy_type': 'random', 'content_hash': 'x'},
+                      'msq_state': {}, 'domain_state': {}}
+        (tmp / 'checkpoint.json').write_text(json.dumps(checkpoint))
+        runner = CliRunner()
+        result = runner.invoke(cli, ['run', '--resume', str(tmp)])
+        assert result.exit_code == 1
+        assert 'metadata.name' in result.output
