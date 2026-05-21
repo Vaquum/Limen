@@ -387,6 +387,23 @@ def test_validate_error_for_underscore_prefixed_sfd_param() -> None:
     assert any('_internal' in e.message for e in result.errors)
 
 
+def test_validate_error_for_non_string_sfd_param_key() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params'][1] = [10, 20]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('must be a string' in e.message for e in result.errors)
+
+
+def test_validate_non_string_sfd_param_key_does_not_crash() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params'][1] = [10, 20]
+    try:
+        validate(yaml_dict)
+    except AttributeError:
+        assert False, 'validate() crashed with AttributeError on non-string key'
+
+
 def test_validate_warning_for_unused_sfd_param() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['params']['orphan_param'] = [1, 2, 3]
