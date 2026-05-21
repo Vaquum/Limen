@@ -1,3 +1,5 @@
 from pathlib import Path
 
-TEMPLATES_DIR = Path(__file__).parent.parent.parent / 'yaml' / 'templates'
+import limen.yaml as _limen_yaml
+
+TEMPLATES_DIR = Path(_limen_yaml.__file__).parent / 'templates'
