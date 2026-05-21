@@ -1,4 +1,6 @@
+import inspect
 from datetime import date
+from pathlib import Path
 from textwrap import dedent
 
 from limen.calibration import grid_threshold_optimizer
@@ -89,12 +91,21 @@ _MINIMAL_ML_YAML = dedent('''\
         threshold_min: [0.20]
         threshold_max: [0.70]
         threshold_step: [0.05]
-        penalty: [l2]
-        class_weight: [0.5]
-        C: [1.0]
-        max_iter: [100]
         solver: [lbfgs]
+        penalty: [l2]
+        dual: [false]
         tol: [0.01]
+        C: [1.0]
+        fit_intercept: [true]
+        intercept_scaling: [1.0]
+        class_weight: [0.5]
+        random_state: [42]
+        max_iter: [100]
+        multi_class: [deprecated]
+        verbose: [0]
+        warm_start: [false]
+        n_jobs: [-1]
+        l1_ratio: [null]
     uel:
       n_permutations: 5
       search_strategy:
@@ -240,6 +251,23 @@ def test_validate_passes_valid_ml_yaml() -> None:
     result = validate(yaml_dict)
     assert result.valid
     assert result.errors == []
+
+
+def test_logreg_yaml_template_exposes_full_architecture_surface() -> None:
+    template = Path(__file__).resolve().parents[1] / 'limen/yaml/templates/logreg_binary.yaml'
+    yaml_dict, errors = parse(template.read_text())
+    assert errors == []
+
+    result = validate(yaml_dict)
+    assert result.valid, [e.message for e in result.errors]
+
+    arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
+    model_params = set(inspect.signature(arch).parameters) - {
+        'data',
+        'prediction_calibration_config',
+    }
+
+    assert model_params <= set(yaml_dict['sfd']['params'])
 
 
 def test_validate_passes_valid_rule_based_yaml() -> None:
