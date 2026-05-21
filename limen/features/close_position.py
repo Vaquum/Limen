@@ -1,6 +1,9 @@
 import polars as pl
 
 
+EPSILON = 1e-10
+
+
 def close_position(
     data: pl.DataFrame,
     window: int = 1,
@@ -11,7 +14,7 @@ def close_position(
 ) -> pl.DataFrame:
 
     '''
-    Compute close position within the high-low range as percentage.
+    Compute close position within the high-low range as a unit interval fraction.
 
     Args:
         data (pl.DataFrame): Klines dataset with high, low, and close columns
@@ -25,7 +28,12 @@ def close_position(
         pl.DataFrame: The input data with a new close-position column
     '''
 
-    position = (pl.col(close_col) - pl.col(low_col)) / (pl.col(high_col) - pl.col(low_col) + 1e-8)
+    price_range = pl.col(high_col) - pl.col(low_col)
+    position = (
+        pl.when(price_range.abs() <= EPSILON)
+        .then(None)
+        .otherwise((pl.col(close_col) - pl.col(low_col)) / price_range)
+    )
     if window == 1:
         return data.with_columns(position.alias(output_col))
     if window <= 0:

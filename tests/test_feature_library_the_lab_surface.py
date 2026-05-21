@@ -63,15 +63,20 @@ def _assert_values(actual: list[float | None], expected: list[float | None]) -> 
 
 def test_rolling_zscore_supports_transforms_and_zero_std_nulls() -> None:
     data = pl.DataFrame({'x': [1.0, 2.0, 3.0], 'flat': [5.0, 5.0, 5.0]})
+    abs_data = pl.DataFrame({'x': [-1.0, -3.0, 2.0]})
 
     identity = rolling_zscore(data, 'x', 2)
     log_result = rolling_zscore(data, 'x', 2, transform='log1p', output_col='x_log_z')
+    abs_result = rolling_zscore(abs_data, 'x', 2, transform='abs', output_col='x_abs_z')
     flat = rolling_zscore(data, 'flat', 2)
 
     assert identity['x_zscore_2'].to_list()[0] is None
     assert identity['x_zscore_2'].to_list()[1:] == pytest.approx([math.sqrt(0.5), math.sqrt(0.5)])
     assert log_result['x_log_z'].to_list()[1] == pytest.approx(math.sqrt(0.5))
+    assert abs_result['x_abs_z'].to_list()[1:] == pytest.approx([math.sqrt(0.5), -math.sqrt(0.5)])
     assert flat['flat_zscore_2'].to_list()[1:] == [None, None]
+    with pytest.raises(ValueError, match='transform must be one of'):
+        rolling_zscore(data, 'x', 2, transform='sqrt')
 
 
 def test_microstructure_features_match_the_lab_formulas() -> None:
