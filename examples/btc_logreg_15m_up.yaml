@@ -1,0 +1,120 @@
+schema_version: "1.0"
+
+metadata:
+  name: btc_logreg_15m_up
+  limen_version: "3.8.0"
+  mode: production
+  description: Bitcoin 15m next-bar-up logistic regression
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 900
+        start_date_limit: "2026-02-01"
+
+    split_config:
+      train: 8
+      val: 1
+      test: 2
+
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: "{roc_period}"
+      - func: limen.indicators.ppo
+      - func: limen.indicators.wilder_rsi
+        params:
+          period: "{rsi_period}"
+      - func: limen.indicators.cci
+      - func: limen.indicators.willr
+      - func: limen.indicators.mom
+      - func: limen.indicators.atr
+        params:
+          period: "{atr_period}"
+      - func: limen.indicators.natr
+      - func: limen.indicators.bbands
+        params:
+          period: "{bbands_period}"
+      - func: limen.indicators.stddev
+      - func: limen.indicators.rolling_volatility
+      - func: limen.indicators.obv
+      - func: limen.indicators.mfi
+      - func: limen.indicators.ema
+        params:
+          period: "{ema_period}"
+      - func: limen.indicators.sma
+
+    features:
+      - func: limen.features.fractional_diff
+        params:
+          d: "{frac_diff_d}"
+          cols: [close]
+          threshold: 0.001
+      - func: limen.features.log_returns.log_returns
+      - func: limen.features.vwap
+      - func: limen.features.kline_imbalance
+      - func: limen.features.dollar_volume
+      - func: limen.features.volume_regime
+      - func: limen.features.trend_strength
+      - func: limen.features.range_pct
+      - func: limen.features.body_to_range
+      - func: limen.features.close_position
+
+    target:
+      name: next_bar_up
+      class: limen.targets.NextBarUpTarget
+
+    scaler:
+      from_params: scaler_type
+
+    pca_compression: {}
+
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: "{cal_method}"
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+          threshold_min: "{threshold_min}"
+          threshold_max: "{threshold_max}"
+          threshold_step: "{threshold_step}"
+
+  params:
+    frac_diff_d: [0.0, 0.1, 0.2, 0.3, 0.4]
+    roc_period: [1, 4, 8, 16, 48, 96]
+    atr_period: [5, 7, 14]
+    rsi_period: [10, 14, 21]
+    ema_period: [12, 26, 96]
+    bbands_period: [20, 48, 96]
+    scaler_type: [robust]
+    auto_pca: [true]
+    pca_k: [30, 35, 40]
+    use_calibration: [false]
+    use_threshold: [false]
+    cal_method: [isotonic]
+    threshold_min: [0.30]
+    threshold_max: [0.65]
+    threshold_step: [0.05]
+    solver: [lbfgs, liblinear, saga]
+    penalty: [l2]
+    tol: [0.0001, 0.001]
+    C: [0.01, 0.05, 0.1]
+    fit_intercept: [false]
+    class_weight: [0.40, 0.50, 0.60, 0.75, 0.90]
+    max_iter: [60, 120, 240, 500]
+
+uel:
+  n_permutations: 10000
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
