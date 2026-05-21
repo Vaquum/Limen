@@ -1,9 +1,12 @@
+import re
 import shutil
 from pathlib import Path
 
 import click
 
 from limen.cli.commands._constants import TEMPLATES_DIR
+
+_NAME_SLUG_RE = re.compile(r'^[A-Za-z0-9_-]+$')
 
 
 def run_init(output: Path, template_name: str | None) -> bool:
@@ -43,26 +46,54 @@ def run_init(output: Path, template_name: str | None) -> bool:
         click.secho(f"'{output}' already exists — will not overwrite.", fg='red')
         return False
 
+    experiment_name = output.stem
+    if not _NAME_SLUG_RE.match(experiment_name):
+        click.secho(
+            f"  ✗ '{experiment_name}' is not a valid experiment name. "
+            f"Use only letters, digits, underscores, or hyphens.",
+            fg='red',
+        )
+        return False
+
     output.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(available[template_name], output)
 
-    _update_experiment_name(output, output.stem)
+    if not _update_experiment_name(output, experiment_name):
+        click.secho(
+            f"  ✗ Template '{template_name}' has no metadata.name field to update.",
+            fg='red',
+        )
+        output.unlink()
+        return False
 
     click.secho(f"  ✓ Created '{output}' from template '{template_name}'", fg='green')
     click.echo(f"  Edit the file, then run: limen validate {output}")
     return True
 
 
-def _update_experiment_name(path: Path, name: str) -> None:
+def _update_experiment_name(path: Path, name: str) -> bool:
 
     text = path.read_text()
     lines = text.splitlines(keepends=True)
+    in_metadata = False
+    replaced = False
 
     for i, line in enumerate(lines):
         stripped = line.lstrip()
-        if stripped.startswith('name:'):
-            indent = line[: len(line) - len(stripped)]
+        indent = line[: len(line) - len(stripped)]
+
+        if not indent and stripped.rstrip('\n') == 'metadata:':
+            in_metadata = True
+            continue
+
+        if not indent and stripped and not stripped.startswith('#'):
+            in_metadata = False
+
+        if in_metadata and stripped.startswith('name:'):
             lines[i] = f'{indent}name: "{name}"\n'
+            replaced = True
             break
 
-    path.write_text(''.join(lines))
+    if replaced:
+        path.write_text(''.join(lines))
+    return replaced
