@@ -13,6 +13,7 @@ import polars as pl
 from limen.experiment.trainer.errors import ReconstructionError
 from limen.experiment.trainer.sensor import Sensor
 from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.yaml.compiler import CompiledSFD
 
 logger = logging.getLogger(__name__)
 
@@ -75,13 +76,22 @@ class Trainer:
                 f"Only experiments created with experiment_dir support training."
             ) from None
 
-        if 'sfd_module' not in self._metadata:
-            raise ValueError(
-                'metadata.json missing required key: sfd_module'
-            )
+        yaml_reference = self._metadata.get('yaml_reference')
+        if yaml_reference is not None:
+            if not isinstance(yaml_reference, dict):
+                raise ValueError(
+                    "metadata.json key 'yaml_reference' must be an object"
+                )
+            sfd_module_name = self._metadata.get('sfd_module', 'yaml_reference')
+            sfd = CompiledSFD(yaml_reference)
+        else:
+            if 'sfd_module' not in self._metadata:
+                raise ValueError(
+                    'metadata.json missing required key: sfd_module'
+                )
 
-        sfd_module_name = self._metadata['sfd_module']
-        sfd = self._load_sfd_module(sfd_module_name)
+            sfd_module_name = self._metadata['sfd_module']
+            sfd = self._load_sfd_module(sfd_module_name)
 
         if not hasattr(sfd, 'manifest') or not hasattr(sfd, 'params'):
             raise ValueError(

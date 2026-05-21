@@ -956,3 +956,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `ForwardVolNormalizedReturnTarget` for forward log-return labels normalized by current Parkinson volatility
 - Route new regression coverage into the existing feature-library and target test suites
 - Require code-changing PRs to include both a CHANGELOG entry and package version update
+
+## v3.9.1 on 21st of May, 2026
+
+- Make `Trainer` reconstruct YAML CLI experiment artifacts directly from `metadata.json["yaml_reference"]`, so `sfd_module: yaml:<name>` metadata no longer blocks promotion.

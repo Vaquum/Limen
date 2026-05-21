@@ -555,6 +555,73 @@ def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> No
     assert sys.path == sys_path_before
 
 
+def test_trainer_reconstructs_yaml_artifact_from_metadata_reference(monkeypatch) -> None:
+
+    '''
+    YAML CLI runs store the declarative SFD under metadata.json["yaml_reference"]
+    while metadata.json["sfd_module"] uses a non-importable yaml:<name> marker.
+    Trainer must use the YAML reference directly instead of treating that marker
+    as a Python module path.
+    '''
+
+    seen = {}
+
+    class FakeCompiledSFD:
+
+        def __init__(self, yaml_reference):
+            seen['yaml_reference'] = yaml_reference
+
+        def params(self):
+            return {'alpha': [1]}
+
+        def manifest(self):
+            return SimpleNamespace(architecture_function=None)
+
+    monkeypatch.setattr(trainer_module, 'CompiledSFD', FakeCompiledSFD)
+
+    yaml_reference = {
+        'metadata': {'name': 'yaml_exp'},
+        'sfd': {'params': {'alpha': [1]}},
+    }
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({
+                'sfd_module': 'yaml:yaml_exp',
+                'yaml_reference': yaml_reference,
+            }),
+        )
+        (experiment_dir / 'round_data.jsonl').write_text('')
+
+        trainer = Trainer(
+            experiment_dir,
+            data=pl.DataFrame({'x': [1, 2, 3]}),
+        )
+
+    assert seen['yaml_reference'] == yaml_reference
+    assert trainer._param_keys == frozenset({'alpha'})
+
+
+def test_trainer_rejects_malformed_yaml_reference() -> None:
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({
+                'sfd_module': 'yaml:yaml_exp',
+                'yaml_reference': [],
+            }),
+        )
+        (experiment_dir / 'round_data.jsonl').write_text('')
+
+        with pytest.raises(ValueError, match='yaml_reference'):
+            Trainer(
+                experiment_dir,
+                data=pl.DataFrame({'x': [1, 2, 3]}),
+            )
+
+
 def test_trainer_loads_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
 
     '''
