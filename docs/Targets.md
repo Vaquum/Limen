@@ -43,6 +43,7 @@ manifest.with_target_label(
 | `NextBarDownTarget` | binary `UInt8` | no | none | Canonical down decoder outcome: positive label if the next close is lower. |
 | `NextReturnTarget` | continuous `Float64` | no | n/a | Percentage return over the next N bars. Use with regression architectures. |
 | `VolNormalizedReturnTarget` | continuous `Float64` | yes — train sanity gate | none | Canonical return decoder outcome: log return divided by prior Parkinson volatility. |
+| `ForwardVolNormalizedReturnTarget` | continuous `Float64` | yes — train sanity gate | none | Predictive label: forward log return divided by current Parkinson volatility. |
 | `RiskRewardRatioTarget` | continuous `Float64` | no | n/a | Ratio of `capturable_breakout` to absolute `max_drawdown` per row. |
 | `ExitQualityTarget` | continuous `Float64` | no | n/a | Categorical score for closed trades based on `exit_reason` and `exit_net_return`. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
@@ -218,6 +219,35 @@ Dirty OHLC rows are dropped before target construction when `high < max(open, cl
 | `min_periods` | `int` | Warmup before volatility is emitted; default `150` |
 
 The training split must pass the Parkinson-to-close volatility sanity gate: median `sigma_P / sigma_C2C` must be within `[0.9, 1.1]`. Bucketing is deliberately downstream: fit `q33`/`q66` of `abs(vol_normalized_return)` on train, persist the boundaries, and load them at inference instead of refitting online.
+
+### `ForwardVolNormalizedReturnTarget`
+
+```python
+ForwardVolNormalizedReturnTarget(train_data, target_name, periods=1, absolute=False, halflife=50, min_periods=150, high_col='high', low_col='low', open_col='open', close_col='close')
+```
+
+Produces a continuous predictive label as `log(close.shift(-periods) / close) / sigma`, where `sigma` is the current EWMA Parkinson volatility. Set `absolute=True` to normalize absolute forward movement instead of signed direction.
+
+```python
+.with_target_label(
+    'forward_vol_normalized_return',
+    ForwardVolNormalizedReturnTarget,
+    fit_params={'periods': 1, 'halflife': 50, 'min_periods': 150},
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `periods` | `int` | Forward return horizon in bars; default `1` |
+| `absolute` | `bool` | Whether to use absolute forward log return; default `False` |
+| `halflife` | `int` | EWMA half-life in bars; default `50` |
+| `min_periods` | `int` | Warmup before volatility is emitted; default `150` |
+| `high_col` | `str` | High price column; default `'high'` |
+| `low_col` | `str` | Low price column; default `'low'` |
+| `open_col` | `str` | Open price column used for dirty-bar filtering; default `'open'` |
+| `close_col` | `str` | Close price column; default `'close'` |
+
+The class reuses the same dirty-bar filter and Parkinson-to-close volatility sanity gate as `VolNormalizedReturnTarget`.
 
 ### `RiskRewardRatioTarget`
 

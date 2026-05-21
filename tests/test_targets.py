@@ -8,6 +8,7 @@ from limen.experiment import Manifest
 from limen.targets import EmaBreakoutTarget
 from limen.targets import ExitQualityTarget
 from limen.targets import ForwardBreakoutTarget
+from limen.targets import ForwardVolNormalizedReturnTarget
 from limen.targets import IdentityTarget
 from limen.targets import NextBarDownTarget
 from limen.targets import NextBarUpTarget
@@ -207,6 +208,32 @@ def test_vol_normalized_return_rejects_bad_training_sigma_ratio() -> None:
 
     with pytest.raises(ValueError, match='outside'):
         VolNormalizedReturnTarget(data, 'vol_normalized_return', halflife=2, min_periods=2)
+
+
+def test_forward_vol_normalized_return_uses_current_sigma_and_future_return() -> None:
+    data = _constant_vol_bars(n_rows=6, log_return=0.01)
+    t = ForwardVolNormalizedReturnTarget(data, 'forward_vol_normalized_return', halflife=2, min_periods=2)
+    result = t.transform(data)
+
+    assert result['forward_vol_normalized_return'].to_list()[:1] == [None]
+    assert result['forward_vol_normalized_return'].to_list()[1:-1] == pytest.approx([1.0, 1.0, 1.0, 1.0])
+    assert result['forward_vol_normalized_return'].to_list()[-1] is None
+
+
+def test_forward_vol_normalized_return_absolute_and_multi_periods() -> None:
+    data = _constant_vol_bars(n_rows=6, log_return=0.01)
+    t = ForwardVolNormalizedReturnTarget(
+        data,
+        'forward_abs_vol_normalized_return',
+        periods=2,
+        absolute=True,
+        halflife=2,
+        min_periods=2,
+    )
+    result = t.transform(data)
+
+    assert result['forward_abs_vol_normalized_return'].to_list()[1:-2] == pytest.approx([2.0, 2.0, 2.0])
+    assert result['forward_abs_vol_normalized_return'].to_list()[-2:] == [None, None]
 
 
 def test_canonical_decoder_outcomes_run_through_manifest() -> None:

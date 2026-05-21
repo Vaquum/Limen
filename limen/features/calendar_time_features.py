@@ -15,7 +15,7 @@ def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input frame with `hour`, `minute`, `weekday`,
             `day_of_month`, `day_of_year`, `week_of_year`, `month`,
-            `quarter`, and `is_weekend` appended. `weekday` uses ISO
+            `quarter`, `half_of_year`, and `is_weekend` appended. `weekday` uses ISO
             numbering with `Monday=1` through `Sunday=7`, and
             `week_of_year` follows ISO week numbering
     '''
@@ -31,5 +31,6 @@ def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
         pl.col('datetime').dt.week().alias('week_of_year'),
         pl.col('datetime').dt.month().alias('month'),
         pl.col('datetime').dt.quarter().alias('quarter'),
+        (((pl.col('datetime').dt.month() - 1) // 6) + 1).alias('half_of_year'),
         (weekday >= WEEKEND_START_WEEKDAY).cast(pl.Int8).alias('is_weekend'),
     ])
