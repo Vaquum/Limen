@@ -38,8 +38,7 @@ def run_resume(results_dir: Path) -> bool:
     if target_permutations is None:
         return False
 
-
-    uel_cfg = yaml_reference.get('uel', {})
+    uel_cfg = yaml_reference.get('uel') or {}
     experiment_name: str = yaml_reference['metadata']['name']
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_reference['metadata'].get('mode', 'development') == 'development'
