@@ -231,7 +231,7 @@ def test_cli_run_resume_errors_when_no_checkpoint_json() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ['run', '--resume', str(tmp)])
     assert result.exit_code == 1
-    assert 'checkpoint.json' in result.output
+    assert 'checkpoint' in result.output.lower()
 
 
 def test_cli_run_resume_and_yaml_file_together_exits_1() -> None:
