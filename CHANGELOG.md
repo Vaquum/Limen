@@ -932,3 +932,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `tabpfn_binary.yaml`, `xgboost_regressor.yaml`, and `rule_based.yaml` YAML experiment templates
 - Rule-based YAML manifests now support `indicators` — wired into `RuleBasedManifest.feature_transforms` at compile time
+
+## v3.5.3 on 21st of May, 2026
+
+- Add `CausalRollingRobustScaler` to `limen.scalers` — a robust scaler that computes each row's median and IQR from a strictly trailing rolling window (`.shift(1)`, no look-ahead) and falls back to train-fitted statistics during warmup
+- Register the new scaler in `SCALER_REGISTRY` under the key `causal_rolling_robust`
