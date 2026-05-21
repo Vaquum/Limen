@@ -5,10 +5,8 @@ from typing import Any
 
 import click
 
-from limen.experiment import GridStrategy
-from limen.experiment import RandomStrategy
+from limen.cli.commands._strategy import build_search_strategy
 from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.parser import parse
 from limen.yaml.validator import validate
@@ -75,7 +73,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     results_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(yaml_path, results_dir / yaml_path.name)
 
-    search_strategy = _build_search_strategy(uel_cfg, sfd_cfg)
+    search_strategy = build_search_strategy(uel_cfg, sfd_cfg)
     compiled = CompiledSFD(yaml_dict)
 
     click.echo(f"Running '{experiment_name}' ({n_permutations} permutations) ...")
@@ -125,19 +123,3 @@ def _build_results_dir(uel_cfg: dict[str, Any], experiment_name: str) -> Path:
     )
 
 
-def _build_search_strategy(uel_cfg: dict[str, Any],
-                            sfd_cfg: dict[str, Any]) -> RandomStrategy | GridStrategy:
-
-    strategy_cfg = uel_cfg.get('search_strategy', {})
-    if not isinstance(strategy_cfg, dict):
-        raise ValueError(
-            f"'uel.search_strategy' must be a mapping, got {type(strategy_cfg).__name__}"
-        )
-    strategy_type = strategy_cfg.get('type', 'random')
-    # ruamel.yaml returns CommentedMap/CommentedSeq — convert to plain Python types
-    params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}
-    domain = ParamDomain(params)
-
-    if strategy_type == 'grid':
-        return GridStrategy(domain)
-    return RandomStrategy(domain)

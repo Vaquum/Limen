@@ -4,10 +4,9 @@ from typing import Any
 
 import click
 
-from limen.experiment import GridStrategy
-from limen.experiment import RandomStrategy
+from limen.cli.commands._strategy import build_search_strategy
+from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
 from limen.yaml.compiler import CompiledSFD
 
 
@@ -39,6 +38,7 @@ def run_resume(results_dir: Path) -> bool:
     if target_permutations is None:
         return False
 
+
     uel_cfg = yaml_reference.get('uel', {})
     sfd_cfg = yaml_reference.get('sfd', {})
     experiment_name: str = yaml_reference['metadata']['name']
@@ -49,7 +49,7 @@ def run_resume(results_dir: Path) -> bool:
 
     try:
         compiled = CompiledSFD(yaml_reference)
-        search_strategy = _build_search_strategy(uel_cfg, sfd_cfg)
+        search_strategy = build_search_strategy(uel_cfg, sfd_cfg)
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Failed to reconstruct experiment: {exc}', fg='red')
         return False
@@ -105,29 +105,9 @@ def _load_yaml_reference(results_dir: Path) -> dict[str, Any] | None:
 
 def _load_target_permutations(results_dir: Path) -> int | None:
 
-    checkpoint_path = results_dir / 'checkpoint.json'
-    if not checkpoint_path.exists():
-        click.secho(
-            f"  ✗ No checkpoint.json found in '{results_dir}' — nothing to resume.",
-            fg='red',
-        )
-        return None
-
     try:
-        data = json.loads(checkpoint_path.read_text())
+        data = CheckpointManager().load(results_dir)
         return int(data['metadata']['target_permutations'])
-    except (KeyError, ValueError, TypeError) as exc:
-        click.secho(f'  ✗ Could not read target_permutations from checkpoint: {exc}', fg='red')
+    except ValueError as exc:
+        click.secho(f'  ✗ Cannot load checkpoint: {exc}', fg='red')
         return None
-
-
-def _build_search_strategy(uel_cfg: dict[str, Any],
-                            sfd_cfg: dict[str, Any]) -> RandomStrategy | GridStrategy:
-
-    strategy_type = (uel_cfg.get('search_strategy') or {}).get('type', 'random')
-    params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}
-    domain = ParamDomain(params)
-
-    if strategy_type == 'grid':
-        return GridStrategy(domain)
-    return RandomStrategy(domain)

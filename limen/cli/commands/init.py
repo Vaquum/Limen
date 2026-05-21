@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-_TEMPLATES_DIR = Path(__file__).parent.parent.parent / 'yaml' / 'templates'
+from limen.cli.commands._constants import TEMPLATES_DIR
 
 
 def run_init(output: Path, template_name: str | None) -> bool:
@@ -21,7 +21,7 @@ def run_init(output: Path, template_name: str | None) -> bool:
 
     '''
 
-    available = {p.stem: p for p in sorted(_TEMPLATES_DIR.glob('*.yaml'))}
+    available = {p.stem: p for p in sorted(TEMPLATES_DIR.glob('*.yaml'))}
 
     if template_name is None:
         click.echo('Available templates:')
