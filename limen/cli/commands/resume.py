@@ -89,12 +89,28 @@ def _load_yaml_reference(results_dir: Path) -> dict[str, Any] | None:
         )
         return None
 
-    metadata = json.loads(metadata_path.read_text())
+    try:
+        metadata = json.loads(metadata_path.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        click.secho(f"  ✗ Cannot read metadata.json: {exc}", fg='red')
+        return None
+
+    if not isinstance(metadata, dict):
+        click.secho("  ✗ metadata.json is not a JSON object.", fg='red')
+        return None
+
     yaml_reference = metadata.get('yaml_reference')
 
-    if yaml_reference is None:
+    if not isinstance(yaml_reference, dict):
         click.secho(
-            "  ✗ metadata.json has no 'yaml_reference' — experiment was not started from a YAML file.",
+            "  ✗ metadata.json has no valid 'yaml_reference' — experiment was not started from a YAML file.",
+            fg='red',
+        )
+        return None
+
+    if not isinstance(yaml_reference.get('metadata'), dict) or 'name' not in yaml_reference['metadata']:
+        click.secho(
+            "  ✗ 'yaml_reference' is missing 'metadata.name' — cannot identify experiment.",
             fg='red',
         )
         return None
