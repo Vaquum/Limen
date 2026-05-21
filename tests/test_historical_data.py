@@ -298,6 +298,96 @@ def test_get_spot_dollar_klines_repairs_second_encoded_huggingface_datetimes() -
     assert data['datetime'].dt.year().to_list() == [2020, 2020]
 
 
+def test_get_spot_dollar_klines_repairs_only_second_encoded_datetime_rows() -> None:
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    starts = [start + timedelta(hours=idx) for idx in range(4)]
+    ends = [dt + timedelta(minutes=30) for dt in starts]
+    mixed_starts = [
+        datetime.fromtimestamp(starts[0].timestamp() / 1000, tz=timezone.utc),
+        starts[1],
+        datetime.fromtimestamp(starts[2].timestamp() / 1000, tz=timezone.utc),
+        starts[3],
+    ]
+    mixed_ends = [
+        datetime.fromtimestamp(ends[0].timestamp() / 1000, tz=timezone.utc),
+        ends[1],
+        datetime.fromtimestamp(ends[2].timestamp() / 1000, tz=timezone.utc),
+        ends[3],
+    ]
+
+    with TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / '1m-dollar.parquet'
+        _dollar_frame(1_000_000).with_columns([
+            pl.Series('start_datetime', mixed_starts),
+            pl.Series('end_datetime', mixed_ends),
+        ]).write_parquet(path)
+
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                HistoricalData,
+                'DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO',
+                str(path),
+            )
+            historical = HistoricalData()
+            data = historical.get_spot_dollar_klines(dollar_bar_size=1_000_000)
+
+    assert data['datetime'].to_list() == starts
+
+
+def test_get_spot_dollar_klines_rejects_sub_base_intervals() -> None:
+    data = historical_module._normalize_spot_dollar_klines(_dollar_frame(1_000_000))
+
+    with pytest.raises(ValueError, match='Sub-base aggregation is not supported'):
+        historical_module._aggregate_spot_dollar_klines(
+            data,
+            500_000,
+            1_000_000,
+        )
+
+
+def test_get_spot_dollar_klines_rejects_non_multiple_sizes() -> None:
+    data = historical_module._normalize_spot_dollar_klines(_dollar_frame(1_000_000))
+
+    with pytest.raises(ValueError, match='must be a multiple'):
+        historical_module._aggregate_spot_dollar_klines(
+            data,
+            2_500_000,
+            1_000_000,
+        )
+
+
+def test_get_spot_dollar_klines_resets_aggregate_groups_by_day() -> None:
+    starts = [
+        datetime(2020, 1, 1, 22, tzinfo=timezone.utc),
+        datetime(2020, 1, 1, 23, tzinfo=timezone.utc),
+        datetime(2020, 1, 2, 0, tzinfo=timezone.utc),
+        datetime(2020, 1, 2, 1, tzinfo=timezone.utc),
+    ]
+
+    with TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / '1m-dollar.parquet'
+        _dollar_frame(1_000_000).with_columns([
+            pl.Series('start_datetime', starts),
+            pl.Series(
+                'end_datetime',
+                [dt + timedelta(minutes=30) for dt in starts],
+            ),
+        ]).write_parquet(path)
+
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(
+                HistoricalData,
+                'DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO',
+                str(path),
+            )
+            historical = HistoricalData()
+            data = historical.get_spot_dollar_klines(dollar_bar_size=3_000_000)
+
+    assert data.height == 2
+    assert data['datetime'].to_list() == [starts[0], starts[2]]
+    assert data['liquidity_sum'].to_list() == [2_000_000.0, 2_000_000.0]
+
+
 def test_get_spot_klines_rejects_sub_base_intervals() -> None:
     historical = HistoricalData()
 

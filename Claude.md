@@ -9,7 +9,8 @@
 -> You will install packages from `requirements.txt` if `.venv` must be created
 -> You will never create or touch other files than the one strictly necessary for the task
 -> You never synthentic data, that would be extremely harmful.
--> You always thoroughly test things before declare task as done.
+-> You start local validation early, then push the branch and open or update the PR while it runs.
+-> You only declare task done after local and CI gates pass.
 -> If at any point you feel that requirements are not clear, ask questions.
 -> We want bullet-proof conviction every step of the way.
 -> You stick with minimal highly readable code.

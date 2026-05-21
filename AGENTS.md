@@ -36,7 +36,7 @@
 - A local work branch must track the same-named remote branch.
 - Local-only branches, extra worktrees, and detached-head write work are forbidden.
 - At most one active local WA branch and one unmerged remote WA branch may exist at a time but can inherit branches from operator as long as one active local branch rule stands
-- Dry compile is required before push.
+- Start the local dry compile or test runner before push; while it runs, push the committed branch and open or update the PR.
 - PR and authoritative CI compile are required before merge.
 - Report-back or stand-down requires committed state, a clean tree, and the current branch head present on remote.
 - Machine contracts override prose and repo folklore.
@@ -53,12 +53,12 @@
 
 **During Work**
 - Keep implementation scope inside the routed `task_type`.
-- If the task mutates the repo: stage intended changes, run the staged or pre-push compiler gate, fix until clean, then commit.
+- If the task mutates the repo: stage intended changes, commit, start the local compiler gate, then push and open or update the PR while the gate runs.
 - Runtime-touching work must produce canonical evidence, not narrative-only claims.
 - Operator or user visible changes must remain mechanically enforced on authoritative surfaces.
 
 **Before Completion**
-- Run the required dry compile on the exact push candidate.
+- Confirm the local dry compile or test runner completed on the exact pushed candidate before terminal report.
 - Treat dry run as blocking but non-authoritative.
 - Treat CI compile on the exact PR candidate tree as authoritative for merge.
 - Do not claim done, ready, complete, or mergeable until the end gate passes.
@@ -216,6 +216,9 @@ Minimal common contract shape preserved from the existing per-task developer con
     },
     "pull_request_discipline": {
       "pull_request_first_local_test_suite_next": true,
+      "local_test_runner_starts_before_pr_push": true,
+      "pr_push_and_open_may_run_while_local_test_runner_is_active": true,
+      "terminal_claim_requires_completed_local_test_runner": true,
       "protected_branch": "main",
       "branch_prefix": "wa/",
       "repo_mutation_on_main_branch_forbidden": true,

@@ -7,7 +7,7 @@
 - `get_binance_file()`
 - `get_any_file()`
 
-All three return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
+All four return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
 
 ## How It Works
 

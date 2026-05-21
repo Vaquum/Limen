@@ -314,13 +314,13 @@ def _repair_second_encoded_datetime_column(
     if column_name not in df.columns or not isinstance(df.schema[column_name], pl.Datetime):
         return df
 
-    minimum = df.select(pl.col(column_name).min()).item()
-    if minimum is None or minimum.year >= _DATETIME_REPAIR_YEAR_CUTOFF:
-        return df
-
     return df.with_columns(
-        (pl.col(column_name).dt.epoch('ms') * 1000)
-        .cast(pl.Datetime('ms', time_zone='UTC'))
+        pl.when(pl.col(column_name).dt.year() < _DATETIME_REPAIR_YEAR_CUTOFF)
+        .then(
+            (pl.col(column_name).dt.epoch('ms') * 1000)
+            .cast(pl.Datetime('ms', time_zone='UTC'))
+        )
+        .otherwise(pl.col(column_name))
         .alias(column_name)
     )
 
@@ -542,30 +542,28 @@ def _normalize_spot_dollar_klines(data: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def _spot_dollar_group_ids(
+def _with_spot_dollar_groups(
     data: pl.DataFrame,
     dollar_bar_size: int,
-) -> list[int]:
-    groups: list[int] = []
-    group_id = 0
-    running_liquidity = 0.0
-    current_date = None
-
-    for row in data.iter_rows(named=True):
-        row_date = row['datetime'].date()
-        if current_date is not None and row_date != current_date:
-            group_id += 1
-            running_liquidity = 0.0
-
-        current_date = row_date
-        running_liquidity += row['liquidity_sum']
-        groups.append(group_id)
-
-        if running_liquidity >= dollar_bar_size:
-            group_id += 1
-            running_liquidity = 0.0
-
-    return groups
+) -> pl.DataFrame:
+    return (
+        data
+        .sort('datetime')
+        .with_columns(pl.col('datetime').dt.date().alias('_dollar_day'))
+        .with_columns(
+            (
+                pl.col('liquidity_sum').cum_sum().over('_dollar_day')
+                - pl.col('liquidity_sum')
+            ).alias('_day_liquidity_before')
+        )
+        .with_columns(
+            (
+                (pl.col('_day_liquidity_before') / float(dollar_bar_size))
+                .floor()
+                .cast(pl.UInt64)
+            ).alias('_dollar_group')
+        )
+    )
 
 
 def _aggregate_spot_dollar_klines(
@@ -573,8 +571,6 @@ def _aggregate_spot_dollar_klines(
     dollar_bar_size: int,
     source_dollar_bar_size: int | None,
 ) -> pl.DataFrame:
-    data = _normalize_spot_dollar_klines(data)
-
     if source_dollar_bar_size is not None:
         if dollar_bar_size < source_dollar_bar_size:
             raise ValueError(
@@ -592,12 +588,7 @@ def _aggregate_spot_dollar_klines(
         if dollar_bar_size == source_dollar_bar_size:
             return _round_spot_kline_columns(data)
 
-    grouped = data.with_columns(
-        pl.Series(
-            name='_dollar_group',
-            values=_spot_dollar_group_ids(data, dollar_bar_size),
-        )
-    )
+    grouped = _with_spot_dollar_groups(data, dollar_bar_size)
 
     weighted = grouped.with_columns([
         (
@@ -620,7 +611,7 @@ def _aggregate_spot_dollar_klines(
 
     aggregated = (
         weighted
-        .group_by('_dollar_group', maintain_order=True)
+        .group_by(['_dollar_day', '_dollar_group'], maintain_order=True)
         .agg([
             pl.col('datetime').first().alias('datetime'),
             pl.col('open').first().alias('open'),
