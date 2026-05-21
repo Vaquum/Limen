@@ -5,9 +5,9 @@ from typing import Any
 
 import click
 
-from limen.cli.commands._strategy import build_search_strategy
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.compiler import build_search_strategy
 from limen.yaml.parser import parse
 from limen.yaml.validator import validate
 
@@ -62,7 +62,6 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         return True
 
     uel_cfg = yaml_dict.get('uel', {})
-    sfd_cfg = yaml_dict.get('sfd', {})
 
     experiment_name: str = yaml_dict['metadata']['name']
     n_permutations: int = uel_cfg.get('n_permutations', 10000)
@@ -73,7 +72,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     results_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(yaml_path, results_dir / yaml_path.name)
 
-    search_strategy = build_search_strategy(uel_cfg, sfd_cfg)
+    search_strategy = build_search_strategy(yaml_dict)
     compiled = CompiledSFD(yaml_dict)
 
     click.echo(f"Running '{experiment_name}' ({n_permutations} permutations) ...")

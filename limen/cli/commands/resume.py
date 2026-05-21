@@ -4,10 +4,10 @@ from typing import Any
 
 import click
 
-from limen.cli.commands._strategy import build_search_strategy
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.compiler import build_search_strategy
 
 
 def run_resume(results_dir: Path) -> bool:
@@ -40,7 +40,6 @@ def run_resume(results_dir: Path) -> bool:
 
 
     uel_cfg = yaml_reference.get('uel', {})
-    sfd_cfg = yaml_reference.get('sfd', {})
     experiment_name: str = yaml_reference['metadata']['name']
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_reference['metadata'].get('mode', 'development') == 'development'
@@ -49,7 +48,7 @@ def run_resume(results_dir: Path) -> bool:
 
     try:
         compiled = CompiledSFD(yaml_reference)
-        search_strategy = build_search_strategy(uel_cfg, sfd_cfg)
+        search_strategy = build_search_strategy(yaml_reference)
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Failed to reconstruct experiment: {exc}', fg='red')
         return False

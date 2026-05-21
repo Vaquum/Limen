@@ -1,5 +1,6 @@
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_manifest
+from limen.yaml.compiler import build_search_strategy
 from limen.yaml.errors import GitError
 from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import ValidationError
@@ -19,6 +20,7 @@ __all__ = [
     'ValidationResult',
     'YAMLError',
     'build_manifest',
+    'build_search_strategy',
     'parse',
     'resolve',
     'validate',
