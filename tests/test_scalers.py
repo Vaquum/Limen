@@ -2,6 +2,7 @@ import polars as pl
 import numpy as np
 
 from limen.experiment import MLManifest
+from limen.scalers.causal_rolling_robust_scaler import CausalRollingRobustScaler
 from limen.scalers.rank_gauss_scaler import RankGaussScaler
 from limen.scalers.registry import SCALER_REGISTRY
 from limen.scalers.robust_scaler import RobustScaler
@@ -144,6 +145,129 @@ def test_robust_scaler_all_null_column():
     assert 'normal' in scaler.medians
 
 
+def test_causal_rolling_robust_scaler_fit_and_transform():
+
+    train = _make_train_data()
+    scaler = CausalRollingRobustScaler(train, window=20, min_samples=5)
+    transformed = scaler.transform(train)
+
+    assert 'price' in transformed.columns
+    assert 'datetime' in transformed.columns
+    assert transformed.height == train.height
+    assert not transformed['price'].is_nan().any()
+
+
+def test_causal_rolling_robust_scaler_no_lookahead():
+
+    train = _make_train_data()
+    scaler = CausalRollingRobustScaler(train, window=20, min_samples=5)
+    full = scaler.transform(train)
+
+    for t in (10, 40, 80):
+        prefix = scaler.transform(train.head(t + 1))
+        assert abs(full['price'][t] - prefix['price'][t]) < 1e-9
+
+
+def test_causal_rolling_robust_scaler_warmup_uses_fallback():
+
+    train = _make_train_data()
+    scaler = CausalRollingRobustScaler(train, window=20, min_samples=5)
+    transformed = scaler.transform(train)
+
+    raw = (train['price'][0] - scaler.medians['price']) / scaler.iqrs['price']
+    expected = max(-scaler.clip, min(scaler.clip, raw))
+    assert abs(transformed['price'][0] - expected) < 1e-9
+
+
+def test_causal_rolling_robust_scaler_clip_bound():
+
+    train = _make_train_data()
+    scaler = CausalRollingRobustScaler(train, window=20, min_samples=5, clip=3.0)
+    transformed = scaler.transform(train)
+
+    price = transformed['price'].to_numpy()
+    assert price.max() <= 3.0 + 1e-9
+    assert price.min() >= -3.0 - 1e-9
+
+
+def test_causal_rolling_robust_scaler_zero_iqr_guard():
+
+    train = pl.DataFrame({
+        'constant': [5.0] * 80,
+        'normal': np.random.RandomState(42).normal(0, 1, 80),
+    })
+    scaler = CausalRollingRobustScaler(train, window=20, min_samples=5)
+    assert scaler.iqrs['constant'] == 1.0
+
+    transformed = scaler.transform(train)
+    assert not transformed['constant'].is_nan().any()
+    assert not np.any(np.isinf(transformed['constant'].to_numpy()))
+
+
+def test_causal_rolling_robust_scaler_preserves_datetime():
+
+    train = _make_train_data()
+    scaler = CausalRollingRobustScaler(train)
+    assert 'datetime' not in scaler.medians
+
+    transformed = scaler.transform(train)
+    assert transformed['datetime'].equals(train['datetime'])
+
+
+def test_causal_rolling_robust_scaler_all_null_column():
+
+    train = pl.DataFrame({
+        'all_null': pl.Series([None] * 40, dtype=pl.Float64),
+        'normal': np.random.RandomState(42).normal(0, 1, 40),
+    })
+    scaler = CausalRollingRobustScaler(train, window=10, min_samples=3)
+    assert 'all_null' not in scaler.medians
+    assert 'normal' in scaler.medians
+
+    unchanged = scaler.transform(pl.DataFrame({'other': [1.0, 2.0, 3.0]}))
+    assert unchanged['other'].to_list() == [1.0, 2.0, 3.0]
+
+
+def test_causal_rolling_robust_scaler_invalid_window():
+
+    try:
+        CausalRollingRobustScaler(pl.DataFrame({'a': [1.0, 2.0, 3.0]}), window=1)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'window' in str(e)
+
+
+def test_causal_rolling_robust_scaler_invalid_clip():
+
+    try:
+        CausalRollingRobustScaler(pl.DataFrame({'a': [1.0, 2.0, 3.0]}), clip=0.0)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'clip' in str(e)
+
+
+def test_causal_rolling_robust_scaler_invalid_quantile_range():
+
+    try:
+        CausalRollingRobustScaler(
+            pl.DataFrame({'a': [1.0, 2.0, 3.0]}), quantile_range=(0.9, 0.1),
+        )
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'quantile_range' in str(e)
+
+
+def test_causal_rolling_robust_scaler_invalid_min_samples():
+
+    try:
+        CausalRollingRobustScaler(
+            pl.DataFrame({'a': [1.0, 2.0, 3.0]}), window=10, min_samples=50,
+        )
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'min_samples' in str(e)
+
+
 def _make_manifest_with_scaler_from_params() -> MLManifest:
 
     return (MLManifest()
@@ -210,7 +334,7 @@ def test_scaler_factory_selects_all_types():
 
     manifest = _make_manifest_with_scaler_from_params()
     raw_data = manifest.fetch_test_data()
-    for scaler_type in ('linear', 'logreg', 'robust', 'rank_gauss'):
+    for scaler_type in ('linear', 'logreg', 'robust', 'rank_gauss', 'causal_rolling_robust'):
         data = manifest.prepare_data(raw_data, {'scaler_type': scaler_type})
         assert data['x_train'].height > 0
 
@@ -232,3 +356,4 @@ def test_scaler_factory_registry_has_all():
     assert 'logreg' in SCALER_REGISTRY
     assert 'robust' in SCALER_REGISTRY
     assert 'rank_gauss' in SCALER_REGISTRY
+    assert 'causal_rolling_robust' in SCALER_REGISTRY

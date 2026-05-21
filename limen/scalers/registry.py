@@ -1,3 +1,4 @@
+from limen.scalers.causal_rolling_robust_scaler import CausalRollingRobustScaler
 from limen.scalers.linear_scaler import LinearScaler
 from limen.scalers.logreg_scaler import LogRegScaler
 from limen.scalers.robust_scaler import RobustScaler
@@ -8,4 +9,5 @@ SCALER_REGISTRY: dict[str, type] = {
     'logreg': LogRegScaler,
     'robust': RobustScaler,
     'rank_gauss': RankGaussScaler,
+    'causal_rolling_robust': CausalRollingRobustScaler,
 }

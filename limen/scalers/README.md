@@ -19,6 +19,7 @@ Does **not** own raw feature creation or the experiment loop itself.
 | `LinearScaler` | You want rule-based scaling over mixed market-data columns | Exported at the package root |
 | `LogRegScaler` | You want the standard scaler used by logistic-regression SFDs | Exported at the package root |
 | `RobustScaler` | You want median and IQR scaling for outlier-heavy data | Exported at the package root |
+| `CausalRollingRobustScaler` | You want robust scaling that adapts to drift, with no look-ahead | Exported at the package root |
 | `RankGaussScaler` | You want rank-based Gaussianization | Exported at the package root |
 | `SCALER_REGISTRY` | You want to resolve scalers by manifest parameter name | Used by `set_scaler_from_params()` |
 | `build_rules`, `inverse_transform` | You need to customize or interpret `LinearScaler` behavior | Available from the module-level implementations |
@@ -33,11 +34,12 @@ Does **not** own raw feature creation or the experiment loop itself.
 
 ```text
 scalers/
-├── linear_scaler.py       # LinearScaler, rule helpers, inverse transform
-├── logreg_scaler.py       # Logistic-regression tuned scaling
-├── robust_scaler.py       # Median and IQR scaling
-├── rank_gauss_scaler.py   # Rank-based Gaussianization
-└── registry.py            # SCALER_REGISTRY
+├── linear_scaler.py                 # LinearScaler, rule helpers, inverse transform
+├── logreg_scaler.py                 # Logistic-regression tuned scaling
+├── robust_scaler.py                 # Median and IQR scaling
+├── causal_rolling_robust_scaler.py  # Causal trailing-window median and IQR scaling
+├── rank_gauss_scaler.py             # Rank-based Gaussianization
+└── registry.py                      # SCALER_REGISTRY
 ```
 
 ## Things to know

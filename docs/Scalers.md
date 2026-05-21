@@ -23,6 +23,7 @@ That is why scalers live separately from the stateless helpers in [Transforms](T
 | `LogRegScaler` | the reference logistic-regression style feature sets used in foundational flows | yes | Uses a fixed per-column rule map. Columns outside the rule map are left alone. |
 | `LinearScaler` | mixed feature sets where regex-based scaling rules are useful | yes | The most flexible built-in scaler. Supports `standard`, `log_standard`, `divide_100`, and `none`. |
 | `RobustScaler` | outlier-heavy numeric features | yes | Uses median and IQR instead of mean and standard deviation. |
+| `CausalRollingRobustScaler` | non-stationary features whose scale drifts over time | no | Median and IQR from a strictly trailing rolling window, so no look-ahead. Not row-wise invertible from the fitted scaler. |
 | `RankGaussScaler` | numeric features that benefit from a Gaussianized shape | approximate | The inverse is only approximate because rank-based transforms are lossy. |
 
 ## Manifest Usage
@@ -53,6 +54,7 @@ The built-in registry currently maps:
 | `'logreg'` | `LogRegScaler` |
 | `'robust'` | `RobustScaler` |
 | `'rank_gauss'` | `RankGaussScaler` |
+| `'causal_rolling_robust'` | `CausalRollingRobustScaler` |
 
 The registry itself is also a public export:
 
@@ -111,6 +113,20 @@ It skips datetime and non-numeric columns automatically and is usually the safes
 
 Use it when relative ordering matters more than preserving original spacing. Its inverse transform is approximate, not exact.
 
+### CausalRollingRobustScaler
+
+`CausalRollingRobustScaler(x_train, window=1000, quantile_range=(0.25, 0.75), clip=8.0, min_samples=50)` applies:
+
+```python
+(x - rolling_median) / rolling_IQR
+```
+
+The median and IQR for each row are taken from the `window` rows strictly before it (`.shift(1)`), so the transform never reads the current row or any future row. That makes it suited to non-stationary series whose scale drifts over time.
+
+Rows with fewer than `min_samples` of trailing history fall back to the median and IQR fitted on `x_train`, so during warmup it degrades to plain `RobustScaler` behavior. The scaled output is clipped to `+/- clip`.
+
+It skips datetime and non-numeric columns automatically. It provides no inverse transform: each row's scaling factors are derived from the data itself, so the transform is not row-wise invertible from the fitted scaler alone.
+
 ## Custom Scaler Contract
 
 All custom scalers should follow the same interface:
@@ -135,7 +151,7 @@ That contract is what makes the scaler usable from `Manifest.set_scaler()` and c
 
 ## Practical Notes
 
-- `RobustScaler` and `RankGaussScaler` automatically skip datetime and non-numeric columns.
+- `RobustScaler`, `CausalRollingRobustScaler`, and `RankGaussScaler` automatically skip datetime and non-numeric columns.
 - `LogRegScaler` and `LinearScaler` are rule-driven, so only columns matched by their rule sets are transformed.
 - `LinearScaler` is the better choice when new feature names are expected to appear frequently.
 - If a prediction post-processing step needs original scale values, prefer a scaler with a meaningful inverse path.

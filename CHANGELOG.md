@@ -938,3 +938,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Expose the full sklearn `LogisticRegression` constructor surface through the `logreg_binary` reference-architecture wrapper
 - Add the same LogReg model parameters to the foundational SFD `params()` and `logreg_binary.yaml` template so Python and YAML manifests stay aligned
 - Preserve the legacy numeric `class_weight` shorthand while allowing sklearn-native string and dict values
+
+## v3.7.0 on 21st of May, 2026
+
+- Add `CausalRollingRobustScaler` to `limen.scalers` — a robust scaler that computes each row's median and IQR from a strictly trailing rolling window (`.shift(1)`, no look-ahead) and falls back to train-fitted statistics during warmup
+- Register the new scaler in `SCALER_REGISTRY` under the key `causal_rolling_robust`
