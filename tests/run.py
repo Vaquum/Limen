@@ -36,6 +36,9 @@ from tests.test_yaml import test_validate_error_for_split_config_invalid_value
 from tests.test_yaml import test_validate_error_for_missing_mode
 from tests.test_yaml import test_validate_error_for_unsafe_metadata_name
 from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
+from tests.test_yaml import test_validate_error_for_underscore_prefixed_sfd_param
+from tests.test_yaml import test_validate_error_for_non_string_sfd_param_key
+from tests.test_yaml import test_validate_non_string_sfd_param_key_does_not_crash
 from tests.test_yaml import test_validate_warning_for_unused_sfd_param
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
@@ -101,6 +104,8 @@ from tests.test_yaml import test_compiled_sfd_name_is_yaml_prefixed
 from tests.test_yaml import test_compiled_sfd_params_are_non_empty_lists
 from tests.test_yaml import test_compiled_sfd_manifest_is_cached
 from tests.test_yaml import test_compiled_sfd_manifest_is_ml_manifest
+from tests.test_yaml import test_build_search_strategy_raises_for_unknown_type
+from tests.test_yaml import test_build_search_strategy_raises_for_non_mapping_strategy
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -109,6 +114,29 @@ from tests.test_cli import test_cli_validate_schema_error_exits_1_and_shows_erro
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_exits_0
 from tests.test_cli import test_cli_run_dry_run_shows_dry_run_message
 from tests.test_cli import test_cli_run_dry_run_parse_error_exits_1
+from tests.test_cli import test_cli_list_templates_exits_0
+from tests.test_cli import test_cli_list_templates_shows_all_template_names
+from tests.test_cli import test_cli_list_templates_shows_descriptions
+from tests.test_cli import test_cli_init_creates_file_from_template
+from tests.test_cli import test_cli_init_sets_metadata_name_to_output_stem
+from tests.test_cli import test_cli_init_shows_success_message
+from tests.test_cli import test_cli_init_without_template_lists_templates_and_exits_1
+from tests.test_cli import test_cli_init_unknown_template_exits_1
+from tests.test_cli import test_cli_init_refuses_to_overwrite_existing_file
+from tests.test_cli import test_cli_init_rejects_invalid_slug_stem
+from tests.test_cli import test_cli_init_metadata_name_not_updated_in_non_metadata_fields
+from tests.test_cli import test_cli_run_resume_exits_0_on_success
+from tests.test_cli import test_cli_run_resume_calls_uel_run_with_resume_true
+from tests.test_cli import test_cli_run_resume_errors_when_no_metadata_json
+from tests.test_cli import test_cli_run_resume_errors_when_no_yaml_reference
+from tests.test_cli import test_cli_run_resume_errors_when_no_checkpoint_json
+from tests.test_cli import test_cli_run_resume_and_yaml_file_together_exits_1
+from tests.test_cli import test_cli_run_no_args_exits_1
+from tests.test_cli import test_cli_run_dry_run_and_resume_together_exits_1
+from tests.test_cli import test_cli_run_resume_errors_when_checkpoint_missing_metadata_key
+from tests.test_cli import test_cli_run_resume_errors_when_metadata_json_is_invalid_json
+from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict
+from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1017,6 +1045,9 @@ tests = [
     test_validate_error_for_missing_mode,
     test_validate_error_for_unsafe_metadata_name,
     test_validate_error_for_empty_sfd_param_list,
+    test_validate_error_for_underscore_prefixed_sfd_param,
+    test_validate_error_for_non_string_sfd_param_key,
+    test_validate_non_string_sfd_param_key_does_not_crash,
     test_validate_warning_for_unused_sfd_param,
     test_validate_warning_for_unknown_key_in_data_source,
     test_validate_warning_for_unknown_key_in_split_config,
@@ -1087,6 +1118,8 @@ tests = [
     test_compiled_sfd_params_are_non_empty_lists,
     test_compiled_sfd_manifest_is_cached,
     test_compiled_sfd_manifest_is_ml_manifest,
+    test_build_search_strategy_raises_for_unknown_type,
+    test_build_search_strategy_raises_for_non_mapping_strategy,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
@@ -1095,6 +1128,29 @@ tests = [
     test_cli_run_dry_run_valid_yaml_exits_0,
     test_cli_run_dry_run_shows_dry_run_message,
     test_cli_run_dry_run_parse_error_exits_1,
+    test_cli_list_templates_exits_0,
+    test_cli_list_templates_shows_all_template_names,
+    test_cli_list_templates_shows_descriptions,
+    test_cli_init_creates_file_from_template,
+    test_cli_init_sets_metadata_name_to_output_stem,
+    test_cli_init_shows_success_message,
+    test_cli_init_without_template_lists_templates_and_exits_1,
+    test_cli_init_unknown_template_exits_1,
+    test_cli_init_refuses_to_overwrite_existing_file,
+    test_cli_init_rejects_invalid_slug_stem,
+    test_cli_init_metadata_name_not_updated_in_non_metadata_fields,
+    test_cli_run_resume_exits_0_on_success,
+    test_cli_run_resume_calls_uel_run_with_resume_true,
+    test_cli_run_resume_errors_when_no_metadata_json,
+    test_cli_run_resume_errors_when_no_yaml_reference,
+    test_cli_run_resume_errors_when_no_checkpoint_json,
+    test_cli_run_resume_and_yaml_file_together_exits_1,
+    test_cli_run_no_args_exits_1,
+    test_cli_run_dry_run_and_resume_together_exits_1,
+    test_cli_run_resume_errors_when_checkpoint_missing_metadata_key,
+    test_cli_run_resume_errors_when_metadata_json_is_invalid_json,
+    test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict,
+    test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,

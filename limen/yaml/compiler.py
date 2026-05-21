@@ -1,9 +1,12 @@
 from datetime import date
 from typing import Any
 
+from limen.experiment.param_search.grid_strategy import GridStrategy
+from limen.experiment.param_search.random_strategy import RandomStrategy
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
+from limen.experiment.param_domain import ParamDomain
 from limen.yaml.errors import ResolutionError
 from limen.yaml.resolver import resolve
 
@@ -271,3 +274,36 @@ class CompiledSFD:
         if self._manifest_cache is None:
             self._manifest_cache = build_manifest(self._yaml)
         return self._manifest_cache
+
+
+def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStrategy:
+
+    '''
+    Build a search strategy from a validated YAML experiment dict.
+
+    Args:
+        yaml_dict (dict): Parsed and validated YAML experiment dict
+
+    Returns:
+        RandomStrategy | GridStrategy: Configured search strategy
+
+    Raises:
+        ValueError: If uel.search_strategy is not a mapping or has an unknown type
+
+    '''
+
+    uel_cfg = yaml_dict.get('uel') or {}
+    sfd_cfg = yaml_dict.get('sfd') or {}
+    strategy_cfg = uel_cfg.get('search_strategy', {})
+    if not isinstance(strategy_cfg, dict):
+        raise ValueError(
+            f"'uel.search_strategy' must be a mapping, got {type(strategy_cfg).__name__}"
+        )
+    params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}
+    domain = ParamDomain(params)
+    strategy_type = strategy_cfg.get('type', 'random')
+    if strategy_type == 'grid':
+        return GridStrategy(domain)
+    if strategy_type == 'random':
+        return RandomStrategy(domain)
+    raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random' or 'grid'.")

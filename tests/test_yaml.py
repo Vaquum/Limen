@@ -12,6 +12,7 @@ from limen.metrics.balanced_metric import balanced_metric
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
+from limen.yaml.compiler import build_search_strategy
 from limen.yaml.errors import GitError
 from limen.yaml.errors import ValidationError
 from limen.yaml.errors import YAMLError
@@ -376,6 +377,31 @@ def test_validate_error_for_empty_sfd_param_list() -> None:
     result = validate(yaml_dict)
     assert not result.valid
     assert any('roc_period' in e.message for e in result.errors)
+
+
+def test_validate_error_for_underscore_prefixed_sfd_param() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params']['_internal'] = [1, 2, 3]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('_internal' in e.message for e in result.errors)
+
+
+def test_validate_error_for_non_string_sfd_param_key() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params'][1] = [10, 20]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('must be a string' in e.message for e in result.errors)
+
+
+def test_validate_non_string_sfd_param_key_does_not_crash() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params'][1] = [10, 20]
+    try:
+        validate(yaml_dict)
+    except AttributeError:
+        assert False, 'validate() crashed with AttributeError on non-string key'
 
 
 def test_validate_warning_for_unused_sfd_param() -> None:
@@ -973,3 +999,23 @@ def test_compiled_sfd_manifest_is_cached() -> None:
 def test_compiled_sfd_manifest_is_ml_manifest() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     assert isinstance(CompiledSFD(yaml_dict).manifest(), MLManifest)
+
+
+def test_build_search_strategy_raises_for_unknown_type() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = {'type': 'bayesian'}
+    try:
+        build_search_strategy(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert 'bayesian' in str(exc)
+
+
+def test_build_search_strategy_raises_for_non_mapping_strategy() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = 'random'
+    try:
+        build_search_strategy(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert 'mapping' in str(exc)
