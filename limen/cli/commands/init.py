@@ -62,7 +62,7 @@ def _update_experiment_name(path: Path, name: str) -> None:
         stripped = line.lstrip()
         if stripped.startswith('name:'):
             indent = line[: len(line) - len(stripped)]
-            lines[i] = f'{indent}name: {name}\n'
+            lines[i] = f'{indent}name: "{name}"\n'
             break
 
     path.write_text(''.join(lines))

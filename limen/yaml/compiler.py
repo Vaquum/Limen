@@ -1,8 +1,8 @@
 from datetime import date
 from typing import Any
 
-from limen.experiment import GridStrategy
-from limen.experiment import RandomStrategy
+from limen.experiment.param_search.grid_strategy import GridStrategy
+from limen.experiment.param_search.random_strategy import RandomStrategy
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
