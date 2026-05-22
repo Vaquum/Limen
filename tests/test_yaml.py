@@ -266,6 +266,8 @@ def test_logreg_yaml_template_exposes_full_architecture_surface() -> None:
     result = validate(yaml_dict)
     assert result.valid, [e.message for e in result.errors]
 
+    build_search_strategy(yaml_dict)
+
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {
         'data',
@@ -1043,6 +1045,8 @@ def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
     result = validate(yaml_dict)
     assert result.valid, [e.message for e in result.errors]
 
+    build_search_strategy(yaml_dict)
+
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
 
@@ -1059,6 +1063,8 @@ def test_xgboost_regressor_template_is_valid_and_arch_surface_complete() -> None
     result = validate(yaml_dict)
     assert result.valid, [e.message for e in result.errors]
 
+    build_search_strategy(yaml_dict)
+
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
 
@@ -1074,6 +1080,8 @@ def test_rule_based_template_is_valid_and_compiles() -> None:
 
     result = validate(yaml_dict)
     assert result.valid, [e.message for e in result.errors]
+
+    build_search_strategy(yaml_dict)
 
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), RuleBasedManifest)
