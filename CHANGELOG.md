@@ -972,6 +972,6 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen init <output.yaml> --template <name>` CLI command — scaffolds a new experiment file from a template
 - Add `limen run --resume <results-dir>` CLI command — resumes an experiment from a checkpoint directory using `yaml_reference` and `target_permutations` from the checkpoint
 
-## v3.10.1 on 22nd of May, 2026
+## v4.0.0 on 22nd of May, 2026
 
-- Make `UniversalExperimentLoop.run()` skip terminal post-processing by default and retain `post_processing=True` as an explicit opt-in.
+- Breaking: make `UniversalExperimentLoop.run()` skip terminal post-processing by default and retain `post_processing=True` as an explicit opt-in.
