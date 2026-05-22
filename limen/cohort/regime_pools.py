@@ -205,7 +205,8 @@ class OnlineModelLoader:
                 experiment_name=f"rdop_regime_{regime_id}_model_{model_id}",
                 n_permutations=1,
                 prep_each_round=True,
-                params=lambda: params
+                params=lambda: params,
+                post_processing=True,
             )
         else:
             uel = UniversalExperimentLoop(
@@ -216,7 +217,8 @@ class OnlineModelLoader:
                 prep_each_round=False,
                 params=lambda: params,
                 prep=self.sfd.prep,
-                model=self.sfd.model
+                model=self.sfd.model,
+                post_processing=True,
             )
 
         round_id = 0
