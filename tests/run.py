@@ -106,6 +106,10 @@ from tests.test_yaml import test_compiled_sfd_manifest_is_cached
 from tests.test_yaml import test_compiled_sfd_manifest_is_ml_manifest
 from tests.test_yaml import test_build_search_strategy_raises_for_unknown_type
 from tests.test_yaml import test_build_search_strategy_raises_for_non_mapping_strategy
+from tests.test_yaml import test_all_templates_have_valid_limen_version
+from tests.test_yaml import test_tabpfn_binary_template_is_valid_and_arch_surface_complete
+from tests.test_yaml import test_xgboost_regressor_template_is_valid_and_arch_surface_complete
+from tests.test_yaml import test_rule_based_template_is_valid_and_compiles
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -1124,6 +1128,10 @@ tests = [
     test_compiled_sfd_manifest_is_ml_manifest,
     test_build_search_strategy_raises_for_unknown_type,
     test_build_search_strategy_raises_for_non_mapping_strategy,
+    test_all_templates_have_valid_limen_version,
+    test_tabpfn_binary_template_is_valid_and_arch_surface_complete,
+    test_xgboost_regressor_template_is_valid_and_arch_surface_complete,
+    test_rule_based_template_is_valid_and_compiles,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
