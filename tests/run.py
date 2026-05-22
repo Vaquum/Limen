@@ -290,6 +290,8 @@ from tests.test_checkpoint_manager import test_uel_shutdown_flag
 from tests.test_checkpoint_manager import test_uel_double_signal_raises
 from tests.test_checkpoint_manager import test_uel_checkpoint_and_resume
 from tests.test_experiment_core_msq import test_run_with_msq_basic_flow
+from tests.test_experiment_core_msq import test_run_with_msq_skips_post_processing_by_default
+from tests.test_experiment_core_msq import test_run_with_msq_post_processing_opt_in_reaches_finalize
 from tests.test_experiment_core_msq import test_run_with_msq_context_params
 from tests.test_experiment_core_msq import test_run_with_msq_feedback_trigger
 from tests.test_experiment_core_msq import test_run_with_msq_checkpoint_trigger
@@ -347,6 +349,7 @@ from tests.test_experiment_core_standard_csv import test_standard_run_csv_round_
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_does_not_append_duplicate_headers_on_rerun
 from tests.test_experiment_core_standard_csv import test_standard_run_csv_uses_experiment_dir
 from tests.test_experiment_core_standard_csv import test_standard_run_rechunks_live_log_without_changing_row_output
+from tests.test_experiment_core_standard_csv import test_standard_run_skips_post_processing_by_default
 from tests.test_runtime_tracking import test_execute_test_suite_writes_profile_and_stops_on_first_failure
 from tests.test_runtime_tracking import test_runtime_gate_writes_summary_and_passes_when_within_budget
 from tests.test_runtime_tracking import test_runtime_gate_fails_when_profile_exceeds_budget
@@ -867,6 +870,8 @@ tests = [
     test_uel_double_signal_raises,
     test_uel_checkpoint_and_resume,
     test_run_with_msq_basic_flow,
+    test_run_with_msq_skips_post_processing_by_default,
+    test_run_with_msq_post_processing_opt_in_reaches_finalize,
     test_run_with_msq_context_params,
     test_run_with_msq_feedback_trigger,
     test_run_with_msq_checkpoint_trigger,
@@ -924,6 +929,7 @@ tests = [
     test_standard_run_csv_does_not_append_duplicate_headers_on_rerun,
     test_standard_run_csv_uses_experiment_dir,
     test_standard_run_rechunks_live_log_without_changing_row_output,
+    test_standard_run_skips_post_processing_by_default,
     test_execute_test_suite_writes_profile_and_stops_on_first_failure,
     test_runtime_gate_writes_summary_and_passes_when_within_budget,
     test_runtime_gate_fails_when_profile_exceeds_budget,

@@ -29,6 +29,7 @@ def _run_uel(sfd_module=random_binary_sfd,
         uel.run(
             experiment_name=str(Path(tmpdir) / 'test'),
             n_permutations=n_permutations,
+            post_processing=True,
         )
 
     return uel

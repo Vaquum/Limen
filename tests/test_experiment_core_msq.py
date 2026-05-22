@@ -51,6 +51,7 @@ def test_run_with_msq_basic_flow():
 
             context_params=None,
             resume=False,
+            post_processing=True,
         )
 
     assert uel.experiment_log.shape[0] == 6
@@ -86,6 +87,50 @@ def test_run_with_msq_basic_flow():
     assert len(uel.experiment_backtest_results) > 0
     corr = uel.experiment_parameter_correlation('auc', min_n=1)
     assert len(corr) > 0
+
+
+def test_run_with_msq_skips_post_processing_by_default():
+
+    uel, _, _ = _make_uel()
+    finalize_calls = []
+
+    def fake_finalize():
+        finalize_calls.append(True)
+
+    uel._finalize = fake_finalize
+
+    with TemporaryDirectory() as tmpdir:
+        uel.run(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=1,
+        )
+
+    assert finalize_calls == []
+    assert uel.experiment_log.shape[0] == 1
+    assert uel._log is None
+    assert uel.experiment_confusion_metrics is None
+    assert uel.experiment_backtest_results is None
+    assert uel.experiment_parameter_correlation is None
+
+
+def test_run_with_msq_post_processing_opt_in_reaches_finalize():
+
+    uel, _, _ = _make_uel()
+    finalize_calls = []
+
+    def fake_finalize():
+        finalize_calls.append(True)
+
+    uel._finalize = fake_finalize
+
+    with TemporaryDirectory() as tmpdir:
+        uel.run(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=1,
+            post_processing=True,
+        )
+
+    assert finalize_calls == [True]
 
 
 def test_run_with_msq_context_params():
@@ -261,6 +306,7 @@ def _shutdown_resume_full_data(strategy_cls):
             n_permutations=6,
             context_params=None,
             resume=True,
+            post_processing=True,
         )
 
         assert uel2.experiment_log.shape[0] == 6

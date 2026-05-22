@@ -123,6 +123,7 @@ class UniversalExperimentLoop:
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
+        self._clear_post_processing_outputs()
 
     def run(self,
             experiment_name: str,
@@ -134,7 +135,8 @@ class UniversalExperimentLoop:
             params: Callable | None = None,
             prep: Callable | None = None,
             model: Callable | None = None,
-            resume: bool = False) -> None:
+            resume: bool = False,
+            post_processing: bool = False) -> None:
 
         '''
         Run the experiment `n_permutations` times.
@@ -155,6 +157,7 @@ class UniversalExperimentLoop:
             prep (Callable | None): Callable to prepare the data
             model (Callable | None): Callable to run the model
             resume (bool): Whether to resume from an existing checkpoint
+            post_processing (bool): Whether to compute terminal post-run metrics
 
         '''
 
@@ -163,6 +166,7 @@ class UniversalExperimentLoop:
         self.preds = []
         self.scalers = []
         self._alignment = []
+        self._clear_post_processing_outputs()
 
         if resume and self._search_strategy is None:
             raise ValueError(
@@ -175,6 +179,7 @@ class UniversalExperimentLoop:
                 n_permutations=n_permutations,
                 context_params=context_params,
                 resume=resume,
+                post_processing=post_processing,
             )
             return
 
@@ -280,8 +285,17 @@ class UniversalExperimentLoop:
             if self.experiment_log.n_chunks() > STANDARD_RUN_LOG_RECHUNK_THRESHOLD:
                 self.experiment_log = self.experiment_log.rechunk()
 
-        self._finalize()
+        if post_processing:
+            self._finalize()
 
+    def _clear_post_processing_outputs(self) -> None:
+
+        '''Clear terminal post-processing outputs before a run.'''
+
+        self._log = None
+        self.experiment_confusion_metrics = None
+        self.experiment_backtest_results = None
+        self.experiment_parameter_correlation = None
 
     def _finalize(self) -> None:
 
@@ -339,7 +353,8 @@ class UniversalExperimentLoop:
                       experiment_name: str,
                       n_permutations: int,
                       context_params: dict | None,
-                      resume: bool) -> None:
+                      resume: bool,
+                      post_processing: bool = False) -> None:
 
         '''
         Run the experiment using the Mutable-Search-Queue based execution flow.
@@ -354,6 +369,7 @@ class UniversalExperimentLoop:
             n_permutations (int): Maximum number of combinations to run
             context_params (dict | None): Static parameters merged into each round
             resume (bool): Whether to resume from an existing checkpoint
+            post_processing (bool): Whether to compute terminal post-run metrics
 
         '''
 
@@ -381,6 +397,7 @@ class UniversalExperimentLoop:
         self.scalers = []
         self._alignment = []
         self.experiment_log = None
+        self._clear_post_processing_outputs()
 
         start_round = 0
         if resume and self._experiment_dir.exists():
@@ -548,7 +565,8 @@ class UniversalExperimentLoop:
             )
 
         self._flush_results(results_accumulator)
-        self._finalize()
+        if post_processing:
+            self._finalize()
 
 
     def _validate_msq_preconditions(self,
