@@ -733,8 +733,11 @@ from tests.test_proto_cohort import test_rejects_duplicate_permutation_ids
 from tests.test_proto_cohort import test_rejects_unknown_permutation_ids
 from tests.test_proto_cohort import test_accepts_string_permutation_ids_when_numeric
 from tests.test_proto_cohort import test_rejects_selector_with_explicit_permutation_ids
+from tests.test_proto_cohort import test_rejects_selector_params_without_selector
 from tests.test_proto_cohort import test_callable_selector_receives_contract_context
 from tests.test_proto_cohort import test_named_top_n_selector_uses_results_column
+from tests.test_proto_cohort import test_builtin_selector_rejects_boolean_ids
+from tests.test_proto_cohort import test_builtin_selector_coerces_object_ids_to_strings
 from tests.test_proto_cohort import test_backtest_pareto_selector_filters_dominated_and_inactive_rows
 from tests.test_proto_cohort import test_diverse_metrics_selector_clamps_cluster_count
 from tests.test_proto_cohort import test_rejects_when_round_data_is_missing
@@ -1490,8 +1493,11 @@ tests = [
     test_rejects_unknown_permutation_ids,
     test_accepts_string_permutation_ids_when_numeric,
     test_rejects_selector_with_explicit_permutation_ids,
+    test_rejects_selector_params_without_selector,
     test_callable_selector_receives_contract_context,
     test_named_top_n_selector_uses_results_column,
+    test_builtin_selector_rejects_boolean_ids,
+    test_builtin_selector_coerces_object_ids_to_strings,
     test_backtest_pareto_selector_filters_dominated_and_inactive_rows,
     test_diverse_metrics_selector_clamps_cluster_count,
     test_rejects_when_round_data_is_missing,

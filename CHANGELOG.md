@@ -984,6 +984,6 @@ Note: add all new changelog entries to the bottom of this file.
 ## v5.0.0 on 23rd of May, 2026
 
 - Add Cohort selector support with the `select(context, **params) -> list[int | str]` contract.
-- Add built-in Cohort selectors: `all`, `top_n`, `backtest_pareto`, and `diverse_metrics`.
+- Add built-in single-file Cohort selectors under `limen.cohort.sfc`: `all`, `top_n`, `backtest_pareto`, and `diverse_metrics`.
 - Make `all` the default selector, preserving existing Cohort behavior when `permutation_ids` is omitted.
 - Remove `RegimeDiversifiedOpinionPools`; its reusable metric-diversity selection idea now lives in `diverse_metrics`, while replay and per-regime output behavior are no longer part of the public package.

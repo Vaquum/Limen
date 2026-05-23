@@ -5,8 +5,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from limen.cohort.selection import BUILTIN_SELECTORS
-from limen.cohort.selection import Selector
+from limen.cohort.sfc import BUILTIN_SELECTORS
+from limen.cohort.sfc import Selector
 
 
 class Cohort:

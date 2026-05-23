@@ -12,7 +12,7 @@
 This package owns the cohort-level inference surface:
 
 1. `Cohort` for direct multi-member aggregation from one experiment and selected permutations
-2. selector helpers for choosing those permutations from experiment artefacts
+2. single-file cohort (`sfc`) strategies for choosing those permutations from experiment artefacts
 
 It does **not** own:
 
@@ -25,17 +25,21 @@ It does **not** own:
 | Entry point                       | Use it when                                                                             | Notes                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `Cohort`                        | You want to aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
-| `select_all`                    | You want the default "use every round" selector                                         | Preserves existing omitted-`permutation_ids` behavior          |
-| `select_top_n`                  | You want a simple results-column ranker                                                 | Requires `results.csv`                                         |
-| `select_backtest_pareto`        | You want trading-metric Pareto selection                                                | Uses backtest return/risk columns                              |
-| `select_diverse_metrics`        | You want metric-diverse member selection                                                | Uses PCA/KMeans medoids over metric columns                    |
+| `limen.cohort.sfc.all.select`             | You want the default "use every round" selector                         | Preserves existing omitted-`permutation_ids` behavior          |
+| `limen.cohort.sfc.top_n.select`           | You want a simple results-column ranker                                 | Requires `results.csv`                                         |
+| `limen.cohort.sfc.backtest_pareto.select` | You want trading-metric Pareto selection                                | Uses backtest return/risk columns                              |
+| `limen.cohort.sfc.diverse_metrics.select` | You want metric-diverse member selection                                | Uses PCA/KMeans medoids over metric columns                    |
 
 ## Package map
 
 ```text
 cohort/
 ├── cohort.py                # Cohort constructor + aggregation logic
-└── selection.py             # Built-in selector contract helpers
+└── sfc/                     # Single-file cohort strategies
+    ├── all.py               # select(context) -> ids
+    ├── top_n.py             # select(context, *, column, n, ...) -> ids
+    ├── backtest_pareto.py   # select(context, *, target_count, ...) -> ids
+    └── diverse_metrics.py   # select(context, *, target_count, ...) -> ids
 ```
 
 ## Cohort quick behavior
@@ -53,6 +57,7 @@ See [Cohort](../../docs/Cohort.md) for full contract and examples.
 
 ## Selector quick behavior
 
+- Selectors are one-file strategies with one public `select(...)` function
 - Selectors receive a context dict and return permutation IDs only
 - Cohort owns all validation after selector execution
 - Built-ins cover all-round, single-column rank, backtest Pareto, and metric diversity selection

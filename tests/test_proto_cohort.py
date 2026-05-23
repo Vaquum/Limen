@@ -5,7 +5,8 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
 
-from limen.cohort import Cohort, select_top_n
+from limen.cohort import Cohort
+from limen.cohort.sfc.top_n import select as select_top_n
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy

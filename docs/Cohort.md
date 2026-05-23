@@ -79,6 +79,11 @@ def select(context: dict) -> list[int | str]:
     return sorted(context['available_permutation_ids'])
 ```
 
+A selector strategy is intentionally just one Python file with one public
+function named `select`. Limen's built-ins live under `limen.cohort.sfc`
+("single-file cohort"). User strategies can live anywhere as long as the
+callable follows the same input/output contract.
+
 The selector receives:
 
 - `experiment_dir`
@@ -90,13 +95,22 @@ The selector receives:
 The selector must return permutation IDs only. Cohort still owns ID validation,
 architecture consistency, member binding, and prediction aggregation.
 
-### Built-In Selectors
+### Single-File Cohort Selectors
 
 ```python
 Cohort(experiment_log_path='experiments/my_exp')
 ```
 
 Uses `all`, preserving the previous omitted-`permutation_ids` behavior.
+
+Built-in strategy files:
+
+- `limen.cohort.sfc.all`
+- `limen.cohort.sfc.top_n`
+- `limen.cohort.sfc.backtest_pareto`
+- `limen.cohort.sfc.diverse_metrics`
+
+Use them by built-in name:
 
 ```python
 Cohort(
@@ -107,6 +121,18 @@ Cohort(
 ```
 
 `top_n` ranks `results.csv` by one numeric column.
+
+Or pass the single-file function directly:
+
+```python
+from limen.cohort.sfc.top_n import select as select_top_n
+
+Cohort(
+    experiment_log_path='experiments/my_exp',
+    selector=select_top_n,
+    selector_params={'column': 'backtest_trade_pnl_net_bps_p50', 'n': 5},
+)
+```
 
 ```python
 Cohort(
