@@ -230,3 +230,38 @@ def test_standard_run_rechunks_live_log_without_changing_row_output() -> None:
         assert [int(row['marker']) for row in rows] == list(range(10))
     finally:
         experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD = original_threshold
+
+
+def test_standard_run_skips_post_processing_by_default() -> None:
+    sfd = SimpleNamespace(
+        params=lambda: {'marker': [0]},
+        prep=_standard_csv_test_prep,
+        model=_standard_csv_test_model,
+    )
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+        uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+        finalize_calls = []
+
+        def fake_finalize():
+            finalize_calls.append(True)
+
+        uel._finalize = fake_finalize
+        uel.run(
+            experiment_name=experiment_name,
+            n_permutations=1,
+            prep_each_round=True,
+            random_search=False,
+        )
+
+    assert finalize_calls == []
+    assert uel.experiment_log.height == 1
+    assert uel._log is None
+    assert uel.experiment_confusion_metrics is None
+    assert uel.experiment_backtest_results is None
+    assert uel.experiment_parameter_correlation is None

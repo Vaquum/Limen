@@ -47,6 +47,7 @@ def test_rdop():
                     uel.run(
                         experiment_name=str(experiment_dir / 'test'),
                         n_permutations=1,
+                        post_processing=True,
                     )
 
                     confusion_df = uel.experiment_confusion_metrics
