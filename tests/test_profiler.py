@@ -12,8 +12,6 @@ from limen.yaml.profiler import profile
 _TEMPLATES_DIR = Path(__file__).resolve().parents[1] / 'limen' / 'yaml' / 'templates'
 
 
-# --- _complexity_rating ---
-
 def test_complexity_rating_low() -> None:
     assert _complexity_rating(1) == 'low'
     assert _complexity_rating(100) == 'low'
@@ -34,8 +32,6 @@ def test_complexity_rating_extreme() -> None:
     assert _complexity_rating(10 ** 9) == 'extreme'
 
 
-# --- make_covering_array ---
-
 def test_covering_array_covers_all_values() -> None:
     params = {
         'a': [1, 2, 3],
@@ -43,10 +39,10 @@ def test_covering_array_covers_all_values() -> None:
         'c': [True, False, True, False],
     }
     array = make_covering_array(params)
-    assert len(array) == 4  # max cardinality
+    assert len(array) == 4
     for key, values in params.items():
         covered = {row[key] for row in array}
-        assert covered == set(values), f'param {key!r} not fully covered'
+        assert covered == set(values), f"param {key!r} not fully covered"
 
 
 def test_covering_array_length_equals_max_cardinality() -> None:
@@ -76,16 +72,12 @@ def test_covering_array_differs_with_different_seeds() -> None:
 
 
 def test_covering_array_columns_are_independently_shuffled() -> None:
-    # If columns were not independently shuffled (pure round-robin),
-    # the first values of each param would all appear in the same row.
+    # Without independent shuffle, all params would share the same rank order.
     params = {'a': [1, 2, 3, 4, 5], 'b': [10, 20, 30, 40, 50]}
     array = make_covering_array(params, seed=42)
-    # In pure round-robin, row 0 would always be a[0]=1, b[0]=10.
-    # With independent shuffle this should not hold for all seeds.
-    # We verify by checking that not all params follow the same rank order.
     a_order = [row['a'] for row in array]
     b_order = [row['b'] for row in array]
-    # Normalise to rank order — if columns were identical rank order, shuffle was not independent
+    # rank-order comparison: identical rank order ↔ columns shuffled as one
     a_ranks = sorted(range(len(a_order)), key=lambda i: a_order[i])
     b_ranks = sorted(range(len(b_order)), key=lambda i: b_order[i])
     assert a_ranks != b_ranks
@@ -105,8 +97,6 @@ def test_covering_array_values_are_from_original_lists() -> None:
         assert row['p'] in params['p']
         assert row['q'] in params['q']
 
-
-# --- _classify_error ---
 
 def test_classify_error_small_dataset() -> None:
     msg = _classify_error(ValueError('Found array with 0 sample(s)'))
@@ -128,8 +118,6 @@ def test_classify_error_generic() -> None:
     assert 'RuntimeError' in msg
     assert 'unexpected' in msg
 
-
-# --- profile() — static fields ---
 
 def test_profile_static_fields_correct_for_logreg_template() -> None:
     template = _TEMPLATES_DIR / 'logreg_binary.yaml'
@@ -214,8 +202,6 @@ def test_profile_warns_when_test_data_source_absent() -> None:
     assert result.sample_permutations_attempted == 0
     assert result.sample_time_seconds_per_permutation is None
 
-
-# --- profile() — runtime sampling (mocked) ---
 
 def _make_mock_manifest(fail: bool = False) -> MagicMock:
     manifest = MagicMock()
