@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 import polars as pl
+import pytest
 
 from limen.experiment import experiment_core
 from limen.experiment.experiment_core import UniversalExperimentLoop
@@ -190,6 +191,31 @@ def test_standard_run_csv_uses_experiment_dir() -> None:
     assert rows[0]['note'] == first_note
     assert rows[1]['note'] == second_note
     assert rows[1]['id'] != 'id'
+
+
+def test_standard_run_rejects_existing_csv_without_header() -> None:
+    sfd = SimpleNamespace(
+        params=lambda: {'marker': [0]},
+        prep=_standard_csv_test_prep,
+        model=_standard_csv_test_model,
+    )
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+        Path(f'{experiment_name}.csv').write_text('\n')
+
+        uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+
+        with pytest.raises(ValueError, match='Existing results CSV has no header'):
+            uel.run(
+                experiment_name=experiment_name,
+                n_permutations=1,
+                prep_each_round=True,
+                random_search=False,
+            )
 
 
 def test_standard_run_batches_live_log_without_changing_row_output() -> None:

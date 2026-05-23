@@ -221,6 +221,10 @@ class UniversalExperimentLoop:
         if csv_path.exists() and csv_path.stat().st_size > 0:
             with csv_path.open('r', newline='') as f:
                 csv_header = next(csv.reader(f), None)
+            if not csv_header or not any(col.strip() for col in csv_header):
+                raise ValueError(
+                    f'Existing results CSV has no header: {csv_path}'
+                )
 
         for i in tqdm(range(n_permutations)):
 
