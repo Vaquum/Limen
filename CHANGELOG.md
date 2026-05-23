@@ -975,3 +975,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.0.0 on 22nd of May, 2026
 
 - Breaking: make `UniversalExperimentLoop.run()` skip terminal post-processing by default and retain `post_processing=True` as an explicit opt-in.
+
+## v4.0.1 on 23rd of May, 2026
+
+- Stop retaining post-processing inputs in memory during default `post_processing=False` UEL runs while preserving persisted round data for resume and promotion workflows.
+- Batch standard UEL experiment-log construction to avoid row-count-dependent slowdown from per-round Polars `vstack`.

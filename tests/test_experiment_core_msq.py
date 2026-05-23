@@ -107,10 +107,37 @@ def test_run_with_msq_skips_post_processing_by_default():
 
     assert finalize_calls == []
     assert uel.experiment_log.shape[0] == 1
+    assert uel.round_params == []
+    assert uel.preds == []
+    assert uel.scalers == []
+    assert uel._alignment == []
     assert uel._log is None
     assert uel.experiment_confusion_metrics is None
     assert uel.experiment_backtest_results is None
     assert uel.experiment_parameter_correlation is None
+
+
+def test_run_with_msq_default_persists_round_data_without_memory_retention():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        uel, _, _ = _make_uel(experiment_dir=exp_dir)
+
+        uel.run(
+            experiment_name='test',
+            n_permutations=2,
+        )
+
+        round_data_path = exp_dir / 'round_data.jsonl'
+        assert round_data_path.exists()
+        with round_data_path.open('r') as f:
+            lines = [line for line in f if line.strip()]
+
+    assert len(lines) == 2
+    assert uel.round_params == []
+    assert uel.preds == []
+    assert uel.scalers == []
+    assert uel._alignment == []
 
 
 def test_run_with_msq_post_processing_opt_in_reaches_finalize():
