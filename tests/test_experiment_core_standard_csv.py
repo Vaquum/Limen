@@ -247,6 +247,7 @@ def test_standard_run_skips_post_processing_by_default() -> None:
             sfd=sfd,
         )
         finalize_calls = []
+        uel.extras = [{'stale': True}]
 
         def fake_finalize():
             finalize_calls.append(True)
@@ -265,6 +266,7 @@ def test_standard_run_skips_post_processing_by_default() -> None:
     assert uel.preds == []
     assert uel.scalers == []
     assert uel._alignment == []
+    assert uel.extras == []
     assert uel._log is None
     assert uel.experiment_confusion_metrics is None
     assert uel.experiment_backtest_results is None

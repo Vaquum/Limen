@@ -163,6 +163,7 @@ class UniversalExperimentLoop:
 
         self.round_params = []
         self.models = []
+        self.extras = []
         self.preds = []
         self.scalers = []
         self._alignment = []
@@ -699,6 +700,8 @@ class UniversalExperimentLoop:
             strategy_type (str): Expected strategy type for validation
             csv_path (Path): Path to results CSV
             round_data_path (Path | None): Path to round_data.jsonl
+            retain_round_artifacts (bool): Whether to hydrate round data
+                into instance artifact lists, or only count entries
 
         Returns:
             int: The round number to resume from
@@ -983,6 +986,11 @@ class UniversalExperimentLoop:
             round_data_path (Path): Path to the round_data.jsonl file
             up_to_round (int | None): If set, only load entries with
                 round_id < up_to_round (for crash recovery consistency)
+            retain_round_artifacts (bool): Whether to hydrate entries into
+                instance artifact lists, or only validate/count them
+
+        Returns:
+            int: The number of round data entries loaded or counted
 
         '''
 
