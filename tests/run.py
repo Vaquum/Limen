@@ -165,6 +165,14 @@ from tests.test_cli import test_cli_run_resume_errors_when_checkpoint_missing_me
 from tests.test_cli import test_cli_run_resume_errors_when_metadata_json_is_invalid_json
 from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict
 from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name
+from tests.test_cli import test_cli_profile_valid_yaml_exits_0
+from tests.test_cli import test_cli_profile_shows_permutation_count_and_rating
+from tests.test_cli import test_cli_profile_shows_all_param_names
+from tests.test_cli import test_cli_profile_shows_runtime_skipped_when_no_sampling
+from tests.test_cli import test_cli_profile_shows_timing_when_sampling_completed
+from tests.test_cli import test_cli_profile_shows_errors_from_sampling
+from tests.test_cli import test_cli_profile_parse_error_exits_1
+from tests.test_cli import test_cli_profile_validation_error_exits_1
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1211,6 +1219,14 @@ tests = [
     test_cli_run_resume_errors_when_metadata_json_is_invalid_json,
     test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict,
     test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name,
+    test_cli_profile_valid_yaml_exits_0,
+    test_cli_profile_shows_permutation_count_and_rating,
+    test_cli_profile_shows_all_param_names,
+    test_cli_profile_shows_runtime_skipped_when_no_sampling,
+    test_cli_profile_shows_timing_when_sampling_completed,
+    test_cli_profile_shows_errors_from_sampling,
+    test_cli_profile_parse_error_exits_1,
+    test_cli_profile_validation_error_exits_1,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
