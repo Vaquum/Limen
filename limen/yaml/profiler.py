@@ -1,3 +1,4 @@
+import math
 import random
 import time
 import warnings
@@ -42,10 +43,7 @@ def _complexity_rating(total: int) -> str:
 
 def _total_permutations(params: dict[str, list[Any]]) -> int:
 
-    result = 1
-    for values in params.values():
-        result *= len(values)
-    return result
+    return math.prod(len(v) for v in params.values())
 
 
 def make_covering_array(params: dict[str, list[Any]], seed: int = 42) -> list[dict[str, Any]]:
@@ -146,16 +144,16 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
 
     elapsed_times: list[float] = []
 
-    for round_params in permutations:
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        for round_params in permutations:
+            try:
                 data_dict = manifest.prepare_data(raw_data, round_params)
                 t0 = time.perf_counter()
                 manifest.run_model(data_dict, round_params)
                 elapsed_times.append(time.perf_counter() - t0)
-        except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
-            result.errors.append(_classify_error(exc))
+            except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
+                result.errors.append(_classify_error(exc))
 
     result.sample_permutations_completed = len(elapsed_times)
 
