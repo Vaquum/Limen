@@ -268,7 +268,7 @@ def test_rejects_selector_params_without_selector():
             )
             assert False, 'Expected ValueError'
         except ValueError as e:
-            assert 'selector_params requires selector' in str(e)
+            assert 'selector_params requires an explicit selector' in str(e)
 
 
 def test_callable_selector_receives_contract_context():

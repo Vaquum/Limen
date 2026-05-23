@@ -78,6 +78,9 @@ class Cohort:
         if selector_params is not None and not isinstance(selector_params, dict):
             raise ValueError('selector_params must be a dict when provided.')
 
+        if selector_params is not None and selector is None:
+            raise ValueError('selector_params requires an explicit selector.')
+
         experiment_dir = (
             self._resolve_experiment_id(experiment_id)
             if experiment_id is not None
@@ -492,9 +495,6 @@ class Cohort:
                                 context: dict[str, Any],
                                 selector: str | Selector | None,
                                 selector_params: dict[str, Any]) -> list[int | str]:
-
-        if selector is None and selector_params:
-            raise ValueError('selector_params requires selector to be provided.')
 
         resolved_selector = cls._resolve_selector(selector)
         try:
