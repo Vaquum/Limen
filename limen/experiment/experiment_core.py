@@ -27,7 +27,7 @@ from limen.experiment.manifest_core import RuleBasedManifest
 
 logger = logging.getLogger(__name__)
 
-STANDARD_RUN_LOG_RECHUNK_THRESHOLD = 500
+STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
 
 class UniversalExperimentLoop:
@@ -166,6 +166,7 @@ class UniversalExperimentLoop:
         self.preds = []
         self.scalers = []
         self._alignment = []
+        self.experiment_log = None
         self._clear_post_processing_outputs()
 
         if resume and self._search_strategy is None:
@@ -211,6 +212,15 @@ class UniversalExperimentLoop:
         else:
             csv_path = Path(f'{experiment_name}.csv')
 
+        retain_round_artifacts = post_processing
+        results_accumulator: list[dict[str, Any]] = []
+        log_batches: list[pl.DataFrame] = []
+
+        csv_header: list[str] | None = None
+        if csv_path.exists() and csv_path.stat().st_size > 0:
+            with csv_path.open('r', newline='') as f:
+                csv_header = next(csv.reader(f), None)
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time
@@ -239,51 +249,68 @@ class UniversalExperimentLoop:
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
 
-            # Add alignment details
-            self._alignment.append(data_dict['_alignment'])
+            if retain_round_artifacts:
+                self._alignment.append(data_dict['_alignment'])
 
             # Handle any extra results that are returned from the model
             if 'extras' in round_results:
-                self.extras.append(round_results['extras'])
+                if retain_round_artifacts:
+                    self.extras.append(round_results['extras'])
                 round_results.pop('extras')
 
             # Handle any models that are returned from the model
             if 'models' in round_results:
-                self.models.append(round_results['models'])
+                if retain_round_artifacts:
+                    self.models.append(round_results['models'])
                 round_results.pop('models')
 
             if '_preds' in round_results:
-                self.preds.append(round_results['_preds'])
+                if retain_round_artifacts:
+                    self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
 
-            if '_scaler' in data_dict:
+            if retain_round_artifacts and '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
 
             # Add the round number and execution time to the results
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
 
-            self.round_params.append(round_params)
+            if retain_round_artifacts:
+                self.round_params.append(round_params)
 
             for key in round_params:
                 round_results[key] = round_params[key]
 
-            # Handle writing to the DataFrame
-            if i == 0:
-                self.experiment_log = pl.DataFrame([round_results])
-            else:
-                self.experiment_log = self.experiment_log.vstack(pl.DataFrame([round_results]))
+            results_accumulator.append(dict(round_results))
+            if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
+                log_batches.append(pl.DataFrame(results_accumulator))
+                results_accumulator = []
 
             # Match the MSQ path: only write a header when the CSV is new or empty.
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             with csv_path.open('a', newline='') as f:
                 writer = csv.writer(f)
                 if write_header:
-                    writer.writerow(round_results.keys())
-                writer.writerow(self.experiment_log.row(i))
+                    csv_header = list(round_results.keys())
+                    writer.writerow(csv_header)
+                writer.writerow([
+                    '' if (v := round_results.get(col)) is None else v
+                    for col in csv_header
+                ])
+                extra_keys = set(round_results) - set(csv_header)
+                if extra_keys:
+                    logger.warning(
+                        'Round %d result keys not in CSV header — values dropped: %s',
+                        i, sorted(extra_keys),
+                    )
 
-            if self.experiment_log.n_chunks() > STANDARD_RUN_LOG_RECHUNK_THRESHOLD:
-                self.experiment_log = self.experiment_log.rechunk()
+        if results_accumulator:
+            log_batches.append(pl.DataFrame(results_accumulator))
+        if log_batches:
+            self.experiment_log = pl.concat(
+                log_batches, how='vertical_relaxed',
+            )
 
         if post_processing:
             self._finalize()
@@ -405,6 +432,7 @@ class UniversalExperimentLoop:
                 msq, domain, feedback_controller, checkpoint_manager,
                 content_hash=content_hash, strategy_type=strategy_type,
                 csv_path=csv_path, round_data_path=round_data_path,
+                retain_round_artifacts=post_processing,
             )
         elif self._experiment_dir:
             self._guard_stale_artifacts()
@@ -481,24 +509,31 @@ class UniversalExperimentLoop:
             )
 
             if 'extras' in round_results:
-                self.extras.append(round_results.pop('extras'))
+                extras = round_results.pop('extras')
+                if post_processing:
+                    self.extras.append(extras)
             if 'models' in round_results:
-                self.models.append(round_results.pop('models'))
+                models = round_results.pop('models')
+                if post_processing:
+                    self.models.append(models)
             current_preds = round_results.pop('_preds', None)
             if current_preds is None:
                 current_preds = []
-            self.preds.append(current_preds)
-            if '_scaler' in data_dict:
+            if post_processing:
+                self.preds.append(current_preds)
+            if post_processing and '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
 
-            self._alignment.append(data_dict['_alignment'])
+            if post_processing:
+                self._alignment.append(data_dict['_alignment'])
 
             round_results['id'] = current_round
             round_results['execution_time'] = round(
                 time.time() - start_time, 2,
             )
 
-            self.round_params.append(sfd_params)
+            if post_processing:
+                self.round_params.append(sfd_params)
             for key, value in round_params.items():
                 round_results[key] = value
             if context_params is not None:
@@ -649,7 +684,8 @@ class UniversalExperimentLoop:
                                    content_hash: str,
                                    strategy_type: str,
                                    csv_path: Path,
-                                   round_data_path: Path | None) -> int:
+                                   round_data_path: Path | None,
+                                   retain_round_artifacts: bool) -> int:
 
         '''
         Restore experiment state from checkpoint and data files.
@@ -706,11 +742,15 @@ class UniversalExperimentLoop:
                 f"{start_round} rounds completed but no round "
                 f"data exists."
             )
-        self._load_round_data(round_data_path, up_to_round=start_round)
-        if len(self.round_params) < start_round:
+        loaded_rounds = self._load_round_data(
+            round_data_path,
+            up_to_round=start_round,
+            retain_round_artifacts=retain_round_artifacts,
+        )
+        if loaded_rounds < start_round:
             raise ValueError(
                 f"Cannot resume: round_data.jsonl has "
-                f"{len(self.round_params)} entries but checkpoint "
+                f"{loaded_rounds} entries but checkpoint "
                 f"indicates {start_round} rounds completed."
             )
 
@@ -932,7 +972,9 @@ class UniversalExperimentLoop:
 
     def _load_round_data(self,
                          round_data_path: Path,
-                         up_to_round: int | None = None) -> None:
+                         up_to_round: int | None = None,
+                         *,
+                         retain_round_artifacts: bool = True) -> int:
 
         '''
         Load accumulated round data from JSONL into instance lists.
@@ -945,8 +987,9 @@ class UniversalExperimentLoop:
         '''
 
         if not round_data_path.exists():
-            return
+            return 0
 
+        loaded_rounds = 0
         with round_data_path.open('r') as f:
             for raw_line in f:
                 stripped = raw_line.strip()
@@ -963,20 +1006,24 @@ class UniversalExperimentLoop:
                 ):
                     break
 
-                self.round_params.append(entry['round_params'])
-                self.preds.append(entry['preds'])
-                self._alignment.append({
-                    'missing_datetimes': [
-                        datetime.fromisoformat(dt)
-                        for dt in entry['alignment']['missing_datetimes']
-                    ],
-                    'first_test_datetime': datetime.fromisoformat(
-                        entry['alignment']['first_test_datetime'],
-                    ),
-                    'last_test_datetime': datetime.fromisoformat(
-                        entry['alignment']['last_test_datetime'],
-                    ),
-                })
+                loaded_rounds += 1
+                if retain_round_artifacts:
+                    self.round_params.append(entry['round_params'])
+                    self.preds.append(entry['preds'])
+                    self._alignment.append({
+                        'missing_datetimes': [
+                            datetime.fromisoformat(dt)
+                            for dt in entry['alignment']['missing_datetimes']
+                        ],
+                        'first_test_datetime': datetime.fromisoformat(
+                            entry['alignment']['first_test_datetime'],
+                        ),
+                        'last_test_datetime': datetime.fromisoformat(
+                            entry['alignment']['last_test_datetime'],
+                        ),
+                    })
+
+        return loaded_rounds
 
 
     def _resume_from_checkpoint(self,

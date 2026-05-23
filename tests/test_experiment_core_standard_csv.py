@@ -192,9 +192,9 @@ def test_standard_run_csv_uses_experiment_dir() -> None:
     assert rows[1]['id'] != 'id'
 
 
-def test_standard_run_rechunks_live_log_without_changing_row_output() -> None:
-    original_threshold = experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD
-    experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD = 4
+def test_standard_run_batches_live_log_without_changing_row_output() -> None:
+    original_batch_size = experiment_core.STANDARD_RUN_LOG_BATCH_SIZE
+    experiment_core.STANDARD_RUN_LOG_BATCH_SIZE = 4
 
     try:
         sfd = SimpleNamespace(
@@ -229,7 +229,7 @@ def test_standard_run_rechunks_live_log_without_changing_row_output() -> None:
         assert [int(row['id']) for row in rows] == list(range(10))
         assert [int(row['marker']) for row in rows] == list(range(10))
     finally:
-        experiment_core.STANDARD_RUN_LOG_RECHUNK_THRESHOLD = original_threshold
+        experiment_core.STANDARD_RUN_LOG_BATCH_SIZE = original_batch_size
 
 
 def test_standard_run_skips_post_processing_by_default() -> None:
@@ -261,6 +261,10 @@ def test_standard_run_skips_post_processing_by_default() -> None:
 
     assert finalize_calls == []
     assert uel.experiment_log.height == 1
+    assert uel.round_params == []
+    assert uel.preds == []
+    assert uel.scalers == []
+    assert uel._alignment == []
     assert uel._log is None
     assert uel.experiment_confusion_metrics is None
     assert uel.experiment_backtest_results is None
