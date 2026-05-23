@@ -735,6 +735,7 @@ from tests.test_proto_cohort import test_accepts_string_permutation_ids_when_num
 from tests.test_proto_cohort import test_rejects_selector_with_explicit_permutation_ids
 from tests.test_proto_cohort import test_rejects_selector_params_without_selector
 from tests.test_proto_cohort import test_callable_selector_receives_contract_context
+from tests.test_proto_cohort import test_selector_context_orders_mixed_string_and_int_ids
 from tests.test_proto_cohort import test_named_top_n_selector_uses_results_column
 from tests.test_proto_cohort import test_builtin_selector_rejects_boolean_ids
 from tests.test_proto_cohort import test_builtin_selector_coerces_object_ids_to_strings
@@ -1495,6 +1496,7 @@ tests = [
     test_rejects_selector_with_explicit_permutation_ids,
     test_rejects_selector_params_without_selector,
     test_callable_selector_receives_contract_context,
+    test_selector_context_orders_mixed_string_and_int_ids,
     test_named_top_n_selector_uses_results_column,
     test_builtin_selector_rejects_boolean_ids,
     test_builtin_selector_coerces_object_ids_to_strings,

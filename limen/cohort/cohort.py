@@ -152,7 +152,7 @@ class Cohort:
 
         self.experiment_dir = experiment_dir
         self.experiment_id = experiment_id
-        self.available_permutation_ids = sorted(available_ids)
+        self.available_permutation_ids = self._sort_permutation_ids(available_ids)
         self.permutation_ids = selected_ids
         self.architecture_id = architecture_id
         self.supports_probabilities = supports_probabilities
@@ -490,6 +490,14 @@ class Cohort:
 
         return stripped
 
+    @staticmethod
+    def _sort_permutation_ids(values: set[int | str]) -> list[int | str]:
+
+        return sorted(
+            values,
+            key=lambda value: (0, value) if isinstance(value, int) else (1, str(value)),
+        )
+
     @classmethod
     def _select_permutation_ids(cls,
                                 context: dict[str, Any],
@@ -552,7 +560,7 @@ class Cohort:
             'experiment_dir': experiment_dir,
             'metadata': metadata,
             'round_entries': round_entries,
-            'available_permutation_ids': sorted(available_ids),
+            'available_permutation_ids': Cohort._sort_permutation_ids(available_ids),
         }
 
         results_path = experiment_dir / 'results.csv'

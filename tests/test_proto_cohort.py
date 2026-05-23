@@ -90,6 +90,7 @@ def _write_real_metadata_only(experiment_dir: Path) -> None:
 
 def _write_minimal_cohort_artifacts(experiment_dir: Path,
                                     n_rounds: int = 3,
+                                    round_ids: list[int | str] | None = None,
                                     results: pd.DataFrame | None = None) -> None:
 
     experiment_dir.mkdir(parents=True, exist_ok=True)
@@ -97,8 +98,10 @@ def _write_minimal_cohort_artifacts(experiment_dir: Path,
     with (experiment_dir / 'metadata.json').open('w') as f:
         json.dump({'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}, f)
 
+    ids = list(range(n_rounds)) if round_ids is None else round_ids
+
     with (experiment_dir / 'round_data.jsonl').open('w') as f:
-        for round_id in range(n_rounds):
+        for round_id in ids:
             f.write(json.dumps({
                 'round_id': round_id,
                 'round_params': {
@@ -288,6 +291,24 @@ def test_callable_selector_receives_contract_context():
 
         assert seen == {'has_results': True, 'available': [0, 1, 2]}
         assert cohort.permutation_ids == [2, 0]
+
+
+def test_selector_context_orders_mixed_string_and_int_ids():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _write_minimal_cohort_artifacts(exp_dir, round_ids=['b', 1, 'a'])
+        seen = {}
+
+        def selector(context):
+            seen['available'] = context['available_permutation_ids']
+            return [1, 'a']
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), selector=selector)
+
+        assert seen['available'] == [1, 'a', 'b']
+        assert cohort.available_permutation_ids == [1, 'a', 'b']
+        assert cohort.permutation_ids == [1, 'a']
 
 
 def test_named_top_n_selector_uses_results_column():
