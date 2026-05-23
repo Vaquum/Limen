@@ -3,6 +3,10 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
+
+from limen.cohort.selection import BUILTIN_SELECTORS
+from limen.cohort.selection import Selector
 
 
 class Cohort:
@@ -36,7 +40,9 @@ class Cohort:
                  *,
                  experiment_id: str | None = None,
                  experiment_log_path: str | None = None,
-                 permutation_ids: list[int | str] | None = None) -> None:
+                 permutation_ids: list[int | str] | None = None,
+                 selector: str | Selector | None = None,
+                 selector_params: dict[str, Any] | None = None) -> None:
         '''
         Construct an inference-only Cohort from one experiment source and selected permutations.
 
@@ -48,6 +54,11 @@ class Cohort:
             permutation_ids (list[int | str] | None): Specific permutation IDs to
                 include. If omitted, all available permutations in the resolved
                 experiment are selected.
+            selector (str | Selector | None): Built-in selector name or callable
+                using the `select(context, **params) -> list[int | str]`
+                contract. Defaults to `all` when permutation_ids is omitted.
+            selector_params (dict[str, Any] | None): Keyword arguments passed to
+                the selector callable.
 
         Returns:
             None
@@ -60,6 +71,12 @@ class Cohort:
 
         if experiment_id is not None and experiment_log_path is not None:
             raise ValueError('Cohort accepts exactly one experiment source.')
+
+        if permutation_ids is not None and selector is not None:
+            raise ValueError('Cohort accepts permutation_ids or selector, not both.')
+
+        if selector_params is not None and not isinstance(selector_params, dict):
+            raise ValueError('selector_params must be a dict when provided.')
 
         experiment_dir = (
             self._resolve_experiment_id(experiment_id)
@@ -92,7 +109,17 @@ class Cohort:
             raise ValueError('Resolved experiment contains no permutations.')
 
         if permutation_ids is None:
-            selected_ids = sorted(available_ids)
+            context = self._build_selector_context(
+                experiment_dir,
+                metadata,
+                round_entries,
+                available_ids,
+            )
+            selected_ids = self._select_permutation_ids(
+                context,
+                selector,
+                selector_params or {},
+            )
         else:
             if not permutation_ids:
                 raise ValueError(
@@ -459,6 +486,71 @@ class Cohort:
             return int(stripped)
 
         return stripped
+
+    @classmethod
+    def _select_permutation_ids(cls,
+                                context: dict[str, Any],
+                                selector: str | Selector | None,
+                                selector_params: dict[str, Any]) -> list[int | str]:
+
+        selected = cls._resolve_selector(selector)(context, **selector_params)
+
+        if not isinstance(selected, list):
+            raise ValueError('Cohort selector must return a list of permutation ids.')
+
+        if not selected:
+            raise ValueError('Cohort selector returned no permutation ids.')
+
+        normalized = [cls._normalize_permutation_id(pid) for pid in selected]
+        if len(normalized) != len(set(normalized)):
+            raise ValueError('Cohort selector returned duplicate permutation ids.')
+
+        available_ids = set(context['available_permutation_ids'])
+        missing_ids = [pid for pid in normalized if pid not in available_ids]
+        if missing_ids:
+            raise ValueError(
+                f'Cohort selector returned unknown permutation ids: {missing_ids}'
+            )
+
+        return normalized
+
+    @staticmethod
+    def _resolve_selector(selector: str | Selector | None) -> Selector:
+
+        if selector is None:
+            return BUILTIN_SELECTORS['all']
+
+        if isinstance(selector, str):
+            if selector not in BUILTIN_SELECTORS:
+                known = sorted(BUILTIN_SELECTORS)
+                raise ValueError(
+                    f'Unknown Cohort selector: {selector}. Known selectors: {known}'
+                )
+            return BUILTIN_SELECTORS[selector]
+
+        if callable(selector):
+            return selector
+
+        raise ValueError('selector must be None, a built-in selector name, or a callable.')
+
+    @staticmethod
+    def _build_selector_context(experiment_dir: Path,
+                                metadata: dict,
+                                round_entries: dict[int | str, dict],
+                                available_ids: set[int | str]) -> dict[str, Any]:
+
+        context: dict[str, Any] = {
+            'experiment_dir': experiment_dir,
+            'metadata': metadata,
+            'round_entries': round_entries,
+            'available_permutation_ids': sorted(available_ids),
+        }
+
+        results_path = experiment_dir / 'results.csv'
+        if results_path.exists():
+            context['results'] = pd.read_csv(results_path)
+
+        return context
 
     @staticmethod
     def _load_round_entries(round_data_path: Path) -> dict[int | str, dict]:

@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
+import pandas as pd
 
 from limen.cohort import Cohort
 from limen.experiment.experiment_core import UniversalExperimentLoop
@@ -84,6 +85,28 @@ def _write_real_metadata_only(experiment_dir: Path) -> None:
 
     with (experiment_dir / 'metadata.json').open('w') as f:
         json.dump({'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}, f)
+
+
+def _write_minimal_cohort_artifacts(experiment_dir: Path,
+                                    n_rounds: int = 3,
+                                    results: pd.DataFrame | None = None) -> None:
+
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+
+    with (experiment_dir / 'metadata.json').open('w') as f:
+        json.dump({'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}, f)
+
+    with (experiment_dir / 'round_data.jsonl').open('w') as f:
+        for round_id in range(n_rounds):
+            f.write(json.dumps({
+                'round_id': round_id,
+                'round_params': {
+                    'model_architecture': 'limen.sfd.foundational_sfd.logreg_binary',
+                },
+            }) + '\n')
+
+    if results is not None:
+        results.to_csv(experiment_dir / 'results.csv', index=False)
 
 
 def _patch_round_architecture(experiment_dir: Path,
@@ -212,6 +235,110 @@ def test_accepts_string_permutation_ids_when_numeric():
         cohort = Cohort(experiment_log_path=str(
             exp_dir), permutation_ids=['0', '1'])
         assert cohort.permutation_ids == [0, 1]
+
+
+def test_rejects_selector_with_explicit_permutation_ids():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _write_minimal_cohort_artifacts(exp_dir)
+
+        try:
+            Cohort(
+                experiment_log_path=str(exp_dir),
+                permutation_ids=[0],
+                selector='all',
+            )
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'permutation_ids or selector' in str(e)
+
+
+def test_callable_selector_receives_contract_context():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        results = pd.DataFrame({'id': [0, 1, 2], 'score': [0.1, 0.2, 0.3]})
+        _write_minimal_cohort_artifacts(exp_dir, results=results)
+        seen = {}
+
+        def selector(context):
+            seen['has_results'] = 'results' in context
+            seen['available'] = context['available_permutation_ids']
+            return [2, 0]
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), selector=selector)
+
+        assert seen == {'has_results': True, 'available': [0, 1, 2]}
+        assert cohort.permutation_ids == [2, 0]
+
+
+def test_named_top_n_selector_uses_results_column():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        results = pd.DataFrame({
+            'id': [0, 1, 2],
+            'score': [0.1, 0.9, 0.5],
+        })
+        _write_minimal_cohort_artifacts(exp_dir, results=results)
+
+        cohort = Cohort(
+            experiment_log_path=str(exp_dir),
+            selector='top_n',
+            selector_params={'column': 'score', 'n': 2},
+        )
+
+        assert cohort.permutation_ids == [1, 2]
+
+
+def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        results = pd.DataFrame({
+            'id': [0, 1, 2, 3],
+            'confusion_tp': [5, 5, 5, 0],
+            'confusion_fp': [1, 1, 1, 0],
+            'backtest_trade_pnl_net_bps_p50': [10.0, 5.0, 1.0, 100.0],
+            'backtest_edge_per_signal_bps_p50': [10.0, 12.0, 1.0, 100.0],
+            'backtest_return_on_exposure_p50': [10.0, 8.0, 1.0, 100.0],
+            'backtest_drawdown_depth_bps_p50': [-100.0, -80.0, -500.0, 0.0],
+            'backtest_cvar_95_return_bps': [-50.0, -40.0, -200.0, 0.0],
+        })
+        _write_minimal_cohort_artifacts(exp_dir, n_rounds=4, results=results)
+
+        cohort = Cohort(
+            experiment_log_path=str(exp_dir),
+            selector='backtest_pareto',
+            selector_params={'target_count': 10, 'min_signals': 1},
+        )
+
+        assert cohort.permutation_ids == [1, 0]
+
+
+def test_diverse_metrics_selector_clamps_cluster_count():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        results = pd.DataFrame({
+            'id': [0, 1, 2, 3],
+            'backtest_trade_pnl_net_bps_p50': [10.0, 20.0, 30.0, 40.0],
+            'backtest_edge_per_signal_bps_p50': [2.0, 4.0, 8.0, 16.0],
+            'backtest_return_on_exposure_p50': [5.0, 4.0, 3.0, 2.0],
+            'backtest_drawdown_depth_bps_p50': [-10.0, -20.0, -30.0, -40.0],
+            'backtest_cvar_95_return_bps': [-1.0, -2.0, -3.0, -4.0],
+        })
+        _write_minimal_cohort_artifacts(exp_dir, n_rounds=4, results=results)
+
+        cohort = Cohort(
+            experiment_log_path=str(exp_dir),
+            selector='diverse_metrics',
+            selector_params={'target_count': 2, 'n_clusters': 20},
+        )
+
+        assert len(cohort.permutation_ids) == 2
+        assert set(cohort.permutation_ids) <= {0, 1, 2, 3}
 
 
 def test_rejects_when_round_data_is_missing():

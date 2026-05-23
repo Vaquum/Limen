@@ -136,16 +136,10 @@ const docs = [
     sidebarPosition: 12,
   },
   {
-    source: 'docs/Regime-Diversified-Opinion-Pools.md',
-    dest: 'guides/regime-diversified-opinion-pools.md',
-    slug: '/guides/regime-diversified-opinion-pools',
-    sidebarPosition: 13,
-  },
-  {
     source: 'docs/Conserved-Flux-Renormalization.md',
     dest: 'guides/conserved-flux-renormalization.md',
     slug: '/guides/conserved-flux-renormalization',
-    sidebarPosition: 14,
+    sidebarPosition: 13,
   },
   {
     source: 'docs/Indicators.md',

@@ -5,15 +5,14 @@
 ## Canonical docs
 
 - [Cohort](../../docs/Cohort.md)
-- [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md)
 - [Trainer](../../docs/Trainer.md)
 
 ## What this package owns
 
-This package owns two cohort-level inference surfaces:
+This package owns the cohort-level inference surface:
 
-1. `Cohort` for direct multi-member aggregation from one experiment + selected permutations
-2. `RegimeDiversifiedOpinionPools` (RDOP) for regime-aware pool construction and per-regime aggregation
+1. `Cohort` for direct multi-member aggregation from one experiment and selected permutations
+2. selector helpers for choosing those permutations from experiment artefacts
 
 It does **not** own:
 
@@ -26,20 +25,24 @@ It does **not** own:
 | Entry point                       | Use it when                                                                             | Notes                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `Cohort`                        | You want to aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
-| `RegimeDiversifiedOpinionPools` | You want regime-diversified cohort construction and per-regime inference                | Full offline + online RDOP workflow                            |
+| `select_all`                    | You want the default "use every round" selector                                         | Preserves existing omitted-`permutation_ids` behavior          |
+| `select_top_n`                  | You want a simple results-column ranker                                                 | Requires `results.csv`                                         |
+| `select_backtest_pareto`        | You want trading-metric Pareto selection                                                | Uses backtest return/risk columns                              |
+| `select_diverse_metrics`        | You want metric-diverse member selection                                                | Uses PCA/KMeans medoids over metric columns                    |
 
 ## Package map
 
 ```text
 cohort/
 ├── cohort.py                # Cohort constructor + aggregation logic
-└── regime_pools.py          # RDOP implementation
+└── selection.py             # Built-in selector contract helpers
 ```
 
 ## Cohort quick behavior
 
 - Construct from exactly one experiment source (`experiment_id` or `experiment_log_path`)
-- Validate selected `permutation_ids` and enforce single-architecture selection
+- Validate explicit or selector-produced `permutation_ids`
+- Enforce single-architecture selection
 - Infer aggregation mode from architecture capability:
   - `probability_weighted` when probability output is supported
   - `majority_vote` fallback otherwise
@@ -48,22 +51,19 @@ cohort/
 
 See [Cohort](../../docs/Cohort.md) for full contract and examples.
 
-## RDOP quick behavior
+## Selector quick behavior
 
-- `offline_pipeline()` selects and diversifies candidate models by regime
-- `online_pipeline()` loads selected models and emits per-regime outputs
-- Intended for regime-aware downstream usage, not direct execution decisions
-
-See [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md).
+- Selectors receive a context dict and return permutation IDs only
+- Cohort owns all validation after selector execution
+- Built-ins cover all-round, single-column rank, backtest Pareto, and metric diversity selection
 
 ## Adjacent modules
 
 - `limen.experiment` provides experiment logs, Trainer, and Sensor reconstruction used by Cohort flows
-- `limen.log` provides analysis surfaces commonly used before RDOP selection
+- `limen.log` provides analysis surfaces commonly used before selector-driven promotion
 - `limen.sfd` and reference architectures define member model output behavior
 
 ## Read next
 
 - [Cohort](../../docs/Cohort.md)
-- [Regime-Diversified Opinion Pools](../../docs/Regime-Diversified-Opinion-Pools.md)
 - [Trainer](../../docs/Trainer.md)

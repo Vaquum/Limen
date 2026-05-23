@@ -10,7 +10,6 @@ from limen.experiment import Sensor
 from limen.experiment import Trainer
 from limen.experiment import UniversalExperimentLoop
 from limen.cohort import Cohort
-from limen.cohort import RegimeDiversifiedOpinionPools
 
 from limen import features
 from limen import indicators
@@ -31,7 +30,6 @@ __all__ = [
     'MLManifest',
     'Manifest',
     'ReconstructionError',
-    'RegimeDiversifiedOpinionPools',
     'RuleBasedManifest',
     'Sensor',
     'Trainer',
