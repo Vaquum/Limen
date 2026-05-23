@@ -6,6 +6,9 @@ from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import ValidationError
 from limen.yaml.errors import YAMLError
 from limen.yaml.parser import parse
+from limen.yaml.profiler import ProfileResult
+from limen.yaml.profiler import make_covering_array
+from limen.yaml.profiler import profile
 from limen.yaml.resolver import resolve
 from limen.yaml.schema import VERSION
 from limen.yaml.validator import ValidationResult
@@ -15,13 +18,16 @@ __all__ = [
     'VERSION',
     'CompiledSFD',
     'GitError',
+    'ProfileResult',
     'ResolutionError',
     'ValidationError',
     'ValidationResult',
     'YAMLError',
     'build_manifest',
     'build_search_strategy',
+    'make_covering_array',
     'parse',
+    'profile',
     'resolve',
     'validate',
 ]
