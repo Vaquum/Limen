@@ -199,17 +199,26 @@ def _ids_from_frame(df: pd.DataFrame) -> list[int | str]:
 
 
 def _coerce_id(value: Any) -> int | str:
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError('selector returned a boolean permutation id')
     if pd.isna(value):
         raise ValueError('selector returned a missing permutation id')
-    if isinstance(value, bool):
-        return value
     if isinstance(value, (int, np.integer)):
         return int(value)
     if isinstance(value, (float, np.floating)) and float(value).is_integer():
         return int(value)
-    if isinstance(value, str) and value.strip().isdigit():
-        return int(value.strip())
-    return str(value).strip() if isinstance(value, str) else value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+        if not stripped:
+            raise ValueError('selector returned an empty permutation id')
+        return stripped
+
+    coerced = str(value).strip()
+    if not coerced:
+        raise ValueError('selector returned an empty permutation id')
+    return coerced
 
 
 def _require_columns(df: pd.DataFrame, columns: list[str]) -> None:

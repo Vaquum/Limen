@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
 
-from limen.cohort import Cohort
+from limen.cohort import Cohort, select_top_n
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy
@@ -254,6 +254,22 @@ def test_rejects_selector_with_explicit_permutation_ids():
             assert 'permutation_ids or selector' in str(e)
 
 
+def test_rejects_selector_params_without_selector():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        _write_minimal_cohort_artifacts(exp_dir)
+
+        try:
+            Cohort(
+                experiment_log_path=str(exp_dir),
+                selector_params={'column': 'score'},
+            )
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'selector_params requires selector' in str(e)
+
+
 def test_callable_selector_receives_contract_context():
 
     with TemporaryDirectory() as tmpdir:
@@ -290,6 +306,29 @@ def test_named_top_n_selector_uses_results_column():
         )
 
         assert cohort.permutation_ids == [1, 2]
+
+
+def test_builtin_selector_rejects_boolean_ids():
+
+    results = pd.DataFrame({'id': [True], 'score': [1.0]})
+
+    try:
+        select_top_n({'results': results}, column='score', n=1)
+        assert False, 'Expected ValueError'
+    except ValueError as e:
+        assert 'boolean permutation id' in str(e)
+
+
+def test_builtin_selector_coerces_object_ids_to_strings():
+
+    class ExternalId:
+
+        def __str__(self):
+            return 'external-1'
+
+    results = pd.DataFrame({'id': [ExternalId()], 'score': [1.0]})
+
+    assert select_top_n({'results': results}, column='score', n=1) == ['external-1']
 
 
 def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():

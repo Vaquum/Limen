@@ -493,7 +493,16 @@ class Cohort:
                                 selector: str | Selector | None,
                                 selector_params: dict[str, Any]) -> list[int | str]:
 
-        selected = cls._resolve_selector(selector)(context, **selector_params)
+        if selector is None and selector_params:
+            raise ValueError('selector_params requires selector to be provided.')
+
+        resolved_selector = cls._resolve_selector(selector)
+        try:
+            selected = resolved_selector(context, **selector_params)
+        except TypeError as e:
+            raise ValueError(
+                f'Cohort selector could not be called with selector_params: {e}'
+            ) from e
 
         if not isinstance(selected, list):
             raise ValueError('Cohort selector must return a list of permutation ids.')
