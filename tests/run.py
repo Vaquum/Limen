@@ -110,6 +110,30 @@ from tests.test_yaml import test_all_templates_have_valid_limen_version
 from tests.test_yaml import test_tabpfn_binary_template_is_valid_and_arch_surface_complete
 from tests.test_yaml import test_xgboost_regressor_template_is_valid_and_arch_surface_complete
 from tests.test_yaml import test_rule_based_template_is_valid_and_compiles
+from tests.test_profiler import test_complexity_rating_low
+from tests.test_profiler import test_complexity_rating_medium
+from tests.test_profiler import test_complexity_rating_high
+from tests.test_profiler import test_complexity_rating_extreme
+from tests.test_profiler import test_covering_array_covers_all_values
+from tests.test_profiler import test_covering_array_length_equals_max_cardinality
+from tests.test_profiler import test_covering_array_empty_params_returns_empty
+from tests.test_profiler import test_covering_array_single_param
+from tests.test_profiler import test_covering_array_is_reproducible_with_same_seed
+from tests.test_profiler import test_covering_array_differs_with_different_seeds
+from tests.test_profiler import test_covering_array_columns_are_independently_shuffled
+from tests.test_profiler import test_covering_array_all_rows_have_all_keys
+from tests.test_profiler import test_covering_array_values_are_from_original_lists
+from tests.test_profiler import test_classify_error_small_dataset
+from tests.test_profiler import test_classify_error_class_diversity
+from tests.test_profiler import test_classify_error_nan
+from tests.test_profiler import test_classify_error_generic
+from tests.test_profiler import test_profile_static_fields_correct_for_logreg_template
+from tests.test_profiler import test_profile_total_permutations_is_product_of_cardinalities
+from tests.test_profiler import test_profile_warns_when_test_data_source_absent
+from tests.test_profiler import test_profile_runtime_records_timing_when_all_permutations_succeed
+from tests.test_profiler import test_profile_runtime_records_errors_when_all_permutations_fail
+from tests.test_profiler import test_profile_runtime_partial_failure_timing_from_completed_only
+from tests.test_profiler import test_profile_runtime_fetch_data_failure_reported_as_error
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -1132,6 +1156,30 @@ tests = [
     test_tabpfn_binary_template_is_valid_and_arch_surface_complete,
     test_xgboost_regressor_template_is_valid_and_arch_surface_complete,
     test_rule_based_template_is_valid_and_compiles,
+    test_complexity_rating_low,
+    test_complexity_rating_medium,
+    test_complexity_rating_high,
+    test_complexity_rating_extreme,
+    test_covering_array_covers_all_values,
+    test_covering_array_length_equals_max_cardinality,
+    test_covering_array_empty_params_returns_empty,
+    test_covering_array_single_param,
+    test_covering_array_is_reproducible_with_same_seed,
+    test_covering_array_differs_with_different_seeds,
+    test_covering_array_columns_are_independently_shuffled,
+    test_covering_array_all_rows_have_all_keys,
+    test_covering_array_values_are_from_original_lists,
+    test_classify_error_small_dataset,
+    test_classify_error_class_diversity,
+    test_classify_error_nan,
+    test_classify_error_generic,
+    test_profile_static_fields_correct_for_logreg_template,
+    test_profile_total_permutations_is_product_of_cardinalities,
+    test_profile_warns_when_test_data_source_absent,
+    test_profile_runtime_records_timing_when_all_permutations_succeed,
+    test_profile_runtime_records_errors_when_all_permutations_fail,
+    test_profile_runtime_partial_failure_timing_from_completed_only,
+    test_profile_runtime_fetch_data_failure_reported_as_error,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
