@@ -7,12 +7,11 @@ from typing import Any
 
 import click
 
-from limen.cli.commands.profile import _format_space
+from limen.cli.commands._load_yaml import load_and_validate
+from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
-from limen.yaml.parser import parse
-from limen.yaml.validator import validate
 
 
 def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
@@ -31,29 +30,9 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
 
     click.echo(f"Loading {yaml_path} ...")
 
-    yaml_dict, parse_errors = parse(yaml_path)
-    if parse_errors:
-        for e in parse_errors:
-            location = f' (line {e.line})' if e.line else ''
-            click.secho(f'  PARSE ERROR{location}: {e.message}', fg='red')
+    yaml_dict, valid = load_and_validate(yaml_path)
+    if not valid:
         return False
-
-    result = validate(yaml_dict)
-    for e in result.errors:
-        location = f' (line {e.line})' if e.line else ''
-        path = f'  [{e.path}]' if e.path else ''
-        suggestion = f'\n    → {e.suggestion}' if e.suggestion else ''
-        click.secho(f'  ERROR{path}{location}: {e.message}{suggestion}', fg='red')
-    for w in result.warnings:
-        location = f' (line {w.line})' if w.line else ''
-        path = f'  [{w.path}]' if w.path else ''
-        click.secho(f'  WARN{path}{location}: {w.message}', fg='yellow')
-
-    if not result.valid:
-        click.secho(f'  ✗ {len(result.errors)} validation error(s) — aborting', fg='red')
-        return False
-
-    click.secho('  ✓ Valid', fg='green')
 
     if dry_run:
         try:
@@ -79,11 +58,12 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     compiled = CompiledSFD(yaml_dict)
 
     _params = compiled.params()
-    total_space = math.prod(len(v) for v in _params.values()) if _params else 0
+    _cardinalities = {k: len(v) for k, v in _params.items()}
+    total_space = math.prod(_cardinalities.values()) if _cardinalities else 0
     strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
     click.echo(
         f"Running '{experiment_name}' — "
-        f"{n_permutations:,} of {_format_space(total_space)} permutations ({strategy_type})"
+        f"{n_permutations:,} of {format_space(total_space)} permutations ({strategy_type})"
     )
     click.echo(f"  Results → {results_dir}")
 
@@ -109,7 +89,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
         return False
 
-    _patch_metadata(results_dir, total_space, _params)
+    _patch_metadata(results_dir, total_space, _cardinalities)
 
     output_format: str = uel_cfg.get('output_format', 'csv')
     if output_format == 'parquet' and uel.experiment_log is not None:
@@ -122,7 +102,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     return True
 
 
-def _patch_metadata(results_dir: Path, total_space: int, params: dict) -> None:
+def _patch_metadata(results_dir: Path, total_space: int, cardinalities: dict[str, int]) -> None:
 
     metadata_path = results_dir / 'metadata.json'
     if not metadata_path.exists():
@@ -131,7 +111,7 @@ def _patch_metadata(results_dir: Path, total_space: int, params: dict) -> None:
         meta = json.load(f)
     meta['permutation_space'] = {
         'total': total_space,
-        'param_cardinalities': {k: len(v) for k, v in params.items()},
+        'param_cardinalities': cardinalities,
     }
     with metadata_path.open('w') as f:
         json.dump(meta, f, indent=2)

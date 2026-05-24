@@ -41,10 +41,6 @@ def _complexity_rating(total: int) -> str:
     return 'extreme'
 
 
-def _total_permutations(params: dict[str, list[Any]]) -> int:
-
-    return math.prod(len(v) for v in params.values())
-
 
 def make_covering_array(params: dict[str, list[Any]], seed: int = 42) -> list[dict[str, Any]]:
 
@@ -112,11 +108,13 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
 
     '''
 
-    params: dict[str, list[Any]] = {
-        k: list(v) for k, v in compiled_sfd.params().items()
-    }
-    cardinalities = {k: len(v) for k, v in params.items()}
-    total = _total_permutations(params) if params else 0
+    params: dict[str, list[Any]] = {}
+    cardinalities: dict[str, int] = {}
+    for k, v in compiled_sfd.params().items():
+        lst = list(v)
+        params[k] = lst
+        cardinalities[k] = len(lst)
+    total = math.prod(cardinalities.values()) if cardinalities else 0
 
     result = ProfileResult(
         total_permutations=total,

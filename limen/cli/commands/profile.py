@@ -2,11 +2,10 @@ from pathlib import Path
 
 import click
 
+from limen.cli.commands._load_yaml import load_and_validate
 from limen.yaml.compiler import CompiledSFD
-from limen.yaml.parser import parse
 from limen.yaml.profiler import ProfileResult
 from limen.yaml.profiler import profile
-from limen.yaml.validator import validate
 
 
 _COMPLEXITY_COLOURS = {
@@ -32,29 +31,9 @@ def run_profile(yaml_path: Path) -> bool:
 
     click.echo(f"Profiling {yaml_path} ...")
 
-    yaml_dict, parse_errors = parse(yaml_path)
-    if parse_errors:
-        for e in parse_errors:
-            location = f' (line {e.line})' if e.line else ''
-            click.secho(f'  PARSE ERROR{location}: {e.message}', fg='red')
+    yaml_dict, valid = load_and_validate(yaml_path)
+    if not valid:
         return False
-
-    result = validate(yaml_dict)
-    for e in result.errors:
-        location = f' (line {e.line})' if e.line else ''
-        path = f'  [{e.path}]' if e.path else ''
-        suggestion = f'\n    → {e.suggestion}' if e.suggestion else ''
-        click.secho(f'  ERROR{path}{location}: {e.message}{suggestion}', fg='red')
-    for w in result.warnings:
-        location = f' (line {w.line})' if w.line else ''
-        path = f'  [{w.path}]' if w.path else ''
-        click.secho(f'  WARN{path}{location}: {w.message}', fg='yellow')
-
-    if not result.valid:
-        click.secho(f'  ✗ {len(result.errors)} validation error(s) — aborting', fg='red')
-        return False
-
-    click.secho('  ✓ Valid', fg='green')
 
     try:
         sfd = CompiledSFD(yaml_dict)
@@ -85,7 +64,7 @@ def _print_permutation_space(prof: ProfileResult) -> None:
     rating_label = click.style(f'[{prof.complexity_rating}]', fg=colour)
     n_params = len(prof.param_cardinalities)
     click.echo("  Permutation space")
-    click.echo(f"    Total:       {_format_space(prof.total_permutations)}  {rating_label}")
+    click.echo(f"    Total:       {format_space(prof.total_permutations)}  {rating_label}")
     click.echo(f"    Parameters:  {n_params}")
 
     sorted_params = sorted(
@@ -115,7 +94,7 @@ def _print_runtime_sampling(prof: ProfileResult) -> None:
         click.echo(f"    Per permutation: {t:.3f}s")
         estimated_total = t * prof.total_permutations
         click.echo(f"    Estimated total: {_format_duration(estimated_total)}  "
-                   f"({_format_space(prof.total_permutations)} permutations)")
+                   f"({format_space(prof.total_permutations)} permutations)")
     else:
         click.echo('    Per permutation: —  (no completed runs)')
 
@@ -131,7 +110,7 @@ _SPACE_UNITS = [
 ]
 
 
-def _format_space(n: int) -> str:
+def format_space(n: int) -> str:
 
     if n >= 10 ** 15:
         return f"{float(n):.2e}"
