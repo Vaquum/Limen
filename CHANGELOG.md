@@ -997,5 +997,4 @@ Note: add all new changelog entries to the bottom of this file.
 - Fix: add missing `random_state` param to `xgboost_regressor.yaml` template
 - Add `limen profile` CLI command — profiles a YAML experiment's permutation space (total count, per-parameter cardinalities, complexity rating) and, when `test_data_source` is configured, runs a randomised strength-1 covering array to estimate per-permutation runtime
 - Add `limen/yaml/profiler.py` with `ProfileResult`, `make_covering_array`, and `profile()` — profiler core usable independently of the CLI
-- `limen run` now prints `N of M permutations (strategy)` at startup using human-readable K/M/B/T formatting
-- `limen run` writes `permutation_space` (total and per-parameter cardinalities) into `metadata.json` after each experiment
+
