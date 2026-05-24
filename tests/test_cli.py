@@ -170,7 +170,7 @@ def test_patch_metadata_adds_permutation_space() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         p = Path(tmpdir)
         (p / 'metadata.json').write_text(json.dumps({'limen_version': '1.0.0'}))
-        _patch_metadata(p, 1000, {'a': [1, 2], 'b': [3, 4, 5]})
+        _patch_metadata(p, 1000, {'a': 2, 'b': 3})
         meta = json.loads((p / 'metadata.json').read_text())
         assert meta['permutation_space']['total'] == 1000
         assert meta['permutation_space']['param_cardinalities'] == {'a': 2, 'b': 3}
@@ -181,7 +181,7 @@ def test_patch_metadata_no_op_when_file_absent() -> None:
     import tempfile
     from limen.cli.commands.run import _patch_metadata
     with tempfile.TemporaryDirectory() as tmpdir:
-        _patch_metadata(Path(tmpdir), 100, {'x': [1]})  # should not raise
+        _patch_metadata(Path(tmpdir), 100, {'x': 1})  # should not raise
 
 
 def _make_results_dir(yaml_reference: dict | None = None,
