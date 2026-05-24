@@ -259,5 +259,5 @@ So the clean mental model is:
 ## Read Next
 
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and retrains.
-- Continue to [Regime Diversified Opinion Pools](Regime-Diversified-Opinion-Pools.md) if you want to work with diversified pools of selected rounds rather than isolated sensors.
+- Continue to [Cohort](Cohort.md) if you want to bind selected sensors into an ensemble inference surface.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) if you need the run layer that produces `experiment_dir`.

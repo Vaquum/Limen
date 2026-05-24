@@ -81,7 +81,7 @@ Every major public page should reinforce the same core Limen story:
 3. An experiment is defined through an SFD, usually manifest-driven.
 4. Universal Experiment Loop executes a parameter search across the chosen search space.
 5. Log, benchmark-style analytics, and backtest outputs show what happened and why.
-6. Trainer and RDOP turn finished experiment outputs into reusable downstream artefacts.
+6. Trainer and Cohort turn finished experiment outputs into reusable downstream artefacts.
 7. Trade decisioning and execution happen outside Limen, downstream in other Vaquum systems.
 
 If a page does not help a reader understand its place in that story, it should route clearly to the pages that do.
@@ -202,7 +202,7 @@ Use one terminology set across the whole docs system.
 - Template unit: `SFD` or `Single-File Decoder`
 - Declarative SFD spec: `Manifest`
 - Experiment engine: `Universal Experiment Loop` or `UEL`
-- Cohort method: `RDOP`
+- Cohort selection method: `selector`
 - Reusable trained inference object: `Sensor`
 - Data access class: `HistoricalData`
 
@@ -262,7 +262,7 @@ The overhaul should be tracked in the following order.
 | 2 | Docs-Site Build | Add the site build, docs assembly model, product metadata, local dev/build/check commands, and navigation shell. | The Limen docs site builds locally, renders the current corpus, and enforces link integrity. |
 | 3 | Top-Level Narrative | Rewrite the product home and docs hub so Limen has one clear entry story and reading flow. | A new user can enter the docs without guessing what to read next. |
 | 4 | Core Workflow Guides | Rewrite data, bars, SFD, manifest, and UEL pages as one connected workflow layer. | A reader can go from data to running an experiment using only the guide layer. |
-| 5 | Analysis And Outcomes | Rewrite log, benchmark, backtest, trainer, RDOP, metrics, and CFR pages. | A reader can understand what Limen produces after a run and how to interpret it. |
+| 5 | Analysis And Outcomes | Rewrite log, benchmark, backtest, trainer, cohort, metrics, and CFR pages. | A reader can understand what Limen produces after a run and how to interpret it. |
 | 6 | Reference Layer | Rewrite indicators, features, transforms, and scalers as coordinated reference pages. | The large reference pages are scannable, consistent, and trusted. |
 | 7 | Developer Layer | Rewrite contributor, release, and versioning docs around current practice. | A contributor can follow the maintenance workflow without external tribal knowledge. |
 | 8 | Package README Alignment | Align package READMEs with the same contract and route them to canonical docs. | Package READMEs feel like part of one system rather than isolated notes. |

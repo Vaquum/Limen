@@ -1,7 +1,7 @@
 from limen.cohort.cohort import Cohort
-from limen.cohort.regime_pools import RegimeDiversifiedOpinionPools
+from limen.cohort.sfc import BUILTIN_SELECTORS
 
 __all__ = [
+    'BUILTIN_SELECTORS',
     'Cohort',
-    'RegimeDiversifiedOpinionPools',
 ]

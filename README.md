@@ -48,7 +48,7 @@ In the wider Vaquum architecture, Origo sits upstream as the data layer. Nexus, 
 - Bitcoin-native transforms, scaling, and target construction
 - Leakage-safe train, validation, and test workflows
 - Built-in backtesting, confusion analytics, and parameter diagnostics
-- Decoder cohort construction and regime-diversified model pooling
+- Decoder cohort construction with pluggable selection
 - Reproducible runs with checkpointing, resumption, and retraining
 
 ## First Experiment
@@ -93,7 +93,7 @@ That path is the simplest way to get a real Limen run on your machine without re
 - Run experiments in [docs/Universal-Experiment-Loop.md](docs/Universal-Experiment-Loop.md) and extend the artifact-rich path through [docs/Advanced-Search.md](docs/Advanced-Search.md) and [docs/Reducers-And-Feedback.md](docs/Reducers-And-Feedback.md)
 - Analyze results in [docs/Log.md](docs/Log.md), [docs/Benchmark.md](docs/Benchmark.md), and [docs/Backtest.md](docs/Backtest.md)
 - Understand the model layer in [docs/Reference-Architecture.md](docs/Reference-Architecture.md) and the helper layer in [docs/Utilities.md](docs/Utilities.md)
-- Promote finished runs into reusable outputs with [docs/Trainer.md](docs/Trainer.md) and [docs/Regime-Diversified-Opinion-Pools.md](docs/Regime-Diversified-Opinion-Pools.md)
+- Promote finished runs into reusable outputs with [docs/Trainer.md](docs/Trainer.md) and [docs/Cohort.md](docs/Cohort.md)
 - Contribute through [docs/Developer/README.md](docs/Developer/README.md)
 
 ## Contributing
