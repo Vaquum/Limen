@@ -101,6 +101,8 @@ def _print_runtime_sampling(prof: ProfileResult) -> None:
 
 _SECONDS_PER_MINUTE = 60
 _SECONDS_PER_HOUR = 3600
+_SECONDS_PER_DAY = 86400
+_SECONDS_PER_YEAR = 31_536_000
 
 _SPACE_UNITS = [
     (10 ** 12, 'T'),
@@ -126,4 +128,8 @@ def _format_duration(seconds: float) -> str:
         return f"{seconds:.1f}s"
     if seconds < _SECONDS_PER_HOUR:
         return f"{seconds / _SECONDS_PER_MINUTE:.1f}m"
-    return f"{seconds / _SECONDS_PER_HOUR:.1f}h"
+    if seconds < _SECONDS_PER_DAY:
+        return f"{seconds / _SECONDS_PER_HOUR:.1f}h"
+    if seconds < _SECONDS_PER_YEAR:
+        return f"{seconds / _SECONDS_PER_DAY:.1f}d"
+    return f"{seconds / _SECONDS_PER_YEAR:.1f}y"
