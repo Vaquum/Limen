@@ -137,7 +137,7 @@ def _format_space(n: int) -> str:
         return f"{float(n):.2e}"
     for threshold, suffix in _SPACE_UNITS:
         if n >= threshold:
-            return f"{n / threshold:.1f}{suffix}"
+            return f"{n / threshold:.2f}{suffix}"
     return str(n)
 
 
