@@ -57,7 +57,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     compiled = CompiledSFD(yaml_dict)
 
     _params = compiled.params()
-    total_space = math.prod(len(v) for v in _params.values()) if _params else 0
+    total_space = math.prod(len(v) for v in _params.values())
     strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
     click.echo(
         f"Running '{experiment_name}' — "

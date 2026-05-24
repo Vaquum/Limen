@@ -8,14 +8,18 @@ from dataclasses import field
 from typing import TYPE_CHECKING
 from typing import Any
 
+from limen.yaml.schema import COMPLEXITY_HIGH_MAX
+from limen.yaml.schema import COMPLEXITY_LOW_MAX
+from limen.yaml.schema import COMPLEXITY_MEDIUM_MAX
+
 if TYPE_CHECKING:
     from limen.yaml.compiler import CompiledSFD
 
 
 _COMPLEXITY_THRESHOLDS = [
-    (100, 'low'),
-    (1000, 'medium'),
-    (10000, 'high'),
+    (COMPLEXITY_LOW_MAX, 'low'),
+    (COMPLEXITY_MEDIUM_MAX, 'medium'),
+    (COMPLEXITY_HIGH_MAX, 'high'),
 ]
 
 
@@ -115,7 +119,7 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
         lst = list(v)
         params[k] = lst
         cardinalities[k] = len(lst)
-    total = math.prod(cardinalities.values()) if cardinalities else 0
+    total = math.prod(cardinalities.values())
 
     result = ProfileResult(
         total_permutations=total,
