@@ -7,6 +7,7 @@ from click.testing import CliRunner
 
 from limen.cli.main import cli
 from limen.yaml.parser import parse
+from limen.yaml.profiler import ProfileResult
 from tests.test_yaml import _MINIMAL_ML_YAML
 
 
@@ -163,6 +164,7 @@ def test_cli_init_metadata_name_not_updated_in_non_metadata_fields() -> None:
         assert 'name: "RSI oversold"' in text or 'name: RSI oversold' in text
 
 
+
 def _make_results_dir(yaml_reference: dict | None = None,
                       target_permutations: int = 10) -> tempfile.TemporaryDirectory:
     td = tempfile.TemporaryDirectory()
@@ -308,6 +310,105 @@ def test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict() -> None:
         result = runner.invoke(cli, ['run', '--resume', str(tmp)])
         assert result.exit_code == 1
         assert 'yaml_reference' in result.output
+
+
+def _make_profile_result(*, attempted: int = 0, completed: int = 0,
+                         time_per: float | None = None,
+                         warnings: list | None = None,
+                         errors: list | None = None) -> ProfileResult:
+    return ProfileResult(
+        total_permutations=120,
+        param_cardinalities={'solver': 3, 'C': 4, 'max_iter': 2, 'tol': 5},
+        complexity_rating='low',
+        sample_permutations_attempted=attempted,
+        sample_permutations_completed=completed,
+        sample_time_seconds_per_permutation=time_per,
+        warnings=warnings or [],
+        errors=errors or [],
+    )
+
+
+def test_cli_profile_valid_yaml_exits_0() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        with patch('limen.cli.commands.profile.profile', return_value=_make_profile_result()):
+            result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert result.exit_code == 0
+
+
+def test_cli_profile_shows_permutation_count_and_rating() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        with patch('limen.cli.commands.profile.profile', return_value=_make_profile_result()):
+            result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert '120' in result.output
+        assert 'low' in result.output
+
+
+def test_cli_profile_shows_all_param_names() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        with patch('limen.cli.commands.profile.profile', return_value=_make_profile_result()):
+            result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        for name in ('solver', 'C', 'max_iter', 'tol'):
+            assert name in result.output
+
+
+def test_cli_profile_shows_runtime_skipped_when_no_sampling() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        prof = _make_profile_result(
+            warnings=['test_data_source not defined — runtime sampling skipped.'],
+        )
+        with patch('limen.cli.commands.profile.profile', return_value=prof):
+            result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert 'Skipped' in result.output
+
+
+def test_cli_profile_shows_timing_when_sampling_completed() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        prof = _make_profile_result(attempted=5, completed=5, time_per=0.42)
+        with patch('limen.cli.commands.profile.profile', return_value=prof):
+            result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert '0.420s' in result.output
+        assert '5 of 5' in result.output
+
+
+def test_cli_profile_shows_errors_from_sampling() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        prof = _make_profile_result(
+            attempted=3, completed=1, time_per=0.1,
+            errors=['Test data too small — increase n_rows in test_data_source.'],
+        )
+        with patch('limen.cli.commands.profile.profile', return_value=prof):
+            result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert 'ERROR' in result.output
+        assert 'n_rows' in result.output
+
+
+def test_cli_profile_parse_error_exits_1() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text('sfd: [unclosed')
+        result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert result.exit_code == 1
+
+
+def test_cli_profile_validation_error_exits_1() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML.replace('name: test_exp\n', ''))
+        result = runner.invoke(cli, ['profile', 'exp.yaml'])
+        assert result.exit_code == 1
+        assert 'ERROR' in result.output
 
 
 def test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name() -> None:

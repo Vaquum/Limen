@@ -106,6 +106,34 @@ from tests.test_yaml import test_compiled_sfd_manifest_is_cached
 from tests.test_yaml import test_compiled_sfd_manifest_is_ml_manifest
 from tests.test_yaml import test_build_search_strategy_raises_for_unknown_type
 from tests.test_yaml import test_build_search_strategy_raises_for_non_mapping_strategy
+from tests.test_yaml import test_all_templates_have_valid_limen_version
+from tests.test_yaml import test_tabpfn_binary_template_is_valid_and_arch_surface_complete
+from tests.test_yaml import test_xgboost_regressor_template_is_valid_and_arch_surface_complete
+from tests.test_yaml import test_rule_based_template_is_valid_and_compiles
+from tests.test_profiler import test_complexity_rating_low
+from tests.test_profiler import test_complexity_rating_medium
+from tests.test_profiler import test_complexity_rating_high
+from tests.test_profiler import test_complexity_rating_extreme
+from tests.test_profiler import test_covering_array_covers_all_values
+from tests.test_profiler import test_covering_array_length_equals_max_cardinality
+from tests.test_profiler import test_covering_array_empty_params_returns_empty
+from tests.test_profiler import test_covering_array_single_param
+from tests.test_profiler import test_covering_array_is_reproducible_with_same_seed
+from tests.test_profiler import test_covering_array_differs_with_different_seeds
+from tests.test_profiler import test_covering_array_columns_are_independently_shuffled
+from tests.test_profiler import test_covering_array_all_rows_have_all_keys
+from tests.test_profiler import test_covering_array_values_are_from_original_lists
+from tests.test_profiler import test_classify_error_small_dataset
+from tests.test_profiler import test_classify_error_class_diversity
+from tests.test_profiler import test_classify_error_nan
+from tests.test_profiler import test_classify_error_generic
+from tests.test_profiler import test_profile_static_fields_correct_for_logreg_template
+from tests.test_profiler import test_profile_total_permutations_is_product_of_cardinalities
+from tests.test_profiler import test_profile_warns_when_test_data_source_absent
+from tests.test_profiler import test_profile_runtime_records_timing_when_all_permutations_succeed
+from tests.test_profiler import test_profile_runtime_records_errors_when_all_permutations_fail
+from tests.test_profiler import test_profile_runtime_partial_failure_timing_from_completed_only
+from tests.test_profiler import test_profile_runtime_fetch_data_failure_reported_as_error
 from tests.test_cli import test_cli_run_dry_run_valid_yaml_shows_dry_run_complete
 from tests.test_cli import test_cli_validate_valid_yaml_exits_0
 from tests.test_cli import test_cli_validate_shows_valid_checkmark
@@ -137,6 +165,14 @@ from tests.test_cli import test_cli_run_resume_errors_when_checkpoint_missing_me
 from tests.test_cli import test_cli_run_resume_errors_when_metadata_json_is_invalid_json
 from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict
 from tests.test_cli import test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name
+from tests.test_cli import test_cli_profile_valid_yaml_exits_0
+from tests.test_cli import test_cli_profile_shows_permutation_count_and_rating
+from tests.test_cli import test_cli_profile_shows_all_param_names
+from tests.test_cli import test_cli_profile_shows_runtime_skipped_when_no_sampling
+from tests.test_cli import test_cli_profile_shows_timing_when_sampling_completed
+from tests.test_cli import test_cli_profile_shows_errors_from_sampling
+from tests.test_cli import test_cli_profile_parse_error_exits_1
+from tests.test_cli import test_cli_profile_validation_error_exits_1
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1124,6 +1160,34 @@ tests = [
     test_compiled_sfd_manifest_is_ml_manifest,
     test_build_search_strategy_raises_for_unknown_type,
     test_build_search_strategy_raises_for_non_mapping_strategy,
+    test_all_templates_have_valid_limen_version,
+    test_tabpfn_binary_template_is_valid_and_arch_surface_complete,
+    test_xgboost_regressor_template_is_valid_and_arch_surface_complete,
+    test_rule_based_template_is_valid_and_compiles,
+    test_complexity_rating_low,
+    test_complexity_rating_medium,
+    test_complexity_rating_high,
+    test_complexity_rating_extreme,
+    test_covering_array_covers_all_values,
+    test_covering_array_length_equals_max_cardinality,
+    test_covering_array_empty_params_returns_empty,
+    test_covering_array_single_param,
+    test_covering_array_is_reproducible_with_same_seed,
+    test_covering_array_differs_with_different_seeds,
+    test_covering_array_columns_are_independently_shuffled,
+    test_covering_array_all_rows_have_all_keys,
+    test_covering_array_values_are_from_original_lists,
+    test_classify_error_small_dataset,
+    test_classify_error_class_diversity,
+    test_classify_error_nan,
+    test_classify_error_generic,
+    test_profile_static_fields_correct_for_logreg_template,
+    test_profile_total_permutations_is_product_of_cardinalities,
+    test_profile_warns_when_test_data_source_absent,
+    test_profile_runtime_records_timing_when_all_permutations_succeed,
+    test_profile_runtime_records_errors_when_all_permutations_fail,
+    test_profile_runtime_partial_failure_timing_from_completed_only,
+    test_profile_runtime_fetch_data_failure_reported_as_error,
     test_cli_run_dry_run_valid_yaml_shows_dry_run_complete,
     test_cli_validate_valid_yaml_exits_0,
     test_cli_validate_shows_valid_checkmark,
@@ -1155,6 +1219,14 @@ tests = [
     test_cli_run_resume_errors_when_metadata_json_is_invalid_json,
     test_cli_run_resume_errors_when_yaml_reference_is_not_a_dict,
     test_cli_run_resume_errors_when_yaml_reference_missing_metadata_name,
+    test_cli_profile_valid_yaml_exits_0,
+    test_cli_profile_shows_permutation_count_and_rating,
+    test_cli_profile_shows_all_param_names,
+    test_cli_profile_shows_runtime_skipped_when_no_sampling,
+    test_cli_profile_shows_timing_when_sampling_completed,
+    test_cli_profile_shows_errors_from_sampling,
+    test_cli_profile_parse_error_exits_1,
+    test_cli_profile_validation_error_exits_1,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,

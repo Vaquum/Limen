@@ -991,3 +991,10 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.12.1 on 24th of May, 2026
 
 - Make `Cohort` resolve YAML CLI artifacts through `metadata.json["yaml_reference"]` before falling back to `sfd_module`, preserving Trainer sensor probability output for manifest-based runs.
+
+## v3.12.2 on 24th of May, 2026
+
+- Fix: add missing `random_state` param to `xgboost_regressor.yaml` template
+- Add `limen profile` CLI command — profiles a YAML experiment's permutation space (total count, per-parameter cardinalities, complexity rating) and, when `test_data_source` is configured, runs a randomised strength-1 covering array to estimate per-permutation runtime
+- Add `limen/yaml/profiler.py` with `ProfileResult`, `make_covering_array`, and `profile()` — profiler core usable independently of the CLI
+

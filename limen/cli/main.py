@@ -4,6 +4,7 @@ import click
 
 from limen.cli.commands.init import run_init
 from limen.cli.commands.list_templates import run_list_templates
+from limen.cli.commands.profile import run_profile
 from limen.cli.commands.resume import run_resume
 from limen.cli.commands.run import run_experiment
 from limen.cli.commands.validate import run_validate
@@ -22,6 +23,7 @@ def cli() -> None:
     \b
     Quick start:
       limen validate experiment.yaml       Check your YAML for errors
+      limen profile experiment.yaml        Profile permutation space and runtime
       limen run experiment.yaml            Run the experiment
       limen run --dry-run experiment.yaml  Validate + compile only, no execution
 
@@ -77,6 +79,38 @@ def validate(yaml_file: Path) -> None:
     '''
 
     ok = run_validate(yaml_file)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command('profile')
+@click.argument('yaml_file', type=click.Path(exists=True, path_type=Path))
+def profile_cmd(yaml_file: Path) -> None:
+
+    '''
+    Profile a YAML experiment — permutation space and runtime estimate.
+
+    \b
+    Always computed:
+      - Total permutations and complexity rating (low / medium / high / extreme)
+      - Per-parameter value counts
+
+    \b
+    Computed when test_data_source is configured:
+      - Average time per permutation (covering array sampling)
+      - Estimated total runtime across the full permutation space
+      - Errors encountered during sampling (small data, NaN, class imbalance)
+
+    \b
+    Exits 0 on success, 1 on validation or compilation failure.
+    Sampling errors are non-fatal and reported in the output.
+
+    \b
+    Examples:
+      limen profile experiment.yaml
+      limen profile limen/yaml/templates/logreg_binary.yaml
+    '''
+
+    ok = run_profile(yaml_file)
     raise SystemExit(0 if ok else 1)
 
 

@@ -1,4 +1,5 @@
 import inspect
+import re
 from datetime import date
 from pathlib import Path
 from textwrap import dedent
@@ -20,6 +21,9 @@ from limen.yaml.parser import parse
 from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
 from limen.yaml.validator import validate
+
+_TEMPLATES_DIR = Path(__file__).resolve().parents[1] / 'limen' / 'yaml' / 'templates'
+_SEMVER_RE = re.compile(r'^\d+\.\d+\.\d+')
 
 _MINIMAL_ML_YAML = dedent('''\
     schema_version: "1.0"
@@ -261,6 +265,8 @@ def test_logreg_yaml_template_exposes_full_architecture_surface() -> None:
 
     result = validate(yaml_dict)
     assert result.valid, [e.message for e in result.errors]
+
+    build_search_strategy(yaml_dict)
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {
@@ -1019,3 +1025,68 @@ def test_build_search_strategy_raises_for_non_mapping_strategy() -> None:
         assert False, 'expected ValueError'
     except ValueError as exc:
         assert 'mapping' in str(exc)
+
+
+def test_all_templates_have_valid_limen_version() -> None:
+    for path in sorted(_TEMPLATES_DIR.glob('*.yaml')):
+        yaml_dict, errors = parse(path.read_text(encoding='utf-8'))
+        assert errors == [], f'{path.name}: parse errors: {errors}'
+        version = yaml_dict.get('metadata', {}).get('limen_version')
+        assert isinstance(version, str) and _SEMVER_RE.match(version), (
+            f'{path.name}: metadata.limen_version missing or invalid: {version!r}'
+        )
+
+
+def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
+    try:
+        import tabpfn  # noqa: F401
+    except ImportError:
+        return
+
+    template = _TEMPLATES_DIR / 'tabpfn_binary.yaml'
+    yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
+    assert errors == []
+
+    result = validate(yaml_dict)
+    assert result.valid, [e.message for e in result.errors]
+
+    build_search_strategy(yaml_dict)
+
+    sfd = CompiledSFD(yaml_dict)
+    assert isinstance(sfd.manifest(), MLManifest)
+
+    arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
+    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
+    assert model_params <= set(yaml_dict['sfd']['params'])
+
+
+def test_xgboost_regressor_template_is_valid_and_arch_surface_complete() -> None:
+    template = _TEMPLATES_DIR / 'xgboost_regressor.yaml'
+    yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
+    assert errors == []
+
+    result = validate(yaml_dict)
+    assert result.valid, [e.message for e in result.errors]
+
+    build_search_strategy(yaml_dict)
+
+    sfd = CompiledSFD(yaml_dict)
+    assert isinstance(sfd.manifest(), MLManifest)
+
+    arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
+    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
+    assert model_params <= set(yaml_dict['sfd']['params'])
+
+
+def test_rule_based_template_is_valid_and_compiles() -> None:
+    template = _TEMPLATES_DIR / 'rule_based.yaml'
+    yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
+    assert errors == []
+
+    result = validate(yaml_dict)
+    assert result.valid, [e.message for e in result.errors]
+
+    build_search_strategy(yaml_dict)
+
+    sfd = CompiledSFD(yaml_dict)
+    assert isinstance(sfd.manifest(), RuleBasedManifest)
