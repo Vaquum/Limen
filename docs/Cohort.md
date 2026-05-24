@@ -174,6 +174,9 @@ Members are expected to behave like Sensor/model wrappers with a `predict(data_d
 ## Aggregation Modes
 
 Aggregation mode is selected at construction based on architecture capability hints.
+For YAML CLI runs, Cohort reads `metadata.json["yaml_reference"]` to recover the
+manifest `reference_architecture`; this keeps `sfd_module: yaml:<name>` bundles
+compatible with Trainer-reconstructed sensors.
 
 ### 1) `probability_weighted`
 

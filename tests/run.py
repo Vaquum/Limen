@@ -746,6 +746,7 @@ from tests.test_proto_cohort import test_rejects_unresolvable_experiment_id
 from tests.test_proto_cohort import test_rejects_ambiguous_experiment_id_resolution
 from tests.test_proto_cohort import test_rejects_mixed_architecture_selection
 from tests.test_proto_cohort import test_sets_probability_mode_for_probability_capable_architecture
+from tests.test_proto_cohort import test_yaml_cli_artifact_cohort_preserves_trainer_sensor_contract
 from tests.test_proto_cohort import test_sets_fallback_mode_for_non_probability_architecture
 from tests.test_proto_cohort import test_probability_weighted_predict_aggregates_mean_p1
 from tests.test_proto_cohort import test_probability_weighted_predict_single_member_matches_own_thresholded_probs
@@ -1507,6 +1508,7 @@ tests = [
     test_rejects_ambiguous_experiment_id_resolution,
     test_rejects_mixed_architecture_selection,
     test_sets_probability_mode_for_probability_capable_architecture,
+    test_yaml_cli_artifact_cohort_preserves_trainer_sensor_contract,
     test_sets_fallback_mode_for_non_probability_architecture,
     test_probability_weighted_predict_aggregates_mean_p1,
     test_probability_weighted_predict_single_member_matches_own_thresholded_probs,

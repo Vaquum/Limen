@@ -987,3 +987,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add built-in single-file Cohort selectors under `limen.cohort.sfc`: `all`, `top_n`, `backtest_pareto`, and `diverse_metrics`.
 - Make `all` the default selector, preserving existing Cohort behavior when `permutation_ids` is omitted.
 - Remove `RegimeDiversifiedOpinionPools`; its reusable metric-diversity selection idea now lives in `diverse_metrics`, while replay and per-regime output behavior are no longer part of the public package.
+
+## v5.0.1 on 24th of May, 2026
+
+- Make `Cohort` resolve YAML CLI artifacts through `metadata.json["yaml_reference"]` before falling back to `sfd_module`, preserving Trainer sensor probability output for manifest-based runs.
