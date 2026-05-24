@@ -119,6 +119,19 @@ def test_classify_error_generic() -> None:
     assert 'unexpected' in msg
 
 
+def test_classify_error_no_false_positive_on_numeric_1_in_message() -> None:
+    # "1" appears in learning_rate value — must not match class-diversity branch
+    msg = _classify_error(ValueError('XGBClassifier: learning_rate must be > 0.1'))
+    assert 'class diversity' not in msg
+
+
+def test_classify_error_no_false_positive_on_information_in_message() -> None:
+    # "inf" appears inside "information" — must not match NaN/Inf branch
+    msg = _classify_error(ValueError('For more information see sklearn docs'))
+    assert 'NaN' not in msg
+    assert 'Inf' not in msg
+
+
 def test_profile_static_fields_correct_for_logreg_template() -> None:
     template = _TEMPLATES_DIR / 'logreg_binary.yaml'
     yaml_dict, _ = parse(template.read_text(encoding='utf-8'))
