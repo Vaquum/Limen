@@ -604,8 +604,8 @@ class Cohort:
 
         return next(iter(architecture_ids))
 
-    @staticmethod
-    def _extract_architecture_id(round_entry: dict, metadata: dict) -> str:
+    @classmethod
+    def _extract_architecture_id(cls, round_entry: dict, metadata: dict) -> str:
 
         round_params = round_entry.get('round_params', {})
         for key in (
@@ -620,11 +620,36 @@ class Cohort:
             if isinstance(value, str) and value.strip():
                 return value.strip()
 
+        yaml_architecture = cls._extract_yaml_reference_architecture(metadata)
+        if yaml_architecture is not None:
+            return yaml_architecture
+
         sfd_module = metadata.get('sfd_module')
         if isinstance(sfd_module, str) and sfd_module.strip():
             return sfd_module.strip()
 
         return 'unknown_architecture'
+
+    @staticmethod
+    def _extract_yaml_reference_architecture(metadata: dict) -> str | None:
+
+        yaml_reference = metadata.get('yaml_reference')
+        if not isinstance(yaml_reference, dict):
+            return None
+
+        sfd_config = yaml_reference.get('sfd')
+        if not isinstance(sfd_config, dict):
+            return None
+
+        manifest_config = sfd_config.get('manifest')
+        if not isinstance(manifest_config, dict):
+            return None
+
+        reference_architecture = manifest_config.get('reference_architecture')
+        if isinstance(reference_architecture, str) and reference_architecture.strip():
+            return reference_architecture.strip()
+
+        return None
 
     @classmethod
     def _architecture_supports_probabilities(cls, architecture_id: str) -> bool:

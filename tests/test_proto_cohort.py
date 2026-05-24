@@ -1,17 +1,24 @@
 import json
+import math
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
+from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
 from limen.cohort.sfc.top_n import select as select_top_n
+from limen.data import historical_data
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy
 from limen.experiment.trainer import Trainer
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
+from tests.test_yaml import _MINIMAL_ML_YAML
 
 
 class _RaisingMember:
@@ -149,6 +156,42 @@ def _train_real_members_and_input(experiment_dir: Path,
     x_test = data_dict['x_test']
 
     return sensors, x_test
+
+
+def _make_yaml_contract_data(kline_size: int = 3600,
+                             n_rows: int | None = None) -> pl.DataFrame:
+
+    _ = kline_size
+    n = int(n_rows or 500)
+    timestamps = [datetime(2025, 1, 1) + timedelta(hours=i) for i in range(n)]
+    close = [100.0 + 0.02 * i + math.sin(i / 7.0) for i in range(n)]
+
+    return pl.DataFrame({
+        'datetime': timestamps,
+        'open': [value - 0.1 for value in close],
+        'high': [value + 0.2 for value in close],
+        'low': [value - 0.2 for value in close],
+        'close': close,
+        'volume': [1000.0 + i for i in range(n)],
+    })
+
+
+def _minimal_yaml_cli_contract_text(output_path: Path) -> str:
+
+    yaml_text = _MINIMAL_ML_YAML.replace('n_permutations: 5', 'n_permutations: 1')
+    yaml_text = yaml_text.replace(
+        'use_calibration: [true, false]',
+        'use_calibration: [false]',
+    )
+    yaml_text = yaml_text.replace(
+        'use_threshold: [true, false]',
+        'use_threshold: [false]',
+    )
+
+    return yaml_text.replace(
+        'output_format: csv',
+        f'output_format: csv\n  output_path: "{output_path}"',
+    )
 
 
 def test_rejects_when_no_source_provided():
@@ -472,6 +515,61 @@ def test_sets_probability_mode_for_probability_capable_architecture():
         assert cohort.architecture_id.endswith('logreg_binary')
         assert cohort.supports_probabilities is True
         assert cohort.aggregation_mode == 'probability_weighted'
+
+
+def test_yaml_cli_artifact_cohort_preserves_trainer_sensor_contract():
+
+    original_get_spot_klines = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(
+        _make_yaml_contract_data,
+    )
+
+    try:
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            yaml_path = root / 'exp.yaml'
+            exp_dir = root / 'results' / 'test_exp'
+            yaml_path.write_text(
+                _minimal_yaml_cli_contract_text(exp_dir),
+            )
+
+            assert run_experiment(yaml_path) is True
+
+            with (exp_dir / 'metadata.json').open('r') as f:
+                metadata = json.load(f)
+            with (exp_dir / 'round_data.jsonl').open('r') as f:
+                round_entry = json.loads(f.readline())
+
+            assert metadata['sfd_module'] == 'yaml:test_exp'
+            assert isinstance(metadata['yaml_reference'], dict)
+            assert not [
+                key for key in round_entry['round_params']
+                if 'architecture' in key
+            ]
+
+            trainer = Trainer(exp_dir)
+            sensors = trainer.train([0])
+            data_dict = trainer._manifest.prepare_data(
+                trainer._data,
+                sensors[0].round_params,
+            )
+            live_input = {'x_test': data_dict['x_test']}
+
+            sensor_result = sensors[0].predict(live_input)
+            cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+
+            assert cohort.architecture_id == 'limen.sfd.reference_architecture.logreg_binary'
+            assert cohort.aggregation_mode == 'probability_weighted'
+
+            cohort.set_members(sensors)
+            cohort_result = cohort.predict(live_input)
+
+            assert '_probs' in sensor_result
+            assert '_probs' in cohort_result
+            np.testing.assert_array_equal(cohort_result['_preds'], sensor_result['_preds'])
+            np.testing.assert_allclose(cohort_result['_probs'], sensor_result['_probs'])
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original_get_spot_klines
 
 
 def test_rejects_raw_input_for_sensor_compatible_predict_contract():
