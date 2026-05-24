@@ -1,4 +1,3 @@
-import json
 import math
 import shutil
 from datetime import datetime
@@ -58,8 +57,7 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     compiled = CompiledSFD(yaml_dict)
 
     _params = compiled.params()
-    _cardinalities = {k: len(v) for k, v in _params.items()}
-    total_space = math.prod(_cardinalities.values()) if _cardinalities else 0
+    total_space = math.prod(len(v) for v in _params.values()) if _params else 0
     strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
     click.echo(
         f"Running '{experiment_name}' — "
@@ -89,8 +87,6 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
         return False
 
-    _patch_metadata(results_dir, total_space, _cardinalities)
-
     output_format: str = uel_cfg.get('output_format', 'csv')
     if output_format == 'parquet' and uel.experiment_log is not None:
         parquet_path = results_dir / 'results.parquet'
@@ -100,21 +96,6 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     click.secho('  ✓ Experiment complete', fg='green')
 
     return True
-
-
-def _patch_metadata(results_dir: Path, total_space: int, cardinalities: dict[str, int]) -> None:
-
-    metadata_path = results_dir / 'metadata.json'
-    if not metadata_path.exists():
-        return
-    with metadata_path.open() as f:
-        meta = json.load(f)
-    meta['permutation_space'] = {
-        'total': total_space,
-        'param_cardinalities': cardinalities,
-    }
-    with metadata_path.open('w') as f:
-        json.dump(meta, f, indent=2)
 
 
 def _build_results_dir(uel_cfg: dict[str, Any], experiment_name: str) -> Path:
