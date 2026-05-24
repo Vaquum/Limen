@@ -972,22 +972,22 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen init <output.yaml> --template <name>` CLI command — scaffolds a new experiment file from a template
 - Add `limen run --resume <results-dir>` CLI command — resumes an experiment from a checkpoint directory using `yaml_reference` and `target_permutations` from the checkpoint
 
-## v4.0.0 on 22nd of May, 2026
+## v3.11.0 on 22nd of May, 2026
 
-- Breaking: make `UniversalExperimentLoop.run()` skip terminal post-processing by default and retain `post_processing=True` as an explicit opt-in.
+- Change `UniversalExperimentLoop.run()` to skip terminal post-processing by default and retain `post_processing=True` as an explicit opt-in.
 
-## v4.0.1 on 23rd of May, 2026
+## v3.11.1 on 23rd of May, 2026
 
 - Stop retaining post-processing inputs in memory during default `post_processing=False` UEL runs while preserving persisted round data for resume and promotion workflows.
 - Batch standard UEL experiment-log construction to avoid row-count-dependent slowdown from per-round Polars `vstack`.
 
-## v5.0.0 on 23rd of May, 2026
+## v3.12.0 on 23rd of May, 2026
 
 - Add Cohort selector support with the `select(context, **params) -> list[int | str]` contract.
 - Add built-in single-file Cohort selectors under `limen.cohort.sfc`: `all`, `top_n`, `backtest_pareto`, and `diverse_metrics`.
 - Make `all` the default selector, preserving existing Cohort behavior when `permutation_ids` is omitted.
 - Remove `RegimeDiversifiedOpinionPools`; its reusable metric-diversity selection idea now lives in `diverse_metrics`, while replay and per-regime output behavior are no longer part of the public package.
 
-## v5.0.1 on 24th of May, 2026
+## v3.12.1 on 24th of May, 2026
 
 - Make `Cohort` resolve YAML CLI artifacts through `metadata.json["yaml_reference"]` before falling back to `sfd_module`, preserving Trainer sensor probability output for manifest-based runs.
