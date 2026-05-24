@@ -1038,6 +1038,11 @@ def test_all_templates_have_valid_limen_version() -> None:
 
 
 def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
+    try:
+        import tabpfn  # noqa: F401
+    except ImportError:
+        return
+
     template = _TEMPLATES_DIR / 'tabpfn_binary.yaml'
     yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
     assert errors == []
