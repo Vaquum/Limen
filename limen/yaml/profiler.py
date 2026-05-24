@@ -74,6 +74,8 @@ def make_covering_array(params: dict[str, list[Any]], seed: int = 42) -> list[di
     columns: dict[str, list[Any]] = {}
 
     for key, values in params.items():
+        if not values:
+            raise ValueError(f"Parameter '{key}' has an empty values list")
         column = [values[i % len(values)] for i in range(n)]
         rng.shuffle(column)
         columns[key] = column
