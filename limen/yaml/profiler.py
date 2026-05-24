@@ -140,7 +140,7 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
 
     try:
         raw_data = manifest.fetch_test_data()
-    except (OSError, ValueError, RuntimeError, ConnectionError) as exc:
+    except Exception as exc:  # noqa: BLE001
         result.errors.append(f'Failed to load test data: {type(exc).__name__}: {exc}')
         return result
 
@@ -153,8 +153,8 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
         warnings.simplefilter('ignore')
         for round_params in permutations:
             try:
-                data_dict = manifest.prepare_data(raw_data, round_params)
                 t0 = time.perf_counter()
+                data_dict = manifest.prepare_data(raw_data, round_params)
                 manifest.run_model(data_dict, round_params)
                 elapsed_times.append(time.perf_counter() - t0)
             except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:

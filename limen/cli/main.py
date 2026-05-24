@@ -101,7 +101,8 @@ def profile_cmd(yaml_file: Path) -> None:
       - Errors encountered during sampling (small data, NaN, class imbalance)
 
     \b
-    Exits 0 on success, 1 on validation failure or profile error.
+    Exits 0 on success, 1 on validation or compilation failure.
+    Sampling errors are non-fatal and reported in the output.
 
     \b
     Examples:
