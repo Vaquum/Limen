@@ -1,3 +1,4 @@
+import json
 import math
 import shutil
 from datetime import datetime
@@ -108,6 +109,8 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
         return False
 
+    _patch_metadata(results_dir, total_space, _params)
+
     output_format: str = uel_cfg.get('output_format', 'csv')
     if output_format == 'parquet' and uel.experiment_log is not None:
         parquet_path = results_dir / 'results.parquet'
@@ -117,6 +120,21 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     click.secho('  ✓ Experiment complete', fg='green')
 
     return True
+
+
+def _patch_metadata(results_dir: Path, total_space: int, params: dict) -> None:
+
+    metadata_path = results_dir / 'metadata.json'
+    if not metadata_path.exists():
+        return
+    with metadata_path.open() as f:
+        meta = json.load(f)
+    meta['permutation_space'] = {
+        'total': total_space,
+        'param_cardinalities': {k: len(v) for k, v in params.items()},
+    }
+    with metadata_path.open('w') as f:
+        json.dump(meta, f, indent=2)
 
 
 def _build_results_dir(uel_cfg: dict[str, Any], experiment_name: str) -> Path:

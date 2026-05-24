@@ -173,6 +173,8 @@ from tests.test_cli import test_cli_profile_shows_timing_when_sampling_completed
 from tests.test_cli import test_cli_profile_shows_errors_from_sampling
 from tests.test_cli import test_cli_profile_parse_error_exits_1
 from tests.test_cli import test_cli_profile_validation_error_exits_1
+from tests.test_cli import test_patch_metadata_adds_permutation_space
+from tests.test_cli import test_patch_metadata_no_op_when_file_absent
 from tests.test_foundational_sfd import test_foundational_sfd
 from tests.test_conserved_flux_renormalization import test_conserved_flux_renormalization
 from tests.test_confidence_filtering_system import test_calibrate_confidence_threshold
@@ -1227,6 +1229,8 @@ tests = [
     test_cli_profile_shows_errors_from_sampling,
     test_cli_profile_parse_error_exits_1,
     test_cli_profile_validation_error_exits_1,
+    test_patch_metadata_adds_permutation_space,
+    test_patch_metadata_no_op_when_file_absent,
     test_foundational_sfd,
     test_conserved_flux_renormalization,
     test_calibrate_confidence_threshold,
