@@ -685,6 +685,14 @@ class SfdParams:
             ))
             return
 
+        if not params:
+            errors.append(YAMLError(
+                message="'sfd.params' must not be empty",
+                path='sfd.params',
+                suggestion='Add at least one parameter, e.g. lookback: [12, 24, 48]',
+            ))
+            return
+
         for key, values in params.items():
             if not isinstance(key, str):
                 errors.append(YAMLError(
