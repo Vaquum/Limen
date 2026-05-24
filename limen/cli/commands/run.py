@@ -1,3 +1,4 @@
+import math
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -5,6 +6,7 @@ from typing import Any
 
 import click
 
+from limen.cli.commands.profile import _format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
@@ -75,7 +77,13 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     search_strategy = build_search_strategy(yaml_dict)
     compiled = CompiledSFD(yaml_dict)
 
-    click.echo(f"Running '{experiment_name}' ({n_permutations} permutations) ...")
+    _params = compiled.params()
+    total_space = math.prod(len(v) for v in _params.values()) if _params else 0
+    strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
+    click.echo(
+        f"Running '{experiment_name}' — "
+        f"{n_permutations:,} of {_format_space(total_space)} permutations ({strategy_type})"
+    )
     click.echo(f"  Results → {results_dir}")
 
     feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))

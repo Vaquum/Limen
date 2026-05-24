@@ -85,7 +85,7 @@ def _print_permutation_space(prof: ProfileResult) -> None:
     rating_label = click.style(f'[{prof.complexity_rating}]', fg=colour)
     n_params = len(prof.param_cardinalities)
     click.echo("  Permutation space")
-    click.echo(f"    Total:       {prof.total_permutations:,}  {rating_label}")
+    click.echo(f"    Total:       {_format_space(prof.total_permutations)}  {rating_label}")
     click.echo(f"    Parameters:  {n_params}")
 
     sorted_params = sorted(
@@ -115,13 +115,30 @@ def _print_runtime_sampling(prof: ProfileResult) -> None:
         click.echo(f"    Per permutation: {t:.3f}s")
         estimated_total = t * prof.total_permutations
         click.echo(f"    Estimated total: {_format_duration(estimated_total)}  "
-                   f"({prof.total_permutations:,} permutations)")
+                   f"({_format_space(prof.total_permutations)} permutations)")
     else:
         click.echo('    Per permutation: —  (no completed runs)')
 
 
 _SECONDS_PER_MINUTE = 60
 _SECONDS_PER_HOUR = 3600
+
+_SPACE_UNITS = [
+    (10 ** 12, 'T'),
+    (10 ** 9, 'B'),
+    (10 ** 6, 'M'),
+    (10 ** 3, 'K'),
+]
+
+
+def _format_space(n: int) -> str:
+
+    if n >= 10 ** 15:
+        return f"{float(n):.2e}"
+    for threshold, suffix in _SPACE_UNITS:
+        if n >= threshold:
+            return f"{n / threshold:.1f}{suffix}"
+    return str(n)
 
 
 def _format_duration(seconds: float) -> str:
