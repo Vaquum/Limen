@@ -1,5 +1,6 @@
 import math
 import random
+import re
 import time
 import warnings
 from dataclasses import dataclass
@@ -82,9 +83,9 @@ def _classify_error(exc: Exception) -> str:
     lower = msg.lower()
     if 'sample' in lower and ('0 ' in lower or 'empty' in lower):
         return f'Test data too small — increase n_rows in test_data_source. ({msg})'
-    if 'class' in lower and ('one' in lower or '1' in lower or 'least' in lower):
+    if 'class' in lower and ('one' in lower or 'least' in lower):
         return f'Not enough class diversity in test data — try larger n_rows. ({msg})'
-    if 'nan' in lower or 'inf' in lower:
+    if 'nan' in lower or re.search(r'\binf\b', lower):
         return f'Test data contains NaN or Inf values. ({msg})'
     return f'{type(exc).__name__}: {msg}'
 
