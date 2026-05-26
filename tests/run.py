@@ -808,6 +808,10 @@ from tests.test_proto_cohort import test_single_member_fallback_predict_returns_
 from tests.test_yaml_config import test_find_project_root_walks_up_from_subdirectory
 from tests.test_yaml_config import test_find_project_root_returns_none_when_not_found
 from tests.test_yaml_config import test_get_store_path_raises_when_no_project_root
+from tests.test_yaml_store import test_commit_stores_file_in_committed_dir
+from tests.test_yaml_store import test_commit_is_idempotent
+from tests.test_yaml_store import test_commit_injects_lineage_section
+from tests.test_yaml_store import test_commit_updates_index_json
 
 tests = [
     test_param_domain_init,
@@ -1609,6 +1613,10 @@ tests = [
     test_find_project_root_walks_up_from_subdirectory,
     test_find_project_root_returns_none_when_not_found,
     test_get_store_path_raises_when_no_project_root,
+    test_commit_stores_file_in_committed_dir,
+    test_commit_is_idempotent,
+    test_commit_injects_lineage_section,
+    test_commit_updates_index_json,
 ]
 
 # Configure logging
