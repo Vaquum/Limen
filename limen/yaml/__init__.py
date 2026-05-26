@@ -1,3 +1,6 @@
+from limen.yaml.config import find_project_root
+from limen.yaml.config import get_store_path
+from limen.yaml.config import read_limen_toml
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_manifest
 from limen.yaml.compiler import build_search_strategy
@@ -25,9 +28,12 @@ __all__ = [
     'YAMLError',
     'build_manifest',
     'build_search_strategy',
+    'find_project_root',
+    'get_store_path',
     'make_covering_array',
     'parse',
     'profile',
+    'read_limen_toml',
     'resolve',
     'validate',
 ]
