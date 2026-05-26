@@ -2,6 +2,7 @@ from pathlib import Path
 
 import click
 
+from limen.cli.commands.commit import run_commit
 from limen.cli.commands.init import run_init
 from limen.cli.commands.list_templates import run_list_templates
 from limen.cli.commands.new import run_new
@@ -51,6 +52,40 @@ def cli() -> None:
     Templates are in limen/yaml/templates/:
       logreg_binary.yaml           Logistic regression binary classifier
     '''
+
+
+@cli.command()
+@click.argument('yaml_file', type=click.Path(exists=True, path_type=Path))
+@click.option('--parent', default=None, metavar='MANIFEST_ID',
+              help='Parent manifest ID for lineage tracking (e.g. sha256:abc123...).')
+@click.option('--message', '-m', default=None,
+              help='Git commit message. Auto-generated if omitted.')
+def commit(yaml_file: Path, parent: str | None, message: str | None) -> None:
+
+    '''
+    Validate and commit a YAML experiment file to the manifest store.
+
+    \b
+    Steps:
+      1. Find the limen project root (walks up from the YAML file location)
+      2. Validate the YAML file
+      3. Content-address and store in manifests/committed/
+      4. Update manifests/committed/index.json
+      5. Git add + commit inside the project
+
+    \b
+    The committed file has a lineage block injected with its ID and timestamp.
+    Committing the same file twice is a no-op (idempotent).
+
+    \b
+    Examples:
+      limen commit manifests/examples/logreg_binary.yaml
+      limen commit manifests/examples/logreg_binary.yaml --message "tuned lookback"
+      limen commit manifests/examples/logreg_binary.yaml --parent sha256:abc123...
+    '''
+
+    ok = run_commit(yaml_file, parent, message)
+    raise SystemExit(0 if ok else 1)
 
 
 @cli.command()

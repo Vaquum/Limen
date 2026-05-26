@@ -4,16 +4,10 @@ from pathlib import Path
 
 import click
 
+from limen.cli.git_utils import git_executable
+
 
 _TEMPLATE_REPO = 'https://github.com/Vaquum/limen-project-template.git'
-
-
-def _git_executable() -> str:
-
-    git = shutil.which('git')
-    if git is None:
-        raise FileNotFoundError('git not found on PATH')
-    return git
 
 
 def run_new(project_name: str, backup_remote: str | None) -> bool:
@@ -60,7 +54,7 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
 
 def _clone_template(project_path: Path) -> bool:
 
-    git = _git_executable()
+    git = git_executable()
     click.echo('  Cloning template ...')
     result = subprocess.run(
         [git, 'clone', '--depth=1', _TEMPLATE_REPO, str(project_path)],
@@ -77,9 +71,7 @@ def _clone_template(project_path: Path) -> bool:
     subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, check=False)
     subprocess.run(
         [git, 'commit', '-m', 'feat: initial project from limen-project-template'],
-        cwd=project_path,
-        capture_output=True,
-        check=False,
+        cwd=project_path, capture_output=True, check=False,
     )
     return True
 
