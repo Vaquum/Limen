@@ -5,6 +5,7 @@ import click
 from limen.cli.commands.commit import run_commit
 from limen.cli.commands.init import run_init
 from limen.cli.commands.list_templates import run_list_templates
+from limen.cli.commands.ls import run_ls
 from limen.cli.commands.new import run_new
 from limen.cli.commands.profile import run_profile
 from limen.cli.commands.resume import run_resume
@@ -85,6 +86,28 @@ def commit(yaml_file: Path, parent: str | None, message: str | None) -> None:
     '''
 
     ok = run_commit(yaml_file, parent, message)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command('ls')
+def ls() -> None:
+
+    '''
+    List all committed manifests in the current project.
+
+    \b
+    Reads manifests/committed/index.json and displays each manifest
+    with its short ID, name, and commit timestamp.
+
+    \b
+    Run from anywhere inside a Limen project directory.
+
+    \b
+    Examples:
+      limen ls
+    '''
+
+    ok = run_ls(Path.cwd())
     raise SystemExit(0 if ok else 1)
 
 

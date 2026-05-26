@@ -1,0 +1,48 @@
+import json
+from pathlib import Path
+
+import click
+
+from limen.yaml.config import find_project_root
+from limen.yaml.config import _STORE_RELATIVE
+from limen.yaml.store import _SHA256_PREFIX
+
+
+def run_ls(start: Path) -> bool:
+
+    '''
+    List all committed manifests in the project store.
+
+    Args:
+        start (Path): Directory to start searching for the project root
+
+    Returns:
+        bool: True on success, False if no project found
+
+    '''
+
+    project_root = find_project_root(start)
+    if project_root is None:
+        click.secho('  ✗ No limen project found. Run this command from inside a Limen project.', fg='red')
+        return False
+
+    index_path = project_root / _STORE_RELATIVE / 'index.json'
+    if not index_path.exists():
+        click.echo('  No committed manifests yet. Use limen commit to add one.')
+        return True
+
+    index = json.loads(index_path.read_text(encoding='utf-8'))
+    manifests = index.get('manifests', [])
+
+    if not manifests:
+        click.echo('  No committed manifests yet. Use limen commit to add one.')
+        return True
+
+    click.echo(f"Committed manifests ({len(manifests)}):\n")
+    p = len(_SHA256_PREFIX)
+    for entry in manifests:
+        short_id = entry['id'][p:p + 8]
+        parent = f"  parent: {entry['parent_id'][p:p + 8]}" if entry.get('parent_id') else ''
+        click.echo(f"  {_SHA256_PREFIX}{short_id}  {entry['name']:<30}  {entry['committed_at']}{parent}")
+
+    return True
