@@ -4,6 +4,7 @@ import click
 
 from limen.cli.commands.init import run_init
 from limen.cli.commands.list_templates import run_list_templates
+from limen.cli.commands.new import run_new
 from limen.cli.commands.profile import run_profile
 from limen.cli.commands.resume import run_resume
 from limen.cli.commands.run import run_experiment
@@ -207,4 +208,27 @@ def init(output: Path, template: str | None) -> None:
     '''
 
     ok = run_init(output, template)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+@click.argument('project_name')
+@click.option('--backup-remote', default=None,
+              help='Git remote URL for manifest store backup (can also be set interactively).')
+def new(project_name: str, backup_remote: str | None) -> None:
+
+    '''
+    Create a new Limen project from the official project template.
+
+    \b
+    Clones Vaquum/limen-project-template, creates a virtual environment,
+    installs limen, and optionally sets up a backup remote.
+
+    \b
+    Examples:
+      limen new my-project
+      limen new my-project --backup-remote git@github.com:user/my-project.git
+    '''
+
+    ok = run_new(project_name, backup_remote)
     raise SystemExit(0 if ok else 1)
