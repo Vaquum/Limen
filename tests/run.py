@@ -805,6 +805,9 @@ from tests.test_proto_cohort import test_predict_return_probs_probability_mode_r
 from tests.test_proto_cohort import test_predict_return_probs_single_member_returns_sample_major_column
 from tests.test_proto_cohort import test_majority_vote_uses_binary_votes_for_continuous_fallback_members
 from tests.test_proto_cohort import test_single_member_fallback_predict_returns_binary_votes
+from tests.test_yaml_config import test_find_project_root_walks_up_from_subdirectory
+from tests.test_yaml_config import test_find_project_root_returns_none_when_not_found
+from tests.test_yaml_config import test_get_store_path_raises_when_no_project_root
 
 tests = [
     test_param_domain_init,
@@ -1603,6 +1606,9 @@ tests = [
     test_validate_probability_range_rejects_non_finite_values,
     test_cohort_is_drop_in_decoder_replacement_for_dict_input,
     test_member_failure_propagates_and_fails_whole_call,
+    test_find_project_root_walks_up_from_subdirectory,
+    test_find_project_root_returns_none_when_not_found,
+    test_get_store_path_raises_when_no_project_root,
 ]
 
 # Configure logging
