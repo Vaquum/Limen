@@ -1,13 +1,11 @@
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import click
 
 
 _TEMPLATE_REPO = 'https://github.com/Vaquum/limen-project-template.git'
-_MIN_PYTHON = (3, 10)
 
 
 def _git_executable() -> str:
@@ -32,9 +30,6 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
 
     '''
 
-    if not _check_python_version():
-        return False
-
     project_path = Path(project_name)
 
     if project_path.exists():
@@ -44,12 +39,6 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
     click.echo(f"Creating project '{project_name}' ...")
 
     if not _clone_template(project_path):
-        return False
-
-    if not _create_venv(project_path):
-        return False
-
-    if not _install_limen(project_path):
         return False
 
     if backup_remote is None:
@@ -65,25 +54,7 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
     click.secho(f"\n  ✓ Project '{project_name}' created.", fg='green')
     click.echo("\n  Next steps:")
     click.echo(f"    cd {project_name}")
-    click.echo("    source venv/bin/activate")
-    return True
-
-
-def _check_python_version() -> bool:
-
-    major, minor = sys.version_info[:2]
-    min_major, min_minor = _MIN_PYTHON
-
-    if (major, minor) < (min_major, min_minor):
-        click.secho(
-            f"  ✗ Python {min_major}.{min_minor}+ required. Found {major}.{minor}.",
-            fg='red',
-        )
-        click.echo(
-            f"  Install via pyenv: pyenv install {min_major}.{min_minor} "
-            f"&& pyenv global {min_major}.{min_minor}"
-        )
-        return False
+    click.echo("    limen validate manifests/examples/logreg_binary.yaml")
     return True
 
 
@@ -110,38 +81,6 @@ def _clone_template(project_path: Path) -> bool:
         capture_output=True,
         check=False,
     )
-    return True
-
-
-def _create_venv(project_path: Path) -> bool:
-
-    click.echo('  Creating virtual environment ...')
-    result = subprocess.run(
-        [sys.executable, '-m', 'venv', 'venv'],
-        cwd=project_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        click.secho(f"  ✗ Failed to create venv: {result.stderr.strip()}", fg='red')
-        return False
-    return True
-
-
-def _install_limen(project_path: Path) -> bool:
-
-    click.echo('  Installing limen ...')
-    venv_pip = project_path / 'venv' / 'bin' / 'pip'
-    result = subprocess.run(
-        [str(venv_pip), 'install', 'vaquum-limen', '--quiet'],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        click.secho(f"  ✗ Failed to install limen: {result.stderr.strip()}", fg='red')
-        return False
     return True
 
 

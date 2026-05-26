@@ -221,8 +221,7 @@ def new(project_name: str, backup_remote: str | None) -> None:
     Create a new Limen project from the official project template.
 
     \b
-    Clones Vaquum/limen-project-template, creates a virtual environment,
-    installs limen, and optionally sets up a backup remote.
+    Clones Vaquum/limen-project-template and optionally sets up a backup remote.
 
     \b
     Examples:
