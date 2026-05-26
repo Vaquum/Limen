@@ -5,6 +5,7 @@ import click
 from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.git_utils import git_add_and_commit
 from limen.yaml.config import find_project_root
+from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import commit_manifest
 
 
@@ -44,8 +45,8 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         return True
 
     name = str(yaml_dict.get('metadata', {}).get('name', yaml_path.stem))
-    short_id = manifest_id[7:15]
-    commit_msg = message or f'commit: {name} (sha256:{short_id})'
+    short_id = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
+    commit_msg = message or f'commit: {name} ({_SHA256_PREFIX}{short_id})'
     git_add_and_commit(project_root, Path('manifests') / 'committed', commit_msg)
 
     click.secho(f"\n  ✓ Committed {manifest_id}", fg='green')

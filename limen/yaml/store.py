@@ -1,10 +1,17 @@
 import hashlib
 import json
 from datetime import datetime
+from datetime import timezone
 from io import StringIO
 from pathlib import Path
+from typing import Any
 
 from ruamel.yaml import YAML
+
+from limen.yaml.config import _STORE_RELATIVE
+
+
+_SHA256_PREFIX = 'sha256:'
 
 
 def commit_manifest(yaml_path: Path,
@@ -31,9 +38,9 @@ def commit_manifest(yaml_path: Path,
 
     content = yaml_path.read_text(encoding='utf-8')
     hex_hash = hashlib.sha256(content.encode()).hexdigest()
-    manifest_id = f'sha256:{hex_hash}'
+    manifest_id = f'{_SHA256_PREFIX}{hex_hash}'
 
-    store_path = project_root / 'manifests' / 'committed'
+    store_path = project_root / _STORE_RELATIVE
     dest = store_path / f'{hex_hash}.yaml'
 
     if dest.exists():
@@ -43,7 +50,7 @@ def commit_manifest(yaml_path: Path,
     yaml.preserve_quotes = True
     data = yaml.load(content)
     name = str(data.get('metadata', {}).get('name', yaml_path.stem))
-    committed_at = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+    committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
 
     lineage: dict = {'id': manifest_id, 'committed_at': committed_at}
     if parent_id is not None:
@@ -55,17 +62,20 @@ def commit_manifest(yaml_path: Path,
 
     store_path.mkdir(parents=True, exist_ok=True)
     dest.write_text(stream.getvalue(), encoding='utf-8')
-    _update_index(store_path, manifest_id, name, hex_hash, committed_at, parent_id)
+
+    entry: dict[str, Any] = {
+        'id': manifest_id,
+        'name': name,
+        'committed_at': committed_at,
+        'parent_id': parent_id,
+        'file': f'{hex_hash}.yaml',
+    }
+    _update_index(store_path, entry)
 
     return manifest_id, False
 
 
-def _update_index(store_path: Path,
-                  manifest_id: str,
-                  name: str,
-                  hex_hash: str,
-                  committed_at: str,
-                  parent_id: str | None) -> None:
+def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
 
     index_path = store_path / 'index.json'
     if index_path.exists():
@@ -73,11 +83,5 @@ def _update_index(store_path: Path,
     else:
         index = {'version': 1, 'manifests': []}
 
-    index['manifests'].append({
-        'id': manifest_id,
-        'name': name,
-        'committed_at': committed_at,
-        'parent_id': parent_id,
-        'file': f'{hex_hash}.yaml',
-    })
+    index['manifests'].append(entry)
     index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')
