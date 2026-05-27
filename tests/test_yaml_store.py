@@ -77,13 +77,14 @@ def test_commit_updates_index_json() -> None:
         assert index['manifests'][0]['name'] == 'test_experiment'
 
 
-def test_resolve_manifest_uri_returns_path() -> None:
+def test_resolve_manifest_uri_returns_path_and_project_root() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
         uri = f'manifest://{manifest_id}'
-        resolved = resolve_manifest_uri(uri, project_root)
+        resolved, returned_root = resolve_manifest_uri(uri, project_root)
         assert resolved.exists()
+        assert returned_root == project_root
 
 
 def test_resolve_manifest_uri_rejects_missing_manifest() -> None:
@@ -110,7 +111,7 @@ def test_resolve_manifest_uri_accepts_short_hash() -> None:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
         short = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
-        resolved = resolve_manifest_uri(f'manifest://sha256:{short}', project_root)
+        resolved, _ = resolve_manifest_uri(f'manifest://sha256:{short}', project_root)
         assert resolved.exists()
 
 
