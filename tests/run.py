@@ -815,7 +815,7 @@ from tests.test_yaml_store import test_commit_stores_file_in_committed_dir
 from tests.test_yaml_store import test_commit_is_idempotent
 from tests.test_yaml_store import test_commit_injects_lineage_section
 from tests.test_yaml_store import test_commit_updates_index_json
-from tests.test_yaml_store import test_resolve_manifest_uri_returns_path
+from tests.test_yaml_store import test_resolve_manifest_uri_returns_path_and_project_root
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_missing_manifest
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_tampered_lineage
 from tests.test_yaml_store import test_resolve_manifest_uri_accepts_short_hash
@@ -1645,7 +1645,7 @@ tests = [
     test_commit_is_idempotent,
     test_commit_injects_lineage_section,
     test_commit_updates_index_json,
-    test_resolve_manifest_uri_returns_path,
+    test_resolve_manifest_uri_returns_path_and_project_root,
     test_resolve_manifest_uri_rejects_missing_manifest,
     test_resolve_manifest_uri_rejects_tampered_lineage,
     test_resolve_manifest_uri_accepts_short_hash,
