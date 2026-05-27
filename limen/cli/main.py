@@ -227,10 +227,10 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
             raise SystemExit(1)
         ok = run_resume(resume)
     elif target is not None:
-        yaml_path, manifest_id = _resolve_target(target)
+        yaml_path, manifest_id, results_base = _resolve_target(target)
         if yaml_path is None:
             raise SystemExit(1)
-        ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id)
+        ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id, results_base=results_base)
     else:
         click.secho('Provide a YAML file or --resume <results-dir>.', fg='red')
         raise SystemExit(1)
@@ -238,22 +238,22 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
     raise SystemExit(0 if ok else 1)
 
 
-def _resolve_target(target: str) -> tuple[Path | None, str | None]:
+def _resolve_target(target: str) -> tuple[Path | None, str | None, Path]:
 
     if target.startswith(_MANIFEST_URI_SCHEME):
         try:
-            path = resolve_manifest_uri(target, Path.cwd())
+            path, project_root = resolve_manifest_uri(target, Path.cwd())
         except ValueError as exc:
             click.secho(f'  ✗ {exc}', fg='red')
-            return None, None
+            return None, None, Path('.')
         click.echo(f"  Resolved {target}")
-        return path, path.stem
+        return path, path.stem, project_root
 
     p = Path(target)
     if not p.exists():
         click.secho(f"  ✗ File not found: {target}", fg='red')
-        return None, None
-    return p, None
+        return None, None, Path('.')
+    return p, None, Path('.')
 
 
 @cli.command('list-templates')

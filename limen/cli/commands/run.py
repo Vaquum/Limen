@@ -11,12 +11,12 @@ from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
-from limen.yaml.config import _STORE_RELATIVE
 
 
 def run_experiment(yaml_path: Path,
                    dry_run: bool = False,
-                   manifest_id: str | None = None) -> bool:
+                   manifest_id: str | None = None,
+                   results_base: Path = Path('.')) -> bool:
 
     '''
     Validate, compile, and execute a YAML experiment file.
@@ -26,6 +26,8 @@ def run_experiment(yaml_path: Path,
         dry_run (bool): When True, validate only — do not execute
         manifest_id (str | None): Full hex hash when running from a committed manifest URI.
             Changes results directory layout and YAML copy filename
+        results_base (Path): Base directory for results output. Defaults to cwd.
+            Pass the project root when running a committed manifest URI.
 
     Returns:
         bool: True on success, False on validation failure
@@ -54,7 +56,6 @@ def run_experiment(yaml_path: Path,
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
 
-    results_base = yaml_path.parents[len(_STORE_RELATIVE.parts)] if manifest_id is not None else Path('.')
     results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
     results_dir.mkdir(parents=True, exist_ok=True)
     yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name

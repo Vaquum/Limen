@@ -78,7 +78,7 @@ def commit_manifest(yaml_path: Path,
     return manifest_id, False
 
 
-def resolve_manifest_uri(uri: str, start: Path) -> Path:
+def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
 
     '''
     Resolve a manifest:// URI to a filesystem path.
@@ -91,7 +91,8 @@ def resolve_manifest_uri(uri: str, start: Path) -> Path:
         start (Path): Directory to start searching for the project root
 
     Returns:
-        Path: Resolved path to the committed manifest file
+        tuple[Path, Path]: (manifest_path, project_root) — resolved path to the
+            committed manifest file and the limen project root
 
     Raises:
         ValueError: If the URI is malformed, the project root is not found,
@@ -141,7 +142,7 @@ def resolve_manifest_uri(uri: str, start: Path) -> Path:
             f"does not match expected '{expected_id}'"
         )
 
-    return candidate
+    return candidate, project_root
 
 
 def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
