@@ -77,6 +77,8 @@ def commit_manifest(yaml_path: Path,
             existing = yaml.load(dest.read_text(encoding='utf-8'))
         except (OSError, YAMLError) as exc:
             raise ValueError(f"Cannot read committed manifest '{dest.name}': {exc}") from exc
+        if not isinstance(existing, dict):
+            raise ValueError(f"Invalid committed manifest format in '{dest.name}': expected a mapping")
         name = str(existing.get('metadata', {}).get('name', dest.stem))
         committed_at = existing.get('lineage', {}).get('committed_at', '')
         stored_parent_id = existing.get('lineage', {}).get('parent_id')
