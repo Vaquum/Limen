@@ -46,36 +46,40 @@ def commit_manifest(yaml_path: Path,
     store_path = project_root / _STORE_RELATIVE
     dest = store_path / f'{hex_hash}.yaml'
 
-    if dest.exists():
-        return manifest_id, True
+    already_existed = dest.exists()
 
     yaml = YAML()
     yaml.preserve_quotes = True
-    data = yaml.load(content)
-    name = str(data.get('metadata', {}).get('name', yaml_path.stem))
-    committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')
 
-    lineage: dict = {'id': manifest_id, 'committed_at': committed_at}
-    if parent_id is not None:
-        lineage['parent_id'] = parent_id
-    data['lineage'] = lineage
-
-    stream = StringIO()
-    yaml.dump(data, stream)
-
-    store_path.mkdir(parents=True, exist_ok=True)
-    dest.write_text(stream.getvalue(), encoding='utf-8')
+    if not already_existed:
+        data = yaml.load(content)
+        name = str(data.get('metadata', {}).get('name', yaml_path.stem))
+        committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        lineage: dict = {'id': manifest_id, 'committed_at': committed_at}
+        if parent_id is not None:
+            lineage['parent_id'] = parent_id
+        data['lineage'] = lineage
+        stream = StringIO()
+        yaml.dump(data, stream)
+        store_path.mkdir(parents=True, exist_ok=True)
+        dest.write_text(stream.getvalue(), encoding='utf-8')
+        stored_parent_id = parent_id
+    else:
+        existing = yaml.load(dest.read_text(encoding='utf-8'))
+        name = str(existing.get('metadata', {}).get('name', dest.stem))
+        committed_at = existing.get('lineage', {}).get('committed_at', '')
+        stored_parent_id = existing.get('lineage', {}).get('parent_id')
 
     entry: dict[str, Any] = {
         'id': manifest_id,
         'name': name,
         'committed_at': committed_at,
-        'parent_id': parent_id,
+        'parent_id': stored_parent_id,
         'file': f'{hex_hash}.yaml',
     }
     _update_index(store_path, entry)
 
-    return manifest_id, False
+    return manifest_id, already_existed
 
 
 def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
@@ -120,7 +124,7 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
         if not candidate.exists():
             raise ValueError(f"Manifest not found in store: '{uri}'")
     else:
-        matches = [p for p in store_path.glob('*.yaml') if p.stem.startswith(hex_hash)]
+        matches = list(store_path.glob(f'{hex_hash}*.yaml'))
         if not matches:
             raise ValueError(f"Manifest not found in store: '{uri}'")
         if len(matches) > 1:
@@ -153,5 +157,6 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
     else:
         index = {'version': 1, 'manifests': []}
 
-    index['manifests'].append(entry)
+    if not any(m['id'] == entry['id'] for m in index['manifests']):
+        index['manifests'].append(entry)
     index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')
