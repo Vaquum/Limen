@@ -203,7 +203,10 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
 
     \b
     Output:
-      Results are written to ./results/{name}_{datetime}/results.csv by default.
+      Development mode:  ./results/dev/{name}_{datetime}/results.csv
+      Production mode:   ./results/{name}_{datetime}/results.csv
+      Committed manifest (manifest://):
+                         ./results/[dev/]<short-hash>/<timestamp>/results.csv
       Set uel.output_format: parquet to also write results.parquet.
       Override the output path with uel.output_path in the YAML.
 
