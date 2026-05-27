@@ -67,12 +67,12 @@ def _clone_template(project_path: Path) -> bool:
         return False
 
     shutil.rmtree(project_path / '.git')
-    init = subprocess.run([git, 'init'], cwd=project_path, capture_output=True, check=False)
+    init = subprocess.run([git, 'init'], cwd=project_path, capture_output=True, text=True, check=False)
     if init.returncode != 0:
         shutil.rmtree(project_path)
         click.secho(f"  ✗ git init failed: {init.stderr.strip()}", fg='red')
         return False
-    add = subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, check=False)
+    add = subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, text=True, check=False)
     if add.returncode != 0:
         shutil.rmtree(project_path)
         click.secho(f"  ✗ git add failed: {add.stderr.strip()}", fg='red')

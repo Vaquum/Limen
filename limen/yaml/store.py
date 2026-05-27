@@ -55,7 +55,12 @@ def commit_manifest(yaml_path: Path,
     yaml.preserve_quotes = True
 
     if not already_existed:
-        data = yaml.load(content)
+        try:
+            data = yaml.load(content)
+        except YAMLError as exc:
+            raise ValueError(f"Cannot parse YAML '{yaml_path.name}': {exc}") from exc
+        if not isinstance(data, dict):
+            raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
         name = str(data.get('metadata', {}).get('name', yaml_path.stem))
         committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         lineage: dict = {'id': manifest_id, 'committed_at': committed_at}

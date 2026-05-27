@@ -56,7 +56,9 @@ def run_ls(start: Path) -> bool:
         if (not isinstance(entry, dict)
                 or not _REQUIRED.issubset(entry)
                 or not isinstance(entry_id, str)
-                or not entry_id.startswith(_SHA256_PREFIX)):
+                or not entry_id.startswith(_SHA256_PREFIX)
+                or not isinstance(entry.get('name'), str)
+                or not isinstance(entry.get('committed_at'), str)):
             click.secho('  ⚠ Skipping malformed entry in index.json.', fg='yellow')
             continue
         short_id = entry_id[p:p + 8]
