@@ -5,6 +5,7 @@ import click
 from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.git_utils import git_add_and_commit
 from limen.yaml.config import find_project_root
+from limen.yaml.store import _SHA256_HEX_LENGTH
 from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import commit_manifest
 
@@ -23,6 +24,16 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         bool: True on success, False on failure
 
     '''
+
+    if parent_id is not None:
+        hex_part = parent_id[len(_SHA256_PREFIX):]
+        if not parent_id.startswith(_SHA256_PREFIX) or len(hex_part) != _SHA256_HEX_LENGTH:
+            click.secho(
+                f"  ✗ Invalid parent ID: '{parent_id}'\n"
+                '    Expected sha256:<64-hex-chars>.',
+                fg='red',
+            )
+            return False
 
     project_root = find_project_root(yaml_path.parent)
     if project_root is None:
