@@ -38,6 +38,15 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
     if not valid:
         return False
 
+    mode = yaml_dict.get('metadata', {}).get('mode', 'development')
+    if mode != 'production':
+        click.secho(
+            '  ✗ Cannot commit a development-mode manifest.\n'
+            '    Set metadata.mode: production before committing.',
+            fg='red',
+        )
+        return False
+
     manifest_id, already_existed = commit_manifest(yaml_path, project_root, parent_id)
 
     if already_existed:
