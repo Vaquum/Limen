@@ -1,5 +1,7 @@
 import hashlib
 import json
+import re
+import warnings
 from datetime import datetime
 from datetime import timezone
 from io import StringIO
@@ -113,6 +115,9 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
 
     hex_hash = ref[len(_SHA256_PREFIX):]
 
+    if not re.fullmatch(r'[0-9a-f]{1,64}', hex_hash):
+        raise ValueError(f"Malformed hash in manifest URI: '{uri}'")
+
     project_root = find_project_root(start)
     if project_root is None:
         raise ValueError('No limen project found. Run from inside a project directory.')
@@ -153,7 +158,11 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
 
     index_path = store_path / 'index.json'
     if index_path.exists():
-        index = json.loads(index_path.read_text(encoding='utf-8'))
+        try:
+            index = json.loads(index_path.read_text(encoding='utf-8'))
+        except json.JSONDecodeError:
+            warnings.warn(f"index.json is corrupted — reinitializing: {index_path}", stacklevel=2)
+            index = {'version': 1, 'manifests': []}
     else:
         index = {'version': 1, 'manifests': []}
 
