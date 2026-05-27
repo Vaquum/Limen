@@ -79,6 +79,7 @@ def test_run_commit_rejects_invalid_parent_id() -> None:
         with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)):
             assert run_commit(yaml_path, 'not-a-valid-id', None) is False
             assert run_commit(yaml_path, 'sha256:short', None) is False
+            assert run_commit(yaml_path, 'sha256:' + 'z' * 64, None) is False
 
 
 def test_run_commit_uses_custom_message() -> None:

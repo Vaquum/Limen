@@ -44,6 +44,13 @@ def test_run_ls_lists_committed_manifests() -> None:
         assert run_ls(Path(d)) is True
 
 
+def test_run_ls_returns_true_when_index_is_corrupt() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        store = _make_project(Path(d))
+        (store / 'index.json').write_text('not valid json')
+        assert run_ls(Path(d)) is True
+
+
 def test_run_ls_shows_parent_id_when_present() -> None:
     with tempfile.TemporaryDirectory() as d:
         store = _make_project(Path(d))

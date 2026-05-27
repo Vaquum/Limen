@@ -77,6 +77,18 @@ def test_commit_updates_index_json() -> None:
         assert index['manifests'][0]['name'] == 'test_experiment'
 
 
+def test_commit_recovers_from_corrupt_index() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        commit_manifest(yaml_path, project_root)
+        (project_root / 'manifests' / 'committed' / 'index.json').write_text('not valid json')
+        yaml_path2 = project_root / 'manifests' / 'examples' / 'test2.yaml'
+        yaml_path2.write_text(_SAMPLE_YAML + '\n# extra\n')
+        manifest_id2, _ = commit_manifest(yaml_path2, project_root)
+        index = json.loads((project_root / 'manifests' / 'committed' / 'index.json').read_text())
+        assert any(m['id'] == manifest_id2 for m in index['manifests'])
+
+
 def test_commit_repairs_index_when_missing() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
@@ -104,6 +116,17 @@ def test_resolve_manifest_uri_returns_path_and_project_root() -> None:
         resolved, returned_root = resolve_manifest_uri(uri, project_root)
         assert resolved.exists()
         assert returned_root == project_root
+
+
+def test_resolve_manifest_uri_rejects_malformed_hash() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, _ = _make_project(Path(d))
+        with pytest.raises(ValueError, match='Malformed hash'):
+            resolve_manifest_uri('manifest://sha256:*', project_root)
+        with pytest.raises(ValueError, match='Malformed hash'):
+            resolve_manifest_uri('manifest://sha256:', project_root)
+        with pytest.raises(ValueError, match='Malformed hash'):
+            resolve_manifest_uri('manifest://sha256:' + 'a' * 65, project_root)
 
 
 def test_resolve_manifest_uri_rejects_missing_manifest() -> None:

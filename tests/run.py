@@ -816,8 +816,10 @@ from tests.test_yaml_store import test_commit_is_idempotent
 from tests.test_yaml_store import test_commit_injects_lineage_section
 from tests.test_yaml_store import test_commit_updates_index_json
 from tests.test_yaml_store import test_commit_repairs_index_when_missing
+from tests.test_yaml_store import test_commit_recovers_from_corrupt_index
 from tests.test_yaml_store import test_commit_timestamps_are_utc
 from tests.test_yaml_store import test_resolve_manifest_uri_returns_path_and_project_root
+from tests.test_yaml_store import test_resolve_manifest_uri_rejects_malformed_hash
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_missing_manifest
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_tampered_lineage
 from tests.test_yaml_store import test_resolve_manifest_uri_accepts_short_hash
@@ -833,6 +835,7 @@ from tests.test_cli_ls import test_run_ls_fails_when_no_project_root
 from tests.test_cli_ls import test_run_ls_returns_true_when_no_index
 from tests.test_cli_ls import test_run_ls_returns_true_when_empty_manifests
 from tests.test_cli_ls import test_run_ls_lists_committed_manifests
+from tests.test_cli_ls import test_run_ls_returns_true_when_index_is_corrupt
 from tests.test_cli_ls import test_run_ls_shows_parent_id_when_present
 from tests.test_cli_git_utils import test_git_executable_returns_path
 from tests.test_cli_git_utils import test_git_add_and_commit_creates_commit
@@ -1649,8 +1652,10 @@ tests = [
     test_commit_injects_lineage_section,
     test_commit_updates_index_json,
     test_commit_repairs_index_when_missing,
+    test_commit_recovers_from_corrupt_index,
     test_commit_timestamps_are_utc,
     test_resolve_manifest_uri_returns_path_and_project_root,
+    test_resolve_manifest_uri_rejects_malformed_hash,
     test_resolve_manifest_uri_rejects_missing_manifest,
     test_resolve_manifest_uri_rejects_tampered_lineage,
     test_resolve_manifest_uri_accepts_short_hash,
@@ -1666,6 +1671,7 @@ tests = [
     test_run_ls_returns_true_when_no_index,
     test_run_ls_returns_true_when_empty_manifests,
     test_run_ls_lists_committed_manifests,
+    test_run_ls_returns_true_when_index_is_corrupt,
     test_run_ls_shows_parent_id_when_present,
     test_git_executable_returns_path,
     test_git_add_and_commit_creates_commit,
