@@ -67,8 +67,16 @@ def _clone_template(project_path: Path) -> bool:
         return False
 
     shutil.rmtree(project_path / '.git')
-    subprocess.run([git, 'init'], cwd=project_path, capture_output=True, check=False)
-    subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, check=False)
+    init = subprocess.run([git, 'init'], cwd=project_path, capture_output=True, check=False)
+    if init.returncode != 0:
+        shutil.rmtree(project_path)
+        click.secho(f"  ✗ git init failed: {init.stderr.strip()}", fg='red')
+        return False
+    add = subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, check=False)
+    if add.returncode != 0:
+        shutil.rmtree(project_path)
+        click.secho(f"  ✗ git add failed: {add.stderr.strip()}", fg='red')
+        return False
     commit = subprocess.run(
         [git, 'commit', '-m', 'feat: initial project from limen-project-template'],
         cwd=project_path, capture_output=True, check=False,
@@ -85,6 +93,9 @@ def _write_backup_remote(project_path: Path, remote_url: str) -> None:
 
     toml_path = project_path / 'limen.toml'
     text = toml_path.read_text(encoding='utf-8')
-    text = text.replace('backup_remote = ""', f'backup_remote = "{remote_url}"')
-    toml_path.write_text(text, encoding='utf-8')
+    updated = text.replace('backup_remote = ""', f'backup_remote = "{remote_url}"')
+    if updated == text:
+        click.secho('  ⚠ Could not set backup remote — limen.toml format unexpected.', fg='yellow')
+        return
+    toml_path.write_text(updated, encoding='utf-8')
     click.echo(f"  Backup remote set to: {remote_url}")

@@ -68,7 +68,7 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         if git_add_and_commit(project_root, Path('manifests') / 'committed', repair_msg):
             click.secho(f"\n  ✓ Repaired and committed {manifest_id}", fg='green')
         else:
-            click.secho(f"\n  Already committed: {manifest_id}", fg='yellow')
+            click.secho(f"\n  Already in store: {manifest_id}", fg='yellow')
         return True
 
     name = str(yaml_dict.get('metadata', {}).get('name', yaml_path.stem))

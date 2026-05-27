@@ -177,6 +177,6 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
         warnings.warn(f"index.json has invalid structure — reinitializing: {index_path}", stacklevel=2)
         index = {'version': 1, 'manifests': []}
 
-    if not any(isinstance(m, dict) and m.get('id') == entry['id'] for m in index['manifests']):
-        index['manifests'].append(entry)
+    index['manifests'] = [m for m in index['manifests'] if not (isinstance(m, dict) and m.get('id') == entry['id'])]
+    index['manifests'].append(entry)
     index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')
