@@ -830,6 +830,7 @@ from tests.test_yaml_store import test_resolve_manifest_uri_rejects_ambiguous_sh
 from tests.test_yaml_store import test_update_index_deduplicates_pre_existing_entries
 from tests.test_yaml_store import test_commit_manifest_raises_on_invalid_yaml_content
 from tests.test_yaml_store import test_commit_manifest_raises_when_yaml_is_not_a_dict
+from tests.test_yaml_store import test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict
 from tests.test_cli_commit import test_run_commit_fails_when_no_project_root
 from tests.test_cli_commit import test_run_commit_fails_on_invalid_yaml
 from tests.test_cli_commit import test_run_commit_rejects_development_mode
@@ -1680,6 +1681,7 @@ tests = [
     test_update_index_deduplicates_pre_existing_entries,
     test_commit_manifest_raises_on_invalid_yaml_content,
     test_commit_manifest_raises_when_yaml_is_not_a_dict,
+    test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict,
     test_run_commit_fails_when_no_project_root,
     test_run_commit_fails_on_invalid_yaml,
     test_run_commit_rejects_development_mode,

@@ -210,6 +210,17 @@ def test_commit_manifest_raises_when_yaml_is_not_a_dict() -> None:
             commit_manifest(list_yaml, project_root)
 
 
+def test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        store = project_root / 'manifests' / 'committed'
+        (store / f'{hex_hash}.yaml').write_text('- corrupted\n- list\n', encoding='utf-8')
+        with pytest.raises(ValueError, match='expected a mapping'):
+            commit_manifest(yaml_path, project_root)
+
+
 def test_update_index_deduplicates_pre_existing_entries() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
