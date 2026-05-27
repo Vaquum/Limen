@@ -11,9 +11,12 @@ from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
+from limen.yaml.config import _STORE_RELATIVE
 
 
-def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
+def run_experiment(yaml_path: Path,
+                   dry_run: bool = False,
+                   manifest_id: str | None = None) -> bool:
 
     '''
     Validate, compile, and execute a YAML experiment file.
@@ -21,6 +24,8 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     Args:
         yaml_path (Path): Path to the YAML experiment file
         dry_run (bool): When True, validate only — do not execute
+        manifest_id (str | None): Full hex hash when running from a committed manifest URI.
+            Changes results directory layout and YAML copy filename
 
     Returns:
         bool: True on success, False on validation failure
@@ -49,9 +54,11 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
 
-    results_dir = _build_results_dir(uel_cfg, experiment_name)
+    results_base = yaml_path.parents[len(_STORE_RELATIVE.parts)] if manifest_id is not None else Path('.')
+    results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
     results_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(yaml_path, results_dir / yaml_path.name)
+    yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name
+    shutil.copy2(yaml_path, results_dir / yaml_dest_name)
 
     search_strategy = build_search_strategy(yaml_dict)
     compiled = CompiledSFD(yaml_dict)
@@ -98,14 +105,20 @@ def run_experiment(yaml_path: Path, dry_run: bool = False) -> bool:
     return True
 
 
-def _build_results_dir(uel_cfg: dict[str, Any], experiment_name: str) -> Path:
+def _build_results_dir(uel_cfg: dict[str, Any],
+                       experiment_name: str,
+                       test_mode: bool,
+                       manifest_id: str | None = None,
+                       results_base: Path = Path('.')) -> Path:
 
-    output_path_template: str = uel_cfg.get('output_path', './results/{name}_{datetime}')
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return Path(
-        output_path_template
-        .replace('{name}', experiment_name)
-        .replace('{datetime}', timestamp)
-    )
+    results_root = results_base / 'results'
+    prefix = results_root / 'dev' if test_mode else results_root
+
+    if manifest_id is not None:
+        return prefix / manifest_id[:8] / timestamp
+
+    template: str = uel_cfg.get('output_path', '{name}_{datetime}')
+    return prefix / template.replace('{name}', experiment_name).replace('{datetime}', timestamp)
 
 

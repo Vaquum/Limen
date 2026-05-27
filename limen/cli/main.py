@@ -11,6 +11,8 @@ from limen.cli.commands.profile import run_profile
 from limen.cli.commands.resume import run_resume
 from limen.cli.commands.run import run_experiment
 from limen.cli.commands.validate import run_validate
+from limen.yaml.store import _MANIFEST_URI_SCHEME
+from limen.yaml.store import resolve_manifest_uri
 
 
 @click.group()
@@ -174,13 +176,13 @@ def profile_cmd(yaml_file: Path) -> None:
 
 
 @cli.command()
-@click.argument('yaml_file', type=click.Path(exists=True, path_type=Path), required=False, default=None)
+@click.argument('target', required=False, default=None, metavar='[YAML_FILE | MANIFEST_URI]')
 @click.option('--dry-run', is_flag=True, default=False,
               help='Validate and compile only — do not execute the experiment.')
 @click.option('--resume', type=click.Path(exists=True, file_okay=False, path_type=Path),
               default=None, metavar='RESULTS_DIR',
               help='Resume from a checkpoint directory instead of starting fresh.')
-def run(yaml_file: Path | None, dry_run: bool, resume: Path | None) -> None:
+def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
 
     '''
     Validate, compile, and run a YAML experiment file.
@@ -212,24 +214,46 @@ def run(yaml_file: Path | None, dry_run: bool, resume: Path | None) -> None:
     Examples:
       limen run experiment.yaml
       limen run --dry-run experiment.yaml
+      limen run manifest://sha256:abc123ef...
       limen run --resume ./results/my_experiment_20260521_120000
     '''
 
     if resume is not None:
-        if yaml_file is not None:
+        if target is not None:
             click.secho('Cannot specify both a YAML file and --resume.', fg='red')
             raise SystemExit(1)
         if dry_run:
             click.secho('--dry-run has no effect with --resume.', fg='red')
             raise SystemExit(1)
         ok = run_resume(resume)
-    elif yaml_file is not None:
-        ok = run_experiment(yaml_file, dry_run=dry_run)
+    elif target is not None:
+        yaml_path, manifest_id = _resolve_target(target)
+        if yaml_path is None:
+            raise SystemExit(1)
+        ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id)
     else:
         click.secho('Provide a YAML file or --resume <results-dir>.', fg='red')
         raise SystemExit(1)
 
     raise SystemExit(0 if ok else 1)
+
+
+def _resolve_target(target: str) -> tuple[Path | None, str | None]:
+
+    if target.startswith(_MANIFEST_URI_SCHEME):
+        try:
+            path = resolve_manifest_uri(target, Path.cwd())
+        except ValueError as exc:
+            click.secho(f'  ✗ {exc}', fg='red')
+            return None, None
+        click.echo(f"  Resolved {target}")
+        return path, path.stem
+
+    p = Path(target)
+    if not p.exists():
+        click.secho(f"  ✗ File not found: {target}", fg='red')
+        return None, None
+    return p, None
 
 
 @cli.command('list-templates')
