@@ -32,7 +32,11 @@ def run_ls(start: Path) -> bool:
         click.echo('  No committed manifests yet. Use limen commit to add one.')
         return True
 
-    index = json.loads(index_path.read_text(encoding='utf-8'))
+    try:
+        index = json.loads(index_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError:
+        click.secho('  ⚠ index.json is corrupted — run limen commit to repair it.', fg='yellow')
+        return True
     manifests = index.get('manifests', [])
 
     if not manifests:
