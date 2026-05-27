@@ -22,7 +22,7 @@ def git_executable() -> str:
     return git
 
 
-def git_add_and_commit(repo_root: Path, path: Path, message: str) -> None:
+def git_add_and_commit(repo_root: Path, path: Path, message: str) -> bool:
 
     '''
     Stage a path and create a git commit inside a repository.
@@ -32,8 +32,14 @@ def git_add_and_commit(repo_root: Path, path: Path, message: str) -> None:
         path (Path): Path to stage (relative to repo_root)
         message (str): Commit message
 
+    Returns:
+        bool: True if both git add and git commit succeeded
+
     '''
 
     git = git_executable()
-    subprocess.run([git, 'add', str(path)], cwd=repo_root, capture_output=True, check=False)
-    subprocess.run([git, 'commit', '-m', message], cwd=repo_root, capture_output=True, check=False)
+    add = subprocess.run([git, 'add', str(path)], cwd=repo_root, capture_output=True, check=False)
+    if add.returncode != 0:
+        return False
+    commit = subprocess.run([git, 'commit', '-m', message], cwd=repo_root, capture_output=True, check=False)
+    return commit.returncode == 0

@@ -69,10 +69,15 @@ def _clone_template(project_path: Path) -> bool:
     shutil.rmtree(project_path / '.git')
     subprocess.run([git, 'init'], cwd=project_path, capture_output=True, check=False)
     subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, check=False)
-    subprocess.run(
+    commit = subprocess.run(
         [git, 'commit', '-m', 'feat: initial project from limen-project-template'],
         cwd=project_path, capture_output=True, check=False,
     )
+    if commit.returncode != 0:
+        click.secho(
+            '  ⚠ Initial git commit failed — project created but not version-controlled.',
+            fg='yellow',
+        )
     return True
 
 

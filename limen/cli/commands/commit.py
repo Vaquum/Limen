@@ -56,7 +56,14 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
     name = str(yaml_dict.get('metadata', {}).get('name', yaml_path.stem))
     short_id = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
     commit_msg = message or f'commit: {name} ({_SHA256_PREFIX}{short_id})'
-    git_add_and_commit(project_root, Path('manifests') / 'committed', commit_msg)
+    git_ok = git_add_and_commit(project_root, Path('manifests') / 'committed', commit_msg)
 
-    click.secho(f"\n  ✓ Committed {manifest_id}", fg='green')
+    if not git_ok:
+        click.secho(
+            f"\n  ✓ Stored {manifest_id}\n"
+            '  ⚠ Git commit failed — manifest is stored but not version-controlled.',
+            fg='yellow',
+        )
+    else:
+        click.secho(f"\n  ✓ Committed {manifest_id}", fg='green')
     return True
