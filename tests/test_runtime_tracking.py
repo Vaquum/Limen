@@ -97,7 +97,7 @@ def test_runtime_gate_writes_summary_and_passes_when_within_budget() -> None:
         profile_path.write_text(json.dumps(profile), encoding='utf-8')
         budget_path.write_text(json.dumps(budget), encoding='utf-8')
 
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             [
                 sys.executable,
                 '-m',
@@ -161,7 +161,7 @@ def test_runtime_gate_fails_when_profile_exceeds_budget() -> None:
         profile_path.write_text(json.dumps(profile), encoding='utf-8')
         budget_path.write_text(json.dumps(budget), encoding='utf-8')
 
-        result = subprocess.run(  # noqa: S603
+        result = subprocess.run(
             [
                 sys.executable,
                 '-m',
