@@ -998,3 +998,13 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen profile` CLI command — profiles a YAML experiment's permutation space (total count, per-parameter cardinalities, complexity rating) and, when `test_data_source` is configured, runs a randomised strength-1 covering array to estimate per-permutation runtime
 - Add `limen/yaml/profiler.py` with `ProfileResult`, `make_covering_array`, and `profile()` — profiler core usable independently of the CLI
 
+## v3.13.0 on 27th of May, 2026
+
+- Add `limen new <project-name>` CLI command — scaffolds a new Limen project by cloning the official project template and optionally setting a backup remote
+- Add `limen commit <yaml>` CLI command — content-addresses a YAML manifest into `manifests/committed/`, injects a `lineage` block, updates `index.json`, and git-commits the store; gates on `metadata.mode: production`
+- Add `limen ls` CLI command — lists all committed manifests with copy-pasteable `manifest://sha256:<short>` URIs
+- Add `manifest://sha256:<hex>` URI support to `limen run` — resolves a committed manifest by full or unambiguous short hash, verifies `lineage.id` integrity, and routes results to `results/<short_id>/<timestamp>/`
+- Route development-mode results to `results/dev/` (gitignored in project template) and production-mode results to `results/`
+- Add `limen/yaml/config.py` with `find_project_root()`, `read_limen_toml()`, and `get_store_path()`
+- Add `limen/cli/git_utils.py` with `git_executable()` and `git_add_and_commit()`
+
