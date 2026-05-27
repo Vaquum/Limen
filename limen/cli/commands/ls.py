@@ -5,6 +5,7 @@ import click
 
 from limen.yaml.config import find_project_root
 from limen.yaml.config import _STORE_RELATIVE
+from limen.yaml.store import _MANIFEST_URI_SCHEME
 from limen.yaml.store import _SHA256_PREFIX
 
 
@@ -42,7 +43,8 @@ def run_ls(start: Path) -> bool:
     p = len(_SHA256_PREFIX)
     for entry in manifests:
         short_id = entry['id'][p:p + 8]
+        uri = f'{_MANIFEST_URI_SCHEME}{_SHA256_PREFIX}{short_id}'
         parent = f"  parent: {entry['parent_id'][p:p + 8]}" if entry.get('parent_id') else ''
-        click.echo(f"  {_SHA256_PREFIX}{short_id}  {entry['name']:<30}  {entry['committed_at']}{parent}")
+        click.echo(f"  {uri}  {entry['name']:<30}  {entry['committed_at']}{parent}")
 
     return True
