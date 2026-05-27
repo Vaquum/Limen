@@ -75,6 +75,7 @@ from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_output_path_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_prep_each_round_wrong_type
+from tests.test_yaml import test_validate_warns_for_uel_experiment_dir
 from tests.test_yaml import test_validate_error_for_uel_feedback_interval_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_checkpoint_interval_wrong_type
 from tests.test_yaml import test_validate_error_for_manifest_ref_not_in_sfd_params
@@ -840,6 +841,8 @@ from tests.test_cli_ls import test_run_ls_lists_committed_manifests
 from tests.test_cli_ls import test_run_ls_returns_true_when_index_is_corrupt
 from tests.test_cli_ls import test_run_ls_returns_true_when_index_has_invalid_structure
 from tests.test_cli_ls import test_run_ls_skips_malformed_entries
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_parent_id
 from tests.test_cli_ls import test_run_ls_shows_parent_id_when_present
 from tests.test_cli_git_utils import test_git_executable_returns_path
 from tests.test_cli_git_utils import test_git_add_and_commit_creates_commit
@@ -1166,6 +1169,7 @@ tests = [
     test_validate_error_for_uel_search_strategy_wrong_type,
     test_validate_error_for_uel_output_path_wrong_type,
     test_validate_error_for_uel_prep_each_round_wrong_type,
+    test_validate_warns_for_uel_experiment_dir,
     test_validate_error_for_uel_feedback_interval_wrong_type,
     test_validate_error_for_uel_checkpoint_interval_wrong_type,
     test_validate_error_for_manifest_ref_not_in_sfd_params,
@@ -1680,6 +1684,8 @@ tests = [
     test_run_ls_returns_true_when_index_is_corrupt,
     test_run_ls_returns_true_when_index_has_invalid_structure,
     test_run_ls_skips_malformed_entries,
+    test_run_ls_skips_entry_with_non_string_id,
+    test_run_ls_skips_entry_with_non_string_parent_id,
     test_run_ls_shows_parent_id_when_present,
     test_git_executable_returns_path,
     test_git_add_and_commit_creates_commit,
