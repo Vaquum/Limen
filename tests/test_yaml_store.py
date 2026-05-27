@@ -118,6 +118,27 @@ def test_resolve_manifest_uri_returns_path_and_project_root() -> None:
         assert returned_root == project_root
 
 
+def test_commit_recovers_from_structurally_invalid_index() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        index_path = project_root / 'manifests' / 'committed' / 'index.json'
+        index_path.write_text(json.dumps([1, 2, 3]))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        index = json.loads(index_path.read_text())
+        assert any(m['id'] == manifest_id for m in index['manifests'])
+
+
+def test_resolve_manifest_uri_raises_on_corrupt_manifest_file() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        committed_path = project_root / 'manifests' / 'committed' / f'{hex_hash}.yaml'
+        committed_path.write_text(': invalid: yaml: {{{')
+        with pytest.raises(ValueError, match='Cannot read manifest'):
+            resolve_manifest_uri(f'manifest://{manifest_id}', project_root)
+
+
 def test_resolve_manifest_uri_rejects_malformed_hash() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, _ = _make_project(Path(d))

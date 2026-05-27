@@ -51,6 +51,22 @@ def test_run_ls_returns_true_when_index_is_corrupt() -> None:
         assert run_ls(Path(d)) is True
 
 
+def test_run_ls_returns_true_when_index_has_invalid_structure() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        store = _make_project(Path(d))
+        (store / 'index.json').write_text(json.dumps([1, 2, 3]))
+        assert run_ls(Path(d)) is True
+
+
+def test_run_ls_skips_malformed_entries() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        store = _make_project(Path(d))
+        good = {'id': 'sha256:' + 'a' * 64, 'name': 'ok', 'committed_at': '2026-05-28T10:00:00Z', 'parent_id': None}
+        bad = {'broken': True}
+        (store / 'index.json').write_text(json.dumps({'version': 1, 'manifests': [good, bad]}))
+        assert run_ls(Path(d)) is True
+
+
 def test_run_ls_shows_parent_id_when_present() -> None:
     with tempfile.TemporaryDirectory() as d:
         store = _make_project(Path(d))
