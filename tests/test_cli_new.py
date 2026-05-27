@@ -76,7 +76,7 @@ def test_run_new_fails_when_git_not_found() -> None:
         project_path = Path(d) / 'new-project'
         with patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError):
             result = run_new(str(project_path), None)
-    assert result is False
+        assert result is False
 
 
 def test_run_new_skips_backup_remote_with_invalid_chars() -> None:

@@ -846,6 +846,8 @@ from tests.test_cli_ls import test_run_ls_returns_true_when_index_is_corrupt
 from tests.test_cli_ls import test_run_ls_returns_true_when_index_has_invalid_structure
 from tests.test_cli_ls import test_run_ls_skips_malformed_entries
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_truncated_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_hex_id
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_parent_id
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_name
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_committed_at
@@ -1700,6 +1702,8 @@ tests = [
     test_run_ls_returns_true_when_index_has_invalid_structure,
     test_run_ls_skips_malformed_entries,
     test_run_ls_skips_entry_with_non_string_id,
+    test_run_ls_skips_entry_with_truncated_id,
+    test_run_ls_skips_entry_with_non_hex_id,
     test_run_ls_skips_entry_with_non_string_parent_id,
     test_run_ls_skips_entry_with_non_string_name,
     test_run_ls_skips_entry_with_non_string_committed_at,
