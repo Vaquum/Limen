@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from limen.yaml.config import _STORE_RELATIVE
 from limen.yaml.config import find_project_root
@@ -67,7 +68,10 @@ def commit_manifest(yaml_path: Path,
         dest.write_text(stream.getvalue(), encoding='utf-8')
         stored_parent_id = parent_id
     else:
-        existing = yaml.load(dest.read_text(encoding='utf-8'))
+        try:
+            existing = yaml.load(dest.read_text(encoding='utf-8'))
+        except (OSError, YAMLError) as exc:
+            raise ValueError(f"Cannot read committed manifest '{dest.name}': {exc}") from exc
         name = str(existing.get('metadata', {}).get('name', dest.stem))
         committed_at = existing.get('lineage', {}).get('committed_at', '')
         stored_parent_id = existing.get('lineage', {}).get('parent_id')
@@ -140,7 +144,10 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
     full_hex = candidate.stem
 
     yaml_obj = YAML()
-    data = yaml_obj.load(candidate.read_text(encoding='utf-8'))
+    try:
+        data = yaml_obj.load(candidate.read_text(encoding='utf-8'))
+    except (OSError, YAMLError) as exc:
+        raise ValueError(f"Cannot read manifest '{candidate.name}': {exc}") from exc
     if not isinstance(data, dict):
         raise ValueError(f"Invalid manifest format in '{candidate.name}'")
     expected_id = f'{_SHA256_PREFIX}{full_hex}'
@@ -164,6 +171,10 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
             warnings.warn(f"index.json is corrupted — reinitializing: {index_path}", stacklevel=2)
             index = {'version': 1, 'manifests': []}
     else:
+        index = {'version': 1, 'manifests': []}
+
+    if not isinstance(index, dict) or not isinstance(index.get('manifests'), list):
+        warnings.warn(f"index.json has invalid structure — reinitializing: {index_path}", stacklevel=2)
         index = {'version': 1, 'manifests': []}
 
     if not any(m['id'] == entry['id'] for m in index['manifests']):
