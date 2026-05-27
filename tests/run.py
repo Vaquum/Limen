@@ -815,6 +815,8 @@ from tests.test_yaml_store import test_commit_stores_file_in_committed_dir
 from tests.test_yaml_store import test_commit_is_idempotent
 from tests.test_yaml_store import test_commit_injects_lineage_section
 from tests.test_yaml_store import test_commit_updates_index_json
+from tests.test_yaml_store import test_commit_repairs_index_when_missing
+from tests.test_yaml_store import test_commit_timestamps_are_utc
 from tests.test_yaml_store import test_resolve_manifest_uri_returns_path_and_project_root
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_missing_manifest
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_tampered_lineage
@@ -825,6 +827,7 @@ from tests.test_cli_commit import test_run_commit_fails_on_invalid_yaml
 from tests.test_cli_commit import test_run_commit_rejects_development_mode
 from tests.test_cli_commit import test_run_commit_succeeds_for_production_yaml
 from tests.test_cli_commit import test_run_commit_is_idempotent
+from tests.test_cli_commit import test_run_commit_rejects_invalid_parent_id
 from tests.test_cli_commit import test_run_commit_uses_custom_message
 from tests.test_cli_ls import test_run_ls_fails_when_no_project_root
 from tests.test_cli_ls import test_run_ls_returns_true_when_no_index
@@ -1645,6 +1648,8 @@ tests = [
     test_commit_is_idempotent,
     test_commit_injects_lineage_section,
     test_commit_updates_index_json,
+    test_commit_repairs_index_when_missing,
+    test_commit_timestamps_are_utc,
     test_resolve_manifest_uri_returns_path_and_project_root,
     test_resolve_manifest_uri_rejects_missing_manifest,
     test_resolve_manifest_uri_rejects_tampered_lineage,
@@ -1655,6 +1660,7 @@ tests = [
     test_run_commit_rejects_development_mode,
     test_run_commit_succeeds_for_production_yaml,
     test_run_commit_is_idempotent,
+    test_run_commit_rejects_invalid_parent_id,
     test_run_commit_uses_custom_message,
     test_run_ls_fails_when_no_project_root,
     test_run_ls_returns_true_when_no_index,

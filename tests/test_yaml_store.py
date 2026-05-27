@@ -77,6 +77,25 @@ def test_commit_updates_index_json() -> None:
         assert index['manifests'][0]['name'] == 'test_experiment'
 
 
+def test_commit_repairs_index_when_missing() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        (project_root / 'manifests' / 'committed' / 'index.json').unlink()
+        _, already_existed = commit_manifest(yaml_path, project_root)
+        assert already_existed
+        index = json.loads((project_root / 'manifests' / 'committed' / 'index.json').read_text())
+        assert any(m['id'] == manifest_id for m in index['manifests'])
+
+
+def test_commit_timestamps_are_utc() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        commit_manifest(yaml_path, project_root)
+        index = json.loads((project_root / 'manifests' / 'committed' / 'index.json').read_text())
+        assert index['manifests'][0]['committed_at'].endswith('Z')
+
+
 def test_resolve_manifest_uri_returns_path_and_project_root() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
