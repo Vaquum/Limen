@@ -828,6 +828,8 @@ from tests.test_yaml_store import test_resolve_manifest_uri_rejects_tampered_lin
 from tests.test_yaml_store import test_resolve_manifest_uri_accepts_short_hash
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_ambiguous_short_hash
 from tests.test_yaml_store import test_update_index_deduplicates_pre_existing_entries
+from tests.test_yaml_store import test_commit_manifest_raises_on_invalid_yaml_content
+from tests.test_yaml_store import test_commit_manifest_raises_when_yaml_is_not_a_dict
 from tests.test_cli_commit import test_run_commit_fails_when_no_project_root
 from tests.test_cli_commit import test_run_commit_fails_on_invalid_yaml
 from tests.test_cli_commit import test_run_commit_rejects_development_mode
@@ -844,6 +846,8 @@ from tests.test_cli_ls import test_run_ls_returns_true_when_index_has_invalid_st
 from tests.test_cli_ls import test_run_ls_skips_malformed_entries
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_id
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_parent_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_name
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_committed_at
 from tests.test_cli_ls import test_run_ls_shows_parent_id_when_present
 from tests.test_cli_git_utils import test_git_executable_returns_path
 from tests.test_cli_git_utils import test_git_add_and_commit_creates_commit
@@ -1674,6 +1678,8 @@ tests = [
     test_resolve_manifest_uri_accepts_short_hash,
     test_resolve_manifest_uri_rejects_ambiguous_short_hash,
     test_update_index_deduplicates_pre_existing_entries,
+    test_commit_manifest_raises_on_invalid_yaml_content,
+    test_commit_manifest_raises_when_yaml_is_not_a_dict,
     test_run_commit_fails_when_no_project_root,
     test_run_commit_fails_on_invalid_yaml,
     test_run_commit_rejects_development_mode,
@@ -1690,6 +1696,8 @@ tests = [
     test_run_ls_skips_malformed_entries,
     test_run_ls_skips_entry_with_non_string_id,
     test_run_ls_skips_entry_with_non_string_parent_id,
+    test_run_ls_skips_entry_with_non_string_name,
+    test_run_ls_skips_entry_with_non_string_committed_at,
     test_run_ls_shows_parent_id_when_present,
     test_git_executable_returns_path,
     test_git_add_and_commit_creates_commit,

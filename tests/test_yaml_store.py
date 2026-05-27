@@ -192,6 +192,24 @@ def test_resolve_manifest_uri_rejects_ambiguous_short_hash() -> None:
             resolve_manifest_uri(f'manifest://sha256:{first_char}', project_root)
 
 
+def test_commit_manifest_raises_on_invalid_yaml_content() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, _ = _make_project(Path(d))
+        bad_yaml = project_root / 'bad.yaml'
+        bad_yaml.write_text(': invalid: yaml: {', encoding='utf-8')
+        with pytest.raises(ValueError, match='Cannot parse YAML'):
+            commit_manifest(bad_yaml, project_root)
+
+
+def test_commit_manifest_raises_when_yaml_is_not_a_dict() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, _ = _make_project(Path(d))
+        list_yaml = project_root / 'list.yaml'
+        list_yaml.write_text('- item1\n- item2\n', encoding='utf-8')
+        with pytest.raises(ValueError, match='expected a mapping'):
+            commit_manifest(list_yaml, project_root)
+
+
 def test_update_index_deduplicates_pre_existing_entries() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
