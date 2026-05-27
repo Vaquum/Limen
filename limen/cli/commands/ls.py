@@ -6,6 +6,7 @@ import click
 from limen.yaml.config import find_project_root
 from limen.yaml.config import _STORE_RELATIVE
 from limen.yaml.store import _MANIFEST_URI_SCHEME
+from limen.yaml.store import _SHA256_HEX_LENGTH
 from limen.yaml.store import _SHA256_PREFIX
 
 
@@ -49,23 +50,31 @@ def run_ls(start: Path) -> bool:
         return True
 
     _REQUIRED = {'id', 'name', 'committed_at'}
+    _HEX = frozenset('0123456789abcdef')
     click.echo(f"Committed manifests ({len(manifests)}):\n")
     p = len(_SHA256_PREFIX)
     for entry in manifests:
         entry_id = entry.get('id') if isinstance(entry, dict) else None
+        hex_part = entry_id[p:] if isinstance(entry_id, str) else ''
         if (not isinstance(entry, dict)
                 or not _REQUIRED.issubset(entry)
                 or not isinstance(entry_id, str)
                 or not entry_id.startswith(_SHA256_PREFIX)
+                or len(hex_part) != _SHA256_HEX_LENGTH
+                or not _HEX.issuperset(hex_part)
                 or not isinstance(entry.get('name'), str)
                 or not isinstance(entry.get('committed_at'), str)):
             click.secho('  ⚠ Skipping malformed entry in index.json.', fg='yellow')
             continue
-        short_id = entry_id[p:p + 8]
+        short_id = hex_part[:8]
         uri = f'{_MANIFEST_URI_SCHEME}{_SHA256_PREFIX}{short_id}'
         parent_id_val = entry.get('parent_id')
-        parent = (f"  parent: {parent_id_val[p:p + 8]}"
-                  if isinstance(parent_id_val, str) and parent_id_val.startswith(_SHA256_PREFIX)
+        parent_hex = parent_id_val[p:] if isinstance(parent_id_val, str) else ''
+        parent = (f"  parent: {parent_hex[:8]}"
+                  if (isinstance(parent_id_val, str)
+                      and parent_id_val.startswith(_SHA256_PREFIX)
+                      and len(parent_hex) == _SHA256_HEX_LENGTH
+                      and _HEX.issuperset(parent_hex))
                   else '')
         click.echo(f"  {uri}  {entry['name']:<30}  {entry['committed_at']}{parent}")
 
