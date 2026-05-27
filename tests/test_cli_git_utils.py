@@ -13,9 +13,9 @@ def test_git_executable_returns_path() -> None:
 
 
 def test_git_add_and_commit_returns_false_when_git_not_found() -> None:
-    with tempfile.TemporaryDirectory() as d:
-        with patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError):
-            result = git_add_and_commit(Path(d), Path('file.txt'), 'msg')
+    with tempfile.TemporaryDirectory() as d, \
+         patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError):
+        result = git_add_and_commit(Path(d), Path('file.txt'), 'msg')
     assert result is False
 
 
