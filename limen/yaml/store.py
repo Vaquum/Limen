@@ -9,9 +9,12 @@ from typing import Any
 from ruamel.yaml import YAML
 
 from limen.yaml.config import _STORE_RELATIVE
+from limen.yaml.config import find_project_root
 
 
 _SHA256_PREFIX = 'sha256:'
+_MANIFEST_URI_SCHEME = 'manifest://'
+_SHA256_HEX_LENGTH = 64
 
 
 def commit_manifest(yaml_path: Path,
@@ -73,6 +76,72 @@ def commit_manifest(yaml_path: Path,
     _update_index(store_path, entry)
 
     return manifest_id, False
+
+
+def resolve_manifest_uri(uri: str, start: Path) -> Path:
+
+    '''
+    Resolve a manifest:// URI to a filesystem path.
+
+    Verifies that lineage.id in the committed file matches the URI hash,
+    catching cases where the wrong file is at the expected path.
+
+    Args:
+        uri (str): URI of the form manifest://sha256:<hex>
+        start (Path): Directory to start searching for the project root
+
+    Returns:
+        Path: Resolved path to the committed manifest file
+
+    Raises:
+        ValueError: If the URI is malformed, the project root is not found,
+            the manifest is not in the store, or lineage.id does not match
+
+    '''
+
+    if not uri.startswith(_MANIFEST_URI_SCHEME):
+        raise ValueError(f"Not a manifest URI: '{uri}'")
+
+    ref = uri[len(_MANIFEST_URI_SCHEME):]
+    if not ref.startswith(_SHA256_PREFIX):
+        raise ValueError(f"Manifest URI must use sha256 scheme: '{uri}'")
+
+    hex_hash = ref[len(_SHA256_PREFIX):]
+
+    project_root = find_project_root(start)
+    if project_root is None:
+        raise ValueError('No limen project found. Run from inside a project directory.')
+
+    store_path = project_root / _STORE_RELATIVE
+
+    if len(hex_hash) == _SHA256_HEX_LENGTH:
+        candidate = store_path / f'{hex_hash}.yaml'
+        if not candidate.exists():
+            raise ValueError(f"Manifest not found in store: '{uri}'")
+    else:
+        matches = [p for p in store_path.glob('*.yaml') if p.stem.startswith(hex_hash)]
+        if not matches:
+            raise ValueError(f"Manifest not found in store: '{uri}'")
+        if len(matches) > 1:
+            shorts = ', '.join(p.stem[:12] for p in matches)
+            raise ValueError(f"Ambiguous short hash '{hex_hash}' matches multiple manifests: {shorts}")
+        candidate = matches[0]
+
+    full_hex = candidate.stem
+
+    yaml_obj = YAML()
+    data = yaml_obj.load(candidate.read_text(encoding='utf-8'))
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid manifest format in '{candidate.name}'")
+    expected_id = f'{_SHA256_PREFIX}{full_hex}'
+    actual_id = data.get('lineage', {}).get('id')
+    if actual_id != expected_id:
+        raise ValueError(
+            f"Integrity check failed: '{candidate.name}' lineage.id "
+            f"does not match expected '{expected_id}'"
+        )
+
+    return candidate
 
 
 def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
