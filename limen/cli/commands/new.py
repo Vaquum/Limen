@@ -54,7 +54,11 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
 
 def _clone_template(project_path: Path) -> bool:
 
-    git = git_executable()
+    try:
+        git = git_executable()
+    except FileNotFoundError:
+        click.secho('  ✗ git not found on PATH — install git and try again.', fg='red')
+        return False
     click.echo('  Cloning template ...')
     result = subprocess.run(
         [git, 'clone', '--depth=1', _TEMPLATE_REPO, str(project_path)],
@@ -91,6 +95,9 @@ def _clone_template(project_path: Path) -> bool:
 
 def _write_backup_remote(project_path: Path, remote_url: str) -> None:
 
+    if '"' in remote_url or '\n' in remote_url:
+        click.secho('  ⚠ Backup remote URL contains invalid characters — skipping.', fg='yellow')
+        return
     toml_path = project_path / 'limen.toml'
     text = toml_path.read_text(encoding='utf-8')
     updated = text.replace('backup_remote = ""', f'backup_remote = "{remote_url}"')

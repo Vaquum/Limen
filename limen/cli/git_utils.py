@@ -37,7 +37,10 @@ def git_add_and_commit(repo_root: Path, path: Path, message: str) -> bool:
 
     '''
 
-    git = git_executable()
+    try:
+        git = git_executable()
+    except FileNotFoundError:
+        return False
     add = subprocess.run([git, 'add', str(path)], cwd=repo_root, capture_output=True, check=False)
     if add.returncode != 0:
         return False
