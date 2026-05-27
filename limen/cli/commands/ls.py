@@ -52,12 +52,19 @@ def run_ls(start: Path) -> bool:
     click.echo(f"Committed manifests ({len(manifests)}):\n")
     p = len(_SHA256_PREFIX)
     for entry in manifests:
-        if not isinstance(entry, dict) or not _REQUIRED.issubset(entry):
+        entry_id = entry.get('id') if isinstance(entry, dict) else None
+        if (not isinstance(entry, dict)
+                or not _REQUIRED.issubset(entry)
+                or not isinstance(entry_id, str)
+                or not entry_id.startswith(_SHA256_PREFIX)):
             click.secho('  ⚠ Skipping malformed entry in index.json.', fg='yellow')
             continue
-        short_id = entry['id'][p:p + 8]
+        short_id = entry_id[p:p + 8]
         uri = f'{_MANIFEST_URI_SCHEME}{_SHA256_PREFIX}{short_id}'
-        parent = f"  parent: {entry['parent_id'][p:p + 8]}" if entry.get('parent_id') else ''
+        parent_id_val = entry.get('parent_id')
+        parent = (f"  parent: {parent_id_val[p:p + 8]}"
+                  if isinstance(parent_id_val, str) and parent_id_val.startswith(_SHA256_PREFIX)
+                  else '')
         click.echo(f"  {uri}  {entry['name']:<30}  {entry['committed_at']}{parent}")
 
     return True

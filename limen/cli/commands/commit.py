@@ -63,7 +63,12 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
     manifest_id, already_existed = commit_manifest(yaml_path, project_root, parent_id)
 
     if already_existed:
-        click.secho(f"\n  Already committed: {manifest_id}", fg='yellow')
+        short_id = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
+        repair_msg = f'repair: restore index for {_SHA256_PREFIX}{short_id}'
+        if git_add_and_commit(project_root, Path('manifests') / 'committed', repair_msg):
+            click.secho(f"\n  ✓ Repaired and committed {manifest_id}", fg='green')
+        else:
+            click.secho(f"\n  Already committed: {manifest_id}", fg='yellow')
         return True
 
     name = str(yaml_dict.get('metadata', {}).get('name', yaml_path.stem))
