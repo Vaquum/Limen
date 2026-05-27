@@ -1,0 +1,54 @@
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+from limen.cli.commands.new import run_new
+
+
+def test_run_new_fails_when_directory_exists() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        existing = Path(d) / 'my-project'
+        existing.mkdir()
+        assert run_new(str(existing), None) is False
+
+
+def test_run_new_succeeds_with_mocked_clone() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'my-project'
+        project_path.mkdir()
+        (project_path / 'limen.toml').write_text('backup_remote = ""\n')
+
+        def fake_clone(path: Path) -> bool:
+            return True
+
+        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone), \
+             patch('click.prompt', return_value=''):
+            result = run_new(str(project_path.parent / 'new-project'), None)
+
+        assert result is True
+
+
+def test_run_new_sets_backup_remote() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'new-project'
+
+        def fake_clone(path: Path) -> bool:
+            path.mkdir(parents=True, exist_ok=True)
+            (path / 'limen.toml').write_text('backup_remote = ""\n')
+            return True
+
+        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone):
+            result = run_new(str(project_path), 'git@github.com:user/repo.git')
+
+        assert result is True
+        assert 'git@github.com:user/repo.git' in (project_path / 'limen.toml').read_text()
+
+
+def test_run_new_clone_failure_returns_false() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'new-project'
+
+        with patch('limen.cli.commands.new._clone_template', return_value=False):
+            result = run_new(str(project_path), None)
+
+        assert result is False
