@@ -62,7 +62,6 @@ UEL_OPTIONAL = {
     'pruning_strategies',
     'feedback_interval',
     'checkpoint_interval',
-    'experiment_dir',
     'intra_callback',
     'prep_each_round',
     'output_format',

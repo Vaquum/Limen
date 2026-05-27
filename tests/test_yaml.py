@@ -740,6 +740,13 @@ def test_validate_error_for_uel_checkpoint_interval_wrong_type() -> None:
         assert any('checkpoint_interval' in e.path for e in result.errors)
 
 
+def test_validate_warns_for_uel_experiment_dir() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['experiment_dir'] = '/some/path'
+    result = validate(yaml_dict)
+    assert any('experiment_dir' in w.path for w in result.warnings)
+
+
 def test_validate_error_for_manifest_ref_not_in_sfd_params() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['indicators'][0]['params']['period'] = '{unknown_param}'

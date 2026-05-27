@@ -75,6 +75,7 @@ from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_output_path_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_prep_each_round_wrong_type
+from tests.test_yaml import test_validate_warns_for_uel_experiment_dir
 from tests.test_yaml import test_validate_error_for_uel_feedback_interval_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_checkpoint_interval_wrong_type
 from tests.test_yaml import test_validate_error_for_manifest_ref_not_in_sfd_params
@@ -805,6 +806,63 @@ from tests.test_proto_cohort import test_predict_return_probs_probability_mode_r
 from tests.test_proto_cohort import test_predict_return_probs_single_member_returns_sample_major_column
 from tests.test_proto_cohort import test_majority_vote_uses_binary_votes_for_continuous_fallback_members
 from tests.test_proto_cohort import test_single_member_fallback_predict_returns_binary_votes
+from tests.test_yaml_config import test_find_project_root_walks_up_from_subdirectory
+from tests.test_yaml_config import test_find_project_root_returns_none_when_not_found
+from tests.test_yaml_config import test_get_store_path_raises_when_no_project_root
+from tests.test_yaml_config import test_get_store_path_returns_committed_dir
+from tests.test_yaml_config import test_read_limen_toml_returns_parsed_contents
+from tests.test_yaml_config import test_read_limen_toml_raises_when_file_missing
+from tests.test_yaml_store import test_commit_stores_file_in_committed_dir
+from tests.test_yaml_store import test_commit_is_idempotent
+from tests.test_yaml_store import test_commit_injects_lineage_section
+from tests.test_yaml_store import test_commit_updates_index_json
+from tests.test_yaml_store import test_commit_repairs_index_when_missing
+from tests.test_yaml_store import test_commit_recovers_from_corrupt_index
+from tests.test_yaml_store import test_commit_recovers_from_structurally_invalid_index
+from tests.test_yaml_store import test_commit_timestamps_are_utc
+from tests.test_yaml_store import test_resolve_manifest_uri_returns_path_and_project_root
+from tests.test_yaml_store import test_resolve_manifest_uri_raises_on_corrupt_manifest_file
+from tests.test_yaml_store import test_resolve_manifest_uri_rejects_malformed_hash
+from tests.test_yaml_store import test_resolve_manifest_uri_rejects_missing_manifest
+from tests.test_yaml_store import test_resolve_manifest_uri_rejects_tampered_lineage
+from tests.test_yaml_store import test_resolve_manifest_uri_accepts_short_hash
+from tests.test_yaml_store import test_resolve_manifest_uri_rejects_ambiguous_short_hash
+from tests.test_yaml_store import test_update_index_deduplicates_pre_existing_entries
+from tests.test_yaml_store import test_commit_manifest_raises_on_invalid_yaml_content
+from tests.test_yaml_store import test_commit_manifest_raises_when_yaml_is_not_a_dict
+from tests.test_yaml_store import test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict
+from tests.test_cli_commit import test_run_commit_fails_when_no_project_root
+from tests.test_cli_commit import test_run_commit_fails_on_invalid_yaml
+from tests.test_cli_commit import test_run_commit_rejects_development_mode
+from tests.test_cli_commit import test_run_commit_succeeds_for_production_yaml
+from tests.test_cli_commit import test_run_commit_is_idempotent
+from tests.test_cli_commit import test_run_commit_rejects_invalid_parent_id
+from tests.test_cli_commit import test_run_commit_uses_custom_message
+from tests.test_cli_ls import test_run_ls_fails_when_no_project_root
+from tests.test_cli_ls import test_run_ls_returns_true_when_no_index
+from tests.test_cli_ls import test_run_ls_returns_true_when_empty_manifests
+from tests.test_cli_ls import test_run_ls_lists_committed_manifests
+from tests.test_cli_ls import test_run_ls_returns_true_when_index_is_corrupt
+from tests.test_cli_ls import test_run_ls_returns_true_when_index_has_invalid_structure
+from tests.test_cli_ls import test_run_ls_skips_malformed_entries
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_truncated_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_hex_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_parent_id
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_name
+from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_committed_at
+from tests.test_cli_ls import test_run_ls_shows_parent_id_when_present
+from tests.test_cli_git_utils import test_git_executable_returns_path
+from tests.test_cli_git_utils import test_git_add_and_commit_returns_false_when_git_not_found
+from tests.test_cli_git_utils import test_git_add_and_commit_creates_commit
+from tests.test_cli_new import test_run_new_fails_when_directory_exists
+from tests.test_cli_new import test_run_new_succeeds_with_mocked_clone
+from tests.test_cli_new import test_run_new_sets_backup_remote
+from tests.test_cli_new import test_run_new_fails_when_git_not_found
+from tests.test_cli_new import test_run_new_skips_backup_remote_with_invalid_chars
+from tests.test_cli_new import test_run_new_clone_failure_returns_false
+from tests.test_cli_new import test_run_new_warns_when_backup_remote_placeholder_missing
+from tests.test_cli_new import test_clone_template_fails_fast_on_git_init_failure
 
 tests = [
     test_param_domain_init,
@@ -1124,6 +1182,7 @@ tests = [
     test_validate_error_for_uel_search_strategy_wrong_type,
     test_validate_error_for_uel_output_path_wrong_type,
     test_validate_error_for_uel_prep_each_round_wrong_type,
+    test_validate_warns_for_uel_experiment_dir,
     test_validate_error_for_uel_feedback_interval_wrong_type,
     test_validate_error_for_uel_checkpoint_interval_wrong_type,
     test_validate_error_for_manifest_ref_not_in_sfd_params,
@@ -1603,6 +1662,63 @@ tests = [
     test_validate_probability_range_rejects_non_finite_values,
     test_cohort_is_drop_in_decoder_replacement_for_dict_input,
     test_member_failure_propagates_and_fails_whole_call,
+    test_find_project_root_walks_up_from_subdirectory,
+    test_find_project_root_returns_none_when_not_found,
+    test_get_store_path_raises_when_no_project_root,
+    test_get_store_path_returns_committed_dir,
+    test_read_limen_toml_returns_parsed_contents,
+    test_read_limen_toml_raises_when_file_missing,
+    test_commit_stores_file_in_committed_dir,
+    test_commit_is_idempotent,
+    test_commit_injects_lineage_section,
+    test_commit_updates_index_json,
+    test_commit_repairs_index_when_missing,
+    test_commit_recovers_from_corrupt_index,
+    test_commit_recovers_from_structurally_invalid_index,
+    test_commit_timestamps_are_utc,
+    test_resolve_manifest_uri_returns_path_and_project_root,
+    test_resolve_manifest_uri_raises_on_corrupt_manifest_file,
+    test_resolve_manifest_uri_rejects_malformed_hash,
+    test_resolve_manifest_uri_rejects_missing_manifest,
+    test_resolve_manifest_uri_rejects_tampered_lineage,
+    test_resolve_manifest_uri_accepts_short_hash,
+    test_resolve_manifest_uri_rejects_ambiguous_short_hash,
+    test_update_index_deduplicates_pre_existing_entries,
+    test_commit_manifest_raises_on_invalid_yaml_content,
+    test_commit_manifest_raises_when_yaml_is_not_a_dict,
+    test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict,
+    test_run_commit_fails_when_no_project_root,
+    test_run_commit_fails_on_invalid_yaml,
+    test_run_commit_rejects_development_mode,
+    test_run_commit_succeeds_for_production_yaml,
+    test_run_commit_is_idempotent,
+    test_run_commit_rejects_invalid_parent_id,
+    test_run_commit_uses_custom_message,
+    test_run_ls_fails_when_no_project_root,
+    test_run_ls_returns_true_when_no_index,
+    test_run_ls_returns_true_when_empty_manifests,
+    test_run_ls_lists_committed_manifests,
+    test_run_ls_returns_true_when_index_is_corrupt,
+    test_run_ls_returns_true_when_index_has_invalid_structure,
+    test_run_ls_skips_malformed_entries,
+    test_run_ls_skips_entry_with_non_string_id,
+    test_run_ls_skips_entry_with_truncated_id,
+    test_run_ls_skips_entry_with_non_hex_id,
+    test_run_ls_skips_entry_with_non_string_parent_id,
+    test_run_ls_skips_entry_with_non_string_name,
+    test_run_ls_skips_entry_with_non_string_committed_at,
+    test_run_ls_shows_parent_id_when_present,
+    test_git_executable_returns_path,
+    test_git_add_and_commit_returns_false_when_git_not_found,
+    test_git_add_and_commit_creates_commit,
+    test_run_new_fails_when_directory_exists,
+    test_run_new_succeeds_with_mocked_clone,
+    test_run_new_sets_backup_remote,
+    test_run_new_fails_when_git_not_found,
+    test_run_new_skips_backup_remote_with_invalid_chars,
+    test_run_new_clone_failure_returns_false,
+    test_run_new_warns_when_backup_remote_placeholder_missing,
+    test_clone_template_fails_fast_on_git_init_failure,
 ]
 
 # Configure logging
