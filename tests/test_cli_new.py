@@ -71,6 +71,30 @@ def test_run_new_warns_when_backup_remote_placeholder_missing() -> None:
         assert 'git@github.com:user/repo.git' not in (project_path / 'limen.toml').read_text()
 
 
+def test_run_new_fails_when_git_not_found() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'new-project'
+        with patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError):
+            result = run_new(str(project_path), None)
+    assert result is False
+
+
+def test_run_new_skips_backup_remote_with_invalid_chars() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'new-project'
+
+        def fake_clone(path: Path) -> bool:
+            path.mkdir(parents=True, exist_ok=True)
+            (path / 'limen.toml').write_text('backup_remote = ""\n')
+            return True
+
+        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone):
+            result = run_new(str(project_path), 'git@github.com:user/"bad".git')
+
+        assert result is True
+        assert '"bad"' not in (project_path / 'limen.toml').read_text()
+
+
 def test_clone_template_fails_fast_on_git_init_failure() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_path = Path(d) / 'new-project'

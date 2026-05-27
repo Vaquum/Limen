@@ -1,6 +1,7 @@
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from limen.cli.git_utils import git_add_and_commit
 from limen.cli.git_utils import git_executable
@@ -9,6 +10,13 @@ from limen.cli.git_utils import git_executable
 def test_git_executable_returns_path() -> None:
     path = git_executable()
     assert 'git' in path
+
+
+def test_git_add_and_commit_returns_false_when_git_not_found() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        with patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError):
+            result = git_add_and_commit(Path(d), Path('file.txt'), 'msg')
+    assert result is False
 
 
 def test_git_add_and_commit_creates_commit() -> None:

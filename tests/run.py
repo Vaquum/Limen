@@ -851,10 +851,13 @@ from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_name
 from tests.test_cli_ls import test_run_ls_skips_entry_with_non_string_committed_at
 from tests.test_cli_ls import test_run_ls_shows_parent_id_when_present
 from tests.test_cli_git_utils import test_git_executable_returns_path
+from tests.test_cli_git_utils import test_git_add_and_commit_returns_false_when_git_not_found
 from tests.test_cli_git_utils import test_git_add_and_commit_creates_commit
 from tests.test_cli_new import test_run_new_fails_when_directory_exists
 from tests.test_cli_new import test_run_new_succeeds_with_mocked_clone
 from tests.test_cli_new import test_run_new_sets_backup_remote
+from tests.test_cli_new import test_run_new_fails_when_git_not_found
+from tests.test_cli_new import test_run_new_skips_backup_remote_with_invalid_chars
 from tests.test_cli_new import test_run_new_clone_failure_returns_false
 from tests.test_cli_new import test_run_new_warns_when_backup_remote_placeholder_missing
 from tests.test_cli_new import test_clone_template_fails_fast_on_git_init_failure
@@ -1702,10 +1705,13 @@ tests = [
     test_run_ls_skips_entry_with_non_string_committed_at,
     test_run_ls_shows_parent_id_when_present,
     test_git_executable_returns_path,
+    test_git_add_and_commit_returns_false_when_git_not_found,
     test_git_add_and_commit_creates_commit,
     test_run_new_fails_when_directory_exists,
     test_run_new_succeeds_with_mocked_clone,
     test_run_new_sets_backup_remote,
+    test_run_new_fails_when_git_not_found,
+    test_run_new_skips_backup_remote_with_invalid_chars,
     test_run_new_clone_failure_returns_false,
     test_run_new_warns_when_backup_remote_placeholder_missing,
     test_clone_template_fails_fast_on_git_init_failure,
