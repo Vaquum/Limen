@@ -27,7 +27,9 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
 
     if parent_id is not None:
         hex_part = parent_id[len(_SHA256_PREFIX):]
-        if not parent_id.startswith(_SHA256_PREFIX) or len(hex_part) != _SHA256_HEX_LENGTH:
+        if (not parent_id.startswith(_SHA256_PREFIX)
+                or len(hex_part) != _SHA256_HEX_LENGTH
+                or not all(c in '0123456789abcdef' for c in hex_part)):
             click.secho(
                 f"  ✗ Invalid parent ID: '{parent_id}'\n"
                 '    Expected sha256:<64-hex-chars>.',
