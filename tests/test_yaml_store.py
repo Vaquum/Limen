@@ -190,3 +190,21 @@ def test_resolve_manifest_uri_rejects_ambiguous_short_hash() -> None:
         (store / f'{clone_stem}.yaml').write_text(existing.read_text())
         with pytest.raises(ValueError, match='Ambiguous'):
             resolve_manifest_uri(f'manifest://sha256:{first_char}', project_root)
+
+
+def test_update_index_deduplicates_pre_existing_entries() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        store = project_root / 'manifests' / 'committed'
+        index_path = store / 'index.json'
+        index = json.loads(index_path.read_text())
+        # manually inject a duplicate entry
+        index['manifests'].append(index['manifests'][0])
+        index_path.write_text(json.dumps(index))
+        assert len(json.loads(index_path.read_text())['manifests']) == 2
+        # re-committing the same YAML should deduplicate
+        commit_manifest(yaml_path, project_root)
+        result = json.loads(index_path.read_text())
+        ids = [m['id'] for m in result['manifests']]
+        assert ids.count(manifest_id) == 1

@@ -827,6 +827,7 @@ from tests.test_yaml_store import test_resolve_manifest_uri_rejects_missing_mani
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_tampered_lineage
 from tests.test_yaml_store import test_resolve_manifest_uri_accepts_short_hash
 from tests.test_yaml_store import test_resolve_manifest_uri_rejects_ambiguous_short_hash
+from tests.test_yaml_store import test_update_index_deduplicates_pre_existing_entries
 from tests.test_cli_commit import test_run_commit_fails_when_no_project_root
 from tests.test_cli_commit import test_run_commit_fails_on_invalid_yaml
 from tests.test_cli_commit import test_run_commit_rejects_development_mode
@@ -850,6 +851,8 @@ from tests.test_cli_new import test_run_new_fails_when_directory_exists
 from tests.test_cli_new import test_run_new_succeeds_with_mocked_clone
 from tests.test_cli_new import test_run_new_sets_backup_remote
 from tests.test_cli_new import test_run_new_clone_failure_returns_false
+from tests.test_cli_new import test_run_new_warns_when_backup_remote_placeholder_missing
+from tests.test_cli_new import test_clone_template_fails_fast_on_git_init_failure
 
 tests = [
     test_param_domain_init,
@@ -1670,6 +1673,7 @@ tests = [
     test_resolve_manifest_uri_rejects_tampered_lineage,
     test_resolve_manifest_uri_accepts_short_hash,
     test_resolve_manifest_uri_rejects_ambiguous_short_hash,
+    test_update_index_deduplicates_pre_existing_entries,
     test_run_commit_fails_when_no_project_root,
     test_run_commit_fails_on_invalid_yaml,
     test_run_commit_rejects_development_mode,
@@ -1693,6 +1697,8 @@ tests = [
     test_run_new_succeeds_with_mocked_clone,
     test_run_new_sets_backup_remote,
     test_run_new_clone_failure_returns_false,
+    test_run_new_warns_when_backup_remote_placeholder_missing,
+    test_clone_template_fails_fast_on_git_init_failure,
 ]
 
 # Configure logging
