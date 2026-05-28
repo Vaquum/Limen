@@ -29,10 +29,10 @@ from tests.test_yaml import test_validate_passes_valid_ml_yaml
 from tests.test_yaml import test_validate_passes_valid_rule_based_yaml
 from tests.test_yaml import test_validate_passes_valid_yaml_with_split_dates
 from tests.test_yaml import test_validate_error_for_missing_required_field
-from tests.test_yaml import test_validate_error_when_both_split_config_and_split_dates_present
+from tests.test_yaml import test_validate_error_when_split_config_present
 from tests.test_yaml import test_validate_error_for_invalid_split_date_format
 from tests.test_yaml import test_validate_error_for_split_dates_out_of_order
-from tests.test_yaml import test_validate_error_for_split_config_invalid_value
+from tests.test_yaml import test_validate_error_for_split_config_present
 from tests.test_yaml import test_validate_error_for_missing_mode
 from tests.test_yaml import test_validate_error_for_unsafe_metadata_name
 from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
@@ -41,7 +41,7 @@ from tests.test_yaml import test_validate_error_for_non_string_sfd_param_key
 from tests.test_yaml import test_validate_non_string_sfd_param_key_does_not_crash
 from tests.test_yaml import test_validate_warning_for_unused_sfd_param
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
-from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
+from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_dates
 from tests.test_yaml import test_validate_error_for_unresolvable_reference_architecture
 from tests.test_yaml import test_validate_error_for_unresolvable_target_class
 from tests.test_yaml import test_validate_error_for_callable_path_resolving_to_module
@@ -82,9 +82,13 @@ from tests.test_yaml import test_validate_error_for_manifest_ref_not_in_sfd_para
 from tests.test_yaml import test_validate_no_error_when_manifest_ref_is_in_sfd_params
 from tests.test_yaml import test_validate_no_unused_param_warning_for_pca_defaults
 from tests.test_yaml import test_build_manifest_data_source_method_is_callable_with_correct_params
-from tests.test_yaml import test_build_manifest_test_data_source_method_is_callable
-from tests.test_yaml import test_build_manifest_split_config_tuple_is_correct
-from tests.test_yaml import test_build_manifest_split_dates_calls_set_split_dates
+from tests.test_yaml import test_build_manifest_data_source_date_limits_injected_from_split_dates
+from tests.test_yaml import test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates
+from tests.test_yaml import test_validate_error_for_test_data_source_in_yaml
+from tests.test_yaml import test_validate_error_for_start_date_limit_in_data_source_params
+from tests.test_yaml import test_validate_error_for_end_date_limit_in_data_source_params
+from tests.test_yaml import test_build_manifest_split_dates_is_correct
+from tests.test_yaml import test_build_manifest_split_dates_all_six_dates_stored
 from tests.test_yaml import test_build_manifest_indicator_include_if_stored_on_entry
 from tests.test_yaml import test_build_manifest_indicator_include_if_none_when_absent
 from tests.test_yaml import test_build_manifest_feature_include_if_stored_on_entry
@@ -1136,10 +1140,10 @@ tests = [
     test_validate_passes_valid_rule_based_yaml,
     test_validate_passes_valid_yaml_with_split_dates,
     test_validate_error_for_missing_required_field,
-    test_validate_error_when_both_split_config_and_split_dates_present,
+    test_validate_error_when_split_config_present,
     test_validate_error_for_invalid_split_date_format,
     test_validate_error_for_split_dates_out_of_order,
-    test_validate_error_for_split_config_invalid_value,
+    test_validate_error_for_split_config_present,
     test_validate_error_for_missing_mode,
     test_validate_error_for_unsafe_metadata_name,
     test_validate_error_for_empty_sfd_param_list,
@@ -1148,7 +1152,7 @@ tests = [
     test_validate_non_string_sfd_param_key_does_not_crash,
     test_validate_warning_for_unused_sfd_param,
     test_validate_warning_for_unknown_key_in_data_source,
-    test_validate_warning_for_unknown_key_in_split_config,
+    test_validate_warning_for_unknown_key_in_split_dates,
     test_validate_error_for_unresolvable_reference_architecture,
     test_validate_error_for_unresolvable_target_class,
     test_validate_error_for_callable_path_resolving_to_module,
@@ -1194,9 +1198,13 @@ tests = [
     test_resolve_func_params_raises_on_unresolvable_limen_path,
     test_resolve_func_params_raises_on_limen_module_path,
     test_build_manifest_data_source_method_is_callable_with_correct_params,
-    test_build_manifest_test_data_source_method_is_callable,
-    test_build_manifest_split_config_tuple_is_correct,
-    test_build_manifest_split_dates_calls_set_split_dates,
+    test_build_manifest_data_source_date_limits_injected_from_split_dates,
+    test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates,
+    test_validate_error_for_test_data_source_in_yaml,
+    test_validate_error_for_start_date_limit_in_data_source_params,
+    test_validate_error_for_end_date_limit_in_data_source_params,
+    test_build_manifest_split_dates_is_correct,
+    test_build_manifest_split_dates_all_six_dates_stored,
     test_build_manifest_indicator_include_if_stored_on_entry,
     test_build_manifest_indicator_include_if_none_when_absent,
     test_build_manifest_feature_include_if_stored_on_entry,

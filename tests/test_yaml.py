@@ -37,15 +37,13 @@ _MINIMAL_ML_YAML = dedent('''\
           method: limen.data.HistoricalData.get_spot_klines
           params:
             kline_size: 3600
-        test_data_source:
-          method: limen.data.HistoricalData.get_spot_klines
-          params:
-            kline_size: 7200
-            n_rows: 500
-        split_config:
-          train: 8
-          val: 1
-          test: 2
+        split_dates:
+          train_start: "2022-01-01"
+          train_end: "2022-07-01"
+          val_start: "2022-07-01"
+          val_end: "2022-10-01"
+          test_start: "2022-10-01"
+          test_end: "2023-01-01"
         indicators:
           - func: limen.indicators.roc
             params:
@@ -130,10 +128,13 @@ _MINIMAL_RULE_BASED_YAML = dedent('''\
           method: limen.data.HistoricalData.get_spot_klines
           params:
             kline_size: 3600
-        split_config:
-          train: 8
-          val: 1
-          test: 2
+        split_dates:
+          train_start: "2022-01-01"
+          train_end: "2022-07-01"
+          val_start: "2022-07-01"
+          val_end: "2022-10-01"
+          test_start: "2022-10-01"
+          test_end: "2023-01-01"
         strategy:
           conditions:
             - id: rsi_low
@@ -296,39 +297,28 @@ def test_validate_error_for_invalid_indicator_func_in_rule_based_manifest() -> N
 
 def test_validate_passes_valid_yaml_with_split_dates() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    del yaml_dict['sfd']['manifest']['split_config']
-    yaml_dict['sfd']['manifest']['split_dates'] = {
-        'train_start': '2022-01-01', 'train_end': '2022-07-01',
-        'val_start': '2022-07-01', 'val_end': '2022-10-01',
-        'test_start': '2022-10-01', 'test_end': '2023-01-01',
-    }
     result = validate(yaml_dict)
     assert result.valid
 
 
 def test_validate_error_for_missing_required_field() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    del yaml_dict['sfd']['manifest']['split_config']
+    del yaml_dict['sfd']['manifest']['split_dates']
     result = validate(yaml_dict)
     assert not result.valid
-    assert any('split_config' in e.message for e in result.errors)
+    assert any('split_dates' in e.message for e in result.errors)
 
 
-def test_validate_error_when_both_split_config_and_split_dates_present() -> None:
+def test_validate_error_when_split_config_present() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    yaml_dict['sfd']['manifest']['split_dates'] = {
-        'train_start': '2022-01-01', 'train_end': '2022-07-01',
-        'val_start': '2022-07-01', 'val_end': '2022-10-01',
-        'test_start': '2022-10-01', 'test_end': '2023-01-01',
-    }
+    yaml_dict['sfd']['manifest']['split_config'] = {'train': 8, 'val': 1, 'test': 2}
     result = validate(yaml_dict)
     assert not result.valid
-    assert any('split_config' in e.message and 'split_dates' in e.message for e in result.errors)
+    assert any('split_config' in e.message and 'not supported' in e.message for e in result.errors)
 
 
 def test_validate_error_for_invalid_split_date_format() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    del yaml_dict['sfd']['manifest']['split_config']
     yaml_dict['sfd']['manifest']['split_dates'] = {
         'train_start': '01/01/2022', 'train_end': '2022-07-01',
         'val_start': '2022-07-01', 'val_end': '2022-10-01',
@@ -341,7 +331,6 @@ def test_validate_error_for_invalid_split_date_format() -> None:
 
 def test_validate_error_for_split_dates_out_of_order() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    del yaml_dict['sfd']['manifest']['split_config']
     yaml_dict['sfd']['manifest']['split_dates'] = {
         'train_start': '2022-07-01', 'train_end': '2022-01-01',
         'val_start': '2022-07-01', 'val_end': '2022-10-01',
@@ -352,13 +341,13 @@ def test_validate_error_for_split_dates_out_of_order() -> None:
     assert any('non-decreasing' in e.message for e in result.errors)
 
 
-def test_validate_error_for_split_config_invalid_value() -> None:
-    for key, value in [('train', 0), ('val', -1)]:
-        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-        yaml_dict['sfd']['manifest']['split_config'][key] = value
-        result = validate(yaml_dict)
-        assert not result.valid
-        assert any(key in e.message for e in result.errors)
+def test_validate_error_for_split_config_present() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    del yaml_dict['sfd']['manifest']['split_dates']
+    yaml_dict['sfd']['manifest']['split_config'] = {'train': 8, 'val': 1, 'test': 2}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('split_config' in e.message and 'not supported' in e.message for e in result.errors)
 
 
 def test_validate_error_for_missing_mode() -> None:
@@ -424,9 +413,9 @@ def test_validate_warning_for_unknown_key_in_data_source() -> None:
     assert any('typo_key' in w.message for w in result.warnings)
 
 
-def test_validate_warning_for_unknown_key_in_split_config() -> None:
+def test_validate_warning_for_unknown_key_in_split_dates() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    yaml_dict['sfd']['manifest']['split_config']['typo_key'] = 1
+    yaml_dict['sfd']['manifest']['split_dates']['typo_key'] = '2022-01-01'
     result = validate(yaml_dict)
     assert any('typo_key' in w.message for w in result.warnings)
 
@@ -780,31 +769,69 @@ def test_build_manifest_data_source_method_is_callable_with_correct_params() -> 
     assert cfg.params['kline_size'] == 3600
 
 
-def test_build_manifest_test_data_source_method_is_callable() -> None:
+def test_build_manifest_data_source_date_limits_injected_from_split_dates() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     manifest = build_manifest(yaml_dict)
-    cfg = manifest.test_data_source_config
-    assert callable(cfg.method)
-    assert cfg.params['n_rows'] == 500
+    params = manifest.data_source_config.params
+    assert params['start_date_limit'] == '2022-01-01'
+    assert params['end_date_limit'] == '2023-01-01'
 
 
-def test_build_manifest_split_config_tuple_is_correct() -> None:
+def test_validate_error_for_test_data_source_in_yaml() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    assert build_manifest(yaml_dict).split_config == (8, 1, 2)
-
-
-def test_build_manifest_split_dates_calls_set_split_dates() -> None:
-    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    del yaml_dict['sfd']['manifest']['split_config']
-    yaml_dict['sfd']['manifest']['split_dates'] = {
-        'train_start': '2022-01-01', 'train_end': '2022-07-01',
-        'val_start': '2022-07-01', 'val_end': '2022-10-01',
-        'test_start': '2022-10-01', 'test_end': '2023-01-01',
+    yaml_dict['sfd']['manifest']['test_data_source'] = {
+        'method': 'limen.data.HistoricalData.get_spot_klines',
+        'params': {'kline_size': 7200},
     }
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('test_data_source' in e.message for e in result.errors)
+
+
+def test_validate_error_for_start_date_limit_in_data_source_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_source']['params']['start_date_limit'] = '2022-01-01'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('start_date_limit' in e.message for e in result.errors)
+
+
+def test_validate_error_for_end_date_limit_in_data_source_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['data_source']['params']['end_date_limit'] = '2023-01-01'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('end_date_limit' in e.message for e in result.errors)
+
+
+def test_build_manifest_split_dates_is_correct() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     manifest = build_manifest(yaml_dict)
     assert manifest.split_dates is not None
     assert manifest.split_dates[0] == date.fromisoformat('2022-01-01')
     assert manifest.split_dates[5] == date.fromisoformat('2023-01-01')
+
+
+def test_build_manifest_split_dates_all_six_dates_stored() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_dates'] = {
+        'train_start': '2023-01-01', 'train_end': '2023-06-30',
+        'val_start': '2023-07-01', 'val_end': '2023-09-30',
+        'test_start': '2023-10-01', 'test_end': '2023-12-31',
+    }
+    manifest = build_manifest(yaml_dict)
+    assert manifest.split_dates is not None
+    assert manifest.split_dates[0] == date.fromisoformat('2023-01-01')
+    assert manifest.split_dates[3] == date.fromisoformat('2023-09-30')
+    assert manifest.split_dates[5] == date.fromisoformat('2023-12-31')
+
+
+def test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates() -> None:
+    yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
+    manifest = build_manifest(yaml_dict)
+    params = manifest.data_source_config.params
+    assert params['start_date_limit'] == '2022-01-01'
+    assert params['end_date_limit'] == '2023-01-01'
 
 
 def test_build_manifest_indicator_include_if_stored_on_entry() -> None:
@@ -960,10 +987,13 @@ def test_build_manifest_rule_based_indicators_wired() -> None:
               method: limen.data.HistoricalData.get_spot_klines
               params:
                 kline_size: 3600
-            split_config:
-              train: 8
-              val: 1
-              test: 2
+            split_dates:
+              train_start: "2022-01-01"
+              train_end: "2022-07-01"
+              val_start: "2022-07-01"
+              val_end: "2022-10-01"
+              test_start: "2022-10-01"
+              test_end: "2023-01-01"
             indicators:
               - func: limen.indicators.wilder_rsi
                 params:
