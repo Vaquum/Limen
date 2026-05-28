@@ -116,11 +116,11 @@ def _apply_indicators(manifest: Manifest, m: dict[str, Any]) -> None:
 def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
     ds = m['data_source']
-    manifest.set_data_source(method=resolve(ds['method']), params=dict(ds.get('params') or {}))
-
-    tds = m.get('test_data_source')
-    if tds is not None:
-        manifest.set_test_data_source(method=resolve(tds['method']), params=dict(tds.get('params') or {}))
+    params = dict(ds.get('params') or {})
+    sd = m['split_dates']
+    params['start_date_limit'] = sd['train_start']
+    params['end_date_limit'] = sd['test_end']
+    manifest.set_data_source(method=resolve(ds['method']), params=params)
 
     _apply_split(manifest, m)
 
@@ -133,19 +133,15 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
 
-    sd = m.get('split_dates')
-    if sd is not None:
-        manifest.set_split_dates(
-            date.fromisoformat(sd['train_start']),
-            date.fromisoformat(sd['train_end']),
-            date.fromisoformat(sd['val_start']),
-            date.fromisoformat(sd['val_end']),
-            date.fromisoformat(sd['test_start']),
-            date.fromisoformat(sd['test_end']),
-        )
-    else:
-        sc = m['split_config']
-        manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+    sd = m['split_dates']
+    manifest.set_split_dates(
+        date.fromisoformat(sd['train_start']),
+        date.fromisoformat(sd['train_end']),
+        date.fromisoformat(sd['val_start']),
+        date.fromisoformat(sd['val_end']),
+        date.fromisoformat(sd['test_start']),
+        date.fromisoformat(sd['test_end']),
+    )
 
 
 def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:

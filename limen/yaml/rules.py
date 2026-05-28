@@ -339,7 +339,7 @@ class SchemaVersion:
 
 class DataSource:
 
-    '''Validate data_source (required) and test_data_source (optional) blocks.'''
+    '''Validate data_source block, reject test_data_source, and forbid reserved date-limit params.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -348,45 +348,63 @@ class DataSource:
 
         manifest = _get_manifest(yaml_dict)
 
-        for section, required in (('data_source', True), ('test_data_source', False)):
-            src = manifest.get(section)
-            if src is None:
-                if required:
+        if 'test_data_source' in manifest:
+            errors.append(YAMLError(
+                message="'test_data_source' is not supported in YAML experiments — "
+                        "use the Python manifest API for programmatic test-mode data sources",
+                path='sfd.manifest.test_data_source',
+                suggestion='Remove test_data_source; date limits are injected from split_dates automatically',
+            ))
+
+        src = manifest.get('data_source')
+        if src is None:
+            errors.append(YAMLError(
+                message="Missing required field 'data_source'",
+                path='sfd.manifest.data_source',
+            ))
+            return
+
+        if not isinstance(src, dict):
+            errors.append(YAMLError(
+                message="'data_source' must be a mapping",
+                path='sfd.manifest.data_source',
+            ))
+            return
+
+        if 'method' not in src:
+            errors.append(YAMLError(
+                message="Missing required field 'method'",
+                path='sfd.manifest.data_source.method',
+            ))
+            return
+
+        method = src['method']
+        if isinstance(method, str):
+            _check_callable_path(method, 'sfd.manifest.data_source.method', errors)
+        else:
+            errors.append(YAMLError(
+                message=f"'method' must be a string (got {type(method).__name__})",
+                path='sfd.manifest.data_source.method',
+            ))
+
+        params = src.get('params')
+        if params is not None and not isinstance(params, dict):
+            errors.append(YAMLError(
+                message="'params' in 'data_source' must be a mapping",
+                path='sfd.manifest.data_source.params',
+            ))
+            return
+
+        if isinstance(params, dict):
+            for reserved in ('start_date_limit', 'end_date_limit'):
+                if reserved in params:
                     errors.append(YAMLError(
-                        message=f"Missing required field '{section}'",
-                        path=f'sfd.manifest.{section}',
+                        message=f"'{reserved}' must not be set in 'data_source.params' — "
+                                f"it is derived automatically from 'split_dates'",
+                        path=f'sfd.manifest.data_source.params.{reserved}',
+                        suggestion=f"Remove '{reserved}' from data_source.params and set the "
+                                   f"date window via split_dates instead",
                     ))
-                continue
-
-            if not isinstance(src, dict):
-                errors.append(YAMLError(
-                    message=f"'{section}' must be a mapping",
-                    path=f'sfd.manifest.{section}',
-                ))
-                continue
-
-            if 'method' not in src:
-                errors.append(YAMLError(
-                    message="Missing required field 'method'",
-                    path=f'sfd.manifest.{section}.method',
-                ))
-                continue
-
-            method = src['method']
-            if isinstance(method, str):
-                _check_callable_path(method, f'sfd.manifest.{section}.method', errors)
-            else:
-                errors.append(YAMLError(
-                    message=f"'method' must be a string (got {type(method).__name__})",
-                    path=f'sfd.manifest.{section}.method',
-                ))
-
-            params = src.get('params')
-            if params is not None and not isinstance(params, dict):
-                errors.append(YAMLError(
-                    message=f"'params' in '{section}' must be a mapping",
-                    path=f'sfd.manifest.{section}.params',
-                ))
 
 
 class FuncList:
@@ -529,7 +547,7 @@ class ConditionsList:
 
 class SplitSpec:
 
-    '''Exactly one of split_config (ratio) or split_dates (absolute) must be present.'''
+    '''split_dates (absolute date windows) is required; split_config (ratio) is not supported in YAML.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -537,91 +555,58 @@ class SplitSpec:
               _warnings: list[YAMLError]) -> None:
 
         manifest = _get_manifest(yaml_dict)
-        has_config = 'split_config' in manifest
-        has_dates = 'split_dates' in manifest
 
-        if has_config and has_dates:
+        if 'split_config' in manifest:
             errors.append(YAMLError(
-                message="Cannot specify both 'split_config' and 'split_dates' — use one or the other",
-                path='sfd.manifest',
-                suggestion="Remove 'split_config' to use absolute-date splits, or remove 'split_dates' to use ratio splits",
+                message="'split_config' is not supported — use 'split_dates' with explicit date windows",
+                path='sfd.manifest.split_config',
+                suggestion='Replace with split_dates: {train_start: YYYY-MM-DD, train_end: YYYY-MM-DD, val_start: YYYY-MM-DD, val_end: YYYY-MM-DD, test_start: YYYY-MM-DD, test_end: YYYY-MM-DD}',
             ))
             return
 
-        if not has_config and not has_dates:
+        if 'split_dates' not in manifest:
             errors.append(YAMLError(
-                message="One of 'split_config' or 'split_dates' is required",
+                message="'split_dates' is required",
                 path='sfd.manifest',
-                suggestion='Add split_config: {train: 8, val: 1, test: 2} or split_dates: {train_start: ..., ...}',
+                suggestion='Add split_dates: {train_start: YYYY-MM-DD, train_end: YYYY-MM-DD, val_start: YYYY-MM-DD, val_end: YYYY-MM-DD, test_start: YYYY-MM-DD, test_end: YYYY-MM-DD}',
             ))
             return
 
-        if has_config:
-            sc = manifest['split_config']
-            if not isinstance(sc, dict):
+        sd = manifest['split_dates']
+        if not isinstance(sd, dict):
+            errors.append(YAMLError(
+                message="'split_dates' must be a mapping",
+                path='sfd.manifest.split_dates',
+            ))
+            return
+        parsed: dict[str, date] = {}
+        for key in _SPLIT_DATE_KEYS:
+            if key not in sd:
                 errors.append(YAMLError(
-                    message="'split_config' must be a mapping",
-                    path='sfd.manifest.split_config',
+                    message=f"Missing required field '{key}'",
+                    path=f'sfd.manifest.split_dates.{key}',
                 ))
-                return
-            for key in ('train', 'val', 'test'):
-                if key not in sc:
-                    errors.append(YAMLError(
-                        message=f"Missing required field '{key}'",
-                        path=f'sfd.manifest.split_config.{key}',
-                    ))
-                elif not isinstance(sc[key], int):
-                    errors.append(YAMLError(
-                        message=f"'{key}' must be an int",
-                        path=f'sfd.manifest.split_config.{key}',
-                    ))
-                elif key == 'train' and sc[key] <= 0:
-                    errors.append(YAMLError(
-                        message=f"'train' must be > 0 (got {sc[key]})",
-                        path='sfd.manifest.split_config.train',
-                        suggestion='Use a positive integer e.g. train: 8',
-                    ))
-                elif key in ('val', 'test') and sc[key] < 0:
-                    errors.append(YAMLError(
-                        message=f"'{key}' must be >= 0 (got {sc[key]})",
-                        path=f'sfd.manifest.split_config.{key}',
-                    ))
-        else:
-            sd = manifest['split_dates']
-            if not isinstance(sd, dict):
+            elif not isinstance(sd[key], str):
                 errors.append(YAMLError(
-                    message="'split_dates' must be a mapping",
-                    path='sfd.manifest.split_dates',
+                    message=f"'{key}' must be a date string (e.g. '2022-01-01')",
+                    path=f'sfd.manifest.split_dates.{key}',
                 ))
-                return
-            parsed: dict[str, date] = {}
-            for key in _SPLIT_DATE_KEYS:
-                if key not in sd:
+            else:
+                try:
+                    parsed[key] = date.fromisoformat(sd[key])
+                except ValueError:
                     errors.append(YAMLError(
-                        message=f"Missing required field '{key}'",
+                        message=f"'{key}' is not a valid ISO-8601 date (got '{sd[key]}')",
                         path=f'sfd.manifest.split_dates.{key}',
+                        suggestion="Use format 'YYYY-MM-DD', e.g. '2022-01-01'",
                     ))
-                elif not isinstance(sd[key], str):
+        if len(parsed) == len(_SPLIT_DATE_KEYS):
+            for (a_key, a_val), (b_key, b_val) in pairwise(parsed.items()):
+                if a_val > b_val:
                     errors.append(YAMLError(
-                        message=f"'{key}' must be a date string (e.g. '2022-01-01')",
-                        path=f'sfd.manifest.split_dates.{key}',
-                    ))
-                else:
-                    try:
-                        parsed[key] = date.fromisoformat(sd[key])
-                    except ValueError:
-                        errors.append(YAMLError(
-                            message=f"'{key}' is not a valid ISO-8601 date (got '{sd[key]}')",
-                            path=f'sfd.manifest.split_dates.{key}',
-                            suggestion="Use format 'YYYY-MM-DD', e.g. '2022-01-01'",
-                        ))
-            if len(parsed) == len(_SPLIT_DATE_KEYS):
-                for (a_key, a_val), (b_key, b_val) in pairwise(parsed.items()):
-                    if a_val > b_val:
-                        errors.append(YAMLError(
-                            message=f"split_dates must be non-decreasing: '{a_key}' ({a_val}) > '{b_key}' ({b_val})",
-                            path='sfd.manifest.split_dates',
-                            suggestion='Ensure train_start <= train_end <= val_start <= val_end <= test_start <= test_end',
+                        message=f"split_dates must be non-decreasing: '{a_key}' ({a_val}) > '{b_key}' ({b_val})",
+                        path='sfd.manifest.split_dates',
+                        suggestion='Ensure train_start <= train_end <= val_start <= val_end <= test_start <= test_end',
                         ))
 
 
