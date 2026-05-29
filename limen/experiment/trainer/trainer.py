@@ -1,18 +1,12 @@
-import importlib
-import importlib.util
-import inspect
 import json
 import logging
-import sys
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import polars as pl
 
 from limen.experiment.trainer.errors import ReconstructionError
 from limen.experiment.trainer.sensor import Sensor
-from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.errors import ResolutionError
 
@@ -29,13 +23,12 @@ _STOCHASTIC_TOLERANCE = 0.01
 class Trainer:
 
     '''
-    Retrain selected permutations from a completed experiment.
+    Retrain selected permutations from a completed YAML experiment.
 
     Pass 1 validates permutations by re-running manifest.prepare_data()
     and manifest.run_model(), comparing metrics against the original
-    experiment log. Pass 2 retrains on the full dataset with
-    split_config=(1,0,0) using the model class directly. Returns Sensor
-    instances wrapping trained ReferenceModel objects.
+    experiment log. The validated Pass 1 model is used directly as the
+    Sensor model — no second training pass is performed.
     '''
 
     def __init__(self,
@@ -43,27 +36,16 @@ class Trainer:
                  data: pl.DataFrame | None = None) -> None:
 
         '''
-        Create a Trainer from a completed experiment directory.
-
-        If metadata.json includes `yaml_reference`, Trainer rebuilds the
-        SFD from that declarative YAML payload without importing or
-        executing an experiment-provided SFD module. Otherwise, the SFD
-        module named by
-        `metadata.json["sfd_module"]` is loaded in two stages: first the
-        experiment_dir is searched for a file of the same name
-        (`<sfd_module>.py`); only when that file is absent is the name
-        resolved via `importlib.import_module` against `sys.path` (the
-        legacy mode for built-in SFDs referenced by a fully-qualified
-        package path).
-
-        NOTE: experiment_dir must be trusted when the Python SFD module
-        path is used. That path imports Python and executes arbitrary code
-        from the module.
+        Create a Trainer from a completed YAML experiment directory.
 
         Args:
             experiment_dir (str | Path): Path to completed experiment directory
             data (pl.DataFrame | None): Data to use for training. If None,
                 fetches from manifest data source config
+
+        Raises:
+            FileNotFoundError: If metadata.json is not found
+            ValueError: If metadata.json does not contain a valid yaml_reference
 
         '''
 
@@ -80,44 +62,40 @@ class Trainer:
             ) from None
 
         yaml_reference = self._metadata.get('yaml_reference')
-        if yaml_reference is not None:
-            if not isinstance(yaml_reference, dict):
-                raise ValueError(
-                    'metadata.json key \'yaml_reference\' must be an object'
-                )
-            sfd_module_name = self._metadata.get('sfd_module', 'yaml_reference')
-            try:
-                sfd = CompiledSFD(yaml_reference)
-            except (KeyError, TypeError, ValueError) as exc:
-                raise ValueError(
-                    'metadata.json key \'yaml_reference\' is not a valid '
-                    'YAML SFD reference'
-                ) from exc
-        else:
-            if 'sfd_module' not in self._metadata:
-                raise ValueError(
-                    'metadata.json missing required key: sfd_module'
-                )
+        if yaml_reference is None:
+            raise ValueError(
+                'metadata.json missing required key: yaml_reference. '
+                'Trainer requires a YAML-based experiment.'
+            )
+        if not isinstance(yaml_reference, dict):
+            raise ValueError(
+                'metadata.json key \'yaml_reference\' must be an object'
+            )
+        self._yaml_reference = yaml_reference
 
-            sfd_module_name = self._metadata['sfd_module']
-            sfd = self._load_sfd_module(sfd_module_name)
+        try:
+            sfd = CompiledSFD(yaml_reference)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                'metadata.json key \'yaml_reference\' is not a valid '
+                'YAML SFD reference'
+            ) from exc
 
         if not hasattr(sfd, 'manifest') or not hasattr(sfd, 'params'):
             raise ValueError(
-                f"SFD module '{sfd_module_name}' does not have manifest() and "
-                f"params(). Trainer requires a manifest-based SFD."
+                'yaml_reference does not produce a manifest-based SFD. '
+                'Trainer requires a manifest-based SFD.'
             )
 
         try:
             self._manifest = sfd.manifest()
             params = sfd.params()
         except (KeyError, ResolutionError, TypeError, ValueError) as exc:
-            if yaml_reference is not None:
-                raise ValueError(
-                    'metadata.json key \'yaml_reference\' is not a valid '
-                    'YAML SFD reference'
-                ) from exc
-            raise
+            raise ValueError(
+                'metadata.json key \'yaml_reference\' is not a valid '
+                'YAML SFD reference'
+            ) from exc
+
         self._param_keys = frozenset(params.keys())
         self._round_data = self._load_round_data()
         self._original_log = self._load_original_log()
@@ -126,91 +104,6 @@ class Trainer:
             self._data = data
         else:
             self._data = self._manifest.fetch_data()
-
-
-    def _load_sfd_module(self, sfd_module_name: str) -> ModuleType:
-
-        '''
-        Load the SFD module by name.
-
-        Prefers a `<sfd_module_name>.py` file inside `experiment_dir`
-        (self-contained experiment), falls back to
-        `importlib.import_module(sfd_module_name)` against `sys.path`
-        when no such file exists (built-in SFDs referenced by fully
-        qualified package path).
-
-        After loading via the experiment-local branch the resulting
-        module is registered in `sys.modules` under `sfd_module_name`
-        before `exec_module` runs. This allows downstream code that
-        resolves the SFD's classes/functions by name — most notably
-        `Trainer._resolve_model_class`, which re-imports the
-        architecture function's module via
-        `importlib.import_module(architecture_function.__module__)` —
-        to see the same module instance loaded here. Without the
-        registration, a self-contained bundle whose architecture
-        function is defined in the SFD file itself fails sensor
-        wiring with `ModuleNotFoundError` at the
-        `_resolve_model_class` call. If `exec_module` raises, any
-        prior `sys.modules` entry under that name is restored (or
-        the key removed if there was no prior entry) so a partially
-        initialised module is never visible to other code and an
-        unrelated module that happened to share the name is not
-        clobbered.
-
-        Rejects any name whose dot-separated segments are not valid
-        Python identifiers, so `..`, `/`, `\\`, leading/trailing dots
-        and empty segments cannot escape `experiment_dir` via the
-        local-file branch (TD-001 documents the residual hardening
-        needed on the `import_module` fallback's site-packages
-        surface).
-
-        Args:
-            sfd_module_name (str): Module name from metadata.json
-
-        Returns:
-            ModuleType: The loaded SFD module
-
-        Raises:
-            ValueError: If `sfd_module_name` is not a dotted sequence
-                of valid Python identifiers
-            ImportError: If `spec_from_file_location` cannot build a
-                spec for the experiment-local file, or if
-                `import_module` cannot resolve the name on `sys.path`
-            Exception: Any exception raised by the SFD module's own
-                top-level code during `exec_module` is propagated
-
-        '''
-
-        segments = sfd_module_name.split('.')
-        if not sfd_module_name or not all(seg.isidentifier() for seg in segments):
-            msg = (
-                f"sfd_module name {sfd_module_name!r} is not a dotted "
-                f"sequence of valid Python identifiers"
-            )
-            raise ValueError(msg)
-
-        sfd_path = self._experiment_dir / f'{sfd_module_name}.py'
-        if sfd_path.is_file():
-            spec = importlib.util.spec_from_file_location(
-                sfd_module_name, sfd_path,
-            )
-            if spec is None or spec.loader is None:
-                raise ImportError(
-                    f"Cannot create import spec for SFD file {sfd_path}"
-                )
-            module = importlib.util.module_from_spec(spec)
-            previous = sys.modules.get(sfd_module_name)
-            sys.modules[sfd_module_name] = module
-            try:
-                spec.loader.exec_module(module)
-            except BaseException:
-                if previous is None:
-                    sys.modules.pop(sfd_module_name, None)
-                else:
-                    sys.modules[sfd_module_name] = previous
-                raise
-            return module
-        return importlib.import_module(sfd_module_name)
 
 
     def _load_round_data(self) -> dict[int, dict[str, Any]]:
@@ -278,48 +171,6 @@ class Trainer:
         return result
 
 
-    def _resolve_model_class(self) -> type[ReferenceModel]:
-
-        '''
-        Resolve the ReferenceModel subclass from the model function's module.
-
-        Returns:
-            type[ReferenceModel]: The model class
-
-        Raises:
-            ValueError: If zero or multiple ReferenceModel subclasses found
-
-        '''
-
-        if self._manifest.architecture_function is None:
-            raise ValueError(
-                'Architecture function not configured on manifest. '
-                'Cannot resolve model class.'
-            )
-
-        module_name = self._manifest.architecture_function.__module__
-        module = importlib.import_module(module_name)
-
-        classes = [
-            cls for _, cls in inspect.getmembers(module, inspect.isclass)
-            if issubclass(cls, ReferenceModel) and cls is not ReferenceModel
-        ]
-
-        if len(classes) == 0:
-            raise ValueError(
-                f"No ReferenceModel subclass found in '{module_name}'. "
-                'The model module must define exactly one ReferenceModel '
-                'subclass with train(), predict(), and evaluate() methods.'
-            )
-        if len(classes) > 1:
-            raise ValueError(
-                f"Multiple ReferenceModel subclasses found in '{module_name}': "
-                f"{[c.__name__ for c in classes]}"
-            )
-
-        return classes[0]
-
-
     def _validate_metrics(self,
                           permutation_id: int,
                           results: dict[str, Any],
@@ -385,18 +236,17 @@ class Trainer:
     def train(self, permutation_ids: list[int]) -> list[Sensor]:
 
         '''
-        Run 2-pass training for selected permutations.
+        Run Pass 1 training for selected permutations and return Sensor instances.
 
-        Pass 1 re-runs the pipeline and compares metrics against the
-        original experiment log. Raises ReconstructionError on mismatch.
-        Pass 2 retrains on the full dataset with split_config=(1,0,0)
-        using the model class directly.
+        Pass 1 re-runs the pipeline and compares metrics against the original
+        experiment log. Raises ReconstructionError on mismatch. The validated
+        Pass 1 model is used directly as the Sensor model without retraining.
 
         Args:
             permutation_ids (list[int]): Round IDs from experiment_log to retrain
 
         Returns:
-            list[Sensor]: Sensor instances wrapping trained models
+            list[Sensor]: Sensor instances wrapping validated Pass 1 models
 
         Raises:
             ValueError: If any permutation ID is not found in round_data
@@ -413,35 +263,29 @@ class Trainer:
                 f"Permutation IDs not found in round_data: {missing}"
             )
 
-        model_class = self._resolve_model_class()
-        manifest_full = self._manifest.with_params_override(split_config=(1, 0, 0))
         sensors: list[Sensor] = []
 
         for pid in permutation_ids:
             round_params = dict(self._round_data[pid]['round_params'])
 
-            # Pass 1: validate with original split
             data_dict = self._manifest.prepare_data(self._data, round_params)
             results = self._manifest.run_model(data_dict, round_params)
 
-            mismatches = self._validate_metrics(pid, results, model_class.deterministic)
+            model = results.pop('_model')
+            fitted_params = data_dict.pop('_fitted_params', {})
+
+            mismatches = self._validate_metrics(pid, results, model.deterministic)
             if mismatches:
                 raise ReconstructionError(
                     f"Permutation {pid}: metric mismatch detected — "
                     + '; '.join(mismatches)
                 )
 
-            # Pass 2: retrain on full data
-            full_data = manifest_full.prepare_data(self._data, round_params)
-            model_kwargs = self._manifest.resolve_model_kwargs(round_params)
-            trained_model = model_class().train(full_data, **model_kwargs)
-
             sensor = Sensor(
-                model=trained_model,
-                permutation_id=pid,
+                yaml_reference=self._yaml_reference,
+                model=model,
+                fitted_params=fitted_params,
                 round_params=round_params,
-                metadata=self._metadata,
-                results=results,
             )
             sensors.append(sensor)
 
