@@ -493,6 +493,34 @@ class RequiredColumnsSpec:
                 ))
 
 
+class DecoderLookbackSpec:
+
+    '''When decoder_lookback is present, it must be an integer >= 1.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        manifest = _get_manifest(yaml_dict)
+        value = manifest.get('decoder_lookback')
+        if value is None:
+            return
+        if not isinstance(value, int) or isinstance(value, bool):
+            errors.append(YAMLError(
+                message=f"'decoder_lookback' must be an integer (got {type(value).__name__})",
+                path='sfd.manifest.decoder_lookback',
+                suggestion='Set decoder_lookback to a positive integer, e.g. decoder_lookback: 30',
+            ))
+            return
+        if value < 1:
+            errors.append(YAMLError(
+                message=f"'decoder_lookback' must be >= 1 (got {value})",
+                path='sfd.manifest.decoder_lookback',
+                suggestion='Set decoder_lookback to a positive integer, e.g. decoder_lookback: 30',
+            ))
+
+
 class ConditionsList:
 
     '''Validate the rule_based strategy conditions list structure.'''

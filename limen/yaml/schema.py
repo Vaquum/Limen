@@ -27,6 +27,7 @@ ML_MANIFEST_OPTIONAL = {
     'pca_compression',
     'params_override',
     'metrics_params',
+    'decoder_lookback',
 }
 
 RULE_BASED_MANIFEST_REQUIRED = {'strategy'}

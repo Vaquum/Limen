@@ -777,6 +777,7 @@ class MLManifest(Manifest):
     pca_compression_config: PCACompressionConfig | None = None
     data_dict_extension: Callable = None
     prediction_calibration_config: CalibrationConfig | None = None
+    decoder_lookback: int = 1
 
     def set_scaler(self, transform_class: Any, param_name: str = '_scaler') -> 'MLManifest':
 

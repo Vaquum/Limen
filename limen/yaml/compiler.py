@@ -246,6 +246,8 @@ def _apply_ml_extras(manifest: MLManifest, m: dict[str, Any]) -> None:
     if mp is not None:
         manifest.metrics_params = dict(mp)
 
+    manifest.decoder_lookback = int(m.get('decoder_lookback') or 1)
+
 
 class CompiledSFD:
 
