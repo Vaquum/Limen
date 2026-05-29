@@ -184,4 +184,6 @@ def logreg_binary(data: dict,
         l1_ratio=l1_ratio,
     )
 
-    return model.evaluate(data, inline_metrics=True)
+    result = model.evaluate(data, inline_metrics=True)
+    result['_model'] = model
+    return result

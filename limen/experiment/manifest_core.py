@@ -1679,6 +1679,7 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     data_dict['_feature_names'] = cols
+    data_dict['_fitted_params'] = dict(fitted_params)
 
     if price_data_for_backtest is not None:
         data_dict['price_data_for_backtest'] = price_data_for_backtest

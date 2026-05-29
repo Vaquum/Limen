@@ -147,4 +147,6 @@ def xgboost_regressor(data: dict,
         random_state=random_state,
     )
 
-    return model.evaluate(data, inline_metrics=True)
+    result = model.evaluate(data, inline_metrics=True)
+    result['_model'] = model
+    return result

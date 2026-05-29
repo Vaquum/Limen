@@ -97,4 +97,7 @@ def random_binary(data: dict,
             and backtest metrics when price_data_for_backtest is in data
     '''
 
-    return RandomBinary().train(data, random_weights=random_weights).evaluate(data, inline_metrics=True)
+    model = RandomBinary().train(data, random_weights=random_weights)
+    result = model.evaluate(data, inline_metrics=True)
+    result['_model'] = model
+    return result

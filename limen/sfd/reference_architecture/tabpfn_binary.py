@@ -141,4 +141,6 @@ def tabpfn_binary(data: dict,
         device=device,
     )
 
-    return model.evaluate(data, inline_metrics=True)
+    result = model.evaluate(data, inline_metrics=True)
+    result['_model'] = model
+    return result
