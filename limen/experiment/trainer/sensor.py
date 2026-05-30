@@ -49,6 +49,17 @@ class Sensor:
         self._manifest: Any = None
 
 
+    @property
+    def round_params(self) -> dict:
+
+        return self._round_params
+
+
+    def __call__(self, data: Any) -> Any:
+
+        return self.predict(data)
+
+
     def _get_manifest(self) -> Any:
 
         if self._manifest is None:
@@ -56,23 +67,30 @@ class Sensor:
         return self._manifest
 
 
-    def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
+    def predict(self, raw_klines: pl.DataFrame | dict) -> BarPrediction | dict:
 
         '''
         Prepare raw klines and return a prediction for the last bar.
 
+        When called with a dict, delegates directly to the underlying model —
+        compatible with the Cohort decoder interface.
+
         Args:
-            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
-                the manifest data source
+            raw_klines (pl.DataFrame | dict): Raw klines DataFrame for bar-by-bar
+                prediction, or a decoder-style dict for direct model inference
 
         Returns:
-            BarPrediction: Prediction for the last bar with reason=None
+            BarPrediction | dict: BarPrediction for DataFrame input, raw model
+                prediction dict for dict input
 
         Raises:
             ValueError: If the window is too small, the last bar is a warm-up bar,
                 or any bar falls inside the training/test window
 
         '''
+
+        if isinstance(raw_klines, dict):
+            return self._model.predict(raw_klines)
 
         manifest = self._get_manifest()
         data, indicator_lookback = manifest.sensor_input_prep(
@@ -90,11 +108,11 @@ class Sensor:
                 f"window), got {len(data)}"
             )
 
+        feature_cols = [c for c in data.columns if c != 'datetime']
         last_row = data[-1]
-        if last_row.null_count() > 0:
+        if any(last_row[c][0] is None for c in feature_cols):
             raise ValueError('Last bar is a warm-up bar — cannot predict')
 
-        feature_cols = [c for c in data.columns if c != 'datetime']
         x = np.array(last_row.select(feature_cols).row(0), dtype=float).reshape(1, -1)
         pred_result = self._model.predict({'x_test': x})
 
@@ -186,10 +204,7 @@ class Sensor:
         if manifest.split_dates is None or 'datetime' not in data.columns:
             return
         train_start, _, _, _, _, test_end = manifest.split_dates
-        inside = [
-            dt is not None and train_start <= dt < test_end
-            for dt in data['datetime'].to_list()
-        ]
+        inside = self._inside_training_window_mask(data, manifest)
         if any(inside):
             raise ValueError(
                 f"Input data contains bars inside the training/test window "
@@ -205,10 +220,15 @@ class Sensor:
         if manifest.split_dates is None or 'datetime' not in data.columns:
             return [False] * len(data)
         train_start, _, _, _, _, test_end = manifest.split_dates
-        return [
-            dt is not None and train_start <= dt < test_end
-            for dt in data['datetime'].to_list()
-        ]
+        result = []
+        for dt in data['datetime'].to_list():
+            if dt is None:
+                result.append(False)
+                continue
+            # normalise to date for comparison — split_dates stores date objects
+            dt_date = dt.date() if hasattr(dt, 'date') else dt
+            result.append(train_start <= dt_date < test_end)
+        return result
 
 
 def _extract_scalar(arr: Any) -> int | float | None:

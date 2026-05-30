@@ -526,6 +526,10 @@ class UniversalExperimentLoop:
                 models = round_results.pop('models')
                 if post_processing:
                     self.models.append(models)
+            if '_model' in round_results:
+                model = round_results.pop('_model')
+                if post_processing:
+                    self.models.append(model)
             current_preds = round_results.pop('_preds', None)
             if current_preds is None:
                 current_preds = []
