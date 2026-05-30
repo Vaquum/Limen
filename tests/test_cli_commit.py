@@ -23,7 +23,7 @@ def _make_project(root: Path) -> None:
 
 
 def test_run_commit_fails_when_no_project_root() -> None:
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory() as d, patch('click.echo'), patch('click.secho'):
         yaml_path = Path(d) / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
         assert run_commit(yaml_path, None, None) is False
@@ -35,7 +35,8 @@ def test_run_commit_fails_on_invalid_yaml() -> None:
         _make_project(root)
         yaml_path = root / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
-        with patch('limen.cli.commands.commit.load_and_validate', return_value=({}, False)):
+        with patch('limen.cli.commands.commit.load_and_validate', return_value=({}, False)), \
+             patch('click.echo'), patch('click.secho'):
             assert run_commit(yaml_path, None, None) is False
 
 
@@ -45,7 +46,8 @@ def test_run_commit_rejects_development_mode() -> None:
         _make_project(root)
         yaml_path = root / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
-        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_DEV_DICT, True)):
+        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_DEV_DICT, True)), \
+             patch('click.echo'), patch('click.secho'):
             assert run_commit(yaml_path, None, None) is False
 
 
@@ -55,7 +57,8 @@ def test_run_commit_succeeds_for_production_yaml() -> None:
         _make_project(root)
         yaml_path = root / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
-        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)):
+        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)), \
+             patch('click.echo'), patch('click.secho'):
             assert run_commit(yaml_path, None, None) is True
 
 
@@ -65,7 +68,8 @@ def test_run_commit_is_idempotent() -> None:
         _make_project(root)
         yaml_path = root / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
-        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)):
+        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)), \
+             patch('click.echo'), patch('click.secho'):
             run_commit(yaml_path, None, None)
             assert run_commit(yaml_path, None, None) is True
 
@@ -76,7 +80,8 @@ def test_run_commit_rejects_invalid_parent_id() -> None:
         _make_project(root)
         yaml_path = root / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
-        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)):
+        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)), \
+             patch('click.echo'), patch('click.secho'):
             assert run_commit(yaml_path, 'not-a-valid-id', None) is False
             assert run_commit(yaml_path, 'sha256:short', None) is False
             assert run_commit(yaml_path, 'sha256:' + 'z' * 64, None) is False
@@ -88,5 +93,6 @@ def test_run_commit_uses_custom_message() -> None:
         _make_project(root)
         yaml_path = root / 'test.yaml'
         yaml_path.write_text(_MINIMAL_YAML)
-        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)):
+        with patch('limen.cli.commands.commit.load_and_validate', return_value=(_PROD_DICT, True)), \
+             patch('click.echo'), patch('click.secho'):
             assert run_commit(yaml_path, None, 'my custom message') is True

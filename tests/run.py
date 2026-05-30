@@ -749,22 +749,47 @@ from tests.test_fractional_diff import test_find_min_d_small_data_skips
 from tests.test_manifest_prepare_data import test_split_validation_rejects_invalid
 from tests.test_manifest_prepare_data import test_column_consistency_drops_mismatched_columns
 from tests.test_fractional_diff import test_fractional_diff_manifest_integration
-from tests.test_trainer import test_trainer_end_to_end
-from tests.test_trainer import test_reconstruction_error_stochastic
-from tests.test_trainer import test_reconstruction_error_tampered_log
-from tests.test_trainer import test_deterministic_validation
-from tests.test_trainer import test_pass2_uses_full_data
-from tests.test_trainer import test_sensor_inference
-from tests.test_trainer import test_trainer_with_feature_ablation
-from tests.test_trainer import test_trainer_with_fractional_diff
+from tests.test_trainer import test_trainer_requires_yaml_reference
+from tests.test_trainer import test_trainer_rejects_non_dict_yaml_reference
+from tests.test_trainer import test_trainer_rejects_malformed_yaml_reference
 from tests.test_trainer import test_load_round_data_skips_blank_and_malformed_lines
 from tests.test_trainer import test_load_round_data_requires_round_data_file
 from tests.test_trainer import test_load_original_log_returns_none_when_results_csv_is_missing
-from tests.test_trainer import test_resolve_model_class_requires_configured_architecture_function
-from tests.test_trainer import test_resolve_model_class_rejects_modules_without_reference_model_subclasses
-from tests.test_trainer import test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
 from tests.test_trainer import test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches
+from tests.test_trainer import test_trainer_yaml_end_to_end
+from tests.test_trainer import test_trainer_yaml_reconstruction_error_stochastic
+from tests.test_trainer import test_trainer_yaml_reconstruction_error_tampered_log
+from tests.test_trainer import test_trainer_yaml_deterministic_validation
+from tests.test_trainer import test_trainer_yaml_sensor_inference
+from tests.test_trainer import test_trainer_yaml_feature_ablation
+from tests.test_sensor import test_count_leading_nulls_no_nulls
+from tests.test_sensor import test_count_leading_nulls_leading_nulls
+from tests.test_sensor import test_count_leading_nulls_all_null
+from tests.test_sensor import test_count_leading_nulls_gap_in_middle
+from tests.test_sensor import test_count_leading_nulls_datetime_excluded
+from tests.test_sensor import test_count_leading_nulls_any_null_col_triggers_row
+from tests.test_sensor import test_count_leading_nulls_empty_features
+from tests.test_sensor import test_sensor_input_prep_preserves_row_count
+from tests.test_sensor import test_sensor_input_prep_indicator_lookback_matches_leading_nulls
+from tests.test_sensor import test_sensor_input_prep_no_leading_nulls_returns_zero_lookback
+from tests.test_sensor import test_sensor_input_prep_no_drop_nulls
+from tests.test_sensor import test_sensor_input_prep_drops_ablated_features
+from tests.test_sensor import test_sensor_input_prep_applies_fitted_scaler
+from tests.test_sensor import test_sensor_input_prep_scaler_leaves_null_rows_null
+from tests.test_sensor import test_apply_sensor_pca_transforms_valid_rows
+from tests.test_sensor import test_apply_sensor_pca_preserves_null_rows
+from tests.test_sensor import test_apply_sensor_pca_skipped_when_disabled
+from tests.test_sensor import test_apply_sensor_pca_skipped_when_no_config
+from tests.test_sensor import test_predict_raises_if_last_bar_is_warmup
+from tests.test_sensor import test_predict_raises_if_insufficient_valid_rows
+from tests.test_sensor import test_predict_raises_if_inside_training_window
+from tests.test_sensor import test_predict_happy_path_returns_bar_prediction
+from tests.test_sensor import test_predict_all_output_length_equals_input
+from tests.test_sensor import test_predict_all_warmup_bars_have_reason_warmup
+from tests.test_sensor import test_predict_all_valid_bars_have_predictions
+from tests.test_sensor import test_predict_all_inside_window_bars_flagged
+from tests.test_sensor import test_predict_all_decoder_lookback_gt1_raises
 from tests.test_proto_cohort import test_rejects_when_no_source_provided
 from tests.test_proto_cohort import test_rejects_when_both_sources_provided
 from tests.test_proto_cohort import test_rejects_missing_experiment_log_path
@@ -1609,22 +1634,47 @@ tests = [
     test_pca_compression_rejects_invalid_k,
     test_pca_compression_rejects_nonnumeric_features,
     test_fractional_diff_manifest_integration,
-    test_trainer_end_to_end,
-    test_reconstruction_error_stochastic,
-    test_reconstruction_error_tampered_log,
-    test_deterministic_validation,
-    test_pass2_uses_full_data,
-    test_sensor_inference,
-    test_trainer_with_feature_ablation,
-    test_trainer_with_fractional_diff,
+    test_trainer_requires_yaml_reference,
+    test_trainer_rejects_non_dict_yaml_reference,
+    test_trainer_rejects_malformed_yaml_reference,
     test_load_round_data_skips_blank_and_malformed_lines,
     test_load_round_data_requires_round_data_file,
     test_load_original_log_returns_none_when_results_csv_is_missing,
-    test_resolve_model_class_requires_configured_architecture_function,
-    test_resolve_model_class_rejects_modules_without_reference_model_subclasses,
-    test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses,
     test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift,
     test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches,
+    test_trainer_yaml_end_to_end,
+    test_trainer_yaml_reconstruction_error_stochastic,
+    test_trainer_yaml_reconstruction_error_tampered_log,
+    test_trainer_yaml_deterministic_validation,
+    test_trainer_yaml_sensor_inference,
+    test_trainer_yaml_feature_ablation,
+    test_count_leading_nulls_no_nulls,
+    test_count_leading_nulls_leading_nulls,
+    test_count_leading_nulls_all_null,
+    test_count_leading_nulls_gap_in_middle,
+    test_count_leading_nulls_datetime_excluded,
+    test_count_leading_nulls_any_null_col_triggers_row,
+    test_count_leading_nulls_empty_features,
+    test_sensor_input_prep_preserves_row_count,
+    test_sensor_input_prep_indicator_lookback_matches_leading_nulls,
+    test_sensor_input_prep_no_leading_nulls_returns_zero_lookback,
+    test_sensor_input_prep_no_drop_nulls,
+    test_sensor_input_prep_drops_ablated_features,
+    test_sensor_input_prep_applies_fitted_scaler,
+    test_sensor_input_prep_scaler_leaves_null_rows_null,
+    test_apply_sensor_pca_transforms_valid_rows,
+    test_apply_sensor_pca_preserves_null_rows,
+    test_apply_sensor_pca_skipped_when_disabled,
+    test_apply_sensor_pca_skipped_when_no_config,
+    test_predict_raises_if_last_bar_is_warmup,
+    test_predict_raises_if_insufficient_valid_rows,
+    test_predict_raises_if_inside_training_window,
+    test_predict_happy_path_returns_bar_prediction,
+    test_predict_all_output_length_equals_input,
+    test_predict_all_warmup_bars_have_reason_warmup,
+    test_predict_all_valid_bars_have_predictions,
+    test_predict_all_inside_window_bars_flagged,
+    test_predict_all_decoder_lookback_gt1_raises,
     test_rejects_when_no_source_provided,
     test_rejects_when_both_sources_provided,
     test_rejects_missing_experiment_log_path,

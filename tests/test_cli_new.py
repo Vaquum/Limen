@@ -7,7 +7,7 @@ from limen.cli.commands.new import run_new
 
 
 def test_run_new_fails_when_directory_exists() -> None:
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory() as d, patch('click.echo'), patch('click.secho'):
         existing = Path(d) / 'my-project'
         existing.mkdir()
         assert run_new(str(existing), None) is False
@@ -23,7 +23,8 @@ def test_run_new_succeeds_with_mocked_clone() -> None:
             return True
 
         with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone), \
-             patch('click.prompt', return_value=''):
+             patch('click.prompt', return_value=''), \
+             patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path.parent / 'new-project'), None)
 
         assert result is True
@@ -38,7 +39,8 @@ def test_run_new_sets_backup_remote() -> None:
             (path / 'limen.toml').write_text('backup_remote = ""\n')
             return True
 
-        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone):
+        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone), \
+             patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), 'git@github.com:user/repo.git')
 
         assert result is True
@@ -49,7 +51,8 @@ def test_run_new_clone_failure_returns_false() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_path = Path(d) / 'new-project'
 
-        with patch('limen.cli.commands.new._clone_template', return_value=False):
+        with patch('limen.cli.commands.new._clone_template', return_value=False), \
+             patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), None)
 
         assert result is False
@@ -64,7 +67,8 @@ def test_run_new_warns_when_backup_remote_placeholder_missing() -> None:
             (path / 'limen.toml').write_text('# no placeholder here\n')
             return True
 
-        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone):
+        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone), \
+             patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), 'git@github.com:user/repo.git')
 
         assert result is True
@@ -72,11 +76,12 @@ def test_run_new_warns_when_backup_remote_placeholder_missing() -> None:
 
 
 def test_run_new_fails_when_git_not_found() -> None:
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory() as d, \
+         patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError), \
+         patch('click.echo'), patch('click.secho'):
         project_path = Path(d) / 'new-project'
-        with patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError):
-            result = run_new(str(project_path), None)
-        assert result is False
+        result = run_new(str(project_path), None)
+    assert result is False
 
 
 def test_run_new_skips_backup_remote_with_invalid_chars() -> None:
@@ -88,7 +93,8 @@ def test_run_new_skips_backup_remote_with_invalid_chars() -> None:
             (path / 'limen.toml').write_text('backup_remote = ""\n')
             return True
 
-        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone):
+        with patch('limen.cli.commands.new._clone_template', side_effect=fake_clone), \
+             patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), 'git@github.com:user/"bad".git')
 
         assert result is True
@@ -114,7 +120,8 @@ def test_clone_template_fails_fast_on_git_init_failure() -> None:
             return result
 
         with patch('limen.cli.commands.new.subprocess.run', side_effect=fake_subprocess), \
-             patch('limen.cli.commands.new.shutil.rmtree'):
+             patch('limen.cli.commands.new.shutil.rmtree'), \
+             patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), None)
 
         assert result is False
