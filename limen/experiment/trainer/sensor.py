@@ -26,10 +26,10 @@ class Sensor:
     '''Inference wrapper around a trained YAML model for live bar-by-bar prediction.'''
 
     def __init__(self,
-                 yaml_reference: dict,
+                 yaml_reference: dict[str, Any],
                  model: ReferenceModel,
-                 fitted_params: dict,
-                 round_params: dict) -> None:
+                 fitted_params: dict[str, Any],
+                 round_params: dict[str, Any]) -> None:
 
         '''
         Create a Sensor from a validated Pass 1 model.
@@ -50,7 +50,7 @@ class Sensor:
 
 
     @property
-    def round_params(self) -> dict:
+    def round_params(self) -> dict[str, Any]:
 
         return self._round_params
 

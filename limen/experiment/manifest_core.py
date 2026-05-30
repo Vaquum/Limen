@@ -1307,14 +1307,11 @@ def _count_leading_nulls(data: pl.DataFrame) -> int:
     if not feature_cols:
         return 0
     null_mask = pl.any_horizontal([pl.col(c).is_null() for c in feature_cols])
-    has_null = data.select(null_mask.alias('_has_null'))['_has_null'].to_list()
-    count = 0
-    for val in has_null:
-        if val:
-            count += 1
-        else:
-            break
-    return count
+    has_null = data.select(null_mask.alias('_has_null'))['_has_null'].cast(pl.UInt8)
+    first_valid = has_null.arg_min()
+    if first_valid is None or bool(has_null[first_valid]):
+        return len(data)
+    return int(first_valid)
 
 
 def _apply_sensor_pca(
