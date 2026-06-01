@@ -243,8 +243,8 @@ def test_e2e_label_control_trainer_sensor() -> None:
 
         # Guarantee at least one calibrated and one uncalibrated sensor so both
         # code paths through LogRegBinary.predict() are exercised.
-        calibrated = results.filter(pl.col('use_calibration') == True)
-        uncalibrated = results.filter(pl.col('use_calibration') == False)
+        calibrated = results.filter(pl.col('use_calibration'))
+        uncalibrated = results.filter(~pl.col('use_calibration'))
         cal_ids = calibrated.sort('accuracy', descending=True).head(2)['id'].to_list()
         uncal_ids = uncalibrated.sort('accuracy', descending=True).head(1)['id'].to_list()
         top_ids = cal_ids + uncal_ids
@@ -291,7 +291,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert n_inside == 0
             assert n_valid > 0
             assert n_warmup + n_valid == len(inference_klines)
-            assert all(p.datetime == dt for p, dt in zip(all_preds, kline_dts))
+            assert all(p.datetime == dt for p, dt in zip(all_preds, kline_dts, strict=True))
 
             valid_preds = [p for p in all_preds if p.reason is None]
             assert all(p.probability is not None for p in valid_preds)
@@ -321,7 +321,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert len(min_preds) == n_warmup + 1
             assert sum(1 for p in min_preds if p.reason == 'warm-up') == n_warmup
             assert sum(1 for p in min_preds if p.reason is None) == 1
-            assert all(p.datetime == dt for p, dt in zip(min_preds, min_dts))
+            assert all(p.datetime == dt for p, dt in zip(min_preds, min_dts, strict=True))
 
             min_bar_pred = sensor.predict(min_klines)
             assert min_bar_pred.reason is None
@@ -341,7 +341,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert len(few_preds) == n_warmup + 5
             assert sum(1 for p in few_preds if p.reason == 'warm-up') == n_warmup
             assert sum(1 for p in few_preds if p.reason is None) == 5
-            assert all(p.datetime == dt for p, dt in zip(few_preds, few_dts))
+            assert all(p.datetime == dt for p, dt in zip(few_preds, few_dts, strict=True))
 
             few_valid = [p for p in few_preds if p.reason is None]
             assert all(p.probability is not None for p in few_valid)
