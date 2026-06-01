@@ -38,7 +38,7 @@ def fit_calibrator(model: Any,
     Fit calibrator on validation data.
 
     Args:
-        model: Fitted classifier with predict_proba method
+        model (Any): Fitted classifier with predict_proba method
         config (CalibrationConfig): Resolved calibration configuration
         x_val (np.ndarray): Validation features
         y_val (np.ndarray): Validation labels

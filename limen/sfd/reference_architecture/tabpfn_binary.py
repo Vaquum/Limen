@@ -61,8 +61,12 @@ class TabPFNBinary(ReferenceModel):
         )
 
         self.model.fit(arrays['x_train'], arrays['y_train'])
+        self._fitted_calibrator = None
+        self._calibration_threshold = 0.5
+        self._val_score = None
 
         return self
+
 
     def predict(self, data: dict) -> dict:
 

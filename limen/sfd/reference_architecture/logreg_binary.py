@@ -69,8 +69,12 @@ class LogRegBinary(ReferenceModel):
         params = _drop_removed_sklearn_params(params)
         self.model = LogisticRegression(**params)
         self.model.fit(data['x_train'], data['y_train'])
+        self._fitted_calibrator = None
+        self._calibration_threshold = 0.5
+        self._val_score = None
 
         return self
+
 
     def predict(self, data: dict) -> dict:
 
