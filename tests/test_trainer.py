@@ -7,7 +7,6 @@ from tempfile import TemporaryDirectory
 from textwrap import dedent
 from unittest.mock import patch
 
-import numpy as np
 import polars as pl
 import pytest
 
