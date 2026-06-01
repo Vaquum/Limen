@@ -241,11 +241,20 @@ def test_e2e_label_control_trainer_sensor() -> None:
 
         # ── Trainer ───────────────────────────────────────────────────────────
 
-        top_ids = results.sort('accuracy', descending=True).head(_TOP_N)['id'].to_list()
+        # Guarantee at least one calibrated and one uncalibrated sensor so both
+        # code paths through LogRegBinary.predict() are exercised.
+        calibrated = results.filter(pl.col('use_calibration') == True)
+        uncalibrated = results.filter(pl.col('use_calibration') == False)
+        cal_ids = calibrated.sort('accuracy', descending=True).head(2)['id'].to_list()
+        uncal_ids = uncalibrated.sort('accuracy', descending=True).head(1)['id'].to_list()
+        top_ids = cal_ids + uncal_ids
 
         trainer = Trainer(exp_dir)
         sensors = trainer.train(top_ids)
         assert len(sensors) == _TOP_N
+
+        sensor_pids = [s.permutation_id for s in sensors]
+        assert len(set(sensor_pids)) == _TOP_N, f'duplicate permutation_ids: {sensor_pids}'
 
         for sensor in sensors:
             assert sensor.permutation_id in top_ids
@@ -284,6 +293,10 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert n_warmup + n_valid == len(inference_klines)
             assert all(p.datetime == dt for p, dt in zip(all_preds, kline_dts))
 
+            valid_preds = [p for p in all_preds if p.reason is None]
+            assert all(p.probability is not None for p in valid_preds)
+            assert all(0.0 <= p.probability <= 1.0 for p in valid_preds)
+
             bar_pred = sensor.predict(inference_klines)
             assert isinstance(bar_pred, BarPrediction)
             assert bar_pred.reason is None
@@ -293,6 +306,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert bar_pred.datetime == kline_dts[-1]
             last_valid = next(p for p in reversed(all_preds) if p.reason is None)
             assert last_valid.prediction == bar_pred.prediction
+            assert last_valid.probability == bar_pred.probability
 
             assert n_warmup + 5 <= len(inference_klines), (
                 f'inference window too small: {len(inference_klines)} bars, n_warmup={n_warmup}'
@@ -312,8 +326,11 @@ def test_e2e_label_control_trainer_sensor() -> None:
             min_bar_pred = sensor.predict(min_klines)
             assert min_bar_pred.reason is None
             assert min_bar_pred.prediction in (0, 1)
+            assert min_bar_pred.probability is not None
+            assert 0.0 <= min_bar_pred.probability <= 1.0
             assert min_bar_pred.datetime == min_dts[-1]
             assert min_bar_pred.prediction == min_preds[-1].prediction
+            assert min_bar_pred.probability == min_preds[-1].probability
 
             # ── Few bars window (n_warmup + 5 bars) ──────────────────────────
 
@@ -326,8 +343,15 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert sum(1 for p in few_preds if p.reason is None) == 5
             assert all(p.datetime == dt for p, dt in zip(few_preds, few_dts))
 
+            few_valid = [p for p in few_preds if p.reason is None]
+            assert all(p.probability is not None for p in few_valid)
+            assert all(0.0 <= p.probability <= 1.0 for p in few_valid)
+
             few_bar_pred = sensor.predict(few_klines)
             assert few_bar_pred.reason is None
             assert few_bar_pred.prediction in (0, 1)
+            assert few_bar_pred.probability is not None
+            assert 0.0 <= few_bar_pred.probability <= 1.0
             assert few_bar_pred.datetime == few_dts[-1]
             assert few_bar_pred.prediction == few_preds[-1].prediction
+            assert few_bar_pred.probability == few_preds[-1].probability
