@@ -4,7 +4,7 @@ import numpy as np
 
 from tabpfn import TabPFNClassifier
 
-from limen.calibration import apply_calibrated_predict
+from limen.calibration import fit_calibrator
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.utils.data_dict_to_numpy import data_dict_to_numpy
@@ -26,6 +26,9 @@ class TabPFNBinary(ReferenceModel):
 
         super().__init__()
         self.prediction_calibration_config = prediction_calibration_config
+        self._fitted_calibrator: Any = None
+        self._calibration_threshold: float = 0.5
+        self._val_score: float | None = None
 
     def train(self, data: dict, **params: Any) -> 'TabPFNBinary':
 
@@ -66,21 +69,38 @@ class TabPFNBinary(ReferenceModel):
         '''
         Compute binary predictions with optional calibration and threshold tuning.
 
+        On the first call with calibration configured, fits the calibrator on
+        validation data and stores it for reuse. Subsequent calls (including
+        inference without val data) use the stored calibrator directly.
+
         Args:
-            data (dict): Data dictionary with x_val, y_val, x_test
+            data (dict): Data dictionary. Training call requires x_val, y_val, x_test;
+                inference call requires only x_test
 
         Returns:
             dict: Prediction results with '_preds' and '_probs' keys; calibrated path
                 also includes 'optimal_threshold' and 'val_score'
         '''
 
-        arrays = data_dict_to_numpy(data, ['x_val', 'y_val', 'x_test'])
+        x_test = data_dict_to_numpy(data, ['x_test'])['x_test']
 
         if self.prediction_calibration_config is not None:
-            return apply_calibrated_predict(self.model, self.prediction_calibration_config, arrays)
+            if self._fitted_calibrator is None:
+                arrays = data_dict_to_numpy(data, ['x_val', 'y_val'])
+                self._fitted_calibrator, self._calibration_threshold, self._val_score = fit_calibrator(
+                    self.model, self.prediction_calibration_config, arrays['x_val'], arrays['y_val']
+                )
+            test_proba = self._fitted_calibrator.predict_proba(x_test)[:, 1]
+            preds = (test_proba >= self._calibration_threshold).astype(np.int8)
+            return {
+                '_preds': preds,
+                '_probs': test_proba,
+                'optimal_threshold': self._calibration_threshold,
+                'val_score': self._val_score,
+            }
 
-        y_test_proba = self.model.predict_proba(arrays['x_test'])[:, 1]
-        y_pred = self.model.predict(arrays['x_test']).astype(np.int8)
+        y_test_proba = self.model.predict_proba(x_test)[:, 1]
+        y_pred = self.model.predict(x_test).astype(np.int8)
         return {'_preds': y_pred, '_probs': y_test_proba}
 
 
