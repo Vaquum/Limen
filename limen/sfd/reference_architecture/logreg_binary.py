@@ -1,9 +1,10 @@
 import inspect
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 
-from limen.calibration import apply_calibrated_predict
+from limen.calibration import fit_calibrator
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -41,6 +42,9 @@ class LogRegBinary(ReferenceModel):
 
         super().__init__()
         self.prediction_calibration_config = prediction_calibration_config
+        self._fitted_calibrator: Any = None
+        self._calibration_threshold: float = 0.5
+        self._val_score: float | None = None
 
     def train(self, data: dict, **params: Any) -> 'LogRegBinary':
 
@@ -73,8 +77,13 @@ class LogRegBinary(ReferenceModel):
         '''
         Compute binary predictions from feature data.
 
+        On the first call with calibration configured, fits the calibrator on
+        validation data and stores it for reuse. Subsequent calls (including
+        inference without val data) use the stored calibrator directly.
+
         Args:
-            data (dict): Data dictionary with x_val, y_val, x_test
+            data (dict): Data dictionary. Training call requires x_val, y_val, x_test;
+                inference call requires only x_test
 
         Returns:
             dict: Prediction results with '_preds' and '_probs' keys; calibrated path
@@ -82,7 +91,18 @@ class LogRegBinary(ReferenceModel):
         '''
 
         if self.prediction_calibration_config is not None:
-            return apply_calibrated_predict(self.model, self.prediction_calibration_config, data)
+            if self._fitted_calibrator is None:
+                self._fitted_calibrator, self._calibration_threshold, self._val_score = fit_calibrator(
+                    self.model, self.prediction_calibration_config, data['x_val'], data['y_val']
+                )
+            test_proba = self._fitted_calibrator.predict_proba(data['x_test'])[:, 1]
+            preds = (test_proba >= self._calibration_threshold).astype(np.int8)
+            return {
+                '_preds': preds,
+                '_probs': test_proba,
+                'optimal_threshold': self._calibration_threshold,
+                'val_score': self._val_score,
+            }
 
         preds = self.model.predict(data['x_test'])
         probs = self.model.predict_proba(data['x_test'])[:, 1]
