@@ -1008,3 +1008,13 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen/yaml/config.py` with `find_project_root()`, `read_limen_toml()`, and `get_store_path()`
 - Add `limen/cli/git_utils.py` with `git_executable()` and `git_add_and_commit()`
 
+
+## v3.14.0 on 2nd of June, 2026
+
+- Add `fit_calibrator(model, config, x_val, y_val)` to `limen/calibration/pipeline.py` and export from `limen.calibration` — separates the fit step from the apply step so calibrators can be stored and reused
+- Fix calibration at inference: `LogRegBinary` and `TabPFNBinary` now store the fitted calibrator on first `predict()` call and reuse it on subsequent calls, enabling sensor inference without validation data
+- Reset stored calibrator state when `train()` is called again on an existing model instance, preventing stale-calibrator bugs on reuse
+- Add `random_state` parameter to `RandomBinaryTarget` for reproducible label generation across training and evaluation
+- Fix `test_xgboost_inline_and_post_backtest_metrics_match`: use NaN-aware comparison (`math.isnan`) consistent with the logreg equivalent
+- Add e2e integration test covering the full experiment loop → Trainer → Sensor pipeline with three inference window sizes per sensor
+- Remove "Pass 1 / Pass 2" terminology from Trainer docstrings and documentation; there is only one training pass
