@@ -892,6 +892,7 @@ from tests.test_cli_new import test_run_new_skips_backup_remote_with_invalid_cha
 from tests.test_cli_new import test_run_new_clone_failure_returns_false
 from tests.test_cli_new import test_run_new_warns_when_backup_remote_placeholder_missing
 from tests.test_cli_new import test_clone_template_fails_fast_on_git_init_failure
+from tests.test_e2e_loop_trainer_sensor import test_e2e_label_control_trainer_sensor
 
 tests = [
     test_param_domain_init,
@@ -1777,6 +1778,7 @@ tests = [
     test_run_new_clone_failure_returns_false,
     test_run_new_warns_when_backup_remote_placeholder_missing,
     test_clone_template_fails_fast_on_git_init_failure,
+    test_e2e_label_control_trainer_sensor,
 ]
 
 # Configure logging
