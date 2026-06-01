@@ -13,7 +13,7 @@ At minimum, the directory must contain:
 - `metadata.json`
 - `round_data.jsonl`
 
-If `results.csv` is also present, Trainer performs Pass 1 validation against the original metrics. If it is missing, Trainer skips validation and proceeds directly to retraining.
+If `results.csv` is also present, Trainer validates the retrained metrics against the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
 
 ## Prerequisites
 
@@ -68,16 +68,14 @@ Trainer handles that transition cleanly by:
 - validating that the pipeline still reproduces the logged round
 - retraining on all data with `split_config=(1,0,0)`
 
-## Two-Pass Training
-
-### Pass 1: Validation
+## Training and Validation
 
 Trainer reruns:
 
 - `manifest.prepare_data(...)`
 - `manifest.run_model(...)`
 
-with the original round parameters and compares the resulting metrics against the original experiment log.
+with the original round parameters and wraps the resulting model in a `Sensor`. If `results.csv` is present, it also compares the resulting metrics against the original experiment log.
 
 If the model is deterministic, validation expects an exact match within a very small float tolerance. If the model is stochastic, Trainer uses a looser scaled tolerance.
 
@@ -93,18 +91,6 @@ except ReconstructionError as e:
 ```
 
 This is Limen's guard against pipeline drift.
-
-### Pass 2: Retraining
-
-After validation, Trainer deep-copies the manifest with:
-
-```python
-split_config=(1, 0, 0)
-```
-
-and retrains the resolved `ReferenceModel` on the full dataset.
-
-That trained model is then wrapped in a `Sensor`.
 
 ## Deterministic Vs Stochastic Models
 
@@ -130,8 +116,7 @@ That means the promotion stack depends on the [Reference Architecture](Reference
 
 On a live local `logreg_binary` promotion run in this repo:
 
-- Pass 1 validation completed with `validation_mismatches == []`
-- the promoted `Sensor.results` included task metrics plus `backtest_*` keys
+- validation completed with no metric mismatches
 - `Sensor.predict()` returned `_preds` and `_probs`
 - the promoted sensor produced predictions for `884` test bars
 
@@ -200,31 +185,7 @@ pred = sensor({'x_test': live_features})
 
 ### What `predict()` expects
 
-Most reference models only need:
-
-- `x_test`
-
-Some models may require more. The requirement comes from the underlying model class, not from the `Sensor` wrapper itself.
-
-### What `results` contains
-
-`Sensor.results` comes from the Pass 1 evaluation result, not from a stripped-down inference-only payload.
-
-In a live local logreg promotion run in this repo, the stored keys included:
-
-- `_preds`
-- `accuracy`
-- `auc`
-- `backtest_edge_per_signal_bps_p50`
-- `backtest_trade_pnl_net_bps_p50`
-- `backtest_cvar_95_return_bps`
-
-When the promoted round used calibration, `results` also includes:
-
-- `optimal_threshold` — the threshold chosen during the validation pass
-- `val_score` — the metric score at that threshold
-
-That is why `Sensor.results` is useful for provenance and review, while `Sensor.predict()` is the smaller live inference surface.
+All reference models need only `x_test` for inference. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time.
 
 ## What Trainer Reads From Disk
 
@@ -232,7 +193,7 @@ Trainer uses:
 
 - `metadata.json` to discover the SFD module and experiment metadata
 - `round_data.jsonl` to load `round_params`, stored predictions, and alignment metadata
-- `results.csv` when available for Pass 1 metric validation
+- `results.csv` when available for metric validation
 
 On a live local artifact-rich run in this repo, `metadata.json` contained:
 

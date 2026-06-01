@@ -25,10 +25,9 @@ class Trainer:
     '''
     Retrain selected permutations from a completed YAML experiment.
 
-    Pass 1 validates permutations by re-running manifest.prepare_data()
-    and manifest.run_model(), comparing metrics against the original
-    experiment log. The validated Pass 1 model is used directly as the
-    Sensor model — no second training pass is performed.
+    Validates permutations by re-running manifest.prepare_data() and
+    manifest.run_model(), comparing metrics against the original experiment
+    log. The validated model is used directly as the Sensor model.
     '''
 
     def __init__(self,
@@ -177,11 +176,11 @@ class Trainer:
                           is_deterministic: bool) -> list[str]:
 
         '''
-        Compare Pass 1 results against original experiment log entry.
+        Compare retrained results against original experiment log entry.
 
         Args:
             permutation_id (int): Round ID to validate
-            results (dict[str, Any]): Pass 1 results from run_model
+            results (dict[str, Any]): Results from run_model
             is_deterministic (bool): Whether to use exact-match tolerance
 
         Returns:
@@ -236,21 +235,21 @@ class Trainer:
     def train(self, permutation_ids: list[int]) -> list[Sensor]:
 
         '''
-        Run Pass 1 training for selected permutations and return Sensor instances.
+        Retrain selected permutations and return Sensor instances.
 
-        Pass 1 re-runs the pipeline and compares metrics against the original
-        experiment log. Raises ReconstructionError on mismatch. The validated
-        Pass 1 model is used directly as the Sensor model without retraining.
+        Re-runs the pipeline and compares metrics against the original experiment
+        log. Raises ReconstructionError on mismatch. The validated model is used
+        directly as the Sensor model.
 
         Args:
             permutation_ids (list[int]): Round IDs from experiment_log to retrain
 
         Returns:
-            list[Sensor]: Sensor instances wrapping validated Pass 1 models
+            list[Sensor]: Sensor instances wrapping validated models
 
         Raises:
             ValueError: If any permutation ID is not found in round_data
-            ReconstructionError: If Pass 1 metrics deviate beyond tolerance
+            ReconstructionError: If metrics deviate beyond tolerance
 
         '''
 

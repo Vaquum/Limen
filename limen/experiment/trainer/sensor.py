@@ -32,11 +32,11 @@ class Sensor:
                  round_params: dict[str, Any]) -> None:
 
         '''
-        Create a Sensor from a validated Pass 1 model.
+        Create a Sensor from a validated trained model.
 
         Args:
             yaml_reference (dict): Parsed YAML experiment dict from metadata.json
-            model (ReferenceModel): Trained model from Pass 1
+            model (ReferenceModel): Validated trained model
             fitted_params (dict): Fitted scaler/PCA state from the winning round
             round_params (dict): Full parameter dict from the winning round
 

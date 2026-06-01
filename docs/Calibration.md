@@ -173,9 +173,15 @@ NOTE: `predict()` only includes these keys when calibration is active for the ro
 
 The optimizer returns the `default_threshold` with score `0.0` when every candidate threshold predicts all negatives.
 
+## Calibration at Inference
+
+When a calibrated model is promoted to a `Sensor`, the calibrator is fitted once during training evaluation (on validation data) and stored inside the model instance. Subsequent `predict()` calls — including all sensor inference calls — reuse the stored calibrator without needing `x_val` or `y_val`. Calibrated sensors therefore work identically to uncalibrated ones from the caller's perspective: pass `x_test`, receive predictions.
+
+`fit_calibrator` is the low-level function that encapsulates this fit step. It is called internally by `LogRegBinary.predict()` and `TabPFNBinary.predict()` on first use, and is also available as a public API if you need to fit a calibrator outside the standard pipeline.
+
 ## Where To Look
 
-- `limen/calibration/` — `sklearn_probability_calibrator`, `grid_threshold_optimizer`, `apply_calibrated_predict`, `CalibratorProtocol`, `ThresholdOptimizerProtocol`
+- `limen/calibration/` — `fit_calibrator`, `sklearn_probability_calibrator`, `grid_threshold_optimizer`, `apply_calibrated_predict`, `CalibratorProtocol`, `ThresholdOptimizerProtocol`
 - `limen.experiment.CalibrationConfig` — the resolved config dataclass injected into the architecture
 - `CalibrationBuilder` — the fluent builder returned by `MLManifest.with_calibration()`; not a public import, obtain it only via the fluent chain
 
