@@ -251,6 +251,8 @@ def _extract_scalar(arr: Any) -> int | float | None:
 
     if arr is None:
         return None
+    if isinstance(arr, (int, float)) and not isinstance(arr, bool):
+        return arr
     try:
         if hasattr(arr, 'ndim') and arr.ndim == 0:
             return arr.item()

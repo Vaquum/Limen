@@ -495,7 +495,7 @@ class RequiredColumnsSpec:
 
 class DecoderLookbackSpec:
 
-    '''When decoder_lookback is present, it must be an integer >= 1.'''
+    '''When decoder_lookback is present, it must be exactly 1 (the only supported value).'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -510,14 +510,21 @@ class DecoderLookbackSpec:
             errors.append(YAMLError(
                 message=f"'decoder_lookback' must be an integer (got {type(value).__name__})",
                 path='sfd.manifest.decoder_lookback',
-                suggestion='Set decoder_lookback to a positive integer, e.g. decoder_lookback: 30',
+                suggestion='Set decoder_lookback: 1 (the only supported value)',
             ))
             return
         if value < 1:
             errors.append(YAMLError(
                 message=f"'decoder_lookback' must be >= 1 (got {value})",
                 path='sfd.manifest.decoder_lookback',
-                suggestion='Set decoder_lookback to a positive integer, e.g. decoder_lookback: 30',
+                suggestion='Set decoder_lookback: 1 (the only supported value)',
+            ))
+            return
+        if value > 1:
+            errors.append(YAMLError(
+                message=f"'decoder_lookback' > 1 is not yet supported (got {value}); only decoder_lookback: 1 is supported",
+                path='sfd.manifest.decoder_lookback',
+                suggestion='Set decoder_lookback: 1 or omit the field (defaults to 1)',
             ))
 
 
