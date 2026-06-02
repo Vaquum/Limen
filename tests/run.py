@@ -794,6 +794,7 @@ from tests.test_sensor import test_predict_all_output_length_equals_input
 from tests.test_sensor import test_predict_all_warmup_bars_have_reason_warmup
 from tests.test_sensor import test_predict_all_valid_bars_have_predictions
 from tests.test_sensor import test_predict_all_inside_window_bars_flagged
+from tests.test_sensor import test_predict_all_midstream_null_row_has_reason_null_features
 from tests.test_sensor import test_predict_all_decoder_lookback_gt1_raises
 from tests.test_sensor import test_extract_scalar_returns_none_for_none
 from tests.test_sensor import test_extract_scalar_returns_python_int
@@ -1692,6 +1693,7 @@ tests = [
     test_predict_all_warmup_bars_have_reason_warmup,
     test_predict_all_valid_bars_have_predictions,
     test_predict_all_inside_window_bars_flagged,
+    test_predict_all_midstream_null_row_has_reason_null_features,
     test_predict_all_decoder_lookback_gt1_raises,
     test_extract_scalar_returns_none_for_none,
     test_extract_scalar_returns_python_int,

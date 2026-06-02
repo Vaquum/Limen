@@ -392,6 +392,27 @@ def test_predict_all_inside_window_bars_flagged() -> None:
         assert r.prediction is None
 
 
+def test_predict_all_midstream_null_row_has_reason_null_features() -> None:
+    manifest, _lag = _make_lag_manifest(lag=2)
+    manifest.split_dates = None
+    raw = _make_klines(10)
+    # inject a null into a non-leading row (row 5, well past warm-up)
+    raw = raw.with_columns(
+        pl.when(pl.int_range(pl.len()) == 5)
+        .then(None)
+        .otherwise(pl.col('close'))
+        .alias('close')
+    )
+    sensor = _make_sensor(manifest, round_params={'bar_type': 'base'})
+    results = sensor.predict_all(raw)
+    assert results[5].reason == 'null-features'
+    assert results[5].prediction is None
+    assert results[5].probability is None
+    # other post-warmup bars still produce predictions
+    assert results[6].reason is None
+    assert results[6].prediction is not None
+
+
 def test_predict_all_decoder_lookback_gt1_raises() -> None:
     manifest = _make_basic_manifest()
     manifest.decoder_lookback = 2
