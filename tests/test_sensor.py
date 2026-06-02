@@ -290,11 +290,19 @@ def test_predict_raises_if_last_bar_is_warmup() -> None:
 
 def test_predict_raises_if_insufficient_valid_rows() -> None:
     manifest, _ = _make_lag_manifest(lag=3)
-    manifest.decoder_lookback = 5
-    # 3 warm-up + 1 valid < 5 decoder_lookback
-    raw = _make_klines(4)
+    # decoder_lookback=1, only 3 rows → valid_rows=0 < 1
+    raw = _make_klines(3)
     sensor = _make_sensor(manifest)
     with pytest.raises(ValueError, match='Insufficient data'):
+        sensor.predict(raw)
+
+
+def test_predict_raises_not_implemented_for_decoder_lookback_gt_1() -> None:
+    manifest, _ = _make_lag_manifest(lag=3)
+    manifest.decoder_lookback = 2
+    raw = _make_klines(10)
+    sensor = _make_sensor(manifest)
+    with pytest.raises(NotImplementedError, match='decoder_lookback > 1'):
         sensor.predict(raw)
 
 
