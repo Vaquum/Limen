@@ -7,6 +7,7 @@ from limen.yaml.rules import BlockSpec
 from limen.yaml.rules import CalibrationCrossRef
 from limen.yaml.rules import CalibrationPresence
 from limen.yaml.rules import ConditionsList
+from limen.yaml.rules import DecoderLookbackSpec
 from limen.yaml.rules import DataSource
 from limen.yaml.rules import FuncList
 from limen.yaml.rules import NameSlug
@@ -46,7 +47,6 @@ from limen.yaml.schema import SCALER_EXPLICIT_OPTIONAL
 from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
 from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
 from limen.yaml.schema import SEARCH_STRATEGY_REQUIRED
-from limen.yaml.schema import SPLIT_CONFIG_REQUIRED
 from limen.yaml.schema import SPLIT_DATES_REQUIRED
 from limen.yaml.schema import STRATEGY_REQUIRED
 from limen.yaml.schema import TARGET_OPTIONAL
@@ -95,11 +95,9 @@ _MAIN_ENGINE = RuleEngine([
 
     DataSource(),
     NoUnknownKeys('sfd.manifest.data_source', DATA_SOURCE_REQUIRED | DATA_SOURCE_OPTIONAL),
-    NoUnknownKeys('sfd.manifest.test_data_source', DATA_SOURCE_REQUIRED | DATA_SOURCE_OPTIONAL),
 
     SplitSpec(),
     RequiredColumnsSpec(),
-    NoUnknownKeys('sfd.manifest.split_config', SPLIT_CONFIG_REQUIRED),
     NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED),
 
     Required('sfd.manifest.reference_architecture', str),
@@ -120,6 +118,7 @@ _MAIN_ENGINE = RuleEngine([
         NoUnknownKeys('sfd.manifest.scaler',
                       SCALER_EXPLICIT_REQUIRED | SCALER_EXPLICIT_OPTIONAL | SCALER_FROM_PARAMS_REQUIRED),
         ScalerSpec(),
+        DecoderLookbackSpec(),
         BlockSpec(
             'sfd.manifest.feature_ablation',
             'sfd.manifest.pca_compression',

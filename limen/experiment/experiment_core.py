@@ -274,6 +274,11 @@ class UniversalExperimentLoop:
                     self.preds.append(round_results['_preds'])
                 round_results.pop('_preds')
 
+            if '_model' in round_results:
+                if retain_round_artifacts:
+                    self.models.append(round_results['_model'])
+                round_results.pop('_model')
+
             if retain_round_artifacts and '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
 
@@ -521,6 +526,10 @@ class UniversalExperimentLoop:
                 models = round_results.pop('models')
                 if post_processing:
                     self.models.append(models)
+            if '_model' in round_results:
+                model = round_results.pop('_model')
+                if post_processing:
+                    self.models.append(model)
             current_preds = round_results.pop('_preds', None)
             if current_preds is None:
                 current_preds = []

@@ -14,18 +14,14 @@ sfd:
       method: limen.data.HistoricalData.get_spot_klines
       params:
         kline_size: 3600
-        start_date_limit: "2025-01-01"
 
-    test_data_source:
-      method: limen.data.HistoricalData.get_spot_klines
-      params:
-        kline_size: 7200
-        n_rows: 5000
-
-    split_config:
-      train: 8
-      val: 1
-      test: 2
+    split_dates:
+      train_start: "2024-01-01"
+      train_end:   "2024-09-30"
+      val_start:   "2024-10-01"
+      val_end:     "2024-11-30"
+      test_start:  "2024-12-01"
+      test_end:    "2024-12-31"
 
     indicators:
       - func: limen.indicators.wilder_rsi

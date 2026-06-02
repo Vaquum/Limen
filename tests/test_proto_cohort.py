@@ -4,6 +4,8 @@ from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from textwrap import dedent
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -13,12 +15,53 @@ from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
-from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
 from limen.experiment.trainer import Trainer
-from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
-from tests.test_yaml import _MINIMAL_ML_YAML
+
+_COHORT_CONTRACT_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_exp
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        scaler:
+          from_params: scaler_type
+        reference_architecture: limen.sfd.reference_architecture.logreg_binary
+      params:
+        scaler_type: [logreg]
+        C: [1.0, 0.5]
+        random_state: [42]
+    uel:
+      n_permutations: 2
+      search_strategy:
+        type: random
+      output_format: csv
+''')
 
 
 class _RaisingMember:
@@ -40,8 +83,7 @@ class _FallbackContinuousMember:
         self.permutation_id = permutation_id
         self._preds = np.asarray(preds, dtype=float)
         self._round_params = {'model_architecture': architecture}
-        self._metadata = {
-            'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}
+        self._metadata = {}
 
     @property
     def round_params(self) -> dict:
@@ -61,20 +103,18 @@ class _FallbackContinuousMember:
 def _run_real_experiment(experiment_dir: Path,
                          n_permutations: int = 2) -> list[int]:
 
-    params = logreg_sfd.params()
-    domain = ParamDomain(params)
-    strategy = GridStrategy(domain)
-
-    uel = UniversalExperimentLoop(
-        sfd=logreg_sfd,
-        search_strategy=strategy,
-        experiment_dir=experiment_dir,
-    )
-
-    uel.run(
-        experiment_name='test_proto_cohort',
-        n_permutations=n_permutations,
-    )
+    experiment_dir = Path(experiment_dir).resolve()
+    original = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    try:
+        with TemporaryDirectory() as tmpdir, patch('click.echo'), patch('click.secho'):
+            yaml_path = Path(tmpdir) / 'exp.yaml'
+            yaml_text = _minimal_yaml_cli_contract_text(experiment_dir)
+            yaml_text = yaml_text.replace('n_permutations: 2', f'n_permutations: {n_permutations}')
+            yaml_path.write_text(yaml_text)
+            run_experiment(yaml_path)
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original
 
     round_ids: list[int] = []
     with (experiment_dir / 'round_data.jsonl').open('r') as f:
@@ -148,20 +188,26 @@ def _patch_round_architecture(experiment_dir: Path,
 def _train_real_members_and_input(experiment_dir: Path,
                                   permutation_ids: list[int]) -> tuple[list, np.ndarray]:
 
-    trainer = Trainer(experiment_dir)
-    sensors = trainer.train(permutation_ids)
-
-    data_dict = trainer._manifest.prepare_data(
-        trainer._data, sensors[0].round_params)
-    x_test = data_dict['x_test']
+    original = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    try:
+        trainer = Trainer(experiment_dir)
+        sensors = trainer.train(permutation_ids)
+        data_dict = trainer._manifest.prepare_data(
+            trainer._data, sensors[0].round_params)
+        x_test = data_dict['x_test']
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original
 
     return sensors, x_test
 
 
 def _make_yaml_contract_data(kline_size: int = 3600,
-                             n_rows: int | None = None) -> pl.DataFrame:
+                             n_rows: int | None = None,
+                             start_date_limit: object = None,
+                             end_date_limit: object = None) -> pl.DataFrame:
 
-    _ = kline_size
+    _ = kline_size, start_date_limit, end_date_limit
     n = int(n_rows or 500)
     timestamps = [datetime(2025, 1, 1) + timedelta(hours=i) for i in range(n)]
     close = [100.0 + 0.02 * i + math.sin(i / 7.0) for i in range(n)]
@@ -178,17 +224,7 @@ def _make_yaml_contract_data(kline_size: int = 3600,
 
 def _minimal_yaml_cli_contract_text(output_path: Path) -> str:
 
-    yaml_text = _MINIMAL_ML_YAML.replace('n_permutations: 5', 'n_permutations: 1')
-    yaml_text = yaml_text.replace(
-        'use_calibration: [true, false]',
-        'use_calibration: [false]',
-    )
-    yaml_text = yaml_text.replace(
-        'use_threshold: [true, false]',
-        'use_threshold: [false]',
-    )
-
-    return yaml_text.replace(
+    return _COHORT_CONTRACT_YAML.replace(
         'output_format: csv',
         f'output_format: csv\n  output_path: "{output_path}"',
     )

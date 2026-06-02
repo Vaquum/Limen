@@ -1,360 +1,258 @@
-import importlib
 import json
-import sys
+import math
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from types import SimpleNamespace
-import types
+from textwrap import dedent
+from unittest.mock import patch
 
 import polars as pl
 import pytest
 
-import limen.experiment.trainer.trainer as trainer_module
-from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
+from limen.cli.commands.run import run_experiment
+from limen.data import historical_data
 from limen.experiment.trainer import ReconstructionError
 from limen.experiment.trainer import Trainer
-from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
-from limen.sfd.foundational_sfd import random_binary as random_sfd
-from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.experiment.param_search import RandomStrategy
-from tests.utils.historical_data import get_cached_spot_klines_2h
+from limen.experiment.trainer.sensor import BarPrediction
 
 
-class _ReferenceModelA(ReferenceModel):
-    deterministic = True
-
-    def train(self, data, **kwargs):
-        return self
-
-    def predict(self, data, **kwargs):
-        return {'_preds': []}
-
-    def evaluate(self, data, **kwargs):
-        return {}
-
-
-class _ReferenceModelB(ReferenceModel):
-    deterministic = True
-
-    def train(self, data, **kwargs):
-        return self
-
-    def predict(self, data, **kwargs):
-        return {'_preds': []}
-
-    def evaluate(self, data, **kwargs):
-        return {}
-
-
-def test_trainer_end_to_end():
-
-    with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
-        )
-
-        uel.run(
-            experiment_name='test_trainer',
-            n_permutations=2,
-        )
-
-        # metadata.json written with correct fields
-        metadata_path = experiment_dir / 'metadata.json'
-        assert metadata_path.exists()
-        with metadata_path.open('r') as f:
-            metadata = json.load(f)
-        assert metadata['sfd_module'] == 'limen.sfd.foundational_sfd.logreg_binary'
-        assert 'limen_version' in metadata
-        assert 'created_at' in metadata
-
-        # Trainer loads manifest, params, round data, and original log
-        trainer = Trainer(experiment_dir, data=uel.data)
-        assert trainer._manifest is not None
-        assert len(trainer._param_keys) > 0
-        assert len(trainer._round_data) == 2
-        assert trainer._original_log is not None
-        assert len(trainer._original_log) == 2
-
-        # train returns Sensor instances with trained models
-        permutation_ids = list(trainer._round_data.keys())
-        sensors = trainer.train(permutation_ids)
-        assert len(sensors) == 2
-
-        for pid, sensor in zip(permutation_ids, sensors, strict=True):
-            assert sensor.permutation_id == pid
-            assert sensor.round_params is not None
-            assert sensor.metadata is not None
-            assert sensor.results is not None
-            assert sensor.model is not None
-            assert isinstance(sensor.model, ReferenceModel)
-
-        # Sensor is callable with trained model
-        data_dict = trainer._manifest.prepare_data(uel.data, sensors[0].round_params)
-        result = sensors[0](data_dict)
-        assert isinstance(result, dict)
-
-        # invalid permutation ID raises ValueError
-        try:
-            trainer.train([99999])
-            assert False, 'Expected ValueError'
-        except ValueError as e:
-            assert '99999' in str(e)
+_E2E_LOGREG_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_logreg
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        scaler:
+          from_params: scaler_type
+        reference_architecture: limen.sfd.reference_architecture.logreg_binary
+      params:
+        scaler_type: [logreg]
+        C: [1.0, 0.5]
+        random_state: [42]
+    uel:
+      n_permutations: 2
+      search_strategy:
+        type: grid
+      output_format: csv
+''')
 
 
-def test_reconstruction_error_stochastic():
-
-    with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = random_sfd.params()
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=random_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
-        )
-
-        uel.run(
-            experiment_name='test_stochastic',
-            n_permutations=2,
-        )
-
-        trainer = Trainer(experiment_dir, data=uel.data)
-        permutation_ids = list(trainer._round_data.keys())
-
-        try:
-            trainer.train(permutation_ids)
-            assert False, 'Expected ReconstructionError'
-        except ReconstructionError as e:
-            assert 'metric mismatch' in str(e).lower()
-
-
-def test_reconstruction_error_tampered_log():
-
-    with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
-        )
-
-        uel.run(
-            experiment_name='test_tampered',
-            n_permutations=2,
-        )
-
-        trainer = Trainer(experiment_dir, data=uel.data)
-        permutation_ids = list(trainer._round_data.keys())
-
-        # Tamper with original log to force mismatch
-        pid = permutation_ids[0]
-        for key, value in trainer._original_log[pid].items():
-            if isinstance(value, float) and key not in ('id', '_id'):
-                trainer._original_log[pid][key] = value + 999.0
-                break
-
-        try:
-            trainer.train([pid])
-            assert False, 'Expected ReconstructionError'
-        except ReconstructionError as e:
-            assert str(pid) in str(e)
+_E2E_RANDOM_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_random
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        reference_architecture: limen.sfd.reference_architecture.random_binary
+      params:
+        random_weights: [0.5]
+    uel:
+      n_permutations: 1
+      search_strategy:
+        type: grid
+      output_format: csv
+''')
 
 
-def test_deterministic_validation():
-
-    with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
-        )
-
-        uel.run(
-            experiment_name='test_logreg',
-            n_permutations=2,
-        )
-
-        trainer = Trainer(experiment_dir, data=uel.data)
-        permutation_ids = list(trainer._round_data.keys())
-        sensors = trainer.train(permutation_ids)
-
-        # Deterministic model produces zero mismatches
-        for pid, sensor in zip(permutation_ids, sensors, strict=True):
-            mismatches = trainer._validate_metrics(pid, sensor.results, True)
-            assert mismatches == [], f"Permutation {pid} had mismatches: {mismatches}"
-
-
-def test_pass2_uses_full_data():
-
-    with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
-        )
-
-        uel.run(
-            experiment_name='test_full_data',
-            n_permutations=1,
-        )
-
-        trainer = Trainer(experiment_dir, data=uel.data)
-        pid = next(iter(trainer._round_data.keys()))
-        round_params = dict(trainer._round_data[pid]['round_params'])
-
-        # Pass 1 data has original split — val and test are non-empty
-        pass1_data = trainer._manifest.prepare_data(uel.data, round_params)
-        assert len(pass1_data['x_val']) > 0
-        assert len(pass1_data['x_test']) > 0
-        pass1_train_rows = len(pass1_data['x_train'])
-
-        # Pass 2 data uses split_config=(1,0,0) — all data in training
-        manifest_full = trainer._manifest.with_params_override(split_config=(1, 0, 0))
-        pass2_data = manifest_full.prepare_data(uel.data, round_params)
-        pass2_train_rows = len(pass2_data['x_train'])
-        assert len(pass2_data['x_val']) == 0
-        assert len(pass2_data['x_test']) == 0
-        assert pass2_train_rows > pass1_train_rows
+_E2E_ABLATION_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_ablation
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+          - func: limen.indicators.roc
+            params:
+              period: 2
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        scaler:
+          from_params: scaler_type
+        feature_ablation:
+          drop_count_key: feature_drop_count
+          seed_key: feature_drop_seed
+        reference_architecture: limen.sfd.reference_architecture.logreg_binary
+      params:
+        scaler_type: [logreg]
+        C: [1.0]
+        random_state: [42]
+        feature_drop_count: [1]
+        feature_drop_seed: [42]
+    uel:
+      n_permutations: 1
+      search_strategy:
+        type: grid
+      output_format: csv
+''')
 
 
-def test_sensor_inference():
+def _make_e2e_data(kline_size: int = 3600,
+                   n_rows: int | None = None,
+                   start_date_limit: object = None,
+                   end_date_limit: object = None) -> pl.DataFrame:
+    _ = kline_size, start_date_limit, end_date_limit
+    n = int(n_rows or 500)
+    timestamps = [datetime(2025, 1, 1) + timedelta(hours=i) for i in range(n)]
+    close = [100.0 + 0.02 * i + math.sin(i / 7.0) for i in range(n)]
+    return pl.DataFrame({
+        'datetime': timestamps,
+        'open': [v - 0.1 for v in close],
+        'high': [v + 0.2 for v in close],
+        'low': [v - 0.2 for v in close],
+        'close': close,
+        'volume': [1000.0 + i for i in range(n)],
+    })
+
+
+def _run_e2e_experiment(experiment_dir: Path, yaml_text: str) -> list[int]:
+    experiment_dir = Path(experiment_dir).resolve()
+    original = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_e2e_data)
+    try:
+        with TemporaryDirectory() as tmpdir, patch('click.echo'), patch('click.secho'):
+            yaml_path = Path(tmpdir) / 'exp.yaml'
+            yaml_path.write_text(yaml_text.replace(
+                'output_format: csv',
+                f'output_format: csv\n  output_path: "{experiment_dir}"',
+            ))
+            run_experiment(yaml_path)
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original
+    round_ids: list[int] = []
+    with (experiment_dir / 'round_data.jsonl').open('r') as f:
+        for raw_line in f:
+            stripped = raw_line.strip()
+            if not stripped:
+                continue
+            round_ids.append(json.loads(stripped)['round_id'])
+    return sorted(round_ids)
+
+
+def _train_e2e(experiment_dir: Path, pids: list[int]) -> tuple[Trainer, list]:
+    original = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_e2e_data)
+    try:
+        trainer = Trainer(experiment_dir)
+        sensors = trainer.train(pids)
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original
+    return trainer, sensors
+
+
+def test_trainer_requires_yaml_reference() -> None:
 
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}),
         )
+        (experiment_dir / 'round_data.jsonl').write_text('')
 
-        uel.run(
-            experiment_name='test_inference',
-            n_permutations=1,
-        )
-
-        trainer = Trainer(experiment_dir, data=uel.data)
-        pid = next(iter(trainer._round_data.keys()))
-        sensors = trainer.train([pid])
-        sensor = sensors[0]
-
-        # sensor.predict() works on feature-only data (no labels needed)
-        data_dict = trainer._manifest.prepare_data(uel.data, sensor.round_params)
-        live_data = {'x_test': data_dict['x_test']}
-        result = sensor.predict(live_data)
-        assert isinstance(result, dict)
-        assert '_preds' in result
-        assert '_probs' in result
-        assert len(result['_preds']) == len(data_dict['x_test'])
-
-        # __call__ delegates to predict()
-        result_via_call = sensor(live_data)
-        assert result_via_call.keys() == result.keys()
+        with pytest.raises(ValueError, match='yaml_reference'):
+            Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
 
 
-def test_trainer_with_feature_ablation():
+def test_trainer_rejects_non_dict_yaml_reference() -> None:
 
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        params['feature_drop_count'] = [1]
-        params['feature_drop_seed'] = [42]
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            test_mode=True,
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({'yaml_reference': []}),
         )
+        (experiment_dir / 'round_data.jsonl').write_text('')
 
-        uel.run(
-            experiment_name='test_ablation',
-            n_permutations=1,
-        )
-
-        # _dropped_features stored in round_data.jsonl
-        trainer = Trainer(experiment_dir, data=uel.data)
-        pid = next(iter(trainer._round_data.keys()))
-        rp = trainer._round_data[pid]['round_params']
-        assert '_dropped_features' in rp
-        assert len(rp['_dropped_features']) == 1
-
-        # Trainer reproduces same drops
-        train_rp = dict(rp)
-        trainer._manifest.prepare_data(uel.data, train_rp)
-        assert train_rp['_dropped_features'] == rp['_dropped_features']
-
-        # Trainer Pass 1 validates with ablation active
-        sensors = trainer.train([pid])
-        assert len(sensors) == 1
-        assert sensors[0].model is not None
+        with pytest.raises(ValueError, match='yaml_reference'):
+            Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
 
 
-def test_trainer_with_fractional_diff():
-
-    large_data = get_cached_spot_klines_2h(20000)
+def test_trainer_rejects_malformed_yaml_reference() -> None:
 
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir) / 'experiment'
-        params = logreg_sfd.params()
-        params['frac_diff_d'] = [0.4]
-        domain = ParamDomain(params)
-        strategy = RandomStrategy(domain, seed=42)
-
-        uel = UniversalExperimentLoop(
-            sfd=logreg_sfd,
-            search_strategy=strategy,
-            experiment_dir=experiment_dir,
-            data=large_data,
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'metadata.json').write_text(
+            json.dumps({'yaml_reference': {'metadata': {'name': 'yaml_exp'}, 'sfd': {}}}),
         )
+        (experiment_dir / 'round_data.jsonl').write_text('')
 
-        uel.run(
-            experiment_name='test_fracdiff',
-            n_permutations=1,
-        )
-
-        trainer = Trainer(experiment_dir, data=large_data)
-        pid = next(iter(trainer._round_data.keys()))
-
-        # Trainer Pass 1 validates with fracdiff active
-        sensors = trainer.train([pid])
-        assert len(sensors) == 1
-        assert sensors[0].model is not None
+        with pytest.raises(ValueError, match='yaml_reference'):
+            Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
 
 
 def test_load_round_data_skips_blank_and_malformed_lines() -> None:
@@ -391,55 +289,6 @@ def test_load_original_log_returns_none_when_results_csv_is_missing() -> None:
         trainer._experiment_dir = Path(tmpdir)
 
         assert trainer._load_original_log() is None
-
-
-def test_resolve_model_class_requires_configured_architecture_function() -> None:
-    trainer = object.__new__(Trainer)
-    trainer._manifest = SimpleNamespace(architecture_function=None)
-
-    with pytest.raises(ValueError, match='Architecture function not configured'):
-        trainer._resolve_model_class()
-
-
-def test_resolve_model_class_rejects_modules_without_reference_model_subclasses() -> None:
-    def architecture_function():
-        return None
-
-    architecture_function.__module__ = 'dummy.no_model'
-    trainer = object.__new__(Trainer)
-    trainer._manifest = SimpleNamespace(architecture_function=architecture_function)
-
-    with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(
-            trainer_module.importlib,
-            'import_module',
-            lambda module_name: types.SimpleNamespace(NotAReferenceModel=object),
-        )
-
-        with pytest.raises(ValueError, match='No ReferenceModel subclass found'):
-            trainer._resolve_model_class()
-
-
-def test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses() -> None:
-    def architecture_function():
-        return None
-
-    architecture_function.__module__ = 'dummy.multi_model'
-    trainer = object.__new__(Trainer)
-    trainer._manifest = SimpleNamespace(architecture_function=architecture_function)
-
-    with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(
-            trainer_module.importlib,
-            'import_module',
-            lambda module_name: types.SimpleNamespace(
-                ModelA=_ReferenceModelA,
-                ModelB=_ReferenceModelB,
-            ),
-        )
-
-        with pytest.raises(ValueError, match='Multiple ReferenceModel subclasses found'):
-            trainer._resolve_model_class()
 
 
 def test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift() -> None:
@@ -494,314 +343,114 @@ def test_validate_metrics_reports_missing_permutations_and_large_deterministic_m
     assert mismatches == ['accuracy: original=0.8, new=0.81']
 
 
-_SELF_CONTAINED_SFD_SOURCE = '''
-from types import SimpleNamespace
-
-
-def manifest():
-    return SimpleNamespace(architecture_function=None)
-
-
-def params():
-    return {'alpha': 0.5}
-'''
-
-
-def test_trainer_loads_sfd_from_experiment_dir_without_sys_path_mutation() -> None:
-
-    '''
-    Pin the self-contained-experiment contract: Trainer(experiment_dir)
-    must succeed when the SFD .py lives inside experiment_dir and is
-    referenced by bare module name in metadata.json, even though that
-    name is not on sys.path. The loaded module must be registered in
-    sys.modules under the bare name so downstream
-    importlib.import_module(name) lookups (e.g. _resolve_model_class)
-    resolve to the same module instance.
-    '''
-
-    sys_path_before = list(sys.path)
-    sfd_module_name = 'isolated_sfd_for_trainer_test'
-    previous = sys.modules.pop(sfd_module_name, None)
-
-    try:
-        with TemporaryDirectory() as tmpdir:
-            experiment_dir = Path(tmpdir)
-
-            (experiment_dir / f'{sfd_module_name}.py').write_text(
-                _SELF_CONTAINED_SFD_SOURCE,
-            )
-            (experiment_dir / 'metadata.json').write_text(
-                json.dumps({'sfd_module': sfd_module_name}),
-            )
-            (experiment_dir / 'round_data.jsonl').write_text('')
-
-            trainer = Trainer(
-                experiment_dir,
-                data=pl.DataFrame({'x': [1, 2, 3]}),
-            )
-
-            assert trainer._param_keys == frozenset({'alpha'})
-            assert trainer._manifest.architecture_function is None
-
-            registered = sys.modules.get(sfd_module_name)
-            assert registered is not None
-            assert importlib.import_module(sfd_module_name) is registered
-    finally:
-        if previous is None:
-            sys.modules.pop(sfd_module_name, None)
-        else:
-            sys.modules[sfd_module_name] = previous
-
-    assert sys.path == sys_path_before
-
-
-def test_trainer_reconstructs_yaml_artifact_from_metadata_reference(monkeypatch) -> None:
-
-    '''
-    YAML CLI runs store the declarative SFD under metadata.json["yaml_reference"]
-    while metadata.json["sfd_module"] uses a non-importable yaml:<name> marker.
-    Trainer must use the YAML reference directly instead of treating that marker
-    as a Python module path.
-    '''
-
-    seen = {}
-
-    class FakeCompiledSFD:
-
-        def __init__(self, yaml_reference):
-            seen['yaml_reference'] = yaml_reference
-
-        def params(self):
-            return {'alpha': [1]}
-
-        def manifest(self):
-            return SimpleNamespace(architecture_function=None)
-
-    monkeypatch.setattr(trainer_module, 'CompiledSFD', FakeCompiledSFD)
-
-    yaml_reference = {
-        'metadata': {'name': 'yaml_exp'},
-        'sfd': {'params': {'alpha': [1]}},
-    }
-
+def test_trainer_yaml_end_to_end() -> None:
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir)
-        (experiment_dir / 'metadata.json').write_text(
-            json.dumps({
-                'sfd_module': 'yaml:yaml_exp',
-                'yaml_reference': yaml_reference,
-            }),
-        )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
+        assert len(round_ids) == 2
 
-        trainer = Trainer(
-            experiment_dir,
-            data=pl.DataFrame({'x': [1, 2, 3]}),
-        )
+        metadata = json.loads((exp_dir / 'metadata.json').read_text())
+        assert 'yaml_reference' in metadata
+        assert 'limen_version' in metadata
 
-    assert seen['yaml_reference'] == yaml_reference
-    assert trainer._param_keys == frozenset({'alpha'})
+        trainer, sensors = _train_e2e(exp_dir, round_ids)
+        assert len(sensors) == 2
+
+        for i, sensor in enumerate(sensors):
+            assert sensor.permutation_id == round_ids[i]
+            assert isinstance(sensor.round_params, dict)
+
+        with pytest.raises(ValueError, match='not found in round_data'):
+            trainer.train([999])
 
 
-@pytest.mark.parametrize(
-    'yaml_reference',
-    [
-        [],
-        {'metadata': {'name': 'yaml_exp'}, 'sfd': {}},
-    ],
-)
-def test_trainer_rejects_malformed_yaml_reference(yaml_reference) -> None:
-
+def test_trainer_yaml_reconstruction_error_stochastic() -> None:
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir)
-        (experiment_dir / 'metadata.json').write_text(
-            json.dumps({
-                'sfd_module': 'yaml:yaml_exp',
-                'yaml_reference': yaml_reference,
-            }),
-        )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_RANDOM_YAML)
+        assert len(round_ids) == 1
 
-        with pytest.raises(ValueError, match='yaml_reference'):
-            Trainer(
-                experiment_dir,
-                data=pl.DataFrame({'x': [1, 2, 3]}),
-            )
+        original = historical_data.HistoricalData.get_spot_klines
+        historical_data.HistoricalData.get_spot_klines = staticmethod(_make_e2e_data)
+        try:
+            trainer = Trainer(exp_dir)
+            with pytest.raises(ReconstructionError, match='metric mismatch'):
+                trainer.train(round_ids)
+        finally:
+            historical_data.HistoricalData.get_spot_klines = original
 
 
-def test_trainer_wraps_yaml_resolution_error(monkeypatch) -> None:
-
-    class FakeCompiledSFD:
-
-        def __init__(self, _yaml_reference):
-            pass
-
-        def params(self):
-            return {'alpha': [1]}
-
-        def manifest(self):
-            raise trainer_module.ResolutionError(
-                'bad.reference',
-                ['limen'],
-            )
-
-    monkeypatch.setattr(trainer_module, 'CompiledSFD', FakeCompiledSFD)
-
+def test_trainer_yaml_reconstruction_error_tampered_log() -> None:
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir)
-        (experiment_dir / 'metadata.json').write_text(
-            json.dumps({
-                'sfd_module': 'yaml:yaml_exp',
-                'yaml_reference': {
-                    'metadata': {'name': 'yaml_exp'},
-                    'sfd': {'params': {'alpha': [1]}},
-                },
-            }),
-        )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
 
-        with pytest.raises(ValueError, match='yaml_reference'):
-            Trainer(
-                experiment_dir,
-                data=pl.DataFrame({'x': [1, 2, 3]}),
-            )
+        df = pl.read_csv(exp_dir / 'results.csv')
+        df = df.with_columns((pl.col('accuracy') + 0.5).alias('accuracy'))
+        df.write_csv(exp_dir / 'results.csv')
+
+        with pytest.raises(ReconstructionError, match='metric mismatch'):
+            _train_e2e(exp_dir, [round_ids[0]])
 
 
-def test_trainer_loads_sfd_rolls_back_sys_modules_on_exec_failure() -> None:
-
-    '''
-    If the SFD module raises during exec_module, the partially
-    initialised module must not remain in sys.modules and any
-    previous entry under the same name must be restored.
-    '''
-
-    sfd_module_name = 'broken_sfd_for_trainer_test'
-    previous = sys.modules.pop(sfd_module_name, None)
-
-    try:
-        with TemporaryDirectory() as tmpdir:
-            experiment_dir = Path(tmpdir)
-
-            (experiment_dir / f'{sfd_module_name}.py').write_text(
-                'raise RuntimeError("intentional sfd boom")\n',
-            )
-            (experiment_dir / 'metadata.json').write_text(
-                json.dumps({'sfd_module': sfd_module_name}),
-            )
-            (experiment_dir / 'round_data.jsonl').write_text('')
-
-            with pytest.raises(RuntimeError, match='intentional sfd boom'):
-                Trainer(
-                    experiment_dir,
-                    data=pl.DataFrame({'x': [1, 2, 3]}),
-                )
-
-            assert sfd_module_name not in sys.modules
-    finally:
-        if previous is None:
-            sys.modules.pop(sfd_module_name, None)
-        else:
-            sys.modules[sfd_module_name] = previous
-
-
-def test_trainer_loads_sfd_restores_previous_sys_modules_entry_on_exec_failure() -> None:
-
-    '''
-    If a different module was already registered under
-    `sfd_module_name`, an `exec_module` failure must restore that
-    prior entry instead of leaving the slot empty.
-    '''
-
-    sfd_module_name = 'preexisting_sfd_for_trainer_test'
-    sentinel = types.ModuleType(sfd_module_name)
-    sentinel.__limen_test_sentinel__ = True
-    saved = sys.modules.get(sfd_module_name)
-    sys.modules[sfd_module_name] = sentinel
-
-    try:
-        with TemporaryDirectory() as tmpdir:
-            experiment_dir = Path(tmpdir)
-
-            (experiment_dir / f'{sfd_module_name}.py').write_text(
-                'raise RuntimeError("intentional sfd boom")\n',
-            )
-            (experiment_dir / 'metadata.json').write_text(
-                json.dumps({'sfd_module': sfd_module_name}),
-            )
-            (experiment_dir / 'round_data.jsonl').write_text('')
-
-            with pytest.raises(RuntimeError, match='intentional sfd boom'):
-                Trainer(
-                    experiment_dir,
-                    data=pl.DataFrame({'x': [1, 2, 3]}),
-                )
-
-            assert sys.modules.get(sfd_module_name) is sentinel
-    finally:
-        if saved is None:
-            sys.modules.pop(sfd_module_name, None)
-        else:
-            sys.modules[sfd_module_name] = saved
-
-
-def test_trainer_falls_back_to_import_module_when_no_local_sfd_file() -> None:
-
-    '''
-    Built-in / packaged SFDs referenced by fully-qualified package
-    name must continue to work via importlib.import_module when no
-    `<sfd_module_name>.py` exists inside experiment_dir.
-    '''
-
+def test_trainer_yaml_deterministic_validation() -> None:
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir)
-
-        (experiment_dir / 'metadata.json').write_text(
-            json.dumps({
-                'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary',
-            }),
-        )
-        (experiment_dir / 'round_data.jsonl').write_text('')
-
-        trainer = Trainer(
-            experiment_dir,
-            data=pl.DataFrame({'x': [1, 2, 3]}),
-        )
-
-        assert trainer._param_keys == frozenset(logreg_sfd.params().keys())
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
+        _, sensors = _train_e2e(exp_dir, [round_ids[0]])
+        assert len(sensors) == 1
+        assert sensors[0]._model.deterministic is True
 
 
-@pytest.mark.parametrize('bad_name', [
-    '../etc/passwd',
-    '..',
-    '/etc/passwd',
-    'foo/bar',
-    'foo\\bar',
-    'foo..bar',
-    '.leading_dot',
-    'trailing_dot.',
-    '',
-    '1starts_with_digit',
-    'has space',
-])
-def test_trainer_rejects_path_traversal_and_invalid_module_names(bad_name: str) -> None:
-
-    '''
-    Pin the path-traversal hardening: `_load_sfd_module` must reject
-    any `sfd_module` name that is not a dotted sequence of valid
-    Python identifiers, before either the local-file or import_module
-    branch runs.
-    '''
-
+def test_trainer_yaml_sensor_inference() -> None:
     with TemporaryDirectory() as tmpdir:
-        experiment_dir = Path(tmpdir)
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
+        trainer, sensors = _train_e2e(exp_dir, [round_ids[0]])
+        sensor = sensors[0]
 
-        (experiment_dir / 'metadata.json').write_text(
-            json.dumps({'sfd_module': bad_name}),
-        )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        # dict dispatch — delegates to underlying model, returns raw dict
+        data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
+        x_batch = data_dict['x_test'].to_numpy()[:2]
+        dict_result = sensor.predict({'x_test': x_batch})
+        assert isinstance(dict_result, dict)
+        assert '_preds' in dict_result
 
-        with pytest.raises(ValueError, match='not a dotted sequence'):
-            Trainer(
-                experiment_dir,
-                data=pl.DataFrame({'x': [1, 2, 3]}),
-            )
+        # __call__ delegates to predict
+        call_result = sensor({'x_test': x_batch})
+        assert isinstance(call_result, dict)
+
+        # DataFrame path — returns BarPrediction for last bar
+        n = 100
+        post_ts = [datetime(2025, 1, 22) + timedelta(hours=i) for i in range(n)]
+        close = [110.0 + 0.02 * i + math.sin(i / 7.0) for i in range(n)]
+        post_data = pl.DataFrame({
+            'datetime': post_ts,
+            'open': [v - 0.1 for v in close],
+            'high': [v + 0.2 for v in close],
+            'low': [v - 0.2 for v in close],
+            'close': close,
+            'volume': [1000.0 + i for i in range(n)],
+        })
+        bar_pred = sensor.predict(post_data)
+        assert isinstance(bar_pred, BarPrediction)
+        assert bar_pred.reason is None
+        assert bar_pred.prediction is not None
+
+
+def test_trainer_yaml_feature_ablation() -> None:
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_ABLATION_YAML)
+        assert len(round_ids) == 1
+        _, sensors = _train_e2e(exp_dir, round_ids)
+        sensor = sensors[0]
+        dropped = sensor.round_params.get('_dropped_features')
+        assert isinstance(dropped, list)
+        assert len(dropped) == 1

@@ -13,7 +13,7 @@ METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags', 'limen_versi
 SFD_REQUIRED = {'manifest', 'params'}
 
 MANIFEST_REQUIRED = {'type', 'data_source', 'reference_architecture'}
-MANIFEST_OPTIONAL_SHARED = {'test_data_source', 'required_columns', 'split_config', 'split_dates', 'indicators'}
+MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'indicators'}
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {
@@ -27,6 +27,7 @@ ML_MANIFEST_OPTIONAL = {
     'pca_compression',
     'params_override',
     'metrics_params',
+    'decoder_lookback',
 }
 
 RULE_BASED_MANIFEST_REQUIRED = {'strategy'}

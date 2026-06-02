@@ -13,26 +13,13 @@ At minimum, the directory must contain:
 - `metadata.json`
 - `round_data.jsonl`
 
-If `results.csv` is also present, Trainer performs Pass 1 validation against the original metrics. If it is missing, Trainer skips validation and proceeds directly to retraining.
+If `results.csv` is also present, Trainer validates the retrained metrics against the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
 
 ## Prerequisites
 
 - the experiment must have been created with `experiment_dir=...`
-- the SFD must be manifest-driven
-- the experiment directory must be trusted
-
-The trust warning matters because Trainer imports the SFD module path stored in `metadata.json` and executes its top-level code.
-
-## SFD Module Resolution
-
-`Trainer.__init__` reads `metadata.json["sfd_module"]` and resolves it in two stages:
-
-1. **Experiment-local file** — if `<experiment_dir>/<sfd_module>.py` exists, it is loaded via `importlib.util.spec_from_file_location` + `module_from_spec`. The SFD module is **not** added to `sys.path` and is **not** registered in `sys.modules` under its bare name, so each Trainer construction loads the SFD freshly without polluting global import state. This is the path used by self-contained experiment bundles produced by tools like Praxis's `trainer_prep.py`.
-2. **`importlib.import_module` fallback** — if no experiment-local file is present, the name is passed to `importlib.import_module` and resolved against `sys.path` like any other Python import. This is the legacy path used by experiments referencing built-in SFDs by fully-qualified package path (e.g. `limen.sfd.foundational_sfd.logreg_binary`).
-
-Names are validated up-front: `sfd_module` must be a dotted sequence of valid Python identifiers (`name.split('.')` and `str.isidentifier()` per segment). Anything else — `..`, `/`, `\`, leading/trailing dots, empty segments — raises `ValueError` before either branch runs, so a malicious `metadata.json` cannot path-traverse out of `experiment_dir` via the local-file branch.
-
-The `import_module` fallback still trusts any module name that resolves on `sys.path`, including arbitrary site-packages modules. That residual surface is documented as TD-001 in [`docs/TechnicalDebt.md`](TechnicalDebt.md) and should be tightened (e.g. allowlisted) before any live-trading deploy where the upstream bundle pipeline is not under the same trust boundary as the deploy operator.
+- the experiment must be YAML-based (created via `limen run`)
+- the SFD must be a manifest-driven ML architecture (rule-based architectures are not supported)
 
 ## Typical Workflow
 
@@ -64,20 +51,18 @@ Experiment runs are usually done on train/validation/test splits. Promotion is d
 
 Trainer handles that transition cleanly by:
 
-- reconstructing the original experiment logic
-- validating that the pipeline still reproduces the logged round
-- retraining on all data with `split_config=(1,0,0)`
+- reconstructing the original experiment logic from `yaml_reference`
+- validating that the pipeline still reproduces the logged round metrics
+- wrapping the validated model in a `Sensor` ready for inference
 
-## Two-Pass Training
-
-### Pass 1: Validation
+## Training and Validation
 
 Trainer reruns:
 
 - `manifest.prepare_data(...)`
 - `manifest.run_model(...)`
 
-with the original round parameters and compares the resulting metrics against the original experiment log.
+with the original round parameters and wraps the resulting model in a `Sensor`. If `results.csv` is present, it also compares the resulting metrics against the original experiment log.
 
 If the model is deterministic, validation expects an exact match within a very small float tolerance. If the model is stochastic, Trainer uses a looser scaled tolerance.
 
@@ -93,18 +78,6 @@ except ReconstructionError as e:
 ```
 
 This is Limen's guard against pipeline drift.
-
-### Pass 2: Retraining
-
-After validation, Trainer deep-copies the manifest with:
-
-```python
-split_config=(1, 0, 0)
-```
-
-and retrains the resolved `ReferenceModel` on the full dataset.
-
-That trained model is then wrapped in a `Sensor`.
 
 ## Deterministic Vs Stochastic Models
 
@@ -130,8 +103,7 @@ That means the promotion stack depends on the [Reference Architecture](Reference
 
 On a live local `logreg_binary` promotion run in this repo:
 
-- Pass 1 validation completed with `validation_mismatches == []`
-- the promoted `Sensor.results` included task metrics plus `backtest_*` keys
+- validation completed with no metric mismatches
 - `Sensor.predict()` returned `_preds` and `_probs`
 - the promoted sensor produced predictions for `884` test bars
 
@@ -172,13 +144,10 @@ Raises:
 
 A `Sensor` is the promoted form of a trained round.
 
-Each sensor stores:
+Each sensor exposes:
 
-- `permutation_id`
-- `model`
-- `round_params`
-- `metadata`
-- `results`
+- `permutation_id` — round ID from the experiment log; required for cohort binding
+- `round_params` — parameter values used for this permutation
 
 ### Example
 
@@ -187,65 +156,27 @@ sensor = sensors[0]
 
 print(sensor.permutation_id)
 print(sensor.round_params)
-print(sensor.metadata['sfd_module'])
 
-pred = sensor.predict({'x_test': live_features})
+pred = sensor.predict(raw_klines)
 ```
 
 Sensors are also callable:
 
 ```python
-pred = sensor({'x_test': live_features})
+pred = sensor(raw_klines)
 ```
 
 ### What `predict()` expects
 
-Most reference models only need:
-
-- `x_test`
-
-Some models may require more. The requirement comes from the underlying model class, not from the `Sensor` wrapper itself.
-
-### What `results` contains
-
-`Sensor.results` comes from the Pass 1 evaluation result, not from a stripped-down inference-only payload.
-
-In a live local logreg promotion run in this repo, the stored keys included:
-
-- `_preds`
-- `accuracy`
-- `auc`
-- `backtest_edge_per_signal_bps_p50`
-- `backtest_trade_pnl_net_bps_p50`
-- `backtest_cvar_95_return_bps`
-
-When the promoted round used calibration, `results` also includes:
-
-- `optimal_threshold` — the threshold chosen during the validation pass
-- `val_score` — the metric score at that threshold
-
-That is why `Sensor.results` is useful for provenance and review, while `Sensor.predict()` is the smaller live inference surface.
+All reference models need only `x_test` for inference. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time.
 
 ## What Trainer Reads From Disk
 
 Trainer uses:
 
-- `metadata.json` to discover the SFD module and experiment metadata
-- `round_data.jsonl` to load `round_params`, stored predictions, and alignment metadata
-- `results.csv` when available for Pass 1 metric validation
-
-On a live local artifact-rich run in this repo, `metadata.json` contained:
-
-- `sfd_module`
-- `limen_version`
-- `created_at`
-
-and `round_data.jsonl` contained entries with:
-
-- `round_id`
-- `round_params`
-- `preds`
-- `alignment`
+- `metadata.json` — reads `yaml_reference` to reconstruct the manifest; `sfd_module` may be present in older experiments but is not used by the YAML-only Trainer
+- `round_data.jsonl` — loads `round_params` for each permutation
+- `results.csv` — when available, validates retrained metrics against the original experiment log
 
 ## Scope Note
 

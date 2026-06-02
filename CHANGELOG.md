@@ -1008,3 +1008,15 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen/yaml/config.py` with `find_project_root()`, `read_limen_toml()`, and `get_store_path()`
 - Add `limen/cli/git_utils.py` with `git_executable()` and `git_add_and_commit()`
 
+
+## v3.14.0 on 2nd of June, 2026
+
+- Refactor `Trainer` to a single training pass: drop the second all-data retraining run; the validated training-run model is promoted directly to a `Sensor`; enforce YAML-only experiment input
+- Add `sensor_input_prep` to `MLManifest` — the canonical preparation step for sensor inference: applies fitted scaler/PCA, drops ablated features, and preserves null rows so datetime alignment is maintained
+- Rewrite `Sensor` with a YAML-only constructor; `predict()` and `predict_all()` both wrap `sensor_input_prep` so feature preparation is never done outside the sensor; training-window and lookback guards live in the sensor methods
+- Add `Sensor.predict_all(raw_klines)` — returns one `BarPrediction` per input bar with `reason` set for warm-up, inside-training-window, and null-features bars; valid bars carry `prediction` and `probability`
+- Add `decoder_lookback` to the YAML schema, validator, compiler, and `MLManifest`; only `decoder_lookback: 1` (the default) is currently supported — values greater than 1 are rejected at validation time
+- Fix calibration at inference: `LogRegBinary` and `TabPFNBinary` fit the calibrator once during training evaluation and store it on the model; subsequent sensor inference calls reuse the stored calibrator without requiring validation data
+- Add `fit_calibrator` to `limen.calibration` as a public API separating the calibrator fit step from the apply step
+- Add `random_state` parameter to `RandomBinaryTarget` for reproducible label generation
+- Remove split_config percentage-based splits from the YAML layer; all experiments use explicit `split_dates`

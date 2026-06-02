@@ -777,6 +777,7 @@ class MLManifest(Manifest):
     pca_compression_config: PCACompressionConfig | None = None
     data_dict_extension: Callable = None
     prediction_calibration_config: CalibrationConfig | None = None
+    decoder_lookback: int = 1
 
     def set_scaler(self, transform_class: Any, param_name: str = '_scaler') -> 'MLManifest':
 
@@ -1031,6 +1032,50 @@ class MLManifest(Manifest):
                 model_kwargs['prediction_calibration_config'] = config
         return self.architecture_function(data, **model_kwargs)
 
+    def sensor_input_prep(
+            self,
+            raw_klines: pl.DataFrame,
+            fitted_params: dict[str, Any],
+            round_params: dict[str, Any],
+    ) -> tuple[pl.DataFrame, int]:
+
+        '''
+        Prepare raw klines for live inference without splitting or dropping nulls.
+
+        Args:
+            raw_klines (pl.DataFrame): Raw klines covering at least indicator warm-up + decoder window
+            fitted_params (dict[str, Any]): Scaler and PCA state stored from training
+            round_params (dict[str, Any]): Parameter values from the winning round
+
+        Returns:
+            tuple[pl.DataFrame, int]: Prepared feature DataFrame and indicator_lookback count
+
+        NOTE: Does not call drop_nulls. Leading null rows represent indicator warm-up bars.
+        The returned indicator_lookback count is the number of leading null rows so the
+        caller can determine which bars are valid for prediction.
+        '''
+
+        _, data = _process_bars(self, raw_klines, round_params)
+
+        lazy = data.lazy()
+        lazy = _apply_feature_transforms(self, lazy, round_params)
+        data = lazy.collect()
+
+        dropped_features = round_params.get('_dropped_features') or []
+        if dropped_features:
+            data = data.drop([c for c in dropped_features if c in data.columns])
+
+        data = data.fill_nan(None)
+        indicator_lookback = _count_leading_nulls(data)
+
+        all_fitted_params = dict(fitted_params)
+        data, _ = _apply_scaler(self, data, round_params, all_fitted_params, is_training=False)
+        data = data.fill_nan(None)
+
+        data = _apply_sensor_pca(self, data, round_params, all_fitted_params)
+
+        return data, indicator_lookback
+
 
 @dataclass
 class RuleBasedManifest(Manifest):
@@ -1254,6 +1299,65 @@ def _is_group_active(group: str, round_params: dict[str, Any]) -> bool:
         )
 
     return group in feature_groups.split('|')
+
+
+def _count_leading_nulls(data: pl.DataFrame) -> int:
+
+    feature_cols = [c for c in data.columns if c != 'datetime']
+    if not feature_cols:
+        return 0
+    null_mask = pl.any_horizontal([pl.col(c).is_null() for c in feature_cols])
+    has_null = data.select(null_mask.alias('_has_null'))['_has_null'].cast(pl.UInt8)
+    first_valid = has_null.arg_min()
+    if first_valid is None or bool(has_null[first_valid]):
+        return len(data)
+    return int(first_valid)
+
+
+def _apply_sensor_pca(
+        manifest: 'MLManifest',
+        data: pl.DataFrame,
+        round_params: dict[str, Any],
+        all_fitted_params: dict[str, Any],
+) -> pl.DataFrame:
+
+    config = manifest.pca_compression_config
+    if config is None:
+        return data
+
+    enabled = round_params.get(config.enabled_param, False)
+    if not enabled:
+        return data
+
+    pca = all_fitted_params.get('_pca')
+    input_feature_names = all_fitted_params.get('_pca_input_feature_names')
+    component_cols = all_fitted_params.get('_pca_feature_names')
+
+    if pca is None or input_feature_names is None or component_cols is None:
+        raise ValueError(
+            'PCA was not fitted — fitted_params missing _pca, '
+            '_pca_input_feature_names, or _pca_feature_names'
+        )
+
+    target_col = manifest.target_column
+    null_mask = data.select(
+        pl.any_horizontal([pl.col(c).is_null() for c in input_feature_names]).alias('_is_null')
+    )['_is_null'].to_list()
+    valid_indices = [i for i, is_null in enumerate(null_mask) if not is_null]
+
+    n_rows = len(data)
+    component_arrays: dict[str, list] = {col: [None] * n_rows for col in component_cols}
+    if valid_indices:
+        valid_np = data[valid_indices].select(input_feature_names).to_numpy()
+        components = pca.transform(valid_np)
+        for arr_idx, row_idx in enumerate(valid_indices):
+            for col_idx, col in enumerate(component_cols):
+                component_arrays[col][row_idx] = float(components[arr_idx, col_idx])
+
+    out = data.select('datetime').hstack(pl.DataFrame(component_arrays))
+    if target_col and target_col in data.columns:
+        out = out.with_columns(data[target_col])
+    return out
 
 
 def _apply_feature_ablation(
@@ -1679,6 +1783,7 @@ def _finalize_to_data_dict(
         data_dict[param_name] = param_value
 
     data_dict['_feature_names'] = cols
+    data_dict['_fitted_params'] = dict(fitted_params)
 
     if price_data_for_backtest is not None:
         data_dict['price_data_for_backtest'] = price_data_for_backtest

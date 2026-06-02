@@ -29,6 +29,37 @@ class ThresholdOptimizerProtocol(Protocol):
         ...
 
 
+def fit_calibrator(model: Any,
+                   config: 'CalibrationConfig',
+                   x_val: np.ndarray,
+                   y_val: np.ndarray) -> tuple[Any, float, float | None]:
+
+    '''
+    Fit calibrator on validation data.
+
+    Args:
+        model (Any): Fitted classifier with predict_proba method
+        config (CalibrationConfig): Resolved calibration configuration
+        x_val (np.ndarray): Validation features
+        y_val (np.ndarray): Validation labels
+
+    Returns:
+        tuple: (fitted_calibrator, optimal_threshold, val_score)
+            val_score is None when no threshold_func is configured
+    '''
+
+    fitted = (config.calibration_func(model, x_val, y_val, **config.calibration_params)
+              if config.calibration_func is not None else model)
+    val_proba = fitted.predict_proba(x_val)[:, 1]
+
+    if config.threshold_func is not None:
+        threshold, score = config.threshold_func(y_val, val_proba, **config.threshold_params)
+    else:
+        threshold, score = 0.5, None
+
+    return fitted, threshold, score
+
+
 def apply_calibrated_predict(model: Any,
                               config: 'CalibrationConfig',
                               data: dict[str, Any]) -> dict:
@@ -46,15 +77,7 @@ def apply_calibrated_predict(model: Any,
             (val_score is None when no threshold_func is configured)
     '''
 
-    fitted = (config.calibration_func(model, data['x_val'], data['y_val'], **config.calibration_params)
-              if config.calibration_func is not None else model)
-    val_proba = fitted.predict_proba(data['x_val'])[:, 1]
+    fitted, threshold, score = fit_calibrator(model, config, data['x_val'], data['y_val'])
     test_proba = fitted.predict_proba(data['x_test'])[:, 1]
-
-    if config.threshold_func is not None:
-        threshold, score = config.threshold_func(data['y_val'], val_proba, **config.threshold_params)
-    else:
-        threshold, score = 0.5, None
-
     preds = (test_proba >= threshold).astype(np.int8)
     return {'_preds': preds, '_probs': test_proba, 'optimal_threshold': threshold, 'val_score': score}

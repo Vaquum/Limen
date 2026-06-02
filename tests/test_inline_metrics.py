@@ -93,5 +93,11 @@ def test_xgboost_inline_and_post_backtest_metrics_match() -> None:
 
     uel = _run_uel(sfd_module=xgboost_sfd, n_permutations=1)
 
-    assert uel.experiment_log['backtest_trade_pnl_net_bps_p50'].to_list() == \
-        uel.experiment_backtest_results['trade_pnl_net_bps_p50'].tolist()
+    for inline_value, post_value in zip(
+        uel.experiment_log['backtest_trade_pnl_net_bps_p50'].to_list(),
+        uel.experiment_backtest_results['trade_pnl_net_bps_p50'].tolist(),
+        strict=True,
+    ):
+        if math.isnan(inline_value) and math.isnan(post_value):
+            continue
+        assert inline_value == post_value

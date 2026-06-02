@@ -29,10 +29,10 @@ from tests.test_yaml import test_validate_passes_valid_ml_yaml
 from tests.test_yaml import test_validate_passes_valid_rule_based_yaml
 from tests.test_yaml import test_validate_passes_valid_yaml_with_split_dates
 from tests.test_yaml import test_validate_error_for_missing_required_field
-from tests.test_yaml import test_validate_error_when_both_split_config_and_split_dates_present
+from tests.test_yaml import test_validate_error_when_split_config_present
 from tests.test_yaml import test_validate_error_for_invalid_split_date_format
 from tests.test_yaml import test_validate_error_for_split_dates_out_of_order
-from tests.test_yaml import test_validate_error_for_split_config_invalid_value
+from tests.test_yaml import test_validate_error_for_split_config_present
 from tests.test_yaml import test_validate_error_for_missing_mode
 from tests.test_yaml import test_validate_error_for_unsafe_metadata_name
 from tests.test_yaml import test_validate_error_for_empty_sfd_param_list
@@ -41,7 +41,7 @@ from tests.test_yaml import test_validate_error_for_non_string_sfd_param_key
 from tests.test_yaml import test_validate_non_string_sfd_param_key_does_not_crash
 from tests.test_yaml import test_validate_warning_for_unused_sfd_param
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
-from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_config
+from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_dates
 from tests.test_yaml import test_validate_error_for_unresolvable_reference_architecture
 from tests.test_yaml import test_validate_error_for_unresolvable_target_class
 from tests.test_yaml import test_validate_error_for_callable_path_resolving_to_module
@@ -71,6 +71,9 @@ from tests.test_yaml import test_validate_no_error_when_include_if_key_is_in_sfd
 from tests.test_yaml import test_validate_error_when_include_if_key_not_in_sfd_params
 from tests.test_yaml import test_validate_error_when_include_if_param_values_are_not_bool
 from tests.test_yaml import test_validate_error_for_required_columns_not_a_list
+from tests.test_yaml import test_validate_error_for_decoder_lookback_greater_than_one
+from tests.test_yaml import test_validate_error_for_decoder_lookback_zero
+from tests.test_yaml import test_validate_accepts_decoder_lookback_one
 from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_key
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_output_path_wrong_type
@@ -82,9 +85,13 @@ from tests.test_yaml import test_validate_error_for_manifest_ref_not_in_sfd_para
 from tests.test_yaml import test_validate_no_error_when_manifest_ref_is_in_sfd_params
 from tests.test_yaml import test_validate_no_unused_param_warning_for_pca_defaults
 from tests.test_yaml import test_build_manifest_data_source_method_is_callable_with_correct_params
-from tests.test_yaml import test_build_manifest_test_data_source_method_is_callable
-from tests.test_yaml import test_build_manifest_split_config_tuple_is_correct
-from tests.test_yaml import test_build_manifest_split_dates_calls_set_split_dates
+from tests.test_yaml import test_build_manifest_data_source_date_limits_injected_from_split_dates
+from tests.test_yaml import test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates
+from tests.test_yaml import test_validate_error_for_test_data_source_in_yaml
+from tests.test_yaml import test_validate_error_for_start_date_limit_in_data_source_params
+from tests.test_yaml import test_validate_error_for_end_date_limit_in_data_source_params
+from tests.test_yaml import test_build_manifest_split_dates_is_correct
+from tests.test_yaml import test_build_manifest_split_dates_all_six_dates_stored
 from tests.test_yaml import test_build_manifest_indicator_include_if_stored_on_entry
 from tests.test_yaml import test_build_manifest_indicator_include_if_none_when_absent
 from tests.test_yaml import test_build_manifest_feature_include_if_stored_on_entry
@@ -745,22 +752,57 @@ from tests.test_fractional_diff import test_find_min_d_small_data_skips
 from tests.test_manifest_prepare_data import test_split_validation_rejects_invalid
 from tests.test_manifest_prepare_data import test_column_consistency_drops_mismatched_columns
 from tests.test_fractional_diff import test_fractional_diff_manifest_integration
-from tests.test_trainer import test_trainer_end_to_end
-from tests.test_trainer import test_reconstruction_error_stochastic
-from tests.test_trainer import test_reconstruction_error_tampered_log
-from tests.test_trainer import test_deterministic_validation
-from tests.test_trainer import test_pass2_uses_full_data
-from tests.test_trainer import test_sensor_inference
-from tests.test_trainer import test_trainer_with_feature_ablation
-from tests.test_trainer import test_trainer_with_fractional_diff
+from tests.test_trainer import test_trainer_requires_yaml_reference
+from tests.test_trainer import test_trainer_rejects_non_dict_yaml_reference
+from tests.test_trainer import test_trainer_rejects_malformed_yaml_reference
 from tests.test_trainer import test_load_round_data_skips_blank_and_malformed_lines
 from tests.test_trainer import test_load_round_data_requires_round_data_file
 from tests.test_trainer import test_load_original_log_returns_none_when_results_csv_is_missing
-from tests.test_trainer import test_resolve_model_class_requires_configured_architecture_function
-from tests.test_trainer import test_resolve_model_class_rejects_modules_without_reference_model_subclasses
-from tests.test_trainer import test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
 from tests.test_trainer import test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches
+from tests.test_trainer import test_trainer_yaml_end_to_end
+from tests.test_trainer import test_trainer_yaml_reconstruction_error_stochastic
+from tests.test_trainer import test_trainer_yaml_reconstruction_error_tampered_log
+from tests.test_trainer import test_trainer_yaml_deterministic_validation
+from tests.test_trainer import test_trainer_yaml_sensor_inference
+from tests.test_trainer import test_trainer_yaml_feature_ablation
+from tests.test_sensor import test_count_leading_nulls_no_nulls
+from tests.test_sensor import test_count_leading_nulls_leading_nulls
+from tests.test_sensor import test_count_leading_nulls_all_null
+from tests.test_sensor import test_count_leading_nulls_gap_in_middle
+from tests.test_sensor import test_count_leading_nulls_datetime_excluded
+from tests.test_sensor import test_count_leading_nulls_any_null_col_triggers_row
+from tests.test_sensor import test_count_leading_nulls_empty_features
+from tests.test_sensor import test_sensor_input_prep_preserves_row_count
+from tests.test_sensor import test_sensor_input_prep_indicator_lookback_matches_leading_nulls
+from tests.test_sensor import test_sensor_input_prep_no_leading_nulls_returns_zero_lookback
+from tests.test_sensor import test_sensor_input_prep_no_drop_nulls
+from tests.test_sensor import test_sensor_input_prep_drops_ablated_features
+from tests.test_sensor import test_sensor_input_prep_applies_fitted_scaler
+from tests.test_sensor import test_sensor_input_prep_scaler_leaves_null_rows_null
+from tests.test_sensor import test_apply_sensor_pca_transforms_valid_rows
+from tests.test_sensor import test_apply_sensor_pca_preserves_null_rows
+from tests.test_sensor import test_apply_sensor_pca_skipped_when_disabled
+from tests.test_sensor import test_apply_sensor_pca_skipped_when_no_config
+from tests.test_sensor import test_predict_raises_if_last_bar_is_warmup
+from tests.test_sensor import test_predict_raises_if_insufficient_valid_rows
+from tests.test_sensor import test_predict_raises_not_implemented_for_decoder_lookback_gt_1
+from tests.test_sensor import test_predict_raises_if_inside_training_window
+from tests.test_sensor import test_predict_allows_context_bars_inside_window_when_last_bar_is_valid
+from tests.test_sensor import test_predict_happy_path_returns_bar_prediction
+from tests.test_sensor import test_predict_all_output_length_equals_input
+from tests.test_sensor import test_predict_all_warmup_bars_have_reason_warmup
+from tests.test_sensor import test_predict_all_valid_bars_have_predictions
+from tests.test_sensor import test_predict_all_inside_window_bars_flagged
+from tests.test_sensor import test_predict_all_midstream_null_row_has_reason_null_features
+from tests.test_sensor import test_predict_all_decoder_lookback_gt1_raises
+from tests.test_sensor import test_extract_scalar_returns_none_for_none
+from tests.test_sensor import test_extract_scalar_returns_python_int
+from tests.test_sensor import test_extract_scalar_returns_python_float
+from tests.test_sensor import test_extract_scalar_rejects_bool
+from tests.test_sensor import test_extract_scalar_from_numpy_array
+from tests.test_sensor import test_extract_scalar_from_zero_dim_numpy
+from tests.test_sensor import test_extract_scalar_from_empty_array_returns_none
 from tests.test_proto_cohort import test_rejects_when_no_source_provided
 from tests.test_proto_cohort import test_rejects_when_both_sources_provided
 from tests.test_proto_cohort import test_rejects_missing_experiment_log_path
@@ -863,6 +905,7 @@ from tests.test_cli_new import test_run_new_skips_backup_remote_with_invalid_cha
 from tests.test_cli_new import test_run_new_clone_failure_returns_false
 from tests.test_cli_new import test_run_new_warns_when_backup_remote_placeholder_missing
 from tests.test_cli_new import test_clone_template_fails_fast_on_git_init_failure
+from tests.test_e2e_loop_trainer_sensor import test_e2e_label_control_trainer_sensor
 
 tests = [
     test_param_domain_init,
@@ -1136,10 +1179,10 @@ tests = [
     test_validate_passes_valid_rule_based_yaml,
     test_validate_passes_valid_yaml_with_split_dates,
     test_validate_error_for_missing_required_field,
-    test_validate_error_when_both_split_config_and_split_dates_present,
+    test_validate_error_when_split_config_present,
     test_validate_error_for_invalid_split_date_format,
     test_validate_error_for_split_dates_out_of_order,
-    test_validate_error_for_split_config_invalid_value,
+    test_validate_error_for_split_config_present,
     test_validate_error_for_missing_mode,
     test_validate_error_for_unsafe_metadata_name,
     test_validate_error_for_empty_sfd_param_list,
@@ -1148,7 +1191,7 @@ tests = [
     test_validate_non_string_sfd_param_key_does_not_crash,
     test_validate_warning_for_unused_sfd_param,
     test_validate_warning_for_unknown_key_in_data_source,
-    test_validate_warning_for_unknown_key_in_split_config,
+    test_validate_warning_for_unknown_key_in_split_dates,
     test_validate_error_for_unresolvable_reference_architecture,
     test_validate_error_for_unresolvable_target_class,
     test_validate_error_for_callable_path_resolving_to_module,
@@ -1178,6 +1221,9 @@ tests = [
     test_validate_error_when_include_if_key_not_in_sfd_params,
     test_validate_error_when_include_if_param_values_are_not_bool,
     test_validate_error_for_required_columns_not_a_list,
+    test_validate_error_for_decoder_lookback_greater_than_one,
+    test_validate_error_for_decoder_lookback_zero,
+    test_validate_accepts_decoder_lookback_one,
     test_validate_error_for_data_dict_extension_unknown_key,
     test_validate_error_for_uel_search_strategy_wrong_type,
     test_validate_error_for_uel_output_path_wrong_type,
@@ -1194,9 +1240,13 @@ tests = [
     test_resolve_func_params_raises_on_unresolvable_limen_path,
     test_resolve_func_params_raises_on_limen_module_path,
     test_build_manifest_data_source_method_is_callable_with_correct_params,
-    test_build_manifest_test_data_source_method_is_callable,
-    test_build_manifest_split_config_tuple_is_correct,
-    test_build_manifest_split_dates_calls_set_split_dates,
+    test_build_manifest_data_source_date_limits_injected_from_split_dates,
+    test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates,
+    test_validate_error_for_test_data_source_in_yaml,
+    test_validate_error_for_start_date_limit_in_data_source_params,
+    test_validate_error_for_end_date_limit_in_data_source_params,
+    test_build_manifest_split_dates_is_correct,
+    test_build_manifest_split_dates_all_six_dates_stored,
     test_build_manifest_indicator_include_if_stored_on_entry,
     test_build_manifest_indicator_include_if_none_when_absent,
     test_build_manifest_feature_include_if_stored_on_entry,
@@ -1601,22 +1651,57 @@ tests = [
     test_pca_compression_rejects_invalid_k,
     test_pca_compression_rejects_nonnumeric_features,
     test_fractional_diff_manifest_integration,
-    test_trainer_end_to_end,
-    test_reconstruction_error_stochastic,
-    test_reconstruction_error_tampered_log,
-    test_deterministic_validation,
-    test_pass2_uses_full_data,
-    test_sensor_inference,
-    test_trainer_with_feature_ablation,
-    test_trainer_with_fractional_diff,
+    test_trainer_requires_yaml_reference,
+    test_trainer_rejects_non_dict_yaml_reference,
+    test_trainer_rejects_malformed_yaml_reference,
     test_load_round_data_skips_blank_and_malformed_lines,
     test_load_round_data_requires_round_data_file,
     test_load_original_log_returns_none_when_results_csv_is_missing,
-    test_resolve_model_class_requires_configured_architecture_function,
-    test_resolve_model_class_rejects_modules_without_reference_model_subclasses,
-    test_resolve_model_class_rejects_modules_with_multiple_reference_model_subclasses,
     test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift,
     test_validate_metrics_reports_missing_permutations_and_large_deterministic_mismatches,
+    test_trainer_yaml_end_to_end,
+    test_trainer_yaml_reconstruction_error_stochastic,
+    test_trainer_yaml_reconstruction_error_tampered_log,
+    test_trainer_yaml_deterministic_validation,
+    test_trainer_yaml_sensor_inference,
+    test_trainer_yaml_feature_ablation,
+    test_count_leading_nulls_no_nulls,
+    test_count_leading_nulls_leading_nulls,
+    test_count_leading_nulls_all_null,
+    test_count_leading_nulls_gap_in_middle,
+    test_count_leading_nulls_datetime_excluded,
+    test_count_leading_nulls_any_null_col_triggers_row,
+    test_count_leading_nulls_empty_features,
+    test_sensor_input_prep_preserves_row_count,
+    test_sensor_input_prep_indicator_lookback_matches_leading_nulls,
+    test_sensor_input_prep_no_leading_nulls_returns_zero_lookback,
+    test_sensor_input_prep_no_drop_nulls,
+    test_sensor_input_prep_drops_ablated_features,
+    test_sensor_input_prep_applies_fitted_scaler,
+    test_sensor_input_prep_scaler_leaves_null_rows_null,
+    test_apply_sensor_pca_transforms_valid_rows,
+    test_apply_sensor_pca_preserves_null_rows,
+    test_apply_sensor_pca_skipped_when_disabled,
+    test_apply_sensor_pca_skipped_when_no_config,
+    test_predict_raises_if_last_bar_is_warmup,
+    test_predict_raises_if_insufficient_valid_rows,
+    test_predict_raises_not_implemented_for_decoder_lookback_gt_1,
+    test_predict_raises_if_inside_training_window,
+    test_predict_allows_context_bars_inside_window_when_last_bar_is_valid,
+    test_predict_happy_path_returns_bar_prediction,
+    test_predict_all_output_length_equals_input,
+    test_predict_all_warmup_bars_have_reason_warmup,
+    test_predict_all_valid_bars_have_predictions,
+    test_predict_all_inside_window_bars_flagged,
+    test_predict_all_midstream_null_row_has_reason_null_features,
+    test_predict_all_decoder_lookback_gt1_raises,
+    test_extract_scalar_returns_none_for_none,
+    test_extract_scalar_returns_python_int,
+    test_extract_scalar_returns_python_float,
+    test_extract_scalar_rejects_bool,
+    test_extract_scalar_from_numpy_array,
+    test_extract_scalar_from_zero_dim_numpy,
+    test_extract_scalar_from_empty_array_returns_none,
     test_rejects_when_no_source_provided,
     test_rejects_when_both_sources_provided,
     test_rejects_missing_experiment_log_path,
@@ -1719,6 +1804,7 @@ tests = [
     test_run_new_clone_failure_returns_false,
     test_run_new_warns_when_backup_remote_placeholder_missing,
     test_clone_template_fails_fast_on_git_init_failure,
+    test_e2e_label_control_trainer_sensor,
 ]
 
 # Configure logging

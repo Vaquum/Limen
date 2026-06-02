@@ -172,10 +172,13 @@ def test_profile_warns_when_test_data_source_absent() -> None:
               method: limen.data.HistoricalData.get_spot_klines
               params:
                 kline_size: 3600
-            split_config:
-              train: 8
-              val: 1
-              test: 2
+            split_dates:
+              train_start: "2024-01-01"
+              train_end: "2024-09-30"
+              val_start: "2024-10-01"
+              val_end: "2024-11-30"
+              test_start: "2024-12-01"
+              test_end: "2024-12-31"
             target:
               name: quantile_flag
               class: limen.targets.QuantileBinaryTarget

@@ -1,3 +1,4 @@
+import inspect
 from datetime import date
 from typing import Any
 
@@ -116,11 +117,19 @@ def _apply_indicators(manifest: Manifest, m: dict[str, Any]) -> None:
 def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
     ds = m['data_source']
-    manifest.set_data_source(method=resolve(ds['method']), params=dict(ds.get('params') or {}))
-
-    tds = m.get('test_data_source')
-    if tds is not None:
-        manifest.set_test_data_source(method=resolve(tds['method']), params=dict(tds.get('params') or {}))
+    params = dict(ds.get('params') or {})
+    sd = m['split_dates']
+    method = resolve(ds['method'])
+    sig = inspect.signature(method)
+    sig_params = sig.parameters
+    accepts_var_keyword = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig_params.values()
+    )
+    if 'start_date_limit' in sig_params or accepts_var_keyword:
+        params['start_date_limit'] = sd['train_start']
+    if 'end_date_limit' in sig_params or accepts_var_keyword:
+        params['end_date_limit'] = sd['test_end']
+    manifest.set_data_source(method=method, params=params)
 
     _apply_split(manifest, m)
 
@@ -133,19 +142,15 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
 
-    sd = m.get('split_dates')
-    if sd is not None:
-        manifest.set_split_dates(
-            date.fromisoformat(sd['train_start']),
-            date.fromisoformat(sd['train_end']),
-            date.fromisoformat(sd['val_start']),
-            date.fromisoformat(sd['val_end']),
-            date.fromisoformat(sd['test_start']),
-            date.fromisoformat(sd['test_end']),
-        )
-    else:
-        sc = m['split_config']
-        manifest.set_split_config(sc['train'], sc['val'], sc['test'])
+    sd = m['split_dates']
+    manifest.set_split_dates(
+        date.fromisoformat(sd['train_start']),
+        date.fromisoformat(sd['train_end']),
+        date.fromisoformat(sd['val_start']),
+        date.fromisoformat(sd['val_end']),
+        date.fromisoformat(sd['test_start']),
+        date.fromisoformat(sd['test_end']),
+    )
 
 
 def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
@@ -249,6 +254,8 @@ def _apply_ml_extras(manifest: MLManifest, m: dict[str, Any]) -> None:
     mp = m.get('metrics_params')
     if mp is not None:
         manifest.metrics_params = dict(mp)
+
+    manifest.decoder_lookback = int(m.get('decoder_lookback') or 1)
 
 
 class CompiledSFD:
