@@ -90,7 +90,7 @@ class Sensor:
 
         Raises:
             ValueError: If the window is too small, the last bar is a warm-up bar,
-                or any bar falls inside the training/test window
+                or the last bar (the prediction target) falls inside the training/test window
 
         '''
 
@@ -141,7 +141,7 @@ class Sensor:
 
         Warm-up bars and bars inside the training window have prediction=None
         with reason set. Valid bars have predictions populated. Output length
-        always equals len(raw_klines) for alignment with the input.
+        equals the post-bar-formation row count, not necessarily len(raw_klines).
 
         Args:
             raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
