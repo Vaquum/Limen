@@ -319,6 +319,20 @@ def test_predict_raises_if_inside_training_window() -> None:
         sensor.predict(raw)
 
 
+def test_predict_allows_context_bars_inside_window_when_last_bar_is_valid() -> None:
+    manifest, _lag = _make_lag_manifest(lag=2)
+    manifest.split_dates = (
+        date(2026, 1, 1), date(2026, 1, 10),
+        date(2026, 1, 10), date(2026, 1, 15),
+        date(2026, 1, 15), date(2026, 1, 20),
+    )
+    # 19 context bars (inside window) + 1 post-test_end bar as the last bar
+    raw = _make_klines(20, start_year=2026)
+    sensor = _make_sensor(manifest, round_params={'bar_type': 'base'})
+    result = sensor.predict(raw)
+    assert isinstance(result, BarPrediction)
+
+
 def test_predict_happy_path_returns_bar_prediction() -> None:
     manifest, _lag = _make_lag_manifest(lag=2)
     manifest.split_dates = None
