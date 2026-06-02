@@ -19,7 +19,9 @@ class BarPrediction:
     datetime: Any
     prediction: int | float | None
     probability: float | None
-    reason: str | None  # None = valid prediction; 'warm-up', 'inside-training-window' = invalid
+    reason: str | None  # None = valid prediction; 'warm-up' = leading null rows from indicator lookback;
+                        # 'inside-training-window' = bar falls within the train/test window;
+                        # 'null-features' = mid-stream null feature values (data gap or transform anomaly)
 
 
 class Sensor:
@@ -120,7 +122,7 @@ class Sensor:
         feature_cols = [c for c in data.columns if c != 'datetime']
         last_row = data[-1]
         if any(last_row[c][0] is None for c in feature_cols):
-            raise ValueError('Last bar is a warm-up bar — cannot predict')
+            raise ValueError('Last bar has null feature values — cannot predict')
 
         x = np.array(last_row.select(feature_cols).row(0), dtype=float).reshape(1, -1)
         pred_result = self._model.predict({'x_test': x})
@@ -170,6 +172,16 @@ class Sensor:
         feature_cols = [c for c in data.columns if c != 'datetime']
         datetimes = data['datetime'].to_list() if 'datetime' in data.columns else [None] * len(data)
 
+        if feature_cols:
+            row_has_null = (
+                data.select(feature_cols)
+                .select(pl.any_horizontal(pl.col(c).is_null() for c in feature_cols))
+                .to_series()
+                .to_list()
+            )
+        else:
+            row_has_null = [False] * len(data)
+
         results: list[BarPrediction | None] = [None] * len(data)
         valid_indices: list[int] = []
 
@@ -187,6 +199,13 @@ class Sensor:
                     prediction=None,
                     probability=None,
                     reason='warm-up',
+                )
+            elif row_has_null[i]:
+                results[i] = BarPrediction(
+                    datetime=datetimes[i],
+                    prediction=None,
+                    probability=None,
+                    reason='null-features',
                 )
             else:
                 valid_indices.append(i)
