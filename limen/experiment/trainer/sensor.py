@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from typing import Any
 
@@ -42,7 +43,7 @@ class Sensor:
 
         '''
 
-        self._yaml_reference = dict(yaml_reference)
+        self._yaml_reference = copy.deepcopy(yaml_reference)
         self._model = model
         self._fitted_params = dict(fitted_params)
         self._round_params = dict(round_params)
@@ -139,7 +140,10 @@ class Sensor:
                 the manifest data source
 
         Returns:
-            list[BarPrediction]: One entry per input bar
+            list[BarPrediction]: One entry per bar in the post-bar-formation data.
+                Length equals len(raw_klines) when bar_type is 'base' (no bar
+                aggregation). When bar formation is active, length equals the
+                aggregated bar count, which is smaller than len(raw_klines).
 
         '''
 
@@ -156,22 +160,22 @@ class Sensor:
 
         inside_window = self._inside_training_window_mask(data, manifest)
         feature_cols = [c for c in data.columns if c != 'datetime']
+        datetimes = data['datetime'].to_list() if 'datetime' in data.columns else [None] * len(data)
 
         results: list[BarPrediction | None] = [None] * len(data)
         valid_indices: list[int] = []
 
         for i in range(len(data)):
-            dt = data[i]['datetime'][0] if 'datetime' in data.columns else None
             if inside_window[i]:
                 results[i] = BarPrediction(
-                    datetime=dt,
+                    datetime=datetimes[i],
                     prediction=None,
                     probability=None,
                     reason='inside-training-window',
                 )
             elif i < indicator_lookback:
                 results[i] = BarPrediction(
-                    datetime=dt,
+                    datetime=datetimes[i],
                     prediction=None,
                     probability=None,
                     reason='warm-up',
@@ -186,11 +190,10 @@ class Sensor:
             probs = pred_result.get('_probs')
 
             for j, idx in enumerate(valid_indices):
-                dt = data[idx]['datetime'][0] if 'datetime' in data.columns else None
                 results[idx] = BarPrediction(
-                    datetime=dt,
-                    prediction=_extract_scalar([preds[j]]),
-                    probability=_extract_scalar([probs[j]]) if probs is not None else None,
+                    datetime=datetimes[idx],
+                    prediction=_extract_scalar(preds[j]),
+                    probability=_extract_scalar(probs[j]) if probs is not None else None,
                     reason=None,
                 )
 
@@ -233,11 +236,13 @@ class Sensor:
 
 def _extract_scalar(arr: Any) -> int | float | None:
 
-    '''Extract a Python scalar from the first element of an array-like.'''
+    '''Extract a Python scalar from an array-like or from a scalar directly.'''
 
     if arr is None:
         return None
     try:
+        if hasattr(arr, 'ndim') and arr.ndim == 0:
+            return arr.item()
         val = arr[0]
         return val.item() if hasattr(val, 'item') else val
     except (IndexError, TypeError):
