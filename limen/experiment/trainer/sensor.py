@@ -215,11 +215,14 @@ class Sensor:
         if manifest.split_dates is None or 'datetime' not in data.columns:
             return
         train_start, _, _, _, _, test_end = manifest.split_dates
-        inside = self._inside_training_window_mask(data, manifest)
-        if any(inside):
+        last_dt = data[-1]['datetime'][0]
+        if last_dt is None:
+            return
+        dt_date = last_dt.date() if hasattr(last_dt, 'date') else last_dt
+        if train_start <= dt_date < test_end:
             raise ValueError(
-                f"Input data contains bars inside the training/test window "
-                f"[{train_start}, {test_end}). Sensor expects data strictly "
+                f"Prediction bar {dt_date} falls inside the training/test window "
+                f"[{train_start}, {test_end}). Sensor predicts bars strictly "
                 f"after {test_end}."
             )
 

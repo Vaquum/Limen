@@ -270,7 +270,13 @@ class Trainer:
             data_dict = self._manifest.prepare_data(self._data, round_params)
             results = self._manifest.run_model(data_dict, round_params)
 
-            model = results.pop('_model')
+            model = results.pop('_model', None)
+            if model is None:
+                raise ValueError(
+                    f"Permutation {pid}: architecture result does not contain '_model'. "
+                    f"Trainer requires a reference architecture that returns the trained "
+                    f"model via result['_model']. Rule-based architectures are not supported."
+                )
             fitted_params = data_dict.pop('_fitted_params', {})
 
             mismatches = self._validate_metrics(pid, results, model.deterministic)
