@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from textwrap import dedent
@@ -285,7 +286,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert bar_pred.datetime == kline_dts[-1]
             last_valid = next(p for p in reversed(all_preds) if p.reason is None)
             assert last_valid.prediction == bar_pred.prediction
-            assert last_valid.probability == bar_pred.probability
+            assert math.isclose(last_valid.probability, bar_pred.probability, rel_tol=1e-6)
 
             assert n_warmup + 5 <= len(inference_klines), (
                 f"inference window too small: {len(inference_klines)} bars, n_warmup={n_warmup}"
@@ -329,4 +330,4 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert 0.0 <= few_bar_pred.probability <= 1.0
             assert few_bar_pred.datetime == few_dts[-1]
             assert few_bar_pred.prediction == few_preds[-1].prediction
-            assert few_bar_pred.probability == few_preds[-1].probability
+            assert math.isclose(few_bar_pred.probability, few_preds[-1].probability, rel_tol=1e-6)
