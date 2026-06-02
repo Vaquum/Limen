@@ -1011,10 +1011,12 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v3.14.0 on 2nd of June, 2026
 
-- Add `fit_calibrator(model, config, x_val, y_val)` to `limen/calibration/pipeline.py` and export from `limen.calibration` — separates the fit step from the apply step so calibrators can be stored and reused
-- Fix calibration at inference: `LogRegBinary` and `TabPFNBinary` now store the fitted calibrator on first `predict()` call and reuse it on subsequent calls, enabling sensor inference without validation data
-- Reset stored calibrator state when `train()` is called again on an existing model instance, preventing stale-calibrator bugs on reuse
-- Add `random_state` parameter to `RandomBinaryTarget` for reproducible label generation across training and evaluation
-- Fix `test_xgboost_inline_and_post_backtest_metrics_match`: use NaN-aware comparison (`math.isnan`) consistent with the logreg equivalent
-- Add e2e integration test covering the full experiment loop → Trainer → Sensor pipeline with three inference window sizes per sensor
-- Remove "Pass 1 / Pass 2" terminology from Trainer docstrings and documentation; there is only one training pass
+- Refactor `Trainer` to a single training pass: drop the second all-data retraining run; the validated training-run model is promoted directly to a `Sensor`; enforce YAML-only experiment input
+- Add `sensor_input_prep` to `MLManifest` — the canonical preparation step for sensor inference: applies fitted scaler/PCA, guards against bars inside the training window, and enforces indicator and decoder lookback requirements
+- Rewrite `Sensor` with a YAML-only constructor; `predict()` and `predict_all()` both wrap `sensor_input_prep` so feature preparation is never done outside the sensor
+- Add `Sensor.predict_all(raw_klines)` — returns one `BarPrediction` per input bar with `reason` set for warm-up and inside-training-window bars; valid bars carry `prediction` and `probability`
+- Add `decoder_lookback` to the YAML schema, validator, compiler, and `MLManifest` for architectures that require a multi-bar inference window
+- Fix calibration at inference: `LogRegBinary` and `TabPFNBinary` fit the calibrator once during training evaluation and store it on the model; subsequent sensor inference calls reuse the stored calibrator without requiring validation data
+- Add `fit_calibrator` to `limen.calibration` as a public API separating the calibrator fit step from the apply step
+- Add `random_state` parameter to `RandomBinaryTarget` for reproducible label generation
+- Remove split_config percentage-based splits from the YAML layer; all experiments use explicit `split_dates`
