@@ -1,9 +1,3 @@
-'''
-End-to-end integration tests: experiment loop → Trainer → Sensor inference.
-
-These tests use real HistoricalData API calls (network required) and cover the
-full pipeline from YAML experiment to trained sensors with live bar prediction.
-'''
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,11 +12,6 @@ from limen.experiment.trainer import Trainer
 from limen.experiment.trainer.sensor import BarPrediction
 
 
-# Adapted from logreg_label_control.yaml:
-#   - split_config replaced with explicit split_dates
-#   - start_date_limit/end_date_limit removed from data_source.params (blocked by validator)
-#   - mode: development for testing
-#   - n_permutations reduced to 10
 _LABEL_CONTROL_YAML = dedent('''\
     schema_version: "1.0"
     metadata:
@@ -205,8 +194,6 @@ def test_e2e_label_control_trainer_sensor() -> None:
         exp_dir = Path(tmpdir) / 'label_control'
         exp_dir.mkdir()
 
-        # ── Experiment ────────────────────────────────────────────────────────
-
         with TemporaryDirectory() as yaml_dir, patch('click.echo'), patch('click.secho'):
             yaml_path = Path(yaml_dir) / 'label_control.yaml'
             yaml_path.write_text(_LABEL_CONTROL_YAML.replace(
@@ -239,8 +226,6 @@ def test_e2e_label_control_trainer_sensor() -> None:
                     round_ids.append(json.loads(stripped)['round_id'])
         assert len(round_ids) == _N_PERMUTATIONS
 
-        # ── Trainer ───────────────────────────────────────────────────────────
-
         # Guarantee at least one calibrated and one uncalibrated sensor so both
         # code paths through LogRegBinary.predict() are exercised.
         calibrated = results.filter(pl.col('use_calibration'))
@@ -254,7 +239,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
         assert len(sensors) == _TOP_N
 
         sensor_pids = [s.permutation_id for s in sensors]
-        assert len(set(sensor_pids)) == _TOP_N, f'duplicate permutation_ids: {sensor_pids}'
+        assert len(set(sensor_pids)) == _TOP_N, f"duplicate permutation_ids: {sensor_pids}"
 
         for sensor in sensors:
             assert sensor.permutation_id in top_ids
@@ -265,8 +250,6 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert 'feature_drop_seed' in rp
             assert 'auto_pca' in rp
 
-        # ── Inference data ────────────────────────────────────────────────────
-
         inference_klines = historical_data.HistoricalData().get_spot_klines(
             kline_size=900,
             start_date_limit=_INFERENCE_START,
@@ -275,18 +258,14 @@ def test_e2e_label_control_trainer_sensor() -> None:
         assert len(inference_klines) > 50
         kline_dts = inference_klines['datetime'].to_list()
 
-        # ── Sensor inference — three windows per sensor ───────────────────────
-
         for sensor in sensors:
-
-            # ── Full window ───────────────────────────────────────────────────
 
             all_preds = sensor.predict_all(inference_klines)
             assert len(all_preds) == len(inference_klines)
 
             n_warmup = sum(1 for p in all_preds if p.reason == 'warm-up')
             n_inside = sum(1 for p in all_preds if p.reason == 'inside-training-window')
-            n_valid  = sum(1 for p in all_preds if p.reason is None)
+            n_valid = sum(1 for p in all_preds if p.reason is None)
 
             assert n_inside == 0
             assert n_valid > 0
@@ -309,10 +288,8 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert last_valid.probability == bar_pred.probability
 
             assert n_warmup + 5 <= len(inference_klines), (
-                f'inference window too small: {len(inference_klines)} bars, n_warmup={n_warmup}'
+                f"inference window too small: {len(inference_klines)} bars, n_warmup={n_warmup}"
             )
-
-            # ── Minimum window (n_warmup + 1 bars) ───────────────────────────
 
             min_klines = inference_klines[:n_warmup + 1]
             min_dts = min_klines['datetime'].to_list()
@@ -331,8 +308,6 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert min_bar_pred.datetime == min_dts[-1]
             assert min_bar_pred.prediction == min_preds[-1].prediction
             assert min_bar_pred.probability == min_preds[-1].probability
-
-            # ── Few bars window (n_warmup + 5 bars) ──────────────────────────
 
             few_klines = inference_klines[:n_warmup + 5]
             few_dts = few_klines['datetime'].to_list()
