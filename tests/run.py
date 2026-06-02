@@ -71,6 +71,9 @@ from tests.test_yaml import test_validate_no_error_when_include_if_key_is_in_sfd
 from tests.test_yaml import test_validate_error_when_include_if_key_not_in_sfd_params
 from tests.test_yaml import test_validate_error_when_include_if_param_values_are_not_bool
 from tests.test_yaml import test_validate_error_for_required_columns_not_a_list
+from tests.test_yaml import test_validate_error_for_decoder_lookback_greater_than_one
+from tests.test_yaml import test_validate_error_for_decoder_lookback_zero
+from tests.test_yaml import test_validate_accepts_decoder_lookback_one
 from tests.test_yaml import test_validate_error_for_data_dict_extension_unknown_key
 from tests.test_yaml import test_validate_error_for_uel_search_strategy_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_output_path_wrong_type
@@ -783,13 +786,22 @@ from tests.test_sensor import test_apply_sensor_pca_skipped_when_disabled
 from tests.test_sensor import test_apply_sensor_pca_skipped_when_no_config
 from tests.test_sensor import test_predict_raises_if_last_bar_is_warmup
 from tests.test_sensor import test_predict_raises_if_insufficient_valid_rows
+from tests.test_sensor import test_predict_raises_not_implemented_for_decoder_lookback_gt_1
 from tests.test_sensor import test_predict_raises_if_inside_training_window
+from tests.test_sensor import test_predict_allows_context_bars_inside_window_when_last_bar_is_valid
 from tests.test_sensor import test_predict_happy_path_returns_bar_prediction
 from tests.test_sensor import test_predict_all_output_length_equals_input
 from tests.test_sensor import test_predict_all_warmup_bars_have_reason_warmup
 from tests.test_sensor import test_predict_all_valid_bars_have_predictions
 from tests.test_sensor import test_predict_all_inside_window_bars_flagged
 from tests.test_sensor import test_predict_all_decoder_lookback_gt1_raises
+from tests.test_sensor import test_extract_scalar_returns_none_for_none
+from tests.test_sensor import test_extract_scalar_returns_python_int
+from tests.test_sensor import test_extract_scalar_returns_python_float
+from tests.test_sensor import test_extract_scalar_rejects_bool
+from tests.test_sensor import test_extract_scalar_from_numpy_array
+from tests.test_sensor import test_extract_scalar_from_zero_dim_numpy
+from tests.test_sensor import test_extract_scalar_from_empty_array_returns_none
 from tests.test_proto_cohort import test_rejects_when_no_source_provided
 from tests.test_proto_cohort import test_rejects_when_both_sources_provided
 from tests.test_proto_cohort import test_rejects_missing_experiment_log_path
@@ -1208,6 +1220,9 @@ tests = [
     test_validate_error_when_include_if_key_not_in_sfd_params,
     test_validate_error_when_include_if_param_values_are_not_bool,
     test_validate_error_for_required_columns_not_a_list,
+    test_validate_error_for_decoder_lookback_greater_than_one,
+    test_validate_error_for_decoder_lookback_zero,
+    test_validate_accepts_decoder_lookback_one,
     test_validate_error_for_data_dict_extension_unknown_key,
     test_validate_error_for_uel_search_strategy_wrong_type,
     test_validate_error_for_uel_output_path_wrong_type,
@@ -1669,13 +1684,22 @@ tests = [
     test_apply_sensor_pca_skipped_when_no_config,
     test_predict_raises_if_last_bar_is_warmup,
     test_predict_raises_if_insufficient_valid_rows,
+    test_predict_raises_not_implemented_for_decoder_lookback_gt_1,
     test_predict_raises_if_inside_training_window,
+    test_predict_allows_context_bars_inside_window_when_last_bar_is_valid,
     test_predict_happy_path_returns_bar_prediction,
     test_predict_all_output_length_equals_input,
     test_predict_all_warmup_bars_have_reason_warmup,
     test_predict_all_valid_bars_have_predictions,
     test_predict_all_inside_window_bars_flagged,
     test_predict_all_decoder_lookback_gt1_raises,
+    test_extract_scalar_returns_none_for_none,
+    test_extract_scalar_returns_python_int,
+    test_extract_scalar_returns_python_float,
+    test_extract_scalar_rejects_bool,
+    test_extract_scalar_from_numpy_array,
+    test_extract_scalar_from_zero_dim_numpy,
+    test_extract_scalar_from_empty_array_returns_none,
     test_rejects_when_no_source_provided,
     test_rejects_when_both_sources_provided,
     test_rejects_missing_experiment_log_path,

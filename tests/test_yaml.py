@@ -672,6 +672,29 @@ def test_validate_error_for_required_columns_not_a_list() -> None:
     assert any('required_columns' in e.path for e in result.errors)
 
 
+def test_validate_error_for_decoder_lookback_greater_than_one() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['decoder_lookback'] = 2
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('decoder_lookback' in e.path for e in result.errors)
+
+
+def test_validate_error_for_decoder_lookback_zero() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['decoder_lookback'] = 0
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('decoder_lookback' in e.path for e in result.errors)
+
+
+def test_validate_accepts_decoder_lookback_one() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['decoder_lookback'] = 1
+    result = validate(yaml_dict)
+    assert result.valid
+
+
 def test_validate_error_for_data_dict_extension_unknown_key() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['data_dict_extension'] = {

@@ -14,6 +14,7 @@ from limen.experiment.manifest_core import _apply_sensor_pca
 from limen.experiment.manifest_core import _count_leading_nulls
 from limen.experiment.trainer.sensor import BarPrediction
 from limen.experiment.trainer.sensor import Sensor
+from limen.experiment.trainer.sensor import _extract_scalar
 from limen.scalers.robust_scaler import RobustScaler
 
 
@@ -399,3 +400,37 @@ def test_predict_all_decoder_lookback_gt1_raises() -> None:
     sensor = _make_sensor(manifest, round_params={'bar_type': 'base'})
     with pytest.raises(NotImplementedError, match='decoder_lookback'):
         sensor.predict_all(raw)
+
+
+def test_extract_scalar_returns_none_for_none() -> None:
+    assert _extract_scalar(None) is None
+
+
+def test_extract_scalar_returns_python_int() -> None:
+    assert _extract_scalar(1) == 1
+    assert isinstance(_extract_scalar(1), int)
+
+
+def test_extract_scalar_returns_python_float() -> None:
+    assert _extract_scalar(0.7) == 0.7
+    assert isinstance(_extract_scalar(0.7), float)
+
+
+def test_extract_scalar_rejects_bool() -> None:
+    assert _extract_scalar(True) is None
+
+
+def test_extract_scalar_from_numpy_array() -> None:
+    arr = np.array([0.5, 0.3])
+    result = _extract_scalar(arr)
+    assert result == 0.5
+
+
+def test_extract_scalar_from_zero_dim_numpy() -> None:
+    arr = np.float64(0.42)
+    result = _extract_scalar(arr)
+    assert result == 0.42
+
+
+def test_extract_scalar_from_empty_array_returns_none() -> None:
+    assert _extract_scalar(np.array([])) is None
