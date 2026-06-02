@@ -1,3 +1,4 @@
+import inspect
 from datetime import date
 from typing import Any
 
@@ -118,9 +119,17 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
     ds = m['data_source']
     params = dict(ds.get('params') or {})
     sd = m['split_dates']
-    params['start_date_limit'] = sd['train_start']
-    params['end_date_limit'] = sd['test_end']
-    manifest.set_data_source(method=resolve(ds['method']), params=params)
+    method = resolve(ds['method'])
+    sig = inspect.signature(method)
+    sig_params = sig.parameters
+    accepts_var_keyword = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig_params.values()
+    )
+    if 'start_date_limit' in sig_params or accepts_var_keyword:
+        params['start_date_limit'] = sd['train_start']
+    if 'end_date_limit' in sig_params or accepts_var_keyword:
+        params['end_date_limit'] = sd['test_end']
+    manifest.set_data_source(method=method, params=params)
 
     _apply_split(manifest, m)
 
