@@ -285,8 +285,8 @@ class Trainer:
                 model=model,
                 fitted_params=fitted_params,
                 round_params=round_params,
+                permutation_id=pid,
             )
-            sensor.permutation_id = pid
             sensors.append(sensor)
 
             logger.info('Trained sensor for permutation %d', pid)

@@ -30,7 +30,8 @@ class Sensor:
                  yaml_reference: dict[str, Any],
                  model: ReferenceModel,
                  fitted_params: dict[str, Any],
-                 round_params: dict[str, Any]) -> None:
+                 round_params: dict[str, Any],
+                 permutation_id: int | None = None) -> None:
 
         '''
         Create a Sensor from a validated trained model.
@@ -40,6 +41,8 @@ class Sensor:
             model (ReferenceModel): Validated trained model
             fitted_params (dict): Fitted scaler/PCA state from the winning round
             round_params (dict): Full parameter dict from the winning round
+            permutation_id (int | None): Round ID from the experiment log — required
+                for cohort binding via Cohort.set_members
 
         '''
 
@@ -48,6 +51,7 @@ class Sensor:
         self._fitted_params = dict(fitted_params)
         self._round_params = dict(round_params)
         self._manifest: Any = None
+        self.permutation_id = permutation_id
 
 
     @property
@@ -98,6 +102,10 @@ class Sensor:
             raw_klines, self._fitted_params, self._round_params
         )
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
+        if decoder_lookback > 1:
+            raise NotImplementedError(
+                'predict does not yet support decoder_lookback > 1'
+            )
 
         self._raise_if_inside_training_window(data, manifest)
 
