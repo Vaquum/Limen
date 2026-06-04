@@ -26,17 +26,20 @@ If `results.csv` is also present, Trainer validates the retrained metrics agains
 Start from an existing experiment directory:
 
 ```python
-import limen
+import polars as pl
+from limen.experiment.trainer import Trainer
 
-trainer = limen.Trainer(
-    experiment_dir='path/to/experiment',
-    data=my_data,  # optional override
-)
+# 1) identify permutation IDs from results.csv
+results = pl.read_csv('path/to/experiment/results.csv')
+top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
 
-sensors = trainer.train([0, 7, 19])
+# 2) retrain selected permutations into Sensor objects
+trainer = Trainer('path/to/experiment')
+sensors = trainer.train(top_ids)
+
+# 3) run inference on live klines
 sensor = sensors[0]
-
-result = sensor.predict({'x_test': live_features})
+bar_pred = sensor.predict(raw_klines)
 ```
 
 In this workflow:
@@ -72,7 +75,7 @@ If validation fails, Trainer raises `ReconstructionError`.
 from limen import ReconstructionError
 
 try:
-    sensors = trainer.train([42])
+    sensors = trainer.train(top_ids)
 except ReconstructionError as e:
     print(e)
 ```
@@ -101,16 +104,6 @@ That means the promotion stack depends on the [Reference Architecture](Reference
 - `evaluate(data, inline_metrics=True)`
 - `deterministic`
 
-On a live local `logreg_binary` promotion run in this repo:
-
-- validation completed with no metric mismatches
-- `Sensor.predict()` returned `_preds` and `_probs`
-- the promoted sensor produced predictions for `884` test bars
-
-On a live local `random_binary` promotion run in this repo, Trainer raised `ReconstructionError` because the stochastic rerun did not reproduce the original logged metrics closely enough.
-
-This is expected behavior, not a special case in the docs.
-
 ## `Trainer(experiment_dir, data=None)`
 
 ### Arguments
@@ -125,19 +118,21 @@ Use `data=` when you already have the exact dataframe you want Trainer to use. O
 ## `train(permutation_ids)`
 
 ```python
-sensors = trainer.train([0, 1, 2])
+sensors = trainer.train(top_ids)
 ```
+
+`permutation_ids` is a `list[str]` of SHA-256 round IDs from `round_data.jsonl`. These are the `id` values in `results.csv` — use that file to identify which rounds to promote.
 
 This method:
 
-- verifies that the requested permutation ids exist in `round_data.jsonl`
+- verifies that the requested permutation IDs exist in `round_data.jsonl`
 - validates them against `results.csv` when available
 - retrains them on all data
 - returns `list[Sensor]`
 
 Raises:
 
-- `ValueError` if a permutation id is missing
+- `ValueError` if a permutation ID is missing
 - `ReconstructionError` if validation detects metric drift
 
 ## Sensor
@@ -146,7 +141,8 @@ A `Sensor` is the promoted form of a trained round.
 
 Each sensor exposes:
 
-- `permutation_id` — round ID from the experiment log; required for cohort binding
+- `permutation_id` — SHA-256 round ID from the experiment log; required for cohort binding
+- `manifest_id` — SHA-256 content hash of the YAML manifest, carried from `metadata.json` for traceability
 - `round_params` — parameter values used for this permutation
 
 ### Example
@@ -154,17 +150,49 @@ Each sensor exposes:
 ```python
 sensor = sensors[0]
 
-print(sensor.permutation_id)
+print(sensor.permutation_id)   # 'sha256:a3f1...'
+print(sensor.manifest_id)      # 'sha256:7c2e...'
 print(sensor.round_params)
 
-pred = sensor.predict(raw_klines)
+bar_pred = sensor.predict(raw_klines)
 ```
 
 Sensors are also callable:
 
 ```python
-pred = sensor(raw_klines)
+bar_pred = sensor(raw_klines)
 ```
+
+### `predict(raw_klines) -> BarPrediction`
+
+Takes a `pl.DataFrame` of raw klines with the same schema as the manifest data source. Returns a `BarPrediction` for the last bar.
+
+```python
+@dataclass
+class BarPrediction:
+    datetime: Any
+    prediction: int | float | None
+    probability: float | None
+    reason: str | None
+```
+
+`reason` values:
+
+| Value | Meaning |
+|---|---|
+| `None` | valid prediction; use `prediction` and `probability` |
+| `'warm-up'` | not enough bars to satisfy indicator lookback |
+| `'inside-training-window'` | bar falls within the train/test split window |
+| `'null-features'` | mid-stream null feature value (data gap or transform anomaly) |
+| `'sensor-error'` | unexpected exception; prediction is not available |
+
+`predict()` never raises. All non-prediction conditions are returned as `BarPrediction` with the corresponding `reason`.
+
+### `predict_all(raw_klines) -> list[BarPrediction]`
+
+Returns one `BarPrediction` per bar in the post-bar-formation data. Warm-up bars and inside-window bars have `reason` set; valid bars have `prediction` and `probability` populated.
+
+On unexpected exceptions the method returns a list of `reason='sensor-error'` entries (one per input bar) rather than raising.
 
 ### What `predict()` expects
 
@@ -174,7 +202,7 @@ All reference models need only `x_test` for inference. Calibrated models (those 
 
 Trainer uses:
 
-- `metadata.json` — reads `yaml_reference` to reconstruct the manifest; `sfd_module` may be present in older experiments but is not used by the YAML-only Trainer
+- `metadata.json` — reads `yaml_reference` to reconstruct the manifest; `manifest_id` is also read and passed to each Sensor
 - `round_data.jsonl` — loads `round_params` for each permutation
 - `results.csv` — when available, validates retrained metrics against the original experiment log
 

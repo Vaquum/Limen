@@ -1,6 +1,6 @@
 # Cohort
 
-`Cohort` is Limen’s inference-time ensemble surface for combining multiple trained decoders reconstructed from one completed experiment.
+`Cohort` is Limen's inference-time ensemble surface for combining multiple trained sensors reconstructed from one completed experiment.
 
 Use it when you want to move from single-round predictions to a controlled multi-member prediction surface while staying inside Limen artefacts (`metadata.json`, `round_data.jsonl`, Trainer-reconstructed sensors).
 
@@ -10,7 +10,7 @@ Use it when you want to move from single-round predictions to a controlled multi
 - construction and validation rules
 - selector contract and built-in selectors
 - aggregation behavior (probability-weighted vs fallback majority vote)
-- output contracts for `predict(...)` and `__call__(...)`
+- output contracts for `predict(...)` and `predict_all(...)`
 - a real end-to-end example from experiment artefacts
 
 ## Prerequisites
@@ -36,20 +36,28 @@ Typical path:
 3. reconstruct/train those permutations with Trainer
 4. create Cohort from experiment source + permutation IDs or selector
 5. bind trained members via `set_members(...)`
-6. infer with either:
-   - `predict(...)` for Sensor-compatible dict output (with optional tuple variants)
-   - `__call__(...)` as an alias of `predict(...)`
+6. infer with:
+   - `predict(raw_klines)` → one `BarPrediction` for the last bar
+   - `predict_all(raw_klines)` → one `BarPrediction` per bar
+   - `__call__(raw_klines)` as an alias of `predict(...)`
 
 ## Construction
 
 ```python
+import polars as pl
 from limen.cohort import Cohort
+from limen.experiment.trainer import Trainer
+
+results = pl.read_csv('experiments/my_exp/results.csv')
+top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
 
 cohort = Cohort(
     experiment_log_path='experiments/my_exp',
-    permutation_ids=[0, 1],
+    permutation_ids=top_ids,
 )
 ```
+
+`permutation_ids` is a `list[str]` of SHA-256 round IDs. Use the `id` column in `results.csv` to identify which rounds to include.
 
 ### Experiment source rules
 
@@ -62,11 +70,22 @@ Providing none or both raises `ValueError`.
 
 ### Permutation rules
 
-- omitted `permutation_ids` means “use the default `all` selector”
+- omitted `permutation_ids` means "use the default `all` selector"
 - provided list must be non-empty
 - IDs must be unique after normalization
 - unknown IDs raise `ValueError`
 - `permutation_ids` and `selector` are mutually exclusive
+
+### Cohort identity fields
+
+After construction and before `set_members()`:
+
+- `cohort.manifest_id` — SHA-256 hash of the YAML manifest, read from `metadata.json`
+- `cohort.cohort_id` — `None` until `set_members()` is called
+
+After `set_members()`:
+
+- `cohort.cohort_id` — `'sha256:<hex>'` derived from `manifest_id` and the sorted set of `permutation_ids`
 
 ## Selector Contract
 
@@ -75,7 +94,7 @@ Selectors choose Cohort members before any training or inference work starts.
 Minimum contract:
 
 ```python
-def select(context: dict) -> list[int | str]:
+def select(context: dict) -> list[str]:
     return sorted(context['available_permutation_ids'])
 ```
 
@@ -163,13 +182,22 @@ All selected permutation IDs must resolve to the same architecture identifier. M
 
 ## Binding Members
 
-After construction, bind trained decoder members:
+After construction, bind trained sensor members:
 
 ```python
+trainer = Trainer('experiments/my_exp')
+sensors = trainer.train(top_ids)
+
 cohort.set_members(sensors)
 ```
 
-Members are expected to behave like Sensor/model wrappers with a `predict(data_dict)` method returning at least `{'_preds': ...}` and optionally `{'_probs': ...}`.
+Each member must expose `permutation_id` for binding. `set_members()` validates that:
+
+- all `permutation_ids` are covered exactly once
+- member `permutation_id` values match the cohort's selected IDs
+- all members share the same architecture
+
+After a successful `set_members()` call, `cohort.cohort_id` is populated.
 
 ## Aggregation Modes
 
@@ -180,129 +208,111 @@ compatible with Trainer-reconstructed sensors.
 
 ### 1) `probability_weighted`
 
-- expects each member to return `_probs` as P(1)
-- validates probabilities are finite and in `[0, 1]`
-- computes mean P(1) across members
+- expects each member to return a finite `probability` in `[0, 1]`
+- computes mean probability across members
 - converts to class via strict threshold `> 0.5`
 - tie at exactly `0.5` resolves to class `0`
-- for a single-member cohort, preserves the member payload as-is for default
-  dict output (drop-in Sensor behavior)
 
 ### 2) `majority_vote`
 
-- uses member `_preds`
+- uses member `prediction` values
 - computes mean vote across members
 - applies strict threshold `> 0.5`
 - exact ties resolve to class `0`
 
 ## Output Contracts
 
-### `predict(data, ...)`
+### `predict(raw_klines) -> BarPrediction`
 
-Sensor-compatible contract:
+Takes a `pl.DataFrame` of raw klines. Returns one aggregated `BarPrediction` for the last bar.
 
-- `predict(data)` → `dict` with `'_preds'` and (if available) `'_probs'`
-- `predict(data, return_probs=True)` → `(y_pred, probs)`
-- `predict(data, return_meta=True)` → `(y_pred, meta)`
-- `predict(data, return_probs=True, return_meta=True)` → `(y_pred, probs, meta)`
+```python
+bar_pred = cohort.predict(raw_klines)
 
-Input contract:
+if bar_pred.reason is None:
+    print(bar_pred.prediction)   # 0 or 1
+    print(bar_pred.probability)  # mean probability across members
+```
 
-- canonical input is a decoder-style dict (for example `{'x_test': ...}`)
-- architectures that require additional context (for example TabPFN variants)
-  must be called with a dict that includes required fields such as `x_val`/`y_val`
+`reason` values mirror the per-sensor contract:
 
-Where:
+| Value | Meaning |
+|---|---|
+| `None` | valid aggregated prediction |
+| `'warm-up'` | the highest-priority blocking reason across members |
+| `'inside-training-window'` | highest-priority blocking reason |
+| `'null-features'` | highest-priority blocking reason |
+| `'sensor-error'` | all members returned `sensor-error`; no valid prediction available |
 
-- `probs` is a per-decoder probability matrix with shape
-  `(n_samples, n_members)` in the same order as `permutation_ids`
-- `meta` currently contains:
-  - `permutation_ids`
-  - `decoder_count`
-  - `architecture_id`
-  - `aggregation_mode`
+When some members return `sensor-error` but not all, those members are excluded from
+aggregation and a warning is logged. The cohort still produces a valid prediction from
+the remaining members.
 
-Single-member note:
+### `predict_all(raw_klines) -> list[BarPrediction]`
 
-- in probability mode, `predict(data)` returns the member payload unchanged
-  (including any extra keys beyond `_preds` / `_probs`)
+Returns one aggregated `BarPrediction` per bar. Each bar is aggregated independently
+across members.
 
-If `return_probs=True` is requested in fallback mode, Cohort raises `ValueError`.
+```python
+all_preds = cohort.predict_all(raw_klines)
 
-### `__call__(data_dict)`
+for bar in all_preds:
+    if bar.reason is None:
+        print(bar.datetime, bar.prediction, bar.probability)
+```
 
-Alias of `predict(data_dict)`, preserving Sensor-style decoder dict behavior.
+### `__call__(raw_klines)`
+
+Alias of `predict(raw_klines)`.
 
 ## Real End-To-End Example
 
 ```python
-from pathlib import Path
-
+import polars as pl
 from limen.cohort import Cohort
-from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
 from limen.experiment.trainer import Trainer
-from limen.sfd.foundational_sfd import logreg_binary as sfd_module
 
-experiment_dir = Path('tmp/cohort_docs_example')
+experiment_dir = 'experiments/my_exp'
 
-# 1) run a real experiment
-params = sfd_module.params()
-domain = ParamDomain(params)
-strategy = GridStrategy(domain)
+# 1) identify top permutations from results
+results = pl.read_csv(f'{experiment_dir}/results.csv')
+top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
 
-uel = UniversalExperimentLoop(
-    sfd=sfd_module,
-    search_strategy=strategy,
-    experiment_dir=experiment_dir,
-)
-uel.run(experiment_name='cohort_docs_example', n_permutations=2)
-
-# 2) reconstruct trained members from selected permutations
+# 2) retrain selected permutations
 trainer = Trainer(experiment_dir)
-permutation_ids = [0, 1]
-members = trainer.train(permutation_ids)
+sensors = trainer.train(top_ids)
 
-# 3) prepare per-member inference payloads (schemas may differ by permutation)
-payloads_by_pid = {}
-for member in members:
-    prepared = trainer._manifest.prepare_data(trainer._data, member.round_params)
-    payloads_by_pid[member.permutation_id] = {'x_test': prepared['x_test']}
-
-# 4) build and bind cohort
+# 3) build and bind cohort
 cohort = Cohort(
-    experiment_log_path=str(experiment_dir),
-    permutation_ids=permutation_ids,
+    experiment_log_path=experiment_dir,
+    permutation_ids=top_ids,
 )
-cohort.set_members(members)
+cohort.set_members(sensors)
 
-# 5a) sensor-compatible prediction surface
-pred = cohort.predict({'_by_permutation_id': payloads_by_pid})
-y_pred = pred['_preds']
+print(cohort.cohort_id)    # 'sha256:...'
+print(cohort.manifest_id)  # 'sha256:...'
 
-# 5b) optional structured returns
-y_pred2, probs, meta = cohort.predict(
-    {'_by_permutation_id': payloads_by_pid},
-    return_probs=True,
-    return_meta=True,
-)
+# 4a) predict last bar
+bar_pred = cohort.predict(raw_klines)
+if bar_pred.reason is None:
+    print(bar_pred.prediction, bar_pred.probability)
 
-# 5c) decoder-compatible adapter
-decoder_result = cohort({'_by_permutation_id': payloads_by_pid})
+# 4b) predict all bars
+all_preds = cohort.predict_all(raw_klines)
+valid = [p for p in all_preds if p.reason is None]
+print(f'{len(valid)} valid bars out of {len(all_preds)}')
+
+# 4c) callable alias
+bar_pred2 = cohort(raw_klines)
 ```
-
-If all selected members truly share one schema, you may still pass one common
-decoder payload (for example `{'x_test': ...}`), but heterogeneous cohorts
-should provide per-member payloads as above.
 
 ## Failure Cases And Caveats
 
 - missing experiment artefacts (`metadata.json` / `round_data.jsonl`) raise `FileNotFoundError`
 - unresolvable or ambiguous experiment ID resolution raises `ValueError`
 - no bound members at inference raises `RuntimeError`
-- shape mismatch across member outputs raises `ValueError`
-- member inference exceptions propagate and fail the whole call
+- member sensor lists of different lengths raise `ValueError` in `predict_all`
+- when a member returns `sensor-error` for a bar, it is excluded from aggregation for that bar; only when all members return `sensor-error` does the cohort return `reason='sensor-error'`
 - architecture capability detection is currently hint-based; validate behavior in your target architecture set
 - selectors that depend on `results.csv` raise if the required columns are missing
 
