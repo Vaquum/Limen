@@ -107,9 +107,8 @@ class SearchStrategy(ABC):
         '''
         Compute deterministic hash of a parameter combination.
 
-        Returns the first 32 hex characters (128 bits) of the SHA-256
-        digest. Truncation is acceptable because the hash is used for
-        dedup, not cryptographic integrity.
+        Returns the full 64 hex characters (256 bits) of the SHA-256
+        digest.
 
         Note:
             Strips ``_``-prefixed keys because domain params never
@@ -121,12 +120,12 @@ class SearchStrategy(ABC):
             combo (dict[str, Any]): Parameter combination or log row
 
         Returns:
-            str: 32-character truncated hex digest
+            str: 64-character hex digest
         '''
 
         clean = {k: v for k, v in combo.items() if not k.startswith('_')}
         canonical = json.dumps(clean, sort_keys=True, default=str)
-        return hashlib.sha256(canonical.encode()).hexdigest()[:32]
+        return hashlib.sha256(canonical.encode()).hexdigest()
 
 
     def mark_seen(self, combo: dict[str, Any]) -> str:

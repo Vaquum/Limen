@@ -43,7 +43,20 @@ def commit_manifest(yaml_path: Path,
     '''
 
     content = yaml_path.read_text(encoding='utf-8')
-    hex_hash = hashlib.sha256(content.encode()).hexdigest()
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+
+    try:
+        data = yaml.load(content)
+    except YAMLError as exc:
+        raise ValueError(f"Cannot parse YAML '{yaml_path.name}': {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
+
+    data_no_lineage = {k: v for k, v in data.items() if k != 'lineage'}
+    canonical = json.dumps(data_no_lineage, sort_keys=True, default=str)
+    hex_hash = hashlib.sha256(canonical.encode()).hexdigest()
     manifest_id = f'{_SHA256_PREFIX}{hex_hash}'
 
     store_path = project_root / _STORE_RELATIVE
@@ -51,16 +64,7 @@ def commit_manifest(yaml_path: Path,
 
     already_existed = dest.exists()
 
-    yaml = YAML()
-    yaml.preserve_quotes = True
-
     if not already_existed:
-        try:
-            data = yaml.load(content)
-        except YAMLError as exc:
-            raise ValueError(f"Cannot parse YAML '{yaml_path.name}': {exc}") from exc
-        if not isinstance(data, dict):
-            raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
         name = str(data.get('metadata', {}).get('name', yaml_path.stem))
         committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         lineage: dict = {'id': manifest_id, 'committed_at': committed_at}

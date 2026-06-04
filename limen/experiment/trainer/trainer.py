@@ -13,7 +13,7 @@ from limen.yaml.errors import ResolutionError
 logger = logging.getLogger(__name__)
 
 _SKIP_COLUMNS = frozenset({
-    'id', '_id', 'execution_time', '_warnings',
+    'id', '_id', '_round_index', 'execution_time', '_warnings',
 })
 
 _FLOAT_TOLERANCE = 1e-6
@@ -71,6 +71,7 @@ class Trainer:
                 'metadata.json key \'yaml_reference\' must be an object'
             )
         self._yaml_reference = yaml_reference
+        self._manifest_id: str | None = self._metadata.get('manifest_id')
 
         try:
             sfd = CompiledSFD(yaml_reference)
@@ -105,19 +106,19 @@ class Trainer:
             self._data = self._manifest.fetch_data()
 
 
-    def _load_round_data(self) -> dict[int, dict[str, Any]]:
+    def _load_round_data(self) -> dict[str, dict[str, Any]]:
 
         '''
         Load round_data.jsonl into a dict keyed by round_id.
 
         Returns:
-            dict[int, dict[str, Any]]: Mapping of round_id to round entry
+            dict[str, dict[str, Any]]: Mapping of round_id to round entry
 
         '''
 
         round_data_path = self._experiment_dir / 'round_data.jsonl'
 
-        result: dict[int, dict[str, Any]] = {}
+        result: dict[str, dict[str, Any]] = {}
         try:
             f = round_data_path.open('r')
         except FileNotFoundError:
@@ -144,13 +145,13 @@ class Trainer:
         return result
 
 
-    def _load_original_log(self) -> dict[int, dict[str, Any]] | None:
+    def _load_original_log(self) -> dict[str, dict[str, Any]] | None:
 
         '''
         Load results.csv into a dict keyed by permutation id.
 
         Returns:
-            dict[int, dict[str, Any]] | None: Mapping of id to row, or None if not found
+            dict[str, dict[str, Any]] | None: Mapping of id to row, or None if not found
 
         '''
 
@@ -164,14 +165,14 @@ class Trainer:
             )
             return None
 
-        result: dict[int, dict[str, Any]] = {}
+        result: dict[str, dict[str, Any]] = {}
         for row in df.iter_rows(named=True):
-            result[row['id']] = row
+            result[str(row['id'])] = row
         return result
 
 
     def _validate_metrics(self,
-                          permutation_id: int,
+                          permutation_id: str,
                           results: dict[str, Any],
                           is_deterministic: bool) -> list[str]:
 
@@ -179,7 +180,7 @@ class Trainer:
         Compare retrained results against original experiment log entry.
 
         Args:
-            permutation_id (int): Round ID to validate
+            permutation_id (str): Round ID to validate
             results (dict[str, Any]): Results from run_model
             is_deterministic (bool): Whether to use exact-match tolerance
 
@@ -232,7 +233,7 @@ class Trainer:
         return mismatches
 
 
-    def train(self, permutation_ids: list[int]) -> list[Sensor]:
+    def train(self, permutation_ids: list[str]) -> list[Sensor]:
 
         '''
         Retrain selected permutations and return Sensor instances.
@@ -242,7 +243,7 @@ class Trainer:
         directly as the Sensor model.
 
         Args:
-            permutation_ids (list[int]): Round IDs from experiment_log to retrain
+            permutation_ids (list[str]): Round IDs from experiment_log to retrain
 
         Returns:
             list[Sensor]: Sensor instances wrapping validated models
@@ -292,9 +293,10 @@ class Trainer:
                 fitted_params=fitted_params,
                 round_params=round_params,
                 permutation_id=pid,
+                manifest_id=self._manifest_id,
             )
             sensors.append(sensor)
 
-            logger.info('Trained sensor for permutation %d', pid)
+            logger.info('Trained sensor for permutation %s', pid)
 
         return sensors

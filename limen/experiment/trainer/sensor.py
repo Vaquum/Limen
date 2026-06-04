@@ -33,7 +33,8 @@ class Sensor:
                  model: ReferenceModel,
                  fitted_params: dict[str, Any],
                  round_params: dict[str, Any],
-                 permutation_id: int | None = None) -> None:
+                 permutation_id: str | None = None,
+                 manifest_id: str | None = None) -> None:
 
         '''
         Create a Sensor from a validated trained model.
@@ -43,8 +44,10 @@ class Sensor:
             model (ReferenceModel): Validated trained model
             fitted_params (dict): Fitted scaler/PCA state from the winning round
             round_params (dict): Full parameter dict from the winning round
-            permutation_id (int | None): Round ID from the experiment log — required
+            permutation_id (str | None): Round ID from the experiment log — required
                 for cohort binding via Cohort.set_members
+            manifest_id (str | None): SHA-256 content hash of the YAML manifest,
+                carried from metadata.json for traceability
 
         '''
 
@@ -54,6 +57,7 @@ class Sensor:
         self._round_params = dict(round_params)
         self._manifest: Any = None
         self.permutation_id = permutation_id
+        self.manifest_id = manifest_id
 
 
     @property
@@ -74,30 +78,23 @@ class Sensor:
         return self._manifest
 
 
-    def predict(self, raw_klines: pl.DataFrame | dict) -> BarPrediction | dict:
+    def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
         '''
         Prepare raw klines and return a prediction for the last bar.
 
-        When called with a dict, delegates directly to the underlying model —
-        compatible with the Cohort decoder interface.
-
         Args:
-            raw_klines (pl.DataFrame | dict): Raw klines DataFrame for bar-by-bar
-                prediction, or a decoder-style dict for direct model inference
+            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
+                the manifest data source
 
         Returns:
-            BarPrediction | dict: BarPrediction for DataFrame input, raw model
-                prediction dict for dict input
+            BarPrediction: Prediction for the last bar
 
         Raises:
-            ValueError: If the window is too small, the last bar is a warm-up bar,
-                or the last bar (the prediction target) falls inside the training/test window
+            ValueError: If the window is too small, the last bar has null features,
+                or the last bar falls inside the training/test window
 
         '''
-
-        if isinstance(raw_klines, dict):
-            return self._model.predict(raw_klines)
 
         manifest = self._get_manifest()
         data, indicator_lookback = manifest.sensor_input_prep(
