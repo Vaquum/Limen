@@ -337,7 +337,7 @@ def _shutdown_resume_full_data(strategy_cls):
         )
 
         assert uel2.experiment_log.shape[0] == 6
-        assert uel2.experiment_log['id'].to_list() == [0, 1, 2, 3, 4, 5]
+        assert all(isinstance(v, str) for v in uel2.experiment_log['id'].to_list())
         assert len(uel2.preds) == 6
         assert len(uel2._alignment) == 6
         assert len(uel2.round_params) == 6
@@ -455,8 +455,9 @@ def test_preds_none_does_not_crash():
             current_preds = []
 
         uel._append_round_data(
-            round_data_path, 0, sfd_params, current_preds,
+            round_data_path, 'abc123', sfd_params, current_preds,
             data_dict['_alignment'],
+            round_index=0,
         )
 
         assert round_data_path.exists()
@@ -504,10 +505,12 @@ def test_resume_truncates_stale_rounds():
             existing_lines = [raw.strip() for raw in f if raw.strip()]
 
         # Append stale entries beyond the checkpoint to simulate crash
-        checkpoint_round = json.loads(existing_lines[-1])['round_id']
+        last_entry = json.loads(existing_lines[-1])
+        checkpoint_index = last_entry['_round_index']
         for i in range(1, 3):
-            stale_entry = json.loads(existing_lines[-1])
-            stale_entry['round_id'] = checkpoint_round + i
+            stale_entry = dict(last_entry)
+            stale_entry['round_id'] = f'stale_hash_{i}'
+            stale_entry['_round_index'] = checkpoint_index + i
             with round_data_path.open('a') as f:
                 f.write(json.dumps(stale_entry) + '\n')
 
@@ -520,7 +523,7 @@ def test_resume_truncates_stale_rounds():
             writer = csv.writer(f)
             for offset in range(1, 3):
                 stale_row = list(rows[-1])
-                stale_row[id_idx] = str(int(stale_row[id_idx]) + offset)
+                stale_row[id_idx] = f'stale_hash_{offset}'
                 writer.writerow(stale_row)
 
         with round_data_path.open('r') as f:
@@ -540,13 +543,15 @@ def test_resume_truncates_stale_rounds():
         )
 
         assert uel2.experiment_log.shape[0] == 6
-        assert uel2.experiment_log['id'].to_list() == [0, 1, 2, 3, 4, 5]
+        assert all(isinstance(v, str) for v in uel2.experiment_log['id'].to_list())
 
         with round_data_path.open('r') as f:
             final_jsonl = [raw for raw in f if raw.strip()]
         assert len(final_jsonl) == 6
         for i, line in enumerate(final_jsonl):
-            assert json.loads(line)['round_id'] == i
+            entry = json.loads(line)
+            assert isinstance(entry['round_id'], str)
+            assert entry['_round_index'] == i
 
         with csv_path.open('r') as f:
             final_csv = [raw for raw in f if raw.strip()]
@@ -559,11 +564,11 @@ def test_truncate_round_data_unit():
         path = Path(tmpdir) / 'round_data.jsonl'
 
         entries = [
-            {'round_id': 0, 'data': 'a'},
-            {'round_id': 1, 'data': 'b'},
-            {'round_id': 2, 'data': 'c'},
-            {'round_id': 3, 'data': 'd'},
-            {'round_id': 4, 'data': 'e'},
+            {'round_id': 'hash_0', '_round_index': 0, 'data': 'a'},
+            {'round_id': 'hash_1', '_round_index': 1, 'data': 'b'},
+            {'round_id': 'hash_2', '_round_index': 2, 'data': 'c'},
+            {'round_id': 'hash_3', '_round_index': 3, 'data': 'd'},
+            {'round_id': 'hash_4', '_round_index': 4, 'data': 'e'},
         ]
         with path.open('w') as f:
             for entry in entries:
@@ -575,7 +580,7 @@ def test_truncate_round_data_unit():
             remaining = [json.loads(raw) for raw in f if raw.strip()]
 
         assert len(remaining) == 3
-        assert [e['round_id'] for e in remaining] == [0, 1, 2]
+        assert [e['round_id'] for e in remaining] == ['hash_0', 'hash_1', 'hash_2']
 
 
 def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_orders_cohorts():

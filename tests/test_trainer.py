@@ -414,16 +414,12 @@ def test_trainer_yaml_sensor_inference() -> None:
         trainer, sensors = _train_e2e(exp_dir, [round_ids[0]])
         sensor = sensors[0]
 
-        # dict dispatch — delegates to underlying model, returns raw dict
+        # underlying model can still be called directly
         data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
         x_batch = data_dict['x_test'].to_numpy()[:2]
-        dict_result = sensor.predict({'x_test': x_batch})
-        assert isinstance(dict_result, dict)
-        assert '_preds' in dict_result
-
-        # __call__ delegates to predict
-        call_result = sensor({'x_test': x_batch})
-        assert isinstance(call_result, dict)
+        model_result = sensor._model.predict({'x_test': x_batch})
+        assert isinstance(model_result, dict)
+        assert '_preds' in model_result
 
         # DataFrame path — returns BarPrediction for last bar
         n = 100

@@ -267,7 +267,7 @@ def test_param_hash_deterministic():
     h1 = strategy.compute_param_hash(combo)
     h2 = strategy.compute_param_hash(combo)
     assert h1 == h2
-    assert len(h1) == 32
+    assert len(h1) == 64
     assert all(c in '0123456789abcdef' for c in h1)
 
 
