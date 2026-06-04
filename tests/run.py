@@ -834,6 +834,7 @@ from tests.test_proto_cohort import test_cohort_id_computed_after_set_members
 from tests.test_proto_cohort import test_cohort_id_is_stable_across_calls
 from tests.test_proto_cohort import test_manifest_id_set_from_metadata_at_construction
 from tests.test_proto_cohort import test_manifest_id_consistent_across_members
+from tests.test_proto_cohort import test_yaml_reference_lineage_stripped_from_metadata
 from tests.test_proto_cohort import test_predict_requires_members
 from tests.test_proto_cohort import test_predict_all_requires_members
 from tests.test_proto_cohort import test_predict_all_returns_one_entry_per_bar
@@ -1737,6 +1738,7 @@ tests = [
     test_cohort_id_is_stable_across_calls,
     test_manifest_id_set_from_metadata_at_construction,
     test_manifest_id_consistent_across_members,
+    test_yaml_reference_lineage_stripped_from_metadata,
     test_predict_requires_members,
     test_predict_all_requires_members,
     test_predict_all_returns_one_entry_per_bar,

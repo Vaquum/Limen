@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 from datetime import datetime
@@ -714,7 +715,13 @@ def test_cohort_id_is_stable_across_calls():
         sensors, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
         cohort.set_members(sensors)
 
-        assert cohort.cohort_id == cohort.cohort_id
+        first = cohort.cohort_id
+        # Rebuilding from same experiment and membership yields identical cohort_id
+        cohort2 = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        sensors2, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
+        cohort2.set_members(sensors2)
+
+        assert cohort2.cohort_id == first
 
 
 def test_manifest_id_set_from_metadata_at_construction():
@@ -750,6 +757,43 @@ def test_manifest_id_consistent_across_members():
         assert cohort.manifest_id == mid_before
         assert cohort.manifest_id == sensors[0].manifest_id
         assert cohort.manifest_id == sensors[1].manifest_id
+
+
+def test_yaml_reference_lineage_stripped_from_metadata():
+    # Simulate a committed YAML that has a lineage block injected.
+    # _write_metadata() must strip it before storing yaml_reference so the
+    # manifest_id hash is identical to a plain (pre-commit) YAML.
+    original = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    try:
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            exp_dir = root / 'results' / 'test_exp'
+            yaml_text = _minimal_yaml_cli_contract_text(exp_dir)
+            # Inject a lineage block (as commit_manifest would)
+            yaml_with_lineage = yaml_text + dedent('''\
+                lineage:
+                  id: sha256:aaaa
+                  committed_at: "2025-01-01T00:00:00Z"
+            ''')
+            yaml_path = root / 'exp.yaml'
+            yaml_path.write_text(yaml_with_lineage)
+            with patch('click.echo'), patch('click.secho'):
+                run_experiment(yaml_path)
+
+            with (exp_dir / 'metadata.json').open('r') as f:
+                metadata = json.load(f)
+
+            assert 'yaml_reference' in metadata
+            assert 'lineage' not in metadata['yaml_reference']
+
+            # manifest_id must equal the hash of the lineage-free canonical form
+            data_no_lineage = dict(metadata['yaml_reference'])
+            canonical = json.dumps(data_no_lineage, sort_keys=True, default=str)
+            expected_id = 'sha256:' + hashlib.sha256(canonical.encode()).hexdigest()
+            assert metadata['manifest_id'] == expected_id
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original
 
 
 # ---------------------------------------------------------------------------
@@ -881,20 +925,12 @@ def test_predict_all_propagates_worst_reason():
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
         ids = _write_minimal_cohort_artifacts(exp_dir)
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0], ids[1]])
-        cohort._members = []  # bypass set_members for unit test
-
-    m0 = _BarMember(ids[0], prediction=None, reason='warm-up')
-    m1 = _BarMember(ids[1], prediction=None, reason='inside-training-window')
-    bars = [m0.predict(None), m1.predict(None)]
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        ids = _write_minimal_cohort_artifacts(exp_dir)
+        m0 = _BarMember(ids[0], prediction=None, reason='warm-up')
+        m1 = _BarMember(ids[1], prediction=None, reason='inside-training-window')
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0], ids[1]])
         cohort._members = [m0, m1]
 
+    bars = [m0.predict(None), m1.predict(None)]
     result = cohort._aggregate_bar_predictions(bars)
     assert result.reason == 'inside-training-window'
     assert result.prediction is None

@@ -353,13 +353,17 @@ def test_trainer_yaml_end_to_end() -> None:
         metadata = json.loads((exp_dir / 'metadata.json').read_text())
         assert 'yaml_reference' in metadata
         assert 'limen_version' in metadata
+        assert 'manifest_id' in metadata
+        assert metadata['manifest_id'].startswith('sha256:')
 
         trainer, sensors = _train_e2e(exp_dir, round_ids)
         assert len(sensors) == 2
 
+        expected_mid = metadata['manifest_id']
         for i, sensor in enumerate(sensors):
             assert sensor.permutation_id == round_ids[i]
             assert isinstance(sensor.round_params, dict)
+            assert sensor.manifest_id == expected_mid
 
         with pytest.raises(ValueError, match='not found in round_data'):
             trainer.train([999])

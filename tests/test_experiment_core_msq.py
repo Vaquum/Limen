@@ -337,7 +337,9 @@ def _shutdown_resume_full_data(strategy_cls):
         )
 
         assert uel2.experiment_log.shape[0] == 6
-        assert all(isinstance(v, str) for v in uel2.experiment_log['id'].to_list())
+        ids = uel2.experiment_log['id'].to_list()
+        assert all(isinstance(v, str) for v in ids)
+        assert len(set(ids)) == 6
         assert len(uel2.preds) == 6
         assert len(uel2._alignment) == 6
         assert len(uel2.round_params) == 6
@@ -464,6 +466,7 @@ def test_preds_none_does_not_crash():
         with round_data_path.open('r') as f:
             entry = json.loads(f.readline())
         assert entry['preds'] == []
+        assert entry['_round_index'] == 0
 
 
 def test_resume_truncates_stale_rounds():
