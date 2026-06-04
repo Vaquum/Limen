@@ -40,14 +40,30 @@ body:
       description: |
         A noun phrase that names the concrete change. "Add X to Y" and "Replace A
         with B" beat "Harden the X contract" and "Freeze the Y semantics."
-      placeholder: "Add stream_sequence column to canonical_event_log"
+      placeholder: "Add template listing to Limen CLI"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: primary_task_type
+    attributes:
+      label: Primary Task Type
+      options:
+        - proof
+        - planning
+        - issue_authoring
+        - operator_surface
+        - runtime_env
+        - correctness
+        - performance
+        - capability
     validations:
       required: true
 
   - type: textarea
     id: routing
     attributes:
-      label: Routing
+      label: Routing and Dependencies
       value: |
         > **Significance.** Routing is the minimum information needed to place this
         > slice in the dependency graph. Parent and dependencies must be existing
@@ -66,7 +82,7 @@ body:
   - type: textarea
     id: mvc
     attributes:
-      label: Minimum Viable Capability
+      label: Capability
       value: |
         > **Significance.** A slice delivers exactly one capability. The capability
         > must be expressible as a set of assertions that become mechanically true
@@ -76,9 +92,9 @@ body:
         > HTTP request that returns a definite result. One assertion per line.
         >
         > Accepted:
-        > - `clickhouse-client --query "SELECT countIf(stream_sequence IS NULL) FROM canonical_event_log"` returns `0`.
-        > - `python -c "import inspect, origo.events.writer as m; print(inspect.signature(m.CanonicalEventWriter.__init__))"` returns `(self, *, clickhouse_client)`.
-        > - `curl -sf https://origo.vaquum.fi/v1/health/schema | jq -r '.canonical_event_log_v1.columns | length'` returns `17`.
+        > - `python -c "from limen.experiment.trainer import Trainer; print(Trainer.__name__)"` returns `Trainer`.
+        > - `python -m tests.run` returns exit code `0`.
+        > - `ruff check .` returns exit code `0`.
         >
         > Rejected:
         > - *Freeze the current-truth read contract.*
@@ -95,46 +111,76 @@ body:
   - type: textarea
     id: before_state
     attributes:
-      label: Current State
+      label: Objective, Baseline, and Scope
       value: |
-        > **Significance.** Baseline is a snapshot of repo / runtime state today,
-        > not a history of how we got here. Each line below is a command and its
-        > output today. A reader should be able to run these commands against
-        > `main` and confirm the baseline. If a fact matters to the slice and cannot
-        > be expressed as a command with output, it probably does not matter
-        > mechanically and does not belong here.
+        > **Significance.** Objective, baseline, and scope define the smallest
+        > useful change. The objective states the outcome. Baseline is repo or
+        > runtime state today, expressed as commands and outputs a reader can run
+        > against `main`. Scope names the exact surfaces this slice may touch.
         >
         > Accepted:
-        > - `git show HEAD:origo/events/schema.sql | grep -c '^CREATE'` returns `14`.
-        > - `clickhouse-client --query "DESCRIBE canonical_event_log" | wc -l` returns `16`.
+        > - `git show HEAD:pyproject.toml | grep -c 'name = "limen"'` returns `1`.
+        > - `test -f limen/cli/main.py && echo present` returns `present`.
         >
         > Rejected:
-        > - *The system has accumulated technical debt in the read path.*
-        > - *Several live paths already consume that read constant.*
+        > - *The system has accumulated technical debt.*
+        > - *Several paths are confusing.*
 
-        Commands with output (one per line):
+        Objective:
+
+        Baseline commands with output (one per line):
         -
         -
+        -
+
+        Scope:
         -
     validations:
       required: true
 
   - type: textarea
-    id: after_state
+    id: design
     attributes:
-      label: Target State
+      label: Design
       value: |
-        > **Significance.** Parallel to *Current State*: each line is a command and
-        > the output that command will return AFTER the slice merges. These
-        > commands ARE the proof obligation of the slice. Each one maps to a test
-        > in the *Tests* section below. Vague targets like "the system is faster"
-        > or "the contract is hardened" are rejected — state the measurable
-        > predicate.
+        > **Significance.** Design is the end-to-end shape of the solution. Name
+        > the concrete files, commands, interfaces, and data flow that make the
+        > capability true. Do not restate the objective.
+
+        Design:
+    validations:
+      required: true
+
+  - type: textarea
+    id: runtime_observability_scope
+    attributes:
+      label: Runtime and Observability Scope
+      value: |
+        > **Significance.** Runtime and observability scope states whether this
+        > slice changes execution behavior, environment, telemetry, logs, metrics,
+        > alerts, or operational proof. If there is no runtime touch, say so.
+
+        Runtime touch:
+        Observability touch:
+        Operational proof:
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof_coverage
+    attributes:
+      label: Proof Coverage
+      value: |
+        > **Significance.** Proof coverage names the commands that must return the
+        > stated result after merge. These commands are the proof obligation of the
+        > slice. Each one maps to a test or CI gate in the Proof section below.
+        > Vague targets like "the system is faster" or "the contract is hardened"
+        > are rejected — state the measurable predicate.
         >
         > Accepted:
-        > - `clickhouse-client --query "SELECT countIf(stream_sequence IS NULL) FROM canonical_event_log"` returns `0`.
-        > - `pytest tests/contract/test_stream_sequence.py -q` returns exit code `0`.
-        > - `pyright origo/events/ --outputjson | jq '.summary.errorCount'` returns `0`.
+        > - `python -m tests.run` returns exit code `0`.
+        > - `ruff check .` returns exit code `0`.
+        > - `python -m coverage report --fail-under=92` returns exit code `0`.
 
         Commands with output on the merge commit (one per line):
         -
@@ -204,9 +250,9 @@ body:
   - type: textarea
     id: tests
     attributes:
-      label: Tests That Prove the MVC
+      label: Proof
       value: |
-        > **Significance.** Every assertion in the *Minimum Viable Capability*
+        > **Significance.** Every assertion in the *Capability*
         > section above has exactly one test. This section is the mapping. Each
         > row names the MVC assertion (quote or shorten it), the test file path,
         > and the test name within that file. The test must exist at merge and
@@ -225,7 +271,7 @@ body:
   - type: textarea
     id: regression_gate
     attributes:
-      label: Regression Gate
+      label: Guardrails
       value: |
         > **Significance.** A slice is not complete if its capability can be
         > silently removed by the next PR. Name the CI workflow and job that
@@ -234,10 +280,9 @@ body:
         > mechanical block on tomorrow's PR undoing today's work.
         >
         > Accepted:
-        > - Workflow `.github/workflows/pr_checks_contract.yml`, job
-        >   `contract-gate`, which runs
-        >   `pytest tests/contract/test_stream_sequence.py` and fails the PR
-        >   on non-zero exit.
+        > - Workflow `.github/workflows/pr_checks_tests.yml`, job
+        >   `pr_checks_tests`, which runs `python -m coverage run -m tests.run`
+        >   and fails the PR on non-zero exit.
         >
         > Rejected:
         > - *A guardrail will be added to the backfill protocol.*
@@ -247,6 +292,22 @@ body:
         Workflow file:
         Job name:
         Specific failing command the job runs:
+    validations:
+      required: true
+
+  - type: textarea
+    id: step_register
+    attributes:
+      label: Step Register
+      value: |
+        > **Significance.** Step Register is the ordered execution backlog for
+        > this slice. Each step must name a concrete edit, command, or GitHub
+        > action. It is not a narrative plan.
+
+        Steps:
+        -
+        -
+        -
     validations:
       required: true
 
@@ -275,7 +336,7 @@ body:
         > **Significance.** Short. Only risks that change the decision tree for
         > this slice belong here. A risk that is resolved by doing more
         > engineering work is engineering work, not a risk, and goes in the
-        > *Target State* section instead.
+        > *Proof Coverage* section instead.
 
         Risks:
         -
@@ -288,17 +349,18 @@ body:
   - type: textarea
     id: closeout
     attributes:
-      label: Closeout
+      label: Done Means
       value: |
-        > **Significance.** A slice closes on a SHA, not on a self-assessed
-        > checkbox. Fill these three fields at closeout. An issue-closer
-        > bot verifies:
-        >   1. the merge SHA is reachable from the protected base ref;
-        >   2. every workflow run listed has conclusion `SUCCESS` on that SHA;
-        >   3. every command in the *Target State* section returns the stated
-        >      output when executed against the merge commit.
-        > There is no "slice complete" checkbox anywhere in this template —
-        > there are only these three fields with verifiable values.
+        > **Significance.** Done Means closes on verifiable evidence, not on a
+        > self-assessed claim. Check each item only when the linked evidence
+        > exists. Fill the closeout fields after merge.
+
+        - [ ] Capability complete
+        - [ ] Proof complete
+        - [ ] Guardrails complete
+        - [ ] Required gates green
+        - [ ] Required docs updated
+        - [ ] Required closeout state and evidence links are recorded in this issue
 
         Merge SHA:
         Merged PR number:
@@ -321,7 +383,7 @@ body:
           required: true
         - label: Every Surfaces entry with a public signature has a corresponding Signature Diff entry with literal Before and After code blocks.
           required: true
-        - label: The Regression Gate cites a CI workflow file path, a job name, and a specific failing command — not a promise to add one later.
+        - label: Guardrails cites a CI workflow file path, a job name, and a specific failing command — not a promise to add one later.
           required: true
-        - label: The Current State and Target State sections contain commands, not prose.
+        - label: Objective, Baseline, and Scope entries and Proof Coverage entries contain commands, not prose.
           required: true

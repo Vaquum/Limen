@@ -134,6 +134,6 @@ body:
     id: work_slices
     attributes:
       label: Work Slices
-      description: Break down into one or more slice and link the underlying slice issues below.
+      description: Break down into one or more slices and link the underlying slice issues below.
     validations:
       required: true
