@@ -106,8 +106,7 @@ class MSQ:
         '''Enrich combo with metadata, update counters, and return.'''
 
         combo = dict(combo)
-        combo['_param_hash'] = self._strategy.mark_seen(combo)
-        combo['_id'] = combo['_param_hash']
+        combo['_id'] = self._strategy.mark_seen(combo)
         combo['_round_index'] = self._yielded_count
         combo['_injected'] = injected
         combo['_generation_index'] = None if injected else self._strategy.generated_count - 1

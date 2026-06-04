@@ -461,7 +461,7 @@ class UniversalExperimentLoop:
 
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
             current_round = round_params['_round_index']
-            current_hash = round_params['_param_hash']
+            current_hash = round_params['_id']
 
             if self._shutdown_requested:
                 logger.info(
@@ -782,9 +782,11 @@ class UniversalExperimentLoop:
             )
         self.experiment_log = pl.read_csv(csv_path, n_rows=start_round)
 
-        if '_param_hash' in self.experiment_log.columns:
-            hashes = self.experiment_log['_param_hash'].drop_nulls().to_list()
-            self._search_strategy.rebuild_seen_from_log(hashes)
+        col = next((c for c in ('_id', '_param_hash') if c in self.experiment_log.columns), None)
+        if col is not None:
+            self._search_strategy.rebuild_seen_from_log(
+                self.experiment_log[col].drop_nulls().to_list()
+            )
 
         self._truncate_round_data(round_data_path, start_round)
         self.experiment_log.write_csv(csv_path)
