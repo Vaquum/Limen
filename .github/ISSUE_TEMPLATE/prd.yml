@@ -1,6 +1,5 @@
 name: PRD
 description: Define a product requirement and proposed delivery shape.
-title: ""
 body:
   - type: textarea
     id: objective
