@@ -309,8 +309,9 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}
     domain = ParamDomain(params)
     strategy_type = strategy_cfg.get('type', 'random')
+    seed = strategy_cfg.get('seed')
     if strategy_type == 'grid':
         return GridStrategy(domain)
     if strategy_type == 'random':
-        return RandomStrategy(domain)
+        return RandomStrategy(domain, seed=seed)
     raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random' or 'grid'.")

@@ -179,6 +179,7 @@ _LABEL_CONTROL_YAML = dedent('''\
       n_permutations: 10
       search_strategy:
         type: random
+        seed: 42
       prep_each_round: true
       output_format: csv
 ''')
