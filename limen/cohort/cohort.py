@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from typing import ClassVar
@@ -45,6 +46,8 @@ class Cohort:
         'null-features': 1,
         'warm-up': 0,
     }
+
+    _logger = logging.getLogger(__name__)
 
     def __init__(self,
                  *,
@@ -322,28 +325,39 @@ class Cohort:
 
         dt = member_bars[0].datetime
 
-        blocking = [b for b in member_bars if b.reason is not None]
+        valid_bars = [b for b in member_bars if b.reason != 'sensor-error']
+        if not valid_bars:
+            return BarPrediction(datetime=dt, prediction=None, probability=None, reason='sensor-error')
+
+        if len(valid_bars) < len(member_bars):
+            n_errors = len(member_bars) - len(valid_bars)
+            self._logger.warning(
+                'Cohort aggregation: %d of %d member(s) returned sensor-error and were excluded.',
+                n_errors, len(member_bars),
+            )
+
+        blocking = [b for b in valid_bars if b.reason is not None]
         if blocking:
             worst = max(blocking, key=lambda b: self._REASON_PRIORITY.get(b.reason or '', -1))
             return BarPrediction(datetime=dt, prediction=None, probability=None, reason=worst.reason)
 
         if self.aggregation_mode == 'probability_weighted':
-            if any(b.probability is None for b in member_bars):
+            if any(b.probability is None for b in valid_bars):
                 raise ValueError(
                     'probability_weighted mode requires a finite probability from all members.'
                 )
-            probs = np.array([b.probability for b in member_bars], dtype=float)
+            probs = np.array([b.probability for b in valid_bars], dtype=float)
             self._validate_probability_range(probs)
             mean_prob = float(np.mean(probs))
             pred = int(mean_prob > self._VOTE_THRESHOLD)
             return BarPrediction(datetime=dt, prediction=pred, probability=mean_prob, reason=None)
 
-        if any(b.prediction is None for b in member_bars):
+        if any(b.prediction is None for b in valid_bars):
             raise ValueError(
                 'majority_vote mode requires a numeric prediction from all members.'
             )
         threshold = self._fallback_vote_threshold()
-        votes = np.array([int(float(b.prediction) > threshold) for b in member_bars])
+        votes = np.array([int(float(b.prediction) > threshold) for b in valid_bars])
         pred = int(np.mean(votes) > self._VOTE_THRESHOLD)
         return BarPrediction(datetime=dt, prediction=pred, probability=None, reason=None)
 
