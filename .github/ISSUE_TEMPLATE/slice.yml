@@ -1,0 +1,388 @@
+name: Slice
+description: Plan, deliver, and close one Limen slice against mechanical proof.
+labels:
+  - slice
+  - planning
+
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        ## How this template works
+
+        Every section below opens with a blockquoted **Significance** note. That note
+        explains what the section is for and what content the section does and does not
+        accept. **The Significance notes are part of the filed issue.** They ride
+        alongside your content so anyone reading this issue — now or a year from now —
+        sees both what you filled in and what the template required you to fill in.
+        A slice issue without its Significance notes is not a slice issue and will be
+        closed unfiled.
+
+        Prose goals, noun-phrase objectives, philosophy of proof, taxonomy of
+        guardrails: not accepted. Every section asks for a mechanical predicate —
+        a command, a file path, a function signature, a commit SHA, or a CI
+        workflow name — that can be evaluated against repo state at merge.
+
+  - type: input
+    id: slice_id
+    attributes:
+      label: Slice ID
+      placeholder: "S62"
+    validations:
+      required: true
+
+  - type: input
+    id: slice_title
+    attributes:
+      label: Slice Title
+      description: |
+        A noun phrase that names the concrete change. "Add X to Y" and "Replace A
+        with B" beat "Harden the X contract" and "Freeze the Y semantics."
+      placeholder: "Add template listing to Limen CLI"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: primary_task_type
+    attributes:
+      label: Primary Task Type
+      options:
+        - proof
+        - planning
+        - issue_authoring
+        - operator_surface
+        - runtime_env
+        - correctness
+        - performance
+        - capability
+    validations:
+      required: true
+
+  - type: textarea
+    id: routing
+    attributes:
+      label: Routing and Dependencies
+      value: |
+        > **Significance.** Routing is the minimum information needed to place this
+        > slice in the dependency graph. Parent and dependencies must be existing
+        > issue numbers; unlocks may be forward-looking. Prose description of the
+        > relationship is not accepted — only issue references. This section is not
+        > a planning document; it is a graph edge list.
+
+        Parent issue:
+        Depends on:
+        -
+        Unlocks:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: mvc
+    attributes:
+      label: Capability
+      value: |
+        > **Significance.** A slice delivers exactly one capability. The capability
+        > must be expressible as a set of assertions that become mechanically true
+        > at merge. This is the answer to *what changes in the system that an
+        > external observer can verify by running a command?* Every line below
+        > must be evaluable as a shell command, SQL query, Python expression, or
+        > HTTP request that returns a definite result. One assertion per line.
+        >
+        > Accepted:
+        > - `python -c "from limen.experiment.trainer import Trainer; print(Trainer.__name__)"` returns `Trainer`.
+        > - `python -m tests.run` returns exit code `0`.
+        > - `ruff check .` returns exit code `0`.
+        >
+        > Rejected:
+        > - *Freeze the current-truth read contract.*
+        > - *Strict CQRS separation.*
+        > - *Terminal proof obligations are complete.*
+
+        Assertions (one per line, each executable as-is):
+        -
+        -
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: before_state
+    attributes:
+      label: Objective, Baseline, and Scope
+      value: |
+        > **Significance.** Objective, baseline, and scope define the smallest
+        > useful change. The objective states the outcome. Baseline is repo or
+        > runtime state today, expressed as commands and outputs a reader can run
+        > against `main`. Scope names the exact surfaces this slice may touch.
+        >
+        > Accepted:
+        > - `git show HEAD:pyproject.toml | grep -c 'name = "limen"'` returns `1`.
+        > - `test -f limen/cli/main.py && echo present` returns `present`.
+        >
+        > Rejected:
+        > - *The system has accumulated technical debt.*
+        > - *Several paths are confusing.*
+
+        Objective:
+
+        Baseline commands with output (one per line):
+        -
+        -
+        -
+
+        Scope:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Design
+      value: |
+        > **Significance.** Design is the end-to-end shape of the solution. Name
+        > the concrete files, commands, interfaces, and data flow that make the
+        > capability true. Do not restate the objective.
+
+        Design:
+    validations:
+      required: true
+
+  - type: textarea
+    id: runtime_observability_scope
+    attributes:
+      label: Runtime and Observability Scope
+      value: |
+        > **Significance.** Runtime and observability scope states whether this
+        > slice changes execution behavior, environment, telemetry, logs, metrics,
+        > alerts, or operational proof. If there is no runtime touch, say so.
+
+        Runtime touch:
+        Observability touch:
+        Operational proof:
+    validations:
+      required: true
+
+  - type: textarea
+    id: proof_coverage
+    attributes:
+      label: Proof Coverage
+      value: |
+        > **Significance.** Proof coverage names the commands that must return the
+        > stated result after merge. These commands are the proof obligation of the
+        > slice. Each one maps to a test or CI gate in the Proof section below.
+        > Vague targets like "the system is faster" or "the contract is hardened"
+        > are rejected — state the measurable predicate.
+        >
+        > Accepted:
+        > - `python -m tests.run` returns exit code `0`.
+        > - `ruff check .` returns exit code `0`.
+        > - `python -m coverage report --fail-under=92` returns exit code `0`.
+
+        Commands with output on the merge commit (one per line):
+        -
+        -
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: surfaces
+    attributes:
+      label: Surfaces
+      value: |
+        > **Significance.** This is the mechanical scope contract. List every file
+        > path that the PR delivering this slice will modify, add, or remove.
+        > Files outside these three lists must not change. A scope-check CI step
+        > compares the PR's changed-file set against this list and fails if they
+        > diverge. The scope model is: "out of scope is every file not listed
+        > here." Glob patterns are permitted; prose is not.
+
+        Modified (exact paths relative to repo root, or globs):
+        -
+
+        Added:
+        -
+
+        Removed:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: signature_diff
+    attributes:
+      label: Signature Diff
+      value: |
+        > **Significance.** For every surface in the list above that has a public
+        > signature — a function, a class, a SQL view or table, an HTTP route, a
+        > CLI entry point, a JSON schema — give the `Before` and `After` forms as
+        > code blocks. These signatures are the contract future PRs cannot
+        > silently regress. Prose like "rename the function" or "make it
+        > fail-loud" is rejected — the only accepted content under `Before` and
+        > `After` is a literal code fragment in the language of the surface.
+
+        ### <file>::<symbol>
+        Before:
+        ```
+
+        ```
+        After:
+        ```
+
+        ```
+
+        ### <file>::<symbol>
+        Before:
+        ```
+
+        ```
+        After:
+        ```
+
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Proof
+      value: |
+        > **Significance.** Every assertion in the *Capability*
+        > section above has exactly one test. This section is the mapping. Each
+        > row names the MVC assertion (quote or shorten it), the test file path,
+        > and the test name within that file. The test must exist at merge and
+        > must pass in CI. Prose like "terminal proof obligation," "claim class,"
+        > or "proof freshness requirement" is rejected — the row's middle column
+        > is a path that resolves to a running test, or the row is wrong.
+
+        | MVC assertion | test file | test name |
+        |---|---|---|
+        |  |  |  |
+        |  |  |  |
+        |  |  |  |
+    validations:
+      required: true
+
+  - type: textarea
+    id: regression_gate
+    attributes:
+      label: Guardrails
+      value: |
+        > **Significance.** A slice is not complete if its capability can be
+        > silently removed by the next PR. Name the CI workflow and job that
+        > will fail a future PR that regresses this MVC. If no such gate exists
+        > today, creating it is part of this slice. The answer below is the
+        > mechanical block on tomorrow's PR undoing today's work.
+        >
+        > Accepted:
+        > - Workflow `.github/workflows/pr_checks_tests.yml`, job
+        >   `pr_checks_tests`, which runs `python -m coverage run -m tests.run`
+        >   and fails the PR on non-zero exit.
+        >
+        > Rejected:
+        > - *A guardrail will be added to the backfill protocol.*
+        > - *Invariants documented in the slice spec.*
+        > - *The proof fixture will be extended.*
+
+        Workflow file:
+        Job name:
+        Specific failing command the job runs:
+    validations:
+      required: true
+
+  - type: textarea
+    id: step_register
+    attributes:
+      label: Step Register
+      value: |
+        > **Significance.** Step Register is the ordered execution backlog for
+        > this slice. Each step must name a concrete edit, command, or GitHub
+        > action. It is not a narrative plan.
+
+        Steps:
+        -
+        -
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of Scope
+      value: |
+        > **Significance.** The slice PR must not touch the paths listed here.
+        > A scope-check CI step compares the PR diff against this list and fails
+        > if any out-of-scope path appears in the diff. This is the mechanical
+        > complement to the *Surfaces* section above. "Out of scope" here is
+        > not aspirational — it is a CI-enforced block.
+
+        Paths that must not change in this slice's PR (globs permitted):
+        -
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and Open Questions
+      value: |
+        > **Significance.** Short. Only risks that change the decision tree for
+        > this slice belong here. A risk that is resolved by doing more
+        > engineering work is engineering work, not a risk, and goes in the
+        > *Proof Coverage* section instead.
+
+        Risks:
+        -
+
+        Open questions:
+        -
+    validations:
+      required: false
+
+  - type: textarea
+    id: closeout
+    attributes:
+      label: Done Means
+      value: |
+        > **Significance.** Done Means closes on verifiable evidence, not on a
+        > self-assessed claim. Check each item only when the linked evidence
+        > exists. Fill the closeout fields after merge.
+
+        - [ ] Capability complete
+        - [ ] Proof complete
+        - [ ] Guardrails complete
+        - [ ] Required gates green
+        - [ ] Required docs updated
+        - [ ] Required closeout state and evidence links are recorded in this issue
+
+        Merge SHA:
+        Merged PR number:
+        Required CI runs (workflow name : run id):
+        -
+        -
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: author_checks
+    attributes:
+      label: Author Checks
+      options:
+        - label: The Significance blockquote at the top of every section above remains in this issue unchanged.
+          required: true
+        - label: Every MVC assertion is executable (shell command, SQL query, Python expression, or HTTP request) and has a definite expected output.
+          required: true
+        - label: Every MVC assertion has exactly one row in the Tests table pointing at a concrete test file and test name.
+          required: true
+        - label: Every Surfaces entry with a public signature has a corresponding Signature Diff entry with literal Before and After code blocks.
+          required: true
+        - label: Guardrails cites a CI workflow file path, a job name, and a specific failing command — not a promise to add one later.
+          required: true
+        - label: Objective, Baseline, and Scope entries and Proof Coverage entries contain commands, not prose.
+          required: true
