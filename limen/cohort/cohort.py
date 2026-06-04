@@ -241,6 +241,14 @@ class Cohort:
         return self.predict(raw_klines)
 
 
+    def _assert_members(self) -> None:
+
+        if not self._members:
+            raise RuntimeError(
+                'Cohort has no bound members. Use set_members() before predicting.'
+            )
+
+
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
         '''
@@ -258,11 +266,7 @@ class Cohort:
 
         '''
 
-        if not self._members:
-            raise RuntimeError(
-                'Cohort has no bound members. Use set_members() before predict().'
-            )
-
+        self._assert_members()
         member_bars = [m.predict(raw_klines) for m in self._members]
         return self._aggregate_bar_predictions(member_bars)
 
@@ -285,10 +289,7 @@ class Cohort:
 
         '''
 
-        if not self._members:
-            raise RuntimeError(
-                'Cohort has no bound members. Use set_members() before predict_all().'
-            )
+        self._assert_members()
 
         all_bars = [m.predict_all(raw_klines) for m in self._members]
         n = len(all_bars[0])
