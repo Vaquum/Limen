@@ -1009,6 +1009,18 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `limen/cli/git_utils.py` with `git_executable()` and `git_add_and_commit()`
 
 
+## v3.15.0 on 5th of June, 2026
+
+- Add `manifest_id` (SHA-256 content hash of YAML manifest) to `metadata.json`, `Sensor`, and `Cohort` for end-to-end traceability
+- Add `permutation_id` to `Sensor` as the stable SHA-256 hash of the parameter combination — replaces integer round index; `id` column in `results.csv` carries the same hash
+- Remove `_param_hash` internal key; consolidate to `_id` as the single internal round_params hash key
+- Add `cohort_id` to `Cohort` — SHA-256 hash of `manifest_id` + sorted `permutation_ids`, stable across rebinds
+- Refactor `Sensor.predict()` and `Sensor.predict_all()` to return `BarPrediction` for all conditions instead of raising: warm-up, inside-training-window, and null-features return the corresponding `reason`; unexpected exceptions return `reason='sensor-error'`
+- Remove `_raise_if_inside_training_window` from `Sensor`; inside-training-window detection in `predict()` now reuses `_inside_training_window_mask`
+- Add `sensor-error` graceful degradation to `Cohort._aggregate_bar_predictions`: sensor-error members are excluded before aggregation; only when all members error does the cohort return `reason='sensor-error'`
+- Fix flaky `test_e2e_label_control_trainer_sensor` by adding `seed: 42` to YAML search strategy; fix `build_search_strategy` compiler to pass `seed` through to `RandomStrategy`
+- Extend `test_e2e_label_control_trainer_sensor` to cover full cohort prediction path: `Cohort` construction, `set_members`, `predict_all`, `predict`, and probability mean verification
+
 ## v3.14.0 on 2nd of June, 2026
 
 - Refactor `Trainer` to a single training pass: drop the second all-data retraining run; the validated training-run model is promoted directly to a `Sensor`; enforce YAML-only experiment input
