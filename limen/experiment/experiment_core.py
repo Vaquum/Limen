@@ -1,6 +1,5 @@
 import copy
 import csv
-import hashlib
 import importlib.metadata
 import json
 import logging
@@ -25,6 +24,7 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 from limen.experiment.manifest_core import RuleBasedManifest
+from limen.yaml.store import _canonical_manifest_id
 
 logger = logging.getLogger(__name__)
 
@@ -460,8 +460,8 @@ class UniversalExperimentLoop:
                 csv_header = next(csv.reader(f), None)
 
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
-            current_round = round_params['_round_index']   # int: tqdm, logging, checkpointing
-            current_hash  = round_params['_param_hash']    # str: content identity, results id
+            current_round = round_params['_round_index']
+            current_hash = round_params['_param_hash']
 
             if self._shutdown_requested:
                 logger.info(
@@ -902,8 +902,7 @@ class UniversalExperimentLoop:
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
-            canonical = json.dumps(data_no_lineage, sort_keys=True, default=str)
-            metadata['manifest_id'] = 'sha256:' + hashlib.sha256(canonical.encode()).hexdigest()
+            metadata['manifest_id'] = _canonical_manifest_id(self._yaml_reference)
 
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)

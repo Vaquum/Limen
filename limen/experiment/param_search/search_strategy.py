@@ -110,7 +110,7 @@ class SearchStrategy(ABC):
         Returns the full 64 hex characters (256 bits) of the SHA-256
         digest.
 
-        Note:
+        NOTE:
             Strips ``_``-prefixed keys because domain params never
             start with underscore, but log rows include MSQ metadata
             columns (``_param_hash``, ``_id``, etc.) that must not

@@ -11,6 +11,7 @@ import polars as pl
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
 from limen.experiment.trainer.sensor import BarPrediction
+from limen.yaml.store import _SHA256_PREFIX
 
 
 class Cohort:
@@ -229,7 +230,8 @@ class Cohort:
             {'manifest_id': self.manifest_id, 'permutation_ids': sorted(self.permutation_ids)},
             sort_keys=True,
         )
-        self.cohort_id = 'sha256:' + hashlib.sha256(payload.encode()).hexdigest()
+        self.cohort_id = f'{_SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
+
 
     def __call__(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
@@ -298,6 +300,26 @@ class Cohort:
 
     def _aggregate_bar_predictions(self, member_bars: list[BarPrediction]) -> BarPrediction:
 
+        '''
+        Aggregate per-member BarPredictions into one cohort-level BarPrediction.
+
+        Args:
+            member_bars (list[BarPrediction]): One prediction per bound member,
+                all sharing the same datetime
+
+        Returns:
+            BarPrediction: Aggregated prediction for the bar
+
+        Raises:
+            ValueError: If member_bars is empty, or if any member has a None
+                probability in probability_weighted mode, or a None prediction
+                in majority_vote mode
+
+        '''
+
+        if not member_bars:
+            raise ValueError('member_bars must be a non-empty list.')
+
         dt = member_bars[0].datetime
 
         blocking = [b for b in member_bars if b.reason is not None]
@@ -306,16 +328,25 @@ class Cohort:
             return BarPrediction(datetime=dt, prediction=None, probability=None, reason=worst.reason)
 
         if self.aggregation_mode == 'probability_weighted':
+            if any(b.probability is None for b in member_bars):
+                raise ValueError(
+                    'probability_weighted mode requires a finite probability from all members.'
+                )
             probs = np.array([b.probability for b in member_bars], dtype=float)
             self._validate_probability_range(probs)
             mean_prob = float(np.mean(probs))
             pred = int(mean_prob > self._VOTE_THRESHOLD)
             return BarPrediction(datetime=dt, prediction=pred, probability=mean_prob, reason=None)
 
+        if any(b.prediction is None for b in member_bars):
+            raise ValueError(
+                'majority_vote mode requires a numeric prediction from all members.'
+            )
         threshold = self._fallback_vote_threshold()
         votes = np.array([int(float(b.prediction) > threshold) for b in member_bars])
         pred = int(np.mean(votes) > self._VOTE_THRESHOLD)
         return BarPrediction(datetime=dt, prediction=pred, probability=None, reason=None)
+
 
     @staticmethod
     def _probability_weighted_vote(member_probs: list[np.ndarray]) -> np.ndarray:
@@ -333,6 +364,7 @@ class Cohort:
 
         return (mean_p1 > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
+
     @staticmethod
     def _validate_probability_range(probs: np.ndarray) -> None:
 
@@ -342,6 +374,7 @@ class Cohort:
 
         if np.any((probs < 0.0) | (probs > 1.0)):
             raise ValueError('Decoder probabilities must lie within [0, 1].')
+
 
     @staticmethod
     def _majority_vote(member_preds: list[np.ndarray]) -> np.ndarray:
@@ -359,10 +392,12 @@ class Cohort:
 
         return (mean_vote > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
+
     @staticmethod
     def _to_binary_votes(preds: np.ndarray, *, threshold: float) -> np.ndarray:
 
         return (preds > threshold).astype(np.int8)
+
 
     def _fallback_vote_threshold(self) -> float:
 
@@ -370,6 +405,7 @@ class Cohort:
         if 'regressor' in arch:
             return 0.0
         return Cohort._VOTE_THRESHOLD
+
 
     @staticmethod
     def _normalize_permutation_id(pid: str) -> str:
