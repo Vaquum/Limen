@@ -916,7 +916,7 @@ def test_predict_all_valid_bars_match_sensor():
         valid_sensor = [r for r in sensor_results if r.reason is None]
 
         assert len(valid_cohort) == len(valid_sensor)
-        for c, s in zip(valid_cohort, valid_sensor):
+        for c, s in zip(valid_cohort, valid_sensor, strict=True):
             assert c.prediction == s.prediction
 
 

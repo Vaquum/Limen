@@ -27,7 +27,7 @@ def test_msq_basic_iteration():
     for i, c in enumerate(combos):
         assert c['_round_index'] == i
         assert isinstance(c['_id'], str)
-        assert c['_id'] == c['_param_hash']
+        assert '_param_hash' not in c
         assert c['_injected'] is False
 
     param_combos = {frozenset(_param_keys(c).items()) for c in combos}
