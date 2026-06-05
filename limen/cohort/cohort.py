@@ -307,6 +307,13 @@ class Cohort:
         if any(length != n for length in healthy_lengths[1:]):
             raise ValueError('Member sensors returned different-length prediction lists.')
 
+        n_errored_members = sum(fully_errored)
+        if n_errored_members:
+            self._logger.warning(
+                'Cohort predict_all: %d of %d member(s) fully errored and were excluded from aggregation.',
+                n_errored_members, len(self._members),
+            )
+
         aligned = [
             [BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
              for _ in range(n)]
@@ -350,7 +357,7 @@ class Cohort:
 
         if len(valid_bars) < len(member_bars):
             n_errors = len(member_bars) - len(valid_bars)
-            self._logger.warning(
+            self._logger.debug(
                 'Cohort aggregation: %d of %d member(s) returned sensor-error and were excluded.',
                 n_errors, len(member_bars),
             )
