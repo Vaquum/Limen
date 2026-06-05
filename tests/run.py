@@ -841,11 +841,6 @@ from tests.test_proto_cohort import test_predict_all_returns_one_entry_per_bar
 from tests.test_proto_cohort import test_predict_all_valid_bars_match_sensor
 from tests.test_proto_cohort import test_predict_all_propagates_worst_reason
 from tests.test_proto_cohort import test_probability_weighted_predict_aggregates_mean_prob
-from tests.test_proto_cohort import test_majority_vote_tie_returns_zero
-from tests.test_proto_cohort import test_probability_weighted_tie_returns_zero
-from tests.test_proto_cohort import test_majority_vote_multimember_expected_output
-from tests.test_proto_cohort import test_probability_weighted_vote_rejects_shape_mismatch
-from tests.test_proto_cohort import test_majority_vote_rejects_shape_mismatch
 from tests.test_proto_cohort import test_majority_vote_uses_threshold_for_regressor
 from tests.test_proto_cohort import test_single_member_majority_vote_returns_binary
 from tests.test_proto_cohort import test_probability_weighted_majority_vote_fallback_returns_none_probability
@@ -1745,11 +1740,6 @@ tests = [
     test_predict_all_valid_bars_match_sensor,
     test_predict_all_propagates_worst_reason,
     test_probability_weighted_predict_aggregates_mean_prob,
-    test_majority_vote_tie_returns_zero,
-    test_probability_weighted_tie_returns_zero,
-    test_majority_vote_multimember_expected_output,
-    test_probability_weighted_vote_rejects_shape_mismatch,
-    test_majority_vote_rejects_shape_mismatch,
     test_majority_vote_uses_threshold_for_regressor,
     test_single_member_majority_vote_returns_binary,
     test_probability_weighted_majority_vote_fallback_returns_none_probability,

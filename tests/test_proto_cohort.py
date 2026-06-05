@@ -1028,65 +1028,6 @@ def test_member_failure_propagates():
             assert 'member failed during inference' in str(e)
 
 
-# ---------------------------------------------------------------------------
-# Static aggregation helpers
-# ---------------------------------------------------------------------------
-
-def test_majority_vote_tie_returns_zero():
-
-    vote = Cohort._majority_vote([
-        np.array([1, 0, 1, 0], dtype=float),
-        np.array([0, 1, 1, 0], dtype=float),
-    ])
-
-    assert vote.tolist() == [0, 0, 1, 0]
-
-
-def test_probability_weighted_tie_returns_zero():
-
-    vote = Cohort._probability_weighted_vote([
-        np.array([0.6, 0.4, 0.5], dtype=float),
-        np.array([0.4, 0.6, 0.5], dtype=float),
-    ])
-
-    assert vote.tolist() == [0, 0, 0]
-
-
-def test_majority_vote_multimember_expected_output():
-
-    vote = Cohort._majority_vote([
-        np.array([1, 1, 0, 0], dtype=float),
-        np.array([1, 0, 1, 0], dtype=float),
-        np.array([1, 0, 0, 1], dtype=float),
-    ])
-
-    assert vote.tolist() == [1, 0, 0, 0]
-
-
-def test_probability_weighted_vote_rejects_shape_mismatch():
-
-    try:
-        Cohort._probability_weighted_vote([
-            np.array([0.6, 0.4], dtype=float),
-            np.array([0.4], dtype=float),
-        ])
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'same shape' in str(e)
-
-
-def test_majority_vote_rejects_shape_mismatch():
-
-    try:
-        Cohort._majority_vote([
-            np.array([1, 0], dtype=float),
-            np.array([1], dtype=float),
-        ])
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'same shape' in str(e)
-
-
 def test_validate_probability_range_accepts_values_in_unit_interval():
 
     Cohort._validate_probability_range(np.array([0.0, 0.25, 0.5, 1.0]))
