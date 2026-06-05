@@ -9,6 +9,8 @@ import zipfile
 
 import numpy as np
 import polars as pl
+import pyarrow as pa
+import pyarrow.ipc as pa_ipc
 import requests
 
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
@@ -148,6 +150,39 @@ def _slice_arrow_to_date_range(
     raise ValueError(
         "A date range requires a 'ts' (Int64 nanoseconds) or 'datetime' column."
     )
+
+
+def _validate_arrow_zero_copy(file_path: str) -> None:
+    '''Raise unless `file_path` is a single-record-batch, uncompressed Arrow IPC
+    file that can actually be served zero-copy.
+
+    A compressed IPC file passes a naive `n_chunks() == 1` check but cannot be
+    memory-mapped: polars/pyarrow silently fall back to a full decompress into
+    RAM, dropping the zero-copy guarantee with only an uncatchable Rust-side log.
+    Detect it by mapping the file and confirming the first batch's buffers point
+    inside the mapped region (uncompressed) rather than into freshly allocated
+    heap memory (decompressed).'''
+
+    mapped = pa.memory_map(file_path, 'r')
+    reader = pa_ipc.open_file(mapped)
+    if reader.num_record_batches != 1:
+        raise ValueError(
+            f'{file_path} is not a single Arrow record batch '
+            f'(num_record_batches={reader.num_record_batches}); '
+            'it cannot be served zero-copy.'
+        )
+    whole = mapped.read_buffer(mapped.size())
+    low = whole.address
+    high = low + whole.size
+    batch = reader.get_batch(0)
+    for column in batch.columns:
+        for buffer in column.buffers():
+            if buffer is not None and buffer.size and not (low <= buffer.address < high):
+                raise ValueError(
+                    f'{file_path} is a compressed Arrow IPC file; it cannot be '
+                    'memory-mapped zero-copy (it would fully decompress into RAM). '
+                    'Re-write it uncompressed to use get_arrow_file.'
+                )
 
 
 def _validate_columns(df: pl.DataFrame, columns: list[str] | None) -> pl.DataFrame:
@@ -910,8 +945,9 @@ class HistoricalData:
         lifetime is owned by the returned frame (kept on the instance via
         `_store`); keep that frame referenced while holding zero-copy views.
 
-        Raises if the file is not a single record batch, since it then cannot be
-        served zero-copy. `n_rows` is accepted as a legacy alias.
+        Raises if the file is not a single *uncompressed* record batch: a
+        multi-batch or compressed Arrow IPC file cannot be memory-mapped, so it
+        would silently materialize a full copy. `n_rows` is a legacy alias.
         '''
 
         row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
@@ -931,12 +967,8 @@ class HistoricalData:
                 'and end_date_limit are set.'
             )
 
+        _validate_arrow_zero_copy(file_path)
         data = pl.read_ipc(file_path, memory_map=True, rechunk=False)
-        if data.n_chunks() != 1:
-            raise ValueError(
-                f"{file_path} is not a single Arrow record batch "
-                f"(n_chunks={data.n_chunks()}); it cannot be served zero-copy."
-            )
 
         if (
             'datetime' not in data.columns

@@ -553,6 +553,7 @@ def _write_arrow_bar_file(
     *,
     rows: int = 1000,
     batch_rows: int | None = None,
+    compression: str = 'uncompressed',
 ) -> None:
     ts = [_ARROW_BASE_NS + index * _ARROW_HOUR_NS for index in range(rows)]
     frame = pl.DataFrame({
@@ -565,7 +566,7 @@ def _write_arrow_bar_file(
     }).rechunk()
     frame.write_ipc(
         str(path),
-        compression='uncompressed',
+        compression=compression,
         record_batch_size=batch_rows if batch_rows is not None else frame.height,
     )
 
@@ -629,6 +630,18 @@ def test_get_arrow_file_rejects_non_single_batch(tmp_path: Path) -> None:
 
     historical = HistoricalData()
     with pytest.raises(ValueError, match='single Arrow record batch'):
+        historical.get_arrow_file(str(path))
+
+
+def test_get_arrow_file_rejects_compressed(tmp_path: Path) -> None:
+    # A compressed single-batch file cannot be memory-mapped, so it must raise
+    # rather than silently decompressing into RAM and dropping the zero-copy
+    # guarantee (it passes a naive n_chunks() == 1 check).
+    path = tmp_path / 'compressed.arrow'
+    _write_arrow_bar_file(path, rows=1000, compression='lz4')
+
+    historical = HistoricalData()
+    with pytest.raises(ValueError, match='compressed'):
         historical.get_arrow_file(str(path))
 
 
