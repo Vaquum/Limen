@@ -138,7 +138,7 @@ class Sensor:
                 reason=None,
             )
         except Exception as e:
-            logger.warning('Sensor predict failed (permutation_id=%s): %s', self.permutation_id, e)
+            logger.warning('Sensor predict failed (permutation_id=%s): %s', self.permutation_id, e, exc_info=True)
             return BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
 
 
@@ -184,7 +184,7 @@ class Sensor:
             if feature_cols:
                 row_has_null = (
                     data.select(feature_cols)
-                    .select(pl.any_horizontal(pl.col(c).is_null() for c in feature_cols))
+                    .select(pl.any_horizontal([pl.col(c).is_null() for c in feature_cols]))
                     .to_series()
                     .to_list()
                 )
@@ -236,7 +236,7 @@ class Sensor:
             return results  # type: ignore[return-value]
 
         except Exception as e:
-            logger.warning('Sensor predict_all failed (permutation_id=%s): %s', self.permutation_id, e)
+            logger.warning('Sensor predict_all failed (permutation_id=%s): %s', self.permutation_id, e, exc_info=True)
             return [
                 BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
                 for _ in range(n_fallback)
