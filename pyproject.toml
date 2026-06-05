@@ -129,6 +129,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
 "limen/targets/*.py" = ["ARG002"]
 "limen/cli/**/*.py" = ["S603"]
+"limen/experiment/trainer/sensor.py" = ["BLE001"]
 
 [tool.ruff.lint.pylint]
 max-statements = 50

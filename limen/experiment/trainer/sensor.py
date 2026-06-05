@@ -101,14 +101,15 @@ class Sensor:
 
         '''
 
+        manifest = self._get_manifest()
+        decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
+        if decoder_lookback > 1:
+            raise NotImplementedError('predict does not yet support decoder_lookback > 1')
+
         try:
-            manifest = self._get_manifest()
             data, indicator_lookback = manifest.sensor_input_prep(
                 raw_klines, self._fitted_params, self._round_params
             )
-            decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
-            if decoder_lookback > 1:
-                raise NotImplementedError('predict does not yet support decoder_lookback > 1')
 
             dt = data[-1]['datetime'][0] if 'datetime' in data.columns else None
 
@@ -133,7 +134,7 @@ class Sensor:
                 probability=_extract_scalar(pred_result.get('_probs')),
                 reason=None,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning('Sensor predict failed (permutation_id=%s): %s', self.permutation_id, e)
             return BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
 
@@ -161,18 +162,16 @@ class Sensor:
 
         '''
 
+        manifest = self._get_manifest()
+        decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
+        if decoder_lookback > 1:
+            raise NotImplementedError('predict_all does not yet support decoder_lookback > 1')
+
         n_fallback = len(raw_klines)
         try:
-            manifest = self._get_manifest()
             data, indicator_lookback = manifest.sensor_input_prep(
                 raw_klines, self._fitted_params, self._round_params
             )
-            decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
-
-            if decoder_lookback > 1:
-                raise NotImplementedError(
-                    'predict_all does not yet support decoder_lookback > 1'
-                )
 
             inside_window = self._inside_training_window_mask(data, manifest)
             feature_cols = [c for c in data.columns if c != 'datetime']
@@ -232,7 +231,7 @@ class Sensor:
 
             return results  # type: ignore[return-value]
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning('Sensor predict_all failed (permutation_id=%s): %s', self.permutation_id, e)
             return [
                 BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')

@@ -293,12 +293,29 @@ class Cohort:
         self._assert_members()
 
         all_bars = [m.predict_all(raw_klines) for m in self._members]
-        n = len(all_bars[0])
-        if any(len(b) != n for b in all_bars[1:]):
+
+        fully_errored = [all(b.reason == 'sensor-error' for b in bars) for bars in all_bars]
+        healthy_lengths = [len(bars) for bars, err in zip(all_bars, fully_errored, strict=True) if not err]
+
+        if not healthy_lengths:
+            return [
+                BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
+                for _ in range(len(raw_klines))
+            ]
+
+        n = healthy_lengths[0]
+        if any(length != n for length in healthy_lengths[1:]):
             raise ValueError('Member sensors returned different-length prediction lists.')
 
+        aligned = [
+            [BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
+             for _ in range(n)]
+            if err else bars
+            for bars, err in zip(all_bars, fully_errored, strict=True)
+        ]
+
         return [
-            self._aggregate_bar_predictions([all_bars[i][t] for i in range(len(self._members))])
+            self._aggregate_bar_predictions([aligned[i][t] for i in range(len(self._members))])
             for t in range(n)
         ]
 
