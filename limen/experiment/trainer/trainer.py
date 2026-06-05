@@ -140,7 +140,7 @@ class Trainer:
                         stripped[:80],
                     )
                     continue
-                result[entry['round_id']] = entry
+                result[str(entry['round_id'])] = entry
 
         return result
 

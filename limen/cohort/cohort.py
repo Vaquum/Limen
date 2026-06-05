@@ -505,7 +505,7 @@ class Cohort:
                 entry = json.loads(stripped)
                 if 'round_id' not in entry:
                     continue
-                entries[entry['round_id']] = entry
+                entries[str(entry['round_id'])] = entry
 
         return entries
 
