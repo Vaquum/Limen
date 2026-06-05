@@ -24,7 +24,7 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 from limen.experiment.manifest_core import RuleBasedManifest
-from limen.yaml.store import _canonical_manifest_id
+from limen.yaml.store import canonical_manifest_id
 
 logger = logging.getLogger(__name__)
 
@@ -904,7 +904,7 @@ class UniversalExperimentLoop:
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
-            metadata['manifest_id'] = _canonical_manifest_id(self._yaml_reference)
+            metadata['manifest_id'] = canonical_manifest_id(self._yaml_reference)
 
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)

@@ -20,7 +20,7 @@ _MANIFEST_URI_SCHEME = 'manifest://'
 _SHA256_HEX_LENGTH = 64
 
 
-def _canonical_manifest_id(yaml_dict: dict[str, Any]) -> str:
+def canonical_manifest_id(yaml_dict: dict[str, Any]) -> str:
 
     '''
     Compute the content-addressed manifest ID for a YAML dict.
@@ -76,7 +76,7 @@ def commit_manifest(yaml_path: Path,
     if not isinstance(data, dict):
         raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
 
-    manifest_id = _canonical_manifest_id(data)
+    manifest_id = canonical_manifest_id(data)
     hex_hash = manifest_id[len(_SHA256_PREFIX):]
 
     store_path = project_root / _STORE_RELATIVE
