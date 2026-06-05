@@ -72,9 +72,9 @@ class Sensor:
         return self._round_params
 
 
-    def __call__(self, data: Any) -> Any:
+    def __call__(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
 
-        return self.predict(data)
+        return self.predict_all(raw_klines)
 
 
     def _get_manifest(self) -> Any:

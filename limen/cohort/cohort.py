@@ -237,9 +237,9 @@ class Cohort:
         self.cohort_id = f'{_SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
 
 
-    def __call__(self, raw_klines: pl.DataFrame) -> BarPrediction:
+    def __call__(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
 
-        return self.predict(raw_klines)
+        return self.predict_all(raw_klines)
 
 
     def _assert_members(self) -> None:
