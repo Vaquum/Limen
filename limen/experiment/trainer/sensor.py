@@ -4,12 +4,16 @@ import copy
 import logging
 from dataclasses import dataclass
 from typing import Any
+from typing import Literal
 
 import numpy as np
 import polars as pl
 
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
+
+
+PredictionReason = Literal['warm-up', 'inside-training-window', 'null-features', 'sensor-error']
 
 
 @dataclass
@@ -20,10 +24,7 @@ class BarPrediction:
     datetime: Any
     prediction: int | float | None
     probability: float | None
-    reason: str | None  # None = valid prediction; 'warm-up' = leading null rows from indicator lookback;
-                        # 'inside-training-window' = bar falls within the train/test window;
-                        # 'null-features' = mid-stream null feature values (data gap or transform anomaly);
-                        # 'sensor-error' = unexpected exception during prediction
+    reason: PredictionReason | None
 
 
 logger = logging.getLogger(__name__)
