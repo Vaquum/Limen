@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 from datetime import datetime
@@ -16,6 +17,7 @@ from limen.cohort import Cohort
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
 from limen.experiment.trainer import Trainer
+from limen.experiment.trainer.sensor import BarPrediction
 
 _COHORT_CONTRACT_YAML = dedent('''\
     schema_version: "1.0"
@@ -66,42 +68,64 @@ _COHORT_CONTRACT_YAML = dedent('''\
 
 class _RaisingMember:
 
-    permutation_id = 0
+    permutation_id = 'pid_raise'
 
-    def predict(self, _data):
+    @property
+    def round_params(self):
+        return {'model_architecture': 'logreg_binary'}
+
+    def predict(self, _raw_klines):
+        raise RuntimeError('member failed during inference')
+
+    def predict_all(self, _raw_klines):
         raise RuntimeError('member failed during inference')
 
 
-class _FallbackContinuousMember:
+class _BarMember:
 
     def __init__(self,
-                 permutation_id: int,
-                 preds: np.ndarray,
-                 *,
-                 architecture: str = 'xgboost_regressor'):
+                 permutation_id: str,
+                 prediction: float | int | None,
+                 probability: float | None = None,
+                 reason: str | None = None,
+                 architecture: str = 'limen.sfd.foundational_sfd.logreg_binary',
+                 manifest_id: str | None = None,
+                 n_bars: int = 4):
 
         self.permutation_id = permutation_id
-        self._preds = np.asarray(preds, dtype=float)
+        self.manifest_id = manifest_id
+        self._prediction = prediction
+        self._probability = probability
+        self._reason = reason
+        self._n_bars = n_bars
         self._round_params = {'model_architecture': architecture}
-        self._metadata = {}
 
     @property
     def round_params(self) -> dict:
 
         return dict(self._round_params)
 
-    @property
-    def metadata(self) -> dict:
+    def predict(self, raw_klines) -> BarPrediction:
 
-        return dict(self._metadata)
+        return BarPrediction(
+            datetime=None,
+            prediction=self._prediction,
+            probability=self._probability,
+            reason=self._reason,
+        )
 
-    def predict(self, _data):
+    def predict_all(self, raw_klines) -> list:
 
-        return {'_preds': self._preds.copy()}
+        n = len(raw_klines) if hasattr(raw_klines, '__len__') else self._n_bars
+        return [
+            BarPrediction(datetime=None, prediction=self._prediction,
+                          probability=self._probability, reason=self._reason)
+            for _ in range(n)
+        ]
 
 
 def _run_real_experiment(experiment_dir: Path,
-                         n_permutations: int = 2) -> list[int]:
+                         n_permutations: int = 2) -> list[str]:
 
     experiment_dir = Path(experiment_dir).resolve()
     original = historical_data.HistoricalData.get_spot_klines
@@ -116,7 +140,7 @@ def _run_real_experiment(experiment_dir: Path,
     finally:
         historical_data.HistoricalData.get_spot_klines = original
 
-    round_ids: list[int] = []
+    round_ids: list[str] = []
     with (experiment_dir / 'round_data.jsonl').open('r') as f:
         for raw_line in f:
             stripped = raw_line.strip()
@@ -137,20 +161,21 @@ def _write_real_metadata_only(experiment_dir: Path) -> None:
 
 def _write_minimal_cohort_artifacts(experiment_dir: Path,
                                     n_rounds: int = 3,
-                                    round_ids: list[int | str] | None = None,
-                                    results: pd.DataFrame | None = None) -> None:
+                                    round_ids: list[str] | None = None,
+                                    results: pd.DataFrame | None = None) -> list[str]:
 
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     with (experiment_dir / 'metadata.json').open('w') as f:
         json.dump({'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}, f)
 
-    ids = list(range(n_rounds)) if round_ids is None else round_ids
+    ids: list[str] = [f'id_{i}' for i in range(n_rounds)] if round_ids is None else round_ids
 
     with (experiment_dir / 'round_data.jsonl').open('w') as f:
         for round_id in ids:
             f.write(json.dumps({
                 'round_id': round_id,
+                '_round_index': ids.index(round_id),
                 'round_params': {
                     'model_architecture': 'limen.sfd.foundational_sfd.logreg_binary',
                 },
@@ -159,9 +184,11 @@ def _write_minimal_cohort_artifacts(experiment_dir: Path,
     if results is not None:
         results.to_csv(experiment_dir / 'results.csv', index=False)
 
+    return ids
+
 
 def _patch_round_architecture(experiment_dir: Path,
-                              architecture_by_round_id: dict[int, str]) -> None:
+                               architecture_by_round_id: dict[str, str]) -> None:
 
     round_data_path = experiment_dir / 'round_data.jsonl'
     rows: list[dict] = []
@@ -186,26 +213,24 @@ def _patch_round_architecture(experiment_dir: Path,
 
 
 def _train_real_members_and_input(experiment_dir: Path,
-                                  permutation_ids: list[int]) -> tuple[list, np.ndarray]:
+                                  permutation_ids: list[str]) -> tuple[list, pl.DataFrame]:
 
     original = historical_data.HistoricalData.get_spot_klines
     historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
     try:
         trainer = Trainer(experiment_dir)
         sensors = trainer.train(permutation_ids)
-        data_dict = trainer._manifest.prepare_data(
-            trainer._data, sensors[0].round_params)
-        x_test = data_dict['x_test']
     finally:
         historical_data.HistoricalData.get_spot_klines = original
 
-    return sensors, x_test
+    post_data = _make_post_training_data()
+    return sensors, post_data
 
 
 def _make_yaml_contract_data(kline_size: int = 3600,
-                             n_rows: int | None = None,
-                             start_date_limit: object = None,
-                             end_date_limit: object = None) -> pl.DataFrame:
+                              n_rows: int | None = None,
+                              start_date_limit: object = None,
+                              end_date_limit: object = None) -> pl.DataFrame:
 
     _ = kline_size, start_date_limit, end_date_limit
     n = int(n_rows or 500)
@@ -222,6 +247,22 @@ def _make_yaml_contract_data(kline_size: int = 3600,
     })
 
 
+def _make_post_training_data(n: int = 50) -> pl.DataFrame:
+
+    # Dates strictly after test_end (2025-01-22) to avoid training window rejection
+    timestamps = [datetime(2025, 1, 23) + timedelta(hours=i) for i in range(n)]
+    close = [110.0 + 0.02 * i + math.sin(i / 7.0) for i in range(n)]
+
+    return pl.DataFrame({
+        'datetime': timestamps,
+        'open': [v - 0.1 for v in close],
+        'high': [v + 0.2 for v in close],
+        'low': [v - 0.2 for v in close],
+        'close': close,
+        'volume': [1000.0 + i for i in range(n)],
+    })
+
+
 def _minimal_yaml_cli_contract_text(output_path: Path) -> str:
 
     return _COHORT_CONTRACT_YAML.replace(
@@ -229,6 +270,10 @@ def _minimal_yaml_cli_contract_text(output_path: Path) -> str:
         f'output_format: csv\n  output_path: "{output_path}"',
     )
 
+
+# ---------------------------------------------------------------------------
+# Constructor validation
+# ---------------------------------------------------------------------------
 
 def test_rejects_when_no_source_provided():
 
@@ -290,7 +335,7 @@ def test_rejects_duplicate_permutation_ids():
         _run_real_experiment(exp_dir)
 
         try:
-            Cohort(experiment_log_path=str(exp_dir), permutation_ids=[1, '1'])
+            Cohort(experiment_log_path=str(exp_dir), permutation_ids=['abc', 'abc'])
             assert False, 'Expected ValueError'
         except ValueError as e:
             assert 'must be unique' in str(e)
@@ -303,33 +348,32 @@ def test_rejects_unknown_permutation_ids():
         _run_real_experiment(exp_dir)
 
         try:
-            Cohort(experiment_log_path=str(exp_dir), permutation_ids=[99])
+            Cohort(experiment_log_path=str(exp_dir), permutation_ids=['unknown_hash_xyz'])
             assert False, 'Expected ValueError'
         except ValueError as e:
             assert 'Unknown permutation_ids requested' in str(e)
 
 
-def test_accepts_string_permutation_ids_when_numeric():
+def test_accepts_string_permutation_ids():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=['0', '1'])
-        assert cohort.permutation_ids == [0, 1]
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
+        assert cohort.permutation_ids == round_ids
 
 
 def test_rejects_selector_with_explicit_permutation_ids():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _write_minimal_cohort_artifacts(exp_dir)
+        ids = _write_minimal_cohort_artifacts(exp_dir)
 
         try:
             Cohort(
                 experiment_log_path=str(exp_dir),
-                permutation_ids=[0],
+                permutation_ids=[ids[0]],
                 selector='all',
             )
             assert False, 'Expected ValueError'
@@ -353,52 +397,56 @@ def test_rejects_selector_params_without_selector():
             assert 'selector_params requires an explicit selector' in str(e)
 
 
+# ---------------------------------------------------------------------------
+# Selector tests
+# ---------------------------------------------------------------------------
+
 def test_callable_selector_receives_contract_context():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        results = pd.DataFrame({'id': [0, 1, 2], 'score': [0.1, 0.2, 0.3]})
-        _write_minimal_cohort_artifacts(exp_dir, results=results)
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        results = pd.DataFrame({'id': ids, 'score': [0.1, 0.2, 0.3]})
+        (exp_dir / 'results.csv').unlink(missing_ok=True)
+        results.to_csv(exp_dir / 'results.csv', index=False)
         seen = {}
 
         def selector(context):
             seen['has_results'] = 'results' in context
             seen['available'] = context['available_permutation_ids']
-            return [2, 0]
+            return [ids[2], ids[0]]
 
         cohort = Cohort(experiment_log_path=str(exp_dir), selector=selector)
 
-        assert seen == {'has_results': True, 'available': [0, 1, 2]}
-        assert cohort.permutation_ids == [2, 0]
+        assert seen == {'has_results': True, 'available': sorted(ids)}
+        assert cohort.permutation_ids == [ids[2], ids[0]]
 
 
-def test_selector_context_orders_mixed_string_and_int_ids():
+def test_selector_context_orders_string_ids():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _write_minimal_cohort_artifacts(exp_dir, round_ids=['b', 1, 'a'])
+        _write_minimal_cohort_artifacts(exp_dir, round_ids=['beta', '1abc', 'alpha'])
         seen = {}
 
         def selector(context):
             seen['available'] = context['available_permutation_ids']
-            return [1, 'a']
+            return ['1abc', 'alpha']
 
         cohort = Cohort(experiment_log_path=str(exp_dir), selector=selector)
 
-        assert seen['available'] == [1, 'a', 'b']
-        assert cohort.available_permutation_ids == [1, 'a', 'b']
-        assert cohort.permutation_ids == [1, 'a']
+        assert seen['available'] == ['1abc', 'alpha', 'beta']
+        assert cohort.available_permutation_ids == ['1abc', 'alpha', 'beta']
+        assert cohort.permutation_ids == ['1abc', 'alpha']
 
 
 def test_named_top_n_selector_uses_results_column():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        results = pd.DataFrame({
-            'id': [0, 1, 2],
-            'score': [0.1, 0.9, 0.5],
-        })
-        _write_minimal_cohort_artifacts(exp_dir, results=results)
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        results = pd.DataFrame({'id': ids, 'score': [0.1, 0.9, 0.5]})
+        results.to_csv(exp_dir / 'results.csv', index=False)
 
         cohort = Cohort(
             experiment_log_path=str(exp_dir),
@@ -406,7 +454,7 @@ def test_named_top_n_selector_uses_results_column():
             selector_params={'column': 'score', 'n': 2},
         )
 
-        assert cohort.permutation_ids == [1, 2]
+        assert cohort.permutation_ids == [ids[1], ids[2]]
 
 
 def test_builtin_selector_rejects_boolean_ids():
@@ -436,8 +484,9 @@ def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir, n_rounds=4)
         results = pd.DataFrame({
-            'id': [0, 1, 2, 3],
+            'id': ids,
             'confusion_tp': [5, 5, 5, 0],
             'confusion_fp': [1, 1, 1, 0],
             'backtest_trade_pnl_net_bps_p50': [10.0, 5.0, 1.0, 100.0],
@@ -446,7 +495,7 @@ def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():
             'backtest_drawdown_depth_bps_p50': [-100.0, -80.0, -500.0, 0.0],
             'backtest_cvar_95_return_bps': [-50.0, -40.0, -200.0, 0.0],
         })
-        _write_minimal_cohort_artifacts(exp_dir, n_rounds=4, results=results)
+        results.to_csv(exp_dir / 'results.csv', index=False)
 
         cohort = Cohort(
             experiment_log_path=str(exp_dir),
@@ -454,22 +503,24 @@ def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():
             selector_params={'target_count': 10, 'min_signals': 1},
         )
 
-        assert cohort.permutation_ids == [1, 0]
+        # ids[1] dominates ids[0]; ids[2] dominated; ids[3] inactive
+        assert cohort.permutation_ids == [ids[1], ids[0]]
 
 
 def test_diverse_metrics_selector_clamps_cluster_count():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir, n_rounds=4)
         results = pd.DataFrame({
-            'id': [0, 1, 2, 3],
+            'id': ids,
             'backtest_trade_pnl_net_bps_p50': [10.0, 20.0, 30.0, 40.0],
             'backtest_edge_per_signal_bps_p50': [2.0, 4.0, 8.0, 16.0],
             'backtest_return_on_exposure_p50': [5.0, 4.0, 3.0, 2.0],
             'backtest_drawdown_depth_bps_p50': [-10.0, -20.0, -30.0, -40.0],
             'backtest_cvar_95_return_bps': [-1.0, -2.0, -3.0, -4.0],
         })
-        _write_minimal_cohort_artifacts(exp_dir, n_rounds=4, results=results)
+        results.to_csv(exp_dir / 'results.csv', index=False)
 
         cohort = Cohort(
             experiment_log_path=str(exp_dir),
@@ -478,8 +529,12 @@ def test_diverse_metrics_selector_clamps_cluster_count():
         )
 
         assert len(cohort.permutation_ids) == 2
-        assert set(cohort.permutation_ids) <= {0, 1, 2, 3}
+        assert set(cohort.permutation_ids) <= set(ids)
 
+
+# ---------------------------------------------------------------------------
+# Experiment resolution
+# ---------------------------------------------------------------------------
 
 def test_rejects_when_round_data_is_missing():
 
@@ -520,22 +575,23 @@ def test_rejects_ambiguous_experiment_id_resolution():
             assert 'resolved to multiple experiment logs' in str(e)
 
 
+# ---------------------------------------------------------------------------
+# Architecture detection
+# ---------------------------------------------------------------------------
+
 def test_rejects_mixed_architecture_selection():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         _patch_round_architecture(
             exp_dir,
-            {
-                0: 'logreg_v1',
-                1: 'tabpfn_v1',
-            },
+            {round_ids[0]: 'logreg_v1', round_ids[1]: 'tabpfn_v1'},
         )
 
         try:
-            Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0, 1])
+            Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
             assert False, 'Expected ValueError'
         except ValueError as e:
             assert 'same architecture' in str(e)
@@ -545,154 +601,40 @@ def test_sets_probability_mode_for_probability_capable_architecture():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
         assert cohort.architecture_id.endswith('logreg_binary')
         assert cohort.supports_probabilities is True
         assert cohort.aggregation_mode == 'probability_weighted'
 
 
-def test_yaml_cli_artifact_cohort_preserves_trainer_sensor_contract():
-
-    original_get_spot_klines = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(
-        _make_yaml_contract_data,
-    )
-
-    try:
-        with TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            yaml_path = root / 'exp.yaml'
-            exp_dir = root / 'results' / 'test_exp'
-            yaml_path.write_text(
-                _minimal_yaml_cli_contract_text(exp_dir),
-            )
-
-            assert run_experiment(yaml_path) is True
-
-            with (exp_dir / 'metadata.json').open('r') as f:
-                metadata = json.load(f)
-            with (exp_dir / 'round_data.jsonl').open('r') as f:
-                round_entry = json.loads(f.readline())
-
-            assert metadata['sfd_module'] == 'yaml:test_exp'
-            assert isinstance(metadata['yaml_reference'], dict)
-            assert not [
-                key for key in round_entry['round_params']
-                if 'architecture' in key
-            ]
-
-            trainer = Trainer(exp_dir)
-            sensors = trainer.train([0])
-            data_dict = trainer._manifest.prepare_data(
-                trainer._data,
-                sensors[0].round_params,
-            )
-            live_input = {'x_test': data_dict['x_test']}
-
-            sensor_result = sensors[0].predict(live_input)
-            cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-            assert cohort.architecture_id == 'limen.sfd.reference_architecture.logreg_binary'
-            assert cohort.aggregation_mode == 'probability_weighted'
-
-            cohort.set_members(sensors)
-            cohort_result = cohort.predict(live_input)
-
-            assert '_probs' in sensor_result
-            assert '_probs' in cohort_result
-            np.testing.assert_array_equal(cohort_result['_preds'], sensor_result['_preds'])
-            np.testing.assert_allclose(cohort_result['_probs'], sensor_result['_probs'])
-    finally:
-        historical_data.HistoricalData.get_spot_klines = original_get_spot_klines
-
-
-def test_rejects_raw_input_for_sensor_compatible_predict_contract():
+def test_sets_fallback_mode_for_non_probability_architecture():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        sensors, _x_test = _train_real_members_and_input(exp_dir, [0])
-        cohort.set_members(sensors)
+        _patch_round_architecture(exp_dir, {round_ids[0]: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
 
-        try:
-            cohort.predict(np.array([[1.0, 2.0]], dtype=float))
-            assert False, 'Expected ValueError'
-        except ValueError as e:
-            assert 'decoder-style dict input' in str(e)
+        assert cohort.architecture_id == 'xgboost_regressor'
+        assert cohort.supports_probabilities is False
+        assert cohort.aggregation_mode == 'majority_vote'
 
 
-def test_rejects_raw_input_for_dict_required_architecture():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        _patch_round_architecture(exp_dir, {0: 'tabpfn_binary'})
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-        class _StubMember:
-
-            permutation_id = 0
-
-            def predict(self, _data):
-                return {'_preds': np.array([1], dtype=np.int8), '_probs': np.array([0.9], dtype=float)}
-
-        cohort.set_members([_StubMember()])
-
-        try:
-            cohort.predict(np.array([[1.0, 2.0]], dtype=float))
-            assert False, 'Expected ValueError'
-        except ValueError as e:
-            assert 'decoder-style dict input' in str(e)
-
-
-def test_accepts_dict_input_for_dict_required_architecture():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        _patch_round_architecture(exp_dir, {0: 'tabpfn_binary'})
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-        class _CaptureMember:
-
-            permutation_id = 0
-
-            def __init__(self):
-                self.last_input = None
-
-            def predict(self, data):
-                self.last_input = data
-                return {'_preds': np.array([1], dtype=np.int8), '_probs': np.array([0.9], dtype=float)}
-
-        member = _CaptureMember()
-        cohort.set_members([member])
-
-        data = {
-            'x_test': np.array([[1.0, 2.0]], dtype=float),
-            'x_val': np.array([[0.5, 1.5]], dtype=float),
-            'y_val': np.array([1], dtype=np.int8),
-        }
-        out = cohort.predict(data)
-
-        assert out['_preds'].tolist() == [1]
-        assert member.last_input == data
-
+# ---------------------------------------------------------------------------
+# set_members validation
+# ---------------------------------------------------------------------------
 
 def test_set_members_rejects_count_mismatch():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
-        sensors, _x_test = _train_real_members_and_input(exp_dir, [0])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
+        sensors, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
 
         try:
             cohort.set_members(sensors)
@@ -705,14 +647,14 @@ def test_set_members_rejects_missing_permutation_id_binding():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
 
         class _NoPidMember:
 
             def predict(self, _data):
-                return {'_preds': np.array([1], dtype=np.int8)}
+                return BarPrediction(datetime=None, prediction=1, probability=None, reason=None)
 
         try:
             cohort.set_members([_NoPidMember()])
@@ -721,337 +663,366 @@ def test_set_members_rejects_missing_permutation_id_binding():
             assert 'must expose permutation_id' in str(e)
 
 
-def test_member_specific_payload_is_routed_by_permutation_id():
+def test_set_members_rejects_manifest_id_mismatch():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
-        cohort.set_members(sensors)
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
 
-        routed = {
-            0: {'x_test': x_test[:3]},
-            1: {'x_test': x_test},
-        }
+        arch = 'limen.sfd.reference_architecture.logreg_binary'
+        m0 = _BarMember(round_ids[0], prediction=1, probability=0.7, architecture=arch,
+                        manifest_id='sha256:' + 'a' * 64)
+        m1 = _BarMember(round_ids[1], prediction=0, probability=0.3, architecture=arch,
+                        manifest_id='sha256:' + 'b' * 64)
 
         try:
-            cohort.predict({'x_test': x_test, '_by_permutation_id': routed})
+            cohort.set_members([m0, m1])
             assert False, 'Expected ValueError'
         except ValueError as e:
-            assert 'same shape' in str(e)
+            assert 'manifest_id' in str(e)
 
 
-def test_sets_fallback_mode_for_non_probability_architecture():
+# ---------------------------------------------------------------------------
+# cohort_id and manifest_id
+# ---------------------------------------------------------------------------
 
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-        assert cohort.architecture_id == 'xgboost_regressor'
-        assert cohort.supports_probabilities is False
-        assert cohort.aggregation_mode == 'majority_vote'
-
-
-def test_probability_weighted_predict_aggregates_mean_p1():
+def test_cohort_id_computed_after_set_members():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        assert cohort.cohort_id is None
 
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
+        sensors, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
         cohort.set_members(sensors)
 
-        y_pred = cohort.predict({'x_test': x_test})['_preds']
-
-        member_probs = [
-            np.asarray(sensor.predict({'x_test': x_test})[
-                       '_probs'], dtype=float)
-            for sensor in sensors
-        ]
-        expected = (np.mean(np.vstack(member_probs), axis=0)
-                    > 0.5).astype(np.int8)
-
-        assert np.array_equal(y_pred, expected)
+        assert cohort.cohort_id is not None
+        assert cohort.cohort_id.startswith('sha256:')
+        assert len(cohort.cohort_id) == len('sha256:') + 64
 
 
-def test_probability_weighted_predict_single_member_matches_own_thresholded_probs():
+def test_cohort_id_is_stable_across_calls():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        sensors, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
         cohort.set_members(sensors)
 
-        y_pred = cohort.predict({'x_test': x_test})['_preds']
-        expected = np.asarray(sensors[0].predict({'x_test': x_test})['_preds'])
+        first = cohort.cohort_id
+        cohort2 = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        sensors2, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
+        cohort2.set_members(sensors2)
 
-        assert np.array_equal(y_pred, expected)
+        assert cohort2.cohort_id == first
 
 
-def test_single_decoder_passthrough_returns_member_preds_unchanged():
+def test_manifest_id_set_from_metadata_at_construction():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
 
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        assert cohort.manifest_id is not None
+        assert cohort.manifest_id.startswith('sha256:')
+
+        sensors, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
         cohort.set_members(sensors)
 
-        y_pred = cohort.predict({'x_test': x_test})['_preds']
-        expected = np.asarray(sensors[0].predict({'x_test': x_test})['_preds'])
-
-        assert np.array_equal(y_pred, expected)
+        assert cohort.manifest_id == sensors[0].manifest_id
 
 
-def test_probability_weighted_predict_requires_members():
+def test_manifest_id_consistent_across_members():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
+        mid_before = cohort.manifest_id
+        assert mid_before is not None
+
+        sensors, _ = _train_real_members_and_input(exp_dir, round_ids)
+        cohort.set_members(sensors)
+
+        assert cohort.manifest_id == mid_before
+        assert cohort.manifest_id == sensors[0].manifest_id
+        assert cohort.manifest_id == sensors[1].manifest_id
+
+
+def test_yaml_reference_lineage_stripped_from_metadata():
+
+    original = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    try:
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            exp_dir = root / 'results' / 'test_exp'
+            yaml_text = _minimal_yaml_cli_contract_text(exp_dir)
+            # Inject a lineage block (as commit_manifest would)
+            yaml_with_lineage = yaml_text + dedent('''\
+                lineage:
+                  id: sha256:aaaa
+                  committed_at: "2025-01-01T00:00:00Z"
+            ''')
+            yaml_path = root / 'exp.yaml'
+            yaml_path.write_text(yaml_with_lineage)
+            with patch('click.echo'), patch('click.secho'):
+                run_experiment(yaml_path)
+
+            with (exp_dir / 'metadata.json').open('r') as f:
+                metadata = json.load(f)
+
+            assert 'yaml_reference' in metadata
+            assert 'lineage' not in metadata['yaml_reference']
+
+            # manifest_id must equal the hash of the lineage-free canonical form
+            data_no_lineage = dict(metadata['yaml_reference'])
+            canonical = json.dumps(data_no_lineage, sort_keys=True, default=str)
+            expected_id = 'sha256:' + hashlib.sha256(canonical.encode()).hexdigest()
+            assert metadata['manifest_id'] == expected_id
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original
+
+
+# ---------------------------------------------------------------------------
+# predict() — raw klines
+# ---------------------------------------------------------------------------
+
+def test_yaml_cli_artifact_cohort_predict_returns_bar_prediction():
+
+    original_get_spot_klines = historical_data.HistoricalData.get_spot_klines
+    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+
+    try:
+        with TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            yaml_path = root / 'exp.yaml'
+            exp_dir = root / 'results' / 'test_exp'
+            yaml_path.write_text(_minimal_yaml_cli_contract_text(exp_dir))
+
+            assert run_experiment(yaml_path) is True
+
+            with (exp_dir / 'metadata.json').open('r') as f:
+                metadata = json.load(f)
+            assert isinstance(metadata.get('manifest_id'), str)
+            assert metadata['manifest_id'].startswith('sha256:')
+
+            round_ids = sorted(
+                json.loads(line)['round_id']
+                for line in (exp_dir / 'round_data.jsonl').read_text().splitlines()
+                if line.strip()
+            )
+
+            trainer = Trainer(exp_dir)
+            sensors = trainer.train([round_ids[0]])
+            sensor = sensors[0]
+
+            assert isinstance(sensor.permutation_id, str)
+            assert sensor.manifest_id == metadata['manifest_id']
+
+            cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+            cohort.set_members(sensors)
+
+            assert cohort.cohort_id is not None
+            assert cohort.manifest_id == metadata['manifest_id']
+
+            post_data = _make_post_training_data()
+            bar_pred = cohort.predict(post_data)
+            sensor_bar_pred = sensor.predict(post_data)
+
+            assert isinstance(bar_pred, BarPrediction)
+            assert bar_pred.reason is None
+            assert bar_pred.prediction == sensor_bar_pred.prediction
+    finally:
+        historical_data.HistoricalData.get_spot_klines = original_get_spot_klines
+
+
+def test_predict_requires_members():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        post_data = _make_post_training_data()
 
         try:
-            cohort.predict([[1]])
+            cohort.predict(post_data)
             assert False, 'Expected RuntimeError'
         except RuntimeError as e:
-            assert 'no bound decoder members' in str(e)
+            assert 'no bound members' in str(e)
 
 
-def test_majority_vote_uses_binary_votes_for_continuous_fallback_members():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
-
-        _patch_round_architecture(
-            exp_dir,
-            {
-                0: 'xgboost_regressor',
-                1: 'xgboost_regressor',
-            },
-        )
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
-
-        m0 = _FallbackContinuousMember(
-            0,
-            np.array([0.1, -0.2, 0.8, -0.4], dtype=float),
-        )
-        m1 = _FallbackContinuousMember(
-            1,
-            np.array([0.2, -0.7, 0.6, -0.3], dtype=float),
-        )
-        cohort.set_members([m0, m1])
-
-        out = cohort.predict({'x_test': np.zeros((4, 2), dtype=float)})
-
-        # Directional fallback votes use threshold > 0 for regressor outputs.
-        # m0=[1,0,1,0], m1=[1,0,1,0] => [1,0,1,0]
-        assert out['_preds'].tolist() == [1, 0, 1, 0]
-
-
-def test_single_member_fallback_predict_returns_binary_votes():
+def test_predict_all_requires_members():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
-        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-        member = _FallbackContinuousMember(
-            0,
-            np.array([0.2, -0.3, 1.1, 0.0], dtype=float),
-        )
-        cohort.set_members([member])
-
-        out = cohort.predict({'x_test': np.zeros((4, 2), dtype=float)})
-
-        assert out['_preds'].tolist() == [1, 0, 1, 0]
-
-
-def test_majority_vote_tie_returns_zero():
-
-    vote = Cohort._majority_vote([
-        np.array([1, 0, 1, 0], dtype=float),
-        np.array([0, 1, 1, 0], dtype=float),
-    ])
-
-    assert vote.tolist() == [0, 0, 1, 0]
-
-
-def test_probability_weighted_tie_returns_zero():
-
-    vote = Cohort._probability_weighted_vote([
-        np.array([0.6, 0.4, 0.5], dtype=float),
-        np.array([0.4, 0.6, 0.5], dtype=float),
-    ])
-
-    assert vote.tolist() == [0, 0, 0]
-
-
-def test_majority_vote_multimember_expected_output():
-
-    vote = Cohort._majority_vote([
-        np.array([1, 1, 0, 0], dtype=float),
-        np.array([1, 0, 1, 0], dtype=float),
-        np.array([1, 0, 0, 1], dtype=float),
-    ])
-
-    assert vote.tolist() == [1, 0, 0, 0]
-
-
-def test_probability_weighted_vote_rejects_shape_mismatch():
-
-    try:
-        Cohort._probability_weighted_vote([
-            np.array([0.6, 0.4], dtype=float),
-            np.array([0.4], dtype=float),
-        ])
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'same shape' in str(e)
-
-
-def test_majority_vote_rejects_shape_mismatch():
-
-    try:
-        Cohort._majority_vote([
-            np.array([1, 0], dtype=float),
-            np.array([1], dtype=float),
-        ])
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'same shape' in str(e)
-
-
-def test_predict_return_probs_probability_mode_returns_per_sample_probs():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
-
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
-
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
-        cohort.set_members(list(reversed(sensors)))
-
-        by_pid = {sensor.permutation_id: sensor for sensor in sensors}
-        y_pred, probs = cohort.predict({'x_test': x_test}, return_probs=True)
-
-        member_probs = np.column_stack([
-            np.asarray(by_pid[pid].predict({'x_test': x_test})['_probs'], dtype=float)
-            for pid in cohort.permutation_ids
-        ])
-
-        assert isinstance(probs, np.ndarray)
-        assert np.asarray(probs).shape == (np.asarray(y_pred).shape[0], 2)
-        assert np.allclose(np.asarray(probs, dtype=float), member_probs)
-
-
-def test_predict_return_probs_single_member_returns_sample_major_column():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        cohort.set_members(sensors)
-
-        y_pred, probs = cohort.predict({'x_test': x_test}, return_probs=True)
-        expected_probs = np.asarray(
-            sensors[0].predict({'x_test': x_test})['_probs'],
-            dtype=float,
-        )[:, None]
-
-        assert np.asarray(probs).shape == (np.asarray(y_pred).shape[0], 1)
-        assert np.allclose(np.asarray(probs, dtype=float), expected_probs)
-
-
-def test_predict_return_meta_returns_metadata_placeholder():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        cohort.set_members(sensors)
-
-        y_pred, meta = cohort.predict({'x_test': x_test}, return_meta=True)
-
-        assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
-        assert meta['permutation_ids'] == [0]
-        assert meta['decoder_count'] == 1
-        assert 'architecture_id' in meta
-        assert 'aggregation_mode' in meta
-
-
-def test_predict_return_probs_and_return_meta_returns_three_tuple():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=2)
-
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0, 1])
-
-        cohort = Cohort(experiment_log_path=str(
-            exp_dir), permutation_ids=[0, 1])
-        cohort.set_members(sensors)
-
-        y_pred, probs, meta = cohort.predict(
-            {'x_test': x_test},
-            return_probs=True,
-            return_meta=True,
-        )
-
-        assert isinstance(probs, np.ndarray)
-        assert np.asarray(probs).shape == (np.asarray(y_pred).shape[0], 2)
-        assert meta['permutation_ids'] == [0, 1]
-        assert meta['decoder_count'] == 2
-        assert np.asarray(y_pred).shape[0] == np.asarray(x_test).shape[0]
-
-
-def test_predict_return_probs_rejected_in_fallback_mode():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        _patch_round_architecture(exp_dir, {0: 'xgboost_regressor'})
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-        member = _FallbackContinuousMember(
-            0,
-            np.array([0.9, 0.1], dtype=float),
-        )
-        cohort.set_members([member])
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        post_data = _make_post_training_data()
 
         try:
-            cohort.predict(
-                {'x_test': np.zeros((2, 2), dtype=float)}, return_probs=True)
-            assert False, 'Expected ValueError'
-        except ValueError as e:
-            assert 'Probabilities are unavailable' in str(e)
+            cohort.predict_all(post_data)
+            assert False, 'Expected RuntimeError'
+        except RuntimeError as e:
+            assert 'no bound members' in str(e)
+
+
+def test_predict_all_returns_one_entry_per_bar():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        sensors, post_data = _train_real_members_and_input(exp_dir, [round_ids[0]])
+        cohort.set_members(sensors)
+
+        results = cohort.predict_all(post_data)
+
+        assert isinstance(results, list)
+        sensor_results = sensors[0].predict_all(post_data)
+        assert len(results) == len(sensor_results)
+        assert all(isinstance(r, BarPrediction) for r in results)
+
+
+def test_predict_all_valid_bars_match_sensor():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        sensors, post_data = _train_real_members_and_input(exp_dir, [round_ids[0]])
+        cohort.set_members(sensors)
+
+        cohort_results = cohort.predict_all(post_data)
+        sensor_results = sensors[0].predict_all(post_data)
+
+        valid_cohort = [r for r in cohort_results if r.reason is None]
+        valid_sensor = [r for r in sensor_results if r.reason is None]
+
+        assert len(valid_cohort) == len(valid_sensor)
+        for c, s in zip(valid_cohort, valid_sensor, strict=True):
+            assert c.prediction == s.prediction
+
+
+def test_predict_all_propagates_worst_reason():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        m0 = _BarMember(ids[0], prediction=None, reason='warm-up')
+        m1 = _BarMember(ids[1], prediction=None, reason='inside-training-window')
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0], ids[1]])
+        cohort._members = [m0, m1]
+
+    bars = [m0.predict(None), m1.predict(None)]
+    result = cohort._aggregate_bar_predictions(bars)
+    assert result.reason == 'inside-training-window'
+    assert result.prediction is None
+
+
+# ---------------------------------------------------------------------------
+# Aggregation with stub members
+# ---------------------------------------------------------------------------
+
+def test_probability_weighted_predict_aggregates_mean_prob():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0], ids[1]])
+
+        m0 = _BarMember(ids[0], prediction=1, probability=0.8)
+        m1 = _BarMember(ids[1], prediction=0, probability=0.3)
+        cohort.set_members([m0, m1])
+
+        post_data = _make_post_training_data(n=4)
+        result = cohort.predict(post_data)
+
+        assert isinstance(result, BarPrediction)
+        assert result.reason is None
+        assert abs(result.probability - 0.55) < 1e-9   # mean of 0.8 and 0.3
+        assert result.prediction == 1                   # 0.55 > 0.5
+
+
+def test_majority_vote_uses_threshold_for_regressor():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        _patch_round_architecture(exp_dir, {ids[0]: 'xgboost_regressor', ids[1]: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0], ids[1]])
+
+        m0 = _BarMember(ids[0], prediction=0.1, architecture='xgboost_regressor')
+        m1 = _BarMember(ids[1], prediction=-0.2, architecture='xgboost_regressor')
+        cohort.set_members([m0, m1])
+
+        post_data = _make_post_training_data(n=4)
+        result = cohort.predict(post_data)
+
+        # m0: 0.1 > 0 = 1, m1: -0.2 > 0 = 0 → mean=0.5, not > 0.5 → 0
+        assert result.prediction == 0
+        assert result.probability is None
+
+
+def test_single_member_majority_vote_returns_binary():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        _patch_round_architecture(exp_dir, {ids[0]: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0]])
+
+        m = _BarMember(ids[0], prediction=1.1, architecture='xgboost_regressor')
+        cohort.set_members([m])
+
+        result = cohort.predict(_make_post_training_data(n=4))
+        assert result.prediction == 1
+        assert result.probability is None
+
+
+def test_probability_weighted_majority_vote_fallback_returns_none_probability():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir)
+        _patch_round_architecture(exp_dir, {ids[0]: 'xgboost_regressor'})
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0]])
+
+        m = _BarMember(ids[0], prediction=0.6, architecture='xgboost_regressor')
+        cohort.set_members([m])
+
+        result = cohort.predict(_make_post_training_data(n=4))
+        assert result.probability is None
+
+
+def test_member_failure_propagates():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        round_ids = _run_real_experiment(exp_dir, n_permutations=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
+        cohort._members = [_RaisingMember()]
+        cohort._members[0].permutation_id = round_ids[0]
+
+        try:
+            cohort.predict(_make_post_training_data())
+            assert False, 'Expected RuntimeError'
+        except RuntimeError as e:
+            assert 'member failed during inference' in str(e)
 
 
 def test_validate_probability_range_accepts_values_in_unit_interval():
@@ -1075,85 +1046,3 @@ def test_validate_probability_range_rejects_non_finite_values():
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'finite values' in str(e)
-
-
-def test_cohort_is_drop_in_decoder_replacement_for_dict_input():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-        base_sensor = sensors[0]
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        cohort.set_members([base_sensor])
-
-        live_data = {'x_test': x_test}
-
-        sensor_result = base_sensor(live_data)
-        cohort_result = cohort(live_data)
-        cohort_pred = cohort.predict(live_data)
-
-        assert isinstance(sensor_result, dict)
-        assert isinstance(cohort_result, dict)
-        assert isinstance(cohort_pred, dict)
-        assert '_preds' in cohort_result
-        assert '_probs' in cohort_result
-        assert np.array_equal(np.asarray(cohort_result['_preds']),
-                              np.asarray(sensor_result['_preds']))
-        assert np.allclose(np.asarray(cohort_result['_probs'], dtype=float),
-                           np.asarray(sensor_result['_probs'], dtype=float))
-        assert np.array_equal(np.asarray(cohort_pred['_preds']),
-                              np.asarray(sensor_result['_preds']))
-
-
-def test_single_member_probability_mode_preserves_exact_payload_shape_and_keys():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-
-        class _NonTrivialProbMember:
-
-            permutation_id = 0
-
-            def predict(self, _data):
-                return {
-                    '_preds': np.array([0, 1], dtype=np.int8),
-                    '_probs': np.array([0.9, 0.1], dtype=float),
-                    'optimal_threshold': 0.9,
-                    'val_score': 0.123,
-                }
-
-        member = _NonTrivialProbMember()
-        cohort.set_members([member])
-
-        out = cohort.predict({'x_test': np.zeros((2, 2), dtype=float)})
-
-        expected = member.predict({'x_test': np.zeros((2, 2), dtype=float)})
-        assert set(out.keys()) == set(expected.keys())
-        assert np.array_equal(out['_preds'], expected['_preds'])
-        assert np.array_equal(out['_probs'], expected['_probs'])
-        assert out['optimal_threshold'] == expected['optimal_threshold']
-        assert out['val_score'] == expected['val_score']
-
-
-def test_member_failure_propagates_and_fails_whole_call():
-
-    with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        _run_real_experiment(exp_dir, n_permutations=1)
-
-        _sensors, x_test = _train_real_members_and_input(exp_dir, [0])
-
-        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[0])
-        cohort.set_members([_RaisingMember()])
-
-        try:
-            cohort.predict({'x_test': x_test})
-            assert False, 'Expected RuntimeError'
-        except RuntimeError as e:
-            assert 'member failed during inference' in str(e)

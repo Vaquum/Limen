@@ -270,8 +270,8 @@ def test_load_round_data_skips_blank_and_malformed_lines() -> None:
 
         round_data = trainer._load_round_data()
 
-    assert list(round_data) == [0, 1]
-    assert round_data[1]['round_params'] == {'alpha': 2}
+    assert list(round_data) == ['0', '1']
+    assert round_data['1']['round_params'] == {'alpha': 2}
 
 
 def test_load_round_data_requires_round_data_file() -> None:
@@ -353,13 +353,17 @@ def test_trainer_yaml_end_to_end() -> None:
         metadata = json.loads((exp_dir / 'metadata.json').read_text())
         assert 'yaml_reference' in metadata
         assert 'limen_version' in metadata
+        assert 'manifest_id' in metadata
+        assert metadata['manifest_id'].startswith('sha256:')
 
         trainer, sensors = _train_e2e(exp_dir, round_ids)
         assert len(sensors) == 2
 
+        expected_mid = metadata['manifest_id']
         for i, sensor in enumerate(sensors):
             assert sensor.permutation_id == round_ids[i]
             assert isinstance(sensor.round_params, dict)
+            assert sensor.manifest_id == expected_mid
 
         with pytest.raises(ValueError, match='not found in round_data'):
             trainer.train([999])
@@ -414,16 +418,12 @@ def test_trainer_yaml_sensor_inference() -> None:
         trainer, sensors = _train_e2e(exp_dir, [round_ids[0]])
         sensor = sensors[0]
 
-        # dict dispatch — delegates to underlying model, returns raw dict
+        # underlying model can still be called directly
         data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
         x_batch = data_dict['x_test'].to_numpy()[:2]
-        dict_result = sensor.predict({'x_test': x_batch})
-        assert isinstance(dict_result, dict)
-        assert '_preds' in dict_result
-
-        # __call__ delegates to predict
-        call_result = sensor({'x_test': x_batch})
-        assert isinstance(call_result, dict)
+        model_result = sensor._model.predict({'x_test': x_batch})
+        assert isinstance(model_result, dict)
+        assert '_preds' in model_result
 
         # DataFrame path — returns BarPrediction for last bar
         n = 100

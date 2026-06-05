@@ -1,12 +1,19 @@
+import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
+from limen.experiment.trainer.sensor import BarPrediction
+from limen.experiment.trainer.sensor import PredictionReason
+from limen.yaml.store import _SHA256_PREFIX
 
 
 class Cohort:
@@ -35,12 +42,19 @@ class Cohort:
         'cnn',
     )
     _VOTE_THRESHOLD = 0.5
+    _REASON_PRIORITY: ClassVar[dict[PredictionReason, int]] = {
+        'inside-training-window': 2,
+        'null-features': 1,
+        'warm-up': 0,
+    }
+
+    _logger = logging.getLogger(__name__)
 
     def __init__(self,
                  *,
                  experiment_id: str | None = None,
                  experiment_log_path: str | None = None,
-                 permutation_ids: list[int | str] | None = None,
+                 permutation_ids: list[str] | None = None,
                  selector: str | Selector | None = None,
                  selector_params: dict[str, Any] | None = None) -> None:
         '''
@@ -51,11 +65,11 @@ class Cohort:
                 experiment directory containing decoder permutations.
             experiment_log_path (str | None): Explicit path to an experiment
                 directory used to reconstruct selected decoders.
-            permutation_ids (list[int | str] | None): Specific permutation IDs to
+            permutation_ids (list[str] | None): Specific permutation IDs to
                 include. If omitted, all available permutations in the resolved
                 experiment are selected.
             selector (str | Selector | None): Built-in selector name or callable
-                using the `select(context, **params) -> list[int | str]`
+                using the `select(context, **params) -> list[str]`
                 contract. Defaults to `all` when permutation_ids is omitted.
             selector_params (dict[str, Any] | None): Keyword arguments passed to
                 the selector callable.
@@ -160,6 +174,8 @@ class Cohort:
             'probability_weighted' if supports_probabilities else 'majority_vote'
         )
         self.metadata = metadata
+        self.manifest_id: str | None = metadata.get('manifest_id')
+        self.cohort_id: str | None = None
         self._members: list[Any] = []
 
     def set_members(self, members: list[Any]) -> None:
@@ -172,7 +188,7 @@ class Cohort:
                 'Cohort member count must match selected permutation_ids count.'
             )
 
-        by_pid: dict[int | str, Any] = {}
+        by_pid: dict[str, Any] = {}
         for member in members:
             if not hasattr(member, 'permutation_id'):
                 raise ValueError(
@@ -196,15 +212,15 @@ class Cohort:
                         'Bound members must match cohort architecture_id.'
                     )
 
-            if hasattr(member, 'metadata'):
-                member_metadata = member.metadata
-                if isinstance(member_metadata, dict):
-                    cohort_sfd = self.metadata.get('sfd_module')
-                    member_sfd = member_metadata.get('sfd_module')
-                    if cohort_sfd and member_sfd and cohort_sfd != member_sfd:
-                        raise ValueError(
-                            'Bound members must originate from the same experiment family.'
-                        )
+            member_mid = getattr(member, 'manifest_id', None)
+            if member_mid is not None:
+                if self.manifest_id is None:
+                    self.manifest_id = member_mid
+                elif self.manifest_id != member_mid:
+                    raise ValueError(
+                        f"All cohort members must share the same manifest_id. "
+                        f"Got {member_mid!r}, expected {self.manifest_id!r}."
+                    )
 
         missing = [pid for pid in self.permutation_ids if pid not in by_pid]
         if missing:
@@ -214,169 +230,163 @@ class Cohort:
 
         self._members = [by_pid[pid] for pid in self.permutation_ids]
 
-    def __call__(self, data: dict) -> dict:
+        payload = json.dumps(
+            {'manifest_id': self.manifest_id, 'permutation_ids': sorted(self.permutation_ids)},
+            sort_keys=True,
+        )
+        self.cohort_id = f'{_SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
 
-        return self.predict(data)
 
-    def predict(self,
-                X: Any,
-                *,
-                return_probs: bool = False,
-                return_meta: bool = False) -> dict | tuple:
-        '''
-        Run cohort members on input data and return aggregated binary predictions.
+    def __call__(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
 
-        Args:
-            X (Any): Decoder-style input dict consumed by member decoders.
-            return_probs (bool): Whether to also return per-decoder
-                probabilities as a matrix with shape
-                `(n_samples, n_members)`. Only valid in
-                probability-weighted mode.
-            return_meta (bool): Whether to also return structured cohort metadata
-                (placeholder schema) alongside predictions.
+        return self.predict_all(raw_klines)
 
-        Returns:
-            dict | tuple: Sensor-compatible dict by default (`{'_preds': ...}` and
-                optionally `{'_probs': ...}` in probability mode).
-                Optional tuple variants are:
-                - (predictions, probabilities)
-                - (predictions, metadata)
-                - (predictions, probabilities, metadata)
 
-        '''
-
-        if return_probs and self.aggregation_mode != 'probability_weighted':
-            raise ValueError(
-                'Probabilities are unavailable for this Cohort architecture.')
+    def _assert_members(self) -> None:
 
         if not self._members:
             raise RuntimeError(
-                'Cohort has no bound decoder members. '
-                'Use set_members(...) before predict().'
+                'Cohort has no bound members. Use set_members() before predicting.'
             )
 
-        if not isinstance(X, dict):
-            raise ValueError(
-                'Cohort.predict expects decoder-style dict input to remain '
-                'Sensor-compatible.'
+
+    def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
+
+        '''
+        Run all member sensors on raw klines and return one aggregated prediction for the last bar.
+
+        Args:
+            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
+                the manifest data source
+
+        Returns:
+            BarPrediction: Aggregated prediction for the last bar
+
+        Raises:
+            RuntimeError: If no members have been bound via set_members()
+
+        '''
+
+        self._assert_members()
+        member_bars = [m.predict(raw_klines) for m in self._members]
+        return self._aggregate_bar_predictions(member_bars)
+
+
+    def predict_all(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
+
+        '''
+        Run all member sensors on raw klines and return one aggregated prediction per bar.
+
+        Args:
+            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
+                the manifest data source
+
+        Returns:
+            list[BarPrediction]: One aggregated entry per bar in the post-bar-formation data
+
+        Raises:
+            RuntimeError: If no members have been bound via set_members()
+            ValueError: If member sensors return different-length prediction lists
+
+        '''
+
+        self._assert_members()
+
+        all_bars = [m.predict_all(raw_klines) for m in self._members]
+
+        fully_errored = [all(b.reason == 'sensor-error' for b in bars) for bars in all_bars]
+        healthy_lengths = [len(bars) for bars, err in zip(all_bars, fully_errored, strict=True) if not err]
+
+        if not healthy_lengths:
+            return [
+                BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
+                for _ in range(len(all_bars[0]))
+            ]
+
+        n = healthy_lengths[0]
+        if any(length != n for length in healthy_lengths[1:]):
+            raise ValueError('Member sensors returned different-length prediction lists.')
+
+        n_errored_members = sum(fully_errored)
+        if n_errored_members:
+            self._logger.warning(
+                'Cohort predict_all: %d of %d member(s) fully errored and were excluded from aggregation.',
+                n_errored_members, len(self._members),
             )
 
-        # Single-decoder cohort short-circuit.
-        if len(self._members) == 1:
-            member = self._members[0]
-            result = member.predict(self._prepare_member_input(member, X))
-            if not isinstance(result, dict) or '_preds' not in result:
-                raise ValueError(
-                    'Single-decoder cohort member must return a dict with _preds.'
-                )
+        aligned = [
+            [BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
+             for _ in range(n)]
+            if err else bars
+            for bars, err in zip(all_bars, fully_errored, strict=True)
+        ]
 
-            if self.aggregation_mode == 'probability_weighted':
-                if '_probs' not in result:
-                    raise ValueError(
-                        'Decoder in probability mode must return a dict with _probs.'
-                    )
+        return [
+            self._aggregate_bar_predictions([aligned[i][t] for i in range(len(self._members))])
+            for t in range(n)
+        ]
 
-                probs = np.asarray(result['_probs'], dtype=float)
-                self._validate_probability_range(probs)
 
-                if not return_probs and not return_meta:
-                    # Preserve exact sensor payload/keys for single-member passthrough.
-                    return dict(result)
+    def _aggregate_bar_predictions(self, member_bars: list[BarPrediction]) -> BarPrediction:
 
-                return self._format_predict_output(
-                    np.asarray(result['_preds']),
-                    probs,
-                    return_probs=return_probs,
-                    return_meta=return_meta,
-                    probs_for_return=probs[:, None],
-                )
+        '''
+        Aggregate per-member BarPredictions into one cohort-level BarPrediction.
 
-            raw_preds = np.asarray(result['_preds'], dtype=float)
-            preds = self._to_binary_votes(
-                raw_preds,
-                threshold=self._fallback_vote_threshold(),
+        Args:
+            member_bars (list[BarPrediction]): One prediction per bound member,
+                all sharing the same datetime
+
+        Returns:
+            BarPrediction: Aggregated prediction for the bar
+
+        Raises:
+            ValueError: If member_bars is empty, or if any member has a None
+                probability in probability_weighted mode, or a None prediction
+                in majority_vote mode
+
+        '''
+
+        if not member_bars:
+            raise ValueError('member_bars must be a non-empty list.')
+
+        dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
+
+        valid_bars = [b for b in member_bars if b.reason != 'sensor-error']
+        if not valid_bars:
+            return BarPrediction(datetime=dt, prediction=None, probability=None, reason='sensor-error')
+
+        if len(valid_bars) < len(member_bars):
+            n_errors = len(member_bars) - len(valid_bars)
+            self._logger.debug(
+                'Cohort aggregation: %d of %d member(s) returned sensor-error and were excluded.',
+                n_errors, len(member_bars),
             )
 
-            if return_probs and '_probs' not in result:
-                raise ValueError(
-                    'Decoder in probability mode must return a dict with _probs.'
-                )
-
-            return self._format_predict_output(
-                preds,
-                None,
-                return_probs=return_probs,
-                return_meta=return_meta,
-            )
+        blocking = [b for b in valid_bars if b.reason is not None]
+        if blocking:
+            worst = max(blocking, key=lambda b: self._REASON_PRIORITY.get(b.reason or '', -1))
+            return BarPrediction(datetime=dt, prediction=None, probability=None, reason=worst.reason)
 
         if self.aggregation_mode == 'probability_weighted':
-            member_probs: list[np.ndarray] = []
-
-            for member in self._members:
-                result = member.predict(self._prepare_member_input(member, X))
-                if not isinstance(result, dict) or '_probs' not in result:
-                    raise ValueError(
-                        'Decoder in probability mode must return a dict with _probs.'
-                    )
-
-                probs = np.asarray(result['_probs'], dtype=float)
-                self._validate_probability_range(probs)
-                member_probs.append(probs)
-
-            preds = self._probability_weighted_vote(member_probs)
-            probs_matrix = np.vstack(member_probs)
-            probs = np.mean(probs_matrix, axis=0)
-            return self._format_predict_output(
-                preds,
-                probs,
-                return_probs=return_probs,
-                return_meta=return_meta,
-                probs_for_return=probs_matrix.T,
-            )
-
-        if self.aggregation_mode == 'majority_vote':
-            member_preds: list[np.ndarray] = []
-
-            for member in self._members:
-                result = member.predict(self._prepare_member_input(member, X))
-                if not isinstance(result, dict) or '_preds' not in result:
-                    raise ValueError(
-                        'Decoder in majority_vote mode must return a dict with _preds.'
-                    )
-
-                raw_preds = np.asarray(result['_preds'], dtype=float)
-                member_preds.append(
-                    self._to_binary_votes(
-                        raw_preds,
-                        threshold=self._fallback_vote_threshold(),
-                    )
+            if any(b.probability is None for b in valid_bars):
+                raise ValueError(
+                    'probability_weighted mode requires a finite probability from all members.'
                 )
+            probs = np.array([b.probability for b in valid_bars], dtype=float)
+            self._validate_probability_range(probs)
+            mean_prob = float(np.mean(probs))
+            pred = int(mean_prob > self._VOTE_THRESHOLD)
+            return BarPrediction(datetime=dt, prediction=pred, probability=mean_prob, reason=None)
 
-            preds = self._majority_vote(member_preds)
-            return self._format_predict_output(
-                preds,
-                None,
-                return_probs=return_probs,
-                return_meta=return_meta,
+        if any(b.prediction is None for b in valid_bars):
+            raise ValueError(
+                'majority_vote mode requires a numeric prediction from all members.'
             )
+        threshold = self._fallback_vote_threshold()
+        votes = np.array([int(float(b.prediction) > threshold) for b in valid_bars])
+        pred = int(np.mean(votes) > self._VOTE_THRESHOLD)
+        return BarPrediction(datetime=dt, prediction=pred, probability=None, reason=None)
 
-        raise ValueError(f'Unknown aggregation_mode: {self.aggregation_mode}')
-
-    @staticmethod
-    def _probability_weighted_vote(member_probs: list[np.ndarray]) -> np.ndarray:
-
-        if not member_probs:
-            raise ValueError('member_probs must be a non-empty list.')
-
-        base_shape = member_probs[0].shape
-        for probs in member_probs[1:]:
-            if probs.shape != base_shape:
-                raise ValueError('Decoder outputs must share the same shape.')
-
-        probs_matrix = np.vstack(member_probs)
-        mean_p1 = np.mean(probs_matrix, axis=0)
-
-        return (mean_p1 > Cohort._VOTE_THRESHOLD).astype(np.int8)
 
     @staticmethod
     def _validate_probability_range(probs: np.ndarray) -> None:
@@ -388,26 +398,6 @@ class Cohort:
         if np.any((probs < 0.0) | (probs > 1.0)):
             raise ValueError('Decoder probabilities must lie within [0, 1].')
 
-    @staticmethod
-    def _majority_vote(member_preds: list[np.ndarray]) -> np.ndarray:
-
-        if not member_preds:
-            raise ValueError('member_preds must be a non-empty list.')
-
-        base_shape = member_preds[0].shape
-        for preds in member_preds[1:]:
-            if preds.shape != base_shape:
-                raise ValueError('Decoder outputs must share the same shape.')
-
-        preds_matrix = np.vstack(member_preds)
-        mean_vote = np.mean(preds_matrix, axis=0)
-
-        return (mean_vote > Cohort._VOTE_THRESHOLD).astype(np.int8)
-
-    @staticmethod
-    def _to_binary_votes(preds: np.ndarray, *, threshold: float) -> np.ndarray:
-
-        return (preds > threshold).astype(np.int8)
 
     def _fallback_vote_threshold(self) -> float:
 
@@ -416,93 +406,26 @@ class Cohort:
             return 0.0
         return Cohort._VOTE_THRESHOLD
 
-    def _prepare_member_input(self, member: Any, data: dict) -> dict:
-
-        member_input = dict(data)
-        by_permutation = member_input.pop('_by_permutation_id', None)
-
-        if isinstance(by_permutation, dict) and hasattr(member, 'permutation_id'):
-            pid = self._normalize_permutation_id(member.permutation_id)
-            if pid in by_permutation:
-                selected = by_permutation[pid]
-                if not isinstance(selected, dict):
-                    raise ValueError(
-                        '_by_permutation_id entries must be decoder-style dict payloads.'
-                    )
-                return dict(selected)
-
-        return member_input
-
-    def _format_predict_output(self,
-                               predictions: np.ndarray,
-                               probs: np.ndarray | None,
-                               *,
-                               return_probs: bool,
-                               return_meta: bool,
-                               probs_for_return: np.ndarray | None = None) -> dict | tuple:
-
-        payload: dict[str, Any] = {'_preds': predictions}
-        if probs is not None:
-            payload['_probs'] = probs
-
-        if not return_probs and not return_meta:
-            return payload
-
-        out: list[Any] = [predictions]
-        if return_probs:
-            probs_out = probs_for_return if probs_for_return is not None else probs
-            if probs_out is None:
-                raise ValueError(
-                    'Probabilities are unavailable for this Cohort architecture.'
-                )
-            out.append(probs_out)
-        if return_meta:
-            out.append(self._predict_meta())
-
-        return tuple(out)
-
-    def _predict_meta(self) -> dict[str, Any]:
-
-        return {
-            'permutation_ids': list(self.permutation_ids),
-            'decoder_count': len(self._members),
-            'architecture_id': self.architecture_id,
-            'aggregation_mode': self.aggregation_mode,
-        }
 
     @staticmethod
-    def _normalize_permutation_id(pid: int | str) -> int | str:
-
-        if isinstance(pid, bool):
-            raise ValueError(
-                'permutation_ids entries must be int or str identifiers.')
-
-        if isinstance(pid, int):
-            return pid
+    def _normalize_permutation_id(pid: str) -> str:
 
         if not isinstance(pid, str):
-            raise ValueError(
-                'permutation_ids entries must be int or str identifiers.')
+            raise ValueError('permutation_ids entries must be str identifiers.')
 
-        stripped = pid.strip()
-        if stripped.isdigit():
-            return int(stripped)
+        return pid.strip()
 
-        return stripped
 
     @staticmethod
-    def _sort_permutation_ids(values: set[int | str]) -> list[int | str]:
+    def _sort_permutation_ids(values: set[str]) -> list[str]:
 
-        return sorted(
-            values,
-            key=lambda value: (0, value) if isinstance(value, int) else (1, str(value)),
-        )
+        return sorted(values)
 
     @classmethod
     def _select_permutation_ids(cls,
                                 context: dict[str, Any],
                                 selector: str | Selector | None,
-                                selector_params: dict[str, Any]) -> list[int | str]:
+                                selector_params: dict[str, Any]) -> list[str]:
 
         resolved_selector = cls._resolve_selector(selector)
         try:
@@ -553,8 +476,8 @@ class Cohort:
     @staticmethod
     def _build_selector_context(experiment_dir: Path,
                                 metadata: dict,
-                                round_entries: dict[int | str, dict],
-                                available_ids: set[int | str]) -> dict[str, Any]:
+                                round_entries: dict[str, dict],
+                                available_ids: set[str]) -> dict[str, Any]:
 
         context: dict[str, Any] = {
             'experiment_dir': experiment_dir,
@@ -570,9 +493,9 @@ class Cohort:
         return context
 
     @staticmethod
-    def _load_round_entries(round_data_path: Path) -> dict[int | str, dict]:
+    def _load_round_entries(round_data_path: Path) -> dict[str, dict]:
 
-        entries: dict[int | str, dict] = {}
+        entries: dict[str, dict] = {}
         with round_data_path.open('r') as f:
             for raw_line in f:
                 stripped = raw_line.strip()
@@ -582,14 +505,14 @@ class Cohort:
                 entry = json.loads(stripped)
                 if 'round_id' not in entry:
                     continue
-                entries[entry['round_id']] = entry
+                entries[str(entry['round_id'])] = entry
 
         return entries
 
     @classmethod
     def _resolve_cohort_architecture(cls,
-                                     selected_ids: list[int | str],
-                                     round_entries: dict[int | str, dict],
+                                     selected_ids: list[str],
+                                     round_entries: dict[str, dict],
                                      metadata: dict) -> str:
 
         architecture_ids = {

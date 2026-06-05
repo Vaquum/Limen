@@ -25,7 +25,9 @@ def test_msq_basic_iteration():
     assert len(combos) == 4
 
     for i, c in enumerate(combos):
-        assert c['_id'] == i
+        assert c['_round_index'] == i
+        assert isinstance(c['_id'], str)
+        assert '_param_hash' not in c
         assert c['_injected'] is False
 
     param_combos = {frozenset(_param_keys(c).items()) for c in combos}
@@ -69,7 +71,7 @@ def test_priority_queue():
     third = next(msq)
     assert third['_injected'] is False
 
-    assert first['_id'] < second['_id'] < third['_id']
+    assert first['_round_index'] < second['_round_index'] < third['_round_index']
 
 
 def test_inject_validates_keys():

@@ -72,13 +72,13 @@ def test_random_rebuild_seen_from_log():
     domain = _small_domain()
     strategy = RandomStrategy(domain, seed=42)
     combo = next(strategy)
-    h = combo['_param_hash']
+    h = combo['_id']
 
     strategy2 = RandomStrategy(domain, seed=42)
     strategy2.rebuild_seen_from_log([h])
     assert h in strategy2._seen
     combo2 = next(strategy2)
-    assert combo2['_param_hash'] != h, 'rebuilt _seen must prevent duplicate generation'
+    assert combo2['_id'] != h, 'rebuilt _seen must prevent duplicate generation'
 
 
 def test_random_with_msq():
@@ -90,7 +90,7 @@ def test_random_with_msq():
     combos = list(msq)
     assert len(combos) == 3
     for i, combo in enumerate(combos):
-        assert '_param_hash' in combo
+        assert '_id' in combo
         assert combo['_generation_index'] == i
         assert combo['_search_strategy'] == 'RandomStrategy'
 
@@ -247,7 +247,7 @@ def test_grid_with_msq():
     assert len(combos) == 4
     for combo in combos:
         assert combo['_search_strategy'] == 'GridStrategy'
-        assert combo['_param_hash'] is not None
+        assert combo['_id'] is not None
 
 
 def test_strategy_registry():
@@ -267,7 +267,7 @@ def test_param_hash_deterministic():
     h1 = strategy.compute_param_hash(combo)
     h2 = strategy.compute_param_hash(combo)
     assert h1 == h2
-    assert len(h1) == 32
+    assert len(h1) == 64
     assert all(c in '0123456789abcdef' for c in h1)
 
 

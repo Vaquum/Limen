@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import polars as pl
-import pytest
 
 from limen.experiment import MLManifest
 from limen.experiment.manifest_core import PCACompressionConfig
@@ -281,21 +280,23 @@ def test_apply_sensor_pca_skipped_when_no_config() -> None:
     assert out is data
 
 
-def test_predict_raises_if_last_bar_is_warmup() -> None:
+def test_predict_returns_warmup_if_last_bar_is_warmup() -> None:
     manifest, _lag = _make_lag_manifest(lag=5)
     raw = _make_klines(5)
     sensor = _make_sensor(manifest)
-    with pytest.raises(ValueError, match='warm-up'):
-        sensor.predict(raw)
+    result = sensor.predict(raw)
+    assert result.reason == 'warm-up'
+    assert result.prediction is None
 
 
-def test_predict_raises_if_insufficient_valid_rows() -> None:
+def test_predict_returns_warmup_if_insufficient_valid_rows() -> None:
     manifest, _ = _make_lag_manifest(lag=3)
     # decoder_lookback=1, only 3 rows → valid_rows=0 < 1
     raw = _make_klines(3)
     sensor = _make_sensor(manifest)
-    with pytest.raises(ValueError, match='Insufficient data'):
-        sensor.predict(raw)
+    result = sensor.predict(raw)
+    assert result.reason == 'warm-up'
+    assert result.prediction is None
 
 
 def test_predict_raises_not_implemented_for_decoder_lookback_gt_1() -> None:
@@ -303,11 +304,14 @@ def test_predict_raises_not_implemented_for_decoder_lookback_gt_1() -> None:
     manifest.decoder_lookback = 2
     raw = _make_klines(10)
     sensor = _make_sensor(manifest)
-    with pytest.raises(NotImplementedError, match='decoder_lookback > 1'):
+    try:
         sensor.predict(raw)
+        assert False, 'Expected NotImplementedError'
+    except NotImplementedError as e:
+        assert 'decoder_lookback' in str(e)
 
 
-def test_predict_raises_if_inside_training_window() -> None:
+def test_predict_returns_inside_training_window_reason() -> None:
     manifest = _make_basic_manifest()
     manifest.split_dates = (
         date(2026, 1, 1), date(2026, 1, 10),
@@ -316,8 +320,9 @@ def test_predict_raises_if_inside_training_window() -> None:
     )
     raw = _make_klines(5, start_year=2026)
     sensor = _make_sensor(manifest)
-    with pytest.raises(ValueError, match='training/test window'):
-        sensor.predict(raw)
+    result = sensor.predict(raw)
+    assert result.reason == 'inside-training-window'
+    assert result.prediction is None
 
 
 def test_predict_allows_context_bars_inside_window_when_last_bar_is_valid() -> None:
@@ -413,14 +418,17 @@ def test_predict_all_midstream_null_row_has_reason_null_features() -> None:
     assert results[6].prediction is not None
 
 
-def test_predict_all_decoder_lookback_gt1_raises() -> None:
+def test_predict_all_raises_not_implemented_for_decoder_lookback_gt1() -> None:
     manifest = _make_basic_manifest()
     manifest.decoder_lookback = 2
     manifest.split_dates = None
     raw = _make_klines(10)
     sensor = _make_sensor(manifest, round_params={'bar_type': 'base'})
-    with pytest.raises(NotImplementedError, match='decoder_lookback'):
+    try:
         sensor.predict_all(raw)
+        assert False, 'Expected NotImplementedError'
+    except NotImplementedError as e:
+        assert 'decoder_lookback' in str(e)
 
 
 def test_extract_scalar_returns_none_for_none() -> None:

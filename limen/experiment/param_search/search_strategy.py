@@ -107,26 +107,25 @@ class SearchStrategy(ABC):
         '''
         Compute deterministic hash of a parameter combination.
 
-        Returns the first 32 hex characters (128 bits) of the SHA-256
-        digest. Truncation is acceptable because the hash is used for
-        dedup, not cryptographic integrity.
+        Returns the full 64 hex characters (256 bits) of the SHA-256
+        digest.
 
-        Note:
+        NOTE:
             Strips ``_``-prefixed keys because domain params never
             start with underscore, but log rows include MSQ metadata
-            columns (``_param_hash``, ``_id``, etc.) that must not
+            columns (``_id``, ``_round_index``, etc.) that must not
             affect the hash.
 
         Args:
             combo (dict[str, Any]): Parameter combination or log row
 
         Returns:
-            str: 32-character truncated hex digest
+            str: 64-character hex digest
         '''
 
         clean = {k: v for k, v in combo.items() if not k.startswith('_')}
         canonical = json.dumps(clean, sort_keys=True, default=str)
-        return hashlib.sha256(canonical.encode()).hexdigest()[:32]
+        return hashlib.sha256(canonical.encode()).hexdigest()
 
 
     def mark_seen(self, combo: dict[str, Any]) -> str:
@@ -135,7 +134,7 @@ class SearchStrategy(ABC):
         Register a combination as seen and return its hash.
 
         Called by MSQ after a combo passes filters and is yielded.
-        Reuses ``_param_hash`` if already attached by ``_is_unseen``.
+        Reuses ``_id`` if already attached by ``_is_unseen``.
 
         Args:
             combo (dict[str, Any]): Parameter combination
@@ -144,7 +143,7 @@ class SearchStrategy(ABC):
             str: The param hash
         '''
 
-        h = combo.get('_param_hash') or self.compute_param_hash(combo)
+        h = combo.get('_id') or self.compute_param_hash(combo)
         self._seen.add(h)
         return h
 
@@ -155,7 +154,7 @@ class SearchStrategy(ABC):
         Check if a combination has been seen before.
 
         Computes the hash, checks against _seen set, and attaches
-        ``_param_hash`` to the combo for downstream reuse. Does not
+        ``_id`` to the combo for downstream reuse. Does not
         register — registration is deferred to ``mark_seen`` so that
         combos rejected by MSQ filters remain available.
 
@@ -169,7 +168,7 @@ class SearchStrategy(ABC):
         h = self.compute_param_hash(combo)
         if h in self._seen:
             return False
-        combo['_param_hash'] = h
+        combo['_id'] = h
         return True
 
 

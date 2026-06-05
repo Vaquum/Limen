@@ -20,6 +20,28 @@ _MANIFEST_URI_SCHEME = 'manifest://'
 _SHA256_HEX_LENGTH = 64
 
 
+def canonical_manifest_id(yaml_dict: dict[str, Any]) -> str:
+
+    '''
+    Compute the content-addressed manifest ID for a YAML dict.
+
+    Strips any ``lineage`` key before hashing so commit-time and run-time
+    identifiers remain identical regardless of whether a lineage block has
+    been injected.
+
+    Args:
+        yaml_dict (dict[str, Any]): Parsed YAML manifest as a plain dict
+
+    Returns:
+        str: ``sha256:<64-hex>`` identifier
+
+    '''
+
+    data_no_lineage = {k: v for k, v in yaml_dict.items() if k != 'lineage'}
+    canonical = json.dumps(data_no_lineage, sort_keys=True, default=str)
+    return f'{_SHA256_PREFIX}{hashlib.sha256(canonical.encode()).hexdigest()}'
+
+
 def commit_manifest(yaml_path: Path,
                     project_root: Path,
                     parent_id: str | None = None) -> tuple[str, bool]:
@@ -43,24 +65,26 @@ def commit_manifest(yaml_path: Path,
     '''
 
     content = yaml_path.read_text(encoding='utf-8')
-    hex_hash = hashlib.sha256(content.encode()).hexdigest()
-    manifest_id = f'{_SHA256_PREFIX}{hex_hash}'
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+
+    try:
+        data = yaml.load(content)
+    except YAMLError as exc:
+        raise ValueError(f"Cannot parse YAML '{yaml_path.name}': {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
+
+    manifest_id = canonical_manifest_id(data)
+    hex_hash = manifest_id[len(_SHA256_PREFIX):]
 
     store_path = project_root / _STORE_RELATIVE
     dest = store_path / f'{hex_hash}.yaml'
 
     already_existed = dest.exists()
 
-    yaml = YAML()
-    yaml.preserve_quotes = True
-
     if not already_existed:
-        try:
-            data = yaml.load(content)
-        except YAMLError as exc:
-            raise ValueError(f"Cannot parse YAML '{yaml_path.name}': {exc}") from exc
-        if not isinstance(data, dict):
-            raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
         name = str(data.get('metadata', {}).get('name', yaml_path.stem))
         committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         lineage: dict = {'id': manifest_id, 'committed_at': committed_at}

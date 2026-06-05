@@ -8,6 +8,7 @@ from unittest.mock import patch
 import polars as pl
 
 from limen.cli.commands.run import run_experiment
+from limen.cohort import Cohort
 from limen.data import historical_data
 from limen.experiment.trainer import Trainer
 from limen.experiment.trainer.sensor import BarPrediction
@@ -179,6 +180,7 @@ _LABEL_CONTROL_YAML = dedent('''\
       n_permutations: 10
       search_strategy:
         type: random
+        seed: 42
       prep_each_round: true
       output_format: csv
 ''')
@@ -331,3 +333,38 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert few_bar_pred.datetime == few_dts[-1]
             assert few_bar_pred.prediction == few_preds[-1].prediction
             assert math.isclose(few_bar_pred.probability, few_preds[-1].probability, rel_tol=1e-6)
+
+        # --- Cohort prediction ---
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=top_ids)
+        cohort.set_members(sensors)
+
+        assert cohort.cohort_id is not None
+        assert cohort.cohort_id.startswith('sha256:')
+        assert cohort.manifest_id is not None
+
+        # predict_all: one BarPrediction per bar
+        cohort_all = cohort.predict_all(inference_klines)
+        assert len(cohort_all) == len(inference_klines)
+
+        n_valid = sum(1 for p in cohort_all if p.reason is None)
+        n_warmup = sum(1 for p in cohort_all if p.reason == 'warm-up')
+        assert n_valid > 0
+        assert n_warmup + n_valid == len(inference_klines)
+
+        valid_cohort = [p for p in cohort_all if p.reason is None]
+        assert all(p.prediction in (0, 1) for p in valid_cohort)
+        assert all(p.probability is not None for p in valid_cohort)
+        assert all(0.0 <= p.probability <= 1.0 for p in valid_cohort)
+
+        # predict: single bar (last bar)
+        cohort_bar = cohort.predict(inference_klines)
+        assert isinstance(cohort_bar, BarPrediction)
+        assert cohort_bar.reason is None
+        assert cohort_bar.prediction in (0, 1)
+        assert cohort_bar.probability is not None
+        assert 0.0 <= cohort_bar.probability <= 1.0
+
+        # cohort probability is the mean of individual sensor probabilities
+        sensor_probs = [s.predict(inference_klines).probability for s in sensors]
+        expected_prob = sum(sensor_probs) / len(sensor_probs)
+        assert math.isclose(cohort_bar.probability, expected_prob, rel_tol=1e-6)

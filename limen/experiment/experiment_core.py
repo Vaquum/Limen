@@ -24,6 +24,7 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 from limen.experiment.manifest_core import RuleBasedManifest
+from limen.yaml.store import canonical_manifest_id
 
 logger = logging.getLogger(__name__)
 
@@ -459,7 +460,8 @@ class UniversalExperimentLoop:
                 csv_header = next(csv.reader(f), None)
 
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
-            current_round = round_params['_id']
+            current_round = round_params['_round_index']
+            current_hash = round_params['_id']
 
             if self._shutdown_requested:
                 logger.info(
@@ -541,7 +543,7 @@ class UniversalExperimentLoop:
             if post_processing:
                 self._alignment.append(data_dict['_alignment'])
 
-            round_results['id'] = current_round
+            round_results['id'] = current_hash
             round_results['execution_time'] = round(
                 time.time() - start_time, 2,
             )
@@ -575,9 +577,10 @@ class UniversalExperimentLoop:
 
             if round_data_path:
                 self._append_round_data(
-                    round_data_path, current_round, sfd_params,
+                    round_data_path, current_hash, sfd_params,
                     current_preds,
                     data_dict['_alignment'],
+                    round_index=current_round,
                 )
 
             checkpoint_due = (
@@ -779,9 +782,11 @@ class UniversalExperimentLoop:
             )
         self.experiment_log = pl.read_csv(csv_path, n_rows=start_round)
 
-        if '_param_hash' in self.experiment_log.columns:
-            hashes = self.experiment_log['_param_hash'].drop_nulls().to_list()
-            self._search_strategy.rebuild_seen_from_log(hashes)
+        col = next((c for c in ('_param_hash', '_id') if c in self.experiment_log.columns), None)
+        if col is not None:
+            self._search_strategy.rebuild_seen_from_log(
+                self.experiment_log[col].drop_nulls().to_list()
+            )
 
         self._truncate_round_data(round_data_path, start_round)
         self.experiment_log.write_csv(csv_path)
@@ -805,7 +810,7 @@ class UniversalExperimentLoop:
                     entry = json.loads(stripped)
                 except json.JSONDecodeError:
                     break
-                if entry['round_id'] >= start_round:
+                if entry.get('_round_index', 0) >= start_round:
                     break
                 valid_lines.append(stripped)
 
@@ -897,7 +902,9 @@ class UniversalExperimentLoop:
             'created_at': datetime.now(timezone.utc).isoformat(),
         }
         if self._yaml_reference is not None:
-            metadata['yaml_reference'] = self._yaml_reference
+            data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
+            metadata['yaml_reference'] = data_no_lineage
+            metadata['manifest_id'] = canonical_manifest_id(self._yaml_reference)
 
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
@@ -957,15 +964,18 @@ class UniversalExperimentLoop:
 
     def _append_round_data(self,
                            round_data_path: Path,
-                           round_id: int,
+                           round_id: str,
                            round_params: dict,
                            preds: Any,
-                           alignment: dict) -> None:
+                           alignment: dict,
+                           *,
+                           round_index: int) -> None:
 
         '''Append one round's data to the JSONL file.'''
 
         entry = {
             'round_id': round_id,
+            '_round_index': round_index,
             'round_params': round_params,
             'preds': preds.tolist() if hasattr(preds, 'tolist') else list(preds),
             'alignment': {
@@ -1021,10 +1031,7 @@ class UniversalExperimentLoop:
                 except json.JSONDecodeError:
                     break
 
-                if (
-                    up_to_round is not None
-                    and entry['round_id'] >= up_to_round
-                ):
+                if up_to_round is not None and entry.get('_round_index', 0) >= up_to_round:
                     break
 
                 loaded_rounds += 1
