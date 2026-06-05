@@ -364,23 +364,6 @@ class Cohort:
 
 
     @staticmethod
-    def _probability_weighted_vote(member_probs: list[np.ndarray]) -> np.ndarray:
-
-        if not member_probs:
-            raise ValueError('member_probs must be a non-empty list.')
-
-        base_shape = member_probs[0].shape
-        for probs in member_probs[1:]:
-            if probs.shape != base_shape:
-                raise ValueError('Decoder outputs must share the same shape.')
-
-        probs_matrix = np.vstack(member_probs)
-        mean_p1 = np.mean(probs_matrix, axis=0)
-
-        return (mean_p1 > Cohort._VOTE_THRESHOLD).astype(np.int8)
-
-
-    @staticmethod
     def _validate_probability_range(probs: np.ndarray) -> None:
 
         if not np.isfinite(probs).all():
@@ -389,29 +372,6 @@ class Cohort:
 
         if np.any((probs < 0.0) | (probs > 1.0)):
             raise ValueError('Decoder probabilities must lie within [0, 1].')
-
-
-    @staticmethod
-    def _majority_vote(member_preds: list[np.ndarray]) -> np.ndarray:
-
-        if not member_preds:
-            raise ValueError('member_preds must be a non-empty list.')
-
-        base_shape = member_preds[0].shape
-        for preds in member_preds[1:]:
-            if preds.shape != base_shape:
-                raise ValueError('Decoder outputs must share the same shape.')
-
-        preds_matrix = np.vstack(member_preds)
-        mean_vote = np.mean(preds_matrix, axis=0)
-
-        return (mean_vote > Cohort._VOTE_THRESHOLD).astype(np.int8)
-
-
-    @staticmethod
-    def _to_binary_votes(preds: np.ndarray, *, threshold: float) -> np.ndarray:
-
-        return (preds > threshold).astype(np.int8)
 
 
     def _fallback_vote_threshold(self) -> float:
