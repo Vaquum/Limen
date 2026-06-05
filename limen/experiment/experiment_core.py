@@ -810,10 +810,7 @@ class UniversalExperimentLoop:
                     entry = json.loads(stripped)
                 except json.JSONDecodeError:
                     break
-                round_index = entry.get('_round_index') if entry.get('_round_index') is not None else entry.get('round_id', 0)
-                if isinstance(round_index, str):
-                    round_index = 0
-                if round_index >= start_round:
+                if entry.get('_round_index', 0) >= start_round:
                     break
                 valid_lines.append(stripped)
 
@@ -1034,12 +1031,8 @@ class UniversalExperimentLoop:
                 except json.JSONDecodeError:
                     break
 
-                if up_to_round is not None:
-                    round_index = entry.get('_round_index') if entry.get('_round_index') is not None else entry.get('round_id', 0)
-                    if isinstance(round_index, str):
-                        round_index = 0
-                    if round_index >= up_to_round:
-                        break
+                if up_to_round is not None and entry.get('_round_index', 0) >= up_to_round:
+                    break
 
                 loaded_rounds += 1
                 if retain_round_artifacts:
