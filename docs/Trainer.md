@@ -186,13 +186,13 @@ class BarPrediction:
 | `'null-features'` | mid-stream null feature value (data gap or transform anomaly) |
 | `'sensor-error'` | unexpected exception; prediction is not available |
 
-`predict()` never raises. All non-prediction conditions are returned as `BarPrediction` with the corresponding `reason`.
+`predict()` never raises for data or model failures — all non-prediction conditions are returned as `BarPrediction` with the corresponding `reason`. The one exception is `NotImplementedError`, which is raised if the manifest has `decoder_lookback > 1` (not yet supported).
 
 ### `predict_all(raw_klines) -> list[BarPrediction]`
 
 Returns one `BarPrediction` per bar in the post-bar-formation data. Warm-up bars and inside-window bars have `reason` set; valid bars have `prediction` and `probability` populated.
 
-On unexpected exceptions the method returns a list of `reason='sensor-error'` entries (one per input bar) rather than raising.
+On unexpected exceptions the method returns a list of `reason='sensor-error'` entries (one per input bar) rather than raising. The one exception is `NotImplementedError`, which is raised if the manifest has `decoder_lookback > 1` (not yet supported).
 
 ### What `predict()` expects
 
