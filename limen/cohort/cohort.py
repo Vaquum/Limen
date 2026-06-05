@@ -12,6 +12,7 @@ import polars as pl
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
 from limen.experiment.trainer.sensor import BarPrediction
+from limen.experiment.trainer.sensor import PredictionReason
 from limen.yaml.store import _SHA256_PREFIX
 
 
@@ -41,7 +42,7 @@ class Cohort:
         'cnn',
     )
     _VOTE_THRESHOLD = 0.5
-    _REASON_PRIORITY: ClassVar[dict[str, int]] = {
+    _REASON_PRIORITY: ClassVar[dict[PredictionReason, int]] = {
         'inside-training-window': 2,
         'null-features': 1,
         'warm-up': 0,
