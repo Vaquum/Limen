@@ -300,7 +300,7 @@ class Cohort:
         if not healthy_lengths:
             return [
                 BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
-                for _ in range(len(raw_klines))
+                for _ in range(len(all_bars[0]))
             ]
 
         n = healthy_lengths[0]
@@ -342,7 +342,7 @@ class Cohort:
         if not member_bars:
             raise ValueError('member_bars must be a non-empty list.')
 
-        dt = member_bars[0].datetime
+        dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
 
         valid_bars = [b for b in member_bars if b.reason != 'sensor-error']
         if not valid_bars:
