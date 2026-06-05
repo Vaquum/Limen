@@ -163,26 +163,31 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
     inside the mapped region (uncompressed) rather than into freshly allocated
     heap memory (decompressed).'''
 
-    mapped = pa.memory_map(file_path, 'r')
-    reader = pa_ipc.open_file(mapped)
-    if reader.num_record_batches != 1:
-        raise ValueError(
-            f'{file_path} is not a single Arrow record batch '
-            f'(num_record_batches={reader.num_record_batches}); '
-            'it cannot be served zero-copy.'
-        )
-    whole = mapped.read_buffer(mapped.size())
-    low = whole.address
-    high = low + whole.size
-    batch = reader.get_batch(0)
-    for column in batch.columns:
-        for buffer in column.buffers():
-            if buffer is not None and buffer.size and not (low <= buffer.address < high):
-                raise ValueError(
-                    f'{file_path} is a compressed Arrow IPC file; it cannot be '
-                    'memory-mapped zero-copy (it would fully decompress into RAM). '
-                    'Re-write it uncompressed to use get_arrow_file.'
-                )
+    # The context manager releases the file descriptor / mmap handle even on the
+    # raise paths (pyarrow's RecordBatchFileReader has no public close()).
+    with pa.memory_map(file_path, 'r') as mapped:
+        reader = pa_ipc.open_file(mapped)
+        if reader.num_record_batches != 1:
+            raise ValueError(
+                f'{file_path} is not a single Arrow record batch '
+                f'(num_record_batches={reader.num_record_batches}); '
+                'it cannot be served zero-copy.'
+            )
+        batch = reader.get_batch(0)
+        # `open_file`/`get_batch` move the file position; rewind so read_buffer
+        # spans the whole mapping and yields the true mmap address range.
+        mapped.seek(0)
+        whole = mapped.read_buffer(mapped.size())
+        low = whole.address
+        high = low + whole.size
+        for column in batch.columns:
+            for buffer in column.buffers():
+                if buffer is not None and buffer.size and not (low <= buffer.address < high):
+                    raise ValueError(
+                        f'{file_path} is a compressed Arrow IPC file; it cannot be '
+                        'memory-mapped zero-copy (it would fully decompress into RAM). '
+                        'Re-write it uncompressed to use get_arrow_file.'
+                    )
 
 
 def _validate_columns(df: pl.DataFrame, columns: list[str] | None) -> pl.DataFrame:
