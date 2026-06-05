@@ -944,10 +944,10 @@ class HistoricalData:
         `ts` index. When `ts` is present, a `datetime` column is added as a
         zero-cost reinterpret of it, since the rest of Limen keys on `datetime`.
 
-        Date range and row limits stay zero-copy: a date range maps to a
-        contiguous slice of the sorted index, and `row_count_limit` returns the
-        latest rows as a slice. Input mirrors `get_spot_klines`. The memory map's
-        lifetime is owned by the returned frame (kept on the instance via
+        Date range and row limits stay zero-copy when `ts` is an integer index: a
+        date range maps to a contiguous slice of the sorted index, and
+        `row_count_limit` returns the latest rows as a slice. Input mirrors
+        `get_spot_klines`. The memory map's
         `_store`); keep that frame referenced while holding zero-copy views.
 
         Raises if the file is not a single *uncompressed* record batch: a
