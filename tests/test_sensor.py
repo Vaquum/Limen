@@ -299,14 +299,16 @@ def test_predict_returns_warmup_if_insufficient_valid_rows() -> None:
     assert result.prediction is None
 
 
-def test_predict_returns_sensor_error_for_decoder_lookback_gt_1() -> None:
+def test_predict_raises_not_implemented_for_decoder_lookback_gt_1() -> None:
     manifest, _ = _make_lag_manifest(lag=3)
     manifest.decoder_lookback = 2
     raw = _make_klines(10)
     sensor = _make_sensor(manifest)
-    result = sensor.predict(raw)
-    assert result.reason == 'sensor-error'
-    assert result.prediction is None
+    try:
+        sensor.predict(raw)
+        assert False, 'Expected NotImplementedError'
+    except NotImplementedError as e:
+        assert 'decoder_lookback' in str(e)
 
 
 def test_predict_returns_inside_training_window_reason() -> None:
@@ -416,15 +418,17 @@ def test_predict_all_midstream_null_row_has_reason_null_features() -> None:
     assert results[6].prediction is not None
 
 
-def test_predict_all_decoder_lookback_gt1_returns_sensor_error() -> None:
+def test_predict_all_raises_not_implemented_for_decoder_lookback_gt1() -> None:
     manifest = _make_basic_manifest()
     manifest.decoder_lookback = 2
     manifest.split_dates = None
     raw = _make_klines(10)
     sensor = _make_sensor(manifest, round_params={'bar_type': 'base'})
-    results = sensor.predict_all(raw)
-    assert len(results) == len(raw)
-    assert all(r.reason == 'sensor-error' for r in results)
+    try:
+        sensor.predict_all(raw)
+        assert False, 'Expected NotImplementedError'
+    except NotImplementedError as e:
+        assert 'decoder_lookback' in str(e)
 
 
 def test_extract_scalar_returns_none_for_none() -> None:

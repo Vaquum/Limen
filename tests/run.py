@@ -786,7 +786,7 @@ from tests.test_sensor import test_apply_sensor_pca_skipped_when_disabled
 from tests.test_sensor import test_apply_sensor_pca_skipped_when_no_config
 from tests.test_sensor import test_predict_returns_warmup_if_last_bar_is_warmup
 from tests.test_sensor import test_predict_returns_warmup_if_insufficient_valid_rows
-from tests.test_sensor import test_predict_returns_sensor_error_for_decoder_lookback_gt_1
+from tests.test_sensor import test_predict_raises_not_implemented_for_decoder_lookback_gt_1
 from tests.test_sensor import test_predict_returns_inside_training_window_reason
 from tests.test_sensor import test_predict_allows_context_bars_inside_window_when_last_bar_is_valid
 from tests.test_sensor import test_predict_happy_path_returns_bar_prediction
@@ -795,7 +795,7 @@ from tests.test_sensor import test_predict_all_warmup_bars_have_reason_warmup
 from tests.test_sensor import test_predict_all_valid_bars_have_predictions
 from tests.test_sensor import test_predict_all_inside_window_bars_flagged
 from tests.test_sensor import test_predict_all_midstream_null_row_has_reason_null_features
-from tests.test_sensor import test_predict_all_decoder_lookback_gt1_returns_sensor_error
+from tests.test_sensor import test_predict_all_raises_not_implemented_for_decoder_lookback_gt1
 from tests.test_sensor import test_extract_scalar_returns_none_for_none
 from tests.test_sensor import test_extract_scalar_returns_python_int
 from tests.test_sensor import test_extract_scalar_returns_python_float
@@ -1685,7 +1685,7 @@ tests = [
     test_apply_sensor_pca_skipped_when_no_config,
     test_predict_returns_warmup_if_last_bar_is_warmup,
     test_predict_returns_warmup_if_insufficient_valid_rows,
-    test_predict_returns_sensor_error_for_decoder_lookback_gt_1,
+    test_predict_raises_not_implemented_for_decoder_lookback_gt_1,
     test_predict_returns_inside_training_window_reason,
     test_predict_allows_context_bars_inside_window_when_last_bar_is_valid,
     test_predict_happy_path_returns_bar_prediction,
@@ -1694,7 +1694,7 @@ tests = [
     test_predict_all_valid_bars_have_predictions,
     test_predict_all_inside_window_bars_flagged,
     test_predict_all_midstream_null_row_has_reason_null_features,
-    test_predict_all_decoder_lookback_gt1_returns_sensor_error,
+    test_predict_all_raises_not_implemented_for_decoder_lookback_gt1,
     test_extract_scalar_returns_none_for_none,
     test_extract_scalar_returns_python_int,
     test_extract_scalar_returns_python_float,
