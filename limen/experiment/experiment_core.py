@@ -782,7 +782,7 @@ class UniversalExperimentLoop:
             )
         self.experiment_log = pl.read_csv(csv_path, n_rows=start_round)
 
-        col = next((c for c in ('_id', '_param_hash') if c in self.experiment_log.columns), None)
+        col = next((c for c in ('_param_hash', '_id') if c in self.experiment_log.columns), None)
         if col is not None:
             self._search_strategy.rebuild_seen_from_log(
                 self.experiment_log[col].drop_nulls().to_list()
@@ -810,7 +810,10 @@ class UniversalExperimentLoop:
                     entry = json.loads(stripped)
                 except json.JSONDecodeError:
                     break
-                if entry.get('_round_index', 0) >= start_round:
+                round_index = entry.get('_round_index') if entry.get('_round_index') is not None else entry.get('round_id', 0)
+                if isinstance(round_index, str):
+                    round_index = 0
+                if round_index >= start_round:
                     break
                 valid_lines.append(stripped)
 
@@ -1031,11 +1034,12 @@ class UniversalExperimentLoop:
                 except json.JSONDecodeError:
                     break
 
-                if (
-                    up_to_round is not None
-                    and entry.get('_round_index', 0) >= up_to_round
-                ):
-                    break
+                if up_to_round is not None:
+                    round_index = entry.get('_round_index') if entry.get('_round_index') is not None else entry.get('round_id', 0)
+                    if isinstance(round_index, str):
+                        round_index = 0
+                    if round_index >= up_to_round:
+                        break
 
                 loaded_rounds += 1
                 if retain_round_artifacts:

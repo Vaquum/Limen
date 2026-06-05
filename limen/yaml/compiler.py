@@ -310,6 +310,8 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     domain = ParamDomain(params)
     strategy_type = strategy_cfg.get('type', 'random')
     seed = strategy_cfg.get('seed')
+    if seed is not None:
+        seed = int(seed)
     if strategy_type == 'grid':
         return GridStrategy(domain)
     if strategy_type == 'random':

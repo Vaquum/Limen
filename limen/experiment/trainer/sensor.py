@@ -111,6 +111,9 @@ class Sensor:
                 raw_klines, self._fitted_params, self._round_params
             )
 
+            if len(data) == 0:
+                return BarPrediction(datetime=None, prediction=None, probability=None, reason='warm-up')
+
             dt = data[-1]['datetime'][0] if 'datetime' in data.columns else None
 
             inside_window = self._inside_training_window_mask(data, manifest)
@@ -172,6 +175,7 @@ class Sensor:
             data, indicator_lookback = manifest.sensor_input_prep(
                 raw_klines, self._fitted_params, self._round_params
             )
+            n_fallback = len(data)
 
             inside_window = self._inside_training_window_mask(data, manifest)
             feature_cols = [c for c in data.columns if c != 'datetime']
