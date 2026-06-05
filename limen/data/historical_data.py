@@ -7,7 +7,10 @@ from typing import Final
 from urllib.parse import urlparse
 import zipfile
 
+import numpy as np
 import polars as pl
+import pyarrow as pa
+import pyarrow.ipc as pa_ipc
 import requests
 
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
@@ -103,6 +106,95 @@ def _resolve_row_count_limit(
         raise ValueError('Only one of row_count_limit and n_rows may be set.')
 
     return row_count_limit if row_count_limit is not None else n_rows
+
+
+def _parse_utc_datetime(value: str) -> datetime:
+    return datetime.strptime(value, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+
+
+def _slice_arrow_to_date_range(
+    data: pl.DataFrame,
+    start_date_limit: str | None,
+    end_date_limit: str | None,
+) -> pl.DataFrame:
+    if start_date_limit is None and end_date_limit is None:
+        return data
+
+    if 'ts' in data.columns and data.schema['ts'].is_integer():
+        # An integer `ts` is the sorted nanosecond index, so a date range is a
+        # contiguous slice found by binary search -- the result stays a
+        # zero-copy view rather than a materialized filter. A non-integer `ts`
+        # (e.g. a Datetime column) falls through to the datetime filter below.
+        index = data['ts'].to_numpy(allow_copy=False)
+        start = 0
+        if start_date_limit is not None:
+            bound = int(_parse_utc_datetime(start_date_limit).timestamp())
+            start = int(np.searchsorted(index, bound * 1_000_000_000, side='left'))
+        stop = index.shape[0]
+        if end_date_limit is not None:
+            bound = int(_parse_utc_datetime(end_date_limit).timestamp())
+            stop = int(np.searchsorted(index, bound * 1_000_000_000, side='right'))
+        return data.slice(start, max(stop - start, 0))
+
+    if 'datetime' in data.columns:
+        if start_date_limit is not None:
+            data = data.filter(
+                pl.col('datetime') >= pl.lit(_parse_utc_datetime(start_date_limit))
+            )
+        if end_date_limit is not None:
+            data = data.filter(
+                pl.col('datetime') <= pl.lit(_parse_utc_datetime(end_date_limit))
+            )
+        return data
+
+    raise ValueError(
+        "A date range requires a 'ts' (Int64 nanoseconds) or 'datetime' column."
+    )
+
+
+def _validate_arrow_zero_copy(file_path: str) -> None:
+    '''Raise unless `file_path` is a single-record-batch, uncompressed Arrow IPC
+    file that can actually be served zero-copy.
+
+    A compressed IPC file passes a naive `n_chunks() == 1` check but cannot be
+    memory-mapped: polars/pyarrow silently fall back to a full decompress into
+    RAM, dropping the zero-copy guarantee with only an uncatchable Rust-side log.
+    Detect it by mapping the file and confirming the first batch's buffers point
+    inside the mapped region (uncompressed) rather than into freshly allocated
+    heap memory (decompressed).'''
+
+    # The context manager releases the file descriptor / mmap handle even on the
+    # raise paths (pyarrow's RecordBatchFileReader has no public close()).
+    with pa.memory_map(file_path, 'r') as mapped:
+        reader = pa_ipc.open_file(mapped)
+        if reader.num_record_batches != 1:
+            raise ValueError(
+                f'{file_path} is not a single Arrow record batch '
+                f'(num_record_batches={reader.num_record_batches}); '
+                'it cannot be served zero-copy.'
+            )
+        batch = reader.get_batch(0)
+        # `open_file`/`get_batch` move the file position; rewind so read_buffer
+        # spans the whole mapping and yields the true mmap address range.
+        mapped.seek(0)
+        whole = mapped.read_buffer(mapped.size())
+        low = whole.address
+        high = low + whole.size
+        for column in batch.columns:
+            for buffer in column.buffers():
+                if buffer is None or not buffer.size:
+                    continue
+                # The *entire* buffer [start, end) must lie inside the mapping;
+                # a buffer that starts inside but extends past `high` is not
+                # fully mmap-backed and would not be served zero-copy.
+                start = buffer.address
+                end = start + buffer.size
+                if not (low <= start and end <= high):
+                    raise ValueError(
+                        f'{file_path} is a compressed Arrow IPC file; it cannot be '
+                        'memory-mapped zero-copy (it would fully decompress into RAM). '
+                        'Re-write it uncompressed to use get_arrow_file.'
+                    )
 
 
 def _validate_columns(df: pl.DataFrame, columns: list[str] | None) -> pl.DataFrame:
@@ -833,6 +925,78 @@ class HistoricalData:
             dollar_bar_size,
             source_dollar_bar_size,
         )
+
+        if row_count_limit is not None:
+            data = data.tail(row_count_limit)
+
+        return self._store(data)
+
+    def get_arrow_file(
+        self,
+        file_path: str,
+        row_count_limit: int | None = None,
+        start_date_limit: str | None = None,
+        end_date_limit: str | None = None,
+        *,
+        n_rows: int | None = None,
+    ) -> pl.DataFrame:
+
+        '''Zero-copy read of a local single-batch Arrow IPC file.
+
+        Memory-maps `file_path` and returns a Polars DataFrame whose columns are
+        views onto the mapping: `df[col].to_numpy(allow_copy=False)` succeeds and
+        shares the mapped memory -- no deserialization, no buffer copy. Built for
+        the tdw Arrow bar store (`/opt/arrow/<series>/latest.arrow`): a single
+        uncompressed record batch with a strictly increasing `Int64`-nanosecond
+        `ts` index. When `ts` is present, a `datetime` column is added as a
+        zero-cost reinterpret of it, since the rest of Limen keys on `datetime`.
+
+        With the `Int64`-nanosecond `ts` index, date range and row limits stay
+        zero-copy: the date range maps to a contiguous slice of the sorted index
+        (binary search) and `row_count_limit` returns the latest rows as a slice.
+        A file carrying only a `datetime` column (no integer `ts`) instead falls
+        back to a `datetime` filter for the date range, which materializes.
+        Input mirrors `get_spot_klines`. The memory map's lifetime is owned by
+        the returned frame (kept on the instance via `_store`); keep that frame
+        referenced while holding zero-copy views.
+
+        Raises if the file is not a single *uncompressed* record batch: a
+        multi-batch or compressed Arrow IPC file cannot be memory-mapped, so it
+        would silently materialize a full copy. `n_rows` is a legacy alias.
+        '''
+
+        row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
+        start_date_limit = _normalize_datetime_literal(
+            start_date_limit, 'start_date_limit'
+        )
+        end_date_limit = _normalize_datetime_literal(
+            end_date_limit, 'end_date_limit', end_of_day=True
+        )
+        if (
+            start_date_limit is not None
+            and end_date_limit is not None
+            and row_count_limit is not None
+        ):
+            raise ValueError(
+                'row_count_limit must be None when both start_date_limit '
+                'and end_date_limit are set.'
+            )
+
+        _validate_arrow_zero_copy(file_path)
+        data = pl.read_ipc(file_path, memory_map=True, rechunk=False)
+
+        if (
+            'datetime' not in data.columns
+            and 'ts' in data.columns
+            and data.schema['ts'].is_integer()
+        ):
+            data = data.with_columns(
+                pl.col('ts')
+                .cast(pl.Datetime('ns', time_zone='UTC'))
+                .alias('datetime')
+            )
+
+        data = _slice_arrow_to_date_range(data, start_date_limit, end_date_limit)
 
         if row_count_limit is not None:
             data = data.tail(row_count_limit)

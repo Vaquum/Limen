@@ -542,3 +542,160 @@ def test_get_spot_klines_rejects_row_limit_with_closed_date_window() -> None:
                 start_date_limit='2020-01-01',
                 end_date_limit='2020-01-02',
             )
+
+
+_ARROW_BASE_NS = 1_577_836_800_000_000_000  # 2020-01-01 00:00:00 UTC, nanoseconds
+_ARROW_HOUR_NS = 3_600_000_000_000
+
+
+def _write_arrow_bar_file(
+    path: Path,
+    *,
+    rows: int = 1000,
+    batch_rows: int | None = None,
+    compression: str = 'uncompressed',
+) -> None:
+    ts = [_ARROW_BASE_NS + index * _ARROW_HOUR_NS for index in range(rows)]
+    frame = pl.DataFrame({
+        'ts': pl.Series(ts, dtype=pl.Int64),
+        'open': [float(index) for index in range(rows)],
+        'high': [float(index) + 1.0 for index in range(rows)],
+        'low': [float(index) - 1.0 for index in range(rows)],
+        'close': [float(index) + 0.5 for index in range(rows)],
+        'volume': [float(index) * 2.0 for index in range(rows)],
+    }).rechunk()
+    frame.write_ipc(
+        str(path),
+        compression=compression,
+        record_batch_size=batch_rows if batch_rows is not None else frame.height,
+    )
+
+
+def test_get_arrow_file_zero_copy_single_batch(tmp_path: Path) -> None:
+    path = tmp_path / 'time_1h.arrow'
+    _write_arrow_bar_file(path, rows=1000)
+
+    historical = HistoricalData()
+    data = historical.get_arrow_file(str(path))
+
+    assert isinstance(data, pl.DataFrame)
+    assert data.n_chunks() == 1
+    # to_numpy(allow_copy=False) raises if a copy is needed; reaching the assert
+    # proves the columns are views straight onto the memory map.
+    assert not data['ts'].to_numpy(allow_copy=False).flags.writeable
+    assert not data['close'].to_numpy(allow_copy=False).flags.writeable
+    assert 'datetime' in data.columns
+    assert isinstance(data.schema['datetime'], pl.Datetime)
+    assert data.columns == historical.data_columns
+
+
+def test_get_arrow_file_date_range_is_zero_copy_slice(tmp_path: Path) -> None:
+    path = tmp_path / 'time_1h.arrow'
+    _write_arrow_bar_file(path, rows=1000)
+
+    historical = HistoricalData()
+    windowed = historical.get_arrow_file(
+        str(path),
+        start_date_limit='2020-01-02',
+        end_date_limit='2020-01-02',
+    )
+
+    assert windowed.height == 24  # one full day of hourly bars
+    assert windowed.n_chunks() == 1
+    assert not windowed['close'].to_numpy(allow_copy=False).flags.writeable
+    assert windowed['datetime'][0] == datetime(2020, 1, 2, tzinfo=timezone.utc)
+    assert windowed['datetime'][-1] == datetime(
+        2020, 1, 2, 23, tzinfo=timezone.utc
+    )
+
+
+def test_get_arrow_file_row_count_limit_zero_copy(tmp_path: Path) -> None:
+    path = tmp_path / 'time_1h.arrow'
+    _write_arrow_bar_file(path, rows=1000)
+
+    historical = HistoricalData()
+    full = historical.get_arrow_file(str(path))
+    tail = historical.get_arrow_file(str(path), row_count_limit=10)
+    legacy = historical.get_arrow_file(str(path), n_rows=10)
+
+    assert tail.height == 10
+    assert tail['ts'].to_list() == full['ts'].tail(10).to_list()
+    assert legacy['ts'].to_list() == full['ts'].tail(10).to_list()
+    assert not tail['close'].to_numpy(allow_copy=False).flags.writeable
+
+
+def test_get_arrow_file_rejects_non_single_batch(tmp_path: Path) -> None:
+    path = tmp_path / 'multi.arrow'
+    _write_arrow_bar_file(path, rows=1000, batch_rows=100)
+
+    historical = HistoricalData()
+    with pytest.raises(ValueError, match='single Arrow record batch'):
+        historical.get_arrow_file(str(path))
+
+
+def test_get_arrow_file_rejects_compressed(tmp_path: Path) -> None:
+    # A compressed single-batch file cannot be memory-mapped, so it must raise
+    # rather than silently decompressing into RAM and dropping the zero-copy
+    # guarantee (it passes a naive n_chunks() == 1 check).
+    path = tmp_path / 'compressed.arrow'
+    _write_arrow_bar_file(path, rows=1000, compression='lz4')
+
+    historical = HistoricalData()
+    with pytest.raises(ValueError, match='compressed'):
+        historical.get_arrow_file(str(path))
+
+
+def test_get_arrow_file_view_outlives_call(tmp_path: Path) -> None:
+    import gc
+
+    path = tmp_path / 'time_1h.arrow'
+    _write_arrow_bar_file(path, rows=1000)
+
+    historical = HistoricalData()
+    data = historical.get_arrow_file(str(path))
+    ts = data['ts'].to_numpy(allow_copy=False)
+    # the intermediate map/reader scope has returned; the frame (held on the
+    # instance via _store) owns the mapping, so the view is still valid.
+    gc.collect()
+    assert int(ts[0]) == _ARROW_BASE_NS
+    assert int(ts[-1]) == _ARROW_BASE_NS + 999 * _ARROW_HOUR_NS
+
+
+def test_get_arrow_file_rejects_row_limit_with_closed_date_window(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / 'time_1h.arrow'
+    _write_arrow_bar_file(path, rows=100)
+
+    historical = HistoricalData()
+    with pytest.raises(ValueError, match='row_count_limit must be None'):
+        historical.get_arrow_file(
+            str(path),
+            row_count_limit=1,
+            start_date_limit='2020-01-01',
+            end_date_limit='2020-01-02',
+        )
+
+
+def test_get_arrow_file_date_range_on_datetime_only_file(tmp_path: Path) -> None:
+    # A generic Arrow file with a `datetime` column and no integer `ts` index:
+    # the date range falls back to a datetime filter, because the zero-copy
+    # searchsorted path is guarded by an integer-dtype check on `ts`.
+    path = tmp_path / 'datetime_only.arrow'
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    frame = pl.DataFrame({
+        'datetime': [start + timedelta(hours=index) for index in range(1000)],
+        'close': [float(index) for index in range(1000)],
+    }).rechunk()
+    frame.write_ipc(str(path), compression='uncompressed', record_batch_size=frame.height)
+
+    historical = HistoricalData()
+    windowed = historical.get_arrow_file(
+        str(path),
+        start_date_limit='2020-01-02',
+        end_date_limit='2020-01-02',
+    )
+
+    assert windowed.height == 24
+    assert windowed['datetime'][0] == datetime(2020, 1, 2, tzinfo=timezone.utc)
+    assert windowed['datetime'][-1] == datetime(2020, 1, 2, 23, tzinfo=timezone.utc)

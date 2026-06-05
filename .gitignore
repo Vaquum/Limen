@@ -21,6 +21,8 @@ test_x*.csv
 *.csv
 !tests/fixtures/historical_data_spot_2h.csv
 !logreg_broad_2_3600.csv
+# Experiment-run output archives (e.g. btc_logreg_15m_up_early__r0004.zip)
+*__r[0-9][0-9][0-9][0-9].zip
 # Added by Task Master AI
 # Logs
 logs
