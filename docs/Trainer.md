@@ -157,10 +157,10 @@ print(sensor.round_params)
 bar_pred = sensor.predict(raw_klines)
 ```
 
-Sensors are also callable:
+Sensors are also callable — `__call__` aliases `predict_all` and returns `list[BarPrediction]`, one entry per bar. Use this in replay loops:
 
 ```python
-bar_pred = sensor(raw_klines)
+all_preds = sensor(raw_klines)  # list[BarPrediction]
 ```
 
 ### `predict(raw_klines) -> BarPrediction`

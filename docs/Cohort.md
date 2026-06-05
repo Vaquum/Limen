@@ -39,7 +39,7 @@ Typical path:
 6. infer with:
    - `predict(raw_klines)` → one `BarPrediction` for the last bar
    - `predict_all(raw_klines)` → one `BarPrediction` per bar
-   - `__call__(raw_klines)` as an alias of `predict(...)`
+   - `__call__(raw_klines)` as an alias of `predict_all(...)` → `list[BarPrediction]`
 
 ## Construction
 
@@ -263,7 +263,7 @@ for bar in all_preds:
 
 ### `__call__(raw_klines)`
 
-Alias of `predict(raw_klines)`.
+Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per bar. Use this in replay loops where you want all bars from a window.
 
 ## Real End-To-End Example
 
@@ -302,8 +302,8 @@ all_preds = cohort.predict_all(raw_klines)
 valid = [p for p in all_preds if p.reason is None]
 print(f'{len(valid)} valid bars out of {len(all_preds)}')
 
-# 4c) callable alias
-bar_pred2 = cohort(raw_klines)
+# 4c) callable alias — same as predict_all, useful in replay loops
+all_preds2 = cohort(raw_klines)  # list[BarPrediction]
 ```
 
 ## Failure Cases And Caveats
