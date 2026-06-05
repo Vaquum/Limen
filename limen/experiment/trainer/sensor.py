@@ -116,8 +116,7 @@ class Sensor:
 
             dt = data[-1]['datetime'][0] if 'datetime' in data.columns else None
 
-            inside_window = self._inside_training_window_mask(data, manifest)
-            if inside_window[-1]:
+            if self._last_bar_inside_training_window(dt, manifest):
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='inside-training-window')
 
             valid_rows = len(data) - indicator_lookback
@@ -241,6 +240,17 @@ class Sensor:
                 BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
                 for _ in range(n_fallback)
             ]
+
+
+    def _last_bar_inside_training_window(self,
+                                         dt: Any,
+                                         manifest: Any) -> bool:
+
+        if manifest.split_dates is None or dt is None:
+            return False
+        train_start, _, _, _, _, test_end = manifest.split_dates
+        dt_date = dt.date() if hasattr(dt, 'date') else dt
+        return train_start <= dt_date < test_end
 
 
     def _inside_training_window_mask(self,
