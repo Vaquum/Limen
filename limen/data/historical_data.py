@@ -182,7 +182,14 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
         high = low + whole.size
         for column in batch.columns:
             for buffer in column.buffers():
-                if buffer is not None and buffer.size and not (low <= buffer.address < high):
+                if buffer is None or not buffer.size:
+                    continue
+                # The *entire* buffer [start, end) must lie inside the mapping;
+                # a buffer that starts inside but extends past `high` is not
+                # fully mmap-backed and would not be served zero-copy.
+                start = buffer.address
+                end = start + buffer.size
+                if not (low <= start and end <= high):
                     raise ValueError(
                         f'{file_path} is a compressed Arrow IPC file; it cannot be '
                         'memory-mapped zero-copy (it would fully decompress into RAM). '
@@ -944,11 +951,14 @@ class HistoricalData:
         `ts` index. When `ts` is present, a `datetime` column is added as a
         zero-cost reinterpret of it, since the rest of Limen keys on `datetime`.
 
-        Date range and row limits stay zero-copy when `ts` is an integer index: a
-        date range maps to a contiguous slice of the sorted index, and
-        `row_count_limit` returns the latest rows as a slice. Input mirrors
-        `get_spot_klines`. The memory map's
-        `_store`); keep that frame referenced while holding zero-copy views.
+        With the `Int64`-nanosecond `ts` index, date range and row limits stay
+        zero-copy: the date range maps to a contiguous slice of the sorted index
+        (binary search) and `row_count_limit` returns the latest rows as a slice.
+        A file carrying only a `datetime` column (no integer `ts`) instead falls
+        back to a `datetime` filter for the date range, which materializes.
+        Input mirrors `get_spot_klines`. The memory map's lifetime is owned by
+        the returned frame (kept on the instance via `_store`); keep that frame
+        referenced while holding zero-copy views.
 
         Raises if the file is not a single *uncompressed* record batch: a
         multi-batch or compressed Arrow IPC file cannot be memory-mapped, so it
