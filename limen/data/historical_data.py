@@ -118,10 +118,11 @@ def _slice_arrow_to_date_range(
     if start_date_limit is None and end_date_limit is None:
         return data
 
-    if 'ts' in data.columns:
-        # `ts` is the sorted Int64-nanosecond index, so a date range is a
+    if 'ts' in data.columns and data.schema['ts'].is_integer():
+        # An integer `ts` is the sorted nanosecond index, so a date range is a
         # contiguous slice found by binary search -- the result stays a
-        # zero-copy view rather than a materialized filter.
+        # zero-copy view rather than a materialized filter. A non-integer `ts`
+        # (e.g. a Datetime column) falls through to the datetime filter below.
         index = data['ts'].to_numpy(allow_copy=False)
         start = 0
         if start_date_limit is not None:
@@ -937,7 +938,11 @@ class HistoricalData:
                 f"(n_chunks={data.n_chunks()}); it cannot be served zero-copy."
             )
 
-        if 'datetime' not in data.columns and 'ts' in data.columns:
+        if (
+            'datetime' not in data.columns
+            and 'ts' in data.columns
+            and data.schema['ts'].is_integer()
+        ):
             data = data.with_columns(
                 pl.col('ts')
                 .cast(pl.Datetime('ns', time_zone='UTC'))

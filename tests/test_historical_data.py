@@ -662,3 +662,27 @@ def test_get_arrow_file_rejects_row_limit_with_closed_date_window(
             start_date_limit='2020-01-01',
             end_date_limit='2020-01-02',
         )
+
+
+def test_get_arrow_file_date_range_on_datetime_only_file(tmp_path: Path) -> None:
+    # A generic Arrow file with a `datetime` column and no integer `ts` index:
+    # the date range falls back to a datetime filter, because the zero-copy
+    # searchsorted path is guarded by an integer-dtype check on `ts`.
+    path = tmp_path / 'datetime_only.arrow'
+    start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    frame = pl.DataFrame({
+        'datetime': [start + timedelta(hours=index) for index in range(1000)],
+        'close': [float(index) for index in range(1000)],
+    }).rechunk()
+    frame.write_ipc(str(path), compression='uncompressed', record_batch_size=frame.height)
+
+    historical = HistoricalData()
+    windowed = historical.get_arrow_file(
+        str(path),
+        start_date_limit='2020-01-02',
+        end_date_limit='2020-01-02',
+    )
+
+    assert windowed.height == 24
+    assert windowed['datetime'][0] == datetime(2020, 1, 2, tzinfo=timezone.utc)
+    assert windowed['datetime'][-1] == datetime(2020, 1, 2, 23, tzinfo=timezone.utc)
