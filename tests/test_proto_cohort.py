@@ -716,7 +716,6 @@ def test_cohort_id_is_stable_across_calls():
         cohort.set_members(sensors)
 
         first = cohort.cohort_id
-        # Rebuilding from same experiment and membership yields identical cohort_id
         cohort2 = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
         sensors2, _ = _train_real_members_and_input(exp_dir, [round_ids[0]])
         cohort2.set_members(sensors2)
@@ -760,9 +759,7 @@ def test_manifest_id_consistent_across_members():
 
 
 def test_yaml_reference_lineage_stripped_from_metadata():
-    # Simulate a committed YAML that has a lineage block injected.
-    # _write_metadata() must strip it before storing yaml_reference so the
-    # manifest_id hash is identical to a plain (pre-commit) YAML.
+
     original = historical_data.HistoricalData.get_spot_klines
     historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
     try:
