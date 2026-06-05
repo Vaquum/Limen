@@ -270,8 +270,8 @@ def test_load_round_data_skips_blank_and_malformed_lines() -> None:
 
         round_data = trainer._load_round_data()
 
-    assert list(round_data) == [0, 1]
-    assert round_data[1]['round_params'] == {'alpha': 2}
+    assert list(round_data) == ['0', '1']
+    assert round_data['1']['round_params'] == {'alpha': 2}
 
 
 def test_load_round_data_requires_round_data_file() -> None:
