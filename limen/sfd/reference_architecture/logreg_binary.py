@@ -6,6 +6,8 @@ from sklearn.linear_model import LogisticRegression
 
 from limen.calibration import fit_calibrator
 from limen.metrics.binary_metrics import binary_metrics
+from limen.sfd.reference_architecture.base import DEFAULT_FEE_BPS
+from limen.sfd.reference_architecture.base import DEFAULT_SLIP_BPS
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 if TYPE_CHECKING:
@@ -159,8 +161,8 @@ def logreg_binary(data: dict,
                   warm_start: bool = False,
                   n_jobs: int = -1,
                   l1_ratio: float | None = None,
-                  fee_bps: float = 5.0,
-                  slip_bps: float = 5.0,
+                  fee_bps: float = DEFAULT_FEE_BPS,
+                  slip_bps: float = DEFAULT_SLIP_BPS,
                   prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
     '''

@@ -25,6 +25,26 @@ class ReferenceModel(ABC):
         self.fee_bps = DEFAULT_FEE_BPS
         self.slip_bps = DEFAULT_SLIP_BPS
 
+    @property
+    def fee_bps(self) -> float:
+        return self._fee_bps
+
+    @fee_bps.setter
+    def fee_bps(self, value: float) -> None:
+        if value < 0:
+            raise ValueError('ReferenceModel fee_bps must be non-negative')
+        self._fee_bps = value
+
+    @property
+    def slip_bps(self) -> float:
+        return self._slip_bps
+
+    @slip_bps.setter
+    def slip_bps(self, value: float) -> None:
+        if value < 0:
+            raise ValueError('ReferenceModel slip_bps must be non-negative')
+        self._slip_bps = value
+
     @abstractmethod
     def train(self, data: dict, **params: Any) -> 'ReferenceModel':
 

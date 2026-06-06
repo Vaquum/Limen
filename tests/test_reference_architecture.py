@@ -19,6 +19,8 @@ from limen.sfd.reference_architecture import logreg_binary
 from limen.sfd.reference_architecture import random_binary
 from limen.sfd.reference_architecture import tabpfn_binary
 from limen.sfd.reference_architecture import xgboost_regressor
+from limen.sfd.reference_architecture.base import DEFAULT_FEE_BPS
+from limen.sfd.reference_architecture.base import DEFAULT_SLIP_BPS
 from limen.sfd.reference_architecture.rule_based import rule_based
 
 
@@ -364,9 +366,20 @@ def test_higher_cost_raises_drag_and_lowers_net_pnl():
 def test_omitting_cost_matches_explicit_default():
 
     omitted = logreg_binary(_make_data(binary=True, with_price=True))
-    explicit = logreg_binary(_make_data(binary=True, with_price=True), fee_bps=5.0, slip_bps=5.0)
+    explicit = logreg_binary(_make_data(binary=True, with_price=True), fee_bps=DEFAULT_FEE_BPS, slip_bps=DEFAULT_SLIP_BPS)
 
     backtest_keys = [key for key in omitted if key.startswith('backtest_')]
     assert backtest_keys
     for key in backtest_keys:
         assert omitted[key] == explicit[key] or (np.isnan(omitted[key]) and np.isnan(explicit[key]))
+
+
+def test_negative_cost_is_rejected():
+
+    data = _make_data(binary=True, with_price=True)
+    for bad_cost in ({'fee_bps': -1.0}, {'slip_bps': -1.0}):
+        try:
+            logreg_binary(data, **bad_cost)
+            assert False, 'Expected ValueError for negative cost'
+        except ValueError as e:
+            assert 'bps' in str(e)

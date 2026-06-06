@@ -3,6 +3,8 @@ from typing import Any
 import numpy as np
 
 from limen.metrics.binary_metrics import binary_metrics
+from limen.sfd.reference_architecture.base import DEFAULT_FEE_BPS
+from limen.sfd.reference_architecture.base import DEFAULT_SLIP_BPS
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 
@@ -84,8 +86,8 @@ class RandomBinary(ReferenceModel):
 
 def random_binary(data: dict,
                   random_weights: float = 0.5,
-                  fee_bps: float = 5.0,
-                  slip_bps: float = 5.0) -> dict:
+                  fee_bps: float = DEFAULT_FEE_BPS,
+                  slip_bps: float = DEFAULT_SLIP_BPS) -> dict:
 
     '''
     Random binary classifier for testing and demonstration purposes.

@@ -6,6 +6,8 @@ import polars as pl
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.metrics.rule_based_metrics import rule_based_metrics
+from limen.sfd.reference_architecture.base import DEFAULT_FEE_BPS
+from limen.sfd.reference_architecture.base import DEFAULT_SLIP_BPS
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 
@@ -137,8 +139,8 @@ class RuleBasedStrategy(ReferenceModel):
 def rule_based(data: dict,
                sharpe_std_threshold: float = 0.5,
                sharpe_degradation_threshold: float = 0.3,
-               fee_bps: float = 5.0,
-               slip_bps: float = 5.0) -> dict:
+               fee_bps: float = DEFAULT_FEE_BPS,
+               slip_bps: float = DEFAULT_SLIP_BPS) -> dict:
 
     '''
     Apply a rule-based strategy to the given data and return evaluation metrics.

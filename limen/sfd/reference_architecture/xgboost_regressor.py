@@ -4,6 +4,8 @@ import numpy as np
 import xgboost as xgb
 
 from limen.metrics.continuous_metrics import continuous_metrics
+from limen.sfd.reference_architecture.base import DEFAULT_FEE_BPS
+from limen.sfd.reference_architecture.base import DEFAULT_SLIP_BPS
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 
@@ -105,8 +107,8 @@ def xgboost_regressor(data: dict,
                   booster: str = 'gbtree',
                   early_stopping_rounds: int | None = 50,
                   random_state: int = 42,
-                  fee_bps: float = 5.0,
-                  slip_bps: float = 5.0) -> dict:
+                  fee_bps: float = DEFAULT_FEE_BPS,
+                  slip_bps: float = DEFAULT_SLIP_BPS) -> dict:
 
     '''
     Compute XGBoost regression predictions and evaluation metrics.
