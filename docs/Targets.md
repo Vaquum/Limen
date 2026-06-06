@@ -44,6 +44,7 @@ manifest.with_target_label(
 | `NextReturnTarget` | continuous `Float64` | no | n/a | Percentage return over the next N bars. Use with regression architectures. |
 | `VolNormalizedReturnTarget` | continuous `Float64` | yes — train sanity gate | none | Canonical return decoder outcome: log return divided by prior Parkinson volatility. |
 | `ForwardVolNormalizedReturnTarget` | continuous `Float64` | yes — train sanity gate | none | Predictive label: forward log return divided by current Parkinson volatility. |
+| `TripleBarrierTarget` | ternary `Int8` | no | n/a | First barrier touched over the next `max_horizon` bars: `1` upper, `-1` lower, `0` vertical. Horizontal barriers are volatility multiples. |
 | `RiskRewardRatioTarget` | continuous `Float64` | no | n/a | Ratio of `capturable_breakout` to absolute `max_drawdown` per row. |
 | `ExitQualityTarget` | continuous `Float64` | no | n/a | Categorical score for closed trades based on `exit_reason` and `exit_net_return`. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
@@ -248,6 +249,35 @@ Produces a continuous predictive label as `log(close.shift(-periods) / close) / 
 | `close_col` | `str` | Close price column; default `'close'` |
 
 The class reuses the same dirty-bar filter and Parkinson-to-close volatility sanity gate as `VolNormalizedReturnTarget`.
+
+### `TripleBarrierTarget`
+
+```python
+TripleBarrierTarget(train_data, target_name, upper_multiple=1.0, lower_multiple=1.0, max_horizon=10, span=100, min_periods=100, close_col='close')
+```
+
+Produces a ternary label from Lopez de Prado's triple-barrier method. For each bar, the forward close path is followed for up to `max_horizon` bars and labelled by the first barrier it touches: `1` if the upper (profit-taking) barrier is touched first, `-1` if the lower (stop-loss) barrier is touched first, and `0` if neither is touched within `max_horizon` bars (the vertical barrier). No fitting step.
+
+The horizontal barriers are volatility multiples — `+upper_multiple * sigma` and `-lower_multiple * sigma`, where `sigma` is the EWMA standard deviation of close-to-close returns with the given `span`. The barrier width is taken from the entry-bar volatility, so it adapts to the local regime instead of using a fixed percentage.
+
+A bar is null during the volatility warmup (`min_periods`), when its volatility is zero, and when the vertical barrier would extend past the available data and no barrier is touched within the truncated window. Manifest preparation drops null target rows.
+
+```python
+.with_target_label(
+    'triple_barrier',
+    TripleBarrierTarget,
+    fit_params={'upper_multiple': 2.0, 'lower_multiple': 2.0, 'max_horizon': 24, 'span': 100, 'min_periods': 100},
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `upper_multiple` | `float` | Profit-taking barrier width in volatility units; default `1.0` |
+| `lower_multiple` | `float` | Stop-loss barrier width in volatility units; default `1.0` |
+| `max_horizon` | `int` | Vertical barrier as a forward window in bars; default `10` |
+| `span` | `int` | EWMA span for the close-to-close return volatility; default `100` |
+| `min_periods` | `int` | Warmup before volatility is emitted; default `100` |
+| `close_col` | `str` | Close price column used for the barrier path; default `'close'` |
 
 ### `RiskRewardRatioTarget`
 

@@ -708,6 +708,12 @@ from tests.test_targets import test_identity_target_raises_when_column_missing_o
 from tests.test_targets import test_ema_breakout_target_labels_future_moves_above_ema_threshold
 from tests.test_targets import test_exit_quality_target_distinguishes_good_bad_and_neutral_exits
 from tests.test_targets import test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard
+from tests.test_targets import test_triple_barrier_labels_upper_touch_first
+from tests.test_targets import test_triple_barrier_labels_lower_touch_first
+from tests.test_targets import test_triple_barrier_vertical_barrier_labels_zero
+from tests.test_targets import test_triple_barrier_nulls_warmup_and_truncated_horizon
+from tests.test_targets import test_triple_barrier_lower_multiple_widens_stop
+from tests.test_targets import test_triple_barrier_rejects_nonpositive_params
 from tests.test_feature_perturbation import test_ablation_drop_count_exceeds_eligible_raises
 from tests.test_reducer_factory import test_reducer_registry_has_all_types
 from tests.test_reducer_factory import test_reducer_registry_maps_to_correct_classes
@@ -1600,6 +1606,12 @@ tests = [
     test_ema_breakout_target_labels_future_moves_above_ema_threshold,
     test_exit_quality_target_distinguishes_good_bad_and_neutral_exits,
     test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard,
+    test_triple_barrier_labels_upper_touch_first,
+    test_triple_barrier_labels_lower_touch_first,
+    test_triple_barrier_vertical_barrier_labels_zero,
+    test_triple_barrier_nulls_warmup_and_truncated_horizon,
+    test_triple_barrier_lower_multiple_widens_stop,
+    test_triple_barrier_rejects_nonpositive_params,
     test_ablation_drop_count_exceeds_eligible_raises,
     test_reducer_registry_has_all_types,
     test_reducer_registry_maps_to_correct_classes,
