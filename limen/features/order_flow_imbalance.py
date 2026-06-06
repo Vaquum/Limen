@@ -32,6 +32,11 @@ def order_flow_imbalance(
             new 'order_flow_imbalance' column
     '''
 
+    if window <= 0:
+        raise ValueError('order_flow_imbalance window must be positive')
+    if classification_window <= 0:
+        raise ValueError('order_flow_imbalance classification_window must be positive')
+
     classified = bulk_volume_classification(
         data,
         window=classification_window,
@@ -42,9 +47,12 @@ def order_flow_imbalance(
     net_flow = pl.col('bvc_buy_volume') - pl.col('bvc_sell_volume')
     total_flow = pl.col('bvc_buy_volume') + pl.col('bvc_sell_volume')
 
+    rolling_net = net_flow.rolling_sum(window_size=window)
+    rolling_total = total_flow.rolling_sum(window_size=window)
+
     return classified.with_columns(
-        (
-            net_flow.rolling_sum(window_size=window)
-            / total_flow.rolling_sum(window_size=window)
-        ).alias('order_flow_imbalance')
+        pl.when(rolling_total > 0.0)
+        .then(rolling_net / rolling_total)
+        .otherwise(None)
+        .alias('order_flow_imbalance')
     )

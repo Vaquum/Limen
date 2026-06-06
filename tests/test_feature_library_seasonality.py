@@ -138,3 +138,15 @@ def test_time_to_funding_respects_interval_and_validates_positive() -> None:
     assert result == pytest.approx([0.0, 3.0, 2.0, 1.0])
     with pytest.raises(ValueError, match='interval_hours'):
         time_to_funding(data, interval_hours=0)
+    with pytest.raises(ValueError, match='divide 24'):
+        time_to_funding(data, interval_hours=5)
+
+
+def test_time_to_funding_uses_utc_for_timezone_aware_timestamps() -> None:
+    data = pl.DataFrame({'datetime': [datetime(2025, 1, 1, 22, 0)]}).with_columns(
+        pl.col('datetime').dt.replace_time_zone('UTC').dt.convert_time_zone('Asia/Karachi')
+    )
+
+    result = time_to_funding(data)['hours_to_funding'].to_list()
+
+    assert result == pytest.approx([2.0])

@@ -31,6 +31,11 @@ def vpin(
         pl.DataFrame: The input data with classified buy/sell volume columns and a new 'vpin' column
     '''
 
+    if window <= 0:
+        raise ValueError('vpin window must be positive')
+    if classification_window <= 0:
+        raise ValueError('vpin classification_window must be positive')
+
     classified = bulk_volume_classification(
         data,
         window=classification_window,
@@ -41,9 +46,12 @@ def vpin(
     order_imbalance = (pl.col('bvc_buy_volume') - pl.col('bvc_sell_volume')).abs()
     total_volume = pl.col('bvc_buy_volume') + pl.col('bvc_sell_volume')
 
+    rolling_imbalance = order_imbalance.rolling_sum(window_size=window)
+    rolling_volume = total_volume.rolling_sum(window_size=window)
+
     return classified.with_columns(
-        (
-            order_imbalance.rolling_sum(window_size=window)
-            / total_volume.rolling_sum(window_size=window)
-        ).alias('vpin')
+        pl.when(rolling_volume > 0.0)
+        .then(rolling_imbalance / rolling_volume)
+        .otherwise(None)
+        .alias('vpin')
     )

@@ -28,6 +28,9 @@ def bulk_volume_classification(
         pl.DataFrame: The input data with new columns 'bvc_buy_volume' and 'bvc_sell_volume'
     '''
 
+    if window <= 0:
+        raise ValueError('bulk_volume_classification window must be positive')
+
     log_return = pl.col(close_col).log() - pl.col(close_col).shift(1).log()
     rolling_std = log_return.rolling_std(window_size=window)
     standardized = (

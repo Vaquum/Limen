@@ -169,3 +169,13 @@ def test_order_flow_imbalance_and_vpin_are_bounded_and_directional() -> None:
             assert -1.0 <= ofi_value <= 1.0
             assert 0.0 <= vpin_value <= 1.0
             assert vpin_value >= abs(ofi_value) - 1e-9
+
+
+def test_order_flow_imbalance_and_vpin_null_on_zero_volume() -> None:
+    data = pl.DataFrame({'close': [100.0, 101.0, 102.0, 103.0], 'volume': [0.0, 0.0, 0.0, 0.0]})
+
+    ofi = order_flow_imbalance(data, window=2, classification_window=2)['order_flow_imbalance'].to_list()
+    vpin_values = vpin(data, window=2, classification_window=2)['vpin'].to_list()
+
+    assert all(value is None for value in ofi)
+    assert all(value is None for value in vpin_values)
