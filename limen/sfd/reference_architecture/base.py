@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+import math
 from typing import Any
 
 import numpy as np
@@ -31,8 +32,8 @@ class ReferenceModel(ABC):
 
     @fee_bps.setter
     def fee_bps(self, value: float) -> None:
-        if value < 0:
-            raise ValueError('ReferenceModel fee_bps must be non-negative')
+        if not math.isfinite(value) or value < 0:
+            raise ValueError('ReferenceModel fee_bps must be a non-negative finite number')
         self._fee_bps = value
 
     @property
@@ -41,8 +42,8 @@ class ReferenceModel(ABC):
 
     @slip_bps.setter
     def slip_bps(self, value: float) -> None:
-        if value < 0:
-            raise ValueError('ReferenceModel slip_bps must be non-negative')
+        if not math.isfinite(value) or value < 0:
+            raise ValueError('ReferenceModel slip_bps must be a non-negative finite number')
         self._slip_bps = value
 
     @abstractmethod

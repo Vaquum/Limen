@@ -374,12 +374,18 @@ def test_omitting_cost_matches_explicit_default():
         assert omitted[key] == explicit[key] or (np.isnan(omitted[key]) and np.isnan(explicit[key]))
 
 
-def test_negative_cost_is_rejected():
+def test_invalid_cost_is_rejected():
 
     data = _make_data(binary=True, with_price=True)
-    for bad_cost in ({'fee_bps': -1.0}, {'slip_bps': -1.0}):
+    bad_costs = (
+        {'fee_bps': -1.0},
+        {'slip_bps': -1.0},
+        {'fee_bps': float('inf')},
+        {'slip_bps': float('nan')},
+    )
+    for bad_cost in bad_costs:
         try:
             logreg_binary(data, **bad_cost)
-            assert False, 'Expected ValueError for negative cost'
+            assert False, 'Expected ValueError for invalid cost'
         except ValueError as e:
             assert 'bps' in str(e)
