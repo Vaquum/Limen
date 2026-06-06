@@ -24,22 +24,22 @@ def select(context: dict[str, Any],
     '''
 
     if not isinstance(target_count, int) or target_count <= 0:
-        raise ValueError('target_count must be a positive integer')
+        raise ValueError('diverse_metrics target_count must be a positive integer')
     if not isinstance(n_clusters, int) or n_clusters <= 0:
-        raise ValueError('n_clusters must be a positive integer')
+        raise ValueError('diverse_metrics n_clusters must be a positive integer')
     if n_components is not None and (
         not isinstance(n_components, int) or n_components <= 0
     ):
-        raise ValueError('n_components must be a positive integer')
+        raise ValueError('diverse_metrics n_components must be a positive integer')
     if iqr_multiplier < 0:
-        raise ValueError('iqr_multiplier must be >= 0')
+        raise ValueError('diverse_metrics iqr_multiplier must be >= 0')
 
     min_default_metric_cols = 2
     results = context.get('results')
     if results is None:
-        raise ValueError('selector requires results.csv data in context["results"]')
+        raise ValueError('diverse_metrics selector requires results.csv data in context["results"]')
     if not isinstance(results, pd.DataFrame):
-        raise ValueError('context["results"] must be a pandas DataFrame')
+        raise ValueError('diverse_metrics context["results"] must be a pandas DataFrame')
 
     metric_groups = [
         [
@@ -88,13 +88,13 @@ def select(context: dict[str, Any],
 
     missing = [col for col in ['id', *metric_cols] if col not in results.columns]
     if missing:
-        raise ValueError(f'selector input is missing required columns: {missing}')
+        raise ValueError(f'diverse_metrics selector input is missing required columns: {missing}')
 
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
-            raise ValueError('selector returned a boolean permutation id')
+            raise ValueError('diverse_metrics selector returned a boolean permutation id')
         if pd.isna(value):
-            raise ValueError('selector returned a missing permutation id')
+            raise ValueError('diverse_metrics selector returned a missing permutation id')
         if isinstance(value, (int, np.integer)):
             return int(value)
         if isinstance(value, (float, np.floating)) and float(value).is_integer():
@@ -104,12 +104,12 @@ def select(context: dict[str, Any],
             if stripped.isdigit():
                 return int(stripped)
             if not stripped:
-                raise ValueError('selector returned an empty permutation id')
+                raise ValueError('diverse_metrics selector returned an empty permutation id')
             return stripped
 
         coerced = str(value).strip()
         if not coerced:
-            raise ValueError('selector returned an empty permutation id')
+            raise ValueError('diverse_metrics selector returned an empty permutation id')
         return coerced
 
     work = results[['id', *metric_cols]].copy()

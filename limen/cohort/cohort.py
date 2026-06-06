@@ -81,7 +81,7 @@ class Cohort:
 
         if experiment_id is None and experiment_log_path is None:
             raise ValueError(
-                'Provide exactly one of: experiment_id or experiment_log_path.')
+                'Cohort Provide exactly one of: experiment_id or experiment_log_path.')
 
         if experiment_id is not None and experiment_log_path is not None:
             raise ValueError('Cohort accepts exactly one experiment source.')
@@ -90,10 +90,10 @@ class Cohort:
             raise ValueError('Cohort accepts permutation_ids or selector, not both.')
 
         if selector_params is not None and not isinstance(selector_params, dict):
-            raise ValueError('selector_params must be a dict when provided.')
+            raise ValueError('Cohort selector_params must be a dict when provided.')
 
         if selector_params is not None and selector is None:
-            raise ValueError('selector_params requires an explicit selector.')
+            raise ValueError('Cohort selector_params requires an explicit selector.')
 
         experiment_dir = (
             self._resolve_experiment_id(experiment_id)
@@ -103,18 +103,18 @@ class Cohort:
 
         if not experiment_dir.exists() or not experiment_dir.is_dir():
             raise FileNotFoundError(
-                f'Experiment log path is missing or unreadable: {experiment_dir}'
+                f'Cohort Experiment log path is missing or unreadable: {experiment_dir}'
             )
 
         metadata_path = experiment_dir / 'metadata.json'
         round_data_path = experiment_dir / 'round_data.jsonl'
         if not metadata_path.exists():
             raise FileNotFoundError(
-                f'Experiment log path is missing or unreadable: {experiment_dir}'
+                f'Cohort Experiment log path is missing or unreadable: {experiment_dir}'
             )
         if not round_data_path.exists():
             raise FileNotFoundError(
-                f'Experiment log path is missing or unreadable: {experiment_dir}'
+                f'Cohort Experiment log path is missing or unreadable: {experiment_dir}'
             )
 
         with metadata_path.open('r') as f:
@@ -123,7 +123,7 @@ class Cohort:
         round_entries = self._load_round_entries(round_data_path)
         available_ids = set(round_entries.keys())
         if not available_ids:
-            raise ValueError('Resolved experiment contains no permutations.')
+            raise ValueError('Cohort Resolved experiment contains no permutations.')
 
         if permutation_ids is None:
             context = self._build_selector_context(
@@ -140,18 +140,18 @@ class Cohort:
         else:
             if not permutation_ids:
                 raise ValueError(
-                    'permutation_ids must be a non-empty list when provided.')
+                    'Cohort permutation_ids must be a non-empty list when provided.')
 
             normalized = [self._normalize_permutation_id(
                 pid) for pid in permutation_ids]
             if len(normalized) != len(set(normalized)):
-                raise ValueError('permutation_ids must be unique.')
+                raise ValueError('Cohort permutation_ids must be unique.')
 
             missing_ids = [
                 pid for pid in normalized if pid not in available_ids]
             if missing_ids:
                 raise ValueError(
-                    f'Unknown permutation_ids requested: {missing_ids}')
+                    f'Cohort Unknown permutation_ids requested: {missing_ids}')
 
             selected_ids = normalized
 
@@ -225,7 +225,7 @@ class Cohort:
         missing = [pid for pid in self.permutation_ids if pid not in by_pid]
         if missing:
             raise ValueError(
-                f'Missing bound members for permutation_ids: {missing}'
+                f'Cohort Missing bound members for permutation_ids: {missing}'
             )
 
         self._members = [by_pid[pid] for pid in self.permutation_ids]
@@ -305,7 +305,7 @@ class Cohort:
 
         n = healthy_lengths[0]
         if any(length != n for length in healthy_lengths[1:]):
-            raise ValueError('Member sensors returned different-length prediction lists.')
+            raise ValueError('Cohort Member sensors returned different-length prediction lists.')
 
         n_errored_members = sum(fully_errored)
         if n_errored_members:
@@ -347,7 +347,7 @@ class Cohort:
         '''
 
         if not member_bars:
-            raise ValueError('member_bars must be a non-empty list.')
+            raise ValueError('Cohort member_bars must be a non-empty list.')
 
         dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
 
@@ -370,7 +370,7 @@ class Cohort:
         if self.aggregation_mode == 'probability_weighted':
             if any(b.probability is None for b in valid_bars):
                 raise ValueError(
-                    'probability_weighted mode requires a finite probability from all members.'
+                    'Cohort probability_weighted mode requires a finite probability from all members.'
                 )
             probs = np.array([b.probability for b in valid_bars], dtype=float)
             self._validate_probability_range(probs)
@@ -380,7 +380,7 @@ class Cohort:
 
         if any(b.prediction is None for b in valid_bars):
             raise ValueError(
-                'majority_vote mode requires a numeric prediction from all members.'
+                'Cohort majority_vote mode requires a numeric prediction from all members.'
             )
         threshold = self._fallback_vote_threshold()
         votes = np.array([int(float(b.prediction) > threshold) for b in valid_bars])
@@ -393,10 +393,10 @@ class Cohort:
 
         if not np.isfinite(probs).all():
             raise ValueError(
-                'Decoder probabilities must be finite values in [0, 1].')
+                'Cohort Decoder probabilities must be finite values in [0, 1].')
 
         if np.any((probs < 0.0) | (probs > 1.0)):
-            raise ValueError('Decoder probabilities must lie within [0, 1].')
+            raise ValueError('Cohort Decoder probabilities must lie within [0, 1].')
 
 
     def _fallback_vote_threshold(self) -> float:
@@ -411,7 +411,7 @@ class Cohort:
     def _normalize_permutation_id(pid: str) -> str:
 
         if not isinstance(pid, str):
-            raise ValueError('permutation_ids entries must be str identifiers.')
+            raise ValueError('Cohort permutation_ids entries must be str identifiers.')
 
         return pid.strip()
 
@@ -471,7 +471,7 @@ class Cohort:
         if callable(selector):
             return selector
 
-        raise ValueError('selector must be None, a built-in selector name, or a callable.')
+        raise ValueError('Cohort selector must be None, a built-in selector name, or a callable.')
 
     @staticmethod
     def _build_selector_context(experiment_dir: Path,
@@ -522,7 +522,7 @@ class Cohort:
 
         if len(architecture_ids) != 1:
             raise ValueError(
-                'All selected permutation_ids must belong to the same architecture.'
+                'Cohort All selected permutation_ids must belong to the same architecture.'
             )
 
         return next(iter(architecture_ids))
@@ -599,12 +599,12 @@ class Cohort:
 
         if not matches:
             raise ValueError(
-                f'Unable to resolve experiment_id: {experiment_id}')
+                f'Cohort Unable to resolve experiment_id: {experiment_id}')
 
         unique_matches = sorted(set(matches))
         if len(unique_matches) > 1:
             raise ValueError(
-                f'experiment_id resolved to multiple experiment logs: {experiment_id}'
+                f'Cohort experiment_id resolved to multiple experiment logs: {experiment_id}'
             )
 
         return unique_matches[0]

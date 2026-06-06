@@ -104,7 +104,7 @@ class Sensor:
         manifest = self._get_manifest()
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
         if decoder_lookback > 1:
-            raise NotImplementedError('predict does not yet support decoder_lookback > 1')
+            raise NotImplementedError('Sensor predict does not yet support decoder_lookback > 1')
 
         try:
             data, indicator_lookback = manifest.sensor_input_prep(
@@ -167,7 +167,7 @@ class Sensor:
         manifest = self._get_manifest()
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
         if decoder_lookback > 1:
-            raise NotImplementedError('predict_all does not yet support decoder_lookback > 1')
+            raise NotImplementedError('Sensor predict_all does not yet support decoder_lookback > 1')
 
         n_fallback = len(raw_klines)
         try:

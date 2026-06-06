@@ -149,15 +149,15 @@ def backtest_snapshot(df: pd.DataFrame,
         raise ValueError('backtest_snapshot requires at least one row')
 
     if execution_lag_bars < 0:
-        raise ValueError('execution_lag_bars must be >= 0')
+        raise ValueError('backtest_snapshot execution_lag_bars must be >= 0')
 
     try:
         pred = pd.to_numeric(df[pred_col], errors='raise')
     except (TypeError, ValueError) as exc:
-        raise ValueError('predictions must contain only 0 or 1') from exc
+        raise ValueError('backtest_snapshot predictions must contain only 0 or 1') from exc
 
     if pred.isna().any() or (~pred.isin([0, 1])).any():
-        raise ValueError('predictions must contain only 0 or 1')
+        raise ValueError('backtest_snapshot predictions must contain only 0 or 1')
 
     pred = pred.astype(int)
     try:
@@ -165,7 +165,7 @@ def backtest_snapshot(df: pd.DataFrame,
         close_px = pd.to_numeric(df[close_col], errors='raise')
         dpx = pd.to_numeric(df[price_change_col], errors='raise')
     except (TypeError, ValueError) as exc:
-        raise ValueError('open, close, and price_change must be numeric') from exc
+        raise ValueError('backtest_snapshot open, close, and price_change must be numeric') from exc
 
     price_check_mask = open_px.notna() & close_px.notna() & dpx.notna()
     expected_dpx = close_px - open_px
@@ -176,7 +176,7 @@ def backtest_snapshot(df: pd.DataFrame,
         rtol=PRICE_CHANGE_RTOL,
         atol=PRICE_CHANGE_ATOL,
     ).all():
-        raise ValueError('price_change must equal close - open')
+        raise ValueError('backtest_snapshot price_change must equal close - open')
 
     tradable = open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
     execution_rows = pd.Series(False, index=df.index)

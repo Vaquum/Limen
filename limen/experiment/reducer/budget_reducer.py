@@ -68,27 +68,27 @@ class BudgetReducer(PruningStrategy):
 
         if trim_strategy not in (TRIM_RANDOM, TRIM_WORST_FIRST):
             raise ValueError(
-                f"Unknown trim_strategy '{trim_strategy}'. Must be '{TRIM_RANDOM}' or '{TRIM_WORST_FIRST}'."
+                f"BudgetReducer Unknown trim_strategy '{trim_strategy}'. Must be '{TRIM_RANDOM}' or '{TRIM_WORST_FIRST}'."
             )
 
         if trim_strategy == TRIM_WORST_FIRST and metric is None:
             raise ValueError(
-                f"metric is required when trim_strategy is '{TRIM_WORST_FIRST}'."
+                f"BudgetReducer metric is required when trim_strategy is '{TRIM_WORST_FIRST}'."
             )
 
         if max_walltime_hours is not None and max_walltime_hours <= 0:
             raise ValueError(
-                f"max_walltime_hours must be > 0, got {max_walltime_hours}"
+                f"BudgetReducer max_walltime_hours must be > 0, got {max_walltime_hours}"
             )
 
         if max_permutations is not None and max_permutations <= 0:
             raise ValueError(
-                f"max_permutations must be > 0, got {max_permutations}"
+                f"BudgetReducer max_permutations must be > 0, got {max_permutations}"
             )
 
         if not 0.0 <= check_after_pct <= 1.0:
             raise ValueError(
-                f"check_after_pct must be between 0.0 and 1.0, got {check_after_pct}"
+                f"BudgetReducer check_after_pct must be between 0.0 and 1.0, got {check_after_pct}"
             )
 
         super().__init__(active=active)

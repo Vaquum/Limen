@@ -41,7 +41,7 @@ def _coerce_value(val: Any) -> Any:
 
 def _op_expr(left: pl.Expr, operator: str, right: Any) -> pl.Expr:
     if operator not in _OPS:
-        raise ValueError(f'Unknown operator: {operator!r}')
+        raise ValueError(f'predicates Unknown operator: {operator!r}')
     return _OPS[operator](left, right)
 
 
@@ -119,7 +119,7 @@ def slope(column: str, direction: str = 'rising', lookback: int = 1) -> pl.Expr:
     '''
 
     if lookback <= 0:
-        raise ValueError(f'lookback must be a positive integer, got {lookback}')
+        raise ValueError(f'predicates lookback must be a positive integer, got {lookback}')
 
     col = pl.col(column)
 
@@ -144,7 +144,7 @@ def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
     '''
 
     if n <= 0:
-        raise ValueError(f'n must be a positive integer, got {n}')
+        raise ValueError(f'predicates n must be a positive integer, got {n}')
 
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=n) == n).fill_null(False)
 
@@ -163,7 +163,7 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
     '''
 
     if n <= 0:
-        raise ValueError(f'n must be a positive integer, got {n}')
+        raise ValueError(f'predicates n must be a positive integer, got {n}')
 
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=1) >= 1).fill_null(False)
 

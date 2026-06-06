@@ -39,7 +39,7 @@ def adf_test(series: pl.Series,
     '''
 
     if not 0 < significance_level < 1:
-        raise ValueError(f"significance_level must be between 0 and 1, got {significance_level}")
+        raise ValueError(f"adf_test significance_level must be between 0 and 1, got {significance_level}")
 
     values = series.cast(pl.Float64).drop_nulls().drop_nans().to_numpy()
     if len(values) == 0:

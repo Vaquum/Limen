@@ -22,7 +22,7 @@ class RankGaussScaler:
 
         if n_quantiles < 1:
             raise ValueError(
-                f"n_quantiles must be >= 1, got {n_quantiles}"
+                f"RankGaussScaler n_quantiles must be >= 1, got {n_quantiles}"
             )
 
         self._n_quantiles = n_quantiles

@@ -32,16 +32,16 @@ class CausalRollingRobustScaler:
         q_low, q_high = quantile_range
         if not (0 <= q_low < q_high <= 1):
             raise ValueError(
-                f"quantile_range must satisfy 0 <= low < high <= 1, "
+                f"CausalRollingRobustScaler quantile_range must satisfy 0 <= low < high <= 1, "
                 f"got ({q_low}, {q_high})"
             )
         if window <= 1:
-            raise ValueError(f"window must be >= 2, got {window}")
+            raise ValueError(f"CausalRollingRobustScaler window must be >= 2, got {window}")
         if clip <= 0:
-            raise ValueError(f"clip must be > 0, got {clip}")
+            raise ValueError(f"CausalRollingRobustScaler clip must be > 0, got {clip}")
         if not (1 <= min_samples <= window):
             raise ValueError(
-                f"min_samples must satisfy 1 <= min_samples <= window ({window}), "
+                f"CausalRollingRobustScaler min_samples must satisfy 1 <= min_samples <= window ({window}), "
                 f"got {min_samples}"
             )
 

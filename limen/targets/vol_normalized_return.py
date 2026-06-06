@@ -37,9 +37,9 @@ class VolNormalizedReturnTarget:
         '''
 
         if halflife <= 0:
-            raise ValueError('halflife must be positive')
+            raise ValueError('VolNormalizedReturnTarget halflife must be positive')
         if min_periods <= 0:
-            raise ValueError('min_periods must be positive')
+            raise ValueError('VolNormalizedReturnTarget min_periods must be positive')
 
         self.target_name = target_name
         self.high_col = high_col

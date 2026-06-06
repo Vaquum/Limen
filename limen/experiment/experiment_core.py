@@ -74,7 +74,7 @@ class UniversalExperimentLoop:
         '''
 
         if sfd is None:
-            raise ValueError('sfd is required')
+            raise ValueError('UniversalExperimentLoop sfd is required')
 
         self._sfd_module_name = getattr(sfd, '__name__', None)
         self.params = sfd.params()
@@ -86,7 +86,7 @@ class UniversalExperimentLoop:
             if data is None:
                 if self.manifest.data_source_config is None:
                     raise ValueError(
-                        'No data source configured in manifest. '
+                        'UniversalExperimentLoop No data source configured in manifest. '
                         'Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) '
                         'to manifest or pass data explicitly.'
                     )
@@ -103,12 +103,12 @@ class UniversalExperimentLoop:
                 self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
             else:
                 raise ValueError(
-                    'Manifest without architecture_function is not supported. '
+                    'UniversalExperimentLoop Manifest without architecture_function is not supported. '
                     'Use .with_reference_architecture(func) in your manifest.'
                 )
         else:
             if data is None:
-                raise ValueError('data parameter required for custom SFDs using custom functions approach')
+                raise ValueError('UniversalExperimentLoop data parameter required for custom SFDs using custom functions approach')
             self.data = data
             self.prep = getattr(sfd, 'prep', None)
             self.model = getattr(sfd, 'model', None)
@@ -173,7 +173,7 @@ class UniversalExperimentLoop:
 
         if resume and self._search_strategy is None:
             raise ValueError(
-                'resume=True is only supported with a search_strategy.'
+                'UniversalExperimentLoop resume=True is only supported with a search_strategy.'
             )
 
         if self._search_strategy is not None:
@@ -189,11 +189,11 @@ class UniversalExperimentLoop:
         if self.manifest is not None:
             if prep is not None or model is not None:
                 raise ValueError(
-                    'Cannot override prep/model when SFM has manifest.'
+                    'UniversalExperimentLoop Cannot override prep/model when SFM has manifest.'
                 )
             if not prep_each_round:
                 raise ValueError(
-                    'prep_each_round must be True for manifest-driven SFMs.'
+                    'UniversalExperimentLoop prep_each_round must be True for manifest-driven SFMs.'
                 )
 
         if params is not None:
@@ -224,7 +224,7 @@ class UniversalExperimentLoop:
                 csv_header = next(csv.reader(f), None)
             if not csv_header or not any(col.strip() for col in csv_header):
                 raise ValueError(
-                    f'Existing results CSV has no header: {csv_path}'
+                    f'UniversalExperimentLoop Existing results CSV has no header: {csv_path}'
                 )
 
         for i in tqdm(range(n_permutations)):
@@ -630,11 +630,11 @@ class UniversalExperimentLoop:
         if resume:
             if not self._experiment_dir:
                 raise ValueError(
-                    'resume=True requires experiment_dir to be set.'
+                    'UniversalExperimentLoop resume=True requires experiment_dir to be set.'
                 )
             if not self._experiment_dir.exists():
                 raise FileNotFoundError(
-                    f"Cannot resume: experiment directory "
+                    f"UniversalExperimentLoop Cannot resume: experiment directory "
                     f"{self._experiment_dir} does not exist."
                 )
 
@@ -740,7 +740,7 @@ class UniversalExperimentLoop:
             states = checkpoint_data['pruning_strategy_states']
             if len(self._pruning_strategies) != len(states):
                 raise ValueError(
-                    f"Pruning strategy count mismatch: checkpoint "
+                    f"UniversalExperimentLoop Pruning strategy count mismatch: checkpoint "
                     f"has {len(states)} but "
                     f"{len(self._pruning_strategies)} configured. "
                     f"Use the same strategies to resume or delete "
@@ -756,7 +756,7 @@ class UniversalExperimentLoop:
 
         if not round_data_path or not round_data_path.exists():
             raise ValueError(
-                f"Cannot resume: round_data.jsonl not found in "
+                f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in "
                 f"{self._experiment_dir}. Checkpoint indicates "
                 f"{start_round} rounds completed but no round "
                 f"data exists."
@@ -768,14 +768,14 @@ class UniversalExperimentLoop:
         )
         if loaded_rounds < start_round:
             raise ValueError(
-                f"Cannot resume: round_data.jsonl has "
+                f"UniversalExperimentLoop Cannot resume: round_data.jsonl has "
                 f"{loaded_rounds} entries but checkpoint "
                 f"indicates {start_round} rounds completed."
             )
 
         if not csv_path.exists():
             raise ValueError(
-                f"Cannot resume: results.csv not found in "
+                f"UniversalExperimentLoop Cannot resume: results.csv not found in "
                 f"{self._experiment_dir}. Checkpoint indicates "
                 f"{start_round} rounds completed but no results "
                 f"log exists."
@@ -853,7 +853,7 @@ class UniversalExperimentLoop:
         ]
         if existing:
             raise FileExistsError(
-                f"Experiment directory {self._experiment_dir} "
+                f"UniversalExperimentLoop Experiment directory {self._experiment_dir} "
                 f"already contains artifacts: "
                 f"{', '.join(existing)}. "
                 f"Set resume=True to continue or choose a "
@@ -892,7 +892,7 @@ class UniversalExperimentLoop:
 
         if self._sfd_module_name is None:
             raise ValueError(
-                'Cannot write metadata: SFD module has no __name__ attribute. '
+                'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. '
                 'Trainer requires a reimportable SFD module.'
             )
 
