@@ -1051,4 +1051,4 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v3.15.4 on 6th of June, 2026
 
-- Make remote dataset fetches in `HistoricalData` resilient to transient HTTP failures: the HuggingFace `latest.json` lookup and the file download each run through a `requests` session with exponential backoff that retries on 429/5xx and honours `Retry-After`. Fixes intermittent CI failures when HuggingFace rate-limits the test-data fetch
+- Make remote dataset fetches in `HistoricalData` resilient to transient HTTP failures: the HuggingFace `latest.json` lookup and the dataset download (`.parquet`, `.csv`, and `.zip`, including the default Parquet datasets) each run through a `requests` session with exponential backoff that retries on 429/5xx and honours `Retry-After`. Fixes intermittent CI failures when HuggingFace rate-limits the test-data fetch

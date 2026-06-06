@@ -225,6 +225,7 @@ from tests.test_historical_data import test_get_any_file_rejects_unsupported_ext
 from tests.test_historical_data import test_get_spot_klines_accepts_iso_date_limits_and_rejects_invalid_literals
 from tests.test_historical_data import test_get_spot_klines_rejects_row_limit_with_closed_date_window
 from tests.test_remote_fetch_retry import test_remote_session_is_configured_to_retry_transient_errors
+from tests.test_remote_fetch_retry import test_read_any_file_routes_remote_parquet_through_retrying_reader
 from tests.test_param_domain import test_param_domain_init
 from tests.test_param_domain import test_param_domain_init_validation
 from tests.test_param_domain import test_param_domain_defensive_copy
@@ -1363,6 +1364,7 @@ tests = [
     test_get_spot_klines_accepts_iso_date_limits_and_rejects_invalid_literals,
     test_get_spot_klines_rejects_row_limit_with_closed_date_window,
     test_remote_session_is_configured_to_retry_transient_errors,
+    test_read_any_file_routes_remote_parquet_through_retrying_reader,
     test_indicators_vs_talib,
     test_xgboost_train_returns_fitted_model,
     test_xgboost_evaluate_returns_all_metric_types,

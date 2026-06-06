@@ -361,7 +361,10 @@ def _read_any_file(
     suffix = Path(source_path).suffix.lower()
 
     if suffix == '.parquet':
-        df = pl.read_parquet(resolved_source)
+        if _is_url(resolved_source):
+            df = pl.read_parquet(BytesIO(_read_remote_bytes(resolved_source)))
+        else:
+            df = pl.read_parquet(resolved_source)
     elif suffix == '.csv':
         df = _read_csv_source(resolved_source, has_header=has_header)
     elif suffix == '.zip':
