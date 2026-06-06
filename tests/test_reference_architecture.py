@@ -387,6 +387,7 @@ def test_invalid_backtest_config_is_rejected():
         ({'slip_bps': -1.0}, {}),
         ({'fee_bps': 'fee'}, {'fee': float('inf')}),
         ({'slip_bps': 'slip'}, {'slip': float('nan')}),
+        ({'fee_bps': 'fee'}, {'fee': 'oops'}),
     )
     for config_kwargs, round_params in bad:
         try:
@@ -395,6 +396,7 @@ def test_invalid_backtest_config_is_rejected():
         except ValueError as e:
             assert 'bps' in str(e)
             assert 'got ' in str(e)
+            assert 'unknown search-param' not in str(e)
 
     try:
         MLManifest().set_backtest_config(fee_bps='missing_param')._apply_backtest_cost({}, {})

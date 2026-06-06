@@ -777,15 +777,19 @@ class Manifest:
         if self.backtest_config is None:
             return
 
-        resolved = _resolve_params(
-            {'fee_bps': self.backtest_config.fee_bps, 'slip_bps': self.backtest_config.slip_bps},
-            round_params,
-        )
+        raw = {'fee_bps': self.backtest_config.fee_bps, 'slip_bps': self.backtest_config.slip_bps}
+        resolved = _resolve_params(raw, round_params)
         for key in ('fee_bps', 'slip_bps'):
+            original = raw[key]
             value = resolved[key]
-            if isinstance(value, str):
+            if (
+                isinstance(original, str)
+                and isinstance(value, str)
+                and value == original
+                and original not in round_params
+            ):
                 raise ValueError(
-                    f"Manifest backtest {key} references unknown search-param '{value}'; "
+                    f"Manifest backtest {key} references unknown search-param '{original}'; "
                     "add it to params() or pass a number"
                 )
             if (
