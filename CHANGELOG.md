@@ -1044,3 +1044,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Disambiguate previously-identical messages duplicated across files (e.g. selector errors shared by `top_n`, `diverse_metrics`, `backtest_pareto`; `min_observations must be > 0` shared by three reducers)
 - Replace the `ERROR:` prefix anti-pattern in `Account` and `BacktestSequential` with the component name
 - Leave messages that already name their source untouched (e.g. `CheckpointManager` checkpoint errors, `manifest` store/URI errors, `round_params[...]` and `Condition {id}` validations)
+
+## v3.15.3 on 6th of June, 2026
+
+- Fix macOS-only failures in `test_yaml_config` and `test_yaml_store`: resolve the temporary directory before comparing it against the canonicalised output of `find_project_root`/`get_store_path`/`resolve_manifest_uri`, so the `/tmp` vs `/private/tmp` symlink no longer causes a spurious path mismatch. Test-only change; no library behaviour affected

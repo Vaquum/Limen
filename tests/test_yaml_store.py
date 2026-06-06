@@ -31,6 +31,7 @@ uel:
 
 
 def _make_project(tmp: Path) -> tuple[Path, Path]:
+    tmp = tmp.resolve()
     (tmp / 'limen.toml').write_text('[store]\nbackup_remote = ""\n')
     (tmp / 'manifests' / 'committed').mkdir(parents=True)
     yaml_path = tmp / 'manifests' / 'examples' / 'test.yaml'
