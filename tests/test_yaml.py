@@ -273,6 +273,8 @@ def test_logreg_yaml_template_exposes_full_architecture_surface() -> None:
     model_params = set(inspect.signature(arch).parameters) - {
         'data',
         'prediction_calibration_config',
+        'fee_bps',
+        'slip_bps',
     }
 
     assert model_params <= set(yaml_dict['sfd']['params'])
@@ -1116,7 +1118,7 @@ def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
     assert isinstance(sfd.manifest(), MLManifest)
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
-    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
+    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config', 'fee_bps', 'slip_bps'}
     assert model_params <= set(yaml_dict['sfd']['params'])
 
 
@@ -1134,7 +1136,7 @@ def test_xgboost_regressor_template_is_valid_and_arch_surface_complete() -> None
     assert isinstance(sfd.manifest(), MLManifest)
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
-    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
+    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config', 'fee_bps', 'slip_bps'}
     assert model_params <= set(yaml_dict['sfd']['params'])
 
 
