@@ -9,7 +9,7 @@ from limen.yaml.config import _STORE_RELATIVE
 
 def test_find_project_root_walks_up_from_subdirectory() -> None:
     with tempfile.TemporaryDirectory() as d:
-        root = Path(d)
+        root = Path(d).resolve()
         (root / 'limen.toml').write_text('')
         subdir = root / 'manifests' / 'examples'
         subdir.mkdir(parents=True)
@@ -32,7 +32,7 @@ def test_get_store_path_raises_when_no_project_root() -> None:
 
 def test_get_store_path_returns_committed_dir() -> None:
     with tempfile.TemporaryDirectory() as d:
-        root = Path(d)
+        root = Path(d).resolve()
         (root / 'limen.toml').write_text('')
         assert get_store_path(root) == root / _STORE_RELATIVE
 
