@@ -1056,3 +1056,11 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.16.0 on 6th of June, 2026
 
 - Add `TripleBarrierTarget` to `limen.targets` — Lopez de Prado's triple-barrier label. Each bar is labelled by the first barrier its forward close path touches over the next `max_horizon` bars: `1` for the upper (profit-taking) barrier, `-1` for the lower (stop-loss) barrier, and `0` for the vertical (time) barrier when neither is touched. The horizontal barriers are volatility multiples — `upper_multiple`/`lower_multiple` times the EWMA standard deviation of close-to-close returns — so they adapt to the local regime rather than using a fixed percentage. Bars are null during the volatility warmup, on zero volatility, and when the vertical barrier extends past the available data with no touch
+
+## v3.17.0 on 6th of June, 2026
+
+- Add `bulk_volume_classification` to `limen.features` — bulk-volume classification (Easley, Lopez de Prado, and O'Hara): splits each bar's `volume` into `bvc_buy_volume` and `bvc_sell_volume` by passing the close-to-close log return, standardized by its rolling volatility, through the standard normal CDF. Infers trade direction from price alone, so it needs only `close` and `volume`
+- Add `order_flow_imbalance` to `limen.features` — rolling net BVC-classified signed flow as a share of volume, in `[-1, 1]`; a bar-level order-flow imbalance proxy, not the level-2 OFI of Cont, Kukanov, and Stoikov. Composes `bulk_volume_classification`
+- Add `vpin` to `limen.features` — Volume-synchronized Probability of Informed Trading (Easley, Lopez de Prado, and O'Hara): the rolling absolute BVC buy/sell imbalance over total volume, a flow-toxicity gauge in `[0, 1]`. Composes `bulk_volume_classification`; feed volume bars for canonical equal-volume buckets
+- Add `cusum_filter` to `limen.features` — Lopez de Prado's symmetric CUSUM event gate on the close log-return path, emitting an Int8 `cusum_event` flag (`1` up, `-1` down, `0` none) that samples only moves whose cumulative magnitude breaches `threshold`
+- Add `time_to_funding` to `limen.features` — continuous hours until the next funding settlement (default cadence every `8` hours from `0` UTC), complementing the existing `is_funding_hour` flag

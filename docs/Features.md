@@ -77,6 +77,7 @@ These helpers derive time-of-bar context from `datetime` without depending on ea
 | `calendar_time_features` | `hour`, `minute`, `weekday`, `day_of_month`, `day_of_year`, `week_of_year`, `month`, `quarter`, `half_of_year`, `is_weekend` | Adds discrete calendar fields for downstream splits, filters, and rules. `weekday` uses ISO numbering (`Monday=1` to `Sunday=7`), and `week_of_year` uses ISO week numbering. |
 | `cyclical_time_features` | `hour_sin`, `hour_cos`, `minute_sin`, `minute_cos`, `weekday_sin`, `weekday_cos`, `day_of_month_sin`, `day_of_month_cos`, `day_of_year_sin`, `day_of_year_cos`, `week_of_year_sin`, `week_of_year_cos`, `month_sin`, `month_cos`, `quarter_sin`, `quarter_cos` | Encodes cyclical calendar fields without introducing artificial ordinal jumps. Uses the same ISO conventions as `calendar_time_features`; weekday cycles are phase-aligned with `weekday - 1` before applying sine/cosine. |
 | `is_funding_hour` | `is_funding_hour` | Parameterized funding-cadence hour indicator; default hours are `0`, `8`, and `16`. |
+| `time_to_funding` | `hours_to_funding` | Continuous hours until the next funding settlement; default cadence is every `8` hours from `0` UTC, and zero at a settlement bar. |
 | `is_us_open_hour` | `is_us_open_hour` | Parameterized US open-hour indicator; default hour is `14`. |
 
 ## Range-Based Volatility Features
@@ -113,6 +114,9 @@ These helpers translate ordinary OHLCV bars into simple liquidity, impact, and s
 | `trade_density` | `trade_density` | Rolling mean number of trades per unit of volume. |
 | `trade_imbalance` | `trade_imbalance` | Rolling maker volume divided by rolling total volume. |
 | `trade_size_ratio` | `trade_size_ratio` | Short average trade size divided by long average trade size. |
+| `bulk_volume_classification` | `bvc_buy_volume`, `bvc_sell_volume` | Splits bar volume into buy and sell by bulk-volume classification (standardized return through the normal CDF). Needs only `close` and `volume`. |
+| `order_flow_imbalance` | `order_flow_imbalance` plus `bvc_buy_volume`, `bvc_sell_volume` | Rolling net BVC-classified signed flow as a share of volume; a bar-level order-flow imbalance proxy, not level-2 OFI. |
+| `vpin` | `vpin` plus `bvc_buy_volume`, `bvc_sell_volume` | Volume-synchronized Probability of Informed Trading from the BVC buy/sell imbalance; a flow-toxicity gauge. Feed volume bars for canonical equal-volume buckets. |
 
 ## Realized Risk And Tail Features
 
@@ -188,6 +192,7 @@ These helpers are mainly used to expand existing columns or define cutoffs for t
 | `lag_range` | a lag range such as `close_lag_1` through `close_lag_3` | Requires `col`, `start`, and `end`. |
 | `lag_range_cols` | a lag range for each listed column | Requires `cols`, `start`, and `end`. |
 | `rolling_zscore` | configurable `*_zscore_*` column | Applies `identity`, `log1p`, or `abs` before rolling z-score standardization. |
+| `cusum_filter` | `cusum_event` | Int8 flag of symmetric CUSUM events on the close log-return path (`1` up, `-1` down, `0` none); gates which moves are worth sampling. |
 
 ## Stationarity And Long-Memory Helpers
 
