@@ -17,6 +17,7 @@ from limen.targets import QuantileBinaryTarget
 from limen.targets import RandomBinaryTarget
 from limen.targets import RiskRewardRatioTarget
 from limen.targets import ThresholdBinaryTarget
+from limen.targets import TripleBarrierTarget
 from limen.targets import VolNormalizedReturnTarget
 
 
@@ -383,3 +384,57 @@ def test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard() ->
     assert result['risk_reward_ratio'].to_list() == pytest.approx([0.5 / 0.101, 1000.0])
     assert 'capturable_breakout' not in result.columns
     assert 'max_drawdown' not in result.columns
+
+
+def _triple_barrier_close() -> list[float]:
+    return [100.0, 101.0, 100.0, 101.0, 100.0]
+
+
+def test_triple_barrier_labels_upper_touch_first() -> None:
+    data = _close_series([*_triple_barrier_close(), 200.0, 200.0, 200.0])
+    t = TripleBarrierTarget(data, 'tb', span=2, min_periods=2, max_horizon=3)
+    result = t.transform(data)['tb'].to_list()
+    assert result[4] == 1
+
+
+def test_triple_barrier_labels_lower_touch_first() -> None:
+    data = _close_series([*_triple_barrier_close(), 50.0, 50.0, 50.0])
+    t = TripleBarrierTarget(data, 'tb', span=2, min_periods=2, max_horizon=3)
+    result = t.transform(data)['tb'].to_list()
+    assert result[4] == -1
+
+
+def test_triple_barrier_vertical_barrier_labels_zero() -> None:
+    data = _close_series([*_triple_barrier_close(), 100.0, 100.0, 100.0])
+    t = TripleBarrierTarget(data, 'tb', span=2, min_periods=2, max_horizon=3)
+    result = t.transform(data)['tb'].to_list()
+    assert result[4] == 0
+
+
+def test_triple_barrier_nulls_warmup_and_truncated_horizon() -> None:
+    data = _close_series([*_triple_barrier_close(), 100.0, 100.0, 100.0])
+    t = TripleBarrierTarget(data, 'tb', span=2, min_periods=2, max_horizon=3)
+    result = t.transform(data)['tb'].to_list()
+    assert result[0] is None
+    assert result[1] is None
+    assert result[5] is None
+    assert result[6] is None
+    assert result[7] is None
+
+
+def test_triple_barrier_lower_multiple_widens_stop() -> None:
+    data = _close_series([*_triple_barrier_close(), 97.0, 110.0, 110.0])
+    narrow = TripleBarrierTarget(data, 'tb', span=2, min_periods=2, max_horizon=3,
+                                 lower_multiple=1.0).transform(data)['tb'].to_list()
+    wide = TripleBarrierTarget(data, 'tb', span=2, min_periods=2, max_horizon=3,
+                               lower_multiple=100.0).transform(data)['tb'].to_list()
+    assert narrow[4] == -1
+    assert wide[4] == 1
+
+
+def test_triple_barrier_rejects_nonpositive_params() -> None:
+    data = _close_series(_triple_barrier_close())
+    with pytest.raises(ValueError, match='upper_multiple'):
+        TripleBarrierTarget(data, 'tb', upper_multiple=0.0)
+    with pytest.raises(ValueError, match='max_horizon'):
+        TripleBarrierTarget(data, 'tb', max_horizon=0)

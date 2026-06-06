@@ -1052,3 +1052,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.15.4 on 6th of June, 2026
 
 - Make remote dataset fetches in `HistoricalData` resilient to transient HTTP failures: the HuggingFace `latest.json` lookup and the dataset download (`.parquet`, `.csv`, and `.zip`, including the default Parquet datasets) each run through a `requests` session with exponential backoff that retries on 429/5xx and honours `Retry-After`. Fixes intermittent CI failures when HuggingFace rate-limits the test-data fetch
+
+## v3.16.0 on 6th of June, 2026
+
+- Add `TripleBarrierTarget` to `limen.targets` — Lopez de Prado's triple-barrier label. Each bar is labelled by the first barrier its forward close path touches over the next `max_horizon` bars: `1` for the upper (profit-taking) barrier, `-1` for the lower (stop-loss) barrier, and `0` for the vertical (time) barrier when neither is touched. The horizontal barriers are volatility multiples — `upper_multiple`/`lower_multiple` times the EWMA standard deviation of close-to-close returns — so they adapt to the local regime rather than using a fixed percentage. Bars are null during the volatility warmup, on zero volatility, and when the vertical barrier extends past the available data with no touch
