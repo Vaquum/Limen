@@ -1064,3 +1064,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `vpin` to `limen.features` — Volume-synchronized Probability of Informed Trading (Easley, Lopez de Prado, and O'Hara): the rolling absolute BVC buy/sell imbalance over total volume, a flow-toxicity gauge in `[0, 1]`. Composes `bulk_volume_classification`; feed volume bars for canonical equal-volume buckets
 - Add `cusum_filter` to `limen.features` — Lopez de Prado's symmetric CUSUM event gate on the close log-return path, emitting an Int8 `cusum_event` flag (`1` up, `-1` down, `0` none) that samples only moves whose cumulative magnitude breaches `threshold`
 - Add `time_to_funding` to `limen.features` — continuous hours until the next funding settlement (default cadence every `8` hours from `0` UTC), complementing the existing `is_funding_hour` flag
+
+## v3.18.0 on 6th of June, 2026
+
+- Add a manifest-level backtest cost config: `Manifest.set_backtest_config(fee_bps, slip_bps)` stores a `BacktestConfig` that `run_model` resolves against the round's params (a number is fixed; a string is a search-param reference, so `set_backtest_config(fee_bps='fee')` sweeps cost via `params()`), validates non-negative and finite, and injects into the prepared `data` dict. `ReferenceModel._compute_backtest` and the rule-based backtest forward the resolved cost to `backtest_snapshot`, defaulting to the existing `5.0`/`5.0` when no config is set. The model architectures are untouched — cost stays off the model surface. Towards #534

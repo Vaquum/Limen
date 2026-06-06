@@ -9,6 +9,7 @@ from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment import CalibrationConfig
+from limen.experiment import MLManifest
 from limen.sfd.foundational_sfd import logreg_binary as foundational_logreg_binary
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
@@ -16,6 +17,9 @@ from limen.sfd.reference_architecture import RuleBasedStrategy
 from limen.sfd.reference_architecture import TabPFNBinary
 from limen.sfd.reference_architecture import XGBoostRegressor
 from limen.sfd.reference_architecture import logreg_binary
+from limen.sfd.reference_architecture import random_binary
+from limen.sfd.reference_architecture import tabpfn_binary
+from limen.sfd.reference_architecture import xgboost_regressor
 from limen.sfd.reference_architecture.rule_based import rule_based
 
 
@@ -332,3 +336,70 @@ def test_rule_based_unknown_operator_raises():
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'Unknown logical operator' in str(e)
+
+
+def test_compute_backtest_honours_injected_cost():
+
+    base = _make_data(binary=True, with_price=True)
+    model = LogRegBinary().train(_make_data(binary=True, with_price=True), solver='lbfgs', max_iter=200)
+
+    zero = model.evaluate({**base, 'backtest_fee_bps': 0.0, 'backtest_slip_bps': 0.0})
+    high = model.evaluate({**base, 'backtest_fee_bps': 20.0, 'backtest_slip_bps': 20.0})
+
+    assert zero['backtest_cost_drag_bps_p50'] == 0.0
+    assert high['backtest_cost_drag_bps_p50'] > zero['backtest_cost_drag_bps_p50']
+    assert zero['backtest_trade_pnl_net_bps_p50'] > high['backtest_trade_pnl_net_bps_p50']
+
+
+def test_manifest_backtest_config_resolves_and_sweeps():
+
+    swept = {}
+    MLManifest().set_backtest_config(fee_bps='fee', slip_bps=3.0)._apply_backtest_cost(swept, {'fee': 7.0})
+    assert swept['backtest_fee_bps'] == 7.0
+    assert swept['backtest_slip_bps'] == 3.0
+
+    literal = {}
+    MLManifest().set_backtest_config(fee_bps=2.0, slip_bps=4.0)._apply_backtest_cost(literal, {})
+    assert literal['backtest_fee_bps'] == 2.0
+    assert literal['backtest_slip_bps'] == 4.0
+
+    unset = {}
+    MLManifest()._apply_backtest_cost(unset, {})
+    assert unset == {}
+
+
+def test_architectures_do_not_expose_cost_parameters():
+
+    architectures = [logreg_binary, random_binary, xgboost_regressor, rule_based]
+    if tabpfn_binary is not None:
+        architectures.append(tabpfn_binary)
+
+    for architecture in architectures:
+        params = inspect.signature(architecture).parameters
+        assert 'fee_bps' not in params, f"{architecture.__name__} should not expose fee_bps"
+        assert 'slip_bps' not in params, f"{architecture.__name__} should not expose slip_bps"
+
+
+def test_invalid_backtest_config_is_rejected():
+
+    bad = (
+        ({'fee_bps': -1.0}, {}),
+        ({'slip_bps': -1.0}, {}),
+        ({'fee_bps': 'fee'}, {'fee': float('inf')}),
+        ({'slip_bps': 'slip'}, {'slip': float('nan')}),
+        ({'fee_bps': 'fee'}, {'fee': 'oops'}),
+    )
+    for config_kwargs, round_params in bad:
+        try:
+            MLManifest().set_backtest_config(**config_kwargs)._apply_backtest_cost({}, round_params)
+            assert False, 'Expected ValueError for invalid backtest cost'
+        except ValueError as e:
+            assert 'bps' in str(e)
+            assert 'got ' in str(e)
+            assert 'unknown search-param' not in str(e)
+
+    try:
+        MLManifest().set_backtest_config(fee_bps='missing_param')._apply_backtest_cost({}, {})
+        assert False, 'Expected ValueError for unresolved param reference'
+    except ValueError as e:
+        assert 'unknown search-param' in str(e)

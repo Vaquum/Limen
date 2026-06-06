@@ -2,6 +2,8 @@ import copy
 import inspect
 import importlib
 import logging
+import math
+import numbers
 import random
 import re
 from datetime import date
@@ -237,6 +239,15 @@ class DataSourceResolver:
 
 
 @dataclass
+class BacktestConfig:
+
+    '''Backtest cost configuration: per-fill fee and slippage in basis points.'''
+
+    fee_bps: float | str = 5.0
+    slip_bps: float | str = 5.0
+
+
+@dataclass
 class Manifest:
 
     '''Base manifest with shared data pipeline configuration for Loop experiments.'''
@@ -255,6 +266,7 @@ class Manifest:
     architecture_function: Callable = None
     architecture_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
+    backtest_config: BacktestConfig | None = None
 
     def _add_transform(self,
                        func: Callable,
@@ -742,6 +754,55 @@ class Manifest:
         return model_kwargs
 
 
+    def set_backtest_config(self,
+                            fee_bps: float | str = 5.0,
+                            slip_bps: float | str = 5.0) -> 'Manifest':
+
+        '''
+        Configure the backtest cost model for this manifest.
+
+        Args:
+            fee_bps (float | str): Per-fill fee in basis points, or a round-param name to sweep
+            slip_bps (float | str): Per-fill slippage in basis points, or a round-param name to sweep
+
+        Returns:
+            Manifest: Self for method chaining
+        '''
+
+        self.backtest_config = BacktestConfig(fee_bps=fee_bps, slip_bps=slip_bps)
+
+        return self
+
+    def _apply_backtest_cost(self, data: dict, round_params: dict[str, Any]) -> None:
+        if self.backtest_config is None:
+            return
+
+        raw = {'fee_bps': self.backtest_config.fee_bps, 'slip_bps': self.backtest_config.slip_bps}
+        resolved = _resolve_params(raw, round_params)
+        for key in ('fee_bps', 'slip_bps'):
+            original = raw[key]
+            value = resolved[key]
+            if (
+                isinstance(original, str)
+                and isinstance(value, str)
+                and value == original
+                and original not in round_params
+            ):
+                raise ValueError(
+                    f"Manifest backtest {key} references unknown search-param '{original}'; "
+                    "add it to params() or pass a number"
+                )
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, numbers.Real)
+                or not math.isfinite(value)
+                or value < 0
+            ):
+                raise ValueError(
+                    f"Manifest backtest {key} must be a non-negative finite number, got {value!r}"
+                )
+            data[f"backtest_{key}"] = float(value)
+
     def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
 
         '''
@@ -764,6 +825,7 @@ class Manifest:
         '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
+        self._apply_backtest_cost(data, round_params)
         return self.architecture_function(data, **model_kwargs)
 
 
@@ -1030,6 +1092,7 @@ class MLManifest(Manifest):
                     threshold_params=resolved.threshold_params,
                 )
                 model_kwargs['prediction_calibration_config'] = config
+        self._apply_backtest_cost(data, round_params)
         return self.architecture_function(data, **model_kwargs)
 
     def sensor_input_prep(
