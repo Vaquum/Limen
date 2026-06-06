@@ -260,7 +260,7 @@ Produces a ternary label from Lopez de Prado's triple-barrier method. For each b
 
 The horizontal barriers are volatility multiples — `+upper_multiple * sigma` and `-lower_multiple * sigma`, where `sigma` is the EWMA standard deviation of close-to-close returns with the given `span`. The barrier width is taken from the entry-bar volatility, so it adapts to the local regime instead of using a fixed percentage.
 
-A bar is null during the volatility warmup (`min_periods`), when its volatility is zero, and when the vertical barrier would extend past the available data and no barrier is touched within the truncated window. Manifest preparation drops null target rows.
+A bar is null during the volatility warmup (`min_periods`), when its volatility is zero, and when the vertical barrier would extend past the available data and no barrier is touched within the truncated window. Manifest preparation drops null target rows. Size `min_periods` (and `span`) against the smallest split: a split shorter than the volatility warmup is entirely null and is dropped, leaving no labelled rows for that split.
 
 ```python
 .with_target_label(

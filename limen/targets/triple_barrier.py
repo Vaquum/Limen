@@ -112,13 +112,14 @@ class TripleBarrierTarget:
         for k in range(1, self.max_horizon + 1):
             if k >= n:
                 break
-            forward_return = np.full(n, np.nan)
-            forward_return[:n - k] = close[k:] / close[:n - k] - 1.0
-            hit_upper = (~touched) & (forward_return >= upper)
-            hit_lower = (~touched) & (forward_return <= -lower)
-            label[hit_upper] = 1
-            label[hit_lower] = -1
-            touched = touched | hit_upper | hit_lower
+            prefix = n - k
+            forward_return = close[k:] / close[:prefix] - 1.0
+            open_bars = ~touched[:prefix]
+            hit_upper = open_bars & (forward_return >= upper[:prefix])
+            hit_lower = open_bars & (forward_return <= -lower[:prefix])
+            label[:prefix][hit_upper] = 1
+            label[:prefix][hit_lower] = -1
+            touched[:prefix] |= hit_upper | hit_lower
 
         horizon_available = np.arange(n) <= (n - 1 - self.max_horizon)
         valid = (volatility > 0.0) & (touched | horizon_available)
