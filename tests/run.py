@@ -126,6 +126,7 @@ from tests.test_yaml import test_validate_error_for_backtest_cost_invalid_value
 from tests.test_yaml import test_build_manifest_backtest_config_fixed
 from tests.test_yaml import test_build_manifest_backtest_config_swept_resolves
 from tests.test_yaml import test_build_manifest_no_backtest_block_leaves_config_none
+from tests.test_yaml import test_build_manifest_empty_backtest_block_leaves_config_none
 from tests.test_yaml import test_build_manifest_rule_based_backtest_config_resolves
 from tests.test_profiler import test_complexity_rating_low
 from tests.test_profiler import test_complexity_rating_medium
@@ -1271,6 +1272,7 @@ tests = [
     test_build_manifest_backtest_config_fixed,
     test_build_manifest_backtest_config_swept_resolves,
     test_build_manifest_no_backtest_block_leaves_config_none,
+    test_build_manifest_empty_backtest_block_leaves_config_none,
     test_build_manifest_rule_based_backtest_config_resolves,
     test_resolve_func_params_resolves_limen_path_to_callable,
     test_resolve_func_params_preserves_round_param_ref_as_string,

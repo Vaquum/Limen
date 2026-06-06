@@ -63,7 +63,7 @@ sfd:
     fee: [1.0, 5.0, 10.0]
 ```
 
-The block is optional and applies to both `ml` and `rule_based` manifests; omitting it keeps the 5 + 5 default. `limen validate` rejects an unknown key, a negative or non-finite cost, and a `"{param}"` reference missing from `sfd.params`.
+The block is optional and applies to both `ml` and `rule_based` manifests; omitting it — or leaving it empty — keeps the 5 + 5 default. `limen validate` rejects an unknown key, a negative or non-finite cost, and a `"{param}"` reference missing from `sfd.params`.
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 

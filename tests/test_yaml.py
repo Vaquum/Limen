@@ -852,6 +852,13 @@ def test_build_manifest_no_backtest_block_leaves_config_none() -> None:
     assert manifest.backtest_config is None
 
 
+def test_build_manifest_empty_backtest_block_leaves_config_none() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {}
+    manifest = build_manifest(yaml_dict)
+    assert manifest.backtest_config is None
+
+
 def test_build_manifest_rule_based_backtest_config_resolves() -> None:
     yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
     yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': '{dummy_param}'}
