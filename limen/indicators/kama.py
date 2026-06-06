@@ -117,7 +117,7 @@ def kama(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('kama period must be between 2 and 100000')
 
     out_col = f"kama_{period}"
     frame = data

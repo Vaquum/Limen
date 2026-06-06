@@ -137,9 +137,9 @@ def sar(
     '''
 
     if acceleration < 0.0 or acceleration > CMP_N_3E37:
-        raise ValueError('acceleration must be between 0 and 3e37')
+        raise ValueError('sar acceleration must be between 0 and 3e37')
     if maximum < 0.0 or maximum > CMP_N_3E37:
-        raise ValueError('maximum must be between 0 and 3e37')
+        raise ValueError('sar maximum must be between 0 and 3e37')
 
     frame = data
     sar_expr = pl.struct([high_col, low_col]).map_batches(

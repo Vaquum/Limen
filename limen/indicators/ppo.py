@@ -31,13 +31,13 @@ def ppo(
     '''
 
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
-        raise ValueError('fast_period must be between 2 and 100000')
+        raise ValueError('ppo fast_period must be between 2 and 100000')
     if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
-        raise ValueError('slow_period must be between 2 and 100000')
+        raise ValueError('ppo slow_period must be between 2 and 100000')
     if ma_type < 0 or ma_type > CMP_N_8:
-        raise ValueError('ma_type must be between 0 and 8')
+        raise ValueError('ppo ma_type must be between 0 and 8')
     if slow_period <= fast_period:
-        raise ValueError('slow_period must be greater than fast_period')
+        raise ValueError('ppo slow_period must be greater than fast_period')
 
     out_col = f"ppo_{fast_period}_{slow_period}_{ma_type}"
     frame = data

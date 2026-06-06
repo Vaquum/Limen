@@ -28,7 +28,7 @@ def _ma_lookback(period: int, ma_type: int) -> int:
     }
     if ma_type in lookback_by_type:
         return lookback_by_type[ma_type]
-    raise ValueError('ma_type must be between 0 and 8')
+    raise ValueError('macdext ma_type must be between 0 and 8')
 
 
 def _ma_talib_segment(
@@ -153,17 +153,17 @@ def macdext(
     '''
 
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
-        raise ValueError('fast_period must be between 2 and 100000')
+        raise ValueError('macdext fast_period must be between 2 and 100000')
     if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
-        raise ValueError('slow_period must be between 2 and 100000')
+        raise ValueError('macdext slow_period must be between 2 and 100000')
     if signal_period < 1 or signal_period > CMP_N_100000:
-        raise ValueError('signal_period must be between 1 and 100000')
+        raise ValueError('macdext signal_period must be between 1 and 100000')
     if fast_ma_type < 0 or fast_ma_type > CMP_N_8:
-        raise ValueError('fast_ma_type must be between 0 and 8')
+        raise ValueError('macdext fast_ma_type must be between 0 and 8')
     if slow_ma_type < 0 or slow_ma_type > CMP_N_8:
-        raise ValueError('slow_ma_type must be between 0 and 8')
+        raise ValueError('macdext slow_ma_type must be between 0 and 8')
     if signal_ma_type < 0 or signal_ma_type > CMP_N_8:
-        raise ValueError('signal_ma_type must be between 0 and 8')
+        raise ValueError('macdext signal_ma_type must be between 0 and 8')
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     macd_values, signal_values, hist_values = _macdext_from_values(

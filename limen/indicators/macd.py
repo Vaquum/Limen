@@ -74,11 +74,11 @@ def macd(
     '''
 
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
-        raise ValueError('fast_period must be between 2 and 100000')
+        raise ValueError('macd fast_period must be between 2 and 100000')
     if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
-        raise ValueError('slow_period must be between 2 and 100000')
+        raise ValueError('macd slow_period must be between 2 and 100000')
     if signal_period < 1 or signal_period > CMP_N_100000:
-        raise ValueError('signal_period must be between 1 and 100000')
+        raise ValueError('macd signal_period must be between 1 and 100000')
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     macd_values, signal_values, hist_values = _macd_from_values(

@@ -26,7 +26,7 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
     '''
 
     if threshold <= 0:
-        raise ValueError(f"threshold must be positive, got {threshold}")
+        raise ValueError(f"fractional_diff threshold must be positive, got {threshold}")
 
     weights = [1.0]
     k = 1
@@ -70,13 +70,13 @@ def fractional_diff(data: pl.DataFrame,
     '''
 
     if not cols:
-        raise ValueError('cols must be a non-empty list of column names')
+        raise ValueError('fractional_diff cols must be a non-empty list of column names')
 
     if d < 0:
-        raise ValueError(f"d must be non-negative, got {d}")
+        raise ValueError(f"fractional_diff d must be non-negative, got {d}")
 
     if threshold <= 0:
-        raise ValueError(f"threshold must be positive, got {threshold}")
+        raise ValueError(f"fractional_diff threshold must be positive, got {threshold}")
 
     schema_names = data.collect_schema().names()
 
@@ -169,7 +169,7 @@ def find_min_d(data: pl.DataFrame,
     from limen.utils.adf_test import adf_test
 
     if step <= 0:
-        raise ValueError(f"step must be positive, got {step}")
+        raise ValueError(f"fractional_diff step must be positive, got {step}")
 
     fracdiff_col = f"{col}{FRACDIFF_SUFFIX}"
 

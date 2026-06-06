@@ -37,7 +37,7 @@ def _cdlabandonedbaby_impl(
     '''
 
     if penetration < 0.0 or penetration > CMP_N_3E37:
-        raise ValueError('penetration must be between 0 and 3e37')
+        raise ValueError('cdlabandonedbaby penetration must be between 0 and 3e37')
 
     open_values = data[open_col].to_numpy().astype(float, copy=False)
     high_values = data[high_col].to_numpy().astype(float, copy=False)

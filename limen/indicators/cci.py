@@ -63,7 +63,7 @@ def cci(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('cci period must be between 2 and 100000')
 
     out_col = f"cci_{period}"
     frame = data

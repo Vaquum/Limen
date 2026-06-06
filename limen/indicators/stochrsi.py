@@ -66,13 +66,13 @@ def stochrsi(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('stochrsi period must be between 2 and 100000')
     if fastk_period < 1 or fastk_period > CMP_N_100000:
-        raise ValueError('fastk_period must be between 1 and 100000')
+        raise ValueError('stochrsi fastk_period must be between 1 and 100000')
     if fastd_period < 1 or fastd_period > CMP_N_100000:
-        raise ValueError('fastd_period must be between 1 and 100000')
+        raise ValueError('stochrsi fastd_period must be between 1 and 100000')
     if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
-        raise ValueError('fastd_ma_type must be between 0 and 8')
+        raise ValueError('stochrsi fastd_ma_type must be between 0 and 8')
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     fastk_values, fastd_values = _stochrsi_from_values(

@@ -31,7 +31,7 @@ def atr(
     '''
 
     if period < ATR_PERIOD_MIN or period > ATR_PERIOD_MAX:
-        raise ValueError(f"period must be between {ATR_PERIOD_MIN} and {ATR_PERIOD_MAX}")
+        raise ValueError(f"atr period must be between {ATR_PERIOD_MIN} and {ATR_PERIOD_MAX}")
 
     out_col = f"{ATR_OUT_COL_PREFIX}{period}"
     prev_close = pl.col(close_col).shift(1)

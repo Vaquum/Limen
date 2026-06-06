@@ -37,5 +37,5 @@ def close_position(
     if window == 1:
         return data.with_columns(position.alias(output_col))
     if window <= 0:
-        raise ValueError('window must be positive')
+        raise ValueError('close_position window must be positive')
     return data.with_columns(position.rolling_mean(window_size=window).alias(output_col))

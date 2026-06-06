@@ -22,7 +22,7 @@ def mom(
     '''
 
     if period < 1 or period > CMP_N_100000:
-        raise ValueError('period must be between 1 and 100000')
+        raise ValueError('mom period must be between 1 and 100000')
 
     out_col = f"mom_{period}"
     mom_expr = (

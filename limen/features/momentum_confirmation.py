@@ -20,7 +20,7 @@ def momentum_confirmation(df: pl.DataFrame,
     '''
 
     if short_period >= long_period:
-        raise ValueError(f"short_period ({short_period}) must be less than long_period ({long_period})")
+        raise ValueError(f"momentum_confirmation short_period ({short_period}) must be less than long_period ({long_period})")
 
     long_weight = 1.0 - short_weight
 

@@ -29,7 +29,7 @@ def willr(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('willr period must be between 2 and 100000')
 
     out_col = f"willr_{period}"
     highest = pl.col(high_col).rolling_max(window_size=period)

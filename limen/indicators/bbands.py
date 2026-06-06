@@ -58,13 +58,13 @@ def bbands(
     '''
 
     if period < BBANDS_PERIOD_MIN or period > BBANDS_PERIOD_MAX:
-        raise ValueError(f"period must be between {BBANDS_PERIOD_MIN} and {BBANDS_PERIOD_MAX}")
+        raise ValueError(f"bbands period must be between {BBANDS_PERIOD_MIN} and {BBANDS_PERIOD_MAX}")
     if nb_dev_up < BBANDS_NBDEV_MIN or nb_dev_up > BBANDS_NBDEV_MAX:
-        raise ValueError(f"nb_dev_up must be between {BBANDS_NBDEV_MIN} and {BBANDS_NBDEV_MAX}")
+        raise ValueError(f"bbands nb_dev_up must be between {BBANDS_NBDEV_MIN} and {BBANDS_NBDEV_MAX}")
     if nb_dev_dn < BBANDS_NBDEV_MIN or nb_dev_dn > BBANDS_NBDEV_MAX:
-        raise ValueError(f"nb_dev_dn must be between {BBANDS_NBDEV_MIN} and {BBANDS_NBDEV_MAX}")
+        raise ValueError(f"bbands nb_dev_dn must be between {BBANDS_NBDEV_MIN} and {BBANDS_NBDEV_MAX}")
     if ma_type < BBANDS_MATYPE_MIN or ma_type > BBANDS_MATYPE_MAX:
-        raise ValueError(f"ma_type must be between {BBANDS_MATYPE_MIN} and {BBANDS_MATYPE_MAX}")
+        raise ValueError(f"bbands ma_type must be between {BBANDS_MATYPE_MIN} and {BBANDS_MATYPE_MAX}")
 
     middle_col = f"ma_{period}_{ma_type}"
     frame = ma(

@@ -33,7 +33,7 @@ def natr(
     '''
 
     if period < NATR_PERIOD_MIN or period > NATR_PERIOD_MAX:
-        raise ValueError(f"period must be between {NATR_PERIOD_MIN} and {NATR_PERIOD_MAX}")
+        raise ValueError(f"natr period must be between {NATR_PERIOD_MIN} and {NATR_PERIOD_MAX}")
 
     out_col = f"{NATR_OUT_COL_PREFIX}{period}"
     prev_close = pl.col(close_col).shift(1)
