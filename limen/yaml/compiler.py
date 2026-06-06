@@ -139,6 +139,17 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
             raise ValueError(f"'required_columns' must be a list, got {type(cols).__name__}")
         manifest.set_required_bar_columns(list(cols))
 
+    _apply_backtest(manifest, m)
+
+
+def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
+
+    backtest = m.get('backtest')
+    if not backtest:
+        return
+    kwargs = {key: backtest[key] for key in ('fee_bps', 'slip_bps') if key in backtest}
+    manifest.set_backtest_config(**kwargs)
+
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
 

@@ -13,7 +13,7 @@ METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags', 'limen_versi
 SFD_REQUIRED = {'manifest', 'params'}
 
 MANIFEST_REQUIRED = {'type', 'data_source', 'reference_architecture'}
-MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'indicators'}
+MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'indicators', 'backtest'}
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {
@@ -52,6 +52,7 @@ SCALER_FROM_PARAMS_REQUIRED = {'from_params'}
 
 FEATURE_ABLATION_OPTIONAL = {'drop_count_key', 'seed_key'}
 PCA_COMPRESSION_OPTIONAL = {'enabled_param', 'n_components_param', 'scaler_param_name', 'component_prefix'}
+BACKTEST_OPTIONAL = {'fee_bps', 'slip_bps'}
 
 CALIBRATION_OPTIONAL = {'probability_calibration', 'threshold_function'}
 CALIBRATION_FUNC_REQUIRED = {'func'}

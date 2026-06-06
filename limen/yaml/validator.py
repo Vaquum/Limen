@@ -3,6 +3,7 @@ from dataclasses import field
 from typing import Any
 
 from limen.yaml.errors import YAMLError
+from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import BlockSpec
 from limen.yaml.rules import CalibrationCrossRef
 from limen.yaml.rules import CalibrationPresence
@@ -28,6 +29,7 @@ from limen.yaml.rules import SplitSpec
 from limen.yaml.rules import WarnIfPresent
 from limen.yaml.rules import When
 from limen.yaml.rules import get_at
+from limen.yaml.schema import BACKTEST_OPTIONAL
 from limen.yaml.schema import CALIBRATION_FUNC_OPTIONAL
 from limen.yaml.schema import CALIBRATION_FUNC_REQUIRED
 from limen.yaml.schema import CALIBRATION_OPTIONAL
@@ -102,6 +104,10 @@ _MAIN_ENGINE = RuleEngine([
 
     Required('sfd.manifest.reference_architecture', str),
     Resolvable('sfd.manifest.reference_architecture'),
+
+    BlockSpec('sfd.manifest.backtest'),
+    NoUnknownKeys('sfd.manifest.backtest', BACKTEST_OPTIONAL, severity='error'),
+    BacktestCostSpec(),
 
     When('sfd.manifest.type', 'ml', [
         Required('sfd.manifest.target', dict),
