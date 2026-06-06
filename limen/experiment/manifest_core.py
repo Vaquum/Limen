@@ -783,6 +783,11 @@ class Manifest:
         )
         for key in ('fee_bps', 'slip_bps'):
             value = resolved[key]
+            if isinstance(value, str):
+                raise ValueError(
+                    f"Manifest backtest {key} references unknown search-param '{value}'; "
+                    "add it to params() or pass a number"
+                )
             if (
                 isinstance(value, bool)
                 or not isinstance(value, numbers.Real)
