@@ -784,6 +784,84 @@ def test_validate_no_unused_param_warning_for_pca_defaults() -> None:
     assert not any(w.path in ('sfd.params.auto_pca', 'sfd.params.pca_k') for w in result.warnings)
 
 
+def test_validate_valid_for_fixed_and_swept_backtest_cost() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': '{fee}', 'slip_bps': 5.0}
+    yaml_dict['sfd']['params']['fee'] = [1.0, 5.0, 10.0]
+    result = validate(yaml_dict)
+    assert result.valid
+    assert not any(w.path == 'sfd.params.fee' for w in result.warnings)
+
+
+def test_validate_error_for_backtest_not_a_mapping() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = 'cheap'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('backtest' in e.path and 'mapping' in e.message for e in result.errors)
+
+
+def test_validate_error_for_backtest_unknown_key() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': 5.0, 'slippage': 3.0}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('slippage' in e.message for e in result.errors)
+
+
+def test_validate_error_for_backtest_cost_ref_not_in_sfd_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': '{nonexistent_fee}'}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('nonexistent_fee' in e.message for e in result.errors)
+
+
+def test_validate_error_for_backtest_cost_invalid_value() -> None:
+    for value in [-1.0, float('inf'), float('nan'), 'fee', True, [5.0]]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': value}
+        result = validate(yaml_dict)
+        assert not result.valid, f'backtest fee_bps={value!r} should be invalid'
+        assert any(e.path == 'sfd.manifest.backtest.fee_bps' for e in result.errors)
+
+
+def test_build_manifest_backtest_config_fixed() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': 8.0, 'slip_bps': 3.0}
+    manifest = build_manifest(yaml_dict)
+    assert manifest.backtest_config is not None
+    assert manifest.backtest_config.fee_bps == 8.0
+    assert manifest.backtest_config.slip_bps == 3.0
+
+
+def test_build_manifest_backtest_config_swept_resolves() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': '{fee}', 'slip_bps': 5.0}
+    yaml_dict['sfd']['params']['fee'] = [1.0, 5.0, 10.0]
+    manifest = build_manifest(yaml_dict)
+    data: dict = {}
+    manifest._apply_backtest_cost(data, {'fee': 10.0})
+    assert data['backtest_fee_bps'] == 10.0
+    assert data['backtest_slip_bps'] == 5.0
+
+
+def test_build_manifest_no_backtest_block_leaves_config_none() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    manifest = build_manifest(yaml_dict)
+    assert manifest.backtest_config is None
+
+
+def test_build_manifest_rule_based_backtest_config_resolves() -> None:
+    yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': '{dummy_param}'}
+    assert validate(yaml_dict).valid
+    manifest = build_manifest(yaml_dict)
+    data: dict = {}
+    manifest._apply_backtest_cost(data, {'dummy_param': 2})
+    assert data['backtest_fee_bps'] == 2.0
+
+
 def test_build_manifest_data_source_method_is_callable_with_correct_params() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     manifest = build_manifest(yaml_dict)

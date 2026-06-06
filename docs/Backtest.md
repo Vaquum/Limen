@@ -51,6 +51,20 @@ The current snapshot backtest is intentionally simple and opinionated:
 
 The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=..., slip_bps=...)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
 
+In a YAML/CLI manifest the same configuration is a `backtest:` block under `sfd.manifest`, sibling to `target:` and `scaler:`. Each cost is a fixed number or a `"{param}"` reference into `sfd.params`, mirroring how indicator and target params are swept:
+
+```yaml
+sfd:
+  manifest:
+    backtest:
+      fee_bps: "{fee}"   # swept across the search
+      slip_bps: 5.0      # fixed
+  params:
+    fee: [1.0, 5.0, 10.0]
+```
+
+The block is optional and applies to both `ml` and `rule_based` manifests; omitting it keeps the 5 + 5 default. `limen validate` rejects an unknown key, a negative or non-finite cost, and a `"{param}"` reference missing from `sfd.params`.
+
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
 ### Output columns

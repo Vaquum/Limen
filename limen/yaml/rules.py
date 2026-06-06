@@ -1,4 +1,5 @@
 import inspect
+import math
 import re
 from datetime import date
 from itertools import pairwise
@@ -999,6 +1000,62 @@ class ParamKeyFields:
                     message=f"'{field_name}' must be a non-empty string",
                     path=f'{self._path}.{field_name}',
                     suggestion=f"Use a param name string, e.g. {field_name}: my_param_name",
+                ))
+
+
+class BacktestCostSpec:
+
+    '''Each backtest cost (fee_bps, slip_bps) must be a non-negative finite number or a {param} reference in sfd.params.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        sfd = yaml_dict.get('sfd') or {}
+        manifest = sfd.get('manifest') or {}
+        backtest = manifest.get('backtest')
+        if not isinstance(backtest, dict):
+            return
+
+        sfd_params = set(sfd.get('params') or {})
+
+        for key in ('fee_bps', 'slip_bps'):
+            if key not in backtest:
+                continue
+            value = backtest[key]
+            path = f'sfd.manifest.backtest.{key}'
+            if isinstance(value, bool):
+                errors.append(YAMLError(
+                    message=f"'backtest.{key}' must be a non-negative number or a {{param}} reference (got bool)",
+                    path=path,
+                    suggestion=f'Use a number like {key}: 5.0 or a reference like {key}: "{{fee}}"',
+                ))
+            elif isinstance(value, (int, float)):
+                if not math.isfinite(value) or value < 0:
+                    errors.append(YAMLError(
+                        message=f"'backtest.{key}' must be a non-negative finite number (got {value})",
+                        path=path,
+                        suggestion=f'Use a non-negative number, e.g. {key}: 5.0',
+                    ))
+            elif isinstance(value, str):
+                ref = _PARAM_REF_RE.fullmatch(value.strip())
+                if ref is None:
+                    errors.append(YAMLError(
+                        message=f"'backtest.{key}' must be a number or a {{param}} reference (got '{value}')",
+                        path=path,
+                        suggestion=f'Reference a search param, e.g. {key}: "{{fee}}", or use a number',
+                    ))
+                elif ref.group(1) not in sfd_params:
+                    errors.append(YAMLError(
+                        message=f"'backtest.{key}' references '{{{ref.group(1)}}}' which is not in sfd.params",
+                        path=path,
+                        suggestion=f"Add '{ref.group(1)}' to sfd.params",
+                    ))
+            else:
+                errors.append(YAMLError(
+                    message=f"'backtest.{key}' must be a number or a {{param}} reference (got {type(value).__name__})",
+                    path=path,
                 ))
 
 

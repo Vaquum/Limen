@@ -118,6 +118,15 @@ from tests.test_yaml import test_all_templates_have_valid_limen_version
 from tests.test_yaml import test_tabpfn_binary_template_is_valid_and_arch_surface_complete
 from tests.test_yaml import test_xgboost_regressor_template_is_valid_and_arch_surface_complete
 from tests.test_yaml import test_rule_based_template_is_valid_and_compiles
+from tests.test_yaml import test_validate_valid_for_fixed_and_swept_backtest_cost
+from tests.test_yaml import test_validate_error_for_backtest_not_a_mapping
+from tests.test_yaml import test_validate_error_for_backtest_unknown_key
+from tests.test_yaml import test_validate_error_for_backtest_cost_ref_not_in_sfd_params
+from tests.test_yaml import test_validate_error_for_backtest_cost_invalid_value
+from tests.test_yaml import test_build_manifest_backtest_config_fixed
+from tests.test_yaml import test_build_manifest_backtest_config_swept_resolves
+from tests.test_yaml import test_build_manifest_no_backtest_block_leaves_config_none
+from tests.test_yaml import test_build_manifest_rule_based_backtest_config_resolves
 from tests.test_profiler import test_complexity_rating_low
 from tests.test_profiler import test_complexity_rating_medium
 from tests.test_profiler import test_complexity_rating_high
@@ -1254,6 +1263,15 @@ tests = [
     test_validate_error_for_manifest_ref_not_in_sfd_params,
     test_validate_no_error_when_manifest_ref_is_in_sfd_params,
     test_validate_no_unused_param_warning_for_pca_defaults,
+    test_validate_valid_for_fixed_and_swept_backtest_cost,
+    test_validate_error_for_backtest_not_a_mapping,
+    test_validate_error_for_backtest_unknown_key,
+    test_validate_error_for_backtest_cost_ref_not_in_sfd_params,
+    test_validate_error_for_backtest_cost_invalid_value,
+    test_build_manifest_backtest_config_fixed,
+    test_build_manifest_backtest_config_swept_resolves,
+    test_build_manifest_no_backtest_block_leaves_config_none,
+    test_build_manifest_rule_based_backtest_config_resolves,
     test_resolve_func_params_resolves_limen_path_to_callable,
     test_resolve_func_params_preserves_round_param_ref_as_string,
     test_resolve_func_params_preserves_non_limen_string_on_resolution_failure,

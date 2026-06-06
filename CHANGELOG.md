@@ -1068,3 +1068,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.18.0 on 6th of June, 2026
 
 - Add a manifest-level backtest cost config: `Manifest.set_backtest_config(fee_bps, slip_bps)` stores a `BacktestConfig` that `run_model` resolves against the round's params (a number is fixed; a string is a search-param reference, so `set_backtest_config(fee_bps='fee')` sweeps cost via `params()`), validates non-negative and finite, and injects into the prepared `data` dict. `ReferenceModel._compute_backtest` and the rule-based backtest forward the resolved cost to `backtest_snapshot`, defaulting to the existing `5.0`/`5.0` when no config is set. The model architectures are untouched — cost stays off the model surface. Towards #534
+
+## v3.19.0 on 6th of June, 2026
+
+- Add a YAML `backtest:` block that compiles to `Manifest.set_backtest_config`, making the manifest-level cost config reachable from CLI/YAML manifests. The block sits under `sfd.manifest` (sibling to `target:`/`scaler:`) with `fee_bps`/`slip_bps`, each a fixed number or a `"{param}"` reference into `sfd.params` — `fee_bps: "{fee}"` sweeps cost across the search exactly like indicator and target params. It is optional and shared across `ml` and `rule_based` manifests via the compiler's `_apply_base` seam; omitting it keeps the `5.0`/`5.0` default. `validate` rejects a non-mapping block, an unknown key (hard error), a negative or non-finite cost, and a `"{param}"` reference missing from `sfd.params`. Towards #534, completes the YAML surface (#579)
