@@ -1048,3 +1048,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.15.3 on 6th of June, 2026
 
 - Fix macOS-only failures in `test_yaml_config` and `test_yaml_store`: resolve the temporary directory before comparing it against the canonicalised output of `find_project_root`/`get_store_path`/`resolve_manifest_uri`, so the `/tmp` vs `/private/tmp` symlink no longer causes a spurious path mismatch. Test-only change; no library behaviour affected
+
+## v3.15.4 on 6th of June, 2026
+
+- Make remote dataset fetches in `HistoricalData` resilient to transient HTTP failures: the HuggingFace `latest.json` lookup and the dataset download (`.parquet`, `.csv`, and `.zip`, including the default Parquet datasets) each run through a `requests` session with exponential backoff that retries on 429/5xx and honours `Retry-After`. Fixes intermittent CI failures when HuggingFace rate-limits the test-data fetch
