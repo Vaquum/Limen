@@ -794,7 +794,9 @@ class Manifest:
                 or not math.isfinite(value)
                 or value < 0
             ):
-                raise ValueError(f"Manifest backtest {key} must be a non-negative finite number")
+                raise ValueError(
+                    f"Manifest backtest {key} must be a non-negative finite number, got {value!r}"
+                )
             data[f"backtest_{key}"] = float(value)
 
     def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:

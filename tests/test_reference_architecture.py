@@ -394,6 +394,7 @@ def test_invalid_backtest_config_is_rejected():
             assert False, 'Expected ValueError for invalid backtest cost'
         except ValueError as e:
             assert 'bps' in str(e)
+            assert 'got ' in str(e)
 
     try:
         MLManifest().set_backtest_config(fee_bps='missing_param')._apply_backtest_cost({}, {})
