@@ -9,6 +9,10 @@ from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 
 
+DEFAULT_FEE_BPS = 5.0
+DEFAULT_SLIP_BPS = 5.0
+
+
 class ReferenceModel(ABC):
 
     '''Base class for class-based reference architecture models.'''
@@ -18,6 +22,8 @@ class ReferenceModel(ABC):
     def __init__(self) -> None:
 
         self.model = None
+        self.fee_bps = DEFAULT_FEE_BPS
+        self.slip_bps = DEFAULT_SLIP_BPS
 
     @abstractmethod
     def train(self, data: dict, **params: Any) -> 'ReferenceModel':
@@ -151,7 +157,12 @@ class ReferenceModel(ABC):
 
         bt_input = pd.DataFrame(bt_input_data)
 
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
+        bt_result = backtest_snapshot(
+            bt_input,
+            execution_lag_bars=1,
+            fee_bps=self.fee_bps,
+            slip_bps=self.slip_bps,
+        )
 
         if bt_result.empty:
             return {}

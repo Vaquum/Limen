@@ -16,6 +16,9 @@ from limen.sfd.reference_architecture import RuleBasedStrategy
 from limen.sfd.reference_architecture import TabPFNBinary
 from limen.sfd.reference_architecture import XGBoostRegressor
 from limen.sfd.reference_architecture import logreg_binary
+from limen.sfd.reference_architecture import random_binary
+from limen.sfd.reference_architecture import tabpfn_binary
+from limen.sfd.reference_architecture import xgboost_regressor
 from limen.sfd.reference_architecture.rule_based import rule_based
 
 
@@ -123,6 +126,8 @@ def test_logreg_foundational_params_cover_wrapper_model_surface():
     model_params = set(inspect.signature(logreg_binary).parameters) - {
         'data',
         'prediction_calibration_config',
+        'fee_bps',
+        'slip_bps',
     }
 
     assert model_params <= set(foundational_logreg_binary.params())
@@ -332,3 +337,36 @@ def test_rule_based_unknown_operator_raises():
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'Unknown logical operator' in str(e)
+
+
+def test_reference_architectures_expose_cost_parameters():
+
+    architectures = [logreg_binary, random_binary, xgboost_regressor, rule_based]
+    if tabpfn_binary is not None:
+        architectures.append(tabpfn_binary)
+
+    for architecture in architectures:
+        params = inspect.signature(architecture).parameters
+        assert 'fee_bps' in params, f"{architecture.__name__} missing fee_bps"
+        assert 'slip_bps' in params, f"{architecture.__name__} missing slip_bps"
+
+
+def test_higher_cost_raises_drag_and_lowers_net_pnl():
+
+    zero = logreg_binary(_make_data(binary=True, with_price=True), fee_bps=0.0, slip_bps=0.0)
+    high = logreg_binary(_make_data(binary=True, with_price=True), fee_bps=20.0, slip_bps=20.0)
+
+    assert zero['backtest_cost_drag_bps_p50'] == 0.0
+    assert high['backtest_cost_drag_bps_p50'] > zero['backtest_cost_drag_bps_p50']
+    assert zero['backtest_trade_pnl_net_bps_p50'] > high['backtest_trade_pnl_net_bps_p50']
+
+
+def test_omitting_cost_matches_explicit_default():
+
+    omitted = logreg_binary(_make_data(binary=True, with_price=True))
+    explicit = logreg_binary(_make_data(binary=True, with_price=True), fee_bps=5.0, slip_bps=5.0)
+
+    backtest_keys = [key for key in omitted if key.startswith('backtest_')]
+    assert backtest_keys
+    for key in backtest_keys:
+        assert omitted[key] == explicit[key] or (np.isnan(omitted[key]) and np.isnan(explicit[key]))

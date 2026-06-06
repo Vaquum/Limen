@@ -1064,3 +1064,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `vpin` to `limen.features` — Volume-synchronized Probability of Informed Trading (Easley, Lopez de Prado, and O'Hara): the rolling absolute BVC buy/sell imbalance over total volume, a flow-toxicity gauge in `[0, 1]`. Composes `bulk_volume_classification`; feed volume bars for canonical equal-volume buckets
 - Add `cusum_filter` to `limen.features` — Lopez de Prado's symmetric CUSUM event gate on the close log-return path, emitting an Int8 `cusum_event` flag (`1` up, `-1` down, `0` none) that samples only moves whose cumulative magnitude breaches `threshold`
 - Add `time_to_funding` to `limen.features` — continuous hours until the next funding settlement (default cadence every `8` hours from `0` UTC), complementing the existing `is_funding_hour` flag
+
+## v3.18.0 on 6th of June, 2026
+
+- Make the backtest cost model configurable on the reference architectures: `fee_bps` and `slip_bps` are now parameters on `logreg_binary`, `random_binary`, `xgboost_regressor`, `tabpfn_binary`, and `rule_based`, carried on `ReferenceModel` and forwarded to `backtest_snapshot`, defaulting to the existing `5.0`/`5.0`. Because model parameters resolve by signature inspection, `fee_bps`/`slip_bps` in `params()` now sweep cost as a search dimension — to match a venue's costs, make cost a first-class axis of the results, or stress-test how sensitive an edge is to the cost assumption. Omitting them is byte-for-byte unchanged. Resolves #534

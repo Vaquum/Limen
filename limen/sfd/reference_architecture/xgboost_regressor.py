@@ -104,7 +104,9 @@ def xgboost_regressor(data: dict,
                   objective: str = 'reg:squarederror',
                   booster: str = 'gbtree',
                   early_stopping_rounds: int | None = 50,
-                  random_state: int = 42) -> dict:
+                  random_state: int = 42,
+                  fee_bps: float = 5.0,
+                  slip_bps: float = 5.0) -> dict:
 
     '''
     Compute XGBoost regression predictions and evaluation metrics.
@@ -124,6 +126,8 @@ def xgboost_regressor(data: dict,
         booster (str): Which booster to use
         early_stopping_rounds (int): Early stopping rounds
         random_state (int): Random seed
+        fee_bps (float): Per-fill fee in basis points applied in the backtest
+        slip_bps (float): Per-fill slippage in basis points applied in the backtest
 
     Returns:
         dict: Results with continuous metrics, predictions, inline confusion metrics,
@@ -147,6 +151,8 @@ def xgboost_regressor(data: dict,
         random_state=random_state,
     )
 
+    model.fee_bps = fee_bps
+    model.slip_bps = slip_bps
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result

@@ -49,6 +49,8 @@ The current snapshot backtest is intentionally simple and opinionated:
 - output metrics are quantiles over their declared substrate
 - return and ratio outputs are basis-point scaled
 
+The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip). On the reference architectures they are configurable: pass `fee_bps` / `slip_bps` to a reference-architecture SFD, or sweep them in `params()` (for example `'fee_bps': [2.0, 5.0, 10.0]`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting them keeps the 5 + 5 default, so existing experiments are unchanged.
+
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
 ### Output columns

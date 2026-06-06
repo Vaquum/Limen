@@ -142,6 +142,8 @@ class TabPFNBinary(ReferenceModel):
 def tabpfn_binary(data: dict,
                   n_ensemble_configurations: int = 4,
                   device: str = 'cpu',
+                  fee_bps: float = 5.0,
+                  slip_bps: float = 5.0,
                   prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
     '''
@@ -151,6 +153,8 @@ def tabpfn_binary(data: dict,
         data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
         n_ensemble_configurations (int): Number of ensemble configurations for TabPFN
         device (str): Device to run on ('cpu' or 'cuda')
+        fee_bps (float): Per-fill fee in basis points applied in the backtest
+        slip_bps (float): Per-fill slippage in basis points applied in the backtest
         prediction_calibration_config (CalibrationConfig | None): Optional calibration config
 
     Returns:
@@ -165,6 +169,8 @@ def tabpfn_binary(data: dict,
         device=device,
     )
 
+    model.fee_bps = fee_bps
+    model.slip_bps = slip_bps
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result

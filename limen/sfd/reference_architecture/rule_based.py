@@ -123,7 +123,12 @@ class RuleBasedStrategy(ReferenceModel):
             bt_input_data['datetime'] = df['datetime'].to_numpy()
 
         bt_input = pd.DataFrame(bt_input_data)
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
+        bt_result = backtest_snapshot(
+            bt_input,
+            execution_lag_bars=1,
+            fee_bps=self.fee_bps,
+            slip_bps=self.slip_bps,
+        )
         if bt_result.empty:
             return {}
         return bt_result.iloc[0].to_dict()
@@ -131,7 +136,9 @@ class RuleBasedStrategy(ReferenceModel):
 
 def rule_based(data: dict,
                sharpe_std_threshold: float = 0.5,
-               sharpe_degradation_threshold: float = 0.3) -> dict:
+               sharpe_degradation_threshold: float = 0.3,
+               fee_bps: float = 5.0,
+               slip_bps: float = 5.0) -> dict:
 
     '''
     Apply a rule-based strategy to the given data and return evaluation metrics.
@@ -140,6 +147,8 @@ def rule_based(data: dict,
         data (dict): Data dict with 'train', 'val', 'test' DataFrames and 'strategy' config
         sharpe_std_threshold (float): Max sharpe_std for is_stable to be True
         sharpe_degradation_threshold (float): Max sharpe_degradation for is_stable to be True
+        fee_bps (float): Per-fill fee in basis points applied in the backtest
+        slip_bps (float): Per-fill slippage in basis points applied in the backtest
 
     Returns:
         dict: Rule-based metrics with Tier 1, Tier 2, Tier 3 keys and '_preds'
@@ -150,4 +159,6 @@ def rule_based(data: dict,
         sharpe_degradation_threshold=sharpe_degradation_threshold,
     )
     model.train(data)
+    model.fee_bps = fee_bps
+    model.slip_bps = slip_bps
     return model.evaluate(data)

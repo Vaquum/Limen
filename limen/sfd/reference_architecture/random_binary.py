@@ -83,7 +83,9 @@ class RandomBinary(ReferenceModel):
 
 
 def random_binary(data: dict,
-                  random_weights: float = 0.5) -> dict:
+                  random_weights: float = 0.5,
+                  fee_bps: float = 5.0,
+                  slip_bps: float = 5.0) -> dict:
 
     '''
     Random binary classifier for testing and demonstration purposes.
@@ -91,6 +93,8 @@ def random_binary(data: dict,
     Args:
         data (dict): Data dictionary with x_test, y_test
         random_weights (float): Probability weight for class 1 (0.0 to 1.0)
+        fee_bps (float): Per-fill fee in basis points applied in the backtest
+        slip_bps (float): Per-fill slippage in basis points applied in the backtest
 
     Returns:
         dict: Results with binary metrics, predictions, inline confusion metrics,
@@ -98,6 +102,8 @@ def random_binary(data: dict,
     '''
 
     model = RandomBinary().train(data, random_weights=random_weights)
+    model.fee_bps = fee_bps
+    model.slip_bps = slip_bps
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result

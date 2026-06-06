@@ -159,6 +159,8 @@ def logreg_binary(data: dict,
                   warm_start: bool = False,
                   n_jobs: int = -1,
                   l1_ratio: float | None = None,
+                  fee_bps: float = 5.0,
+                  slip_bps: float = 5.0,
                   prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
     '''
@@ -182,6 +184,8 @@ def logreg_binary(data: dict,
         warm_start (bool): Whether to reuse previous solution
         n_jobs (int): Number of parallel jobs
         l1_ratio (float | None): Elastic-net mixing parameter
+        fee_bps (float): Per-fill fee in basis points applied in the backtest
+        slip_bps (float): Per-fill slippage in basis points applied in the backtest
         prediction_calibration_config (CalibrationConfig | None): Optional calibration config
 
     Returns:
@@ -208,6 +212,8 @@ def logreg_binary(data: dict,
         l1_ratio=l1_ratio,
     )
 
+    model.fee_bps = fee_bps
+    model.slip_bps = slip_bps
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
