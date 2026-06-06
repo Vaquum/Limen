@@ -49,6 +49,8 @@ The current snapshot backtest is intentionally simple and opinionated:
 - output metrics are quantiles over their declared substrate
 - return and ratio outputs are basis-point scaled
 
+The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=..., slip_bps=...)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
+
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
 ### Output columns

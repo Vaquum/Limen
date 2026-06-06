@@ -480,6 +480,10 @@ from tests.test_reference_architecture import test_rule_based_or_compound_condit
 from tests.test_reference_architecture import test_rule_based_not_operator
 from tests.test_reference_architecture import test_rule_based_empty_operands_raises
 from tests.test_reference_architecture import test_rule_based_unknown_operator_raises
+from tests.test_reference_architecture import test_compute_backtest_honours_injected_cost
+from tests.test_reference_architecture import test_manifest_backtest_config_resolves_and_sweeps
+from tests.test_reference_architecture import test_architectures_do_not_expose_cost_parameters
+from tests.test_reference_architecture import test_invalid_backtest_config_is_rejected
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -1395,6 +1399,10 @@ tests = [
     test_rule_based_not_operator,
     test_rule_based_empty_operands_raises,
     test_rule_based_unknown_operator_raises,
+    test_compute_backtest_honours_injected_cost,
+    test_manifest_backtest_config_resolves_and_sweeps,
+    test_architectures_do_not_expose_cost_parameters,
+    test_invalid_backtest_config_is_rejected,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,

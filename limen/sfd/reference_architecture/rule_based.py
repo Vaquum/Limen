@@ -72,10 +72,11 @@ class RuleBasedStrategy(ReferenceModel):
         strategy = data['strategy']
         cond_index = {c['id']: c for c in strategy['conditions']}
 
+        cost_kwargs = self._cost_kwargs(data)
         for split in ('train', 'val', 'test'):
             pos = self._resolve(cond_index[strategy['entry']], cond_index, data[split]).fill_null(False).to_numpy().astype(int)
             positions[split] = pos
-            backtest_results[split] = self._backtest_split(data[split], pos)
+            backtest_results[split] = self._backtest_split(data[split], pos, cost_kwargs)
 
         results = rule_based_metrics(
             positions,
@@ -108,7 +109,7 @@ class RuleBasedStrategy(ReferenceModel):
             result = result & s if operator == 'and' else result | s
         return result
 
-    def _backtest_split(self, df: pl.DataFrame, positions: np.ndarray) -> dict:
+    def _backtest_split(self, df: pl.DataFrame, positions: np.ndarray, cost_kwargs: dict) -> dict:
         if 'open' not in df.columns or 'close' not in df.columns:
             return {}
         open_arr = df['open'].to_numpy().astype(float)
@@ -123,7 +124,7 @@ class RuleBasedStrategy(ReferenceModel):
             bt_input_data['datetime'] = df['datetime'].to_numpy()
 
         bt_input = pd.DataFrame(bt_input_data)
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
+        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1, **cost_kwargs)
         if bt_result.empty:
             return {}
         return bt_result.iloc[0].to_dict()

@@ -122,6 +122,13 @@ class ReferenceModel(ABC):
 
         return results
 
+    def _cost_kwargs(self, data: dict) -> dict:
+        return {
+            key: data[f"backtest_{key}"]
+            for key in ('fee_bps', 'slip_bps')
+            if f"backtest_{key}" in data
+        }
+
     def _compute_backtest(self, preds: np.ndarray, data: dict) -> dict:
 
         '''
@@ -151,7 +158,7 @@ class ReferenceModel(ABC):
 
         bt_input = pd.DataFrame(bt_input_data)
 
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1)
+        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1, **self._cost_kwargs(data))
 
         if bt_result.empty:
             return {}
