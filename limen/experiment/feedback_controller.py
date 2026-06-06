@@ -35,19 +35,19 @@ def _apply_set_filter(msq: MSQ, intervention: dict[str, Any]) -> None:
     if filter_type not in FILTER_BUILDERS:
         supported = ', '.join(sorted(FILTER_BUILDERS.keys()))
         raise ValueError(
-            f"Unknown filter_type '{filter_type}'. Supported types: {supported}"
+            f"FeedbackController Unknown filter_type '{filter_type}'. Supported types: {supported}"
         )
 
     if not isinstance(filter_params, dict):
         raise ValueError(
-            f"filter_params must be a dict, got {type(filter_params).__name__}"
+            f"FeedbackController filter_params must be a dict, got {type(filter_params).__name__}"
         )
 
     try:
         condition = FILTER_BUILDERS[filter_type](filter_params)
     except KeyError as e:
         raise ValueError(
-            f"filter_params for '{filter_type}' missing required key: {e}"
+            f"FeedbackController filter_params for '{filter_type}' missing required key: {e}"
         ) from e
 
     msq.set_filter(
@@ -95,7 +95,7 @@ class FeedbackController:
 
         if feedback_interval < 1:
             raise ValueError(
-                f"feedback_interval must be >= 1, got {feedback_interval}"
+                f"FeedbackController feedback_interval must be >= 1, got {feedback_interval}"
             )
         self._feedback_interval = feedback_interval
         self._pruning_strategies = pruning_strategies or []
@@ -288,7 +288,7 @@ class FeedbackController:
         interventions = json.loads(content)
 
         if not isinstance(interventions, list):
-            raise ValueError('Intervention file must contain a JSON array')
+            raise ValueError('FeedbackController Intervention file must contain a JSON array')
 
         for item in interventions:
             if 'source' not in item:
@@ -326,7 +326,7 @@ class FeedbackController:
         op = intervention['op']
         handler = dispatch.get(op)
         if handler is None:
-            raise ValueError(f"Unknown intervention op: '{op}'")
+            raise ValueError(f"FeedbackController Unknown intervention op: '{op}'")
         handler(intervention)
 
 

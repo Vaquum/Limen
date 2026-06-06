@@ -57,27 +57,27 @@ class SanityReducer(PruningStrategy):
 
         if not 0.0 <= nan_threshold <= 1.0:
             raise ValueError(
-                f"nan_threshold must be between 0.0 and 1.0, got {nan_threshold}"
+                f"SanityReducer nan_threshold must be between 0.0 and 1.0, got {nan_threshold}"
             )
 
         if min_observations <= 0:
             raise ValueError(
-                f"min_observations must be > 0, got {min_observations}"
+                f"SanityReducer min_observations must be > 0, got {min_observations}"
             )
 
         if zero_metric_threshold is not None and not 0.0 <= zero_metric_threshold <= 1.0:
             raise ValueError(
-                f"zero_metric_threshold must be between 0.0 and 1.0, got {zero_metric_threshold}"
+                f"SanityReducer zero_metric_threshold must be between 0.0 and 1.0, got {zero_metric_threshold}"
             )
 
         if not 0.0 <= timeout_rate_threshold <= 1.0:
             raise ValueError(
-                f"timeout_rate_threshold must be between 0.0 and 1.0, got {timeout_rate_threshold}"
+                f"SanityReducer timeout_rate_threshold must be between 0.0 and 1.0, got {timeout_rate_threshold}"
             )
 
         if warning_threshold is not None and not 0.0 <= warning_threshold <= 1.0:
             raise ValueError(
-                f"warning_threshold must be between 0.0 and 1.0, got {warning_threshold}"
+                f"SanityReducer warning_threshold must be between 0.0 and 1.0, got {warning_threshold}"
             )
 
         super().__init__(active=active)

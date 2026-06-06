@@ -71,32 +71,32 @@ class CorrelationReducer(PruningStrategy):
         valid_methods = ('spearman', 'pearson', 'kendall')
         if method not in valid_methods:
             raise ValueError(
-                f"method must be one of {valid_methods}, got '{method}'"
+                f"CorrelationReducer method must be one of {valid_methods}, got '{method}'"
             )
 
         if min_observations <= 0:
             raise ValueError(
-                f"min_observations must be > 0, got {min_observations}"
+                f"CorrelationReducer min_observations must be > 0, got {min_observations}"
             )
 
         if not 0.0 <= prune_threshold <= 1.0:
             raise ValueError(
-                f"prune_threshold must be between 0.0 and 1.0, got {prune_threshold}"
+                f"CorrelationReducer prune_threshold must be between 0.0 and 1.0, got {prune_threshold}"
             )
 
         if not 0.0 <= sign_stability_threshold <= 1.0:
             raise ValueError(
-                f"sign_stability_threshold must be between 0.0 and 1.0, got {sign_stability_threshold}"
+                f"CorrelationReducer sign_stability_threshold must be between 0.0 and 1.0, got {sign_stability_threshold}"
             )
 
         if n_boot <= 0:
             raise ValueError(
-                f"n_boot must be > 0, got {n_boot}"
+                f"CorrelationReducer n_boot must be > 0, got {n_boot}"
             )
 
         if not -1.0 <= negative_correlation_threshold <= 0.0:
             raise ValueError(
-                f"negative_correlation_threshold must be between -1.0 and 0.0, got {negative_correlation_threshold}"
+                f"CorrelationReducer negative_correlation_threshold must be between -1.0 and 0.0, got {negative_correlation_threshold}"
             )
 
         super().__init__(active=active)

@@ -12,9 +12,9 @@ def select(context: dict[str, Any],
     '''Return a backtest-first Pareto front capped by deterministic rank.'''
 
     if not isinstance(target_count, int) or target_count <= 0:
-        raise ValueError('target_count must be a positive integer')
+        raise ValueError('backtest_pareto target_count must be a positive integer')
     if not isinstance(min_signals, int) or min_signals < 0:
-        raise ValueError('min_signals must be a non-negative integer')
+        raise ValueError('backtest_pareto min_signals must be a non-negative integer')
 
     default_metrics = [
         'backtest_trade_pnl_net_bps_p50',
@@ -27,19 +27,19 @@ def select(context: dict[str, Any],
 
     results = context.get('results')
     if results is None:
-        raise ValueError('selector requires results.csv data in context["results"]')
+        raise ValueError('backtest_pareto selector requires results.csv data in context["results"]')
     if not isinstance(results, pd.DataFrame):
-        raise ValueError('context["results"] must be a pandas DataFrame')
+        raise ValueError('backtest_pareto context["results"] must be a pandas DataFrame')
 
     missing = [col for col in ['id', *metric_cols] if col not in results.columns]
     if missing:
-        raise ValueError(f'selector input is missing required columns: {missing}')
+        raise ValueError(f'backtest_pareto selector input is missing required columns: {missing}')
 
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
-            raise ValueError('selector returned a boolean permutation id')
+            raise ValueError('backtest_pareto selector returned a boolean permutation id')
         if pd.isna(value):
-            raise ValueError('selector returned a missing permutation id')
+            raise ValueError('backtest_pareto selector returned a missing permutation id')
         if isinstance(value, (int, np.integer)):
             return int(value)
         if isinstance(value, (float, np.floating)) and float(value).is_integer():
@@ -49,12 +49,12 @@ def select(context: dict[str, Any],
             if stripped.isdigit():
                 return int(stripped)
             if not stripped:
-                raise ValueError('selector returned an empty permutation id')
+                raise ValueError('backtest_pareto selector returned an empty permutation id')
             return stripped
 
         coerced = str(value).strip()
         if not coerced:
-            raise ValueError('selector returned an empty permutation id')
+            raise ValueError('backtest_pareto selector returned an empty permutation id')
         return coerced
 
     guard_cols = [

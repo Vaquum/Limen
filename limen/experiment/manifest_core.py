@@ -167,7 +167,7 @@ class CalibrationBuilder:
         '''
 
         if self._calibration_func is None and self._threshold_func is None:
-            raise ValueError('at least one of probability_calibration() or threshold_function() must be called before done()')
+            raise ValueError('CalibrationBuilder at least one of probability_calibration() or threshold_function() must be called before done()')
         self._manifest.prediction_calibration_config = CalibrationConfig(
             calibration_func=self._calibration_func,
             calibration_params=dict(self._calibration_params),
@@ -227,13 +227,13 @@ class DataSourceResolver:
                 if hasattr(instance, 'data'):
                     return instance.data
                 raise ValueError(
-                    f"Method {method.__qualname__} executed successfully but "
+                    f"DataSourceResolver Method {method.__qualname__} executed successfully but "
                     f"instance does not have 'data' attribute. Expected data source "
                     f"methods to populate instance.data"
                 )
             return method(**params)
 
-        raise ValueError(f"Unsupported callable type: {type(method)}")
+        raise ValueError(f"DataSourceResolver Unsupported callable type: {type(method)}")
 
 
 @dataclass
@@ -321,7 +321,7 @@ class Manifest:
         '''Fetch data using configured data source.'''
 
         if self.data_source_config is None:
-            raise ValueError('No data source configured')
+            raise ValueError('Manifest No data source configured')
 
         return DataSourceResolver.resolve(self.data_source_config)
 
@@ -330,7 +330,7 @@ class Manifest:
         '''Fetch data using configured test data source.'''
 
         if self.test_data_source_config is None:
-            raise ValueError('No test data source configured')
+            raise ValueError('Manifest No test data source configured')
 
         return DataSourceResolver.resolve(self.test_data_source_config)
 
@@ -445,9 +445,9 @@ class Manifest:
         '''
 
         if train <= 0:
-            raise ValueError('train split ratio must be positive')
+            raise ValueError('Manifest train split ratio must be positive')
         if val < 0 or test < 0:
-            raise ValueError('val and test split ratios must be non-negative')
+            raise ValueError('Manifest val and test split ratios must be non-negative')
 
         self.split_config = (train, val, test)
 
@@ -508,13 +508,13 @@ class Manifest:
         for name, value in bounds:
             if not isinstance(value, date):
                 raise TypeError(
-                    f'{name} must be a date or datetime instance, '
+                    f'Manifest {name} must be a date or datetime instance, '
                     f'got {type(value).__name__}: {value!r}'
                 )
         for (a_name, a), (b_name, b) in pairwise(bounds):
             if a > b:
                 raise ValueError(
-                    f'{a_name}={a!r} must be <= {b_name}={b!r}; bounds must be '
+                    f'Manifest {a_name}={a!r} must be <= {b_name}={b!r}; bounds must be '
                     'in non-decreasing order (gaps between adjacent windows allowed)'
                 )
 
@@ -618,14 +618,14 @@ class Manifest:
         ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
         if ds_overrides:
             if new_manifest.data_source_config is None:
-                raise ValueError('Cannot override data source params: no data source configured')
+                raise ValueError('Manifest Cannot override data source params: no data source configured')
             method_params = set(inspect.signature(
                 new_manifest.data_source_config.method
             ).parameters.keys()) - {'self', 'cls'}
             unknown = set(ds_overrides) - method_params
             if unknown:
                 raise ValueError(
-                    f"Unknown data source params: {sorted(unknown)}. "
+                    f"Manifest Unknown data source params: {sorted(unknown)}. "
                     f"Accepted by {new_manifest.data_source_config.method.__name__}: "
                     f"{sorted(method_params)}"
                 )
@@ -709,7 +709,7 @@ class Manifest:
         '''
 
         if self.architecture_function is None:
-            raise ValueError('Architecture function not configured. Use .with_reference_architecture(func) before run_model() or resolve_model_kwargs().')
+            raise ValueError('Manifest Architecture function not configured. Use .with_reference_architecture(func) before run_model() or resolve_model_kwargs().')
 
         sig = inspect.signature(self.architecture_function)
         model_kwargs: dict[str, Any] = {}
@@ -730,7 +730,7 @@ class Manifest:
                 model_kwargs[param_name] = param_obj.default
             else:
                 raise ValueError(
-                    f"Missing required parameter '{param_name}' for model function. "
+                    f"Manifest Missing required parameter '{param_name}' for model function. "
                     'It must be provided in round_params.'
                 )
 
@@ -824,7 +824,7 @@ class MLManifest(Manifest):
                         f"Available types: {sorted(SCALER_REGISTRY)}"
                     )
                 raise ValueError(
-                    f"Unknown scaler type '{scaler_type}'. "
+                    f"MLManifest Unknown scaler type '{scaler_type}'. "
                     f"Available: {sorted(SCALER_REGISTRY)}"
                 )
             return SCALER_REGISTRY[scaler_type](data)
@@ -889,7 +889,7 @@ class MLManifest(Manifest):
             'component_prefix': component_prefix,
         }.items():
             if not isinstance(value, str) or not value:
-                raise TypeError(f'{name} must be a non-empty string')
+                raise TypeError(f'MLManifest {name} must be a non-empty string')
 
         self.pca_compression_config = PCACompressionConfig(
             enabled_param=enabled_param,
@@ -1018,7 +1018,7 @@ class MLManifest(Manifest):
                 )
                 if not accepts_config:
                     raise ValueError(
-                        'Calibration is configured but the architecture function does not '
+                        'MLManifest Calibration is configured but the architecture function does not '
                         'accept `prediction_calibration_config`. Add it as a named parameter '
                         'or use **kwargs.'
                     )

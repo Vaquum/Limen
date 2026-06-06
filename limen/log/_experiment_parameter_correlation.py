@@ -61,10 +61,10 @@ def _experiment_parameter_correlation(self: Any,
         data_numeric[c] = pd.to_numeric(data_numeric[c], errors='coerce')
 
     if metric not in data_numeric.columns:
-        raise ValueError(f'metric "{metric}" not found in data columns')
+        raise ValueError(f'experiment_parameter_correlation metric "{metric}" not found in data columns')
 
     if sort_key not in data_numeric.columns:
-        raise ValueError(f'sort_key "{sort_key}" not found in data columns')
+        raise ValueError(f'experiment_parameter_correlation sort_key "{sort_key}" not found in data columns')
 
     df = (
         data_numeric
@@ -74,7 +74,7 @@ def _experiment_parameter_correlation(self: Any,
     )
 
     if df.empty:
-        raise ValueError('No rows remain after dropping NaNs in the metric column.')
+        raise ValueError('experiment_parameter_correlation No rows remain after dropping NaNs in the metric column.')
 
     num_df = df.select_dtypes(include=[np.number])
     nunique = num_df.nunique(dropna=True)
@@ -84,11 +84,11 @@ def _experiment_parameter_correlation(self: Any,
         num_df = num_df.drop(columns=constant_cols, errors='ignore')
 
     if metric not in num_df.columns:
-        raise ValueError('After cleaning, metric is not numeric. Ensure it is numeric in self.experiment_log.')
+        raise ValueError('experiment_parameter_correlation After cleaning, metric is not numeric. Ensure it is numeric in self.experiment_log.')
 
     features: list[str] = [c for c in num_df.columns if c != metric]
     if not features:
-        raise ValueError('No numeric features available (besides metric) after cleaning.')
+        raise ValueError('experiment_parameter_correlation No numeric features available (besides metric) after cleaning.')
 
     rng = np.random.default_rng(random_state)
     total_n = len(num_df)
@@ -148,7 +148,7 @@ def _experiment_parameter_correlation(self: Any,
         blocks.append(block)
 
     if not blocks:
-        raise ValueError('No cohorts produced results (check heads/min_n and data quality).')
+        raise ValueError('experiment_parameter_correlation No cohorts produced results (check heads/min_n and data quality).')
 
     res = pd.concat(blocks, ignore_index=True)
 

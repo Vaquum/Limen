@@ -39,7 +39,7 @@ class ForwardVolNormalizedReturnTarget(VolNormalizedReturnTarget):
         '''
 
         if periods <= 0:
-            raise ValueError('periods must be positive')
+            raise ValueError('ForwardVolNormalizedReturnTarget periods must be positive')
 
         self.periods = periods
         self.absolute = absolute

@@ -33,7 +33,7 @@ def sample_range_exact(
     # Mirror CPython Lib/random.py for range(N) sampling so huge-space ParamSpace
     # keeps legacy random.sample semantics even when the wrapper overflows.
     if not 0 <= sample_size <= population_size:
-        raise ValueError('Sample larger than population or is negative')
+        raise ValueError('sample_range_exact Sample larger than population or is negative')
 
     setsize = SAMPLE_SELECTION_MIN_SIZE
     if sample_size > SAMPLE_SELECTION_TIPPING_POINT:

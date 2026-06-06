@@ -29,12 +29,12 @@ class ParamDomain:
         for k, v in params.items():
             if k.startswith('_'):
                 raise ValueError(
-                    f"Parameter name '{k}' must not start with '_'. "
+                    f"ParamDomain Parameter name '{k}' must not start with '_'. "
                     f"The '_' prefix is reserved for framework metadata."
                 )
             if not isinstance(v, list) or len(v) == 0:
                 raise ValueError(
-                    f"Parameter '{k}' must be a non-empty list, got {v!r}"
+                    f"ParamDomain Parameter '{k}' must be a non-empty list, got {v!r}"
                 )
 
         self._params: dict[str, list[Any]] = {k: list(v) for k, v in params.items()}
@@ -115,7 +115,7 @@ class ParamDomain:
             return False
         if len(values) == 1:
             raise ValueError(
-                f"Cannot remove '{value}' from '{param}': "
+                f"ParamDomain Cannot remove '{value}' from '{param}': "
                 f"would leave domain empty."
             )
         values.remove(value)
@@ -142,7 +142,7 @@ class ParamDomain:
             kept = [v for v in original if v < threshold]
         except TypeError as e:
             raise TypeError(
-                f"Cannot compare values of '{param}' with threshold "
+                f"ParamDomain Cannot compare values of '{param}' with threshold "
                 f"{threshold!r}: {e}"
             ) from e
         if len(kept) == 0:
@@ -176,7 +176,7 @@ class ParamDomain:
             kept = [v for v in original if v > threshold]
         except TypeError as e:
             raise TypeError(
-                f"Cannot compare values of '{param}' with threshold "
+                f"ParamDomain Cannot compare values of '{param}' with threshold "
                 f"{threshold!r}: {e}"
             ) from e
         if len(kept) == 0:
@@ -237,7 +237,7 @@ class ParamDomain:
             kept = [v for v in original if lower <= v <= upper]
         except TypeError as e:
             raise TypeError(
-                f"Cannot compare values of '{param}' with bounds "
+                f"ParamDomain Cannot compare values of '{param}' with bounds "
                 f"[{lower!r}, {upper!r}]: {e}"
             ) from e
         if len(kept) == 0:
@@ -302,11 +302,11 @@ class ParamDomain:
         for k, v in state.items():
             if not isinstance(v, list) or len(v) == 0:
                 raise ValueError(
-                    f"Parameter '{k}' must be a non-empty list, got {v!r}"
+                    f"ParamDomain Parameter '{k}' must be a non-empty list, got {v!r}"
                 )
         if set(state.keys()) != set(self._params.keys()):
             raise ValueError(
-                f"State keys {sorted(state.keys())} do not match "
+                f"ParamDomain State keys {sorted(state.keys())} do not match "
                 f"domain keys {sorted(self._params.keys())}."
             )
         old_params = {k: list(v) for k, v in self._params.items()}

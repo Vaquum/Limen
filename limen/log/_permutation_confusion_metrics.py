@@ -26,7 +26,7 @@ def _confusion_mean_return_pct(pred: pd.Series,
     '''
 
     if execution_lag_bars < 0:
-        raise ValueError('execution_lag_bars must be >= 0')
+        raise ValueError('permutation_confusion_metrics execution_lag_bars must be >= 0')
 
     pred = pd.to_numeric(pd.Series(np.asarray(pred)), errors='coerce')
     actual = pd.to_numeric(pd.Series(np.asarray(actual)), errors='coerce')
@@ -107,14 +107,14 @@ def _permutation_confusion_metrics(self: Any,
     # Optional: binarize from probabilities
     if proba_col is not None:
         if proba_col not in df:
-            raise ValueError(f'proba_col "{proba_col}" not found')
+            raise ValueError(f'permutation_confusion_metrics proba_col "{proba_col}" not found')
 
         df[pred_col] = (df[proba_col].astype(float) >= float(threshold)).astype(int)
 
     # Validate required columns
     for col in (pred_col, actual_col, x, 'open', 'price_change'):
         if col not in df:
-            raise ValueError(f'column "{col}" not found')
+            raise ValueError(f'permutation_confusion_metrics column "{col}" not found')
 
     df[pred_col] = df[pred_col].astype(int)
     df[actual_col] = df[actual_col].astype(int)
@@ -134,11 +134,11 @@ def _permutation_confusion_metrics(self: Any,
         df[x] = df[x].clip(q_lo, q_hi)
 
     else:
-        raise ValueError('outlier_mode must be "filter" or "winsor"')
+        raise ValueError('permutation_confusion_metrics outlier_mode must be "filter" or "winsor"')
 
     n = len(df)
     if n == 0:
-        raise ValueError('no rows remain after outlier handling')
+        raise ValueError('permutation_confusion_metrics no rows remain after outlier handling')
 
     pred = df[pred_col]
     act = df[actual_col]

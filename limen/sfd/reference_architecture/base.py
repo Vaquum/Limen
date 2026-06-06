@@ -108,7 +108,7 @@ class ReferenceModel(ABC):
         }
 
         if price_data_for_backtest is None:
-            raise ValueError('price_data_for_backtest is required for inline confusion mean return metrics')
+            raise ValueError('ReferenceModel price_data_for_backtest is required for inline confusion mean return metrics')
 
         price_pd = self._price_data_to_pandas(price_data_for_backtest)
 

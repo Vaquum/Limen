@@ -47,7 +47,7 @@ class MSQ:
 
         if strategy.domain is not domain:
             raise ValueError(
-                'strategy.domain and domain must reference the same ParamDomain'
+                'MSQ strategy.domain and domain must reference the same ParamDomain'
             )
         self._strategy = strategy
         self._domain = domain
@@ -92,7 +92,7 @@ class MSQ:
 
         total_filters = len(self._custom_filters) + len(self._named_filters)
         raise FilterExhaustedError(
-            f"Filters rejected {self._max_filter_retries} "
+            f"MSQ Filters rejected {self._max_filter_retries} "
             f"consecutive combinations. "
             f"Active filters: {total_filters}. "
             f"Consider relaxing filters or removing them."
@@ -195,7 +195,7 @@ class MSQ:
 
         if (filter_type is None) != (filter_params is None):
             raise ValueError(
-                'filter_type and filter_params must both be provided or both omitted.'
+                'MSQ filter_type and filter_params must both be provided or both omitted.'
             )
 
         log_kwargs: dict[str, Any] = {'key': key}
@@ -283,10 +283,10 @@ class MSQ:
         domain_keys = set(self._domain.keys)
         missing = domain_keys - combo_keys
         if missing:
-            raise ValueError(f"Injected combo missing parameters: {missing}")
+            raise ValueError(f"MSQ Injected combo missing parameters: {missing}")
         extra = combo_keys - domain_keys
         if extra:
-            raise ValueError(f"Injected combo has extra keys: {extra}")
+            raise ValueError(f"MSQ Injected combo has extra keys: {extra}")
 
         if prioritize:
             self._priority_queue.appendleft(combo)

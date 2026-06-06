@@ -1037,3 +1037,10 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.15.1 on 6th of June, 2026
 
 - Prefix every parameter-validation error message in `limen/indicators` and `limen/features` with the indicator/feature name, so each message names its own context (e.g. `period must be between 2 and 100000` becomes `ema period must be between 2 and 100000`) — 107 messages across 54 files
+
+## v3.15.2 on 6th of June, 2026
+
+- Extend the error-message context convention across the rest of `limen`: prefix raised messages that lacked a clear source with their component name (class name for methods, function/file name for module-level functions), so the origin is unambiguous in logs no matter where the message surfaces — 200 messages across 35 files
+- Disambiguate previously-identical messages duplicated across files (e.g. selector errors shared by `top_n`, `diverse_metrics`, `backtest_pareto`; `min_observations must be > 0` shared by three reducers)
+- Replace the `ERROR:` prefix anti-pattern in `Account` and `BacktestSequential` with the component name
+- Leave messages that already name their source untouched (e.g. `CheckpointManager` checkpoint errors, `manifest` store/URI errors, `round_params[...]` and `Condition {id}` validations)

@@ -12,23 +12,23 @@ def select(context: dict[str, Any],
     '''Return the top n ids from results.csv ordered by one numeric column.'''
 
     if not isinstance(n, int) or n <= 0:
-        raise ValueError('n must be a positive integer')
+        raise ValueError('top_n n must be a positive integer')
 
     results = context.get('results')
     if results is None:
-        raise ValueError('selector requires results.csv data in context["results"]')
+        raise ValueError('top_n selector requires results.csv data in context["results"]')
     if not isinstance(results, pd.DataFrame):
-        raise ValueError('context["results"] must be a pandas DataFrame')
+        raise ValueError('top_n context["results"] must be a pandas DataFrame')
 
     missing = [col for col in ('id', column) if col not in results.columns]
     if missing:
-        raise ValueError(f'selector input is missing required columns: {missing}')
+        raise ValueError(f'top_n selector input is missing required columns: {missing}')
 
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
-            raise ValueError('selector returned a boolean permutation id')
+            raise ValueError('top_n selector returned a boolean permutation id')
         if pd.isna(value):
-            raise ValueError('selector returned a missing permutation id')
+            raise ValueError('top_n selector returned a missing permutation id')
         if isinstance(value, (int, np.integer)):
             return int(value)
         if isinstance(value, (float, np.floating)) and float(value).is_integer():
@@ -38,12 +38,12 @@ def select(context: dict[str, Any],
             if stripped.isdigit():
                 return int(stripped)
             if not stripped:
-                raise ValueError('selector returned an empty permutation id')
+                raise ValueError('top_n selector returned an empty permutation id')
             return stripped
 
         coerced = str(value).strip()
         if not coerced:
-            raise ValueError('selector returned an empty permutation id')
+            raise ValueError('top_n selector returned an empty permutation id')
         return coerced
 
     work = results[['id', column]].copy()

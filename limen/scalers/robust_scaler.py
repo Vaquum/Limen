@@ -21,7 +21,7 @@ class RobustScaler:
         q_low, q_high = quantile_range
         if not (0 <= q_low < q_high <= 1):
             raise ValueError(
-                f"quantile_range must satisfy 0 <= low < high <= 1, "
+                f"RobustScaler quantile_range must satisfy 0 <= low < high <= 1, "
                 f"got ({q_low}, {q_high})"
             )
 

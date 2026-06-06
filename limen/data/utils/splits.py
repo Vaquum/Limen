@@ -108,7 +108,7 @@ def split_by_dates(
     ):
         if not isinstance(value, date):
             raise TypeError(
-                f'{name} must be a date or datetime instance, '
+                f'splits {name} must be a date or datetime instance, '
                 f'got {type(value).__name__}: {value!r}'
             )
 

@@ -77,7 +77,7 @@ def _normalize_datetime_literal(
             continue
 
     raise ValueError(
-        f"{field_name} must match one of: YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, "
+        f"HistoricalData {field_name} must match one of: YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, "
         'YYYY-MM-DDTHH:MM:SS.'
     )
 
@@ -87,10 +87,10 @@ def _validate_positive_int(value: int | None, field_name: str) -> int | None:
         return None
 
     if type(value) is not int:
-        raise TypeError(f"{field_name} must be an int.")
+        raise TypeError(f"HistoricalData {field_name} must be an int.")
 
     if value < 1:
-        raise ValueError(f"{field_name} must be at least 1.")
+        raise ValueError(f"HistoricalData {field_name} must be at least 1.")
 
     return value
 
@@ -103,7 +103,7 @@ def _resolve_row_count_limit(
     n_rows = _validate_positive_int(n_rows, 'n_rows')
 
     if row_count_limit is not None and n_rows is not None:
-        raise ValueError('Only one of row_count_limit and n_rows may be set.')
+        raise ValueError('HistoricalData Only one of row_count_limit and n_rows may be set.')
 
     return row_count_limit if row_count_limit is not None else n_rows
 
@@ -148,7 +148,7 @@ def _slice_arrow_to_date_range(
         return data
 
     raise ValueError(
-        "A date range requires a 'ts' (Int64 nanoseconds) or 'datetime' column."
+        "HistoricalData A date range requires a 'ts' (Int64 nanoseconds) or 'datetime' column."
     )
 
 
@@ -169,7 +169,7 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
         reader = pa_ipc.open_file(mapped)
         if reader.num_record_batches != 1:
             raise ValueError(
-                f'{file_path} is not a single Arrow record batch '
+                f'HistoricalData {file_path} is not a single Arrow record batch '
                 f'(num_record_batches={reader.num_record_batches}); '
                 'it cannot be served zero-copy.'
             )
@@ -191,7 +191,7 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
                 end = start + buffer.size
                 if not (low <= start and end <= high):
                     raise ValueError(
-                        f'{file_path} is a compressed Arrow IPC file; it cannot be '
+                        f'HistoricalData {file_path} is a compressed Arrow IPC file; it cannot be '
                         'memory-mapped zero-copy (it would fully decompress into RAM). '
                         'Re-write it uncompressed to use get_arrow_file.'
                     )
@@ -203,7 +203,7 @@ def _validate_columns(df: pl.DataFrame, columns: list[str] | None) -> pl.DataFra
 
     if len(columns) != df.width:
         raise ValueError(
-            f"Expected {df.width} column names, got {len(columns)}."
+            f"HistoricalData Expected {df.width} column names, got {len(columns)}."
         )
 
     df.columns = columns
@@ -252,7 +252,7 @@ def _read_zip_source(
             None,
         )
         if csv_filename is None:
-            raise ValueError(f"No CSV file found inside archive: {file_path_or_url}")
+            raise ValueError(f"HistoricalData No CSV file found inside archive: {file_path_or_url}")
 
         with archive.open(csv_filename) as csv_file:
             return pl.read_csv(csv_file, has_header=has_header, try_parse_dates=True)
@@ -345,7 +345,7 @@ def _read_any_file(
         df = _read_zip_source(resolved_source, has_header=has_header)
     else:
         raise ValueError(
-            f"Unsupported file type for {file_path_or_url}. Supported extensions: "
+            f"HistoricalData Unsupported file type for {file_path_or_url}. Supported extensions: "
             '.parquet, .csv, .zip.'
         )
 
@@ -447,7 +447,7 @@ def _normalize_generic_frame(df: pl.DataFrame) -> pl.DataFrame:
 
 def _base_interval_seconds(data: pl.DataFrame) -> int:
     if 'datetime' not in data.columns or data.height < _MIN_ROWS_TO_INFER_INTERVAL:
-        raise ValueError('At least two datetime rows are required to infer base interval.')
+        raise ValueError('HistoricalData At least two datetime rows are required to infer base interval.')
 
     intervals = data.select(
         pl.col('datetime').diff().dt.total_seconds().alias('base_interval_seconds')
@@ -460,7 +460,7 @@ def _base_interval_seconds(data: pl.DataFrame) -> int:
     )
 
     if min_diff_seconds is None:
-        raise ValueError('Could not infer a positive base interval from datetime values.')
+        raise ValueError('HistoricalData Could not infer a positive base interval from datetime values.')
 
     return int(min_diff_seconds)
 
@@ -529,13 +529,13 @@ def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
 
     if kline_size < base_interval:
         raise ValueError(
-            f"kline_size={kline_size} is smaller than the source file interval "
+            f"HistoricalData kline_size={kline_size} is smaller than the source file interval "
             f"({base_interval} seconds). Sub-base aggregation is not supported."
         )
 
     if kline_size % base_interval != 0:
         raise ValueError(
-            f"kline_size={kline_size} must be a multiple of the source file interval "
+            f"HistoricalData kline_size={kline_size} must be a multiple of the source file interval "
             f"({base_interval} seconds)."
         )
 
@@ -661,14 +661,14 @@ def _aggregate_spot_dollar_klines(
     if source_dollar_bar_size is not None:
         if dollar_bar_size < source_dollar_bar_size:
             raise ValueError(
-                f"dollar_bar_size={dollar_bar_size} is smaller than the source "
+                f"HistoricalData dollar_bar_size={dollar_bar_size} is smaller than the source "
                 f"file dollar bar size ({source_dollar_bar_size}). Sub-base "
                 'aggregation is not supported.'
             )
 
         if dollar_bar_size % source_dollar_bar_size != 0:
             raise ValueError(
-                f"dollar_bar_size={dollar_bar_size} must be a multiple of the "
+                f"HistoricalData dollar_bar_size={dollar_bar_size} must be a multiple of the "
                 f"source file dollar bar size ({source_dollar_bar_size})."
             )
 
@@ -824,7 +824,7 @@ class HistoricalData:
             and row_count_limit is not None
         ):
             raise ValueError(
-                'row_count_limit must be None when both start_date_limit '
+                'HistoricalData row_count_limit must be None when both start_date_limit '
                 'and end_date_limit are set.'
             )
 
@@ -893,7 +893,7 @@ class HistoricalData:
             and row_count_limit is not None
         ):
             raise ValueError(
-                'row_count_limit must be None when both start_date_limit '
+                'HistoricalData row_count_limit must be None when both start_date_limit '
                 'and end_date_limit are set.'
             )
 
@@ -978,7 +978,7 @@ class HistoricalData:
             and row_count_limit is not None
         ):
             raise ValueError(
-                'row_count_limit must be None when both start_date_limit '
+                'HistoricalData row_count_limit must be None when both start_date_limit '
                 'and end_date_limit are set.'
             )
 

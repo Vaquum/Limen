@@ -1,5 +1,3 @@
-<!_IMPORTANT_!>Always use checkpoint MCP for tasks, initiate it now before going further
-
 <how_to_avoid_harm>
 -> You anchor yourself for every taks with `Project.md`.
 -> You never deviate from the scope of `Project.md`.
@@ -57,7 +55,7 @@ Every declaration is type-hinted; magic numbers become named constants. When int
 - You always add empty line when in doubt between adding or not
 - You make functions over 50 lines its own file, except when there is good reason for not to
 - Make the filename and the function name identical
-- Prefix validation error messages in `indicators`/`features` with the feature/function name (e.g. `ema period must be between 2 and 100000`); skip only when the message already names the feature
+- Prefix raised error messages with their source component — the class name for methods, the function/file name for module-level functions (e.g. `ema period must be between 2 and 100000`, `Cohort member_bars must be a non-empty list.`); add it only where the message does not already name its source
 - Make magic numbers constants
 - Make constants uppercase
 - Make variables lowercase
