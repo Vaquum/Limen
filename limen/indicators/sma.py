@@ -56,7 +56,7 @@ def sma(
         price_col = column
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('sma period must be between 2 and 100000')
 
     out_col = f"sma_{period}"
     compat_col = f"{price_col}_sma_{period}"

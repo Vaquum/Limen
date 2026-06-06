@@ -245,9 +245,9 @@ def mama(
     '''
 
     if fast_limit < CMP_N_0_01 or fast_limit > CMP_N_0_99:
-        raise ValueError('fast_limit must be between 0.01 and 0.99')
+        raise ValueError('mama fast_limit must be between 0.01 and 0.99')
     if slow_limit < CMP_N_0_01 or slow_limit > CMP_N_0_99:
-        raise ValueError('slow_limit must be between 0.01 and 0.99')
+        raise ValueError('mama slow_limit must be between 0.01 and 0.99')
 
     frame = data
     return frame.with_columns([

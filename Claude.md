@@ -57,6 +57,7 @@ Every declaration is type-hinted; magic numbers become named constants. When int
 - You always add empty line when in doubt between adding or not
 - You make functions over 50 lines its own file, except when there is good reason for not to
 - Make the filename and the function name identical
+- Prefix validation error messages in `indicators`/`features` with the feature/function name (e.g. `ema period must be between 2 and 100000`); skip only when the message already names the feature
 - Make magic numbers constants
 - Make constants uppercase
 - Make variables lowercase

@@ -74,9 +74,9 @@ def var(
     '''
 
     if period < 1 or period > CMP_N_100000:
-        raise ValueError('period must be between 1 and 100000')
+        raise ValueError('var period must be between 1 and 100000')
     if nb_dev < CMP_NEG_3E37 or nb_dev > CMP_N_3E37:
-        raise ValueError('nb_dev must be between -3e37 and 3e37')
+        raise ValueError('var nb_dev must be between -3e37 and 3e37')
 
     out_col = f"var_{period}_{nb_dev:g}"
     return data.with_columns(

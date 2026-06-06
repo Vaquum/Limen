@@ -139,11 +139,11 @@ def ultosc(
     '''
 
     if period1 < 1 or period1 > CMP_N_100000:
-        raise ValueError('period1 must be between 1 and 100000')
+        raise ValueError('ultosc period1 must be between 1 and 100000')
     if period2 < 1 or period2 > CMP_N_100000:
-        raise ValueError('period2 must be between 1 and 100000')
+        raise ValueError('ultosc period2 must be between 1 and 100000')
     if period3 < 1 or period3 > CMP_N_100000:
-        raise ValueError('period3 must be between 1 and 100000')
+        raise ValueError('ultosc period3 must be between 1 and 100000')
 
     out_col = f"ultosc_{period1}_{period2}_{period3}"
     frame = data

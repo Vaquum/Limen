@@ -58,7 +58,7 @@ def linearreg_intercept(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('linearreg_intercept period must be between 2 and 100000')
 
     out_col = f"linearreg_intercept_{period}"
     return data.with_columns(

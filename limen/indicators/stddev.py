@@ -82,9 +82,9 @@ def stddev(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('stddev period must be between 2 and 100000')
     if nb_dev < CMP_NEG_3E37 or nb_dev > CMP_N_3E37:
-        raise ValueError('nb_dev must be between -3e37 and 3e37')
+        raise ValueError('stddev nb_dev must be between -3e37 and 3e37')
 
     out_col = f"stddev_{period}_{nb_dev:g}"
     return data.with_columns(

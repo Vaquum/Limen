@@ -27,7 +27,7 @@ def _ma_lookback(period: int, ma_type: int) -> int:
     }
     if ma_type in lookback_by_type:
         return lookback_by_type[ma_type]
-    raise ValueError('ma_type must be between 0 and 8')
+    raise ValueError('stoch ma_type must be between 0 and 8')
 
 
 def _stoch_from_arrays(
@@ -171,15 +171,15 @@ def stoch(
     '''
 
     if fastk_period < 1 or fastk_period > CMP_N_100000:
-        raise ValueError('fastk_period must be between 1 and 100000')
+        raise ValueError('stoch fastk_period must be between 1 and 100000')
     if slowk_period < 1 or slowk_period > CMP_N_100000:
-        raise ValueError('slowk_period must be between 1 and 100000')
+        raise ValueError('stoch slowk_period must be between 1 and 100000')
     if slowd_period < 1 or slowd_period > CMP_N_100000:
-        raise ValueError('slowd_period must be between 1 and 100000')
+        raise ValueError('stoch slowd_period must be between 1 and 100000')
     if slowk_ma_type < 0 or slowk_ma_type > CMP_N_8:
-        raise ValueError('slowk_ma_type must be between 0 and 8')
+        raise ValueError('stoch slowk_ma_type must be between 0 and 8')
     if slowd_ma_type < 0 or slowd_ma_type > CMP_N_8:
-        raise ValueError('slowd_ma_type must be between 0 and 8')
+        raise ValueError('stoch slowd_ma_type must be between 0 and 8')
 
     high_values = data[high_col].to_numpy().astype(float, copy=False)
     low_values = data[low_col].to_numpy().astype(float, copy=False)

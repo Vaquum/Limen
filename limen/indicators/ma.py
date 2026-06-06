@@ -41,9 +41,9 @@ def ma(
     '''
 
     if period < 1 or period > CMP_N_100000:
-        raise ValueError('period must be between 1 and 100000')
+        raise ValueError('ma period must be between 1 and 100000')
     if ma_type < 0 or ma_type > CMP_N_8:
-        raise ValueError('ma_type must be between 0 and 8')
+        raise ValueError('ma ma_type must be between 0 and 8')
 
     out_col = f"ma_{period}_{ma_type}"
     frame = data

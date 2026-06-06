@@ -20,16 +20,16 @@ def lag_range_cols(data: pl.DataFrame,
     '''
 
     if not cols:
-        raise ValueError('cols cannot be empty')
+        raise ValueError('lagged_features cols cannot be empty')
 
     if not isinstance(start, int) or not isinstance(end, int):
-        raise TypeError('start and end must be integers')
+        raise TypeError('lagged_features start and end must be integers')
 
     if start < 0 or end < 0:
-        raise ValueError('start and end must be non-negative')
+        raise ValueError('lagged_features start and end must be non-negative')
 
     if start > end:
-        raise ValueError('start must be less than or equal to end')
+        raise ValueError('lagged_features start must be less than or equal to end')
 
     lag_expressions = [
         pl.col(col).shift(lag).alias(f'{col}_lag_{lag}')
@@ -100,7 +100,7 @@ def lag_column(data: pl.DataFrame,
     '''
 
     if alias is not None and not isinstance(alias, str):
-        raise TypeError('alias must be a string or None')
+        raise TypeError('lagged_features alias must be a string or None')
 
     result = lag_range_cols(data, [col], lag, lag)
 

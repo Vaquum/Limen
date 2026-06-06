@@ -81,7 +81,7 @@ def macdfix(
     '''
 
     if signal_period < 1 or signal_period > CMP_N_100000:
-        raise ValueError('signal_period must be between 1 and 100000')
+        raise ValueError('macdfix signal_period must be between 1 and 100000')
 
     values = data[price_col].to_numpy().astype(float, copy=False)
     macd_values, signal_values, hist_values = _macdfix_from_values(values, signal_period)

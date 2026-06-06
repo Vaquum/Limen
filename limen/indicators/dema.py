@@ -52,7 +52,7 @@ def dema(
     '''
 
     if period < CMP_N_2 or period > CMP_N_100000:
-        raise ValueError('period must be between 2 and 100000')
+        raise ValueError('dema period must be between 2 and 100000')
 
     out_col = f"dema_{period}"
     frame = data

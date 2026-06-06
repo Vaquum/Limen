@@ -181,21 +181,21 @@ def sarext(
     '''
 
     if start_value < CMP_NEG_3E37 or start_value > CMP_N_3E37:
-        raise ValueError('start_value must be between -3e37 and 3e37')
+        raise ValueError('sarext start_value must be between -3e37 and 3e37')
     if offset_on_reverse < 0.0 or offset_on_reverse > CMP_N_3E37:
-        raise ValueError('offset_on_reverse must be between 0 and 3e37')
+        raise ValueError('sarext offset_on_reverse must be between 0 and 3e37')
     if acceleration_init_long < 0.0 or acceleration_init_long > CMP_N_3E37:
-        raise ValueError('acceleration_init_long must be between 0 and 3e37')
+        raise ValueError('sarext acceleration_init_long must be between 0 and 3e37')
     if acceleration_long < 0.0 or acceleration_long > CMP_N_3E37:
-        raise ValueError('acceleration_long must be between 0 and 3e37')
+        raise ValueError('sarext acceleration_long must be between 0 and 3e37')
     if acceleration_max_long < 0.0 or acceleration_max_long > CMP_N_3E37:
-        raise ValueError('acceleration_max_long must be between 0 and 3e37')
+        raise ValueError('sarext acceleration_max_long must be between 0 and 3e37')
     if acceleration_init_short < 0.0 or acceleration_init_short > CMP_N_3E37:
-        raise ValueError('acceleration_init_short must be between 0 and 3e37')
+        raise ValueError('sarext acceleration_init_short must be between 0 and 3e37')
     if acceleration_short < 0.0 or acceleration_short > CMP_N_3E37:
-        raise ValueError('acceleration_short must be between 0 and 3e37')
+        raise ValueError('sarext acceleration_short must be between 0 and 3e37')
     if acceleration_max_short < 0.0 or acceleration_max_short > CMP_N_3E37:
-        raise ValueError('acceleration_max_short must be between 0 and 3e37')
+        raise ValueError('sarext acceleration_max_short must be between 0 and 3e37')
 
     frame = data
     sarext_expr = pl.struct([high_col, low_col]).map_batches(

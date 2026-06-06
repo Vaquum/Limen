@@ -1033,3 +1033,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add `sensor-error` graceful degradation to `Cohort._aggregate_bar_predictions`: sensor-error members are excluded before aggregation; only when all members error does the cohort return `reason='sensor-error'`
 - Fix flaky `test_e2e_label_control_trainer_sensor` by adding `seed: 42` to YAML search strategy; fix `build_search_strategy` compiler to pass `seed` through to `RandomStrategy`
 - Extend `test_e2e_label_control_trainer_sensor` to cover full cohort prediction path: `Cohort` construction, `set_members`, `predict_all`, `predict`, and probability mean verification
+
+## v3.15.1 on 6th of June, 2026
+
+- Prefix every parameter-validation error message in `limen/indicators` and `limen/features` with the indicator/feature name, so each message names its own context (e.g. `period must be between 2 and 100000` becomes `ema period must be between 2 and 100000`) — 107 messages across 54 files

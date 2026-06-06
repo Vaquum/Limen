@@ -30,7 +30,7 @@ def rolling_zscore(
     '''
 
     if window <= 0:
-        raise ValueError('window must be positive')
+        raise ValueError('rolling_zscore window must be positive')
 
     x = pl.col(column)
     if transform == 'log1p':
@@ -38,7 +38,7 @@ def rolling_zscore(
     elif transform == 'abs':
         x = x.abs()
     elif transform != 'identity':
-        raise ValueError("transform must be one of 'identity', 'log1p', or 'abs'")
+        raise ValueError("rolling_zscore transform must be one of 'identity', 'log1p', or 'abs'")
 
     mean = x.rolling_mean(window_size=window)
     std = x.rolling_std(window_size=window)

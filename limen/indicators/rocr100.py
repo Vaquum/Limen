@@ -22,7 +22,7 @@ def rocr100(
     '''
 
     if period < 1 or period > CMP_N_100000:
-        raise ValueError('period must be between 1 and 100000')
+        raise ValueError('rocr100 period must be between 1 and 100000')
 
     out_col = f"rocr100_{period}"
     trailing = pl.col(price_col).shift(period)
