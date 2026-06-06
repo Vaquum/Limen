@@ -5,11 +5,13 @@ from limen.features.atr_sma import atr_sma
 from limen.features.body_to_range import body_to_range
 from limen.features.breakout_features import breakout_features
 from limen.features.breakout_percentile_regime import breakout_percentile_regime
+from limen.features.bulk_volume_classification import bulk_volume_classification
 from limen.features.calendar_time_features import calendar_time_features
 from limen.features.close_ma_distance_atr import close_ma_distance_atr
 from limen.features.close_position import close_position
 from limen.features.close_position_rolling import close_position_rolling
 from limen.features.conserved_flux_renormalization import conserved_flux_renormalization
+from limen.features.cusum_filter import cusum_filter
 from limen.features.cyclical_time_features import cyclical_time_features
 from limen.features.distance_from_ma import distance_from_ma
 from limen.features.distance_from_high import distance_from_high
@@ -39,6 +41,7 @@ from limen.features.maker_liquidity_share import maker_liquidity_share
 from limen.features.maker_volume_ratio import maker_volume_ratio
 from limen.features.maker_volume_share import maker_volume_share
 from limen.features.narrow_range import narrow_range
+from limen.features.order_flow_imbalance import order_flow_imbalance
 from limen.features.parkinson_vol_of_vol import parkinson_vol_of_vol
 from limen.features.parkinson_volatility import parkinson_volatility
 from limen.features.price_range_position import price_range_position
@@ -62,6 +65,7 @@ from limen.features.sma_crossover import sma_crossover
 from limen.features.stochastic_k_abs import stochastic_k_abs
 from limen.features.taker_imbalance_ratio import taker_imbalance_ratio
 from limen.features.tail_event_intensity import tail_event_intensity
+from limen.features.time_to_funding import time_to_funding
 from limen.features.trade_density import trade_density
 from limen.features.trade_imbalance import trade_imbalance
 from limen.features.trade_size_ratio import trade_size_ratio
@@ -74,6 +78,7 @@ from limen.features.volatility_ratio import volatility_ratio
 from limen.features.volatility_spike import volatility_spike
 from limen.features.volatility_term_structure import volatility_term_structure
 from limen.features.volume_regime import volume_regime
+from limen.features.vpin import vpin
 from limen.features.vwap import vwap
 from limen.features.wick_imbalance import wick_imbalance
 from limen.features.wick_proportion import wick_proportion
@@ -88,11 +93,13 @@ __all__ = [
     'body_to_range',
     'breakout_features',
     'breakout_percentile_regime',
+    'bulk_volume_classification',
     'calendar_time_features',
     'close_ma_distance_atr',
     'close_position',
     'close_position_rolling',
     'conserved_flux_renormalization',
+    'cusum_filter',
     'cyclical_time_features',
     'distance_from_high',
     'distance_from_low',
@@ -122,6 +129,7 @@ __all__ = [
     'maker_volume_ratio',
     'maker_volume_share',
     'narrow_range',
+    'order_flow_imbalance',
     'parkinson_vol_of_vol',
     'parkinson_volatility',
     'price_range_position',
@@ -145,6 +153,7 @@ __all__ = [
     'stochastic_k_abs',
     'tail_event_intensity',
     'taker_imbalance_ratio',
+    'time_to_funding',
     'trade_density',
     'trade_imbalance',
     'trade_size_ratio',
@@ -157,6 +166,7 @@ __all__ = [
     'volume_regime',
     'volume_to_range',
     'volume_volatility_correlation',
+    'vpin',
     'vwap',
     'wick_imbalance',
     'wick_proportion',

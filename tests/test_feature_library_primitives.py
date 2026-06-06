@@ -24,6 +24,7 @@ from limen.features.volume_to_range import volume_to_range
 from limen.features.volume_ratio import volume_ratio
 from limen.features.volume_regime import volume_regime
 from limen.features.wick_proportion import wick_proportion
+from limen.features.cusum_filter import cusum_filter
 
 
 SAMPLE_OHLCV = pl.DataFrame(
@@ -229,3 +230,16 @@ def test_sma_crossover_marks_bullish_and_bearish_crosses() -> None:
     assert result['signal'].to_list()[8] == -1
     assert result['signal'].to_list()[6] == 0
     assert result['signal'].to_list()[7] == 0
+
+
+def test_cusum_filter_flags_accumulated_up_and_down_moves() -> None:
+    data = pl.DataFrame({'close': [100.0, 102.0, 102.0, 100.0, 100.0]})
+    events = cusum_filter(data, threshold=0.015)['cusum_event'].to_list()
+    assert events == [0, 1, 0, -1, 0]
+
+
+def test_cusum_filter_ignores_subthreshold_noise_and_validates_threshold() -> None:
+    data = pl.DataFrame({'close': [100.0, 100.2, 100.0, 100.1, 100.0]})
+    assert set(cusum_filter(data, threshold=0.05)['cusum_event'].to_list()) == {0}
+    with pytest.raises(ValueError, match='threshold'):
+        cusum_filter(data, threshold=0.0)

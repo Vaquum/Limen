@@ -17,6 +17,9 @@ from limen.features.taker_imbalance_ratio import taker_imbalance_ratio
 from limen.features.trade_density import trade_density
 from limen.features.trade_imbalance import trade_imbalance
 from limen.features.trade_size_ratio import trade_size_ratio
+from limen.features.bulk_volume_classification import bulk_volume_classification
+from limen.features.order_flow_imbalance import order_flow_imbalance
+from limen.features.vpin import vpin
 
 
 def _assert_values(actual: list[float | None], expected: list[float | None]) -> None:
@@ -126,3 +129,53 @@ def test_native_microstructure_features_match_manual_formulas() -> None:
         liquidity_drop(data, window=2)['liquidity_drop'].to_list(),
         [None, None, 1.0, 0.25],
     )
+
+
+def test_bulk_volume_classification_reconstructs_volume_and_signs_with_price() -> None:
+    data = pl.DataFrame(
+        {
+            'close': [100.0, 101.0, 100.0, 101.0, 101.0, 103.0],
+            'volume': [10.0, 10.0, 10.0, 10.0, 10.0, 10.0],
+        }
+    )
+
+    classified = bulk_volume_classification(data, window=2)
+    buy = classified['bvc_buy_volume'].to_list()
+    sell = classified['bvc_sell_volume'].to_list()
+
+    assert buy[0] is None
+    assert buy[1] is None
+    for buy_value, sell_value in zip(buy, sell, strict=True):
+        if buy_value is not None:
+            assert buy_value + sell_value == pytest.approx(10.0)
+    assert buy[4] == pytest.approx(5.0)
+    assert sell[4] == pytest.approx(5.0)
+    assert buy[5] > sell[5]
+    assert buy[2] < sell[2]
+
+
+def test_order_flow_imbalance_and_vpin_are_bounded_and_directional() -> None:
+    up = pl.DataFrame({'close': [100.0, 101.0, 102.0, 103.0, 104.0, 105.0], 'volume': [10.0] * 6})
+    down = pl.DataFrame({'close': [105.0, 104.0, 103.0, 102.0, 101.0, 100.0], 'volume': [10.0] * 6})
+
+    ofi_up = order_flow_imbalance(up, window=2, classification_window=2)['order_flow_imbalance'].to_list()
+    ofi_down = order_flow_imbalance(down, window=2, classification_window=2)['order_flow_imbalance'].to_list()
+    vpin_up = vpin(up, window=2, classification_window=2)['vpin'].to_list()
+
+    assert ofi_up[-1] > 0.99
+    assert ofi_down[-1] < -0.99
+    for ofi_value, vpin_value in zip(ofi_up, vpin_up, strict=True):
+        if ofi_value is not None:
+            assert -1.0 <= ofi_value <= 1.0
+            assert 0.0 <= vpin_value <= 1.0
+            assert vpin_value >= abs(ofi_value) - 1e-9
+
+
+def test_order_flow_imbalance_and_vpin_null_on_zero_volume() -> None:
+    data = pl.DataFrame({'close': [100.0, 101.0, 102.0, 103.0], 'volume': [0.0, 0.0, 0.0, 0.0]})
+
+    ofi = order_flow_imbalance(data, window=2, classification_window=2)['order_flow_imbalance'].to_list()
+    vpin_values = vpin(data, window=2, classification_window=2)['vpin'].to_list()
+
+    assert all(value is None for value in ofi)
+    assert all(value is None for value in vpin_values)

@@ -9,6 +9,7 @@ from limen.features.is_us_open_hour import is_us_open_hour
 from limen.features.relative_range_seasonality import relative_range_seasonality
 from limen.features.relative_volatility_seasonality import relative_volatility_seasonality
 from limen.features.relative_volume_seasonality import relative_volume_seasonality
+from limen.features.time_to_funding import time_to_funding
 
 
 def test_calendar_session_features_add_half_year_and_hour_flags() -> None:
@@ -101,3 +102,51 @@ def test_relative_volatility_seasonality_uses_same_hour_of_week_absolute_returns
         pytest.approx(1.0),
         pytest.approx(2.0),
     ]
+
+
+def test_time_to_funding_counts_hours_to_next_settlement() -> None:
+    data = pl.DataFrame(
+        {
+            'datetime': pl.datetime_range(
+                pl.datetime(2025, 1, 1, 0),
+                pl.datetime(2025, 1, 1, 10),
+                interval='2h',
+                eager=True,
+            )
+        }
+    )
+
+    result = time_to_funding(data)['hours_to_funding'].to_list()
+
+    assert result == pytest.approx([0.0, 6.0, 4.0, 2.0, 0.0, 6.0])
+
+
+def test_time_to_funding_respects_interval_and_validates_positive() -> None:
+    data = pl.DataFrame(
+        {
+            'datetime': pl.datetime_range(
+                pl.datetime(2025, 1, 1, 0),
+                pl.datetime(2025, 1, 1, 3),
+                interval='1h',
+                eager=True,
+            )
+        }
+    )
+
+    result = time_to_funding(data, interval_hours=4)['hours_to_funding'].to_list()
+
+    assert result == pytest.approx([0.0, 3.0, 2.0, 1.0])
+    with pytest.raises(ValueError, match='interval_hours'):
+        time_to_funding(data, interval_hours=0)
+    with pytest.raises(ValueError, match='divide 24'):
+        time_to_funding(data, interval_hours=5)
+
+
+def test_time_to_funding_uses_utc_for_timezone_aware_timestamps() -> None:
+    data = pl.DataFrame({'datetime': [datetime(2025, 1, 1, 22, 0)]}).with_columns(
+        pl.col('datetime').dt.replace_time_zone('UTC').dt.convert_time_zone('Asia/Karachi')
+    )
+
+    result = time_to_funding(data)['hours_to_funding'].to_list()
+
+    assert result == pytest.approx([2.0])
