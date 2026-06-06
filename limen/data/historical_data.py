@@ -12,6 +12,8 @@ import polars as pl
 import pyarrow as pa
 import pyarrow.ipc as pa_ipc
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
 
@@ -22,6 +24,9 @@ _SUPPORTED_DATETIME_FORMATS: Final[tuple[str, ...]] = (
     '%Y-%m-%dT%H:%M:%S',
 )
 _REMOTE_TIMEOUT_SECONDS: Final[int] = 60
+_REMOTE_MAX_RETRIES: Final[int] = 5
+_REMOTE_BACKOFF_FACTOR: Final[float] = 1.0
+_REMOTE_RETRY_STATUSES: Final[tuple[int, ...]] = (429, 500, 502, 503, 504)
 _DEFAULT_SPOT_DATASET_REPO: Final[str] = 'vaquum/binance_btcusdt_1m_klines'
 _DEFAULT_SPOT_DOLLAR_DATASET_REPO: Final[str] = (
     'vaquum/binance_btcusdt_1M_dollar_klines'
@@ -210,10 +215,27 @@ def _validate_columns(df: pl.DataFrame, columns: list[str] | None) -> pl.DataFra
     return df
 
 
+def _remote_session() -> requests.Session:
+    retry = Retry(
+        total=_REMOTE_MAX_RETRIES,
+        backoff_factor=_REMOTE_BACKOFF_FACTOR,
+        status_forcelist=_REMOTE_RETRY_STATUSES,
+        allowed_methods=frozenset({'GET'}),
+        respect_retry_after_header=True,
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount('https://', adapter)
+    session.mount('http://', adapter)
+    return session
+
+
 def _read_remote_bytes(url: str) -> bytes:
-    response = requests.get(url, timeout=_REMOTE_TIMEOUT_SECONDS)
-    response.raise_for_status()
-    return response.content
+    with _remote_session() as session:
+        response = session.get(url, timeout=_REMOTE_TIMEOUT_SECONDS)
+        response.raise_for_status()
+        return response.content
 
 
 def _read_csv_source(
@@ -260,9 +282,10 @@ def _read_zip_source(
 
 def _resolve_huggingface_latest_file(repo_id: str) -> str:
     metadata_url = f"https://huggingface.co/datasets/{repo_id}/resolve/main/latest.json"
-    response = requests.get(metadata_url, timeout=_REMOTE_TIMEOUT_SECONDS)
-    response.raise_for_status()
-    metadata = response.json()
+    with _remote_session() as session:
+        response = session.get(metadata_url, timeout=_REMOTE_TIMEOUT_SECONDS)
+        response.raise_for_status()
+        metadata = response.json()
     file_name = metadata['file_name']
     return f"https://huggingface.co/datasets/{repo_id}/resolve/main/{file_name}"
 

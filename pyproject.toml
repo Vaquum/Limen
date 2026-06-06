@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaquum_limen"
-version = "3.15.3"
+version = "3.15.4"
 description = "Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works."
 readme = "README.md"
 authors = [
