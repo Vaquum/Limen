@@ -107,9 +107,9 @@ With `inline_metrics=True`, `evaluate()` adds:
 
 On that same live local run, `LogRegBinary.evaluate(..., inline_metrics=True)` added keys such as:
 
-- `backtest_edge_per_signal_bps_p50`
-- `backtest_trade_pnl_net_bps_p50`
-- `backtest_cvar_95_return_bps`
+- `backtest_edge_bps_p50`
+- `backtest_pnl_bps_p50`
+- `backtest_cvar_95_pnl_bps`
 - `confusion_tp`
 - `confusion_fp`
 - `confusion_precision`
@@ -195,7 +195,7 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 `evaluate()` returns a flat dict with three tiers:
 
 - **Tier 1** — position stats: `num_trades_{split}`, `position_rate_{split}`
-- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `trade_pnl_net_bps_p50_train`, `drawdown_depth_bps_p5_test`)
+- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `pnl_bps_p50_train`, `drawdown_bps_p5_test`)
 - **Tier 3** — cross-split diagnostics: `drawdown_std_bps`, `is_stable`
 
 `is_stable` is `False` until a replacement stability rule is defined against the new decoder-level ledger.

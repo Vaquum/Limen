@@ -172,16 +172,18 @@ The same table is exposed directly on UEL as:
 uel.experiment_backtest_results
 ```
 
-The current summary columns are the 22 decoder-level backtest ledger fields:
+The current summary columns are the 21 bar-based backtest ledger fields — every column is computed per bar over all bars in the window.
 
-- `edge_per_signal_bps_p5`, `edge_per_signal_bps_p50`, `edge_per_signal_bps_p95`
-- `trade_pnl_net_bps_p5`, `trade_pnl_net_bps_p50`, `trade_pnl_net_bps_p95`
-- `cost_drag_bps_p5`, `cost_drag_bps_p50`, `cost_drag_bps_p95`
-- `rolling_return_net_bps_p5`, `rolling_return_net_bps_p50`, `rolling_return_net_bps_p95`
-- `return_on_exposure_p5`, `return_on_exposure_p50`, `return_on_exposure_p95`
-- `drawdown_depth_bps_p5`, `drawdown_depth_bps_p50`, `drawdown_depth_bps_p95`
-- `drawdown_duration_days_p5`, `drawdown_duration_days_p50`, `drawdown_duration_days_p95`
-- `cvar_95_return_bps`
+Per-bar distributions (`p5` / `p50` / `p95`):
+
+- `edge_bps_*` — gross per-bar return
+- `pnl_bps_*` — net per-bar return
+- `cost_bps_*` — per-bar cost (gross minus net)
+- `drawdown_bps_*` — net equity against its running peak
+
+Intensive scalars:
+
+- `win_rate`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `in_market_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
 Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
 

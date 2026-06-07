@@ -49,7 +49,7 @@ def rule_based_metrics(positions: dict,
         for k, v in bt.items():
             results[f'{k}_{split}'] = v
 
-    drawdowns = [split_bt[s].get('drawdown_depth_bps_p5') for s in _SPLITS]
+    drawdowns = [split_bt[s].get('drawdown_bps_p5') for s in _SPLITS]
 
     valid_drawdowns = [d for d in drawdowns if d is not None and not np.isnan(d)]
 

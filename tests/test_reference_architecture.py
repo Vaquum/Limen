@@ -251,7 +251,7 @@ def test_rule_based_evaluate_returns_expected_metrics():
         rate = results[f'position_rate_{split}']
         assert 0.0 <= rate <= 1.0
 
-    assert results['drawdown_std_bps'] is None
+    assert results['drawdown_std_bps'] == 0.0
     assert isinstance(results['is_stable'], bool)
 
     assert isinstance(results['_preds'], np.ndarray)
@@ -346,9 +346,9 @@ def test_compute_backtest_honours_injected_cost():
     zero = model.evaluate({**base, 'backtest_fee_bps': 0.0, 'backtest_slip_bps': 0.0})
     high = model.evaluate({**base, 'backtest_fee_bps': 20.0, 'backtest_slip_bps': 20.0})
 
-    assert zero['backtest_cost_drag_bps_p50'] == 0.0
-    assert high['backtest_cost_drag_bps_p50'] > zero['backtest_cost_drag_bps_p50']
-    assert zero['backtest_trade_pnl_net_bps_p50'] > high['backtest_trade_pnl_net_bps_p50']
+    assert zero['backtest_cost_per_bar_bps'] == 0.0
+    assert high['backtest_cost_per_bar_bps'] > zero['backtest_cost_per_bar_bps']
+    assert zero['backtest_pnl_per_bar_bps'] > high['backtest_pnl_per_bar_bps']
 
 
 def test_manifest_backtest_config_resolves_and_sweeps():

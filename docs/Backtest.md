@@ -45,9 +45,9 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `price_change` must match `close - open` when all three fields are present
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - fee and slippage costs are applied multiplicatively on entry and exit fills
-- `trade_*` metrics are computed from compounded consecutive `1` runs
-- output metrics are quantiles over their declared substrate
-- return and ratio outputs are basis-point scaled
+- every column is computed per bar over all bars in the window (a flat bar counts as a real `0`)
+- distribution columns carry p5/p50/p95; the rest are single intensive (run-length-invariant) scalars
+- return and cost outputs are basis-point scaled
 
 The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=..., slip_bps=...)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
 
@@ -69,16 +69,25 @@ This makes snapshot backtests fast and comparable across rounds, but it also mea
 
 ### Output columns
 
-Snapshot backtests produce:
+Snapshot backtests produce 21 columns over one population — every bar in the window.
 
-- `edge_per_signal_bps_p5`, `edge_per_signal_bps_p50`, `edge_per_signal_bps_p95`
-- `trade_pnl_net_bps_p5`, `trade_pnl_net_bps_p50`, `trade_pnl_net_bps_p95`
-- `cost_drag_bps_p5`, `cost_drag_bps_p50`, `cost_drag_bps_p95`
-- `rolling_return_net_bps_p5`, `rolling_return_net_bps_p50`, `rolling_return_net_bps_p95`
-- `return_on_exposure_p5`, `return_on_exposure_p50`, `return_on_exposure_p95`
-- `drawdown_depth_bps_p5`, `drawdown_depth_bps_p50`, `drawdown_depth_bps_p95`
-- `drawdown_duration_days_p5`, `drawdown_duration_days_p50`, `drawdown_duration_days_p95`
-- `cvar_95_return_bps`
+Per-bar distributions (`p5` / `p50` / `p95`):
+
+- `edge_bps_*` — gross per-bar return
+- `pnl_bps_*` — net per-bar return
+- `cost_bps_*` — per-bar cost (gross minus net)
+- `drawdown_bps_*` — net equity against its running peak (≤ 0)
+
+Intensive scalars:
+
+- `win_rate` — share of bars with positive net return
+- `pnl_per_bar_bps` — mean net return per bar
+- `avg_win_bps`, `avg_loss_bps` — mean of the positive / negative bars (NaN when there are none)
+- `cvar_95_pnl_bps` — mean of the worst 5% of per-bar net returns (NaN below 20 bars)
+- `trades_per_bar` — entries per bar (turnover)
+- `in_market_per_bar` — share of bars holding a position
+- `inventory_per_bar` — mean fraction of capital deployed per bar
+- `cost_per_bar_bps` — mean cost per bar
 
 ### Typical use
 

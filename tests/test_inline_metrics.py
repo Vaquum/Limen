@@ -51,10 +51,12 @@ def test_inline_and_post_experiment_metrics() -> None:
                 'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
         assert col in log_cols, f"Missing inline confusion return column: {col}"
 
+    nan_capable = {'avg_win_bps', 'avg_loss_bps', 'cvar_95_pnl_bps'}
     for metric_col in BACKTEST_SNAPSHOT_COLUMNS:
         col = f'backtest_{metric_col}'
         assert col in log_cols, f"Missing inline backtest column: {col}"
-        assert uel.experiment_log[col].null_count() == 0, f"Null values in {col}"
+        if metric_col not in nan_capable:
+            assert uel.experiment_log[col].null_count() == 0, f"Null values in {col}"
 
     assert uel.experiment_confusion_metrics is not None
     assert len(uel.experiment_confusion_metrics) > 0
@@ -64,8 +66,8 @@ def test_inline_and_post_experiment_metrics() -> None:
     assert len(uel.experiment_backtest_results) > 0
     assert uel.experiment_backtest_results.columns.tolist() == BACKTEST_SNAPSHOT_COLUMNS
 
-    assert uel.experiment_log['backtest_trade_pnl_net_bps_p50'].to_list() == \
-        uel.experiment_backtest_results['trade_pnl_net_bps_p50'].tolist()
+    assert uel.experiment_log['backtest_pnl_bps_p50'].to_list() == \
+        uel.experiment_backtest_results['pnl_bps_p50'].tolist()
 
 
 def test_logreg_inline_and_post_confusion_metrics_match() -> None:
@@ -94,8 +96,8 @@ def test_xgboost_inline_and_post_backtest_metrics_match() -> None:
     uel = _run_uel(sfd_module=xgboost_sfd, n_permutations=1)
 
     for inline_value, post_value in zip(
-        uel.experiment_log['backtest_trade_pnl_net_bps_p50'].to_list(),
-        uel.experiment_backtest_results['trade_pnl_net_bps_p50'].tolist(),
+        uel.experiment_log['backtest_pnl_bps_p50'].to_list(),
+        uel.experiment_backtest_results['pnl_bps_p50'].tolist(),
         strict=True,
     ):
         if math.isnan(inline_value) and math.isnan(post_value):
