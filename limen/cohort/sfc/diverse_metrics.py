@@ -43,11 +43,11 @@ def select(context: dict[str, Any],
 
     metric_groups = [
         [
-            'backtest_trade_pnl_net_bps_p50',
-            'backtest_edge_per_signal_bps_p50',
-            'backtest_return_on_exposure_p50',
-            'backtest_drawdown_depth_bps_p50',
-            'backtest_cvar_95_return_bps',
+            'backtest_pnl_per_bar_bps',
+            'backtest_edge_bps_p95',
+            'backtest_wins_per_bar',
+            'backtest_drawdown_bps_p5',
+            'backtest_cvar_95_pnl_bps',
         ],
         [
             'pred_pos_rate_pct',

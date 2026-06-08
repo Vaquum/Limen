@@ -13,9 +13,9 @@ def _make_positions(train, val, test):
 
 def _make_backtest(drawdown_train, drawdown_val, drawdown_test):
     return {
-        'train': {'drawdown_depth_bps_p5': drawdown_train},
-        'val':   {'drawdown_depth_bps_p5': drawdown_val},
-        'test':  {'drawdown_depth_bps_p5': drawdown_test},
+        'train': {'drawdown_bps_p5': drawdown_train},
+        'val':   {'drawdown_bps_p5': drawdown_val},
+        'test':  {'drawdown_bps_p5': drawdown_test},
     }
 
 
@@ -39,7 +39,7 @@ def test_backtest_metrics_flattened_with_split_suffix() -> None:
     positions = _make_positions([1], [1], [1])
     bt = _make_backtest(-5.0, -6.0, -8.0)
     result = rule_based_metrics(positions, bt)
-    assert result['drawdown_depth_bps_p5_test'] == -8.0
+    assert result['drawdown_bps_p5_test'] == -8.0
 
 
 def test_drawdown_std_bps() -> None:

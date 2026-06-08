@@ -1,3 +1,7 @@
+import inspect
+import re
+from pathlib import Path
+
 import numpy as np
 import polars as pl
 import pandas as pd
@@ -240,7 +244,6 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 1, 0],
-            'datetime': pd.date_range('2025-01-01', periods=4, freq='D'),
             'open': [100.0, 100.0, 100.0, 100.0],
             'close': [120.0, 100.0, 90.0, 100.0],
             'price_change': [20.0, 0.0, -10.0, 0.0],
@@ -251,16 +254,19 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
     ).iloc[0]
 
     assert result.index.tolist() == BACKTEST_SNAPSHOT_COLUMNS
-    assert result['edge_per_signal_bps_p50'] == 500.0
-    assert result['trade_pnl_net_bps_p50'] == 500.0
-    assert result['cvar_95_return_bps'] == -1000.0
+    assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
+    assert result['wins_per_bar'] == 0.25
+    assert result['pnl_per_bar_bps'] == 250.0
+    assert result['avg_win_bps'] == 2000.0
+    assert result['avg_loss_bps'] == -1000.0
+    assert result['drawdown_bps_p50'] == -500.0
+    assert result['trades_per_bar'] == 0.5
 
 
 def test_backtest_snapshot_executes_on_next_bar() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 0],
-            'datetime': pd.date_range('2025-01-01', periods=3, freq='D'),
             'open': [100.0, 100.0, 100.0],
             'close': [110.0, 90.0, 100.0],
             'price_change': [10.0, -10.0, 0.0],
@@ -269,16 +275,16 @@ def test_backtest_snapshot_executes_on_next_bar() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['edge_per_signal_bps_p50'] == -1000.0
-    assert result['trade_pnl_net_bps_p50'] == -1000.0
-    assert result['rolling_return_net_bps_p50'] == -500.0
+    assert result['wins_per_bar'] == 0.0
+    assert result['avg_loss_bps'] == -1000.0
+    assert result['pnl_per_bar_bps'] == -333.3
+    assert result['drawdown_bps_p50'] == -1000.0
 
 
 def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 1, 0],
-            'datetime': pd.date_range('2025-01-01', periods=3, freq='D'),
             'open': [100.0, 100.0, 110.0],
             'close': [100.0, 110.0, 121.0],
             'price_change': [0.0, 10.0, 11.0],
@@ -287,9 +293,11 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['edge_per_signal_bps_p50'] == 1000.0
-    assert result['trade_pnl_net_bps_p50'] == 2100.0
-    assert result['cost_drag_bps_p50'] == 0.0
+    assert result['edge_bps_p50'] == 1000.0
+    assert result['pnl_bps_p50'] == 1000.0
+    assert result['cost_bps_p50'] == 0.0
+    assert result['inventory_per_bar'] == 0.6667
+    assert result['pnl_per_bar_bps'] == 666.7
 
 
 def test_backtest_snapshot_rejects_empty_input() -> None:
@@ -356,7 +364,6 @@ def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1],
-            'datetime': pd.date_range('2025-01-01', periods=1, freq='D'),
             'open': [100.0],
             'close': [100.0],
             'price_change': [0.0],
@@ -366,15 +373,15 @@ def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
         slip_bps=50.0,
     ).iloc[0]
 
-    assert result['cost_drag_bps_p50'] == 198.3
-    assert result['trade_pnl_net_bps_p50'] == -198.3
+    assert result['cost_bps_p50'] == 198.3
+    assert result['pnl_bps_p50'] == -198.3
+    assert result['cost_per_bar_bps'] == 198.3
 
 
 def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1],
-            'datetime': pd.date_range('2025-01-01', periods=1, freq='D'),
             'open': [100.0],
             'close': [90.0],
             'price_change': [-10.0],
@@ -384,14 +391,13 @@ def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['drawdown_depth_bps_p50'] == -1000.0
+    assert result['drawdown_bps_p50'] == -1000.0
 
 
 def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 0],
-            'datetime': pd.date_range('2025-01-01', periods=3, freq='D'),
             'open': [100.0, np.nan, 100.0],
             'close': [100.0, np.nan, 100.0],
             'price_change': [0.0, np.nan, 0.0],
@@ -400,9 +406,150 @@ def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_ba
         slip_bps=0.0,
     ).iloc[0]
 
-    assert np.isnan(result['edge_per_signal_bps_p50'])
-    assert np.isnan(result['trade_pnl_net_bps_p50'])
-    assert result['rolling_return_net_bps_p50'] == 0.0
+    assert result['inventory_per_bar'] == 0.0
+    assert result['pnl_bps_p50'] == 0.0
+    assert np.isnan(result['avg_win_bps'])
+    assert np.isnan(result['avg_loss_bps'])
+
+
+def test_backtest_snapshot_reports_all_bars_population() -> None:
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 0, 1, 0],
+            'open': [100.0, 100.0, 100.0, 100.0],
+            'close': [120.0, 100.0, 90.0, 100.0],
+            'price_change': [20.0, 0.0, -10.0, 0.0],
+        }),
+        execution_lag_bars=0,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert result['inventory_per_bar'] == 0.5
+    assert result['wins_per_bar'] == 0.25
+    assert result['edge_bps_p50'] == 0.0
+    assert result['pnl_bps_p50'] == 0.0
+
+
+def test_backtest_snapshot_cvar_floor_5pct_tail() -> None:
+    close = [101.0] * 20
+    close[7] = 80.0
+    close[8] = 101.0
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1] * 20,
+            'open': [100.0] * 20,
+            'close': close,
+            'price_change': [value - 100.0 for value in close],
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert result['cvar_95_pnl_bps'] == -2079.2
+
+    short = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1, 0] * 5,
+            'open': [100.0] * 10,
+            'close': [101.0] * 10,
+            'price_change': [1.0] * 10,
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert np.isnan(short['cvar_95_pnl_bps'])
+
+
+def test_backtest_snapshot_edge_case_sentinels() -> None:
+    flat = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [0] * 25,
+            'open': [100.0] * 25,
+            'close': [101.0] * 25,
+            'price_change': [1.0] * 25,
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert np.isnan(flat['avg_win_bps'])
+    assert np.isnan(flat['avg_loss_bps'])
+    assert flat['cvar_95_pnl_bps'] == 0.0
+    assert flat['wins_per_bar'] == 0.0
+    assert flat['pnl_per_bar_bps'] == 0.0
+    assert flat['trades_per_bar'] == 0.0
+
+    no_losers = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [1] * 25,
+            'open': [100.0] * 25,
+            'close': [101.0] * 25,
+            'price_change': [1.0] * 25,
+        }),
+        fee_bps=0.0,
+        slip_bps=0.0,
+    ).iloc[0]
+
+    assert np.isnan(no_losers['avg_loss_bps'])
+    assert not np.isnan(no_losers['avg_win_bps'])
+
+
+def test_backtest_snapshot_scalars_invariant_under_window_doubling() -> None:
+    prices = [100.0, 110.0, 99.0, 100.0, 105.0, 95.0, 100.0]
+    base = pd.DataFrame({
+        'predictions': [0, 1, 1, 0, 1, 1, 0],
+        'open': [100.0] * 7,
+        'close': prices,
+        'price_change': [value - 100.0 for value in prices],
+    })
+    doubled = pd.concat([base, base], ignore_index=True)
+
+    single = backtest_snapshot(base, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0).iloc[0]
+    twice = backtest_snapshot(doubled, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0).iloc[0]
+
+    intensive_scalars = [
+        'wins_per_bar',
+        'pnl_per_bar_bps',
+        'avg_win_bps',
+        'avg_loss_bps',
+        'cost_per_bar_bps',
+        'trades_per_bar',
+        'inventory_per_bar',
+    ]
+    for column in intensive_scalars:
+        assert single[column] == twice[column], column
+
+
+def test_backtest_snapshot_is_time_free() -> None:
+    import limen.backtest.backtest_snapshot as snapshot_module
+
+    params = inspect.signature(backtest_snapshot).parameters
+    assert 'datetime_col' not in params
+    assert 'clock_window' not in params
+
+    source = inspect.getsource(snapshot_module)
+    assert not re.search(r'datetime|clock_window|Timedelta|to_datetime|dt\.floor|Timestamp|DatetimeIndex', source)
+
+
+def test_no_legacy_backtest_column_names() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    legacy = re.compile(
+        r'edge_per_signal|trade_pnl_net|cost_drag|rolling_return|return_on_exposure'
+        r'|drawdown_depth|drawdown_duration|cvar_95_return|bar_in_market|capital_in_market'
+        r'|in_market_per_bar'
+    )
+    this_file = Path(__file__).resolve()
+    offenders = [
+        str(path.relative_to(repo_root))
+        for base in ('limen', 'docs', 'tests')
+        for path in (repo_root / base).rglob('*')
+        if path.suffix in {'.py', '.md'}
+        and path.resolve() != this_file
+        and legacy.search(path.read_text(encoding='utf-8'))
+    ]
+    assert offenders == [], offenders
 
 
 def test_completed_bar_signal_proves_next_bar_alignment() -> None:
@@ -421,8 +568,8 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert same_row['trade_pnl_net_bps_p50'] == 1000.0
-    assert next_bar['trade_pnl_net_bps_p50'] == -1000.0
+    assert same_row['pnl_bps_p50'] == 500.0
+    assert next_bar['pnl_bps_p50'] == -500.0
 
 
 def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
@@ -441,7 +588,7 @@ def test_experiment_backtest_results_directionalizes_regression_predictions() ->
         execution_lag_bars=1,
     ).iloc[0]
 
-    assert result['trade_pnl_net_bps_p50'] == expected['trade_pnl_net_bps_p50']
+    assert result['pnl_bps_p50'] == expected['pnl_bps_p50']
 
 
 def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:
