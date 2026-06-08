@@ -1080,3 +1080,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.21.0 on 8th of June, 2026
 
 - Remove the stateful `BacktestSequential` backtest entirely — delete `limen/backtest/backtest_sequential.py` and its `test_backtest_conviction` suite, drop the `limen.BacktestSequential` public export, and prune the sequential sections from `docs/Backtest.md` and the `limen.backtest`/`limen.trading` READMEs. The vectorized `backtest_snapshot` is now Limen's only backtest surface. The `Account` ledger primitive (`limen.Account`) is unchanged — still exported and still covered by `test_account_conviction`. Breaking: callers of `limen.BacktestSequential` must migrate to `backtest_snapshot`.
+
+## v3.22.0 on 8th of June, 2026
+
+- Remove the `Account` ledger and the `limen.trading` package. `BacktestSequential` (removed in 3.21.0) was its only consumer; with the sequential simulator gone, `Account` has no in-package or downstream consumer, and the vectorized `backtest_snapshot` computes returns directly without a ledger. Deletes `limen/trading/` (`account.py`, its `__init__`, and README) and `tests/test_account_conviction`, and drops the `limen.Account` public export. Breaking: callers of `limen.Account` must migrate to `backtest_snapshot`.
