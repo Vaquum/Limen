@@ -1084,3 +1084,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.22.0 on 8th of June, 2026
 
 - Remove the `Account` ledger and the `limen.trading` package. `BacktestSequential` (removed in 3.21.0) was its only consumer; with the sequential simulator gone, `Account` has no in-package or downstream consumer. Deletes `limen/trading/` (`account.py`, its `__init__`, and README), `tests/test_account_conviction`, and the `limen.trading` entry in the docs-site source list, and drops the `limen.Account` public export. Breaking: `limen.Account` is removed with no replacement — it was a standalone bookkeeping primitive, and `backtest_snapshot` is a bar-based metrics aggregator, not a ledger.
+
+## v3.23.0 on 8th of June, 2026
+
+- Bring the line-based context feature family into the public feature library as a consistency pass. Register `active_lines`, `active_quantile_count`, `quantile_line_density`, `hours_since_big_move`, and `hours_since_quantile_line` in `limen.features` (imports and `__all__`) and document them in `docs/Features.md` under a dedicated section. These features take pre-computed line structures (`list[dict]` with `start_idx`/`end_idx`) rather than YAML scalar params, so the docs note they are composed programmatically rather than dispatched through a manifest `func:` reference. Also adds the previously-missing test coverage for `hours_since_big_move` and `hours_since_quantile_line` in `test_feature_library_context` (reset-at-line-end, lookback-cap, and no-lines/empty-frame cases), matching the sibling pattern.
