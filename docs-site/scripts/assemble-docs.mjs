@@ -298,17 +298,10 @@ const docs = [
     sidebarLabel: 'Backtest',
   },
   {
-    source: 'limen/trading/README.md',
-    dest: 'packages/trading.md',
-    slug: '/packages/trading',
-    sidebarPosition: 12,
-    sidebarLabel: 'Trading',
-  },
-  {
     source: 'limen/utils/README.md',
     dest: 'packages/utils.md',
     slug: '/packages/utils',
-    sidebarPosition: 13,
+    sidebarPosition: 12,
     sidebarLabel: 'Utils',
   },
 ];

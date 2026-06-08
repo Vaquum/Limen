@@ -197,7 +197,6 @@ from tests.test_confidence_filtering_system import test_calibrate_confidence_thr
 from tests.test_confidence_filtering_system import test_apply_confidence_filtering
 from tests.test_confidence_filtering_system import test_confidence_filtering_system
 from tests.test_confidence_filtering_system import test_edge_cases
-from tests.test_account_conviction import test_account_conviction
 from tests.test_klines_data_maker_fields import test_klines_data_maker_fields
 from tests.test_large_param_space import test_large_param_space
 from tests.test_param_space import test_param_space_large_space_no_longer_overflows_and_is_reproducible
@@ -1387,7 +1386,6 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
-    test_account_conviction,
     test_get_any_file_loads_local_csv,
     test_get_spot_klines_reaggregates_latest_dataset,
     test_get_spot_klines_row_count_limit_returns_latest_rows,

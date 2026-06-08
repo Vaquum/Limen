@@ -1,6 +1,5 @@
 from limen.data import HistoricalData
 from limen.log.log import Log
-from limen.trading import Account
 from limen.experiment import MLManifest
 from limen.experiment import Manifest
 from limen.experiment import RuleBasedManifest
@@ -21,7 +20,6 @@ from limen import utils
 from limen import log
 
 __all__ = [
-    'Account',
     'Cohort',
     'HistoricalData',
     'Log',
