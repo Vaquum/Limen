@@ -525,6 +525,9 @@ from tests.test_metrics_and_log_helpers import test_backtest_snapshot_cvar_floor
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_edge_case_sentinels
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_scalars_invariant_under_window_doubling
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_is_time_free
+from tests.test_metrics_and_log_helpers import test_backtest_snapshot_delegates_to_injected_strategy
+from tests.test_metrics_and_log_helpers import test_long_flat_strategy_returns_execution_result
+from tests.test_metrics_and_log_helpers import test_long_flat_strategy_rejects_negative_lag
 from tests.test_metrics_and_log_helpers import test_no_legacy_backtest_column_names
 from tests.test_metrics_and_log_helpers import test_completed_bar_signal_proves_next_bar_alignment
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_empty_input
@@ -1453,6 +1456,9 @@ tests = [
     test_backtest_snapshot_edge_case_sentinels,
     test_backtest_snapshot_scalars_invariant_under_window_doubling,
     test_backtest_snapshot_is_time_free,
+    test_backtest_snapshot_delegates_to_injected_strategy,
+    test_long_flat_strategy_returns_execution_result,
+    test_long_flat_strategy_rejects_negative_lag,
     test_no_legacy_backtest_column_names,
     test_completed_bar_signal_proves_next_bar_alignment,
     test_backtest_snapshot_rejects_empty_input,
