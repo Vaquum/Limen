@@ -181,6 +181,18 @@ These helpers are useful when you want state or structure, not just a continuous
 | `sma_crossover` | `crossover`, `signal` | Compact crossover-state helper. |
 | `window_return_regime` | `ret_24`, `regime_window_return` | Return plus regime thresholding over a window. |
 
+## Line-Based Context Features
+
+These helpers summarize how recently and how densely price interacted with detected trend lines. Unlike the other helpers, they take pre-computed line structures — `long_lines`/`short_lines` (or their `_q` quantile-filtered variants) as `list[dict]` with `start_idx`/`end_idx` — rather than plain columns and scalar params. Because those line objects cannot be expressed as YAML scalar params, this family is composed programmatically from an upstream line-detection step rather than dispatched through a manifest `func:` reference.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `active_lines` | `active_lines` | Count of long and short lines active at each bar. |
+| `active_quantile_count` | `active_quantile_count` | Active-line count restricted to quantile-filtered lines. |
+| `quantile_line_density` | `quantile_line_density_<lookback>h` | Count of quantile-line endings within a trailing `lookback_hours` window. |
+| `hours_since_big_move` | `hours_since_big_move` | Bars since the most recent line end, capped at `lookback_hours`. |
+| `hours_since_quantile_line` | `hours_since_quantile_line` | Bars since the most recent quantile-line end, capped at `lookback_hours`. |
+
 ## Lag Helpers And Threshold Utilities
 
 These helpers are mainly used to expand existing columns or define cutoffs for target construction.

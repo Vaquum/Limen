@@ -1,4 +1,6 @@
 from limen.features.absorption_intensity import absorption_intensity
+from limen.features.active_lines import active_lines
+from limen.features.active_quantile_count import active_quantile_count
 from limen.features.amihud_illiquidity import amihud_illiquidity
 from limen.features.atr_percent_sma import atr_percent_sma
 from limen.features.atr_sma import atr_sma
@@ -23,6 +25,8 @@ from limen.features.fractional_diff import fractional_diff
 from limen.features.gap_high import gap_high
 from limen.features.garman_klass_volatility import garman_klass_volatility
 from limen.features.hh_hl_structure_regime import hh_hl_structure_regime
+from limen.features.hours_since_big_move import hours_since_big_move
+from limen.features.hours_since_quantile_line import hours_since_quantile_line
 from limen.features.ichimoku_cloud import ichimoku_cloud
 from limen.features.illiquidity_shock import illiquidity_shock
 from limen.features.is_funding_hour import is_funding_hour
@@ -46,6 +50,7 @@ from limen.features.parkinson_vol_of_vol import parkinson_vol_of_vol
 from limen.features.parkinson_volatility import parkinson_volatility
 from limen.features.price_range_position import price_range_position
 from limen.features.price_vs_band_regime import price_vs_band_regime
+from limen.features.quantile_line_density import quantile_line_density
 from limen.features.range_overlap import range_overlap
 from limen.features.range_pct import range_pct
 from limen.features.range_per_dollar_volume import range_per_dollar_volume
@@ -87,6 +92,8 @@ from limen.features.yang_zhang_volatility import yang_zhang_volatility
 
 __all__ = [
     'absorption_intensity',
+    'active_lines',
+    'active_quantile_count',
     'amihud_illiquidity',
     'atr_percent_sma',
     'atr_sma',
@@ -111,6 +118,8 @@ __all__ = [
     'gap_high',
     'garman_klass_volatility',
     'hh_hl_structure_regime',
+    'hours_since_big_move',
+    'hours_since_quantile_line',
     'ichimoku_cloud',
     'illiquidity_shock',
     'is_funding_hour',
@@ -134,6 +143,7 @@ __all__ = [
     'parkinson_volatility',
     'price_range_position',
     'price_vs_band_regime',
+    'quantile_line_density',
     'range_overlap',
     'range_pct',
     'range_per_dollar_volume',
