@@ -1005,7 +1005,7 @@ class ParamKeyFields:
 
 class BacktestCostSpec:
 
-    '''Each backtest cost (fee_bps, slip_bps) must be a non-negative finite number or a {param} reference in sfd.params.'''
+    '''Each backtest knob is a number (fee_bps/slip_bps non-negative; notional_rate in (0, 1]) or a {param} reference into sfd.params.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -1020,19 +1020,27 @@ class BacktestCostSpec:
 
         sfd_params = set(sfd.get('params') or {})
 
-        for key in ('fee_bps', 'slip_bps'):
+        for key in ('fee_bps', 'slip_bps', 'notional_rate'):
             if key not in backtest:
                 continue
             value = backtest[key]
             path = f'sfd.manifest.backtest.{key}'
             if isinstance(value, bool):
+                bound, example = ('a number in (0, 1]', '0.1') if key == 'notional_rate' else ('a non-negative number', '5.0')
                 errors.append(YAMLError(
-                    message=f"'backtest.{key}' must be a non-negative number or a {{param}} reference (got bool)",
+                    message=f"'backtest.{key}' must be {bound} or a {{param}} reference (got bool)",
                     path=path,
-                    suggestion=f'Use a number like {key}: 5.0 or a reference like {key}: "{{fee}}"',
+                    suggestion=f'Use a number like {key}: {example} or a reference like {key}: "{{my_param}}"',
                 ))
             elif isinstance(value, (int, float)):
-                if not math.isfinite(value) or value < 0:
+                if key == 'notional_rate':
+                    if not math.isfinite(value) or not 0 < value <= 1:
+                        errors.append(YAMLError(
+                            message=f"'backtest.notional_rate' must be a number in (0, 1] (got {value})",
+                            path=path,
+                            suggestion='Use a fraction in (0, 1], e.g. notional_rate: 0.1',
+                        ))
+                elif not math.isfinite(value) or value < 0:
                     errors.append(YAMLError(
                         message=f"'backtest.{key}' must be a non-negative finite number (got {value})",
                         path=path,
@@ -1044,7 +1052,7 @@ class BacktestCostSpec:
                     errors.append(YAMLError(
                         message=f"'backtest.{key}' must be a number or a {{param}} reference (got '{value}')",
                         path=path,
-                        suggestion=f'Reference a search param, e.g. {key}: "{{fee}}", or use a number',
+                        suggestion=f'Reference a search param, e.g. {key}: "{{my_param}}", or use a number',
                     ))
                 elif ref.group(1) not in sfd_params:
                     errors.append(YAMLError(

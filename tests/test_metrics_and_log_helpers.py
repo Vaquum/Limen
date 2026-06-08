@@ -588,6 +588,35 @@ def test_long_flat_strategy_rejects_negative_lag() -> None:
         )
 
 
+def test_backtest_snapshot_notional_rate_scales_returns_not_structure() -> None:
+    df = pd.DataFrame({
+        'predictions': [1, 1, 0, 0],
+        'open': [100.0, 100.0, 100.0, 100.0],
+        'close': [110.0, 121.0, 100.0, 100.0],
+        'price_change': [10.0, 21.0, 0.0, 0.0],
+    })
+    full = backtest_snapshot(df, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0, notional_rate=1.0).iloc[0]
+    half = backtest_snapshot(df, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0, notional_rate=0.5).iloc[0]
+
+    assert half['pnl_per_bar_bps'] == pytest.approx(0.5 * full['pnl_per_bar_bps'])
+    assert half['edge_bps_p50'] == pytest.approx(0.5 * full['edge_bps_p50'])
+    assert half['inventory_per_bar'] == pytest.approx(0.5 * full['inventory_per_bar'])
+    assert half['wins_per_bar'] == full['wins_per_bar']
+    assert half['trades_per_bar'] == full['trades_per_bar']
+
+
+def test_backtest_snapshot_rejects_invalid_notional_rate() -> None:
+    df = pd.DataFrame({
+        'predictions': [1, 0],
+        'open': [100.0, 100.0],
+        'close': [100.0, 100.0],
+        'price_change': [0.0, 0.0],
+    })
+    for bad in (0.0, -0.1, 1.5, True, 'half'):
+        with pytest.raises(ValueError, match='notional_rate must be in'):
+            backtest_snapshot(df, notional_rate=bad)
+
+
 def test_no_legacy_backtest_column_names() -> None:
     repo_root = Path(__file__).resolve().parent.parent
     legacy = re.compile(

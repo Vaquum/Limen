@@ -1,3 +1,4 @@
+import numbers
 from collections.abc import Callable
 
 import numpy as np
@@ -71,7 +72,8 @@ def backtest_snapshot(df: pd.DataFrame,
                       strategy: Callable[..., ExecutionResult] = long_flat_strategy,
                       execution_lag_bars: int = 1,
                       fee_bps: float = 5.0,
-                      slip_bps: float = 5.0) -> pd.DataFrame:
+                      slip_bps: float = 5.0,
+                      notional_rate: float = 1.0) -> pd.DataFrame:
 
     '''
     Bar-based metric ledger over a strategy's per-bar returns.
@@ -86,9 +88,12 @@ def backtest_snapshot(df: pd.DataFrame,
     one-row backtest ledger.
 
     The strategy receives the prediction column and the validated open, close, and
-    price_change series plus execution_lag_bars, fee_bps, and slip_bps, and returns
-    an ExecutionResult of per-bar pos, gross, and net return series. Every column
-    flows from that triple.
+    price_change series plus execution_lag_bars, fee_bps, and slip_bps, and returns an
+    ExecutionResult of per-bar pos, gross, and net return series. Every column flows
+    from that triple. notional_rate (the deployed fraction of capital) is then applied
+    here as a uniform scale on that triple — it commutes with the fill mechanics, so
+    strategies never handle it — scaling edge, pnl, and cost and making
+    inventory_per_bar the average deployed notional; 1.0 is all-in.
 
     Columns (all computed over every bar)
     - Distributions (p5/p50/p95): edge_bps (gross return), pnl_bps (net return),
@@ -112,6 +117,8 @@ def backtest_snapshot(df: pd.DataFrame,
         execution_lag_bars (int): Bars between a signal row and its execution row.
         fee_bps (float): Per-fill fee in basis points.
         slip_bps (float): Per-fill slippage in basis points.
+        notional_rate (float): Fraction of capital deployed while in position, in (0, 1];
+            applied as a uniform scale on the strategy's returned pos, gross, and net.
 
     Returns:
         pd.DataFrame: One-row ledger with columns BACKTEST_SNAPSHOT_COLUMNS.
@@ -119,6 +126,13 @@ def backtest_snapshot(df: pd.DataFrame,
 
     if df.empty:
         raise ValueError('backtest_snapshot requires at least one row')
+
+    if (
+        isinstance(notional_rate, bool)
+        or not isinstance(notional_rate, numbers.Real)
+        or not 0 < notional_rate <= 1
+    ):
+        raise ValueError('backtest_snapshot notional_rate must be in (0, 1]')
 
     try:
         open_px = pd.to_numeric(df[open_col], errors='raise')
@@ -148,9 +162,9 @@ def backtest_snapshot(df: pd.DataFrame,
         slip_bps=slip_bps,
     )
 
-    gross = result.gross
-    net = result.net
-    pos = result.pos
+    gross = result.gross * notional_rate
+    net = result.net * notional_rate
+    pos = result.pos * notional_rate
     total_bars = len(df)
 
     eq_net = (1.0 + net).cumprod()

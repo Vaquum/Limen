@@ -14,8 +14,8 @@ class ExecutionResult(NamedTuple):
     Per-bar execution series consumed by the snapshot ledger.
 
     Attributes:
-        pos (pd.Series): Position held per bar (0 or 1 under the all-in model,
-            a deployed fraction once position sizing exists).
+        pos (pd.Series): Position held per bar (0 or 1 under the all-in model;
+            a strategy may return a deployed fraction).
         gross (pd.Series): Per-bar gross return before costs.
         net (pd.Series): Per-bar net return after entry and exit costs.
     '''

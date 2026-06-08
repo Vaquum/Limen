@@ -125,7 +125,7 @@ class ReferenceModel(ABC):
     def _cost_kwargs(self, data: dict) -> dict:
         return {
             key: data[f"backtest_{key}"]
-            for key in ('fee_bps', 'slip_bps')
+            for key in ('fee_bps', 'slip_bps', 'notional_rate')
             if f"backtest_{key}" in data
         }
 

@@ -869,6 +869,32 @@ def test_build_manifest_rule_based_backtest_config_resolves() -> None:
     assert data['backtest_fee_bps'] == 2.0
 
 
+def test_validate_valid_for_notional_rate() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'notional_rate': '{size}'}
+    yaml_dict['sfd']['params']['size'] = [0.1, 0.25, 1.0]
+    assert validate(yaml_dict).valid
+
+
+def test_validate_error_for_notional_rate_out_of_range() -> None:
+    for value in (1.5, 0.0, -0.1):
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['sfd']['manifest']['backtest'] = {'notional_rate': value}
+        result = validate(yaml_dict)
+        assert not result.valid, f'notional_rate={value!r} should be invalid'
+        assert any(e.path == 'sfd.manifest.backtest.notional_rate' for e in result.errors)
+
+
+def test_build_manifest_notional_rate_resolves() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['backtest'] = {'notional_rate': '{size}'}
+    yaml_dict['sfd']['params']['size'] = [0.1, 0.5, 1.0]
+    manifest = build_manifest(yaml_dict)
+    data: dict = {}
+    manifest._apply_backtest_cost(data, {'size': 0.1})
+    assert data['backtest_notional_rate'] == 0.1
+
+
 def test_build_manifest_data_source_method_is_callable_with_correct_params() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     manifest = build_manifest(yaml_dict)

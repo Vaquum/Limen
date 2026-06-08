@@ -241,10 +241,11 @@ class DataSourceResolver:
 @dataclass
 class BacktestConfig:
 
-    '''Backtest cost configuration: per-fill fee and slippage in basis points.'''
+    '''Backtest economics: per-fill fee and slippage in basis points, and the deployed notional rate.'''
 
     fee_bps: float | str = 5.0
     slip_bps: float | str = 5.0
+    notional_rate: float | str = 1.0
 
 
 @dataclass
@@ -756,20 +757,27 @@ class Manifest:
 
     def set_backtest_config(self,
                             fee_bps: float | str = 5.0,
-                            slip_bps: float | str = 5.0) -> 'Manifest':
+                            slip_bps: float | str = 5.0,
+                            notional_rate: float | str = 1.0) -> 'Manifest':
 
         '''
-        Configure the backtest cost model for this manifest.
+        Configure the backtest economics for this manifest.
 
         Args:
             fee_bps (float | str): Per-fill fee in basis points, or a round-param name to sweep
             slip_bps (float | str): Per-fill slippage in basis points, or a round-param name to sweep
+            notional_rate (float | str): Fraction of capital deployed while in position
+                (in (0, 1]), or a round-param name to sweep
 
         Returns:
             Manifest: Self for method chaining
         '''
 
-        self.backtest_config = BacktestConfig(fee_bps=fee_bps, slip_bps=slip_bps)
+        self.backtest_config = BacktestConfig(
+            fee_bps=fee_bps,
+            slip_bps=slip_bps,
+            notional_rate=notional_rate,
+        )
 
         return self
 
@@ -777,9 +785,13 @@ class Manifest:
         if self.backtest_config is None:
             return
 
-        raw = {'fee_bps': self.backtest_config.fee_bps, 'slip_bps': self.backtest_config.slip_bps}
+        raw = {
+            'fee_bps': self.backtest_config.fee_bps,
+            'slip_bps': self.backtest_config.slip_bps,
+            'notional_rate': self.backtest_config.notional_rate,
+        }
         resolved = _resolve_params(raw, round_params)
-        for key in ('fee_bps', 'slip_bps'):
+        for key in ('fee_bps', 'slip_bps', 'notional_rate'):
             original = raw[key]
             value = resolved[key]
             if (
@@ -792,7 +804,17 @@ class Manifest:
                     f"Manifest backtest {key} references unknown search-param '{original}'; "
                     "add it to params() or pass a number"
                 )
-            if (
+            if key == 'notional_rate':
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, numbers.Real)
+                    or not math.isfinite(value)
+                    or not 0 < value <= 1
+                ):
+                    raise ValueError(
+                        f"Manifest backtest notional_rate must be in (0, 1], got {value!r}"
+                    )
+            elif (
                 isinstance(value, bool)
                 or not isinstance(value, numbers.Real)
                 or not math.isfinite(value)
