@@ -850,6 +850,10 @@ from tests.test_sensor import test_extract_scalar_rejects_bool
 from tests.test_sensor import test_extract_scalar_from_numpy_array
 from tests.test_sensor import test_extract_scalar_from_zero_dim_numpy
 from tests.test_sensor import test_extract_scalar_from_empty_array_returns_none
+from tests.test_sensor import test_guard_masks_all_three_windows_by_default
+from tests.test_sensor import test_test_predict_guard_false_serves_test_window
+from tests.test_sensor import test_val_predict_guard_false_serves_val_only
+from tests.test_sensor import test_set_split_dates_stores_guard_flags
 from tests.test_proto_cohort import test_rejects_when_no_source_provided
 from tests.test_proto_cohort import test_rejects_when_both_sources_provided
 from tests.test_proto_cohort import test_rejects_missing_experiment_log_path
@@ -1796,6 +1800,10 @@ tests = [
     test_extract_scalar_from_numpy_array,
     test_extract_scalar_from_zero_dim_numpy,
     test_extract_scalar_from_empty_array_returns_none,
+    test_guard_masks_all_three_windows_by_default,
+    test_test_predict_guard_false_serves_test_window,
+    test_val_predict_guard_false_serves_val_only,
+    test_set_split_dates_stores_guard_flags,
     test_rejects_when_no_source_provided,
     test_rejects_when_both_sources_provided,
     test_rejects_missing_experiment_log_path,

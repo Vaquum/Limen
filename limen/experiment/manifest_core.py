@@ -258,6 +258,8 @@ class Manifest:
     pre_split_data_selector: PipelineStep = None
     split_config: tuple[int, int, int] = (8, 1, 2)
     split_dates: tuple | None = None
+    val_predict_guard: bool = True
+    test_predict_guard: bool = True
     bar_formation: PipelineStep = None
     required_bar_columns: list[str] = field(default_factory=list)
     feature_transforms: list[TransformEntry] = field(default_factory=list)
@@ -471,6 +473,9 @@ class Manifest:
         train_start: date, train_end: date,
         val_start: date, val_end: date,
         test_start: date, test_end: date,
+        *,
+        val_predict_guard: bool = True,
+        test_predict_guard: bool = True,
     ) -> 'Manifest':
 
         '''
@@ -497,6 +502,14 @@ class Manifest:
         gaps between adjacent windows are allowed and any rows that fall
         into those gaps are intentionally excluded from all three splits.
 
+        `val_predict_guard` and `test_predict_guard` (keyword-only, default
+        `True`) control whether the served `Sensor` masks predictions inside
+        the val and test windows. Both `True` masks the full
+        `[train_start, test_end)` envelope, so every served prediction is
+        identical to omitting the flags; setting one to `False` makes that
+        window emit real predictions instead of `None`. Train is always
+        masked and has no flag — the model trains on it.
+
         Args:
             train_start (date | datetime): Train window start (inclusive)
             train_end   (date | datetime): Train window end (exclusive)
@@ -504,12 +517,17 @@ class Manifest:
             val_end     (date | datetime): Val window end (exclusive)
             test_start  (date | datetime): Test window start (inclusive)
             test_end    (date | datetime): Test window end (exclusive)
+            val_predict_guard (bool): When True (default) the served Sensor
+                masks predictions inside the val window; False serves them
+            test_predict_guard (bool): When True (default) the served Sensor
+                masks predictions inside the test window; False serves them
 
         Returns:
             Manifest: Self for method chaining
 
         Raises:
-            TypeError: If any bound is not a `date` or `datetime` instance
+            TypeError: If any bound is not a `date` or `datetime` instance,
+                or either predict-guard flag is not a `bool`
             ValueError: If the six bounds are not in non-decreasing order
         '''
 
@@ -531,11 +549,21 @@ class Manifest:
                     'in non-decreasing order (gaps between adjacent windows allowed)'
                 )
 
+        for name, flag in (('val_predict_guard', val_predict_guard),
+                           ('test_predict_guard', test_predict_guard)):
+            if not isinstance(flag, bool):
+                raise TypeError(
+                    f'Manifest {name} must be a bool, '
+                    f'got {type(flag).__name__}: {flag!r}'
+                )
+
         self.split_dates = (
             train_start, train_end,
             val_start, val_end,
             test_start, test_end,
         )
+        self.val_predict_guard = val_predict_guard
+        self.test_predict_guard = test_predict_guard
 
         return self
 

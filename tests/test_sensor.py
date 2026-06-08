@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -463,3 +464,96 @@ def test_extract_scalar_from_zero_dim_numpy() -> None:
 
 def test_extract_scalar_from_empty_array_returns_none() -> None:
     assert _extract_scalar(np.array([])) is None
+
+
+_TRAIN_START = date(2024, 1, 1)
+_TRAIN_MID = date(2024, 1, 5)
+_VAL_START = date(2024, 1, 10)
+_VAL_LAST = date(2024, 1, 14)
+_TEST_START = date(2024, 1, 15)
+_TEST_LAST = date(2024, 1, 19)
+_TEST_END = date(2024, 1, 20)
+_PRE_TRAIN = date(2023, 12, 31)
+
+
+def _guard_manifest(val_predict_guard: bool = True,
+                    test_predict_guard: bool = True) -> MLManifest:
+    return MLManifest().set_split_dates(
+        _TRAIN_START, _VAL_START,
+        _VAL_START, _TEST_START,
+        _TEST_START, _TEST_END,
+        val_predict_guard=val_predict_guard,
+        test_predict_guard=test_predict_guard,
+    )
+
+
+def _guard_mask(manifest: MLManifest, days: list[date]) -> list[bool]:
+    data = pl.DataFrame({'datetime': [datetime(d.year, d.month, d.day) for d in days]})
+    sensor = _make_sensor(manifest)
+    mask = sensor._inside_training_window_mask(data, manifest)
+    last_bar = [
+        sensor._last_bar_inside_training_window(datetime(d.year, d.month, d.day), manifest)
+        for d in days
+    ]
+    assert mask == last_bar
+    return mask
+
+
+def test_guard_masks_all_three_windows_by_default() -> None:
+    manifest = _guard_manifest()
+    days = [_PRE_TRAIN, _TRAIN_START, _TRAIN_MID, _VAL_START, _VAL_LAST,
+            _TEST_START, _TEST_LAST, _TEST_END]
+    assert _guard_mask(manifest, days) == [
+        False, True, True, True, True, True, True, False,
+    ]
+
+
+def test_test_predict_guard_false_serves_test_window() -> None:
+    manifest = _guard_manifest(test_predict_guard=False)
+    days = [_TRAIN_START, _TRAIN_MID, _VAL_START, _VAL_LAST,
+            _TEST_START, _TEST_LAST, _TEST_END]
+    assert _guard_mask(manifest, days) == [
+        True, True, True, True, False, False, False,
+    ]
+
+
+def test_val_predict_guard_false_serves_val_only() -> None:
+    manifest = _guard_manifest(val_predict_guard=False)
+    days = [_TRAIN_START, _TRAIN_MID, _VAL_START, _VAL_LAST,
+            _TEST_START, _TEST_LAST]
+    assert _guard_mask(manifest, days) == [
+        True, True, False, False, True, True,
+    ]
+
+
+def test_set_split_dates_stores_guard_flags() -> None:
+    default = _guard_manifest()
+    assert default.val_predict_guard is True
+    assert default.test_predict_guard is True
+
+    configured = _guard_manifest(val_predict_guard=False, test_predict_guard=False)
+    assert configured.val_predict_guard is False
+    assert configured.test_predict_guard is False
+
+    for bad in ('true', 1, None):
+        try:
+            MLManifest().set_split_dates(
+                _TRAIN_START, _VAL_START,
+                _VAL_START, _TEST_START,
+                _TEST_START, _TEST_END,
+                val_predict_guard=bad,
+            )
+            assert False, 'Expected TypeError for non-bool val_predict_guard'
+        except TypeError as e:
+            assert 'val_predict_guard' in str(e)
+
+    try:
+        MLManifest().set_split_dates(
+            _TRAIN_START, _VAL_START,
+            _VAL_START, _TEST_START,
+            _TEST_START, _TEST_END,
+            test_predict_guard='no',
+        )
+        assert False, 'Expected TypeError for non-bool test_predict_guard'
+    except TypeError as e:
+        assert 'test_predict_guard' in str(e)
