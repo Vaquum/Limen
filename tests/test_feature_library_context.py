@@ -3,6 +3,8 @@ import pytest
 
 from limen.features.active_lines import active_lines
 from limen.features.active_quantile_count import active_quantile_count
+from limen.features.hours_since_big_move import hours_since_big_move
+from limen.features.hours_since_quantile_line import hours_since_quantile_line
 from limen.features.market_regime import market_regime
 from limen.features.quantile_line_density import quantile_line_density
 
@@ -71,6 +73,68 @@ def test_quantile_line_density_counts_recent_line_endings_within_lookback() -> N
 
     assert density_columns == ['quantile_line_density_2h']
     assert result[density_columns[0]].to_list() == [0, 1, 2, 2, 2, 1]
+
+
+def test_hours_since_big_move_resets_at_line_end_and_caps_at_lookback() -> None:
+    data = pl.DataFrame({
+        'datetime': list(range(6)),
+        'close': [10.0, 11.0, 12.0, 13.0, 14.0, 15.0],
+    })
+
+    result = hours_since_big_move(
+        data,
+        long_lines=[{'start_idx': 0, 'end_idx': 1}],
+        short_lines=[],
+        lookback_hours=2,
+    )
+
+    assert result['hours_since_big_move'].to_list() == [2.0, 0.0, 1.0, 2.0, 2.0, 2.0]
+
+
+def test_hours_since_big_move_returns_lookback_without_lines_or_rows() -> None:
+    data = pl.DataFrame({'datetime': [1, 2, 3], 'close': [10.0, 11.0, 12.0]})
+    empty = pl.DataFrame({
+        'datetime': pl.Series('datetime', [], dtype=pl.Int64),
+        'close': pl.Series('close', [], dtype=pl.Float64),
+    })
+
+    no_lines = hours_since_big_move(data, long_lines=[], short_lines=[], lookback_hours=5)
+    empty_result = hours_since_big_move(empty, long_lines=[], short_lines=[], lookback_hours=5)
+
+    assert no_lines['hours_since_big_move'].to_list() == [5.0, 5.0, 5.0]
+    assert empty_result.columns == ['datetime', 'close', 'hours_since_big_move']
+    assert empty_result.height == 0
+
+
+def test_hours_since_quantile_line_resets_at_each_end_and_caps_at_lookback() -> None:
+    data = pl.DataFrame({
+        'datetime': list(range(7)),
+        'close': [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0],
+    })
+
+    result = hours_since_quantile_line(
+        data,
+        long_lines_q=[{'end_idx': 1}],
+        short_lines_q=[{'end_idx': 3}],
+        lookback_hours=2,
+    )
+
+    assert result['hours_since_quantile_line'].to_list() == [2.0, 0.0, 1.0, 0.0, 1.0, 2.0, 2.0]
+
+
+def test_hours_since_quantile_line_returns_lookback_without_lines_or_rows() -> None:
+    data = pl.DataFrame({'datetime': [1, 2, 3], 'close': [10.0, 11.0, 12.0]})
+    empty = pl.DataFrame({
+        'datetime': pl.Series('datetime', [], dtype=pl.Int64),
+        'close': pl.Series('close', [], dtype=pl.Float64),
+    })
+
+    no_lines = hours_since_quantile_line(data, long_lines_q=[], short_lines_q=[], lookback_hours=4)
+    empty_result = hours_since_quantile_line(empty, long_lines_q=[], short_lines_q=[], lookback_hours=4)
+
+    assert no_lines['hours_since_quantile_line'].to_list() == [4.0, 4.0, 4.0]
+    assert empty_result.columns == ['datetime', 'close', 'hours_since_quantile_line']
+    assert empty_result.height == 0
 
 
 def test_market_regime_keeps_parameterized_smas_and_adds_normalized_aliases() -> None:
