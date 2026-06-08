@@ -84,6 +84,29 @@ Intensive scalars:
 - `inventory_per_bar` — mean position held per bar (share of bars in market under the all-in model; a deployed fraction once position sizing exists)
 - `cost_per_bar_bps` — mean cost per bar
 
+### Pluggable strategy
+
+The execution model — how a `0/1` signal becomes per-bar returns — is a swappable `strategy`. `backtest_snapshot()` validates the price columns, calls the strategy, and builds the ledger from what it returns; it does not itself know how positions or costs are formed.
+
+The default is `long_flat_strategy` (the long-only, hold-while-1 model described above). A strategy is any callable with this shape:
+
+```python
+from limen.backtest.long_flat_strategy import ExecutionResult
+
+def my_strategy(predictions, open_px, close_px, price_change, *,
+                execution_lag_bars, fee_bps, slip_bps) -> ExecutionResult:
+    ...
+    return ExecutionResult(pos=..., gross=..., net=...)
+```
+
+`ExecutionResult` carries three per-bar series over every bar in the window: `pos` (position held — `0`/`1` here, a deployed fraction once sizing exists), `gross` (per-bar return before costs), and `net` (per-bar return after costs). Every ledger column flows from that triple. Pass a strategy through the `strategy` argument:
+
+```python
+round0_backtest = backtest_snapshot(perf, strategy=my_strategy)
+```
+
+The strategy owns its own signal contract — `long_flat_strategy` requires binary `0/1` and validates it — and applies its own costs, since only it knows where entries and exits fall.
+
 ### Typical use
 
 ```python

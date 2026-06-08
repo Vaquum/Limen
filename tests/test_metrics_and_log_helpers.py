@@ -11,6 +11,8 @@ from typing import ClassVar
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.backtest.long_flat_strategy import ExecutionResult
+from limen.backtest.long_flat_strategy import long_flat_strategy
 from limen.log._experiment_backtest_results import _experiment_backtest_results
 from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
 from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
@@ -531,6 +533,59 @@ def test_backtest_snapshot_is_time_free() -> None:
 
     source = inspect.getsource(snapshot_module)
     assert not re.search(r'datetime|clock_window|Timedelta|to_datetime|dt\.floor|Timestamp|DatetimeIndex', source)
+
+
+def test_backtest_snapshot_delegates_to_injected_strategy() -> None:
+    def constant_long(predictions, *args, **kwargs) -> ExecutionResult:
+        index = predictions.index
+        return ExecutionResult(
+            pos=pd.Series(1.0, index=index),
+            gross=pd.Series(0.01, index=index),
+            net=pd.Series(0.01, index=index),
+        )
+
+    result = backtest_snapshot(
+        pd.DataFrame({
+            'predictions': [0, 0, 0],
+            'open': [100.0, 100.0, 100.0],
+            'close': [100.0, 100.0, 100.0],
+            'price_change': [0.0, 0.0, 0.0],
+        }),
+        strategy=constant_long,
+    ).iloc[0]
+
+    assert result['inventory_per_bar'] == 1.0
+    assert result['wins_per_bar'] == 1.0
+    assert result['pnl_per_bar_bps'] == 100.0
+    assert result['edge_bps_p50'] == 100.0
+    assert result['trades_per_bar'] == 0.33333
+
+
+def test_long_flat_strategy_returns_execution_result() -> None:
+    result = long_flat_strategy(
+        pd.Series([1, 1, 0]),
+        pd.Series([100.0, 100.0, 110.0]),
+        pd.Series([100.0, 110.0, 121.0]),
+        pd.Series([0.0, 10.0, 11.0]),
+        execution_lag_bars=1,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    )
+
+    assert isinstance(result, ExecutionResult)
+    assert list(result.pos) == [0.0, 1.0, 1.0]
+    assert result.net.tolist() == pytest.approx(result.gross.tolist())
+
+
+def test_long_flat_strategy_rejects_negative_lag() -> None:
+    with pytest.raises(ValueError, match='execution_lag_bars must be >= 0'):
+        long_flat_strategy(
+            pd.Series([1, 0]),
+            pd.Series([100.0, 100.0]),
+            pd.Series([100.0, 100.0]),
+            pd.Series([0.0, 0.0]),
+            execution_lag_bars=-1,
+        )
 
 
 def test_no_legacy_backtest_column_names() -> None:

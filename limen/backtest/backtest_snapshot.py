@@ -1,5 +1,10 @@
+from collections.abc import Callable
+
 import numpy as np
 import pandas as pd
+
+from limen.backtest.long_flat_strategy import ExecutionResult
+from limen.backtest.long_flat_strategy import long_flat_strategy
 
 PRICE_CHANGE_RTOL = 1e-09
 PRICE_CHANGE_ATOL = 1e-12
@@ -58,33 +63,32 @@ def _cvar_tail_bps(returns: pd.Series) -> float:
 
 
 def backtest_snapshot(df: pd.DataFrame,
-                     *,
-                     pred_col: str = 'predictions',
-                     open_col: str = 'open',
-                     close_col: str = 'close',
-                     price_change_col: str = 'price_change',
-                     execution_lag_bars: int = 1,
-                     fee_bps: float = 5.0,
-                     slip_bps: float = 5.0) -> pd.DataFrame:
+                      *,
+                      pred_col: str = 'predictions',
+                      open_col: str = 'open',
+                      close_col: str = 'close',
+                      price_change_col: str = 'price_change',
+                      strategy: Callable[..., ExecutionResult] = long_flat_strategy,
+                      execution_lag_bars: int = 1,
+                      fee_bps: float = 5.0,
+                      slip_bps: float = 5.0) -> pd.DataFrame:
 
     '''
-    Long-only, hold-while-1 evaluation using pre-aligned intrabar returns.
+    Bar-based metric ledger over a strategy's per-bar returns.
 
-    Emits a purely bar-based metric ledger: one unit (the bar), one population
-    (every bar in the window, with flat bars counted as a real 0), and every
-    column intensive (a rate, ratio, or per-bar quantity). No wall-clock time.
+    Validates the price columns, delegates execution to `strategy` (default
+    long_flat_strategy), and summarizes the returned per-bar series into a one-row,
+    purely bar-based ledger: one unit (the bar), one population (every bar in the
+    window, with flat bars counted as a real 0), and every column intensive (a rate,
+    ratio, or per-bar quantity). No wall-clock time.
 
     Takes in output of log.permutation_prediction_performance and returns the
     one-row backtest ledger.
 
-    Atoms (built once; every column flows from these)
-    - Predictions are shifted forward by `execution_lag_bars` onto the execution rows.
-    - pos = lagged predictions == 1 on a tradable execution row (long-only, all-in).
-    - Entry bar gross return r_entry = price_change / open; continuation bar gross
-      return r_cont = close_t / close_{t-1} - 1.
-    - R_gross is r_entry on entry bars, r_cont on continuation bars, 0 on flat bars;
-      fee/slippage are applied multiplicatively on the entry and exit fills to give
-      R_net; eq_net compounds R_net.
+    The strategy receives the prediction column and the validated open, close, and
+    price_change series plus execution_lag_bars, fee_bps, and slip_bps, and returns
+    an ExecutionResult of per-bar pos, gross, and net return series. Every column
+    flows from that triple.
 
     Columns (all computed over every bar)
     - Distributions (p5/p50/p95): edge_bps (gross return), pnl_bps (net return),
@@ -92,35 +96,30 @@ def backtest_snapshot(df: pd.DataFrame,
     - Scalars: wins_per_bar, pnl_per_bar_bps, avg_win_bps, avg_loss_bps, cvar_95_pnl_bps,
       trades_per_bar, inventory_per_bar, cost_per_bar_bps.
 
-    wins_per_bar is the share of all bars with a positive net return (a flat bar is not a
-    win), so it cannot exceed the share of bars in market, which equals inventory_per_bar
-    under the all-in model. inventory_per_bar is the average position held per bar (0 or 1
-    under the all-in model, a deployed fraction once position sizing exists).
-
+    wins_per_bar is the share of all bars with a positive net return (a flat bar is not
+    a win), so it cannot exceed inventory_per_bar, the average position held per bar.
     avg_win_bps and avg_loss_bps are NaN when there are no winning or no losing bars,
     and cvar_95_pnl_bps is NaN when there are fewer than CVAR_MIN_BARS bars.
 
-    Returns a one-row DataFrame with columns (in order):
-      BACKTEST_SNAPSHOT_COLUMNS
-    '''
+    Args:
+        df (pd.DataFrame): Per-round table with the prediction and price columns.
+        pred_col (str): Prediction column name.
+        open_col (str): Open price column name.
+        close_col (str): Close price column name.
+        price_change_col (str): Price-change column name (close minus open).
+        strategy (Callable[..., ExecutionResult]): Execution model mapping the signal
+            and prices to per-bar pos, gross, and net series.
+        execution_lag_bars (int): Bars between a signal row and its execution row.
+        fee_bps (float): Per-fill fee in basis points.
+        slip_bps (float): Per-fill slippage in basis points.
 
-    df = df.copy()
+    Returns:
+        pd.DataFrame: One-row ledger with columns BACKTEST_SNAPSHOT_COLUMNS.
+    '''
 
     if df.empty:
         raise ValueError('backtest_snapshot requires at least one row')
 
-    if execution_lag_bars < 0:
-        raise ValueError('backtest_snapshot execution_lag_bars must be >= 0')
-
-    try:
-        pred = pd.to_numeric(df[pred_col], errors='raise')
-    except (TypeError, ValueError) as exc:
-        raise ValueError('backtest_snapshot predictions must contain only 0 or 1') from exc
-
-    if pred.isna().any() or (~pred.isin([0, 1])).any():
-        raise ValueError('backtest_snapshot predictions must contain only 0 or 1')
-
-    pred = pred.astype(int)
     try:
         open_px = pd.to_numeric(df[open_col], errors='raise')
         close_px = pd.to_numeric(df[close_col], errors='raise')
@@ -139,46 +138,31 @@ def backtest_snapshot(df: pd.DataFrame,
     ).all():
         raise ValueError('backtest_snapshot price_change must equal close - open')
 
-    tradable = open_px.notna() & close_px.notna() & dpx.notna() & (open_px != 0)
-    execution_rows = pd.Series(False, index=df.index)
-    if execution_lag_bars < len(df):
-        execution_rows.iloc[execution_lag_bars:] = True
+    result = strategy(
+        df[pred_col],
+        open_px,
+        close_px,
+        dpx,
+        execution_lag_bars=execution_lag_bars,
+        fee_bps=fee_bps,
+        slip_bps=slip_bps,
+    )
 
-    pred = pred.shift(execution_lag_bars, fill_value=0)
-    eval_mask = execution_rows & tradable
-    pos = (pred == 1) & eval_mask
-
-    entry_mask = pos & (~pos.shift(1, fill_value=False))
-    cont_mask = pos & (pos.shift(1, fill_value=False))
-    exit_mask = pos & (~pos.shift(-1, fill_value=False))
-
-    r_entry = dpx / open_px
-    r_cont = (close_px / close_px.shift(1)) - 1.0
-
-    R_gross = np.where(entry_mask, r_entry, 0.0) + np.where(cont_mask, r_cont, 0.0)
-    R_gross = pd.Series(R_gross, index=df.index).fillna(0.0)
-
-    fee = fee_bps / BPS_PER_UNIT
-    slip = slip_bps / BPS_PER_UNIT
-    entry_mult = (1.0 - fee) / (1.0 + slip)
-    exit_mult = (1.0 - fee) * (1.0 - slip)
-
-    cost_mult = pd.Series(1.0, index=df.index)
-    cost_mult.loc[entry_mask] *= entry_mult
-    cost_mult.loc[exit_mask] *= exit_mult
-
-    R_net = (((1.0 + R_gross) * cost_mult) - 1.0).fillna(0.0)
-    eq_net = (1.0 + R_net).cumprod()
-
+    gross = result.gross
+    net = result.net
+    pos = result.pos
     total_bars = len(df)
-    capital_fraction = pos.astype(float)
+
+    eq_net = (1.0 + net).cumprod()
     drawdown = (eq_net / eq_net.cummax().clip(lower=1.0)) - 1.0
+    in_market = pos > 0
+    entry_mask = in_market & (~in_market.shift(1, fill_value=False))
 
     data: dict[str, float] = {}
     for prefix, values in [
-        ('edge_bps', R_gross * BPS_PER_UNIT),
-        ('pnl_bps', R_net * BPS_PER_UNIT),
-        ('cost_bps', (R_gross - R_net) * BPS_PER_UNIT),
+        ('edge_bps', gross * BPS_PER_UNIT),
+        ('pnl_bps', net * BPS_PER_UNIT),
+        ('cost_bps', (gross - net) * BPS_PER_UNIT),
         ('drawdown_bps', drawdown * BPS_PER_UNIT),
     ]:
         p5, p50, p95 = _quantiles(values, BPS_DECIMALS)
@@ -186,14 +170,14 @@ def backtest_snapshot(df: pd.DataFrame,
         data[f'{prefix}_p50'] = p50
         data[f'{prefix}_p95'] = p95
 
-    data['wins_per_bar'] = round(float((R_net > 0).mean()), FRACTION_DECIMALS)
-    data['pnl_per_bar_bps'] = _mean_bps(R_net)
-    data['avg_win_bps'] = _mean_bps(R_net[R_net > 0])
-    data['avg_loss_bps'] = _mean_bps(R_net[R_net < 0])
-    data['cvar_95_pnl_bps'] = _cvar_tail_bps(R_net)
+    data['wins_per_bar'] = round(float((net > 0).mean()), FRACTION_DECIMALS)
+    data['pnl_per_bar_bps'] = _mean_bps(net)
+    data['avg_win_bps'] = _mean_bps(net[net > 0])
+    data['avg_loss_bps'] = _mean_bps(net[net < 0])
+    data['cvar_95_pnl_bps'] = _cvar_tail_bps(net)
     data['trades_per_bar'] = round(float(entry_mask.sum()) / total_bars, RATE_DECIMALS)
-    data['inventory_per_bar'] = round(float(capital_fraction.mean()), FRACTION_DECIMALS)
-    data['cost_per_bar_bps'] = _mean_bps(R_gross - R_net)
+    data['inventory_per_bar'] = round(float(pos.mean()), FRACTION_DECIMALS)
+    data['cost_per_bar_bps'] = _mean_bps(gross - net)
 
     data = {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}
 

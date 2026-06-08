@@ -18,6 +18,7 @@ Does **not** own signal generation, experiment logging, or portfolio bookkeeping
 | Entry point | Use it when | Notes |
 |-------------|-------------|-------|
 | `backtest_snapshot` | You want the fast, vectorized evaluation used across many rounds | Import from `limen.backtest.backtest_snapshot` |
+| `long_flat_strategy` | You want the default execution model, or a template for a new strategy | Returns an `ExecutionResult`; import from `limen.backtest.long_flat_strategy` |
 
 ## Adjacent modules
 
@@ -28,7 +29,8 @@ Does **not** own signal generation, experiment logging, or portfolio bookkeeping
 
 ```text
 backtest/
-└── backtest_snapshot.py     # Vectorized snapshot evaluator
+├── backtest_snapshot.py     # Vectorized snapshot evaluator (price validation + ledger)
+└── long_flat_strategy.py    # Default long-only execution model
 ```
 
 ## Things to know
