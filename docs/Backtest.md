@@ -4,10 +4,7 @@ Backtest is Limen's trading-economics layer. It takes prediction outputs and ask
 
 if we traded this signal as a simple long-only strategy, what would the return profile look like after costs?
 
-Limen currently exposes two backtest surfaces:
-
-- a vectorized snapshot backtest used throughout the `Log` layer
-- a stateful sequential backtest for ledger-style simulation
+Limen exposes a vectorized snapshot backtest, used throughout the `Log` layer.
 
 ## Where Backtest Lives
 
@@ -16,7 +13,6 @@ The most common backtest outputs are:
 - `uel.experiment_backtest_results`
 - `uel._log.experiment_backtest_results()`
 - `limen.backtest.backtest_snapshot`
-- `limen.BacktestSequential`
 
 ## Snapshot Backtest
 
@@ -104,74 +100,6 @@ round0_backtest = backtest_snapshot(perf)
 ```
 
 Use the experiment-wide table to compare many rounds. Use the single-round snapshot when you want to study a specific permutation.
-
-## Sequential Backtest
-
-`BacktestSequential` is the more stateful alternative. It simulates trades bar by bar through a trading `Account` object and returns a small ledger-style metrics summary.
-
-```python
-from limen import BacktestSequential
-
-backtest = BacktestSequential(start_usdt=30_000)
-results = backtest.run(
-    actual=perf['actuals'],
-    prediction=perf['predictions'],
-    price_change=perf['price_change'],
-    open_prices=perf['open'],
-    close_prices=perf['close'],
-)
-```
-
-This path is useful when you want an explicit sequence of account updates rather than the vectorized snapshot summary.
-
-### Current sequential outputs
-
-`BacktestSequential.run()` returns:
-
-- `PnL`
-- `win_rate`
-- `max_drawdown`
-- `expected_value`
-- `sharpe_ratio`
-- `net_long_volume`
-- `net_short_volume`
-- `net_trade_volume`
-
-## Sequential Ledger Semantics
-
-`BacktestSequential` delegates position bookkeeping to `limen.trading.Account`.
-
-`Account` supports these actions:
-
-- `hold`
-- `buy`
-- `sell`
-- `short`
-- `cover`
-
-and exposes:
-
-- `long_position`
-- `short_position`
-- `net_position`
-
-That said, the current `BacktestSequential.run()` implementation is still a long-only evaluator. It uses:
-
-- `buy`
-- `sell`
-- `hold`
-
-and does not currently open short or cover actions during the backtest loop.
-
-On a live local sequential run in this repo:
-
-- `net_short_volume` remained `0`
-- the action history began `hold, buy, sell, buy, sell, ...`
-
-So the right mental model today is:
-
-- `Account` is capable of both long and short bookkeeping
-- `BacktestSequential.run()` currently exercises only the long side
 
 ## Backtest Versus Benchmark
 

@@ -1,7 +1,6 @@
 from limen.data import HistoricalData
 from limen.log.log import Log
 from limen.trading import Account
-from limen.backtest.backtest_sequential import BacktestSequential
 from limen.experiment import MLManifest
 from limen.experiment import Manifest
 from limen.experiment import RuleBasedManifest
@@ -23,7 +22,6 @@ from limen import log
 
 __all__ = [
     'Account',
-    'BacktestSequential',
     'Cohort',
     'HistoricalData',
     'Log',
