@@ -128,6 +128,9 @@ from tests.test_yaml import test_build_manifest_backtest_config_swept_resolves
 from tests.test_yaml import test_build_manifest_no_backtest_block_leaves_config_none
 from tests.test_yaml import test_build_manifest_empty_backtest_block_leaves_config_none
 from tests.test_yaml import test_build_manifest_rule_based_backtest_config_resolves
+from tests.test_yaml import test_validate_valid_for_notional_rate
+from tests.test_yaml import test_validate_error_for_notional_rate_out_of_range
+from tests.test_yaml import test_build_manifest_notional_rate_resolves
 from tests.test_profiler import test_complexity_rating_low
 from tests.test_profiler import test_complexity_rating_medium
 from tests.test_profiler import test_complexity_rating_high
@@ -492,6 +495,7 @@ from tests.test_reference_architecture import test_compute_backtest_honours_inje
 from tests.test_reference_architecture import test_manifest_backtest_config_resolves_and_sweeps
 from tests.test_reference_architecture import test_architectures_do_not_expose_cost_parameters
 from tests.test_reference_architecture import test_invalid_backtest_config_is_rejected
+from tests.test_reference_architecture import test_invalid_notional_rate_config_is_rejected
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
@@ -528,6 +532,8 @@ from tests.test_metrics_and_log_helpers import test_backtest_snapshot_is_time_fr
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_delegates_to_injected_strategy
 from tests.test_metrics_and_log_helpers import test_long_flat_strategy_returns_execution_result
 from tests.test_metrics_and_log_helpers import test_long_flat_strategy_rejects_negative_lag
+from tests.test_metrics_and_log_helpers import test_backtest_snapshot_notional_rate_scales_returns_not_structure
+from tests.test_metrics_and_log_helpers import test_long_flat_strategy_rejects_notional_rate_outside_unit_interval
 from tests.test_metrics_and_log_helpers import test_no_legacy_backtest_column_names
 from tests.test_metrics_and_log_helpers import test_completed_bar_signal_proves_next_bar_alignment
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_empty_input
@@ -1285,6 +1291,9 @@ tests = [
     test_build_manifest_no_backtest_block_leaves_config_none,
     test_build_manifest_empty_backtest_block_leaves_config_none,
     test_build_manifest_rule_based_backtest_config_resolves,
+    test_validate_valid_for_notional_rate,
+    test_validate_error_for_notional_rate_out_of_range,
+    test_build_manifest_notional_rate_resolves,
     test_resolve_func_params_resolves_limen_path_to_callable,
     test_resolve_func_params_preserves_round_param_ref_as_string,
     test_resolve_func_params_preserves_non_limen_string_on_resolution_failure,
@@ -1432,6 +1441,7 @@ tests = [
     test_manifest_backtest_config_resolves_and_sweeps,
     test_architectures_do_not_expose_cost_parameters,
     test_invalid_backtest_config_is_rejected,
+    test_invalid_notional_rate_config_is_rejected,
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
@@ -1459,6 +1469,8 @@ tests = [
     test_backtest_snapshot_delegates_to_injected_strategy,
     test_long_flat_strategy_returns_execution_result,
     test_long_flat_strategy_rejects_negative_lag,
+    test_backtest_snapshot_notional_rate_scales_returns_not_structure,
+    test_long_flat_strategy_rejects_notional_rate_outside_unit_interval,
     test_no_legacy_backtest_column_names,
     test_completed_bar_signal_proves_next_bar_alignment,
     test_backtest_snapshot_rejects_empty_input,

@@ -52,7 +52,7 @@ SCALER_FROM_PARAMS_REQUIRED = {'from_params'}
 
 FEATURE_ABLATION_OPTIONAL = {'drop_count_key', 'seed_key'}
 PCA_COMPRESSION_OPTIONAL = {'enabled_param', 'n_components_param', 'scaler_param_name', 'component_prefix'}
-BACKTEST_OPTIONAL = {'fee_bps', 'slip_bps'}
+BACKTEST_OPTIONAL = {'fee_bps', 'slip_bps', 'notional_rate'}
 
 CALIBRATION_OPTIONAL = {'probability_calibration', 'threshold_function'}
 CALIBRATION_FUNC_REQUIRED = {'func'}

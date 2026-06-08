@@ -147,7 +147,7 @@ def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
     backtest = m.get('backtest')
     if not backtest:
         return
-    kwargs = {key: backtest[key] for key in ('fee_bps', 'slip_bps') if key in backtest}
+    kwargs = {key: backtest[key] for key in ('fee_bps', 'slip_bps', 'notional_rate') if key in backtest}
     manifest.set_backtest_config(**kwargs)
 
 

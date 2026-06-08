@@ -41,25 +41,30 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `price_change` must match `close - open` when all three fields are present
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - fee and slippage costs are applied multiplicatively on entry and exit fills
+- position size is a tunable fraction of capital (`notional_rate`, default `1.0` = all-in) that scales every return column and sets the average deployed notional
 - every column is computed per bar over all bars in the window (a flat bar counts as a real `0`)
 - distribution columns carry p5/p50/p95; the rest are single intensive (run-length-invariant) scalars
 - return and cost outputs are basis-point scaled
 
 The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=..., slip_bps=...)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
 
-In a YAML/CLI manifest the same configuration is a `backtest:` block under `sfd.manifest`, sibling to `target:` and `scaler:`. Each cost is a fixed number or a `"{param}"` reference into `sfd.params`, mirroring how indicator and target params are swept:
+`set_backtest_config` also takes `notional_rate` — the fraction of capital deployed while in position, in `(0, 1]` (default `1.0`, all-in; a 10% book is `notional_rate=0.1`). It scales `edge`, `pnl`, `cost`, and `drawdown` together so the ledger reflects the account at that bet size, leaves `wins_per_bar` and `trades_per_bar` untouched, and turns `inventory_per_bar` into the average deployed notional. Like the costs it is a fixed number or a search-param name, so one search can sweep bet size.
+
+In a YAML/CLI manifest the same configuration is a `backtest:` block under `sfd.manifest`, sibling to `target:` and `scaler:`. Each value is a fixed number or a `"{param}"` reference into `sfd.params`, mirroring how indicator and target params are swept:
 
 ```yaml
 sfd:
   manifest:
     backtest:
-      fee_bps: "{fee}"   # swept across the search
-      slip_bps: 5.0      # fixed
+      fee_bps: "{fee}"        # swept across the search
+      slip_bps: 5.0           # fixed
+      notional_rate: "{size}" # swept bet size, in (0, 1]
   params:
     fee: [1.0, 5.0, 10.0]
+    size: [0.1, 0.5, 1.0]
 ```
 
-The block is optional and applies to both `ml` and `rule_based` manifests; omitting it — or leaving it empty — keeps the 5 + 5 default. `limen validate` rejects an unknown key, a negative or non-finite cost, and a `"{param}"` reference missing from `sfd.params`.
+The block is optional and applies to both `ml` and `rule_based` manifests; omitting it — or leaving it empty — keeps the defaults (5 + 5 bps, all-in). `limen validate` rejects an unknown key, a negative or non-finite cost, a `notional_rate` outside `(0, 1]`, and a `"{param}"` reference missing from `sfd.params`.
 
 This makes snapshot backtests fast and comparable across rounds, but it also means they are not trying to be a full execution simulator.
 
@@ -81,7 +86,7 @@ Intensive scalars:
 - `avg_win_bps`, `avg_loss_bps` — mean of the positive / negative bars (NaN when there are none)
 - `cvar_95_pnl_bps` — mean of the worst 5% of per-bar net returns (NaN below 20 bars)
 - `trades_per_bar` — entries per bar (turnover)
-- `inventory_per_bar` — mean position held per bar (share of bars in market under the all-in model; a deployed fraction once position sizing exists)
+- `inventory_per_bar` — mean position held per bar; the average deployed notional (`notional_rate` × the share of bars in market)
 - `cost_per_bar_bps` — mean cost per bar
 
 ### Pluggable strategy
@@ -94,7 +99,7 @@ The default is `long_flat_strategy` (the long-only, hold-while-1 model described
 from limen.backtest.long_flat_strategy import ExecutionResult
 
 def my_strategy(predictions, open_px, close_px, price_change, *,
-                execution_lag_bars, fee_bps, slip_bps) -> ExecutionResult:
+                execution_lag_bars, fee_bps, slip_bps, notional_rate) -> ExecutionResult:
     ...
     return ExecutionResult(pos=..., gross=..., net=...)
 ```

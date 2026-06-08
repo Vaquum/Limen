@@ -71,7 +71,8 @@ def backtest_snapshot(df: pd.DataFrame,
                       strategy: Callable[..., ExecutionResult] = long_flat_strategy,
                       execution_lag_bars: int = 1,
                       fee_bps: float = 5.0,
-                      slip_bps: float = 5.0) -> pd.DataFrame:
+                      slip_bps: float = 5.0,
+                      notional_rate: float = 1.0) -> pd.DataFrame:
 
     '''
     Bar-based metric ledger over a strategy's per-bar returns.
@@ -86,9 +87,11 @@ def backtest_snapshot(df: pd.DataFrame,
     one-row backtest ledger.
 
     The strategy receives the prediction column and the validated open, close, and
-    price_change series plus execution_lag_bars, fee_bps, and slip_bps, and returns
-    an ExecutionResult of per-bar pos, gross, and net return series. Every column
-    flows from that triple.
+    price_change series plus execution_lag_bars, fee_bps, slip_bps, and notional_rate,
+    and returns an ExecutionResult of per-bar pos, gross, and net return series. Every
+    column flows from that triple. notional_rate (the deployed fraction of capital)
+    scales the return columns and makes inventory_per_bar the average deployed
+    notional; 1.0 is all-in.
 
     Columns (all computed over every bar)
     - Distributions (p5/p50/p95): edge_bps (gross return), pnl_bps (net return),
@@ -112,6 +115,7 @@ def backtest_snapshot(df: pd.DataFrame,
         execution_lag_bars (int): Bars between a signal row and its execution row.
         fee_bps (float): Per-fill fee in basis points.
         slip_bps (float): Per-fill slippage in basis points.
+        notional_rate (float): Fraction of capital deployed while in position, in (0, 1].
 
     Returns:
         pd.DataFrame: One-row ledger with columns BACKTEST_SNAPSHOT_COLUMNS.
@@ -146,6 +150,7 @@ def backtest_snapshot(df: pd.DataFrame,
         execution_lag_bars=execution_lag_bars,
         fee_bps=fee_bps,
         slip_bps=slip_bps,
+        notional_rate=notional_rate,
     )
 
     gross = result.gross

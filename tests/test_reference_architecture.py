@@ -362,6 +362,12 @@ def test_manifest_backtest_config_resolves_and_sweeps():
     MLManifest().set_backtest_config(fee_bps=2.0, slip_bps=4.0)._apply_backtest_cost(literal, {})
     assert literal['backtest_fee_bps'] == 2.0
     assert literal['backtest_slip_bps'] == 4.0
+    assert literal['backtest_notional_rate'] == 1.0
+
+    sized = {}
+    MLManifest().set_backtest_config(notional_rate='size')._apply_backtest_cost(sized, {'size': 0.1})
+    assert sized['backtest_notional_rate'] == 0.1
+    assert sized['backtest_fee_bps'] == 5.0
 
     unset = {}
     MLManifest()._apply_backtest_cost(unset, {})
@@ -378,6 +384,7 @@ def test_architectures_do_not_expose_cost_parameters():
         params = inspect.signature(architecture).parameters
         assert 'fee_bps' not in params, f"{architecture.__name__} should not expose fee_bps"
         assert 'slip_bps' not in params, f"{architecture.__name__} should not expose slip_bps"
+        assert 'notional_rate' not in params, f"{architecture.__name__} should not expose notional_rate"
 
 
 def test_invalid_backtest_config_is_rejected():
@@ -403,3 +410,14 @@ def test_invalid_backtest_config_is_rejected():
         assert False, 'Expected ValueError for unresolved param reference'
     except ValueError as e:
         assert 'unknown search-param' in str(e)
+
+
+def test_invalid_notional_rate_config_is_rejected():
+
+    for value in (1.5, 0.0, -0.1, float('inf')):
+        try:
+            MLManifest().set_backtest_config(notional_rate=value)._apply_backtest_cost({}, {})
+            assert False, 'Expected ValueError for invalid notional_rate'
+        except ValueError as e:
+            assert 'notional_rate must be in (0, 1]' in str(e)
+            assert 'got ' in str(e)
