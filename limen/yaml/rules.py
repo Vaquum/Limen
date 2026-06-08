@@ -12,6 +12,7 @@ from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
 
 _SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
+_SPLIT_DATE_GUARD_KEYS = ('val_predict_guard', 'test_predict_guard')
 
 _PARAM_REF_RE = re.compile(r'\{(\w+)\}')
 
@@ -644,6 +645,14 @@ class SplitSpec:
                         path='sfd.manifest.split_dates',
                         suggestion='Ensure train_start <= train_end <= val_start <= val_end <= test_start <= test_end',
                         ))
+
+        for key in _SPLIT_DATE_GUARD_KEYS:
+            if key in sd and not isinstance(sd[key], bool):
+                errors.append(YAMLError(
+                    message=f"'{key}' must be true or false (got {sd[key]!r})",
+                    path=f'sfd.manifest.split_dates.{key}',
+                    suggestion=f'Use a boolean, e.g. {key}: false',
+                ))
 
 
 class ScalerSpec:

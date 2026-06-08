@@ -49,6 +49,7 @@ from limen.yaml.schema import SCALER_EXPLICIT_OPTIONAL
 from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
 from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
 from limen.yaml.schema import SEARCH_STRATEGY_REQUIRED
+from limen.yaml.schema import SPLIT_DATES_OPTIONAL
 from limen.yaml.schema import SPLIT_DATES_REQUIRED
 from limen.yaml.schema import STRATEGY_REQUIRED
 from limen.yaml.schema import TARGET_OPTIONAL
@@ -100,7 +101,7 @@ _MAIN_ENGINE = RuleEngine([
 
     SplitSpec(),
     RequiredColumnsSpec(),
-    NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED),
+    NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED | SPLIT_DATES_OPTIONAL, severity='error'),
 
     Required('sfd.manifest.reference_architecture', str),
     Resolvable('sfd.manifest.reference_architecture'),

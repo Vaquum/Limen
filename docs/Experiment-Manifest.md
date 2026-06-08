@@ -193,6 +193,20 @@ Behavior rules:
 
 Use this when the train / val / test boundaries must land on specific datetimes (e.g. honouring a deployment date), and `set_split_config` when proportions of the row count are the natural way to express the split.
 
+In a YAML manifest the same windows and flags live in the `split_dates` block. `val_predict_guard` and `test_predict_guard` are optional and default to `true`; a `train_predict_guard` key (or a non-boolean value for either flag) fails `limen validate`:
+
+```yaml
+split_dates:
+  train_start: "2024-01-01"
+  train_end:   "2024-07-01"
+  val_start:   "2024-07-01"
+  val_end:     "2024-10-01"
+  test_start:  "2024-10-01"
+  test_end:    "2025-01-01"
+  val_predict_guard:  false   # val window emits real predictions
+  test_predict_guard: false   # test window emits real predictions
+```
+
 ### `set_pre_split_data_selector(func, **params)`
 
 Optionally select or reduce the raw dataset before splitting.

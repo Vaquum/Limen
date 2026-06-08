@@ -413,11 +413,12 @@ def test_validate_warning_for_unknown_key_in_data_source() -> None:
     assert any('typo_key' in w.message for w in result.warnings)
 
 
-def test_validate_warning_for_unknown_key_in_split_dates() -> None:
+def test_validate_error_for_unknown_key_in_split_dates() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['split_dates']['typo_key'] = '2022-01-01'
     result = validate(yaml_dict)
-    assert any('typo_key' in w.message for w in result.warnings)
+    assert not result.valid
+    assert any('typo_key' in e.message for e in result.errors)
 
 
 def test_validate_error_for_unresolvable_reference_architecture() -> None:
@@ -966,6 +967,40 @@ def test_build_manifest_rule_based_data_source_date_limits_injected_from_split_d
     params = manifest.data_source_config.params
     assert params['start_date_limit'] == '2022-01-01'
     assert params['end_date_limit'] == '2023-01-01'
+
+
+def test_split_dates_predict_guards_compile_to_manifest() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_dates']['val_predict_guard'] = False
+    yaml_dict['sfd']['manifest']['split_dates']['test_predict_guard'] = False
+    assert validate(yaml_dict).valid
+    manifest = build_manifest(yaml_dict)
+    assert manifest.val_predict_guard is False
+    assert manifest.test_predict_guard is False
+
+
+def test_split_dates_predict_guards_default_true_when_omitted() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    assert validate(yaml_dict).valid
+    manifest = build_manifest(yaml_dict)
+    assert manifest.val_predict_guard is True
+    assert manifest.test_predict_guard is True
+
+
+def test_split_dates_train_predict_guard_is_rejected() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_dates']['train_predict_guard'] = False
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('train_predict_guard' in e.message for e in result.errors)
+
+
+def test_split_dates_predict_guard_must_be_bool() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['manifest']['split_dates']['test_predict_guard'] = 'no'
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any(e.path == 'sfd.manifest.split_dates.test_predict_guard' for e in result.errors)
 
 
 def test_build_manifest_indicator_include_if_stored_on_entry() -> None:

@@ -41,7 +41,7 @@ from tests.test_yaml import test_validate_error_for_non_string_sfd_param_key
 from tests.test_yaml import test_validate_non_string_sfd_param_key_does_not_crash
 from tests.test_yaml import test_validate_warning_for_unused_sfd_param
 from tests.test_yaml import test_validate_warning_for_unknown_key_in_data_source
-from tests.test_yaml import test_validate_warning_for_unknown_key_in_split_dates
+from tests.test_yaml import test_validate_error_for_unknown_key_in_split_dates
 from tests.test_yaml import test_validate_error_for_unresolvable_reference_architecture
 from tests.test_yaml import test_validate_error_for_unresolvable_target_class
 from tests.test_yaml import test_validate_error_for_callable_path_resolving_to_module
@@ -87,6 +87,10 @@ from tests.test_yaml import test_validate_no_unused_param_warning_for_pca_defaul
 from tests.test_yaml import test_build_manifest_data_source_method_is_callable_with_correct_params
 from tests.test_yaml import test_build_manifest_data_source_date_limits_injected_from_split_dates
 from tests.test_yaml import test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates
+from tests.test_yaml import test_split_dates_predict_guards_compile_to_manifest
+from tests.test_yaml import test_split_dates_predict_guards_default_true_when_omitted
+from tests.test_yaml import test_split_dates_train_predict_guard_is_rejected
+from tests.test_yaml import test_split_dates_predict_guard_must_be_bool
 from tests.test_yaml import test_validate_error_for_test_data_source_in_yaml
 from tests.test_yaml import test_validate_error_for_start_date_limit_in_data_source_params
 from tests.test_yaml import test_validate_error_for_end_date_limit_in_data_source_params
@@ -1242,7 +1246,7 @@ tests = [
     test_validate_non_string_sfd_param_key_does_not_crash,
     test_validate_warning_for_unused_sfd_param,
     test_validate_warning_for_unknown_key_in_data_source,
-    test_validate_warning_for_unknown_key_in_split_dates,
+    test_validate_error_for_unknown_key_in_split_dates,
     test_validate_error_for_unresolvable_reference_architecture,
     test_validate_error_for_unresolvable_target_class,
     test_validate_error_for_callable_path_resolving_to_module,
@@ -1306,6 +1310,10 @@ tests = [
     test_build_manifest_data_source_method_is_callable_with_correct_params,
     test_build_manifest_data_source_date_limits_injected_from_split_dates,
     test_build_manifest_rule_based_data_source_date_limits_injected_from_split_dates,
+    test_split_dates_predict_guards_compile_to_manifest,
+    test_split_dates_predict_guards_default_true_when_omitted,
+    test_split_dates_train_predict_guard_is_rejected,
+    test_split_dates_predict_guard_must_be_bool,
     test_validate_error_for_test_data_source_in_yaml,
     test_validate_error_for_start_date_limit_in_data_source_params,
     test_validate_error_for_end_date_limit_in_data_source_params,
