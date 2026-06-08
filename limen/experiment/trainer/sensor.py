@@ -248,9 +248,14 @@ class Sensor:
 
         if manifest.split_dates is None or dt is None:
             return False
-        train_start, _, _, _, _, test_end = manifest.split_dates
+        train_start, _, val_start, val_end, test_start, test_end = manifest.split_dates
         dt_date = dt.date() if hasattr(dt, 'date') else dt
-        return train_start <= dt_date < test_end
+        masked = train_start <= dt_date < test_end
+        if masked and manifest.val_predict_guard is False and val_start <= dt_date < val_end:
+            masked = False
+        if masked and manifest.test_predict_guard is False and test_start <= dt_date < test_end:
+            masked = False
+        return masked
 
 
     def _inside_training_window_mask(self,
@@ -259,7 +264,7 @@ class Sensor:
 
         if manifest.split_dates is None or 'datetime' not in data.columns:
             return [False] * len(data)
-        train_start, _, _, _, _, test_end = manifest.split_dates
+        train_start, _, val_start, val_end, test_start, test_end = manifest.split_dates
         result = []
         for dt in data['datetime'].to_list():
             if dt is None:
@@ -267,7 +272,12 @@ class Sensor:
                 continue
             # normalise to date for comparison — split_dates stores date objects
             dt_date = dt.date() if hasattr(dt, 'date') else dt
-            result.append(train_start <= dt_date < test_end)
+            masked = train_start <= dt_date < test_end
+            if masked and manifest.val_predict_guard is False and val_start <= dt_date < val_end:
+                masked = False
+            if masked and manifest.test_predict_guard is False and test_start <= dt_date < test_end:
+                masked = False
+            result.append(masked)
         return result
 
 

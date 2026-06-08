@@ -168,7 +168,7 @@ Behavior rules:
 
 Allowing zeros is important for retraining workflows such as Trainer Pass 2, where `split_config=(1, 0, 0)` means "fit on all available data."
 
-### `set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end)`
+### `set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end, *, val_predict_guard=True, test_predict_guard=True)`
 
 Pin the train, val, and test windows to absolute `datetime` bounds, in preference to ratio-based splits whose absolute boundary depends on the input row count.
 
@@ -187,6 +187,7 @@ Behavior rules:
 - Windows are half-open `[start, end)`. A row enters a split iff its `datetime` falls inside that window.
 - Ordering must satisfy `train_start <= train_end <= val_start <= val_end <= test_start <= test_end`. Gaps between adjacent windows are allowed; rows inside a gap are intentionally excluded from all three splits.
 - Every bound must be a `date` or `datetime` instance. Strings, ints, and floats raise `TypeError` at the API boundary.
+- `val_predict_guard` and `test_predict_guard` are keyword-only and default `True`. They control whether the served `Sensor` masks predictions inside the val and test windows. Both `True` masks the full `[train_start, test_end)` envelope — every served prediction is identical to omitting them; setting one to `False` makes that window emit real `0/1` predictions instead of `None`, so a served cohort can be checked against its own test-split backtest. Train is always masked (the model trains on it) and has no flag. Each flag must be a `bool` or `set_split_dates` raises `TypeError`.
 - When `split_dates` is set it takes precedence over `set_split_config` in both `prepare_data` and `compute_test_bars`. The split runs on the raw data (before per-split feature transforms), so transforms can still drop rows inside a slice but cannot move rows across slice boundaries.
 - `with_params_override(split_config=...)` clears any previously-pinned `split_dates`, so the retraining override (e.g. `Trainer.train_sensors` passing `(1, 0, 0)`) is never silently shadowed by an earlier date pin.
 
