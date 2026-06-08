@@ -161,6 +161,8 @@ def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
         date.fromisoformat(sd['val_end']),
         date.fromisoformat(sd['test_start']),
         date.fromisoformat(sd['test_end']),
+        val_predict_guard=sd.get('val_predict_guard', True),
+        test_predict_guard=sd.get('test_predict_guard', True),
     )
 
 

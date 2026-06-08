@@ -38,6 +38,7 @@ DATA_SOURCE_OPTIONAL = {'params'}
 
 SPLIT_CONFIG_REQUIRED = {'train', 'val', 'test'}
 SPLIT_DATES_REQUIRED = {'train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'}
+SPLIT_DATES_OPTIONAL = {'val_predict_guard', 'test_predict_guard'}
 
 TARGET_REQUIRED = {'name', 'class'}
 TARGET_OPTIONAL = {'fit_params', 'transform_params'}
