@@ -255,7 +255,7 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
 
     assert result.index.tolist() == BACKTEST_SNAPSHOT_COLUMNS
     assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
-    assert result['win_rate'] == 0.25
+    assert result['wins_per_bar'] == 0.25
     assert result['pnl_per_bar_bps'] == 250.0
     assert result['avg_win_bps'] == 2000.0
     assert result['avg_loss_bps'] == -1000.0
@@ -275,7 +275,7 @@ def test_backtest_snapshot_executes_on_next_bar() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['win_rate'] == 0.0
+    assert result['wins_per_bar'] == 0.0
     assert result['avg_loss_bps'] == -1000.0
     assert result['pnl_per_bar_bps'] == -333.3
     assert result['drawdown_bps_p50'] == -1000.0
@@ -426,7 +426,7 @@ def test_backtest_snapshot_reports_all_bars_population() -> None:
     ).iloc[0]
 
     assert result['inventory_per_bar'] == 0.5
-    assert result['win_rate'] == 0.25
+    assert result['wins_per_bar'] == 0.25
     assert result['edge_bps_p50'] == 0.0
     assert result['pnl_bps_p50'] == 0.0
 
@@ -477,7 +477,7 @@ def test_backtest_snapshot_edge_case_sentinels() -> None:
     assert np.isnan(flat['avg_win_bps'])
     assert np.isnan(flat['avg_loss_bps'])
     assert flat['cvar_95_pnl_bps'] == 0.0
-    assert flat['win_rate'] == 0.0
+    assert flat['wins_per_bar'] == 0.0
     assert flat['pnl_per_bar_bps'] == 0.0
     assert flat['trades_per_bar'] == 0.0
 
@@ -510,7 +510,7 @@ def test_backtest_snapshot_scalars_invariant_under_window_doubling() -> None:
     twice = backtest_snapshot(doubled, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0).iloc[0]
 
     intensive_scalars = [
-        'win_rate',
+        'wins_per_bar',
         'pnl_per_bar_bps',
         'avg_win_bps',
         'avg_loss_bps',

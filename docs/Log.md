@@ -183,7 +183,7 @@ Per-bar distributions (`p5` / `p50` / `p95`):
 
 Intensive scalars:
 
-- `win_rate`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
+- `wins_per_bar`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
 Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
 

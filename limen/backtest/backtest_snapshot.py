@@ -22,7 +22,7 @@ BACKTEST_SNAPSHOT_COLUMNS = [
     'drawdown_bps_p5',
     'drawdown_bps_p50',
     'drawdown_bps_p95',
-    'win_rate',
+    'wins_per_bar',
     'pnl_per_bar_bps',
     'avg_win_bps',
     'avg_loss_bps',
@@ -89,10 +89,10 @@ def backtest_snapshot(df: pd.DataFrame,
     Columns (all computed over every bar)
     - Distributions (p5/p50/p95): edge_bps (gross return), pnl_bps (net return),
       cost_bps (gross minus net), drawdown_bps (net equity against its running peak).
-    - Scalars: win_rate, pnl_per_bar_bps, avg_win_bps, avg_loss_bps, cvar_95_pnl_bps,
+    - Scalars: wins_per_bar, pnl_per_bar_bps, avg_win_bps, avg_loss_bps, cvar_95_pnl_bps,
       trades_per_bar, inventory_per_bar, cost_per_bar_bps.
 
-    win_rate is the share of all bars with a positive net return (a flat bar is not a
+    wins_per_bar is the share of all bars with a positive net return (a flat bar is not a
     win), so it cannot exceed the share of bars in market, which equals inventory_per_bar
     under the all-in model. inventory_per_bar is the average position held per bar (0 or 1
     under the all-in model, a deployed fraction once position sizing exists).
@@ -186,7 +186,7 @@ def backtest_snapshot(df: pd.DataFrame,
         data[f'{prefix}_p50'] = p50
         data[f'{prefix}_p95'] = p95
 
-    data['win_rate'] = round(float((R_net > 0).mean()), FRACTION_DECIMALS)
+    data['wins_per_bar'] = round(float((R_net > 0).mean()), FRACTION_DECIMALS)
     data['pnl_per_bar_bps'] = _mean_bps(R_net)
     data['avg_win_bps'] = _mean_bps(R_net[R_net > 0])
     data['avg_loss_bps'] = _mean_bps(R_net[R_net < 0])

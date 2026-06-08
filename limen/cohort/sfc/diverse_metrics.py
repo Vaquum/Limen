@@ -45,7 +45,7 @@ def select(context: dict[str, Any],
         [
             'backtest_pnl_per_bar_bps',
             'backtest_edge_bps_p95',
-            'backtest_win_rate',
+            'backtest_wins_per_bar',
             'backtest_drawdown_bps_p5',
             'backtest_cvar_95_pnl_bps',
         ],

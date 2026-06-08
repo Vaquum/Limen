@@ -489,7 +489,7 @@ def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():
             'id': ids,
             'confusion_tp': [5, 5, 5, 0],
             'confusion_fp': [1, 1, 1, 0],
-            'backtest_win_rate': [0.10, 0.05, 0.01, 1.0],
+            'backtest_wins_per_bar': [0.10, 0.05, 0.01, 1.0],
             'backtest_edge_bps_p95': [10.0, 12.0, 1.0, 100.0],
             'backtest_pnl_per_bar_bps': [10.0, 8.0, 1.0, 100.0],
             'backtest_drawdown_bps_p5': [-100.0, -80.0, -500.0, 0.0],
@@ -514,7 +514,7 @@ def test_diverse_metrics_selector_clamps_cluster_count():
         ids = _write_minimal_cohort_artifacts(exp_dir, n_rounds=4)
         results = pd.DataFrame({
             'id': ids,
-            'backtest_win_rate': [0.10, 0.20, 0.30, 0.40],
+            'backtest_wins_per_bar': [0.10, 0.20, 0.30, 0.40],
             'backtest_edge_bps_p95': [2.0, 4.0, 8.0, 16.0],
             'backtest_pnl_per_bar_bps': [5.0, 4.0, 3.0, 2.0],
             'backtest_drawdown_bps_p5': [-10.0, -20.0, -30.0, -40.0],

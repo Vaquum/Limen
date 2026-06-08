@@ -80,7 +80,7 @@ Per-bar distributions (`p5` / `p50` / `p95`):
 
 Intensive scalars:
 
-- `win_rate` — share of all bars with positive net return (a flat bar is not a win, so it cannot exceed the in-market share — `inventory_per_bar` under the all-in model)
+- `wins_per_bar` — share of all bars with positive net return (a flat bar is not a win, so it cannot exceed the in-market share — `inventory_per_bar` under the all-in model)
 - `pnl_per_bar_bps` — mean net return per bar
 - `avg_win_bps`, `avg_loss_bps` — mean of the positive / negative bars (NaN when there are none)
 - `cvar_95_pnl_bps` — mean of the worst 5% of per-bar net returns (NaN below 20 bars)
