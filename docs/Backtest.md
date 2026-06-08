@@ -99,7 +99,7 @@ The default is `long_flat_strategy` (the long-only, hold-while-1 model described
 from limen.backtest.long_flat_strategy import ExecutionResult
 
 def my_strategy(predictions, open_px, close_px, price_change, *,
-                execution_lag_bars, fee_bps, slip_bps, notional_rate) -> ExecutionResult:
+                execution_lag_bars, fee_bps, slip_bps) -> ExecutionResult:
     ...
     return ExecutionResult(pos=..., gross=..., net=...)
 ```
@@ -112,7 +112,7 @@ round0_backtest = backtest_snapshot(perf, strategy=my_strategy)
 
 The strategy owns its own signal contract — `long_flat_strategy` requires binary `0/1` and validates it — and applies its own costs, since only it knows where entries and exits fall.
 
-`backtest_snapshot` always forwards the full execution kwarg set (`execution_lag_bars`, `fee_bps`, `slip_bps`, `notional_rate`), and that set grows as the backtest gains knobs, so a strategy should accept exactly those keywords — or absorb extras with `**kwargs` — to stay forward-compatible.
+`backtest_snapshot` forwards only the fill-shaping kwargs (`execution_lag_bars`, `fee_bps`, `slip_bps`) to the strategy. `notional_rate` is *not* a strategy concern — it is a uniform scale on the returned triple, so `backtest_snapshot` applies it after the strategy returns, leaving the strategy contract stable as that knob (and others like it) is added.
 
 ### Typical use
 

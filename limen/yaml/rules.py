@@ -1005,7 +1005,7 @@ class ParamKeyFields:
 
 class BacktestCostSpec:
 
-    '''Each backtest knob must be valid: fee_bps/slip_bps a non-negative finite number, notional_rate a number in (0, 1], or any a {param} reference in sfd.params.'''
+    '''Each backtest knob is a number (fee_bps/slip_bps non-negative; notional_rate in (0, 1]) or a {param} reference into sfd.params.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -1030,7 +1030,7 @@ class BacktestCostSpec:
                 errors.append(YAMLError(
                     message=f"'backtest.{key}' must be {bound} or a {{param}} reference (got bool)",
                     path=path,
-                    suggestion=f'Use a number like {key}: {example} or a reference like {key}: "{{p}}"',
+                    suggestion=f'Use a number like {key}: {example} or a reference like {key}: "{{my_param}}"',
                 ))
             elif isinstance(value, (int, float)):
                 if key == 'notional_rate':
@@ -1052,7 +1052,7 @@ class BacktestCostSpec:
                     errors.append(YAMLError(
                         message=f"'backtest.{key}' must be a number or a {{param}} reference (got '{value}')",
                         path=path,
-                        suggestion=f'Reference a search param, e.g. {key}: "{{fee}}", or use a number',
+                        suggestion=f'Reference a search param, e.g. {key}: "{{my_param}}", or use a number',
                     ))
                 elif ref.group(1) not in sfd_params:
                     errors.append(YAMLError(

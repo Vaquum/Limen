@@ -1,4 +1,3 @@
-import numbers
 from typing import NamedTuple
 
 import numpy as np
@@ -15,8 +14,8 @@ class ExecutionResult(NamedTuple):
     Per-bar execution series consumed by the snapshot ledger.
 
     Attributes:
-        pos (pd.Series): Position held per bar (0 when flat, else the deployed
-            fraction notional_rate; 1 under the all-in default).
+        pos (pd.Series): Position held per bar (0 or 1 under the all-in model;
+            a strategy may return a deployed fraction).
         gross (pd.Series): Per-bar gross return before costs.
         net (pd.Series): Per-bar net return after entry and exit costs.
     '''
@@ -33,26 +32,19 @@ def long_flat_strategy(predictions: pd.Series,
                        *,
                        execution_lag_bars: int = 1,
                        fee_bps: float = 5.0,
-                       slip_bps: float = 5.0,
-                       notional_rate: float = 1.0) -> ExecutionResult:
+                       slip_bps: float = 5.0) -> ExecutionResult:
 
     '''
     Long-only, hold-while-1 execution over pre-aligned intrabar returns.
 
-    Interprets a binary 0/1 signal as a long position sized at notional_rate
-    (all-in by default): enter at the open of the first signalled bar, ride
-    close-to-close while the signal persists, and exit at the close of the last
-    signalled bar. Fee and slippage are applied multiplicatively on the entry and
-    exit fills.
+    Interprets a binary 0/1 signal as an all-in long position: enter at the open
+    of the first signalled bar, ride close-to-close while the signal persists, and
+    exit at the close of the last signalled bar. Fee and slippage are applied
+    multiplicatively on the entry and exit fills.
 
     Predictions are shifted forward by execution_lag_bars onto the execution rows.
     The entry-bar gross return is price_change / open; the continuation-bar gross
     return is close_t / close_{t-1} - 1; a flat bar is a real 0.
-
-    notional_rate is the fraction of capital deployed while in position; the rest
-    sits in cash at 0, so the per-bar pos, gross, and net all scale by it. Every
-    ledger column then reflects the account at that bet size, and notional_rate of
-    1.0 reproduces the all-in profile exactly.
 
     Args:
         predictions (pd.Series): Per-bar signal; must contain only 0 or 1.
@@ -62,8 +54,6 @@ def long_flat_strategy(predictions: pd.Series,
         execution_lag_bars (int): Bars between a signal row and its execution row.
         fee_bps (float): Per-fill fee in basis points.
         slip_bps (float): Per-fill slippage in basis points.
-        notional_rate (float): Fraction of capital deployed while in position, in
-            (0, 1]; 1.0 is all-in.
 
     Returns:
         ExecutionResult: Per-bar pos, gross, and net return series.
@@ -71,13 +61,6 @@ def long_flat_strategy(predictions: pd.Series,
 
     if execution_lag_bars < 0:
         raise ValueError('long_flat_strategy execution_lag_bars must be >= 0')
-
-    if (
-        isinstance(notional_rate, bool)
-        or not isinstance(notional_rate, numbers.Real)
-        or not 0 < notional_rate <= 1
-    ):
-        raise ValueError('long_flat_strategy notional_rate must be in (0, 1]')
 
     try:
         pred = pd.to_numeric(predictions, errors='raise')
@@ -121,8 +104,4 @@ def long_flat_strategy(predictions: pd.Series,
 
     net = (((1.0 + gross) * cost_mult) - 1.0).fillna(0.0)
 
-    return ExecutionResult(
-        pos=pos.astype(float) * notional_rate,
-        gross=gross * notional_rate,
-        net=net * notional_rate,
-    )
+    return ExecutionResult(pos=pos.astype(float), gross=gross, net=net)
