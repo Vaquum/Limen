@@ -605,14 +605,14 @@ def test_backtest_snapshot_notional_rate_scales_returns_not_structure() -> None:
     assert half['trades_per_bar'] == full['trades_per_bar']
 
 
-def test_long_flat_strategy_rejects_notional_rate_outside_unit_interval() -> None:
+def test_long_flat_strategy_rejects_invalid_notional_rate() -> None:
     prices = (
         pd.Series([1, 0]),
         pd.Series([100.0, 100.0]),
         pd.Series([100.0, 100.0]),
         pd.Series([0.0, 0.0]),
     )
-    for bad in (0.0, -0.1, 1.5):
+    for bad in (0.0, -0.1, 1.5, True, 'half'):
         with pytest.raises(ValueError, match='notional_rate must be in'):
             long_flat_strategy(*prices, notional_rate=bad)
 

@@ -90,8 +90,8 @@ def backtest_snapshot(df: pd.DataFrame,
     price_change series plus execution_lag_bars, fee_bps, slip_bps, and notional_rate,
     and returns an ExecutionResult of per-bar pos, gross, and net return series. Every
     column flows from that triple. notional_rate (the deployed fraction of capital)
-    scales the return columns and makes inventory_per_bar the average deployed
-    notional; 1.0 is all-in.
+    scales the per-bar pos, gross, and net, and makes inventory_per_bar the average
+    deployed notional; 1.0 is all-in.
 
     Columns (all computed over every bar)
     - Distributions (p5/p50/p95): edge_bps (gross return), pnl_bps (net return),

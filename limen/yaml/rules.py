@@ -1026,10 +1026,11 @@ class BacktestCostSpec:
             value = backtest[key]
             path = f'sfd.manifest.backtest.{key}'
             if isinstance(value, bool):
+                bound, example = ('a number in (0, 1]', '0.1') if key == 'notional_rate' else ('a non-negative number', '5.0')
                 errors.append(YAMLError(
-                    message=f"'backtest.{key}' must be a non-negative number or a {{param}} reference (got bool)",
+                    message=f"'backtest.{key}' must be {bound} or a {{param}} reference (got bool)",
                     path=path,
-                    suggestion=f'Use a number like {key}: 5.0 or a reference like {key}: "{{fee}}"',
+                    suggestion=f'Use a number like {key}: {example} or a reference like {key}: "{{p}}"',
                 ))
             elif isinstance(value, (int, float)):
                 if key == 'notional_rate':

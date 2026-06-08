@@ -41,14 +41,14 @@ The current snapshot backtest is intentionally simple and opinionated:
 - `price_change` must match `close - open` when all three fields are present
 - continuation-bar return is based on `close_t / close_{t-1} - 1`
 - fee and slippage costs are applied multiplicatively on entry and exit fills
-- position size is a tunable fraction of capital (`notional_rate`, default `1.0` = all-in) that scales every return column and sets the average deployed notional
+- position size is a tunable fraction of capital (`notional_rate`, default `1.0` = all-in) that scales the per-bar `edge`, `pnl`, and `cost` and sets the average deployed notional
 - every column is computed per bar over all bars in the window (a flat bar counts as a real `0`)
 - distribution columns carry p5/p50/p95; the rest are single intensive (run-length-invariant) scalars
 - return and cost outputs are basis-point scaled
 
 The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=..., slip_bps=...)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
 
-`set_backtest_config` also takes `notional_rate` — the fraction of capital deployed while in position, in `(0, 1]` (default `1.0`, all-in; a 10% book is `notional_rate=0.1`). It scales `edge`, `pnl`, `cost`, and `drawdown` together so the ledger reflects the account at that bet size, leaves `wins_per_bar` and `trades_per_bar` untouched, and turns `inventory_per_bar` into the average deployed notional. Like the costs it is a fixed number or a search-param name, so one search can sweep bet size.
+`set_backtest_config` also takes `notional_rate` — the fraction of capital deployed while in position, in `(0, 1]` (default `1.0`, all-in; a 10% book is `notional_rate=0.1`). It scales `edge`, `pnl`, and `cost` together so the ledger reflects the account at that bet size (`drawdown` also moves with bet size, but path-dependently — it compounds against a running peak, so it is not a clean multiple of the full-size drawdown), leaves `wins_per_bar` and `trades_per_bar` untouched, and turns `inventory_per_bar` into the average deployed notional. Like the costs it is a fixed number or a search-param name, so one search can sweep bet size.
 
 In a YAML/CLI manifest the same configuration is a `backtest:` block under `sfd.manifest`, sibling to `target:` and `scaler:`. Each value is a fixed number or a `"{param}"` reference into `sfd.params`, mirroring how indicator and target params are swept:
 
@@ -111,6 +111,8 @@ round0_backtest = backtest_snapshot(perf, strategy=my_strategy)
 ```
 
 The strategy owns its own signal contract — `long_flat_strategy` requires binary `0/1` and validates it — and applies its own costs, since only it knows where entries and exits fall.
+
+`backtest_snapshot` always forwards the full execution kwarg set (`execution_lag_bars`, `fee_bps`, `slip_bps`, `notional_rate`), and that set grows as the backtest gains knobs, so a strategy should accept exactly those keywords — or absorb extras with `**kwargs` — to stay forward-compatible.
 
 ### Typical use
 

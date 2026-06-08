@@ -1,3 +1,4 @@
+import numbers
 from typing import NamedTuple
 
 import numpy as np
@@ -71,7 +72,11 @@ def long_flat_strategy(predictions: pd.Series,
     if execution_lag_bars < 0:
         raise ValueError('long_flat_strategy execution_lag_bars must be >= 0')
 
-    if not (0 < notional_rate <= 1):
+    if (
+        isinstance(notional_rate, bool)
+        or not isinstance(notional_rate, numbers.Real)
+        or not 0 < notional_rate <= 1
+    ):
         raise ValueError('long_flat_strategy notional_rate must be in (0, 1]')
 
     try:
