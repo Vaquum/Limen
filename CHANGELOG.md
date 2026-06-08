@@ -1084,3 +1084,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.22.0 on 8th of June, 2026
 
 - Remove the `Account` ledger and the `limen.trading` package. `BacktestSequential` (removed in 3.21.0) was its only consumer; with the sequential simulator gone, `Account` has no in-package or downstream consumer. Deletes `limen/trading/` (`account.py`, its `__init__`, and README), `tests/test_account_conviction`, and the `limen.trading` entry in the docs-site source list, and drops the `limen.Account` public export. Breaking: `limen.Account` is removed with no replacement — it was a standalone bookkeeping primitive, and `backtest_snapshot` is a bar-based metrics aggregator, not a ledger.
+
+## v3.23.0 on 8th of June, 2026
+
+- Remove two orphaned feature modules, `limen/features/hours_since_big_move.py` and `limen/features/hours_since_quantile_line.py`. Neither is registered in `limen.features.__init__`, nor referenced by any other feature, test, template, doc, or the docs-site — so the standard `func: limen.features.<name>` manifest dispatch (which resolves names from the `limen.features` namespace) cannot reach them. An explicit 4-part `limen.features.<name>.<name>` path could still import either file directly, but an org-wide search found no such reference anywhere, in-repo or downstream. Dead files carried along passively; removed.
