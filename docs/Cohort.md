@@ -135,7 +135,7 @@ Use them by built-in name:
 Cohort(
     experiment_log_path='experiments/my_exp',
     selector='top_n',
-    selector_params={'column': 'backtest_pnl_bps_p50', 'n': 5},
+    selector_params={'column': 'backtest_pnl_per_bar_bps', 'n': 5},
 )
 ```
 
@@ -149,7 +149,7 @@ from limen.cohort.sfc.top_n import select as select_top_n
 Cohort(
     experiment_log_path='experiments/my_exp',
     selector=select_top_n,
-    selector_params={'column': 'backtest_pnl_bps_p50', 'n': 5},
+    selector_params={'column': 'backtest_pnl_per_bar_bps', 'n': 5},
 )
 ```
 

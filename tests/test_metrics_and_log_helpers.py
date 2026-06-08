@@ -541,11 +541,14 @@ def test_no_legacy_backtest_column_names() -> None:
         r'edge_per_signal|trade_pnl_net|cost_drag|rolling_return|return_on_exposure'
         r'|drawdown_depth|drawdown_duration|cvar_95_return|bar_in_market|capital_in_market'
     )
+    this_file = Path(__file__).resolve()
     offenders = [
         str(path.relative_to(repo_root))
-        for base in ('limen', 'docs')
+        for base in ('limen', 'docs', 'tests')
         for path in (repo_root / base).rglob('*')
-        if path.suffix in {'.py', '.md'} and legacy.search(path.read_text(encoding='utf-8'))
+        if path.suffix in {'.py', '.md'}
+        and path.resolve() != this_file
+        and legacy.search(path.read_text(encoding='utf-8'))
     ]
     assert offenders == [], offenders
 
