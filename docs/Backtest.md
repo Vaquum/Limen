@@ -69,7 +69,7 @@ This makes snapshot backtests fast and comparable across rounds, but it also mea
 
 ### Output columns
 
-Snapshot backtests produce 21 columns over one population — every bar in the window.
+Snapshot backtests produce 20 columns over one population — every bar in the window.
 
 Per-bar distributions (`p5` / `p50` / `p95`):
 
@@ -80,13 +80,12 @@ Per-bar distributions (`p5` / `p50` / `p95`):
 
 Intensive scalars:
 
-- `win_rate` — share of bars with positive net return
+- `win_rate` — share of all bars with positive net return (a flat bar is not a win, so it cannot exceed the in-market share — `inventory_per_bar` under the all-in model)
 - `pnl_per_bar_bps` — mean net return per bar
 - `avg_win_bps`, `avg_loss_bps` — mean of the positive / negative bars (NaN when there are none)
 - `cvar_95_pnl_bps` — mean of the worst 5% of per-bar net returns (NaN below 20 bars)
 - `trades_per_bar` — entries per bar (turnover)
-- `in_market_per_bar` — share of bars holding a position
-- `inventory_per_bar` — mean fraction of capital deployed per bar
+- `inventory_per_bar` — mean position held per bar (share of bars in market under the all-in model; a deployed fraction once position sizing exists)
 - `cost_per_bar_bps` — mean cost per bar
 
 ### Typical use

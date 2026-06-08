@@ -172,7 +172,7 @@ The same table is exposed directly on UEL as:
 uel.experiment_backtest_results
 ```
 
-The current summary columns are the 21 bar-based backtest ledger fields — every column is computed per bar over all bars in the window.
+The current summary columns are the 20 bar-based backtest ledger fields — every column is computed per bar over all bars in the window.
 
 Per-bar distributions (`p5` / `p50` / `p95`):
 
@@ -183,7 +183,7 @@ Per-bar distributions (`p5` / `p50` / `p95`):
 
 Intensive scalars:
 
-- `win_rate`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `in_market_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
+- `win_rate`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
 Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
 

@@ -28,7 +28,6 @@ BACKTEST_SNAPSHOT_COLUMNS = [
     'avg_loss_bps',
     'cvar_95_pnl_bps',
     'trades_per_bar',
-    'in_market_per_bar',
     'inventory_per_bar',
     'cost_per_bar_bps',
 ]
@@ -91,7 +90,12 @@ def backtest_snapshot(df: pd.DataFrame,
     - Distributions (p5/p50/p95): edge_bps (gross return), pnl_bps (net return),
       cost_bps (gross minus net), drawdown_bps (net equity against its running peak).
     - Scalars: win_rate, pnl_per_bar_bps, avg_win_bps, avg_loss_bps, cvar_95_pnl_bps,
-      trades_per_bar, in_market_per_bar, inventory_per_bar, cost_per_bar_bps.
+      trades_per_bar, inventory_per_bar, cost_per_bar_bps.
+
+    win_rate is the share of all bars with a positive net return (a flat bar is not a
+    win), so it cannot exceed the share of bars in market, which equals inventory_per_bar
+    under the all-in model. inventory_per_bar is the average position held per bar (0 or 1
+    under the all-in model, a deployed fraction once position sizing exists).
 
     avg_win_bps and avg_loss_bps are NaN when there are no winning or no losing bars,
     and cvar_95_pnl_bps is NaN when there are fewer than CVAR_MIN_BARS bars.
@@ -188,7 +192,6 @@ def backtest_snapshot(df: pd.DataFrame,
     data['avg_loss_bps'] = _mean_bps(R_net[R_net < 0])
     data['cvar_95_pnl_bps'] = _cvar_tail_bps(R_net)
     data['trades_per_bar'] = round(float(entry_mask.sum()) / total_bars, RATE_DECIMALS)
-    data['in_market_per_bar'] = round(float((pos != 0).sum()) / total_bars, FRACTION_DECIMALS)
     data['inventory_per_bar'] = round(float(capital_fraction.mean()), FRACTION_DECIMALS)
     data['cost_per_bar_bps'] = _mean_bps(R_gross - R_net)
 

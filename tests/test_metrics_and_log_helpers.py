@@ -254,7 +254,7 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
     ).iloc[0]
 
     assert result.index.tolist() == BACKTEST_SNAPSHOT_COLUMNS
-    assert len(BACKTEST_SNAPSHOT_COLUMNS) == 21
+    assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
     assert result['win_rate'] == 0.25
     assert result['pnl_per_bar_bps'] == 250.0
     assert result['avg_win_bps'] == 2000.0
@@ -296,7 +296,7 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
     assert result['edge_bps_p50'] == 1000.0
     assert result['pnl_bps_p50'] == 1000.0
     assert result['cost_bps_p50'] == 0.0
-    assert result['in_market_per_bar'] == 0.6667
+    assert result['inventory_per_bar'] == 0.6667
     assert result['pnl_per_bar_bps'] == 666.7
 
 
@@ -406,7 +406,7 @@ def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_ba
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['in_market_per_bar'] == 0.0
+    assert result['inventory_per_bar'] == 0.0
     assert result['pnl_bps_p50'] == 0.0
     assert np.isnan(result['avg_win_bps'])
     assert np.isnan(result['avg_loss_bps'])
@@ -425,7 +425,6 @@ def test_backtest_snapshot_reports_all_bars_population() -> None:
         slip_bps=0.0,
     ).iloc[0]
 
-    assert result['in_market_per_bar'] == 0.5
     assert result['inventory_per_bar'] == 0.5
     assert result['win_rate'] == 0.25
     assert result['edge_bps_p50'] == 0.0
@@ -517,7 +516,6 @@ def test_backtest_snapshot_scalars_invariant_under_window_doubling() -> None:
         'avg_loss_bps',
         'cost_per_bar_bps',
         'trades_per_bar',
-        'in_market_per_bar',
         'inventory_per_bar',
     ]
     for column in intensive_scalars:
@@ -540,6 +538,7 @@ def test_no_legacy_backtest_column_names() -> None:
     legacy = re.compile(
         r'edge_per_signal|trade_pnl_net|cost_drag|rolling_return|return_on_exposure'
         r'|drawdown_depth|drawdown_duration|cvar_95_return|bar_in_market|capital_in_market'
+        r'|in_market_per_bar'
     )
     this_file = Path(__file__).resolve()
     offenders = [
