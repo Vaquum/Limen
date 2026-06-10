@@ -13,6 +13,7 @@ They are the fastest way to learn how Limen is shaped in practice because each o
 | SFD | Task shape | Notes |
 |---|---|---|
 | `logreg_binary` | binary classification | the main manifest-driven logistic-regression reference flow |
+| `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
 | `random_binary` | binary classification baseline | useful for sanity checks and control comparisons |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `tabpfn_binary` | binary classification | optional, available only when `tabpfn` is installed |
@@ -56,6 +57,22 @@ On a live local smoke run over the bundled test dataset in this repo, it prepare
 
 - `24` training features
 - `3610` training rows
+
+## `lightgbm_binary`
+
+`lightgbm_binary` is the tradeline long-binary experiment: the line-geometry research track packaged on Limen rails.
+
+It currently combines:
+
+- the grouped line transforms `price_lines` and `quantile_price_lines` with swept geometry (`max_duration_hours`, `min_height_pct`, `quantile_threshold`)
+- context from `roc`, `distance_from_high`/`distance_from_low`/`price_range_position`, `parkinson_volatility`/`volatility_ratio`, and `cyclical_time_features`
+- the train-fitted `TradelineLongBinaryTarget` (confirmed-breakout label from a line-height percentile threshold)
+- scaler selection from params (`robust`, `rank_gauss`, `logreg`) and feature ablation
+- the `LightGBMBinary` reference model with the full `LGBMClassifier` parameter surface and early stopping
+- `CalibrationBuilder` with `sklearn_probability_calibrator` and `grid_threshold_optimizer`
+- swept backtest economics (`fee_bps`, `slip_bps`)
+
+The matching YAML template is `limen/yaml/templates/lightgbm_binary.yaml` (`limen init my_experiment.yaml --template lightgbm_binary`).
 
 ## `random_binary`
 

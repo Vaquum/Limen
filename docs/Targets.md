@@ -37,6 +37,7 @@ manifest.with_target_label(
 |---|---|---|---|---|
 | `QuantileBinaryTarget` | binary `UInt8` | yes — quantile cutoff | `shift=0` | Positive label above the top-N quantile of the source column. |
 | `ThresholdBinaryTarget` | binary `UInt8` | no | `shift=-1` | Positive label above a fixed numeric threshold. |
+| `TradelineLongBinaryTarget` | binary `UInt8` | yes — line-height percentile threshold | n/a | Confirmed long breakout: forward max over `lookahead_hours` reaches the train-fitted threshold and a point return confirms it. |
 | `ForwardBreakoutTarget` | binary `UInt8` | no | `shift=-1` | Positive label if price rises at least `threshold` over the next `forward_periods` bars. |
 | `EmaBreakoutTarget` | binary `UInt8` | no | n/a | Positive label if price `breakout_horizon` bars ahead exceeds EMA by `breakout_delta`. |
 | `NextBarUpTarget` | binary `UInt8` | no | none | Canonical up decoder outcome: positive label if the next close is higher. |
@@ -74,6 +75,31 @@ Fits a quantile cutoff on the training split. Labels a bar as positive if the so
 | `source_column` | `str` | Column used to compute the quantile threshold |
 | `quantile` | `float` | Top-N fraction for positive label (`0.3` = top 30%) |
 | `shift` | `int` | Periods to shift the label; `shift=0` means no shift |
+
+### `TradelineLongBinaryTarget`
+
+```python
+TradelineLongBinaryTarget(train_data, target_name, max_duration_hours, min_height_pct, long_threshold_percentile)
+```
+
+Fits the breakout threshold on the training split: detects price lines on `close` (`limen.utils.find_price_lines`) and stores the `long_threshold_percentile` percentile of long-line heights. Raises when the training split yields no long lines. The transform labels a bar `1` when the maximum close over `[t, t + lookahead_hours]` reaches the threshold AND the point return at `+confirmation_hours` or at `+lookahead_hours` also exceeds it — the move must stick, not just spike. Rows without a full forward window become null and fall to the pipeline's `drop_nulls`.
+
+```python
+.with_target_label(
+    'tradeline_long',
+    TradelineLongBinaryTarget,
+    fit_params={'max_duration_hours': 48, 'min_height_pct': 0.003, 'long_threshold_percentile': 75},
+    transform_params={'lookahead_hours': 48, 'confirmation_hours': 24},
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `max_duration_hours` | `int` | Exclusive upper bound on line duration in bars (fit) |
+| `min_height_pct` | `float` | Minimum absolute line height as a fraction of start price (fit) |
+| `long_threshold_percentile` | `float` | Percentile of long-line heights used as the threshold, in `[0, 100]` (fit) |
+| `lookahead_hours` | `int` | Forward window for the breakout check; default `48` |
+| `confirmation_hours` | `int` | Forward offset for the point-confirmation check; default `24` |
 
 ### `ThresholdBinaryTarget`
 

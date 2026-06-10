@@ -1,0 +1,168 @@
+schema_version: "1.0"
+
+metadata:
+  name: lightgbm_binary_experiment
+  limen_version: "3.29.0"
+  mode: development
+  description: LightGBM tradeline long-binary classifier with line-geometry features, train-fitted breakout target, calibration, and swept costs
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+
+    split_dates:
+      train_start: "2024-01-01"
+      train_end:   "2024-09-30"
+      val_start:   "2024-10-01"
+      val_end:     "2024-11-30"
+      test_start:  "2024-12-01"
+      test_end:    "2024-12-31"
+
+    indicators:
+      - func: limen.indicators.roc.roc
+        params:
+          period: "{ret_period}"
+          group: momentum
+
+    features:
+      # line-geometry sensorium — detected per split from scalar params
+      - func: limen.features.price_lines.price_lines
+        params:
+          max_duration_hours: "{max_duration_hours}"
+          min_height_pct: "{min_height_pct}"
+          group: lines
+      - func: limen.features.quantile_price_lines.quantile_price_lines
+        params:
+          max_duration_hours: "{max_duration_hours}"
+          min_height_pct: "{min_height_pct}"
+          quantile_threshold: "{quantile_threshold}"
+          group: lines
+
+      # price-position context
+      - func: limen.features.distance_from_high.distance_from_high
+        params:
+          period: 24
+          group: position
+      - func: limen.features.distance_from_low.distance_from_low
+        params:
+          period: 24
+          group: position
+      - func: limen.features.price_range_position.price_range_position
+        params:
+          period: 24
+          group: position
+
+      # volatility context
+      - func: limen.features.parkinson_volatility.parkinson_volatility
+        params:
+          window: 24
+          group: volatility
+      - func: limen.features.volatility_ratio.volatility_ratio
+        params:
+          short_window: 6
+          long_window: 24
+          group: volatility
+
+      # temporal context — always on
+      - func: limen.features.cyclical_time_features.cyclical_time_features
+
+    target:
+      name: tradeline_long
+      class: limen.targets.TradelineLongBinaryTarget
+      fit_params:
+        max_duration_hours: "{max_duration_hours}"
+        min_height_pct: "{min_height_pct}"
+        long_threshold_percentile: "{long_threshold_percentile}"
+      transform_params:
+        lookahead_hours: "{lookahead_hours}"
+        confirmation_hours: "{confirmation_hours}"
+
+    scaler:
+      from_params: scaler_type
+
+    feature_ablation:
+      drop_count_key: feature_drop_count
+      seed_key: feature_drop_seed
+
+    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary
+
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: "{cal_method}"
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+          threshold_min: "{threshold_min}"
+          threshold_max: "{threshold_max}"
+          threshold_step: "{threshold_step}"
+
+    backtest:
+      fee_bps: "{fee_bps}"
+      slip_bps: "{slip_bps}"
+
+  params:
+    # line geometry
+    max_duration_hours: [24, 48, 72, 96]
+    min_height_pct: [0.001, 0.002, 0.003, 0.004, 0.005]
+    quantile_threshold: [0.60, 0.70, 0.75, 0.80, 0.85]
+    # label
+    long_threshold_percentile: [65, 75, 85]
+    lookahead_hours: [24, 48, 72]
+    confirmation_hours: [24]
+    # context features
+    ret_period: [1, 6, 12, 24, 48]
+    # view perturbation
+    scaler_type: [robust, rank_gauss, logreg]
+    # feature perturbation
+    feature_groups: [all, lines, "lines|momentum", "lines|volatility", "momentum|volatility|position"]
+    feature_drop_count: [0]
+    feature_drop_seed: [42]
+    # calibration
+    use_calibration: [true, false]
+    use_threshold: [true, false]
+    cal_method: [isotonic, sigmoid]
+    threshold_min: [0.30, 0.45]
+    threshold_max: [0.65, 0.80]
+    threshold_step: [0.05]
+    # backtest economics
+    fee_bps: [1.0, 5.0, 10.0]
+    slip_bps: [2.0, 5.0]
+    # classifier
+    objective: [null]
+    boosting_type: [gbdt]
+    num_leaves: [31, 63, 127]
+    max_depth: [-1]
+    learning_rate: [0.05, 0.1]
+    n_estimators: [100, 300, 500]
+    subsample_for_bin: [200000]
+    min_split_gain: [0.0]
+    min_child_weight: [0.001]
+    min_child_samples: [10, 20]
+    subsample: [0.8, 0.9, 1.0]
+    subsample_freq: [0, 5]
+    colsample_bytree: [0.8, 0.9, 1.0]
+    reg_alpha: [0.0, 0.1]
+    reg_lambda: [0.0, 0.1]
+    class_weight: [balanced, null]
+    random_state: [42]
+    n_jobs: [null]
+    importance_type: [split]
+    early_stopping_rounds: [50]
+    deterministic: [true]
+    force_row_wise: [true]
+    verbosity: [-1]
+
+uel:
+  n_permutations: 50
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

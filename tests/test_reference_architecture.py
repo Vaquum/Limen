@@ -10,12 +10,15 @@ from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment import CalibrationConfig
 from limen.experiment import MLManifest
+from limen.sfd.foundational_sfd import lightgbm_binary as foundational_lightgbm_binary
 from limen.sfd.foundational_sfd import logreg_binary as foundational_logreg_binary
+from limen.sfd.reference_architecture import LightGBMBinary
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
 from limen.sfd.reference_architecture import RuleBasedStrategy
 from limen.sfd.reference_architecture import TabPFNBinary
 from limen.sfd.reference_architecture import XGBoostRegressor
+from limen.sfd.reference_architecture import lightgbm_binary
 from limen.sfd.reference_architecture import logreg_binary
 from limen.sfd.reference_architecture import random_binary
 from limen.sfd.reference_architecture import tabpfn_binary
@@ -421,3 +424,97 @@ def test_invalid_notional_rate_config_is_rejected():
         except ValueError as e:
             assert 'notional_rate must be in (0, 1]' in str(e)
             assert 'got ' in str(e)
+
+
+def test_lightgbm_binary_function_returns_metrics_and_model():
+
+    data = _make_data(binary=True, with_price=True)
+    results = lightgbm_binary(data, n_estimators=60, num_leaves=15)
+
+    for key in ['recall', 'precision', 'fpr', 'auc', 'accuracy']:
+        assert key in results, f"Missing results key: {key}"
+
+    for key in ['confusion_tp', 'confusion_fp', 'confusion_tn', 'confusion_fn']:
+        assert key in results, f"Missing confusion key: {key}"
+
+    assert any(key.startswith('backtest_') for key in results)
+    assert '_preds' in results
+    assert isinstance(results['_model'], LightGBMBinary)
+
+    repeat = lightgbm_binary(data, n_estimators=60, num_leaves=15)
+    assert np.array_equal(results['_preds'], repeat['_preds'])
+
+
+def test_lightgbm_binary_with_calibration_config():
+
+    config = CalibrationConfig(
+        calibration_func=sklearn_probability_calibrator,
+        calibration_params={'method': 'isotonic'},
+        threshold_func=grid_threshold_optimizer,
+    )
+    data = _make_data(binary=True, with_price=True)
+    results = lightgbm_binary(data, n_estimators=60, num_leaves=15,
+                              prediction_calibration_config=config)
+
+    assert results['optimal_threshold'] is not None
+    assert results['val_score'] is not None
+    assert '_preds' in results
+
+
+def test_lightgbm_binary_early_stops_on_validation_split():
+
+    data = _make_data(binary=True, with_price=False)
+    model = LightGBMBinary().train(data, n_estimators=500, early_stopping_rounds=5, verbosity=-1,
+                                   deterministic=True, force_row_wise=True, random_state=42)
+
+    assert model.model.best_iteration_ is not None
+    assert model.model.best_iteration_ < 500
+
+
+def test_lightgbm_binary_trains_without_validation_split():
+
+    data = _make_data(binary=True, with_val=False, with_price=False)
+    model = LightGBMBinary().train(data, n_estimators=20, verbosity=-1,
+                                   deterministic=True, force_row_wise=True, random_state=42)
+
+    assert model.model is not None
+    preds = model.predict(data)['_preds']
+    assert len(preds) == len(data['y_test'])
+
+
+def test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand():
+
+    data = _make_data(binary=True, with_price=False)
+    model = LightGBMBinary().train(data, n_estimators=20, class_weight=0.45, verbosity=-1,
+                                   deterministic=True, force_row_wise=True, random_state=42)
+
+    assert model.model.class_weight == {0: 0.45, 1: 1}
+
+    balanced = LightGBMBinary().train(data, n_estimators=20, class_weight='balanced', verbosity=-1,
+                                      deterministic=True, force_row_wise=True, random_state=42)
+    assert balanced.model.class_weight == 'balanced'
+
+
+def test_lightgbm_wrapper_exposes_lgbm_constructor_params():
+
+    import lightgbm
+
+    lgbm_params = set(inspect.signature(lightgbm.LGBMClassifier).parameters) - {
+        'kwargs',
+    }
+    wrapper_params = set(inspect.signature(lightgbm_binary).parameters) - {
+        'data',
+        'prediction_calibration_config',
+    }
+
+    assert lgbm_params <= wrapper_params
+
+
+def test_lightgbm_foundational_params_cover_wrapper_model_surface():
+
+    model_params = set(inspect.signature(lightgbm_binary).parameters) - {
+        'data',
+        'prediction_calibration_config',
+    }
+
+    assert model_params <= set(foundational_lightgbm_binary.params())

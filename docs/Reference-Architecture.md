@@ -50,6 +50,7 @@ Not every model needs every key, but this is the standard Limen shape that the c
 | Class | Task shape | Deterministic | Notes |
 |---|---|---|---|
 | `LogRegBinary` | binary classification | yes | sklearn logistic regression wrapper; manifest wrapper exposes constructor params |
+| `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
 | `XGBoostRegressor` | regression | no | requires `xgboost` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |

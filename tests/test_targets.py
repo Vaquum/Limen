@@ -17,6 +17,7 @@ from limen.targets import QuantileBinaryTarget
 from limen.targets import RandomBinaryTarget
 from limen.targets import RiskRewardRatioTarget
 from limen.targets import ThresholdBinaryTarget
+from limen.targets import TradelineLongBinaryTarget
 from limen.targets import TripleBarrierTarget
 from limen.targets import VolNormalizedReturnTarget
 
@@ -438,3 +439,83 @@ def test_triple_barrier_rejects_nonpositive_params() -> None:
         TripleBarrierTarget(data, 'tb', upper_multiple=0.0)
     with pytest.raises(ValueError, match='max_horizon'):
         TripleBarrierTarget(data, 'tb', max_horizon=0)
+
+
+def _tradeline_train() -> pl.DataFrame:
+    return _close_series([100.0, 102.0, 102.0, 105.06, 105.06, 109.2624, 109.2624, 109.2624])
+
+
+def test_tradeline_long_binary_fits_percentile_threshold_from_train_lines() -> None:
+    target = TradelineLongBinaryTarget(
+        _tradeline_train(), 'y',
+        max_duration_hours=2, min_height_pct=0.015, long_threshold_percentile=50,
+    )
+
+    assert target.threshold == pytest.approx(0.03)
+
+
+def test_tradeline_long_binary_labels_confirmed_breakouts_and_nulls_tail() -> None:
+    target = TradelineLongBinaryTarget(
+        _tradeline_train(), 'y',
+        max_duration_hours=2, min_height_pct=0.015, long_threshold_percentile=50,
+    )
+
+    closes = [100.0] * 16
+    closes[3] = 104.0
+    closes[4] = 104.0
+    closes[10] = 104.0
+    data = _close_series(closes)
+
+    result = target.transform(data, lookahead_hours=4, confirmation_hours=2)['y'].to_list()
+
+    assert result[1] == 1
+    assert result[2] == 1
+    assert result[6] == 1
+    assert result[8] == 1
+    assert result[7] == 0
+    assert result[9] == 0
+    assert all(value is not None for value in result[:12])
+    assert all(value is None for value in result[12:])
+
+
+def test_tradeline_long_binary_rejects_invalid_params_and_flat_train() -> None:
+    with pytest.raises(ValueError, match='TradelineLongBinaryTarget long_threshold_percentile'):
+        TradelineLongBinaryTarget(
+            _tradeline_train(), 'y',
+            max_duration_hours=2, min_height_pct=0.015, long_threshold_percentile=150,
+        )
+
+    with pytest.raises(ValueError, match='TradelineLongBinaryTarget found no long price lines'):
+        TradelineLongBinaryTarget(
+            _close_series([100.0] * 50), 'y',
+            max_duration_hours=48, min_height_pct=0.003, long_threshold_percentile=75,
+        )
+
+    target = TradelineLongBinaryTarget(
+        _tradeline_train(), 'y',
+        max_duration_hours=2, min_height_pct=0.015, long_threshold_percentile=50,
+    )
+
+    with pytest.raises(ValueError, match='TradelineLongBinaryTarget lookahead_hours'):
+        target.transform(_close_series([100.0] * 10), lookahead_hours=0)
+
+
+def test_tradeline_long_binary_confirmation_is_strictly_greater() -> None:
+    target = TradelineLongBinaryTarget(
+        _close_series([128.0, 132.0]), 'y',
+        max_duration_hours=2, min_height_pct=0.01, long_threshold_percentile=50,
+    )
+
+    assert target.threshold == 4.0 / 128.0
+
+    at_threshold = [128.0, 136.0, 132.0, 128.0, 132.0] + [128.0] * 7
+    result = target.transform(
+        _close_series(at_threshold), lookahead_hours=4, confirmation_hours=2
+    )['y'].to_list()
+    assert result[0] == 0
+
+    above_threshold = [128.0, 136.0, 136.0, 128.0, 132.0] + [128.0] * 7
+    result = target.transform(
+        _close_series(above_threshold), lookahead_hours=4, confirmation_hours=2
+    )['y'].to_list()
+    assert result[0] == 1

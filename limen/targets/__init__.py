@@ -10,6 +10,7 @@ from limen.targets.quantile_binary import QuantileBinaryTarget
 from limen.targets.random_binary import RandomBinaryTarget
 from limen.targets.risk_reward_ratio import RiskRewardRatioTarget
 from limen.targets.threshold_binary import ThresholdBinaryTarget
+from limen.targets.tradeline_long_binary import TradelineLongBinaryTarget
 from limen.targets.triple_barrier import TripleBarrierTarget
 from limen.targets.vol_normalized_return import VolNormalizedReturnTarget
 
@@ -26,6 +27,7 @@ __all__ = [
     'RandomBinaryTarget',
     'RiskRewardRatioTarget',
     'ThresholdBinaryTarget',
+    'TradelineLongBinaryTarget',
     'TripleBarrierTarget',
     'VolNormalizedReturnTarget',
 ]
