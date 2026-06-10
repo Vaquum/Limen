@@ -5,8 +5,11 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from tests.utils.runtime_tracking import execute_test_suite
 from tests.utils.runtime_tracking import load_runtime_profile
+from tests.utils.runtime_tracking import render_runtime_summary_markdown
 from tests.utils.runtime_tracking import write_runtime_summary
 
 
@@ -50,6 +53,34 @@ def test_execute_test_suite_writes_profile_and_stops_on_first_failure() -> None:
     assert profile['suite']['failed_count'] == 1
     assert profile['tests'][1]['status'] == 'failed'
     assert profile['tests'][1]['error'] == 'RuntimeError: boom'
+
+
+def test_execute_test_suite_records_skipped_tests_without_failing() -> None:
+    def skipping_test() -> None:
+        pytest.skip('optional dependency missing')
+
+    def passing_test() -> None:
+        pass
+
+    with TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / 'runtime_profile.json'
+        result = execute_test_suite(
+            tests=[skipping_test, passing_test],
+            logger=_make_runtime_logger('tests.runtime_tracking.skip'),
+            profile_output_path=profile_path,
+            skip_exceptions=(pytest.skip.Exception,),
+        )
+        profile = load_runtime_profile(profile_path)
+
+    assert result.exit_code == 0
+    assert result.failure_traceback is None
+    assert profile['suite']['test_count'] == 2
+    assert profile['suite']['passed_count'] == 1
+    assert profile['suite']['failed_count'] == 0
+    assert profile['suite']['skipped_count'] == 1
+    assert profile['tests'][0]['status'] == 'skipped'
+    assert profile['tests'][0]['skip_reason'] == 'optional dependency missing'
+    assert 'Skipped: `1`' in render_runtime_summary_markdown(profile)
 
 
 def test_runtime_gate_writes_summary_and_passes_when_within_budget() -> None:

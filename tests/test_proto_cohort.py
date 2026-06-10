@@ -11,9 +11,12 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import polars as pl
+import pytest
 
 from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
+from limen.cohort.sfc.backtest_pareto import select as select_backtest_pareto
+from limen.cohort.sfc.diverse_metrics import select as select_diverse_metrics
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
 from limen.experiment.trainer import Trainer
@@ -1046,3 +1049,109 @@ def test_validate_probability_range_rejects_non_finite_values():
         assert False, 'Expected ValueError'
     except ValueError as e:
         assert 'finite values' in str(e)
+
+
+def test_top_n_selector_validates_inputs_and_coerces_ids():
+
+    with pytest.raises(ValueError, match='positive integer'):
+        select_top_n({'results': pd.DataFrame()}, column='m', n=0)
+    with pytest.raises(ValueError, match=r'requires results\.csv'):
+        select_top_n({}, column='m', n=1)
+    with pytest.raises(ValueError, match='pandas DataFrame'):
+        select_top_n({'results': [1]}, column='m', n=1)
+    with pytest.raises(ValueError, match='missing required columns'):
+        select_top_n({'results': pd.DataFrame({'id': [1]})}, column='m', n=1)
+    with pytest.raises(ValueError, match='missing permutation id'):
+        select_top_n({'results': pd.DataFrame({'id': [np.nan], 'm': [1.0]})}, column='m', n=1)
+    with pytest.raises(ValueError, match='empty permutation id'):
+        select_top_n({'results': pd.DataFrame({'id': ['  '], 'm': [1.0]})}, column='m', n=1)
+
+    results = pd.DataFrame({'id': [3, 1.0, ' 7 ', 'perm_a'], 'm': [4.0, 3.0, 2.0, 1.0]})
+    assert select_top_n({'results': results}, column='m', n=4) == [3, 1, 7, 'perm_a']
+
+    non_numeric = pd.DataFrame({'id': [1, 2], 'm': ['x', None]})
+    assert select_top_n({'results': non_numeric}, column='m', n=2) == []
+
+
+def test_backtest_pareto_selector_validates_inputs_and_orders_front_deterministically():
+
+    with pytest.raises(ValueError, match='target_count must be a positive integer'):
+        select_backtest_pareto({'results': pd.DataFrame()}, target_count=0)
+    with pytest.raises(ValueError, match='min_signals must be a non-negative integer'):
+        select_backtest_pareto({'results': pd.DataFrame()}, min_signals=-1)
+    with pytest.raises(ValueError, match=r'requires results\.csv'):
+        select_backtest_pareto({})
+    with pytest.raises(ValueError, match='pandas DataFrame'):
+        select_backtest_pareto({'results': [1]})
+    with pytest.raises(ValueError, match='missing required columns'):
+        select_backtest_pareto({'results': pd.DataFrame({'id': [1]})}, metric_cols=['a'])
+    with pytest.raises(ValueError, match='boolean permutation id'):
+        select_backtest_pareto(
+            {'results': pd.DataFrame({'id': [True], 'a': [1.0]})},
+            metric_cols=['a'],
+        )
+
+    results = pd.DataFrame({
+        'id': ['2', '1', '3', '4'],
+        'a': [1.0, 1.0, 3.0, np.nan],
+        'b': [1.0, 2.0, 1.0, 5.0],
+        'num_trades_test': [5, 5, 5, 0],
+    })
+    selected = select_backtest_pareto({'results': results}, metric_cols=['a', 'b'], min_signals=1)
+    assert selected == [1, 3]
+
+    starved = select_backtest_pareto({'results': results}, metric_cols=['a', 'b'], min_signals=10)
+    assert starved == []
+
+    degenerate = pd.DataFrame({'id': ['9', '8'], 'a': [np.inf, 1.0], 'b': [2.0, 1.0]})
+    assert select_backtest_pareto({'results': degenerate}, metric_cols=['a', 'b']) == [9]
+
+
+def test_diverse_metrics_selector_validates_inputs_and_early_paths():
+
+    with pytest.raises(ValueError, match='target_count must be a positive integer'):
+        select_diverse_metrics({'results': pd.DataFrame()}, target_count=0)
+    with pytest.raises(ValueError, match='n_clusters must be a positive integer'):
+        select_diverse_metrics({'results': pd.DataFrame()}, n_clusters=0)
+    with pytest.raises(ValueError, match='n_components must be a positive integer'):
+        select_diverse_metrics({'results': pd.DataFrame()}, n_components=0)
+    with pytest.raises(ValueError, match='iqr_multiplier must be >= 0'):
+        select_diverse_metrics({'results': pd.DataFrame()}, iqr_multiplier=-1.0)
+    with pytest.raises(ValueError, match=r'requires results\.csv'):
+        select_diverse_metrics({})
+    with pytest.raises(ValueError, match='pandas DataFrame'):
+        select_diverse_metrics({'results': [1]})
+    with pytest.raises(ValueError, match='at least two numeric metric columns'):
+        select_diverse_metrics({'results': pd.DataFrame({'id': [1], 'auc': [0.5]})})
+    with pytest.raises(ValueError, match='missing required columns'):
+        select_diverse_metrics({'results': pd.DataFrame({'id': [1]})}, metric_cols=['m1', 'm2'])
+
+    all_nan = pd.DataFrame({'id': [1, 2], 'm1': [np.nan, np.nan], 'm2': [1.0, 2.0]})
+    assert select_diverse_metrics({'results': all_nan}, metric_cols=['m1', 'm2']) == []
+
+    small = pd.DataFrame({'id': ['1', 2, 3.0], 'm1': [1.0, 2.0, 3.0], 'm2': [5.0, 5.0, 5.0]})
+    assert select_diverse_metrics({'results': small}, metric_cols=['m1', 'm2'], target_count=5) == [1, 2, 3]
+
+
+def test_diverse_metrics_selector_single_cluster_medoid_and_score_topup():
+
+    results = pd.DataFrame({
+        'id': [1, 2, 3, 4, 5, 6],
+        'm1': [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        'm2': [7.0, 7.0, 7.0, 7.0, 7.0, 7.0],
+    })
+
+    selected = select_diverse_metrics(
+        {'results': results},
+        metric_cols=['m1', 'm2'],
+        target_count=3,
+        n_clusters=1,
+    )
+
+    assert selected == [3, 6, 5]
+    assert selected == select_diverse_metrics(
+        {'results': results},
+        metric_cols=['m1', 'm2'],
+        target_count=3,
+        n_clusters=1,
+    )

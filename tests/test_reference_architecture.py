@@ -3,6 +3,7 @@ import inspect
 import numpy as np
 import pandas as pd
 import polars as pl
+import pytest
 from sklearn.linear_model import LogisticRegression
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
@@ -169,7 +170,7 @@ def test_random_binary_train_evaluate_end_to_end():
 def test_tabpfn_train_evaluate_end_to_end():
 
     if TabPFNBinary is None:
-        return
+        pytest.skip('tabpfn is not installed')
 
     config = CalibrationConfig(
         calibration_func=sklearn_probability_calibrator,
