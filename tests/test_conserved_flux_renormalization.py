@@ -66,6 +66,7 @@ def test_conserved_flux_renormalization():
     assert result['volume'].sum() == pytest.approx(trades_df['quantity'].sum())
     expected_value_sum = (trades_df['price'] * trades_df['quantity']).sum()
     assert result['value_sum'].sum() == pytest.approx(expected_value_sum)
+    assert result['value_sum'].sum() == pytest.approx(trades_df['quote_quantity'].sum())
 
     for row in result.iter_rows(named=True):
         assert row['vwap'] * row['volume'] == pytest.approx(row['value_sum'])

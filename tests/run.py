@@ -3,8 +3,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tests.utils.runtime_tracking import DEFAULT_SLOWEST_TESTS_LIMIT
@@ -414,7 +412,6 @@ from tests.test_runtime_tracking import test_execute_test_suite_writes_profile_a
 from tests.test_runtime_tracking import test_runtime_gate_writes_summary_and_passes_when_within_budget
 from tests.test_runtime_tracking import test_runtime_gate_fails_when_profile_exceeds_budget
 from tests.test_runtime_tracking import test_write_runtime_summary_appends_to_existing_summary_file
-from tests.test_runtime_tracking import test_execute_test_suite_records_skipped_tests_without_failing
 from tests.test_run_registration import test_every_test_function_is_registered_in_run
 from tests.test_run_registration import test_pytest_only_allowlist_is_current
 from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
@@ -2024,7 +2021,6 @@ tests = [
     test_standard_run_rejects_existing_csv_without_header,
     test_cusum_filter_runs_on_lazyframes_and_matches_eager_output,
     test_write_runtime_summary_appends_to_existing_summary_file,
-    test_execute_test_suite_records_skipped_tests_without_failing,
     test_lag_range_cols_appends_shifted_columns_over_range,
     test_lag_range_cols_validates_inputs,
     test_lag_range_and_lag_columns_delegate_to_lag_range_cols,
@@ -2077,7 +2073,6 @@ def main() -> int:
         logger=logger,
         profile_output_path=_runtime_profile_output_path(),
         slowest_tests_limit=_runtime_slowest_tests_limit(),
-        skip_exceptions=(pytest.skip.Exception,),
     )
 
     cleanup_csv_files()

@@ -127,8 +127,8 @@ def test_every_test_function_is_registered_in_run():
             unaccounted[module] = gap
 
     assert not unaccounted, (
-        f'test_run_registration found tests missing from tests/run.py: '
-        f'{unaccounted}'
+        f'test_run_registration found tests neither registered in tests/run.py '
+        f'nor in the PYTEST_ONLY_TESTS allowlist: {unaccounted}'
     )
 
 

@@ -51,7 +51,6 @@ def build_runtime_profile(
 ) -> dict[str, Any]:
     passed_count = sum(record['status'] == 'passed' for record in test_records)
     failed_count = sum(record['status'] == 'failed' for record in test_records)
-    skipped_count = sum(record['status'] == 'skipped' for record in test_records)
 
     return {
         'schema_version': 1,
@@ -62,7 +61,6 @@ def build_runtime_profile(
             'test_count': len(test_records),
             'passed_count': passed_count,
             'failed_count': failed_count,
-            'skipped_count': skipped_count,
         },
         'tests': test_records,
     }
@@ -193,7 +191,6 @@ def render_runtime_summary_markdown(
         f"- Tests recorded: `{suite['test_count']}`",
         f"- Passed: `{suite['passed_count']}`",
         f"- Failed: `{suite['failed_count']}`",
-        f"- Skipped: `{suite.get('skipped_count', 0)}`",
     ]
 
     if budget is not None:
@@ -252,7 +249,6 @@ def execute_test_suite(
     logger: logging.Logger,
     profile_output_path: Path | None = None,
     slowest_tests_limit: int = DEFAULT_SLOWEST_TESTS_LIMIT,
-    skip_exceptions: tuple[type[BaseException], ...] = (),
 ) -> TestSuiteRunResult:
     suite_started_at = utc_now_iso()
     suite_started_clock = time.perf_counter()
@@ -262,17 +258,11 @@ def execute_test_suite(
     for test in tests:
         test_started_at = utc_now_iso()
         test_started_clock = time.perf_counter()
-        skip_reason: str | None = None
 
         try:
             test()
             status = 'passed'
             error_message = None
-
-        except skip_exceptions as exc:
-            status = 'skipped'
-            error_message = None
-            skip_reason = str(exc) or type(exc).__name__
 
         except Exception as exc:
             status = 'failed'
@@ -292,22 +282,11 @@ def execute_test_suite(
         }
         if error_message is not None:
             test_record['error'] = error_message
-        if skip_reason is not None:
-            test_record['skip_reason'] = skip_reason
 
         test_records.append(test_record)
 
         if status == 'passed':
             logger.info('✅ %s: PASSED (%.3fs)', test.__name__, duration_seconds)
-            continue
-
-        if status == 'skipped':
-            logger.info(
-                '⏭️ %s: SKIPPED (%.3fs) - %s',
-                test.__name__,
-                duration_seconds,
-                skip_reason,
-            )
             continue
 
         logger.error(
@@ -333,12 +312,11 @@ def execute_test_suite(
 
     suite = profile['suite']
     logger.info(
-        'Test suite runtime: %s across %d tests (%d passed, %d failed, %d skipped)',
+        'Test suite runtime: %s across %d tests (%d passed, %d failed)',
         format_duration(float(suite['duration_seconds'])),
         suite['test_count'],
         suite['passed_count'],
         suite['failed_count'],
-        suite['skipped_count'],
     )
 
     slowest_tests = sorted_test_records(profile, limit=slowest_tests_limit)
