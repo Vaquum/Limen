@@ -48,7 +48,7 @@ def params() -> dict:
         'multi_class': ['deprecated'],
         'verbose': [0],
         'warm_start': [False],
-        'n_jobs': [-1],
+        'n_jobs': [None],
         'l1_ratio': [None],
     }
 
