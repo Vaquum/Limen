@@ -758,3 +758,30 @@ def test_read_any_file_does_not_cache_non_huggingface_urls() -> None:
 
             assert network_calls == [url, url]
             assert not cache_dir.exists()
+
+
+def test_read_any_file_falls_back_to_download_when_cache_is_unwritable() -> None:
+    buffer = BytesIO()
+    _spot_frame(7200).write_parquet(buffer)
+    payload = buffer.getvalue()
+    network_calls: list[str] = []
+
+    def fake_read_remote_bytes(url: str) -> bytes:
+        network_calls.append(url)
+        return payload
+
+    url = 'https://huggingface.co/datasets/vaquum/test_repo/resolve/main/snapshot_a.parquet'
+
+    with TemporaryDirectory() as tmpdir:
+        cache_dir = Path(tmpdir) / 'datasets'
+        cache_dir.write_text('not a directory')
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(historical_module, '_DATASET_CACHE_DIR', cache_dir)
+            monkeypatch.setattr(historical_module, '_read_remote_bytes', fake_read_remote_bytes)
+
+            first = historical_module._read_any_file(url)
+            second = historical_module._read_any_file(url)
+
+            assert network_calls == [url, url]
+            assert first.equals(second)
+            assert cache_dir.is_file()
