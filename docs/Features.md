@@ -183,7 +183,18 @@ These helpers are useful when you want state or structure, not just a continuous
 
 ## Line-Based Context Features
 
-These helpers summarize how recently and how densely price interacted with detected trend lines. Unlike the other helpers, they take pre-computed line structures — `long_lines`/`short_lines` (or their `_q` quantile-filtered variants) as `list[dict]` with `start_idx`/`end_idx` — rather than plain columns and scalar params. Because those line objects cannot be expressed as YAML scalar params, this family is composed programmatically from an upstream line-detection step rather than dispatched through a manifest `func:` reference.
+These helpers summarize how recently and how densely price interacted with detected price lines — pairs of bars at most `max_duration_hours` apart whose close-to-close change is at least `min_height_pct` (positive lines are long, negative are short; quantile lines are those at or above the `quantile_threshold` height quantile per direction).
+
+The two grouped transforms below are the YAML-facing surface. Each detects lines internally from scalar params on the frame it receives — per split under the manifest pipeline, so detection cannot observe other splits — and adds its full column family in one detection pass. Line detection lives in `limen.utils.find_price_lines` / `limen.utils.filter_lines_by_quantile`.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `price_lines` | `active_lines`, `hours_since_big_move`, `line_momentum_<m>h`, `trending_score`, `reversal_potential` | All-line family: span count, end recency (capped at `big_move_lookback_hours`), and long-minus-short end counts over the trailing `[t-m, t)` window with their balance (`trending_score`, in `[-1, 1]`) and min/max ratio (`reversal_potential`, in `[0, 1]`). |
+| `quantile_price_lines` | `hours_since_quantile_line`, `active_quantile_count`, `quantile_line_density_<d>h`, `quantile_momentum_<m>h`, `avg_quantile_height_<h>h`, `quantile_direction_bias` | Quantile-line family: end recency and span count, end density over `density_lookback_hours`, signed height sum over ends in `[t-m, t]`, and mean height plus height-weighted direction (in `[-1, 1]`) over ends in `[t-h, t]`. |
+
+`active_lines` and `active_quantile_count` count lines that span the current bar before the line's end — the event that defines it — is knowable. That within-line lookahead is inherited from the tradeline research design: treat both columns as research-only, not live-computable. The end-event columns are causal.
+
+The per-column building blocks below take pre-computed line structures (`list[dict]` with `start_idx`/`end_idx`) and remain available for programmatic composition; the grouped transforms above compose them.
 
 | Function | Adds by default | Notes |
 |---|---|---|

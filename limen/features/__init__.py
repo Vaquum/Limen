@@ -48,9 +48,11 @@ from limen.features.narrow_range import narrow_range
 from limen.features.order_flow_imbalance import order_flow_imbalance
 from limen.features.parkinson_vol_of_vol import parkinson_vol_of_vol
 from limen.features.parkinson_volatility import parkinson_volatility
+from limen.features.price_lines import price_lines
 from limen.features.price_range_position import price_range_position
 from limen.features.price_vs_band_regime import price_vs_band_regime
 from limen.features.quantile_line_density import quantile_line_density
+from limen.features.quantile_price_lines import quantile_price_lines
 from limen.features.range_overlap import range_overlap
 from limen.features.range_pct import range_pct
 from limen.features.range_per_dollar_volume import range_per_dollar_volume
@@ -141,9 +143,11 @@ __all__ = [
     'order_flow_imbalance',
     'parkinson_vol_of_vol',
     'parkinson_volatility',
+    'price_lines',
     'price_range_position',
     'price_vs_band_regime',
     'quantile_line_density',
+    'quantile_price_lines',
     'range_overlap',
     'range_pct',
     'range_per_dollar_volume',

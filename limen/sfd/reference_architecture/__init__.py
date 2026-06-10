@@ -1,4 +1,6 @@
 from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.sfd.reference_architecture.logreg_binary import logreg_binary
 from limen.sfd.reference_architecture.random_binary import RandomBinary
@@ -17,12 +19,14 @@ except ImportError:
     tabpfn_binary = None
 
 __all__ = [
+    'LightGBMBinary',
     'LogRegBinary',
     'RandomBinary',
     'ReferenceModel',
     'RuleBasedStrategy',
     'TabPFNBinary',
     'XGBoostRegressor',
+    'lightgbm_binary',
     'logreg_binary',
     'random_binary',
     'rule_based',
