@@ -157,7 +157,7 @@ def logreg_binary(data: dict,
                   multi_class: str = 'deprecated',
                   verbose: int = 0,
                   warm_start: bool = False,
-                  n_jobs: int = -1,
+                  n_jobs: int | None = None,
                   l1_ratio: float | None = None,
                   prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
 
@@ -180,7 +180,9 @@ def logreg_binary(data: dict,
         multi_class (str): Multiclass handling passthrough
         verbose (int): Verbosity level
         warm_start (bool): Whether to reuse previous solution
-        n_jobs (int): Number of parallel jobs
+        n_jobs (int | None): Number of parallel jobs. Binary classification fits a
+            single class, so parallel dispatch only adds joblib overhead; None keeps
+            the fit in-process
         l1_ratio (float | None): Elastic-net mixing parameter
         prediction_calibration_config (CalibrationConfig | None): Optional calibration config
 

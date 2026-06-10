@@ -5,6 +5,9 @@ from io import BytesIO
 from pathlib import Path
 from typing import Final
 from urllib.parse import urlparse
+from uuid import uuid4
+import logging
+import os
 import zipfile
 
 import numpy as np
@@ -18,6 +21,9 @@ from urllib3.util.retry import Retry
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
 
 
+logger = logging.getLogger(__name__)
+
+
 _SUPPORTED_DATETIME_FORMATS: Final[tuple[str, ...]] = (
     '%Y-%m-%d',
     '%Y-%m-%d %H:%M:%S',
@@ -27,6 +33,9 @@ _REMOTE_TIMEOUT_SECONDS: Final[int] = 60
 _REMOTE_MAX_RETRIES: Final[int] = 5
 _REMOTE_BACKOFF_FACTOR: Final[float] = 1.0
 _REMOTE_RETRY_STATUSES: Final[tuple[int, ...]] = (429, 500, 502, 503, 504)
+_DATASET_CACHE_DIR: Final[Path] = Path.home() / '.cache' / 'limen' / 'datasets'
+_HUGGINGFACE_DATASETS_URL_PREFIX: Final[str] = 'https://huggingface.co/datasets/'
+_DATASET_CACHE_TMP_SUFFIX: Final[str] = '.tmp'
 _DEFAULT_SPOT_DATASET_REPO: Final[str] = 'vaquum/binance_btcusdt_1m_klines'
 _DEFAULT_SPOT_DOLLAR_DATASET_REPO: Final[str] = (
     'vaquum/binance_btcusdt_1M_dollar_klines'
@@ -238,6 +247,108 @@ def _read_remote_bytes(url: str) -> bytes:
         return response.content
 
 
+def _dataset_cache_path(url: str) -> Path | None:
+
+    '''
+    Compute the on-disk cache path for a Hugging Face dataset snapshot URL.
+
+    Snapshot files are immutable and date-stamped, so `repo + file_name` is an
+    exact cache key: a refreshed snapshot publishes a new file name and misses
+    the cache by construction. Non Hugging Face dataset URLs return None and
+    are never cached.
+
+    NOTE: The key's correctness is a load-bearing invariant on the Vaquum
+    dataset-publishing convention — a snapshot file name is never reused for
+    different content. There is no content check (size/hash/etag) on a cache
+    hit, so republishing changed bytes under a reused name (or switching to a
+    fixed name like `latest.parquet`) would serve stale data until the cached
+    file under `~/.cache/limen/datasets` is deleted.
+
+    Args:
+        url (str): Resolved remote file URL
+
+    Returns:
+        Path | None: Cache file path, or None when the URL is not cacheable
+    '''
+
+    if not url.startswith(_HUGGINGFACE_DATASETS_URL_PREFIX):
+        return None
+
+    path_parts = [part for part in urlparse(url).path.split('/') if part]
+    if len(path_parts) < _HUGGINGFACE_DATASET_REPO_PART_COUNT + 1 or path_parts[0] != 'datasets':
+        return None
+
+    repo_dir = f'{path_parts[1]}--{path_parts[2]}'
+    return _DATASET_CACHE_DIR / repo_dir / path_parts[-1]
+
+
+def _read_remote_bytes_cached(url: str) -> bytes:
+
+    '''
+    Read remote bytes through the local dataset snapshot cache.
+
+    Hugging Face dataset snapshots are served from disk when previously
+    fetched; a cache miss downloads once, writes atomically (unique temp file
+    + rename), and prunes superseded snapshots of the same repo. Any other
+    URL falls through to a direct download.
+
+    NOTE: The cache is best-effort. An unreadable or unwritable cache
+    (read-only home, permissions, full disk) logs a warning and falls back to
+    the direct download — it never fails a fetch that succeeded remotely.
+
+    Args:
+        url (str): Resolved remote file URL
+
+    Returns:
+        bytes: The file content
+    '''
+
+    cache_path = _dataset_cache_path(url)
+    if cache_path is None:
+        return _read_remote_bytes(url)
+
+    if cache_path.is_file():
+        try:
+            return cache_path.read_bytes()
+        except OSError as exc:
+            logger.warning(
+                'Dataset cache read failed for %s (%s) — downloading instead',
+                cache_path, exc,
+            )
+
+    content = _read_remote_bytes(url)
+
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = cache_path.with_name(
+            f'{cache_path.name}.{os.getpid()}.{uuid4().hex}{_DATASET_CACHE_TMP_SUFFIX}'
+        )
+        tmp_path.write_bytes(content)
+        tmp_path.replace(cache_path)
+    except OSError as exc:
+        logger.warning(
+            'Dataset cache write failed for %s (%s) — proceeding uncached',
+            cache_path, exc,
+        )
+        return content
+
+    try:
+        for stale in cache_path.parent.iterdir():
+            if (
+                stale != cache_path
+                and stale.is_file()
+                and not stale.name.endswith(_DATASET_CACHE_TMP_SUFFIX)
+            ):
+                stale.unlink(missing_ok=True)
+    except OSError as exc:
+        logger.warning(
+            'Dataset cache prune failed in %s (%s) — the cached snapshot is intact',
+            cache_path.parent, exc,
+        )
+
+    return content
+
+
 def _read_csv_source(
     file_path_or_url: str,
     *,
@@ -362,7 +473,7 @@ def _read_any_file(
 
     if suffix == '.parquet':
         if _is_url(resolved_source):
-            df = pl.read_parquet(BytesIO(_read_remote_bytes(resolved_source)))
+            df = pl.read_parquet(BytesIO(_read_remote_bytes_cached(resolved_source)))
         else:
             df = pl.read_parquet(resolved_source)
     elif suffix == '.csv':

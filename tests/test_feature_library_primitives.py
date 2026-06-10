@@ -243,3 +243,11 @@ def test_cusum_filter_ignores_subthreshold_noise_and_validates_threshold() -> No
     assert set(cusum_filter(data, threshold=0.05)['cusum_event'].to_list()) == {0}
     with pytest.raises(ValueError, match='threshold'):
         cusum_filter(data, threshold=0.0)
+
+
+def test_cusum_filter_runs_on_lazyframes_and_matches_eager_output() -> None:
+    data = pl.DataFrame({'close': [100.0, 102.0, 102.0, 100.0, 100.0]})
+    eager = cusum_filter(data, threshold=0.015)
+    lazy = cusum_filter(data.lazy(), threshold=0.015).collect()
+    assert lazy['cusum_event'].to_list() == eager['cusum_event'].to_list()
+    assert lazy['cusum_event'].dtype == pl.Int8

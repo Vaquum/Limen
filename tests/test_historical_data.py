@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from math import isclose, sqrt
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -699,3 +700,88 @@ def test_get_arrow_file_date_range_on_datetime_only_file(tmp_path: Path) -> None
     assert windowed.height == 24
     assert windowed['datetime'][0] == datetime(2020, 1, 2, tzinfo=timezone.utc)
     assert windowed['datetime'][-1] == datetime(2020, 1, 2, 23, tzinfo=timezone.utc)
+
+
+def test_read_any_file_caches_huggingface_dataset_snapshots() -> None:
+    buffer = BytesIO()
+    _spot_frame(7200).write_parquet(buffer)
+    payload = buffer.getvalue()
+    network_calls: list[str] = []
+
+    def fake_read_remote_bytes(url: str) -> bytes:
+        network_calls.append(url)
+        return payload
+
+    url_a = 'https://huggingface.co/datasets/vaquum/test_repo/resolve/main/snapshot_a.parquet'
+    url_b = 'https://huggingface.co/datasets/vaquum/test_repo/resolve/main/snapshot_b.parquet'
+
+    with TemporaryDirectory() as tmpdir:
+        cache_dir = Path(tmpdir) / 'datasets'
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(historical_module, '_DATASET_CACHE_DIR', cache_dir)
+            monkeypatch.setattr(historical_module, '_read_remote_bytes', fake_read_remote_bytes)
+
+            first = historical_module._read_any_file(url_a)
+            second = historical_module._read_any_file(url_a)
+            repo_dir = cache_dir / 'vaquum--test_repo'
+
+            assert network_calls == [url_a]
+            assert first.equals(second)
+            assert sorted(item.name for item in repo_dir.iterdir()) == ['snapshot_a.parquet']
+
+            historical_module._read_any_file(url_b)
+
+            assert network_calls == [url_a, url_b]
+            assert sorted(item.name for item in repo_dir.iterdir()) == ['snapshot_b.parquet']
+
+
+def test_read_any_file_does_not_cache_non_huggingface_urls() -> None:
+    buffer = BytesIO()
+    _spot_frame(7200).write_parquet(buffer)
+    payload = buffer.getvalue()
+    network_calls: list[str] = []
+
+    def fake_read_remote_bytes(url: str) -> bytes:
+        network_calls.append(url)
+        return payload
+
+    url = 'https://example.com/data/snapshot.parquet'
+
+    with TemporaryDirectory() as tmpdir:
+        cache_dir = Path(tmpdir) / 'datasets'
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(historical_module, '_DATASET_CACHE_DIR', cache_dir)
+            monkeypatch.setattr(historical_module, '_read_remote_bytes', fake_read_remote_bytes)
+
+            historical_module._read_any_file(url)
+            historical_module._read_any_file(url)
+
+            assert network_calls == [url, url]
+            assert not cache_dir.exists()
+
+
+def test_read_any_file_falls_back_to_download_when_cache_is_unwritable() -> None:
+    buffer = BytesIO()
+    _spot_frame(7200).write_parquet(buffer)
+    payload = buffer.getvalue()
+    network_calls: list[str] = []
+
+    def fake_read_remote_bytes(url: str) -> bytes:
+        network_calls.append(url)
+        return payload
+
+    url = 'https://huggingface.co/datasets/vaquum/test_repo/resolve/main/snapshot_a.parquet'
+
+    with TemporaryDirectory() as tmpdir:
+        cache_dir = Path(tmpdir) / 'datasets'
+        cache_dir.write_text('not a directory')
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(historical_module, '_DATASET_CACHE_DIR', cache_dir)
+            monkeypatch.setattr(historical_module, '_read_remote_bytes', fake_read_remote_bytes)
+
+            first = historical_module._read_any_file(url)
+            second = historical_module._read_any_file(url)
+
+            assert network_calls == [url, url]
+            assert first.equals(second)
+            assert cache_dir.is_file()

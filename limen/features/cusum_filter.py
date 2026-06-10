@@ -20,22 +20,31 @@ def cusum_filter(
     magnitude is meaningful, gating out micro-noise ahead of downstream sampling.
 
     Args:
-        data (pl.DataFrame): Klines dataset with a close price column
+        data (pl.DataFrame | pl.LazyFrame): Klines dataset with a close price column
         threshold (float): Cumulative log-return magnitude that triggers an event
         close_col (str): Column name used for close-to-close log returns
         output_col (str): Output column name
 
     Returns:
-        pl.DataFrame: The input data with an Int8 column: 1 for an up event,
-            -1 for a down event, 0 otherwise
+        pl.DataFrame | pl.LazyFrame: The input data, matching the input frame
+            type, with an Int8 column: 1 for an up event, -1 for a down event,
+            0 otherwise
+
+    NOTE: Column access is expression-based so the feature runs on both eager
+    DataFrames and the LazyFrames piped by the manifest feature pipeline.
     '''
 
     if threshold <= 0:
         raise ValueError('cusum_filter threshold must be positive')
 
-    close = data[close_col].to_numpy().astype(float, copy=False)
     return data.with_columns(
-        pl.Series(output_col, _cusum_events(close, threshold), dtype=pl.Int8)
+        pl.col(close_col)
+        .cast(pl.Float64)
+        .map_batches(
+            lambda s: pl.Series(_cusum_events(s.to_numpy(), threshold), dtype=pl.Int8),
+            return_dtype=pl.Int8,
+        )
+        .alias(output_col)
     )
 
 
