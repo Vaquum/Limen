@@ -325,6 +325,14 @@ def _read_remote_bytes_cached(url: str) -> bytes:
         )
         tmp_path.write_bytes(content)
         tmp_path.replace(cache_path)
+    except OSError as exc:
+        logger.warning(
+            'Dataset cache write failed for %s (%s) — proceeding uncached',
+            cache_path, exc,
+        )
+        return content
+
+    try:
         for stale in cache_path.parent.iterdir():
             if (
                 stale != cache_path
@@ -334,8 +342,8 @@ def _read_remote_bytes_cached(url: str) -> bytes:
                 stale.unlink(missing_ok=True)
     except OSError as exc:
         logger.warning(
-            'Dataset cache write failed for %s (%s) — proceeding uncached',
-            cache_path, exc,
+            'Dataset cache prune failed in %s (%s) — the cached snapshot is intact',
+            cache_path.parent, exc,
         )
 
     return content
