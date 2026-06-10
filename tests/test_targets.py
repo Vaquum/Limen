@@ -499,6 +499,9 @@ def test_tradeline_long_binary_rejects_invalid_params_and_flat_train() -> None:
     with pytest.raises(ValueError, match='TradelineLongBinaryTarget lookahead_hours'):
         target.transform(_close_series([100.0] * 10), lookahead_hours=0)
 
+    with pytest.raises(ValueError, match='TradelineLongBinaryTarget confirmation_hours must not exceed'):
+        target.transform(_close_series([100.0] * 10), lookahead_hours=4, confirmation_hours=8)
+
 
 def test_tradeline_long_binary_confirmation_is_strictly_greater() -> None:
     target = TradelineLongBinaryTarget(

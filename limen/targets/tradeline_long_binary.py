@@ -78,7 +78,8 @@ class TradelineLongBinaryTarget:
             pl.DataFrame: Data with the target column added
 
         Raises:
-            ValueError: If 'close' is missing or a window is below 1
+            ValueError: If 'close' is missing, a window is below 1, or
+                confirmation_hours exceeds lookahead_hours
         '''
 
         if 'close' not in data.columns:
@@ -89,6 +90,9 @@ class TradelineLongBinaryTarget:
 
         if confirmation_hours < 1:
             raise ValueError('TradelineLongBinaryTarget confirmation_hours must be at least 1')
+
+        if confirmation_hours > lookahead_hours:
+            raise ValueError('TradelineLongBinaryTarget confirmation_hours must not exceed lookahead_hours')
 
         close = pl.col('close')
 
