@@ -4,6 +4,7 @@ import numpy as np
 import polars as pl
 import pytest
 
+from limen.features.breakout_features import breakout_features
 from limen.features.entry_score_microstructure import entry_score_microstructure
 from limen.features.feature_aliases import feature_aliases
 from limen.features.hh_hl_structure_regime import hh_hl_structure_regime
@@ -188,3 +189,45 @@ def test_price_vs_band_regime_flags_prices_outside_rolling_bands() -> None:
     result = price_vs_band_regime(data, period=2, band='std', k=0.2)
 
     assert result['regime_price_band'].to_list()[2:] == ['Flat', 'Up', 'Down']
+
+
+def test_breakout_features_builds_lags_stats_and_roc_then_drops_warmup() -> None:
+    data = pl.DataFrame(
+        {
+            'breakout_long': [1.0, 2.0, 4.0, 0.0, 3.0, 6.0],
+            'breakout_short': [2.0, 1.0, 2.0, 4.0, 0.0, 5.0],
+            'breakout_pct': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+        }
+    )
+
+    result = breakout_features(data, lookback=2, horizon=1)
+
+    assert result.height == 4
+    assert result['long_t-1'].to_list() == [2.0, 4.0, 0.0, 3.0]
+    assert result['long_t-2'].to_list() == [1.0, 2.0, 4.0, 0.0]
+    assert result['short_t-1'].to_list() == [1.0, 2.0, 4.0, 0.0]
+    assert result['short_t-2'].to_list() == [2.0, 1.0, 2.0, 4.0]
+    assert result['long_roll_mean'].to_list() == pytest.approx([1.5, 3.0, 2.0, 1.5])
+    assert result['long_roll_std'].to_list() == pytest.approx(
+        [math.sqrt(0.5), math.sqrt(2.0), math.sqrt(8.0), math.sqrt(4.5)]
+    )
+    assert result['short_roll_mean'].to_list() == pytest.approx([1.5, 1.5, 3.0, 2.0])
+    assert result['roc_long_1_1'].to_list() == pytest.approx([100.0, 100.0, -100.0, 0.0])
+    assert result['roc_short_1_1'].to_list() == pytest.approx([-50.0, 100.0, 100.0, -100.0])
+    assert result['breakout_pct'].to_list() == pytest.approx([0.3, 0.4, 0.5, 0.6])
+
+
+def test_breakout_features_names_columns_from_horizon() -> None:
+    data = pl.DataFrame(
+        {
+            'breakout_long': [1.0, 2.0, 4.0, 0.0, 3.0, 6.0],
+            'breakout_short': [2.0, 1.0, 2.0, 4.0, 0.0, 5.0],
+            'breakout_pct': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+        }
+    )
+
+    result = breakout_features(data, lookback=2, horizon=2)
+
+    assert result.height == 3
+    for column in ['long_t-2', 'long_t-3', 'short_t-2', 'short_t-3', 'roc_long_2_1', 'roc_short_2_1']:
+        assert column in result.columns

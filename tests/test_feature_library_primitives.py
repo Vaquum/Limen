@@ -25,6 +25,10 @@ from limen.features.volume_ratio import volume_ratio
 from limen.features.volume_regime import volume_regime
 from limen.features.wick_proportion import wick_proportion
 from limen.features.cusum_filter import cusum_filter
+from limen.features.lagged_features import lag_column
+from limen.features.lagged_features import lag_columns
+from limen.features.lagged_features import lag_range
+from limen.features.lagged_features import lag_range_cols
 
 
 SAMPLE_OHLCV = pl.DataFrame(
@@ -251,3 +255,53 @@ def test_cusum_filter_runs_on_lazyframes_and_matches_eager_output() -> None:
     lazy = cusum_filter(data.lazy(), threshold=0.015).collect()
     assert lazy['cusum_event'].to_list() == eager['cusum_event'].to_list()
     assert lazy['cusum_event'].dtype == pl.Int8
+
+
+def test_lag_range_cols_appends_shifted_columns_over_range() -> None:
+    data = pl.DataFrame({'a': [1.0, 2.0, 3.0, 4.0], 'b': [10.0, 20.0, 30.0, 40.0]})
+    result = lag_range_cols(data, ['a', 'b'], 1, 2)
+
+    assert result.columns == ['a', 'b', 'a_lag_1', 'a_lag_2', 'b_lag_1', 'b_lag_2']
+    assert result['a_lag_1'].to_list() == [None, 1.0, 2.0, 3.0]
+    assert result['a_lag_2'].to_list() == [None, None, 1.0, 2.0]
+    assert result['b_lag_1'].to_list() == [None, 10.0, 20.0, 30.0]
+    assert result['b_lag_2'].to_list() == [None, None, 10.0, 20.0]
+
+
+def test_lag_range_cols_validates_inputs() -> None:
+    data = pl.DataFrame({'a': [1.0, 2.0]})
+
+    with pytest.raises(ValueError, match='cols cannot be empty'):
+        lag_range_cols(data, [], 1, 2)
+    with pytest.raises(TypeError, match='must be integers'):
+        lag_range_cols(data, ['a'], '1', 2)
+    with pytest.raises(ValueError, match='non-negative'):
+        lag_range_cols(data, ['a'], -1, 2)
+    with pytest.raises(ValueError, match='less than or equal'):
+        lag_range_cols(data, ['a'], 3, 2)
+
+
+def test_lag_range_and_lag_columns_delegate_to_lag_range_cols() -> None:
+    data = pl.DataFrame({'a': [1.0, 2.0, 3.0], 'b': [10.0, 20.0, 30.0]})
+
+    ranged = lag_range(data, 'a', 1, 2)
+    assert ranged['a_lag_1'].to_list() == [None, 1.0, 2.0]
+    assert ranged['a_lag_2'].to_list() == [None, None, 1.0]
+
+    single = lag_columns(data, ['a', 'b'], 2)
+    assert single.columns == ['a', 'b', 'a_lag_2', 'b_lag_2']
+    assert single['b_lag_2'].to_list() == [None, None, 10.0]
+
+
+def test_lag_column_supports_alias_and_rejects_non_string_alias() -> None:
+    data = pl.DataFrame({'a': [1.0, 2.0, 3.0]})
+
+    aliased = lag_column(data, 'a', 1, alias='prev_a')
+    assert aliased.columns == ['a', 'prev_a']
+    assert aliased['prev_a'].to_list() == [None, 1.0, 2.0]
+
+    default = lag_column(data, 'a', 1)
+    assert default.columns == ['a', 'a_lag_1']
+
+    with pytest.raises(TypeError, match='alias must be a string'):
+        lag_column(data, 'a', 1, alias=3)
