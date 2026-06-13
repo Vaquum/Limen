@@ -70,6 +70,12 @@ class CausalRollingRobustScaler:
             self.iqrs[col] = iqr if iqr != 0 else 1.0
 
 
+    @property
+    def context_rows(self) -> int:
+
+        return self.window
+
+
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
         '''
