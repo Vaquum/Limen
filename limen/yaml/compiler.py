@@ -86,6 +86,7 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
     _apply_pca_compression(manifest, m)
     _apply_calibration(manifest, m)
     _apply_ml_extras(manifest, m)
+    _apply_strict_mode(manifest, m)
     manifest.with_reference_architecture(resolve(m['reference_architecture']))
     return manifest
 
@@ -197,10 +198,17 @@ def _apply_scaler(manifest: MLManifest, m: dict[str, Any]) -> None:
     scaler = m.get('scaler')
     if scaler is None:
         return
+    extra_params = dict(scaler.get('params') or {})
     if 'from_params' in scaler:
-        manifest.set_scaler_from_params(param_name=scaler['from_params'])
+        manifest.set_scaler_from_params(param_name=scaler['from_params'], extra_params=extra_params)
     else:
-        manifest.set_scaler(resolve(scaler['class']))
+        manifest.set_scaler(resolve(scaler['class']), extra_params=extra_params)
+
+
+def _apply_strict_mode(manifest: MLManifest, m: dict[str, Any]) -> None:
+
+    if m.get('strict_mode'):
+        manifest.set_strict_mode(True)
 
 
 def _apply_target(manifest: MLManifest, m: dict[str, Any]) -> None:
