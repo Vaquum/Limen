@@ -1097,12 +1097,12 @@ class MLManifest(Manifest):
 
         for i, split in enumerate(split_data):
             is_train = i == 0
-            n_raw_cco = cco_indicator_rows + scaler_context_rows
 
-            if not is_train and cco_block is not None and n_raw_cco > 0:
+            if not is_train and cco_block is not None and cco_indicator_rows + scaler_context_rows > 0:
                 raw_input = pl.concat([cco_block, split])
             else:
                 raw_input = split
+
 
             lazy = raw_input.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
@@ -1141,8 +1141,8 @@ class MLManifest(Manifest):
                     (getattr(v, 'context_rows', 0) for v in all_fitted_params.values()),
                     default=0,
                 )
-                n_raw_cco = cco_indicator_rows + scaler_context_rows
 
+            n_raw_cco = cco_indicator_rows + scaler_context_rows
             cco_block = split.tail(min(n_raw_cco, len(split))) if n_raw_cco > 0 else None
 
         split_data = _align_split_columns(split_data)
@@ -1488,11 +1488,11 @@ def _check_unexpected_nulls(manifest: 'MLManifest',
 
     exclude = {'datetime', manifest.target_column}
     feature_cols = [c for c in data.columns if c not in exclude]
+    counts = data.select([pl.col(c).null_count().alias(c) for c in feature_cols])
     null_info = {}
     for col in feature_cols:
-        null_rows = data.filter(pl.col(col).is_null())
-        if null_rows.height > 0:
-            null_info[col] = null_rows['datetime'].to_list()
+        if counts[col][0] > 0:
+            null_info[col] = data.filter(pl.col(col).is_null())['datetime'].to_list()
     if not null_info:
         return
 
