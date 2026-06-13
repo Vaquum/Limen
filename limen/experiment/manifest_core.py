@@ -904,12 +904,13 @@ class MLManifest(Manifest):
         Args:
             transform_class: Transform class to use for scaling
             param_name (str): Parameter name for fitted scaler
+            extra_params (dict | None): Additional keyword arguments passed to the transform constructor
 
         Returns:
             MLManifest: Self for method chaining
         '''
 
-        self.scaler = make_fitted_scaler(param_name, transform_class, dict(extra_params or {}))
+        self.scaler = make_fitted_scaler(param_name, transform_class, extra_params)
 
         return self
 
@@ -1140,8 +1141,8 @@ class MLManifest(Manifest):
                     (getattr(v, 'context_rows', 0) for v in all_fitted_params.values()),
                     default=0,
                 )
+                n_raw_cco = cco_indicator_rows + scaler_context_rows
 
-            n_raw_cco = cco_indicator_rows + scaler_context_rows
             cco_block = split.tail(min(n_raw_cco, len(split))) if n_raw_cco > 0 else None
 
         split_data = _align_split_columns(split_data)
@@ -1487,11 +1488,11 @@ def _check_unexpected_nulls(manifest: 'MLManifest',
 
     exclude = {'datetime', manifest.target_column}
     feature_cols = [c for c in data.columns if c not in exclude]
-    null_info = {
-        col: data.filter(pl.col(col).is_null())['datetime'].to_list()
-        for col in feature_cols
-        if data[col].is_null().any()
-    }
+    null_info = {}
+    for col in feature_cols:
+        null_rows = data.filter(pl.col(col).is_null())
+        if null_rows.height > 0:
+            null_info[col] = null_rows['datetime'].to_list()
     if not null_info:
         return
 
