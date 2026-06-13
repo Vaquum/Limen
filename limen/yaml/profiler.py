@@ -1,3 +1,4 @@
+import logging
 import math
 import random
 import re
@@ -36,6 +37,22 @@ class ProfileResult:
     sample_time_seconds_per_permutation: float | None = None
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    data_quality_warnings: list[str] = field(default_factory=list)
+
+
+_MANIFEST_CORE_LOGGER = 'limen.experiment.manifest_core'
+
+
+class _LogCapture(logging.Handler):
+
+    def __init__(self) -> None:
+
+        super().__init__(level=logging.WARNING)
+        self.records: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+
+        self.records.append(record.getMessage())
 
 
 def _complexity_rating(total: int) -> str:
@@ -148,17 +165,35 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     result.sample_permutations_attempted = len(permutations)
 
     elapsed_times: list[float] = []
+    saved_strict_mode = getattr(manifest, 'strict_mode', False)
+    if hasattr(manifest, 'strict_mode'):
+        manifest.strict_mode = False
 
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        for round_params in permutations:
-            try:
-                t0 = time.perf_counter()
-                data_dict = manifest.prepare_data(raw_data, round_params)
-                manifest.run_model(data_dict, round_params)
-                elapsed_times.append(time.perf_counter() - t0)
-            except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
-                result.errors.append(_classify_error(exc))
+    log_capture = _LogCapture()
+    manifest_logger = logging.getLogger(_MANIFEST_CORE_LOGGER)
+    manifest_logger.addHandler(log_capture)
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            for round_params in permutations:
+                try:
+                    t0 = time.perf_counter()
+                    data_dict = manifest.prepare_data(raw_data, round_params)
+                    manifest.run_model(data_dict, round_params)
+                    elapsed_times.append(time.perf_counter() - t0)
+                except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
+                    result.errors.append(_classify_error(exc))
+    finally:
+        manifest_logger.removeHandler(log_capture)
+        if hasattr(manifest, 'strict_mode'):
+            manifest.strict_mode = saved_strict_mode
+
+    seen: set[str] = set()
+    for msg in log_capture.records:
+        if 'Unexpected nulls' in msg and msg not in seen:
+            seen.add(msg)
+            result.data_quality_warnings.append(msg)
 
     result.sample_permutations_completed = len(elapsed_times)
 
