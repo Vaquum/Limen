@@ -163,6 +163,57 @@ _E2E_ABLATION_YAML = dedent('''\
 ''')
 
 
+_E2E_REPRO_ROLLING_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_repro_rolling
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+          val_predict_guard: false
+          test_predict_guard: false
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        scaler:
+          class: limen.scalers.CausalRollingRobustScaler
+          params:
+            window: 20
+            min_samples: 5
+        reference_architecture: limen.sfd.reference_architecture.logreg_binary
+      params:
+        C: [1.0]
+        random_state: [42]
+    uel:
+      n_permutations: 1
+      search_strategy:
+        type: grid
+      output_format: csv
+''')
+
+
 _E2E_REPRO_YAML = dedent('''\
     schema_version: "1.0"
     metadata:
@@ -543,4 +594,62 @@ def test_sensor_reproduces_training_metrics_on_val_test() -> None:
         # results.csv stores metrics rounded to 3 decimal places
         assert round(sensor_accuracy, 3) == training_accuracy, (
             f'sensor accuracy {sensor_accuracy} does not match training accuracy {training_accuracy}'
+        )
+
+
+def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_REPRO_ROLLING_YAML)
+        assert len(round_ids) == 1
+
+        training_accuracy = (
+            pl.read_csv(exp_dir / 'results.csv')
+            .filter(pl.col('id') == str(round_ids[0]))['accuracy'][0]
+        )
+
+        trainer, sensors = _train_e2e(exp_dir, round_ids)
+        sensor = sensors[0]
+
+        # Feed the full raw series so CausalRollingRobustScaler is warm across val+test —
+        # the same continuous stream that sensor_input_prep uses during training.
+        # Training-window bars come back with reason='inside-training-window'.
+        val_start = datetime(2025, 1, 15)
+        test_start = datetime(2025, 1, 18)
+        test_end = datetime(2025, 1, 22)
+        bar_preds = sensor.predict_all(trainer._data)
+
+        def _valid(p: object, lo: datetime, hi: datetime) -> bool:
+            return p.datetime is not None and p.reason is None and lo <= p.datetime < hi
+
+        val_preds = sorted([p for p in bar_preds if _valid(p, val_start, test_start)],
+                           key=lambda p: p.datetime)
+        test_preds = sorted([p for p in bar_preds if _valid(p, test_start, test_end)],
+                            key=lambda p: p.datetime)
+
+        data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
+        y_val = data_dict['y_val'].to_list()
+        y_test = data_dict['y_test'].to_list()
+
+        # Row-count: CCO must have recovered all val+test rows (no cold-scaler nulls masked).
+        # Without CCO, min_samples-1=4 cold rows get reason='warm-up-rows' and are excluded,
+        # so the val count would fall below len(y_val).
+        assert len(val_preds) >= len(y_val), (
+            f'CCO failed on val: expected >= {len(y_val)} predictions '
+            f'(cold-scaler rows masked), got {len(val_preds)}'
+        )
+        assert len(test_preds) >= len(y_test), (
+            f'CCO failed on test: expected >= {len(y_test)} predictions '
+            f'(cold-scaler rows masked), got {len(test_preds)}'
+        )
+
+        # Accuracy: test-split predictions must match training (results.csv stores test accuracy)
+        test_preds = test_preds[:len(y_test)]
+        n_correct = sum(1 for p, y in zip(test_preds, y_test) if p.prediction == y)
+        sensor_accuracy = n_correct / len(y_test)
+
+        assert round(sensor_accuracy, 3) == training_accuracy, (
+            f'rolling scaler sensor accuracy {sensor_accuracy} '
+            f'does not match training accuracy {training_accuracy}'
         )

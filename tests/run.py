@@ -882,6 +882,7 @@ from tests.test_trainer import test_trainer_yaml_deterministic_validation
 from tests.test_trainer import test_trainer_yaml_sensor_inference
 from tests.test_trainer import test_trainer_yaml_feature_ablation
 from tests.test_trainer import test_sensor_reproduces_training_metrics_on_val_test
+from tests.test_trainer import test_sensor_reproduces_training_metrics_with_rolling_scaler
 from tests.test_sensor import test_count_leading_nulls_no_nulls
 from tests.test_sensor import test_count_leading_nulls_leading_nulls
 from tests.test_sensor import test_count_leading_nulls_all_null
@@ -1868,6 +1869,7 @@ tests = [
     test_trainer_yaml_sensor_inference,
     test_trainer_yaml_feature_ablation,
     test_sensor_reproduces_training_metrics_on_val_test,
+    test_sensor_reproduces_training_metrics_with_rolling_scaler,
     test_count_leading_nulls_no_nulls,
     test_count_leading_nulls_leading_nulls,
     test_count_leading_nulls_all_null,
