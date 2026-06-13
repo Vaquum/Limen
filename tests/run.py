@@ -546,6 +546,15 @@ from tests.test_manifest_prepare_data import test_pca_compression_requires_confi
 from tests.test_manifest_prepare_data import test_pca_compression_reports_scaler_param_mismatch
 from tests.test_manifest_prepare_data import test_pca_compression_rejects_invalid_k
 from tests.test_manifest_prepare_data import test_pca_compression_rejects_nonnumeric_features
+from tests.test_manifest_cco import test_context_rows_property
+from tests.test_manifest_cco import test_context_rows_default_window
+from tests.test_manifest_cco import test_cco_no_contamination
+from tests.test_manifest_cco import test_cco_val_matches_continuous
+from tests.test_manifest_cco import test_cco_row_count_recovery
+from tests.test_manifest_cco import test_no_cco_for_stateless_scaler
+from tests.test_manifest_cco import test_strict_mode_raises_on_gap
+from tests.test_manifest_cco import test_scaler_params_yaml_window
+from tests.test_manifest_cco import test_scaler_params_default_when_omitted
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 from tests.test_inline_metrics import test_logreg_inline_and_post_confusion_metrics_match
 from tests.test_inline_metrics import test_xgboost_inline_and_post_backtest_metrics_match
@@ -872,6 +881,7 @@ from tests.test_trainer import test_trainer_yaml_reconstruction_error_tampered_l
 from tests.test_trainer import test_trainer_yaml_deterministic_validation
 from tests.test_trainer import test_trainer_yaml_sensor_inference
 from tests.test_trainer import test_trainer_yaml_feature_ablation
+from tests.test_trainer import test_sensor_reproduces_training_metrics_on_val_test
 from tests.test_sensor import test_count_leading_nulls_no_nulls
 from tests.test_sensor import test_count_leading_nulls_leading_nulls
 from tests.test_sensor import test_count_leading_nulls_all_null
@@ -1833,6 +1843,15 @@ tests = [
     test_pca_compression_reports_scaler_param_mismatch,
     test_pca_compression_rejects_invalid_k,
     test_pca_compression_rejects_nonnumeric_features,
+    test_context_rows_property,
+    test_context_rows_default_window,
+    test_cco_no_contamination,
+    test_cco_val_matches_continuous,
+    test_cco_row_count_recovery,
+    test_no_cco_for_stateless_scaler,
+    test_strict_mode_raises_on_gap,
+    test_scaler_params_yaml_window,
+    test_scaler_params_default_when_omitted,
     test_fractional_diff_manifest_integration,
     test_trainer_requires_yaml_reference,
     test_trainer_rejects_non_dict_yaml_reference,
@@ -1848,6 +1867,7 @@ tests = [
     test_trainer_yaml_deterministic_validation,
     test_trainer_yaml_sensor_inference,
     test_trainer_yaml_feature_ablation,
+    test_sensor_reproduces_training_metrics_on_val_test,
     test_count_leading_nulls_no_nulls,
     test_count_leading_nulls_leading_nulls,
     test_count_leading_nulls_all_null,
