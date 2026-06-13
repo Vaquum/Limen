@@ -16,6 +16,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
+from limen.experiment.errors import StrictModeError
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
@@ -496,6 +497,9 @@ class UniversalExperimentLoop:
                     round_results = self.model(
                         data=data_dict, round_params=sfd_params,
                     )
+            except StrictModeError as exc:
+                logger.error('Round %d failed strict mode check: %s', current_round, exc)
+                round_results = {'strict_mode_error': str(exc)}
             except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
