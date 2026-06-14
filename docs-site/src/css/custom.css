@@ -225,12 +225,34 @@ html[data-theme='dark'] .pagination-nav__link {
   padding: 64px 0;
 }
 
+html[data-theme='dark'] .theme-doc-markdown:has(.vaquum-design-system-sample) {
+  --vaquum-sample-ink-deep: #F8F8F8;
+  --vaquum-sample-ink: #F3F3F3;
+  --vaquum-sample-ink-soft: #D3D3D3;
+  --vaquum-sample-ink-mute: #808080;
+  --vaquum-sample-rule: #444444;
+  --vaquum-sample-paper-2: #231F20;
+  --vaquum-sample-paper: #121212;
+  --vaquum-sample-accent: #EAA3C8;
+  background: var(--vaquum-sample-paper);
+  border: 0;
+  box-shadow: none;
+  color: var(--vaquum-sample-ink);
+}
+
 .theme-doc-markdown:has(.vaquum-design-system-sample) h1,
 .theme-doc-markdown:has(.vaquum-design-system-sample) h2,
 .theme-doc-markdown:has(.vaquum-design-system-sample) h3,
 .theme-doc-markdown:has(.vaquum-design-system-sample) h4 {
   color: var(--vaquum-sample-ink-deep);
   font-family: var(--vaquum-sample-sans);
+}
+
+html[data-theme='dark'] .theme-doc-markdown:has(.vaquum-design-system-sample) h1,
+html[data-theme='dark'] .theme-doc-markdown:has(.vaquum-design-system-sample) h2,
+html[data-theme='dark'] .theme-doc-markdown:has(.vaquum-design-system-sample) h3,
+html[data-theme='dark'] .theme-doc-markdown:has(.vaquum-design-system-sample) h4 {
+  color: var(--vaquum-sample-ink-deep);
 }
 
 .theme-doc-markdown:has(.vaquum-design-system-sample) h1 {
@@ -422,6 +444,10 @@ html[data-theme='dark'] .pagination-nav__link {
 }
 
 .theme-doc-markdown:has(.vaquum-design-system-sample) td {
+  color: var(--vaquum-sample-ink-soft);
+}
+
+html[data-theme='dark'] .theme-doc-markdown:has(.vaquum-design-system-sample) td {
   color: var(--vaquum-sample-ink-soft);
 }
 
