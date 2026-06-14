@@ -165,8 +165,9 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     result.sample_permutations_attempted = len(permutations)
 
     elapsed_times: list[float] = []
-    saved_strict_mode = getattr(manifest, 'strict_mode', False)
-    if hasattr(manifest, 'strict_mode'):
+    has_strict_mode = hasattr(manifest, 'strict_mode')
+    if has_strict_mode:
+        saved_strict_mode = manifest.strict_mode
         manifest.strict_mode = False
 
     log_capture = _LogCapture()
@@ -186,7 +187,7 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
                     result.errors.append(_classify_error(exc))
     finally:
         manifest_logger.removeHandler(log_capture)
-        if hasattr(manifest, 'strict_mode'):
+        if has_strict_mode:
             manifest.strict_mode = saved_strict_mode
 
     seen: set[str] = set()

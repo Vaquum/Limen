@@ -948,9 +948,7 @@ class MLManifest(Manifest):
             MLManifest: Self for method chaining
         '''
 
-        _extra = dict(extra_params or {})
-        _static = {k: v for k, v in _extra.items() if not isinstance(v, str)}
-        _dynamic = {k: v for k, v in _extra.items() if isinstance(v, str)}
+        _static, _dynamic = _split_extra_params(extra_params)
 
         def _scaler_factory(data: 'pl.DataFrame',
                             scaler_type: str = '',
@@ -1096,16 +1094,16 @@ class MLManifest(Manifest):
 
         cco_indicator_rows: int = 0
         scaler_context_rows: int = 0
+        n_raw_cco: int = 0
         cco_block: pl.DataFrame | None = None
 
         for i, split in enumerate(split_data):
             is_train = i == 0
 
-            if not is_train and cco_block is not None and cco_indicator_rows + scaler_context_rows > 0:
+            if not is_train and cco_block is not None and n_raw_cco > 0:
                 raw_input = pl.concat([cco_block, split])
             else:
                 raw_input = split
-
 
             lazy = raw_input.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
@@ -1144,9 +1142,9 @@ class MLManifest(Manifest):
                     (getattr(v, 'context_rows', 0) for v in all_fitted_params.values()),
                     default=0,
                 )
+                n_raw_cco = cco_indicator_rows + scaler_context_rows
 
-            n_raw_cco = cco_indicator_rows + scaler_context_rows
-            cco_block = split.tail(min(n_raw_cco, len(split))) if n_raw_cco > 0 else None
+            cco_block = split.tail(n_raw_cco) if n_raw_cco > 0 else None
 
         split_data = _align_split_columns(split_data)
         split_data, all_fitted_params = _apply_pca_compression(
@@ -1339,6 +1337,13 @@ def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.Dat
     return fitted_transform.transform(data)
 
 
+def _split_extra_params(extra_params: dict[str, Any] | None) -> tuple[dict[str, Any], dict[str, Any]]:
+    _extra = dict(extra_params or {})
+    _static = {k: v for k, v in _extra.items() if not isinstance(v, str)}
+    _dynamic = {k: v for k, v in _extra.items() if isinstance(v, str)}
+    return _static, _dynamic
+
+
 def make_fitted_scaler(param_name: str,
                        transform_class: Any,
                        extra_params: dict[str, Any] | None = None) -> FittedTransformEntry:
@@ -1355,9 +1360,7 @@ def make_fitted_scaler(param_name: str,
         FittedTransformEntry: Complete fitted transform configuration
     '''
 
-    _extra = dict(extra_params or {})
-    _static = {k: v for k, v in _extra.items() if not isinstance(v, str)}
-    _dynamic = {k: v for k, v in _extra.items() if isinstance(v, str)}
+    _static, _dynamic = _split_extra_params(extra_params)
 
     def _factory(data: 'pl.DataFrame',
                  _cls: Any = transform_class,

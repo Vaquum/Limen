@@ -526,6 +526,8 @@ class UniversalExperimentLoop:
                 if caught else '[]'
             )
 
+            round_succeeded = '_alignment' in data_dict
+
             if 'extras' in round_results:
                 extras = round_results.pop('extras')
                 if post_processing:
@@ -541,12 +543,12 @@ class UniversalExperimentLoop:
             current_preds = round_results.pop('_preds', None)
             if current_preds is None:
                 current_preds = []
-            if post_processing and '_alignment' in data_dict:
+            if post_processing and round_succeeded:
                 self.preds.append(current_preds)
-            if post_processing and '_alignment' in data_dict and '_scaler' in data_dict:
+            if post_processing and round_succeeded and '_scaler' in data_dict:
                 self.scalers.append(data_dict['_scaler'])
 
-            if post_processing and '_alignment' in data_dict:
+            if post_processing and round_succeeded:
                 self._alignment.append(data_dict['_alignment'])
 
             round_results['id'] = current_hash
@@ -554,7 +556,7 @@ class UniversalExperimentLoop:
                 time.time() - start_time, 2,
             )
 
-            if post_processing and '_alignment' in data_dict:
+            if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
             for key, value in round_params.items():
                 round_results[key] = value
@@ -581,7 +583,7 @@ class UniversalExperimentLoop:
                         current_round, sorted(extra_keys),
                     )
 
-            if round_data_path and '_alignment' in data_dict:
+            if round_data_path and round_succeeded:
                 self._append_round_data(
                     round_data_path, current_hash, sfd_params,
                     current_preds,
