@@ -30,5 +30,6 @@ def manifest() -> Manifest:
             'no_of_trades'
         ])
         .with_target_label('outcome', RandomBinaryTarget)
+        .set_strict_mode(True)
         .with_reference_architecture(random_binary)
     )
