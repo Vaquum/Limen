@@ -632,16 +632,16 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
         y_val = data_dict['y_val'].to_list()
         y_test = data_dict['y_test'].to_list()
 
-        # Row-count: CCO must have recovered all val+test rows (no cold-scaler nulls masked).
-        # Without CCO, min_samples-1=4 cold rows get reason='warm-up-rows' and are excluded,
-        # so the val count would fall below len(y_val).
-        assert len(val_preds) >= len(y_val), (
-            f'CCO failed on val: expected >= {len(y_val)} predictions '
-            f'(cold-scaler rows masked), got {len(val_preds)}'
+        # Row-count: sensor predicts every bar in the window including the last (no target due
+        # to shift:-1), so the count is len(y_*)+1. Without CCO, min_samples-1=4 cold rows
+        # get reason='warm-up-rows' and are excluded, dropping the count below len(y_val)+1.
+        assert len(val_preds) == len(y_val) + 1, (
+            f'CCO failed on val: expected {len(y_val) + 1} predictions '
+            f'(cold-scaler rows would be masked), got {len(val_preds)}'
         )
-        assert len(test_preds) >= len(y_test), (
-            f'CCO failed on test: expected >= {len(y_test)} predictions '
-            f'(cold-scaler rows masked), got {len(test_preds)}'
+        assert len(test_preds) == len(y_test) + 1, (
+            f'CCO failed on test: expected {len(y_test) + 1} predictions '
+            f'(cold-scaler rows would be masked), got {len(test_preds)}'
         )
 
         # Accuracy: test-split predictions must match training (results.csv stores test accuracy)
