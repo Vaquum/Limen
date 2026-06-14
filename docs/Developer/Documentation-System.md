@@ -4,14 +4,14 @@
 
 This page defines how Limen documentation should be structured, written, built, and improved. It is the operating contract for the docs overhaul and the reference point for every later documentation change.
 
-The goal is not only to make individual pages better. The goal is to make Limen documentation behave like one coherent product.
+The goal is not only page-level correctness. The goal is one coherent Limen documentation product.
 
 ## What 10/10 Means
 
 For Limen, 10/10 docs means the full system is:
 
 - accurate to the code and current Vaquum architecture
-- easy to enter for a new user
+- direct entry path for a new user
 - deep enough for serious research and contributor work
 - coherent across product pages, reference pages, and package READMEs
 - grounded in real runnable workflows and real artefacts
@@ -41,7 +41,7 @@ The long-term target is `docs.vaquum.fi` as the Vaquum documentation entry point
 
 ## Canonical Source Rules
 
-Limen documentation should have one clear ownership model.
+Limen documentation should have one ownership model.
 
 - [README.md](../../README.md) is the product home page and first-success entry point.
 - [docs/README.md](../README.md) is the canonical public docs hub.
@@ -78,7 +78,7 @@ Every major public page should reinforce the same core Limen story:
 
 1. Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.
 2. Data enters through native Limen data access or external OHLC-style data.
-3. An experiment is defined through an SFD, usually manifest-driven.
+3. An experiment is defined through an SFD, manifest-driven by default.
 4. Universal Experiment Loop executes a parameter search across the chosen search space.
 5. Log, benchmark-style analytics, and backtest outputs show what happened and why.
 6. Trainer and Cohort turn finished experiment outputs into reusable downstream artefacts.
@@ -106,7 +106,7 @@ All Limen documentation should use the same register:
 - Prefer examples that show inputs, outputs, and artefacts.
 - Do not use unexplained internal jargon.
 - Do not duplicate large sections of content across pages.
-- End pages with explicit reading routes or next steps when useful.
+- End pages with explicit reading routes or next steps when they affect task completion.
 
 ## Page Types And Required Blocks
 
@@ -122,7 +122,7 @@ Required blocks:
 - what Limen is not
 - capability summary
 - first successful workflow
-- clear routes into the rest of the docs
+- explicit routes into the rest of the docs
 
 ### Docs Hub
 
@@ -260,15 +260,15 @@ The overhaul should be tracked in the following order.
 | --- | --- | --- | --- |
 | 1 | Docs System Contract | Define structure, voice, page types, ownership, navigation model, site boundary, and rewrite slices. | This contract exists, is linked from developer docs, and is accepted as the operating manual for later slices. |
 | 2 | Docs-Site Build | Add the site build, docs assembly model, product metadata, local dev/build/check commands, and navigation shell. | The Limen docs site builds locally, renders the current corpus, and enforces link integrity. |
-| 3 | Top-Level Narrative | Rewrite the product home and docs hub so Limen has one clear entry story and reading flow. | A new user can enter the docs without guessing what to read next. |
+| 3 | Top-level narrative | Rewrite the product home and docs hub so Limen has one entry story and reading flow. | A new user can enter the docs without guessing what to read next. |
 | 4 | Core Workflow Guides | Rewrite data, bars, SFD, manifest, and UEL pages as one connected workflow layer. | A reader can go from data to running an experiment using only the guide layer. |
 | 5 | Analysis And Outcomes | Rewrite log, benchmark, backtest, trainer, cohort, metrics, and CFR pages. | A reader can understand what Limen produces after a run and how to interpret it. |
 | 6 | Reference Layer | Rewrite indicators, features, transforms, and scalers as coordinated reference pages. | The large reference pages are scannable, consistent, and trusted. |
-| 7 | Developer Layer | Rewrite contributor, release, and versioning docs around current practice. | A contributor can follow the maintenance workflow without external tribal knowledge. |
+| 7 | Developer layer | Rewrite contributor, release, and versioning docs for current practice. | A contributor can follow the maintenance workflow without external tribal knowledge. |
 | 8 | Package README Alignment | Align package READMEs with the same contract and route them to canonical docs. | Package READMEs feel like part of one system rather than isolated notes. |
-| 9 | Final Cohesion Pass | Sweep the entire corpus for terminology, duplication, examples, links, navigation, and consistency. | The docs read as one coherent product and meet the 10/10 acceptance bar. |
+| 9 | Final cohesion pass | Sweep the entire corpus for terminology, duplication, examples, links, navigation, and consistency. | The docs read as one coherent product and meet the acceptance bar. |
 
-## Acceptance Bar For The Whole Overhaul
+## Acceptance bar for the overhaul
 
 The overhaul should be considered complete when all of the following are true:
 
@@ -276,7 +276,7 @@ The overhaul should be considered complete when all of the following are true:
 - a serious user can understand how Limen fits into the broader Vaquum architecture
 - a contributor can find the canonical page for any subsystem quickly
 - examples are grounded in real Limen runs and artefacts
-- large reference pages are easy to navigate and trustworthy
+- large reference pages have explicit navigation and code-true claims
 - the standalone Limen docs site feels complete
 - the same docs system can later plug into a Vaquum-wide docs portal without conceptual rework
 

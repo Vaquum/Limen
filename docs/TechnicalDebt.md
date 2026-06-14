@@ -4,7 +4,7 @@ Known technical debt in shipped Limen code. Each item includes origin PR, severi
 
 ## Register Rules
 
-Use this page only for debt that is accepted and intentionally carried. Do not use it as a general TODO list.
+Use this page only for debt that is accepted and intentionally carried. Do not use it as a general task backlog.
 
 Each entry should include:
 

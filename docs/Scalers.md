@@ -2,7 +2,7 @@
 
 Scalers are train-fitted preprocessing objects. A manifest fits the scaler on `x_train`, then reuses that fitted state to transform validation and test data without refitting.
 
-Use this page when you need to choose a scaler, understand how `set_scaler()` and `set_scaler_from_params()` behave, or see the interface a custom scaler must follow.
+This page covers scaler selection, `set_scaler()` and `set_scaler_from_params()` behavior, and the custom scaler interface.
 
 ## How Scalers Fit In Limen
 
@@ -18,10 +18,10 @@ That is why scalers live separately from the stateless helpers in [Transforms](T
 
 ## Choosing A Scaler
 
-| Scaler | Best fit | Inverse support | Notes |
+| Scaler | Fit | Inverse support | Notes |
 |---|---|---|---|
 | `LogRegScaler` | the reference logistic-regression style feature sets used in foundational flows | yes | Uses a fixed per-column rule map. Columns outside the rule map are left alone. |
-| `LinearScaler` | mixed feature sets where regex-based scaling rules are useful | yes | The most flexible built-in scaler. Supports `standard`, `log_standard`, `divide_100`, and `none`. |
+| `LinearScaler` | mixed feature sets needing regex-based scaling rules | yes | Broadest built-in scaler rule surface. Supports `standard`, `log_standard`, `divide_100`, and `none`. |
 | `RobustScaler` | outlier-heavy numeric features | yes | Uses median and IQR instead of mean and standard deviation. |
 | `CausalRollingRobustScaler` | non-stationary features whose scale drifts over time | no | Median and IQR from a strictly trailing rolling window, so no look-ahead. Not row-wise invertible from the fitted scaler. |
 | `RankGaussScaler` | numeric features that benefit from a Gaussianized shape | approximate | The inverse is only approximate because rank-based transforms are lossy. |
@@ -82,7 +82,7 @@ On live local manifest-prep runs in this repo, `set_scaler_from_params('scaler_t
 - divides `wilder_rsi` by `100`
 - leaves columns such as `maker_ratio` unchanged
 
-This is the most opinionated scaler in the package. It is a good default for old-style foundational SFDs, but less flexible than `LinearScaler`.
+This is the logistic-regression-oriented scaler in the package. It remains the legacy default for old-style foundational SFDs and exposes fewer rules than `LinearScaler`.
 
 ### `LinearScaler`
 
@@ -95,7 +95,7 @@ It supports:
 - `divide_100`
 - `none`
 
-Use it when you want explicit control over scaling policy or when scaler choice itself is part of the search space.
+Use `set_scaler_from_params()` for explicit scaling-policy control or search-time scaler choice.
 
 ### `RobustScaler`
 
@@ -105,11 +105,11 @@ Use it when you want explicit control over scaling policy or when scaler choice 
 (x - median) / IQR
 ```
 
-It skips datetime and non-numeric columns automatically and is usually the safest choice when heavy tails or outliers are distorting standardization.
+It skips datetime and non-numeric columns automatically and fits heavy-tail or outlier-distorted standardization cases.
 
 ### `RankGaussScaler`
 
-`RankGaussScaler(x_train, n_quantiles=1000)` maps numeric columns to an approximately Gaussian distribution through quantiles and the inverse normal CDF.
+`RankGaussScaler(x_train, n_quantiles=1000)` maps numeric columns to a quantile-Gaussian distribution through quantiles and the inverse normal CDF.
 
 Use it when relative ordering matters more than preserving original spacing. Its inverse transform is approximate, not exact.
 
@@ -132,19 +132,19 @@ It skips datetime and non-numeric columns automatically. It provides no inverse 
 All custom scalers should follow the same interface:
 
 ```python
-class YourScaler:
+class IdentityScaler:
     def __init__(self, x_train: pl.DataFrame, **kwargs):
-        ...
+        self.columns = x_train.columns
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
-        ...
+        return df
 ```
 
 Optional inverse helper:
 
 ```python
-def inverse_transform(df: pl.DataFrame, scaler: YourScaler) -> pl.DataFrame:
-    ...
+def inverse_transform(df: pl.DataFrame, scaler: IdentityScaler) -> pl.DataFrame:
+    return df
 ```
 
 That contract is what makes the scaler usable from `Manifest.set_scaler()` and compatible with post-processing flows that need to return to the original scale.
@@ -153,7 +153,7 @@ That contract is what makes the scaler usable from `Manifest.set_scaler()` and c
 
 - `RobustScaler`, `CausalRollingRobustScaler`, and `RankGaussScaler` automatically skip datetime and non-numeric columns.
 - `LogRegScaler` and `LinearScaler` are rule-driven, so only columns matched by their rule sets are transformed.
-- `LinearScaler` is the better choice when new feature names are expected to appear frequently.
+- `LinearScaler` fits cases where new feature names are expected to appear frequently.
 - If a prediction post-processing step needs original scale values, prefer a scaler with a meaningful inverse path.
 
 ## Read Next

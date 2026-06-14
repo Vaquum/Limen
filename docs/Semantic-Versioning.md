@@ -8,7 +8,7 @@ Use the current guide here:
 
 That external page is now the canonical source for version-bump policy across Vaquum projects.
 
-## Limen Local Scope
+## Limen local scope
 
 Use this page to find the policy, then apply the result to Limen's local version surfaces.
 
@@ -21,22 +21,18 @@ Limen-local version surfaces:
 | git tag `v<version>` | release identity expected by `scripts/create_release.py` |
 | docs and package references | update only when the changed behavior affects documented public surfaces |
 
-## Local Rules
+## Local rules
 
 - Do not invent a Limen-specific version policy here; use the shared Vaquum policy.
 - Keep `pyproject.toml`, changelog entry, release tag, and release notes aligned to the same version.
 - Treat docs-only changes as version-affecting only when the shared policy says the published package metadata should move.
 - If code behavior changes, update docs and changelog in the same PR when they are part of the public surface.
 
-## Review Notes
+## Review notes
 
-Version review should answer:
+Version review records the shared-policy category, the local files requiring version or changelog updates, and whether the release script reads the intended version from `pyproject.toml`.
 
-1. Which shared-policy category applies?
-2. Which local files need the version or changelog update?
-3. Does the release script already see the intended version in `pyproject.toml`?
-
-## Read Next
+## Read next
 
 - [Making a Release](Developer/Making-Release.md)
 - [Developer Home](Developer/README.md)

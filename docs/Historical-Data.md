@@ -24,9 +24,9 @@ assert data is historical.data
 
 ## Current Surface
 
-| Method | Backend | Returns | Typical use |
+| Method | Backend | Returns | Use case |
 |---|---|---|---|
-| `get_spot_klines()` | Hugging Face BTCUSDT parquet datasets | BTCUSDT spot klines as `pl.DataFrame` | most common experiment input |
+| `get_spot_klines()` | Hugging Face BTCUSDT parquet datasets | BTCUSDT spot klines as `pl.DataFrame` | standard experiment input |
 | `get_spot_dollar_klines()` | Hugging Face BTCUSDT dollar-bar parquet datasets | BTCUSDT spot dollar bars as `pl.DataFrame` | event-time experiments |
 | `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
 | `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
@@ -105,7 +105,7 @@ trades = historical.get_binance_file(
 )
 ```
 
-Use this when you want Binance source files rather than the curated kline dataset.
+Use this for Binance source files rather than the curated kline dataset.
 
 ## `get_any_file()`
 
@@ -134,12 +134,12 @@ It is the right choice for:
 
 ## Manifest Integration
 
-Most manifest-driven experiments should use:
+Manifest-driven experiments should use:
 
 - `HistoricalData.get_spot_klines` for production data
 - `HistoricalData.get_spot_dollar_klines` for event-time dollar-bar production data
-- `HistoricalData.get_spot_klines` with a smaller `row_count_limit` and coarser `kline_size` for lightweight test runs
-- `HistoricalData.get_any_file` only when you intentionally want to load a specific local or remote file
+- `HistoricalData.get_spot_klines` with a bounded `row_count_limit` and coarser `kline_size` for test runs
+- `HistoricalData.get_any_file` only for a specific local or remote file
 
 ```python
 from limen.data import HistoricalData
@@ -160,9 +160,9 @@ manifest = (
 
 ## Choosing The Right Surface
 
-- Use `get_spot_klines()` for most Limen experiments and for manifest test sources that should stay on the public BTCUSDT path.
+- Use `get_spot_klines()` for standard Limen experiments and manifest test sources that should stay on the public BTCUSDT path.
 - Use `get_spot_dollar_klines()` when market activity, not wall-clock time, should define each row.
-- Use `get_binance_file()` when you want direct Binance archives.
+- Use `get_binance_file()` for direct Binance archives.
 - Use `get_any_file()` for local fixtures, URLs, and generic file-backed ingestion.
 
 ## Read Next

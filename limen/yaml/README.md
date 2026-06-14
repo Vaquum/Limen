@@ -15,22 +15,22 @@ Does **not** own Click command routing, UEL execution, model implementations, or
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 | --- | --- | --- |
-| `parser.py` | You need to read YAML into structured config | Handles file parsing before validation. |
-| `schema.py` | You need the authoritative YAML field sets and allowed values | Defines schema version `1.0`, modes, manifest types, output formats, and search strategies. |
-| `validator.py` | You need to validate structure and supported field names | Used by CLI validation and run paths. |
-| `resolver.py` | You need to resolve `limen.*` dotted references | Bridges YAML text to Python callables/classes. |
-| `compiler.py` | You need to compile YAML config into executable Limen objects | Produces manifest and UEL-ready configuration. |
-| `profiler.py` | You need permutation and runtime estimates | Powers `limen profile`. |
-| `store.py` | You need committed-manifest storage and `manifest://` lookup | Used by `limen commit`, `limen ls`, and `limen run manifest://...`. |
-| `templates/` | You need shipped starting YAML files | Used by `limen init` and `limen list-templates`. |
+| `parser.py` | Read YAML into structured config | Handles file parsing before validation. |
+| `schema.py` | Authoritative YAML field sets and allowed values | Defines schema version `1.0`, modes, manifest types, output formats, and search strategies. |
+| `validator.py` | Validate structure and supported field names | Used by CLI validation and run paths. |
+| `resolver.py` | Resolve `limen.*` dotted references | Bridges YAML text to Python callables/classes. |
+| `compiler.py` | Compile YAML config into executable Limen objects | Produces manifest and UEL-ready configuration. |
+| `profiler.py` | Permutation and runtime estimates | Powers `limen profile`. |
+| `store.py` | Committed-manifest storage and `manifest://` lookup | Used by `limen commit`, `limen ls`, and `limen run manifest://sha256:`. |
+| `templates/` | Shipped starting YAML files | Used by `limen init` and `limen list-templates`. |
 
 ## Adjacent modules
 
 - `limen.cli` exposes this package through shell commands.
 - `limen.experiment.manifest_core` is the Python object model that compiled YAML targets.
-- `limen.sfd.foundational_sfd` mirrors several YAML templates as packaged SFDs.
+- `limen.sfd.foundational_sfd` mirrors YAML templates as packaged SFDs.
 
 ## Quick orientation
 

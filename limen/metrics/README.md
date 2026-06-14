@@ -13,13 +13,13 @@ Does **not** own model fitting, prediction generation, experiment logging, or ba
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `binary_metrics` | You need binary-classification metrics from predictions and probabilities | Import from `limen.metrics.binary_metrics` for the function form |
-| `multiclass_metrics` | You need macro or weighted metrics for multiclass problems | Import from `limen.metrics.multiclass_metrics` |
-| `continuous_metrics` | You need regression metrics like MAE, RMSE, and R2 | Import from `limen.metrics.continuous_metrics` |
-| `safe_ovr_auc` | You need OvR AUC without blowing up on missing-class edge cases | Import from `limen.metrics.safe_ovr_auc` |
-| `balanced_metric` | You want a single optimization target for balanced binary prediction quality | Exported directly from the package root |
+| `binary_metrics` | Binary-classification metrics from predictions and probabilities | Import from `limen.metrics.binary_metrics` for the function form |
+| `multiclass_metrics` | Macro or weighted metrics for multiclass problems | Import from `limen.metrics.multiclass_metrics` |
+| `continuous_metrics` | Regression metrics like MAE, RMSE, and R2 | Import from `limen.metrics.continuous_metrics` |
+| `safe_ovr_auc` | OvR AUC without blowing up on missing-class edge cases | Import from `limen.metrics.safe_ovr_auc` |
+| `balanced_metric` | Single optimization target for balanced binary prediction quality | Exported directly from the package root |
 
 ## Adjacent modules
 

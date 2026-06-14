@@ -1,12 +1,12 @@
 # Trainer
 
-`Trainer` is Limen's promotion layer for finished experiment rounds. It takes a completed artifact-rich experiment directory, reconstructs the manifest and round parameters, validates selected permutations, and retrains them into reusable `Sensor` objects.
+`Trainer` is Limen's promotion layer for finished experiment rounds. It takes a completed artifact-backed experiment directory, reconstructs the manifest and round parameters, validates selected permutations, and retrains them into reusable `Sensor` objects.
 
-This is the bridge between "a good row in an experiment" and "a trained model object I can carry forward."
+Trainer bridges a selected experiment row and a trained model object for downstream inference.
 
-## What Trainer Needs
+## What Trainer needs
 
-Trainer works only with experiments that were run through the artifact-rich UEL path and wrote an `experiment_dir`.
+Trainer works only with experiments that were run through the artifact-backed UEL path and wrote an `experiment_dir`.
 
 At minimum, the directory must contain:
 
@@ -17,11 +17,11 @@ If `results.csv` is also present, Trainer validates the retrained metrics agains
 
 ## Prerequisites
 
-- the experiment must have been created with `experiment_dir=...`
+- the experiment must have been created with `experiment_dir='experiments/logreg-first'`
 - the experiment must be YAML-based (created via `limen run`)
 - the SFD must be a manifest-driven ML architecture (rule-based architectures are not supported)
 
-## Typical Workflow
+## Workflow
 
 Start from an existing experiment directory:
 
@@ -45,12 +45,12 @@ bar_pred = sensor.predict(raw_klines)
 In this workflow:
 
 - `Trainer` reconstructs the manifest and round metadata
-- `train([ ... ])` validates and retrains the selected rounds
+- `trainer.train(top_ids)` validates and retrains the selected rounds
 - each returned `Sensor` wraps one trained `ReferenceModel`
 
 ## Why Trainer Exists
 
-Experiment runs are usually done on train/validation/test splits. Promotion is different: once a round is selected, you usually want to retrain it on all available data before carrying it downstream.
+Experiment runs normally use train/validation/test splits. Promotion retrains a selected round on all available data before downstream use.
 
 Trainer handles that transition cleanly by:
 
@@ -58,16 +58,16 @@ Trainer handles that transition cleanly by:
 - validating that the pipeline still reproduces the logged round metrics
 - wrapping the validated model in a `Sensor` ready for inference
 
-## Training and Validation
+## Training and validation
 
 Trainer reruns:
 
-- `manifest.prepare_data(...)`
-- `manifest.run_model(...)`
+- `manifest.prepare_data(data, round_params)`
+- `manifest.run_model(prepared, round_params)`
 
 with the original round parameters and wraps the resulting model in a `Sensor`. If `results.csv` is present, it also compares the resulting metrics against the original experiment log.
 
-If the model is deterministic, validation expects an exact match within a very small float tolerance. If the model is stochastic, Trainer uses a looser scaled tolerance.
+Deterministic models require near-exact metric matches. Stochastic models use a scaled tolerance.
 
 If validation fails, Trainer raises `ReconstructionError`.
 
@@ -82,7 +82,7 @@ except ReconstructionError as e:
 
 This is Limen's guard against pipeline drift.
 
-## Deterministic Vs Stochastic Models
+## Deterministic versus stochastic models
 
 Trainer uses the model class's `deterministic` attribute to choose the validation tolerance.
 
@@ -93,7 +93,7 @@ Trainer uses the model class's `deterministic` attribute to choose the validatio
 
 This is why promotion is more reliable for deterministic reference models than for intentionally stochastic ones.
 
-## Trainer And The Reference-Architecture Contract
+## Trainer and the reference-architecture contract
 
 Trainer does not promote arbitrary model objects. It resolves exactly one `ReferenceModel` subclass from the original model module and uses that class for retraining.
 
@@ -113,7 +113,7 @@ That means the promotion stack depends on the [Reference Architecture](Reference
 | `experiment_dir` | path to the completed experiment directory |
 | `data` | optional dataframe override; if omitted, Trainer fetches data from the reconstructed manifest |
 
-Use `data=` when you already have the exact dataframe you want Trainer to use. Otherwise Trainer falls back to `manifest.fetch_data()`.
+Use `data=` with an exact dataframe override. Otherwise Trainer falls back to `manifest.fetch_data()`.
 
 ## `train(permutation_ids)`
 
@@ -145,19 +145,19 @@ Each sensor exposes:
 - `manifest_id` — SHA-256 content hash of the YAML manifest, carried from `metadata.json` for traceability
 - `round_params` — parameter values used for this permutation
 
-### Example
+### Sensor example
 
 ```python
 sensor = sensors[0]
 
-print(sensor.permutation_id)   # 'sha256:a3f1...'
-print(sensor.manifest_id)      # 'sha256:7c2e...'
+print(sensor.permutation_id)   # 'sha256:a3f1c9'
+print(sensor.manifest_id)      # 'sha256:7c2e41'
 print(sensor.round_params)
 
 bar_pred = sensor.predict(raw_klines)
 ```
 
-Sensors are also callable — `__call__` aliases `predict_all` and returns `list[BarPrediction]`, one entry per bar. Use this in replay loops:
+Sensors are also callable. `__call__` aliases `predict_all` and returns `list[BarPrediction]`, one entry per bar:
 
 ```python
 all_preds = sensor(raw_klines)  # list[BarPrediction]
@@ -198,7 +198,7 @@ On unexpected exceptions the method returns a list of `reason='sensor-error'` en
 
 All reference models need only `x_test` for inference. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time.
 
-## What Trainer Reads From Disk
+## What Trainer reads from disk
 
 Trainer uses:
 
@@ -206,17 +206,17 @@ Trainer uses:
 - `round_data.jsonl` — loads `round_params` for each permutation
 - `results.csv` — when available, validates retrained metrics against the original experiment log
 
-## Scope Note
+## Scope note
 
-Trainer depends on the artifact-rich UEL path, which in turn depends on a concrete `SearchStrategy`. Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for writing your own.
+Trainer depends on the artifact-backed UEL path, which in turn depends on a concrete `SearchStrategy`. Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for custom strategies.
 
-So the clean mental model is:
+The operating model is:
 
-- UEL artifact-rich runs create the promotion-ready experiment directory
+- UEL artifact-backed runs create the promotion-ready experiment directory
 - Trainer turns selected rounds from that directory into sensors
 
-## Read Next
+## Read next
 
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and retrains.
-- Continue to [Cohort](Cohort.md) if you want to bind selected sensors into an ensemble inference surface.
-- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) if you need the run layer that produces `experiment_dir`.
+- Continue to [Cohort](Cohort.md) to bind selected sensors into an ensemble inference surface.
+- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the run layer that produces `experiment_dir`.

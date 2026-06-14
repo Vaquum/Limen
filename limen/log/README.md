@@ -15,14 +15,14 @@ Does **not** own experiment execution, model training, or artifact persistence d
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `Log` | You want the main post-run analysis object | Import from `limen.log.log` |
-| `permutation_prediction_performance` | You want aligned predictions, actuals, and price columns for one round | Available as a `Log` method |
-| `permutation_confusion_metrics` | You want one-round classification diagnostics | Available as a `Log` method |
-| `experiment_confusion_metrics` | You want one table across all permutations | Available as a `Log` method and re-exported helper |
-| `experiment_backtest_results` | You want snapshot backtests across all rounds | Uses `limen.backtest` downstream |
-| `experiment_parameter_correlation` | You want to inspect which parameters move with a chosen metric | Useful for sweep interpretation |
+| `Log` | Main post-run analysis object | Import from `limen.log.log` |
+| `permutation_prediction_performance` | Aligned predictions, actuals, and price columns for one round | Available as a `Log` method |
+| `permutation_confusion_metrics` | One-round classification diagnostics | Available as a `Log` method |
+| `experiment_confusion_metrics` | One table across all permutations | Available as a `Log` method and re-exported helper |
+| `experiment_backtest_results` | Snapshot backtests across all rounds | Uses `limen.backtest` downstream |
+| `experiment_parameter_correlation` | Inspect which parameters move with a chosen metric | Supports sweep interpretation |
 
 ## Adjacent modules
 
@@ -45,10 +45,10 @@ log/
 
 ## Things to know
 
-- `Log(file_path=...)` is useful, but it does not expose every method that a live UEL-backed `Log` can support.
+- `Log(file_path='my_experiment.csv')` supports CSV-log cleanup but does not expose every method that a live UEL-backed `Log` can support.
 - Manifest-aware logs reconstruct the test window with the same bar-formation logic used during the run.
 - The package root re-exports helper functions, but the `Log` class itself lives in `limen.log.log`.
-- A good mental model is that `Log` is the bridge between raw experiment output and higher-level selection decisions.
+- `Log` bridges raw experiment output and higher-level selection decisions.
 
 ## Read next
 

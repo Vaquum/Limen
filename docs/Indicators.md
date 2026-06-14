@@ -1,19 +1,19 @@
 # Indicators
 
-Indicators are Limen's lowest-level signal helpers. They usually take a kline-style `pl.DataFrame`, append one or more derived columns, and return the same frame shape back for the rest of the manifest pipeline.
+Indicators are Limen's lowest-level signal helpers. They take a kline-style `pl.DataFrame`, append one or more derived columns, and return the same frame shape back for the rest of the manifest pipeline.
 
-Use this page when you need to choose an indicator, understand its naming convention, or see which columns it adds by default. For higher-level derived signals, see [Features](Features.md).
+This page covers indicator selection, naming conventions, and default added columns. For higher-level derived signals, see [Features](Features.md).
 
 ## Conventions
 
 - Indicators append columns. They do not replace the input frame with a reduced schema.
-- Most helpers assume the usual OHLCV names: `open`, `high`, `low`, `close`, `volume`.
+- Helpers assume the standard OHLCV names: `open`, `high`, `low`, `close`, `volume`.
 - TA-Lib-backed wrappers treat TA-Lib parity as the source of truth. If Limen and TA-Lib diverge, TA-Lib wins unless there is a deliberate, documented reason not to.
-- Output column names usually encode the main defaults, such as `rsi_14` or `apo_12_26_0`.
-- Candlestick pattern helpers add a same-named integer column, usually following TA-Lib's positive bullish, negative bearish, zero neutral convention.
-- A few helpers intentionally expose legacy compatibility behavior. The main example is `sma`, which adds both `sma_{period}` and `{price_col}_sma_{period}`.
+- Output column names encode key defaults, such as `rsi_14` or `apo_12_26_0`.
+- Candlestick pattern helpers add a same-named integer column following TA-Lib's positive bullish, negative bearish, zero neutral convention.
+- Legacy compatibility helpers intentionally expose legacy behavior. `sma` adds both `sma_{period}` and `{price_col}_sma_{period}`.
 
-## Quick Example
+## Quick example
 
 ```python
 from limen.data import HistoricalData
@@ -41,7 +41,7 @@ def manifest():
     )
 ```
 
-## Family Index
+## Family index
 
 - `Price and moving averages`: direct price transforms and smoothing helpers.
 - `Momentum and oscillators`: rate-of-change, oscillator, regression, and Hilbert-style cycle helpers.
@@ -49,16 +49,16 @@ def manifest():
 - `Volume, breadth, and bar diagnostics`: flow, bar-body, and return-style helpers.
 - `Candlestick patterns`: TA-Lib-style pattern flags over OHLC bars.
 
-## Price And Moving Averages
+## Price and moving averages
 
-These helpers usually take either a single `price_col` or basic OHLC inputs and add smoothed or transformed price views.
+These helpers take either a single `price_col` or basic OHLC inputs and add smoothed or transformed price views.
 
 | Function | Adds by default | Notes |
 |---|---|---|
 | `avgprice` | `avgprice` | Average OHLC price. |
 | `medprice` | `medprice` | Median of high and low. |
 | `midprice` | `midprice_14` | Rolling midpoint of high and low over `period`. |
-| `typprice` | `typprice` | Typical price from high, low, close. |
+| `typprice` | `typprice` | Mean of high, low, and close. |
 | `wclprice` | `wclprice` | Weighted close price. |
 | `midpoint` | `midpoint_14` | Rolling midpoint of a single `price_col`. |
 | `sma` | `sma_30`, `close_sma_30` | Adds both the canonical and compatibility alias columns. |
@@ -73,7 +73,7 @@ These helpers usually take either a single `price_col` or basic OHLC inputs and 
 | `ma` | `ma_30_0` | Generic moving average with explicit `ma_type`. |
 | `ht_trendline` | `ht_trendline` | Hilbert Transform instantaneous trendline. |
 
-## Momentum And Oscillators
+## Momentum and oscillators
 
 These helpers focus on rate of change, directional persistence, oscillator state, or cycle structure.
 
@@ -112,7 +112,7 @@ These helpers focus on rate of change, directional persistence, oscillator state
 | `ht_sine` | `ht_sine`, `ht_sine_lead` | Hilbert sine pair. |
 | `ht_trendmode` | `ht_trendmode` | Trend-versus-cycle mode flag. |
 
-## Volatility, Bands, And Range
+## Volatility, bands, and range
 
 These helpers quantify range, dispersion, band structure, or stop placement.
 
@@ -131,7 +131,7 @@ These helpers quantify range, dispersion, band structure, or stop placement.
 | `sar` | `sar` | Parabolic SAR. |
 | `sarext` | `sarext` | Extended SAR with separate long and short parameters. |
 
-## Volume, Breadth, And Bar Diagnostics
+## Volume, breadth, and bar diagnostics
 
 These helpers focus on participation, bar structure, or direct return transforms.
 
@@ -143,17 +143,17 @@ These helpers focus on participation, bar structure, or direct return transforms
 | `mfi` | `mfi_14` | Money Flow Index. |
 | `bop` | `bop` | Balance of Power. |
 | `price_change_pct` | `price_change_pct_1` | Point-to-point percent change. |
-| `returns` | `returns` | Single-step simple returns helper. |
+| `returns` | `returns` | Single-step returns helper. |
 | `body_pct` | `body_pct` | Candle body size as a share of the full range. |
 | `window_return` | `ret_24` | Return over a wider rolling window. |
 
-## Candlestick Patterns
+## Candlestick patterns
 
 All candlestick pattern helpers:
 
 - expect OHLC columns
 - append one integer column named after the function
-- are best treated as event flags rather than smooth continuous features
+- should be treated as event flags rather than smooth continuous features
 
 Only three patterns expose an extra parameter today.
 
@@ -207,15 +207,15 @@ Only three patterns expose an extra parameter today.
 | `cdltristar` | `cdltristar` | None |
 | `cdlunique3river` | `cdlunique3river` | None |
 
-## Choosing Between Similar Helpers
+## Choosing between similar helpers
 
-- Use `bbands` when you want TA-Lib parity and configurable moving-average type.
-- Use `bollinger_bands` when you want a lightweight native SMA-based band helper.
-- Use `stoch` or `stochf` when you want TA-Lib parity. Use `stochastic_oscillator` when you want a simpler native rolling implementation.
-- Use `sma` when you want the canonical moving average helper used across Limen manifests. Use `ma` when `ma_type` itself is part of the search space.
-- Use `returns`, `price_change_pct`, and `window_return` differently: one-bar simple returns, configurable percent change, and wider-window return summaries respectively.
+- Use `bbands` for TA-Lib parity and configurable moving-average type.
+- Use `bollinger_bands` for the native SMA-based band helper.
+- Use `stoch` or `stochf` for TA-Lib parity. Use `stochastic_oscillator` for the native rolling implementation.
+- Use `sma` for the canonical moving average helper used across Limen manifests. Use `ma` when `ma_type` itself is part of the search space.
+- Use `returns`, `price_change_pct`, and `window_return` for one-bar returns, configurable percent change, and wider-window return summaries respectively.
 
-## Read Next
+## Read next
 
 - [Features](Features.md) for higher-level derived signals built on top of raw bars or indicators
 - [Experiment Manifest](Experiment-Manifest.md) for how to wire indicators into a manifest pipeline

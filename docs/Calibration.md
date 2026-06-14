@@ -1,12 +1,12 @@
 # Calibration
 
-Calibration controls two things that raw model output typically gets wrong: the reliability of predicted probabilities, and where the decision boundary sits. Limen's calibration layer is declarative — it is configured on the manifest and injected automatically into each experiment round.
+Calibration controls two model-output surfaces: the reliability of predicted probabilities, and where the decision boundary sits. Limen's calibration layer is declarative — it is configured on the manifest and injected automatically into each experiment round.
 
 ## What Calibration Does
 
-Binary classifiers return raw probabilities, but those probabilities are rarely well-calibrated. A model that says 0.7 rarely means there is a 70% chance the positive class is correct. Probability calibration fits a post-hoc correction on a held-out validation set so the output probabilities better reflect actual class frequencies.
+Binary classifiers return raw probabilities, but raw probabilities can be miscalibrated. A model output of `0.7` is not automatically a calibrated `70%` positive-class probability. Probability calibration fits a post-hoc correction on a held-out validation set so the output probabilities align with actual class frequencies.
 
-Threshold optimization solves a different problem. The default decision boundary at 0.5 is rarely optimal when the metric you care about is not symmetric — for example, when recall and precision have unequal importance. Limen's `grid_threshold_optimizer` sweeps a range of candidate thresholds, scores each one with a chosen metric, and selects the best.
+Threshold optimization solves a different problem. The default decision boundary at `0.5` can be suboptimal when the target metric is asymmetric, such as when recall and precision have unequal importance. Limen's `grid_threshold_optimizer` sweeps a range of candidate thresholds, scores each one with a chosen metric, and selects the highest-scoring candidate.
 
 The two steps are independent and can be used together or separately.
 
@@ -29,18 +29,30 @@ The minimum setup: add `with_calibration()` to the manifest.
 
 ```python
 from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
-from limen.experiment import MLManifest
+from limen.data import HistoricalData
+from limen.experiment import Manifest, MLManifest
+from limen.indicators import roc
 from limen.metrics.balanced_metric import balanced_metric
+from limen.scalers import LogRegScaler
 from limen.sfd.reference_architecture import logreg_binary
+from limen.targets import QuantileBinaryTarget
 
-def manifest():
+def manifest() -> Manifest:
     return (
         MLManifest()
-        .set_data_source(...)
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'row_count_limit': 5000},
+        )
         .set_split_config(8, 1, 2)
-        .add_indicator(...)
-        .with_target_label(...)
-        .set_scaler(...)
+        .add_indicator(roc, period=14)
+        .with_target_label(
+            'quantile_flag',
+            QuantileBinaryTarget,
+            fit_params={'source_column': 'roc_14', 'quantile': 0.40},
+            transform_params={'shift': -1},
+        )
+        .set_scaler(LogRegScaler)
         .with_reference_architecture(logreg_binary)
         .with_calibration()
         .probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
@@ -53,11 +65,11 @@ def manifest():
 
 `sklearn_probability_calibrator` wraps sklearn's `CalibratedClassifierCV` with `FrozenEstimator` to avoid the deprecation that came with sklearn 1.6. It accepts `method='isotonic'` (default) or `method='sigmoid'`.
 
-`grid_threshold_optimizer` sweeps a bounded range of thresholds, scores each with the chosen metric, and returns the best one. `balanced_metric` is Limen's built-in `precision * sqrt(trade_rate)` score, which balances signal quality with trade frequency — appropriate when both accuracy and trading activity matter.
+`grid_threshold_optimizer` sweeps a bounded range of thresholds, scores each with the chosen metric, and returns the highest-scoring threshold. `balanced_metric` is Limen's built-in `precision * sqrt(trade_rate)` score, which balances signal quality with trade frequency — appropriate when both accuracy and trading activity matter.
 
 ## Threshold-Only Path
 
-If you want threshold optimization without probability recalibration, call `threshold_function()` only:
+`threshold_function()` configures threshold optimization without probability recalibration. In an existing manifest chain, the calibration fragment is:
 
 ```python
 .with_calibration()
@@ -80,10 +92,23 @@ def params():
         'threshold_step':  [0.05, 0.10],
     }
 
-def manifest():
+def manifest() -> Manifest:
     return (
         MLManifest()
-        ...
+        .set_data_source(
+            method=HistoricalData.get_spot_klines,
+            params={'kline_size': 3600, 'row_count_limit': 5000},
+        )
+        .set_split_config(8, 1, 2)
+        .add_indicator(roc, period=14)
+        .with_target_label(
+            'quantile_flag',
+            QuantileBinaryTarget,
+            fit_params={'source_column': 'roc_14', 'quantile': 0.40},
+            transform_params={'shift': -1},
+        )
+        .set_scaler(LogRegScaler)
+        .with_reference_architecture(logreg_binary)
         .with_calibration()
         .probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
         .threshold_function(
@@ -110,11 +135,10 @@ def params():
     return {
         'use_calibration': [True, False],
         'use_threshold':   [True, False],
-        ...
     }
 ```
 
-All four modes produce comparable metrics in the same experiment log, so you can evaluate the effect of each step directly from the results.
+All four modes produce comparable metrics in the same experiment log, so each step's effect is visible directly from the results.
 
 ## Custom Calibrators and Optimizers
 
@@ -123,28 +147,22 @@ The calibration layer is protocol-based. Any function that matches the expected 
 **Calibrator protocol** — `(clf, x_val, y_val, **params) -> fitted model with predict_proba()`:
 
 ```python
-from limen.calibration import CalibratorProtocol
-
-def my_calibrator(clf, x_val, y_val, **params):
-    # fit and return anything with predict_proba()
-    ...
-
-.probability_calibration(func=my_calibrator)
+def passthrough_calibrator(clf, x_val, y_val, **params):
+    return clf
 ```
+
+Pass `passthrough_calibrator` as the `func=` value in `probability_calibration()`.
 
 **Threshold optimizer protocol** — `(y_val, val_proba, **params) -> tuple[float, float]`:
 
 ```python
-from limen.calibration import ThresholdOptimizerProtocol
-
-def my_optimizer(y_val, val_proba, **params) -> tuple[float, float]:
-    # return (best_threshold, best_score)
-    ...
-
-.threshold_function(func=my_optimizer)
+def fixed_threshold_optimizer(y_val, val_proba, **params) -> tuple[float, float]:
+    return 0.5, 0.0
 ```
 
-The two protocols are independent. You can mix Limen's built-in calibrator with a custom optimizer, or vice versa.
+Pass `fixed_threshold_optimizer` as the `func=` value in `threshold_function()`.
+
+The two protocols are independent. Limen's built-in calibrator can be paired with a custom optimizer, and a custom calibrator can be paired with Limen's built-in optimizer.
 
 ## What Gets Added to Results
 
@@ -177,7 +195,7 @@ The optimizer returns the `default_threshold` with score `0.0` when every candid
 
 When a calibrated model is promoted to a `Sensor`, the calibrator is fitted once during training evaluation (on validation data) and stored inside the model instance. Subsequent `predict()` calls — including all sensor inference calls — reuse the stored calibrator without needing `x_val` or `y_val`. Calibrated sensors therefore work identically to uncalibrated ones from the caller's perspective: pass `x_test`, receive predictions.
 
-`fit_calibrator` is the low-level function that encapsulates this fit step. It is called internally by `LogRegBinary.predict()` and `TabPFNBinary.predict()` on first use, and is also available as a public API if you need to fit a calibrator outside the standard pipeline.
+`fit_calibrator` is the low-level function that encapsulates this fit step. It is called internally by `LogRegBinary.predict()` and `TabPFNBinary.predict()` on first use, and is also available as a public API for calibrator fitting outside the standard pipeline.
 
 ## Where To Look
 

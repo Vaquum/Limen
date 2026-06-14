@@ -15,27 +15,27 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `limen.features.*` exports | You want feature functions inside a manifest or custom prep pipeline | The package root re-exports the public feature surface |
-| `lag_column`, `lag_columns`, `lag_range`, `lag_range_cols` | You want lagged versions of existing columns | Useful for both raw and derived features |
-| `calendar_time_features`, `cyclical_time_features` | You want calendar context or cyclical encodings from `datetime` | Time-of-bar features for schedules, regimes, and model inputs |
-| `parkinson_volatility`, `garman_klass_volatility`, `rogers_satchell_volatility`, `yang_zhang_volatility` | You want range-based volatility estimates from OHLC bars | Useful when close-to-close volatility is too coarse |
-| `dollar_volume`, `amihud_illiquidity`, `return_per_dollar_volume`, `range_per_dollar_volume`, `illiquidity_shock` | You want simple liquidity and impact proxies from OHLCV data | Keeps bar-derived liquidity features separate from trade-level microstructure |
-| `maker_*`, `trade_*`, `liquidity_*`, `taker_imbalance_ratio` | You want maker/taker and LOB-liquidity features emitted by native klines | Uses columns from `get_spot_klines` and `get_spot_dollar_klines` |
-| `rolling_zscore` | You want one primitive for rolling z-score features | Supports `identity`, `log1p`, and `abs` transforms |
-| `wick_proportion`, `stochastic_k_abs`, `distance_from_ma`, `close_ma_distance_atr`, `kaufman_efficiency_ratio` | You want structural rolling OHLCV features | Adds bar-structure, distance, and path-efficiency context |
-| `realized_semivariance`, `realized_skewness`, `realized_kurtosis`, `jump_variation_proxy`, `tail_event_intensity`, `volatility_of_volatility` | You want asymmetry, jump, and tail context around recent returns | These are useful risk-state features, not just volatility levels |
-| `relative_volume_seasonality`, `relative_range_seasonality`, `relative_volatility_seasonality` | You want current bar behavior normalized against hour-of-week baselines | Helps detect unusually active or quiet bars in a 24/7 market |
-| `body_to_range`, `wick_imbalance`, `range_overlap`, `rejection_intensity`, `absorption_intensity` | You want candle anatomy and auction-style context from plain bars | Focuses on rejection, overlap, and body-versus-wick structure |
-| `trend_coherence`, `volatility_term_structure` | You want short/medium/long horizon agreement features | Summarizes cross-timescale alignment without a large feature bundle |
-| `conserved_flux_renormalization` | You want trade-derived multi-scale flux diagnostics | Requires trade-level input rather than plain OHLCV bars |
+| `limen.features.*` exports | Feature functions inside a manifest or custom prep pipeline | The package root re-exports the public feature surface |
+| `lag_column`, `lag_columns`, `lag_range`, `lag_range_cols` | Lagged versions of existing columns | Works for raw and derived features |
+| `calendar_time_features`, `cyclical_time_features` | Calendar context or cyclical encodings from `datetime` | Time-of-bar features for schedules, regimes, and model inputs |
+| `parkinson_volatility`, `garman_klass_volatility`, `rogers_satchell_volatility`, `yang_zhang_volatility` | Range-based volatility estimates from OHLC bars | Captures range information beyond close-to-close volatility |
+| `dollar_volume`, `amihud_illiquidity`, `return_per_dollar_volume`, `range_per_dollar_volume`, `illiquidity_shock` | Liquidity and impact proxies from OHLCV data | Keeps bar-derived liquidity features separate from trade-level microstructure |
+| `maker_*`, `trade_*`, `liquidity_*`, `taker_imbalance_ratio` | Maker/taker and LOB-liquidity features emitted by native klines | Uses columns from `get_spot_klines` and `get_spot_dollar_klines` |
+| `rolling_zscore` | One primitive for rolling z-score features | Supports `identity`, `log1p`, and `abs` transforms |
+| `wick_proportion`, `stochastic_k_abs`, `distance_from_ma`, `close_ma_distance_atr`, `kaufman_efficiency_ratio` | Structural rolling OHLCV features | Adds bar-structure, distance, and path-efficiency context |
+| `realized_semivariance`, `realized_skewness`, `realized_kurtosis`, `jump_variation_proxy`, `tail_event_intensity`, `volatility_of_volatility` | Asymmetry, jump, and tail context near recent returns | Risk-state features beyond volatility levels |
+| `relative_volume_seasonality`, `relative_range_seasonality`, `relative_volatility_seasonality` | Current bar behavior normalized against hour-of-week baselines | Detects activity and range deviations in a 24/7 market |
+| `body_to_range`, `wick_imbalance`, `range_overlap`, `rejection_intensity`, `absorption_intensity` | Candle anatomy and auction-style context from plain bars | Focuses on rejection, overlap, and body-versus-wick structure |
+| `trend_coherence`, `volatility_term_structure` | Short/medium/long horizon agreement features | Summarizes cross-timescale alignment without a large feature bundle |
+| `conserved_flux_renormalization` | Trade-derived multi-scale flux diagnostics | Requires trade-level input rather than plain OHLCV bars |
 
 ## Adjacent modules
 
-- `limen.indicators` usually runs first and produces columns that many features depend on.
+- `limen.indicators` runs first when features depend on indicator columns.
 - `limen.transforms` is commonly used alongside feature generation when building targets.
-- `limen.experiment.Manifest` wires features into the prep pipeline through `.add_feature(...)`.
+- `limen.experiment.Manifest` wires features into the prep pipeline through `.add_feature(vwap)`.
 
 ## Quick orientation
 

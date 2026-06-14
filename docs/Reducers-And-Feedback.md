@@ -1,4 +1,4 @@
-# Reducers And Feedback
+# Reducers and feedback
 
 Reducers and feedback are the control layer inside Limen's advanced search path. They are what let a run react to its own results instead of sweeping the full original domain unchanged.
 
@@ -8,7 +8,7 @@ This layer is coordinated by `FeedbackController`, which can collect interventio
 - an in-process `intra_callback`
 - an optional JSON intervention file
 
-## Feedback Cycle Order
+## Feedback cycle order
 
 Each feedback trigger runs sources in this order:
 
@@ -23,7 +23,7 @@ Two other behavior rules matter:
 - failures are isolated per source, so one bad source does not block the others
 - suggestion interventions are logged but not dispatched to the queue
 
-## The Intervention Surface
+## The intervention surface
 
 The `MSQ` layer currently supports these intervention families:
 
@@ -37,9 +37,9 @@ The `MSQ` layer currently supports these intervention families:
 | `set_filter`, `clear_filter` | apply or remove named multi-combination filters |
 | `remove_custom` | direct callback-only custom combo filtering |
 
-Reducers usually return declarative dicts. The `intra_callback` is different: it receives direct `MSQ` access and can call queue methods itself.
+Reducers return declarative dicts by default. The `intra_callback` receives direct `MSQ` access and can call queue methods itself.
 
-## Built-In Reducers
+## Built-in reducers
 
 ### `BudgetReducer`
 
@@ -54,21 +54,21 @@ In direct `worst_first` analysis, it emitted:
 
 ```python
 [
-    {'op': 'remove_is', 'param': 'a', 'value': 1, ...},
-    {'op': 'remove_is', 'param': 'b', 'value': 'x', ...},
-    {'op': 'trim', 'target_count': 5, ...},
+    {'op': 'remove_is', 'param': 'a', 'value': 1, 'reason': 'sanity rule'},
+    {'op': 'remove_is', 'param': 'b', 'value': 'x', 'reason': 'sanity rule'},
+    {'op': 'trim', 'target_count': 5, 'reason': 'budget limit'},
 ]
 ```
 
 ### `FocusReducer`
 
-`FocusReducer` reacts to a breakthrough score and narrows the search around the current winner.
+`FocusReducer` reacts to a breakthrough score and narrows the search near the current winner.
 
 In a live direct reducer run, a breakthrough above `0.9` emitted:
 
 - one `keep_between` filter for a numeric parameter
 - one `keep_values` filter for a categorical parameter
-- multiple `inject_value` variations around the winning numeric value
+- multiple `inject_value` variations near the winning numeric value
 
 This is the exploitation-style reducer in the current package.
 
@@ -121,19 +121,19 @@ In a live direct run, it detected a wrong-direction parameter and emitted:
     'op': 'remove_is',
     'param': 'a',
     'value': 1,
-    'reason': 'wrong-direction (negative) correlation ...',
+    'reason': 'wrong-direction negative correlation on auc',
 }
 ```
 
 It can also emit suggestion-style `keep_is` interventions for low-impact parameters.
 
-## Feedback Sources Beyond Reducers
+## Feedback sources beyond reducers
 
 ### `intra_callback`
 
 `intra_callback` receives `(log, msq)` and can call queue methods directly.
 
-Use it when you want:
+Use `ManualReducer` for:
 
 - arbitrary Python-side control logic
 - direct queue mutation that is too custom for declarative reducer output
@@ -158,7 +158,7 @@ Example:
 ]
 ```
 
-## Audit Trail
+## Audit trail
 
 Each feedback trigger writes one JSONL entry to `audit.jsonl` when the advanced path is using an `experiment_dir`.
 
@@ -172,7 +172,7 @@ A live local run in this repo recorded:
 
 That audit trail is the main way to explain why the search changed mid-run.
 
-## One Concrete Mixed Feedback Cycle
+## One concrete mixed feedback cycle
 
 In a live local controller run in this repo, one trigger applied all three sources in the same cycle:
 
@@ -183,12 +183,12 @@ In a live local controller run in this repo, one trigger applied all three sourc
 All three were:
 
 - applied to the queue
-- passed to `strategy.update_from_feedback(...)`
+- passed to `strategy.update_from_feedback(interventions)`
 - written into `audit.jsonl`
 
 On the next trigger, changing the file to inject `a=123` produced a second audit entry with the updated file-driven intervention.
 
-## Reducer Registry
+## Reducer registry
 
 All built-in reducers are available via `REDUCER_REGISTRY` for params-based or programmatic selection:
 
@@ -204,8 +204,8 @@ from limen.experiment.reducer import REDUCER_REGISTRY
 | `'sanity'` | `SanityReducer` |
 | `'saturation'` | `SaturationReducer` |
 
-## Read Next
+## Read next
 
-- Continue to [Advanced Search](Advanced-Search.md) for the full artifact-rich run path around this feedback system.
+- Continue to [Advanced Search](Advanced-Search.md) for the full artifact-backed run path for this feedback system.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for where feedback triggers are scheduled during a run.
-- Continue to [Trainer](Trainer.md) if you want to use the finished artifacts downstream.
+- Continue to [Trainer](Trainer.md) for downstream use of finished artifacts.

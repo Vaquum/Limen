@@ -1,10 +1,10 @@
-# Data Bars
+# Data bars
 
-Limen currently supports threshold-based bar formation over existing kline data. This is an optional preprocessing step inside a manifest: you start from regular time-based klines, then aggregate consecutive rows until a volume, trade-count, or liquidity threshold is reached.
+Limen currently supports threshold-based bar formation over existing kline data. This optional manifest preprocessing step starts from regular time-based klines, then aggregates consecutive rows until a volume, trade-count, or liquidity threshold is reached.
 
-Use bars when time-based candles are not the best surface for the behavior you want to study. Skip them when fixed-interval klines already match the rhythm of the research problem.
+Use bars when time-based candles do not match the studied behavior. Skip bars when fixed-interval klines already match the research rhythm.
 
-## Current Scope
+## Current scope
 
 The implemented bar surface today is:
 
@@ -14,23 +14,23 @@ The implemented bar surface today is:
 
 Limen does not currently expose imbalance bars, run bars, or tick bars as a supported public surface.
 
-## When Bars Help
+## When bars help
 
-Bars usually help when you want each row to represent a more comparable amount of market activity instead of a fixed amount of clock time.
+Bars help when each row should represent a comparable amount of market activity instead of a fixed amount of clock time.
 
-Typical good fits:
+Suitable fits:
 
 - high-volatility periods where fixed-time candles contain very uneven activity
-- strategies that care more about activity intensity than about wall-clock spacing
+- strategies that depend more on activity intensity than wall-clock spacing
 - research where volume or liquidity concentration matters more than elapsed time
 
-Typical poor fits:
+Unsuitable fits:
 
 - experiments where explicit time-of-day structure matters
 - workflows that depend on regular calendar spacing
 - cases where the added aggregation step makes the experiment harder to interpret than the base klines
 
-## Shared Output Schema
+## Shared output schema
 
 All supported bar functions return a `pl.DataFrame` with this shared schema:
 
@@ -48,9 +48,9 @@ All supported bar functions return a `pl.DataFrame` with this shared schema:
 | `bar_count` | number of source klines merged into the bar |
 | `base_interval` | source kline interval in seconds |
 
-Your source dataframe must already contain the columns needed to compute the chosen bar type. In practice that means using kline-style input with fields such as `volume`, `no_of_trades`, and `liquidity_sum`.
+The source dataframe must already contain the columns needed to compute the chosen bar type. Kline-style input must include fields such as `volume`, `no_of_trades`, and `liquidity_sum`.
 
-## Supported Functions
+## Supported functions
 
 ### `volume_bars(data, volume_threshold)`
 
@@ -64,7 +64,7 @@ Aggregate rows until cumulative trade count reaches `trade_threshold`.
 
 Aggregate rows until cumulative liquidity reaches `liquidity_threshold`.
 
-## Manifest Usage
+## Manifest usage
 
 Bar formation is configured through `Manifest.set_bar_formation()` and is applied separately inside each split. That matters because Limen's manifest pipeline is split-first by design.
 
@@ -112,8 +112,8 @@ def manifest():
 
 Two important details:
 
-- `bar_type` must be present in `round_params` if you want the bar step to switch between bar modes.
-- `set_required_bar_columns()` is an assertion layer. It verifies that the bar step still leaves the downstream columns your experiment needs.
+- `bar_type` must be present in `round_params` when the bar step switches between bar modes.
+- `set_required_bar_columns()` is an assertion layer. It verifies that the bar step still leaves the downstream columns required by the experiment.
 
 ## `compute_data_bars()`
 
@@ -128,7 +128,7 @@ It currently supports these `bar_type` values:
 
 `base` returns the input data unchanged. The other values dispatch to the corresponding threshold-bar function and require the matching threshold parameter.
 
-## How Bars Fit Into The Manifest Pipeline
+## How bars fit into the manifest pipeline
 
 Inside a manifest-driven experiment, the order is:
 
@@ -140,8 +140,8 @@ Inside a manifest-driven experiment, the order is:
 
 This keeps train-only fitting and test-only evaluation aligned with the actual post-bar data seen by each fold.
 
-## Read Next
+## Read next
 
-- Continue to [Single File Decoder](Single-File-Decoder.md) if you are deciding how to package the experiment.
+- Continue to [Single File Decoder](Single-File-Decoder.md) for experiment packaging.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline that bar formation plugs into.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run the resulting experiment.

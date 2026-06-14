@@ -22,13 +22,13 @@ It does **not** own:
 
 ## Key entry points
 
-| Entry point                       | Use it when                                                                             | Notes                                                          |
+| Entry point                       | Use case | Notes                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `Cohort`                        | You want to aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
-| `limen.cohort.sfc.all.select`             | You want the default "use every round" selector                         | Preserves existing omitted-`permutation_ids` behavior          |
-| `limen.cohort.sfc.top_n.select`           | You want a simple results-column ranker                                 | Requires `results.csv`                                         |
-| `limen.cohort.sfc.backtest_pareto.select` | You want trading-metric Pareto selection                                | Uses backtest return/risk columns                              |
-| `limen.cohort.sfc.diverse_metrics.select` | You want metric-diverse member selection                                | Uses PCA/KMeans medoids over metric columns                    |
+| `Cohort`                        | Aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
+| `limen.cohort.sfc.all.select`             | Default "use every round" selector | Preserves existing omitted-`permutation_ids` behavior          |
+| `limen.cohort.sfc.top_n.select`           | Results-column ranker | Requires `results.csv`                                         |
+| `limen.cohort.sfc.backtest_pareto.select` | Trading-metric Pareto selection | Uses backtest return/risk columns                              |
+| `limen.cohort.sfc.diverse_metrics.select` | Metric-diverse member selection | Uses PCA/KMeans medoids over metric columns                    |
 
 ## Package map
 
@@ -37,9 +37,9 @@ cohort/
 ├── cohort.py                # Cohort constructor + aggregation logic
 └── sfc/                     # Single-file cohort strategies
     ├── all.py               # select(context) -> ids
-    ├── top_n.py             # select(context, *, column, n, ...) -> ids
-    ├── backtest_pareto.py   # select(context, *, target_count, ...) -> ids
-    └── diverse_metrics.py   # select(context, *, target_count, ...) -> ids
+    ├── top_n.py             # select(context, *, column, n) -> ids
+    ├── backtest_pareto.py   # select(context, *, target_count) -> ids
+    └── diverse_metrics.py   # select(context, *, target_count) -> ids
 ```
 
 ## Cohort quick behavior
@@ -50,14 +50,14 @@ cohort/
 - Infer aggregation mode from architecture capability:
   - `probability_weighted` when probability output is supported
   - `majority_vote` fallback otherwise
-- `predict(...)` returns ndarray/tuple contract
-- `__call__(...)` returns decoder-compatible dict contract
+- `predict(raw_klines)` returns ndarray/tuple contract
+- `__call__(raw_klines)` returns decoder-compatible dict contract
 
 See [Cohort](../../docs/Cohort.md) for full contract and examples.
 
 ## Selector quick behavior
 
-- Selectors are one-file strategies with one public `select(...)` function
+- Selectors are one-file strategies with one public `select(context)` function
 - Selectors receive a context dict and return permutation IDs only
 - Cohort owns all validation after selector execution
 - Built-ins cover all-round, single-column rank, backtest Pareto, and metric diversity selection

@@ -17,13 +17,13 @@ Does **not** own experiment execution, data retrieval, or the lower-level indica
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `logreg_binary` | You want the standard manifest-driven binary-classification SFD | Exported at the package root |
-| `random_binary` | You want a baseline classifier for comparison | Exported at the package root |
-| `xgboost_regressor` | You want a regression-style SFD | Exported at the package root |
-| `foundational_sfd` | You want the full catalog of packaged SFDs | Subpackage with production-oriented SFD modules |
-| `reference_architecture` | You want model-function templates without the packaged data pipeline | Starting point for custom SFD work |
+| `logreg_binary` | Standard manifest-driven binary-classification SFD | Exported at the package root |
+| `random_binary` | Baseline classifier for comparison | Exported at the package root |
+| `xgboost_regressor` | Regression-style SFD | Exported at the package root |
+| `foundational_sfd` | Full catalog of packaged SFDs | Subpackage with production-oriented SFD modules |
+| `reference_architecture` | Model-function templates without the packaged data pipeline | Starting point for custom SFD work |
 
 ## Adjacent modules
 
@@ -49,7 +49,7 @@ sfd/
 
 ## Things to know
 
-- A foundational SFD typically owns the experiment shape, while the matching reference architecture owns the model training logic.
+- A foundational SFD owns the experiment shape, while the matching reference architecture owns the model training logic.
 - `tabpfn_binary` is optional and remains unavailable when `tabpfn` is not installed.
 - The simplest path to a new SFD is to copy an existing foundational SFD, adjust `params()`, and modify the manifest chain.
 - SFD modules are expected to stay cheap and stateless at import and manifest-construction time.

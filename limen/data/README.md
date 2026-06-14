@@ -14,12 +14,12 @@ Does **not** own indicators, higher-level features, manifests, or model training
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `HistoricalData` | You need file-backed BTCUSDT spot klines or raw file ingestion | The main public class exported by `limen.data` |
-| `compute_data_bars()` | You want to aggregate kline rows into threshold bars before feature engineering | Used by manifests through `set_bar_formation()` |
-| `split_sequential()` | You need ordered train/validation/test windows | Used by manifest-driven prep |
-| `split_data_to_prep_output()` | You need the standard `data_dict` structure | Converts split frames into model-ready keys like `x_train` and `y_test` |
+| `HistoricalData` | File-backed BTCUSDT spot klines or raw file ingestion | The main public class exported by `limen.data` |
+| `compute_data_bars()` | Aggregate kline rows into threshold bars before feature engineering | Used by manifests through `set_bar_formation()` |
+| `split_sequential()` | Ordered train/validation/test windows | Used by manifest-driven prep |
+| `split_data_to_prep_output()` | Standard `data_dict` structure | Converts split frames into model-ready keys like `x_train` and `y_test` |
 
 ## Adjacent modules
 

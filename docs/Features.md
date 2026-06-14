@@ -1,18 +1,18 @@
 # Features
 
-Features sit one layer above indicators. They usually combine, re-express, lag, or contextualize price and volume information into model-ready signals or regime flags.
+Features sit one layer above indicators. They combine, re-express, lag, or contextualize price and volume information into model-ready signals or regime flags.
 
-Use this page when you need to choose between feature helpers, understand their input requirements, or see what each helper adds to a frame. For lower-level signal primitives, see [Indicators](Indicators.md).
+This page covers feature-helper selection, input requirements, and added columns. For lower-level signal primitives, see [Indicators](Indicators.md).
 
 ## Conventions
 
-- Feature helpers usually append columns and return the original frame with the extra outputs attached.
-- Some helpers operate on plain kline data only. Others require trade-derived columns such as `maker_ratio`, `no_of_trades`, `price`, or `quantity`.
+- Feature helpers append columns and return the original frame with the extra outputs attached.
+- Helpers either operate on plain kline data or require trade-derived columns such as `maker_ratio`, `no_of_trades`, `price`, or `quantity`.
 - Not every helper is intended as a final predictor. Some are utilities used to build targets or wider feature families.
-- Several regime helpers output compact categorical-style columns such as `regime_ma_slope` or `regime_price_band`.
-- A few helpers return scalar values instead of frames. The main example is `find_min_d`, which searches for a stationarity-preserving fractional-differentiation order.
+- Regime helpers output compact categorical-style columns such as `regime_ma_slope` or `regime_price_band`.
+- `find_min_d` returns a scalar value instead of a frame; it searches for a stationarity-preserving fractional-differentiation order.
 
-## Quick Example
+## Quick example
 
 ```python
 from limen.data import HistoricalData
@@ -42,9 +42,9 @@ def manifest():
     )
 ```
 
-## Kline-Derived Position And Volatility Features
+## Kline-derived position and volatility features
 
-These helpers work directly on bar data and are usually the easiest feature layer to add to a first manifest.
+These helpers work directly on bar data and require only kline-style inputs.
 
 | Function | Adds by default | Notes |
 |---|---|---|
@@ -68,7 +68,7 @@ These helpers work directly on bar data and are usually the easiest feature laye
 | `vwap` | `vwap` | Requires a datetime-like `datetime` column because VWAP resets by trading day. |
 | `wick_proportion` | `wick_proportion` | Rolling mean wick share of full candle range. |
 
-## Calendar And Cyclical Time Features
+## Calendar and cyclical time features
 
 These helpers derive time-of-bar context from `datetime` without depending on earlier indicator columns.
 
@@ -80,7 +80,7 @@ These helpers derive time-of-bar context from `datetime` without depending on ea
 | `time_to_funding` | `hours_to_funding` | Continuous hours until the next funding settlement; default cadence is every `8` hours from `0` UTC, and zero at a settlement bar. |
 | `is_us_open_hour` | `is_us_open_hour` | Parameterized US open-hour indicator; default hour is `14`. |
 
-## Range-Based Volatility Features
+## Range-based volatility features
 
 These helpers estimate volatility directly from OHLC structure instead of relying only on close-to-close returns.
 
@@ -94,15 +94,15 @@ These helpers estimate volatility directly from OHLC structure instead of relyin
 | `volatility_spike` | `volatility_spike` | Current Parkinson variance divided by its fixed-lag value. |
 | `yang_zhang_volatility` | `yang_zhang_volatility` | Combines overnight, open-close, and range information into a higher-fidelity volatility estimate. Requires `window > 1`. |
 
-## Liquidity And Impact Features
+## Liquidity and impact features
 
-These helpers translate ordinary OHLCV bars into simple liquidity, impact, and slippage proxies.
+These helpers translate ordinary OHLCV bars into liquidity, impact, and slippage proxies.
 
 | Function | Adds by default | Notes |
 |---|---|---|
 | `dollar_volume` | `dollar_volume` | Price-times-volume activity proxy using close and volume. |
 | `amihud_illiquidity` | `amihud_illiquidity` | Absolute return per dollar of volume, a compact price-impact proxy. |
-| `return_per_dollar_volume` | `return_per_dollar_volume` | Signed return per dollar of volume, useful when direction matters as much as impact. |
+| `return_per_dollar_volume` | `return_per_dollar_volume` | Signed return per dollar of volume for directional impact analysis. |
 | `range_per_dollar_volume` | `range_per_dollar_volume` | Bar range scaled by dollar volume. |
 | `illiquidity_shock` | `illiquidity_shock` | Current Amihud-style illiquidity relative to its own trailing mean. |
 | `liquidity_drop` | `liquidity_drop` | Current LOB liquidity divided by fixed-lag LOB liquidity. |
@@ -118,7 +118,7 @@ These helpers translate ordinary OHLCV bars into simple liquidity, impact, and s
 | `order_flow_imbalance` | `order_flow_imbalance` plus `bvc_buy_volume`, `bvc_sell_volume` | Rolling net BVC-classified signed flow as a share of volume; a bar-level order-flow imbalance proxy, not level-2 OFI. |
 | `vpin` | `vpin` plus `bvc_buy_volume`, `bvc_sell_volume` | Volume-synchronized Probability of Informed Trading from the BVC buy/sell imbalance; a flow-toxicity gauge. Feed volume bars for canonical equal-volume buckets. |
 
-## Realized Risk And Tail Features
+## Realized risk and tail features
 
 These helpers describe the quality of recent movement, not just its level.
 
@@ -135,7 +135,7 @@ These helpers describe the quality of recent movement, not just its level.
 | `return_volatility_correlation` | `return_volatility_correlation` | Rolling correlation between returns and Parkinson variance. |
 | `volume_volatility_correlation` | `volume_volatility_correlation` | Rolling correlation between volume and Parkinson variance. |
 
-## Seasonality-Normalized Features
+## Seasonality-normalized features
 
 These helpers compare current bar behavior to the trailing mean for the same hour of the week.
 
@@ -145,7 +145,7 @@ These helpers compare current bar behavior to the trailing mean for the same hou
 | `relative_range_seasonality` | `relative_range_seasonality` | Current range percentage relative to the trailing hour-of-week baseline. |
 | `relative_volatility_seasonality` | `relative_volatility_seasonality` | Current absolute return magnitude relative to the trailing hour-of-week baseline. |
 
-## Candle Structure And Auction Features
+## Candle structure and auction features
 
 These helpers focus on how a bar moved internally, not just where it finished.
 
@@ -157,22 +157,22 @@ These helpers focus on how a bar moved internally, not just where it finished.
 | `rejection_intensity` | `rejection_intensity` | Wick-heavy rejection proxy based on total wick share and directional close location. |
 | `absorption_intensity` | `absorption_intensity` | High-volume, small-body absorption proxy using a trailing shifted volume baseline. |
 
-## Cross-Timescale Context Features
+## Cross-timescale context features
 
-These helpers summarize whether multiple horizons agree or disagree about market state.
+These helpers summarize cross-horizon agreement or disagreement on market state.
 
 | Function | Adds by default | Notes |
 |---|---|---|
 | `trend_coherence` | `trend_coherence` | Average sign agreement across short, medium, and long return horizons. |
 | `volatility_term_structure` | `volatility_term_structure` | Average ratio between short, medium, and long rolling volatility estimates. |
 
-## Breakout And Regime Features
+## Breakout and regime features
 
-These helpers are useful when you want state or structure, not just a continuous numeric series.
+These helpers provide state or structure rather than only a continuous numeric series.
 
 | Function | Adds by default | Notes |
 |---|---|---|
-| `breakout_features` | many lagged breakout columns plus `long_roll_mean`, `long_roll_std`, `short_roll_mean`, `short_roll_std`, `roc_long_12_1`, `roc_short_12_1` | Designed to enrich pre-existing breakout flags. |
+| `breakout_features` | lagged breakout columns plus `long_roll_mean`, `long_roll_std`, `short_roll_mean`, `short_roll_std`, `roc_long_12_1`, `roc_short_12_1` | Enriches pre-existing breakout flags. |
 | `breakout_percentile_regime` | `price_range_position`, `regime_breakout_pct` | Uses percentile thresholds over price-range position. |
 | `hh_hl_structure_regime` | `regime_hh_hl` | Captures higher-high and higher-low style structure. |
 | `ichimoku_cloud` | `tenkan`, `kijun`, `senkou_a`, `senkou_b`, `chikou` | Full Ichimoku feature set. |
@@ -181,7 +181,7 @@ These helpers are useful when you want state or structure, not just a continuous
 | `sma_crossover` | `crossover`, `signal` | Compact crossover-state helper. |
 | `window_return_regime` | `ret_24`, `regime_window_return` | Return plus regime thresholding over a window. |
 
-## Line-Based Context Features
+## Line-based context features
 
 These helpers summarize how recently and how densely price interacted with detected price lines — pairs of bars at most `max_duration_hours` apart whose close-to-close change is at least `min_height_pct` (positive lines are long, negative are short; quantile lines are those at or above the `quantile_threshold` height quantile per direction).
 
@@ -204,9 +204,9 @@ The per-column building blocks below take pre-computed line structures (`list[di
 | `hours_since_big_move` | `hours_since_big_move` | Bars since the most recent line end, capped at `lookback_hours`. |
 | `hours_since_quantile_line` | `hours_since_quantile_line` | Bars since the most recent quantile-line end, capped at `lookback_hours`. |
 
-## Lag Helpers And Threshold Utilities
+## Lag helpers and threshold utilities
 
-These helpers are mainly used to expand existing columns or define cutoffs for target construction.
+These helpers expand existing columns or define cutoffs for target construction.
 
 | Function | Adds or returns | Notes |
 |---|---|---|
@@ -217,9 +217,9 @@ These helpers are mainly used to expand existing columns or define cutoffs for t
 | `rolling_zscore` | configurable `*_zscore_*` column | Applies `identity`, `log1p`, or `abs` before rolling z-score standardization. |
 | `cusum_filter` | `cusum_event` | Int8 flag of symmetric CUSUM events on the close log-return path (`1` up, `-1` down, `0` none); gates which moves are worth sampling. |
 
-## Stationarity And Long-Memory Helpers
+## Stationarity and long-memory helpers
 
-These helpers are useful when you want to reduce non-stationarity while preserving more long-memory structure than a simple first difference would.
+These helpers reduce non-stationarity while preserving more long-memory structure than a first difference would.
 
 | Function | Adds or returns | Notes |
 |---|---|---|
@@ -228,26 +228,26 @@ These helpers are useful when you want to reduce non-stationarity while preservi
 
 Two practical details matter:
 
-- `fractional_diff` needs `cols=[...]` and writes new columns such as `close_fracdiff`.
+- `fractional_diff` needs `cols=['close']` and writes new columns such as `close_fracdiff`.
 - if one split is too short to produce the same fractional-diff column as another split, Manifest now drops that extra column during split alignment so the final `data_dict` stays consistent.
 
-## Trade-Shape And Microstructure Features
+## Trade-shape and microstructure features
 
 These helpers need richer data than ordinary OHLCV bars.
 
 | Function | Adds by default | Notes |
 |---|---|---|
-| `kline_imbalance` | `imbalance` | Requires `maker_ratio` and `no_of_trades`. Useful when those were carried through data retrieval or bar formation. |
+| `kline_imbalance` | `imbalance` | Requires `maker_ratio` and `no_of_trades` from data retrieval or bar formation. |
 | `conserved_flux_renormalization` | synthetic OHLCV plus `value_sum`, `vwap`, `flux_rel_std_mean`, `flux_rel_std_var`, `entropy_mean`, `entropy_var`, `Δflux_rms`, `Δentropy_rms` | Works on trade-level `datetime`, `price`, and `quantity`, then rolls those into kline-aligned diagnostics. |
 
-## Choosing Between Indicators And Features
+## Choosing between indicators and features
 
-- Use an indicator when you want a direct market calculation such as RSI, ATR, or MACD.
-- Use a feature when you want structure around those signals, such as lags, regimes, relative position, or multi-step aggregation.
+- Use an indicator for a direct market calculation such as RSI, ATR, or MACD.
+- Use a feature for structure around those signals, such as lags, regimes, relative position, or multi-step aggregation.
 - Use the lag helpers when the main value is temporal context rather than a new market calculation.
 - Use `fractional_diff` when stationarity itself is part of the design problem, not just a preprocessing afterthought.
 
-## Read Next
+## Read next
 
 - [Indicators](Indicators.md) for lower-level signal primitives
 - [Transforms](Transforms.md) for target shaping and post-model calibration helpers

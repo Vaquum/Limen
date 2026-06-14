@@ -1,22 +1,22 @@
 # Transforms
 
-Transforms in Limen are lightweight helpers used during data preparation or target construction. They are not the same thing as train-fitted scalers. For probability calibration and threshold optimization, see `limen.calibration`.
+Transforms in Limen are stateless helpers used during data preparation or target construction. They are not the same thing as train-fitted scalers. For probability calibration and threshold optimization, see `limen.calibration`.
 
-Use this page when you need to shape a target, clip or normalize a frame in a stateless way. For train-only fitted preprocessing, see [Scalers](Scalers.md).
+This page covers stateless target shaping, clipping, and frame normalization. For train-only fitted preprocessing, see [Scalers](Scalers.md).
 
-## DataFrame Transforms
+## DataFrame transforms
 
-These helpers operate on the frame passed into them. They do not carry learned state across splits. If you call them separately on train, validation, and test, each call uses the statistics of the frame it received.
+These helpers operate on the frame passed into them. They do not carry learned state across splits. Separate calls on train, validation, and test use the statistics of the frame passed to that call.
 
 | Function | Behavior | Notes |
 |---|---|---|
 | `mad_transform(df, time_col='datetime')` | rescales numeric columns by median absolute deviation | Leaves the time column untouched. |
-| `winsorize_transform(df, time_col='datetime')` | clips numeric columns to fixed 1% and 99% quantiles | Good when you want to tame outliers without dropping rows. |
+| `winsorize_transform(df, time_col='datetime')` | clips numeric columns to fixed 1% and 99% quantiles | Preserves rows while capping outliers. |
 | `quantile_trim_transform(df, time_col='datetime')` | removes rows outside fixed 0.5% and 99.5% bounds across numeric columns | More aggressive than winsorization because rows can disappear. |
 | `zscore_transform(df, time_col='datetime')` | standardizes numeric columns to mean zero and unit variance | Stateless per call, unlike a train-fitted scaler. |
 | `shift_column_transform(data, shift, column)` | shifts one column in place | Common in target construction. Negative values shift forward in time. |
 
-## Function Reference
+## Function reference
 
 ### `mad_transform(df, *, time_col='datetime')`
 
@@ -77,11 +77,11 @@ Return behavior:
 - nulls are introduced at the shifted boundary
 - the target column must exist in `data`
 
-## Manifest Usage
+## Manifest usage
 
-Transforms usually appear in manifest target construction or as callable helpers inside a custom SFD prep path. The important split-safety rule is that stateless transforms do not remember train statistics. If validation and test must use train-fitted parameters, use [Scalers](Scalers.md) or a target class that fits on train in `__init__`.
+Transforms appear in manifest target construction or as callable helpers inside a custom SFD prep path. The important split-safety rule is that stateless transforms do not remember train statistics. If validation and test must use train-fitted parameters, use [Scalers](Scalers.md) or a target class that fits on train in `__init__`.
 
-## Target-Building Example
+## Target-building example
 
 ```python
 from limen.targets import QuantileBinaryTarget
@@ -98,15 +98,15 @@ The important detail is that `QuantileBinaryTarget.__init__` computes the cutoff
 
 ## Boundaries
 
-- Use a transform when the operation is lightweight and local to the frame or prediction arrays you already have.
+- Use a transform when the operation is stateless and local to the frame or prediction arrays.
 - Use a scaler when the operation must be fitted on train and then reused unchanged on validation and test.
-- If you need split-safe learned parameters inside a target, compute them through the manifest target builder rather than hiding the fitting inside the transform itself.
+- Compute split-safe learned parameters through the manifest target builder rather than hiding the fitting inside the transform itself.
 - For probability calibration and threshold selection after model training, use `limen.calibration` and the manifest's `with_calibration()` builder.
 - Use `quantile_trim_transform` only when row removal is acceptable for the downstream split. If preserving row alignment matters, prefer `winsorize_transform`.
-- Keep `time_col` explicit when your time column is not named `datetime`; otherwise it will be transformed like any other numeric column.
+- Keep `time_col` explicit when the time column is not named `datetime`; otherwise it will be transformed like any other numeric column.
 
-## Read Next
+## Read next
 
 - [Scalers](Scalers.md) for train-fitted preprocessing
-- [Features](Features.md) for target and regime helpers that often pair with transforms
+- [Features](Features.md) for target and regime helpers paired with transforms
 - [Experiment Manifest](Experiment-Manifest.md) for where transforms live in the split-first execution order

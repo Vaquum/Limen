@@ -15,16 +15,16 @@ Does **not** own manifest semantics, experiment execution internals, model behav
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 | --- | --- | --- |
-| `limen.cli.main:cli` | You need the Click command group exported by the package script | Registered as the `limen` console script. |
-| `commands/validate.py` | You need YAML validation from the shell | Uses `limen.yaml` validation. |
-| `commands/profile.py` | You need static permutation profiling for YAML manifests | Runtime sampling is skipped for validated CLI YAML. |
-| `commands/run.py` | You need to execute a YAML experiment | Compiles YAML into a manifest and runs UEL. |
-| `commands/resume.py` | You need to continue a checkpointed artifact-rich run | Used through `limen run --resume`. |
-| `commands/init.py` and `commands/list_templates.py` | You need bundled template discovery or scaffolding | Reads `limen/yaml/templates`. |
-| `commands/commit.py` and `commands/ls.py` | You need committed manifest storage | Writes project-local `manifests/committed` state. |
-| `commands/new.py` | You need a new project scaffold | Clones the official project template. |
+| `limen.cli.main:cli` | Click command group exported by the package script | Registered as the `limen` console script. |
+| `commands/validate.py` | YAML validation from the shell | Uses `limen.yaml` validation. |
+| `commands/profile.py` | Static permutation profiling for YAML manifests | Runtime sampling is skipped for validated CLI YAML. |
+| `commands/run.py` | Execute a YAML experiment | Compiles YAML into a manifest and runs UEL. |
+| `commands/resume.py` | Continue a checkpointed artifact-backed run | Used through `limen run --resume`. |
+| `commands/init.py` and `commands/list_templates.py` | Bundled template discovery or scaffolding | Reads `limen/yaml/templates`. |
+| `commands/commit.py` and `commands/ls.py` | Committed manifest storage | Writes project-local `manifests/committed` state. |
+| `commands/new.py` | New project scaffold | Clones the official project template. |
 
 ## Adjacent modules
 
@@ -53,7 +53,7 @@ cli/
 ## Things to know
 
 - `limen profile` is static for validated CLI YAML because YAML manifests reject `test_data_source`.
-- `limen run` accepts both direct YAML files and committed `manifest://sha256:...` URIs.
+- `limen run` accepts both direct YAML files and committed `manifest://sha256:` URIs.
 - `limen commit` writes the project manifest store before attempting the git commit.
 - Command code should stay thin; YAML semantics belong in `limen.yaml` and execution semantics belong in `limen.experiment`.
 

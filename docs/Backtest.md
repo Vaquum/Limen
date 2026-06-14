@@ -2,13 +2,13 @@
 
 Backtest is Limen's trading-economics layer. It takes prediction outputs and asks the next question after benchmark:
 
-if we traded this signal as a simple long-only strategy, what would the return profile look like after costs?
+The layer maps a binary signal into long-only returns after fees and slippage.
 
 Limen exposes a vectorized snapshot backtest, used throughout the `Log` layer.
 
-## Where Backtest Lives
+## Where backtest lives
 
-The most common backtest outputs are:
+Backtest outputs are exposed through:
 
 - `uel.experiment_backtest_results`
 - `uel._log.experiment_backtest_results()`
@@ -28,7 +28,7 @@ and returns one summary row.
 
 ### Current assumptions
 
-The current snapshot backtest is intentionally simple and opinionated:
+The current snapshot backtest has a fixed long-flat contract:
 
 - long-only
 - direct snapshot predictions must already be binary `0/1`
@@ -46,9 +46,9 @@ The current snapshot backtest is intentionally simple and opinionated:
 - distribution columns carry p5/p50/p95; the rest are single intensive (run-length-invariant) scalars
 - return and cost outputs are basis-point scaled
 
-The fee and slippage rates default to `5.0` bps each per fill (a ~20 bps round trip) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=..., slip_bps=...)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
+The fee and slippage rates default to `5.0` bps each per fill (`20.0` bps for one entry and one exit) and are configured on the manifest, not on the model: `manifest.set_backtest_config(fee_bps=5.0, slip_bps=5.0)`. Each value is a fixed number or a search-param name — pass a param name to sweep cost across the search (for example `set_backtest_config(fee_bps='fee')` with `fee` in `params()`), to match a venue's costs, make cost a search dimension, or stress-test how sensitive an edge is to the cost assumption. Omitting the config keeps the 5 + 5 default, so existing experiments are unchanged.
 
-`set_backtest_config` also takes `notional_rate` — the fraction of capital deployed while in position, in `(0, 1]` (default `1.0`, all-in; a 10% book is `notional_rate=0.1`). It scales `edge`, `pnl`, and `cost` together so the ledger reflects the account at that bet size (`drawdown` also moves with bet size, but path-dependently — it compounds against a running peak, so it is not a clean multiple of the full-size drawdown), leaves `wins_per_bar` and `trades_per_bar` untouched, and turns `inventory_per_bar` into the average deployed notional. Like the costs it is a fixed number or a search-param name, so one search can sweep bet size.
+`set_backtest_config` also takes `notional_rate` — the fraction of capital deployed while in position, in `(0, 1]` (default `1.0`, all-in; a 10% book is `notional_rate=0.1`). It scales `edge`, `pnl`, and `cost` together so the ledger reflects the account at that bet size (`drawdown` also moves with bet size, but path-dependently — it compounds against a running peak, so it is not a linear multiple of the full-size drawdown), leaves `wins_per_bar` and `trades_per_bar` untouched, and turns `inventory_per_bar` into the average deployed notional. Like the costs it is a fixed number or a search-param name, so one search can sweep bet size.
 
 In a YAML/CLI manifest the same configuration is a `backtest:` block under `sfd.manifest`, sibling to `target:` and `scaler:`. Each value is a fixed number or a `"{param}"` reference into `sfd.params`, mirroring how indicator and target params are swept:
 
@@ -100,8 +100,20 @@ from limen.backtest.long_flat_strategy import ExecutionResult
 
 def my_strategy(predictions, open_px, close_px, price_change, *,
                 execution_lag_bars, fee_bps, slip_bps) -> ExecutionResult:
-    ...
-    return ExecutionResult(pos=..., gross=..., net=...)
+    position = predictions.astype(float).shift(execution_lag_bars, fill_value=0.0)
+    gross_return = position * price_change / open_px
+
+    entry_mask = (position == 1.0) & (position.shift(1, fill_value=0.0) == 0.0)
+    exit_mask = (position == 1.0) & (position.shift(-1, fill_value=0.0) == 0.0)
+    fee = fee_bps / 10_000.0
+    slip = slip_bps / 10_000.0
+    cost_mult = position.copy()
+    cost_mult[:] = 1.0
+    cost_mult.loc[entry_mask] *= (1.0 - fee) / (1.0 + slip)
+    cost_mult.loc[exit_mask] *= (1.0 - fee) * (1.0 - slip)
+
+    net_return = ((1.0 + gross_return) * cost_mult) - 1.0
+    return ExecutionResult(pos=position, gross=gross_return, net=net_return)
 ```
 
 `ExecutionResult` carries three per-bar series over every bar in the window: `pos` (position held — `0`/`1` here, a deployed fraction once sizing exists), `gross` (per-bar return before costs), and `net` (per-bar return after costs). Every ledger column flows from that triple. Pass a strategy through the `strategy` argument:
@@ -114,7 +126,7 @@ The strategy owns its own signal contract — `long_flat_strategy` requires bina
 
 `backtest_snapshot` forwards only the fill-shaping kwargs (`execution_lag_bars`, `fee_bps`, `slip_bps`) to the strategy. `notional_rate` is *not* a strategy concern — it is a uniform scale on the returned triple, so `backtest_snapshot` applies it after the strategy returns, leaving the strategy contract stable as that knob (and others like it) is added.
 
-### Typical use
+### Usage
 
 ```python
 backtest = uel.experiment_backtest_results
@@ -129,9 +141,9 @@ perf = uel._log.permutation_prediction_performance(round_id=0)
 round0_backtest = backtest_snapshot(perf)
 ```
 
-Use the experiment-wide table to compare many rounds. Use the single-round snapshot when you want to study a specific permutation.
+Use the experiment-wide table to compare rounds. Use the single-round snapshot for one permutation.
 
-## Backtest Versus Benchmark
+## Backtest versus benchmark
 
 Benchmark and backtest should be read together, not treated as substitutes.
 
@@ -140,13 +152,13 @@ Benchmark and backtest should be read together, not treated as substitutes.
 
 Examples of why the layers diverge:
 
-- a signal can have decent precision but still spend too much time in market
-- a signal can separate TP and FP weakly yet still avoid the worst losses
-- a signal can score well statistically but lose most of its edge once costs are charged
+- a signal can have high precision but excessive market exposure
+- a signal can have low TP/FP separation yet still avoid the largest losses
+- a signal can score high statistically but lose edge after costs
 
 That is why Limen keeps the layers separate in both the API and the docs.
 
-## What Snapshot Backtest Does Not Try To Do
+## What snapshot backtest does not try to do
 
 The snapshot backtest is not:
 
@@ -157,8 +169,8 @@ The snapshot backtest is not:
 
 Those concerns belong downstream from Limen or in more specialized evaluation layers.
 
-## Read Next
+## Read next
 
-- Continue to [Trainer](Trainer.md) if you want to promote strong experiment rounds into reusable trained sensors.
+- Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable trained sensors.
 - Continue to [Log](Log.md) for the broader post-run workflow that produces the backtest inputs.
-- Continue to [Benchmark](Benchmark.md) if you want the prediction-quality layer that should usually be inspected before the trading-economics layer.
+- Continue to [Benchmark](Benchmark.md) for the prediction-quality layer that precedes trading-economics inspection.
