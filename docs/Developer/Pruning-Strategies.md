@@ -64,8 +64,8 @@ All reducers return intervention dicts with an `op` key. Available operations:
 | Operation | Required Keys | Effect |
 |---|---|---|
 | `remove_is` | `param`, `value` | Remove a specific value from a parameter |
-| `remove_ge` | `param`, `threshold` | Remove all values >= threshold |
-| `remove_le` | `param`, `threshold` | Remove all values <= threshold |
+| `remove_ge` | `param`, `threshold` | Remove all values greater than or equal to threshold |
+| `remove_le` | `param`, `threshold` | Remove all values less than or equal to threshold |
 | `keep_is` | `param`, `value` | Keep only this value, remove all others |
 | `keep_between` | `param`, `lower`, `upper` | Keep only values in [lower, upper] |
 | `inject` | `combo`, `prioritize` (optional) | Add a specific combination to the queue |
