@@ -135,7 +135,7 @@ def test_cco_val_matches_continuous() -> None:
     for col in feature_cols:
         cco_vals = val_cco[col].to_list()
         cont_vals = val_continuous[col].to_list()[:len(val_cco)]
-        for i, (a, b) in enumerate(zip(cco_vals, cont_vals)):
+        for i, (a, b) in enumerate(zip(cco_vals, cont_vals, strict=False)):
             assert abs(a - b) < 1e-9, f"val col={col} row={i}: CCO={a} continuous={b}"
 
 

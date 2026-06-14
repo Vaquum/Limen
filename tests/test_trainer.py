@@ -588,7 +588,7 @@ def test_sensor_reproduces_training_metrics_on_val_test() -> None:
             f'expected {len(y_test)} test predictions, got {len(test_preds)}'
         )
 
-        n_correct = sum(1 for p, y in zip(test_preds, y_test) if p.prediction == y)
+        n_correct = sum(1 for p, y in zip(test_preds, y_test, strict=False) if p.prediction == y)
         sensor_accuracy = n_correct / len(y_test)
 
         # results.csv stores metrics rounded to 3 decimal places
@@ -646,7 +646,7 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
 
         # Accuracy: test-split predictions must match training (results.csv stores test accuracy)
         test_preds = test_preds[:len(y_test)]
-        n_correct = sum(1 for p, y in zip(test_preds, y_test) if p.prediction == y)
+        n_correct = sum(1 for p, y in zip(test_preds, y_test, strict=False) if p.prediction == y)
         sensor_accuracy = n_correct / len(y_test)
 
         assert round(sensor_accuracy, 3) == training_accuracy, (
