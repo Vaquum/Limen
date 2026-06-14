@@ -270,6 +270,123 @@ def test_scaler_params_default_when_omitted() -> None:
     assert fitted_scaler.context_rows == _WINDOW
 
 
+def _make_dynamic_scaler_yaml(scaler_block: str,
+                               extra_params_block: str = '',
+                               scaler_window: int = 60) -> str:
+    from textwrap import dedent
+    return dedent(f'''\
+        schema_version: "1.0"
+        metadata:
+          name: test_dynamic_scaler
+          mode: development
+        sfd:
+          manifest:
+            type: ml
+            data_source:
+              method: limen.data.HistoricalData.get_spot_klines
+              params:
+                kline_size: 3600
+            split_dates:
+              train_start: "2025-01-01"
+              train_end: "2025-01-09"
+              val_start: "2025-01-09"
+              val_end: "2025-01-11"
+              test_start: "2025-01-11"
+              test_end: "2025-01-13"
+            indicators:
+              - func: limen.indicators.roc
+                params:
+                  period: 1
+                  group: momentum
+            target:
+              name: quantile_flag
+              class: limen.targets.QuantileBinaryTarget
+              fit_params:
+                source_column: roc_1
+                quantile: 0.5
+              transform_params:
+                shift: -1
+            {scaler_block}
+            reference_architecture: limen.sfd.reference_architecture.logreg_binary
+          params:
+            C: [1.0]
+            random_state: [42]
+            scaler_window: [{scaler_window}]
+            {extra_params_block}
+        uel:
+          n_permutations: 1
+          search_strategy:
+            type: grid
+          output_format: csv
+    ''')
+
+
+def test_scaler_params_class_form_with_dynamic_window() -> None:
+    scaler_block = '''\
+scaler:
+              class: limen.scalers.CausalRollingRobustScaler
+              params:
+                window: scaler_window'''
+
+    yaml_dict, parse_errors = parse(_make_dynamic_scaler_yaml(scaler_block, scaler_window=60))
+    assert not parse_errors, parse_errors
+
+    manifest = build_manifest(yaml_dict)
+    raw = _make_raw_data()
+    data_dict = manifest.prepare_data(raw, round_params={'C': 1.0, 'random_state': 42, 'scaler_window': 60})
+
+    fitted_scaler = data_dict['_fitted_params'].get('_scaler')
+    assert fitted_scaler is not None
+    assert fitted_scaler.window == 60, f'expected window=60, got {fitted_scaler.window}'
+    assert fitted_scaler.context_rows == 60
+
+
+def test_scaler_params_from_params_with_dynamic_window() -> None:
+    scaler_block = '''\
+scaler:
+              from_params: scaler_type
+              params:
+                window: scaler_window'''
+    extra_params_block = 'scaler_type: [causal_rolling_robust]'
+
+    yaml_dict, parse_errors = parse(_make_dynamic_scaler_yaml(scaler_block, extra_params_block, scaler_window=60))
+    assert not parse_errors, parse_errors
+
+    manifest = build_manifest(yaml_dict)
+    raw = _make_raw_data()
+    data_dict = manifest.prepare_data(
+        raw,
+        round_params={'C': 1.0, 'random_state': 42, 'scaler_window': 60, 'scaler_type': 'causal_rolling_robust'},
+    )
+
+    fitted_scaler = data_dict['_fitted_params'].get('_scaler')
+    assert fitted_scaler is not None
+    assert fitted_scaler.window == 60, f'expected window=60, got {fitted_scaler.window}'
+    assert fitted_scaler.context_rows == 60
+
+
+def test_scaler_params_mixed_static_and_dynamic() -> None:
+    # window is a sweep param reference (dynamic); min_samples is a literal (static)
+    scaler_block = '''\
+scaler:
+              class: limen.scalers.CausalRollingRobustScaler
+              params:
+                window: scaler_window
+                min_samples: 3'''
+
+    yaml_dict, parse_errors = parse(_make_dynamic_scaler_yaml(scaler_block, scaler_window=30))
+    assert not parse_errors, parse_errors
+
+    manifest = build_manifest(yaml_dict)
+    raw = _make_raw_data()
+    data_dict = manifest.prepare_data(raw, round_params={'C': 1.0, 'random_state': 42, 'scaler_window': 30})
+
+    fitted_scaler = data_dict['_fitted_params'].get('_scaler')
+    assert fitted_scaler is not None
+    assert fitted_scaler.window == 30, f'expected window=30 (dynamic), got {fitted_scaler.window}'
+    assert fitted_scaler.min_samples == 3, f'expected min_samples=3 (static), got {fitted_scaler.min_samples}'
+
+
 def test_uel_continues_after_strict_mode_error() -> None:
     domain = ParamDomain(_random_binary_sfd.params())
     strategy = RandomStrategy(domain, seed=42)
