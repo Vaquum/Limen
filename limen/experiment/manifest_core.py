@@ -949,9 +949,12 @@ class MLManifest(Manifest):
         '''
 
         _extra = dict(extra_params or {})
+        _static = {k: v for k, v in _extra.items() if not isinstance(v, str)}
+        _dynamic = {k: v for k, v in _extra.items() if isinstance(v, str)}
 
         def _scaler_factory(data: 'pl.DataFrame',
-                            scaler_type: str = '') -> Any:
+                            scaler_type: str = '',
+                            **dyn: Any) -> Any:
 
             if scaler_type not in SCALER_REGISTRY:
                 if scaler_type == param_name:
@@ -964,10 +967,10 @@ class MLManifest(Manifest):
                     f"MLManifest Unknown scaler type '{scaler_type}'. "
                     f"Available: {sorted(SCALER_REGISTRY)}"
                 )
-            return SCALER_REGISTRY[scaler_type](data, **_extra)
+            return SCALER_REGISTRY[scaler_type](data, **_static, **dyn)
 
         self.scaler = (
-            [('_scaler', _scaler_factory, {'scaler_type': param_name})],
+            [('_scaler', _scaler_factory, {'scaler_type': param_name, **_dynamic})],
             _apply_fitted_transform,
             {'fitted_transform': '_scaler'},
         )
@@ -1353,12 +1356,20 @@ def make_fitted_scaler(param_name: str,
     '''
 
     _extra = dict(extra_params or {})
-    return ([
-        (param_name, lambda data, _cls=transform_class, _p=_extra: _cls(data, **_p), {})
-    ],
-    _apply_fitted_transform, {
-        'fitted_transform': param_name
-    })
+    _static = {k: v for k, v in _extra.items() if not isinstance(v, str)}
+    _dynamic = {k: v for k, v in _extra.items() if isinstance(v, str)}
+
+    def _factory(data: 'pl.DataFrame',
+                 _cls: Any = transform_class,
+                 _p: dict[str, Any] = _static,
+                 **dyn: Any) -> Any:
+        return _cls(data, **_p, **dyn)
+
+    return (
+        [(param_name, _factory, _dynamic)],
+        _apply_fitted_transform,
+        {'fitted_transform': param_name},
+    )
 
 
 def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
