@@ -194,3 +194,216 @@ html[data-theme='dark'] .pagination-nav__link {
 .table-of-contents__link--active {
   font-weight: 600;
 }
+
+
+/* Vaquum design-system sample: docs/Backtest.md. */
+.theme-doc-markdown:has(.vaquum-design-system-sample) {
+  --vaquum-sample-ink-deep: #121212;
+  --vaquum-sample-ink: #231F20;
+  --vaquum-sample-ink-soft: #444444;
+  --vaquum-sample-ink-mute: #808080;
+  --vaquum-sample-rule: #D3D3D3;
+  --vaquum-sample-paper-2: #F3F3F3;
+  --vaquum-sample-paper: #F8F8F8;
+  --vaquum-sample-accent: #DC65A6;
+  --vaquum-sample-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --vaquum-sample-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  background: var(--vaquum-sample-paper);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: var(--vaquum-sample-ink);
+  font-family: var(--vaquum-sample-sans);
+  font-size: 17px;
+  font-variant-numeric: lining-nums;
+  letter-spacing: 0;
+  line-height: 1.55;
+  margin: 0 auto;
+  max-width: 680px;
+  padding: 64px 0;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) h1,
+.theme-doc-markdown:has(.vaquum-design-system-sample) h2,
+.theme-doc-markdown:has(.vaquum-design-system-sample) h3,
+.theme-doc-markdown:has(.vaquum-design-system-sample) h4 {
+  color: var(--vaquum-sample-ink-deep);
+  font-family: var(--vaquum-sample-sans);
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) h1 {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  max-width: 28ch;
+  text-transform: none;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) h2 {
+  border-top: 1px solid var(--vaquum-sample-rule);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  margin: 64px 0 16px;
+  padding-top: 16px;
+  text-transform: uppercase;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) h3 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  margin: 24px 0 16px;
+  text-transform: uppercase;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) p,
+.theme-doc-markdown:has(.vaquum-design-system-sample) li {
+  font-size: 17px;
+  letter-spacing: 0;
+  line-height: 1.55;
+  max-width: 66ch;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) h1 + .vaquum-design-system-sample + p {
+  color: var(--vaquum-sample-ink-soft);
+  font-size: 19px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  max-width: 52ch;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) a {
+  color: var(--vaquum-sample-ink);
+  font-weight: 400;
+  text-decoration-color: var(--vaquum-sample-accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) a:hover {
+  color: var(--vaquum-sample-accent);
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) strong {
+  font-weight: 600;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) em {
+  font-style: normal;
+  font-weight: 600;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) ul,
+.theme-doc-markdown:has(.vaquum-design-system-sample) ol {
+  margin: 16px 0 24px;
+  max-width: 66ch;
+  padding-left: 0;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) ul {
+  list-style: none;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) ul li {
+  padding-left: 1.2em;
+  position: relative;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) ul li::before {
+  color: var(--vaquum-sample-ink-mute);
+  content: '·';
+  left: 0;
+  position: absolute;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) code,
+.theme-doc-markdown:has(.vaquum-design-system-sample) pre {
+  font-family: var(--vaquum-sample-mono);
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0;
+  line-height: 1.65;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) :not(pre) > code {
+  background: var(--vaquum-sample-paper-2);
+  border: 0;
+  border-radius: 0;
+  color: var(--vaquum-sample-ink);
+  padding: 0 2px;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) pre {
+  background: var(--vaquum-sample-paper-2);
+  border: 0;
+  border-left: 3px solid var(--vaquum-sample-accent);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 16px 0 24px;
+  max-width: 80ch;
+  padding: 16px;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) table {
+  background: transparent;
+  border-collapse: collapse;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--vaquum-sample-ink);
+  display: table;
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 16px 0 24px;
+  overflow: visible;
+  width: 100%;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) th,
+.theme-doc-markdown:has(.vaquum-design-system-sample) td {
+  border: 0;
+  padding: 8px 16px 8px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) thead {
+  border-bottom: 1px solid var(--vaquum-sample-rule);
+  border-top: 1px solid var(--vaquum-sample-ink);
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) tbody tr {
+  border-bottom: 1px solid var(--vaquum-sample-paper-2);
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) tbody tr:last-child {
+  border-bottom: 1px solid var(--vaquum-sample-ink);
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) th {
+  color: var(--vaquum-sample-ink-deep);
+  font-weight: 600;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) td {
+  color: var(--vaquum-sample-ink-soft);
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) hr {
+  border: 0;
+  border-top: 1px solid var(--vaquum-sample-rule);
+  margin: 64px 0;
+}
+
+@media (max-width: 996px) {
+  .theme-doc-markdown:has(.vaquum-design-system-sample) {
+    max-width: none;
+    padding: 24px 16px 64px;
+  }
+}
