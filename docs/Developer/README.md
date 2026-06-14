@@ -17,10 +17,12 @@ Before opening or updating a Limen PR:
 | If you are doing this | Read this next | Why |
 |---|---|---|
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
+| updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
 | adding a new foundational experiment template | [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md) | Covers research expectations, file ownership, and review criteria for foundational SFDs. |
 | preparing a release or checking release automation | [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) | Uses the shared Vaquum release process that the Limen release script now fetches directly. |
 | deciding how to bump the version | [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md) | Uses the shared Vaquum versioning guidance rather than a repo-local copy. |
+| assessing recorded known risk | [Technical Debt](../TechnicalDebt.md) | Tracks accepted debt, trigger conditions, and candidate remedies. |
 
 ## Common Contributor Workflow
 
@@ -42,11 +44,14 @@ Before opening or updating a Limen PR:
 - `/docs` is the canonical public docs layer.
 - `/docs/Developer` is the canonical Limen contributor layer.
 - package `README`s under `/limen` are orientation pages, not the main contributor process docs.
+- release and versioning policy lives in the shared Vaquum developer docs; Limen pages record local release surfaces, automation inputs, and review notes.
 
 ## Read Next
 
 - [Documentation System Contract](Documentation-System.md)
+- [Pruning Strategies](Pruning-Strategies.md)
 - [Writing Docstrings](Writing-Docstrings.md)
 - [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)
 - [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md)
 - [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)
+- [Technical Debt](../TechnicalDebt.md)

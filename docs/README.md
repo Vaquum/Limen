@@ -25,7 +25,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 1. Start with [Single-File Decoder](Single-File-Decoder.md)
 2. Review the shipped patterns in [Built-In SFDs](Built-In-SFDs.md)
 3. Continue to [Experiment Manifest](Experiment-Manifest.md)
-4. Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), [Scalers](Scalers.md), and [Reference Architecture](Reference-Architecture.md) as your reference layer
+4. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as your reference layer
 5. Run the search in [Universal Experiment Loop](Universal-Experiment-Loop.md)
 6. If you need adaptive search, continue to [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md)
 7. Inspect results in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
@@ -43,20 +43,23 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 1. Start with [Reference Architecture](Reference-Architecture.md) and [Built-In SFDs](Built-In-SFDs.md)
 2. Continue to [Advanced Search](Advanced-Search.md) for `SearchStrategy`, `ParamDomain`, `MSQ`, and checkpoints
 3. Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for adaptive interventions
-4. Use [Utilities](Utilities.md) when you need the helper layer rather than the main workflow
+4. Use [Command Line Interface](Command-Line-Interface.md) when the extension is YAML-first or shell-driven
+5. Use [Utilities](Utilities.md) when you need the helper layer rather than the main workflow
 
 ### If You Want To Contribute Or Maintain
 
 1. Start with [Developer Guidelines](Developer/README.md)
 2. Read the docs contract in [Documentation System](Developer/Documentation-System.md)
-3. Use [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md) for SFD work
-4. Use [Making Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) and [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md) for maintenance work
+3. Use [Pruning Strategies](Developer/Pruning-Strategies.md) for reducer work
+4. Use [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md) for SFD work
+5. Use [Technical Debt](TechnicalDebt.md) when assessing recorded known-risk items
+6. Use [Making Release](Developer/Making-Release.md) and [Semantic Versioning](Semantic-Versioning.md) for maintenance work
 
 ## How Limen Flows
 
 1. Data enters through [Historical Data](Historical-Data.md) or compatible external OHLC data.
 2. Data can be reshaped with [Data Bars](Data-Bars.md) when threshold bars are the right research surface.
-3. Indicators, features, transforms, and scalers define the research surface.
+3. Indicators, features, transforms, and scalers define the research surface. Targets define supervised labels; calibration adjusts probabilities and thresholds after model output.
 4. An experiment is packaged in an [SFD](Single-File-Decoder.md), often starting from [Built-In SFDs](Built-In-SFDs.md) and usually expressed through an [Experiment Manifest](Experiment-Manifest.md).
 5. [Universal Experiment Loop](Universal-Experiment-Loop.md) executes the search, with [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md) extending the artifact-rich path.
 6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
@@ -68,9 +71,9 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md)
 - `Guides`: [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Experiment Manifest](Experiment-Manifest.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
-- `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
-- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), plus external [Making Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) and [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)
-- `Packages`: the package `README`s under `/limen`, which provide module-level orientation and route back to the canonical docs
+- `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md), [Command Line Interface](Command-Line-Interface.md)
+- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md), [Technical Debt](TechnicalDebt.md)
+- `Packages`: package `README`s under `/limen` for `data`, `experiment`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`
 
 ## Product Boundary
 
@@ -78,6 +81,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 - experiment-oriented data access
 - indicator, feature, transform, and scaler composition
+- target construction, calibration, and CLI-driven YAML experiment execution
 - manifest-driven and custom SFD-based research units
 - parameter sweep and experiment logging
 - benchmark-style analytics and backtesting
