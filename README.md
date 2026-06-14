@@ -4,7 +4,7 @@
   <br />
 </div>
 <br />
-<div align="center"><strong>Vaquum Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.</strong></div>
+<div align="center"><b>Vaquum Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.</b></div>
 
 <div align="center">
   <a href="#limen">Limen</a> •
@@ -15,7 +15,7 @@
 </div>
 <br />
 <div align="center">
-  <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF Best Practices" /></a>
+  <a href="https://www.bestpractices.dev/projects/11898"><img src="https://www.bestpractices.dev/projects/11898/badge" alt="OpenSSF practices badge" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/Vaquum/Limen"><img src="https://img.shields.io/ossf-scorecard/github.com/Vaquum/Limen?label=openssf+scorecard&amp;style=flat" alt="OpenSSF Scorecard" /></a>
 </div>
 
@@ -23,11 +23,11 @@
 
 <a id="limen"></a>
 
-# Limen — The Research Engine
+# Limen — Research engine
 
 *Manifest-driven Bitcoin alpha research engine that turns market data into searchable signals, backtested outcomes, and decoder cohorts.*
 
-Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works. It evolves from Talos, the hyperparameter optimization framework for TensorFlow and Keras cited in over 1,000 scientific papers with zero breaking bugs in six years.
+Limen unifies parameter search across machine learning and rule-based strategies. Built-in analytics connect experiment outputs to benchmark, backtest, and cohort workflows. The project evolves from Talos, a hyperparameter optimization framework for TensorFlow and Keras.
 
 ## What Limen Is Not
 
@@ -43,7 +43,7 @@ In the wider Vaquum architecture, Origo sits upstream as the data layer. Nexus, 
 
 - Manifest-driven experiment pipelines
 - Search across models, rules, features, targets, and hyperparameters
-- Extensive built-in indicator and feature library for Bitcoin research
+- Built-in indicator and feature library for Bitcoin research
 - Support for both machine learning and rule-based strategy research
 - Bitcoin-native transforms, scaling, and target construction
 - Leakage-safe train, validation, and test workflows
@@ -53,7 +53,7 @@ In the wider Vaquum architecture, Origo sits upstream as the data layer. Nexus, 
 
 ## First Experiment
 
-The fastest first success is a small parameter sweep on the bundled BTC/USDT kline dataset with the built-in logistic-regression decoder.
+The first runnable path is a small parameter sweep on the bundled BTC/USDT kline dataset with the built-in logistic-regression decoder.
 
 1. Install the package:
 
@@ -84,13 +84,13 @@ uel.run(
 - `uel.experiment_confusion_metrics` for confusion analytics
 - `uel.experiment_backtest_results` for backtest results
 
-That path is the simplest way to get a real Limen run on your machine without relying on repo-local fixture files. If you want richer run directories, checkpoints, resumability, and stored round artefacts, continue into the UEL documentation below.
+That path runs against public BTC/USDT data without relying on repo-local fixture files. The UEL documentation covers run directories, checkpoints, resumability, and stored round artefacts.
 
-## Learn More
+## Learn more
 
 - Start with the full docs hub in [docs/README.md](docs/README.md)
 - Define research units in [docs/Single-File-Decoder.md](docs/Single-File-Decoder.md), [docs/Built-In-SFDs.md](docs/Built-In-SFDs.md), and [docs/Experiment-Manifest.md](docs/Experiment-Manifest.md)
-- Run experiments in [docs/Universal-Experiment-Loop.md](docs/Universal-Experiment-Loop.md) and extend the artifact-rich path through [docs/Advanced-Search.md](docs/Advanced-Search.md) and [docs/Reducers-And-Feedback.md](docs/Reducers-And-Feedback.md)
+- Run experiments in [docs/Universal-Experiment-Loop.md](docs/Universal-Experiment-Loop.md) and extend the artifact-backed path through [docs/Advanced-Search.md](docs/Advanced-Search.md) and [docs/Reducers-And-Feedback.md](docs/Reducers-And-Feedback.md)
 - Analyze results in [docs/Log.md](docs/Log.md), [docs/Benchmark.md](docs/Benchmark.md), and [docs/Backtest.md](docs/Backtest.md)
 - Understand the model layer in [docs/Reference-Architecture.md](docs/Reference-Architecture.md) and the helper layer in [docs/Utilities.md](docs/Utilities.md)
 - Promote finished runs into reusable outputs with [docs/Trainer.md](docs/Trainer.md) and [docs/Cohort.md](docs/Cohort.md)
@@ -98,7 +98,7 @@ That path is the simplest way to get a real Limen run on your machine without re
 
 ## Contributing
 
-The simplest way to start contributing is by [joining an open discussion](https://github.com/Vaquum/Limen/issues?q=is%3Aissue%20state%3Aopen%20label%3Aquestion%2Fdiscussion), contributing to [the docs](https://github.com/Vaquum/Limen/tree/main/docs), or by [picking up an open issue](https://github.com/Vaquum/Limen/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug%20OR%20label%3Aenhancement%20OR%20label%3A%22good%20first%20issue%22%20OR%20label%3A%22help%20wanted%22%20OR%20label%3APriority%20OR%20label%3Aprocess).
+Contribution starts through [open discussions](https://github.com/Vaquum/Limen/issues), [docs changes](https://github.com/Vaquum/Limen/tree/main/docs), or [open issues](https://github.com/Vaquum/Limen/issues).
 
 Before contributing, start with [docs/Developer/README.md](docs/Developer/README.md).
 
@@ -108,7 +108,7 @@ Report vulnerabilities privately through [GitHub Security Advisories](https://gi
 
 ## Citations
 
-If you use Limen for published work, please cite:
+Published work should cite:
 
 Vaquum Limen [Computer software]. (2026). Retrieved from https://github.com/Vaquum/Limen.
 

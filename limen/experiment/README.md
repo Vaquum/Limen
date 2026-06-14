@@ -17,13 +17,13 @@ Does **not** own model architectures, indicators, features, or raw metric helper
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `Manifest` | You want a declarative experiment pipeline | Exported at the package root |
-| `UniversalExperimentLoop` | You want to run an SFD across many permutations | Exported at the package root |
-| `Trainer` | You want to rebuild winning rounds into reusable inference artifacts | Exported at the package root |
-| `Sensor` | You want a portable inference object produced by `Trainer` | Exported at the package root |
-| `ReconstructionError` | You need to handle failed manifest reconstruction during training | Exported at the package root |
+| `Manifest` | Declarative experiment pipeline | Exported at the package root |
+| `UniversalExperimentLoop` | Run an SFD across parameter permutations | Exported at the package root |
+| `Trainer` | Rebuild winning rounds into reusable inference artifacts | Exported at the package root |
+| `Sensor` | Portable inference object produced by `Trainer` | Exported at the package root |
+| `ReconstructionError` | Handle failed manifest reconstruction during training | Exported at the package root |
 
 ## Adjacent modules
 

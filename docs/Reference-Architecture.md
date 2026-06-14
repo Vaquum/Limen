@@ -1,12 +1,12 @@
-# Reference Architecture
+# Reference architecture
 
 The reference architecture is Limen's class-based model layer. It sits underneath the foundational SFDs and underneath `Trainer`.
 
-This is the page to read when you want to understand:
+This page covers:
 
 - what a `ReferenceModel` must implement
 - how the built-in model classes behave
-- what `evaluate(..., inline_metrics=True)` really adds
+- what `evaluate(data, inline_metrics=True)` adds
 - how class-based models relate to the simpler function wrappers used in manifests
 
 ## Public Surface
@@ -43,7 +43,7 @@ In a live local reference-architecture run in this repo, the prepared `data_dict
 - `_alignment`
 - `_scaler`
 
-Not every model needs every key, but this is the standard Limen shape that the class-based models are designed around.
+Models consume the subset of keys they need from the standard Limen shape.
 
 ## The Built-In Model Classes
 
@@ -66,7 +66,7 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 
 | Architecture | Returns probabilities P(1) | Cohort mode | Notes |
 |---|---:|---|---|
-| `LogRegBinary` | yes | probability | `predict()` returns `_probs = predict_proba(... )[:, 1]`, which is directly the class-1 probability P(1). |
+| `LogRegBinary` | yes | probability | `predict()` returns `_probs = predict_proba(x_test)[:, 1]`, which is directly the class-1 probability P(1). |
 | `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
 | `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimised before `_preds` are produced. This is compatible with P(1). |
 | `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
@@ -106,7 +106,7 @@ With `inline_metrics=True`, `evaluate()` adds:
 - `confusion_*` metrics
 - `backtest_*` metrics when `price_data_for_backtest` is present
 
-On that same live local run, `LogRegBinary.evaluate(..., inline_metrics=True)` added keys such as:
+On that same live local run, `LogRegBinary.evaluate(data, inline_metrics=True)` added keys such as:
 
 - `backtest_edge_bps_p50`
 - `backtest_pnl_bps_p50`
@@ -139,25 +139,25 @@ This is the same contract that `Trainer` eventually relies on when it promotes f
 
 ## Function Wrappers Versus Classes
 
-Most foundational manifests call the function wrapper:
+Foundational manifests call the function wrapper:
 
 ```python
 .with_reference_architecture(logreg_binary)
 ```
 
-That wrapper typically:
+That wrapper:
 
 1. instantiates the matching class
 2. trains it
 3. evaluates it with `inline_metrics=True`
 
-The class is the canonical reusable architecture surface. The function wrapper is the convenient manifest-facing adapter.
+The class is the canonical reusable architecture surface. The function wrapper is the manifest-facing adapter.
 
 ## Trainer Relationship
 
 `Trainer` resolves the `ReferenceModel` subclass from the model module used by the original manifest.
 
-That is why the class-based layer matters even if your day-to-day work mostly touches foundational SFDs:
+The class-based layer matters even when daily work touches foundational SFDs:
 
 - foundational SFDs package the experiment
 - reference architecture owns the model contract
@@ -185,7 +185,12 @@ It expects a `data_dict` produced by a manifest configured with `with_strategy()
     'train': pl.DataFrame,  # with pre-computed boolean predicate columns
     'val':   pl.DataFrame,
     'test':  pl.DataFrame,
-    'strategy': {'conditions': [...], 'entry': 'entry_id'},
+    'strategy': {
+        'conditions': [
+            {'id': 'entry_id', 'type': 'threshold', 'column': 'wilder_rsi_14', 'operator': '<', 'value': 30},
+        ],
+        'entry': 'entry_id',
+    },
 }
 ```
 

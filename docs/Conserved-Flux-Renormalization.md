@@ -7,7 +7,7 @@ In practical Limen terms, CFR turns raw trades into:
 - a kline-like frame
 - plus six additional columns that describe multi-scale flow stability and entropy behavior
 
-Use CFR when you want a compact diagnostic of whether trade flow looks scale-stable or anomalous inside each bar.
+CFR provides a compact diagnostic for scale-stable or anomalous trade flow inside each bar.
 
 ## Input And Output
 
@@ -77,41 +77,41 @@ Variance of that entropy ladder across levels.
 
 ### `Δflux_rms`
 
-Root-mean-square deviation from an ideal flat flux-variability ladder.
+Root-mean-square deviation from the flat flux-variability reference ladder.
 
 Higher values mean one or more scales dominate the traded-value flow instead of the flow looking scale-stable.
 
 ### `Δentropy_rms`
 
-Root-mean-square deviation from an ideal one-bit-per-octave entropy ladder.
+Root-mean-square deviation from the one-bit-per-octave entropy reference ladder.
 
 Higher values mean trade-size diversity changes unevenly across scales.
 
-## When CFR Is Useful
+## When CFR fits
 
-Good fits:
+Suitable fits:
 
 - anomaly detection in trade flow
 - regime features for microstructure-heavy experiments
-- identifying bars where traded value is concentrated on a few scales
+- identifying bars where traded value is concentrated on a subset of scales
 - identifying bars where trade-size diversity behaves unusually
 
 Poor fits:
 
 - workflows where only OHLCV-level information is available
 - experiments that never touch raw trade data
-- cases where simpler activity features already capture the behavior you care about
+- cases where lower-dimensional activity features already capture the target behavior
 
 ## The Intuition
 
 The conserved-flux idea treats traded value as conserved "stuff." Renormalization then asks:
 
-what happens to that flow when we repeatedly zoom out in time?
+CFR measures how that flow changes under repeated time-scale aggregation.
 
 The function starts from a base window such as 60 seconds and repeatedly coarse-grains the trade stream:
 
 ```text
-60s -> 120s -> 240s -> 480s -> ...
+60s -> 120s -> 240s -> 480s
 ```
 
 At each scale it measures two things:
@@ -123,7 +123,7 @@ Instead of returning the entire multi-scale ladder, CFR compresses it into a sma
 
 ## Interpreting The Deviation Metrics
 
-The two most important anomaly-style outputs are:
+The anomaly-style outputs are:
 
 - `Δflux_rms`
 - `Δentropy_rms`
@@ -141,4 +141,4 @@ These are interpretation aids, not hard universal thresholds.
 ## Read Next
 
 - Continue to [Features](Features.md) for the broader feature layer CFR belongs to.
-- Continue to [Historical Data](Historical-Data.md) if you need the trade-data surfaces CFR expects upstream.
+- Continue to [Historical Data](Historical-Data.md) for the trade-data surfaces CFR expects upstream.

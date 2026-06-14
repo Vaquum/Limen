@@ -37,7 +37,7 @@ FeedbackController.trigger()
   │      → returns list of intervention dicts
   │
   ├─ Dispatch each intervention to MSQ
-  │    (remove_is, remove_ge, keep_between, trim, inject, ...)
+  │    (remove_is, remove_ge, keep_between, trim, inject, inject_value)
   │
   ├─ Notify SearchStrategy of changes
   │
@@ -76,7 +76,7 @@ All reducers return intervention dicts with an `op` key. Available operations:
 
 ### 3.1 Sanity Reducer
 
-**Signal dimension:** Validity — is the combination physically viable?
+**Signal dimension:** Validity — combination violates feasibility constraints.
 
 **Trigger:** A completed permutation produces NaN results or other failure
 indicators.
@@ -113,7 +113,7 @@ pruning_strategies:
 ### 3.2 Correlation Reducer
 
 **Signal dimension:** Trend — is a parameter value consistently associated
-with poor performance?
+with low metric values
 
 **Trigger:** Sufficient observations accumulated to compute reliable
 correlations.
@@ -147,14 +147,14 @@ pruning_strategies:
 2. Compute bootstrap correlations between each parameter and the target metric
 3. If `|correlation| < prune_threshold` and
    `sign_stability > sign_stability_threshold`, the parameter is low-impact —
-   fix to its best-performing value via `keep_is`
+   fix to its highest-performing value via `keep_is`
 
 ---
 
 ### 3.3 Saturation Reducer
 
 **Signal dimension:** Variance — is continued sampling yielding new
-information?
+information deficit
 
 **Trigger:** A parameter value's result variance drops below threshold.
 
@@ -187,13 +187,13 @@ pruning_strategies:
 2. Compute coefficient of variation: `CV = std / mean`
 3. If `CV < cv_threshold` and `samples >= min_samples_per_value`, the value
    is saturated — remove `(1 - retain_fraction)` of its pending combinations
-4. `retain_fraction` keeps a small sample for continued monitoring
+4. `retain_fraction` keeps a bounded sample for continued monitoring
 
 ---
 
 ### 3.4 Focus Reducer
 
-**Signal dimension:** Local optimality — has a breakthrough been found?
+**Signal dimension:** Local optimality — metric crosses the configured breakthrough threshold.
 
 **Trigger:** A permutation result crosses `breakthrough_threshold`, switching
 from exploration to exploitation.
@@ -239,7 +239,7 @@ pruning_strategies:
 
 ### 3.5 Budget Reducer
 
-**Signal dimension:** Resource — can we afford to continue at this rate?
+**Signal dimension:** Resource — projected resource use exceeds the configured budget.
 
 **Trigger:** Elapsed time or completed permutations approach configured limits.
 
@@ -393,7 +393,7 @@ When multiple reducers run together:
 
 | Asset | Location | Purpose |
 |---|---|---|
-| `StubPruningStrategy` | `tests/stubs/stubs.py` | Configurable mock returning preset interventions |
+| `StubPruningStrategy` | `tests/stubs/stubs.py` | Configurable test double returning preset interventions |
 | `StubStrategy` | `tests/stubs/stubs.py` | Stub `SearchStrategy` for MSQ construction |
 | `make_msq()` | `tests/stubs/stubs.py` | Create MSQ with configurable params for testing |
 | `random_binary` SFD | `limen/sfd/foundational_sfd/` | Produces real Log data with metrics |
@@ -435,7 +435,7 @@ A `make_log()` test helper producing controlled `pl.DataFrame` with:
 - Verify variation injection when `inject_variations` is enabled
 
 **Budget Reducer**
-- Mock time progression; verify `trim` fires when projected over budget
+- Simulate time progression; verify `trim` fires when projected over budget
 - Verify `check_after_pct` gate: no action before threshold
 - Verify both trim strategies (`random`, `worst_first`)
 

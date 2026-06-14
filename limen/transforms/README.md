@@ -1,6 +1,6 @@
 # `limen.transforms`
 
-> Hold lightweight transform helpers for target construction and data cleanup.
+> Hold stateless transform helpers for target construction and data cleanup.
 
 ## Canonical docs
 
@@ -13,11 +13,11 @@ Owns stateless DataFrame transforms. Does **not** own fitted feature scaling, hi
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `shift_column_transform` | You need a forward-looking target column | Common inside manifest target blocks |
-| `zscore_transform` | You want a simple frame-wide normalization step | Stateless and fast |
-| `winsorize_transform`, `mad_transform`, `quantile_trim_transform` | You want lightweight clipping or row filtering before modeling | These do not carry their own train-only state |
+| `shift_column_transform` | Forward-looking target column | Common inside manifest target blocks |
+| `zscore_transform` | Frame-wide normalization step | Stateless per call |
+| `winsorize_transform`, `mad_transform`, `quantile_trim_transform` | Clipping or row filtering before modeling | These do not carry their own train-only state |
 
 ## Adjacent modules
 
@@ -40,7 +40,7 @@ transforms/
 ## Things to know
 
 - All helpers in this package are intentionally stateless per call.
-- If you need fit-on-train and apply-to-all semantics, use a manifest fit parameter or a scaler rather than assuming a transform will remember state.
+- For fit-on-train and apply-to-all semantics, use a manifest fit parameter or a scaler rather than assuming a transform will remember state.
 - `shift_column_transform` with `shift=-1` creates a future-looking label and therefore introduces a trailing null row that later prep stages drop.
 
 ## Read next

@@ -1,28 +1,28 @@
-# Universal Experiment Loop
+# Universal experiment loop
 
 The Universal Experiment Loop (UEL) is Limen's experiment runner. It takes an SFD, executes parameter combinations, streams a CSV log, and then exposes post-run analysis surfaces such as confusion metrics and backtest results.
 
-This is the page to read when you want to answer four practical questions:
+This page covers:
 
 - how to run a first experiment
 - what `UniversalExperimentLoop` actually stores after a run
-- when to use the simple run path versus the advanced artifact-rich path
+- when to use the standard run path versus the advanced artifact-backed path
 - which run-time rules matter for manifest-driven and custom SFDs
 
-## Two Execution Modes
+## Two execution modes
 
 UEL currently has two execution modes.
 
-| Mode | How you enter it | Best for | What you get |
+| Mode | Entry path | Fits | Outputs |
 |---|---|---|---|
-| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | most public examples and straightforward sweeps | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when `experiment_dir` is set |
-| MSQ / artifact-rich path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
+| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | public examples and direct sweeps | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when `experiment_dir` is set |
+| MSQ / artifact-backed path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
 
-The standard run path is the right starting point for most readers. The advanced path is real and supported, but it is an extension-oriented surface built around `SearchStrategy`.
+The standard run path is the starting point for public examples and direct sweeps. The advanced path is supported and extension-oriented through `SearchStrategy`.
 
-## First Real Run
+## First real run
 
-This is the most reliable local example because it uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
+This local example uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
 
 ```python
 import limen
@@ -44,7 +44,7 @@ uel.run(
 )
 ```
 
-After the run you can inspect:
+After the run, these attributes are available:
 
 ```python
 uel.experiment_log
@@ -59,7 +59,7 @@ On a live local run over that file-backed input, that produced:
 - `uel.experiment_backtest_results` with one row per round
 - `uel.preds`, `uel.round_params`, and `uel._alignment` for round-level reconstruction
 
-## Constructor Contract
+## Constructor contract
 
 ```python
 uel = limen.UniversalExperimentLoop(
@@ -83,11 +83,11 @@ uel = limen.UniversalExperimentLoop(
 
 ### Data behavior
 
-- If the SFD exposes `manifest()` and you do not pass `data=`, UEL fetches data from the manifest.
+- If the SFD exposes `manifest()` and `data=` is omitted, UEL fetches data from the manifest.
 - If the SFD is custom and has no manifest, `data=` is required.
 - For manifest-driven SFDs, the data source used is `fetch_data()` by default; pass `test_mode=True` to use the test data source.
 
-## `run()` Contract
+## `run()` contract
 
 ```python
 uel.run(
@@ -121,13 +121,13 @@ If the SFD uses `manifest()`:
 
 If the SFD uses custom `prep()` and `model()`:
 
-- `data=` must be provided when you instantiate UEL
+- `data=` must be provided when UEL is instantiated
 - `prep_each_round` can be `True` or `False`, depending on whether prep depends on round params
 - `params=`, `prep=`, and `model=` overrides are available on the standard path
 
-## What UEL Stores After A Run
+## What UEL stores after a run
 
-The most important attributes are:
+Primary attributes are:
 
 | Attribute | Meaning |
 |---|---|
@@ -154,15 +154,15 @@ This is what lets downstream analysis stay aligned with the actual test window s
 
 ### Deeper post-run analysis
 
-UEL constructs a `Log` instance automatically at the end of a successful run. That gives you access to methods such as:
+UEL constructs a `Log` instance automatically at the end of a successful run. That exposes methods such as:
 
 - `uel._log.permutation_prediction_performance(round_id=0)`
 - `uel._log.permutation_confusion_metrics('price_change', round_id=0)`
 - `uel.experiment_parameter_correlation('auc')`
 
-## Standard Path Versus Artifact-Rich Path
+## Standard path versus artifact-backed path
 
-### Standard Path
+### Standard path
 
 The standard path writes a streaming CSV at:
 
@@ -182,12 +182,12 @@ This is the path to use for:
 
 - first experiments
 - docs examples
-- quick local research loops
-- simple parameter sweeps
+- direct local research loops
+- direct parameter sweeps
 
-### Artifact-Rich Path
+### Artifact-backed path
 
-If you instantiate UEL with a concrete `search_strategy` and an `experiment_dir`, Limen stores structured artifacts there. This path uses `results.csv` as the round log filename rather than `<experiment_name>.csv`.
+When UEL is instantiated with a concrete `search_strategy` and an `experiment_dir`, Limen stores structured artifacts there. This path uses `results.csv` as the round log filename rather than `<experiment_name>.csv`.
 
 | File | Meaning |
 |---|---|
@@ -195,18 +195,18 @@ If you instantiate UEL with a concrete `search_strategy` and an `experiment_dir`
 | `round_data.jsonl` | round params, predictions, and alignment metadata |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |
-| `interventions.json` | optional external intervention file polled by the feedback controller if you create it |
+| `interventions.json` | optional external intervention file polled by the feedback controller when the file exists |
 | `metadata.json` | experiment metadata used by `Trainer` |
 
 This path is what powers checkpointing, resumability, and the [Trainer](Trainer.md) workflow.
 
 ### Important scope note
 
-Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for writing your own. The advanced path is available now with the built-in strategies or a custom implementation from your codebase.
+Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for custom strategies. The advanced path is available with built-in strategies or a custom implementation from the caller's codebase.
 
-## One Real Advanced Run
+## One real advanced run
 
-The UEL-facing part of an advanced run looks like this once you already have a concrete `SearchStrategy`:
+The UEL-facing part of an advanced run looks like this with a concrete `SearchStrategy`:
 
 ```python
 import limen
@@ -242,9 +242,9 @@ On a live local run in this repo, that advanced run:
 - wrote `1` entry to `audit.jsonl`
 - saved a checkpoint after round `3`
 
-That behavior came from a reducer-triggered trim during the feedback cycle, not from a simple early stop.
+That behavior came from a reducer-triggered trim during the feedback cycle, not an early stop.
 
-## Resume In Practice
+## Resume in practice
 
 Resumption belongs only to the advanced path:
 
@@ -271,22 +271,22 @@ For the full advanced-search contract, continue to [Advanced Search](Advanced-Se
 
 ### Manifest-driven runs require `prep_each_round=True`
 
-If you run a manifest-driven SFD with `prep_each_round=False`, UEL currently raises the exact runtime string `prep_each_round must be True for manifest-driven SFMs`. The `SFM` wording there is legacy runtime text, not current docs terminology. Set `prep_each_round=True`.
+A manifest-driven SFD with `prep_each_round=False` raises the exact runtime string `prep_each_round must be True for manifest-driven SFMs`. The `SFM` wording is legacy runtime text, not current docs terminology. Set `prep_each_round=True`.
 
 ### Manifest-driven runs cannot override `prep` or `model`
 
-If you pass `prep=` or `model=` to `run()` for a manifest-driven SFD, UEL currently raises `Cannot override prep/model when SFM has manifest`. That `SFM` wording is also legacy runtime text. Put the logic into the manifest instead, or switch to the custom SFD path.
+Passing `prep=` or `model=` to `run()` for a manifest-driven SFD raises `Cannot override prep/model when SFM has manifest`. That `SFM` wording is legacy runtime text. Put the logic into the manifest, or switch to the custom SFD path.
 
 ### Custom SFDs require explicit `data=`
 
-If you instantiate UEL with a custom SFD and omit `data=`, UEL raises `data parameter required for custom SFDs using custom functions approach`.
+A custom SFD with omitted `data=` raises `data parameter required for custom SFDs using custom functions approach`.
 
 ### Resuming requires a search strategy
 
-Resumption belongs to the advanced path. If you call `run(..., resume=True)` without a search strategy, UEL raises `resume=True is only supported with a search_strategy`.
+Resumption belongs to the advanced path. Calling `run(resume=True)` without a search strategy raises `resume=True is only supported with a search_strategy`.
 
-## Read Next
+## Read next
 
 - Continue to [Log](Log.md) to understand the analysis surfaces built on top of UEL results.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) if you are building a manifest-driven SFD.
-- Continue to [Trainer](Trainer.md) if you are using the artifact-rich path and want to retrain finished rounds into sensors.
+- Continue to [Experiment Manifest](Experiment-Manifest.md) for manifest-driven SFD construction.
+- Continue to [Trainer](Trainer.md) for artifact-backed retraining of finished rounds into sensors.

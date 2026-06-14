@@ -1,8 +1,8 @@
 # Advanced Search
 
-Advanced search is Limen's artifact-rich experiment path. It adds a mutable parameter domain, a search strategy abstraction, checkpointing, resumability, and mid-run feedback on top of the normal Universal Experiment Loop.
+Advanced search is Limen's artifact-backed experiment path. It adds a mutable parameter domain, a search strategy abstraction, checkpointing, resumability, and mid-run feedback on top of the normal Universal Experiment Loop.
 
-Use this page when you want:
+This page covers:
 
 - a search strategy that is not the legacy `ParamSpace` sweep
 - a durable `experiment_dir` with resumable artifacts
@@ -11,7 +11,7 @@ Use this page when you want:
 
 For a first experiment, stay on the standard UEL path. Advanced search is real and supported, but it is the extension-oriented layer of Limen.
 
-## The Core Pieces
+## The core pieces
 
 | Piece | What it owns |
 |---|---|
@@ -28,9 +28,9 @@ The important mental model is:
 3. feedback mutates `MSQ` and sometimes the underlying `ParamDomain`
 4. checkpoints preserve enough state to continue later with `resume=True`
 
-## Minimal Custom `SearchStrategy`
+## Minimal custom `SearchStrategy`
 
-Limen ships two built-in strategies (`GridStrategy` for exhaustive search, `RandomStrategy` for lazy sampling) and the `SearchStrategy` abstraction for writing your own. A strategy must at minimum:
+Limen ships two built-in strategies (`GridStrategy` for exhaustive search, `RandomStrategy` for lazy sampling) and the `SearchStrategy` abstraction for custom strategies. A strategy must at minimum:
 
 - hold a reference to a shared `ParamDomain`
 - yield dictionaries of round parameters
@@ -84,7 +84,7 @@ class MiniGrid(SearchStrategy):
         self._generated_count = state['generated_count']
 ```
 
-## First Artifact-Rich Run
+## First artifact-backed run
 
 ```python
 import limen
@@ -125,7 +125,7 @@ The reducer intervention that caused the trim was:
 {'op': 'trim', 'target_count': 4, 'reason': 'budget trim to 4 total permutations'}
 ```
 
-## What `experiment_dir` Stores
+## What `experiment_dir` stores
 
 When `experiment_dir` is set, advanced search writes:
 
@@ -136,11 +136,11 @@ When `experiment_dir` is set, advanced search writes:
 | `checkpoint.json` | search state for resume |
 | `audit.jsonl` | feedback-cycle audit trail |
 | `metadata.json` | experiment metadata used by `Trainer` |
-| `interventions.json` | optional input file polled by the feedback controller if you create it |
+| `interventions.json` | optional input file polled by the feedback controller when the file exists |
 
 Unlike the other files above, `interventions.json` is not produced by the run. It is an optional external control file that the feedback controller watches when `experiment_dir` is present.
 
-## Resume Flow
+## Resume flow
 
 Resumption belongs to the advanced path only.
 
@@ -166,9 +166,9 @@ For resume to work cleanly, keep these stable:
 - the same parameter content
 - the same configured reducer stack
 
-## What Advanced Search Adds Beyond Standard UEL
+## What advanced search adds beyond standard UEL
 
-Compared to the standard path, advanced search gives you:
+Compared to the standard path, advanced search adds:
 
 - mutable pruning and focus during a run
 - stored round-level predictions and alignment data
@@ -182,8 +182,8 @@ What it does not change:
 - manifests still govern split-first prep
 - post-run analysis still flows through `Log`
 
-## Read Next
+## Read next
 
 - Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for the intervention system that acts on the mutable search queue.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the broader run contract around standard and advanced execution.
-- Continue to [Trainer](Trainer.md) if you want to promote finished advanced runs into reusable sensors.
+- Continue to [Trainer](Trainer.md) for promotion of finished advanced runs into reusable sensors.

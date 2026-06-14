@@ -2,17 +2,22 @@
 
 `Log` is Limen's post-run analysis layer. It sits on top of a finished experiment and turns raw round results into round-level prediction tables, benchmark-style summaries, backtest summaries, and parameter-correlation views.
 
-In most workflows you do not instantiate it yourself. `UniversalExperimentLoop` creates `uel._log` automatically at the end of a successful run and also exposes the most-used derived tables directly on the `uel` object.
+`UniversalExperimentLoop` creates `uel._log` automatically at the end of a successful run and exposes the primary derived tables directly on the `uel` object.
 
-## Two Ways To Use `Log`
+## Two ways to use `Log`
 
 ### UEL-backed `Log`
 
 This is the normal path.
 
 ```python
-uel = limen.UniversalExperimentLoop(...)
-uel.run(...)
+from limen.data import HistoricalData
+
+historical = HistoricalData()
+data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
+
+uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
+uel.run(experiment_name='logreg-first', n_permutations=4, prep_each_round=True)
 
 log = uel._log
 ```
@@ -29,7 +34,7 @@ That is why the full post-run surface works from a UEL-backed `Log`.
 
 ### File-backed `Log`
 
-You can also load a CSV log from disk:
+A CSV log can also be loaded from disk:
 
 ```python
 import limen
@@ -37,21 +42,21 @@ import limen
 log = limen.Log(file_path='my_experiment.csv')
 ```
 
-This path is useful when you mainly want the cleaned experiment log itself, or experiment-log-only analysis such as parameter correlation.
+This path supports the cleaned experiment log itself and experiment-log-only analysis such as parameter correlation.
 
 Important limitation:
 
 - file-backed `Log` does not have `data`, `prep`, `preds`, or `_alignment`
 - methods that reconstruct per-round predictions or test windows require a UEL-backed `Log`
 
-## The Main Post-Run Workflow
+## The post-run workflow
 
-The most common sequence is:
+The standard sequence is:
 
 1. inspect one round's prediction table
 2. compare rounds with benchmark summaries
 3. compare rounds with backtest summaries
-4. inspect which parameters move with your target metric
+4. inspect which parameters move with the target metric
 
 ```python
 log = uel._log
@@ -64,7 +69,7 @@ correlation = log.experiment_parameter_correlation('auc', min_n=10)
 
 ## `permutation_prediction_performance(round_id)`
 
-This is the most concrete place to start. It reconstructs a single round's test-period table and joins:
+This method reconstructs a single round's test-period table and joins:
 
 - model predictions
 - actual outcomes
@@ -87,11 +92,11 @@ The resulting table has these columns:
 
 On a live local run in this repo, the table for one round contained 218 test rows with exactly that schema.
 
-Use this table when you want to understand a round before jumping to summary statistics. It is also the direct input to Limen's snapshot backtest.
+Use this table for round-level inspection before summary statistics. It is also the direct input to Limen's snapshot backtest.
 
-## Benchmark Surfaces
+## Benchmark surfaces
 
-The benchmark layer answers: is the signal making useful directional calls before we translate those calls into trading results?
+The benchmark layer measures directional signal quality before translation into trading results.
 
 ### `experiment_confusion_metrics(x, disable_progress_bar=False)`
 
@@ -123,7 +128,7 @@ uel._log.experiment_confusion_metrics('price_change')
 
 automatically at the end of the run.
 
-### `permutation_confusion_metrics(x, round_id, ...)`
+### `permutation_confusion_metrics(x, round_id)`
 
 Produces the same style of summary for one specific round.
 
@@ -134,18 +139,13 @@ round0_conf = uel._log.permutation_confusion_metrics(
 )
 ```
 
-This is the right view when a round looks interesting and you want to inspect its benchmark behavior in isolation.
+This view isolates benchmark behavior for one selected round.
 
 ### Reading the benchmark table
 
-Good questions to ask:
+Benchmark-table review should inspect whether high `precision_pct` comes from selectivity or low activity, whether `recall_pct` captures actual positives, whether `tp_x_mean` and `tp_x_median` exceed `fp_x_mean` and `fp_x_median`, and whether `tp_fp_cohen_d` indicates separation rather than noise.
 
-- is `precision_pct` high because the signal is selective, or because it barely predicts positives?
-- does `recall_pct` stay useful, or is the model missing most real positives?
-- are `tp_x_mean` and `tp_x_median` materially better than `fp_x_mean` and `fp_x_median`?
-- is `tp_fp_cohen_d` stable enough to suggest real separation rather than noise?
-
-This is exactly why benchmark and backtest are separate in Limen: a round can look statistically interesting before it proves itself economically.
+Benchmark and backtest stay separate because statistical signal quality and trading economics can diverge.
 
 When the confusion table includes:
 
@@ -156,7 +156,7 @@ When the confusion table includes:
 
 those four fields use the same immediate-next-execution-row contract as snapshot backtests for completed-bar pipelines. They are not same-row feature-bar returns.
 
-## Backtest Surface
+## Backtest surface
 
 ### `experiment_backtest_results(disable_progress_bar=False)`
 
@@ -185,7 +185,7 @@ Intensive scalars:
 
 - `wins_per_bar`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
-Use this table to compare the trading-economics side of rounds after you have already inspected the benchmark layer.
+Use this table to compare trading economics after benchmark inspection.
 
 Post-run snapshot backtests currently support:
 
@@ -194,9 +194,9 @@ Post-run snapshot backtests currently support:
 
 Logged multiclass outputs are not supported on this surface and raise explicitly instead of being silently collapsed.
 
-## Parameter Correlation Surface
+## Parameter correlation surface
 
-### `experiment_parameter_correlation(metric, ...)`
+### `experiment_parameter_correlation(metric)`
 
 This method looks for robust relationships between experiment parameters and a chosen metric across explicit cohorts.
 
@@ -221,25 +221,25 @@ with columns:
 - `ci_hi`
 - `sign_stability`
 
-This is most useful after a run is large enough to support meaningful cohorts. On tiny runs, the output is still legal but usually too unstable to interpret with confidence.
+This method requires enough rows to support cohort-level interpretation. Tiny runs produce legal output but unstable estimates.
 
-## Persisting Predictions And Complex Artifacts
+## Persisting predictions and complex artifacts
 
-If you want `Log` to have enough information for round-level reconstruction:
+`Log` needs these fields for round-level reconstruction:
 
 - store test predictions as `round_results['_preds']`
 - keep prep deterministic with respect to `round_params`
 - use `prep_each_round=True` when the prep stage depends on round parameters
 
-If your model or prep returns large objects that should not be flattened into the experiment log, put them under:
+Large model or prep objects that should not be flattened into the experiment log belong under:
 
 ```python
-round_results['extras'] = ...
+round_results['extras'] = {'model': fitted_model}
 ```
 
 UEL preserves those in `uel.extras`.
 
-## Determinism Matters
+## Determinism matters
 
 `Log` reconstructs test data by replaying the relevant prep path. That means non-deterministic prep logic can break alignment between:
 
@@ -263,10 +263,10 @@ It:
 - trims whitespace in object columns
 - returns a cleaned pandas dataframe
 
-Use it when you need to recover or inspect an experiment log outside a live UEL object.
+Use `read_from_file()` to recover or inspect an experiment log outside a live UEL object.
 
-## Read Next
+## Read next
 
 - Continue to [Benchmark](Benchmark.md) for the prediction-quality layer built on top of `Log`.
 - Continue to [Backtest](Backtest.md) for the trading-economics layer built on top of `permutation_prediction_performance()`.
-- Continue to [Trainer](Trainer.md) if you want to promote selected experiment rounds into reusable sensors.
+- Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable sensors.

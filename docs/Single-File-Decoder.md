@@ -1,21 +1,21 @@
-# Single File Decoder
+# Single file decoder
 
 A Single File Decoder (SFD) is the unit of experiment definition in Limen. It is a Python module that packages the parameter space together with either a declarative manifest or fully custom preparation and model functions.
 
-When you pass an SFD into `UniversalExperimentLoop`, Limen knows how to turn that module into an actual parameter sweep.
+`UniversalExperimentLoop` turns an SFD module into a parameter sweep.
 
-## Choose The SFD Style
+## Choose the SFD style
 
 Limen supports two SFD styles.
 
-| Style | Best for | Required functions | Data handling |
+| Style | Fit | Required functions | Data handling |
 |---|---|---|---|
-| manifest-driven | most Limen experiments, reproducible shared research, built-in workflows | `params()`, `manifest()` | data can be fetched automatically from the manifest |
-| custom functions | non-standard prep logic, external libraries, experimental flows | `params()`, `prep()`, `model()` | you pass `data=` explicitly to `UniversalExperimentLoop` |
+| manifest-driven | standard Limen experiments, reproducible shared research, built-in workflows | `params()`, `manifest()` | data can be fetched automatically from the manifest |
+| custom functions | non-standard prep logic, external libraries, experimental flows | `params()`, `prep()`, `model()` | caller passes `data=` explicitly to `UniversalExperimentLoop` |
 
-In practice, the manifest-driven path should be your default. Reach for the custom path only when the declarative pipeline is too restrictive for the job.
+The manifest-driven path is the default. Use the custom path only when the declarative pipeline is too restrictive for the job.
 
-## What Every SFD Must Expose
+## What every SFD must expose
 
 Every SFD must expose `params()`.
 
@@ -30,14 +30,14 @@ def params():
 
 `params()` returns the search space dictionary. Each key is a parameter name and each value must be a list, even when only one value is present.
 
-### `params()` Rules
+### `params()` rules
 
 - the return value must be a dictionary
 - every value must be a list
-- the individual values are usually scalars such as ints, floats, strings, booleans, or callables
-- structured values are possible when a manifest step explicitly expects them, but keep them deterministic and easy to inspect
+- individual values are scalars such as ints, floats, strings, booleans, or callables
+- structured values are possible when a manifest step explicitly expects them; keep them deterministic and inspectable
 
-## Manifest-Driven SFDs
+## Manifest-driven SFDs
 
 Manifest-driven SFDs expose `manifest()` instead of custom `prep()` and `model()` functions.
 
@@ -85,22 +85,22 @@ def manifest() -> Manifest:
 
 This style is how Limen's foundational SFDs are built.
 
-### What You Get From The Manifest Path
+### What the manifest path provides
 
 - declarative data fetching
 - split-first prep with train-only fitting
 - automatic prep/model wiring inside `UniversalExperimentLoop`
-- better reproducibility and clearer collaboration surface
+- reproducible collaboration surface
 
-### Runtime Rules For Manifest-Driven SFDs
+### Runtime rules for manifest-driven SFDs
 
-- `UniversalExperimentLoop.run(..., prep_each_round=True)` is required
-- you cannot override `prep` or `model` in `run()`
-- if you do not pass `data=`, Limen fetches data from the manifest
+- `UniversalExperimentLoop.run(prep_each_round=True)` is required
+- `prep` and `model` cannot be overridden in `run()`
+- when `data=` is omitted, Limen fetches data from the manifest
 
 ## Custom SFDs
 
-Custom SFDs expose `prep()` and `model()` directly. Use this path when you need full control over data preparation or do not want to express the pipeline through a manifest.
+Custom SFDs expose `prep()` and `model()` directly. Use this path for full control over data preparation or workflows that do not fit the manifest pipeline.
 
 ```python
 import polars as pl
@@ -135,7 +135,7 @@ def model(data: dict, round_params: dict):
     return results
 ```
 
-In this style you pass the input dataframe explicitly:
+This style passes the input dataframe explicitly:
 
 ```python
 import limen
@@ -149,39 +149,39 @@ uel = limen.UniversalExperimentLoop(data=data, sfd=my_custom_sfd)
 
 Custom `prep()` receives the experiment dataframe and the round-specific parameters. It must return a `data_dict` that the model function can consume.
 
-Good defaults:
+Defaults:
 
 - keep `datetime` in the dataframe until just before `split_data_to_prep_output()`
-- capture `all_datetimes = data['datetime'].to_list()` before dropping rows if you want correct alignment metadata
+- capture `all_datetimes = data['datetime'].to_list()` before dropping rows when alignment metadata is required
 - make the function deterministic with respect to `round_params`
 
 ### `model(data, round_params)`
 
-Custom `model()` receives the prepared `data_dict` and the round parameters. It must return a results dictionary, typically produced by one of:
+Custom `model()` receives the prepared `data_dict` and the round parameters. It must return a results dictionary produced by one of:
 
 - `limen.metrics.binary_metrics`
 - `limen.metrics.multiclass_metrics`
 - `limen.metrics.continuous_metrics`
 
-If you want predictions to be available through `uel.preds` and `Log`, include:
+For predictions available through `uel.preds` and `Log`, include:
 
 ```python
 round_results['_preds'] = preds
 ```
 
-If your prep stage fits an object that should be preserved, put it into the data dict under:
+Fitted prep-stage objects that should be preserved belong in the data dict under:
 
 ```python
 data_dict['_scaler'] = fitted_scaler
 ```
 
-## Foundational Vs Custom
+## Foundational versus custom
 
 Limen ships foundational SFDs under `limen.sfd.foundational_sfd`. These are reference implementations that show the preferred style for shared Limen workflows.
 
-Custom SFDs are your own experiment modules. They can use the same manifest system, or they can take the custom `prep()` and `model()` path when the workflow demands it.
+Custom SFDs are project experiment modules. They can use the same manifest system or the custom `prep()` and `model()` path.
 
-## Foundational SFDs Versus Reference Architecture
+## Foundational SFDs versus reference architecture
 
 There is one more design split that matters in practice:
 
@@ -204,10 +204,10 @@ On a live local smoke pass in this repo:
 
 Use [Built-In SFDs](Built-In-SFDs.md) for the current shipped catalog and [Reference Architecture](Reference-Architecture.md) for the model layer underneath it.
 
-## Read Next
+## Read next
 
 - Continue to [Built-In SFDs](Built-In-SFDs.md) for the shipped foundational decoder catalog.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline used by most SFDs.
+- Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline used by standard SFDs.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run an SFD.
-- Continue to [Reference Architecture](Reference-Architecture.md) if you are authoring model implementations rather than only packaged decoders.
+- Continue to [Reference Architecture](Reference-Architecture.md) for model implementation authoring beyond packaged decoders.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring new SFDs.

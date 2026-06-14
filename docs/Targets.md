@@ -382,8 +382,7 @@ class MyTarget:
 
     def transform(self, data: pl.DataFrame, **transform_params) -> pl.DataFrame:
         return data.with_columns(
-            # ... compute label ...
-            .alias(self.target_name)
+            (pl.col('close').shift(-1) > pl.col('close')).cast(pl.Int8).alias(self.target_name)
         )
 ```
 

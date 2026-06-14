@@ -1,8 +1,8 @@
 # Experiment Manifest
 
-The Experiment Manifest is Limen's declarative pipeline builder. Instead of hand-writing `prep()` and threading every step yourself, you describe how data should be fetched, split, transformed, targeted, scaled, and handed to a model.
+The Experiment Manifest is Limen's declarative pipeline builder. Instead of hand-written `prep()` orchestration, the manifest describes how data is fetched, split, transformed, targeted, scaled, and handed to a model.
 
-This is the default path for Limen work because it gives you:
+This is the default path for Limen work because it provides:
 
 - split-first execution
 - train-only fitting for targets and scalers
@@ -10,7 +10,7 @@ This is the default path for Limen work because it gives you:
 - cleaner collaboration surfaces
 - reproducible experiment definitions
 
-Use a manifest when you want Limen's opinionated pipeline. Skip it only when the workflow genuinely needs fully custom `prep()` and `model()` functions.
+Use a manifest for Limen's opinionated pipeline. Use custom `prep()` and `model()` functions only when the workflow cannot fit the declarative pipeline.
 
 ## Manifest Types
 
@@ -110,7 +110,7 @@ The execution order is:
 
 This ordering is one of the main reasons to use a manifest: the leak-prevention rules come built in.
 
-The manifest is deliberately opinionated. It forces split-first execution, train-only fitting, and immutable dataframe-style transforms because those guardrails prevent the most common financial-ML mistakes.
+The manifest is deliberately opinionated. It forces split-first execution, train-only fitting, and immutable dataframe-style transforms because those guardrails prevent leakage-prone financial-ML mistakes.
 
 There is one more protection step after feature engineering: non-empty splits are aligned to a shared column set before the final `data_dict` is built. If a transform such as `fractional_diff` produces a column in one split but not another because the shorter split lacks enough history, Limen drops that extra column from the non-empty splits so the downstream model still receives a consistent schema.
 
@@ -146,7 +146,7 @@ Pass `test_mode=True` to `UniversalExperimentLoop` to fetch from the test data s
 When `test_mode=True` and a test data source is configured, `fetch_test_data()` is called; otherwise `fetch_data()` is used.
 
 That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source.
-To keep local runs lightweight, configure `set_test_data_source()` with explicit `kline_size` and `row_count_limit`.
+To keep local runs bounded, configure `set_test_data_source()` with explicit `kline_size` and `row_count_limit`.
 
 ## Pipeline Configuration
 
@@ -189,7 +189,7 @@ Behavior rules:
 - Every bound must be a `date` or `datetime` instance. Strings, ints, and floats raise `TypeError` at the API boundary.
 - `val_predict_guard` and `test_predict_guard` are keyword-only and default `True`. They control whether the served `Sensor` masks predictions inside the val and test windows. Both `True` masks the full `[train_start, test_end)` envelope — every served prediction is identical to omitting them; setting one to `False` makes that window emit real `0/1` predictions instead of `None`, so a served cohort can be checked against its own test-split backtest. Train is always masked (the model trains on it) and has no flag. Each flag must be a `bool` or `set_split_dates` raises `TypeError`.
 - When `split_dates` is set it takes precedence over `set_split_config` in both `prepare_data` and `compute_test_bars`. The split runs on the raw data (before per-split feature transforms), so transforms can still drop rows inside a slice but cannot move rows across slice boundaries.
-- `with_params_override(split_config=...)` clears any previously-pinned `split_dates`, so the retraining override (e.g. `Trainer.train_sensors` passing `(1, 0, 0)`) is never silently shadowed by an earlier date pin.
+- `with_params_override(split_config=(1, 0, 0))` clears any previously-pinned `split_dates`, so the retraining override (e.g. `Trainer.train_sensors` passing `(1, 0, 0)`) is never silently shadowed by an earlier date pin.
 
 Use this when the train / val / test boundaries must land on specific datetimes (e.g. honouring a deployment date), and `set_split_config` when proportions of the row count are the natural way to express the split.
 
@@ -223,7 +223,7 @@ from limen.data.utils import random_slice
 )
 ```
 
-Use this when you want smaller or controlled slices of the raw dataset before the normal split-first pipeline begins.
+Use this for smaller or controlled slices of the raw dataset before the normal split-first pipeline begins.
 
 ### `set_bar_formation(func, **params)`
 
@@ -243,7 +243,7 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 ### `set_required_bar_columns(columns)`
 
-Assert that bar formation still leaves the downstream columns your experiment requires.
+Assert that bar formation still leaves the downstream columns required by the experiment.
 
 ```python
 .set_required_bar_columns([
@@ -257,7 +257,7 @@ Assert that bar formation still leaves the downstream columns your experiment re
 ])
 ```
 
-This is especially useful when your model or backtest assumes OHLC fields are present after bars have been formed.
+This assertion protects model or backtest paths that require OHLC fields after bar formation.
 
 ## Indicators And Features
 
@@ -322,7 +322,7 @@ Use `include_if=` when a transform should only run if a boolean round parameter 
 
 ## Parameter-Controlled Perturbations
 
-The manifest builder now supports several perturbation-style workflows directly in the declarative surface.
+The manifest builder supports perturbation-style workflows directly in the declarative surface.
 
 ### Feature-group selection
 
@@ -389,7 +389,7 @@ On a live local prep run in this repo, `feature_drop_count=1` and `feature_drop_
 round_params['_dropped_features'] == ['vol_5']
 ```
 
-In artifact-rich runs, that `_dropped_features` payload is stored into `round_data.jsonl`, and [Trainer](Trainer.md) reproduces the same drop set during promotion.
+In artifact-backed runs, that `_dropped_features` payload is stored into `round_data.jsonl`, and [Trainer](Trainer.md) reproduces the same drop set during promotion.
 
 ### Scaler choice from parameters
 
@@ -410,15 +410,15 @@ On live local manifest-prep runs in this repo, this resolved correctly to:
 
 ### Manifest-level overrides
 
-Use `with_params_override(...)` when you want a manifest clone with structural changes that should not come from the round search itself.
+Use `with_params_override(split_config=(1, 0, 0))` for a manifest clone with structural changes that should not come from the round search itself.
 
-Typical examples:
+Examples:
 
 - `split_config=(1, 0, 0)` for full-data retraining in [Trainer](Trainer.md)
-- `start_date_limit=...` for a controlled data-window variant
-- `row_count_limit=...` for test or smoke paths
+- `start_date_limit='2025-01-01'` for a controlled data-window variant
+- `row_count_limit=5000` for test or smoke paths
 
-Use round parameters for search-time variation and `with_params_override(...)` for external structural control.
+Round parameters handle search-time variation. `with_params_override(split_config=(1, 0, 0))` handles external structural control.
 
 Then in `params()`:
 
@@ -479,7 +479,7 @@ Then in `params()`:
 }
 ```
 
-Use this when scaler choice is itself part of the search space.
+Use this when scaler choice is part of the search space.
 
 ## PCA Compression
 
@@ -603,10 +603,16 @@ The rule-based path produces a different `data_dict` than the ML path:
     'val':   pl.DataFrame,
     'test':  pl.DataFrame,
     'strategy': {
-        'conditions': [...],  # condition dicts as configured
+        'conditions': [
+            {'id': 'entry', 'type': 'threshold', 'column': 'wilder_rsi_14', 'operator': '<', 'value': 30},
+        ],
         'entry': 'entry',
     },
-    '_alignment': {...},
+    '_alignment': {
+        'first_test_datetime': None,
+        'last_test_datetime': None,
+        'missing_datetimes': [],
+    },
 }
 ```
 
@@ -637,11 +643,11 @@ from limen.sfd.reference_architecture import logreg_binary
 
 The model function must accept the prepared `data_dict` as its first argument.
 
-All remaining parameters are auto-mapped from `round_params` by signature inspection. For example, if your model function has:
+All remaining parameters are auto-mapped from `round_params` by signature inspection. For a model function with this signature:
 
 ```python
 def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, solver='lbfgs'):
-    ...
+    return LogRegBinary().evaluate(data, inline_metrics=True, C=C, class_weight=class_weight, max_iter=max_iter, solver=solver)
 ```
 
 then manifest execution will automatically pull `C`, `class_weight`, `max_iter`, and `solver` from the current round when those keys exist in `round_params`.
@@ -724,7 +730,7 @@ Then in `params()`:
 }
 ```
 
-This is useful when you want feature robustness to be part of the search itself.
+This makes feature robustness part of the search itself.
 
 ## Data Dict Extension
 
@@ -752,11 +758,11 @@ Create a deep-copied manifest with selected overrides.
 manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
-This is especially useful in retraining workflows where you want to promote a winning round from train/val/test mode into all-data training.
+This supports retraining workflows that promote a selected round from train/val/test mode into all-data training.
 
 Supported override behavior today:
 
-- `split_config=(...)` overrides the split ratios
+- `split_config=(1, 0, 0)` overrides the split ratios
 - other keys are interpreted as data-source parameter overrides and are validated against the configured data-source method signature
 
 Example:
@@ -792,11 +798,11 @@ Indicator and feature functions are applied during the feature stage over a Pola
 
 The practical contract is:
 
-- input: frame with the columns your transform expects
+- input: frame with the columns the transform expects
 - output: frame with the new columns added
 - behavior: deterministic with respect to the resolved parameters
 
-If you are adding custom manifest transforms, write them in the same style as Limen's built-ins: accept a frame plus keyword arguments, and return the transformed frame.
+Custom manifest transforms should match Limen's built-ins: accept a frame plus keyword arguments, and return the transformed frame.
 
 ### Fitted parameter computation functions
 
@@ -807,7 +813,7 @@ The contract is:
 - input: eager `pl.DataFrame` plus resolved kwargs
 - output: one fitted value
 
-That fitted value is then stored under the name you gave in `fit_param(...)` and can be referenced later in the target or scaler step.
+That fitted value is then stored under the fitted-parameter name and can be referenced later in the target or scaler step.
 
 ### Target transform functions
 
@@ -822,7 +828,7 @@ Use fitted transforms when the function depends on train-only fitted state. Use 
 
 ### Model functions
 
-The architecture function configured in `with_reference_architecture(...)` must:
+The architecture function configured in `with_reference_architecture(logreg_binary)` must:
 
 - accept the finalized `data_dict` as its first argument
 - accept any searched model parameters as named kwargs
@@ -884,6 +890,6 @@ That pattern is central to [Trainer](Trainer.md).
 
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run a manifest-driven SFD.
 - Continue to [Calibration](Calibration.md) for the full calibration reference including custom calibrators, threshold optimisers, and all four calibration modes.
-- Continue to [Historical Data](Historical-Data.md) if you need the data surfaces a manifest can point at.
+- Continue to [Historical Data](Historical-Data.md) for data surfaces a manifest can reference.
 - Continue to [Data Bars](Data-Bars.md) if bar formation is part of the experiment design.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.

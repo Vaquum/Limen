@@ -16,12 +16,12 @@ Does **not** own the canonical experiment, feature, metric, or backtest surfaces
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `ParamSpace` | You are on the legacy basic `UEL.run()` path and need permutation sampling | Advanced runs use `SearchStrategy` and `ParamDomain` instead |
-| `data_dict_to_numpy` | You want numpy arrays from the standard Limen `data_dict` | Common inside sklearn-style model functions |
-| `confidence_filtering_system` | You want post-prediction filtering based on model agreement | An optional downstream helper, not part of the main UEL contract |
-| Reporting helpers | You want formatted text summaries | Utility surface, not a canonical reporting framework |
+| `ParamSpace` | Legacy basic `UEL.run()` path and need permutation sampling | Advanced runs use `SearchStrategy` and `ParamDomain` instead |
+| `data_dict_to_numpy` | Numpy arrays from the standard Limen `data_dict` | Common inside sklearn-style model functions |
+| `confidence_filtering_system` | Post-prediction filtering based on model agreement | An optional downstream helper, not part of the main UEL contract |
+| Reporting helpers | Formatted text summaries | Utility surface, not a canonical reporting framework |
 
 ## Adjacent modules
 
@@ -41,9 +41,9 @@ utils/
 
 ## Things to know
 
-- This package is intentionally mixed. If a helper grows into a coherent subsystem, it should usually move out of `utils`.
+- This package is intentionally mixed. If a helper grows into a coherent subsystem, move it out of `utils`.
 - `ParamSpace` is the legacy path, not the long-term abstraction for advanced search.
-- `data_dict_to_numpy` assumes the standard Limen split schema and is most useful inside model code.
+- `data_dict_to_numpy` assumes the standard Limen split schema and supports model code.
 
 ## Read next
 

@@ -14,15 +14,15 @@ Does **not** own raw feature creation or the experiment loop itself.
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `LinearScaler` | You want rule-based scaling over mixed market-data columns | Exported at the package root |
-| `LogRegScaler` | You want the standard scaler used by logistic-regression SFDs | Exported at the package root |
-| `RobustScaler` | You want median and IQR scaling for outlier-heavy data | Exported at the package root |
-| `CausalRollingRobustScaler` | You want robust scaling that adapts to drift, with no look-ahead | Exported at the package root |
-| `RankGaussScaler` | You want rank-based Gaussianization | Exported at the package root |
-| `SCALER_REGISTRY` | You want to resolve scalers by manifest parameter name | Used by `set_scaler_from_params()` |
-| `build_rules`, `inverse_transform` | You need to customize or interpret `LinearScaler` behavior | Available from the module-level implementations |
+| `LinearScaler` | Rule-based scaling over mixed market-data columns | Exported at the package root |
+| `LogRegScaler` | Standard scaler used by logistic-regression SFDs | Exported at the package root |
+| `RobustScaler` | Median and IQR scaling for outlier-heavy data | Exported at the package root |
+| `CausalRollingRobustScaler` | Robust scaling that adapts to drift, with no look-ahead | Exported at the package root |
+| `RankGaussScaler` | Rank-based Gaussianization | Exported at the package root |
+| `SCALER_REGISTRY` | Resolve scalers by manifest parameter name | Used by `set_scaler_from_params()` |
+| `build_rules`, `inverse_transform` | Customize or interpret `LinearScaler` behavior | Available from the module-level implementations |
 
 ## Adjacent modules
 

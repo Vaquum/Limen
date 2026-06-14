@@ -15,17 +15,17 @@ Does **not** own feature engineering, model fitting, calibration, or execution s
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 | --- | --- | --- |
-| `QuantileBinaryTarget` | You need labels from a train-fitted quantile cutoff | Fits the cutoff on train only. |
-| `ThresholdBinaryTarget` | You need labels from a fixed threshold | Useful for explicit return thresholds. |
-| `TradelineLongBinaryTarget` | You need a long-entry label from price-line context | Pairs with line-based feature helpers. |
-| `NextReturnTarget`, `VolNormalizedReturnTarget`, `ForwardVolNormalizedReturnTarget` | You need continuous forward-return style targets | Common for regression or ranking experiments. |
-| `NextBarUpTarget`, `NextBarDownTarget` | You need one-bar direction labels | Lightweight classification baselines. |
-| `ForwardBreakoutTarget`, `EmaBreakoutTarget` | You need breakout-oriented labels | Uses forward path or EMA context. |
-| `TripleBarrierTarget` | You need a path-aware barrier label | Requires enough rows for `max_horizon` and the volatility warmup. |
-| `RiskRewardRatioTarget`, `ExitQualityTarget` | You need outcome labels from upstream trade-path columns | Require the expected input columns to exist on every split. |
-| `RandomBinaryTarget`, `IdentityTarget` | You need controls or already-present target columns | Useful for tests, baselines, and externally labelled data. |
+| `QuantileBinaryTarget` | Labels from a train-fitted quantile cutoff | Fits the cutoff on train only. |
+| `ThresholdBinaryTarget` | Labels from a fixed threshold | Supports explicit return thresholds. |
+| `TradelineLongBinaryTarget` | Long-entry label from price-line context | Pairs with line-based feature helpers. |
+| `NextReturnTarget`, `VolNormalizedReturnTarget`, `ForwardVolNormalizedReturnTarget` | Continuous forward-return style targets | Common for regression or ranking experiments. |
+| `NextBarUpTarget`, `NextBarDownTarget` | One-bar direction labels | Classification baselines. |
+| `ForwardBreakoutTarget`, `EmaBreakoutTarget` | Breakout-oriented labels | Uses forward path or EMA context. |
+| `TripleBarrierTarget` | Path-aware barrier label | Requires enough rows for `max_horizon` and the volatility warmup. |
+| `RiskRewardRatioTarget`, `ExitQualityTarget` | Outcome labels from upstream trade-path columns | Require the expected input columns to exist on every split. |
+| `RandomBinaryTarget`, `IdentityTarget` | Controls or already-present target columns | Supports tests, baselines, and externally labelled data. |
 
 ## Adjacent modules
 

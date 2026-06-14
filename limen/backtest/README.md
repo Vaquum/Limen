@@ -15,10 +15,10 @@ Does **not** own signal generation, experiment logging, or portfolio bookkeeping
 
 ## Key entry points
 
-| Entry point | Use it when | Notes |
+| Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `backtest_snapshot` | You want the fast, vectorized evaluation used across many rounds | Import from `limen.backtest.backtest_snapshot` |
-| `long_flat_strategy` | You want the default execution model, or a template for a new strategy | Returns an `ExecutionResult`; import from `limen.backtest.long_flat_strategy` |
+| `backtest_snapshot` | Vectorized evaluation across rounds | Import from `limen.backtest.backtest_snapshot` |
+| `long_flat_strategy` | Default execution model, or a template for a new strategy | Returns an `ExecutionResult`; import from `limen.backtest.long_flat_strategy` |
 
 ## Adjacent modules
 
@@ -36,7 +36,7 @@ backtest/
 ## Things to know
 
 - The package root currently does not re-export the backtest helpers, so import from the module paths directly.
-- `backtest_snapshot()` is the common analysis path for experiment sweeps because it is simple and fast.
+- `backtest_snapshot()` is the standard analysis path for vectorized experiment-sweep evaluation.
 - Snapshot outputs are reported in percent units, while fee and slippage inputs are specified in basis points.
 
 ## Read next

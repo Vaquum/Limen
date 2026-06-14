@@ -1,6 +1,6 @@
 # Command Line Interface
 
-The Limen CLI is the supported shell surface for YAML-first experiment work. Use it when you want validation, profiling, template scaffolding, committed manifests, resumable runs, and standard result directories without writing Python orchestration code.
+The Limen CLI is the supported shell surface for YAML-first experiment work. It provides validation, profiling, template scaffolding, committed manifests, resumable runs, and standard result directories without Python orchestration code.
 
 ## Scope
 
@@ -14,7 +14,7 @@ The CLI owns project and manifest operations around declarative YAML experiments
 | `limen profile <yaml_file>` | Estimate YAML parameter-space size without executing data or model work. | Complexity rating, parameter counts, and runtime-sampling skipped status. |
 | `limen run <yaml_file>` | Validate, compile, and execute a YAML experiment. | Results directory with `results.csv`, optional `results.parquet`, metadata, round data, and checkpoints when configured. |
 | `limen run --dry-run <yaml_file>` | Validate and compile without executing permutations. | Compile success or validation/runtime setup errors. |
-| `limen run --resume <results_dir>` | Resume an artifact-rich run from a checkpoint directory. | Updated result artifacts in the existing run directory. |
+| `limen run --resume <results_dir>` | Resume an artifact-backed run from a checkpoint directory. | Updated result artifacts in the existing run directory. |
 | `limen init <output> --template <name>` | Copy a bundled YAML template and set `metadata.name` from the output filename. | New YAML file. |
 | `limen list-templates` | List bundled YAML templates under `limen/yaml/templates`. | Template names. |
 | `limen commit <yaml_file>` | Validate, content-address, store, index, and git-commit a manifest inside a Limen project. | Committed manifest under `manifests/committed/` plus index update. |
@@ -96,7 +96,7 @@ Options:
 
 ## YAML Run Contract
 
-`limen run` accepts either a YAML file path or a committed `manifest://sha256:...` URI. The command resolves the manifest, validates it, compiles all `limen.*` references, builds the parameter search domain, and then runs UEL.
+`limen run` accepts either a YAML file path or a committed `manifest://sha256:` URI. The command resolves the manifest, validates it, compiles all `limen.*` references, builds the parameter search domain, and then runs UEL.
 
 `metadata.mode` controls the default result path:
 
@@ -110,7 +110,7 @@ Set `uel.output_format: parquet` to also write `results.parquet`. Set `uel.outpu
 
 ## Validation Boundaries
 
-`limen validate` and the validation step inside `limen run` check structure and resolvability before execution. They do not prove that custom callables are statistically useful, that a remote data source is available at run time, or that a production run is safe to promote downstream.
+`limen validate` and the validation step inside `limen run` check structure and resolvability before execution. They do not prove that custom callables have predictive value, that a remote data source is available at run time, or that a production run is valid for downstream promotion.
 
 Runtime boundaries:
 

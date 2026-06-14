@@ -2,44 +2,44 @@
 
 `Cohort` is Limen's inference-time ensemble surface for combining multiple trained sensors reconstructed from one completed experiment.
 
-Use it when you want to move from single-round predictions to a controlled multi-member prediction surface while staying inside Limen artefacts (`metadata.json`, `round_data.jsonl`, Trainer-reconstructed sensors).
+`Cohort` moves single-round predictions into a controlled multi-member prediction surface while staying inside Limen artefacts (`metadata.json`, `round_data.jsonl`, Trainer-reconstructed sensors).
 
-## What This Page Covers
+## What this page covers
 
 - what a Cohort is and where it sits in the Limen workflow
 - construction and validation rules
 - selector contract and built-in selectors
 - aggregation behavior (probability-weighted vs fallback majority vote)
-- output contracts for `predict(...)` and `predict_all(...)`
+- output contracts for `predict(raw_klines)` and `predict_all(raw_klines)`
 - a real end-to-end example from experiment artefacts
 
 ## Prerequisites
 
-Before constructing a Cohort, you need:
+A Cohort requires:
 
 1. a completed UEL experiment directory
 2. valid experiment artefacts (`metadata.json`, `round_data.jsonl`)
 3. selected permutation IDs, or a selector that chooses them
-4. trained members (typically from `Trainer.train(...)`)
+4. trained members from `Trainer.train(permutation_ids)`
 
-If you are new to this flow, read:
+Read these pages first:
 
 - [Universal Experiment Loop](Universal-Experiment-Loop.md)
 - [Trainer](Trainer.md)
 
-## Where Cohort Fits In The Pipeline
+## Where Cohort fits in the pipeline
 
-Typical path:
+Pipeline path:
 
 1. run experiment search with UEL
 2. identify permutations to promote, manually or with a selector
 3. reconstruct/train those permutations with Trainer
 4. create Cohort from experiment source + permutation IDs or selector
-5. bind trained members via `set_members(...)`
+5. bind trained members via `set_members(sensors)`
 6. infer with:
    - `predict(raw_klines)` → one `BarPrediction` for the last bar
    - `predict_all(raw_klines)` → one `BarPrediction` per bar
-   - `__call__(raw_klines)` as an alias of `predict_all(...)` → `list[BarPrediction]`
+   - `__call__(raw_klines)` as an alias of `predict_all(raw_klines)` → `list[BarPrediction]`
 
 ## Construction
 
@@ -61,10 +61,10 @@ cohort = Cohort(
 
 ### Experiment source rules
 
-You must provide exactly one source:
+Exactly one source is required:
 
-- `experiment_id=...`
-- or `experiment_log_path=...`
+- `experiment_id`
+- `experiment_log_path`
 
 Providing none or both raises `ValueError`.
 
@@ -87,7 +87,7 @@ After `set_members()`:
 
 - `cohort.cohort_id` — `'sha256:<hex>'` derived from `manifest_id` and the sorted set of `permutation_ids`
 
-## Selector Contract
+## Selector contract
 
 Selectors choose Cohort members before any training or inference work starts.
 
@@ -114,7 +114,7 @@ The selector receives:
 The selector must return permutation IDs only. Cohort still owns ID validation,
 architecture consistency, member binding, and prediction aggregation.
 
-### Single-File Cohort Selectors
+### Single-file Cohort selectors
 
 ```python
 Cohort(experiment_log_path='experiments/my_exp')
@@ -180,7 +180,7 @@ backtest columns are unavailable.
 
 All selected permutation IDs must resolve to the same architecture identifier. Mixed-architecture selection raises `ValueError`.
 
-## Binding Members
+## Binding members
 
 After construction, bind trained sensor members:
 
@@ -199,7 +199,7 @@ Each member must expose `permutation_id` for binding. `set_members()` validates 
 
 After a successful `set_members()` call, `cohort.cohort_id` is populated.
 
-## Aggregation Modes
+## Aggregation modes
 
 Aggregation mode is selected at construction based on architecture capability hints.
 For YAML CLI runs, Cohort reads `metadata.json["yaml_reference"]` to recover the
@@ -220,7 +220,7 @@ compatible with Trainer-reconstructed sensors.
 - applies strict threshold `> 0.5`
 - exact ties resolve to class `0`
 
-## Output Contracts
+## Output contracts
 
 ### `predict(raw_klines) -> BarPrediction`
 
@@ -244,7 +244,7 @@ if bar_pred.reason is None:
 | `'null-features'` | highest-priority blocking reason |
 | `'sensor-error'` | all members returned `sensor-error`; no valid prediction available |
 
-When some members return `sensor-error` but not all, those members are excluded from
+When one or more members return `sensor-error` but at least one member remains valid, failed members are excluded from
 aggregation and a warning is logged. The cohort still produces a valid prediction from
 the remaining members.
 
@@ -263,9 +263,9 @@ for bar in all_preds:
 
 ### `__call__(raw_klines)`
 
-Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per bar. Use this in replay loops where you want all bars from a window.
+Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per bar. Replay loops use this form for every bar in a window.
 
-## Real End-To-End Example
+## Real end-to-end example
 
 ```python
 import polars as pl
@@ -289,8 +289,8 @@ cohort = Cohort(
 )
 cohort.set_members(sensors)
 
-print(cohort.cohort_id)    # 'sha256:...'
-print(cohort.manifest_id)  # 'sha256:...'
+print(cohort.cohort_id.startswith('sha256:'))
+print(cohort.manifest_id.startswith('sha256:'))
 
 # 4a) predict last bar
 bar_pred = cohort.predict(raw_klines)
@@ -302,21 +302,21 @@ all_preds = cohort.predict_all(raw_klines)
 valid = [p for p in all_preds if p.reason is None]
 print(f'{len(valid)} valid bars out of {len(all_preds)}')
 
-# 4c) callable alias — same as predict_all, useful in replay loops
+# 4c) callable alias, same as predict_all
 all_preds2 = cohort(raw_klines)  # list[BarPrediction]
 ```
 
-## Failure Cases And Caveats
+## Failure cases and caveats
 
 - missing experiment artefacts (`metadata.json` / `round_data.jsonl`) raise `FileNotFoundError`
 - unresolvable or ambiguous experiment ID resolution raises `ValueError`
 - no bound members at inference raises `RuntimeError`
 - member sensor lists of different lengths raise `ValueError` in `predict_all`
 - when a member returns `sensor-error` for a bar, it is excluded from aggregation for that bar; only when all members return `sensor-error` does the cohort return `reason='sensor-error'`
-- architecture capability detection is currently hint-based; validate behavior in your target architecture set
+- architecture capability detection is currently hint-based; validate behavior for the target architecture set
 - selectors that depend on `results.csv` raise if the required columns are missing
 
-## Read Next
+## Read next
 
 - [Trainer](Trainer.md) for reconstruction and promotion flows
 - [Reference Architecture](Reference-Architecture.md) for model output conventions

@@ -31,13 +31,11 @@ Why this matters:
 - `balanced_metric` is re-exported as a callable
 - `limen.metrics` re-exports `binary_metrics`, `multiclass_metrics`, `continuous_metrics`, and `safe_ovr_auc` as modules
 
-So if you write:
+The package-root import returns the module, not the function:
 
 ```python
 from limen.metrics import binary_metrics
 ```
-
-you are importing the module, not the function.
 
 This low-level metrics layer also sits underneath [Reference Architecture](Reference-Architecture.md). The class-based models add confusion and backtest fields later; these helpers stay at the smaller task-metric level.
 
@@ -59,7 +57,7 @@ Returns a dictionary with:
 - `auc`
 - `accuracy`
 
-On a live local `LogRegBinary.evaluate(..., inline_metrics=False)` run in this repo, this task-metric layer was exactly:
+On a live local `LogRegBinary.evaluate(data, inline_metrics=False)` run in this repo, this task-metric layer was exactly:
 
 - `accuracy`
 - `auc`
@@ -147,14 +145,16 @@ If no valid class-vs-rest comparisons can be made, it returns `NaN`.
 
 ## Where These Helpers Fit
 
-A typical reference-architecture model function looks like:
+A reference-architecture model function has this shape:
 
 ```python
+import numpy as np
+
 from limen.metrics.binary_metrics import binary_metrics
 
-def model(data, ...):
-    preds = ...
-    probs = ...
+def model(data):
+    preds = np.zeros(len(data['y_test']), dtype=int)
+    probs = np.zeros(len(data['y_test']), dtype=float)
 
     results = binary_metrics(data, preds, probs)
     results['_preds'] = preds

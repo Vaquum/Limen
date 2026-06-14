@@ -1,24 +1,24 @@
-# Built-In SFDs
+# Built-in SFDs
 
-Limen ships a small set of foundational SFDs under `limen.sfd.foundational_sfd`. These are the packaged decoders you can run immediately without authoring your own experiment module first.
+Limen ships foundational SFDs under `limen.sfd.foundational_sfd`. These packaged decoders run without a custom experiment module.
 
-They are the fastest way to learn how Limen is shaped in practice because each one already combines:
+They show the packaged Limen experiment shape because each one combines:
 
 - `params()`
 - `manifest()`
 - a matching reference-architecture model surface
 
-## The Current Catalog
+## The current catalog
 
 | SFD | Task shape | Notes |
 |---|---|---|
-| `logreg_binary` | binary classification | the main manifest-driven logistic-regression reference flow |
+| `logreg_binary` | binary classification | canonical manifest-driven logistic-regression reference flow |
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
-| `random_binary` | binary classification baseline | useful for sanity checks and control comparisons |
+| `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `tabpfn_binary` | binary classification | optional, available only when `tabpfn` is installed |
 
-## Foundational SFD Versus Reference Architecture
+## Foundational SFD versus reference architecture
 
 Each built-in SFD has a matching model module in [Reference Architecture](Reference-Architecture.md).
 
@@ -29,7 +29,7 @@ The split is:
 | foundational SFD | search space plus manifest pipeline |
 | reference architecture | class-based model contract and function wrapper |
 
-So, for example:
+For the logistic-regression SFD:
 
 - `limen.sfd.foundational_sfd.logreg_binary` owns the packaged experiment
 - `limen.sfd.reference_architecture.logreg_binary` owns the model implementation
@@ -40,7 +40,7 @@ This separation is what lets [Trainer](Trainer.md) reconstruct a finished experi
 
 `logreg_binary` is the standard manifest-driven binary classifier in the package.
 
-It currently combines:
+It combines:
 
 - indicators such as `roc`, `atr`, `ppo`, and `wilder_rsi`
 - features such as `vwap` and `kline_imbalance`
@@ -51,7 +51,7 @@ It currently combines:
 
 The classifier parameter surface mirrors the sklearn `LogisticRegression` constructor through manifest params: `solver`, `penalty`, `dual`, `tol`, `C`, `fit_intercept`, `intercept_scaling`, `class_weight`, `random_state`, `max_iter`, `multi_class`, `verbose`, `warm_start`, `n_jobs`, and `l1_ratio`.
 
-The calibration search space includes `use_calibration`, `use_threshold`, `cal_method`, `threshold_min`, `threshold_max`, and `threshold_step`, giving a full grid of calibration modes within a single experiment run.
+The calibration search space includes `use_calibration`, `use_threshold`, `cal_method`, `threshold_min`, `threshold_max`, and `threshold_step`, creating a grid of calibration modes within a single experiment run.
 
 On a live local smoke run over the bundled test dataset in this repo, it prepared:
 
@@ -62,7 +62,7 @@ On a live local smoke run over the bundled test dataset in this repo, it prepare
 
 `lightgbm_binary` is the tradeline long-binary experiment: the line-geometry research track packaged on Limen rails.
 
-It currently combines:
+It combines:
 
 - the grouped line transforms `price_lines` and `quantile_price_lines` with swept geometry (`max_duration_hours`, `min_height_pct`, `quantile_threshold`)
 - context from `roc`, `distance_from_high`/`distance_from_low`/`price_range_position`, `parkinson_volatility`/`volatility_ratio`, and `cyclical_time_features`
@@ -76,13 +76,7 @@ The matching YAML template is `limen/yaml/templates/lightgbm_binary.yaml` (`lime
 
 ## `random_binary`
 
-`random_binary` is the baseline binary classifier. It is deliberately simple and deliberately stochastic.
-
-Use it when you want:
-
-- a control run
-- a smoke-test decoder
-- a deliberately weak comparison point
+`random_binary` is the baseline binary classifier. It is stochastic and intended for control runs, smoke tests, and low-skill comparison points.
 
 On a live local smoke run in this repo, it prepared:
 
@@ -95,7 +89,7 @@ Because it is stochastic, it is a poor fit for deterministic reconstruction in [
 
 `xgboost_regressor` is the regression-oriented foundational SFD.
 
-Use it when the target is better treated as continuous rather than binary.
+Use this SFD for continuous targets rather than binary targets.
 
 On a live local smoke run in this repo, it prepared:
 
@@ -112,9 +106,9 @@ It uses `CalibrationBuilder` with the same probability calibration and threshold
 
 That optional status matters at import time and in local documentation examples. In a live local smoke pass in this repo, it was unavailable because `tabpfn` was not installed.
 
-## Running One Immediately
+## Running one immediately
 
-The simplest way to use a built-in SFD is:
+A built-in SFD can run with only `sfd=`:
 
 ```python
 import limen
@@ -130,17 +124,17 @@ uel.run(
 )
 ```
 
-If you omit `data=`, the manifest fetches data using `fetch_data()`. Pass `test_mode=True` to UEL to use the test data source instead.
+When `data=` is omitted, the manifest fetches data using `fetch_data()`. Passing `test_mode=True` to UEL uses the test data source instead.
 
-## How To Choose
+## How to choose
 
-- Choose `logreg_binary` when you want the clearest canonical Limen path.
-- Choose `random_binary` when you want a baseline or smoke-test decoder.
-- Choose `xgboost_regressor` when the target is continuous and tree-based regression is the better fit.
-- Choose `tabpfn_binary` only when that dependency is installed and you specifically want the TabPFN workflow.
+- Choose `logreg_binary` for the canonical Limen path.
+- Choose `random_binary` for a baseline or smoke-test decoder.
+- Choose `xgboost_regressor` for continuous targets that should use tree-based regression.
+- Choose `tabpfn_binary` only when that dependency is installed and the TabPFN workflow is required.
 
-## Read Next
+## Read next
 
 - Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) if you want to adapt one of these into your own custom SFD.
+- Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.

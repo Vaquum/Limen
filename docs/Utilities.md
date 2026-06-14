@@ -2,18 +2,18 @@
 
 Utilities are the smaller helper surfaces that support Limen workflows without defining one primary subsystem of their own.
 
-They are useful, but they are not the main story of the package. If you are new to Limen, learn [Universal Experiment Loop](Universal-Experiment-Loop.md), [Experiment Manifest](Experiment-Manifest.md), and [Log](Log.md) first.
+They support the package, but they are not the main workflow. New Limen readers should start with [Universal Experiment Loop](Universal-Experiment-Loop.md), [Experiment Manifest](Experiment-Manifest.md), and [Log](Log.md).
 
-## Current Public Utility Surface
+## Current public utility surface
 
-| Helper | Use it when |
+| Helper | Use case |
 |---|---|
-| `ParamSpace` | you are on the legacy standard UEL path and need sampled parameter combinations |
-| `data_dict_to_numpy` | you want numpy arrays from the standard Limen `data_dict` |
-| `adf_test` and `AdfResult` | you want a simple stationarity check for a series or for helpers such as `find_min_d` |
-| `confidence_filtering_system` | you want validation-calibrated confidence filtering across multiple models |
-| `split_by_dates` | you want absolute-datetime train / val / test splits (the helper backing `Manifest.set_split_dates`) |
-| reporting helpers | you want simple formatted text blocks |
+| `ParamSpace` | legacy standard UEL path requiring sampled parameter combinations |
+| `data_dict_to_numpy` | numpy arrays from the standard Limen `data_dict` |
+| `adf_test` and `AdfResult` | stationarity check for a series or for helpers such as `find_min_d` |
+| `confidence_filtering_system` | validation-calibrated confidence filtering across multiple models |
+| `split_by_dates` | absolute-datetime train / val / test splits (the helper backing `Manifest.set_split_dates`) |
+| reporting helpers | formatted text blocks |
 
 ## `ParamSpace`
 
@@ -35,7 +35,7 @@ On a live local run in this repo, that parameter space had:
 
 Then repeated `generate(random_search=False)` calls returned the remaining sampled combinations in order from the internal sampled pool, not from the full original grid.
 
-Use `ParamSpace` only when you are intentionally on the legacy UEL path. The advanced path uses [Advanced Search](Advanced-Search.md) primitives instead.
+Use `ParamSpace` only on the legacy UEL path. The advanced path uses [Advanced Search](Advanced-Search.md) primitives instead.
 
 ## `data_dict_to_numpy`
 
@@ -54,7 +54,7 @@ On a live local manifest-prepared `data_dict` in this repo, it converted:
 - `x_val` to shape `(428, 24)`
 - `x_test` to shape `(884, 24)`
 
-This helper is most useful inside sklearn-style or numpy-first model code.
+This helper supports sklearn-style or numpy-first model code.
 
 ## `adf_test`
 
@@ -93,7 +93,7 @@ It returns:
 
 In a live synthetic-model run in this repo with `target_confidence=0.8`, it returned:
 
-- coverage of about `0.867`
+- coverage value `0.867`
 - a threshold near zero on that particular synthetic setup
 - a results frame with columns:
   - `datetime`
@@ -132,7 +132,7 @@ Behavior rules:
 
 Prefer `Manifest.set_split_dates` inside the experiment pipeline — it pairs the splitter with the manifest's ordering validation and `with_params_override` clearance contract. Use `split_by_dates` directly when the manifest pipeline is not in play.
 
-## Reporting Helpers
+## Reporting helpers
 
 The reporting helpers are small text-formatting functions:
 
@@ -140,10 +140,10 @@ The reporting helpers are small text-formatting functions:
 - `format_report_section`
 - `format_report_footer`
 
-These are lightweight utilities, not a canonical reporting framework.
+These are text-formatting utilities, not a canonical reporting framework.
 
-## Read Next
+## Read next
 
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the legacy path that still uses `ParamSpace`.
-- Continue to [Advanced Search](Advanced-Search.md) for the newer search abstractions that replace `ParamSpace` in artifact-rich runs.
-- Continue to [Reference Architecture](Reference-Architecture.md) if you are using `data_dict_to_numpy()` inside model code.
+- Continue to [Advanced Search](Advanced-Search.md) for the newer search abstractions that replace `ParamSpace` in artifact-backed runs.
+- Continue to [Reference Architecture](Reference-Architecture.md) for `data_dict_to_numpy()` usage inside model code.
