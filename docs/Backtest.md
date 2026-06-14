@@ -1,6 +1,5 @@
 # Backtest
 
-<span className="vaquum-design-system-sample" aria-hidden="true"></span>
 
 Backtest is Limen's trading-economics ledger. It converts binary prediction output into long-flat per-bar returns after declared fill costs, then reports one row of intensive metrics per evaluated round.
 

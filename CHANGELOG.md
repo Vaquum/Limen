@@ -1135,4 +1135,4 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v3.30.2 on 14th of June, 2026
 
-- Add a design-system-aligned Backtest docs sample: claim-first structure, scoped IBM Plex typography, quieter reference-table type, and dark-mode-safe sample styling.
+- Add a design-system-aligned docs surface: global IBM Plex typography, fixed editorial scale, quiet navigation, booktabs-style tables, square code and media frames, light/dark palette parity, and the Backtest page as the first canonical content sample.
