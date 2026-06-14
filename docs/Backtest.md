@@ -100,9 +100,19 @@ from limen.backtest.long_flat_strategy import ExecutionResult
 
 def my_strategy(predictions, open_px, close_px, price_change, *,
                 execution_lag_bars, fee_bps, slip_bps) -> ExecutionResult:
-    position = predictions.astype(float)
+    position = predictions.astype(float).shift(execution_lag_bars, fill_value=0.0)
     gross_return = position * price_change / open_px
-    net_return = gross_return
+
+    entry_mask = (position == 1.0) & (position.shift(1, fill_value=0.0) == 0.0)
+    exit_mask = (position == 1.0) & (position.shift(-1, fill_value=0.0) == 0.0)
+    fee = fee_bps / 10_000.0
+    slip = slip_bps / 10_000.0
+    cost_mult = position.copy()
+    cost_mult[:] = 1.0
+    cost_mult.loc[entry_mask] *= (1.0 - fee) / (1.0 + slip)
+    cost_mult.loc[exit_mask] *= (1.0 - fee) * (1.0 - slip)
+
+    net_return = ((1.0 + gross_return) * cost_mult) - 1.0
     return ExecutionResult(pos=position, gross=gross_return, net=net_return)
 ```
 

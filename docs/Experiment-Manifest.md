@@ -646,8 +646,17 @@ The model function must accept the prepared `data_dict` as its first argument.
 All remaining parameters are auto-mapped from `round_params` by signature inspection. For a model function with this signature:
 
 ```python
+from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+
 def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, solver='lbfgs'):
-    return LogRegBinary().evaluate(data, inline_metrics=True, C=C, class_weight=class_weight, max_iter=max_iter, solver=solver)
+    model = LogRegBinary().train(
+        data,
+        C=C,
+        class_weight=class_weight,
+        max_iter=max_iter,
+        solver=solver,
+    )
+    return model.evaluate(data, inline_metrics=True)
 ```
 
 then manifest execution will automatically pull `C`, `class_weight`, `max_iter`, and `solver` from the current round when those keys exist in `round_params`.
