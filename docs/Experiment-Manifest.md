@@ -451,7 +451,7 @@ See [Targets](Targets.md) for the full reference including all built-in target c
 
 ## Scaling
 
-### `set_scaler(transform_class, param_name='_scaler')`
+### `set_scaler(transform_class, param_name='_scaler', extra_params=None)`
 
 Configure a fitted scaler that is instantiated on train and then applied across the splits.
 
@@ -463,7 +463,14 @@ from limen.scalers import LogRegScaler
 
 The fitted scaler is stored in the resulting `data_dict` under `_scaler`.
 
-### `set_scaler_from_params(param_name='scaler_type')`
+Pass `extra_params` to forward constructor arguments. String values are treated as sweep param references resolved from `round_params` at fit time; all other values are static:
+
+```python
+# window swept as a param; min_samples fixed
+.set_scaler(CausalRollingRobustScaler, extra_params={'window': 'scaler_window', 'min_samples': 25})
+```
+
+### `set_scaler_from_params(param_name='scaler_type', extra_params=None)`
 
 Select a scaler dynamically from `SCALER_REGISTRY` using a round parameter.
 
@@ -479,7 +486,21 @@ Then in `params()`:
 }
 ```
 
-Use this when scaler choice is part of the search space.
+Use this when scaler choice is itself part of the search space. Pass `extra_params` to forward constructor arguments using the same static/dynamic resolution as `set_scaler()`.
+
+### `set_strict_mode(strict_mode)`
+
+Enable strict null checking on val and test splits after Context Carry-Over (CCO) dislodgement.
+
+```python
+.set_strict_mode(True)
+```
+
+When `True`, any unexpected null found in a feature column after CCO dislodgement raises `StrictModeError`. The UEL catches this per-permutation, records the error in `results.csv` under `strict_mode_error`, and continues to the next round.
+
+When `False` (default), the same condition logs a `WARNING` and training continues. In both modes the target column (which always has a trailing null from `shift:-1`) is excluded from the check.
+
+All foundational ML SFDs have `strict_mode=True`. New SFDs should follow the same convention.
 
 ## PCA Compression
 
