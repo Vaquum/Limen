@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
   --vaquum-cyan: #c4e8f4;
@@ -36,8 +36,8 @@
   --ifm-code-font-size: 94%;
   --ifm-font-family-base: "IBM Plex Sans", "Segoe UI", sans-serif;
   --ifm-font-family-monospace: "IBM Plex Mono", "SFMono-Regular", monospace;
-  --ifm-heading-font-family: "Rajdhani", "IBM Plex Sans", sans-serif;
-  --ifm-heading-font-weight: 700;
+  --ifm-heading-font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --ifm-heading-font-weight: 600;
   --ifm-line-height-base: 1.65;
   --ifm-menu-color: var(--vaquum-gray-700);
   --ifm-menu-color-active: var(--vaquum-black);
@@ -127,8 +127,8 @@ html[data-theme='dark'] .theme-doc-markdown {
 .theme-doc-markdown h4,
 .hero__title,
 .navbar__title {
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .theme-doc-markdown h1 {
@@ -215,6 +215,7 @@ html[data-theme='dark'] .pagination-nav__link {
   backdrop-filter: none;
   color: var(--vaquum-sample-ink);
   font-family: var(--vaquum-sample-sans);
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
   font-size: 17px;
   font-variant-numeric: lining-nums;
   letter-spacing: 0;
@@ -260,6 +261,14 @@ html[data-theme='dark'] .pagination-nav__link {
   line-height: 1.2;
   margin: 24px 0 16px;
   text-transform: uppercase;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) p:has(+ table) {
+  color: var(--vaquum-sample-ink-soft);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 16px 0 8px;
+  max-width: 60ch;
 }
 
 .theme-doc-markdown:has(.vaquum-design-system-sample) p,
@@ -367,10 +376,31 @@ html[data-theme='dark'] .pagination-nav__link {
 
 .theme-doc-markdown:has(.vaquum-design-system-sample) th,
 .theme-doc-markdown:has(.vaquum-design-system-sample) td {
+  background: transparent;
   border: 0;
   padding: 8px 16px 8px 0;
   text-align: left;
   vertical-align: top;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) tr,
+.theme-doc-markdown:has(.vaquum-design-system-sample) tr:nth-child(2n) {
+  background: transparent;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) th code,
+.theme-doc-markdown:has(.vaquum-design-system-sample) td code {
+  background: transparent;
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0;
+}
+
+.theme-doc-markdown:has(.vaquum-design-system-sample) th {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .theme-doc-markdown:has(.vaquum-design-system-sample) thead {
