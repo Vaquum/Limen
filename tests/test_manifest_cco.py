@@ -3,12 +3,18 @@ import math
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import polars as pl
 import pytest
 
+import limen.sfd.foundational_sfd.random_binary as _random_binary_sfd
 from limen.experiment import MLManifest
 from limen.experiment.errors import StrictModeError
+from limen.experiment.experiment_core import UniversalExperimentLoop
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search import RandomStrategy
 from limen.indicators import roc
 from limen.scalers.causal_rolling_robust_scaler import CausalRollingRobustScaler
 from limen.scalers.robust_scaler import RobustScaler
@@ -262,3 +268,39 @@ def test_scaler_params_default_when_omitted() -> None:
     assert fitted_scaler is not None
     assert fitted_scaler.window == _WINDOW
     assert fitted_scaler.context_rows == _WINDOW
+
+
+def test_uel_continues_after_strict_mode_error() -> None:
+    domain = ParamDomain(_random_binary_sfd.params())
+    strategy = RandomStrategy(domain, seed=42)
+    uel = UniversalExperimentLoop(sfd=_random_binary_sfd, search_strategy=strategy, test_mode=True)
+
+    call_count = [0]
+    original_prep = uel.prep
+
+    def patched_prep(data: pl.DataFrame, round_params: dict | None = None) -> dict:
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise StrictModeError('Unexpected nulls in val split · Checkpoint A · roc_1 @ [2025-01-09T08:00]')
+        return original_prep(data, round_params)
+
+    uel.prep = patched_prep
+
+    with TemporaryDirectory() as tmpdir:
+        uel._run_with_msq(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=3,
+            context_params=None,
+            resume=False,
+            post_processing=True,
+        )
+
+    assert uel.experiment_log is not None
+    assert uel.experiment_log.shape[0] == 3, 'all 3 rounds must appear in experiment log'
+    assert len(uel.round_params) == 2, 'only successful rounds in round_params'
+    assert len(uel.preds) == 2, 'only successful rounds in preds'
+    assert len(uel._alignment) == 2, 'only successful rounds in alignment'
+    assert 'strict_mode_error' in uel.experiment_log.columns, 'strict_mode_error column must exist'
+    error_rows = uel.experiment_log.filter(pl.col('strict_mode_error').is_not_null())
+    assert error_rows.shape[0] == 1, 'exactly one round must have strict_mode_error'
+    assert 'Unexpected nulls' in error_rows['strict_mode_error'][0]

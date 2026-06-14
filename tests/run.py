@@ -555,6 +555,7 @@ from tests.test_manifest_cco import test_no_cco_for_stateless_scaler
 from tests.test_manifest_cco import test_strict_mode_raises_on_gap
 from tests.test_manifest_cco import test_scaler_params_yaml_window
 from tests.test_manifest_cco import test_scaler_params_default_when_omitted
+from tests.test_manifest_cco import test_uel_continues_after_strict_mode_error
 from tests.test_inline_metrics import test_inline_and_post_experiment_metrics
 from tests.test_inline_metrics import test_logreg_inline_and_post_confusion_metrics_match
 from tests.test_inline_metrics import test_xgboost_inline_and_post_backtest_metrics_match
@@ -1853,6 +1854,7 @@ tests = [
     test_strict_mode_raises_on_gap,
     test_scaler_params_yaml_window,
     test_scaler_params_default_when_omitted,
+    test_uel_continues_after_strict_mode_error,
     test_fractional_diff_manifest_integration,
     test_trainer_requires_yaml_reference,
     test_trainer_rejects_non_dict_yaml_reference,
