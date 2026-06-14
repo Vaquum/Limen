@@ -1132,3 +1132,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.30.1 on 14th of June, 2026
 
 - Complete the canonical docs surface: route every public docs page and package README through the docs-site assembly map, add missing CLI and package orientation pages, and expand canonical references for CLI, transforms, release/version local scope, pruning terminology, and technical-debt register rules.
+
+## v3.30.2 on 14th of June, 2026
+
+- Add a design-system-aligned docs surface: global IBM Plex typography, fixed editorial scale, quiet navigation, booktabs-style tables, square code and media frames, light/dark palette parity, and the Backtest page as the first canonical content sample.
