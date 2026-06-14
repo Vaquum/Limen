@@ -490,17 +490,30 @@ Use this when scaler choice is itself part of the search space. Pass `extra_para
 
 ### `set_strict_mode(strict_mode)`
 
-Enable strict null checking on val and test splits after Context Carry-Over (CCO) dislodgement.
+Enable strict null checking after the Context Carry-Over (CCO) pipeline.
 
 ```python
 .set_strict_mode(True)
 ```
 
-When `True`, any unexpected null found in a feature column after CCO dislodgement raises `StrictModeError`. The UEL catches this per-permutation, records the error in `results.csv` under `strict_mode_error`, and continues to the next round.
+#### Background: Context Carry-Over
 
-When `False` (default), the same condition logs a `WARNING` and training continues. In both modes the target column (which always has a trailing null from `shift:-1`) is excluded from the check.
+When `prepare_data` processes val and test splits, it prepends a raw tail of the preceding split (the CCO block) before running feature transforms and the scaler. This ensures indicator warm-up rows and rolling-scaler warm-up rows are fully warmed before the first real split row is produced — matching how the Sensor sees a continuous stream in live inference.
 
-All foundational ML SFDs have `strict_mode=True`. New SFDs should follow the same convention.
+After the CCO rows are stripped from each processed split, two null checkpoints run on feature columns only (the target column, which always has a trailing null from `shift:-1`, is excluded):
+
+- **Checkpoint A** — after leading warm-up nulls are sliced off, before the scaler. Nulls here indicate mid-split data gaps in the raw input or indicator failures.
+- **Checkpoint B** — after the scaler and after CCO rows are removed. Nulls here would indicate the scaler itself introduced them (rare).
+
+Checkpoint A also runs on the training split, where there is no CCO block.
+
+#### Strict vs non-strict
+
+`strict_mode=True` — any unexpected null raises `StrictModeError` with the split name, checkpoint label, column name, and the timestamps of the null rows. The UEL catches this per-permutation, records the error message in `results.csv` under the `strict_mode_error` column (metric columns are empty for that round), and continues to the next round.
+
+`strict_mode=False` (default) — the same detection runs, but logs a `WARNING` instead of raising. Training continues and the final `drop_nulls()` silently removes the affected rows.
+
+All foundational ML SFDs and YAML templates ship with `strict_mode=True`. New SFDs should follow the same convention — silent drops during search can mask data quality problems that only appear under specific scaler or param combinations.
 
 ## PCA Compression
 
