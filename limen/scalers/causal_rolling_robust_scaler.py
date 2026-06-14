@@ -73,6 +73,8 @@ class CausalRollingRobustScaler:
     @property
     def context_rows(self) -> int:
 
+        '''Number of raw preceding rows needed to produce a fully warm scaled output.'''
+
         return self.window
 
 
