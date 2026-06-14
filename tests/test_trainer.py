@@ -622,6 +622,18 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
         assert results['accuracy'].null_count() == 0
         assert results['auc'].null_count() == 0
 
+        for row in results.iter_rows(named=True):
+            assert row['scaler_window'] in {20, 50}, f'scaler_window={row["scaler_window"]} is a jumbled value'
+            assert isinstance(row['accuracy'], float) and 0.0 <= row['accuracy'] <= 1.0, (
+                f'accuracy={row["accuracy"]} outside [0,1] — possible column jumble'
+            )
+            assert isinstance(row['auc'], float) and 0.0 <= row['auc'] <= 1.0, (
+                f'auc={row["auc"]} outside [0,1] — possible column jumble'
+            )
+            assert row['C'] == 1.0, f'C={row["C"]} does not match the only swept value'
+            assert row['random_state'] == 42, f'random_state={row["random_state"]} does not match the only swept value'
+            assert row['strict_mode_error'] is None, f'strict_mode_error unexpectedly set: {row["strict_mode_error"]}'
+
         cohort = Cohort(
             experiment_log_path=str(exp_dir),
             selector=select_top_n,
