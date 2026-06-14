@@ -564,6 +564,8 @@ class UniversalExperimentLoop:
                 for key, value in context_params.items():
                     round_results[key] = value
 
+            round_results.setdefault('strict_mode_error', None)
+
             results_accumulator.append(round_results)
 
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0

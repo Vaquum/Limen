@@ -397,7 +397,7 @@ def test_uel_continues_after_strict_mode_error() -> None:
 
     def patched_prep(data: pl.DataFrame, round_params: dict | None = None) -> dict:
         call_count[0] += 1
-        if call_count[0] == 1:
+        if call_count[0] == 2:
             raise StrictModeError('Unexpected nulls in val split · Checkpoint A · roc_1 @ [2025-01-09T08:00]')
         return original_prep(data, round_params)
 
@@ -417,7 +417,12 @@ def test_uel_continues_after_strict_mode_error() -> None:
     assert len(uel.round_params) == 2, 'only successful rounds in round_params'
     assert len(uel.preds) == 2, 'only successful rounds in preds'
     assert len(uel._alignment) == 2, 'only successful rounds in alignment'
+    # strict_mode_error must be a column in every row (null for success, string for failure)
     assert 'strict_mode_error' in uel.experiment_log.columns, 'strict_mode_error column must exist'
     error_rows = uel.experiment_log.filter(pl.col('strict_mode_error').is_not_null())
+    ok_rows = uel.experiment_log.filter(pl.col('strict_mode_error').is_null())
     assert error_rows.shape[0] == 1, 'exactly one round must have strict_mode_error'
+    assert ok_rows.shape[0] == 2, 'successful rounds must have null strict_mode_error'
     assert 'Unexpected nulls' in error_rows['strict_mode_error'][0]
+    # successful rounds must have metric columns populated (not dropped due to header mismatch)
+    assert 'id' in ok_rows.columns and ok_rows['id'].null_count() == 0
