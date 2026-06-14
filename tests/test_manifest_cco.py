@@ -27,10 +27,6 @@ _WINDOW = 20
 _MIN_SAMPLES = 5
 _ROC_PERIOD = 1
 
-# 300 hourly bars: 2025-01-01 00:00 to 2025-01-13 11:00
-# train: [2025-01-01, 2025-01-09) = 192 bars
-# val:   [2025-01-09, 2025-01-11) = 48 bars
-# test:  [2025-01-11, 2025-01-13) = 48 bars
 _N = 300
 _TRAIN_START = date(2025, 1, 1)
 _TRAIN_END = date(2025, 1, 9)
@@ -114,11 +110,9 @@ def test_cco_val_matches_continuous() -> None:
     manifest = _make_manifest()
     data_dict = _prepare(manifest, raw)
 
-    # sensor_input_prep applies indicators + scaler continuously on the full raw series
     fitted_params = data_dict['_fitted_params']
     sensor_data, _ = manifest.sensor_input_prep(raw, fitted_params, {})
 
-    # filter sensor output to val timestamps; this is the ground-truth continuous output
     val_dt_start = datetime(_VAL_START.year, _VAL_START.month, _VAL_START.day)
     val_dt_end = datetime(_VAL_END.year, _VAL_END.month, _VAL_END.day)
     val_continuous = (
@@ -128,7 +122,7 @@ def test_cco_val_matches_continuous() -> None:
     )
 
     feature_cols = data_dict['x_val'].columns
-    val_cco = data_dict['x_val']  # 47 rows (last target row dropped)
+    val_cco = data_dict['x_val']
 
     # compare first 47 rows (sensor includes all 48 val rows; x_val drops last due to target shift)
     assert len(val_cco) == len(val_continuous) - 1
@@ -142,13 +136,9 @@ def test_cco_val_matches_continuous() -> None:
 def test_cco_row_count_recovery() -> None:
     raw = _make_raw_data()
 
-    # with rolling scaler: CCO recovers indicator warm-up rows (1 for roc period=1)
     data_dict_cco = _prepare(_make_manifest(use_rolling_scaler=True), raw)
-
-    # with stateless scaler: no CCO context rows beyond indicator warm-up
     data_dict_stateless = _prepare(_make_manifest(use_rolling_scaler=False), raw)
 
-    # CCO should recover at least as many rows as stateless (warm-up rows are not dropped)
     assert len(data_dict_cco['x_val']) >= len(data_dict_stateless['x_val'])
     assert len(data_dict_cco['x_test']) >= len(data_dict_stateless['x_test'])
 
@@ -158,7 +148,6 @@ def test_no_cco_for_stateless_scaler() -> None:
     data_dict = _prepare(_make_manifest(use_rolling_scaler=False), raw)
 
     # stateless scaler has context_rows=0; scaler values are globally fitted so no CCO needed
-    # verify alignment is still correct and row counts are within window bounds
     assert len(data_dict['x_val']) <= _VAL_HOURS
     assert len(data_dict['x_test']) <= _TEST_HOURS
 
@@ -417,7 +406,6 @@ def test_uel_continues_after_strict_mode_error() -> None:
     assert len(uel.round_params) == 2, 'only successful rounds in round_params'
     assert len(uel.preds) == 2, 'only successful rounds in preds'
     assert len(uel._alignment) == 2, 'only successful rounds in alignment'
-    # strict_mode_error must be a column in every row (null for success, string for failure)
     assert 'strict_mode_error' in uel.experiment_log.columns, 'strict_mode_error column must exist'
     error_rows = uel.experiment_log.filter(pl.col('strict_mode_error').is_not_null())
     ok_rows = uel.experiment_log.filter(pl.col('strict_mode_error').is_null())

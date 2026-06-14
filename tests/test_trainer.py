@@ -11,6 +11,8 @@ import polars as pl
 import pytest
 
 from limen.cli.commands.run import run_experiment
+from limen.cohort import Cohort
+from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
 from limen.experiment.trainer import ReconstructionError
 from limen.experiment.trainer import Trainer
@@ -200,14 +202,16 @@ _E2E_REPRO_ROLLING_YAML = dedent('''\
         scaler:
           class: limen.scalers.CausalRollingRobustScaler
           params:
-            window: 20
+            window: scaler_window
             min_samples: 5
+        strict_mode: true
         reference_architecture: limen.sfd.reference_architecture.logreg_binary
       params:
         C: [1.0]
         random_state: [42]
+        scaler_window: [20, 50]
     uel:
-      n_permutations: 1
+      n_permutations: 2
       search_strategy:
         type: grid
       output_format: csv
@@ -602,54 +606,98 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
         round_ids = _run_e2e_experiment(exp_dir, _E2E_REPRO_ROLLING_YAML)
-        assert len(round_ids) == 1
+        assert len(round_ids) == 2
 
-        training_accuracy = (
-            pl.read_csv(exp_dir / 'results.csv')
-            .filter(pl.col('id') == str(round_ids[0]))['accuracy'][0]
+        results = pl.read_csv(exp_dir / 'results.csv')
+
+        assert 'scaler_window' in results.columns
+        assert set(results['scaler_window'].to_list()) == {20, 50}
+
+        # strict_mode=true: clean synthetic data must never trigger StrictModeError
+        assert 'strict_mode_error' in results.columns
+        assert results['strict_mode_error'].null_count() == len(round_ids), (
+            'clean data must produce no strict_mode_error on any round'
         )
 
-        trainer, sensors = _train_e2e(exp_dir, round_ids)
-        sensor = sensors[0]
+        assert results['accuracy'].null_count() == 0
+        assert results['auc'].null_count() == 0
 
-        # Feed the full raw series so CausalRollingRobustScaler is warm across val+test —
-        # the same continuous stream that sensor_input_prep uses during training.
-        # Training-window bars come back with reason='inside-training-window'.
+        cohort = Cohort(
+            experiment_log_path=str(exp_dir),
+            selector=select_top_n,
+            selector_params={'column': 'accuracy', 'n': 2},
+        )
+        assert len(cohort.permutation_ids) == 2
+
+        trainer, sensors = _train_e2e(exp_dir, round_ids)
+        assert len(sensors) == 2
+
+        assert {s.round_params['scaler_window'] for s in sensors} == {20, 50}
+
         val_start = datetime(2025, 1, 15)
         test_start = datetime(2025, 1, 18)
         test_end = datetime(2025, 1, 22)
-        bar_preds = sensor.predict_all(trainer._data)
 
-        def _valid(p: object, lo: datetime, hi: datetime) -> bool:
+        def _valid(p: BarPrediction, lo: datetime, hi: datetime) -> bool:
             return p.datetime is not None and p.reason is None and lo <= p.datetime < hi
 
-        val_preds = sorted([p for p in bar_preds if _valid(p, val_start, test_start)],
-                           key=lambda p: p.datetime)
-        test_preds = sorted([p for p in bar_preds if _valid(p, test_start, test_end)],
-                            key=lambda p: p.datetime)
+        for sensor in sensors:
+            w = sensor.round_params['scaler_window']
 
-        data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
-        y_val = data_dict['y_val'].to_list()
-        y_test = data_dict['y_test'].to_list()
+            # Feed the full raw series — same continuous stream the scaler saw during training.
+            # Training-window bars come back with reason='inside-training-window'.
+            bar_preds = sensor.predict_all(trainer._data)
 
-        # Row-count: sensor predicts every bar in the window including the last (no target due
-        # to shift:-1), so the count is len(y_*)+1. Without CCO, min_samples-1=4 cold rows
-        # get reason='warm-up-rows' and are excluded, dropping the count below len(y_val)+1.
-        assert len(val_preds) == len(y_val) + 1, (
-            f'CCO failed on val: expected {len(y_val) + 1} predictions '
-            f'(cold-scaler rows would be masked), got {len(val_preds)}'
-        )
-        assert len(test_preds) == len(y_test) + 1, (
-            f'CCO failed on test: expected {len(y_test) + 1} predictions '
-            f'(cold-scaler rows would be masked), got {len(test_preds)}'
-        )
+            val_preds = sorted(
+                [p for p in bar_preds if _valid(p, val_start, test_start)],
+                key=lambda p: p.datetime,
+            )
+            test_preds = sorted(
+                [p for p in bar_preds if _valid(p, test_start, test_end)],
+                key=lambda p: p.datetime,
+            )
 
-        # Accuracy: test-split predictions must match training (results.csv stores test accuracy)
-        test_preds = test_preds[:len(y_test)]
-        n_correct = sum(1 for p, y in zip(test_preds, y_test, strict=False) if p.prediction == y)
-        sensor_accuracy = n_correct / len(y_test)
+            data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
+            y_val = data_dict['y_val'].to_list()
+            y_test = data_dict['y_test'].to_list()
 
-        assert round(sensor_accuracy, 3) == training_accuracy, (
-            f'rolling scaler sensor accuracy {sensor_accuracy} '
-            f'does not match training accuracy {training_accuracy}'
-        )
+            # CCO must recover all val and test rows regardless of window size.
+            # Without CCO, the first (min_samples - 1) = 4 val rows would be
+            # excluded as cold-scaler warm-up, giving len(val_preds) < len(y_val) + 1.
+            assert len(val_preds) == len(y_val) + 1, (
+                f'CCO failed on val (window={w}): '
+                f'expected {len(y_val) + 1}, got {len(val_preds)}'
+            )
+            assert len(test_preds) == len(y_test) + 1, (
+                f'CCO failed on test (window={w}): '
+                f'expected {len(y_test) + 1}, got {len(test_preds)}'
+            )
+
+            n_correct = sum(
+                1 for p, y in zip(test_preds[:len(y_test)], y_test, strict=False)
+                if p.prediction == y
+            )
+            sensor_accuracy = n_correct / len(y_test)
+            training_accuracy = (
+                results.filter(pl.col('id') == str(sensor.permutation_id))['accuracy'][0]
+            )
+            assert round(sensor_accuracy, 3) == training_accuracy, (
+                f'sensor (window={w}) accuracy {sensor_accuracy:.4f} '
+                f'!= training {training_accuracy}'
+            )
+
+        cohort.set_members(sensors)
+
+        cohort_all = cohort.predict_all(trainer._data)
+        assert len(cohort_all) == len(trainer._data)
+        valid_cohort = [p for p in cohort_all if p.reason is None]
+        assert len(valid_cohort) > 0
+        assert all(p.prediction in (0, 1) for p in valid_cohort)
+        assert all(p.probability is not None and 0.0 <= p.probability <= 1.0 for p in valid_cohort)
+
+        cohort_last = cohort.predict(trainer._data)
+        assert isinstance(cohort_last, BarPrediction)
+        assert cohort_last.prediction in (0, 1)
+        assert cohort_last.probability is not None and 0.0 <= cohort_last.probability <= 1.0
+        last_valid_cohort = next(p for p in reversed(cohort_all) if p.reason is None)
+        assert cohort_last.prediction == last_valid_cohort.prediction
