@@ -127,7 +127,9 @@ Rows with fewer than `min_samples` of trailing history fall back to the median a
 
 It skips datetime and non-numeric columns automatically. It provides no inverse transform: each row's scaling factors are derived from the data itself, so the transform is not row-wise invertible from the fitted scaler alone.
 
-The fitted instance exposes `context_rows = window`. The experiment pipeline reads this property to size the Context Carry-Over (CCO) block prepended to val and test splits, ensuring the scaler sees enough preceding rows to be fully warm from the very first split row.
+The fitted instance exposes `context_rows = window`. The experiment pipeline reads this property to size the scaler warm-up portion of the Context Carry-Over (CCO) block prepended to val and test splits, ensuring the scaler sees enough preceding rows to be fully warm from the very first split row.
+
+Scalers without a `context_rows` property (such as `RobustScaler` and `StandardScaler`) contribute zero to the scaler warm-up. CCO may still run for those scalers when indicators produce leading warm-up rows — those rows are prepended as indicator context regardless of scaler type. The total CCO block is `indicator_warm_up_rows + scaler_context_rows`.
 
 ## Custom Scaler Contract
 
