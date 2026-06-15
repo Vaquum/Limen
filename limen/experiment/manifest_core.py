@@ -1101,6 +1101,17 @@ class MLManifest(Manifest):
             is_train = i == 0
 
             if not is_train and cco_block is not None and n_raw_cco > 0:
+                if scaler_context_rows > 0 and len(cco_block) < n_raw_cco:
+                    split_name = _SPLIT_NAMES[i] if i < len(_SPLIT_NAMES) else str(i)
+                    shortfall = n_raw_cco - len(cco_block)
+                    msg = (
+                        f'under-warmed CCO: {split_name} split requires {n_raw_cco} '
+                        f'context rows but only {len(cco_block)} available '
+                        f'(shortfall {shortfall})'
+                    )
+                    if self.strict_mode:
+                        raise StrictModeError(msg)
+                    logger.warning(msg)
                 raw_input = pl.concat([cco_block, split])
             else:
                 raw_input = split

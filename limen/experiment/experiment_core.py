@@ -228,6 +228,9 @@ class UniversalExperimentLoop:
                     f'UniversalExperimentLoop Existing results CSV has no header: {csv_path}'
                 )
 
+        data_dict: dict[str, Any] = {}
+        _pending_csv_rows: list[dict] = []
+
         for i in tqdm(range(n_permutations)):
 
             # Start counting execution_time
@@ -246,49 +249,52 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            if prep_each_round is True or i == 0:
-                data_dict = self.prep(self.data, round_params=round_params)
-
-            # Perform the model training and evaluation
-            round_results = self.model(data=data_dict, round_params=round_params)
+            try:
+                if prep_each_round is True or i == 0:
+                    data_dict = self.prep(self.data, round_params=round_params)
+                round_results = self.model(data=data_dict, round_params=round_params)
+                round_succeeded = True
+            except StrictModeError as exc:
+                logger.error('Round %d failed strict mode check: %s', i, exc)
+                round_results = {'strict_mode_error': str(exc)}
+                round_succeeded = False
 
             # Remove the experiment details from the results
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
 
-            if retain_round_artifacts:
-                self._alignment.append(data_dict['_alignment'])
-
-            # Handle any extra results that are returned from the model
-            if 'extras' in round_results:
+            if round_succeeded:
                 if retain_round_artifacts:
-                    self.extras.append(round_results['extras'])
-                round_results.pop('extras')
+                    self._alignment.append(data_dict['_alignment'])
 
-            # Handle any models that are returned from the model
-            if 'models' in round_results:
-                if retain_round_artifacts:
-                    self.models.append(round_results['models'])
-                round_results.pop('models')
+                if 'extras' in round_results:
+                    if retain_round_artifacts:
+                        self.extras.append(round_results['extras'])
+                    round_results.pop('extras')
 
-            if '_preds' in round_results:
-                if retain_round_artifacts:
-                    self.preds.append(round_results['_preds'])
-                round_results.pop('_preds')
+                if 'models' in round_results:
+                    if retain_round_artifacts:
+                        self.models.append(round_results['models'])
+                    round_results.pop('models')
 
-            if '_model' in round_results:
-                if retain_round_artifacts:
-                    self.models.append(round_results['_model'])
-                round_results.pop('_model')
+                if '_preds' in round_results:
+                    if retain_round_artifacts:
+                        self.preds.append(round_results['_preds'])
+                    round_results.pop('_preds')
 
-            if retain_round_artifacts and '_scaler' in data_dict:
-                self.scalers.append(data_dict['_scaler'])
+                if '_model' in round_results:
+                    if retain_round_artifacts:
+                        self.models.append(round_results['_model'])
+                    round_results.pop('_model')
 
-            # Add the round number and execution time to the results
+                if retain_round_artifacts and '_scaler' in data_dict:
+                    self.scalers.append(data_dict['_scaler'])
+
+            round_results.setdefault('strict_mode_error', None)
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
 
-            if retain_round_artifacts:
+            if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
 
             for key in round_params:
@@ -299,23 +305,43 @@ class UniversalExperimentLoop:
                 log_batches.append(pl.DataFrame(results_accumulator))
                 results_accumulator = []
 
-            # Match the MSQ path: only write a header when the CSV is new or empty.
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+            if write_header and not round_succeeded:
+                _pending_csv_rows.append(dict(round_results))
+            else:
+                with csv_path.open('a', newline='') as f:
+                    writer = csv.writer(f)
+                    if write_header:
+                        csv_header = list(round_results.keys())
+                        writer.writerow(csv_header)
+                        for pending in _pending_csv_rows:
+                            writer.writerow([
+                                '' if (v := pending.get(col)) is None else v
+                                for col in csv_header
+                            ])
+                        _pending_csv_rows = []
+                    writer.writerow([
+                        '' if (v := round_results.get(col)) is None else v
+                        for col in csv_header
+                    ])
+                    extra_keys = set(round_results) - set(csv_header)
+                    if extra_keys:
+                        logger.warning(
+                            'Round %d result keys not in CSV header — values dropped: %s',
+                            i, sorted(extra_keys),
+                        )
+
+        if _pending_csv_rows:
             with csv_path.open('a', newline='') as f:
                 writer = csv.writer(f)
-                if write_header:
-                    csv_header = list(round_results.keys())
+                if csv_header is None:
+                    csv_header = list(_pending_csv_rows[0].keys())
                     writer.writerow(csv_header)
-                writer.writerow([
-                    '' if (v := round_results.get(col)) is None else v
-                    for col in csv_header
-                ])
-                extra_keys = set(round_results) - set(csv_header)
-                if extra_keys:
-                    logger.warning(
-                        'Round %d result keys not in CSV header — values dropped: %s',
-                        i, sorted(extra_keys),
-                    )
+                for pending in _pending_csv_rows:
+                    writer.writerow([
+                        '' if (v := pending.get(col)) is None else v
+                        for col in csv_header
+                    ])
 
         if results_accumulator:
             log_batches.append(pl.DataFrame(results_accumulator))
@@ -460,6 +486,8 @@ class UniversalExperimentLoop:
             with csv_path.open('r', newline='') as f:
                 csv_header = next(csv.reader(f), None)
 
+        _pending_csv_rows: list[dict] = []
+
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
             current_round = round_params['_round_index']
             current_hash = round_params['_id']
@@ -569,21 +597,30 @@ class UniversalExperimentLoop:
             results_accumulator.append(round_results)
 
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
-            with csv_path.open('a', newline='') as f:
-                writer = csv.writer(f)
-                if write_header:
-                    csv_header = list(round_results.keys())
-                    writer.writerow(csv_header)
-                writer.writerow([
-                    '' if (v := round_results.get(col)) is None else v
-                    for col in csv_header
-                ])
-                extra_keys = set(round_results) - set(csv_header)
-                if extra_keys:
-                    logger.warning(
-                        'Round %d result keys not in CSV header — values dropped: %s',
-                        current_round, sorted(extra_keys),
-                    )
+            if write_header and not round_succeeded:
+                _pending_csv_rows.append(dict(round_results))
+            else:
+                with csv_path.open('a', newline='') as f:
+                    writer = csv.writer(f)
+                    if write_header:
+                        csv_header = list(round_results.keys())
+                        writer.writerow(csv_header)
+                        for pending in _pending_csv_rows:
+                            writer.writerow([
+                                '' if (v := pending.get(col)) is None else v
+                                for col in csv_header
+                            ])
+                        _pending_csv_rows = []
+                    writer.writerow([
+                        '' if (v := round_results.get(col)) is None else v
+                        for col in csv_header
+                    ])
+                    extra_keys = set(round_results) - set(csv_header)
+                    if extra_keys:
+                        logger.warning(
+                            'Round %d result keys not in CSV header — values dropped: %s',
+                            current_round, sorted(extra_keys),
+                        )
 
             if round_data_path and round_succeeded:
                 self._append_round_data(
@@ -619,6 +656,18 @@ class UniversalExperimentLoop:
 
             last_msq_state = msq.get_state()
             last_completed_round = current_round
+
+        if _pending_csv_rows:
+            with csv_path.open('a', newline='') as f:
+                writer = csv.writer(f)
+                if csv_header is None:
+                    csv_header = list(_pending_csv_rows[0].keys())
+                    writer.writerow(csv_header)
+                for pending in _pending_csv_rows:
+                    writer.writerow([
+                        '' if (v := pending.get(col)) is None else v
+                        for col in csv_header
+                    ])
 
         if not self._shutdown_requested:
             logger.info(
