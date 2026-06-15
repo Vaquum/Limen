@@ -1,3 +1,5 @@
+import csv as _csv
+import io
 import logging
 import math
 from datetime import date
@@ -169,7 +171,7 @@ def test_strict_mode_raises_on_gap() -> None:
         _prepare(manifest, raw_with_gap)
 
 
-def test_non_strict_mode_warns_on_gap(caplog: pytest.LogCaptureFixture) -> None:
+def test_non_strict_mode_warns_on_gap() -> None:
     raw = _make_raw_data()
 
     rows = raw.to_dicts()
@@ -177,10 +179,17 @@ def test_non_strict_mode_warns_on_gap(caplog: pytest.LogCaptureFixture) -> None:
     raw_with_gap = pl.DataFrame(rows)
 
     manifest = _make_manifest(strict_mode=False)
-    with caplog.at_level(logging.WARNING, logger='limen.experiment.manifest_core'):
+    buf = io.StringIO()
+    handler = logging.StreamHandler(buf)
+    handler.setLevel(logging.WARNING)
+    logger = logging.getLogger('limen.experiment.manifest_core')
+    logger.addHandler(handler)
+    try:
         data_dict = _prepare(manifest, raw_with_gap)
+    finally:
+        logger.removeHandler(handler)
 
-    assert any('Unexpected nulls' in r.message for r in caplog.records)
+    assert 'Unexpected nulls' in buf.getvalue()
     assert 'x_val' in data_dict
 
 
@@ -414,3 +423,110 @@ def test_uel_continues_after_strict_mode_error() -> None:
     assert 'Unexpected nulls' in error_rows['strict_mode_error'][0]
     # successful rounds must have metric columns populated (not dropped due to header mismatch)
     assert 'id' in ok_rows.columns and ok_rows['id'].null_count() == 0
+
+
+_UNDER_WARM_WINDOW = 25
+_SHORT_N = 80
+_SHORT_TRAIN_START = date(2025, 1, 1)
+_SHORT_TRAIN_END = date(2025, 1, 2)    # 24 train rows < n_raw_cco=26 → under-warming
+_SHORT_VAL_START = date(2025, 1, 2)
+_SHORT_VAL_END = date(2025, 1, 3)
+_SHORT_TEST_START = date(2025, 1, 3)
+_SHORT_TEST_END = date(2025, 1, 4)
+
+
+def _make_short_raw_data() -> pl.DataFrame:
+    timestamps = [datetime(2025, 1, 1) + timedelta(hours=i) for i in range(_SHORT_N)]
+    close = [100.0 + 0.05 * i for i in range(_SHORT_N)]
+    return pl.DataFrame({
+        'datetime': timestamps,
+        'open': [v - 0.1 for v in close],
+        'high': [v + 0.2 for v in close],
+        'low': [v - 0.2 for v in close],
+        'close': close,
+        'volume': [1000.0 + float(i) for i in range(_SHORT_N)],
+    })
+
+
+def _make_under_warm_manifest(strict_mode: bool = False) -> MLManifest:
+    m = (
+        MLManifest()
+        .set_split_dates(
+            _SHORT_TRAIN_START, _SHORT_TRAIN_END,
+            _SHORT_VAL_START, _SHORT_VAL_END,
+            _SHORT_TEST_START, _SHORT_TEST_END,
+        )
+        .add_indicator(roc, period=1, group='momentum')
+        .with_target_label(
+            'quantile_flag',
+            QuantileBinaryTarget,
+            fit_params={'source_column': 'roc_1', 'quantile': 0.5},
+            transform_params={'shift': -1},
+        )
+        .set_scaler(CausalRollingRobustScaler, extra_params={'window': _UNDER_WARM_WINDOW, 'min_samples': 3})
+    )
+    if strict_mode:
+        m.set_strict_mode(True)
+    return m
+
+
+def test_cco_under_warm_strict_mode_raises() -> None:
+    raw = _make_short_raw_data()
+    manifest = _make_under_warm_manifest(strict_mode=True)
+    with pytest.raises(StrictModeError, match='under-warmed CCO'):
+        manifest.prepare_data(raw, round_params={})
+
+
+def test_cco_under_warm_non_strict_warns() -> None:
+    raw = _make_short_raw_data()
+    manifest = _make_under_warm_manifest(strict_mode=False)
+    buf = io.StringIO()
+    handler = logging.StreamHandler(buf)
+    handler.setLevel(logging.WARNING)
+    logger = logging.getLogger('limen.experiment.manifest_core')
+    logger.addHandler(handler)
+    try:
+        data_dict = manifest.prepare_data(raw, round_params={})
+    finally:
+        logger.removeHandler(handler)
+    assert 'under-warmed CCO' in buf.getvalue()
+    assert 'x_val' in data_dict
+
+
+def test_uel_first_round_strict_mode_error_does_not_corrupt_csv_header() -> None:
+    domain = ParamDomain(_random_binary_sfd.params())
+    strategy = RandomStrategy(domain, seed=42)
+    uel = UniversalExperimentLoop(sfd=_random_binary_sfd, search_strategy=strategy, test_mode=True)
+
+    call_count = [0]
+    original_prep = uel.prep
+
+    def patched_prep(data: pl.DataFrame, round_params: dict | None = None) -> dict:
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise StrictModeError('Unexpected nulls in val split · Checkpoint A · roc_1 @ [2025-01-01T00:00]')
+        return original_prep(data, round_params)
+
+    uel.prep = patched_prep
+
+    with TemporaryDirectory() as tmpdir:
+        exp_name = str(Path(tmpdir) / 'test_header')
+        uel._run_with_msq(
+            experiment_name=exp_name,
+            n_permutations=3,
+            context_params=None,
+            resume=False,
+            post_processing=True,
+        )
+        csv_path = Path(f'{exp_name}.csv')
+        assert csv_path.exists(), 'CSV must be written'
+        with csv_path.open('r', newline='') as f:
+            reader = _csv.reader(f)
+            header = next(reader)
+            rows = list(reader)
+
+    assert 'accuracy' in header, f'accuracy missing from CSV header — first-round failure corrupted the schema: {header}'
+    assert len(rows) == 3, f'expected 3 rows in CSV, got {len(rows)}'
+    acc_idx = header.index('accuracy')
+    filled = [r[acc_idx] for r in rows if r[acc_idx] != '']
+    assert len(filled) == 2, 'exactly 2 successful rounds should have accuracy values in CSV'

@@ -14,7 +14,6 @@ PYTEST_ONLY_TESTS = {
         'test_get_arrow_file_row_count_limit_zero_copy',
         'test_get_arrow_file_view_outlives_call',
     },
-    'test_manifest_cco': {'test_non_strict_mode_warns_on_gap'},
     'test_tabpfn': {'test_tabpfn'},
 }
 

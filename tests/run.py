@@ -553,6 +553,10 @@ from tests.test_manifest_cco import test_cco_val_matches_continuous
 from tests.test_manifest_cco import test_cco_row_count_recovery
 from tests.test_manifest_cco import test_no_cco_for_stateless_scaler
 from tests.test_manifest_cco import test_strict_mode_raises_on_gap
+from tests.test_manifest_cco import test_non_strict_mode_warns_on_gap
+from tests.test_manifest_cco import test_cco_under_warm_strict_mode_raises
+from tests.test_manifest_cco import test_cco_under_warm_non_strict_warns
+from tests.test_manifest_cco import test_uel_first_round_strict_mode_error_does_not_corrupt_csv_header
 from tests.test_manifest_cco import test_scaler_params_yaml_window
 from tests.test_manifest_cco import test_scaler_params_default_when_omitted
 from tests.test_manifest_cco import test_scaler_params_class_form_with_dynamic_window
@@ -1855,6 +1859,10 @@ tests = [
     test_cco_row_count_recovery,
     test_no_cco_for_stateless_scaler,
     test_strict_mode_raises_on_gap,
+    test_non_strict_mode_warns_on_gap,
+    test_cco_under_warm_strict_mode_raises,
+    test_cco_under_warm_non_strict_warns,
+    test_uel_first_round_strict_mode_error_does_not_corrupt_csv_header,
     test_scaler_params_yaml_window,
     test_scaler_params_default_when_omitted,
     test_scaler_params_class_form_with_dynamic_window,
