@@ -191,7 +191,7 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 
 | File | Meaning |
 |---|---|
-| `results.csv` | streaming round log |
+| `results.csv` | streaming round log; if a round fails a `strict_mode` null check, a `strict_mode_error` column records the error message and all metric columns for that round are empty |
 | `round_data.jsonl` | round params, predictions, and alignment metadata |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |

@@ -77,5 +77,6 @@ def manifest() -> Manifest:
             'stoch_k',
         ], lag=1)
         .with_target_label('next_return', NextReturnTarget)
+        .set_strict_mode(True)
         .with_reference_architecture(xgboost_regressor)
     )

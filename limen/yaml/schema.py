@@ -28,6 +28,7 @@ ML_MANIFEST_OPTIONAL = {
     'params_override',
     'metrics_params',
     'decoder_lookback',
+    'strict_mode',
 }
 
 RULE_BASED_MANIFEST_REQUIRED = {'strategy'}

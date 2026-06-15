@@ -25,6 +25,7 @@ from limen.data.utils import split_by_dates
 from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
+from limen.experiment.errors import StrictModeError
 from limen.scalers.robust_scaler import RobustScaler
 from limen.scalers.registry import SCALER_REGISTRY
 logger = logging.getLogger(__name__)
@@ -890,8 +891,12 @@ class MLManifest(Manifest):
     data_dict_extension: Callable = None
     prediction_calibration_config: CalibrationConfig | None = None
     decoder_lookback: int = 1
+    strict_mode: bool = False
 
-    def set_scaler(self, transform_class: Any, param_name: str = '_scaler') -> 'MLManifest':
+    def set_scaler(self,
+                   transform_class: Any,
+                   param_name: str = '_scaler',
+                   extra_params: dict[str, Any] | None = None) -> 'MLManifest':
 
         '''
         Set scaler transformation using make_fitted_scaler.
@@ -899,18 +904,36 @@ class MLManifest(Manifest):
         Args:
             transform_class: Transform class to use for scaling
             param_name (str): Parameter name for fitted scaler
+            extra_params (dict | None): Additional keyword arguments passed to the transform constructor
 
         Returns:
             MLManifest: Self for method chaining
         '''
 
-        self.scaler = make_fitted_scaler(param_name, transform_class)
+        self.scaler = make_fitted_scaler(param_name, transform_class, extra_params)
 
         return self
 
 
+    def set_strict_mode(self, strict_mode: bool) -> 'MLManifest':
+
+        '''
+        Enable or disable strict mode for null detection after CCO dislodgement.
+
+        Args:
+            strict_mode (bool): If True, unexpected nulls in feature columns raise StrictModeError
+
+        Returns:
+            MLManifest: Self for method chaining
+        '''
+
+        self.strict_mode = strict_mode
+        return self
+
+
     def set_scaler_from_params(self,
-                               param_name: str = 'scaler_type') -> 'MLManifest':
+                               param_name: str = 'scaler_type',
+                               extra_params: dict[str, Any] | None = None) -> 'MLManifest':
 
         '''
         Configure scaler selection from round_params at runtime.
@@ -925,8 +948,11 @@ class MLManifest(Manifest):
             MLManifest: Self for method chaining
         '''
 
+        _static, _dynamic = _split_extra_params(extra_params)
+
         def _scaler_factory(data: 'pl.DataFrame',
-                            scaler_type: str = '') -> Any:
+                            scaler_type: str = '',
+                            **dyn: Any) -> Any:
 
             if scaler_type not in SCALER_REGISTRY:
                 if scaler_type == param_name:
@@ -939,10 +965,10 @@ class MLManifest(Manifest):
                     f"MLManifest Unknown scaler type '{scaler_type}'. "
                     f"Available: {sorted(SCALER_REGISTRY)}"
                 )
-            return SCALER_REGISTRY[scaler_type](data)
+            return SCALER_REGISTRY[scaler_type](data, **_static, **dyn)
 
         self.scaler = (
-            [('_scaler', _scaler_factory, {'scaler_type': param_name})],
+            [('_scaler', _scaler_factory, {'scaler_type': param_name, **_dynamic})],
             _apply_fitted_transform,
             {'fitted_transform': '_scaler'},
         )
@@ -1066,14 +1092,37 @@ class MLManifest(Manifest):
         columns_to_drop: list[str] | None = None
         pre_transform_columns = frozenset(split_data[0].columns)
 
+        cco_indicator_rows: int = 0
+        scaler_context_rows: int = 0
+        n_raw_cco: int = 0
+        cco_block: pl.DataFrame | None = None
+
         for i, split in enumerate(split_data):
-            lazy = split.lazy()
+            is_train = i == 0
+
+            if not is_train and cco_block is not None and n_raw_cco > 0:
+                if scaler_context_rows > 0 and len(cco_block) < n_raw_cco:
+                    split_name = _SPLIT_NAMES[i] if i < len(_SPLIT_NAMES) else str(i)
+                    shortfall = n_raw_cco - len(cco_block)
+                    msg = (
+                        f'under-warmed CCO: {split_name} split requires {n_raw_cco} '
+                        f'context rows but only {len(cco_block)} available '
+                        f'(shortfall {shortfall})'
+                    )
+                    if self.strict_mode:
+                        raise StrictModeError(msg)
+                    logger.warning(msg)
+                raw_input = pl.concat([cco_block, split])
+            else:
+                raw_input = split
+
+            lazy = raw_input.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
             data = lazy.collect()
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
-                    self, data, round_params, all_fitted_params, i == 0
+                    self, data, round_params, all_fitted_params, is_train
                 )
 
             if self.ablation_config is not None:
@@ -1081,9 +1130,32 @@ class MLManifest(Manifest):
                     data, self, round_params, columns_to_drop, pre_transform_columns,
                 )
 
-            data = data.fill_nan(None).drop_nulls()
-            data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, i == 0)
+            data = data.fill_nan(None)
+            n_leading = _count_leading_nulls(data)
+            data = data.slice(n_leading)
+
+            n_cco_feature_rows = max(0, len(cco_block) - n_leading) if (not is_train and cco_block is not None) else 0
+
+            _check_unexpected_nulls(self, data, i, 'A')
+
+            data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
+
+            if n_cco_feature_rows > 0:
+                data = data.slice(n_cco_feature_rows)
+
+            _check_unexpected_nulls(self, data, i, 'B')
+
             split_data[i] = data.fill_nan(None).drop_nulls()
+
+            if is_train:
+                cco_indicator_rows = n_leading
+                scaler_context_rows = max(
+                    (getattr(v, 'context_rows', 0) for v in all_fitted_params.values()),
+                    default=0,
+                )
+                n_raw_cco = cco_indicator_rows + scaler_context_rows
+
+            cco_block = split.tail(n_raw_cco) if n_raw_cco > 0 else None
 
         split_data = _align_split_columns(split_data)
         split_data, all_fitted_params = _apply_pca_compression(
@@ -1276,7 +1348,16 @@ def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.Dat
     return fitted_transform.transform(data)
 
 
-def make_fitted_scaler(param_name: str, transform_class: Any) -> FittedTransformEntry:
+def _split_extra_params(extra_params: dict[str, Any] | None) -> tuple[dict[str, Any], dict[str, Any]]:
+    _extra = dict(extra_params or {})
+    _static = {k: v for k, v in _extra.items() if not isinstance(v, str)}
+    _dynamic = {k: v for k, v in _extra.items() if isinstance(v, str)}
+    return _static, _dynamic
+
+
+def make_fitted_scaler(param_name: str,
+                       transform_class: Any,
+                       extra_params: dict[str, Any] | None = None) -> FittedTransformEntry:
 
     '''
     Create fitted transform entry for scaling.
@@ -1284,17 +1365,25 @@ def make_fitted_scaler(param_name: str, transform_class: Any) -> FittedTransform
     Args:
         param_name (str): Name for the fitted parameter
         transform_class: Transform class to instantiate
+        extra_params (dict | None): Additional keyword arguments passed to the transform constructor
 
     Returns:
         FittedTransformEntry: Complete fitted transform configuration
     '''
 
-    return ([
-        (param_name, lambda data: transform_class(data), {})
-    ],
-    _apply_fitted_transform, {
-        'fitted_transform': param_name
-    })
+    _static, _dynamic = _split_extra_params(extra_params)
+
+    def _factory(data: 'pl.DataFrame',
+                 _cls: Any = transform_class,
+                 _p: dict[str, Any] = _static,
+                 **dyn: Any) -> Any:
+        return _cls(data, **_p, **dyn)
+
+    return (
+        [(param_name, _factory, _dynamic)],
+        _apply_fitted_transform,
+        {'fitted_transform': param_name},
+    )
 
 
 def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
@@ -1412,6 +1501,33 @@ def _is_group_active(group: str, round_params: dict[str, Any]) -> bool:
         )
 
     return group in feature_groups.split('|')
+
+
+_SPLIT_NAMES = ['train', 'val', 'test']
+
+
+def _check_unexpected_nulls(manifest: 'MLManifest',
+                             data: pl.DataFrame,
+                             split_index: int,
+                             checkpoint: str) -> None:
+
+    exclude = {'datetime', manifest.target_column}
+    feature_cols = [c for c in data.columns if c not in exclude]
+    counts = data.select([pl.col(c).null_count().alias(c) for c in feature_cols])
+    null_info = {}
+    for col in feature_cols:
+        if counts[col][0] > 0:
+            null_info[col] = data.filter(pl.col(col).is_null())['datetime'].to_list()
+    if not null_info:
+        return
+
+    split_name = _SPLIT_NAMES[split_index] if split_index < len(_SPLIT_NAMES) else str(split_index)
+    detail = '; '.join(f"{col} @ {ts}" for col, ts in null_info.items())
+    msg = f"Unexpected nulls in {split_name} split · Checkpoint {checkpoint} · {detail}"
+
+    if manifest.strict_mode:
+        raise StrictModeError(msg)
+    logger.warning(msg)
 
 
 def _count_leading_nulls(data: pl.DataFrame) -> int:

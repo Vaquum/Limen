@@ -67,6 +67,8 @@ def test_foundational_sfd():
                     assert 'is_stable' in log.columns, 'is_stable missing from log'
                     assert uel.experiment_confusion_metrics is None, 'experiment_confusion_metrics should be None for rule-based'
                     assert uel.experiment_backtest_results is None, 'experiment_backtest_results should be None for rule-based'
+                else:
+                    assert sfd_module.manifest().strict_mode is True, f'{sfd_module.__name__} manifest must have strict_mode=True'
 
             logger.info('    ✅ %s: PASSED', sfd_module.__name__)
 

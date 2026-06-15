@@ -451,7 +451,7 @@ See [Targets](Targets.md) for the full reference including all built-in target c
 
 ## Scaling
 
-### `set_scaler(transform_class, param_name='_scaler')`
+### `set_scaler(transform_class, param_name='_scaler', extra_params=None)`
 
 Configure a fitted scaler that is instantiated on train and then applied across the splits.
 
@@ -463,7 +463,14 @@ from limen.scalers import LogRegScaler
 
 The fitted scaler is stored in the resulting `data_dict` under `_scaler`.
 
-### `set_scaler_from_params(param_name='scaler_type')`
+Pass `extra_params` to forward constructor arguments. String values are treated as sweep param references resolved from `round_params` at fit time; all other values are static:
+
+```python
+# window swept as a param; min_samples fixed
+.set_scaler(CausalRollingRobustScaler, extra_params={'window': 'scaler_window', 'min_samples': 25})
+```
+
+### `set_scaler_from_params(param_name='scaler_type', extra_params=None)`
 
 Select a scaler dynamically from `SCALER_REGISTRY` using a round parameter.
 
@@ -479,7 +486,34 @@ Then in `params()`:
 }
 ```
 
-Use this when scaler choice is part of the search space.
+Use this when scaler choice is itself part of the search space. Pass `extra_params` to forward constructor arguments using the same static/dynamic resolution as `set_scaler()`.
+
+### `set_strict_mode(strict_mode)`
+
+Enable strict null checking after the Context Carry-Over (CCO) pipeline.
+
+```python
+.set_strict_mode(True)
+```
+
+#### Background: Context Carry-Over
+
+When `prepare_data` processes val and test splits, it prepends a raw tail of the preceding split (the CCO block) before running feature transforms and the scaler. This ensures indicator warm-up rows and rolling-scaler warm-up rows are fully warmed before the first real split row is produced — matching how the Sensor sees a continuous stream in live inference.
+
+After the CCO rows are stripped from each processed split, two null checkpoints run on feature columns only (the target column, which always has a trailing null from `shift:-1`, is excluded):
+
+- **Checkpoint A** — after leading warm-up nulls are sliced off, before the scaler. Nulls here indicate mid-split data gaps in the raw input or indicator failures.
+- **Checkpoint B** — after the scaler and after CCO rows are removed. Nulls here would indicate the scaler itself introduced them (rare).
+
+Checkpoint A also runs on the training split, where there is no CCO block.
+
+#### Strict vs non-strict
+
+`strict_mode=True` — any unexpected null raises `StrictModeError` with the split name, checkpoint label, column name, and the timestamps of the null rows. The UEL catches this per-permutation, records the error message in `results.csv` under the `strict_mode_error` column (metric columns are empty for that round), and continues to the next round.
+
+`strict_mode=False` (default) — the same detection runs, but logs a `WARNING` instead of raising. Training continues and the final `drop_nulls()` silently removes the affected rows.
+
+All foundational ML SFDs and YAML templates ship with `strict_mode=True`. New SFDs should follow the same convention — silent drops during search can mask data quality problems that only appear under specific scaler or param combinations.
 
 ## PCA Compression
 

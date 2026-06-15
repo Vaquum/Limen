@@ -70,6 +70,14 @@ class CausalRollingRobustScaler:
             self.iqrs[col] = iqr if iqr != 0 else 1.0
 
 
+    @property
+    def context_rows(self) -> int:
+
+        '''Number of raw preceding rows needed to produce a fully warm scaled output.'''
+
+        return self.window
+
+
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
         '''

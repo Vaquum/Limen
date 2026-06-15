@@ -51,6 +51,7 @@ def _print_profile(prof: ProfileResult) -> None:
     click.echo('')
     _print_permutation_space(prof)
     _print_runtime_sampling(prof)
+    _print_data_quality(prof)
 
     for w in prof.warnings:
         click.secho(f'  WARN: {w}', fg='yellow')
@@ -74,6 +75,17 @@ def _print_permutation_space(prof: ProfileResult) -> None:
     )
     for name, card in sorted_params:
         click.echo(f"      {name:<24} {card} value{'s' if card != 1 else ''}")
+
+
+def _print_data_quality(prof: ProfileResult) -> None:
+
+    click.echo('')
+    click.echo('  Data quality')
+    if not prof.data_quality_warnings:
+        click.echo('    No issues detected')
+        return
+    for w in prof.data_quality_warnings:
+        click.secho(f'    WARN: {w}', fg='yellow')
 
 
 def _print_runtime_sampling(prof: ProfileResult) -> None:

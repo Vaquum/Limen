@@ -1136,3 +1136,11 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.30.2 on 14th of June, 2026
 
 - Add a design-system-aligned docs surface: global IBM Plex typography, fixed editorial scale, quiet navigation, booktabs-style tables, square code and media frames, light/dark palette parity, and the Backtest page as the first canonical content sample.
+
+## v3.31.0 on 15th of June, 2026
+
+- Fix rolling scaler reproducibility: the causal rolling scaler cold-started at each split boundary during training, causing val and test bars to receive different scaled values than the continuous inference stream. Context Carry-Over prepends the raw tail of the preceding split before the feature transform pass and strips it after scaling, so the scaler is always warm when it reaches the actual split data. The inference path is unchanged.
+- Expose a context rows property on the causal rolling robust scaler so CCO can detect the required warm-up size automatically. Stateless scalers return zero via duck-typing and receive no CCO block.
+- Add strict mode to the ML manifest. When enabled, unexpected nulls remaining after CCO dislodgement raise an error rather than logging a warning. The experiment loop catches the error per permutation, records the failure in results, and continues to the next round.
+- Add constructor parameter support for scalers in both the manifest API and YAML. Parameters such as window size and minimum samples can be set as literals or as sweep-param references, letting them appear in results and be fully reproducible.
+- Add a data quality section to the profile output. The profiler captures null warnings during sample rounds and the CLI renders them under a dedicated header.

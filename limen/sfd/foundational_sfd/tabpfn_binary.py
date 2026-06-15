@@ -71,6 +71,7 @@ def manifest() -> Manifest:
             transform_params={'forward_periods': 'forward_periods', 'threshold': 'threshold_pct', 'shift': -1},
         )
 
+        .set_strict_mode(True)
         .with_reference_architecture(tabpfn_binary)
 
         .with_calibration()

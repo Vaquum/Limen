@@ -11,6 +11,8 @@ import polars as pl
 import pytest
 
 from limen.cli.commands.run import run_experiment
+from limen.cohort import Cohort
+from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
 from limen.experiment.trainer import ReconstructionError
 from limen.experiment.trainer import Trainer
@@ -155,6 +157,105 @@ _E2E_ABLATION_YAML = dedent('''\
         random_state: [42]
         feature_drop_count: [1]
         feature_drop_seed: [42]
+    uel:
+      n_permutations: 1
+      search_strategy:
+        type: grid
+      output_format: csv
+''')
+
+
+_E2E_REPRO_ROLLING_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_repro_rolling
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+          val_predict_guard: false
+          test_predict_guard: false
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        scaler:
+          class: limen.scalers.CausalRollingRobustScaler
+          params:
+            window: scaler_window
+            min_samples: 5
+        strict_mode: true
+        reference_architecture: limen.sfd.reference_architecture.logreg_binary
+      params:
+        C: [1.0]
+        random_state: [42]
+        scaler_window: [20, 50]
+    uel:
+      n_permutations: 2
+      search_strategy:
+        type: grid
+      output_format: csv
+''')
+
+
+_E2E_REPRO_YAML = dedent('''\
+    schema_version: "1.0"
+    metadata:
+      name: test_repro
+      mode: development
+    sfd:
+      manifest:
+        type: ml
+        data_source:
+          method: limen.data.HistoricalData.get_spot_klines
+          params:
+            kline_size: 3600
+        split_dates:
+          train_start: "2025-01-01"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-18"
+          test_start: "2025-01-18"
+          test_end: "2025-01-22"
+          val_predict_guard: false
+          test_predict_guard: false
+        indicators:
+          - func: limen.indicators.roc
+            params:
+              period: 1
+              group: momentum
+        target:
+          name: quantile_flag
+          class: limen.targets.QuantileBinaryTarget
+          fit_params:
+            source_column: roc_1
+            quantile: 0.5
+          transform_params:
+            shift: -1
+        reference_architecture: limen.sfd.reference_architecture.logreg_binary
+      params:
+        C: [1.0]
+        random_state: [42]
     uel:
       n_permutations: 1
       search_strategy:
@@ -454,3 +555,167 @@ def test_trainer_yaml_feature_ablation() -> None:
         dropped = sensor.round_params.get('_dropped_features')
         assert isinstance(dropped, list)
         assert len(dropped) == 1
+
+
+def test_sensor_reproduces_training_metrics_on_val_test() -> None:
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_REPRO_YAML)
+        assert len(round_ids) == 1
+
+        training_accuracy = (
+            pl.read_csv(exp_dir / 'results.csv')
+            .filter(pl.col('id') == str(round_ids[0]))['accuracy'][0]
+        )
+
+        trainer, sensors = _train_e2e(exp_dir, round_ids)
+        sensor = sensors[0]
+
+        bar_preds = sensor.predict_all(trainer._data)
+
+        test_start = datetime(2025, 1, 18)
+        test_end = datetime(2025, 1, 22)
+        test_preds = sorted(
+            [p for p in bar_preds if p.datetime is not None and p.reason is None
+             and test_start <= p.datetime < test_end],
+            key=lambda p: p.datetime,
+        )
+
+        data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
+        y_test = data_dict['y_test'].to_list()
+
+        # sensor predicts for all test bars including the last one (no target); y_test drops it
+        test_preds = test_preds[:len(y_test)]
+
+        assert len(test_preds) == len(y_test), (
+            f'expected {len(y_test)} test predictions, got {len(test_preds)}'
+        )
+
+        n_correct = sum(1 for p, y in zip(test_preds, y_test, strict=False) if p.prediction == y)
+        sensor_accuracy = n_correct / len(y_test)
+
+        # results.csv stores metrics rounded to 3 decimal places
+        assert round(sensor_accuracy, 3) == training_accuracy, (
+            f'sensor accuracy {sensor_accuracy} does not match training accuracy {training_accuracy}'
+        )
+
+
+def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        round_ids = _run_e2e_experiment(exp_dir, _E2E_REPRO_ROLLING_YAML)
+        assert len(round_ids) == 2
+
+        results = pl.read_csv(exp_dir / 'results.csv')
+
+        assert 'scaler_window' in results.columns
+        assert set(results['scaler_window'].to_list()) == {20, 50}
+
+        # strict_mode=true: clean synthetic data must never trigger StrictModeError
+        assert 'strict_mode_error' in results.columns
+        assert results['strict_mode_error'].null_count() == len(round_ids), (
+            'clean data must produce no strict_mode_error on any round'
+        )
+
+        assert results['accuracy'].null_count() == 0
+        assert results['auc'].null_count() == 0
+
+        for row in results.iter_rows(named=True):
+            assert row['scaler_window'] in {20, 50}, f'scaler_window={row["scaler_window"]} is a jumbled value'
+            assert isinstance(row['accuracy'], float) and 0.0 <= row['accuracy'] <= 1.0, (
+                f'accuracy={row["accuracy"]} outside [0,1] — possible column jumble'
+            )
+            assert isinstance(row['auc'], float) and 0.0 <= row['auc'] <= 1.0, (
+                f'auc={row["auc"]} outside [0,1] — possible column jumble'
+            )
+            assert row['C'] == 1.0, f'C={row["C"]} does not match the only swept value'
+            assert row['random_state'] == 42, f'random_state={row["random_state"]} does not match the only swept value'
+            assert row['strict_mode_error'] is None, f'strict_mode_error unexpectedly set: {row["strict_mode_error"]}'
+
+        cohort = Cohort(
+            experiment_log_path=str(exp_dir),
+            selector=select_top_n,
+            selector_params={'column': 'accuracy', 'n': 2},
+        )
+        assert len(cohort.permutation_ids) == 2
+
+        trainer, sensors = _train_e2e(exp_dir, round_ids)
+        assert len(sensors) == 2
+
+        assert {s.round_params['scaler_window'] for s in sensors} == {20, 50}
+
+        val_start = datetime(2025, 1, 15)
+        test_start = datetime(2025, 1, 18)
+        test_end = datetime(2025, 1, 22)
+
+        raw = trainer._data
+        train_raw = raw.filter(pl.col('datetime') < val_start)
+        val_raw = raw.filter((pl.col('datetime') >= val_start) & (pl.col('datetime') < test_start))
+        test_raw = raw.filter((pl.col('datetime') >= test_start) & (pl.col('datetime') < test_end))
+
+        for sensor in sensors:
+            w = sensor.round_params['scaler_window']
+
+            data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
+            y_val = data_dict['y_val'].to_list()
+            y_test = data_dict['y_test'].to_list()
+
+            # Feed cco+split per split: sensor's rolling computation operates on the same-shaped
+            # array as prepare_data, giving FP-identical scaled features.
+            # n_raw_cco = cco_indicator_rows + scaler_context_rows; roc(period=1) gives 1 leading null.
+            N_raw_cco = w + 1
+            val_preds_raw = sensor.predict_all(pl.concat([train_raw.tail(N_raw_cco), val_raw]))
+            test_preds_raw = sensor.predict_all(pl.concat([val_raw.tail(N_raw_cco), test_raw]))
+
+            # CCO bars are excluded by the datetime filter; no reason filter needed.
+            val_preds = sorted(
+                [p for p in val_preds_raw if p.datetime is not None and val_start <= p.datetime < test_start],
+                key=lambda p: p.datetime,
+            )
+            test_preds = sorted(
+                [p for p in test_preds_raw if p.datetime is not None and test_start <= p.datetime < test_end],
+                key=lambda p: p.datetime,
+            )
+
+            # CCO must recover all val and test rows regardless of window size.
+            # Without CCO, the first (min_samples - 1) = 4 val rows would be
+            # excluded as cold-scaler warm-up, giving len(val_preds) < len(y_val) + 1.
+            assert len(val_preds) == len(y_val) + 1, (
+                f'CCO failed on val (window={w}): '
+                f'expected {len(y_val) + 1}, got {len(val_preds)}'
+            )
+            assert len(test_preds) == len(y_test) + 1, (
+                f'CCO failed on test (window={w}): '
+                f'expected {len(y_test) + 1}, got {len(test_preds)}'
+            )
+
+            n_correct = sum(
+                1 for p, y in zip(test_preds[:len(y_test)], y_test, strict=False)
+                if p.prediction == y
+            )
+            sensor_accuracy = n_correct / len(y_test)
+            training_accuracy = (
+                results.filter(pl.col('id') == str(sensor.permutation_id))['accuracy'][0]
+            )
+            assert round(sensor_accuracy, 3) == training_accuracy, (
+                f'sensor (window={w}) accuracy {sensor_accuracy:.4f} '
+                f'!= training {training_accuracy}'
+            )
+
+        cohort.set_members(sensors)
+
+        cohort_all = cohort.predict_all(trainer._data)
+        assert len(cohort_all) == len(trainer._data)
+        valid_cohort = [p for p in cohort_all if p.reason is None]
+        assert len(valid_cohort) > 0
+        assert all(p.prediction in (0, 1) for p in valid_cohort)
+        assert all(p.probability is not None and 0.0 <= p.probability <= 1.0 for p in valid_cohort)
+
+        cohort_last = cohort.predict(trainer._data)
+        assert isinstance(cohort_last, BarPrediction)
+        assert cohort_last.prediction in (0, 1)
+        assert cohort_last.probability is not None and 0.0 <= cohort_last.probability <= 1.0
+        last_valid_cohort = next(p for p in reversed(cohort_all) if p.reason is None)
+        assert cohort_last.prediction == last_valid_cohort.prediction

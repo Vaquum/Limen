@@ -123,6 +123,7 @@ def manifest() -> Manifest:
 
         .set_scaler_from_params('scaler_type')
         .set_feature_ablation()
+        .set_strict_mode(True)
 
         .with_reference_architecture(lightgbm_binary)
 

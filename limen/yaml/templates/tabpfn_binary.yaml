@@ -77,6 +77,8 @@ sfd:
       drop_count_key: feature_drop_count
       seed_key: feature_drop_seed
 
+    strict_mode: true
+
     reference_architecture: limen.sfd.reference_architecture.tabpfn_binary
 
     calibration:

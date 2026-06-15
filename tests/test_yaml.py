@@ -277,6 +277,9 @@ def test_logreg_yaml_template_exposes_full_architecture_surface() -> None:
 
     assert model_params <= set(yaml_dict['sfd']['params'])
 
+    sfd = CompiledSFD(yaml_dict)
+    assert sfd.manifest().strict_mode is True
+
 
 def test_validate_passes_valid_rule_based_yaml() -> None:
     yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
@@ -1260,6 +1263,7 @@ def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
 
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
+    assert sfd.manifest().strict_mode is True
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
@@ -1278,6 +1282,7 @@ def test_xgboost_regressor_template_is_valid_and_arch_surface_complete() -> None
 
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
+    assert sfd.manifest().strict_mode is True
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
@@ -1310,6 +1315,7 @@ def test_lightgbm_binary_template_is_valid_and_arch_surface_complete() -> None:
 
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
+    assert sfd.manifest().strict_mode is True
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}

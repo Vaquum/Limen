@@ -46,6 +46,7 @@ It combines:
 - features such as `vwap` and `kline_imbalance`
 - a fitted quantile-based target
 - scaler selection from params (`logreg`, `robust`, `rank_gauss`)
+- `strict_mode=True` — unexpected mid-split nulls abort the round and record an error in `results.csv`
 - the `LogRegBinary` reference model
 - `CalibrationBuilder` with `sklearn_probability_calibrator` and `grid_threshold_optimizer`
 
@@ -68,6 +69,7 @@ It combines:
 - context from `roc`, `distance_from_high`/`distance_from_low`/`price_range_position`, `parkinson_volatility`/`volatility_ratio`, and `cyclical_time_features`
 - the train-fitted `TradelineLongBinaryTarget` (confirmed-breakout label from a line-height percentile threshold)
 - scaler selection from params (`robust`, `rank_gauss`, `logreg`) and feature ablation
+- `strict_mode=True`
 - the `LightGBMBinary` reference model with the full `LGBMClassifier` parameter surface and early stopping
 - `CalibrationBuilder` with `sklearn_probability_calibrator` and `grid_threshold_optimizer`
 - swept backtest economics (`fee_bps`, `slip_bps`)
