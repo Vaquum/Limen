@@ -664,8 +664,8 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
 
             # Feed cco+split per split: sensor's rolling computation operates on the same-shaped
             # array as prepare_data, giving FP-identical scaled features.
-            # N_raw_cco covers the scaler warm-up window plus a small buffer for indicator lookback.
-            N_raw_cco = w + 10
+            # n_raw_cco = cco_indicator_rows + scaler_context_rows; roc(period=1) gives 1 leading null.
+            N_raw_cco = w + 1
             val_preds_raw = sensor.predict_all(pl.concat([train_raw.tail(N_raw_cco), val_raw]))
             test_preds_raw = sensor.predict_all(pl.concat([val_raw.tail(N_raw_cco), test_raw]))
 
