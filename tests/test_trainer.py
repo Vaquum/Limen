@@ -650,28 +650,34 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
         test_start = datetime(2025, 1, 18)
         test_end = datetime(2025, 1, 22)
 
-        def _valid(p: BarPrediction, lo: datetime, hi: datetime) -> bool:
-            return p.datetime is not None and p.reason is None and lo <= p.datetime < hi
+        raw = trainer._data
+        train_raw = raw.filter(pl.col('datetime') < val_start)
+        val_raw = raw.filter((pl.col('datetime') >= val_start) & (pl.col('datetime') < test_start))
+        test_raw = raw.filter((pl.col('datetime') >= test_start) & (pl.col('datetime') < test_end))
 
         for sensor in sensors:
             w = sensor.round_params['scaler_window']
 
-            # Feed the full raw series — same continuous stream the scaler saw during training.
-            # Training-window bars come back with reason='inside-training-window'.
-            bar_preds = sensor.predict_all(trainer._data)
-
-            val_preds = sorted(
-                [p for p in bar_preds if _valid(p, val_start, test_start)],
-                key=lambda p: p.datetime,
-            )
-            test_preds = sorted(
-                [p for p in bar_preds if _valid(p, test_start, test_end)],
-                key=lambda p: p.datetime,
-            )
-
             data_dict = trainer._manifest.prepare_data(trainer._data, sensor.round_params)
             y_val = data_dict['y_val'].to_list()
             y_test = data_dict['y_test'].to_list()
+
+            # Feed cco+split per split: sensor's rolling computation operates on the same-shaped
+            # array as prepare_data, giving FP-identical scaled features.
+            # N_raw_cco covers the scaler warm-up window plus a small buffer for indicator lookback.
+            N_raw_cco = w + 10
+            val_preds_raw = sensor.predict_all(pl.concat([train_raw.tail(N_raw_cco), val_raw]))
+            test_preds_raw = sensor.predict_all(pl.concat([val_raw.tail(N_raw_cco), test_raw]))
+
+            # CCO bars are excluded by the datetime filter; no reason filter needed.
+            val_preds = sorted(
+                [p for p in val_preds_raw if p.datetime is not None and val_start <= p.datetime < test_start],
+                key=lambda p: p.datetime,
+            )
+            test_preds = sorted(
+                [p for p in test_preds_raw if p.datetime is not None and test_start <= p.datetime < test_end],
+                key=lambda p: p.datetime,
+            )
 
             # CCO must recover all val and test rows regardless of window size.
             # Without CCO, the first (min_samples - 1) = 4 val rows would be
