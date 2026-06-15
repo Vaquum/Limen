@@ -520,6 +520,7 @@ class UniversalExperimentLoop:
 
             data_dict: dict[str, Any] = {}
 
+            round_succeeded = False
             try:
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter('always')
@@ -527,6 +528,7 @@ class UniversalExperimentLoop:
                     round_results = self.model(
                         data=data_dict, round_params=sfd_params,
                     )
+                round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', current_round, exc)
                 round_results = {'strict_mode_error': str(exc)}
@@ -553,8 +555,6 @@ class UniversalExperimentLoop:
                 json.dumps([str(w.message) for w in caught])
                 if caught else '[]'
             )
-
-            round_succeeded = '_alignment' in data_dict
 
             if 'extras' in round_results:
                 extras = round_results.pop('extras')
