@@ -75,9 +75,9 @@ The implementation PR closes:
 | D053 | Log docs bound correlation analysis to caller-selected numeric log scope. |
 | D054 | Backtest docs state the `ExecutionResult(pos, gross, net)` full-window contract. |
 | D055 | Metrics docs disclose MAPE zero/near-zero denominator policy. |
-| D056 | LightGBM docs no longer claim objective enforcement beyond wrapper forwarding. |
-| D057 | Confidence filtering docs remain helper-scoped and not a core safety gate. |
-| D058 | Built-in SFD docs disclose research-only line-count feature state. |
+| D056 | LightGBM binary wrapper rejects non-binary objectives before training. |
+| D057 | Confidence filtering validates fields, target confidence, targets, and model prediction shapes. |
+| D058 | Built-in line templates set `include_research_only: false` for live-safe feature surfaces. |
 | D059 | Runtime/docs use SFD wording for manifest-driven errors. |
 | D060 | Stale `Trainer._load_sfd_module` debt entry removed. |
 | D061 | README, Benchmark, Backtest, and Support carry explicit non-advice risk language. |

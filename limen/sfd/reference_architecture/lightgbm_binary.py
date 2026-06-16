@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from limen.experiment.manifest_core import CalibrationConfig
 
 DEFAULT_EARLY_STOPPING_ROUNDS = 50
+_BINARY_OBJECTIVES = frozenset({'binary', 'cross_entropy'})
 
 
 def _resolve_class_weight(class_weight: Any) -> Any:
@@ -20,6 +21,14 @@ def _resolve_class_weight(class_weight: Any) -> Any:
     if isinstance(class_weight, (int, float)) and not isinstance(class_weight, bool):
         return {0: class_weight, 1: 1}
     return class_weight
+
+
+def _validate_binary_objective(objective: Any) -> None:
+    if objective is None:
+        return
+    if not isinstance(objective, str) or objective not in _BINARY_OBJECTIVES:
+        allowed = ', '.join(sorted(_BINARY_OBJECTIVES))
+        raise ValueError(f'LightGBMBinary objective must be one of: {allowed}, or None')
 
 
 class LightGBMBinary(ReferenceModel):
@@ -61,6 +70,7 @@ class LightGBMBinary(ReferenceModel):
 
         if 'class_weight' in params:
             params['class_weight'] = _resolve_class_weight(params['class_weight'])
+        _validate_binary_objective(params.get('objective'))
 
         self.model = lightgbm.LGBMClassifier(**params)
 

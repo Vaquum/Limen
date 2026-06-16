@@ -248,8 +248,22 @@ def test_price_lines_adds_five_line_columns_from_scalar_params() -> None:
     lazy_result = price_lines(data.lazy(), max_duration_hours=4, min_height_pct=0.02).collect()
     assert result.equals(lazy_result)
 
+    live_safe = price_lines(
+        data, max_duration_hours=4, min_height_pct=0.02, include_research_only=False
+    )
+    assert 'active_lines' not in live_safe.columns
+    assert {
+        'hours_since_big_move',
+        'line_momentum_6h',
+        'trending_score',
+        'reversal_potential',
+    }.issubset(live_safe.columns)
+
     with pytest.raises(ValueError, match='price_lines momentum_lookback_hours'):
         price_lines(data, max_duration_hours=4, min_height_pct=0.02, momentum_lookback_hours=0)
+
+    with pytest.raises(ValueError, match='include_research_only'):
+        price_lines(data, max_duration_hours=4, min_height_pct=0.02, include_research_only='false')
 
 
 def test_quantile_price_lines_adds_six_columns_from_scalar_params() -> None:
@@ -277,6 +291,22 @@ def test_quantile_price_lines_adds_six_columns_from_scalar_params() -> None:
     ).collect()
     assert result.equals(lazy_result)
 
+    live_safe = quantile_price_lines(
+        data,
+        max_duration_hours=4,
+        min_height_pct=0.02,
+        quantile_threshold=0.0,
+        include_research_only=False,
+    )
+    assert 'active_quantile_count' not in live_safe.columns
+    assert {
+        'hours_since_quantile_line',
+        'quantile_line_density_48h',
+        'quantile_momentum_6h',
+        'avg_quantile_height_24h',
+        'quantile_direction_bias',
+    }.issubset(live_safe.columns)
+
     no_lines = quantile_price_lines(
         data, max_duration_hours=4, min_height_pct=0.5, quantile_threshold=0.75
     )
@@ -286,6 +316,15 @@ def test_quantile_price_lines_adds_six_columns_from_scalar_params() -> None:
     assert no_lines['quantile_momentum_6h'].sum() == 0.0
     assert no_lines['avg_quantile_height_24h'].sum() == 0.0
     assert no_lines['quantile_direction_bias'].sum() == 0.0
+
+    with pytest.raises(ValueError, match='include_research_only'):
+        quantile_price_lines(
+            data,
+            max_duration_hours=4,
+            min_height_pct=0.02,
+            quantile_threshold=0.0,
+            include_research_only='false',
+        )
 
 
 def test_price_line_momentum_windows_pin_trailing_edges() -> None:

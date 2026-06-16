@@ -3,6 +3,7 @@ import inspect
 import numpy as np
 import pandas as pd
 import polars as pl
+import pytest
 from sklearn.linear_model import LogisticRegression
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
@@ -505,6 +506,17 @@ def test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand():
     balanced = LightGBMBinary().train(data, n_estimators=20, class_weight='balanced', verbosity=-1,
                                       deterministic=True, force_row_wise=True, random_state=42)
     assert balanced.model.class_weight == 'balanced'
+
+
+def test_lightgbm_binary_rejects_non_binary_objective():
+
+    data = _make_data(binary=True, with_price=False)
+
+    with pytest.raises(ValueError, match='objective must be one of'):
+        LightGBMBinary().train(data, objective='regression', n_estimators=20, verbosity=-1)
+
+    with pytest.raises(ValueError, match='objective must be one of'):
+        lightgbm_binary(data, objective='multiclass', n_estimators=20)
 
 
 def test_lightgbm_wrapper_exposes_lgbm_constructor_params():

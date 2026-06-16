@@ -1,7 +1,72 @@
+import numbers
 from typing import Any
+
 import numpy as np
 import polars as pl
 from sklearn.metrics import mean_absolute_error, r2_score
+
+
+_REQUIRED_DATA_FIELDS = ('x_val', 'y_val', 'x_test', 'y_test', 'dt_test')
+
+
+def _validate_target_confidence(target_confidence: float) -> float:
+    if (
+        isinstance(target_confidence, bool)
+        or not isinstance(target_confidence, numbers.Real)
+        or not np.isfinite(float(target_confidence))
+        or not 0.0 <= float(target_confidence) <= 1.0
+    ):
+        raise ValueError('confidence_filtering target_confidence must be finite and in [0.0, 1.0]')
+    return float(target_confidence)
+
+
+def _validate_confidence_threshold(confidence_threshold: float) -> float:
+    if (
+        isinstance(confidence_threshold, bool)
+        or not isinstance(confidence_threshold, numbers.Real)
+        or not np.isfinite(float(confidence_threshold))
+        or float(confidence_threshold) < 0.0
+    ):
+        raise ValueError('confidence_filtering confidence_threshold must be finite and >= 0.0')
+    return float(confidence_threshold)
+
+
+def _as_1d_finite_numeric(name: str, values: Any) -> np.ndarray:
+    arr = np.asarray(values)
+    if arr.ndim != 1:
+        raise ValueError(f'confidence_filtering {name} must be one-dimensional')
+    try:
+        arr = arr.astype(float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f'confidence_filtering {name} must be numeric') from exc
+    if not np.isfinite(arr).all():
+        raise ValueError(f'confidence_filtering {name} must be finite')
+    return arr
+
+
+def _collect_model_predictions(models: list, x: Any, expected_len: int) -> np.ndarray:
+    if not models:
+        raise ValueError('confidence_filtering requires at least one model')
+
+    predictions = []
+    for index, model in enumerate(models):
+        predict = getattr(model, 'predict', None)
+        if not callable(predict):
+            raise ValueError(f'confidence_filtering model {index} must expose predict()')
+        preds = _as_1d_finite_numeric(f'model {index} predictions', predict(x))
+        if len(preds) != expected_len:
+            raise ValueError(
+                f'confidence_filtering model {index} predictions must match target length'
+            )
+        predictions.append(preds)
+
+    return np.vstack(predictions)
+
+
+def _validate_data_fields(data: dict) -> None:
+    missing = [field for field in _REQUIRED_DATA_FIELDS if field not in data]
+    if missing:
+        raise ValueError(f'confidence_filtering data missing required fields: {missing}')
 
 
 def calibrate_confidence_threshold(models: list, x_val: Any, y_val: Any, target_confidence: float = 0.8) -> tuple:
@@ -23,13 +88,9 @@ def calibrate_confidence_threshold(models: list, x_val: Any, y_val: Any, target_
         tuple: Confidence threshold and calibration statistics
     '''
 
-    # Get model predictions on validation data
-    val_preds = []
-    for model in models:
-        preds = model.predict(x_val)
-        val_preds.append(preds)
-
-    val_preds = np.array(val_preds)
+    target_confidence = _validate_target_confidence(target_confidence)
+    y_val = _as_1d_finite_numeric('y_val', y_val)
+    val_preds = _collect_model_predictions(models, x_val, len(y_val))
     val_pred_mean = np.mean(val_preds, axis=0)
     val_pred_std = np.std(val_preds, axis=0)
 
@@ -91,13 +152,9 @@ def apply_confidence_filtering(models: list, x_test: Any, y_test: Any, confidenc
         dict: Results dictionary containing predictions, uncertainty, masks, and metrics
     '''
 
-    # Get model predictions on test data
-    test_preds = []
-    for model in models:
-        preds = model.predict(x_test)
-        test_preds.append(preds)
-
-    test_preds = np.array(test_preds)
+    confidence_threshold = _validate_confidence_threshold(confidence_threshold)
+    y_test = _as_1d_finite_numeric('y_test', y_test)
+    test_preds = _collect_model_predictions(models, x_test, len(y_test))
     test_pred_mean = np.mean(test_preds, axis=0)
     test_pred_std = np.std(test_preds, axis=0)
 
@@ -153,6 +210,11 @@ def confidence_filtering_system(models: list, data: dict, target_confidence: flo
     Returns:
         tuple: Confidence threshold, filtered results, and calibration statistics
     '''
+
+    _validate_data_fields(data)
+
+    if len(data['dt_test']) != len(data['y_test']):
+        raise ValueError('confidence_filtering dt_test must match y_test length')
 
     # Step 1: Calibrate on validation data
     confidence_threshold, calibration_stats = calibrate_confidence_threshold(

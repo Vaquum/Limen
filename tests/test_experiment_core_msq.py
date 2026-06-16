@@ -592,6 +592,10 @@ def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_order
         'auc': [0.1, 0.2, 0.3, 0.4, 0.5],
         'param_up': [1, 2, 3, 4, 5],
         'param_down': [5, 4, 3, 2, 1],
+        'id': [10, 11, 12, 13, 14],
+        '_id': [0, 1, 2, 3, 4],
+        '_round_index': [0, 1, 2, 3, 4],
+        'execution_time': [0.5, 0.4, 0.3, 0.2, 0.1],
         'constant': [7, 7, 7, 7, 7],
         'label': ['a', 'b', 'c', 'd', 'e'],
     })
@@ -620,6 +624,10 @@ def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_order
     }
     assert 'constant' not in corr.index.get_level_values('feature')
     assert 'label' not in corr.index.get_level_values('feature')
+    assert 'id' not in corr.index.get_level_values('feature')
+    assert '_id' not in corr.index.get_level_values('feature')
+    assert '_round_index' not in corr.index.get_level_values('feature')
+    assert 'execution_time' not in corr.index.get_level_values('feature')
     assert corr.loc[(100, 'param_up'), 'corr_med'] == pytest.approx(1.0)
     assert corr.loc[(100, 'param_down'), 'corr_med'] == pytest.approx(-1.0)
     assert corr.loc[(60, 'param_up'), 'n_rows'] == 3

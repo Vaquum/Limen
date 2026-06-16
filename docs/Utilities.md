@@ -90,6 +90,8 @@ It expects a data dictionary containing at least:
 - `x_test`, `y_test`
 - `dt_test`
 
+The utility validates this contract before computing metrics: `target_confidence` must be finite and in `[0.0, 1.0]`, targets must be finite one-dimensional numeric arrays, each model must expose `predict()`, and every model prediction vector must be finite, one-dimensional, and match the target length.
+
 It returns:
 
 1. a results dictionary

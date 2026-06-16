@@ -63,6 +63,31 @@ def _cvar_tail_bps(returns: pd.Series) -> float:
     return round(float(np.sort(arr)[:tail_count].mean()) * BPS_PER_UNIT, BPS_DECIMALS)
 
 
+def _validate_execution_result(result: ExecutionResult, expected_index: pd.Index) -> ExecutionResult:
+    if not isinstance(result, ExecutionResult):
+        raise ValueError('backtest_snapshot strategy must return ExecutionResult(pos, gross, net)')
+
+    normalized: dict[str, pd.Series] = {}
+    for field in ('pos', 'gross', 'net'):
+        values = getattr(result, field)
+        if not isinstance(values, pd.Series):
+            raise ValueError(f'backtest_snapshot strategy {field} must be a pd.Series')
+        if len(values) != len(expected_index) or not values.index.equals(expected_index):
+            raise ValueError(
+                f'backtest_snapshot strategy {field} must be a full-window series with the input index'
+            )
+        try:
+            numeric = pd.to_numeric(values, errors='raise')
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f'backtest_snapshot strategy {field} must be numeric') from exc
+        arr = numeric.to_numpy(dtype=float)
+        if np.isnan(arr).any() or not np.isfinite(arr).all():
+            raise ValueError(f'backtest_snapshot strategy {field} must be finite')
+        normalized[field] = pd.Series(arr, index=expected_index, name=values.name)
+
+    return ExecutionResult(**normalized)
+
+
 def backtest_snapshot(df: pd.DataFrame,
                       *,
                       pred_col: str = 'predictions',
@@ -161,6 +186,7 @@ def backtest_snapshot(df: pd.DataFrame,
         fee_bps=fee_bps,
         slip_bps=slip_bps,
     )
+    result = _validate_execution_result(result, df.index)
 
     gross = result.gross * notional_rate
     net = result.net * notional_rate

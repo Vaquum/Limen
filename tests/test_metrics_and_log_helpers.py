@@ -585,6 +585,43 @@ def test_backtest_snapshot_delegates_to_injected_strategy() -> None:
     assert result['trades_per_bar'] == 0.33333
 
 
+def test_backtest_snapshot_validates_injected_strategy_output() -> None:
+    df = pd.DataFrame({
+        'predictions': [0, 0, 0],
+        'open': [100.0, 100.0, 100.0],
+        'close': [100.0, 100.0, 100.0],
+        'price_change': [0.0, 0.0, 0.0],
+    })
+
+    def wrong_type(predictions, *args, **kwargs):
+        index = predictions.index
+        return (
+            pd.Series(1.0, index=index),
+            pd.Series(0.01, index=index),
+            pd.Series(0.01, index=index),
+        )
+
+    def short_series(predictions, *args, **kwargs) -> ExecutionResult:
+        index = predictions.index[:-1]
+        return ExecutionResult(
+            pos=pd.Series(1.0, index=index),
+            gross=pd.Series(0.01, index=index),
+            net=pd.Series(0.01, index=index),
+        )
+
+    def non_numeric(predictions, *args, **kwargs) -> ExecutionResult:
+        index = predictions.index
+        return ExecutionResult(
+            pos=pd.Series(1.0, index=index),
+            gross=pd.Series('bad', index=index),
+            net=pd.Series(0.01, index=index),
+        )
+
+    for strategy in (wrong_type, short_series, non_numeric):
+        with pytest.raises(ValueError, match='backtest_snapshot strategy'):
+            backtest_snapshot(df, strategy=strategy)
+
+
 def test_long_flat_strategy_returns_execution_result() -> None:
     result = long_flat_strategy(
         pd.Series([1, 1, 0]),

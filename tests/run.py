@@ -211,6 +211,7 @@ from tests.test_confidence_filtering_system import test_calibrate_confidence_thr
 from tests.test_confidence_filtering_system import test_apply_confidence_filtering
 from tests.test_confidence_filtering_system import test_confidence_filtering_system
 from tests.test_confidence_filtering_system import test_edge_cases
+from tests.test_confidence_filtering_system import test_confidence_filtering_validates_contracts
 from tests.test_klines_data_maker_fields import test_klines_data_maker_fields
 from tests.test_large_param_space import test_large_param_space
 from tests.test_param_space import test_param_space_large_space_no_longer_overflows_and_is_reproducible
@@ -511,6 +512,7 @@ from tests.test_reference_architecture import test_lightgbm_binary_with_calibrat
 from tests.test_reference_architecture import test_lightgbm_binary_early_stops_on_validation_split
 from tests.test_reference_architecture import test_lightgbm_binary_trains_without_validation_split
 from tests.test_reference_architecture import test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand
+from tests.test_reference_architecture import test_lightgbm_binary_rejects_non_binary_objective
 from tests.test_reference_architecture import test_lightgbm_wrapper_exposes_lgbm_constructor_params
 from tests.test_reference_architecture import test_lightgbm_foundational_params_cover_wrapper_model_surface
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
@@ -586,6 +588,7 @@ from tests.test_metrics_and_log_helpers import test_backtest_snapshot_edge_case_
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_scalars_invariant_under_window_doubling
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_is_time_free
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_delegates_to_injected_strategy
+from tests.test_metrics_and_log_helpers import test_backtest_snapshot_validates_injected_strategy_output
 from tests.test_metrics_and_log_helpers import test_long_flat_strategy_returns_execution_result
 from tests.test_metrics_and_log_helpers import test_long_flat_strategy_rejects_negative_lag
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_notional_rate_scales_returns_not_structure
@@ -1510,6 +1513,7 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
+    test_confidence_filtering_validates_contracts,
     test_get_any_file_loads_local_csv,
     test_get_spot_klines_reaggregates_latest_dataset,
     test_get_spot_klines_row_count_limit_returns_latest_rows,
@@ -1540,6 +1544,7 @@ tests = [
     test_lightgbm_binary_early_stops_on_validation_split,
     test_lightgbm_binary_trains_without_validation_split,
     test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand,
+    test_lightgbm_binary_rejects_non_binary_objective,
     test_lightgbm_wrapper_exposes_lgbm_constructor_params,
     test_lightgbm_foundational_params_cover_wrapper_model_surface,
     test_tabpfn_train_evaluate_end_to_end,
@@ -1585,6 +1590,7 @@ tests = [
     test_backtest_snapshot_scalars_invariant_under_window_doubling,
     test_backtest_snapshot_is_time_free,
     test_backtest_snapshot_delegates_to_injected_strategy,
+    test_backtest_snapshot_validates_injected_strategy_output,
     test_long_flat_strategy_returns_execution_result,
     test_long_flat_strategy_rejects_negative_lag,
     test_backtest_snapshot_notional_rate_scales_returns_not_structure,

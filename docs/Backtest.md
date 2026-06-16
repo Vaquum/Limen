@@ -108,7 +108,7 @@ Table 4. Scalar columns are intensive metrics.
 
 The execution model is swappable. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar series. The shipped strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
 
-A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a per-bar series over the full window.
+A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a finite numeric per-bar series over the full window with the input index. `backtest_snapshot()` rejects malformed custom strategy outputs before computing the ledger.
 
 ```python
 from limen.backtest.backtest_snapshot import backtest_snapshot

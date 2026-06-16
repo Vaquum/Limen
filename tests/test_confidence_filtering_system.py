@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import lightgbm as lgb
+import pytest
 from sklearn.model_selection import train_test_split
 
 from limen.utils.confidence_filtering_system import (
@@ -168,6 +169,50 @@ def test_edge_cases():
         models, data['x_val'], data['y_val'], target_confidence=0.1
     )
     assert isinstance(threshold, (float, np.floating))
+
+
+class _StaticModel:
+
+    def __init__(self, predictions):
+        self._predictions = predictions
+
+    def predict(self, _x):
+        return self._predictions
+
+
+def test_confidence_filtering_validates_contracts():
+
+    x = np.zeros((3, 2))
+    y = np.asarray([0.1, 0.2, 0.3])
+    models = [_StaticModel([0.1, 0.2, 0.3])]
+
+    with pytest.raises(ValueError, match='target_confidence'):
+        calibrate_confidence_threshold(models, x, y, target_confidence=1.1)
+
+    with pytest.raises(ValueError, match='at least one model'):
+        calibrate_confidence_threshold([], x, y, target_confidence=0.8)
+
+    with pytest.raises(ValueError, match='one-dimensional'):
+        calibrate_confidence_threshold([_StaticModel([[0.1, 0.2, 0.3]])], x, y)
+
+    with pytest.raises(ValueError, match='match target length'):
+        calibrate_confidence_threshold([_StaticModel([0.1, 0.2])], x, y)
+
+    with pytest.raises(ValueError, match='confidence_threshold'):
+        apply_confidence_filtering(models, x, y, confidence_threshold=-0.1)
+
+    data = {
+        'x_val': x,
+        'y_val': y,
+        'x_test': x,
+        'y_test': y,
+    }
+    with pytest.raises(ValueError, match='missing required fields'):
+        confidence_filtering_system(models, data)
+
+    data['dt_test'] = pd.date_range('2023-01-01', periods=2, freq='1h')
+    with pytest.raises(ValueError, match='dt_test must match y_test length'):
+        confidence_filtering_system(models, data)
 
 
 if __name__ == "__main__":

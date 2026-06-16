@@ -35,12 +35,14 @@ sfd:
         params:
           max_duration_hours: "{max_duration_hours}"
           min_height_pct: "{min_height_pct}"
+          include_research_only: false
           group: lines
       - func: limen.features.quantile_price_lines.quantile_price_lines
         params:
           max_duration_hours: "{max_duration_hours}"
           min_height_pct: "{min_height_pct}"
           quantile_threshold: "{quantile_threshold}"
+          include_research_only: false
           group: lines
 
       # price-position context

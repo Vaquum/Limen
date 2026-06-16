@@ -123,6 +123,12 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'price-derived confusion-return and backtest metrics are skipped' in docs_text
     assert 'If columns cannot be aligned safely, the helper returns `NaN`' in docs_text
     assert 'Threshold grids are caller-owned inputs' in docs_text
+    assert 'excluded from feature correlation by default' in docs_text
+    assert 'rejects malformed custom strategy outputs' in docs_text
+    assert 'Rows with zero or near-zero financial returns' in docs_text
+    assert 'LightGBM binary wrapper rejects non-binary objectives before training' in docs_text
+    assert 'target_confidence` must be finite and in `[0.0, 1.0]`' in docs_text
+    assert 'Bundled live-safe templates set `include_research_only: false`' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:
