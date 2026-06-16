@@ -7,6 +7,7 @@
   },
   "scripts": {
     "prepare-docs": "node ./scripts/assemble-docs.mjs",
+    "security:audit": "node ./scripts/audit-security.mjs",
     "start": "npm run prepare-docs && docusaurus start --host 0.0.0.0",
     "build": "npm run prepare-docs && docusaurus build",
     "check": "npm run prepare-docs && docusaurus build --no-minify",
@@ -25,7 +26,8 @@
     "remark-math": "^6.0.0"
   },
   "overrides": {
-    "serialize-javascript": "7.0.5"
+    "serialize-javascript": "7.0.5",
+    "uuid": "11.1.1"
   },
   "license": "MIT"
 }

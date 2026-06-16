@@ -85,7 +85,7 @@ The implementation PR closes:
 | D063 | Benchmark docs avoid claiming an independent benchmark corpus or leaderboard. |
 | D064 | Research falsification methods are not claimed as complete proof. |
 | D065 | Benchmark remains a docs page, not an executable benchmark suite claim. |
-| D066 | Package metadata includes Python and OS classifiers. |
+| D066 | Package metadata and README define Python/OS classifiers, runtime support, and native TA-Lib boundaries. |
 | D067 | `CONTRIBUTING.md` and developer docs define bootstrap and validation commands. |
 | D068 | Developer docs point to local bootstrap, tests, docs-site, changelog, and version surfaces. |
 | D069 | API docs remain manual; no generated API-reference claim is made. |
@@ -107,8 +107,8 @@ The implementation PR closes:
 | D085 | Repo-local `SECURITY.md` documents private disclosure. |
 | D086 | High-stakes public terms are bounded by research and proof language. |
 | D087 | Production mode docs are scoped to result path and manifest mode, not safety certification. |
-| D088 | Docs proof runs under tests; docs-site build/audit are required slice proof commands. |
-| D089 | Docs-site dependency posture is tracked through lockfile updates and high-audit proof. |
+| D088 | Docs-site build and tracked security audit now run as a PR check. |
+| D089 | Docs-site dependency posture is tracked through lockfile overrides and an allowlisted audit script. |
 | D090 | PyPI project links use hosted docs and package metadata instead of challenge-prone generic homepage. |
 | D091 | YAML schema docs state current schema/version compatibility instead of claiming JSON Schema publication. |
 | D092 | Markdown lint config exists. |

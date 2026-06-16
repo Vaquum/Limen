@@ -64,6 +64,8 @@ The first runnable path is a YAML manifest executed through the `limen` CLI.
 pip install vaquum-limen
 ```
 
+Supported runtime: Limen requires Python `>=3.10`; package metadata advertises Python 3.10-3.12 on macOS and Linux. TA-Lib is a native dependency, so install a platform wheel or system TA-Lib library first if `pip` cannot resolve it. Security support covers the latest released Limen version through [SECURITY.md](SECURITY.md).
+
 2. Scaffold a starter manifest:
 
 ```bash
@@ -95,7 +97,7 @@ That path runs the manifest-backed engine without Python orchestration code. The
 
 ## Risk Boundary
 
-Limen is research software. Benchmark and backtest outputs are not investment advice, trading advice, execution simulation, or a promise of future performance.
+Limen is research software. Benchmark and backtest outputs are not investment advice, trading advice, execution simulation, regulatory approval, or a promise of future performance. Past performance is not predictive, and trading digital assets can result in total loss of capital.
 
 ## Learn more
 

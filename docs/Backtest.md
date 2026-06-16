@@ -7,7 +7,7 @@ The layer answers one question: did the predictive structure retain economic val
 
 ## Risk boundary
 
-Backtest output is research evidence, not investment advice, trading advice, execution simulation, or a promise of future performance. Snapshot backtests do not model venue queues, latency, borrow, liquidation, funding, portfolio constraints, or live order execution.
+Backtest output is research evidence, not investment advice, trading advice, execution simulation, regulatory approval, or a promise of future performance. Past performance is not predictive, digital-asset trading can result in total loss of capital, and snapshot backtests do not model venue queues, latency, borrow, liquidation, funding, portfolio constraints, or live order execution.
 
 ## Entry points
 

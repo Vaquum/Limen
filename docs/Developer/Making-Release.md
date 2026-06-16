@@ -42,7 +42,7 @@ Release notes must be tied to local evidence before publication:
 - If the target tag already exists locally or remotely, the script skips release creation.
 - If the shared release guide cannot be fetched, release-note generation fails before tagging.
 - If credentials are missing, the script exits before calling the model or GitHub.
-- The script does not decide the version bump; use the shared semantic-versioning policy before running it.
+- The script does not decide the version bump; use the Limen-local [Semantic Versioning](../Semantic-Versioning.md) contract before running it.
 - LLM-generated prose is draft material until a maintainer checks it against the changelog, merge SHA, compare link, artifact hashes, and CI evidence.
 
 ## Read Next

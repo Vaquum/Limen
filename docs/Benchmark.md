@@ -6,11 +6,13 @@ It measures signal activity, positive-class accuracy, and true-positive versus f
 
 ## Risk boundary
 
-Benchmark output is research evidence, not investment advice, trading advice, or a promise of future performance. A benchmark table can show statistical structure without proving that a strategy survives live execution, fees, slippage, or portfolio constraints.
+Benchmark output is research evidence, not investment advice, trading advice, regulatory approval, or a promise of future performance. Past performance is not predictive, digital-asset trading can result in total loss of capital, and a benchmark table can show statistical structure without proving that a strategy survives live execution, fees, slippage, or portfolio constraints.
 
 ## Where benchmark lives
 
 Benchmark analytics are built on top of `Log`.
+
+This is an internal diagnostics surface, not an independent public benchmark suite. The repository does not publish a leaderboard, benchmark corpus, model card set, data card set, experiment card set, or reproducible benchmark report. It also does not claim walk-forward validation, purged cross-validation, embargoed evaluation, statistical acceptance gates, or formal research falsification proof. Treat those as separate research-governance work if a downstream program needs them.
 
 The main surfaces are:
 

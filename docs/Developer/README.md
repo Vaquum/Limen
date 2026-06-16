@@ -2,7 +2,7 @@
 
 This page routes Limen contribution work to the matching maintenance path before code, docs, or release metadata changes.
 
-For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). Release process and versioning guidance now also live there. The pages below cover Limen-specific contribution and maintenance rules that still belong in this repo.
+For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). Limen release and versioning contracts live in this repository.
 
 ## Read this first
 
@@ -20,8 +20,8 @@ Before opening or updating a Limen PR:
 | updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
 | adding a new foundational experiment template | [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md) | Covers research expectations, file ownership, and review criteria for foundational SFDs. |
-| preparing a release or checking release automation | [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md) | Uses the shared Vaquum release process that the Limen release script now fetches directly. |
-| deciding how to bump the version | [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md) | Uses the shared Vaquum versioning guidance rather than a repo-local copy. |
+| preparing a release or checking release automation | [Making a Release](Making-Release.md) | Defines the local evidence required before Limen release publication. |
+| deciding how to bump the version | [Semantic Versioning](../Semantic-Versioning.md) | Defines the Limen-local version surfaces and bump rules. |
 | assessing recorded known risk | [Technical Debt](../TechnicalDebt.md) | Tracks accepted debt, trigger conditions, and candidate remedies. |
 
 ## Contributor workflow
@@ -31,6 +31,33 @@ Before opening or updating a Limen PR:
 3. Run the relevant validation locally.
 4. Review the full GitHub diff before requesting review.
 5. Confirm the PR template items are true, not just checked.
+
+Canonical bootstrap:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+Canonical validation paths:
+
+```bash
+python -m tests.run
+python -m build
+ruff check .
+```
+
+Docs-site validation:
+
+```bash
+cd docs-site
+npm ci
+npm run check
+```
+
+Limen does not define a tox, nox, or Makefile contract; these direct commands are the authoritative local workflow.
 
 ## Test runtime budget
 
@@ -44,7 +71,7 @@ Before opening or updating a Limen PR:
 - `/docs` is the canonical public docs layer.
 - `/docs/Developer` is the canonical Limen contributor layer.
 - package `README`s under `/limen` are orientation pages, not the main contributor process docs.
-- release and versioning policy lives in the shared Vaquum developer docs; Limen pages record local release surfaces, automation inputs, and review notes.
+- release and versioning policy lives in this repository; shared Vaquum docs are background only.
 
 ## Read next
 
@@ -52,6 +79,6 @@ Before opening or updating a Limen PR:
 - [Pruning Strategies](Pruning-Strategies.md)
 - [Writing Docstrings](Writing-Docstrings.md)
 - [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)
-- [Making a Release](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md)
-- [Semantic Versioning](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)
+- [Making a Release](Making-Release.md)
+- [Semantic Versioning](../Semantic-Versioning.md)
 - [Technical Debt](../TechnicalDebt.md)
