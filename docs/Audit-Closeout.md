@@ -60,14 +60,14 @@ The implementation PR closes:
 | D038 | Committed manifest URI docs state short-prefix expansion and full `manifest_id` provenance. |
 | D039 | Trainer docs keep metric validation scoped to current artifact behavior. |
 | D040 | Trainer/Cohort docs frame sensor inference around trained artifact contracts. |
-| D041 | Trainer docs require valid `round_data.jsonl` artifacts for promotion. |
-| D042 | Cohort selector tests and docs cover Pareto selection boundaries. |
-| D043 | Cohort identity docs state current manifest/member-id scope. |
-| D044 | UEL docs treat `n_permutations` as current run count behavior, not an unbounded proof. |
-| D045 | Randomness claims are bounded to current search and template defaults. |
-| D046 | `include_if` docs reflect the current boolean-switch contract. |
-| D047 | Data helper docs disclose `split_data_to_prep_output()` mutation. |
-| D048 | Manifest docs keep underscore references scoped to available fitted params. |
+| D041 | Trainer rejects malformed `round_data.jsonl` instead of promoting from partial artifacts. |
+| D042 | `backtest_pareto` excludes non-finite selector metrics before ranking. |
+| D043 | Cohort identity now includes manifest, architecture, aggregation mode, and permutation IDs. |
+| D044 | YAML validation rejects invalid or over-budget `n_permutations` values. |
+| D045 | Legacy `ParamSpace` randomness is instance-local and seedable. |
+| D046 | `include_if` missing control keys are treated as false. |
+| D047 | `split_data_to_prep_output()` no longer mutates caller-owned split or column lists. |
+| D048 | Underscore parameter refs resolve only when available; otherwise they stay literal. |
 | D049 | Data-Bars docs remain scoped to supported bar types. |
 | D050 | Reference-architecture docs state backtest metrics require `price_data_for_backtest`. |
 | D051 | `safe_ovr_auc` docs now disclose probability-column alignment limits. |

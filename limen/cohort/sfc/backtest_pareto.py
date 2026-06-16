@@ -65,6 +65,9 @@ def select(context: dict[str, Any],
     for col in [*metric_cols, *guard_cols]:
         work[col] = pd.to_numeric(work[col], errors='coerce')
 
+    finite_metrics = np.isfinite(work[metric_cols].to_numpy(dtype=float)).all(axis=1)
+    work = work.loc[finite_metrics]
+
     if min_signals > 0 and 'num_trades_test' in work.columns:
         work = work.loc[work['num_trades_test'] >= min_signals]
     elif min_signals > 0 and {'confusion_tp', 'confusion_fp'} <= set(work.columns):

@@ -356,13 +356,12 @@ def test_trainer_rejects_malformed_yaml_reference() -> None:
             Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
 
 
-def test_load_round_data_skips_blank_and_malformed_lines() -> None:
+def test_load_round_data_skips_blank_lines_and_loads_valid_entries() -> None:
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir)
         (experiment_dir / 'round_data.jsonl').write_text(
             '\n'
             '{"round_id": 0, "round_params": {"alpha": 1}}\n'
-            'not-json\n'
             '{"round_id": 1, "round_params": {"alpha": 2}}\n'
         )
 
@@ -373,6 +372,49 @@ def test_load_round_data_skips_blank_and_malformed_lines() -> None:
 
     assert list(round_data) == ['0', '1']
     assert round_data['1']['round_params'] == {'alpha': 2}
+
+
+def test_load_round_data_rejects_malformed_jsonl() -> None:
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'round_data.jsonl').write_text(
+            '{"round_id": 0, "round_params": {}}\n'
+            'not-json\n'
+        )
+
+        trainer = object.__new__(Trainer)
+        trainer._experiment_dir = experiment_dir
+
+        with pytest.raises(ValueError, match='Malformed JSON in round_data.jsonl line 2'):
+            trainer._load_round_data()
+
+
+def test_load_round_data_rejects_missing_required_fields() -> None:
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'round_data.jsonl').write_text(
+            '{"round_id": 0}\n'
+        )
+
+        trainer = object.__new__(Trainer)
+        trainer._experiment_dir = experiment_dir
+
+        with pytest.raises(ValueError, match='requires round_id and round_params'):
+            trainer._load_round_data()
+
+
+def test_load_round_data_rejects_non_object_round_params() -> None:
+    with TemporaryDirectory() as tmpdir:
+        experiment_dir = Path(tmpdir)
+        (experiment_dir / 'round_data.jsonl').write_text(
+            '{"round_id": 0, "round_params": []}\n'
+        )
+
+        trainer = object.__new__(Trainer)
+        trainer._experiment_dir = experiment_dir
+
+        with pytest.raises(ValueError, match='round_params must be an object'):
+            trainer._load_round_data()
 
 
 def test_load_round_data_requires_round_data_file() -> None:

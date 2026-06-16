@@ -57,13 +57,13 @@ def test_docs_audit_public_contract_surfaces() -> None:
 
     metadata = _project_metadata()
     assert metadata['name'] == 'vaquum-limen'
-    assert metadata['version'] == '3.31.1'
+    assert metadata['version'] == '3.31.2'
     assert metadata['urls']['Homepage'] == 'https://docs.vaquum.fi/limen/'
     assert 'Operating System :: POSIX :: Linux' in metadata['classifiers']
     assert 'Programming Language :: Python :: 3.12' in metadata['classifiers']
 
     for template in (ROOT / 'limen' / 'yaml' / 'templates').glob('*.yaml'):
-        assert 'limen_version: "3.31.1"' in template.read_text(encoding='utf-8')
+        assert 'limen_version: "3.31.2"' in template.read_text(encoding='utf-8')
 
     manifest = _read('MANIFEST.in')
     for expected in ('recursive-include docs *.md', 'recursive-include .github', 'prune examples'):
@@ -110,7 +110,15 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'unambiguous short prefix' in docs_text
     assert 'metadata.json` records the full canonical `manifest_id`' in docs_text
     assert 'Metric validation is intersection-based' in docs_text
+    assert 'Trainer rejects malformed JSONL instead of skipping corrupt lines' in docs_text
     assert 'Sensor callers pass raw klines, not `x_test`' in docs_text
+    assert 'non-finite selector metrics are excluded' in docs_text
+    assert 'not a code-signing attestation' in docs_text
+    assert 'YAML validation rejects bool, zero, negative, and over-budget values' in docs_text
+    assert 'does not read or mutate Python\'s module-global random state' in docs_text
+    assert 'Missing control keys are treated as false' in docs_text
+    assert 'without mutating the passed split list or column list' in docs_text
+    assert 'resolve to fitted parameters only when that key is available' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:

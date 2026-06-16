@@ -3,6 +3,7 @@ import polars as pl
 
 from limen.data import HistoricalData
 from limen.experiment import MLManifest
+from limen.experiment.manifest_core import _resolve_params
 from limen.scalers.linear_scaler import LinearScaler
 from limen.scalers.robust_scaler import RobustScaler
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
@@ -36,6 +37,17 @@ def _prepare_data_with_manifest(manifest: MLManifest) -> dict:
     raw_data = manifest.fetch_test_data()
     round_params = {'bar_type': 'base'}
     return manifest.prepare_data(raw_data, round_params)
+
+
+def test_resolve_params_preserves_missing_underscore_literals() -> None:
+    resolved = _resolve_params({'label': '_literal'}, {})
+    assert resolved == {'label': '_literal'}
+
+
+def test_resolve_params_uses_available_underscore_values() -> None:
+    sentinel = object()
+    resolved = _resolve_params({'scaler': '_scaler'}, {'_scaler': sentinel})
+    assert resolved == {'scaler': sentinel}
 
 
 def _make_shifted_target_manifest() -> MLManifest:

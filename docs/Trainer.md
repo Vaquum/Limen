@@ -13,6 +13,8 @@ At minimum, the directory must contain:
 - `metadata.json`
 - `round_data.jsonl`
 
+Every nonblank `round_data.jsonl` line must be a valid JSON object with `round_id` and object-valued `round_params`. Trainer rejects malformed JSONL instead of skipping corrupt lines, so promotion cannot proceed from a partial artifact view.
+
 If `results.csv` is also present, Trainer validates retrained metrics against matching numeric columns in the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
 
 Metric validation is intersection-based: Trainer compares numeric, non-private metrics returned by retraining only when the same key exists in `results.csv`. Parameter columns, private artifact keys, non-numeric values, and metrics absent from the original log are skipped. A requested permutation ID missing from `results.csv` remains a validation failure.

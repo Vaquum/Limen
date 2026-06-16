@@ -81,6 +81,7 @@ from tests.test_yaml import test_validate_error_for_uel_prep_each_round_wrong_ty
 from tests.test_yaml import test_validate_warns_for_uel_experiment_dir
 from tests.test_yaml import test_validate_error_for_uel_feedback_interval_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_checkpoint_interval_wrong_type
+from tests.test_yaml import test_validate_error_for_uel_n_permutations_invalid_budget
 from tests.test_yaml import test_validate_error_for_manifest_ref_not_in_sfd_params
 from tests.test_yaml import test_validate_no_error_when_manifest_ref_is_in_sfd_params
 from tests.test_yaml import test_validate_no_unused_param_warning_for_pca_defaults
@@ -214,6 +215,7 @@ from tests.test_klines_data_maker_fields import test_klines_data_maker_fields
 from tests.test_large_param_space import test_large_param_space
 from tests.test_param_space import test_param_space_large_space_no_longer_overflows_and_is_reproducible
 from tests.test_param_space import test_param_space_large_space_sequences_match_for_both_generation_modes
+from tests.test_param_space import test_param_space_seed_does_not_mutate_global_random_state
 from tests.test_param_space import test_param_space_enumerates_full_space_and_returns_none_when_exhausted
 from tests.test_param_space import test_param_space_small_legacy_sequence_is_unchanged
 from tests.test_param_space import test_sample_range_exact_handles_edge_cases
@@ -533,6 +535,8 @@ from tests.test_reference_architecture import test_logreg_foundational_params_co
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
+from tests.test_manifest_prepare_data import test_resolve_params_preserves_missing_underscore_literals
+from tests.test_manifest_prepare_data import test_resolve_params_uses_available_underscore_values
 from tests.test_manifest_prepare_data import test_shifted_target_pipeline_keeps_price_rows_on_feature_bar
 from tests.test_manifest_prepare_data import test_logreg_manifest_keeps_price_rows_on_the_feature_bar
 from tests.test_manifest_prepare_data import test_override_split_config
@@ -752,7 +756,7 @@ from tests.test_feature_perturbation import test_feature_group_absent_includes_a
 from tests.test_feature_perturbation import test_combined_group_and_include_if
 from tests.test_feature_perturbation import test_include_if_true
 from tests.test_feature_perturbation import test_include_if_false
-from tests.test_feature_perturbation import test_include_if_key_missing_includes
+from tests.test_feature_perturbation import test_include_if_key_missing_excludes
 from tests.test_feature_perturbation import test_ablation_drops_correct_count
 from tests.test_feature_perturbation import test_ablation_deterministic_with_seed
 from tests.test_feature_perturbation import test_ablation_zero_drops_nothing
@@ -881,7 +885,10 @@ from tests.test_fractional_diff import test_fractional_diff_manifest_integration
 from tests.test_trainer import test_trainer_requires_yaml_reference
 from tests.test_trainer import test_trainer_rejects_non_dict_yaml_reference
 from tests.test_trainer import test_trainer_rejects_malformed_yaml_reference
-from tests.test_trainer import test_load_round_data_skips_blank_and_malformed_lines
+from tests.test_trainer import test_load_round_data_rejects_malformed_jsonl
+from tests.test_trainer import test_load_round_data_rejects_missing_required_fields
+from tests.test_trainer import test_load_round_data_rejects_non_object_round_params
+from tests.test_trainer import test_load_round_data_skips_blank_lines_and_loads_valid_entries
 from tests.test_trainer import test_load_round_data_requires_round_data_file
 from tests.test_trainer import test_load_original_log_returns_none_when_results_csv_is_missing
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
@@ -964,6 +971,7 @@ from tests.test_proto_cohort import test_set_members_rejects_missing_permutation
 from tests.test_proto_cohort import test_set_members_rejects_manifest_id_mismatch
 from tests.test_proto_cohort import test_cohort_id_computed_after_set_members
 from tests.test_proto_cohort import test_cohort_id_is_stable_across_calls
+from tests.test_proto_cohort import test_cohort_id_includes_architecture_and_aggregation_mode
 from tests.test_proto_cohort import test_manifest_id_set_from_metadata_at_construction
 from tests.test_proto_cohort import test_manifest_id_consistent_across_members
 from tests.test_proto_cohort import test_yaml_reference_lineage_stripped_from_metadata
@@ -1292,6 +1300,7 @@ tests = [
     test_param_space_enumerates_full_space_and_returns_none_when_exhausted,
     test_param_space_large_space_no_longer_overflows_and_is_reproducible,
     test_param_space_large_space_sequences_match_for_both_generation_modes,
+    test_param_space_seed_does_not_mutate_global_random_state,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
     test_trade_bars_basic,
@@ -1367,6 +1376,7 @@ tests = [
     test_validate_warns_for_uel_experiment_dir,
     test_validate_error_for_uel_feedback_interval_wrong_type,
     test_validate_error_for_uel_checkpoint_interval_wrong_type,
+    test_validate_error_for_uel_n_permutations_invalid_budget,
     test_validate_error_for_manifest_ref_not_in_sfd_params,
     test_validate_no_error_when_manifest_ref_is_in_sfd_params,
     test_validate_no_unused_param_warning_for_pca_defaults,
@@ -1546,6 +1556,8 @@ tests = [
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
+    test_resolve_params_preserves_missing_underscore_literals,
+    test_resolve_params_uses_available_underscore_values,
     test_shifted_target_pipeline_keeps_price_rows_on_feature_bar,
     test_logreg_manifest_keeps_price_rows_on_the_feature_bar,
     test_override_split_config,
@@ -1732,7 +1744,7 @@ tests = [
     test_combined_group_and_include_if,
     test_include_if_true,
     test_include_if_false,
-    test_include_if_key_missing_includes,
+    test_include_if_key_missing_excludes,
     test_ablation_drops_correct_count,
     test_ablation_deterministic_with_seed,
     test_ablation_zero_drops_nothing,
@@ -1876,7 +1888,10 @@ tests = [
     test_trainer_requires_yaml_reference,
     test_trainer_rejects_non_dict_yaml_reference,
     test_trainer_rejects_malformed_yaml_reference,
-    test_load_round_data_skips_blank_and_malformed_lines,
+    test_load_round_data_rejects_malformed_jsonl,
+    test_load_round_data_rejects_missing_required_fields,
+    test_load_round_data_rejects_non_object_round_params,
+    test_load_round_data_skips_blank_lines_and_loads_valid_entries,
     test_load_round_data_requires_round_data_file,
     test_load_original_log_returns_none_when_results_csv_is_missing,
     test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift,
@@ -1959,6 +1974,7 @@ tests = [
     test_set_members_rejects_manifest_id_mismatch,
     test_cohort_id_computed_after_set_members,
     test_cohort_id_is_stable_across_calls,
+    test_cohort_id_includes_architecture_and_aggregation_mode,
     test_manifest_id_set_from_metadata_at_construction,
     test_manifest_id_consistent_across_members,
     test_yaml_reference_lineage_stripped_from_metadata,

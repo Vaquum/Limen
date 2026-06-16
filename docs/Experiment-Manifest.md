@@ -33,7 +33,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "3.31.1"
+  limen_version: "3.31.2"
   mode: development
 
 sfd:
@@ -79,6 +79,8 @@ uel:
   prep_each_round: true
   output_format: csv
 ```
+
+`uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
 ## Manifest Types
 
@@ -384,7 +386,7 @@ If `round_params['feature_groups']` is present, only transforms whose group is i
 
 ### Conditional inclusion
 
-Use `include_if=` when a transform should only run if a boolean round parameter is true.
+Use `include_if=` when a transform should only run if a boolean round parameter is true. Missing control keys are treated as false.
 
 ```python-fragment
 .add_feature(vwap, include_if='use_vwap')
@@ -534,6 +536,8 @@ from limen.scalers import LogRegScaler
 The fitted scaler is stored in the resulting `data_dict` under `_scaler`.
 
 Pass `extra_params` to forward constructor arguments. String values are treated as sweep param references resolved from `round_params` at fit time; all other values are static:
+
+Underscore-prefixed strings, such as `_scaler`, resolve to fitted parameters only when that key is available in the current fitted-parameter map. Otherwise they remain literal strings.
 
 ```python-fragment
 # window swept as a param; min_samples fixed

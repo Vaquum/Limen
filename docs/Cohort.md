@@ -85,7 +85,9 @@ After construction and before `set_members()`:
 
 After `set_members()`:
 
-- `cohort.cohort_id` — `'sha256:<hex>'` derived from `manifest_id` and the sorted set of `permutation_ids`
+- `cohort.cohort_id` — `'sha256:<hex>'` derived from `manifest_id`, `architecture_id`, `aggregation_mode`, and the sorted set of `permutation_ids`
+
+`cohort_id` is a cohort binding identity, not a code-signing attestation. Thresholds and model choices encoded into a round are represented through the selected permutation IDs and manifest lineage; Python implementation semantics and external dependency behavior are outside the cohort hash.
 
 ## Selector contract
 
@@ -162,7 +164,9 @@ Cohort(
 ```
 
 `backtest_pareto` selects a trading-metric Pareto front from `results.csv`,
-using backtest return/risk columns and a signal-count guard.
+using backtest return/risk columns and a signal-count guard. Rows with missing,
+infinite, or otherwise non-finite selector metrics are excluded before the
+Pareto front is computed.
 
 ```python
 Cohort(

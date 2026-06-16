@@ -270,6 +270,7 @@ def test_split_data_to_prep_output_builds_expected_alignment_metadata() -> None:
         pl.DataFrame({'datetime': [5, 6], 'feat': [50, 60], 'target': [1, 0]}),
     ]
     cols = ['datetime', 'feat', 'target']
+    original_columns = [frame.columns for frame in split_data]
 
     result = split_data_to_prep_output(split_data, cols, all_datetimes=[1, 2, 3, 4, 5, 6])
 
@@ -279,6 +280,8 @@ def test_split_data_to_prep_output_builds_expected_alignment_metadata() -> None:
     assert result['_alignment']['missing_datetimes'] == [4]
     assert result['_alignment']['first_test_datetime'] == 5
     assert result['_alignment']['last_test_datetime'] == 6
+    assert [frame.columns for frame in split_data] == original_columns
+    assert cols == ['datetime', 'feat', 'target']
 
 
 def test_split_data_to_prep_output_requires_datetime_column() -> None:

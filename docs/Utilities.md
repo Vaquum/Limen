@@ -25,6 +25,7 @@ from limen.utils import ParamSpace
 ps = ParamSpace(
     {'alpha': [0.1, 0.2], 'beta': ['x', 'y'], 'gamma': [1, 2]},
     n_permutations=3,
+    seed=42,
 )
 ```
 
@@ -34,6 +35,8 @@ On a live local run in this repo, that parameter space had:
 - `n_permutations = 3`
 
 Then repeated `generate(random_search=False)` calls returned the remaining sampled combinations in order from the internal sampled pool, not from the full original grid.
+
+`ParamSpace` uses an instance-local random generator. Pass `seed=` for reproducible legacy sampling; it does not read or mutate Python's module-global random state. This legacy helper is outside the artifact-backed `round_params` reproducibility contract.
 
 Use `ParamSpace` only on the legacy UEL path. The advanced path uses [Advanced Search](Advanced-Search.md) primitives instead.
 
@@ -55,6 +58,8 @@ On a live local manifest-prepared `data_dict` in this repo, it converted:
 - `x_test` to shape `(884, 24)`
 
 This helper supports sklearn-style or numpy-first model code.
+
+`split_data_to_prep_output()` is the companion converter that builds `x_train`, `y_train`, `x_val`, `y_val`, `x_test`, and `y_test` from split frames without mutating the passed split list or column list.
 
 ## `adf_test`
 

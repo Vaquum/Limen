@@ -110,7 +110,7 @@ _MINIMAL_ML_YAML = dedent('''\
         n_jobs: [-1]
         l1_ratio: [null]
     uel:
-      n_permutations: 5
+      n_permutations: 4
       search_strategy:
         type: random
       output_format: csv
@@ -754,6 +754,15 @@ def test_validate_error_for_uel_checkpoint_interval_wrong_type() -> None:
         result = validate(yaml_dict)
         assert not result.valid, f'checkpoint_interval={value!r} should be invalid'
         assert any('checkpoint_interval' in e.path for e in result.errors)
+
+
+def test_validate_error_for_uel_n_permutations_invalid_budget() -> None:
+    for value in [True, 0, -1, 9]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['uel']['n_permutations'] = value
+        result = validate(yaml_dict)
+        assert not result.valid, f'n_permutations={value!r} should be invalid'
+        assert any('n_permutations' in e.path for e in result.errors)
 
 
 def test_validate_warns_for_uel_experiment_dir() -> None:

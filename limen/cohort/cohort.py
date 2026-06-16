@@ -231,7 +231,12 @@ class Cohort:
         self._members = [by_pid[pid] for pid in self.permutation_ids]
 
         payload = json.dumps(
-            {'manifest_id': self.manifest_id, 'permutation_ids': sorted(self.permutation_ids)},
+            {
+                'aggregation_mode': self.aggregation_mode,
+                'architecture_id': self.architecture_id,
+                'manifest_id': self.manifest_id,
+                'permutation_ids': sorted(self.permutation_ids),
+            },
             sort_keys=True,
         )
         self.cohort_id = f'{_SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'

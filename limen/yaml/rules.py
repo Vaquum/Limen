@@ -1095,6 +1095,30 @@ class UelSpec:
               _warnings: list[YAMLError]) -> None:
 
         uel = yaml_dict.get('uel') or {}
+        if 'n_permutations' in uel:
+            value = uel['n_permutations']
+            if not isinstance(value, int) or isinstance(value, bool):
+                errors.append(YAMLError(
+                    message=f"'uel.n_permutations' must be an int (got {type(value).__name__})",
+                    path='uel.n_permutations',
+                ))
+            elif value <= 0:
+                errors.append(YAMLError(
+                    message=f"'uel.n_permutations' must be a positive integer (got {value})",
+                    path='uel.n_permutations',
+                ))
+            else:
+                params = (yaml_dict.get('sfd') or {}).get('params') or {}
+                if isinstance(params, dict) and all(isinstance(v, list) for v in params.values()):
+                    total = math.prod(len(v) for v in params.values())
+                    if total > 0 and value > total:
+                        errors.append(YAMLError(
+                            message=(
+                                f"'uel.n_permutations' ({value}) cannot exceed "
+                                f"the available parameter space ({total})"
+                            ),
+                            path='uel.n_permutations',
+                        ))
         for field, expected, suggestion in _UEL_TYPE_CHECKS:
             if field not in uel:
                 continue

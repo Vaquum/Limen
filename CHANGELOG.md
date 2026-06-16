@@ -1151,3 +1151,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add recognized contribution, security, support, citation, notice, third-party, maintainer, funding, and issue-intake surfaces.
 - Update package metadata, artifact inclusion, docs-site dependencies, and public docs proof gates.
 - Bound public benchmark/backtest/trading claims to research use and add explicit risk language.
+
+## v3.31.2 on 16th of June, 2026
+
+- Tighten audit-closeout contracts for trainer artifacts, cohort identity, selector metric finiteness, YAML run budgets, legacy ParamSpace seeding, conditional transforms, split-output conversion, and underscore parameter resolution.

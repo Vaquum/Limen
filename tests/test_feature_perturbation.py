@@ -154,10 +154,10 @@ def test_include_if_false():
     assert 'roc' not in data['_feature_names']
 
 
-def test_include_if_key_missing_includes():
+def test_include_if_key_missing_excludes():
 
     data = _prepare(_make_manifest_with_include_if(), {})
-    assert 'roc' in data['_feature_names']
+    assert 'roc' not in data['_feature_names']
 
 
 def test_ablation_drops_correct_count():
