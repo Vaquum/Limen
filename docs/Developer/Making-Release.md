@@ -1,16 +1,10 @@
 # Making a Release
 
-The full release process now lives in the shared Vaquum developer docs.
-
-Use the current guide here:
-
-- [Making a Release in Vaquum Developer Docs](https://github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md)
-
-Limen's release automation fetches that shared guide directly when it generates release notes, so the external page is the canonical source.
+This page is the Limen-local release contract. Shared Vaquum release docs may provide organization-wide background, but Limen release evidence must be reproducible from this repository.
 
 ## Limen Local Scope
 
-This page is the Limen-local pointer, not a fork of the shared release process. Keep the actual release procedure in the Vaquum developer docs unless a step is specific to this repository.
+Keep shared process references as background only. The local surfaces below are the authoritative Limen release inputs.
 
 Limen-local release surfaces:
 
@@ -35,12 +29,21 @@ Limen-local release surfaces:
 
 The script creates a tag with the `v<version>` shape and uses GitHub release notes generated from the shared release guide plus git history since the latest tag.
 
+Release notes must be tied to local evidence before publication:
+
+- `CHANGELOG.md` entry for the version
+- release PR number and merge SHA
+- compare link from previous tag to new tag
+- built artifact names and hashes
+- CI run links for tests, package build, docs-site build, and docs-site audit where applicable
+
 ## Failure Notes
 
 - If the target tag already exists locally or remotely, the script skips release creation.
 - If the shared release guide cannot be fetched, release-note generation fails before tagging.
 - If credentials are missing, the script exits before calling the model or GitHub.
 - The script does not decide the version bump; use the shared semantic-versioning policy before running it.
+- LLM-generated prose is draft material until a maintainer checks it against the changelog, merge SHA, compare link, artifact hashes, and CI evidence.
 
 ## Read Next
 

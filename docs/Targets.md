@@ -61,7 +61,7 @@ QuantileBinaryTarget(train_data, target_name, source_column, quantile)
 
 Fits a quantile cutoff on the training split. Labels a bar as positive if the source column exceeds the `(1 - quantile)` quantile of the training distribution.
 
-```python
+```python-fragment
 .with_target_label(
     'quantile_flag',
     QuantileBinaryTarget,
@@ -84,7 +84,7 @@ TradelineLongBinaryTarget(train_data, target_name, max_duration_hours, min_heigh
 
 Fits the breakout threshold on the training split: detects price lines on `close` (`limen.utils.find_price_lines`) and stores the `long_threshold_percentile` percentile of long-line heights. Raises when the training split yields no long lines. The transform labels a bar `1` when the maximum close over `[t, t + lookahead_hours]` reaches the threshold AND the point return at `+confirmation_hours` or at `+lookahead_hours` also exceeds it — the move must stick, not just spike. Rows without a full forward window become null and fall to the pipeline's `drop_nulls`.
 
-```python
+```python-fragment
 .with_target_label(
     'tradeline_long',
     TradelineLongBinaryTarget,
@@ -109,7 +109,7 @@ ThresholdBinaryTarget(train_data, target_name, source_column, threshold)
 
 Labels a bar as positive if the source column exceeds a fixed threshold. No fitting step — the threshold is specified directly.
 
-```python
+```python-fragment
 .with_target_label(
     'above_zero',
     ThresholdBinaryTarget,
@@ -132,7 +132,7 @@ ForwardBreakoutTarget(train_data, target_name)
 
 Labels a bar as positive if the close price rises by at least `threshold` over the next `forward_periods` bars. No fitting step.
 
-```python
+```python-fragment
 .with_target_label(
     'breakout',
     ForwardBreakoutTarget,
@@ -154,7 +154,7 @@ EmaBreakoutTarget(train_data, target_name)
 
 Labels a bar as positive if the price `breakout_horizon` bars ahead exceeds the EMA of `target_col` by at least `breakout_delta`. No fitting step.
 
-```python
+```python-fragment
 .with_target_label(
     'breakout_ema',
     EmaBreakoutTarget,
@@ -177,7 +177,7 @@ NextReturnTarget(train_data, target_name)
 
 Produces a continuous target as the percentage return over the next N bars. Use with regression architectures such as `xgboost_regressor`. No fitting step.
 
-```python
+```python-fragment
 .with_target_label(
     'next_return',
     NextReturnTarget,
@@ -198,7 +198,7 @@ NextBarUpTarget(train_data, target_name)
 
 Produces a binary target named `next_bar_up`: `1` when the next close is higher than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by manifest preparation.
 
-```python
+```python-fragment
 .with_target_label('next_bar_up', NextBarUpTarget)
 ```
 
@@ -212,7 +212,7 @@ NextBarDownTarget(train_data, target_name)
 
 Produces a binary target named `next_bar_down`: `1` when the next close is lower than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by manifest preparation.
 
-```python
+```python-fragment
 .with_target_label('next_bar_down', NextBarDownTarget)
 ```
 
@@ -228,7 +228,7 @@ Produces a continuous target named `vol_normalized_return`. The target is `log(c
 
 Dirty OHLC rows are dropped before target construction when `high < max(open, close)` or `low > min(open, close)`. Zero volatility is converted to null, not epsilon.
 
-```python
+```python-fragment
 .with_target_label(
     'vol_normalized_return',
     VolNormalizedReturnTarget,
@@ -255,7 +255,7 @@ ForwardVolNormalizedReturnTarget(train_data, target_name, periods=1, absolute=Fa
 
 Produces a continuous predictive label as `log(close.shift(-periods) / close) / sigma`, where `sigma` is the current EWMA Parkinson volatility. Set `absolute=True` to normalize absolute forward movement instead of signed direction.
 
-```python
+```python-fragment
 .with_target_label(
     'forward_vol_normalized_return',
     ForwardVolNormalizedReturnTarget,
@@ -288,7 +288,7 @@ The horizontal barriers are volatility multiples — `+upper_multiple * sigma` a
 
 A bar is null during the volatility warmup (`min_periods`), when its volatility is zero, and when the vertical barrier would extend past the available data and no barrier is touched within the truncated window. Manifest preparation drops null target rows. Size `min_periods` (and `span`) against the smallest split: a split shorter than the volatility warmup is entirely null and is dropped, leaving no labelled rows for that split.
 
-```python
+```python-fragment
 .with_target_label(
     'triple_barrier',
     TripleBarrierTarget,
@@ -313,7 +313,7 @@ RiskRewardRatioTarget(train_data, target_name)
 
 Computes `capturable_breakout / (|max_drawdown| + 0.001)` per row. Expects both columns to be available on every split. No fitting step.
 
-```python
+```python-fragment
 .with_target_label('rr_ratio', RiskRewardRatioTarget)
 ```
 
@@ -327,7 +327,7 @@ ExitQualityTarget(train_data, target_name)
 
 Scores closed trades as high, low, or medium based on `exit_reason` and `exit_net_return`. Expects both columns to be available on every split. No fitting step.
 
-```python
+```python-fragment
 .with_target_label(
     'exit_quality',
     ExitQualityTarget,
@@ -349,7 +349,7 @@ RandomBinaryTarget(train_data, target_name)
 
 Produces uniformly random binary labels. No fitting step. Use as a noise benchmark to verify that a trained model outperforms chance.
 
-```python
+```python-fragment
 .with_target_label('outcome', RandomBinaryTarget)
 ```
 
@@ -363,7 +363,7 @@ IdentityTarget(train_data, target_name)
 
 For when the target column is already present in the data. Validates that the column exists on the training split and on every subsequent split. The data is returned unchanged; no new column is added.
 
-```python
+```python-fragment
 .with_target_label('label', IdentityTarget)
 ```
 

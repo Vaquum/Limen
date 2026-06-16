@@ -4,6 +4,10 @@ In Limen, benchmark is the prediction-quality layer between the raw experiment l
 
 It measures signal activity, positive-class accuracy, and true-positive versus false-positive outcome separation. Benchmark comes before PnL compression so prediction quality remains visible before a trading rule is applied.
 
+## Risk boundary
+
+Benchmark output is research evidence, not investment advice, trading advice, or a promise of future performance. A benchmark table can show statistical structure without proving that a strategy survives live execution, fees, slippage, or portfolio constraints.
+
 ## Where benchmark lives
 
 Benchmark analytics are built on top of `Log`.

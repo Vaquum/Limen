@@ -190,11 +190,11 @@ class UniversalExperimentLoop:
         if self.manifest is not None:
             if prep is not None or model is not None:
                 raise ValueError(
-                    'UniversalExperimentLoop Cannot override prep/model when SFM has manifest.'
+                    'UniversalExperimentLoop Cannot override prep/model when SFD has manifest.'
                 )
             if not prep_each_round:
                 raise ValueError(
-                    'UniversalExperimentLoop prep_each_round must be True for manifest-driven SFMs.'
+                    'UniversalExperimentLoop prep_each_round must be True for manifest-driven SFDs.'
                 )
 
         if params is not None:
@@ -973,7 +973,7 @@ class UniversalExperimentLoop:
     def _get_limen_version() -> str:
 
         try:
-            return importlib.metadata.version('vaquum_limen')
+            return importlib.metadata.version('vaquum-limen')
         except importlib.metadata.PackageNotFoundError:
             return 'dev'
 

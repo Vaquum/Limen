@@ -28,7 +28,7 @@ def cli() -> None:
     \b
     Quick start:
       limen validate experiment.yaml       Check your YAML for errors
-      limen profile experiment.yaml        Profile permutation space and runtime
+      limen profile experiment.yaml        Profile permutation space
       limen run experiment.yaml            Run the experiment
       limen run --dry-run experiment.yaml  Validate + compile only, no execution
 
@@ -52,8 +52,9 @@ def cli() -> None:
         output_format: csv         # csv | parquet
 
     \b
-    Templates are in limen/yaml/templates/:
-      logreg_binary.yaml           Logistic regression binary classifier
+    \b
+    Template discovery:
+      limen list-templates
     '''
 
 
@@ -82,9 +83,9 @@ def commit(yaml_file: Path, parent: str | None, message: str | None) -> None:
 
     \b
     Examples:
-      limen commit manifests/examples/logreg_binary.yaml
-      limen commit manifests/examples/logreg_binary.yaml --message "tuned lookback"
-      limen commit manifests/examples/logreg_binary.yaml --parent sha256:abc123...
+      limen commit manifests/logreg-first.yaml
+      limen commit manifests/logreg-first.yaml --message "tuned lookback"
+      limen commit manifests/logreg-first.yaml --parent sha256:abc123...
     '''
 
     ok = run_commit(yaml_file, parent, message)
@@ -156,10 +157,10 @@ def profile_cmd(yaml_file: Path) -> None:
       - Per-parameter value counts
 
     \b
-    Computed when test_data_source is configured:
-      - Average time per permutation (covering array sampling)
-      - Estimated total runtime across the full permutation space
-      - Errors encountered during sampling (small data, NaN, class imbalance)
+    Runtime sampling:
+      Validated CLI YAML rejects test_data_source, so runtime sampling is
+      skipped for ordinary CLI manifests. Static permutation-space profiling
+      still runs.
 
     \b
     Exits 0 on success, 1 on validation or compilation failure.
@@ -198,8 +199,8 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
 
     \b
     Mode behaviour is controlled by metadata.mode in the YAML:
-      development    Uses test data (HuggingFace), small dataset
-      production     Uses live data source configured in the manifest
+      development    Writes under ./results/dev/
+      production     Writes under ./results/
 
     \b
     Output:

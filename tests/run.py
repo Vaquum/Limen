@@ -414,6 +414,9 @@ from tests.test_runtime_tracking import test_runtime_gate_fails_when_profile_exc
 from tests.test_runtime_tracking import test_write_runtime_summary_appends_to_existing_summary_file
 from tests.test_run_registration import test_every_test_function_is_registered_in_run
 from tests.test_run_registration import test_pytest_only_allowlist_is_current
+from tests.test_docs_surface import test_docs_audit_public_contract_surfaces
+from tests.test_docs_surface import test_examples_notebook_surface_removed
+from tests.test_docs_surface import test_python_code_fences_are_parseable
 from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
@@ -2071,6 +2074,9 @@ tests = [
     test_diverse_metrics_selector_single_cluster_medoid_and_score_topup,
     test_every_test_function_is_registered_in_run,
     test_pytest_only_allowlist_is_current,
+    test_examples_notebook_surface_removed,
+    test_docs_audit_public_contract_surfaces,
+    test_python_code_fences_are_parseable,
 ]
 
 # Configure logging

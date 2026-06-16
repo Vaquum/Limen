@@ -29,7 +29,7 @@ const config = {
   organizationName: 'Vaquum',
   projectName: 'Limen',
   themes: [],
-  stylesheets: ['https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css'],
+  stylesheets: ['https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css'],
   plugins: [
     [
       require.resolve('@easyops-cn/docusaurus-search-local'),

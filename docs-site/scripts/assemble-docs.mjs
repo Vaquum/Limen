@@ -257,6 +257,12 @@ const docs = [
     sidebarPosition: 8,
   },
   {
+    source: 'docs/Audit-Closeout.md',
+    dest: 'developer/audit-closeout.md',
+    slug: '/developer/audit-closeout',
+    sidebarPosition: 9,
+  },
+  {
     source: 'limen/data/README.md',
     dest: 'packages/data.md',
     slug: '/packages/data',

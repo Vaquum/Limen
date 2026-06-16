@@ -5,6 +5,10 @@ Backtest is Limen's trading-economics ledger. It converts binary prediction outp
 
 The layer answers one question: did the predictive structure retain economic value under the declared execution contract?
 
+## Risk boundary
+
+Backtest output is research evidence, not investment advice, trading advice, execution simulation, or a promise of future performance. Snapshot backtests do not model venue queues, latency, borrow, liquidation, funding, portfolio constraints, or live order execution.
+
 ## Entry points
 
 Table 1. Backtest is exposed through three paths.

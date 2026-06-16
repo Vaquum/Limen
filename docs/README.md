@@ -52,7 +52,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 2. Read the docs contract in [Documentation System](Developer/Documentation-System.md)
 3. Use [Pruning Strategies](Developer/Pruning-Strategies.md) for reducer work
 4. Use [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md) for SFD work
-5. Use [Technical Debt](TechnicalDebt.md) when assessing recorded known-risk items
+5. Use [Technical Debt](TechnicalDebt.md) and [Audit Closeout](Audit-Closeout.md) when assessing recorded known-risk or audit-closeout items
 6. Use [Making Release](Developer/Making-Release.md) and [Semantic Versioning](Semantic-Versioning.md) for maintenance work
 
 ## How Limen flows
@@ -72,7 +72,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md)
 - `Guides`: [Command Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
 - `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
-- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md), [Technical Debt](TechnicalDebt.md)
+- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md), [Technical Debt](TechnicalDebt.md), [Audit Closeout](Audit-Closeout.md)
 - `Packages`: package `README`s under `/limen` for `data`, `experiment`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`
 
 ## Product boundary

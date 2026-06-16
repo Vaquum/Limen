@@ -76,6 +76,8 @@ It combines:
 
 The matching YAML template is `limen/yaml/templates/lightgbm_binary.yaml` (`limen init my_experiment.yaml --template lightgbm_binary`).
 
+This SFD is a research template. The `active_lines` and `active_quantile_count` outputs inherited from the line-context feature family are not live-computable; use the end-event line features for causal inference surfaces.
+
 ## `random_binary`
 
 `random_binary` is the baseline binary classifier. It is stochastic and intended for control runs, smoke tests, and low-skill comparison points.
@@ -102,7 +104,7 @@ It requires `xgboost`.
 
 ## `tabpfn_binary`
 
-`tabpfn_binary` is an optional packaged SFD. It only becomes available when `tabpfn` is installed.
+`tabpfn_binary` is an optional packaged SFD. It only becomes available when `tabpfn` is installed through the `tabpfn` extra. That dependency is intentionally outside the base install because it is materially larger than the default sklearn/LightGBM path.
 
 It uses `CalibrationBuilder` with the same probability calibration and threshold optimisation wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.
 
