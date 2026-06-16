@@ -104,7 +104,9 @@ On a live local `LogRegBinary` evaluation in this repo, that plain result includ
 With `inline_metrics=True`, `evaluate()` adds:
 
 - `confusion_*` metrics
-- `backtest_*` metrics when `price_data_for_backtest` is present
+- `confusion_*_mean_return_pct` and `backtest_*` metrics when `price_data_for_backtest` is present
+
+When `price_data_for_backtest` is absent, default inline evaluation still returns task metrics and confusion counts; price-derived confusion-return and backtest metrics are skipped.
 
 On that same live local run, `LogRegBinary.evaluate(data, inline_metrics=True)` added keys such as:
 

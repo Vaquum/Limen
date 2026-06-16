@@ -119,6 +119,10 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'Missing control keys are treated as false' in docs_text
     assert 'without mutating the passed split list or column list' in docs_text
     assert 'resolve to fitted parameters only when that key is available' in docs_text
+    assert 'Unknown `bar_type` values raise `ValueError`' in docs_text
+    assert 'price-derived confusion-return and backtest metrics are skipped' in docs_text
+    assert 'If columns cannot be aligned safely, the helper returns `NaN`' in docs_text
+    assert 'Threshold grids are caller-owned inputs' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:

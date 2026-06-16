@@ -114,6 +114,18 @@ def test_logreg_train_evaluate_end_to_end():
     assert '_preds' in results
 
 
+def test_logreg_inline_metrics_without_price_data_keeps_confusion_counts():
+
+    data = _make_data(binary=True, with_price=False)
+    model = LogRegBinary().train(data, solver='lbfgs', max_iter=200)
+    results = model.evaluate(data)
+
+    for key in ['confusion_tp', 'confusion_fp', 'confusion_tn', 'confusion_fn']:
+        assert key in results
+    assert not any(key.startswith('backtest_') for key in results)
+    assert 'confusion_tp_mean_return_pct' not in results
+
+
 def test_logreg_wrapper_exposes_sklearn_constructor_params():
 
     sklearn_params = set(inspect.signature(LogisticRegression).parameters)

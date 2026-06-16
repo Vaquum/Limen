@@ -126,7 +126,7 @@ It currently supports these `bar_type` values:
 - `volume`
 - `liquidity`
 
-`base` returns the input data unchanged. The other values dispatch to the corresponding threshold-bar function and require the matching threshold parameter.
+`base` returns the input data unchanged. The other values dispatch to the corresponding threshold-bar function and require the matching threshold parameter. Unknown `bar_type` values raise `ValueError`; they are not silently treated as `base`.
 
 ## How bars fit into the manifest pipeline
 

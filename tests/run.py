@@ -226,7 +226,7 @@ from tests.test_param_space import test_sample_range_exact_skips_small_range_fal
 from tests.test_bars import test_volume_bars_basic
 from tests.test_bars import test_trade_bars_basic
 from tests.test_bars import test_liquidity_bars_basic
-from tests.test_bars import test_compute_data_bars_base_and_unknown_modes_return_input_unchanged
+from tests.test_bars import test_compute_data_bars_base_returns_input_unchanged_and_unknown_raises
 from tests.test_bars import test_compute_data_bars_dispatches_to_specific_bar_builders
 from tests.test_bars import test_compute_data_bars_requires_threshold_for_selected_bar_type
 from tests.test_manifest_pre_split_random_selector import test_pre_split_random_selector
@@ -504,6 +504,7 @@ from tests.test_budget_reducer import test_worst_first_maximize_false
 from tests.test_reference_architecture import test_xgboost_train_returns_fitted_model
 from tests.test_reference_architecture import test_xgboost_evaluate_returns_all_metric_types
 from tests.test_reference_architecture import test_logreg_train_evaluate_end_to_end
+from tests.test_reference_architecture import test_logreg_inline_metrics_without_price_data_keeps_confusion_counts
 from tests.test_reference_architecture import test_random_binary_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_lightgbm_binary_function_returns_metrics_and_model
 from tests.test_reference_architecture import test_lightgbm_binary_with_calibration_config
@@ -590,6 +591,8 @@ from tests.test_metrics_and_log_helpers import test_long_flat_strategy_rejects_n
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_notional_rate_scales_returns_not_structure
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_invalid_notional_rate
 from tests.test_metrics_and_log_helpers import test_no_legacy_backtest_column_names
+from tests.test_metrics_and_log_helpers import test_safe_ovr_auc_returns_nan_when_probability_columns_cannot_align
+from tests.test_metrics_and_log_helpers import test_safe_ovr_auc_uses_label_columns_when_absent_class_columns_remain
 from tests.test_metrics_and_log_helpers import test_completed_bar_signal_proves_next_bar_alignment
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_empty_input
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_inconsistent_price_change
@@ -738,6 +741,7 @@ from tests.test_calibration import test_sklearn_probability_calibrator_no_future
 from tests.test_calibration import test_grid_threshold_optimizer_picks_best_balanced_threshold
 from tests.test_calibration import test_grid_threshold_optimizer_returns_default_when_all_thresholds_predict_zero
 from tests.test_calibration import test_grid_threshold_optimizer_returns_bounded_threshold
+from tests.test_calibration import test_grid_threshold_optimizer_rejects_malformed_grids
 from tests.test_calibration import test_calibration_config_resolve_substitutes_string_params
 from tests.test_calibration import test_calibration_builder_done_raises_without_any_func
 from tests.test_calibration import test_run_model_raises_when_arch_cannot_accept_calibration_config
@@ -1305,7 +1309,7 @@ tests = [
     test_volume_bars_basic,
     test_trade_bars_basic,
     test_liquidity_bars_basic,
-    test_compute_data_bars_base_and_unknown_modes_return_input_unchanged,
+    test_compute_data_bars_base_returns_input_unchanged_and_unknown_raises,
     test_compute_data_bars_dispatches_to_specific_bar_builders,
     test_compute_data_bars_requires_threshold_for_selected_bar_type,
     test_pre_split_random_selector,
@@ -1529,6 +1533,7 @@ tests = [
     test_xgboost_train_returns_fitted_model,
     test_xgboost_evaluate_returns_all_metric_types,
     test_logreg_train_evaluate_end_to_end,
+    test_logreg_inline_metrics_without_price_data_keeps_confusion_counts,
     test_random_binary_train_evaluate_end_to_end,
     test_lightgbm_binary_function_returns_metrics_and_model,
     test_lightgbm_binary_with_calibration_config,
@@ -1585,6 +1590,8 @@ tests = [
     test_backtest_snapshot_notional_rate_scales_returns_not_structure,
     test_backtest_snapshot_rejects_invalid_notional_rate,
     test_no_legacy_backtest_column_names,
+    test_safe_ovr_auc_returns_nan_when_probability_columns_cannot_align,
+    test_safe_ovr_auc_uses_label_columns_when_absent_class_columns_remain,
     test_completed_bar_signal_proves_next_bar_alignment,
     test_backtest_snapshot_rejects_empty_input,
     test_backtest_snapshot_rejects_inconsistent_price_change,
@@ -1726,6 +1733,7 @@ tests = [
     test_grid_threshold_optimizer_picks_best_balanced_threshold,
     test_grid_threshold_optimizer_returns_default_when_all_thresholds_predict_zero,
     test_grid_threshold_optimizer_returns_bounded_threshold,
+    test_grid_threshold_optimizer_rejects_malformed_grids,
     test_calibration_config_resolve_substitutes_string_params,
     test_calibration_builder_done_raises_without_any_func,
     test_run_model_raises_when_arch_cannot_accept_calibration_config,

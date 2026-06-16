@@ -72,6 +72,24 @@ def test_grid_threshold_optimizer_returns_bounded_threshold() -> None:
     assert 0.20 <= threshold <= 0.70
 
 
+def test_grid_threshold_optimizer_rejects_malformed_grids() -> None:
+    invalid_param_sets = [
+        {'threshold_step': 0.0},
+        {'threshold_step': -0.1},
+        {'threshold_step': float('nan')},
+        {'threshold_min': float('inf')},
+        {'threshold_min': 0.8, 'threshold_max': 0.2},
+        {'threshold_min': True},
+    ]
+    for threshold_params in invalid_param_sets:
+        with pytest.raises(ValueError):
+            grid_threshold_optimizer(
+                np.asarray([0, 1, 1, 0], dtype=np.int8),
+                np.asarray([0.2, 0.8, 0.52, 0.45]),
+                **threshold_params,
+            )
+
+
 def test_calibration_config_resolve_substitutes_string_params() -> None:
     config = CalibrationConfig(
         calibration_func=sklearn_probability_calibrator,
