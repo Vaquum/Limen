@@ -1244,6 +1244,15 @@ def test_all_templates_have_valid_limen_version() -> None:
         assert isinstance(version, str) and _SEMVER_RE.match(version), (
             f'{path.name}: metadata.limen_version missing or invalid: {version!r}'
         )
+        total_permutations = 1
+        for values in yaml_dict.get('sfd', {}).get('params', {}).values():
+            total_permutations *= len(list(values))
+        assert total_permutations <= 10_000, (
+            f'{path.name}: onboarding profile is too large: {total_permutations}'
+        )
+        assert yaml_dict.get('uel', {}).get('n_permutations') <= 12, (
+            f'{path.name}: onboarding run budget is too large'
+        )
 
 
 def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:

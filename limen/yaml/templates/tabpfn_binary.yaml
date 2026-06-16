@@ -96,29 +96,29 @@ sfd:
 
   params:
     # target
-    forward_periods: [2, 4, 6, 8, 12, 24]
-    threshold_pct: [0.005, 0.0075, 0.01, 0.015, 0.02, 0.03]
+    forward_periods: [4, 8]
+    threshold_pct: [0.01, 0.02]
     # indicators
-    rsi_period: [7, 14, 21]
-    bb_window: [10, 20, 30]
-    bb_std: [1.5, 2.0, 2.5]
+    rsi_period: [14]
+    bb_window: [20]
+    bb_std: [2.0]
     # feature perturbation
-    feature_groups: [all, momentum, volatility, "momentum|volatility"]
+    feature_groups: [all, "momentum|volatility"]
     feature_drop_count: [0]
     feature_drop_seed: [42]
     # calibration
-    use_calibration: [true, false]
+    use_calibration: [true]
     use_threshold: [true, false]
-    cal_method: [isotonic, sigmoid]
-    threshold_min: [0.20, 0.25, 0.30]
-    threshold_max: [0.60, 0.65, 0.70]
+    cal_method: [sigmoid]
+    threshold_min: [0.25]
+    threshold_max: [0.65]
     threshold_step: [0.05]
     # model
-    n_ensemble_configurations: [4, 8, 16]
+    n_ensemble_configurations: [4, 8]
     device: [cpu]
 
 uel:
-  n_permutations: 50
+  n_permutations: 12
   search_strategy:
     type: random
   prep_each_round: true

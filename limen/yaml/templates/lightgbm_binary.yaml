@@ -112,48 +112,48 @@ sfd:
 
   params:
     # line geometry
-    max_duration_hours: [24, 48, 72, 96]
-    min_height_pct: [0.001, 0.002, 0.003, 0.004, 0.005]
-    quantile_threshold: [0.60, 0.70, 0.75, 0.80, 0.85]
+    max_duration_hours: [48]
+    min_height_pct: [0.002]
+    quantile_threshold: [0.70, 0.80]
     # label
-    long_threshold_percentile: [65, 75, 85]
-    lookahead_hours: [24, 48, 72]
+    long_threshold_percentile: [75]
+    lookahead_hours: [24, 48]
     confirmation_hours: [24]
     # context features
-    ret_period: [1, 6, 12, 24, 48]
+    ret_period: [6, 24]
     # view perturbation
-    scaler_type: [robust, rank_gauss, logreg]
+    scaler_type: [robust, rank_gauss]
     # feature perturbation
-    feature_groups: [all, lines, "lines|momentum", "lines|volatility", "momentum|volatility|position"]
+    feature_groups: [all, lines]
     feature_drop_count: [0]
     feature_drop_seed: [42]
     # calibration
-    use_calibration: [true, false]
+    use_calibration: [true]
     use_threshold: [true, false]
-    cal_method: [isotonic, sigmoid]
-    threshold_min: [0.30, 0.45]
-    threshold_max: [0.65, 0.80]
+    cal_method: [sigmoid]
+    threshold_min: [0.45]
+    threshold_max: [0.80]
     threshold_step: [0.05]
     # backtest economics
-    fee_bps: [1.0, 5.0, 10.0]
-    slip_bps: [2.0, 5.0]
+    fee_bps: [1.0, 5.0]
+    slip_bps: [2.0]
     # classifier
     objective: [null]
     boosting_type: [gbdt]
-    num_leaves: [31, 63, 127]
+    num_leaves: [31, 63]
     max_depth: [-1]
-    learning_rate: [0.05, 0.1]
-    n_estimators: [100, 300, 500]
+    learning_rate: [0.05]
+    n_estimators: [100, 300]
     subsample_for_bin: [200000]
     min_split_gain: [0.0]
     min_child_weight: [0.001]
     min_child_samples: [10, 20]
-    subsample: [0.8, 0.9, 1.0]
-    subsample_freq: [0, 5]
-    colsample_bytree: [0.8, 0.9, 1.0]
-    reg_alpha: [0.0, 0.1]
-    reg_lambda: [0.0, 0.1]
-    class_weight: [balanced, null]
+    subsample: [0.8, 1.0]
+    subsample_freq: [0]
+    colsample_bytree: [0.8, 1.0]
+    reg_alpha: [0.0]
+    reg_lambda: [0.0]
+    class_weight: [balanced]
     random_state: [42]
     n_jobs: [null]
     importance_type: [split]
@@ -163,7 +163,7 @@ sfd:
     verbosity: [-1]
 
 uel:
-  n_permutations: 50
+  n_permutations: 12
   search_strategy:
     type: random
   prep_each_round: true

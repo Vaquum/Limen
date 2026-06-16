@@ -53,7 +53,7 @@ The implementation PR closes:
 | D031 | `limen new` next steps avoid stale project-template example paths. |
 | D032 | All bundled templates carry current `metadata.limen_version`. |
 | D033 | TabPFN docs disclose optional install and non-base dependency state. |
-| D034 | Template polish is bounded by current template metadata and docs. |
+| D034 | Template polish is bounded by current metadata, non-extreme profile totals, and 12-permutation run budgets. |
 | D035 | UEL/docs distinguish default artifacts from opt-in post-processing. |
 | D036 | CLI profiler docs state static profiling for validated CLI YAML. |
 | D037 | CLI docs state `--parent` full-id requirement and store behavior. |
