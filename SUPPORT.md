@@ -9,7 +9,7 @@ Use the route that matches the request:
 
 ## Boundaries
 
-Limen is research software. Maintainers do not provide investment advice, trading advice, exchange operations support, portfolio allocation advice, or live execution support.
+Limen is research software. Maintainers do not provide investment advice, trading advice, exchange operations support, portfolio allocation advice, regulatory approval, or live execution support. Past performance is not predictive, and digital-asset trading can result in total loss of capital.
 
 For reproducible technical help, include:
 

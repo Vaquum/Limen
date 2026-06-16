@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: xgboost_regressor_experiment
-  limen_version: "3.31.1"
+  limen_version: "3.31.2"
   mode: development
   description: XGBoost regressor predicting next-period return with feature perturbation
 
@@ -87,26 +87,26 @@ sfd:
 
   params:
     # feature perturbation
-    feature_groups: [all, momentum, volatility, "momentum|volume", "momentum|volume|structure"]
+    feature_groups: [all, momentum]
     feature_drop_count: [0]
     feature_drop_seed: [42]
     # model
-    learning_rate: [0.01, 0.02, 0.03]
-    max_depth: [2, 3, 4]
-    n_estimators: [300, 500, 700]
-    min_child_weight: [5, 10, 20]
-    subsample: [0.5, 0.6, 0.7]
-    colsample_bytree: [0.5, 0.6, 0.7]
-    gamma: [0.1, 0.5, 1.0]
-    reg_alpha: [0.1, 0.5, 1.0]
-    reg_lambda: [1.0, 5.0, 10.0]
+    learning_rate: [0.03]
+    max_depth: [3, 4]
+    n_estimators: [300, 500]
+    min_child_weight: [5, 10]
+    subsample: [0.6, 0.8]
+    colsample_bytree: [0.6, 0.8]
+    gamma: [0.1]
+    reg_alpha: [0.1]
+    reg_lambda: [1.0, 5.0]
     objective: ["reg:squarederror"]
     booster: [gbtree]
     early_stopping_rounds: [50]
     random_state: [42]
 
 uel:
-  n_permutations: 50
+  n_permutations: 12
   search_strategy:
     type: random
   prep_each_round: true

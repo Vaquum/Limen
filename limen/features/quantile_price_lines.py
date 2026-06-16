@@ -20,7 +20,8 @@ def quantile_price_lines(data: pl.DataFrame,
                          quantile_threshold: float = DEFAULT_QUANTILE_THRESHOLD,
                          density_lookback_hours: int = DEFAULT_DENSITY_LOOKBACK_HOURS,
                          momentum_lookback_hours: int = DEFAULT_MOMENTUM_LOOKBACK_HOURS,
-                         height_lookback_hours: int = DEFAULT_HEIGHT_LOOKBACK_HOURS) -> pl.DataFrame:
+                         height_lookback_hours: int = DEFAULT_HEIGHT_LOOKBACK_HOURS,
+                         include_research_only: bool = True) -> pl.DataFrame:
 
     '''
     Compute quantile-line context features from internally detected price lines.
@@ -44,6 +45,9 @@ def quantile_price_lines(data: pl.DataFrame,
         density_lookback_hours (int): Window for density and the recency cap
         momentum_lookback_hours (int): Window for the signed momentum column
         height_lookback_hours (int): Window for the height and direction-bias columns
+        include_research_only (bool): Include the non-live-computable
+            'active_quantile_count' span-count column. Set False for live-safe
+            feature surfaces.
 
     Returns:
         pl.DataFrame | pl.LazyFrame: The input data, matching the input frame
@@ -70,18 +74,28 @@ def quantile_price_lines(data: pl.DataFrame,
     if height_lookback_hours < 1:
         raise ValueError('quantile_price_lines height_lookback_hours must be at least 1')
 
+    if not isinstance(include_research_only, bool):
+        raise ValueError('quantile_price_lines include_research_only must be a bool')
+
     momentum_col = f"quantile_momentum_{momentum_lookback_hours}h"
     height_col = f"avg_quantile_height_{height_lookback_hours}h"
     density_col = f"quantile_line_density_{density_lookback_hours}h"
 
-    return_dtype = pl.Struct({
+    return_fields = {
         'hours_since_quantile_line': pl.Float64,
-        'active_quantile_count': pl.Int64,
         density_col: pl.Int64,
         momentum_col: pl.Float64,
         height_col: pl.Float64,
         'quantile_direction_bias': pl.Float64,
-    })
+    }
+    if include_research_only:
+        return_fields = {
+            'hours_since_quantile_line': pl.Float64,
+            'active_quantile_count': pl.Int64,
+            **{k: v for k, v in return_fields.items() if k != 'hours_since_quantile_line'},
+        }
+
+    return_dtype = pl.Struct(return_fields)
 
     return data.with_columns(
         pl.col('close')
@@ -95,6 +109,7 @@ def quantile_price_lines(data: pl.DataFrame,
                 density_lookback_hours,
                 momentum_lookback_hours,
                 height_lookback_hours,
+                include_research_only,
             ),
             return_dtype=return_dtype,
         )
@@ -108,10 +123,11 @@ def _quantile_line_columns(close: np.ndarray,
                            quantile_threshold: float,
                            density_lookback_hours: int,
                            momentum_lookback_hours: int,
-                           height_lookback_hours: int) -> pl.Series:
+                           height_lookback_hours: int,
+                           include_research_only: bool) -> pl.Series:
 
     '''
-    Compute the six quantile-line columns as a struct series.
+    Compute the five or six quantile-line columns as a struct series.
 
     Args:
         close (np.ndarray): Close prices for the frame
@@ -121,9 +137,10 @@ def _quantile_line_columns(close: np.ndarray,
         density_lookback_hours (int): Window for density and the recency cap
         momentum_lookback_hours (int): Window for the signed momentum column
         height_lookback_hours (int): Window for the height and direction-bias columns
+        include_research_only (bool): Include the research-only span-count column
 
     Returns:
-        pl.Series: Struct series with the six quantile-line fields
+        pl.Series: Struct series with the quantile-line fields
     '''
 
     long_lines, short_lines = find_price_lines(close, max_duration_hours, min_height_pct)
@@ -133,7 +150,8 @@ def _quantile_line_columns(close: np.ndarray,
 
     frame = pl.DataFrame({'close': close})
     frame = hours_since_quantile_line(frame, long_lines_q, short_lines_q, density_lookback_hours)
-    frame = active_quantile_count(frame, long_lines_q, short_lines_q)
+    if include_research_only:
+        frame = active_quantile_count(frame, long_lines_q, short_lines_q)
     frame = quantile_line_density(frame, long_lines_q, short_lines_q, density_lookback_hours)
 
     n_rows = close.shape[0]
@@ -153,14 +171,17 @@ def _quantile_line_columns(close: np.ndarray,
 
     density_col = f"quantile_line_density_{density_lookback_hours}h"
 
-    frame = frame.with_columns([
+    columns = [
         pl.col('hours_since_quantile_line').cast(pl.Float64),
-        pl.col('active_quantile_count').cast(pl.Int64),
         pl.col(density_col).cast(pl.Int64),
         pl.Series(momentum_col, momentum),
         pl.Series(height_col, avg_height),
         pl.Series('quantile_direction_bias', direction_bias),
-    ])
+    ]
+    if include_research_only:
+        columns.insert(1, pl.col('active_quantile_count').cast(pl.Int64))
+
+    frame = frame.with_columns(columns)
 
     return frame.drop('close').to_struct(STRUCT_COL)
 

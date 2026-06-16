@@ -148,21 +148,17 @@ def split_data_to_prep_output(split_data: list,
 
     alignment = _compute_alignment(split_data, all_datetimes)
 
-    split_data[0] = split_data[0].drop('datetime')
-    split_data[1] = split_data[1].drop('datetime')
-    split_data[2] = split_data[2].drop('datetime')
-
-    if 'datetime' in cols:
-        cols.remove('datetime')
-    else:
+    if 'datetime' not in cols:
         raise ValueError('SFDs must contain `datetime` in data up to when it enters `split_data_to_prep_output` in sfd.prep')
+    model_cols = [col for col in cols if col != 'datetime']
+    model_splits = [split.drop('datetime') for split in split_data]
 
-    data_dict = {'x_train': split_data[0][cols[:-1]],
-                 'y_train': split_data[0][cols[-1]],
-                 'x_val': split_data[1][cols[:-1]],
-                 'y_val': split_data[1][cols[-1]],
-                 'x_test': split_data[2][cols[:-1]],
-                 'y_test': split_data[2][cols[-1]]}
+    data_dict = {'x_train': model_splits[0][model_cols[:-1]],
+                 'y_train': model_splits[0][model_cols[-1]],
+                 'x_val': model_splits[1][model_cols[:-1]],
+                 'y_val': model_splits[1][model_cols[-1]],
+                 'x_test': model_splits[2][model_cols[:-1]],
+                 'y_test': model_splits[2][model_cols[-1]]}
 
     data_dict['_alignment'] = alignment
 

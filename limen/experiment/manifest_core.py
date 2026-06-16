@@ -1402,8 +1402,10 @@ def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dic
     resolved = {}
     for key, value in params.items():
         if isinstance(value, str):
-            if value.startswith('_') or value in round_params:
+            if value in round_params:
                 resolved[key] = round_params[value]
+            elif value.startswith('_'):
+                resolved[key] = value
             elif '{' in value and '}' in value:
                 m = re.fullmatch(r'\{(\w+)\}', value.strip())
                 if m:
@@ -1458,7 +1460,9 @@ def _process_bars(
 
 def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any]) -> bool:
 
-    if entry.include_if is not None and entry.include_if in round_params:
+    if entry.include_if is not None:
+        if entry.include_if not in round_params:
+            return False
         flag = round_params[entry.include_if]
         if not isinstance(flag, bool):
             raise TypeError(

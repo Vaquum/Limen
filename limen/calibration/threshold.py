@@ -1,8 +1,30 @@
 from collections.abc import Callable
+import math
+import numbers
 
 import numpy as np
 
 from limen.metrics.balanced_metric import balanced_metric
+
+
+def _validate_threshold_grid(threshold_min: float,
+                             threshold_max: float,
+                             threshold_step: float) -> None:
+    values = {
+        'threshold_min': threshold_min,
+        'threshold_max': threshold_max,
+        'threshold_step': threshold_step,
+    }
+    for name, value in values.items():
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            raise ValueError(f'{name} must be a finite real number')
+        if not math.isfinite(float(value)):
+            raise ValueError(f'{name} must be finite')
+
+    if threshold_step <= 0:
+        raise ValueError('threshold_step must be positive')
+    if threshold_min > threshold_max:
+        raise ValueError('threshold_min must be less than or equal to threshold_max')
 
 
 def grid_threshold_optimizer(y_val: np.ndarray,
@@ -29,6 +51,7 @@ def grid_threshold_optimizer(y_val: np.ndarray,
         tuple[float, float]: (best_threshold, best_score)
     '''
 
+    _validate_threshold_grid(threshold_min, threshold_max, threshold_step)
     thresholds = np.arange(threshold_min, threshold_max + threshold_step, threshold_step)
     thresholds = np.minimum(thresholds, threshold_max)
     preds_matrix = (val_proba[:, None] >= thresholds).astype(np.int8)

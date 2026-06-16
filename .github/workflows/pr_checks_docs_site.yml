@@ -1,0 +1,36 @@
+name: Docs Site Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr_checks_docs_site:
+    name: PR Checks Docs Site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install docs-site dependencies
+        working-directory: docs-site
+        run: npm ci
+
+      - name: Audit docs-site dependencies
+        working-directory: docs-site
+        run: npm run security:audit
+
+      - name: Build docs site
+        working-directory: docs-site
+        run: npm run check

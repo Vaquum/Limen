@@ -218,7 +218,7 @@ The result is a dataframe indexed by:
 - `cohort_pct`
 - `feature`
 
-The helper works over numeric columns that remain after cleaning. It drops constants and all-NaN columns, but callers should still treat the input log as the scope boundary: include only experiment parameters, diagnostics, and metrics that belong in the correlation review.
+The helper works over numeric columns that remain after cleaning. It drops constants and all-NaN columns. Framework bookkeeping columns (`id`, `_id`, `_round_index`, `execution_time`, `_warnings`) are excluded from feature correlation by default, so the review stays focused on experiment parameters, diagnostics, and metrics.
 
 with columns:
 

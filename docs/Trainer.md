@@ -13,7 +13,11 @@ At minimum, the directory must contain:
 - `metadata.json`
 - `round_data.jsonl`
 
-If `results.csv` is also present, Trainer validates the retrained metrics against the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
+Every nonblank `round_data.jsonl` line must be a valid JSON object with `round_id` and object-valued `round_params`. Trainer rejects malformed JSONL instead of skipping corrupt lines, so promotion cannot proceed from a partial artifact view.
+
+If `results.csv` is also present, Trainer validates retrained metrics against matching numeric columns in the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
+
+Metric validation is intersection-based: Trainer compares numeric, non-private metrics returned by retraining only when the same key exists in `results.csv`. Parameter columns, private artifact keys, non-numeric values, and metrics absent from the original log are skipped. A requested permutation ID missing from `results.csv` remains a validation failure.
 
 ## Prerequisites
 
@@ -65,7 +69,7 @@ Trainer reruns:
 - `manifest.prepare_data(data, round_params)`
 - `manifest.run_model(prepared, round_params)`
 
-with the original round parameters and wraps the resulting model in a `Sensor`. If `results.csv` is present, it also compares the resulting metrics against the original experiment log.
+with the original round parameters and wraps the resulting model in a `Sensor`. If `results.csv` is present, it also compares the resulting metrics against matching numeric columns in the original experiment log.
 
 Deterministic models require near-exact metric matches. Stochastic models use a scaled tolerance.
 
@@ -196,7 +200,7 @@ On unexpected exceptions the method returns a list of `reason='sensor-error'` en
 
 ### What `predict()` expects
 
-All reference models need only `x_test` for inference. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time.
+Sensor callers pass raw klines, not `x_test`. The Sensor rebuilds the feature matrix internally from the stored manifest, fitted preprocessing params, and round params, then passes `x_test` to the trained reference model. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time.
 
 ## What Trainer reads from disk
 
@@ -204,7 +208,7 @@ Trainer uses:
 
 - `metadata.json` — reads `yaml_reference` to reconstruct the manifest; `manifest_id` is also read and passed to each Sensor
 - `round_data.jsonl` — loads `round_params` for each permutation
-- `results.csv` — when available, validates retrained metrics against the original experiment log
+- `results.csv` — when available, validates retrained metrics against matching numeric columns in the original experiment log
 
 ## Scope note
 

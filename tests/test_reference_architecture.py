@@ -3,6 +3,7 @@ import inspect
 import numpy as np
 import pandas as pd
 import polars as pl
+import pytest
 from sklearn.linear_model import LogisticRegression
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
@@ -112,6 +113,18 @@ def test_logreg_train_evaluate_end_to_end():
     assert results['confusion_fp'] + results['confusion_tn'] == int((data['y_test'] == 0).sum())
 
     assert '_preds' in results
+
+
+def test_logreg_inline_metrics_without_price_data_keeps_confusion_counts():
+
+    data = _make_data(binary=True, with_price=False)
+    model = LogRegBinary().train(data, solver='lbfgs', max_iter=200)
+    results = model.evaluate(data)
+
+    for key in ['confusion_tp', 'confusion_fp', 'confusion_tn', 'confusion_fn']:
+        assert key in results
+    assert not any(key.startswith('backtest_') for key in results)
+    assert 'confusion_tp_mean_return_pct' not in results
 
 
 def test_logreg_wrapper_exposes_sklearn_constructor_params():
@@ -493,6 +506,17 @@ def test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand():
     balanced = LightGBMBinary().train(data, n_estimators=20, class_weight='balanced', verbosity=-1,
                                       deterministic=True, force_row_wise=True, random_state=42)
     assert balanced.model.class_weight == 'balanced'
+
+
+def test_lightgbm_binary_rejects_non_binary_objective():
+
+    data = _make_data(binary=True, with_price=False)
+
+    with pytest.raises(ValueError, match='objective must be one of'):
+        LightGBMBinary().train(data, objective='regression', n_estimators=20, verbosity=-1)
+
+    with pytest.raises(ValueError, match='objective must be one of'):
+        lightgbm_binary(data, objective='multiclass', n_estimators=20)
 
 
 def test_lightgbm_wrapper_exposes_lgbm_constructor_params():

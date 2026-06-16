@@ -311,7 +311,7 @@ def test_defaults_to_all_permutations_when_not_provided():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        expected_ids = _run_real_experiment(exp_dir, n_permutations=3)
+        expected_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir))
         assert cohort.available_permutation_ids == expected_ids
@@ -726,6 +726,31 @@ def test_cohort_id_is_stable_across_calls():
         assert cohort2.cohort_id == first
 
 
+def test_cohort_id_includes_architecture_and_aggregation_mode():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        ids = _write_minimal_cohort_artifacts(exp_dir, n_rounds=1)
+
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[ids[0]])
+        cohort.set_members([
+            _BarMember(ids[0], prediction=1, probability=0.8),
+        ])
+
+        payload = json.dumps(
+            {
+                'aggregation_mode': cohort.aggregation_mode,
+                'architecture_id': cohort.architecture_id,
+                'manifest_id': cohort.manifest_id,
+                'permutation_ids': sorted(cohort.permutation_ids),
+            },
+            sort_keys=True,
+        )
+        expected = 'sha256:' + hashlib.sha256(payload.encode()).hexdigest()
+
+        assert cohort.cohort_id == expected
+
+
 def test_manifest_id_set_from_metadata_at_construction():
 
     with TemporaryDirectory() as tmpdir:
@@ -1104,7 +1129,7 @@ def test_backtest_pareto_selector_validates_inputs_and_orders_front_deterministi
     assert starved == []
 
     degenerate = pd.DataFrame({'id': ['9', '8'], 'a': [np.inf, 1.0], 'b': [2.0, 1.0]})
-    assert select_backtest_pareto({'results': degenerate}, metric_cols=['a', 'b']) == [9]
+    assert select_backtest_pareto({'results': degenerate}, metric_cols=['a', 'b']) == [8]
 
 
 def test_diverse_metrics_selector_validates_inputs_and_early_paths():

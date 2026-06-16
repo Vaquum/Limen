@@ -145,7 +145,7 @@ Its purpose is to make multiclass evaluation more stable when not every class is
 
 If no valid class-vs-rest comparisons can be made, it returns `NaN`.
 
-Boundary: the helper assumes `probs` columns line up with the class labels being evaluated. If the probability matrix still contains columns for classes absent from `y_true`, reindex or slice the matrix before calling this helper.
+Boundary: when `probs` contains only the classes present in `y_true`, columns are read in the sorted-present-class order. When `probs` still contains full integer-label columns, the class label itself is used as the probability-column index. If columns cannot be aligned safely, the helper returns `NaN` instead of reading the wrong column.
 
 ## Where These Helpers Fit
 

@@ -76,7 +76,7 @@ It combines:
 
 The matching YAML template is `limen/yaml/templates/lightgbm_binary.yaml` (`limen init my_experiment.yaml --template lightgbm_binary`).
 
-This SFD is a research template. The `active_lines` and `active_quantile_count` outputs inherited from the line-context feature family are not live-computable; use the end-event line features for causal inference surfaces.
+This SFD keeps the line-context family live-safe by setting `include_research_only: false`, which omits `active_lines` and `active_quantile_count`. Those span-count outputs are not live-computable and require explicit research-only opt-in.
 
 ## `random_binary`
 

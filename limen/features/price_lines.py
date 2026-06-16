@@ -14,7 +14,8 @@ def price_lines(data: pl.DataFrame,
                 max_duration_hours: int,
                 min_height_pct: float,
                 big_move_lookback_hours: int = DEFAULT_BIG_MOVE_LOOKBACK_HOURS,
-                momentum_lookback_hours: int = DEFAULT_MOMENTUM_LOOKBACK_HOURS) -> pl.DataFrame:
+                momentum_lookback_hours: int = DEFAULT_MOMENTUM_LOOKBACK_HOURS,
+                include_research_only: bool = True) -> pl.DataFrame:
 
     '''
     Compute line-based context features from internally detected price lines.
@@ -33,6 +34,8 @@ def price_lines(data: pl.DataFrame,
         min_height_pct (float): Minimum absolute line height as a fraction of start price
         big_move_lookback_hours (int): Recency cap for 'hours_since_big_move'
         momentum_lookback_hours (int): Trailing window for the end-count columns
+        include_research_only (bool): Include the non-live-computable 'active_lines'
+            span-count column. Set False for live-safe feature surfaces.
 
     Returns:
         pl.DataFrame | pl.LazyFrame: The input data, matching the input frame
@@ -55,15 +58,21 @@ def price_lines(data: pl.DataFrame,
     if momentum_lookback_hours < 1:
         raise ValueError('price_lines momentum_lookback_hours must be at least 1')
 
+    if not isinstance(include_research_only, bool):
+        raise ValueError('price_lines include_research_only must be a bool')
+
     momentum_col = f"line_momentum_{momentum_lookback_hours}h"
 
-    return_dtype = pl.Struct({
-        'active_lines': pl.Int64,
+    return_fields = {
         'hours_since_big_move': pl.Float64,
         momentum_col: pl.Float64,
         'trending_score': pl.Float64,
         'reversal_potential': pl.Float64,
-    })
+    }
+    if include_research_only:
+        return_fields = {'active_lines': pl.Int64, **return_fields}
+
+    return_dtype = pl.Struct(return_fields)
 
     return data.with_columns(
         pl.col('close')
@@ -75,6 +84,7 @@ def price_lines(data: pl.DataFrame,
                 min_height_pct,
                 big_move_lookback_hours,
                 momentum_lookback_hours,
+                include_research_only,
             ),
             return_dtype=return_dtype,
         )
@@ -86,10 +96,11 @@ def _price_line_columns(close: np.ndarray,
                         max_duration_hours: int,
                         min_height_pct: float,
                         big_move_lookback_hours: int,
-                        momentum_lookback_hours: int) -> pl.Series:
+                        momentum_lookback_hours: int,
+                        include_research_only: bool) -> pl.Series:
 
     '''
-    Compute the five line-based columns as a struct series.
+    Compute the four or five line-based columns as a struct series.
 
     Args:
         close (np.ndarray): Close prices for the frame
@@ -97,15 +108,17 @@ def _price_line_columns(close: np.ndarray,
         min_height_pct (float): Minimum absolute line height as a fraction of start price
         big_move_lookback_hours (int): Recency cap for 'hours_since_big_move'
         momentum_lookback_hours (int): Trailing window for the end-count columns
+        include_research_only (bool): Include the research-only span-count column
 
     Returns:
-        pl.Series: Struct series with the five line-based fields
+        pl.Series: Struct series with the line-based fields
     '''
 
     long_lines, short_lines = find_price_lines(close, max_duration_hours, min_height_pct)
 
     frame = pl.DataFrame({'close': close})
-    frame = active_lines(frame, long_lines, short_lines)
+    if include_research_only:
+        frame = active_lines(frame, long_lines, short_lines)
     frame = hours_since_big_move(frame, long_lines, short_lines, big_move_lookback_hours)
 
     n_rows = close.shape[0]
@@ -124,13 +137,16 @@ def _price_line_columns(close: np.ndarray,
         0.0,
     )
 
-    frame = frame.with_columns([
-        pl.col('active_lines').cast(pl.Int64),
+    columns = [
         pl.col('hours_since_big_move').cast(pl.Float64),
         pl.Series(momentum_col, balance.astype(np.float64)),
         pl.Series('trending_score', trending),
         pl.Series('reversal_potential', reversal),
-    ])
+    ]
+    if include_research_only:
+        columns.insert(0, pl.col('active_lines').cast(pl.Int64))
+
+    frame = frame.with_columns(columns)
 
     return frame.drop('close').to_struct(STRUCT_COL)
 

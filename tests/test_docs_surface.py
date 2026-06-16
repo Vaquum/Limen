@@ -31,6 +31,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
         '.github/ISSUE_TEMPLATE/feature_request.yml',
         '.github/ISSUE_TEMPLATE/security_report.yml',
         '.github/ISSUE_TEMPLATE/support_request.yml',
+        '.github/workflows/pr_checks_docs_site.yml',
         '.markdownlint.json',
         'AUTHORS',
         'CITATION.cff',
@@ -43,6 +44,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
         'SECURITY.md',
         'SUPPORT.md',
         'THIRD_PARTY.md',
+        'docs-site/scripts/audit-security.mjs',
         'docs/Audit-Closeout.md',
     ]
     missing = [path for path in required_files if not (ROOT / path).exists()]
@@ -52,18 +54,40 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'pip install vaquum-limen' in readme
     assert 'pip install vaquum_limen' not in readme
     assert 'not investment advice' in readme
+    assert 'regulatory approval' in readme
+    assert 'Past performance is not predictive' in readme
+    assert 'total loss of capital' in readme
+    assert 'Supported runtime: Limen requires Python `>=3.10`' in readme
+    assert 'Python 3.10-3.12 on macOS and Linux' in readme
+    assert 'TA-Lib is a native dependency' in readme
+    assert 'latest released Limen version' in readme
     assert 'CITATION.cff' in readme
     assert 'SUPPORT.md' in readme
 
+    for risk_path in ('README.md', 'SUPPORT.md', 'docs/Benchmark.md', 'docs/Backtest.md'):
+        risk_text = _read(risk_path)
+        assert 'investment advice' in risk_text
+        assert 'regulatory approval' in risk_text
+        assert 'Past performance is not predictive' in risk_text
+        assert 'total loss of capital' in risk_text
+
     metadata = _project_metadata()
     assert metadata['name'] == 'vaquum-limen'
-    assert metadata['version'] == '3.31.1'
+    assert metadata['version'] == '3.31.2'
     assert metadata['urls']['Homepage'] == 'https://docs.vaquum.fi/limen/'
     assert 'Operating System :: POSIX :: Linux' in metadata['classifiers']
     assert 'Programming Language :: Python :: 3.12' in metadata['classifiers']
+    optional_dependencies = metadata['optional-dependencies']
+    assert optional_dependencies['test'] == ['coverage[toml]>=7', 'pytest>=8']
+    assert optional_dependencies['dev'] == [
+        'build>=1',
+        'coverage[toml]>=7',
+        'pytest>=8',
+        'ruff>=0.8',
+    ]
 
     for template in (ROOT / 'limen' / 'yaml' / 'templates').glob('*.yaml'):
-        assert 'limen_version: "3.31.1"' in template.read_text(encoding='utf-8')
+        assert 'limen_version: "3.31.2"' in template.read_text(encoding='utf-8')
 
     manifest = _read('MANIFEST.in')
     for expected in ('recursive-include docs *.md', 'recursive-include .github', 'prune examples'):
@@ -71,7 +95,18 @@ def test_docs_audit_public_contract_surfaces() -> None:
 
     docs_site_package = json.loads(_read('docs-site/package.json'))
     assert docs_site_package['license'] == 'MIT'
+    assert docs_site_package['scripts']['security:audit'] == 'node ./scripts/audit-security.mjs'
     assert docs_site_package['overrides']['serialize-javascript'] == '7.0.5'
+    assert docs_site_package['overrides']['uuid'] == '11.1.1'
+
+    docs_site_workflow = _read('.github/workflows/pr_checks_docs_site.yml')
+    assert 'npm ci' in docs_site_workflow
+    assert 'npm run security:audit' in docs_site_workflow
+    assert 'npm run check' in docs_site_workflow
+
+    audit_script = _read('docs-site/scripts/audit-security.mjs')
+    assert 'GHSA-h67p-54hq-rp68' in audit_script
+    assert 'Untracked docs-site npm vulnerabilities' in audit_script
 
     worker = _read('docs-site/src/worker.js')
     for expected in (
@@ -107,6 +142,43 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'vaquum_limen' not in docs_text
     assert 'manifest-driven SFMs' not in docs_text
     assert 'SFM has manifest' not in docs_text
+    assert 'unambiguous short prefix' in docs_text
+    assert 'metadata.json` records the full canonical `manifest_id`' in docs_text
+    assert 'Metric validation is intersection-based' in docs_text
+    assert 'not an independent public benchmark suite' in docs_text
+    assert 'does not publish a leaderboard' in docs_text
+    assert 'walk-forward validation' in docs_text
+    assert 'statistical acceptance gates' in docs_text
+    assert 'formal research falsification proof' in docs_text
+    assert 'not a published JSON Schema or editor schema' in docs_text
+    assert 'python -m pip install -e ".[dev]"' in docs_text
+    assert 'python -m build' in docs_text
+    assert 'ruff check .' in docs_text
+    assert 'does not define a tox, nox, or Makefile contract' in docs_text
+    assert 'Limen release and versioning contracts live in this repository' in docs_text
+    assert 'release and versioning policy lives in this repository' in docs_text
+    assert 'Limen-local [Semantic Versioning](../Semantic-Versioning.md)' in docs_text
+    assert 'github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md' not in docs_text
+    assert 'github.com/Vaquum/dev-docs/blob/main/src/Making-Release.md' not in docs_text
+    assert 'Trainer rejects malformed JSONL instead of skipping corrupt lines' in docs_text
+    assert 'Sensor callers pass raw klines, not `x_test`' in docs_text
+    assert 'non-finite selector metrics are excluded' in docs_text
+    assert 'not a code-signing attestation' in docs_text
+    assert 'YAML validation rejects bool, zero, negative, and over-budget values' in docs_text
+    assert 'does not read or mutate Python\'s module-global random state' in docs_text
+    assert 'Missing control keys are treated as false' in docs_text
+    assert 'without mutating the passed split list or column list' in docs_text
+    assert 'resolve to fitted parameters only when that key is available' in docs_text
+    assert 'Unknown `bar_type` values raise `ValueError`' in docs_text
+    assert 'price-derived confusion-return and backtest metrics are skipped' in docs_text
+    assert 'If columns cannot be aligned safely, the helper returns `NaN`' in docs_text
+    assert 'Threshold grids are caller-owned inputs' in docs_text
+    assert 'excluded from feature correlation by default' in docs_text
+    assert 'rejects malformed custom strategy outputs' in docs_text
+    assert 'Rows with zero or near-zero financial returns' in docs_text
+    assert 'LightGBM binary wrapper rejects non-binary objectives before training' in docs_text
+    assert 'target_confidence` must be finite and in `[0.0, 1.0]`' in docs_text
+    assert 'Bundled live-safe templates set `include_research_only: false`' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:

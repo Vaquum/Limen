@@ -26,6 +26,30 @@ from limen.utils.reporting import format_report_header
 from limen.utils.reporting import format_report_section
 
 
+def test_safe_ovr_auc_uses_label_columns_when_absent_class_columns_remain() -> None:
+    y_true = np.array([1, 1, 2, 2])
+    probs = np.array([
+        [0.90, 0.80, 0.20],
+        [0.80, 0.70, 0.30],
+        [0.10, 0.40, 0.60],
+        [0.20, 0.30, 0.70],
+    ])
+
+    assert safe_ovr_auc(y_true, probs) == 1.0
+
+
+def test_safe_ovr_auc_returns_nan_when_probability_columns_cannot_align() -> None:
+    y_true = np.array(['low', 'low', 'high', 'high'])
+    probs = np.array([
+        [0.8, 0.2, 0.0],
+        [0.7, 0.3, 0.0],
+        [0.3, 0.7, 0.0],
+        [0.2, 0.8, 0.0],
+    ])
+
+    assert np.isnan(safe_ovr_auc(y_true, probs))
+
+
 class _DummyPerfWithInverseScaler:
 
     def __init__(self) -> None:
@@ -559,6 +583,43 @@ def test_backtest_snapshot_delegates_to_injected_strategy() -> None:
     assert result['pnl_per_bar_bps'] == 100.0
     assert result['edge_bps_p50'] == 100.0
     assert result['trades_per_bar'] == 0.33333
+
+
+def test_backtest_snapshot_validates_injected_strategy_output() -> None:
+    df = pd.DataFrame({
+        'predictions': [0, 0, 0],
+        'open': [100.0, 100.0, 100.0],
+        'close': [100.0, 100.0, 100.0],
+        'price_change': [0.0, 0.0, 0.0],
+    })
+
+    def wrong_type(predictions, *args, **kwargs):
+        index = predictions.index
+        return (
+            pd.Series(1.0, index=index),
+            pd.Series(0.01, index=index),
+            pd.Series(0.01, index=index),
+        )
+
+    def short_series(predictions, *args, **kwargs) -> ExecutionResult:
+        index = predictions.index[:-1]
+        return ExecutionResult(
+            pos=pd.Series(1.0, index=index),
+            gross=pd.Series(0.01, index=index),
+            net=pd.Series(0.01, index=index),
+        )
+
+    def non_numeric(predictions, *args, **kwargs) -> ExecutionResult:
+        index = predictions.index
+        return ExecutionResult(
+            pos=pd.Series(1.0, index=index),
+            gross=pd.Series('bad', index=index),
+            net=pd.Series(0.01, index=index),
+        )
+
+    for strategy in (wrong_type, short_series, non_numeric):
+        with pytest.raises(ValueError, match='backtest_snapshot strategy'):
+            backtest_snapshot(df, strategy=strategy)
 
 
 def test_long_flat_strategy_returns_execution_result() -> None:

@@ -110,7 +110,7 @@ _MINIMAL_ML_YAML = dedent('''\
         n_jobs: [-1]
         l1_ratio: [null]
     uel:
-      n_permutations: 5
+      n_permutations: 4
       search_strategy:
         type: random
       output_format: csv
@@ -756,6 +756,21 @@ def test_validate_error_for_uel_checkpoint_interval_wrong_type() -> None:
         assert any('checkpoint_interval' in e.path for e in result.errors)
 
 
+def test_validate_error_for_uel_n_permutations_invalid_budget() -> None:
+    for value in [True, 0, -1, 9]:
+        yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+        yaml_dict['uel']['n_permutations'] = value
+        result = validate(yaml_dict)
+        assert not result.valid, f'n_permutations={value!r} should be invalid'
+        assert any('n_permutations' in e.path for e in result.errors)
+
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params'] = {}
+    yaml_dict['uel']['n_permutations'] = 9
+    result = validate(yaml_dict)
+    assert all(e.path != 'uel.n_permutations' for e in result.errors)
+
+
 def test_validate_warns_for_uel_experiment_dir() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['uel']['experiment_dir'] = '/some/path'
@@ -1244,6 +1259,15 @@ def test_all_templates_have_valid_limen_version() -> None:
         assert isinstance(version, str) and _SEMVER_RE.match(version), (
             f'{path.name}: metadata.limen_version missing or invalid: {version!r}'
         )
+        total_permutations = 1
+        for values in yaml_dict.get('sfd', {}).get('params', {}).values():
+            total_permutations *= len(list(values))
+        assert total_permutations <= 10_000, (
+            f'{path.name}: onboarding profile is too large: {total_permutations}'
+        )
+        assert yaml_dict.get('uel', {}).get('n_permutations') <= 12, (
+            f'{path.name}: onboarding run budget is too large'
+        )
 
 
 def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
@@ -1264,6 +1288,16 @@ def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
     assert sfd.manifest().strict_mode is True
+
+    line_features = [
+        feature for feature in yaml_dict['sfd']['manifest']['features']
+        if feature['func'] in {
+            'limen.features.price_lines.price_lines',
+            'limen.features.quantile_price_lines.quantile_price_lines',
+        }
+    ]
+    assert len(line_features) == 2
+    assert all(feature['params']['include_research_only'] is False for feature in line_features)
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}

@@ -7,7 +7,7 @@ The layer answers one question: did the predictive structure retain economic val
 
 ## Risk boundary
 
-Backtest output is research evidence, not investment advice, trading advice, execution simulation, or a promise of future performance. Snapshot backtests do not model venue queues, latency, borrow, liquidation, funding, portfolio constraints, or live order execution.
+Backtest output is research evidence, not investment advice, trading advice, execution simulation, regulatory approval, or a promise of future performance. Past performance is not predictive, digital-asset trading can result in total loss of capital, and snapshot backtests do not model venue queues, latency, borrow, liquidation, funding, portfolio constraints, or live order execution.
 
 ## Entry points
 
@@ -108,7 +108,7 @@ Table 4. Scalar columns are intensive metrics.
 
 The execution model is swappable. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar series. The shipped strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
 
-A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a per-bar series over the full window.
+A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a finite numeric per-bar series over the full window with the input index. `backtest_snapshot()` rejects malformed custom strategy outputs before computing the ledger.
 
 ```python
 from limen.backtest.backtest_snapshot import backtest_snapshot

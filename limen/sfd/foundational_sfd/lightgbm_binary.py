@@ -89,11 +89,13 @@ def manifest() -> Manifest:
         .add_feature(price_lines,
                      max_duration_hours='max_duration_hours',
                      min_height_pct='min_height_pct',
+                     include_research_only=False,
                      group='lines')
         .add_feature(quantile_price_lines,
                      max_duration_hours='max_duration_hours',
                      min_height_pct='min_height_pct',
                      quantile_threshold='quantile_threshold',
+                     include_research_only=False,
                      group='lines')
 
         .add_indicator(roc, period='ret_period', group='momentum')

@@ -53,21 +53,21 @@ The implementation PR closes:
 | D031 | `limen new` next steps avoid stale project-template example paths. |
 | D032 | All bundled templates carry current `metadata.limen_version`. |
 | D033 | TabPFN docs disclose optional install and non-base dependency state. |
-| D034 | Template polish is bounded by current template metadata and docs. |
+| D034 | Template polish is bounded by current metadata, non-extreme profile totals, and 12-permutation run budgets. |
 | D035 | UEL/docs distinguish default artifacts from opt-in post-processing. |
 | D036 | CLI profiler docs state static profiling for validated CLI YAML. |
 | D037 | CLI docs state `--parent` full-id requirement and store behavior. |
-| D038 | Committed manifest URI docs require full `sha256:<64-hex>` parent IDs. |
+| D038 | Committed manifest URI docs state short-prefix expansion and full `manifest_id` provenance. |
 | D039 | Trainer docs keep metric validation scoped to current artifact behavior. |
 | D040 | Trainer/Cohort docs frame sensor inference around trained artifact contracts. |
-| D041 | Trainer docs require valid `round_data.jsonl` artifacts for promotion. |
-| D042 | Cohort selector tests and docs cover Pareto selection boundaries. |
-| D043 | Cohort identity docs state current manifest/member-id scope. |
-| D044 | UEL docs treat `n_permutations` as current run count behavior, not an unbounded proof. |
-| D045 | Randomness claims are bounded to current search and template defaults. |
-| D046 | `include_if` docs reflect the current boolean-switch contract. |
-| D047 | Data helper docs disclose `split_data_to_prep_output()` mutation. |
-| D048 | Manifest docs keep underscore references scoped to available fitted params. |
+| D041 | Trainer rejects malformed `round_data.jsonl` instead of promoting from partial artifacts. |
+| D042 | `backtest_pareto` excludes non-finite selector metrics before ranking. |
+| D043 | Cohort identity now includes manifest, architecture, aggregation mode, and permutation IDs. |
+| D044 | YAML validation rejects invalid or over-budget `n_permutations` values. |
+| D045 | Legacy `ParamSpace` randomness is instance-local and seedable. |
+| D046 | `include_if` missing control keys are treated as false. |
+| D047 | `split_data_to_prep_output()` no longer mutates caller-owned split or column lists. |
+| D048 | Underscore parameter refs resolve only when available; otherwise they stay literal. |
 | D049 | Data-Bars docs remain scoped to supported bar types. |
 | D050 | Reference-architecture docs state backtest metrics require `price_data_for_backtest`. |
 | D051 | `safe_ovr_auc` docs now disclose probability-column alignment limits. |
@@ -75,9 +75,9 @@ The implementation PR closes:
 | D053 | Log docs bound correlation analysis to caller-selected numeric log scope. |
 | D054 | Backtest docs state the `ExecutionResult(pos, gross, net)` full-window contract. |
 | D055 | Metrics docs disclose MAPE zero/near-zero denominator policy. |
-| D056 | LightGBM docs no longer claim objective enforcement beyond wrapper forwarding. |
-| D057 | Confidence filtering docs remain helper-scoped and not a core safety gate. |
-| D058 | Built-in SFD docs disclose research-only line-count feature state. |
+| D056 | LightGBM binary wrapper rejects non-binary objectives before training. |
+| D057 | Confidence filtering validates fields, target confidence, targets, and model prediction shapes. |
+| D058 | Built-in line templates set `include_research_only: false` for live-safe feature surfaces. |
 | D059 | Runtime/docs use SFD wording for manifest-driven errors. |
 | D060 | Stale `Trainer._load_sfd_module` debt entry removed. |
 | D061 | README, Benchmark, Backtest, and Support carry explicit non-advice risk language. |
@@ -85,7 +85,7 @@ The implementation PR closes:
 | D063 | Benchmark docs avoid claiming an independent benchmark corpus or leaderboard. |
 | D064 | Research falsification methods are not claimed as complete proof. |
 | D065 | Benchmark remains a docs page, not an executable benchmark suite claim. |
-| D066 | Package metadata includes Python and OS classifiers. |
+| D066 | Package metadata and README define Python/OS classifiers, runtime support, and native TA-Lib boundaries. |
 | D067 | `CONTRIBUTING.md` and developer docs define bootstrap and validation commands. |
 | D068 | Developer docs point to local bootstrap, tests, docs-site, changelog, and version surfaces. |
 | D069 | API docs remain manual; no generated API-reference claim is made. |
@@ -107,8 +107,8 @@ The implementation PR closes:
 | D085 | Repo-local `SECURITY.md` documents private disclosure. |
 | D086 | High-stakes public terms are bounded by research and proof language. |
 | D087 | Production mode docs are scoped to result path and manifest mode, not safety certification. |
-| D088 | Docs proof runs under tests; docs-site build/audit are required slice proof commands. |
-| D089 | Docs-site dependency posture is tracked through lockfile updates and high-audit proof. |
+| D088 | Docs-site build and tracked security audit now run as a PR check. |
+| D089 | Docs-site dependency posture is tracked through lockfile overrides and an allowlisted audit script. |
 | D090 | PyPI project links use hosted docs and package metadata instead of challenge-prone generic homepage. |
 | D091 | YAML schema docs state current schema/version compatibility instead of claiming JSON Schema publication. |
 | D092 | Markdown lint config exists. |

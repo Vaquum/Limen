@@ -75,12 +75,14 @@ class ParamSpace:
             the stdlib wrapper's `Py_ssize_t` limit. When this is greater than
             or equal to the total parameter space, all combinations are
             enumerated instead of sampled.
+        seed (int | None): Optional seed for reproducible legacy sampling.
     '''
 
-    def __init__(self, params: dict, n_permutations: int) -> None:
+    def __init__(self, params: dict, n_permutations: int, seed: int | None = None) -> None:
 
         self.params = params
         self.keys = list(params.keys())
+        self._rng = random.Random(seed)
         self.param_sizes = [len(params[k]) for k in self.keys]
         self.total_space = 1
         for size in self.param_sizes:
@@ -90,9 +92,9 @@ class ParamSpace:
         if n_permutations >= self.total_space:
             indices = list(range(self.total_space))
         elif self.total_space <= sys.maxsize:
-            indices = random.sample(range(self.total_space), n_permutations)
+            indices = self._rng.sample(range(self.total_space), n_permutations)
         else:
-            indices = sample_range_exact(random, self.total_space, n_permutations)
+            indices = sample_range_exact(self._rng, self.total_space, n_permutations)
 
         # Convert indices to parameter combinations
         combos = [self._index_to_combo(idx) for idx in indices]
@@ -123,7 +125,7 @@ class ParamSpace:
         if self.df_params.is_empty():
             return None
 
-        row_no = random.randrange(self.df_params.height) if random_search else 0
+        row_no = self._rng.randrange(self.df_params.height) if random_search else 0
 
         round_params = dict(zip(self.df_params.columns, self.df_params.row(row_no), strict=True))
 

@@ -128,18 +128,30 @@ class Trainer:
             ) from None
 
         with f:
-            for raw_line in f:
+            for line_number, raw_line in enumerate(f, start=1):
                 stripped = raw_line.strip()
                 if not stripped:
                     continue
                 try:
                     entry = json.loads(stripped)
-                except json.JSONDecodeError:
-                    logger.warning(
-                        'Skipping malformed line in round_data.jsonl: %s',
-                        stripped[:80],
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        f"Malformed JSON in round_data.jsonl line {line_number}"
+                    ) from exc
+                if not isinstance(entry, dict):
+                    raise ValueError(
+                        f"Invalid round_data.jsonl line {line_number}: expected object"
                     )
-                    continue
+                if 'round_id' not in entry or 'round_params' not in entry:
+                    raise ValueError(
+                        f"Invalid round_data.jsonl line {line_number}: "
+                        "requires round_id and round_params"
+                    )
+                if not isinstance(entry['round_params'], dict):
+                    raise ValueError(
+                        f"Invalid round_data.jsonl line {line_number}: "
+                        "round_params must be an object"
+                    )
                 result[str(entry['round_id'])] = entry
 
         return result

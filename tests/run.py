@@ -81,6 +81,7 @@ from tests.test_yaml import test_validate_error_for_uel_prep_each_round_wrong_ty
 from tests.test_yaml import test_validate_warns_for_uel_experiment_dir
 from tests.test_yaml import test_validate_error_for_uel_feedback_interval_wrong_type
 from tests.test_yaml import test_validate_error_for_uel_checkpoint_interval_wrong_type
+from tests.test_yaml import test_validate_error_for_uel_n_permutations_invalid_budget
 from tests.test_yaml import test_validate_error_for_manifest_ref_not_in_sfd_params
 from tests.test_yaml import test_validate_no_error_when_manifest_ref_is_in_sfd_params
 from tests.test_yaml import test_validate_no_unused_param_warning_for_pca_defaults
@@ -210,10 +211,12 @@ from tests.test_confidence_filtering_system import test_calibrate_confidence_thr
 from tests.test_confidence_filtering_system import test_apply_confidence_filtering
 from tests.test_confidence_filtering_system import test_confidence_filtering_system
 from tests.test_confidence_filtering_system import test_edge_cases
+from tests.test_confidence_filtering_system import test_confidence_filtering_validates_contracts
 from tests.test_klines_data_maker_fields import test_klines_data_maker_fields
 from tests.test_large_param_space import test_large_param_space
 from tests.test_param_space import test_param_space_large_space_no_longer_overflows_and_is_reproducible
 from tests.test_param_space import test_param_space_large_space_sequences_match_for_both_generation_modes
+from tests.test_param_space import test_param_space_seed_does_not_mutate_global_random_state
 from tests.test_param_space import test_param_space_enumerates_full_space_and_returns_none_when_exhausted
 from tests.test_param_space import test_param_space_small_legacy_sequence_is_unchanged
 from tests.test_param_space import test_sample_range_exact_handles_edge_cases
@@ -224,7 +227,7 @@ from tests.test_param_space import test_sample_range_exact_skips_small_range_fal
 from tests.test_bars import test_volume_bars_basic
 from tests.test_bars import test_trade_bars_basic
 from tests.test_bars import test_liquidity_bars_basic
-from tests.test_bars import test_compute_data_bars_base_and_unknown_modes_return_input_unchanged
+from tests.test_bars import test_compute_data_bars_base_returns_input_unchanged_and_unknown_raises
 from tests.test_bars import test_compute_data_bars_dispatches_to_specific_bar_builders
 from tests.test_bars import test_compute_data_bars_requires_threshold_for_selected_bar_type
 from tests.test_manifest_pre_split_random_selector import test_pre_split_random_selector
@@ -502,12 +505,14 @@ from tests.test_budget_reducer import test_worst_first_maximize_false
 from tests.test_reference_architecture import test_xgboost_train_returns_fitted_model
 from tests.test_reference_architecture import test_xgboost_evaluate_returns_all_metric_types
 from tests.test_reference_architecture import test_logreg_train_evaluate_end_to_end
+from tests.test_reference_architecture import test_logreg_inline_metrics_without_price_data_keeps_confusion_counts
 from tests.test_reference_architecture import test_random_binary_train_evaluate_end_to_end
 from tests.test_reference_architecture import test_lightgbm_binary_function_returns_metrics_and_model
 from tests.test_reference_architecture import test_lightgbm_binary_with_calibration_config
 from tests.test_reference_architecture import test_lightgbm_binary_early_stops_on_validation_split
 from tests.test_reference_architecture import test_lightgbm_binary_trains_without_validation_split
 from tests.test_reference_architecture import test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand
+from tests.test_reference_architecture import test_lightgbm_binary_rejects_non_binary_objective
 from tests.test_reference_architecture import test_lightgbm_wrapper_exposes_lgbm_constructor_params
 from tests.test_reference_architecture import test_lightgbm_foundational_params_cover_wrapper_model_surface
 from tests.test_reference_architecture import test_tabpfn_train_evaluate_end_to_end
@@ -533,6 +538,8 @@ from tests.test_reference_architecture import test_logreg_foundational_params_co
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_has_ohlc_columns
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_row_count_matches_test
 from tests.test_manifest_prepare_data import test_price_data_for_backtest_datetime_alignment
+from tests.test_manifest_prepare_data import test_resolve_params_preserves_missing_underscore_literals
+from tests.test_manifest_prepare_data import test_resolve_params_uses_available_underscore_values
 from tests.test_manifest_prepare_data import test_shifted_target_pipeline_keeps_price_rows_on_feature_bar
 from tests.test_manifest_prepare_data import test_logreg_manifest_keeps_price_rows_on_the_feature_bar
 from tests.test_manifest_prepare_data import test_override_split_config
@@ -581,11 +588,14 @@ from tests.test_metrics_and_log_helpers import test_backtest_snapshot_edge_case_
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_scalars_invariant_under_window_doubling
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_is_time_free
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_delegates_to_injected_strategy
+from tests.test_metrics_and_log_helpers import test_backtest_snapshot_validates_injected_strategy_output
 from tests.test_metrics_and_log_helpers import test_long_flat_strategy_returns_execution_result
 from tests.test_metrics_and_log_helpers import test_long_flat_strategy_rejects_negative_lag
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_notional_rate_scales_returns_not_structure
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_invalid_notional_rate
 from tests.test_metrics_and_log_helpers import test_no_legacy_backtest_column_names
+from tests.test_metrics_and_log_helpers import test_safe_ovr_auc_returns_nan_when_probability_columns_cannot_align
+from tests.test_metrics_and_log_helpers import test_safe_ovr_auc_uses_label_columns_when_absent_class_columns_remain
 from tests.test_metrics_and_log_helpers import test_completed_bar_signal_proves_next_bar_alignment
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_empty_input
 from tests.test_metrics_and_log_helpers import test_backtest_snapshot_rejects_inconsistent_price_change
@@ -734,6 +744,7 @@ from tests.test_calibration import test_sklearn_probability_calibrator_no_future
 from tests.test_calibration import test_grid_threshold_optimizer_picks_best_balanced_threshold
 from tests.test_calibration import test_grid_threshold_optimizer_returns_default_when_all_thresholds_predict_zero
 from tests.test_calibration import test_grid_threshold_optimizer_returns_bounded_threshold
+from tests.test_calibration import test_grid_threshold_optimizer_rejects_malformed_grids
 from tests.test_calibration import test_calibration_config_resolve_substitutes_string_params
 from tests.test_calibration import test_calibration_builder_done_raises_without_any_func
 from tests.test_calibration import test_run_model_raises_when_arch_cannot_accept_calibration_config
@@ -752,7 +763,7 @@ from tests.test_feature_perturbation import test_feature_group_absent_includes_a
 from tests.test_feature_perturbation import test_combined_group_and_include_if
 from tests.test_feature_perturbation import test_include_if_true
 from tests.test_feature_perturbation import test_include_if_false
-from tests.test_feature_perturbation import test_include_if_key_missing_includes
+from tests.test_feature_perturbation import test_include_if_key_missing_excludes
 from tests.test_feature_perturbation import test_ablation_drops_correct_count
 from tests.test_feature_perturbation import test_ablation_deterministic_with_seed
 from tests.test_feature_perturbation import test_ablation_zero_drops_nothing
@@ -881,7 +892,10 @@ from tests.test_fractional_diff import test_fractional_diff_manifest_integration
 from tests.test_trainer import test_trainer_requires_yaml_reference
 from tests.test_trainer import test_trainer_rejects_non_dict_yaml_reference
 from tests.test_trainer import test_trainer_rejects_malformed_yaml_reference
-from tests.test_trainer import test_load_round_data_skips_blank_and_malformed_lines
+from tests.test_trainer import test_load_round_data_rejects_malformed_jsonl
+from tests.test_trainer import test_load_round_data_rejects_missing_required_fields
+from tests.test_trainer import test_load_round_data_rejects_non_object_round_params
+from tests.test_trainer import test_load_round_data_skips_blank_lines_and_loads_valid_entries
 from tests.test_trainer import test_load_round_data_requires_round_data_file
 from tests.test_trainer import test_load_original_log_returns_none_when_results_csv_is_missing
 from tests.test_trainer import test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift
@@ -964,6 +978,7 @@ from tests.test_proto_cohort import test_set_members_rejects_missing_permutation
 from tests.test_proto_cohort import test_set_members_rejects_manifest_id_mismatch
 from tests.test_proto_cohort import test_cohort_id_computed_after_set_members
 from tests.test_proto_cohort import test_cohort_id_is_stable_across_calls
+from tests.test_proto_cohort import test_cohort_id_includes_architecture_and_aggregation_mode
 from tests.test_proto_cohort import test_manifest_id_set_from_metadata_at_construction
 from tests.test_proto_cohort import test_manifest_id_consistent_across_members
 from tests.test_proto_cohort import test_yaml_reference_lineage_stripped_from_metadata
@@ -1292,11 +1307,12 @@ tests = [
     test_param_space_enumerates_full_space_and_returns_none_when_exhausted,
     test_param_space_large_space_no_longer_overflows_and_is_reproducible,
     test_param_space_large_space_sequences_match_for_both_generation_modes,
+    test_param_space_seed_does_not_mutate_global_random_state,
     test_klines_data_maker_fields,
     test_volume_bars_basic,
     test_trade_bars_basic,
     test_liquidity_bars_basic,
-    test_compute_data_bars_base_and_unknown_modes_return_input_unchanged,
+    test_compute_data_bars_base_returns_input_unchanged_and_unknown_raises,
     test_compute_data_bars_dispatches_to_specific_bar_builders,
     test_compute_data_bars_requires_threshold_for_selected_bar_type,
     test_pre_split_random_selector,
@@ -1367,6 +1383,7 @@ tests = [
     test_validate_warns_for_uel_experiment_dir,
     test_validate_error_for_uel_feedback_interval_wrong_type,
     test_validate_error_for_uel_checkpoint_interval_wrong_type,
+    test_validate_error_for_uel_n_permutations_invalid_budget,
     test_validate_error_for_manifest_ref_not_in_sfd_params,
     test_validate_no_error_when_manifest_ref_is_in_sfd_params,
     test_validate_no_unused_param_warning_for_pca_defaults,
@@ -1496,6 +1513,7 @@ tests = [
     test_apply_confidence_filtering,
     test_confidence_filtering_system,
     test_edge_cases,
+    test_confidence_filtering_validates_contracts,
     test_get_any_file_loads_local_csv,
     test_get_spot_klines_reaggregates_latest_dataset,
     test_get_spot_klines_row_count_limit_returns_latest_rows,
@@ -1519,12 +1537,14 @@ tests = [
     test_xgboost_train_returns_fitted_model,
     test_xgboost_evaluate_returns_all_metric_types,
     test_logreg_train_evaluate_end_to_end,
+    test_logreg_inline_metrics_without_price_data_keeps_confusion_counts,
     test_random_binary_train_evaluate_end_to_end,
     test_lightgbm_binary_function_returns_metrics_and_model,
     test_lightgbm_binary_with_calibration_config,
     test_lightgbm_binary_early_stops_on_validation_split,
     test_lightgbm_binary_trains_without_validation_split,
     test_lightgbm_binary_numeric_class_weight_preserves_legacy_shorthand,
+    test_lightgbm_binary_rejects_non_binary_objective,
     test_lightgbm_wrapper_exposes_lgbm_constructor_params,
     test_lightgbm_foundational_params_cover_wrapper_model_surface,
     test_tabpfn_train_evaluate_end_to_end,
@@ -1546,6 +1566,8 @@ tests = [
     test_price_data_for_backtest_has_ohlc_columns,
     test_price_data_for_backtest_row_count_matches_test,
     test_price_data_for_backtest_datetime_alignment,
+    test_resolve_params_preserves_missing_underscore_literals,
+    test_resolve_params_uses_available_underscore_values,
     test_shifted_target_pipeline_keeps_price_rows_on_feature_bar,
     test_logreg_manifest_keeps_price_rows_on_the_feature_bar,
     test_override_split_config,
@@ -1568,11 +1590,14 @@ tests = [
     test_backtest_snapshot_scalars_invariant_under_window_doubling,
     test_backtest_snapshot_is_time_free,
     test_backtest_snapshot_delegates_to_injected_strategy,
+    test_backtest_snapshot_validates_injected_strategy_output,
     test_long_flat_strategy_returns_execution_result,
     test_long_flat_strategy_rejects_negative_lag,
     test_backtest_snapshot_notional_rate_scales_returns_not_structure,
     test_backtest_snapshot_rejects_invalid_notional_rate,
     test_no_legacy_backtest_column_names,
+    test_safe_ovr_auc_returns_nan_when_probability_columns_cannot_align,
+    test_safe_ovr_auc_uses_label_columns_when_absent_class_columns_remain,
     test_completed_bar_signal_proves_next_bar_alignment,
     test_backtest_snapshot_rejects_empty_input,
     test_backtest_snapshot_rejects_inconsistent_price_change,
@@ -1714,6 +1739,7 @@ tests = [
     test_grid_threshold_optimizer_picks_best_balanced_threshold,
     test_grid_threshold_optimizer_returns_default_when_all_thresholds_predict_zero,
     test_grid_threshold_optimizer_returns_bounded_threshold,
+    test_grid_threshold_optimizer_rejects_malformed_grids,
     test_calibration_config_resolve_substitutes_string_params,
     test_calibration_builder_done_raises_without_any_func,
     test_run_model_raises_when_arch_cannot_accept_calibration_config,
@@ -1732,7 +1758,7 @@ tests = [
     test_combined_group_and_include_if,
     test_include_if_true,
     test_include_if_false,
-    test_include_if_key_missing_includes,
+    test_include_if_key_missing_excludes,
     test_ablation_drops_correct_count,
     test_ablation_deterministic_with_seed,
     test_ablation_zero_drops_nothing,
@@ -1876,7 +1902,10 @@ tests = [
     test_trainer_requires_yaml_reference,
     test_trainer_rejects_non_dict_yaml_reference,
     test_trainer_rejects_malformed_yaml_reference,
-    test_load_round_data_skips_blank_and_malformed_lines,
+    test_load_round_data_rejects_malformed_jsonl,
+    test_load_round_data_rejects_missing_required_fields,
+    test_load_round_data_rejects_non_object_round_params,
+    test_load_round_data_skips_blank_lines_and_loads_valid_entries,
     test_load_round_data_requires_round_data_file,
     test_load_original_log_returns_none_when_results_csv_is_missing,
     test_validate_metrics_ignores_metadata_fields_and_accepts_small_stochastic_drift,
@@ -1959,6 +1988,7 @@ tests = [
     test_set_members_rejects_manifest_id_mismatch,
     test_cohort_id_computed_after_set_members,
     test_cohort_id_is_stable_across_calls,
+    test_cohort_id_includes_architecture_and_aggregation_mode,
     test_manifest_id_set_from_metadata_at_construction,
     test_manifest_id_consistent_across_members,
     test_yaml_reference_lineage_stripped_from_metadata,

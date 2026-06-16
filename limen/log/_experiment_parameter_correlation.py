@@ -9,6 +9,10 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+_FRAMEWORK_LOG_COLUMNS = frozenset({
+    'id', '_id', '_round_index', 'execution_time', '_warnings',
+})
+
 
 def _experiment_parameter_correlation(self: Any,
                                    metric: str,
@@ -86,7 +90,12 @@ def _experiment_parameter_correlation(self: Any,
     if metric not in num_df.columns:
         raise ValueError('experiment_parameter_correlation After cleaning, metric is not numeric. Ensure it is numeric in self.experiment_log.')
 
-    features: list[str] = [c for c in num_df.columns if c != metric]
+    excluded_features = set(_FRAMEWORK_LOG_COLUMNS)
+    excluded_features.discard(metric)
+    features: list[str] = [
+        c for c in num_df.columns
+        if c != metric and c not in excluded_features
+    ]
     if not features:
         raise ValueError('experiment_parameter_correlation No numeric features available (besides metric) after cleaning.')
 
@@ -169,4 +178,3 @@ def _experiment_parameter_correlation(self: Any,
     )
 
     return res
-

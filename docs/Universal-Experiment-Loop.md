@@ -33,6 +33,8 @@ Direct UEL integration currently has two execution modes.
 
 The standard run path is for direct Python work. The artifact-backed path is the durable engine path used by CLI YAML runs and advanced search.
 
+The standard run path samples legacy `ParamSpace` combinations without exposing a seed; module-global `random.seed(...)` does not pin that sampling. Use direct `ParamSpace(seed=...)` helper calls when seeded legacy sampling is required.
+
 ## Direct standard run
 
 This local Python example uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
@@ -118,7 +120,7 @@ uel.run(
 | Argument | Meaning |
 |---|---|
 | `experiment_name` | run name and CSV path stem; `my_experiment` writes `my_experiment.csv`, or `experiment_dir/my_experiment.csv` when `experiment_dir` is set on the standard path |
-| `n_permutations` | number of rounds to execute |
+| `n_permutations` | positive integer number of rounds to execute; YAML validation rejects bool, zero, negative, and values larger than the available parameter space |
 | `prep_each_round` | whether prep runs every round; required for manifest-driven SFDs |
 | `random_search` | random versus deterministic parameter generation on the standard path |
 | `context_params` | extra static keys injected into every round |

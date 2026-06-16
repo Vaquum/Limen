@@ -112,11 +112,12 @@ def test_liquidity_bars_basic():
     assert MIN_EXPECTED_BARS <= len(result) <= MAX_EXPECTED_BARS, f"Expected 10-20 bars, got {len(result)}"
 
 
-def test_compute_data_bars_base_and_unknown_modes_return_input_unchanged():
+def test_compute_data_bars_base_returns_input_unchanged_and_unknown_raises():
     data = _make_small_kline_frame()
 
     assert compute_data_bars(data, bar_type='base') is data
-    assert compute_data_bars(data, bar_type='unsupported') is data
+    with pytest.raises(ValueError, match='bar_type must be one of'):
+        compute_data_bars(data, bar_type='unsupported')
 
 
 def test_compute_data_bars_dispatches_to_specific_bar_builders():

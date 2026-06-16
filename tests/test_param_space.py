@@ -27,16 +27,11 @@ def _collect_generated_params(
     *,
     random_search: bool,
 ) -> list[dict]:
-    previous_state = random.getstate()
-    try:
-        random.seed(seed)
-        param_space = ParamSpace(params, n_permutations)
-        return [
-            param_space.generate(random_search=random_search)
-            for _ in range(count)
-        ]
-    finally:
-        random.setstate(previous_state)
+    param_space = ParamSpace(params, n_permutations, seed=seed)
+    return [
+        param_space.generate(random_search=random_search)
+        for _ in range(count)
+    ]
 
 
 def test_sample_range_exact_matches_stdlib_and_preserves_rng_state():
@@ -133,13 +128,7 @@ def test_param_space_small_legacy_sequence_is_unchanged():
 
 def test_param_space_enumerates_full_space_and_returns_none_when_exhausted():
     params = {'a': [0, 1], 'b': [10, 20]}
-    previous_state = random.getstate()
-
-    try:
-        random.seed(999)
-        param_space = ParamSpace(params, 10)
-    finally:
-        random.setstate(previous_state)
+    param_space = ParamSpace(params, 10, seed=999)
 
     assert param_space.n_permutations == 4
 
@@ -161,25 +150,31 @@ def test_param_space_enumerates_full_space_and_returns_none_when_exhausted():
 def test_param_space_large_space_no_longer_overflows_and_is_reproducible():
     params = _build_huge_params()
     larger_params = _build_huge_params(25)
-    previous_state = random.getstate()
-
-    try:
-        random.seed(42)
-        first = ParamSpace(params, 10_000)
-
-        random.seed(42)
-        second = ParamSpace(params, 10_000)
-
-        random.seed(7)
-        larger = ParamSpace(larger_params, 64)
-    finally:
-        random.setstate(previous_state)
+    first = ParamSpace(params, 10_000, seed=42)
+    second = ParamSpace(params, 10_000, seed=42)
+    larger = ParamSpace(larger_params, 64, seed=7)
 
     assert first.n_permutations == 10_000
     assert second.n_permutations == 10_000
     assert larger.n_permutations == 64
     assert first.df_params.head(5).rows() == second.df_params.head(5).rows()
     assert set(larger.generate(random_search=False).keys()) == set(larger_params.keys())
+
+
+def test_param_space_seed_does_not_mutate_global_random_state():
+    params = {'a': [0, 1, 2], 'b': [10, 20, 30]}
+    previous_state = random.getstate()
+
+    try:
+        random.seed(1234)
+        before = random.getstate()
+        param_space = ParamSpace(params, 4, seed=99)
+        _ = param_space.generate(random_search=True)
+        after = random.getstate()
+    finally:
+        random.setstate(previous_state)
+
+    assert after == before
 
 
 def test_param_space_large_space_sequences_match_for_both_generation_modes():

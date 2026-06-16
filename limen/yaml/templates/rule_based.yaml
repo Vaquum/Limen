@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: rule_based_experiment
-  limen_version: "3.31.1"
+  limen_version: "3.31.2"
   mode: development
   description: Rule-based strategy using RSI oversold and EMA trend filter
 
@@ -63,7 +63,7 @@ sfd:
     ema_period: [50, 100, 200]
 
 uel:
-  n_permutations: 50
+  n_permutations: 12
   search_strategy:
     type: random
   prep_each_round: true
