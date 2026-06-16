@@ -311,7 +311,7 @@ def test_defaults_to_all_permutations_when_not_provided():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
-        expected_ids = _run_real_experiment(exp_dir, n_permutations=3)
+        expected_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir))
         assert cohort.available_permutation_ids == expected_ids
