@@ -57,7 +57,7 @@ The implementation PR closes:
 | D035 | UEL/docs distinguish default artifacts from opt-in post-processing. |
 | D036 | CLI profiler docs state static profiling for validated CLI YAML. |
 | D037 | CLI docs state `--parent` full-id requirement and store behavior. |
-| D038 | Committed manifest URI docs require full `sha256:<64-hex>` parent IDs. |
+| D038 | Committed manifest URI docs state short-prefix expansion and full `manifest_id` provenance. |
 | D039 | Trainer docs keep metric validation scoped to current artifact behavior. |
 | D040 | Trainer/Cohort docs frame sensor inference around trained artifact contracts. |
 | D041 | Trainer docs require valid `round_data.jsonl` artifacts for promotion. |

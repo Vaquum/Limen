@@ -107,6 +107,8 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'vaquum_limen' not in docs_text
     assert 'manifest-driven SFMs' not in docs_text
     assert 'SFM has manifest' not in docs_text
+    assert 'unambiguous short prefix' in docs_text
+    assert 'metadata.json` records the full canonical `manifest_id`' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:

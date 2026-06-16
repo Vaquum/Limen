@@ -123,6 +123,8 @@ Options:
 
 `limen run` accepts either a YAML file path or a committed `manifest://sha256:` URI. The command resolves the manifest, validates it, compiles all `limen.*` references, builds the parameter search domain, and then runs UEL.
 
+Committed manifest URIs may use a full `manifest://sha256:<64-hex>` ID or an unambiguous short prefix. Resolution happens against the current project-local manifest store. A short prefix is expanded to the stored full manifest file name before execution; the result path uses the first eight hex characters, the copied YAML is named `manifest.yaml`, and `metadata.json` records the full canonical `manifest_id`. Use the full URI in external provenance records.
+
 `metadata.mode` controls the default result path:
 
 | Mode | Default output |
