@@ -110,6 +110,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'unambiguous short prefix' in docs_text
     assert 'metadata.json` records the full canonical `manifest_id`' in docs_text
     assert 'Metric validation is intersection-based' in docs_text
+    assert 'Sensor callers pass raw klines, not `x_test`' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:
