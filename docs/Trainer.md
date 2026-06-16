@@ -6,7 +6,7 @@ Trainer bridges a selected experiment row and a trained model object for downstr
 
 ## What Trainer needs
 
-Trainer works only with experiments that were run through the artifact-backed UEL path and wrote an `experiment_dir`.
+Trainer works only with YAML-based artifact directories, normally created by `limen run`, that include the metadata needed to reconstruct the manifest.
 
 At minimum, the directory must contain:
 
@@ -17,8 +17,8 @@ If `results.csv` is also present, Trainer validates the retrained metrics agains
 
 ## Prerequisites
 
-- the experiment must have been created with `experiment_dir='experiments/logreg-first'`
-- the experiment must be YAML-based (created via `limen run`)
+- the experiment must have a result directory created by `limen run`
+- the experiment must be YAML-based and include `metadata.json["yaml_reference"]`
 - the SFD must be a manifest-driven ML architecture (rule-based architectures are not supported)
 
 ## Workflow
@@ -208,15 +208,15 @@ Trainer uses:
 
 ## Scope note
 
-Trainer depends on the artifact-backed UEL path, which in turn depends on a concrete `SearchStrategy`. Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for custom strategies.
+Trainer depends on the artifact-backed YAML run path, which uses UEL with a concrete `SearchStrategy`. Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for custom strategies.
 
 The operating model is:
 
-- UEL artifact-backed runs create the promotion-ready experiment directory
+- `limen run` creates the promotion-ready experiment directory
 - Trainer turns selected rounds from that directory into sensors
 
 ## Read next
 
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and retrains.
 - Continue to [Cohort](Cohort.md) to bind selected sensors into an ensemble inference surface.
-- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the run layer that produces `experiment_dir`.
+- Continue to [Command Line Interface](Command-Line-Interface.md) for the YAML run layer that produces result directories.

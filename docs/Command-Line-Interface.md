@@ -6,6 +6,18 @@ The Limen CLI is the supported shell surface for YAML-first experiment work. It 
 
 The CLI owns project and manifest operations around declarative YAML experiments. It does not replace the Python API for custom SFD authoring, custom feature code, or direct `UniversalExperimentLoop` integration.
 
+## First YAML Run
+
+```bash
+limen init logreg-first.yaml --template logreg_binary
+limen validate logreg-first.yaml
+limen profile logreg-first.yaml
+limen run --dry-run logreg-first.yaml
+limen run logreg-first.yaml
+```
+
+This is the preferred user journey: create or edit YAML, validate it, profile the search space, compile it without execution, then run it through the UEL engine.
+
 ## Commands
 
 | Command | Purpose | Main output |
@@ -53,6 +65,17 @@ Options:
 | --- | --- |
 | `--dry-run` | validate and compile only; no permutations execute |
 | `--resume <results_dir>` | resume from a checkpoint directory; cannot be combined with a YAML file |
+
+The normal result directory contains:
+
+| File | Meaning |
+| --- | --- |
+| copied YAML manifest | the source manifest copied beside the run outputs; committed manifest URI runs use `manifest.yaml` |
+| `metadata.json` | experiment metadata, including `yaml_reference` for Trainer and resume flows |
+| `results.csv` | streaming round log |
+| `round_data.jsonl` | round params, predictions, and alignment metadata |
+| `checkpoint.json` | checkpoint state when checkpointing has run |
+| `audit.jsonl` | feedback-cycle audit trail when feedback has run |
 
 ### `limen commit <yaml_file>`
 

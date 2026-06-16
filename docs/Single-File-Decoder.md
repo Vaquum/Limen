@@ -1,8 +1,8 @@
 # Single file decoder
 
-A Single File Decoder (SFD) is the unit of experiment definition in Limen. It is a Python module that packages the parameter space together with either a declarative manifest or fully custom preparation and model functions.
+A Single File Decoder (SFD) is the Python experiment unit beneath Limen's YAML and CLI path. It packages a parameter space together with either a declarative manifest or fully custom preparation and model functions.
 
-`UniversalExperimentLoop` turns an SFD module into a parameter sweep.
+`limen run` compiles YAML into a manifest-backed SFD and passes it to `UniversalExperimentLoop`. Direct SFD authoring is the extension path for custom decoders and model code.
 
 ## Choose the SFD style
 
@@ -89,12 +89,12 @@ This style is how Limen's foundational SFDs are built.
 
 - declarative data fetching
 - split-first prep with train-only fitting
-- automatic prep/model wiring inside `UniversalExperimentLoop`
+- automatic prep/model wiring inside the CLI-backed UEL engine
 - reproducible collaboration surface
 
 ### Runtime rules for manifest-driven SFDs
 
-- `UniversalExperimentLoop.run(prep_each_round=True)` is required
+- `limen run` sets `prep_each_round` from YAML; direct `UniversalExperimentLoop.run(prep_each_round=True)` is required
 - `prep` and `model` cannot be overridden in `run()`
 - when `data=` is omitted, Limen fetches data from the manifest
 
@@ -206,8 +206,9 @@ Use [Built-In SFDs](Built-In-SFDs.md) for the current shipped catalog and [Refer
 
 ## Read next
 
-- Continue to [Built-In SFDs](Built-In-SFDs.md) for the shipped foundational decoder catalog.
+- Continue to [Command Line Interface](Command-Line-Interface.md) for the normal YAML run path.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline used by standard SFDs.
-- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run an SFD.
+- Continue to [Built-In SFDs](Built-In-SFDs.md) for the shipped foundational decoder catalog.
+- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for direct Python execution.
 - Continue to [Reference Architecture](Reference-Architecture.md) for model implementation authoring beyond packaged decoders.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring new SFDs.

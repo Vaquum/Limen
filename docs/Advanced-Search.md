@@ -1,6 +1,6 @@
 # Advanced Search
 
-Advanced search is Limen's artifact-backed experiment path. It adds a mutable parameter domain, a search strategy abstraction, checkpointing, resumability, and mid-run feedback on top of the normal Universal Experiment Loop.
+Advanced search is Limen's artifact-backed extension path. It adds a mutable parameter domain, a search strategy abstraction, checkpointing, resumability, and mid-run feedback on top of the same UEL engine used by `limen run`.
 
 This page covers:
 
@@ -9,7 +9,7 @@ This page covers:
 - mid-run interventions that can mutate the remaining search space
 - promotion-ready runs for [Trainer](Trainer.md)
 
-For a first experiment, stay on the standard UEL path. Advanced search is real and supported, but it is the extension-oriented layer of Limen.
+For a first experiment, stay on the YAML/CLI path. Advanced search is real and supported, but it is the extension-oriented layer of Limen.
 
 ## The core pieces
 
@@ -166,9 +166,9 @@ For resume to work cleanly, keep these stable:
 - the same parameter content
 - the same configured reducer stack
 
-## What advanced search adds beyond standard UEL
+## What advanced search adds beyond the normal run path
 
-Compared to the standard path, advanced search adds:
+Compared to a normal YAML CLI run or direct standard UEL sweep, advanced search adds:
 
 - mutable pruning and focus during a run
 - stored round-level predictions and alignment data
@@ -185,5 +185,6 @@ What it does not change:
 ## Read next
 
 - Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for the intervention system that acts on the mutable search queue.
-- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the broader run contract around standard and advanced execution.
+- Continue to [Command Line Interface](Command-Line-Interface.md) for the normal YAML run loop.
+- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the broader engine contract around standard and advanced execution.
 - Continue to [Trainer](Trainer.md) for promotion of finished advanced runs into reusable sensors.

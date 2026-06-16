@@ -1,28 +1,41 @@
 # Universal experiment loop
 
-The Universal Experiment Loop (UEL) is Limen's experiment runner. It takes an SFD, executes parameter combinations, streams a CSV log, and then exposes post-run analysis surfaces such as confusion metrics and backtest results.
+The Universal Experiment Loop (UEL) is Limen's execution engine. The normal operator path reaches it through `limen run`: YAML is validated, compiled into a manifest-backed SFD, executed by UEL, and written to a result directory.
 
 This page covers:
 
-- how to run a first experiment
-- what `UniversalExperimentLoop` actually stores after a run
-- when to use the standard run path versus the advanced artifact-backed path
-- which run-time rules matter for manifest-driven and custom SFDs
+- how CLI execution maps to UEL
+- what `UniversalExperimentLoop` stores after a direct Python run
+- when to use direct standard UEL versus the artifact-backed path
+- which runtime rules matter for manifest-driven and custom SFDs
 
-## Two execution modes
+## Preferred execution path
 
-UEL currently has two execution modes.
+Start with CLI unless you are extending the engine directly:
+
+```bash
+limen validate logreg-first.yaml
+limen profile logreg-first.yaml
+limen run --dry-run logreg-first.yaml
+limen run logreg-first.yaml
+```
+
+`limen run` constructs UEL with a compiled SFD, a concrete search strategy, an `experiment_dir`, and the parsed YAML stored as `yaml_reference` in `metadata.json`. The result directory contains the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
+
+## Direct Python execution modes
+
+Direct UEL integration currently has two execution modes.
 
 | Mode | Entry path | Fits | Outputs |
 |---|---|---|---|
-| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | public examples and direct sweeps | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when `experiment_dir` is set |
-| MSQ / artifact-backed path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
+| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | custom local sweeps and Python examples | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when `experiment_dir` is set |
+| MSQ / artifact-backed path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows, and the CLI YAML path | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
 
-The standard run path is the starting point for public examples and direct sweeps. The advanced path is supported and extension-oriented through `SearchStrategy`.
+The standard run path is for direct Python work. The artifact-backed path is the durable engine path used by CLI YAML runs and advanced search.
 
-## First real run
+## Direct standard run
 
-This local example uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
+This local Python example uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
 
 ```python
 import limen
@@ -41,10 +54,11 @@ uel.run(
     n_permutations=4,
     prep_each_round=True,
     random_search=False,
+    post_processing=True,
 )
 ```
 
-After the run, these attributes are available:
+With `post_processing=True`, these attributes are available:
 
 ```python
 uel.experiment_log
@@ -52,7 +66,9 @@ uel.experiment_confusion_metrics
 uel.experiment_backtest_results
 ```
 
-On a live local run over that file-backed input, that produced:
+Without `post_processing=True`, standard UEL still writes `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset.
+
+On a live local run over that file-backed input with post-processing enabled, that produced:
 
 - `uel.experiment_log` with one row per round
 - `uel.experiment_confusion_metrics` with one row per round
@@ -180,9 +196,8 @@ and keeps the full run state in memory on the `uel` object.
 
 This is the path to use for:
 
-- first experiments
-- docs examples
 - direct local research loops
+- custom Python examples
 - direct parameter sweeps
 
 ### Artifact-backed path

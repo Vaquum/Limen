@@ -53,7 +53,7 @@ In the wider Vaquum architecture, Origo sits upstream as the data layer. Nexus, 
 
 ## First Experiment
 
-The first runnable path is a small parameter sweep on the bundled BTC/USDT kline dataset with the built-in logistic-regression decoder.
+The first runnable path is a YAML manifest executed through the `limen` CLI.
 
 1. Install the package:
 
@@ -61,36 +61,41 @@ The first runnable path is a small parameter sweep on the bundled BTC/USDT kline
 pip install vaquum_limen
 ```
 
-2. Load data and run a first experiment:
+2. Scaffold a starter manifest:
 
-```python
-import limen
-
-historical = limen.HistoricalData()
-data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
-
-uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
-
-uel.run(
-    experiment_name="logreg-first",
-    n_permutations=25,
-    prep_each_round=True,
-)
+```bash
+limen init logreg-first.yaml --template logreg_binary
 ```
 
-3. Inspect the core outputs:
+3. Validate, profile, and dry-run the manifest:
 
-- `uel.experiment_log` for the parameter sweep results
-- `uel.experiment_confusion_metrics` for confusion analytics
-- `uel.experiment_backtest_results` for backtest results
+```bash
+limen validate logreg-first.yaml
+limen profile logreg-first.yaml
+limen run --dry-run logreg-first.yaml
+```
 
-That path runs against public BTC/USDT data without relying on repo-local fixture files. The UEL documentation covers run directories, checkpoints, resumability, and stored round artefacts.
+4. Run it:
+
+```bash
+limen run logreg-first.yaml
+```
+
+5. Inspect the result directory printed by the CLI:
+
+- copied YAML manifest
+- `metadata.json`
+- `results.csv`
+- `round_data.jsonl`
+
+That path runs the manifest-backed engine without Python orchestration code. The Python API remains available for custom SFDs, custom prep/model logic, and direct UEL integration.
 
 ## Learn more
 
 - Start with the full docs hub in [docs/README.md](docs/README.md)
-- Define research units in [docs/Single-File-Decoder.md](docs/Single-File-Decoder.md), [docs/Built-In-SFDs.md](docs/Built-In-SFDs.md), and [docs/Experiment-Manifest.md](docs/Experiment-Manifest.md)
-- Run experiments in [docs/Universal-Experiment-Loop.md](docs/Universal-Experiment-Loop.md) and extend the artifact-backed path through [docs/Advanced-Search.md](docs/Advanced-Search.md) and [docs/Reducers-And-Feedback.md](docs/Reducers-And-Feedback.md)
+- Start with the YAML/CLI path in [docs/Command-Line-Interface.md](docs/Command-Line-Interface.md) and [docs/Experiment-Manifest.md](docs/Experiment-Manifest.md)
+- Use [docs/Universal-Experiment-Loop.md](docs/Universal-Experiment-Loop.md) for the engine beneath CLI and direct Python integration
+- Define extension research units in [docs/Single-File-Decoder.md](docs/Single-File-Decoder.md) and [docs/Built-In-SFDs.md](docs/Built-In-SFDs.md)
 - Analyze results in [docs/Log.md](docs/Log.md), [docs/Benchmark.md](docs/Benchmark.md), and [docs/Backtest.md](docs/Backtest.md)
 - Understand the model layer in [docs/Reference-Architecture.md](docs/Reference-Architecture.md) and the helper layer in [docs/Utilities.md](docs/Utilities.md)
 - Promote finished runs into reusable outputs with [docs/Trainer.md](docs/Trainer.md) and [docs/Cohort.md](docs/Cohort.md)

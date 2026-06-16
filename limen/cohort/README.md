@@ -50,8 +50,9 @@ cohort/
 - Infer aggregation mode from architecture capability:
   - `probability_weighted` when probability output is supported
   - `majority_vote` fallback otherwise
-- `predict(raw_klines)` returns ndarray/tuple contract
-- `__call__(raw_klines)` returns decoder-compatible dict contract
+- `predict(raw_klines)` returns one `BarPrediction` for the last bar
+- `predict_all(raw_klines)` returns `list[BarPrediction]`
+- `__call__(raw_klines)` aliases `predict_all(raw_klines)`
 
 See [Cohort](../../docs/Cohort.md) for full contract and examples.
 

@@ -1,29 +1,97 @@
 # Experiment Manifest
 
-The Experiment Manifest is Limen's declarative pipeline builder. Instead of hand-written `prep()` orchestration, the manifest describes how data is fetched, split, transformed, targeted, scaled, and handed to a model.
+The Experiment Manifest is Limen's declarative experiment definition. The canonical operator form is YAML: define the manifest, validate it, profile it, run it through CLI, then inspect the generated artifacts.
 
-This is the default path for Limen work because it provides:
+Use YAML manifests for Limen's opinionated pipeline. Use Python builders, custom `prep()`, and custom `model()` only when the workflow cannot fit the declarative operator path.
+
+The default path provides:
 
 - split-first execution
 - train-only fitting for targets and scalers
 - automatic data fetching
 - cleaner collaboration surfaces
-- reproducible experiment definitions
+- reproducible experiment definitions and artifact-backed runs
 
-Use a manifest for Limen's opinionated pipeline. Use custom `prep()` and `model()` functions only when the workflow cannot fit the declarative pipeline.
+## YAML First Run
+
+```bash
+limen init logreg-first.yaml --template logreg_binary
+limen validate logreg-first.yaml
+limen profile logreg-first.yaml
+limen run --dry-run logreg-first.yaml
+limen run logreg-first.yaml
+```
+
+The run writes a result directory containing the copied YAML manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
+
+## YAML Shape
+
+This minimal shape shows the same pieces as the Python builder API:
+
+```yaml
+schema_version: "1.0"
+
+metadata:
+  name: logreg-first
+  limen_version: "3.6.0"
+  mode: development
+
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+    split_dates:
+      train_start: "2024-01-01"
+      train_end: "2024-09-30"
+      val_start: "2024-10-01"
+      val_end: "2024-11-30"
+      test_start: "2024-12-01"
+      test_end: "2024-12-31"
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: "{roc_period}"
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: "roc_{roc_period}"
+        quantile: "{q}"
+      transform_params:
+        shift: "{shift}"
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    roc_period: [1, 4, 12]
+    q: [0.35, 0.40, 0.45]
+    shift: [-1, -2, -3]
+    scaler_type: [logreg]
+    C: [0.1, 1.0, 5.0]
+
+uel:
+  n_permutations: 25
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
+```
 
 ## Manifest Types
 
-There are two manifest subclasses:
+There are two manifest subclasses under the YAML and Python surfaces:
 
 - **`MLManifest`** — for ML pipelines. Supports indicators, features, targets, scalers, ablation, and calibration.
 - **`RuleBasedManifest`** — for rule-based pipelines. Supports indicators and features, plus `with_strategy()` for predicate-driven entry signals. Does not support scalers or ablation.
 
 Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass. `Manifest` itself is not meant to be instantiated directly — its `prepare_data()` raises `NotImplementedError`.
 
-## Golden Path Example
+## Python Builder Equivalent
 
-This is a complete manifest-driven SFD in the style Limen uses today.
+The Python builder API is the equivalent surface for foundational SFD authors and custom integrations.
 
 ```python
 from limen.data import HistoricalData
@@ -76,7 +144,7 @@ def manifest() -> Manifest:
     )
 ```
 
-Run it through UEL like this:
+Run the Python-built SFD through UEL only when direct engine integration is required:
 
 ```python
 import limen
@@ -90,6 +158,8 @@ uel.run(
     prep_each_round=True,
 )
 ```
+
+For ordinary runs, keep the manifest in YAML and use `limen run`.
 
 ## How A Manifest Executes
 

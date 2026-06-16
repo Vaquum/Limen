@@ -78,11 +78,12 @@ Every major public page should reinforce the same core Limen story:
 
 1. Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.
 2. Data enters through native Limen data access or external OHLC-style data.
-3. An experiment is defined through an SFD, manifest-driven by default.
-4. Universal Experiment Loop executes a parameter search across the chosen search space.
-5. Log, benchmark-style analytics, and backtest outputs show what happened and why.
-6. Trainer and Cohort turn finished experiment outputs into reusable downstream artefacts.
-7. Trade decisioning and execution happen outside Limen, downstream in other Vaquum systems.
+3. An experiment is defined first as a YAML manifest.
+4. The CLI validates, profiles, dry-runs, and runs that manifest.
+5. Universal Experiment Loop is the engine beneath CLI execution and the direct API for Python extensions.
+6. Log, benchmark-style analytics, and backtest outputs show what happened and why.
+7. Trainer and Cohort turn finished experiment outputs into reusable downstream artefacts.
+8. Trade decisioning and execution happen outside Limen, downstream in other Vaquum systems.
 
 If a page does not help a reader understand its place in that story, it should route clearly to the pages that do.
 
@@ -104,6 +105,7 @@ All Limen documentation should use the same register:
 - Keep theory only where it directly improves practical understanding.
 - Explain current surface area honestly; do not imply future behavior as present behavior.
 - Prefer examples that show inputs, outputs, and artefacts.
+- Lead operator-facing workflow docs with YAML manifest and CLI execution before Python internals.
 - Do not use unexplained internal jargon.
 - Do not duplicate large sections of content across pages.
 - End pages with explicit reading routes or next steps when they affect task completion.
