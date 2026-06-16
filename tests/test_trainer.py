@@ -385,7 +385,7 @@ def test_load_round_data_rejects_malformed_jsonl() -> None:
         trainer = object.__new__(Trainer)
         trainer._experiment_dir = experiment_dir
 
-        with pytest.raises(ValueError, match='Malformed JSON in round_data.jsonl line 2'):
+        with pytest.raises(ValueError, match=r'Malformed JSON in round_data\.jsonl line 2'):
             trainer._load_round_data()
 
 
