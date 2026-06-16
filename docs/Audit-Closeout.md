@@ -40,7 +40,7 @@ The implementation PR closes:
 | D018 | Public docs contract assertions run under the existing PR test workflow. |
 | D019 | `.markdownlint.json` and docs-surface tests define the current docs quality gate. |
 | D020 | Link-positive state is preserved by docs-site build with broken-link failure. |
-| D021 | Docs-site dependencies were updated to current Docusaurus-line packages. |
+| D021 | Docs-site dependencies were updated and broken-markdown-link handling uses the non-deprecated `markdown.hooks` config. |
 | D022 | Docs-site high/critical audit findings are removed; high audit is proof. |
 | D023 | Docs-site direct dependencies are refreshed. |
 | D024 | Docs-site package has license metadata; third-party review notes are in `THIRD_PARTY.md`. |
