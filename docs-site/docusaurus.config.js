@@ -23,13 +23,17 @@ const config = {
   url,
   baseUrl,
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'throw',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
+  },
   favicon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>L</text></svg>',
   trailingSlash: false,
   organizationName: 'Vaquum',
   projectName: 'Limen',
   themes: [],
-  stylesheets: ['https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css'],
+  stylesheets: ['https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css'],
   plugins: [
     [
       require.resolve('@easyops-cn/docusaurus-search-local'),
@@ -65,6 +69,17 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      metadata: [
+        {name: 'description', content: productDocs.tagline},
+        {property: 'og:type', content: 'website'},
+        {property: 'og:site_name', content: productDocs.productName},
+        {property: 'og:title', content: `${productDocs.productName} Docs`},
+        {property: 'og:description', content: productDocs.tagline},
+        {property: 'og:url', content: `${url}${baseUrl}`},
+        {name: 'twitter:card', content: 'summary'},
+        {name: 'twitter:title', content: `${productDocs.productName} Docs`},
+        {name: 'twitter:description', content: productDocs.tagline},
+      ],
       navbar: {
         title: productDocs.productName,
         items: [

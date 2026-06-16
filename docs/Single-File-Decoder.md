@@ -152,6 +152,7 @@ Custom `prep()` receives the experiment dataframe and the round-specific paramet
 Defaults:
 
 - keep `datetime` in the dataframe until just before `split_data_to_prep_output()`
+- pass throwaway split lists and column lists to `split_data_to_prep_output()` because it drops `datetime` from the split frames and removes `datetime` from the column list
 - capture `all_datetimes = data['datetime'].to_list()` before dropping rows when alignment metadata is required
 - make the function deterministic with respect to `round_params`
 

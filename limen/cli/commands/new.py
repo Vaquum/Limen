@@ -48,7 +48,9 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
     click.secho(f"\n  ✓ Project '{project_name}' created.", fg='green')
     click.echo("\n  Next steps:")
     click.echo(f"    cd {project_name}")
-    click.echo("    limen validate manifests/examples/logreg_binary.yaml")
+    click.echo("    limen list-templates")
+    click.echo("    limen init logreg-first.yaml --template logreg_binary")
+    click.echo("    limen validate logreg-first.yaml")
     return True
 
 

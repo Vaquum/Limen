@@ -101,7 +101,7 @@ Copies a bundled YAML template to `output` and updates `metadata.name` to the ou
 
 ### `limen list-templates`
 
-Lists package-data templates under `limen/yaml/templates`. Shipped templates include logreg, LightGBM, TabPFN, XGBoost, and rule-based examples when present in the installed package.
+Lists package-data templates under `limen/yaml/templates`. Shipped templates include logreg, LightGBM, TabPFN, XGBoost, and rule-based manifests when present in the installed package. `tabpfn_binary` is listed as a template but requires installing the optional `tabpfn` extra before execution.
 
 ### `limen ls`
 
@@ -110,6 +110,8 @@ Reads `manifests/committed/index.json` from the current project and prints commi
 ### `limen new <project_name>`
 
 Creates a new project from the official project template.
+
+The printed next steps avoid hard-coding project-template example paths. They route through `limen list-templates`, `limen init logreg-first.yaml --template logreg_binary`, and `limen validate logreg-first.yaml`.
 
 Options:
 

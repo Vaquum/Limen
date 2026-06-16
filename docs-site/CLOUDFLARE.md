@@ -48,11 +48,15 @@ The Worker does three things:
 
 - redirects `/` to `/limen/`
 - redirects `/limen` to `/limen/`
+- redirects `/robots.txt` to `/limen/robots.txt`
+- redirects `/sitemap.xml` to `/limen/sitemap.xml`
 - serves `/limen/*` from the Docusaurus static build
+- applies HSTS, CSP, frame, content-type, referrer, and permissions headers to redirects, 404s, and asset responses
 
 Examples:
 
 - `https://docs.vaquum.fi/` -> redirect to `https://docs.vaquum.fi/limen/`
+- `https://docs.vaquum.fi/sitemap.xml` -> redirect to `https://docs.vaquum.fi/limen/sitemap.xml`
 - `https://docs.vaquum.fi/limen/guides/advanced-search` -> serves the `Advanced Search` page
 
 ## Local build check

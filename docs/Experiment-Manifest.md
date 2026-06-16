@@ -33,7 +33,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "3.6.0"
+  limen_version: "3.31.1"
   mode: development
 
 sfd:
@@ -190,7 +190,7 @@ There is one more protection step after feature engineering: non-empty splits ar
 
 Configure the production data source for the manifest.
 
-```python
+```python-fragment
 from limen.data import HistoricalData
 
 .set_data_source(
@@ -203,7 +203,7 @@ from limen.data import HistoricalData
 
 Configure the test data source used when `test_mode=True` is passed to `UniversalExperimentLoop`.
 
-```python
+```python-fragment
 .set_test_data_source(
     method=HistoricalData.get_spot_klines,
     params={'kline_size': 7200, 'row_count_limit': 5000},
@@ -224,7 +224,7 @@ To keep local runs bounded, configure `set_test_data_source()` with explicit `kl
 
 Configure the relative split sizes.
 
-```python
+```python-fragment
 .set_split_config(8, 1, 2)
 ```
 
@@ -242,7 +242,7 @@ Allowing zeros is important for retraining workflows such as Trainer Pass 2, whe
 
 Pin the train, val, and test windows to absolute `datetime` bounds, in preference to ratio-based splits whose absolute boundary depends on the input row count.
 
-```python
+```python-fragment
 from datetime import datetime
 
 .set_split_dates(
@@ -281,7 +281,7 @@ split_dates:
 
 Optionally select or reduce the raw dataset before splitting.
 
-```python
+```python-fragment
 from limen.data.utils import random_slice
 
 .set_pre_split_data_selector(
@@ -299,7 +299,7 @@ Use this for smaller or controlled slices of the raw dataset before the normal s
 
 Configure threshold-bar formation inside each split.
 
-```python
+```python-fragment
 from limen.data.utils import compute_data_bars
 
 .set_bar_formation(
@@ -315,7 +315,7 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 Assert that bar formation still leaves the downstream columns required by the experiment.
 
-```python
+```python-fragment
 .set_required_bar_columns([
     'datetime',
     'open',
@@ -335,14 +335,14 @@ This assertion protects model or backtest paths that require OHLC fields after b
 
 ### `add_indicator(func, group=None, include_if=None, **params)`
 
-```python
+```python-fragment
 .add_indicator(roc, period='roc_period')
 .add_indicator(wilder_rsi)
 ```
 
 ### `add_feature(func, group=None, include_if=None, **params)`
 
-```python
+```python-fragment
 .add_feature(vwap)
 .add_feature(kline_imbalance)
 ```
@@ -358,7 +358,7 @@ Manifest parameters are resolved at run time:
 
 That means this:
 
-```python
+```python-fragment
 .add_indicator(roc, period='roc_period')
 ```
 
@@ -374,7 +374,7 @@ for each round.
 
 Use `group=` to tag transforms into families, then filter by `feature_groups` in `round_params`.
 
-```python
+```python-fragment
 .add_indicator(roc, group='momentum', period='roc_period')
 .add_indicator(wilder_rsi, group='momentum')
 .add_feature(vwap, group='microstructure')
@@ -386,7 +386,7 @@ If `round_params['feature_groups']` is present, only transforms whose group is i
 
 Use `include_if=` when a transform should only run if a boolean round parameter is true.
 
-```python
+```python-fragment
 .add_feature(vwap, include_if='use_vwap')
 ```
 
@@ -398,7 +398,7 @@ The manifest builder supports perturbation-style workflows directly in the decla
 
 Use `group=` on indicators or features, then pass `feature_groups` in `round_params`.
 
-```python
+```python-fragment
 .add_indicator(roc, group='momentum', period='roc_period')
 .add_feature(vwap, group='microstructure')
 ```
@@ -417,7 +417,7 @@ Only grouped transforms in the selected families run. Ungrouped transforms alway
 
 Use `include_if=` for boolean on/off switches:
 
-```python
+```python-fragment
 .add_feature(vwap, include_if='use_vwap')
 ```
 
@@ -502,7 +502,7 @@ Then in `params()`:
 
 Target construction uses `Manifest.with_target_label()` with a class from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
 
-```python
+```python-fragment
 from limen.targets import QuantileBinaryTarget
 
 .with_target_label(
@@ -525,7 +525,7 @@ See [Targets](Targets.md) for the full reference including all built-in target c
 
 Configure a fitted scaler that is instantiated on train and then applied across the splits.
 
-```python
+```python-fragment
 from limen.scalers import LogRegScaler
 
 .set_scaler(LogRegScaler)
@@ -535,7 +535,7 @@ The fitted scaler is stored in the resulting `data_dict` under `_scaler`.
 
 Pass `extra_params` to forward constructor arguments. String values are treated as sweep param references resolved from `round_params` at fit time; all other values are static:
 
-```python
+```python-fragment
 # window swept as a param; min_samples fixed
 .set_scaler(CausalRollingRobustScaler, extra_params={'window': 'scaler_window', 'min_samples': 25})
 ```
@@ -544,7 +544,7 @@ Pass `extra_params` to forward constructor arguments. String values are treated 
 
 Select a scaler dynamically from `SCALER_REGISTRY` using a round parameter.
 
-```python
+```python-fragment
 .set_scaler_from_params('scaler_type')
 ```
 
@@ -562,7 +562,7 @@ Use this when scaler choice is itself part of the search space. Pass `extra_para
 
 Enable strict null checking after the Context Carry-Over (CCO) pipeline.
 
-```python
+```python-fragment
 .set_strict_mode(True)
 ```
 
@@ -739,7 +739,7 @@ This is the safe alternative to writing Python code — the polars SQL parser re
 
 Configure the final model function.
 
-```python
+```python-fragment
 from limen.sfd.reference_architecture import logreg_binary
 
 .with_reference_architecture(logreg_binary)
@@ -775,7 +775,7 @@ Required model parameters with no defaults must be present in the round params o
 
 Opens a `CalibrationBuilder` for configuring probability calibration and threshold optimisation. Call `.done()` to finalize and return to the manifest.
 
-```python
+```python-fragment
 from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
 from limen.metrics.balanced_metric import balanced_metric
 
@@ -815,7 +815,7 @@ Both flags default to `True`. Add `'use_calibration': [True, False]` and `'use_t
 
 Calibration params support the same resolution convention as the rest of the manifest. String values are looked up from `round_params` at runtime; non-string values pass through unchanged:
 
-```python
+```python-fragment
 .probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
 .threshold_function(func=grid_threshold_optimizer,
                     metric=balanced_metric,          # callable — passes through unchanged
@@ -830,7 +830,7 @@ See [Calibration](Calibration.md) for the full reference including custom calibr
 
 Configure deterministic drop-N feature ablation after target construction.
 
-```python
+```python-fragment
 .set_feature_ablation()
 ```
 
@@ -851,7 +851,7 @@ This makes feature robustness part of the search itself.
 
 Append custom entries to the finalized `data_dict`.
 
-```python
+```python-fragment
 def extend_data_dict(data_dict, split_data, round_params, fitted_params):
     data_dict['train_rows'] = split_data[0].height
     return data_dict
@@ -953,7 +953,7 @@ If the model returns `_preds`, UEL stores them in `uel.preds` and the `Log` laye
 
 ### Binary target from a fitted quantile cutoff
 
-```python
+```python-fragment
 from limen.targets import QuantileBinaryTarget
 
 .with_target_label(

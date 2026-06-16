@@ -42,7 +42,7 @@ metrics/
 
 - The clearest import style is function-level imports from each module, even though the package root also exposes part of the surface.
 - `binary_metrics` assumes the standard Limen `data_dict` shape and reads `data['y_test']`.
-- `safe_ovr_auc` returns `NaN` rather than raising when the class structure makes AUC undefined.
+- `safe_ovr_auc` returns `NaN` rather than raising when the class structure makes AUC undefined. Reindex probability columns before calling it if a fold omits an intermediate class.
 - `balanced_metric` is Limen-specific and should not be described as a standard sklearn metric.
 
 ## Read next

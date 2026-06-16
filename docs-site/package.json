@@ -14,14 +14,18 @@
     "clear": "docusaurus clear"
   },
   "dependencies": {
-    "@docusaurus/core": "3.9.2",
-    "@docusaurus/preset-classic": "3.9.2",
-    "@easyops-cn/docusaurus-search-local": "0.55.1",
-    "katex": "^0.16.11",
+    "@docusaurus/core": "^3.10.1",
+    "@docusaurus/preset-classic": "^3.10.1",
+    "@easyops-cn/docusaurus-search-local": "^0.55.2",
+    "katex": "^0.16.47",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
-  }
+  },
+  "overrides": {
+    "serialize-javascript": "7.0.5"
+  },
+  "license": "MIT"
 }

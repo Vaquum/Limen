@@ -286,11 +286,11 @@ For the full advanced-search contract, continue to [Advanced Search](Advanced-Se
 
 ### Manifest-driven runs require `prep_each_round=True`
 
-A manifest-driven SFD with `prep_each_round=False` raises the exact runtime string `prep_each_round must be True for manifest-driven SFMs`. The `SFM` wording is legacy runtime text, not current docs terminology. Set `prep_each_round=True`.
+A manifest-driven SFD with `prep_each_round=False` raises `prep_each_round must be True for manifest-driven SFDs`. Set `prep_each_round=True`.
 
 ### Manifest-driven runs cannot override `prep` or `model`
 
-Passing `prep=` or `model=` to `run()` for a manifest-driven SFD raises `Cannot override prep/model when SFM has manifest`. That `SFM` wording is legacy runtime text. Put the logic into the manifest, or switch to the custom SFD path.
+Passing `prep=` or `model=` to `run()` for a manifest-driven SFD raises `Cannot override prep/model when SFD has manifest`. Put the logic into the manifest, or switch to the custom SFD path.
 
 ### Custom SFDs require explicit `data=`
 

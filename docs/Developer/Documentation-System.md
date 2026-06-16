@@ -49,6 +49,7 @@ Limen documentation should have one ownership model.
 - `/docs/Developer` is the canonical source for contributor and maintainer process docs.
 - package `README`s under `/limen` are orientation pages for module ownership and boundaries, not the main public reference.
 - examples should be derived from real runnable flows in this repository, not imaginary or hand-waved pseudo-usage.
+- use `python` fences only for snippets that parse as standalone Python; use `python-fragment` for method-chain fragments or partial code that requires surrounding context.
 
 Content should be authored once whenever possible. If the same explanation appears in multiple places, one page should be canonical and the others should route to it.
 

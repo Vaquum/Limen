@@ -1,0 +1,35 @@
+include README.md
+include CHANGELOG.md
+include LICENSE
+include AUTHORS
+include CITATION.cff
+include CODE_OF_CONDUCT.md
+include CONTRIBUTING.md
+include GOVERNANCE.md
+include MAINTAINERS.md
+include NOTICE
+include SECURITY.md
+include SUPPORT.md
+include THIRD_PARTY.md
+include .markdownlint.json
+recursive-include docs *.md
+include docs-site/CLOUDFLARE.md
+include docs-site/docusaurus.config.js
+include docs-site/package.json
+include docs-site/package-lock.json
+include docs-site/sidebars.js
+recursive-include docs-site/scripts *.mjs
+recursive-include docs-site/src *.js *.jsx *.ts *.tsx *.css
+recursive-include .github *.md *.yml *.yaml
+recursive-include limen *.md
+recursive-include limen/yaml/templates *.yaml
+prune examples
+prune docs-site/.docusaurus
+prune docs-site/.generated
+prune docs-site/build
+prune docs-site/node_modules
+prune .venv
+prune .mypy_cache
+prune .pytest_cache
+prune .ruff_cache
+global-exclude __pycache__ *.py[cod]

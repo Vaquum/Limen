@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vaquum_limen"
-version = "3.31.0"
-description = "Limen unifies parameter search across machine learning and rule-based strategies, with built-in analytics that show not just what works, but why it works."
+name = "vaquum-limen"
+version = "3.31.1"
+description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
   { name = "Mikko Kotila", email = "mailme@mikkokotila.com" },
@@ -17,6 +17,20 @@ authors = [
 ]
 license = { text = "MIT" }
 requires-python = ">=3.10"
+keywords = ["bitcoin", "machine-learning", "research", "backtest", "yaml"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
   "pandas>=2.3.1",
   "polars>=1.0.0",
@@ -44,9 +58,11 @@ limen = "limen.cli.main:cli"
 tabpfn = ["tabpfn>=6"]
 
 [project.urls]
-Homepage = "https://vaquum.fi"
+Homepage = "https://docs.vaquum.fi/limen/"
 Documentation = "https://docs.vaquum.fi/limen/"
 Repository = "https://github.com/vaquum/limen"
+Issues = "https://github.com/Vaquum/Limen/issues"
+Security = "https://github.com/Vaquum/Limen/security/advisories/new"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -55,6 +71,30 @@ exclude = ["tests*", "scripts*"]
 
 [tool.setuptools.package-data]
 limen = ["yaml/templates/*.yaml"]
+
+[tool.setuptools.data-files]
+"share/limen" = [
+  "AUTHORS",
+  "CHANGELOG.md",
+  "CITATION.cff",
+  "CODE_OF_CONDUCT.md",
+  "CONTRIBUTING.md",
+  "GOVERNANCE.md",
+  "LICENSE",
+  "MAINTAINERS.md",
+  "NOTICE",
+  "README.md",
+  "SECURITY.md",
+  "SUPPORT.md",
+  "THIRD_PARTY.md",
+]
+"share/limen/docs" = ["docs/*.md"]
+"share/limen/docs/Developer" = ["docs/Developer/*.md"]
+"share/limen/github" = [
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/ISSUE_TEMPLATE/*.yml",
+  ".github/ISSUE_TEMPLATE/*.md",
+]
 
 [tool.coverage.run]
 source = ["limen"]

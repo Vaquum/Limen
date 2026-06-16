@@ -1,16 +1,10 @@
 # Semantic Versioning
 
-The shared versioning policy now lives in the Vaquum developer docs.
-
-Use the current guide here:
-
-- [Semantic Versioning in Vaquum Developer Docs](https://github.com/Vaquum/dev-docs/blob/main/src/Semantic-Versioning.md)
-
-That external page is now the canonical source for version-bump policy across Vaquum projects.
+This page is the Limen-local versioning contract.
 
 ## Limen local scope
 
-Use this page to find the policy, then apply the result to Limen's local version surfaces.
+Use this page to decide the version bump and apply the result to Limen's local version surfaces.
 
 Limen-local version surfaces:
 
@@ -23,14 +17,16 @@ Limen-local version surfaces:
 
 ## Local rules
 
-- Do not invent a Limen-specific version policy here; use the shared Vaquum policy.
-- Keep `pyproject.toml`, changelog entry, release tag, and release notes aligned to the same version.
-- Treat docs-only changes as version-affecting only when the shared policy says the published package metadata should move.
+- MAJOR: incompatible public API, CLI, schema, artifact, or package-contract change.
+- MINOR: new compatible public capability.
+- PATCH: compatible fix, docs correction, package metadata correction, dependency/security refresh, or proof-gate change.
+- Keep `pyproject.toml`, template `metadata.limen_version`, changelog entry, release tag, and release notes aligned to the same version.
+- Treat docs-only changes as version-affecting when the published package metadata, README, docs artifacts, or public support/security surface changes.
 - If code behavior changes, update docs and changelog in the same PR when they are part of the public surface.
 
 ## Review notes
 
-Version review records the shared-policy category, the local files requiring version or changelog updates, and whether the release script reads the intended version from `pyproject.toml`.
+Version review records the local-policy category, the files requiring version or changelog updates, and whether the release script reads the intended version from `pyproject.toml`.
 
 ## Read next
 

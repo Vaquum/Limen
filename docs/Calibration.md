@@ -71,7 +71,7 @@ def manifest() -> Manifest:
 
 `threshold_function()` configures threshold optimization without probability recalibration. In an existing manifest chain, the calibration fragment is:
 
-```python
+```python-fragment
 .with_calibration()
 .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
 .done()
@@ -190,6 +190,8 @@ NOTE: `predict()` only includes these keys when calibration is active for the ro
 | `metric` | `balanced_metric` | scoring function `(y_true, y_pred) -> float` |
 
 The optimizer returns the `default_threshold` with score `0.0` when every candidate threshold predicts all negatives.
+
+Threshold grids are caller-owned inputs: `threshold_step` must be positive and finite, bounds must be finite, and `threshold_min <= threshold_max`. The default-threshold fallback is for valid grids that produce no positive predictions, not a substitute for validating a malformed grid.
 
 ## Calibration at Inference
 

@@ -115,6 +115,8 @@ Returns:
 
 `mape` is reported in percent units.
 
+MAPE divides by the target value. Rows with zero or near-zero financial returns can dominate or invalidate the percentage interpretation; use MAE/RMSE/bias for return series where the denominator can be zero or economically negligible.
+
 ## `balanced_metric(y_true, y_pred)`
 
 `balanced_metric()` is Limen's compact binary score for cases where class balance matters.
@@ -142,6 +144,8 @@ score = balanced_metric(y_true, y_pred)
 Its purpose is to make multiclass evaluation more stable when not every class is present in every fold.
 
 If no valid class-vs-rest comparisons can be made, it returns `NaN`.
+
+Boundary: the helper assumes `probs` columns line up with the class labels being evaluated. If the probability matrix still contains columns for classes absent from `y_true`, reindex or slice the matrix before calling this helper.
 
 ## Where These Helpers Fit
 

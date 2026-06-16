@@ -19,7 +19,7 @@ Does **not** own indicators, higher-level features, manifests, or model training
 | `HistoricalData` | File-backed BTCUSDT spot klines or raw file ingestion | The main public class exported by `limen.data` |
 | `compute_data_bars()` | Aggregate kline rows into threshold bars before feature engineering | Used by manifests through `set_bar_formation()` |
 | `split_sequential()` | Ordered train/validation/test windows | Used by manifest-driven prep |
-| `split_data_to_prep_output()` | Standard `data_dict` structure | Converts split frames into model-ready keys like `x_train` and `y_test` |
+| `split_data_to_prep_output()` | Standard `data_dict` structure | Converts split frames into model-ready keys like `x_train` and `y_test`; mutates the passed split list by dropping `datetime` |
 
 ## Adjacent modules
 

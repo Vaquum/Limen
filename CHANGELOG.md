@@ -1144,3 +1144,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Add strict mode to the ML manifest. When enabled, unexpected nulls remaining after CCO dislodgement raise an error rather than logging a warning. The experiment loop catches the error per permutation, records the failure in results, and continues to the next round.
 - Add constructor parameter support for scalers in both the manifest API and YAML. Parameters such as window size and minimum samples can be set as literals or as sweep-param references, letting them appear in results and be fully reproducible.
 - Add a data quality section to the profile output. The profiler captures null warnings during sample rounds and the CLI renders them under a dedicated header.
+
+## v3.31.1 on 16th of June, 2026
+
+- Close the documentation and examples audit tracker by removing the stale notebook example surface.
+- Add recognized contribution, security, support, citation, notice, third-party, maintainer, funding, and issue-intake surfaces.
+- Update package metadata, artifact inclusion, docs-site dependencies, and public docs proof gates.
+- Bound public benchmark/backtest/trading claims to research use and add explicit risk language.

@@ -141,7 +141,7 @@ This is the same contract that `Trainer` eventually relies on when it promotes f
 
 Foundational manifests call the function wrapper:
 
-```python
+```python-fragment
 .with_reference_architecture(logreg_binary)
 ```
 
