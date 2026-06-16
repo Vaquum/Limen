@@ -69,6 +69,17 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      metadata: [
+        {name: 'description', content: productDocs.tagline},
+        {property: 'og:type', content: 'website'},
+        {property: 'og:site_name', content: productDocs.productName},
+        {property: 'og:title', content: `${productDocs.productName} Docs`},
+        {property: 'og:description', content: productDocs.tagline},
+        {property: 'og:url', content: `${url}${baseUrl}`},
+        {name: 'twitter:card', content: 'summary'},
+        {name: 'twitter:title', content: `${productDocs.productName} Docs`},
+        {name: 'twitter:description', content: productDocs.tagline},
+      ],
       navbar: {
         title: productDocs.productName,
         items: [

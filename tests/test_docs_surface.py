@@ -87,6 +87,13 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert "onBrokenLinks: 'throw'" in docusaurus_config
     assert "onBrokenMarkdownLinks: 'throw'" in docusaurus_config
     assert "siteConfig.onBrokenMarkdownLinks" not in docusaurus_config
+    for expected in (
+        "property: 'og:type'",
+        "property: 'og:site_name'",
+        "property: 'og:url'",
+        "name: 'twitter:card'",
+    ):
+        assert expected in docusaurus_config
 
     closeout = _read('docs/Audit-Closeout.md')
     missing_ids = [f'D{i:03d}' for i in range(1, 95) if f'D{i:03d}' not in closeout]

@@ -44,7 +44,7 @@ The implementation PR closes:
 | D022 | Docs-site high/critical audit findings are removed; high audit is proof. |
 | D023 | Docs-site direct dependencies are refreshed. |
 | D024 | Docs-site package has license metadata; third-party review notes are in `THIRD_PARTY.md`. |
-| D025 | Worker owns root sitemap/robots redirects and security headers. |
+| D025 | Worker owns root sitemap/robots redirects and security headers; Docusaurus config includes site-level Open Graph and Twitter metadata. |
 | D026 | Worker sets HSTS, CSP, frame, content-type, referrer, and permissions headers. |
 | D027 | `/sitemap.xml` and `/robots.txt` redirect to Limen paths. |
 | D028 | CLI docs bound validate/run to validation, compilation, and runtime failure limits. |
