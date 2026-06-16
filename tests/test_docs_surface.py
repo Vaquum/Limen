@@ -109,6 +109,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'SFM has manifest' not in docs_text
     assert 'unambiguous short prefix' in docs_text
     assert 'metadata.json` records the full canonical `manifest_id`' in docs_text
+    assert 'Metric validation is intersection-based' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:
