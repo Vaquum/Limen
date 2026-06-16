@@ -1155,3 +1155,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v3.31.2 on 16th of June, 2026
 
 - Tighten audit-closeout contracts for trainer artifacts, cohort identity, selector metric finiteness, YAML run budgets, legacy ParamSpace seeding, conditional transforms, split-output conversion, and underscore parameter resolution.
+- Breaking for YAML validation: finite list-based search spaces now reject `uel.n_permutations` values larger than available combinations instead of silently enumerating the full space.
+- Fix probability-column alignment in `safe_ovr_auc`, allow `_compute_confusion` to return partial metrics without price data, and reject unknown `compute_data_bars` bar types.
+- Tighten user-visible validation for LightGBM objectives, confidence filtering, calibration inputs, backtest snapshots, and correlation framework-column exclusion.
+- Document the conditional live-vs-research feature surface and legacy `ParamSpace` seed boundary.

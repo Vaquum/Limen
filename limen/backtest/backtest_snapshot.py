@@ -81,7 +81,7 @@ def _validate_execution_result(result: ExecutionResult, expected_index: pd.Index
         except (TypeError, ValueError) as exc:
             raise ValueError(f'backtest_snapshot strategy {field} must be numeric') from exc
         arr = numeric.to_numpy(dtype=float)
-        if np.isnan(arr).any() or not np.isfinite(arr).all():
+        if not np.isfinite(arr).all():
             raise ValueError(f'backtest_snapshot strategy {field} must be finite')
         normalized[field] = pd.Series(arr, index=expected_index, name=values.name)
 

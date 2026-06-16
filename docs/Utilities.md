@@ -36,7 +36,7 @@ On a live local run in this repo, that parameter space had:
 
 Then repeated `generate(random_search=False)` calls returned the remaining sampled combinations in order from the internal sampled pool, not from the full original grid.
 
-`ParamSpace` uses an instance-local random generator. Pass `seed=` for reproducible legacy sampling; it does not read or mutate Python's module-global random state. This legacy helper is outside the artifact-backed `round_params` reproducibility contract.
+`ParamSpace` uses an instance-local random generator. Pass `seed=` for reproducible legacy sampling; it does not read or mutate Python's module-global random state. Standard `UniversalExperimentLoop` construction does not expose that seed, so instantiate `ParamSpace` directly when you need seeded legacy helper sampling. This legacy helper is outside the artifact-backed `round_params` reproducibility contract.
 
 Use `ParamSpace` only on the legacy UEL path. The advanced path uses [Advanced Search](Advanced-Search.md) primitives instead.
 

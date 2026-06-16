@@ -100,7 +100,7 @@ def _price_line_columns(close: np.ndarray,
                         include_research_only: bool) -> pl.Series:
 
     '''
-    Compute the five line-based columns as a struct series.
+    Compute the four or five line-based columns as a struct series.
 
     Args:
         close (np.ndarray): Close prices for the frame
@@ -111,7 +111,7 @@ def _price_line_columns(close: np.ndarray,
         include_research_only (bool): Include the research-only span-count column
 
     Returns:
-        pl.Series: Struct series with the five line-based fields
+        pl.Series: Struct series with the line-based fields
     '''
 
     long_lines, short_lines = find_price_lines(close, max_duration_hours, min_height_pct)

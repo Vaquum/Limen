@@ -764,6 +764,12 @@ def test_validate_error_for_uel_n_permutations_invalid_budget() -> None:
         assert not result.valid, f'n_permutations={value!r} should be invalid'
         assert any('n_permutations' in e.path for e in result.errors)
 
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['sfd']['params'] = {}
+    yaml_dict['uel']['n_permutations'] = 9
+    result = validate(yaml_dict)
+    assert all(e.path != 'uel.n_permutations' for e in result.errors)
+
 
 def test_validate_warns_for_uel_experiment_dir() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)

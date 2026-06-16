@@ -127,7 +127,7 @@ def _quantile_line_columns(close: np.ndarray,
                            include_research_only: bool) -> pl.Series:
 
     '''
-    Compute the six quantile-line columns as a struct series.
+    Compute the five or six quantile-line columns as a struct series.
 
     Args:
         close (np.ndarray): Close prices for the frame
@@ -140,7 +140,7 @@ def _quantile_line_columns(close: np.ndarray,
         include_research_only (bool): Include the research-only span-count column
 
     Returns:
-        pl.Series: Struct series with the six quantile-line fields
+        pl.Series: Struct series with the quantile-line fields
     '''
 
     long_lines, short_lines = find_price_lines(close, max_duration_hours, min_height_pct)

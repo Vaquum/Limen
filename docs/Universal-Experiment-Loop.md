@@ -33,6 +33,8 @@ Direct UEL integration currently has two execution modes.
 
 The standard run path is for direct Python work. The artifact-backed path is the durable engine path used by CLI YAML runs and advanced search.
 
+The standard run path samples legacy `ParamSpace` combinations without exposing a seed; module-global `random.seed(...)` does not pin that sampling. Use direct `ParamSpace(seed=...)` helper calls when seeded legacy sampling is required.
+
 ## Direct standard run
 
 This local Python example uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.

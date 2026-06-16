@@ -1109,7 +1109,7 @@ class UelSpec:
                 ))
             else:
                 params = (yaml_dict.get('sfd') or {}).get('params') or {}
-                if isinstance(params, dict) and all(isinstance(v, list) for v in params.values()):
+                if isinstance(params, dict) and params and all(isinstance(v, list) for v in params.values()):
                     total = math.prod(len(v) for v in params.values())
                     if total > 0 and value > total:
                         errors.append(YAMLError(
