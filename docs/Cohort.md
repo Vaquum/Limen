@@ -17,21 +17,21 @@
 
 A Cohort requires:
 
-1. a completed UEL experiment directory
+1. a completed YAML CLI result directory
 2. valid experiment artefacts (`metadata.json`, `round_data.jsonl`)
 3. selected permutation IDs, or a selector that chooses them
 4. trained members from `Trainer.train(permutation_ids)`
 
 Read these pages first:
 
-- [Universal Experiment Loop](Universal-Experiment-Loop.md)
+- [Command Line Interface](Command-Line-Interface.md)
 - [Trainer](Trainer.md)
 
 ## Where Cohort fits in the pipeline
 
 Pipeline path:
 
-1. run experiment search with UEL
+1. run experiment search with `limen run`
 2. identify permutations to promote, manually or with a selector
 3. reconstruct/train those permutations with Trainer
 4. create Cohort from experiment source + permutation IDs or selector

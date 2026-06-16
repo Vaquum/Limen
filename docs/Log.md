@@ -2,22 +2,28 @@
 
 `Log` is Limen's post-run analysis layer. It sits on top of a finished experiment and turns raw round results into round-level prediction tables, benchmark-style summaries, backtest summaries, and parameter-correlation views.
 
-`UniversalExperimentLoop` creates `uel._log` automatically at the end of a successful run and exposes the primary derived tables directly on the `uel` object.
+For YAML CLI runs, start from the generated result directory and `results.csv`. For direct Python UEL runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
 
 ## Two ways to use `Log`
 
 ### UEL-backed `Log`
 
-This is the normal path.
+This is the direct Python analysis path.
 
 ```python
+import limen
 from limen.data import HistoricalData
 
 historical = HistoricalData()
 data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
 
 uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
-uel.run(experiment_name='logreg-first', n_permutations=4, prep_each_round=True)
+uel.run(
+    experiment_name='logreg-first',
+    n_permutations=4,
+    prep_each_round=True,
+    post_processing=True,
+)
 
 log = uel._log
 ```

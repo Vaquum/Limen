@@ -10,7 +10,7 @@
 
 ## What this package owns
 
-Owns YAML schema constants, parsing, validation, object resolution, manifest compilation, profiling, and committed-manifest lookup.
+Owns the declarative manifest surface behind the preferred CLI path: YAML schema constants, parsing, validation, object resolution, manifest compilation, profiling, and committed-manifest lookup.
 Does **not** own Click command routing, UEL execution, model implementations, or feature/target business logic.
 
 ## Key entry points
@@ -51,6 +51,7 @@ yaml/
 ## Things to know
 
 - `schema_version` is currently `1.0`.
+- YAML manifests are the canonical operator-facing experiment definition; Python builders are the extension-equivalent surface.
 - YAML validation rejects `sfd.manifest.test_data_source`; runtime date limits come from `split_dates`.
 - The resolver only treats `limen.*` references as supported dotted references.
 - Store functions back `limen commit`, `limen ls`, and committed-manifest URI runs.

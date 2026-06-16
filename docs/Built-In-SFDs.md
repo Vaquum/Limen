@@ -1,6 +1,6 @@
 # Built-in SFDs
 
-Limen ships foundational SFDs under `limen.sfd.foundational_sfd`. These packaged decoders run without a custom experiment module.
+Limen ships foundational SFDs under `limen.sfd.foundational_sfd` and matching YAML templates under `limen/yaml/templates`. Ordinary runs should start from the YAML template and CLI; the Python modules are the packaged decoder layer beneath that path.
 
 They show the packaged Limen experiment shape because each one combines:
 
@@ -110,23 +110,17 @@ That optional status matters at import time and in local documentation examples.
 
 ## Running one immediately
 
-A built-in SFD can run with only `sfd=`:
+A built-in YAML template can run directly through the CLI:
 
-```python
-import limen
-
-uel = limen.UniversalExperimentLoop(
-    sfd=limen.sfd.logreg_binary,
-)
-
-uel.run(
-    experiment_name='built-in-logreg',
-    n_permutations=5,
-    prep_each_round=True,
-)
+```bash
+limen init built-in-logreg.yaml --template logreg_binary
+limen validate built-in-logreg.yaml
+limen profile built-in-logreg.yaml
+limen run --dry-run built-in-logreg.yaml
+limen run built-in-logreg.yaml
 ```
 
-When `data=` is omitted, the manifest fetches data using `fetch_data()`. Passing `test_mode=True` to UEL uses the test data source instead.
+Direct Python use is still available when you need to integrate with UEL or custom code. When `data=` is omitted on a manifest-driven SFD, the manifest fetches data using `fetch_data()`.
 
 ## How to choose
 
@@ -138,5 +132,6 @@ When `data=` is omitted, the manifest fetches data using `fetch_data()`. Passing
 ## Read next
 
 - Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
+- Continue to [Command Line Interface](Command-Line-Interface.md) for the YAML run loop.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.

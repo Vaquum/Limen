@@ -10,7 +10,7 @@
 
 ## What this package owns
 
-Owns command parsing and command-specific orchestration around YAML manifests.
+Owns the preferred operator path for YAML manifests: scaffold, validate, profile, dry-run, run, resume, and manage committed manifests.
 Does **not** own manifest semantics, experiment execution internals, model behavior, or docs-site build behavior.
 
 ## Key entry points
@@ -53,7 +53,9 @@ cli/
 ## Things to know
 
 - `limen profile` is static for validated CLI YAML because YAML manifests reject `test_data_source`.
+- The normal first-run loop is `limen init`, `limen validate`, `limen profile`, `limen run --dry-run`, then `limen run`.
 - `limen run` accepts both direct YAML files and committed `manifest://sha256:` URIs.
+- `limen run` writes a result directory containing the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
 - `limen commit` writes the project manifest store before attempting the git commit.
 - Command code should stay thin; YAML semantics belong in `limen.yaml` and execution semantics belong in `limen.experiment`.
 

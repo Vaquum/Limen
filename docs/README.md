@@ -4,7 +4,7 @@ This page routes Limen docs by task.
 
 ## Limen in one page
 
-Limen is a Bitcoin alpha research engine for turning market data into experiments, logged analytics, backtests, and decoder cohorts. It keeps the research loop inside one Python system: data preparation, indicators, features, targets, scaling, parameter search, and post-run evaluation.
+Limen is a Bitcoin alpha research engine for turning market data into experiments, logged analytics, backtests, and decoder cohorts. Its default operator path is a YAML manifest run through the CLI; Python APIs remain the extension layer for custom decoder and engine work.
 
 Limen does not perform downstream trade decisioning or execution. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
 
@@ -13,20 +13,20 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ### New to Limen
 
 1. Read the [product home page](../README.md)
-2. Learn how data enters Limen in [Historical Data](Historical-Data.md)
-3. Learn how experiments are packaged in [Single-File Decoder](Single-File-Decoder.md)
-4. Review the shipped patterns in [Built-In SFDs](Built-In-SFDs.md)
-5. Learn the standard declarative path in [Experiment Manifest](Experiment-Manifest.md)
-6. Run experiments in [Universal Experiment Loop](Universal-Experiment-Loop.md)
-7. Review outcomes in [Log](Log.md)
+2. Run the YAML workflow in [Command Line Interface](Command-Line-Interface.md)
+3. Learn the manifest contract in [Experiment Manifest](Experiment-Manifest.md)
+4. Learn how data enters Limen in [Historical Data](Historical-Data.md)
+5. Review outcomes in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
+6. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the engine beneath CLI
+7. Use [Single-File Decoder](Single-File-Decoder.md) and [Built-In SFDs](Built-In-SFDs.md) for Python extension work
 
 ### Author experiments
 
-1. Start with [Single-File Decoder](Single-File-Decoder.md)
-2. Review the shipped patterns in [Built-In SFDs](Built-In-SFDs.md)
-3. Continue to [Experiment Manifest](Experiment-Manifest.md)
-4. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
-5. Run the search in [Universal Experiment Loop](Universal-Experiment-Loop.md)
+1. Start with [Experiment Manifest](Experiment-Manifest.md)
+2. Run manifests through [Command Line Interface](Command-Line-Interface.md)
+3. Review the shipped decoder patterns in [Built-In SFDs](Built-In-SFDs.md)
+4. Use [Single-File Decoder](Single-File-Decoder.md) for custom Python experiment modules
+5. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
 6. Adaptive search continues in [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md)
 7. Inspect results in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
 
@@ -41,9 +41,9 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ### Extend Limen
 
 1. Start with [Reference Architecture](Reference-Architecture.md) and [Built-In SFDs](Built-In-SFDs.md)
-2. Continue to [Advanced Search](Advanced-Search.md) for `SearchStrategy`, `ParamDomain`, `MSQ`, and checkpoints
-3. Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for adaptive interventions
-4. Use [Command Line Interface](Command-Line-Interface.md) when the extension is YAML-first or shell-driven
+2. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for direct engine integration
+3. Continue to [Advanced Search](Advanced-Search.md) for `SearchStrategy`, `ParamDomain`, `MSQ`, and checkpoints
+4. Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for adaptive interventions
 5. Use [Utilities](Utilities.md) for the helper layer rather than the main workflow
 
 ### Contribute or maintain
@@ -60,8 +60,8 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 1. Data enters through [Historical Data](Historical-Data.md) or compatible external OHLC data.
 2. Data can be reshaped with [Data Bars](Data-Bars.md) when threshold bars are the right research surface.
 3. Indicators, features, transforms, and scalers define the research surface. Targets define supervised labels; calibration adjusts probabilities and thresholds after model output.
-4. An experiment is packaged in an [SFD](Single-File-Decoder.md), starts from [Built-In SFDs](Built-In-SFDs.md) when a packaged decoder fits, and is expressed through an [Experiment Manifest](Experiment-Manifest.md) by default.
-5. [Universal Experiment Loop](Universal-Experiment-Loop.md) executes the search, with [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md) extending the artifact-backed path.
+4. An experiment is expressed as an [Experiment Manifest](Experiment-Manifest.md) and run through the [Command Line Interface](Command-Line-Interface.md) by default.
+5. [Universal Experiment Loop](Universal-Experiment-Loop.md) is the engine beneath CLI execution; [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Advanced Search](Advanced-Search.md), and [Reducers And Feedback](Reducers-And-Feedback.md) are the Python extension layer.
 6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
 7. [Trainer](Trainer.md) turns selected rounds into reusable sensors.
 8. [Cohort](Cohort.md) defines selector-driven ensemble inference for multi-member decoder aggregation.
@@ -70,8 +70,8 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ## Docs map
 
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md)
-- `Guides`: [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Experiment Manifest](Experiment-Manifest.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
-- `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md), [Command Line Interface](Command-Line-Interface.md)
+- `Guides`: [Command Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
+- `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
 - `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md), [Technical Debt](TechnicalDebt.md)
 - `Packages`: package `README`s under `/limen` for `data`, `experiment`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`
 
@@ -96,7 +96,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 ## Read next
 
-- For a first real run, continue to [Historical Data](Historical-Data.md), then [Single-File Decoder](Single-File-Decoder.md), then [Universal Experiment Loop](Universal-Experiment-Loop.md)
+- For a first real run, continue to [Command Line Interface](Command-Line-Interface.md), then [Experiment Manifest](Experiment-Manifest.md)
 - For architecture and system boundaries, continue to [Trainer](Trainer.md) and [Cohort](Cohort.md)
 - For the extension layer, continue to [Built-In SFDs](Built-In-SFDs.md), [Reference Architecture](Reference-Architecture.md), and [Advanced Search](Advanced-Search.md)
 - For contributor work, continue to [Developer Guidelines](Developer/README.md)
