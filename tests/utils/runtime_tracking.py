@@ -51,6 +51,7 @@ def build_runtime_profile(
 ) -> dict[str, Any]:
     passed_count = sum(record['status'] == 'passed' for record in test_records)
     failed_count = sum(record['status'] == 'failed' for record in test_records)
+    skipped_count = sum(record['status'] == 'skipped' for record in test_records)
 
     return {
         'schema_version': 1,
@@ -61,6 +62,7 @@ def build_runtime_profile(
             'test_count': len(test_records),
             'passed_count': passed_count,
             'failed_count': failed_count,
+            'skipped_count': skipped_count,
         },
         'tests': test_records,
     }
@@ -191,6 +193,7 @@ def render_runtime_summary_markdown(
         f"- Tests recorded: `{suite['test_count']}`",
         f"- Passed: `{suite['passed_count']}`",
         f"- Failed: `{suite['failed_count']}`",
+        f"- Skipped: `{suite.get('skipped_count', 0)}`",
     ]
 
     if budget is not None:

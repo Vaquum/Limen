@@ -1,154 +1,157 @@
-import ast
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
-
-TESTS_DIR = Path(__file__).resolve().parent
-
-PYTEST_ONLY_TESTS = {
-    'test_historical_data': {
-        'test_get_arrow_file_zero_copy_single_batch',
-        'test_get_arrow_file_date_range_is_zero_copy_slice',
-        'test_get_arrow_file_date_range_on_datetime_only_file',
-        'test_get_arrow_file_rejects_compressed',
-        'test_get_arrow_file_rejects_non_single_batch',
-        'test_get_arrow_file_rejects_row_limit_with_closed_date_window',
-        'test_get_arrow_file_row_count_limit_zero_copy',
-        'test_get_arrow_file_view_outlives_call',
-    },
-    'test_tabpfn': {'test_tabpfn'},
-}
+from tempfile import TemporaryDirectory
 
 
-def _module_test_functions(module_path: Path) -> dict[str, ast.FunctionDef]:
-    '''
-    Collect the top-level test functions defined in one test module.
-
-    Args:
-        module_path (Path): The test module to parse.
-
-    Returns:
-        dict[str, ast.FunctionDef]: Test function nodes keyed by name.
-    '''
-
-    tree = ast.parse(module_path.read_text(encoding='utf-8'))
-
-    return {
-        node.name: node
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name.startswith('test_')
-    }
+ROOT = Path(__file__).resolve().parents[1]
 
 
-def _registered_test_names() -> dict[str, set[str]]:
-    '''
-    Collect per-module test names registered in the tests/run.py suite list.
+def _run_profiled_test_module(source: str) -> tuple[subprocess.CompletedProcess[str], dict]:
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        test_path = tmp_path / 'test_profiled.py'
+        profile_path = tmp_path / 'runtime_profile.json'
+        test_path.write_text(source, encoding='utf-8')
 
-    A name counts as registered only when it is imported from a test module
-    and appears (under its imported alias) in the module-level `tests` list.
+        env = dict(os.environ)
+        env['LIMEN_RUNTIME_PROFILE_PATH'] = str(profile_path)
 
-    Returns:
-        dict[str, set[str]]: Original function names keyed by module stem.
-    '''
+        result = subprocess.run(
+            [sys.executable, '-m', 'tests.run', str(test_path), '-q'],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        profile = json.loads(profile_path.read_text(encoding='utf-8'))
 
-    tree = ast.parse((TESTS_DIR / 'run.py').read_text(encoding='utf-8'))
-
-    listed: set[str] = set()
-    for node in tree.body:
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.List):
-            continue
-        for target in node.targets:
-            if isinstance(target, ast.Name) and target.id == 'tests':
-                listed = {
-                    element.id
-                    for element in node.value.elts
-                    if isinstance(element, ast.Name)
-                }
-
-    registered: dict[str, set[str]] = {}
-    for node in tree.body:
-        if not isinstance(node, ast.ImportFrom):
-            continue
-        if node.module is None or not node.module.startswith('tests.test_'):
-            continue
-        module = node.module.removeprefix('tests.')
-        for alias in node.names:
-            if (alias.asname or alias.name) in listed:
-                registered.setdefault(module, set()).add(alias.name)
-
-    return registered
+    return result, profile
 
 
-def _names_referenced_by(
-    functions: dict[str, ast.FunctionDef],
-    roots: set[str],
-) -> set[str]:
-    '''
-    Collect test names referenced inside the bodies of the given root tests.
+def test_tests_run_delegates_to_pytest_collection() -> None:
+    source = (ROOT / 'tests' / 'run.py').read_text(encoding='utf-8')
 
-    A registered aggregate test that invokes sibling test functions (the
-    tests/test_indicators_vs_talib.py pattern) covers those siblings.
-
-    Args:
-        functions (dict[str, ast.FunctionDef]): Test function nodes by name.
-        roots (set[str]): Names of registered functions whose bodies to scan.
-
-    Returns:
-        set[str]: Defined test names referenced from any root body.
-    '''
-
-    referenced: set[str] = set()
-    for root in roots:
-        if root not in functions:
-            continue
-        for node in ast.walk(functions[root]):
-            if isinstance(node, ast.Name) and node.id in functions:
-                referenced.add(node.id)
-
-    return referenced
+    assert 'pytest.main' in source
+    assert 'execute_test_suite' not in source
+    assert 'from tests.test_' not in source
 
 
-def test_every_test_function_is_registered_in_run():
-    '''
-    Every top-level test function must run in CI: it is in the tests/run.py
-    suite list, or invoked by a registered test in its module, or explicitly
-    allowlisted as pytest-only.
-    '''
+def test_tests_run_writes_pytest_runtime_profile() -> None:
+    with TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / 'runtime_profile.json'
+        env = dict(os.environ)
+        env['LIMEN_RUNTIME_PROFILE_PATH'] = str(profile_path)
 
-    registered = _registered_test_names()
+        result = subprocess.run(
+            [
+                sys.executable,
+                '-m',
+                'tests.run',
+                'tests/test_runtime_tracking.py::test_write_runtime_summary_appends_to_existing_summary_file',
+                '-q',
+            ],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
 
-    unaccounted: dict[str, list[str]] = {}
-    for module_path in sorted(TESTS_DIR.glob('test_*.py')):
-        functions = _module_test_functions(module_path)
-        module = module_path.stem
-        covered = registered.get(module, set())
-        covered = covered | _names_referenced_by(functions, covered)
-        covered = covered | PYTEST_ONLY_TESTS.get(module, set())
-        gap = sorted(set(functions) - covered)
-        if gap:
-            unaccounted[module] = gap
+        profile = json.loads(profile_path.read_text(encoding='utf-8'))
 
-    assert not unaccounted, (
-        f'test_run_registration found tests neither registered in tests/run.py '
-        f'nor in the PYTEST_ONLY_TESTS allowlist: {unaccounted}'
+    assert result.returncode == 0, result.stderr
+    assert profile['suite']['test_count'] == 1
+    assert profile['suite']['passed_count'] == 1
+    assert profile['suite']['failed_count'] == 0
+    assert profile['tests'][0]['test_name'].endswith(
+        'test_write_runtime_summary_appends_to_existing_summary_file',
     )
 
 
-def test_pytest_only_allowlist_is_current():
-    '''
-    Every pytest-only allowlist entry must still exist in its module and
-    must not also be registered in the tests/run.py suite list.
-    '''
+def test_tests_run_counts_call_and_teardown_failure_once() -> None:
+    result, profile = _run_profiled_test_module(
+        """
+import pytest
 
-    registered = _registered_test_names()
 
-    stale: dict[str, list[str]] = {}
-    for module, names in PYTEST_ONLY_TESTS.items():
-        functions = _module_test_functions(TESTS_DIR / f'{module}.py')
-        gone = sorted(names - set(functions))
-        double = sorted(names & registered.get(module, set()))
-        if gone or double:
-            stale[module] = gone + double
+@pytest.fixture
+def failing_teardown():
+    yield
+    raise RuntimeError('teardown failed')
 
-    assert not stale, (
-        f'test_run_registration found stale pytest-only allowlist entries: '
-        f'{stale}'
+
+def test_passes_then_teardown_fails(failing_teardown):
+    assert True
+""",
     )
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert profile['suite']['test_count'] == 1
+    assert profile['suite']['passed_count'] == 0
+    assert profile['suite']['failed_count'] == 1
+    assert len(profile['tests']) == 1
+    assert profile['tests'][0]['status'] == 'failed'
+
+
+def test_tests_run_counts_setup_and_teardown_failure_once() -> None:
+    result, profile = _run_profiled_test_module(
+        """
+import pytest
+
+
+@pytest.fixture
+def prepared_resource():
+    yield
+    raise RuntimeError('teardown failed')
+
+
+@pytest.fixture
+def failing_setup():
+    raise RuntimeError('setup failed')
+
+
+def test_setup_fails_after_resource_setup(prepared_resource, failing_setup):
+    raise AssertionError('unreachable')
+""",
+    )
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert profile['suite']['test_count'] == 1
+    assert profile['suite']['passed_count'] == 0
+    assert profile['suite']['failed_count'] == 1
+    assert len(profile['tests']) == 1
+    assert profile['tests'][0]['status'] == 'failed'
+
+
+def test_tests_run_rejects_invalid_slowest_limit_before_pytest() -> None:
+    with TemporaryDirectory() as tmpdir:
+        profile_path = Path(tmpdir) / 'runtime_profile.json'
+        env = dict(os.environ)
+        env['LIMEN_RUNTIME_PROFILE_PATH'] = str(profile_path)
+        env['LIMEN_RUNTIME_SLOWEST_LIMIT'] = 'invalid'
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                '-m',
+                'tests.run',
+                'tests/test_runtime_tracking.py::test_write_runtime_summary_appends_to_existing_summary_file',
+                '-q',
+            ],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        profile_exists = profile_path.exists()
+
+    assert result.returncode == 2
+    assert 'LIMEN_RUNTIME_SLOWEST_LIMIT must be a positive integer' in result.stderr
+    assert not profile_exists

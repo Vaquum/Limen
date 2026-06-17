@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "4.0.0"
+version = "4.0.1"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -121,6 +121,24 @@ relative_files = true
 
 [tool.coverage.report]
 omit = ["tests/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra"]
+filterwarnings = [
+  "error",
+  # Dependency warning filters are version-sensitive; re-check them on dependency bumps.
+  "ignore:'penalty' was deprecated.*:FutureWarning:sklearn.linear_model._logistic",
+  "ignore:'n_jobs' has no effect.*:FutureWarning:sklearn.linear_model._logistic",
+  "ignore:'n_jobs' > 1 does not have any effect when 'solver' is set to 'liblinear'.*:UserWarning",
+  "ignore:Inconsistent values:UserWarning:sklearn.linear_model._logistic",
+  "ignore:lbfgs failed to converge after .*:sklearn.exceptions.ConvergenceWarning",
+  "ignore:X does not have valid feature names.*:UserWarning:sklearn.utils.validation",
+  "ignore:Support for the dataframe interchange protocol is deprecated since version 1\\.40\\.0:DeprecationWarning",
+]
+markers = [
+  "tabpfn_model: opt-in TabPFN model-download integration tests tracked by #628.",
+]
 
 [tool.ruff]
 target-version = "py310"
