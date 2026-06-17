@@ -13,7 +13,7 @@ from limen.features.volume_ratio import volume_ratio
 from limen.features.sma_ratios import sma_ratios
 from limen.features.lagged_features import lag_columns
 from limen.targets import NextReturnTarget
-from limen.sfd.reference_architecture import xgboost_regressor
+from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
 
 def params():
