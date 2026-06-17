@@ -11,7 +11,7 @@ from limen.indicators import ppo
 from limen.indicators import roc
 from limen.indicators import wilder_rsi
 from limen.metrics.balanced_metric import balanced_metric
-from limen.sfd.reference_architecture import logreg_binary
+from limen.sfd.reference_architecture.logreg_binary import logreg_binary
 from limen.targets import QuantileBinaryTarget
 
 

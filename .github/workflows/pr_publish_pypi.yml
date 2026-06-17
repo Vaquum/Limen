@@ -63,7 +63,9 @@ jobs:
     if: needs.resolve_release_tag.outputs.tag_name != ''
     runs-on: ubuntu-latest
     permissions:
+      attestations: write
       contents: read
+      id-token: write
 
     steps:
       - name: Checkout released tag
@@ -81,13 +83,40 @@ jobs:
         run: python -m pip install --upgrade build
 
       - name: Build package distributions
+        env:
+          SOURCE_DATE_EPOCH: '1704067200'
         run: python -m build
+
+      - name: Attest package distributions
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
 
       - name: Upload distributions
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: python-package-distributions
           path: dist/
+
+  attach_release_assets:
+    name: Attach Release Assets
+    needs: [resolve_release_tag, build_distribution]
+    if: github.event_name == 'release' && needs.build_distribution.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Upload distributions to GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ needs.resolve_release_tag.outputs.tag_name }}" dist/* --clobber
 
   publish_to_pypi:
     name: Publish Distribution to PyPI

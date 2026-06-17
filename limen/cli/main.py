@@ -2,20 +2,11 @@ from pathlib import Path
 
 import click
 
-from limen.cli.commands.commit import run_commit
-from limen.cli.commands.init import run_init
-from limen.cli.commands.list_templates import run_list_templates
-from limen.cli.commands.ls import run_ls
-from limen.cli.commands.new import run_new
-from limen.cli.commands.profile import run_profile
-from limen.cli.commands.resume import run_resume
-from limen.cli.commands.run import run_experiment
-from limen.cli.commands.validate import run_validate
-from limen.yaml.store import _MANIFEST_URI_SCHEME
-from limen.yaml.store import resolve_manifest_uri
+from limen import __version__
 
 
 @click.group()
+@click.version_option(version=__version__, prog_name='limen')
 def cli() -> None:
 
     '''
@@ -88,6 +79,8 @@ def commit(yaml_file: Path, parent: str | None, message: str | None) -> None:
       limen commit manifests/logreg-first.yaml --parent sha256:abc123...
     '''
 
+    from limen.cli.commands.commit import run_commit
+
     ok = run_commit(yaml_file, parent, message)
     raise SystemExit(0 if ok else 1)
 
@@ -109,6 +102,8 @@ def ls() -> None:
     Examples:
       limen ls
     '''
+
+    from limen.cli.commands.ls import run_ls
 
     ok = run_ls(Path.cwd())
     raise SystemExit(0 if ok else 1)
@@ -139,6 +134,8 @@ def validate(yaml_file: Path) -> None:
       limen validate experiment.yaml
       limen validate limen/yaml/templates/logreg_binary.yaml
     '''
+
+    from limen.cli.commands.validate import run_validate
 
     ok = run_validate(yaml_file)
     raise SystemExit(0 if ok else 1)
@@ -171,6 +168,8 @@ def profile_cmd(yaml_file: Path) -> None:
       limen profile experiment.yaml
       limen profile limen/yaml/templates/logreg_binary.yaml
     '''
+
+    from limen.cli.commands.profile import run_profile
 
     ok = run_profile(yaml_file)
     raise SystemExit(0 if ok else 1)
@@ -229,8 +228,12 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
         if dry_run:
             click.secho('--dry-run has no effect with --resume.', fg='red')
             raise SystemExit(1)
+        from limen.cli.commands.resume import run_resume
+
         ok = run_resume(resume)
     elif target is not None:
+        from limen.cli.commands.run import run_experiment
+
         yaml_path, manifest_id, results_base = _resolve_target(target)
         if yaml_path is None:
             raise SystemExit(1)
@@ -243,6 +246,8 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
 
 
 def _resolve_target(target: str) -> tuple[Path | None, str | None, Path]:
+    from limen.yaml.store import _MANIFEST_URI_SCHEME
+    from limen.yaml.store import resolve_manifest_uri
 
     if target.startswith(_MANIFEST_URI_SCHEME):
         try:
@@ -271,6 +276,8 @@ def list_templates() -> None:
       limen list-templates
     '''
 
+    from limen.cli.commands.list_templates import run_list_templates
+
     run_list_templates()
 
 
@@ -293,6 +300,8 @@ def init(output: Path, template: str | None) -> None:
       limen init my_experiment.yaml               # lists templates when --template omitted
     '''
 
+    from limen.cli.commands.init import run_init
+
     ok = run_init(output, template)
     raise SystemExit(0 if ok else 1)
 
@@ -314,6 +323,8 @@ def new(project_name: str, backup_remote: str | None) -> None:
       limen new my-project
       limen new my-project --backup-remote git@github.com:user/my-project.git
     '''
+
+    from limen.cli.commands.new import run_new
 
     ok = run_new(project_name, backup_remote)
     raise SystemExit(0 if ok else 1)

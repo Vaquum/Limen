@@ -1,10 +1,11 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools>=77", "wheel"]
+build-backend = "limen_build_backend"
+backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "3.31.2"
+version = "4.0.0"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -15,49 +16,67 @@ authors = [
   { name = "Soujanyaa Boruah" },
   { name = "Ng Wei Da" },
 ]
-license = { text = "MIT" }
-requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE", "AUTHORS"]
+requires-python = ">=3.10,<3.14"
 keywords = ["bitcoin", "machine-learning", "research", "backtest", "yaml"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Intended Audience :: Financial and Insurance Industry",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: MacOS",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-  "pandas>=2.3.1",
-  "polars>=1.0.0",
-  "scikit-learn>=1.6.1",
-  "tqdm>=4.67.0",
-  "xgboost",
-  "python-dotenv",
-  "scipy",
-  "statsmodels",
-  "tslearn",
-  "lightgbm",
-  "pyarrow",
-  "numpy>=2.2.6",
-  "ta-lib",
-  "requests",
-  "ruamel.yaml>=0.18",
-  "click>=8.0",
-  "tomli>=2.0; python_version < '3.11'",
+  "click>=8.1,<9",
+  "numpy>=2.2,<3",
+  "pandas>=2.3,<3",
+  "polars>=1.0,<2",
+  "requests>=2.32,<3",
+  "ruamel.yaml>=0.18,<0.19",
+  "scikit-learn>=1.6,<2",
+  "tomli>=2.0,<3; python_version < '3.11'",
+  "tqdm>=4.67,<5",
 ]
 
 [project.scripts]
 limen = "limen.cli.main:cli"
 
 [project.optional-dependencies]
-tabpfn = ["tabpfn>=6"]
-test = ["coverage[toml]>=7", "pytest>=8"]
-dev = ["build>=1", "coverage[toml]>=7", "pytest>=8", "ruff>=0.8"]
+data = ["pyarrow>=18,<23"]
+boosting = ["lightgbm>=4.6,<5", "xgboost>=2.1,<4"]
+indicators = ["ta-lib>=0.6,<0.7"]
+stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
+tabpfn = ["tabpfn>=6,<7"]
+all = [
+  "lightgbm>=4.6,<5",
+  "pyarrow>=18,<23",
+  "scipy>=1.15,<2",
+  "statsmodels>=0.14,<0.15",
+  "ta-lib>=0.6,<0.7",
+  "tabpfn>=6,<7",
+  "xgboost>=2.1,<4",
+]
+test = ["coverage[toml]>=7,<8", "pytest>=8,<10"]
+release = ["anthropic>=0.54,<1"]
+dev = [
+  "build>=1,<2",
+  "check-manifest>=0.50,<1",
+  "check-wheel-contents>=0.6,<1",
+  "coverage[toml]>=7,<8",
+  "cyclonedx-bom>=5,<8",
+  "pip-licenses>=5,<6",
+  "pyroma>=5,<6",
+  "pytest>=8,<10",
+  "ruff>=0.8,<1",
+  "twine>=6,<7",
+]
 
 [project.urls]
 Homepage = "https://docs.vaquum.fi/limen/"
@@ -72,19 +91,16 @@ include = ["limen*"]
 exclude = ["tests*", "scripts*"]
 
 [tool.setuptools.package-data]
-limen = ["yaml/templates/*.yaml"]
+limen = ["py.typed", "yaml/templates/*.yaml"]
 
 [tool.setuptools.data-files]
 "share/limen" = [
-  "AUTHORS",
   "CHANGELOG.md",
   "CITATION.cff",
   "CODE_OF_CONDUCT.md",
   "CONTRIBUTING.md",
   "GOVERNANCE.md",
-  "LICENSE",
   "MAINTAINERS.md",
-  "NOTICE",
   "README.md",
   "SECURITY.md",
   "SUPPORT.md",
@@ -97,6 +113,7 @@ limen = ["yaml/templates/*.yaml"]
   ".github/ISSUE_TEMPLATE/*.yml",
   ".github/ISSUE_TEMPLATE/*.md",
 ]
+"share/limen/scripts" = ["scripts/*.py"]
 
 [tool.coverage.run]
 source = ["limen"]

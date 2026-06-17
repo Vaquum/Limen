@@ -1159,3 +1159,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Fix probability-column alignment in `safe_ovr_auc`, allow `_compute_confusion` to return partial metrics without price data, and reject unknown `compute_data_bars` bar types.
 - Tighten user-visible validation for LightGBM objectives, confidence filtering, calibration inputs, backtest snapshots, and correlation framework-column exclusion.
 - Document the conditional live-vs-research feature surface and legacy `ParamSpace` seed boundary.
+
+## v4.0.0 on 17th of June, 2026
+
+- Close the packaging and distribution audit tracker with a complete/testable sdist, typed wheel, deterministic fixed-epoch sdist/wheel builds, package audit script, packaging CI, dependency-license/SBOM artifacts, PyPI provenance attestations, and GitHub release assets.
+- Breaking package-contract change: default installs are now intentionally light and bounded to Python `>=3.10,<3.14`; heavy data/model/statistical backends moved to explicit extras (`data`, `boosting`, `indicators`, `stats`, `tabpfn`, `all`).
+- Add `limen.__version__`, `limen --version`, and `python -m limen`; make root and model-surface imports lazy so optional backends fail only when their surfaces are used.
+- Replace deprecated license metadata with SPDX/PEP 639 fields, declare release tooling, add constraints, and document artifact, dependency, reproducibility, provenance, release cadence, TabPFN, and dataset-cache boundaries.

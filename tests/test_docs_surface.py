@@ -46,6 +46,12 @@ def test_docs_audit_public_contract_surfaces() -> None:
         'THIRD_PARTY.md',
         'docs-site/scripts/audit-security.mjs',
         'docs/Audit-Closeout.md',
+        'docs/Developer/Packaging.md',
+        'limen/py.typed',
+        'limen/__main__.py',
+        'limen_build_backend.py',
+        'requirements/constraints.txt',
+        'scripts/package_audit.py',
     ]
     missing = [path for path in required_files if not (ROOT / path).exists()]
     assert not missing
@@ -57,9 +63,10 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'regulatory approval' in readme
     assert 'Past performance is not predictive' in readme
     assert 'total loss of capital' in readme
-    assert 'Supported runtime: Limen requires Python `>=3.10`' in readme
-    assert 'Python 3.10-3.12 on macOS and Linux' in readme
-    assert 'TA-Lib is a native dependency' in readme
+    assert 'Supported runtime: Limen requires Python `>=3.10,<3.14`' in readme
+    assert 'Python 3.10-3.13 on macOS and Linux' in readme
+    assert 'The default install is intentionally light' in readme
+    assert 'vaquum-limen[all]' in readme
     assert 'latest released Limen version' in readme
     assert 'CITATION.cff' in readme
     assert 'SUPPORT.md' in readme
@@ -73,24 +80,33 @@ def test_docs_audit_public_contract_surfaces() -> None:
 
     metadata = _project_metadata()
     assert metadata['name'] == 'vaquum-limen'
-    assert metadata['version'] == '3.31.2'
+    version = metadata['version']
+    assert re.fullmatch(r'\d+\.\d+\.\d+(?:[a-zA-Z0-9.+-]*)?', version)
     assert metadata['urls']['Homepage'] == 'https://docs.vaquum.fi/limen/'
     assert 'Operating System :: POSIX :: Linux' in metadata['classifiers']
     assert 'Programming Language :: Python :: 3.12' in metadata['classifiers']
+    assert 'Programming Language :: Python :: 3.13' in metadata['classifiers']
+    assert metadata['license'] == 'MIT'
+    assert metadata['requires-python'] == '>=3.10,<3.14'
     optional_dependencies = metadata['optional-dependencies']
-    assert optional_dependencies['test'] == ['coverage[toml]>=7', 'pytest>=8']
-    assert optional_dependencies['dev'] == [
-        'build>=1',
-        'coverage[toml]>=7',
-        'pytest>=8',
-        'ruff>=0.8',
-    ]
+    for extra in ('all', 'boosting', 'data', 'dev', 'indicators', 'release', 'stats', 'tabpfn', 'test'):
+        assert extra in optional_dependencies
+    assert any(req.startswith('anthropic') for req in optional_dependencies['release'])
 
     for template in (ROOT / 'limen' / 'yaml' / 'templates').glob('*.yaml'):
-        assert 'limen_version: "3.31.2"' in template.read_text(encoding='utf-8')
+        assert f'limen_version: "{version}"' in template.read_text(encoding='utf-8')
 
     manifest = _read('MANIFEST.in')
-    for expected in ('recursive-include docs *.md', 'recursive-include .github', 'prune examples'):
+    for expected in (
+        'recursive-include docs *.md',
+        'recursive-include .github',
+        'recursive-include tests *.py *.json',
+        'recursive-include tests/fixtures *.csv *.zip',
+        'include limen/py.typed',
+        'recursive-include requirements *.txt',
+        'recursive-include scripts *.py',
+        'prune examples',
+    ):
         assert expected in manifest
 
     docs_site_package = json.loads(_read('docs-site/package.json'))
@@ -153,6 +169,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'not a published JSON Schema or editor schema' in docs_text
     assert 'python -m pip install -e ".[dev]"' in docs_text
     assert 'python -m build' in docs_text
+    assert 'python scripts/package_audit.py' in docs_text
     assert 'ruff check .' in docs_text
     assert 'does not define a tox, nox, or Makefile contract' in docs_text
     assert 'Limen release and versioning contracts live in this repository' in docs_text
@@ -164,6 +181,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'Sensor callers pass raw klines, not `x_test`' in docs_text
     assert 'non-finite selector metrics are excluded' in docs_text
     assert 'not a code-signing attestation' in docs_text
+    assert 'The default package must import without loading LightGBM' in docs_text
     assert 'YAML validation rejects bool, zero, negative, and over-budget values' in docs_text
     assert 'does not read or mutate Python\'s module-global random state' in docs_text
     assert 'Missing control keys are treated as false' in docs_text

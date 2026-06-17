@@ -1,7 +1,7 @@
 from limen.data import HistoricalData
 from limen.experiment import MLManifest
 from limen.experiment import Manifest
-from limen.sfd.reference_architecture import random_binary
+from limen.sfd.reference_architecture.random_binary import random_binary
 from limen.targets import RandomBinaryTarget
 
 

@@ -2,8 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from tabpfn import TabPFNClassifier
-
+from limen._optional import require_optional
 from limen.calibration import fit_calibrator
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
@@ -52,7 +51,9 @@ class TabPFNBinary(ReferenceModel):
 
         arrays = data_dict_to_numpy(data, ['x_train', 'y_train'])
 
-        self.model = TabPFNClassifier(
+        tabpfn = require_optional('tabpfn', 'TabPFN', 'tabpfn')
+
+        self.model = tabpfn.TabPFNClassifier(
             device=device,
             n_estimators=n_ensemble_configurations,
             model_path=TABPFN_MODEL_PATH,

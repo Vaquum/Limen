@@ -21,6 +21,7 @@ Before opening or updating a Limen PR:
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
 | adding a new foundational experiment template | [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md) | Covers research expectations, file ownership, and review criteria for foundational SFDs. |
 | preparing a release or checking release automation | [Making a Release](Making-Release.md) | Defines the local evidence required before Limen release publication. |
+| changing package metadata, artifacts, extras, or packaging gates | [Packaging](Packaging.md) | Defines the wheel/sdist, dependency, reproducibility, and provenance contract. |
 | deciding how to bump the version | [Semantic Versioning](../Semantic-Versioning.md) | Defines the Limen-local version surfaces and bump rules. |
 | assessing recorded known risk | [Technical Debt](../TechnicalDebt.md) | Tracks accepted debt, trigger conditions, and candidate remedies. |
 
@@ -46,6 +47,7 @@ Canonical validation paths:
 ```bash
 python -m tests.run
 python -m build
+python scripts/package_audit.py
 ruff check .
 ```
 
@@ -80,5 +82,6 @@ Limen does not define a tox, nox, or Makefile contract; these direct commands ar
 - [Writing Docstrings](Writing-Docstrings.md)
 - [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)
 - [Making a Release](Making-Release.md)
+- [Packaging](Packaging.md)
 - [Semantic Versioning](../Semantic-Versioning.md)
 - [Technical Debt](../TechnicalDebt.md)

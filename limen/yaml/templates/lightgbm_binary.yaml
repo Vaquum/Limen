@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: lightgbm_binary_experiment
-  limen_version: "3.31.2"
+  limen_version: "4.0.0"
   mode: development
   description: LightGBM tradeline long-binary classifier with line-geometry features, train-fitted breakout target, calibration, and swept costs
 
@@ -93,7 +93,7 @@ sfd:
 
     strict_mode: true
 
-    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary
+    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary.lightgbm_binary
 
     calibration:
       probability_calibration:

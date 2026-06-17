@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: tabpfn_binary_experiment
-  limen_version: "3.31.2"
+  limen_version: "4.0.0"
   mode: development
   description: TabPFN binary classifier with calibration, feature ablation, and explicit scaler
 
@@ -79,7 +79,7 @@ sfd:
 
     strict_mode: true
 
-    reference_architecture: limen.sfd.reference_architecture.tabpfn_binary
+    reference_architecture: limen.sfd.reference_architecture.tabpfn_binary.tabpfn_binary
 
     calibration:
       probability_calibration:

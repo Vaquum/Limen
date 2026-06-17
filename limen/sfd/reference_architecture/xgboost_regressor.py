@@ -1,8 +1,8 @@
 from typing import Any
 
 import numpy as np
-import xgboost as xgb
 
+from limen._optional import require_optional
 from limen.metrics.continuous_metrics import continuous_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -27,6 +27,8 @@ class XGBoostRegressor(ReferenceModel):
         '''
 
         early_stopping_rounds = params.pop('early_stopping_rounds', 50)
+
+        xgb = require_optional('xgboost', 'XGBoost', 'boosting')
 
         self.model = xgb.XGBRegressor(
             early_stopping_rounds=early_stopping_rounds,

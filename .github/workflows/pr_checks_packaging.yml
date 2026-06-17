@@ -1,0 +1,112 @@
+name: Packaging Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr_checks_packaging:
+    name: PR Checks Packaging
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install packaging tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Audit package source contract
+        run: python scripts/package_audit.py
+
+      - name: Build distributions twice
+        env:
+          SOURCE_DATE_EPOCH: '1704067200'
+        run: |
+          python -m build --outdir dist-a
+          python -m build --outdir dist-b
+
+      - name: Verify reproducible artifacts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          for first in sorted(Path('dist-a').iterdir()):
+              second = Path('dist-b', first.name)
+              assert second.exists(), f'missing second artifact: {first.name}'
+              assert hashlib.sha256(first.read_bytes()).hexdigest() == hashlib.sha256(second.read_bytes()).hexdigest(), first.name
+          PY
+
+      - name: Inspect package artifacts
+        run: |
+          python scripts/package_audit.py --dist-dir dist-a
+          python -m twine check dist-a/*
+          check-wheel-contents dist-a/*.whl
+          check-manifest
+          pyroma .
+
+      - name: Generate dependency reports
+        run: |
+          python -m pip install -e ".[boosting,data,indicators,stats]"
+          pip-licenses --format=json --output-file dependency-licenses.json
+          cyclonedx-py environment --output-file sbom.json
+
+      - name: Upload dependency reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-reports
+          path: |
+            dependency-licenses.json
+            sbom.json
+
+  pr_checks_package_install:
+    name: PR Checks Package Install (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build wheel
+        env:
+          SOURCE_DATE_EPOCH: '1704067200'
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist
+
+      - name: Install and smoke test base wheel
+        run: |
+          python -m pip install dist/*.whl
+          python - <<'PY'
+          import sys
+          import limen
+          from importlib import metadata
+
+          assert limen.__version__ == metadata.version('vaquum-limen')
+          for name in ('lightgbm', 'pyarrow', 'scipy', 'statsmodels', 'talib', 'tabpfn', 'xgboost'):
+              assert name not in sys.modules, name
+          PY
+          python -m limen --version
+          limen --version
+          python -m pip check

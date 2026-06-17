@@ -13,7 +13,7 @@ from limen.features import quantile_price_lines
 from limen.features import volatility_ratio
 from limen.indicators import roc
 from limen.metrics.balanced_metric import balanced_metric
-from limen.sfd.reference_architecture import lightgbm_binary
+from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.targets import TradelineLongBinaryTarget
 
 

@@ -37,8 +37,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Install Anthropic SDK
-          pip install anthropic
+          # Install declared release tooling
+          pip install -e ".[release]"
           
           # Create the release automation script
           python scripts/create_release.py
