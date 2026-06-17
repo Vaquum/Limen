@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Any
 
-import lightgbm
 import numpy as np
 
+from limen._optional import require_optional
 from limen.calibration import fit_calibrator
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
@@ -71,6 +71,8 @@ class LightGBMBinary(ReferenceModel):
         if 'class_weight' in params:
             params['class_weight'] = _resolve_class_weight(params['class_weight'])
         _validate_binary_objective(params.get('objective'))
+
+        lightgbm = require_optional('lightgbm', 'LightGBM', 'boosting')
 
         self.model = lightgbm.LGBMClassifier(**params)
 
