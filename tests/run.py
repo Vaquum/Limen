@@ -420,6 +420,10 @@ from tests.test_run_registration import test_pytest_only_allowlist_is_current
 from tests.test_docs_surface import test_docs_audit_public_contract_surfaces
 from tests.test_docs_surface import test_examples_notebook_surface_removed
 from tests.test_docs_surface import test_python_code_fences_are_parseable
+from tests.test_packaging_surface import test_module_entrypoint_version
+from tests.test_packaging_surface import test_optional_model_modules_import_without_optional_backends
+from tests.test_packaging_surface import test_package_audit_source_contract
+from tests.test_packaging_surface import test_root_import_is_light_and_versioned
 from tests.test_experiment_core_msq import test_checkpoint_saves_feedback_and_pruning_state
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_full_data
 from tests.test_experiment_core_msq import test_run_with_msq_shutdown_resume_grid
@@ -2107,6 +2111,10 @@ tests = [
     test_examples_notebook_surface_removed,
     test_docs_audit_public_contract_surfaces,
     test_python_code_fences_are_parseable,
+    test_package_audit_source_contract,
+    test_root_import_is_light_and_versioned,
+    test_module_entrypoint_version,
+    test_optional_model_modules_import_without_optional_backends,
 ]
 
 # Configure logging
