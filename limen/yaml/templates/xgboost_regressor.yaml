@@ -83,7 +83,7 @@ sfd:
 
     strict_mode: true
 
-    reference_architecture: limen.sfd.reference_architecture.xgboost_regressor
+    reference_architecture: limen.sfd.reference_architecture.xgboost_regressor.xgboost_regressor
 
   params:
     # feature perturbation

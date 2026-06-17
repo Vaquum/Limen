@@ -93,7 +93,7 @@ sfd:
 
     strict_mode: true
 
-    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary
+    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary.lightgbm_binary
 
     calibration:
       probability_calibration:

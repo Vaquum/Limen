@@ -55,7 +55,7 @@ sfd:
             - above_ema
       entry: entry
 
-    reference_architecture: limen.sfd.reference_architecture.rule_based
+    reference_architecture: limen.sfd.reference_architecture.rule_based.rule_based
 
   params:
     rsi_period: [7, 14, 21]

@@ -70,7 +70,7 @@ sfd:
 
     strict_mode: true
 
-    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary.logreg_binary
 
     calibration:
       probability_calibration:

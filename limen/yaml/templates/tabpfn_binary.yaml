@@ -79,7 +79,7 @@ sfd:
 
     strict_mode: true
 
-    reference_architecture: limen.sfd.reference_architecture.tabpfn_binary
+    reference_architecture: limen.sfd.reference_architecture.tabpfn_binary.tabpfn_binary
 
     calibration:
       probability_calibration:
