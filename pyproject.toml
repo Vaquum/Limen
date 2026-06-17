@@ -127,6 +127,7 @@ testpaths = ["tests"]
 addopts = ["-ra"]
 filterwarnings = [
   "error",
+  # Dependency warning filters are version-sensitive; re-check them on dependency bumps.
   "ignore:'penalty' was deprecated.*:FutureWarning:sklearn.linear_model._logistic",
   "ignore:'n_jobs' has no effect.*:FutureWarning:sklearn.linear_model._logistic",
   "ignore:'n_jobs' > 1 does not have any effect when 'solver' is set to 'liblinear'.*:UserWarning",

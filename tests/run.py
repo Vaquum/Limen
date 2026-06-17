@@ -32,6 +32,7 @@ class RuntimeProfilePlugin:
         self.suite_started_clock = time.perf_counter()
         self.test_started_at: dict[str, str] = {}
         self.test_records: list[dict[str, Any]] = []
+        self._records_by_nodeid: dict[str, dict[str, Any]] = {}
 
     def pytest_runtest_protocol(
         self,
@@ -64,19 +65,37 @@ class RuntimeProfilePlugin:
 
     def _record(self, report: pytest.TestReport) -> None:
         status = _report_status(report)
-        record = {
-            'test_name': report.nodeid,
-            'module': _module_name(report.nodeid),
-            'status': status,
-            'duration_seconds': round(float(report.duration), 6),
-            'started_at': self.test_started_at.get(report.nodeid, self.suite_started_at),
-            'finished_at': utc_now_iso(),
-        }
+        record = self._records_by_nodeid.get(report.nodeid)
+        if record is None:
+            record = {
+                'test_name': report.nodeid,
+                'module': _module_name(report.nodeid),
+                'status': 'unknown',
+                'duration_seconds': 0.0,
+                'started_at': self.test_started_at.get(
+                    report.nodeid,
+                    self.suite_started_at,
+                ),
+                'finished_at': utc_now_iso(),
+            }
+            self._records_by_nodeid[report.nodeid] = record
+            self.test_records.append(record)
+
+        record['status'] = _merge_status(str(record['status']), status)
+        record['duration_seconds'] = round(
+            float(record['duration_seconds']) + float(report.duration),
+            6,
+        )
+        record['finished_at'] = utc_now_iso()
+
         if status == 'failed':
             record['error'] = report.longreprtext
-        if status == 'skipped':
+        if status == 'skipped' and record['status'] == 'skipped':
             record['skip_reason'] = str(report.longrepr)
-        self.test_records.append(record)
+        if record['status'] != 'failed':
+            record.pop('error', None)
+        if record['status'] != 'skipped':
+            record.pop('skip_reason', None)
 
 
 def _report_status(report: pytest.TestReport) -> str:
@@ -87,6 +106,16 @@ def _report_status(report: pytest.TestReport) -> str:
     if report.skipped:
         return 'skipped'
     return 'unknown'
+
+
+def _merge_status(current_status: str, new_status: str) -> str:
+    if current_status == 'failed' or new_status == 'failed':
+        return 'failed'
+    if current_status == 'skipped' or new_status == 'skipped':
+        return 'skipped'
+    if current_status == 'passed' or new_status == 'passed':
+        return 'passed'
+    return new_status
 
 
 def _module_name(nodeid: str) -> str:
@@ -112,7 +141,12 @@ def _runtime_slowest_tests_limit() -> int:
     if not configured_limit:
         return DEFAULT_SLOWEST_TESTS_LIMIT
 
-    parsed_limit = int(configured_limit)
+    try:
+        parsed_limit = int(configured_limit)
+    except ValueError as exc:
+        raise ValueError(
+            'LIMEN_RUNTIME_SLOWEST_LIMIT must be a positive integer',
+        ) from exc
     if parsed_limit <= 0:
         raise ValueError('LIMEN_RUNTIME_SLOWEST_LIMIT must be a positive integer')
 
@@ -125,7 +159,7 @@ def _pytest_args(argv: list[str]) -> list[str]:
     return ['tests']
 
 
-def _write_profile(plugin: RuntimeProfilePlugin) -> None:
+def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> None:
     profile = plugin.build_profile()
     output_path = _runtime_profile_output_path()
     if output_path is not None:
@@ -144,7 +178,7 @@ def _write_profile(plugin: RuntimeProfilePlugin) -> None:
 
     slowest_tests = sorted_test_records(
         profile,
-        limit=_runtime_slowest_tests_limit(),
+        limit=slowest_tests_limit,
     )
     if slowest_tests:
         logger.info('Slowest tests:')
@@ -159,11 +193,17 @@ def _write_profile(plugin: RuntimeProfilePlugin) -> None:
 
 def main() -> int:
     setup_cleanup_handlers()
+    try:
+        slowest_tests_limit = _runtime_slowest_tests_limit()
+    except ValueError as exc:
+        logger.error(str(exc))
+        return 2
+
     plugin = RuntimeProfilePlugin()
     try:
         return_code = pytest.main(_pytest_args(sys.argv[1:]), plugins=[plugin])
     finally:
-        _write_profile(plugin)
+        _write_profile(plugin, slowest_tests_limit)
         cleanup_csv_files()
 
     return int(return_code)
