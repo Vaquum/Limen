@@ -45,11 +45,14 @@ python -m pip install -e ".[dev]"
 Canonical validation paths:
 
 ```bash
+python -m pytest
 python -m tests.run
 python -m build
 python scripts/package_audit.py
 ruff check .
 ```
+
+`python -m tests.run` delegates to pytest collection and adds the CI runtime profile artifact. It is not a separate curated test list.
 
 Docs-site validation:
 
@@ -63,10 +66,10 @@ Limen does not define a tox, nox, or Makefile contract; these direct commands ar
 
 ## Test runtime budget
 
-- `PR Validation` now publishes a `test-runtime-profile` artifact from the canonical `python -m coverage run -m tests.run` path.
+- `PR Validation` publishes a `test-runtime-profile` artifact from `python -m coverage run -m tests.run`, which uses pytest collection.
 - `PR Checks Runtime` enforces the suite ceiling committed in `tests/runtime_budget.json`.
 - Update `tests/runtime_budget.json` only when recent green `main` CI runs show a real new baseline, and keep that evidence in the linked issue or PR.
-- Do not raise the budget to absorb avoidable slow tests; everything executed through `tests/run.py` is timed automatically.
+- Do not raise the budget to absorb avoidable slow tests; every pytest test executed through `tests/run.py` is timed automatically.
 
 ## Scope notes
 

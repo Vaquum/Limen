@@ -85,7 +85,8 @@ def test_commit_recovers_from_corrupt_index() -> None:
         (project_root / 'manifests' / 'committed' / 'index.json').write_text('not valid json')
         yaml_path2 = project_root / 'manifests' / 'examples' / 'test2.yaml'
         yaml_path2.write_text(_SAMPLE_YAML + '\n# extra\n')
-        manifest_id2, _ = commit_manifest(yaml_path2, project_root)
+        with pytest.warns(UserWarning, match='index.json is corrupted'):
+            manifest_id2, _ = commit_manifest(yaml_path2, project_root)
         index = json.loads((project_root / 'manifests' / 'committed' / 'index.json').read_text())
         assert any(m['id'] == manifest_id2 for m in index['manifests'])
 
@@ -124,7 +125,8 @@ def test_commit_recovers_from_structurally_invalid_index() -> None:
         project_root, yaml_path = _make_project(Path(d))
         index_path = project_root / 'manifests' / 'committed' / 'index.json'
         index_path.write_text(json.dumps([1, 2, 3]))
-        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        with pytest.warns(UserWarning, match='index.json has invalid structure'):
+            manifest_id, _ = commit_manifest(yaml_path, project_root)
         index = json.loads(index_path.read_text())
         assert any(m['id'] == manifest_id for m in index['manifests'])
 

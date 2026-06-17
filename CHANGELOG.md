@@ -1166,3 +1166,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Breaking package-contract change: default installs are now intentionally light and bounded to Python `>=3.10,<3.14`; heavy data/model/statistical backends moved to explicit extras (`data`, `boosting`, `indicators`, `stats`, `tabpfn`, `all`).
 - Add `limen.__version__`, `limen --version`, and `python -m limen`; make root and model-surface imports lazy so optional backends fail only when their surfaces are used.
 - Replace deprecated license metadata with SPDX/PEP 639 fields, declare release tooling, add constraints, and document artifact, dependency, reproducibility, provenance, release cadence, TabPFN, and dataset-cache boundaries.
+
+## v4.0.1 on 17th of June, 2026
+
+- Make pytest the single test collection authority: `python -m tests.run` now delegates to pytest and emits the CI runtime profile instead of maintaining a parallel curated suite list.
+- Add pytest warning policy and marker registration, and make the heavyweight TabPFN model-download integration test opt-in under `LIMEN_RUN_TABPFN_MODEL_TEST=1`; full TabPFN model validation is tracked separately in #628.
