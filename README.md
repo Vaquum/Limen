@@ -64,7 +64,7 @@ The first runnable path is a YAML manifest executed through the `limen` CLI.
 pip install vaquum-limen
 ```
 
-Supported runtime: Limen requires Python `>=3.10`; package metadata advertises Python 3.10-3.12 on macOS and Linux. TA-Lib is a native dependency, so install a platform wheel or system TA-Lib library first if `pip` cannot resolve it. Security support covers the latest released Limen version through [SECURITY.md](SECURITY.md).
+Supported runtime: Limen requires Python `>=3.10,<3.14`; package metadata advertises Python 3.10-3.13 on macOS and Linux. The default install is intentionally light. Use `vaquum-limen[data]` for Arrow dataset IO, `vaquum-limen[boosting]` for LightGBM/XGBoost models, `vaquum-limen[indicators]` for TA-Lib comparison tooling, `vaquum-limen[stats]` for statistical helpers, or `vaquum-limen[all]` for the full research stack. Security support covers the latest released Limen version through [SECURITY.md](https://github.com/Vaquum/Limen/blob/main/SECURITY.md).
 
 2. Scaffold a starter manifest:
 
@@ -107,17 +107,17 @@ Limen is research software. Benchmark and backtest outputs are not investment ad
 - Define extension research units in [Single-File Decoder](https://docs.vaquum.fi/limen/guides/single-file-decoder) and [Built-In SFDs](https://docs.vaquum.fi/limen/guides/built-in-sfds)
 - Analyze results in [Log](https://docs.vaquum.fi/limen/guides/log), [Benchmark](https://docs.vaquum.fi/limen/guides/benchmark), and [Backtest](https://docs.vaquum.fi/limen/guides/backtest)
 - Promote finished runs into reusable outputs with [Trainer](https://docs.vaquum.fi/limen/guides/trainer) and [Cohort](https://docs.vaquum.fi/limen/guides/cohort)
-- Contribute through [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/Developer/README.md](docs/Developer/README.md)
+- Contribute through [CONTRIBUTING.md](https://github.com/Vaquum/Limen/blob/main/CONTRIBUTING.md) and [Developer docs](https://docs.vaquum.fi/limen/developer/)
 
 ## Contributing
 
-Contribution starts through [CONTRIBUTING.md](CONTRIBUTING.md), [docs changes](https://github.com/Vaquum/Limen/tree/main/docs), or [open issues](https://github.com/Vaquum/Limen/issues).
+Contribution starts through [CONTRIBUTING.md](https://github.com/Vaquum/Limen/blob/main/CONTRIBUTING.md), [docs changes](https://github.com/Vaquum/Limen/tree/main/docs), or [open issues](https://github.com/Vaquum/Limen/issues).
 
-Before contributing, start with [docs/Developer/README.md](docs/Developer/README.md).
+Before contributing, start with the [Developer docs](https://docs.vaquum.fi/limen/developer/).
 
 ## Support
 
-Use [SUPPORT.md](SUPPORT.md) for support routes and scope boundaries.
+Use [SUPPORT.md](https://github.com/Vaquum/Limen/blob/main/SUPPORT.md) for support routes and scope boundaries.
 
 ## Vulnerabilities
 
@@ -129,7 +129,7 @@ Published work should cite:
 
 Vaquum Limen [Computer software]. (2026). Retrieved from https://github.com/Vaquum/Limen.
 
-Machine-readable citation metadata lives in [CITATION.cff](CITATION.cff).
+Machine-readable citation metadata lives in [CITATION.cff](https://github.com/Vaquum/Limen/blob/main/CITATION.cff).
 
 ## License
 

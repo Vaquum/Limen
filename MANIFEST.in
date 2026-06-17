@@ -1,4 +1,5 @@
 include README.md
+include limen_build_backend.py
 include CHANGELOG.md
 include LICENSE
 include AUTHORS
@@ -19,10 +20,15 @@ include docs-site/package.json
 include docs-site/package-lock.json
 include docs-site/sidebars.js
 recursive-include docs-site/scripts *.mjs
-recursive-include docs-site/src *.js *.jsx *.ts *.tsx *.css
-recursive-include .github *.md *.yml *.yaml
+recursive-include docs-site/src *.js *.css
+recursive-include .github *.md *.yml
 recursive-include limen *.md
+include limen/py.typed
 recursive-include limen/yaml/templates *.yaml
+recursive-include requirements *.txt
+recursive-include scripts *.py
+recursive-include tests *.py *.json
+recursive-include tests/fixtures *.csv *.zip
 prune examples
 prune docs-site/.docusaurus
 prune docs-site/.generated

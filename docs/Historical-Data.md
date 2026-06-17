@@ -9,6 +9,8 @@
 
 All four return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
 
+Install `vaquum-limen[data]` when using Hugging Face parquet datasets or Arrow IPC paths. The base package does not install PyArrow.
+
 ## How It Works
 
 ```python
@@ -36,6 +38,8 @@ assert data is historical.data
 `get_spot_klines()` reads from the BTCUSDT datasets published on Hugging Face.
 
 By default it reads native [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines), [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the 1m dataset before aggregating upward.
+
+Dataset snapshot file names are treated as the cache identity. Limen does not package upstream dataset bytes, licenses, or hash manifests inside the wheel/sdist; release packaging proves code and metadata integrity, while dataset publishers remain authoritative for dataset size, license, and content integrity. Cached snapshots live under `~/.cache/limen/datasets` and can be large; delete that directory to reclaim local disk or force a refetch.
 
 ```python
 from limen.data import HistoricalData
