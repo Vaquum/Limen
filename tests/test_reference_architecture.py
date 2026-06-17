@@ -183,6 +183,10 @@ def test_tabpfn_train_evaluate_end_to_end():
 
     if TabPFNBinary is None:
         return
+    try:
+        import tabpfn  # noqa: F401
+    except ImportError:
+        return
 
     config = CalibrationConfig(
         calibration_func=sklearn_probability_calibrator,

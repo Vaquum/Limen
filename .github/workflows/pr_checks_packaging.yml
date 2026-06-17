@@ -58,7 +58,7 @@ jobs:
 
       - name: Generate dependency reports
         run: |
-          python -m pip install -e ".[all]"
+          python -m pip install -e ".[boosting,data,indicators,stats]"
           pip-licenses --format=json --output-file dependency-licenses.json
           cyclonedx-py environment --output-file sbom.json
 

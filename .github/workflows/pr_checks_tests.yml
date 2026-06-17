@@ -24,7 +24,7 @@ jobs:
       - name: Install limen package (and deps)
         run: |
           pip install "coverage[toml]" pytest
-          pip install -e .
+          pip install -e ".[boosting,data,indicators,stats]"
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
