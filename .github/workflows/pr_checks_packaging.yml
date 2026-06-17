@@ -101,9 +101,10 @@ jobs:
           python - <<'PY'
           import sys
           import limen
+          from importlib import metadata
 
-          assert limen.__version__ == '4.0.0'
-          for name in ('lightgbm', 'pyarrow', 'tabpfn', 'xgboost'):
+          assert limen.__version__ == metadata.version('vaquum-limen')
+          for name in ('lightgbm', 'pyarrow', 'scipy', 'statsmodels', 'talib', 'tabpfn', 'xgboost'):
               assert name not in sys.modules, name
           PY
           python -m limen --version

@@ -80,7 +80,8 @@ def test_docs_audit_public_contract_surfaces() -> None:
 
     metadata = _project_metadata()
     assert metadata['name'] == 'vaquum-limen'
-    assert metadata['version'] == '4.0.0'
+    version = metadata['version']
+    assert re.fullmatch(r'\d+\.\d+\.\d+(?:[a-zA-Z0-9.+-]*)?', version)
     assert metadata['urls']['Homepage'] == 'https://docs.vaquum.fi/limen/'
     assert 'Operating System :: POSIX :: Linux' in metadata['classifiers']
     assert 'Programming Language :: Python :: 3.12' in metadata['classifiers']
@@ -93,7 +94,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert any(req.startswith('anthropic') for req in optional_dependencies['release'])
 
     for template in (ROOT / 'limen' / 'yaml' / 'templates').glob('*.yaml'):
-        assert 'limen_version: "4.0.0"' in template.read_text(encoding='utf-8')
+        assert f'limen_version: "{version}"' in template.read_text(encoding='utf-8')
 
     manifest = _read('MANIFEST.in')
     for expected in (

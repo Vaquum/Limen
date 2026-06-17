@@ -63,6 +63,7 @@ jobs:
     if: needs.resolve_release_tag.outputs.tag_name != ''
     runs-on: ubuntu-latest
     permissions:
+      attestations: write
       contents: read
       id-token: write
 

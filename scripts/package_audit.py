@@ -75,7 +75,7 @@ def main() -> int:
 
 
 def _audit_project(project: dict) -> None:
-    assert project['version'] == '4.0.0'
+    assert re.fullmatch(r'\d+\.\d+\.\d+(?:[a-zA-Z0-9.+-]*)?', project['version'])
     assert project['license'] == 'MIT'
     assert project['requires-python'] == '>=3.10,<3.14'
     assert 'Programming Language :: Python :: 3.13' in project['classifiers']
