@@ -52,14 +52,16 @@ def _normalize_tar_gz(source: Path, target: Path) -> None:
             members.append((info, data))
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open('wb') as raw:
-        with gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=epoch) as gz:
-            with tarfile.open(fileobj=gz, mode='w', format=tarfile.PAX_FORMAT) as archive:
-                for info, data in members:
-                    if data is None:
-                        archive.addfile(info)
-                    else:
-                        archive.addfile(info, _BytesReader(data))
+    with (
+        target.open('wb') as raw,
+        gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=epoch) as gz,
+        tarfile.open(fileobj=gz, mode='w', format=tarfile.PAX_FORMAT) as archive,
+    ):
+        for info, data in members:
+            if data is None:
+                archive.addfile(info)
+            else:
+                archive.addfile(info, _BytesReader(data))
 
 
 class _BytesReader:

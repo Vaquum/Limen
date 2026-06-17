@@ -4,6 +4,7 @@ from email.parser import Parser
 from pathlib import Path
 import argparse
 import re
+import sys
 import tarfile
 import zipfile
 
@@ -15,6 +16,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
 
 ROOT = Path(__file__).resolve().parents[1]
 BOUNDED_RE = re.compile(r'>=[^,;]+,<[^,;]+')
+SDIST_PARTS_WITH_PREFIX = 2
 BASE_FORBIDDEN = {
     'lightgbm',
     'pyarrow',
@@ -68,7 +70,7 @@ def main() -> int:
     _audit_readme_links()
     _audit_manifest()
     _audit_dist(Path(args.dist_dir))
-    print('package audit passed')
+    sys.stdout.write('package audit passed\n')
     return 0
 
 
@@ -148,7 +150,7 @@ def _strip_sdist_prefix(names: list[str]) -> set[str]:
     stripped = set()
     for name in names:
         parts = name.split('/', 1)
-        if len(parts) == 2:
+        if len(parts) == SDIST_PARTS_WITH_PREFIX:
             stripped.add(parts[1])
     return stripped
 

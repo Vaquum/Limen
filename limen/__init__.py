@@ -48,7 +48,28 @@ _LAZY_EXPORTS = {
 }
 
 
-__all__ = ['__version__', *_LAZY_EXPORTS]
+__all__ = [
+    'Cohort',
+    'HistoricalData',
+    'Log',
+    'MLManifest',
+    'Manifest',
+    'ReconstructionError',
+    'RuleBasedManifest',
+    'Sensor',
+    'Trainer',
+    'UniversalExperimentLoop',
+    '__version__',
+    'features',
+    'indicators',
+    'log',
+    'metrics',
+    'scalers',
+    'sfd',
+    'targets',
+    'transforms',
+    'utils',
+]
 
 
 def __getattr__(name: str) -> Any:
