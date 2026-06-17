@@ -132,6 +132,7 @@ filterwarnings = [
   "ignore:Inconsistent values:UserWarning:sklearn.linear_model._logistic",
   "ignore:lbfgs failed to converge after .*:sklearn.exceptions.ConvergenceWarning",
   "ignore:X does not have valid feature names.*:UserWarning:sklearn.utils.validation",
+  "ignore:Support for the dataframe interchange protocol is deprecated since version 1\\.40\\.0:DeprecationWarning:typing_extensions",
 ]
 markers = [
   "tabpfn_model: opt-in TabPFN model-download integration tests tracked by #628.",
