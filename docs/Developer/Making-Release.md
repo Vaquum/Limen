@@ -14,6 +14,7 @@ Limen-local release surfaces:
 | `CHANGELOG.md` | human-readable release history expected by PR discipline |
 | `scripts/create_release.py` | local automation for generating and publishing a GitHub release |
 | `RELEASE_DOCS_URL` | optional override for the shared release guide fetched by the script |
+| `.github/workflows/pr_publish_pypi.yml` | release artifact build, attestation, release-asset upload, and PyPI trusted publishing |
 
 ## Automation Inputs
 
@@ -35,6 +36,8 @@ Release notes must be tied to local evidence before publication:
 - release PR number and merge SHA
 - compare link from previous tag to new tag
 - built artifact names and hashes
+- GitHub artifact attestation links
+- GitHub release asset links for the wheel and sdist
 - CI run links for tests, package build, docs-site build, and docs-site audit where applicable
 
 ## Failure Notes
@@ -45,7 +48,12 @@ Release notes must be tied to local evidence before publication:
 - The script does not decide the version bump; use the Limen-local [Semantic Versioning](../Semantic-Versioning.md) contract before running it.
 - LLM-generated prose is draft material until a maintainer checks it against the changelog, merge SHA, compare link, artifact hashes, and CI evidence.
 
+## Cadence Notes
+
+Release velocity is not itself a maturity signal. Publish a new PyPI release only when the changelog, version bump, release notes, package checks, artifact hashes, attestations, and GitHub release assets all describe the same candidate.
+
 ## Read Next
 
 - [Semantic Versioning](../Semantic-Versioning.md)
+- [Packaging](Packaging.md)
 - [Developer Home](README.md)
