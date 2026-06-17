@@ -129,6 +129,7 @@ filterwarnings = [
   "error",
   "ignore:'penalty' was deprecated.*:FutureWarning:sklearn.linear_model._logistic",
   "ignore:'n_jobs' has no effect.*:FutureWarning:sklearn.linear_model._logistic",
+  "ignore:'n_jobs' > 1 does not have any effect when 'solver' is set to 'liblinear'.*:UserWarning",
   "ignore:Inconsistent values:UserWarning:sklearn.linear_model._logistic",
   "ignore:lbfgs failed to converge after .*:sklearn.exceptions.ConvergenceWarning",
   "ignore:X does not have valid feature names.*:UserWarning:sklearn.utils.validation",
