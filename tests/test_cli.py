@@ -362,7 +362,7 @@ def test_cli_profile_shows_runtime_skipped_when_no_sampling() -> None:
     with runner.isolated_filesystem():
         Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
         prof = _make_profile_result(
-            warnings=['test_data_source not defined — runtime sampling skipped.'],
+            warnings=['No permutations completed — timing unavailable.'],
         )
         with patch('limen.cli.commands.profile.profile', return_value=prof):
             result = runner.invoke(cli, ['profile', 'exp.yaml'])
@@ -386,12 +386,12 @@ def test_cli_profile_shows_errors_from_sampling() -> None:
         Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
         prof = _make_profile_result(
             attempted=3, completed=1, time_per=0.1,
-            errors=['Test data too small — increase n_rows in test_data_source.'],
+            errors=['Data too small for profiling — extend the date range in data_source.'],
         )
         with patch('limen.cli.commands.profile.profile', return_value=prof):
             result = runner.invoke(cli, ['profile', 'exp.yaml'])
         assert 'ERROR' in result.output
-        assert 'n_rows' in result.output
+        assert 'date range' in result.output
 
 
 def test_cli_profile_parse_error_exits_1() -> None:

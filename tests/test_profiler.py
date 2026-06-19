@@ -100,7 +100,7 @@ def test_covering_array_values_are_from_original_lists() -> None:
 
 def test_classify_error_small_dataset() -> None:
     msg = _classify_error(ValueError('Found array with 0 sample(s)'))
-    assert 'n_rows' in msg
+    assert 'date range' in msg
 
 
 def test_classify_error_class_diversity() -> None:
@@ -158,71 +158,9 @@ def test_profile_total_permutations_is_product_of_cardinalities() -> None:
     assert result.total_permutations == expected
 
 
-def test_profile_warns_when_test_data_source_absent() -> None:
-    from textwrap import dedent
-    yaml_str = dedent('''\
-        schema_version: "1.0"
-        metadata:
-          name: no_test_src
-          mode: development
-        sfd:
-          manifest:
-            type: ml
-            data_source:
-              method: limen.data.HistoricalData.get_spot_klines
-              params:
-                kline_size: 3600
-            split_dates:
-              train_start: "2024-01-01"
-              train_end: "2024-09-30"
-              val_start: "2024-10-01"
-              val_end: "2024-11-30"
-              test_start: "2024-12-01"
-              test_end: "2024-12-31"
-            target:
-              name: quantile_flag
-              class: limen.targets.QuantileBinaryTarget
-              fit_params:
-                source_column: close
-                quantile: 0.5
-              transform_params:
-                shift: -1
-            reference_architecture: limen.sfd.reference_architecture.logreg_binary
-          params:
-            max_iter: [100]
-            solver: [lbfgs]
-            penalty: [l2]
-            dual: [false]
-            tol: [0.01]
-            C: [1.0]
-            fit_intercept: [true]
-            intercept_scaling: [1.0]
-            class_weight: [0.5]
-            random_state: [42]
-            multi_class: [deprecated]
-            verbose: [0]
-            warm_start: [false]
-            n_jobs: [-1]
-            l1_ratio: [null]
-        uel:
-          n_permutations: 5
-          search_strategy:
-            type: random
-          output_format: csv
-    ''')
-    yaml_dict, _ = parse(yaml_str)
-    sfd = CompiledSFD(yaml_dict)
-    result = profile(sfd)
-
-    assert any('test_data_source' in w for w in result.warnings)
-    assert result.sample_permutations_attempted == 0
-    assert result.sample_time_seconds_per_permutation is None
-
-
 def _make_mock_manifest(fail: bool = False) -> MagicMock:
     manifest = MagicMock()
-    manifest.test_data_source_config = MagicMock()
-    manifest.fetch_test_data.return_value = MagicMock()
+    manifest.fetch_data.return_value = MagicMock()
     manifest.prepare_data.return_value = {'x_train': [], 'y_train': []}
     if fail:
         manifest.run_model.side_effect = ValueError('Found array with 0 sample(s)')
@@ -258,7 +196,7 @@ def test_profile_runtime_records_errors_when_all_permutations_fail() -> None:
     assert result.sample_permutations_completed == 0
     assert result.sample_time_seconds_per_permutation is None
     assert len(result.errors) == 3
-    assert all('n_rows' in e for e in result.errors)
+    assert all('date range' in e for e in result.errors)
 
 
 def test_profile_runtime_partial_failure_timing_from_completed_only() -> None:
@@ -283,9 +221,9 @@ def test_profile_runtime_partial_failure_timing_from_completed_only() -> None:
 def test_profile_runtime_fetch_data_failure_reported_as_error() -> None:
     params = {'a': [1, 2]}
     manifest = _make_mock_manifest()
-    manifest.fetch_test_data.side_effect = ConnectionError('network down')
+    manifest.fetch_data.side_effect = ConnectionError('network down')
     sfd = _make_mock_sfd(params, manifest)
     result = profile(sfd)
 
-    assert any('Failed to load test data' in e for e in result.errors)
+    assert any('Failed to load data' in e for e in result.errors)
     assert result.sample_permutations_attempted == 0
