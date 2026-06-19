@@ -97,9 +97,9 @@ def _print_runtime_sampling(prof: ProfileResult) -> None:
     if attempted == 0:
         click.echo('  Runtime sampling')
         if prof.errors:
-            click.echo('    Skipped — test data could not be loaded (see errors below)')
+            click.echo('    Skipped — data could not be loaded (see errors below)')
         else:
-            click.echo('    Skipped — no test_data_source configured')
+            click.echo('    Skipped — no permutations in covering array')
         return
 
     click.echo(f"  Runtime sampling  ({completed} of {attempted} completed)")
