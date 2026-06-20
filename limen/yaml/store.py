@@ -78,6 +78,11 @@ def commit_manifest(yaml_path: Path,
     if not isinstance(data, dict):
         raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
 
+    if parent_id is None:
+        source_parent = data.get('lineage', {}).get('parent_id')
+        if isinstance(source_parent, str):
+            parent_id = source_parent
+
     manifest_id = canonical_manifest_id(data)
     hex_hash = manifest_id[len(_SHA256_PREFIX):]
 
@@ -315,6 +320,69 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
     dest.write_text(stream.getvalue(), encoding='utf-8')
 
     return parent_id
+
+
+def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
+
+    '''
+    Rebuild manifests/committed/index.json from the committed manifest files.
+
+    The committed *.yaml files are the source of truth; the index is a derived
+    cache. Scans every committed manifest, reads its lineage block, verifies
+    that lineage.id matches the filename, and writes a fresh index. Files that
+    are unreadable, non-mappings, missing a lineage block, or whose lineage.id
+    does not match their filename are skipped and reported.
+
+    Args:
+        project_root (Path): Root directory of the limen project
+
+    Returns:
+        tuple[int, list[str]]: (entries_written, warnings) where warnings
+            describe skipped or malformed files
+
+    '''
+
+    store_path = project_root / _STORE_RELATIVE
+    warnings_out: list[str] = []
+    entries: list[dict[str, Any]] = []
+
+    yaml = YAML()
+    for path in sorted(store_path.glob('*.yaml')):
+        try:
+            data = yaml.load(path.read_text(encoding='utf-8'))
+        except (OSError, YAMLError) as exc:
+            warnings_out.append(f"{path.name}: cannot read ({type(exc).__name__}) — skipped")
+            continue
+        if not isinstance(data, dict):
+            warnings_out.append(f"{path.name}: not a mapping — skipped")
+            continue
+
+        lineage = data.get('lineage')
+        if not isinstance(lineage, dict):
+            warnings_out.append(f"{path.name}: missing lineage block — skipped")
+            continue
+
+        manifest_id = lineage.get('id')
+        expected_id = f'{_SHA256_PREFIX}{path.stem}'
+        if manifest_id != expected_id:
+            warnings_out.append(f"{path.name}: lineage.id does not match filename — skipped")
+            continue
+
+        metadata = data.get('metadata')
+        name = metadata.get('name', path.stem) if isinstance(metadata, dict) else path.stem
+        entries.append({
+            'id': manifest_id,
+            'name': str(name),
+            'committed_at': lineage.get('committed_at', ''),
+            'parent_id': lineage.get('parent_id'),
+            'file': path.name,
+        })
+
+    store_path.mkdir(parents=True, exist_ok=True)
+    index = {'version': 1, 'manifests': entries}
+    (store_path / 'index.json').write_text(json.dumps(index, indent=2), encoding='utf-8')
+
+    return len(entries), warnings_out
 
 
 def _update_index(store_path: Path, entry: dict[str, Any]) -> None:

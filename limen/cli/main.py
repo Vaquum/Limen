@@ -313,6 +313,31 @@ def init(output: Path, template: str | None) -> None:
 
 
 @cli.command()
+def reindex() -> None:
+
+    '''
+    Rebuild the manifest store index from the committed manifest files.
+
+    \b
+    The committed manifests are the source of truth; index.json is a derived
+    cache. Use this to repair the index after a bad merge, a manual edit, or a
+    pull that left index.json out of sync with manifests/committed/.
+
+    \b
+    Only rewrites index.json — the committed manifests are never modified.
+
+    \b
+    Examples:
+      limen reindex
+    '''
+
+    from limen.cli.commands.reindex import run_reindex
+
+    ok = run_reindex(Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
 @click.argument('manifest_ref', metavar='MANIFEST_ID')
 @click.argument('name', required=False, default=None)
 def fork(manifest_ref: str, name: str | None) -> None:
