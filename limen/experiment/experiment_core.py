@@ -552,7 +552,7 @@ class UniversalExperimentLoop:
                 raise
 
             round_results['_warnings'] = (
-                json.dumps([str(w.message) for w in caught])
+                json.dumps(list(dict.fromkeys(str(w.message) for w in caught)))
                 if caught else '[]'
             )
 
