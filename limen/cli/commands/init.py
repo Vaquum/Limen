@@ -46,10 +46,17 @@ def run_init(output: Path, template_name: str | None) -> bool:
     if template_name is None:
         click.echo('Available templates:')
         for name in available:
-            click.echo(f'  {name}')
+            marker = '  (default)' if name == 'logreg_binary' else ''
+            click.echo(f'  {name}{marker}')
         click.echo()
-        click.secho('Usage: limen init <output.yaml> --template <name>', fg='yellow')
-        return False
+        template_name = click.prompt('Template', default='logreg_binary')
+        if template_name not in available:
+            click.secho(
+                f"Template '{template_name}' not found. "
+                f"Available: {', '.join(available)}",
+                fg='red',
+            )
+            return False
 
     if template_name not in available:
         click.secho(

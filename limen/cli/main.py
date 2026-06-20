@@ -303,7 +303,7 @@ def init(output: Path, template: str | None) -> None:
       limen init my_experiment --template logreg_binary
       limen init my_experiment.yaml --template logreg_binary
       limen init path/to/my_experiment.yaml --template logreg_binary
-      limen init my_experiment               # lists templates when --template omitted
+      limen init my_experiment               # prompts for template, default logreg_binary
     '''
 
     from limen.cli.commands.init import run_init
