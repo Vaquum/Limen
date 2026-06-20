@@ -18,6 +18,7 @@ from limen.yaml.config import find_project_root
 _SHA256_PREFIX = 'sha256:'
 _MANIFEST_URI_SCHEME = 'manifest://'
 _SHA256_HEX_LENGTH = 64
+_YAML_DUMP_WIDTH = 4096
 
 
 def canonical_manifest_id(yaml_dict: dict[str, Any]) -> str:
@@ -68,6 +69,7 @@ def commit_manifest(yaml_path: Path,
 
     yaml = YAML()
     yaml.preserve_quotes = True
+    yaml.width = _YAML_DUMP_WIDTH
 
     try:
         data = yaml.load(content)
@@ -190,6 +192,129 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
         )
 
     return candidate, project_root
+
+
+def is_full_manifest_id(value: Any) -> bool:
+
+    '''
+    Check whether a value is a well-formed sha256:<64-hex> manifest ID.
+
+    Args:
+        value (Any): Candidate manifest ID
+
+    Returns:
+        bool: True if value is a full sha256 manifest ID
+
+    '''
+
+    if not isinstance(value, str) or not value.startswith(_SHA256_PREFIX):
+        return False
+    hex_part = value[len(_SHA256_PREFIX):]
+    return len(hex_part) == _SHA256_HEX_LENGTH and all(c in '0123456789abcdef' for c in hex_part)
+
+
+def normalize_manifest_ref(ref: str) -> str:
+
+    '''
+    Normalize a user-supplied manifest reference to a manifest:// URI.
+
+    Accepts a bare hash, a sha256:<hash> reference, or a full
+    manifest://sha256:<hash> URI and returns the canonical URI form.
+
+    Args:
+        ref (str): User-supplied manifest reference
+
+    Returns:
+        str: A manifest://sha256:<hash> URI
+
+    '''
+
+    ref = ref.strip()
+    if ref.startswith(_MANIFEST_URI_SCHEME):
+        return ref
+    if ref.startswith(_SHA256_PREFIX):
+        return f'{_MANIFEST_URI_SCHEME}{ref}'
+    return f'{_MANIFEST_URI_SCHEME}{_SHA256_PREFIX}{ref}'
+
+
+def load_index(project_root: Path) -> dict[str, Any]:
+
+    '''
+    Read the manifest store index, returning an empty index when absent.
+
+    Args:
+        project_root (Path): Root directory of the limen project
+
+    Returns:
+        dict[str, Any]: Parsed index with 'version' and 'manifests' keys
+
+    Raises:
+        ValueError: If index.json exists but is corrupted or malformed
+
+    '''
+
+    index_path = project_root / _STORE_RELATIVE / 'index.json'
+    if not index_path.exists():
+        return {'version': 1, 'manifests': []}
+    try:
+        index = json.loads(index_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"index.json is corrupted: {index_path}") from exc
+    if not isinstance(index, dict) or not isinstance(index.get('manifests'), list):
+        raise ValueError(f"index.json has invalid structure: {index_path}")
+    return index
+
+
+def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
+
+    '''
+    Create a development-mode working copy of a committed manifest.
+
+    Copies the committed manifest to ``dest``, sets metadata.name to
+    ``new_name``, switches metadata.mode to development, and records the
+    source manifest as lineage.parent_id so the lineage is preserved on the
+    next commit.
+
+    Args:
+        committed_path (Path): Path to the committed manifest file
+        dest (Path): Destination path for the working copy
+        new_name (str): Value to set for metadata.name
+
+    Returns:
+        str: The parent manifest ID recorded in the working copy
+
+    Raises:
+        FileExistsError: If dest already exists
+        ValueError: If the committed manifest has no metadata mapping
+
+    '''
+
+    if dest.exists():
+        raise FileExistsError(str(dest))
+
+    parent_id = f'{_SHA256_PREFIX}{committed_path.stem}'
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.width = _YAML_DUMP_WIDTH
+    data = yaml.load(committed_path.read_text(encoding='utf-8'))
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid manifest format in '{committed_path.name}'")
+
+    metadata = data.get('metadata')
+    if not isinstance(metadata, dict):
+        raise ValueError(f"Committed manifest '{committed_path.name}' has no metadata block")
+
+    metadata['name'] = new_name
+    metadata['mode'] = 'development'
+    data['lineage'] = {'parent_id': parent_id}
+
+    stream = StringIO()
+    yaml.dump(data, stream)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(stream.getvalue(), encoding='utf-8')
+
+    return parent_id
 
 
 def _update_index(store_path: Path, entry: dict[str, Any]) -> None:

@@ -313,6 +313,63 @@ def init(output: Path, template: str | None) -> None:
 
 
 @cli.command()
+@click.argument('manifest_ref', metavar='MANIFEST_ID')
+@click.argument('name', required=False, default=None)
+def fork(manifest_ref: str, name: str | None) -> None:
+
+    '''
+    Fork a committed manifest into a new working file.
+
+    \b
+    Copies a committed manifest into manifests/ as a development-mode working
+    file, records the source as its lineage parent, and lets you iterate on it.
+    The parent lineage is committed automatically on the next limen commit.
+
+    \b
+    MANIFEST_ID accepts a bare hash, sha256:<hash>, or manifest://sha256:<hash>,
+    and short hashes are resolved when unambiguous.
+
+    \b
+    Examples:
+      limen fork sha256:d3a5d334
+      limen fork sha256:d3a5d334 my_tuned_run
+      limen fork manifest://sha256:d3a5d334
+    '''
+
+    from limen.cli.commands.fork import run_fork
+
+    ok = run_fork(manifest_ref, name, Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+@click.argument('manifest_ref', metavar='MANIFEST_ID')
+def lineage(manifest_ref: str) -> None:
+
+    '''
+    Show the lineage chain for a committed manifest.
+
+    \b
+    Walks the parent chain from the given manifest up to its root and prints
+    it root-first, with the target manifest marked.
+
+    \b
+    MANIFEST_ID accepts a bare hash, sha256:<hash>, or manifest://sha256:<hash>,
+    and short hashes are resolved when unambiguous.
+
+    \b
+    Examples:
+      limen lineage sha256:37222f71
+      limen lineage 37222f71
+    '''
+
+    from limen.cli.commands.lineage import run_lineage
+
+    ok = run_lineage(manifest_ref, Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
 @click.argument('project_name')
 @click.option('--backup-remote', default=None,
               help='Git remote URL for manifest store backup (can also be set interactively).')

@@ -5,9 +5,9 @@ import click
 from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.git_utils import git_add_and_commit
 from limen.yaml.config import find_project_root
-from limen.yaml.store import _SHA256_HEX_LENGTH
 from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import commit_manifest
+from limen.yaml.store import is_full_manifest_id
 
 
 def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> bool:
@@ -25,18 +25,6 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
 
     '''
 
-    if parent_id is not None:
-        hex_part = parent_id[len(_SHA256_PREFIX):]
-        if (not parent_id.startswith(_SHA256_PREFIX)
-                or len(hex_part) != _SHA256_HEX_LENGTH
-                or not all(c in '0123456789abcdef' for c in hex_part)):
-            click.secho(
-                f"  ✗ Invalid parent ID: '{parent_id}'\n"
-                '    Expected sha256:<64-hex-chars>.',
-                fg='red',
-            )
-            return False
-
     project_root = find_project_root(yaml_path.parent)
     if project_root is None:
         click.secho(
@@ -49,6 +37,19 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
     click.echo(f"Validating {yaml_path.name} ...")
     yaml_dict, valid = load_and_validate(yaml_path)
     if not valid:
+        return False
+
+    if parent_id is None:
+        lineage_parent = yaml_dict.get('lineage', {}).get('parent_id')
+        if isinstance(lineage_parent, str):
+            parent_id = lineage_parent
+
+    if parent_id is not None and not is_full_manifest_id(parent_id):
+        click.secho(
+            f"  ✗ Invalid parent ID: '{parent_id}'\n"
+            '    Expected sha256:<64-hex-chars>.',
+            fg='red',
+        )
         return False
 
     mode = yaml_dict.get('metadata', {}).get('mode', 'development')
