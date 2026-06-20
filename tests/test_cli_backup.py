@@ -58,3 +58,15 @@ def test_run_backup_fails_on_unreachable_remote() -> None:
         root = Path(d)
         project = _make_project(root, str(root / 'does-not-exist.git'))
         assert run_backup(project) is False
+
+
+def test_run_backup_hints_on_https_credential_error() -> None:
+    with tempfile.TemporaryDirectory() as d, \
+         patch('click.echo'), patch('click.secho') as secho, \
+         patch('limen.cli.commands.backup.git_push',
+               return_value=(False, "fatal: could not read Username for 'https://github.com'")):
+        root = Path(d)
+        project = _make_project(root, 'https://github.com/user/repo.git')
+        assert run_backup(project) is False
+        printed = ' '.join(str(c.args[0]) for c in secho.call_args_list if c.args)
+        assert 'SSH URL' in printed
