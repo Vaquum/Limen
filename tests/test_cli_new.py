@@ -1,3 +1,4 @@
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -124,4 +125,49 @@ def test_clone_template_fails_fast_on_git_init_failure() -> None:
              patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), None)
 
+        assert result is False
+
+
+def _git(args: list[str], cwd: Path) -> None:
+    subprocess.run(
+        ['git', '-c', 'user.email=t@t', '-c', 'user.name=t', *args],
+        cwd=cwd, capture_output=True, check=True,
+    )
+
+
+def test_run_new_from_restores_project_from_backup() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        source = root / 'source'
+        source.mkdir()
+        (source / 'limen.toml').write_text('[store]\nbackup_remote = "git@example.com:me/p.git"\n')
+        (source / 'manifests' / 'committed').mkdir(parents=True)
+        (source / 'manifests' / 'committed' / 'a.yaml').write_text('id: a\n')
+        _git(['init'], source)
+        _git(['add', '.'], source)
+        _git(['commit', '-m', 'init'], source)
+
+        dest = root / 'restored'
+        with patch('click.echo'), patch('click.secho'):
+            result = run_new(str(dest), None, from_remote=str(source))
+
+        assert result is True
+        assert (dest / 'limen.toml').exists()
+        assert (dest / 'manifests' / 'committed' / 'a.yaml').exists()
+        assert (dest / '.git').is_dir()  # history preserved
+
+
+def test_run_new_from_fails_on_unreachable_remote() -> None:
+    with tempfile.TemporaryDirectory() as d, patch('click.echo'), patch('click.secho'):
+        dest = Path(d) / 'restored'
+        result = run_new(str(dest), None, from_remote=str(Path(d) / 'nope.git'))
+        assert result is False
+
+
+def test_run_new_from_fails_when_git_not_found() -> None:
+    with tempfile.TemporaryDirectory() as d, \
+         patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError), \
+         patch('click.echo'), patch('click.secho'):
+        dest = Path(d) / 'restored'
+        result = run_new(str(dest), None, from_remote='git@example.com:me/p.git')
         assert result is False
