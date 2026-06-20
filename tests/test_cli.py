@@ -119,12 +119,49 @@ def test_cli_init_shows_success_message() -> None:
         assert '✓' in result.output
 
 
-def test_cli_init_without_template_lists_templates_and_exits_1() -> None:
+def test_cli_init_without_template_prompts_and_uses_default() -> None:
     runner = CliRunner()
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['init', 'my_exp.yaml'])
-        assert result.exit_code == 1
+        result = runner.invoke(cli, ['init', 'my_exp.yaml'], input='\n')
+        assert result.exit_code == 0
         assert 'logreg_binary' in result.output
+        assert Path('my_exp.yaml').exists()
+
+
+def test_cli_init_without_template_accepts_typed_name() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp.yaml'], input='rule_based\n')
+        assert result.exit_code == 0
+        d, _ = parse(Path('my_exp.yaml'))
+        assert d['metadata']['name'] == 'my_exp'
+
+
+def test_cli_init_bare_name_appends_yaml_extension() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp', '--template', 'logreg_binary'])
+        assert result.exit_code == 0
+        assert Path('my_exp.yaml').exists()
+
+
+def test_cli_init_bare_name_inside_project_places_in_manifests() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('limen.toml').write_text('[project]\nname = "test"\n')
+        result = runner.invoke(cli, ['init', 'my_exp', '--template', 'logreg_binary'])
+        assert result.exit_code == 0
+        assert Path('manifests/my_exp.yaml').exists()
+        assert 'manifests/my_exp.yaml' in result.output
+
+
+def test_cli_init_bare_name_outside_project_warns_and_creates_in_cwd() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp', '--template', 'logreg_binary'])
+        assert result.exit_code == 0
+        assert Path('my_exp.yaml').exists()
+        assert 'no limen.toml' in result.output
 
 
 def test_cli_init_unknown_template_exits_1() -> None:
