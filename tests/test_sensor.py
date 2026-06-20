@@ -12,9 +12,9 @@ from limen.experiment import MLManifest
 from limen.experiment.manifest_core import PCACompressionConfig
 from limen.experiment.manifest_core import _apply_sensor_pca
 from limen.experiment.manifest_core import _count_leading_nulls
-from limen.experiment.trainer.sensor import BarPrediction
-from limen.experiment.trainer.sensor import Sensor
-from limen.experiment.trainer.sensor import _extract_scalar
+from limen.inference.sensor import BarPrediction
+from limen.inference.sensor import Sensor
+from limen.inference.sensor import _extract_scalar
 from limen.scalers.robust_scaler import RobustScaler
 
 

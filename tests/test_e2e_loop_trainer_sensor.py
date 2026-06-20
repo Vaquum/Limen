@@ -10,8 +10,8 @@ import polars as pl
 from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
 from limen.data import historical_data
-from limen.experiment.trainer import Trainer
-from limen.experiment.trainer.sensor import BarPrediction
+from limen.inference import Trainer
+from limen.inference.sensor import BarPrediction
 
 
 _LABEL_CONTROL_YAML = dedent('''\
