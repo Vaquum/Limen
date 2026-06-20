@@ -69,6 +69,7 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
             click.secho(f"\n  ✓ Repaired and committed {manifest_id}", fg='green')
         else:
             click.secho(f"\n  Already in store: {manifest_id}", fg='yellow')
+        click.echo(f"  Run with: limen run {manifest_id}")
         return True
 
     name = str(yaml_dict.get('metadata', {}).get('name', yaml_path.stem))
@@ -84,4 +85,5 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         )
     else:
         click.secho(f"\n  ✓ Committed {manifest_id}", fg='green')
+    click.echo(f"  Run with: limen run {manifest_id}")
     return True
