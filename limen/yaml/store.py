@@ -43,6 +43,68 @@ def canonical_manifest_id(yaml_dict: dict[str, Any]) -> str:
     return f'{_SHA256_PREFIX}{hashlib.sha256(canonical.encode()).hexdigest()}'
 
 
+def short_id(manifest_id: str) -> str:
+
+    '''
+    Extract the leading 8 hex characters of a manifest ID for display.
+
+    Args:
+        manifest_id (str): Full sha256:<64-hex> manifest ID
+
+    Returns:
+        str: The first 8 hex characters of the hash
+
+    '''
+
+    return manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
+
+
+def manifest_name(data: dict[str, Any], fallback: str) -> str:
+
+    '''
+    Read metadata.name from a parsed manifest, falling back when absent.
+
+    Args:
+        data (dict[str, Any]): Parsed manifest mapping
+        fallback (str): Value to return when metadata.name is missing
+
+    Returns:
+        str: The metadata.name value, or fallback
+
+    '''
+
+    metadata = data.get('metadata')
+    if isinstance(metadata, dict) and isinstance(metadata.get('name'), str):
+        return metadata['name']
+    return fallback
+
+
+def _configured_yaml() -> YAML:
+
+    '''Create a round-trip YAML instance with the store's dump settings.'''
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.width = _YAML_DUMP_WIDTH
+    return yaml
+
+
+def _index_entry(manifest_id: str,
+                 name: str,
+                 committed_at: str,
+                 parent_id: str | None) -> dict[str, Any]:
+
+    '''Create a manifest store index entry record.'''
+
+    return {
+        'id': manifest_id,
+        'name': name,
+        'committed_at': committed_at,
+        'parent_id': parent_id,
+        'file': f'{manifest_id[len(_SHA256_PREFIX):]}.yaml',
+    }
+
+
 def commit_manifest(yaml_path: Path,
                     project_root: Path,
                     parent_id: str | None = None) -> tuple[str, bool]:
@@ -67,9 +129,7 @@ def commit_manifest(yaml_path: Path,
 
     content = yaml_path.read_text(encoding='utf-8')
 
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.width = _YAML_DUMP_WIDTH
+    yaml = _configured_yaml()
 
     try:
         data = yaml.load(content)
@@ -84,15 +144,14 @@ def commit_manifest(yaml_path: Path,
             parent_id = source_parent
 
     manifest_id = canonical_manifest_id(data)
-    hex_hash = manifest_id[len(_SHA256_PREFIX):]
 
     store_path = project_root / _STORE_RELATIVE
-    dest = store_path / f'{hex_hash}.yaml'
+    dest = store_path / f'{manifest_id[len(_SHA256_PREFIX):]}.yaml'
 
     already_existed = dest.exists()
 
     if not already_existed:
-        name = str(data.get('metadata', {}).get('name', yaml_path.stem))
+        name = manifest_name(data, fallback=yaml_path.stem)
         committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         lineage: dict = {'id': manifest_id, 'committed_at': committed_at}
         if parent_id is not None:
@@ -110,18 +169,11 @@ def commit_manifest(yaml_path: Path,
             raise ValueError(f"Cannot read committed manifest '{dest.name}': {exc}") from exc
         if not isinstance(existing, dict):
             raise ValueError(f"Invalid committed manifest format in '{dest.name}': expected a mapping")
-        name = str(existing.get('metadata', {}).get('name', dest.stem))
+        name = manifest_name(existing, fallback=dest.stem)
         committed_at = existing.get('lineage', {}).get('committed_at', '')
         stored_parent_id = existing.get('lineage', {}).get('parent_id')
 
-    entry: dict[str, Any] = {
-        'id': manifest_id,
-        'name': name,
-        'committed_at': committed_at,
-        'parent_id': stored_parent_id,
-        'file': f'{hex_hash}.yaml',
-    }
-    _update_index(store_path, entry)
+    _update_index(store_path, _index_entry(manifest_id, name, committed_at, stored_parent_id))
 
     return manifest_id, already_existed
 
@@ -299,9 +351,7 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
 
     parent_id = f'{_SHA256_PREFIX}{committed_path.stem}'
 
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.width = _YAML_DUMP_WIDTH
+    yaml = _configured_yaml()
     data = yaml.load(committed_path.read_text(encoding='utf-8'))
     if not isinstance(data, dict):
         raise ValueError(f"Invalid manifest format in '{committed_path.name}'")
@@ -368,15 +418,12 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
             warnings_out.append(f"{path.name}: lineage.id does not match filename — skipped")
             continue
 
-        metadata = data.get('metadata')
-        name = metadata.get('name', path.stem) if isinstance(metadata, dict) else path.stem
-        entries.append({
-            'id': manifest_id,
-            'name': str(name),
-            'committed_at': lineage.get('committed_at', ''),
-            'parent_id': lineage.get('parent_id'),
-            'file': path.name,
-        })
+        entries.append(_index_entry(
+            manifest_id,
+            manifest_name(data, fallback=path.stem),
+            lineage.get('committed_at', ''),
+            lineage.get('parent_id'),
+        ))
 
     store_path.mkdir(parents=True, exist_ok=True)
     index = {'version': 1, 'manifests': entries}

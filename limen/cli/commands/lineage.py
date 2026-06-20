@@ -8,6 +8,7 @@ from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import load_index
 from limen.yaml.store import normalize_manifest_ref
 from limen.yaml.store import resolve_manifest_uri
+from limen.yaml.store import short_id
 
 
 def run_lineage(ref: str, start: Path) -> bool:
@@ -35,7 +36,7 @@ def run_lineage(ref: str, start: Path) -> bool:
     try:
         candidate, _ = resolve_manifest_uri(normalize_manifest_ref(ref), project_root)
     except ValueError as exc:
-        click.secho(f'  ✗ {exc}', fg='red')
+        click.secho(f"  ✗ {exc}", fg='red')
         return False
 
     target_id = f'{_SHA256_PREFIX}{candidate.stem}'
@@ -43,7 +44,7 @@ def run_lineage(ref: str, start: Path) -> bool:
     try:
         index = load_index(project_root)
     except ValueError as exc:
-        click.secho(f'  ✗ {exc}', fg='red')
+        click.secho(f"  ✗ {exc}", fg='red')
         return False
 
     by_id = {
@@ -63,17 +64,15 @@ def run_lineage(ref: str, start: Path) -> bool:
     chain.reverse()
 
     target_name = _name_of(by_id.get(target_id), fallback=candidate.stem)
-    short_target = target_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
-    click.echo(f"Lineage for {_SHA256_PREFIX}{short_target} ({target_name}):\n")
+    click.echo(f"Lineage for {_SHA256_PREFIX}{short_id(target_id)} ({target_name}):\n")
 
     for depth, (manifest_id, entry) in enumerate(chain):
-        short = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
         name = _name_of(entry, fallback='(not in store)')
         committed_at = entry.get('committed_at', '') if isinstance(entry, dict) else ''
         connector = '' if depth == 0 else '└─ '
         indent = '  ' + '   ' * depth
         marker = '  ← target' if manifest_id == target_id else ''
-        click.echo(f"{indent}{connector}{_SHA256_PREFIX}{short}  {name:<28}  {committed_at}{marker}")
+        click.echo(f"{indent}{connector}{_SHA256_PREFIX}{short_id(manifest_id)}  {name:<28}  {committed_at}{marker}")
 
     return True
 

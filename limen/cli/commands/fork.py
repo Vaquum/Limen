@@ -8,8 +8,10 @@ from ruamel.yaml.error import YAMLError
 from limen.yaml.config import find_project_root
 from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import fork_manifest
+from limen.yaml.store import manifest_name
 from limen.yaml.store import normalize_manifest_ref
 from limen.yaml.store import resolve_manifest_uri
+from limen.yaml.store import short_id
 
 _NAME_SLUG_RE = re.compile(r'^[A-Za-z0-9_-]+$')
 _VERSION_SUFFIX_RE = re.compile(r'_v\d+$')
@@ -38,7 +40,7 @@ def run_fork(ref: str, name: str | None, start: Path) -> bool:
     try:
         candidate, _ = resolve_manifest_uri(normalize_manifest_ref(ref), project_root)
     except ValueError as exc:
-        click.secho(f'  ✗ {exc}', fg='red')
+        click.secho(f"  ✗ {exc}", fg='red')
         return False
 
     manifests_dir = project_root / 'manifests'
@@ -63,11 +65,10 @@ def run_fork(ref: str, name: str | None, start: Path) -> bool:
         click.secho(f"  ✗ '{dest}' already exists — choose another name.", fg='red')
         return False
     except ValueError as exc:
-        click.secho(f'  ✗ {exc}', fg='red')
+        click.secho(f"  ✗ {exc}", fg='red')
         return False
 
-    short = parent_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
-    click.secho(f"  ✓ Forked from {_SHA256_PREFIX}{short} → {dest}", fg='green')
+    click.secho(f"  ✓ Forked from {_SHA256_PREFIX}{short_id(parent_id)} → {dest}", fg='green')
     click.echo('  Lineage to parent recorded. Next:')
     click.echo(f"    1. Edit {dest} (set metadata.mode: production when ready)")
     click.echo(f"    2. limen commit {dest}")
@@ -81,11 +82,7 @@ def _read_name(path: Path, fallback: str) -> str:
         data = yaml.load(path.read_text(encoding='utf-8'))
     except (OSError, YAMLError):
         return fallback
-    if isinstance(data, dict):
-        metadata = data.get('metadata')
-        if isinstance(metadata, dict) and isinstance(metadata.get('name'), str):
-            return metadata['name']
-    return fallback
+    return manifest_name(data, fallback) if isinstance(data, dict) else fallback
 
 
 def _default_fork_name(base: str, manifests_dir: Path) -> str:

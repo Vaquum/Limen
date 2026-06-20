@@ -8,6 +8,8 @@ from limen.yaml.config import find_project_root
 from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import commit_manifest
 from limen.yaml.store import is_full_manifest_id
+from limen.yaml.store import manifest_name
+from limen.yaml.store import short_id
 
 
 def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> bool:
@@ -62,10 +64,10 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         return False
 
     manifest_id, already_existed = commit_manifest(yaml_path, project_root, parent_id)
+    short = f'{_SHA256_PREFIX}{short_id(manifest_id)}'
 
     if already_existed:
-        short_id = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
-        repair_msg = f'repair: restore index for {_SHA256_PREFIX}{short_id}'
+        repair_msg = f'repair: restore index for {short}'
         if git_add_and_commit(project_root, Path('manifests') / 'committed', repair_msg):
             click.secho(f"\n  ✓ Repaired and committed {manifest_id}", fg='green')
         else:
@@ -73,9 +75,8 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         click.echo(f"  Run with: limen run {manifest_id}")
         return True
 
-    name = str(yaml_dict.get('metadata', {}).get('name', yaml_path.stem))
-    short_id = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
-    commit_msg = message or f'commit: {name} ({_SHA256_PREFIX}{short_id})'
+    name = manifest_name(yaml_dict, fallback=yaml_path.stem)
+    commit_msg = message or f'commit: {name} ({short})'
     git_ok = git_add_and_commit(project_root, Path('manifests') / 'committed', commit_msg)
 
     if not git_ok:
