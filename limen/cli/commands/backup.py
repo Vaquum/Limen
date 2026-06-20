@@ -50,7 +50,20 @@ def run_backup(start: Path) -> bool:
 
     if not ok:
         click.secho(f"  ✗ Backup failed: {error}", fg='red')
+        if _is_https_credential_error(error):
+            click.secho(
+                '    HTTPS remote needs credentials — run `gh auth setup-git`, '
+                'configure a git credential helper, or use an SSH URL '
+                '(git@github.com:user/repo.git).',
+                fg='yellow',
+            )
         return False
 
     click.secho('  ✓ Backed up', fg='green')
     return True
+
+
+def _is_https_credential_error(error: str) -> bool:
+
+    lowered = error.lower()
+    return 'could not read username' in lowered or 'authentication failed' in lowered
