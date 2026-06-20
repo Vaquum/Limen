@@ -91,7 +91,7 @@ body:
         > HTTP request that returns a definite result. One assertion per line.
         >
         > Accepted:
-        > - `python -c "from limen.experiment.trainer import Trainer; print(Trainer.__name__)"` returns `Trainer`.
+        > - `python -c "from limen.inference import Trainer; print(Trainer.__name__)"` returns `Trainer`.
         > - `python -m tests.run` returns exit code `0`.
         > - `ruff check .` returns exit code `0`.
         >

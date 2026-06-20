@@ -31,7 +31,7 @@ Start from an existing experiment directory:
 
 ```python
 import polars as pl
-from limen.experiment.trainer import Trainer
+from limen.inference import Trainer
 
 # 1) identify permutation IDs from results.csv
 results = pl.read_csv('path/to/experiment/results.csv')
