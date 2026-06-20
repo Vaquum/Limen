@@ -5,8 +5,8 @@ from typing import Any
 
 import polars as pl
 
-from limen.experiment.trainer.errors import ReconstructionError
-from limen.experiment.trainer.sensor import Sensor
+from limen.inference.errors import ReconstructionError
+from limen.inference.sensor import Sensor
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.errors import ResolutionError
 

@@ -11,8 +11,8 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
-from limen.experiment.trainer.sensor import BarPrediction
-from limen.experiment.trainer.sensor import PredictionReason
+from limen.inference.sensor import BarPrediction
+from limen.inference.sensor import PredictionReason
 from limen.yaml.store import _SHA256_PREFIX
 
 
