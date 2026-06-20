@@ -398,21 +398,54 @@ def lineage(manifest_ref: str) -> None:
 @click.argument('project_name')
 @click.option('--backup-remote', default=None,
               help='Git remote URL for manifest store backup (can also be set interactively).')
-def new(project_name: str, backup_remote: str | None) -> None:
+@click.option('--from', 'from_remote', default=None, metavar='REMOTE_URL',
+              help='Restore a project from a backup remote instead of the template.')
+def new(project_name: str, backup_remote: str | None, from_remote: str | None) -> None:
 
     '''
     Create a new Limen project from the official project template.
 
     \b
     Clones Vaquum/limen-project-template and optionally sets up a backup remote.
+    With --from, the project is restored from a backup remote with its full
+    history instead of scaffolded from the template.
 
     \b
     Examples:
       limen new my-project
       limen new my-project --backup-remote git@github.com:user/my-project.git
+      limen new my-project --from git@github.com:user/my-project.git
     '''
+
+    if from_remote is not None and backup_remote is not None:
+        click.secho('  ✗ Cannot combine --from with --backup-remote.', fg='red')
+        raise SystemExit(1)
 
     from limen.cli.commands.new import run_new
 
-    ok = run_new(project_name, backup_remote)
+    ok = run_new(project_name, backup_remote, from_remote)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+def backup() -> None:
+
+    '''
+    Push the project's committed history to the configured backup remote.
+
+    \b
+    Reads backup_remote from limen.toml and pushes the project repository
+    there. Set backup_remote first (via limen new or by editing limen.toml).
+
+    \b
+    Restore on another machine with: limen new <name> --from <remote-url>
+
+    \b
+    Examples:
+      limen backup
+    '''
+
+    from limen.cli.commands.backup import run_backup
+
+    ok = run_backup(Path.cwd())
     raise SystemExit(0 if ok else 1)

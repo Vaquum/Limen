@@ -4,20 +4,26 @@ from pathlib import Path
 
 import click
 
+from limen.cli.git_utils import git_clone
 from limen.cli.git_utils import git_executable
 
 
 _TEMPLATE_REPO = 'https://github.com/Vaquum/limen-project-template.git'
 
 
-def run_new(project_name: str, backup_remote: str | None) -> bool:
+def run_new(project_name: str,
+            backup_remote: str | None,
+            from_remote: str | None = None) -> bool:
 
     '''
-    Create a new Limen project from the official project template.
+    Create a new Limen project from the template or restore one from backup.
 
     Args:
         project_name (str): Name of the new project directory to create
         backup_remote (str | None): Git remote URL for manifest store backup
+        from_remote (str | None): Backup remote to restore from; when set, the
+            project is cloned from it with history intact instead of scaffolded
+            from the template
 
     Returns:
         bool: True on success, False on failure
@@ -29,6 +35,9 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
     if project_path.exists():
         click.secho(f"  ✗ '{project_name}' already exists.", fg='red')
         return False
+
+    if from_remote is not None:
+        return _restore_from_backup(project_path, project_name, from_remote)
 
     click.echo(f"Creating project '{project_name}' ...")
 
@@ -51,6 +60,32 @@ def run_new(project_name: str, backup_remote: str | None) -> bool:
     click.echo("    limen list-templates")
     click.echo("    limen init logreg-first.yaml --template logreg_binary")
     click.echo("    limen validate logreg-first.yaml")
+    return True
+
+
+def _restore_from_backup(project_path: Path, project_name: str, from_remote: str) -> bool:
+
+    click.echo(f"Restoring project '{project_name}' from {from_remote} ...")
+    try:
+        ok, error = git_clone(from_remote, project_path)
+    except FileNotFoundError:
+        click.secho('  ✗ git not found on PATH — install git and try again.', fg='red')
+        return False
+    if not ok:
+        click.secho(f"  ✗ Restore failed: {error}", fg='red')
+        return False
+
+    if not (project_path / 'limen.toml').exists():
+        click.secho(
+            f"  ⚠ Restored '{project_name}', but no limen.toml found — "
+            'this may not be a Limen project backup.',
+            fg='yellow',
+        )
+
+    click.secho(f"\n  ✓ Project '{project_name}' restored.", fg='green')
+    click.echo("\n  Next steps:")
+    click.echo(f"    cd {project_name}")
+    click.echo("    limen ls")
     return True
 
 
