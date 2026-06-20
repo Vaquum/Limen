@@ -295,9 +295,15 @@ def init(output: Path, template: str | None) -> None:
     to the output filename stem.
 
     \b
+    When run from inside a Limen project (limen.toml present), a bare name
+    is placed in manifests/ automatically. The .yaml extension is optional.
+
+    \b
     Examples:
+      limen init my_experiment --template logreg_binary
       limen init my_experiment.yaml --template logreg_binary
-      limen init my_experiment.yaml               # lists templates when --template omitted
+      limen init path/to/my_experiment.yaml --template logreg_binary
+      limen init my_experiment               # lists templates when --template omitted
     '''
 
     from limen.cli.commands.init import run_init

@@ -5,8 +5,24 @@ from pathlib import Path
 import click
 
 from limen.cli.commands._constants import TEMPLATES_DIR
+from limen.yaml.config import find_project_root
 
 _NAME_SLUG_RE = re.compile(r'^[A-Za-z0-9_-]+$')
+
+
+def _resolve_output(output: Path) -> Path:
+    if output.suffix != '.yaml':
+        output = output.with_suffix('.yaml')
+    if output.parent == Path('.'):
+        project_root = find_project_root(Path.cwd())
+        if project_root is not None:
+            return project_root / 'manifests' / output.name
+        click.secho(
+            'Warning: no limen.toml found — creating in current directory. '
+            'Run from inside a Limen project to place files in manifests/ automatically.',
+            fg='yellow',
+        )
+    return output
 
 
 def run_init(output: Path, template_name: str | None) -> bool:
@@ -24,6 +40,7 @@ def run_init(output: Path, template_name: str | None) -> bool:
 
     '''
 
+    output = _resolve_output(output)
     available = {p.stem: p for p in sorted(TEMPLATES_DIR.glob('*.yaml'))}
 
     if template_name is None:
@@ -67,7 +84,7 @@ def run_init(output: Path, template_name: str | None) -> bool:
         return False
 
     click.secho(f"  ✓ Created '{output}' from template '{template_name}'", fg='green')
-    click.echo(f"  Edit the file, then run: limen validate {output}")
+    click.echo(f"  Edit the file, then run: limen validate '{output}'")
     return True
 
 
