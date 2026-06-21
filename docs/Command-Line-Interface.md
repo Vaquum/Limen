@@ -23,15 +23,22 @@ This is the preferred user journey: create or edit YAML, validate it, profile th
 | Command | Purpose | Main output |
 | --- | --- | --- |
 | `limen validate <yaml_file>` | Validate YAML syntax, schema, references, parameter lists, split settings, search strategy, and output format. | Exit code plus validation messages. |
-| `limen profile <yaml_file>` | Estimate YAML parameter-space size without executing data or model work. | Complexity rating, parameter counts, and runtime-sampling skipped status. |
-| `limen run <yaml_file>` | Validate, compile, and execute a YAML experiment. | Results directory with `results.csv`, optional `results.parquet`, metadata, round data, and checkpoints when configured. |
-| `limen run --dry-run <yaml_file>` | Validate and compile without executing permutations. | Compile success or validation/runtime setup errors. |
+| `limen profile <yaml_file>` | Estimate parameter-space size and sample runtime against the real data source. | Complexity rating, parameter counts, per-permutation runtime estimate, and data-quality warnings. |
+| `limen run <target>` | Validate, compile, and execute a YAML file or a committed manifest (`sha256:` / `manifest://sha256:`). | Results directory with `results.csv`, optional `results.parquet`, metadata, round data, and checkpoints when configured. |
+| `limen run --dry-run <target>` | Validate and compile without executing permutations. | Compile success or validation/runtime setup errors. |
 | `limen run --resume <results_dir>` | Resume an artifact-backed run from a checkpoint directory. | Updated result artifacts in the existing run directory. |
-| `limen init <output> --template <name>` | Copy a bundled YAML template and set `metadata.name` from the output filename. | New YAML file. |
+| `limen results <results_dir>` | Read a finished run and rank permutations by a metric. | Best permutations with swept-param context (table or `--json`). |
+| `limen runs` | List run directories under `results/` in the current project. | Run paths, permutation counts, and dev/committed kind. |
+| `limen init <output> [--template <name>]` | Scaffold a YAML file from a template; resolves a bare name into `manifests/` inside a project and prompts for a template when omitted. | New YAML file. |
 | `limen list-templates` | List bundled YAML templates under `limen/yaml/templates`. | Template names. |
 | `limen commit <yaml_file>` | Validate, content-address, store, index, and git-commit a manifest inside a Limen project. | Committed manifest under `manifests/committed/` plus index update. |
-| `limen ls` | List committed manifests in the current project. | Short id, name, and commit timestamp. |
-| `limen new <project_name>` | Create a project from the official Limen project template. | New project directory. |
+| `limen ls` | List committed manifests in the current project. | Short id, name, commit timestamp, and parent. |
+| `limen show <manifest_id>` | Print a committed manifest's stored YAML. | The manifest YAML on stdout. |
+| `limen fork <manifest_id> [name]` | Copy a committed manifest into `manifests/` as a development working file with lineage to its parent. | New working YAML with `lineage.parent_id`. |
+| `limen lineage <manifest_id>` | Show the parent chain for a committed manifest. | Lineage tree, root-first, with the target marked. |
+| `limen reindex` | Rebuild `manifests/committed/index.json` from the committed files. | Repaired index. |
+| `limen new <project_name>` | Create a project from the official template, or restore one with `--from <remote>`. | New project directory. |
+| `limen backup` | Snapshot the project and push it to the configured `backup_remote`. | Project pushed to the backup remote. |
 
 ## Command Details
 
@@ -46,7 +53,7 @@ Exit behavior:
 
 ### `limen profile <yaml_file>`
 
-Validates and compiles the YAML, then reports parameter-space size and complexity. Validated CLI YAML manifests do not accept `test_data_source`, so this command is static: runtime sampling is reported as skipped and no data source, preparation function, or model function is executed.
+Validates and compiles the YAML, then reports parameter-space size and complexity. It also fetches the manifest's real data source and runs a covering-array sample of permutations to estimate per-permutation runtime and surface data-quality warnings (e.g. unexpected nulls). Strict mode is temporarily disabled during sampling so thin parameter combinations do not abort profiling.
 
 ### `limen run <yaml_file>`
 
@@ -95,9 +102,9 @@ Options:
 | `--parent <manifest_id>` | records lineage to an earlier committed manifest |
 | `-m`, `--message <message>` | overrides the generated git commit message |
 
-### `limen init <output> --template <name>`
+### `limen init <output> [--template <name>]`
 
-Copies a bundled YAML template to `output` and updates `metadata.name` to the output filename stem. Without `--template`, the command lists available templates instead of guessing.
+Copies a bundled YAML template to `output` and updates `metadata.name` to the output filename stem. The `.yaml` extension is optional, and a bare name is resolved into the project's `manifests/` directory when run inside a Limen project (a warning is printed otherwise). Without `--template`, the command lists templates and prompts for one, defaulting to `logreg_binary`.
 
 ### `limen list-templates`
 
@@ -109,19 +116,55 @@ Reads `manifests/committed/index.json` from the current project and prints commi
 
 ### `limen new <project_name>`
 
-Creates a new project from the official project template.
-
-The printed next steps avoid hard-coding project-template example paths. They route through `limen list-templates`, `limen init logreg-first.yaml --template logreg_binary`, and `limen validate logreg-first.yaml`.
+Creates a new project from the official project template. New projects are initialized on the `main` branch so they line up with an empty backup remote (which GitHub also defaults to `main`).
 
 Options:
 
 | Option | Behavior |
 | --- | --- |
 | `--backup-remote <url>` | sets a backup remote during project creation |
+| `--from <remote_url>` | restores a project by cloning a backup remote instead of scaffolding from the template; cannot be combined with `--backup-remote` |
+
+### `limen show <manifest_id>`
+
+Prints the stored YAML of a committed manifest. `<manifest_id>` accepts a bare hash, `sha256:<hash>`, or `manifest://sha256:<hash>`, and unambiguous short hashes resolve.
+
+### `limen fork <manifest_id> [name]`
+
+Copies a committed manifest into `manifests/` as a development-mode working file and records the source as `lineage.parent_id`. When `name` is omitted, it prompts with an auto-incremented default (e.g. `<parent>_v2`). On the next `limen commit`, the parent lineage is preserved automatically.
+
+### `limen lineage <manifest_id>`
+
+Walks the `parent_id` chain from a committed manifest to its root and prints it root-first, with the target manifest marked.
+
+### `limen reindex`
+
+Rebuilds `manifests/committed/index.json` from the committed manifest files (the source of truth). Use it to repair the index after a bad merge or a pull that left the index out of sync. Only the index is rewritten; committed manifests are never modified.
+
+### `limen results <results_dir>`
+
+Reads `results.csv` from a run directory and ranks permutations by a metric, printing each with its swept-parameter values.
+
+Options:
+
+| Option | Behavior |
+| --- | --- |
+| `--metric <column>` | column to rank by; a sensible metric is chosen by default |
+| `--top <n>` | number of best permutations to show (default 5) |
+| `--ascending` | rank ascending, for metrics where lower is better (e.g. drawdown) |
+| `--json` | emit the ranked rows as JSON instead of a table |
+
+### `limen runs`
+
+Lists run directories under `results/` in the current project, with each run's permutation count and whether it is a development or committed-manifest run.
+
+### `limen backup`
+
+Snapshots the project — stages and commits the current state, honoring `.gitignore` so development runs under `results/dev/` stay local — then pushes to `backup_remote` from `limen.toml`. It never force-pushes: on a rejected push it explains the remote has diverged and points to the raw `git push` command. Restore on another machine with `limen new <name> --from <remote_url>`.
 
 ## YAML Run Contract
 
-`limen run` accepts either a YAML file path or a committed `manifest://sha256:` URI. The command resolves the manifest, validates it, compiles all `limen.*` references, builds the parameter search domain, and then runs UEL.
+`limen run` accepts either a YAML file path or a committed manifest reference — a bare `sha256:<hash>` (the form `limen commit` prints) or a full `manifest://sha256:<hash>` URI. The command resolves the manifest, validates it, compiles all `limen.*` references, builds the parameter search domain, and then runs UEL.
 
 Committed manifest URIs may use a full `manifest://sha256:<64-hex>` ID or an unambiguous short prefix. Resolution happens against the current project-local manifest store. A short prefix is expanded to the stored full manifest file name before execution; the result path uses the first eight hex characters, the copied YAML is named `manifest.yaml`, and `metadata.json` records the full canonical `manifest_id`. Use the full URI in external provenance records.
 
