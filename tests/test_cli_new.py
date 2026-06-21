@@ -78,8 +78,9 @@ def test_run_new_warns_when_backup_remote_placeholder_missing() -> None:
 
 
 def test_run_new_fails_when_git_not_found() -> None:
+    # _clone_template runs git through git_utils.run_git → git_executable.
     with tempfile.TemporaryDirectory() as d, \
-         patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError), \
+         patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError), \
          patch('click.echo'), patch('click.secho'):
         project_path = Path(d) / 'new-project'
         result = run_new(str(project_path), None)
@@ -121,7 +122,7 @@ def test_clone_template_fails_fast_on_git_init_failure() -> None:
                 result.returncode = 0
             return result
 
-        with patch('limen.cli.commands.new.subprocess.run', side_effect=fake_subprocess), \
+        with patch('limen.cli.git_utils.subprocess.run', side_effect=fake_subprocess), \
              patch('limen.cli.commands.new.shutil.rmtree'), \
              patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), None)
@@ -153,7 +154,7 @@ def test_clone_template_initializes_on_main_branch() -> None:
                 return result
             return real_run(args, **kwargs)
 
-        with patch('limen.cli.commands.new.subprocess.run', side_effect=fake_run), \
+        with patch('limen.cli.git_utils.subprocess.run', side_effect=fake_run), \
              patch('click.echo'), patch('click.secho'):
             assert _clone_template(project_path) is True
 
