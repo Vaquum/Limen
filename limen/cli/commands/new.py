@@ -113,6 +113,11 @@ def _clone_template(project_path: Path) -> bool:
         shutil.rmtree(project_path)
         click.secho(f"  ✗ git init failed: {init.stderr.strip()}", fg='red')
         return False
+    # Start on 'main' to match GitHub's default branch, so backup/restore line up.
+    subprocess.run(
+        [git, 'symbolic-ref', 'HEAD', 'refs/heads/main'],
+        cwd=project_path, capture_output=True, check=False,
+    )
     add = subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, text=True, check=False)
     if add.returncode != 0:
         shutil.rmtree(project_path)
