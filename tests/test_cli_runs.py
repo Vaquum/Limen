@@ -29,6 +29,7 @@ def test_run_runs_lists_dev_and_committed() -> None:
         committed = root / 'results' / 'abc123' / 'ts'
         committed.mkdir(parents=True)
         (committed / 'results.csv').write_text('id,auc\nh1,0.9\n')
+        (committed / 'metadata.json').write_text('{"manifest_id": "sha256:' + 'b' * 64 + '"}')
 
         assert run_runs(root) is True
         out = ' '.join(str(c.args[0]) for c in echo.call_args_list if c.args)
@@ -37,3 +38,5 @@ def test_run_runs_lists_dev_and_committed() -> None:
         assert 'results/abc123/ts' in out
         assert '[committed]' in out
         assert '2 perms' in out
+        assert 'sha256:bbbbbbbb' in out  # committed run shows its manifest id
+        assert '—' in out  # dev run without metadata shows a placeholder
