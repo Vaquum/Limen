@@ -268,6 +268,80 @@ def _resolve_target(target: str) -> tuple[Path | None, str | None, Path]:
     return p, None, Path('.')
 
 
+@cli.command()
+@click.argument('results_dir', type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option('--metric', default=None, help='Column to rank by (default: a sensible metric).')
+@click.option('--top', default=5, show_default=True, help='Number of best permutations to show.')
+@click.option('--ascending', is_flag=True, default=False,
+              help='Rank ascending, for metrics where lower is better (e.g. loss, drawdown).')
+@click.option('--json', 'as_json', is_flag=True, default=False, help='Emit ranked rows as JSON.')
+def results(results_dir: Path, metric: str | None, top: int, ascending: bool, as_json: bool) -> None:
+
+    '''
+    Summarize a finished run and rank its permutations by a metric.
+
+    \b
+    Reads results.csv from a run directory and prints the best permutations
+    with their swept parameter values. Use limen runs to list run directories.
+
+    \b
+    Examples:
+      limen results results/dev/my_exp_20260101_120000
+      limen results results/<hash>/<timestamp> --metric auc --top 10
+      limen results <dir> --metric backtest_drawdown_bps_p50 --ascending
+      limen results <dir> --json
+    '''
+
+    from limen.cli.commands.results import run_results
+
+    ok = run_results(results_dir, metric, top, ascending, as_json)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+def runs() -> None:
+
+    '''
+    List all run directories under results/ in the current project.
+
+    \b
+    Shows each run's path, permutation count, and whether it is a development
+    or committed-manifest run. Run from inside a Limen project.
+
+    \b
+    Examples:
+      limen runs
+    '''
+
+    from limen.cli.commands.runs import run_runs
+
+    ok = run_runs(Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+@click.argument('manifest_ref', metavar='MANIFEST_ID')
+def show(manifest_ref: str) -> None:
+
+    '''
+    Print the YAML of a committed manifest.
+
+    \b
+    MANIFEST_ID accepts a bare hash, sha256:<hash>, or manifest://sha256:<hash>,
+    and short hashes are resolved when unambiguous.
+
+    \b
+    Examples:
+      limen show sha256:abc123
+      limen show abc123
+    '''
+
+    from limen.cli.commands.show import run_show
+
+    ok = run_show(manifest_ref, Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
 @cli.command('list-templates')
 def list_templates() -> None:
 
