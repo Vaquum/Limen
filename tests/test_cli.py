@@ -77,6 +77,30 @@ def test_cli_run_dry_run_valid_yaml_shows_dry_run_complete() -> None:
         assert 'Dry run' in result.output
 
 
+def test_cli_run_accepts_bare_sha256_manifest_ref() -> None:
+    # `limen commit` prints "Run with: limen run sha256:<hash>"; that bare form
+    # must resolve like fork/lineage, not be treated as a missing file.
+    from limen.yaml.store import commit_manifest
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        root = Path.cwd()
+        (root / 'limen.toml').write_text('[store]\nbackup_remote = ""\n')
+        (root / 'manifests' / 'committed').mkdir(parents=True)
+        yaml_path = root / 'exp.yaml'
+        yaml_path.write_text(_MINIMAL_ML_YAML)
+        manifest_id, _ = commit_manifest(yaml_path, root)
+
+        result = runner.invoke(cli, ['run', '--dry-run', manifest_id])
+        assert result.exit_code == 0, result.output
+        assert 'File not found' not in result.output
+        assert 'Resolved' in result.output
+
+        short = manifest_id[:len('sha256:') + 8]
+        short_result = runner.invoke(cli, ['run', '--dry-run', short])
+        assert short_result.exit_code == 0, short_result.output
+
+
 def test_cli_list_templates_exits_0() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ['list-templates'])
