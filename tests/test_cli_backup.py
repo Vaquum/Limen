@@ -70,3 +70,52 @@ def test_run_backup_hints_on_https_credential_error() -> None:
         assert run_backup(project) is False
         printed = ' '.join(str(c.args[0]) for c in secho.call_args_list if c.args)
         assert 'SSH URL' in printed
+
+
+def test_run_backup_commits_uncommitted_work_before_pushing() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        bare = root / 'backup.git'
+        _git(['init', '--bare', str(bare)], root)
+        project = _make_project(root, str(bare))
+        # A committed-manifest result the user produced but never git-committed.
+        (project / 'results' / 'abc123').mkdir(parents=True)
+        (project / 'results' / 'abc123' / 'results.csv').write_text('metric\n1\n')
+
+        with patch('click.echo'), patch('click.secho'):
+            assert run_backup(project) is True
+
+        check = root / 'check'
+        _git(['clone', str(bare), str(check)], root)
+        assert (check / 'results' / 'abc123' / 'results.csv').exists()
+
+
+def test_run_backup_excludes_gitignored_dev_results() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        bare = root / 'backup.git'
+        _git(['init', '--bare', str(bare)], root)
+        project = _make_project(root, str(bare))
+        (project / '.gitignore').write_text('results/dev/\n')
+        (project / 'results' / 'dev' / 'run1').mkdir(parents=True)
+        (project / 'results' / 'dev' / 'run1' / 'out.csv').write_text('x\n')
+
+        with patch('click.echo'), patch('click.secho'):
+            assert run_backup(project) is True
+
+        check = root / 'check'
+        _git(['clone', str(bare), str(check)], root)
+        assert not (check / 'results' / 'dev').exists()
+
+
+def test_run_backup_hints_on_diverged_remote() -> None:
+    with tempfile.TemporaryDirectory() as d, \
+         patch('click.echo'), patch('click.secho') as secho, \
+         patch('limen.cli.commands.backup.git_push',
+               return_value=(False, '! [rejected] main -> main (fetch first)\nUpdates were rejected')):
+        root = Path(d)
+        project = _make_project(root, 'git@github.com:user/repo.git')
+        assert run_backup(project) is False
+        printed = ' '.join(str(c.args[0]) for c in secho.call_args_list if c.args)
+        assert 'force' in printed.lower()
+        assert 'empty repository' in printed
