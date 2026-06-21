@@ -3,6 +3,8 @@ from pathlib import Path
 
 import click
 
+from limen.yaml.store import short_id
+
 _PREFERRED_METRICS = ['val_score', 'auc', 'accuracy', 'balanced_metric', 'backtest_pnl_per_bar_bps']
 _NON_METRIC_COLUMNS = {'id', '_id', '_warnings', '_round_index', '_injected',
                        '_generation_index', '_search_strategy', 'execution_time',
@@ -42,7 +44,9 @@ def run_results(results_dir: Path,
         click.secho('  ✗ results.csv is empty.', fg='red')
         return False
 
-    swept = [p for p in _swept_params(results_dir) if p in df.columns]
+    metadata = _load_metadata(results_dir)
+    swept = [p for p in _swept_params(metadata) if p in df.columns]
+    manifest_id = metadata.get('manifest_id')
 
     if metric is None:
         metric = _default_metric(df)
@@ -64,11 +68,18 @@ def run_results(results_dir: Path,
     rows = ranked.select([c for c in display_cols if c in ranked.columns]).to_dicts()
 
     if as_json:
-        click.echo(json.dumps(rows, indent=2, default=str))
+        payload = {
+            'manifest_id': manifest_id,
+            'metric': metric,
+            'permutations': df.height,
+            'results': rows,
+        }
+        click.echo(json.dumps(payload, indent=2, default=str))
         return True
 
     direction = 'lowest' if ascending else 'highest'
-    click.echo(f"{df.height} permutations — top {len(rows)} by {direction} {metric}\n")
+    manifest_note = f"   (manifest sha256:{short_id(manifest_id)})" if isinstance(manifest_id, str) else ''
+    click.echo(f"{df.height} permutations — top {len(rows)} by {direction} {metric}{manifest_note}\n")
     for rank, row in enumerate(rows, start=1):
         short = str(row.get('id', '?'))[:8]
         value = row.get(metric)
@@ -78,15 +89,19 @@ def run_results(results_dir: Path,
     return True
 
 
-def _swept_params(results_dir: Path) -> list[str]:
+def _load_metadata(results_dir: Path) -> dict:
 
     metadata_path = results_dir / 'metadata.json'
     if not metadata_path.exists():
-        return []
+        return {}
     try:
-        metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+        return json.loads(metadata_path.read_text(encoding='utf-8'))
     except (OSError, json.JSONDecodeError):
-        return []
+        return {}
+
+
+def _swept_params(metadata: dict) -> list[str]:
+
     params = metadata.get('yaml_reference', {}).get('sfd', {}).get('params', {})
     if not isinstance(params, dict):
         return []
