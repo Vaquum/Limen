@@ -136,7 +136,9 @@ class Sensor:
                 probability=_extract_scalar(pred_result.get('_probs')),
                 reason=None,
             )
-        except Exception as e:
+        # Live inference must never crash on one bar — any model/scaler/data
+        # failure degrades to a sensor-error result.
+        except Exception as e:  # noqa: BLE001
             logger.warning('Sensor predict failed (permutation_id=%s): %s', self.permutation_id, e, exc_info=True)
             return BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
 
@@ -234,7 +236,9 @@ class Sensor:
 
             return results  # type: ignore[return-value]
 
-        except Exception as e:
+        # Live inference must never crash on one batch — any model/scaler/data
+        # failure degrades to sensor-error results.
+        except Exception as e:  # noqa: BLE001
             logger.warning('Sensor predict_all failed (permutation_id=%s): %s', self.permutation_id, e, exc_info=True)
             return [
                 BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
