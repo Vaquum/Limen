@@ -78,7 +78,9 @@ def _restore_from_backup(project_path: Path, project_name: str, from_remote: str
     if not (project_path / 'limen.toml').exists():
         click.secho(
             f"  ⚠ Restored '{project_name}', but no limen.toml found — "
-            'this may not be a Limen project backup.',
+            'this may not be a Limen project backup.\n'
+            '    If your backup is on another branch, clone it directly:\n'
+            f'      git clone -b <branch> {from_remote} {project_name}',
             fg='yellow',
         )
 

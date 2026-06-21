@@ -103,3 +103,53 @@ def git_clone(remote_url: str, dest: Path) -> tuple[bool, str]:
         check=False,
     )
     return result.returncode == 0, result.stderr.strip()
+
+
+_FALLBACK_IDENTITY = ['-c', 'user.name=limen', '-c', 'user.email=limen@localhost']
+
+
+def git_snapshot(repo_root: Path, message: str) -> tuple[bool, str]:
+
+    '''
+    Stage all changes and commit them, capturing the project's current state.
+
+    Honors .gitignore, so ignored paths (e.g. results/dev/) are never staged.
+    A clean working tree is a success with nothing committed. Falls back to a
+    limen identity if the repository has no configured git user.
+
+    Args:
+        repo_root (Path): Root directory of the git repository
+        message (str): Commit message for the snapshot
+
+    Returns:
+        tuple[bool, str]: (succeeded, stderr) where stderr carries git's
+            error output when staging or committing fails
+
+    Raises:
+        FileNotFoundError: If git is not found on PATH
+
+    '''
+
+    git = git_executable()
+
+    add = subprocess.run(
+        [git, 'add', '-A'], cwd=repo_root, capture_output=True, text=True, check=False,
+    )
+    if add.returncode != 0:
+        return False, add.stderr.strip()
+
+    staged = subprocess.run(
+        [git, 'diff', '--cached', '--quiet'], cwd=repo_root, capture_output=True, check=False,
+    )
+    if staged.returncode == 0:
+        return True, ''
+
+    commit = subprocess.run(
+        [git, 'commit', '-m', message], cwd=repo_root, capture_output=True, text=True, check=False,
+    )
+    if commit.returncode != 0:
+        commit = subprocess.run(
+            [git, *_FALLBACK_IDENTITY, 'commit', '-m', message],
+            cwd=repo_root, capture_output=True, text=True, check=False,
+        )
+    return commit.returncode == 0, commit.stderr.strip()
