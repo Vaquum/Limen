@@ -158,8 +158,10 @@ def test_clone_template_initializes_on_main_branch() -> None:
              patch('click.echo'), patch('click.secho'):
             assert _clone_template(project_path) is True
 
+        # symbolic-ref reads HEAD directly, so it reports the branch name even
+        # when the initial commit was skipped (e.g. no git identity, as in CI).
         branch = real_run(
-            ['git', '-C', str(project_path), 'rev-parse', '--abbrev-ref', 'HEAD'],
+            ['git', '-C', str(project_path), 'symbolic-ref', '--short', 'HEAD'],
             capture_output=True, text=True, check=True,
         )
         assert branch.stdout.strip() == 'main'
