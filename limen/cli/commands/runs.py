@@ -1,8 +1,10 @@
+import json
 from pathlib import Path
 
 import click
 
 from limen.yaml.config import find_project_root
+from limen.yaml.store import short_id
 
 
 def run_runs(start: Path) -> bool:
@@ -38,9 +40,19 @@ def run_runs(start: Path) -> bool:
         rel = run_dir.relative_to(project_root)
         kind = 'dev' if rel.parts[1:2] == ('dev',) else 'committed'
         permutations = _count_permutations(run_dir / 'results.csv')
-        click.echo(f"  {rel!s:<48}  {permutations:>4} perms  [{kind}]")
+        manifest = _manifest_short(run_dir)
+        click.echo(f"  {rel!s:<46}  {permutations:>4} perms  {manifest:<16}  [{kind}]")
 
     return True
+
+
+def _manifest_short(run_dir: Path) -> str:
+
+    try:
+        manifest_id = json.loads((run_dir / 'metadata.json').read_text(encoding='utf-8')).get('manifest_id')
+    except (OSError, json.JSONDecodeError):
+        return '—'
+    return f'sha256:{short_id(manifest_id)}' if isinstance(manifest_id, str) else '—'
 
 
 def _count_permutations(csv_path: Path) -> int:
