@@ -11,9 +11,13 @@ _CSV = (
     'h2,,0.70,0.85,1.0,rank_gauss\n'
     'h3,,0.95,0.82,0.1,rank_gauss\n'
 )
-_META = {'yaml_reference': {'sfd': {'params': {
-    'C': [0.1, 1.0], 'scaler_type': ['robust', 'rank_gauss'], 'fixed': [1],
-}}}}
+_MANIFEST_ID = 'sha256:' + 'a' * 64
+_META = {
+    'manifest_id': _MANIFEST_ID,
+    'yaml_reference': {'sfd': {'params': {
+        'C': [0.1, 1.0], 'scaler_type': ['robust', 'rank_gauss'], 'fixed': [1],
+    }}},
+}
 
 
 def _make_run(root: Path) -> Path:
@@ -36,6 +40,7 @@ def test_run_results_ranks_by_default_metric() -> None:
         out = _echoed(echo)
         assert 'auc' in out
         assert out.index('h3') < out.index('h2')  # h3 ranked above h2
+        assert 'manifest sha256:aaaaaaaa' in out  # manifest id in the header
 
 
 def test_run_results_metric_override() -> None:
@@ -57,8 +62,11 @@ def test_run_results_json_emits_ranked_records() -> None:
         rdir = _make_run(Path(d))
         assert run_results(rdir, 'auc', 2, False, True) is True
         data = json.loads(_echoed(echo))
-        assert [r['id'] for r in data] == ['h3', 'h1']
-        assert data[0]['scaler_type'] == 'rank_gauss'
+        assert data['manifest_id'] == _MANIFEST_ID
+        assert data['metric'] == 'auc'
+        assert data['permutations'] == 3
+        assert [r['id'] for r in data['results']] == ['h3', 'h1']
+        assert data['results'][0]['scaler_type'] == 'rank_gauss'
 
 
 def test_run_results_missing_csv() -> None:
