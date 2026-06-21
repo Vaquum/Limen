@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+from limen.cli.commands.new import _clone_template
 from limen.cli.commands.new import run_new
 
 
@@ -135,6 +136,34 @@ def _git(args: list[str], cwd: Path) -> None:
     )
 
 
+def test_clone_template_initializes_on_main_branch() -> None:
+    real_run = subprocess.run
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'proj'
+
+        def fake_run(args: list, **kwargs: object) -> object:
+            if 'clone' in args:
+                # Simulate a successful template clone without network access.
+                project_path.mkdir(parents=True, exist_ok=True)
+                (project_path / 'README.md').write_text('x')
+                (project_path / '.git').mkdir()
+                result = MagicMock()
+                result.returncode = 0
+                result.stderr = ''
+                return result
+            return real_run(args, **kwargs)
+
+        with patch('limen.cli.commands.new.subprocess.run', side_effect=fake_run), \
+             patch('click.echo'), patch('click.secho'):
+            assert _clone_template(project_path) is True
+
+        branch = real_run(
+            ['git', '-C', str(project_path), 'rev-parse', '--abbrev-ref', 'HEAD'],
+            capture_output=True, text=True, check=True,
+        )
+        assert branch.stdout.strip() == 'main'
+
+
 def test_run_new_from_restores_project_from_backup() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
@@ -165,8 +194,10 @@ def test_run_new_from_fails_on_unreachable_remote() -> None:
 
 
 def test_run_new_from_fails_when_git_not_found() -> None:
+    # The --from path clones via git_utils.git_clone, which resolves git through
+    # limen.cli.git_utils.git_executable — patch there so no real clone is attempted.
     with tempfile.TemporaryDirectory() as d, \
-         patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError), \
+         patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError), \
          patch('click.echo'), patch('click.secho'):
         dest = Path(d) / 'restored'
         result = run_new(str(dest), None, from_remote='git@example.com:me/p.git')
