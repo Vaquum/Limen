@@ -22,6 +22,33 @@ def git_executable() -> str:
     return git
 
 
+def run_git(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
+
+    '''
+    Run a git subcommand with captured text output and no exception on failure.
+
+    Args:
+        args (list[str]): Git arguments, e.g. ['push', remote_url, 'HEAD']
+        cwd (Path | None): Working directory to run git in
+
+    Returns:
+        subprocess.CompletedProcess: The completed process; inspect returncode
+            and stderr for the result
+
+    Raises:
+        FileNotFoundError: If git is not found on PATH
+
+    '''
+
+    return subprocess.run(
+        [git_executable(), *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def git_add_and_commit(repo_root: Path, path: Path, message: str) -> bool:
 
     '''
@@ -38,13 +65,12 @@ def git_add_and_commit(repo_root: Path, path: Path, message: str) -> bool:
     '''
 
     try:
-        git = git_executable()
+        add = run_git(['add', str(path)], cwd=repo_root)
     except FileNotFoundError:
         return False
-    add = subprocess.run([git, 'add', str(path)], cwd=repo_root, capture_output=True, check=False)
     if add.returncode != 0:
         return False
-    commit = subprocess.run([git, 'commit', '-m', message], cwd=repo_root, capture_output=True, check=False)
+    commit = run_git(['commit', '-m', message], cwd=repo_root)
     return commit.returncode == 0
 
 
@@ -66,14 +92,7 @@ def git_push(repo_root: Path, remote_url: str) -> tuple[bool, str]:
 
     '''
 
-    git = git_executable()
-    result = subprocess.run(
-        [git, 'push', remote_url, 'HEAD'],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_git(['push', remote_url, 'HEAD'], cwd=repo_root)
     return result.returncode == 0, result.stderr.strip()
 
 
@@ -95,13 +114,7 @@ def git_clone(remote_url: str, dest: Path) -> tuple[bool, str]:
 
     '''
 
-    git = git_executable()
-    result = subprocess.run(
-        [git, 'clone', remote_url, str(dest)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_git(['clone', remote_url, str(dest)])
     return result.returncode == 0, result.stderr.strip()
 
 
@@ -114,8 +127,9 @@ def git_snapshot(repo_root: Path, message: str) -> tuple[bool, str]:
     Stage all changes and commit them, capturing the project's current state.
 
     Honors .gitignore, so ignored paths (e.g. results/dev/) are never staged.
-    A clean working tree is a success with nothing committed. Falls back to a
-    limen identity if the repository has no configured git user.
+    A clean working tree is a success with nothing committed. When the
+    repository has no configured git user, commits under a limen identity so
+    backups never fail for lack of git config.
 
     Args:
         repo_root (Path): Root directory of the git repository
@@ -130,26 +144,22 @@ def git_snapshot(repo_root: Path, message: str) -> tuple[bool, str]:
 
     '''
 
-    git = git_executable()
-
-    add = subprocess.run(
-        [git, 'add', '-A'], cwd=repo_root, capture_output=True, text=True, check=False,
-    )
+    add = run_git(['add', '-A'], cwd=repo_root)
     if add.returncode != 0:
         return False, add.stderr.strip()
 
-    staged = subprocess.run(
-        [git, 'diff', '--cached', '--quiet'], cwd=repo_root, capture_output=True, check=False,
-    )
-    if staged.returncode == 0:
+    if run_git(['diff', '--cached', '--quiet'], cwd=repo_root).returncode == 0:
         return True, ''
 
-    commit = subprocess.run(
-        [git, 'commit', '-m', message], cwd=repo_root, capture_output=True, text=True, check=False,
-    )
-    if commit.returncode != 0:
-        commit = subprocess.run(
-            [git, *_FALLBACK_IDENTITY, 'commit', '-m', message],
-            cwd=repo_root, capture_output=True, text=True, check=False,
-        )
+    commit_args = ['commit', '-m', message]
+    if not _has_git_identity(repo_root):
+        commit_args = [*_FALLBACK_IDENTITY, *commit_args]
+    commit = run_git(commit_args, cwd=repo_root)
     return commit.returncode == 0, commit.stderr.strip()
+
+
+def _has_git_identity(repo_root: Path) -> bool:
+
+    name = run_git(['config', 'user.name'], cwd=repo_root)
+    email = run_git(['config', 'user.email'], cwd=repo_root)
+    return bool(name.stdout.strip()) and bool(email.stdout.strip())

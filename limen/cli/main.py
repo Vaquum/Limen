@@ -431,11 +431,13 @@ def new(project_name: str, backup_remote: str | None, from_remote: str | None) -
 def backup() -> None:
 
     '''
-    Push the project's committed history to the configured backup remote.
+    Snapshot the project and push it to the configured backup remote.
 
     \b
-    Reads backup_remote from limen.toml and pushes the project repository
-    there. Set backup_remote first (via limen new or by editing limen.toml).
+    Stages and commits the project's current state (honoring .gitignore, so
+    development runs under results/dev/ stay local), then pushes to the remote.
+    Reads backup_remote from limen.toml. Set it first (via limen new or by
+    editing limen.toml).
 
     \b
     Restore on another machine with: limen new <name> --from <remote-url>

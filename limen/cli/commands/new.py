@@ -1,11 +1,10 @@
 import shutil
-import subprocess
 from pathlib import Path
 
 import click
 
 from limen.cli.git_utils import git_clone
-from limen.cli.git_utils import git_executable
+from limen.cli.git_utils import run_git
 
 
 _TEMPLATE_REPO = 'https://github.com/Vaquum/limen-project-template.git'
@@ -37,7 +36,7 @@ def run_new(project_name: str,
         return False
 
     if from_remote is not None:
-        return _restore_from_backup(project_path, project_name, from_remote)
+        return _restore_from_backup(project_path, from_remote)
 
     click.echo(f"Creating project '{project_name}' ...")
 
@@ -63,8 +62,9 @@ def run_new(project_name: str,
     return True
 
 
-def _restore_from_backup(project_path: Path, project_name: str, from_remote: str) -> bool:
+def _restore_from_backup(project_path: Path, from_remote: str) -> bool:
 
+    project_name = project_path.name
     click.echo(f"Restoring project '{project_name}' from {from_remote} ...")
     try:
         ok, error = git_clone(from_remote, project_path)
@@ -93,41 +93,32 @@ def _restore_from_backup(project_path: Path, project_name: str, from_remote: str
 
 def _clone_template(project_path: Path) -> bool:
 
+    click.echo('  Cloning template ...')
     try:
-        git = git_executable()
+        result = run_git(['clone', '--depth=1', _TEMPLATE_REPO, str(project_path)])
     except FileNotFoundError:
         click.secho('  ✗ git not found on PATH — install git and try again.', fg='red')
         return False
-    click.echo('  Cloning template ...')
-    result = subprocess.run(
-        [git, 'clone', '--depth=1', _TEMPLATE_REPO, str(project_path)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
     if result.returncode != 0:
         click.secho(f"  ✗ Clone failed: {result.stderr.strip()}", fg='red')
         return False
 
     shutil.rmtree(project_path / '.git')
-    init = subprocess.run([git, 'init'], cwd=project_path, capture_output=True, text=True, check=False)
+    init = run_git(['init'], cwd=project_path)
     if init.returncode != 0:
         shutil.rmtree(project_path)
         click.secho(f"  ✗ git init failed: {init.stderr.strip()}", fg='red')
         return False
     # Start on 'main' to match GitHub's default branch, so backup/restore line up.
-    subprocess.run(
-        [git, 'symbolic-ref', 'HEAD', 'refs/heads/main'],
-        cwd=project_path, capture_output=True, check=False,
-    )
-    add = subprocess.run([git, 'add', '.'], cwd=project_path, capture_output=True, text=True, check=False)
+    run_git(['symbolic-ref', 'HEAD', 'refs/heads/main'], cwd=project_path)
+    add = run_git(['add', '.'], cwd=project_path)
     if add.returncode != 0:
         shutil.rmtree(project_path)
         click.secho(f"  ✗ git add failed: {add.stderr.strip()}", fg='red')
         return False
-    commit = subprocess.run(
-        [git, 'commit', '-m', 'feat: initial project from limen-project-template'],
-        cwd=project_path, capture_output=True, check=False,
+    commit = run_git(
+        ['commit', '-m', 'feat: initial project from limen-project-template'],
+        cwd=project_path,
     )
     if commit.returncode != 0:
         click.secho(
