@@ -1174,9 +1174,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v4.1.0 on 21st of June, 2026
 
-- Add manifest lifecycle CLI commands: `limen fork`, `limen lineage`, `limen show`, and `limen reindex` for iterating on, inspecting, and repairing the committed manifest store.
+- Add manifest lifecycle CLI commands: `limen fork`, `limen lineage`, and `limen reindex` for iterating on, inspecting, and repairing the committed manifest store.
 - Add project backup and restore: `limen backup` snapshots the project (honoring `.gitignore`, so `results/dev/` stays local) and pushes to the configured `backup_remote`, and `limen new --from <remote>` restores a project by clone. `limen backup` never force-pushes and gives SSH/credential and diverged-remote hints; new projects are initialized on the `main` branch.
-- Add post-run analysis CLI commands: `limen results` ranks a finished run's permutations by a metric (with `--top`, `--ascending`, and `--json`), and `limen runs` lists run directories under `results/`.
 - Improve `limen init`: a bare name resolves into the project `manifests/` directory, the `.yaml` extension is optional, and omitting `--template` prompts with a `logreg_binary` default.
 - `limen commit` prints the `limen run <id>` command and reads `lineage.parent_id` from forked manifests automatically; `limen run` now accepts the bare `sha256:<hash>` reference that `commit` prints, matching `fork` and `lineage`.
 - `limen profile` now samples runtime against the manifest's real data source instead of the removed `test_data_source`, surfacing per-permutation timing and data-quality warnings.

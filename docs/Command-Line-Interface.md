@@ -27,13 +27,10 @@ This is the preferred user journey: create or edit YAML, validate it, profile th
 | `limen run <target>` | Validate, compile, and execute a YAML file or a committed manifest (`sha256:` / `manifest://sha256:`). | Results directory with `results.csv`, optional `results.parquet`, metadata, round data, and checkpoints when configured. |
 | `limen run --dry-run <target>` | Validate and compile without executing permutations. | Compile success or validation/runtime setup errors. |
 | `limen run --resume <results_dir>` | Resume an artifact-backed run from a checkpoint directory. | Updated result artifacts in the existing run directory. |
-| `limen results <results_dir>` | Read a finished run and rank permutations by a metric. | Best permutations with swept-param context (table or `--json`). |
-| `limen runs` | List run directories under `results/` in the current project. | Run paths, permutation counts, and dev/committed kind. |
 | `limen init <output> [--template <name>]` | Scaffold a YAML file from a template; resolves a bare name into `manifests/` inside a project and prompts for a template when omitted. | New YAML file. |
 | `limen list-templates` | List bundled YAML templates under `limen/yaml/templates`. | Template names. |
 | `limen commit <yaml_file>` | Validate, content-address, store, index, and git-commit a manifest inside a Limen project. | Committed manifest under `manifests/committed/` plus index update. |
 | `limen ls` | List committed manifests in the current project. | Short id, name, commit timestamp, and parent. |
-| `limen show <manifest_id>` | Print a committed manifest's stored YAML. | The manifest YAML on stdout. |
 | `limen fork <manifest_id> [name]` | Copy a committed manifest into `manifests/` as a development working file with lineage to its parent. | New working YAML with `lineage.parent_id`. |
 | `limen lineage <manifest_id>` | Show the parent chain for a committed manifest. | Lineage tree, root-first, with the target marked. |
 | `limen reindex` | Rebuild `manifests/committed/index.json` from the committed files. | Repaired index. |
@@ -125,10 +122,6 @@ Options:
 | `--backup-remote <url>` | sets a backup remote during project creation |
 | `--from <remote_url>` | restores a project by cloning a backup remote instead of scaffolding from the template; cannot be combined with `--backup-remote` |
 
-### `limen show <manifest_id>`
-
-Prints the stored YAML of a committed manifest. `<manifest_id>` accepts a bare hash, `sha256:<hash>`, or `manifest://sha256:<hash>`, and unambiguous short hashes resolve.
-
 ### `limen fork <manifest_id> [name]`
 
 Copies a committed manifest into `manifests/` as a development-mode working file and records the source as `lineage.parent_id`. When `name` is omitted, it prompts with an auto-incremented default (e.g. `<parent>_v2`). On the next `limen commit`, the parent lineage is preserved automatically.
@@ -140,23 +133,6 @@ Walks the `parent_id` chain from a committed manifest to its root and prints it 
 ### `limen reindex`
 
 Rebuilds `manifests/committed/index.json` from the committed manifest files (the source of truth). Use it to repair the index after a bad merge or a pull that left the index out of sync. Only the index is rewritten; committed manifests are never modified.
-
-### `limen results <results_dir>`
-
-Reads `results.csv` from a run directory and ranks permutations by a metric, printing each with its swept-parameter values.
-
-Options:
-
-| Option | Behavior |
-| --- | --- |
-| `--metric <column>` | column to rank by; a sensible metric is chosen by default |
-| `--top <n>` | number of best permutations to show (default 5) |
-| `--ascending` | rank ascending, for metrics where lower is better (e.g. drawdown) |
-| `--json` | emit the ranked rows as JSON instead of a table |
-
-### `limen runs`
-
-Lists run directories under `results/` in the current project, with each run's permutation count and whether it is a development or committed-manifest run.
 
 ### `limen backup`
 
