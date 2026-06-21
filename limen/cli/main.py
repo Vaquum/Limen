@@ -247,15 +247,18 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
 
 def _resolve_target(target: str) -> tuple[Path | None, str | None, Path]:
     from limen.yaml.store import _MANIFEST_URI_SCHEME
+    from limen.yaml.store import _SHA256_PREFIX
+    from limen.yaml.store import normalize_manifest_ref
     from limen.yaml.store import resolve_manifest_uri
 
-    if target.startswith(_MANIFEST_URI_SCHEME):
+    if target.startswith((_MANIFEST_URI_SCHEME, _SHA256_PREFIX)):
+        uri = normalize_manifest_ref(target)
         try:
-            path, project_root = resolve_manifest_uri(target, Path.cwd())
+            path, project_root = resolve_manifest_uri(uri, Path.cwd())
         except ValueError as exc:
             click.secho(f'  ✗ {exc}', fg='red')
             return None, None, Path('.')
-        click.echo(f"  Resolved {target}")
+        click.echo(f"  Resolved {uri}")
         return path, path.stem, project_root
 
     p = Path(target)
