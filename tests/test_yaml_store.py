@@ -228,6 +228,18 @@ def test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict() -> 
             commit_manifest(yaml_path, project_root)
 
 
+def test_commit_manifest_tolerates_scalar_lineage() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        # A hand-edited manifest with a scalar (non-mapping) lineage block passes
+        # validation; committing must degrade gracefully, not raise AttributeError.
+        yaml_path.write_text(_SAMPLE_YAML + 'lineage: foo\n')
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        assert manifest_id.startswith(_SHA256_PREFIX)
+        entry = next(m for m in load_index(project_root)['manifests'] if m['id'] == manifest_id)
+        assert entry['parent_id'] is None
+
+
 def test_update_index_deduplicates_pre_existing_entries() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
