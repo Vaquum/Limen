@@ -247,15 +247,18 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
 
 def _resolve_target(target: str) -> tuple[Path | None, str | None, Path]:
     from limen.yaml.store import _MANIFEST_URI_SCHEME
+    from limen.yaml.store import _SHA256_PREFIX
+    from limen.yaml.store import normalize_manifest_ref
     from limen.yaml.store import resolve_manifest_uri
 
-    if target.startswith(_MANIFEST_URI_SCHEME):
+    if target.startswith((_MANIFEST_URI_SCHEME, _SHA256_PREFIX)):
+        uri = normalize_manifest_ref(target)
         try:
-            path, project_root = resolve_manifest_uri(target, Path.cwd())
+            path, project_root = resolve_manifest_uri(uri, Path.cwd())
         except ValueError as exc:
             click.secho(f'  ✗ {exc}', fg='red')
             return None, None, Path('.')
-        click.echo(f"  Resolved {target}")
+        click.echo(f"  Resolved {uri}")
         return path, path.stem, project_root
 
     p = Path(target)
@@ -295,9 +298,15 @@ def init(output: Path, template: str | None) -> None:
     to the output filename stem.
 
     \b
+    When run from inside a Limen project (limen.toml present), a bare name
+    is placed in manifests/ automatically. The .yaml extension is optional.
+
+    \b
     Examples:
+      limen init my_experiment --template logreg_binary
       limen init my_experiment.yaml --template logreg_binary
-      limen init my_experiment.yaml               # lists templates when --template omitted
+      limen init path/to/my_experiment.yaml --template logreg_binary
+      limen init my_experiment               # prompts for template, default logreg_binary
     '''
 
     from limen.cli.commands.init import run_init
@@ -307,24 +316,141 @@ def init(output: Path, template: str | None) -> None:
 
 
 @cli.command()
+def reindex() -> None:
+
+    '''
+    Rebuild the manifest store index from the committed manifest files.
+
+    \b
+    The committed manifests are the source of truth; index.json is a derived
+    cache. Use this to repair the index after a bad merge, a manual edit, or a
+    pull that left index.json out of sync with manifests/committed/.
+
+    \b
+    Only rewrites index.json — the committed manifests are never modified.
+
+    \b
+    Examples:
+      limen reindex
+    '''
+
+    from limen.cli.commands.reindex import run_reindex
+
+    ok = run_reindex(Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+@click.argument('manifest_ref', metavar='MANIFEST_ID')
+@click.argument('name', required=False, default=None)
+def fork(manifest_ref: str, name: str | None) -> None:
+
+    '''
+    Fork a committed manifest into a new working file.
+
+    \b
+    Copies a committed manifest into manifests/ as a development-mode working
+    file, records the source as its lineage parent, and lets you iterate on it.
+    The parent lineage is committed automatically on the next limen commit.
+
+    \b
+    MANIFEST_ID accepts a bare hash, sha256:<hash>, or manifest://sha256:<hash>,
+    and short hashes are resolved when unambiguous.
+
+    \b
+    Examples:
+      limen fork sha256:d3a5d334
+      limen fork sha256:d3a5d334 my_tuned_run
+      limen fork manifest://sha256:d3a5d334
+    '''
+
+    from limen.cli.commands.fork import run_fork
+
+    ok = run_fork(manifest_ref, name, Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+@click.argument('manifest_ref', metavar='MANIFEST_ID')
+def lineage(manifest_ref: str) -> None:
+
+    '''
+    Show the lineage chain for a committed manifest.
+
+    \b
+    Walks the parent chain from the given manifest up to its root and prints
+    it root-first, with the target manifest marked.
+
+    \b
+    MANIFEST_ID accepts a bare hash, sha256:<hash>, or manifest://sha256:<hash>,
+    and short hashes are resolved when unambiguous.
+
+    \b
+    Examples:
+      limen lineage sha256:37222f71
+      limen lineage 37222f71
+    '''
+
+    from limen.cli.commands.lineage import run_lineage
+
+    ok = run_lineage(manifest_ref, Path.cwd())
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
 @click.argument('project_name')
 @click.option('--backup-remote', default=None,
               help='Git remote URL for manifest store backup (can also be set interactively).')
-def new(project_name: str, backup_remote: str | None) -> None:
+@click.option('--from', 'from_remote', default=None, metavar='REMOTE_URL',
+              help='Restore a project from a backup remote instead of the template.')
+def new(project_name: str, backup_remote: str | None, from_remote: str | None) -> None:
 
     '''
     Create a new Limen project from the official project template.
 
     \b
     Clones Vaquum/limen-project-template and optionally sets up a backup remote.
+    With --from, the project is restored from a backup remote with its full
+    history instead of scaffolded from the template.
 
     \b
     Examples:
       limen new my-project
       limen new my-project --backup-remote git@github.com:user/my-project.git
+      limen new my-project --from git@github.com:user/my-project.git
     '''
+
+    if from_remote is not None and backup_remote is not None:
+        click.secho('  ✗ Cannot combine --from with --backup-remote.', fg='red')
+        raise SystemExit(1)
 
     from limen.cli.commands.new import run_new
 
-    ok = run_new(project_name, backup_remote)
+    ok = run_new(project_name, backup_remote, from_remote)
+    raise SystemExit(0 if ok else 1)
+
+
+@cli.command()
+def backup() -> None:
+
+    '''
+    Snapshot the project and push it to the configured backup remote.
+
+    \b
+    Stages and commits the project's current state (honoring .gitignore, so
+    development runs under results/dev/ stay local), then pushes to the remote.
+    Reads backup_remote from limen.toml. Set it first (via limen new or by
+    editing limen.toml).
+
+    \b
+    Restore on another machine with: limen new <name> --from <remote-url>
+
+    \b
+    Examples:
+      limen backup
+    '''
+
+    from limen.cli.commands.backup import run_backup
+
+    ok = run_backup(Path.cwd())
     raise SystemExit(0 if ok else 1)

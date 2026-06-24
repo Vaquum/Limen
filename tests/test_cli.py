@@ -77,6 +77,30 @@ def test_cli_run_dry_run_valid_yaml_shows_dry_run_complete() -> None:
         assert 'Dry run' in result.output
 
 
+def test_cli_run_accepts_bare_sha256_manifest_ref() -> None:
+    # `limen commit` prints "Run with: limen run sha256:<hash>"; that bare form
+    # must resolve like fork/lineage, not be treated as a missing file.
+    from limen.yaml.store import commit_manifest
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        root = Path.cwd()
+        (root / 'limen.toml').write_text('[store]\nbackup_remote = ""\n')
+        (root / 'manifests' / 'committed').mkdir(parents=True)
+        yaml_path = root / 'exp.yaml'
+        yaml_path.write_text(_MINIMAL_ML_YAML)
+        manifest_id, _ = commit_manifest(yaml_path, root)
+
+        result = runner.invoke(cli, ['run', '--dry-run', manifest_id])
+        assert result.exit_code == 0, result.output
+        assert 'File not found' not in result.output
+        assert 'Resolved' in result.output
+
+        short = manifest_id[:len('sha256:') + 8]
+        short_result = runner.invoke(cli, ['run', '--dry-run', short])
+        assert short_result.exit_code == 0, short_result.output
+
+
 def test_cli_list_templates_exits_0() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ['list-templates'])
@@ -119,12 +143,49 @@ def test_cli_init_shows_success_message() -> None:
         assert '✓' in result.output
 
 
-def test_cli_init_without_template_lists_templates_and_exits_1() -> None:
+def test_cli_init_without_template_prompts_and_uses_default() -> None:
     runner = CliRunner()
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['init', 'my_exp.yaml'])
-        assert result.exit_code == 1
+        result = runner.invoke(cli, ['init', 'my_exp.yaml'], input='\n')
+        assert result.exit_code == 0
         assert 'logreg_binary' in result.output
+        assert Path('my_exp.yaml').exists()
+
+
+def test_cli_init_without_template_accepts_typed_name() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp.yaml'], input='rule_based\n')
+        assert result.exit_code == 0
+        d, _ = parse(Path('my_exp.yaml'))
+        assert d['metadata']['name'] == 'my_exp'
+
+
+def test_cli_init_bare_name_appends_yaml_extension() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp', '--template', 'logreg_binary'])
+        assert result.exit_code == 0
+        assert Path('my_exp.yaml').exists()
+
+
+def test_cli_init_bare_name_inside_project_places_in_manifests() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('limen.toml').write_text('[project]\nname = "test"\n')
+        result = runner.invoke(cli, ['init', 'my_exp', '--template', 'logreg_binary'])
+        assert result.exit_code == 0
+        assert Path('manifests/my_exp.yaml').exists()
+        assert 'manifests/my_exp.yaml' in result.output
+
+
+def test_cli_init_bare_name_outside_project_warns_and_creates_in_cwd() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['init', 'my_exp', '--template', 'logreg_binary'])
+        assert result.exit_code == 0
+        assert Path('my_exp.yaml').exists()
+        assert 'no limen.toml' in result.output
 
 
 def test_cli_init_unknown_template_exits_1() -> None:
@@ -362,7 +423,7 @@ def test_cli_profile_shows_runtime_skipped_when_no_sampling() -> None:
     with runner.isolated_filesystem():
         Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
         prof = _make_profile_result(
-            warnings=['test_data_source not defined — runtime sampling skipped.'],
+            warnings=['No permutations completed — timing unavailable.'],
         )
         with patch('limen.cli.commands.profile.profile', return_value=prof):
             result = runner.invoke(cli, ['profile', 'exp.yaml'])
@@ -386,12 +447,12 @@ def test_cli_profile_shows_errors_from_sampling() -> None:
         Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
         prof = _make_profile_result(
             attempted=3, completed=1, time_per=0.1,
-            errors=['Test data too small — increase n_rows in test_data_source.'],
+            errors=['Data too small for profiling — extend the date range in data_source.'],
         )
         with patch('limen.cli.commands.profile.profile', return_value=prof):
             result = runner.invoke(cli, ['profile', 'exp.yaml'])
         assert 'ERROR' in result.output
-        assert 'n_rows' in result.output
+        assert 'date range' in result.output
 
 
 def test_cli_profile_parse_error_exits_1() -> None:

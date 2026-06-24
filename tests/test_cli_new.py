@@ -1,8 +1,10 @@
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+from limen.cli.commands.new import _clone_template
 from limen.cli.commands.new import run_new
 
 
@@ -76,8 +78,9 @@ def test_run_new_warns_when_backup_remote_placeholder_missing() -> None:
 
 
 def test_run_new_fails_when_git_not_found() -> None:
+    # _clone_template runs git through git_utils.run_git → git_executable.
     with tempfile.TemporaryDirectory() as d, \
-         patch('limen.cli.commands.new.git_executable', side_effect=FileNotFoundError), \
+         patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError), \
          patch('click.echo'), patch('click.secho'):
         project_path = Path(d) / 'new-project'
         result = run_new(str(project_path), None)
@@ -119,9 +122,86 @@ def test_clone_template_fails_fast_on_git_init_failure() -> None:
                 result.returncode = 0
             return result
 
-        with patch('limen.cli.commands.new.subprocess.run', side_effect=fake_subprocess), \
+        with patch('limen.cli.git_utils.subprocess.run', side_effect=fake_subprocess), \
              patch('limen.cli.commands.new.shutil.rmtree'), \
              patch('click.echo'), patch('click.secho'):
             result = run_new(str(project_path), None)
 
+        assert result is False
+
+
+def _git(args: list[str], cwd: Path) -> None:
+    subprocess.run(
+        ['git', '-c', 'user.email=t@t', '-c', 'user.name=t', *args],
+        cwd=cwd, capture_output=True, check=True,
+    )
+
+
+def test_clone_template_initializes_on_main_branch() -> None:
+    real_run = subprocess.run
+    with tempfile.TemporaryDirectory() as d:
+        project_path = Path(d) / 'proj'
+
+        def fake_run(args: list, **kwargs: object) -> object:
+            if 'clone' in args:
+                # Simulate a successful template clone without network access.
+                project_path.mkdir(parents=True, exist_ok=True)
+                (project_path / 'README.md').write_text('x')
+                (project_path / '.git').mkdir()
+                result = MagicMock()
+                result.returncode = 0
+                result.stderr = ''
+                return result
+            return real_run(args, **kwargs)
+
+        with patch('limen.cli.git_utils.subprocess.run', side_effect=fake_run), \
+             patch('click.echo'), patch('click.secho'):
+            assert _clone_template(project_path) is True
+
+        # symbolic-ref reads HEAD directly, so it reports the branch name even
+        # when the initial commit was skipped (e.g. no git identity, as in CI).
+        branch = real_run(
+            ['git', '-C', str(project_path), 'symbolic-ref', '--short', 'HEAD'],
+            capture_output=True, text=True, check=True,
+        )
+        assert branch.stdout.strip() == 'main'
+
+
+def test_run_new_from_restores_project_from_backup() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        source = root / 'source'
+        source.mkdir()
+        (source / 'limen.toml').write_text('[store]\nbackup_remote = "git@example.com:me/p.git"\n')
+        (source / 'manifests' / 'committed').mkdir(parents=True)
+        (source / 'manifests' / 'committed' / 'a.yaml').write_text('id: a\n')
+        _git(['init'], source)
+        _git(['add', '.'], source)
+        _git(['commit', '-m', 'init'], source)
+
+        dest = root / 'restored'
+        with patch('click.echo'), patch('click.secho'):
+            result = run_new(str(dest), None, from_remote=str(source))
+
+        assert result is True
+        assert (dest / 'limen.toml').exists()
+        assert (dest / 'manifests' / 'committed' / 'a.yaml').exists()
+        assert (dest / '.git').is_dir()  # history preserved
+
+
+def test_run_new_from_fails_on_unreachable_remote() -> None:
+    with tempfile.TemporaryDirectory() as d, patch('click.echo'), patch('click.secho'):
+        dest = Path(d) / 'restored'
+        result = run_new(str(dest), None, from_remote=str(Path(d) / 'nope.git'))
+        assert result is False
+
+
+def test_run_new_from_fails_when_git_not_found() -> None:
+    # The --from path clones via git_utils.git_clone, which resolves git through
+    # limen.cli.git_utils.git_executable — patch there so no real clone is attempted.
+    with tempfile.TemporaryDirectory() as d, \
+         patch('limen.cli.git_utils.git_executable', side_effect=FileNotFoundError), \
+         patch('click.echo'), patch('click.secho'):
+        dest = Path(d) / 'restored'
+        result = run_new(str(dest), None, from_remote='git@example.com:me/p.git')
         assert result is False

@@ -1171,3 +1171,13 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Make pytest the single test collection authority: `python -m tests.run` now delegates to pytest and emits the CI runtime profile instead of maintaining a parallel curated suite list.
 - Add pytest warning policy and marker registration, and make the heavyweight TabPFN model-download integration test opt-in under `LIMEN_RUN_TABPFN_MODEL_TEST=1`; full TabPFN model validation is tracked separately in #628.
+
+## v4.1.0 on 21st of June, 2026
+
+- Add manifest lifecycle CLI commands: `limen fork`, `limen lineage`, and `limen reindex` for iterating on, inspecting, and repairing the committed manifest store.
+- Add project backup and restore: `limen backup` snapshots the project (honoring `.gitignore`, so `results/dev/` stays local) and pushes to the configured `backup_remote`, and `limen new --from <remote>` restores a project by clone. `limen backup` never force-pushes and gives SSH/credential and diverged-remote hints; new projects are initialized on the `main` branch.
+- Improve `limen init`: a bare name resolves into the project `manifests/` directory, the `.yaml` extension is optional, and omitting `--template` prompts with a `logreg_binary` default.
+- `limen commit` prints the `limen run <id>` command and reads `lineage.parent_id` from forked manifests automatically; `limen run` now accepts the bare `sha256:<hash>` reference that `commit` prints, matching `fork` and `lineage`.
+- `limen profile` now samples runtime against the manifest's real data source instead of the removed `test_data_source`, surfacing per-permutation timing and data-quality warnings.
+- Move `Trainer`, `Sensor`, and `ReconstructionError` from `limen.experiment.trainer` to a new top-level `limen.inference` module, breaking a circular import. `from limen import Trainer`/`Sensor`/`ReconstructionError` is unchanged; the `limen.experiment.trainer` submodule import path is removed.
+- Deduplicate per-round `_warnings` entries so a repeated library warning is recorded once.

@@ -19,8 +19,8 @@ from limen.cohort.sfc.backtest_pareto import select as select_backtest_pareto
 from limen.cohort.sfc.diverse_metrics import select as select_diverse_metrics
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
-from limen.experiment.trainer import Trainer
-from limen.experiment.trainer.sensor import BarPrediction
+from limen.inference import Trainer
+from limen.inference.sensor import BarPrediction
 
 _COHORT_CONTRACT_YAML = dedent('''\
     schema_version: "1.0"

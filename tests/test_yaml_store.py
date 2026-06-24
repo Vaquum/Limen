@@ -6,6 +6,10 @@ import pytest
 
 from limen.yaml.store import _SHA256_PREFIX
 from limen.yaml.store import commit_manifest
+from limen.yaml.store import fork_manifest
+from limen.yaml.store import is_full_manifest_id
+from limen.yaml.store import load_index
+from limen.yaml.store import normalize_manifest_ref
 from limen.yaml.store import resolve_manifest_uri
 
 
@@ -224,6 +228,18 @@ def test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict() -> 
             commit_manifest(yaml_path, project_root)
 
 
+def test_commit_manifest_tolerates_scalar_lineage() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        # A hand-edited manifest with a scalar (non-mapping) lineage block passes
+        # validation; committing must degrade gracefully, not raise AttributeError.
+        yaml_path.write_text(_SAMPLE_YAML + 'lineage: foo\n')
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        assert manifest_id.startswith(_SHA256_PREFIX)
+        entry = next(m for m in load_index(project_root)['manifests'] if m['id'] == manifest_id)
+        assert entry['parent_id'] is None
+
+
 def test_update_index_deduplicates_pre_existing_entries() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
@@ -240,3 +256,88 @@ def test_update_index_deduplicates_pre_existing_entries() -> None:
         result = json.loads(index_path.read_text())
         ids = [m['id'] for m in result['manifests']]
         assert ids.count(manifest_id) == 1
+
+
+def test_is_full_manifest_id_accepts_valid_and_rejects_invalid() -> None:
+    valid = _SHA256_PREFIX + 'a' * 64
+    assert is_full_manifest_id(valid)
+    assert not is_full_manifest_id('a' * 64)
+    assert not is_full_manifest_id(_SHA256_PREFIX + 'a' * 8)
+    assert not is_full_manifest_id(_SHA256_PREFIX + 'z' * 64)
+    assert not is_full_manifest_id(None)
+    assert not is_full_manifest_id(123)
+
+
+def test_normalize_manifest_ref_handles_all_forms() -> None:
+    hex_ref = 'd3a5d334'
+    assert normalize_manifest_ref(hex_ref) == f'manifest://{_SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(f'{_SHA256_PREFIX}{hex_ref}') == f'manifest://{_SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(f'manifest://{_SHA256_PREFIX}{hex_ref}') == f'manifest://{_SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(f'  {hex_ref}  ') == f'manifest://{_SHA256_PREFIX}{hex_ref}'
+
+
+def test_load_index_returns_empty_when_absent() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, _ = _make_project(Path(d))
+        index = load_index(project_root)
+        assert index == {'version': 1, 'manifests': []}
+
+
+def test_load_index_raises_on_corrupt_index() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        commit_manifest(yaml_path, project_root)
+        index_path = project_root / 'manifests' / 'committed' / 'index.json'
+        index_path.write_text('{not json', encoding='utf-8')
+        with pytest.raises(ValueError, match='corrupted'):
+            load_index(project_root)
+
+
+def test_fork_manifest_creates_dev_copy_with_parent_lineage() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        committed = project_root / 'manifests' / 'committed' / f'{manifest_id[len(_SHA256_PREFIX):]}.yaml'
+        dest = project_root / 'manifests' / 'forked.yaml'
+
+        parent_id = fork_manifest(committed, dest, 'forked')
+
+        assert parent_id == manifest_id
+        assert dest.exists()
+        from limen.yaml.parser import parse
+        data, errors = parse(dest.read_text(encoding='utf-8'))
+        assert errors == []
+        assert data['metadata']['name'] == 'forked'
+        assert data['metadata']['mode'] == 'development'
+        assert data['lineage']['parent_id'] == manifest_id
+
+
+def test_fork_manifest_refuses_to_overwrite() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        manifest_id, _ = commit_manifest(yaml_path, project_root)
+        committed = project_root / 'manifests' / 'committed' / f'{manifest_id[len(_SHA256_PREFIX):]}.yaml'
+        dest = project_root / 'manifests' / 'forked.yaml'
+        dest.write_text('existing', encoding='utf-8')
+        with pytest.raises(FileExistsError):
+            fork_manifest(committed, dest, 'forked')
+        assert dest.read_text(encoding='utf-8') == 'existing'
+
+
+def test_commit_reads_parent_from_forked_lineage() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        project_root, yaml_path = _make_project(Path(d))
+        parent_id, _ = commit_manifest(yaml_path, project_root)
+        committed = project_root / 'manifests' / 'committed' / f'{parent_id[len(_SHA256_PREFIX):]}.yaml'
+        fork_dest = project_root / 'manifests' / 'forked.yaml'
+        fork_manifest(committed, fork_dest, 'forked')
+        # Change a param so the fork is substantively distinct from its parent.
+        text = fork_dest.read_text(encoding='utf-8').replace('lookback: [12, 24]', 'lookback: [36, 48]')
+        fork_dest.write_text(text, encoding='utf-8')
+
+        child_id, _ = commit_manifest(fork_dest, project_root)
+
+        assert child_id != parent_id
+        index = load_index(project_root)
+        child_entry = next(m for m in index['manifests'] if m['id'] == child_id)
+        assert child_entry['parent_id'] == parent_id

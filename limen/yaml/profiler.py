@@ -105,7 +105,7 @@ def _classify_error(exc: Exception) -> str:
     msg = str(exc)
     lower = msg.lower()
     if 'sample' in lower and ('0 ' in lower or 'empty' in lower):
-        return f'Test data too small — increase n_rows in test_data_source. ({msg})'
+        return f'Data too small for profiling — extend the date range in data_source. ({msg})'
     if 'class' in lower and ('one' in lower or 'least' in lower):
         return f'Not enough class diversity in test data — try larger n_rows. ({msg})'
     if 'nan' in lower or re.search(r'\binf\b', lower):
@@ -118,17 +118,17 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     '''
     Profile a compiled YAML experiment.
 
-    Computes static fields (permutation count, complexity) always. If
-    test_data_source is configured, runs a randomised strength-1 covering
-    array of permutations against test data and records timing.
+    Computes static fields (permutation count, complexity) always. Fetches
+    data via the experiment's own data_source and runs a randomised strength-1
+    covering array of permutations to record timing and surface data quality
+    warnings.
 
     Args:
         compiled_sfd (CompiledSFD): Compiled SFD built from a validated yaml_dict
 
     Returns:
         ProfileResult: Static fields always populated; runtime fields populated
-            only when test_data_source is present and at least one permutation
-            completes successfully
+            when data loads successfully and at least one permutation completes
 
     '''
 
@@ -148,17 +148,10 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
 
     manifest = compiled_sfd.manifest()
 
-    if manifest.test_data_source_config is None:
-        result.warnings.append(
-            'test_data_source not defined — runtime sampling skipped. '
-            'Add test_data_source to the manifest for timing estimates.'
-        )
-        return result
-
     try:
-        raw_data = manifest.fetch_test_data()
+        raw_data = manifest.fetch_data()
     except Exception as exc:  # noqa: BLE001
-        result.errors.append(f'Failed to load test data: {type(exc).__name__}: {exc}')
+        result.errors.append(f'Failed to load data: {type(exc).__name__}: {exc}')
         return result
 
     permutations = make_covering_array(params)

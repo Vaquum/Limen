@@ -14,9 +14,9 @@ from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
-from limen.experiment.trainer import ReconstructionError
-from limen.experiment.trainer import Trainer
-from limen.experiment.trainer.sensor import BarPrediction
+from limen.inference import ReconstructionError
+from limen.inference import Trainer
+from limen.inference.sensor import BarPrediction
 
 
 _E2E_LOGREG_YAML = dedent('''\

@@ -46,7 +46,7 @@ Pipeline path:
 ```python
 import polars as pl
 from limen.cohort import Cohort
-from limen.experiment.trainer import Trainer
+from limen.inference import Trainer
 
 results = pl.read_csv('experiments/my_exp/results.csv')
 top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
@@ -274,7 +274,7 @@ Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per
 ```python
 import polars as pl
 from limen.cohort import Cohort
-from limen.experiment.trainer import Trainer
+from limen.inference import Trainer
 
 experiment_dir = 'experiments/my_exp'
 
