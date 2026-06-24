@@ -105,6 +105,14 @@ def _index_entry(manifest_id: str,
     }
 
 
+def _lineage_block(data: dict[str, Any]) -> dict[str, Any]:
+
+    '''Return the lineage mapping, or an empty dict when it is absent or not a mapping.'''
+
+    lineage = data.get('lineage')
+    return lineage if isinstance(lineage, dict) else {}
+
+
 def commit_manifest(yaml_path: Path,
                     project_root: Path,
                     parent_id: str | None = None) -> tuple[str, bool]:
@@ -139,7 +147,7 @@ def commit_manifest(yaml_path: Path,
         raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
 
     if parent_id is None:
-        source_parent = data.get('lineage', {}).get('parent_id')
+        source_parent = _lineage_block(data).get('parent_id')
         if isinstance(source_parent, str):
             parent_id = source_parent
 
@@ -170,8 +178,9 @@ def commit_manifest(yaml_path: Path,
         if not isinstance(existing, dict):
             raise ValueError(f"Invalid committed manifest format in '{dest.name}': expected a mapping")
         name = manifest_name(existing, fallback=dest.stem)
-        committed_at = existing.get('lineage', {}).get('committed_at', '')
-        stored_parent_id = existing.get('lineage', {}).get('parent_id')
+        existing_lineage = _lineage_block(existing)
+        committed_at = existing_lineage.get('committed_at', '')
+        stored_parent_id = existing_lineage.get('parent_id')
 
     _update_index(store_path, _index_entry(manifest_id, name, committed_at, stored_parent_id))
 
@@ -241,7 +250,7 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
     if not isinstance(data, dict):
         raise ValueError(f"Invalid manifest format in '{candidate.name}'")
     expected_id = f'{_SHA256_PREFIX}{full_hex}'
-    actual_id = data.get('lineage', {}).get('id')
+    actual_id = _lineage_block(data).get('id')
     if actual_id != expected_id:
         raise ValueError(
             f"Integrity check failed: '{candidate.name}' lineage.id "

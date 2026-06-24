@@ -6,6 +6,7 @@ from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.git_utils import git_add_and_commit
 from limen.yaml.config import find_project_root
 from limen.yaml.store import _SHA256_PREFIX
+from limen.yaml.store import _lineage_block
 from limen.yaml.store import commit_manifest
 from limen.yaml.store import is_full_manifest_id
 from limen.yaml.store import manifest_name
@@ -42,7 +43,7 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         return False
 
     if parent_id is None:
-        lineage_parent = yaml_dict.get('lineage', {}).get('parent_id')
+        lineage_parent = _lineage_block(yaml_dict).get('parent_id')
         if isinstance(lineage_parent, str):
             parent_id = lineage_parent
 
