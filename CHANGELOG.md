@@ -1181,3 +1181,7 @@ Note: add all new changelog entries to the bottom of this file.
 - `limen profile` now samples runtime against the manifest's real data source instead of the removed `test_data_source`, surfacing per-permutation timing and data-quality warnings.
 - Move `Trainer`, `Sensor`, and `ReconstructionError` from `limen.experiment.trainer` to a new top-level `limen.inference` module, breaking a circular import. `from limen import Trainer`/`Sensor`/`ReconstructionError` is unchanged; the `limen.experiment.trainer` submodule import path is removed.
 - Deduplicate per-round `_warnings` entries so a repeated library warning is recorded once.
+
+## v4.1.1 on 3rd of July, 2026
+
+- Add `README.md` signposts to the remaining nested sub-module directories (`cli/commands`, `cohort/sfc`, `data/bars`, `data/utils`, `experiment/param_search`, `experiment/reducer`, `inference`, `sfd/foundational_sfd`, `sfd/reference_architecture`, `sfd/rule_based`), completing #327 so every package directory under `limen/` documents its purpose, entry points, dependencies, and gotchas in the house style.
