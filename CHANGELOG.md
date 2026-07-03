@@ -1188,5 +1188,5 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## v4.1.2 on 3rd of July, 2026
 
-- Declare `LogRegBinary` non-deterministic so `Trainer` reconstruction validates logistic regression permutations with relative tolerance instead of exact match; sklearn solver refits (notably `lbfgs` and `liblinear`) are not bit-reproducible across BLAS builds and thread counts, which rejected ~12% of permutations (#554)
-- Include `round_params` in `ReconstructionError` messages so solver-correlated reconstruction failures are visible to consumers
+- Declare `LogRegBinary` non-deterministic so `Trainer` reconstruction validates logistic regression permutations with relative tolerance instead of exact match; sklearn solver refits (notably `lbfgs` and `liblinear`) are not bit-reproducible across BLAS builds and thread counts, which rejected ~12% of permutations (#554).
+- Include `round_params` in `ReconstructionError` messages so solver-correlated reconstruction failures are visible to consumers.
