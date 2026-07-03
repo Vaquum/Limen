@@ -1181,3 +1181,8 @@ Note: add all new changelog entries to the bottom of this file.
 - `limen profile` now samples runtime against the manifest's real data source instead of the removed `test_data_source`, surfacing per-permutation timing and data-quality warnings.
 - Move `Trainer`, `Sensor`, and `ReconstructionError` from `limen.experiment.trainer` to a new top-level `limen.inference` module, breaking a circular import. `from limen import Trainer`/`Sensor`/`ReconstructionError` is unchanged; the `limen.experiment.trainer` submodule import path is removed.
 - Deduplicate per-round `_warnings` entries so a repeated library warning is recorded once.
+
+## v4.1.1 on 3rd of July, 2026
+
+- Declare `LogRegBinary` non-deterministic so `Trainer` reconstruction validates logistic regression permutations with relative tolerance instead of exact match; sklearn solver refits (notably `lbfgs` and `liblinear`) are not bit-reproducible across BLAS builds and thread counts, which rejected ~12% of permutations (#554)
+- Include `round_params` in `ReconstructionError` messages so solver-correlated reconstruction failures are visible to consumers

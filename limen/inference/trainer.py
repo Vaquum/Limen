@@ -297,6 +297,7 @@ class Trainer:
                 raise ReconstructionError(
                     f"Permutation {pid}: metric mismatch detected — "
                     + '; '.join(mismatches)
+                    + f" (round_params: {round_params})"
                 )
 
             sensor = Sensor(
