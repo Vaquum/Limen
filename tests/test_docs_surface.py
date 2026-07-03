@@ -121,7 +121,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'npm run check' in docs_site_workflow
 
     audit_script = _read('docs-site/scripts/audit-security.mjs')
-    assert 'GHSA-h67p-54hq-rp68' in audit_script
+    assert 'TRACKED_ADVISORIES = new Set([])' in audit_script
     assert 'Untracked docs-site npm vulnerabilities' in audit_script
 
     worker = _read('docs-site/src/worker.js')
