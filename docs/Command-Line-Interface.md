@@ -69,6 +69,7 @@ Options:
 | --- | --- |
 | `--dry-run` | validate and compile only; no permutations execute |
 | `--resume <results_dir>` | resume from a checkpoint directory; cannot be combined with a YAML file |
+| `--no-progress-bar` | disable the experiment progress bar |
 
 The normal result directory contains:
 

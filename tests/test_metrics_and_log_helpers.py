@@ -748,7 +748,6 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
 def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
     result = _experiment_backtest_results(
         _DummyRegressionBacktestLog(),
-        disable_progress_bar=True,
     ).iloc[0]
 
     expected = backtest_snapshot(

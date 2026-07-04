@@ -126,6 +126,8 @@ uel.run(
 | `context_params` | extra static keys injected into every round |
 | `params`, `prep`, `model` | optional overrides for the standard path |
 | `resume` | resume from checkpoint in the advanced path |
+| `post_processing` | compute terminal post-run metrics (`uel._log`, confusion metrics, backtest results) |
+| `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 
 ### Manifest-driven rules
 

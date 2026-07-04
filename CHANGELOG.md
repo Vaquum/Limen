@@ -1210,3 +1210,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.8 on 4th of July, 2026
 
 - Break the stale-artifact resume catch-22: when `experiment_dir` holds partial artifacts but no `checkpoint.json`, the fresh-start guard now says the previous run crashed before its first checkpoint and the files must be deleted, instead of suggesting a `resume=True` that cannot work; the missing-checkpoint resume error gains the matching guidance (#510).
+
+## v4.1.9 on 4th of July, 2026
+
+- Add `progress_bar` input argument to `UniversalExperimentLoop.run` (on by default) and a `--no-progress-bar` flag to `limen run` (including `--resume`), and remove the two post-processing progress bars from `Log.experiment_confusion_metrics` and `Log.experiment_backtest_results` entirely, so an experiment renders exactly one controllable progress bar (#152).

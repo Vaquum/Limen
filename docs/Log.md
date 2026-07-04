@@ -104,7 +104,7 @@ Use this table for round-level inspection before summary statistics. It is also 
 
 The benchmark layer measures directional signal quality before translation into trading results.
 
-### `experiment_confusion_metrics(x, disable_progress_bar=False)`
+### `experiment_confusion_metrics(x)`
 
 Produces one row per round.
 
@@ -164,7 +164,7 @@ those four fields use the same immediate-next-execution-row contract as snapshot
 
 ## Backtest surface
 
-### `experiment_backtest_results(disable_progress_bar=False)`
+### `experiment_backtest_results()`
 
 Produces one snapshot backtest row per experiment round.
 

@@ -438,6 +438,37 @@ def test_resume_fails_without_round_data():
         assert raised
 
 
+def test_run_progress_bar_off_emits_no_tqdm_output(capfd):
+
+    uel, _, _ = _make_uel()
+
+    with TemporaryDirectory() as tmpdir:
+        uel.run(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=2,
+            progress_bar=False,
+        )
+
+    captured = capfd.readouterr()
+    assert '%|' not in captured.err
+    assert 'it/s' not in captured.err
+    assert uel.experiment_log.shape[0] == 2
+
+
+def test_run_progress_bar_on_by_default(capfd):
+
+    uel, _, _ = _make_uel()
+
+    with TemporaryDirectory() as tmpdir:
+        uel.run(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=2,
+        )
+
+    captured = capfd.readouterr()
+    assert '%|' in captured.err or 'it/s' in captured.err
+
+
 def test_guard_stale_artifacts_without_checkpoint_does_not_suggest_resume():
 
     with TemporaryDirectory() as tmpdir:
