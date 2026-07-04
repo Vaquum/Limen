@@ -1165,6 +1165,7 @@ class MLManifest(Manifest):
         if price_data_for_backtest is not None:
             final_datetimes = split_data[2].select('datetime')
             price_data_for_backtest = final_datetimes.join(
+                # colliding bars share the first bar's OHLC; see #557
                 price_data_for_backtest.unique(
                     subset='datetime', keep='first', maintain_order=True
                 ),

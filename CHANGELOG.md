@@ -1186,6 +1186,11 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `README.md` signposts to the remaining nested sub-module directories (`cli/commands`, `cohort/sfc`, `data/bars`, `data/utils`, `experiment/param_search`, `experiment/reducer`, `inference`, `sfd/foundational_sfd`, `sfd/reference_architecture`, `sfd/rule_based`), completing #327 so every package directory under `limen/` documents its purpose, entry points, dependencies, and gotchas in the house style.
 
-## v4.1.3 on 3rd of July, 2026
+## v4.1.2 on 3rd of July, 2026
+
+- Declare `LogRegBinary` non-deterministic so `Trainer` reconstruction validates logistic regression permutations with relative tolerance instead of exact match; sklearn solver refits (notably `lbfgs` and `liblinear`) are not bit-reproducible across BLAS builds and thread counts, which rejected ~12% of permutations (#554).
+- Include `round_params` in `ReconstructionError` messages so solver-correlated reconstruction failures are visible to consumers.
+
+## v4.1.3 on 4th of July, 2026
 
 - Dedupe `price_data_for_backtest` on `datetime` before the test-row alignment join so ML backtests no longer crash with a numpy broadcast error on bar sources with duplicate timestamps, such as dollar bars (#557).

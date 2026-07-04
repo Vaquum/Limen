@@ -34,9 +34,15 @@ def _drop_removed_sklearn_params(params: dict[str, Any]) -> dict[str, Any]:
 
 class LogRegBinary(ReferenceModel):
 
-    '''Logistic regression binary classifier with train/evaluate interface.'''
+    '''
+    Logistic regression binary classifier with train/evaluate interface.
 
-    deterministic = True
+    Declared non-deterministic because sklearn solver refits are not
+    bit-reproducible across BLAS builds and thread counts even with a fixed
+    random_state, so reconstruction validation must use relative tolerance.
+    '''
+
+    deterministic = False
 
     def __init__(self, prediction_calibration_config: 'CalibrationConfig | None' = None) -> None:
 
