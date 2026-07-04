@@ -134,6 +134,35 @@ def test_price_data_for_backtest_datetime_alignment() -> None:
     assert price_datetimes[-1] == alignment['last_test_datetime']
 
 
+def test_price_data_for_backtest_handles_duplicate_datetimes() -> None:
+
+    manifest = _make_shifted_target_manifest()
+    datetimes = pl.datetime_range(
+        start=pl.datetime(2025, 1, 1, 0, 0, 0),
+        end=pl.datetime(2025, 1, 1, 7, 0, 0),
+        interval='1h',
+        eager=True,
+    ).to_list()
+    datetimes[6] = datetimes[5]
+
+    raw_data = pl.DataFrame({
+        'datetime': datetimes,
+        'open': [100.0] * 8,
+        'high': [111.0, 101.0, 111.0, 101.0, 111.0, 101.0, 111.0, 101.0],
+        'low': [99.0, 89.0, 99.0, 89.0, 99.0, 89.0, 99.0, 89.0],
+        'close': [110.0, 90.0, 110.0, 90.0, 110.0, 90.0, 110.0, 90.0],
+        'current_sign': [1, 0, 1, 0, 1, 0, 1, 0],
+    })
+
+    data = manifest.prepare_data(raw_data, {'bar_type': 'base'})
+    price_df = data['price_data_for_backtest']
+
+    assert price_df.height == data['x_test'].height
+    assert price_df['datetime'].to_list() == [
+        datetimes[4], datetimes[5], datetimes[6],
+    ]
+
+
 def test_shifted_target_pipeline_keeps_price_rows_on_feature_bar() -> None:
 
     manifest = _make_shifted_target_manifest()

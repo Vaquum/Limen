@@ -1195,6 +1195,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Make `binary_metrics` robust to degenerate one-class rounds: the confusion matrix is pinned to `labels=[0, 1]` so a one-class outcome no longer raises `IndexError`, `fpr` is NaN when `y_test` has no negatives, and `auc` is NaN when `y_test` contains a single class, mirroring the `safe_ovr_auc` convention (#509).
 
+## v4.1.5 on 4th of July, 2026
+
+- Dedupe `price_data_for_backtest` on `datetime` before the test-row alignment join so ML backtests no longer crash with a numpy broadcast error on bar sources with duplicate timestamps, such as dollar bars (#557).
+
 ## v4.1.7 on 4th of July, 2026
 
 - Guard `RiskRewardRatioTarget` and `ExitQualityTarget` with an explicit `ValueError` naming the missing user-supplied columns (`capturable_breakout`/`max_drawdown`, `exit_reason`/`exit_net_return`) instead of failing with a low-level missing-column error, and document in `docs/Targets.md` that no Limen indicator or feature produces these columns (#559).

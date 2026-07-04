@@ -391,7 +391,7 @@ def test_exit_quality_target_rejects_missing_required_columns() -> None:
     data = pl.DataFrame({'close': [1.0, 2.0]})
     t = ExitQualityTarget(data, 'exit_quality')
 
-    with pytest.raises(ValueError, match='ExitQualityTarget requires user-supplied columns'):
+    with pytest.raises(ValueError, match="missing from data: \\['exit_reason', 'exit_net_return'\\]"):
         t.transform(data)
 
 
