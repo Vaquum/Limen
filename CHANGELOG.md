@@ -1194,3 +1194,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.4 on 4th of July, 2026
 
 - Make `binary_metrics` robust to degenerate one-class rounds: the confusion matrix is pinned to `labels=[0, 1]` so a one-class outcome no longer raises `IndexError`, `fpr` is NaN when `y_test` has no negatives, and `auc` is NaN when `y_test` contains a single class, mirroring the `safe_ovr_auc` convention (#509).
+
+## v4.1.6 on 4th of July, 2026
+
+- Make `macd`, `macdfix`, and `macdext` LazyFrame-compatible by computing through an expression-level `map_batches` struct instead of eager subscripting, so the macd family works in the ML feature pipeline like the other indicators; outputs are bit-identical to the previous eager implementation (#558).
