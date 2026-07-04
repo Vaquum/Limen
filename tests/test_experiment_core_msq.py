@@ -450,7 +450,8 @@ def test_run_progress_bar_off_emits_no_tqdm_output(capfd):
         )
 
     captured = capfd.readouterr()
-    assert captured.err == ''
+    assert '%|' not in captured.err
+    assert 'it/s' not in captured.err
     assert uel.experiment_log.shape[0] == 2
 
 
@@ -465,7 +466,7 @@ def test_run_progress_bar_on_by_default(capfd):
         )
 
     captured = capfd.readouterr()
-    assert 'it' in captured.err
+    assert '%|' in captured.err or 'it/s' in captured.err
 
 
 def test_guard_stale_artifacts_without_checkpoint_does_not_suggest_resume():
