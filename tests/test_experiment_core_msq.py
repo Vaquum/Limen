@@ -449,8 +449,10 @@ def test_guard_stale_artifacts_without_checkpoint_does_not_suggest_resume():
 
         uel, _, _ = _make_uel(experiment_dir=exp_dir)
 
-        with pytest.raises(FileExistsError, match='crashed before its first checkpoint'):
+        with pytest.raises(FileExistsError, match=r'missing checkpoint\.json') as excinfo:
             uel._guard_stale_artifacts()
+
+        assert 'Set resume=True' not in str(excinfo.value)
 
 
 def test_guard_stale_artifacts_with_checkpoint_suggests_resume():
@@ -459,6 +461,7 @@ def test_guard_stale_artifacts_with_checkpoint_suggests_resume():
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
         (exp_dir / 'results.csv').write_text('id\n')
+        (exp_dir / 'round_data.jsonl').write_text('')
         (exp_dir / 'checkpoint.json').write_text('{}')
 
         uel, _, _ = _make_uel(experiment_dir=exp_dir)
