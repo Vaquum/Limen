@@ -112,7 +112,7 @@ uel.run(
 )
 ```
 
-On a live local run over the bundled test data, this requested `6` permutations but finished with:
+In the bundled budget-reducer example, this requested `6` permutations but finished with:
 
 - `4` rows in `results.csv`
 - `4` entries in `round_data.jsonl`
@@ -152,7 +152,7 @@ uel.run(
 )
 ```
 
-In a live local shutdown-and-resume run in this repo:
+In the shutdown-and-resume example:
 
 - the first phase stopped after `2` completed rounds
 - `round_data.jsonl` and `results.csv` each contained `2` entries

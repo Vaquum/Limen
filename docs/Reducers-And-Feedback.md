@@ -45,7 +45,7 @@ Reducers return declarative dicts by default. The `intra_callback` receives dire
 
 `BudgetReducer` is resource-driven. It does not analyze model quality; it analyzes whether the remaining search still fits the configured budget.
 
-On a live local run in this repo, `BudgetReducer(max_permutations=4)` trimmed a requested `6`-round experiment down to `4` completed rows and wrote the trim to both:
+In an artifact-backed advanced run, `BudgetReducer(max_permutations=4)` trims a requested `6`-round experiment down to `4` completed rows and writes the trim to both:
 
 - `audit.jsonl`
 - `checkpoint.json`
@@ -162,7 +162,7 @@ Example:
 
 Each feedback trigger writes one JSONL entry to `audit.jsonl` when the advanced path is using an `experiment_dir`.
 
-A live local run in this repo recorded:
+A feedback-cycle audit entry records:
 
 - the round number
 - applied interventions
@@ -174,7 +174,7 @@ That audit trail is the main way to explain why the search changed mid-run.
 
 ## One concrete mixed feedback cycle
 
-In a live local controller run in this repo, one trigger applied all three sources in the same cycle:
+In a controller run, one trigger can apply all three sources in the same cycle:
 
 - pruning strategy: `remove_is a=3`
 - `intra_callback`: `inject_value a=99`

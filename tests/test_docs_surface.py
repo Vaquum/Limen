@@ -197,6 +197,11 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'LightGBM binary wrapper rejects non-binary objectives before training' in docs_text
     assert 'target_confidence` must be finite and in `[0.0, 1.0]`' in docs_text
     assert 'Bundled live-safe templates set `include_research_only: false`' in docs_text
+    assert 'Single-File Decoder` | A self-contained Limen experiment unit' in docs_text
+    assert 'Previously called `SFM`' in docs_text
+    assert 'Split-wide normalization' in docs_text
+    assert 'leaks future information within the split' in docs_text
+    assert 'This guide takes a contributor from a fresh checkout to a benchmarked classifier' in docs_text
 
 
 def test_python_code_fences_are_parseable() -> None:
