@@ -438,6 +438,35 @@ def test_resume_fails_without_round_data():
         assert raised
 
 
+def test_guard_stale_artifacts_without_checkpoint_does_not_suggest_resume():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        (exp_dir / 'results.csv').write_text('id\n')
+        (exp_dir / 'round_data.jsonl').write_text('')
+        (exp_dir / 'metadata.json').write_text('{}')
+
+        uel, _, _ = _make_uel(experiment_dir=exp_dir)
+
+        with pytest.raises(FileExistsError, match='crashed before its first checkpoint'):
+            uel._guard_stale_artifacts()
+
+
+def test_guard_stale_artifacts_with_checkpoint_suggests_resume():
+
+    with TemporaryDirectory() as tmpdir:
+        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir.mkdir()
+        (exp_dir / 'results.csv').write_text('id\n')
+        (exp_dir / 'checkpoint.json').write_text('{}')
+
+        uel, _, _ = _make_uel(experiment_dir=exp_dir)
+
+        with pytest.raises(FileExistsError, match='Set resume=True'):
+            uel._guard_stale_artifacts()
+
+
 def test_preds_none_does_not_crash():
 
     with TemporaryDirectory() as tmpdir:

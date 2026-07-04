@@ -168,7 +168,10 @@ class CheckpointManager:
             data = self._read_json(Path(checkpoint_dir) / 'checkpoint.json')
         except FileNotFoundError as e:
             raise ValueError(
-                f"No checkpoint found in '{checkpoint_dir}'."
+                f"No checkpoint found in '{checkpoint_dir}'. If the "
+                f"directory holds artifacts from a run that crashed before "
+                f"its first checkpoint, delete them and rerun with "
+                f"resume=False."
             ) from e
         except json.JSONDecodeError as e:
             raise ValueError(
