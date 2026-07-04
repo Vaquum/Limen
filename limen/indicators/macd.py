@@ -92,7 +92,7 @@ def macd(
             MACD_COL: macd_values,
             MACD_SIGNAL_COL: signal_values,
             MACD_HIST_COL: hist_values,
-        }).to_struct('_macd_struct')
+        }).to_struct('__macd_struct')
 
     macd_expr = pl.col(price_col).map_batches(
         _macd_struct,
@@ -101,6 +101,6 @@ def macd(
             MACD_SIGNAL_COL: pl.Float64,
             MACD_HIST_COL: pl.Float64,
         }),
-    ).alias('_macd_struct')
+    ).alias('__macd_struct')
 
-    return data.with_columns(macd_expr).unnest('_macd_struct')
+    return data.with_columns(macd_expr).unnest('__macd_struct')

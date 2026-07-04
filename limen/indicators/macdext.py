@@ -180,7 +180,7 @@ def macdext(
             'macdext': macd_values,
             'macdext_signal': signal_values,
             'macdext_hist': hist_values,
-        }).to_struct('_macdext_struct')
+        }).to_struct('__macdext_struct')
 
     macdext_expr = pl.col(price_col).map_batches(
         _macdext_struct,
@@ -189,6 +189,6 @@ def macdext(
             'macdext_signal': pl.Float64,
             'macdext_hist': pl.Float64,
         }),
-    ).alias('_macdext_struct')
+    ).alias('__macdext_struct')
 
-    return data.with_columns(macdext_expr).unnest('_macdext_struct')
+    return data.with_columns(macdext_expr).unnest('__macdext_struct')

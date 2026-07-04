@@ -90,7 +90,7 @@ def macdfix(
             MACDFIX_COL: macd_values,
             MACDFIX_SIGNAL_COL: signal_values,
             MACDFIX_HIST_COL: hist_values,
-        }).to_struct('_macdfix_struct')
+        }).to_struct('__macdfix_struct')
 
     macdfix_expr = pl.col(price_col).map_batches(
         _macdfix_struct,
@@ -99,6 +99,6 @@ def macdfix(
             MACDFIX_SIGNAL_COL: pl.Float64,
             MACDFIX_HIST_COL: pl.Float64,
         }),
-    ).alias('_macdfix_struct')
+    ).alias('__macdfix_struct')
 
-    return data.with_columns(macdfix_expr).unnest('_macdfix_struct')
+    return data.with_columns(macdfix_expr).unnest('__macdfix_struct')
