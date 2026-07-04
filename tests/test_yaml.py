@@ -1354,3 +1354,22 @@ def test_lightgbm_binary_template_is_valid_and_arch_surface_complete() -> None:
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
     assert model_params <= set(yaml_dict['sfd']['params'])
+
+
+def test_dlinear_regressor_template_is_valid_and_arch_surface_complete() -> None:
+    template = _TEMPLATES_DIR / 'dlinear_regressor.yaml'
+    yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
+    assert errors == []
+
+    result = validate(yaml_dict)
+    assert result.valid, [e.message for e in result.errors]
+
+    build_search_strategy(yaml_dict)
+
+    sfd = CompiledSFD(yaml_dict)
+    assert isinstance(sfd.manifest(), MLManifest)
+    assert sfd.manifest().strict_mode is True
+
+    arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
+    model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
+    assert model_params <= set(yaml_dict['sfd']['params'])

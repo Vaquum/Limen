@@ -11,14 +11,17 @@ from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment import CalibrationConfig
 from limen.experiment import MLManifest
+from limen.sfd.foundational_sfd import dlinear_regressor as foundational_dlinear_regressor
 from limen.sfd.foundational_sfd import lightgbm_binary as foundational_lightgbm_binary
 from limen.sfd.foundational_sfd import logreg_binary as foundational_logreg_binary
+from limen.sfd.reference_architecture import DLinearRegressor
 from limen.sfd.reference_architecture import LightGBMBinary
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.sfd.reference_architecture import RandomBinary
 from limen.sfd.reference_architecture import RuleBasedStrategy
 from limen.sfd.reference_architecture import TabPFNBinary
 from limen.sfd.reference_architecture import XGBoostRegressor
+from limen.sfd.reference_architecture import dlinear_regressor
 from limen.sfd.reference_architecture import lightgbm_binary
 from limen.sfd.reference_architecture import logreg_binary
 from limen.sfd.reference_architecture import random_binary
@@ -546,3 +549,144 @@ def test_lightgbm_foundational_params_cover_wrapper_model_surface():
     }
 
     assert model_params <= set(foundational_lightgbm_binary.params())
+
+
+def _make_dlinear_data(n=240, lookback=24, with_price=True):
+
+    np.random.seed(42)
+    x = np.random.randn(n, lookback)
+    y = x[:, -1] * 0.5 + np.random.randn(n) * 0.1
+
+    split_train = int(n * 0.6)
+    split_val = int(n * 0.8)
+
+    columns = [f'ret_1_lag_{i}' for i in range(lookback - 1, -1, -1)]
+
+    data = {
+        'x_train': pl.DataFrame({col: x[:split_train, j] for j, col in enumerate(columns)}),
+        'y_train': pl.Series('next_return', y[:split_train]),
+        'x_test': pl.DataFrame({col: x[split_val:, j] for j, col in enumerate(columns)}),
+        'y_test': pl.Series('next_return', y[split_val:]),
+    }
+
+    if with_price:
+        n_test = n - split_val
+        data['price_data_for_backtest'] = pl.DataFrame({
+            'open': np.random.uniform(100, 200, n_test),
+            'high': np.random.uniform(200, 300, n_test),
+            'low': np.random.uniform(50, 100, n_test),
+            'close': np.random.uniform(100, 200, n_test),
+            'datetime': pd.date_range('2025-01-01', periods=n_test, freq='h'),
+        })
+
+    return data
+
+
+def test_dlinear_train_is_deterministic():
+
+    data = _make_dlinear_data()
+
+    first = DLinearRegressor().train(data, kernel_size=13, alpha=1.0)
+    second = DLinearRegressor().train(data, kernel_size=13, alpha=1.0)
+
+    assert DLinearRegressor.deterministic is True
+    assert first.model is not None
+    assert np.array_equal(first.predict(data)['_preds'], second.predict(data)['_preds'])
+
+    z = first._decompose(data['x_train'].select(first.cols).to_numpy(), 13)
+    zc = z - z.mean(axis=0)
+    yc = data['y_train'].to_numpy() - data['y_train'].to_numpy().mean()
+    expected = np.linalg.solve(zc.T @ zc + np.eye(zc.shape[1]), zc.T @ yc)
+
+    assert np.allclose(first.w, expected)
+
+
+def test_dlinear_decomposition_matches_reference():
+
+    np.random.seed(7)
+    x = np.random.randn(8, 24)
+    kernel_size = 5
+    pad = (kernel_size - 1) // 2
+
+    padded = np.concatenate(
+        [np.repeat(x[:, :1], pad, axis=1), x, np.repeat(x[:, -1:], pad, axis=1)],
+        axis=1,
+    )
+    kernel = np.ones(kernel_size) / kernel_size
+    trend = np.stack([np.convolve(row, kernel, mode='valid') for row in padded])
+    expected = np.hstack([x - trend, trend])
+
+    assert np.allclose(DLinearRegressor()._decompose(x, kernel_size), expected)
+
+    scrambled = ['ret_1_lag_0', 'close', 'ret_1_lag_2', 'ret_1_lag_1']
+    ordered = DLinearRegressor()._window_columns(scrambled)
+
+    assert ordered == ['ret_1_lag_2', 'ret_1_lag_1', 'ret_1_lag_0']
+
+
+def test_dlinear_wrapper_params_and_validation():
+
+    wrapper_params = set(inspect.signature(dlinear_regressor).parameters)
+
+    assert {'kernel_size', 'alpha'} <= wrapper_params
+
+    data = _make_dlinear_data(with_price=False)
+
+    with pytest.raises(ValueError, match='DLinearRegressor kernel_size'):
+        DLinearRegressor().train(data, kernel_size=12)
+
+    with pytest.raises(ValueError, match='DLinearRegressor kernel_size'):
+        DLinearRegressor().train(data, kernel_size=True)
+
+    with pytest.raises(ValueError, match='DLinearRegressor alpha'):
+        DLinearRegressor().train(data, alpha=-1.0)
+
+    no_window = {
+        'x_train': pl.DataFrame({'close': [1.0, 2.0]}),
+        'y_train': pl.Series('next_return', [0.1, 0.2]),
+    }
+
+    with pytest.raises(ValueError, match='DLinearRegressor found no lookback window columns'):
+        DLinearRegressor().train(no_window)
+
+
+def test_dlinear_evaluate_returns_all_metric_types():
+
+    data = _make_dlinear_data(with_price=True)
+    model = DLinearRegressor().train(data, kernel_size=13, alpha=1.0)
+    results = model.evaluate(data)
+
+    for key in ['bias', 'mae', 'rmse', 'r2', 'mape']:
+        assert key in results, f"Missing results key: {key}"
+
+    for key in ['confusion_tp', 'confusion_fp', 'confusion_tn', 'confusion_fn',
+                'confusion_precision', 'confusion_recall',
+                'confusion_tp_mean_return_pct', 'confusion_fp_mean_return_pct',
+                'confusion_tn_mean_return_pct', 'confusion_fn_mean_return_pct']:
+        assert key in results, f"Missing confusion key: {key}"
+
+    for metric_col in BACKTEST_SNAPSHOT_COLUMNS:
+        key = f'backtest_{metric_col}'
+        assert key in results, f"Missing backtest key: {key}"
+
+    assert '_preds' in results
+
+
+def test_dlinear_exports_registered():
+
+    import limen.sfd.foundational_sfd
+    import limen.sfd.reference_architecture
+
+    assert 'DLinearRegressor' in limen.sfd.reference_architecture.__all__
+    assert 'dlinear_regressor' in limen.sfd.reference_architecture.__all__
+    assert 'dlinear_regressor' in limen.sfd.foundational_sfd.__all__
+
+
+def test_dlinear_foundational_params_cover_wrapper_model_surface():
+
+    assert sorted(foundational_dlinear_regressor.params()) == ['alpha', 'horizon', 'kernel_size', 'lookback_end']
+    assert isinstance(foundational_dlinear_regressor.manifest(), MLManifest)
+
+    model_params = set(inspect.signature(dlinear_regressor).parameters) - {'data'}
+
+    assert model_params <= set(foundational_dlinear_regressor.params())

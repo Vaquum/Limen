@@ -14,6 +14,7 @@ This page covers:
 The current public reference-architecture exports are:
 
 - `ReferenceModel`
+- `DLinearRegressor`
 - `LogRegBinary`
 - `RandomBinary`
 - `XGBoostRegressor`
@@ -53,6 +54,7 @@ Models consume the subset of keys they need from the standard Limen shape.
 | `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
 | `XGBoostRegressor` | regression | no | requires `xgboost` |
+| `DLinearRegressor` | regression | yes | canonical DLinear semantics; closed-form SVD ridge fit, no seed; requires `scipy` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |
 | `RuleBasedStrategy` | rule-based long/flat | yes | no training step; boolean predicate logic |
 
@@ -70,6 +72,7 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 | `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
 | `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimised before `_preds` are produced. This is compatible with P(1). |
 | `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
+| `DLinearRegressor` | no | fallback | `predict()` returns only `_preds`. Same regressor caveat as `XGBoostRegressor`. |
 
 ## `predict()` Versus `evaluate()`
 
@@ -173,6 +176,19 @@ On a live local logreg trainer run in this repo:
 
 On a live local `random_binary` trainer run, promotion raised `ReconstructionError` because the stochastic rerun did not reproduce the original logged metrics closely enough.
 
+## `DLinearRegressor`
+
+`DLinearRegressor` is Limen's canonical DLinear surface (Zeng et al. 2023, *Are Transformers Effective for Time Series Forecasting?*). It owns the DLinear semantics that downstream parity checks compare against, so every semantic choice is explicit:
+
+- **Decomposition** — each lookback window is split by a centered moving average with replicate edge padding (the official DLinear `moving_avg` behavior; `kernel_size` must be a positive odd integer, canonical default `25`) into a trend component and a remainder component.
+- **Heads** — each component gets its own linear head and the head outputs are summed, which is exactly the DLinear function class.
+- **Fit** — the ridge-regularized DLinear MSE objective is minimized in closed form by SVD (`alpha` is the ridge strength; `alpha=0` gives the min-norm least-squares solution). There is no optimizer loop and no seed: `deterministic = True`, and re-running the same config reproduces the experiment log exactly on a fixed environment. Cross-BLAS-build float differences remain possible, as with any LAPACK-backed path.
+- **Lookback** — the window is read from feature columns named `ret_1_lag_{i}`, ordered by lag descending so each row is the window in time order (oldest bar first). Window length is a manifest concern (`lag_range` with `end=lookback_end`); all other feature columns are ignored.
+- **Target shape** — scalar per bar: `NextReturnTarget(periods=horizon, scale=100.0)`, the percentage return over the next `horizon` bars.
+- **Direction mapping** — `evaluate()` mirrors `XGBoostRegressor`: `preds > 0` becomes the long/flat signal for the inline confusion and backtest metrics.
+
+`DLinearRegressor` is a reference baseline, not an alpha source. On the measured reference window (1h BTCUSDT spot klines from 2025-01-01, split 8:1:2, 5 bps fee + 5 bps slip per fill, 1-bar execution lag), gross `edge_bps_p50` was −0.3 to 0.0 bps, the best actively-trading config netted −1.4 bps/bar against −0.4 bps/bar for always-long, and out-of-sample r² was ≈ 0.000 — at parity with `XGBoostRegressor` on the same window. No sign-honest configuration cleared 10 bps/side costs at these frequencies.
+
 ## `RuleBasedStrategy`
 
 `RuleBasedStrategy` is the reference architecture for rule-based SFDs. It differs from the ML models in two important ways:
@@ -215,6 +231,7 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 ## Optional Dependencies
 
 - `xgboost_regressor` requires `xgboost`
+- `dlinear_regressor` requires `scipy` (the `stats` extra), loaded lazily inside the model
 - `tabpfn_binary` requires `tabpfn`
 
 In a live local smoke pass in this repo:

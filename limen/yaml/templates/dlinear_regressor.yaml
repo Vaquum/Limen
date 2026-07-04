@@ -1,0 +1,64 @@
+schema_version: "1.0"
+
+metadata:
+  name: dlinear_regressor_experiment
+  limen_version: "4.2.0"
+  mode: development
+  description: DLinear decomposition-linear regressor predicting next-period return
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+
+    split_dates:
+      train_start: "2024-01-01"
+      train_end:   "2024-09-30"
+      val_start:   "2024-10-01"
+      val_end:     "2024-11-30"
+      test_start:  "2024-12-01"
+      test_end:    "2024-12-31"
+
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+
+    features:
+      - func: limen.features.lag_range
+        params:
+          col: ret_1
+          start: 0
+          end: "{lookback_end}"
+
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+      transform_params:
+        periods: "{horizon}"
+        scale: 100.0
+
+    strict_mode: true
+
+    reference_architecture: limen.sfd.reference_architecture.dlinear_regressor.dlinear_regressor
+
+  params:
+    # lookback window
+    lookback_end: [23, 47, 95, 167]
+    # decomposition
+    kernel_size: [13, 25]
+    # regularization
+    alpha: [1.0, 10.0, 100.0]
+    # target horizon
+    horizon: [1]
+
+uel:
+  n_permutations: 12
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

@@ -1218,3 +1218,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.10 on 4th of July, 2026
 
 - Add canonical glossary and end-to-end YAML workflow docs, route them through the docs site, document causal seasonality baselines for custom SFD authors, and remove stale live-local wording from the SFD, advanced-search, and reducer docs (#633).
+
+## v4.2.0 on 4th of July, 2026
+
+- Add `DLinearRegressor` reference architecture with canonical DLinear semantics — replicate-padded moving-average decomposition into trend and remainder, per-component linear heads, closed-form SVD ridge fit (`deterministic = True`, no seed), scipy loaded lazily via the `stats` extra — plus the `dlinear_regressor` foundational SFD (lookback window from `window_return` + `lag_range`, `NextReturnTarget` with sweepable `horizon`) and the matching `dlinear_regressor.yaml` template, as Limen's gold standard for downstream DLinear parity (#646).

@@ -16,6 +16,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `xgboost_regressor` | regression | tree-based regression workflow |
+| `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
 | `tabpfn_binary` | binary classification | optional, available only when `tabpfn` is installed |
 
 ## Foundational SFD versus reference architecture
@@ -102,6 +103,24 @@ In the bundled smoke path, it prepared:
 
 It requires `xgboost`.
 
+## `dlinear_regressor`
+
+`dlinear_regressor` is the canonical DLinear reference experiment: Limen's gold standard for DLinear semantics, intended as the parity anchor for downstream comparisons.
+
+It combines:
+
+- `window_return(period=1)` to form the 1-bar close-to-close return series `ret_1`
+- `lag_range(col='ret_1', start=0, end=lookback_end)` to build the lookback window as feature columns
+- `NextReturnTarget` with a sweepable `horizon` (percentage return over the next `horizon` bars)
+- `strict_mode=True`
+- the `DLinearRegressor` reference model
+
+`params()` exposes `lookback_end` (window length minus one), `kernel_size` (odd moving-average kernel of the decomposition), `alpha` (ridge strength on the component heads), and `horizon`.
+
+The fit is closed-form, so every round is deterministic with no seed and the full sweep runs at interactive speed. The matching YAML template is `limen/yaml/templates/dlinear_regressor.yaml` (`limen init my_experiment.yaml --template dlinear_regressor`).
+
+It requires `scipy` (the `stats` extra), loaded lazily inside the model.
+
 ## `tabpfn_binary`
 
 `tabpfn_binary` is an optional packaged SFD. It only becomes available when `tabpfn` is installed through the `tabpfn` extra. That dependency is intentionally outside the base install because it is materially larger than the default sklearn/LightGBM path.
@@ -129,6 +148,7 @@ Direct Python use is still available when you need to integrate with UEL or cust
 - Choose `logreg_binary` for the canonical Limen path.
 - Choose `random_binary` for a baseline or smoke-test decoder.
 - Choose `xgboost_regressor` for continuous targets that should use tree-based regression.
+- Choose `dlinear_regressor` for a deterministic linear forecasting reference with canonical DLinear semantics.
 - Choose `tabpfn_binary` only when that dependency is installed and the TabPFN workflow is required.
 
 ## Read next
