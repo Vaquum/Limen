@@ -1206,3 +1206,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.7 on 4th of July, 2026
 
 - Guard `RiskRewardRatioTarget` and `ExitQualityTarget` with an explicit `ValueError` naming the missing user-supplied columns (`capturable_breakout`/`max_drawdown`, `exit_reason`/`exit_net_return`) instead of failing with a low-level missing-column error, and document in `docs/Targets.md` that no Limen indicator or feature produces these columns (#559).
+
+## v4.1.8 on 4th of July, 2026
+
+- Break the stale-artifact resume catch-22: when `experiment_dir` holds partial artifacts but no `checkpoint.json`, the fresh-start guard now says the previous run crashed before its first checkpoint and the files must be deleted, instead of suggesting a `resume=True` that cannot work; the missing-checkpoint resume error gains the matching guidance (#510).

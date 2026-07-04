@@ -911,12 +911,23 @@ class UniversalExperimentLoop:
             if (self._experiment_dir / f).exists()
         ]
         if existing:
+            resume_required = ['checkpoint.json', 'round_data.jsonl', 'results.csv']
+            missing_for_resume = [f for f in resume_required if f not in existing]
+            if not missing_for_resume:
+                raise FileExistsError(
+                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} "
+                    f"already contains artifacts: "
+                    f"{', '.join(existing)}. "
+                    f"Set resume=True to continue or choose a "
+                    f"different experiment_dir."
+                )
             raise FileExistsError(
                 f"UniversalExperimentLoop Experiment directory {self._experiment_dir} "
-                f"already contains artifacts: "
-                f"{', '.join(existing)}. "
-                f"Set resume=True to continue or choose a "
-                f"different experiment_dir."
+                f"contains partial artifacts that resume=True cannot continue: "
+                f"{', '.join(existing)} (missing "
+                f"{', '.join(missing_for_resume)}). The previous run crashed "
+                f"before a complete checkpoint was written. Delete these "
+                f"files or choose a different experiment_dir."
             )
 
 
