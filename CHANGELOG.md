@@ -1191,6 +1191,10 @@ Note: add all new changelog entries to the bottom of this file.
 - Declare `LogRegBinary` non-deterministic so `Trainer` reconstruction validates logistic regression permutations with relative tolerance instead of exact match; sklearn solver refits (notably `lbfgs` and `liblinear`) are not bit-reproducible across BLAS builds and thread counts, which rejected ~12% of permutations (#554).
 - Include `round_params` in `ReconstructionError` messages so solver-correlated reconstruction failures are visible to consumers.
 
-## v4.1.3 on 4th of July, 2026
+## v4.1.4 on 4th of July, 2026
+
+- Make `binary_metrics` robust to degenerate one-class rounds: the confusion matrix is pinned to `labels=[0, 1]` so a one-class outcome no longer raises `IndexError`, `fpr` is NaN when `y_test` has no negatives, and `auc` is NaN when `y_test` contains a single class, mirroring the `safe_ovr_auc` convention (#509).
+
+## v4.1.5 on 4th of July, 2026
 
 - Dedupe `price_data_for_backtest` on `datetime` before the test-row alignment join so ML backtests no longer crash with a numpy broadcast error on bar sources with duplicate timestamps, such as dollar bars (#557).
