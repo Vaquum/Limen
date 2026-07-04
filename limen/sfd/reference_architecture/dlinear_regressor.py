@@ -90,7 +90,7 @@ class DLinearRegressor(ReferenceModel):
         kernel_size = params.get('kernel_size', DEFAULT_KERNEL_SIZE)
         alpha = params.get('alpha', DEFAULT_ALPHA)
 
-        if not isinstance(kernel_size, int) or kernel_size < 1 or kernel_size % 2 == 0:
+        if isinstance(kernel_size, bool) or not isinstance(kernel_size, int) or kernel_size < 1 or kernel_size % 2 == 0:
             raise ValueError('DLinearRegressor kernel_size must be a positive odd integer')
 
         if alpha < 0:
@@ -107,7 +107,9 @@ class DLinearRegressor(ReferenceModel):
         self.y_mean = y.mean()
 
         u, s, vt = np.linalg.svd(z - self.z_mean, full_matrices=False)
-        d = np.where(s > SINGULAR_VALUE_FLOOR, s / (s * s + alpha), 0.0)
+        d = np.zeros_like(s)
+        kept = s > SINGULAR_VALUE_FLOOR
+        d[kept] = s[kept] / (s[kept] * s[kept] + alpha)
         self.w = vt.T @ (d * (u.T @ (y - self.y_mean)))
         self.model = self.w
 

@@ -593,6 +593,13 @@ def test_dlinear_train_is_deterministic():
     assert first.model is not None
     assert np.array_equal(first.predict(data)['_preds'], second.predict(data)['_preds'])
 
+    z = first._decompose(data['x_train'].select(first.cols).to_numpy(), 13)
+    zc = z - z.mean(axis=0)
+    yc = data['y_train'].to_numpy() - data['y_train'].to_numpy().mean()
+    expected = np.linalg.solve(zc.T @ zc + np.eye(zc.shape[1]), zc.T @ yc)
+
+    assert np.allclose(first.w, expected)
+
 
 def test_dlinear_decomposition_matches_reference():
 
@@ -627,6 +634,9 @@ def test_dlinear_wrapper_params_and_validation():
 
     with pytest.raises(ValueError, match='DLinearRegressor kernel_size'):
         DLinearRegressor().train(data, kernel_size=12)
+
+    with pytest.raises(ValueError, match='DLinearRegressor kernel_size'):
+        DLinearRegressor().train(data, kernel_size=True)
 
     with pytest.raises(ValueError, match='DLinearRegressor alpha'):
         DLinearRegressor().train(data, alpha=-1.0)
