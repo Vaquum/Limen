@@ -25,7 +25,7 @@ class DLinearRegressor(ReferenceModel):
     closed form by SVD, so training is deterministic and needs no seed.
 
     The lookback window is read from the feature columns named
-    '{WINDOW_COLUMN}_lag_{i}', ordered by lag descending so each row is the
+    'ret_1_lag_{i}', ordered by lag descending so each row is the
     window in time order (oldest bar first). All other feature columns are
     ignored.
     '''
