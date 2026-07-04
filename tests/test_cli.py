@@ -269,6 +269,17 @@ def test_cli_run_resume_calls_uel_run_with_resume_true() -> None:
     assert kwargs.get('n_permutations') == 20
 
 
+def test_cli_run_fresh_no_progress_bar_passes_flag() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
+        with patch('limen.cli.commands.run.run_experiment') as mock_run:
+            mock_run.return_value = True
+            runner.invoke(cli, ['run', '--no-progress-bar', 'exp.yaml'])
+        _, kwargs = mock_run.call_args
+    assert kwargs.get('progress_bar') is False
+
+
 def test_cli_run_no_progress_bar_passes_flag() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     with _make_results_dir(yaml_reference=dict(yaml_dict)) as _tmpdir:
