@@ -19,11 +19,39 @@ from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
 from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics
 from limen.log._permutation_prediction_performance import _permutation_prediction_performance
 from limen.metrics.balanced_metric import balanced_metric
+from limen.metrics.binary_metrics import binary_metrics
 from limen.metrics.multiclass_metrics import multiclass_metrics
 from limen.metrics.safe_ovr_auc import safe_ovr_auc
 from limen.utils.reporting import format_report_footer
 from limen.utils.reporting import format_report_header
 from limen.utils.reporting import format_report_section
+
+
+def test_binary_metrics_handles_one_class_outcome() -> None:
+    data = {'y_test': np.array([1, 1, 1, 1])}
+    preds = [1, 1, 1, 1]
+    probs = [0.9, 0.8, 0.7, 0.6]
+
+    result = binary_metrics(data, preds, probs)
+
+    assert result['recall'] == 1.0
+    assert result['accuracy'] == 1.0
+    assert np.isnan(result['fpr'])
+    assert np.isnan(result['auc'])
+
+
+def test_binary_metrics_computes_two_class_outcome() -> None:
+    data = {'y_test': np.array([0, 0, 1, 1])}
+    preds = [0, 1, 1, 1]
+    probs = [0.1, 0.6, 0.8, 0.9]
+
+    result = binary_metrics(data, preds, probs)
+
+    assert result['recall'] == 1.0
+    assert result['precision'] == 0.667
+    assert result['fpr'] == 0.5
+    assert result['auc'] == 1.0
+    assert result['accuracy'] == 0.75
 
 
 def test_safe_ovr_auc_uses_label_columns_when_absent_class_columns_remain() -> None:
