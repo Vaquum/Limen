@@ -22,6 +22,7 @@ def test_foundational_sfd():
     '''Test all foundational SFDs via MSQ path with RandomStrategy and pruning.'''
 
     foundational_sfds = [
+        limen.sfd.foundational_sfd.dlinear_regressor,
         limen.sfd.foundational_sfd.lightgbm_binary,
         limen.sfd.foundational_sfd.random_binary,
         limen.sfd.foundational_sfd.xgboost_regressor,

@@ -5,6 +5,7 @@ from typing import Any
 
 
 _LAZY_EXPORTS = {
+    'dlinear_regressor': ('limen.sfd.foundational_sfd.dlinear_regressor', None),
     'lightgbm_binary': ('limen.sfd.foundational_sfd.lightgbm_binary', None),
     'logreg_binary': ('limen.sfd.foundational_sfd.logreg_binary', None),
     'random_binary': ('limen.sfd.foundational_sfd.random_binary', None),

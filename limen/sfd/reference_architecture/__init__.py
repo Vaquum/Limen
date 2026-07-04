@@ -1,4 +1,6 @@
 from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.sfd.reference_architecture.dlinear_regressor import DLinearRegressor
+from limen.sfd.reference_architecture.dlinear_regressor import dlinear_regressor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
@@ -14,6 +16,7 @@ from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
 
 __all__ = [
+    'DLinearRegressor',
     'LightGBMBinary',
     'LogRegBinary',
     'RandomBinary',
@@ -21,6 +24,7 @@ __all__ = [
     'RuleBasedStrategy',
     'TabPFNBinary',
     'XGBoostRegressor',
+    'dlinear_regressor',
     'lightgbm_binary',
     'logreg_binary',
     'random_binary',
