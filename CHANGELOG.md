@@ -1195,6 +1195,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Make `binary_metrics` robust to degenerate one-class rounds: the confusion matrix is pinned to `labels=[0, 1]` so a one-class outcome no longer raises `IndexError`, `fpr` is NaN when `y_test` has no negatives, and `auc` is NaN when `y_test` contains a single class, mirroring the `safe_ovr_auc` convention (#509).
 
+## v4.1.5 on 4th of July, 2026
+
+- Dedupe `price_data_for_backtest` on `datetime` before the test-row alignment join so ML backtests no longer crash with a numpy broadcast error on bar sources with duplicate timestamps, such as dollar bars (#557).
+
 ## v4.1.8 on 4th of July, 2026
 
 - Break the stale-artifact resume catch-22: when `experiment_dir` holds partial artifacts but no `checkpoint.json`, the fresh-start guard now says the previous run crashed before its first checkpoint and the files must be deleted, instead of suggesting a `resume=True` that cannot work; the missing-checkpoint resume error gains the matching guidance (#510).
