@@ -45,7 +45,7 @@ Reducers return declarative dicts by default. The `intra_callback` receives dire
 
 `BudgetReducer` is resource-driven. It does not analyze model quality; it analyzes whether the remaining search still fits the configured budget.
 
-`BudgetReducer(max_permutations=4)` trims a requested `6`-round experiment down to `4` completed rows and writes the trim to both:
+In an artifact-backed advanced run, `BudgetReducer(max_permutations=4)` trims a requested `6`-round experiment down to `4` completed rows and writes the trim to both:
 
 - `audit.jsonl`
 - `checkpoint.json`
