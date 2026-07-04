@@ -182,7 +182,10 @@ def profile_cmd(yaml_file: Path) -> None:
 @click.option('--resume', type=click.Path(exists=True, file_okay=False, path_type=Path),
               default=None, metavar='RESULTS_DIR',
               help='Resume from a checkpoint directory instead of starting fresh.')
-def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
+@click.option('--no-progress-bar', is_flag=True, default=False,
+              help='Disable the experiment progress bar.')
+def run(target: str | None, dry_run: bool, resume: Path | None,
+        no_progress_bar: bool) -> None:
 
     '''
     Validate, compile, and run a YAML experiment file.
@@ -219,6 +222,7 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
       limen run --dry-run experiment.yaml
       limen run manifest://sha256:abc123ef...
       limen run --resume ./results/my_experiment_20260521_120000
+      limen run --no-progress-bar experiment.yaml
     '''
 
     if resume is not None:
@@ -230,14 +234,15 @@ def run(target: str | None, dry_run: bool, resume: Path | None) -> None:
             raise SystemExit(1)
         from limen.cli.commands.resume import run_resume
 
-        ok = run_resume(resume)
+        ok = run_resume(resume, progress_bar=not no_progress_bar)
     elif target is not None:
         from limen.cli.commands.run import run_experiment
 
         yaml_path, manifest_id, results_base = _resolve_target(target)
         if yaml_path is None:
             raise SystemExit(1)
-        ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id, results_base=results_base)
+        ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id,
+                            results_base=results_base, progress_bar=not no_progress_bar)
     else:
         click.secho('Provide a YAML file or --resume <results-dir>.', fg='red')
         raise SystemExit(1)

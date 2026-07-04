@@ -16,7 +16,8 @@ from limen.yaml.compiler import build_search_strategy
 def run_experiment(yaml_path: Path,
                    dry_run: bool = False,
                    manifest_id: str | None = None,
-                   results_base: Path = Path('.')) -> bool:
+                   results_base: Path = Path('.'),
+                   progress_bar: bool = True) -> bool:
 
     '''
     Validate, compile, and execute a YAML experiment file.
@@ -28,6 +29,7 @@ def run_experiment(yaml_path: Path,
             Changes results directory layout and YAML copy filename
         results_base (Path): Base directory for results output. Defaults to cwd.
             Pass the project root when running a committed manifest URI.
+        progress_bar (bool): Whether to render the experiment progress bar
 
     Returns:
         bool: True on success, False on validation failure
@@ -90,6 +92,7 @@ def run_experiment(yaml_path: Path,
             experiment_name=experiment_name,
             n_permutations=n_permutations,
             prep_each_round=prep_each_round,
+            progress_bar=progress_bar,
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')

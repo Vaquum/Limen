@@ -10,7 +10,7 @@ from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
 
 
-def run_resume(results_dir: Path) -> bool:
+def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
 
     '''
     Resume an experiment from a checkpoint directory.
@@ -22,6 +22,7 @@ def run_resume(results_dir: Path) -> bool:
     Args:
         results_dir (Path): Path to the experiment results directory containing
             metadata.json and checkpoint.json
+        progress_bar (bool): Whether to render the experiment progress bar
 
     Returns:
         bool: True on success, False on failure
@@ -69,6 +70,7 @@ def run_resume(results_dir: Path) -> bool:
             n_permutations=target_permutations,
             prep_each_round=prep_each_round,
             resume=True,
+            progress_bar=progress_bar,
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')

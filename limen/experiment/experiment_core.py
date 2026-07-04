@@ -138,7 +138,8 @@ class UniversalExperimentLoop:
             prep: Callable | None = None,
             model: Callable | None = None,
             resume: bool = False,
-            post_processing: bool = False) -> None:
+            post_processing: bool = False,
+            progress_bar: bool = True) -> None:
 
         '''
         Run the experiment `n_permutations` times.
@@ -160,6 +161,7 @@ class UniversalExperimentLoop:
             model (Callable | None): Callable to run the model
             resume (bool): Whether to resume from an existing checkpoint
             post_processing (bool): Whether to compute terminal post-run metrics
+            progress_bar (bool): Whether to render the experiment progress bar
 
         '''
 
@@ -184,6 +186,7 @@ class UniversalExperimentLoop:
                 context_params=context_params,
                 resume=resume,
                 post_processing=post_processing,
+                progress_bar=progress_bar,
             )
             return
 
@@ -231,7 +234,7 @@ class UniversalExperimentLoop:
         data_dict: dict[str, Any] = {}
         _pending_csv_rows: list[dict] = []
 
-        for i in tqdm(range(n_permutations)):
+        for i in tqdm(range(n_permutations), disable=not progress_bar):
 
             # Start counting execution_time
             start_time = time.time()
@@ -419,7 +422,8 @@ class UniversalExperimentLoop:
                       n_permutations: int,
                       context_params: dict | None,
                       resume: bool,
-                      post_processing: bool = False) -> None:
+                      post_processing: bool = False,
+                      progress_bar: bool = True) -> None:
 
         '''
         Run the experiment using the Mutable-Search-Queue based execution flow.
@@ -435,6 +439,7 @@ class UniversalExperimentLoop:
             context_params (dict | None): Static parameters merged into each round
             resume (bool): Whether to resume from an existing checkpoint
             post_processing (bool): Whether to compute terminal post-run metrics
+            progress_bar (bool): Whether to render the experiment progress bar
 
         '''
 
@@ -488,7 +493,8 @@ class UniversalExperimentLoop:
 
         _pending_csv_rows: list[dict] = []
 
-        for round_params in tqdm(msq, initial=start_round, desc=experiment_name):
+        for round_params in tqdm(msq, initial=start_round, desc=experiment_name,
+                                 disable=not progress_bar):
             current_round = round_params['_round_index']
             current_hash = round_params['_id']
 
