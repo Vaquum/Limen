@@ -1202,3 +1202,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.6 on 4th of July, 2026
 
 - Make `macd`, `macdfix`, and `macdext` LazyFrame-compatible by computing through an expression-level `map_batches` struct instead of eager subscripting, so the macd family works in the ML feature pipeline like the other indicators; outputs are bit-identical to the previous eager implementation (#558).
+
+## v4.1.7 on 4th of July, 2026
+
+- Guard `RiskRewardRatioTarget` and `ExitQualityTarget` with an explicit `ValueError` naming the missing user-supplied columns (`capturable_breakout`/`max_drawdown`, `exit_reason`/`exit_net_return`) instead of failing with a low-level missing-column error, and document in `docs/Targets.md` that no Limen indicator or feature produces these columns (#559).

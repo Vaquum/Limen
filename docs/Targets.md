@@ -311,7 +311,7 @@ A bar is null during the volatility warmup (`min_periods`), when its volatility 
 RiskRewardRatioTarget(train_data, target_name)
 ```
 
-Computes `capturable_breakout / (|max_drawdown| + 0.001)` per row. Expects both columns to be available on every split. No fitting step.
+Computes `capturable_breakout / (|max_drawdown| + 0.001)` per row. Expects both columns to be available on every split. No fitting step. No Limen indicator or feature produces `capturable_breakout` or `max_drawdown` — they must be user-supplied in the input data, and `transform` raises `ValueError` when they are absent.
 
 ```python-fragment
 .with_target_label('rr_ratio', RiskRewardRatioTarget)
@@ -325,7 +325,7 @@ No parameters.
 ExitQualityTarget(train_data, target_name)
 ```
 
-Scores closed trades as high, low, or medium based on `exit_reason` and `exit_net_return`. Expects both columns to be available on every split. No fitting step.
+Scores closed trades as high, low, or medium based on `exit_reason` and `exit_net_return`. Expects both columns to be available on every split. No fitting step. No Limen indicator or feature produces `exit_reason` or `exit_net_return` — they must be user-supplied in the input data, and `transform` raises `ValueError` when they are absent.
 
 ```python-fragment
 .with_target_label(
