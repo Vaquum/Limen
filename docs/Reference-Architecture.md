@@ -49,7 +49,7 @@ Models consume the subset of keys they need from the standard Limen shape.
 
 | Class | Task shape | Deterministic | Notes |
 |---|---|---|---|
-| `LogRegBinary` | binary classification | yes | sklearn logistic regression wrapper; manifest wrapper exposes constructor params |
+| `LogRegBinary` | binary classification | no | sklearn logistic regression wrapper; manifest wrapper exposes constructor params; solver refits are not bit-reproducible across BLAS builds and thread counts, so Trainer validates with relative tolerance |
 | `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
 | `XGBoostRegressor` | regression | no | requires `xgboost` |
@@ -167,7 +167,7 @@ The class-based layer matters even when daily work touches foundational SFDs:
 
 On a live local logreg trainer run in this repo:
 
-- deterministic validation passed with no mismatches
+- relative-tolerance validation passed with no mismatches
 - `Sensor.predict()` returned `_preds` and `_probs`
 - the promoted sensor produced predictions for `884` test bars
 
