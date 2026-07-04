@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: xgboost_regressor_experiment
-  limen_version: "4.1.4"
+  limen_version: "4.1.5"
   mode: development
   description: XGBoost regressor predicting next-period return with feature perturbation
 
