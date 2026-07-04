@@ -165,21 +165,30 @@ def macdext(
     if signal_ma_type < 0 or signal_ma_type > CMP_N_8:
         raise ValueError('macdext signal_ma_type must be between 0 and 8')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    macd_values, signal_values, hist_values = _macdext_from_values(
-        values,
-        fast_period,
-        fast_ma_type,
-        slow_period,
-        slow_ma_type,
-        signal_period,
-        signal_ma_type,
-    )
+    def _macdext_struct(series: pl.Series) -> pl.Series:
+        values = series.to_numpy().astype(float, copy=False)
+        macd_values, signal_values, hist_values = _macdext_from_values(
+            values,
+            fast_period,
+            fast_ma_type,
+            slow_period,
+            slow_ma_type,
+            signal_period,
+            signal_ma_type,
+        )
+        return pl.DataFrame({
+            'macdext': macd_values,
+            'macdext_signal': signal_values,
+            'macdext_hist': hist_values,
+        }).to_struct('__macdext_struct')
 
-    return data.with_columns(
-        [
-            pl.Series(name='macdext', values=macd_values),
-            pl.Series(name='macdext_signal', values=signal_values),
-            pl.Series(name='macdext_hist', values=hist_values),
-        ]
-    )
+    macdext_expr = pl.col(price_col).map_batches(
+        _macdext_struct,
+        return_dtype=pl.Struct({
+            'macdext': pl.Float64,
+            'macdext_signal': pl.Float64,
+            'macdext_hist': pl.Float64,
+        }),
+    ).alias('__macdext_struct')
+
+    return data.with_columns(macdext_expr).unnest('__macdext_struct')

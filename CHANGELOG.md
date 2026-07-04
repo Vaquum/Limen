@@ -1198,3 +1198,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.5 on 4th of July, 2026
 
 - Dedupe `price_data_for_backtest` on `datetime` before the test-row alignment join so ML backtests no longer crash with a numpy broadcast error on bar sources with duplicate timestamps, such as dollar bars (#557).
+
+## v4.1.6 on 4th of July, 2026
+
+- Make `macd`, `macdfix`, and `macdext` LazyFrame-compatible by computing through an expression-level `map_batches` struct instead of eager subscripting, so the macd family works in the ML feature pipeline like the other indicators; outputs are bit-identical to the previous eager implementation (#558).
