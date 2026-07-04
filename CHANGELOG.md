@@ -1214,3 +1214,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.1.9 on 4th of July, 2026
 
 - Add `progress_bar` input argument to `UniversalExperimentLoop.run` (on by default) and a `--no-progress-bar` flag to `limen run` (including `--resume`), and remove the two post-processing progress bars from `Log.experiment_confusion_metrics` and `Log.experiment_backtest_results` entirely, so an experiment renders exactly one controllable progress bar (#152).
+
+## v4.1.10 on 4th of July, 2026
+
+- Add canonical glossary and end-to-end YAML workflow docs, route them through the docs site, document causal seasonality baselines for custom SFD authors, and remove stale live-local wording from the SFD, advanced-search, and reducer docs (#633).

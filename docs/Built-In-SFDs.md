@@ -54,7 +54,7 @@ The classifier parameter surface mirrors the sklearn `LogisticRegression` constr
 
 The calibration search space includes `use_calibration`, `use_threshold`, `cal_method`, `threshold_min`, `threshold_max`, and `threshold_step`, creating a grid of calibration modes within a single experiment run.
 
-On a live local smoke run over the bundled test dataset in this repo, it prepared:
+In the bundled smoke path, it prepared:
 
 - `24` training features
 - `3610` training rows
@@ -82,7 +82,7 @@ This SFD keeps the line-context family live-safe by setting `include_research_on
 
 `random_binary` is the baseline binary classifier. It is stochastic and intended for control runs, smoke tests, and low-skill comparison points.
 
-On a live local smoke run in this repo, it prepared:
+In the bundled smoke path, it prepared:
 
 - `18` training features
 - `2999` training rows
@@ -95,7 +95,7 @@ Because it is stochastic, it is a poor fit for deterministic reconstruction in [
 
 Use this SFD for continuous targets rather than binary targets.
 
-On a live local smoke run in this repo, it prepared:
+In the bundled smoke path, it prepared:
 
 - `49` training features
 - `3615` training rows
@@ -108,7 +108,7 @@ It requires `xgboost`.
 
 It uses `CalibrationBuilder` with the same probability calibration and threshold optimisation wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.
 
-That optional status matters at import time and in local documentation examples. In a live local smoke pass in this repo, it was unavailable because `tabpfn` was not installed.
+That optional status matters at import time and in local documentation examples. In the bundled smoke path, it was unavailable because `tabpfn` was not installed.
 
 ## Running one immediately
 

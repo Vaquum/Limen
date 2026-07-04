@@ -27,11 +27,16 @@ Before opening or updating a Limen PR:
 
 ## Contributor workflow
 
-1. Understand the affected subsystem and read the canonical page for it.
-2. Make the code change, doc change, or release metadata change together when they belong together.
-3. Run the relevant validation locally.
-4. Review the full GitHub diff before requesting review.
-5. Confirm the PR template items are true, not just checked.
+1. Start with data: confirm whether the task uses bundled YAML templates, direct `HistoricalData`, or an external OHLC-compatible source.
+2. Confirm the signal layer: read the relevant [Indicators](../Indicators.md), [Features](../Features.md), [Transforms](../Transforms.md), and [Scalers](../Scalers.md) pages before changing prep.
+3. Confirm prep semantics: preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations.
+4. Confirm the target: read [Targets](../Targets.md) and make sure fitting happens only on the training split when the target learns thresholds.
+5. Confirm hyperparameters: route search-space changes through the manifest/YAML params surface unless the task is Python-extension-only.
+6. Train through the current run surface: prefer YAML plus CLI for operator-facing work, and direct UEL only for Python extension or test work.
+7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
+8. Make code, docs, tests, changelog, and version changes together when they belong together.
+9. Review the full GitHub diff before requesting review.
+10. Confirm the PR template items are true, not just checked.
 
 Canonical bootstrap:
 
@@ -81,6 +86,8 @@ Limen does not define a tox, nox, or Makefile contract; these direct commands ar
 ## Read next
 
 - [Documentation System Contract](Documentation-System.md)
+- [End-to-End Workflow](../End-to-End-Workflow.md)
+- [Glossary](../Glossary.md)
 - [Pruning Strategies](Pruning-Strategies.md)
 - [Writing Docstrings](Writing-Docstrings.md)
 - [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md)

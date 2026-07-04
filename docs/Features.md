@@ -139,6 +139,8 @@ These helpers describe the quality of recent movement, not just its level.
 
 These helpers compare current bar behavior to the trailing mean for the same hour of the week.
 
+Custom SFD authors must keep seasonality baselines causal. Split-wide normalization such as `.mean().over(['season_weekday', 'season_hour'])`, or any full-split hour-of-week baseline computed in one pass, leaks future information within the split. Use trailing-only or train-fitted seasonality baselines instead. The built-in `relative_volume_seasonality`, `relative_range_seasonality`, and `relative_volatility_seasonality` helpers use trailing hour-of-week baselines.
+
 | Function | Adds by default | Notes |
 |---|---|---|
 | `relative_volume_seasonality` | `relative_volume_seasonality` | Current volume relative to the trailing baseline for the same hour-of-week bucket. |

@@ -13,17 +13,17 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ### New to Limen
 
 1. Read the [product home page](../README.md)
-2. Run the YAML workflow in [Command Line Interface](Command-Line-Interface.md)
+2. Run the [End-to-End Workflow](End-to-End-Workflow.md)
 3. Learn the manifest contract in [Experiment Manifest](Experiment-Manifest.md)
 4. Learn how data enters Limen in [Historical Data](Historical-Data.md)
 5. Review outcomes in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
 6. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the engine beneath CLI
-7. Use [Single-File Decoder](Single-File-Decoder.md) and [Built-In SFDs](Built-In-SFDs.md) for Python extension work
+7. Use [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), and [Glossary](Glossary.md) for Python extension work
 
 ### Author experiments
 
 1. Start with [Experiment Manifest](Experiment-Manifest.md)
-2. Run manifests through [Command Line Interface](Command-Line-Interface.md)
+2. Run manifests through [End-to-End Workflow](End-to-End-Workflow.md) and [Command Line Interface](Command-Line-Interface.md)
 3. Review the shipped decoder patterns in [Built-In SFDs](Built-In-SFDs.md)
 4. Use [Single-File Decoder](Single-File-Decoder.md) for custom Python experiment modules
 5. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
@@ -70,8 +70,8 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ## Docs map
 
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md)
-- `Guides`: [Command Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
-- `Reference`: [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
+- `Guides`: [End-to-End Workflow](End-to-End-Workflow.md), [Command Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
+- `Reference`: [Glossary](Glossary.md), [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
 - `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Semantic Versioning](Semantic-Versioning.md), [Technical Debt](TechnicalDebt.md), [Audit Closeout](Audit-Closeout.md)
 - `Packages`: package `README`s under `/limen` for `data`, `experiment`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`
 
@@ -96,7 +96,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 ## Read next
 
-- For a first real run, continue to [Command Line Interface](Command-Line-Interface.md), then [Experiment Manifest](Experiment-Manifest.md)
+- For a first real run, continue to [End-to-End Workflow](End-to-End-Workflow.md), then [Command Line Interface](Command-Line-Interface.md)
 - For architecture and system boundaries, continue to [Trainer](Trainer.md) and [Cohort](Cohort.md)
 - For the extension layer, continue to [Built-In SFDs](Built-In-SFDs.md), [Reference Architecture](Reference-Architecture.md), and [Advanced Search](Advanced-Search.md)
 - For contributor work, continue to [Developer Guidelines](Developer/README.md)
