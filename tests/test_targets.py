@@ -387,6 +387,22 @@ def test_risk_reward_ratio_target_uses_absolute_drawdown_with_epsilon_guard() ->
     assert 'max_drawdown' not in result.columns
 
 
+def test_exit_quality_target_rejects_missing_required_columns() -> None:
+    data = pl.DataFrame({'close': [1.0, 2.0]})
+    t = ExitQualityTarget(data, 'exit_quality')
+
+    with pytest.raises(ValueError, match='ExitQualityTarget requires user-supplied columns'):
+        t.transform(data)
+
+
+def test_risk_reward_ratio_target_rejects_missing_required_columns() -> None:
+    data = pl.DataFrame({'capturable_breakout': [0.5]})
+    t = RiskRewardRatioTarget(data, 'risk_reward_ratio')
+
+    with pytest.raises(ValueError, match="missing from data: \\['max_drawdown'\\]"):
+        t.transform(data)
+
+
 def _triple_barrier_close() -> list[float]:
     return [100.0, 101.0, 100.0, 101.0, 100.0]
 

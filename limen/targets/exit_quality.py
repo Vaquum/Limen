@@ -1,5 +1,7 @@
 import polars as pl
 
+_REQUIRED_COLUMNS = ('exit_reason', 'exit_net_return')
+
 
 class ExitQualityTarget:
 
@@ -35,7 +37,18 @@ class ExitQualityTarget:
 
         Returns:
             pl.DataFrame: Data with target column added
+
+        Raises:
+            ValueError: If the required user-supplied columns are absent
         '''
+
+        missing = [c for c in _REQUIRED_COLUMNS if c not in data.columns]
+        if missing:
+            raise ValueError(
+                f"ExitQualityTarget requires user-supplied columns missing "
+                f"from data: {missing}. No Limen indicator or feature produces "
+                f"them; they must be present in the input data."
+            )
 
         return data.with_columns(
             pl.when((pl.col('exit_reason').is_in(['target_hit', 'trailing_stop'])) & (pl.col('exit_net_return') > 0))

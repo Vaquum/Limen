@@ -2,6 +2,7 @@ import polars as pl
 
 
 EPSILON = 0.001
+_REQUIRED_COLUMNS = ('capturable_breakout', 'max_drawdown')
 
 
 class RiskRewardRatioTarget:
@@ -30,7 +31,18 @@ class RiskRewardRatioTarget:
 
         Returns:
             pl.DataFrame: Data with target column added
+
+        Raises:
+            ValueError: If the required user-supplied columns are absent
         '''
+
+        missing = [c for c in _REQUIRED_COLUMNS if c not in data.columns]
+        if missing:
+            raise ValueError(
+                f"RiskRewardRatioTarget requires user-supplied columns missing "
+                f"from data: {missing}. No Limen indicator or feature produces "
+                f"them; they must be present in the input data."
+            )
 
         return data.with_columns(
             (pl.col('capturable_breakout') / (pl.col('max_drawdown').abs() + EPSILON))
