@@ -543,14 +543,14 @@ def test_trainer_yaml_reconstruction_error_tampered_log() -> None:
             _train_e2e(exp_dir, [round_ids[0]])
 
 
-def test_trainer_yaml_deterministic_validation() -> None:
+def test_trainer_yaml_logreg_stochastic_validation() -> None:
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
         round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
         _, sensors = _train_e2e(exp_dir, [round_ids[0]])
         assert len(sensors) == 1
-        assert sensors[0]._model.deterministic is True
+        assert sensors[0]._model.deterministic is False
 
 
 def test_trainer_yaml_sensor_inference() -> None:
