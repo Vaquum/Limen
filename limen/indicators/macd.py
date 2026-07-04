@@ -80,18 +80,27 @@ def macd(
     if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('macd signal_period must be between 1 and 100000')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    macd_values, signal_values, hist_values = _macd_from_values(
-        values,
-        fast_period,
-        slow_period,
-        signal_period,
-    )
+    def _macd_struct(series: pl.Series) -> pl.Series:
+        values = series.to_numpy().astype(float, copy=False)
+        macd_values, signal_values, hist_values = _macd_from_values(
+            values,
+            fast_period,
+            slow_period,
+            signal_period,
+        )
+        return pl.DataFrame({
+            MACD_COL: macd_values,
+            MACD_SIGNAL_COL: signal_values,
+            MACD_HIST_COL: hist_values,
+        }).to_struct('__macd_struct')
 
-    return data.with_columns(
-        [
-            pl.Series(name=MACD_COL, values=macd_values),
-            pl.Series(name=MACD_SIGNAL_COL, values=signal_values),
-            pl.Series(name=MACD_HIST_COL, values=hist_values),
-        ]
-    )
+    macd_expr = pl.col(price_col).map_batches(
+        _macd_struct,
+        return_dtype=pl.Struct({
+            MACD_COL: pl.Float64,
+            MACD_SIGNAL_COL: pl.Float64,
+            MACD_HIST_COL: pl.Float64,
+        }),
+    ).alias('__macd_struct')
+
+    return data.with_columns(macd_expr).unnest('__macd_struct')

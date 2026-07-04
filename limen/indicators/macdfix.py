@@ -83,13 +83,22 @@ def macdfix(
     if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('macdfix signal_period must be between 1 and 100000')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    macd_values, signal_values, hist_values = _macdfix_from_values(values, signal_period)
+    def _macdfix_struct(series: pl.Series) -> pl.Series:
+        values = series.to_numpy().astype(float, copy=False)
+        macd_values, signal_values, hist_values = _macdfix_from_values(values, signal_period)
+        return pl.DataFrame({
+            MACDFIX_COL: macd_values,
+            MACDFIX_SIGNAL_COL: signal_values,
+            MACDFIX_HIST_COL: hist_values,
+        }).to_struct('__macdfix_struct')
 
-    return data.with_columns(
-        [
-            pl.Series(name=MACDFIX_COL, values=macd_values),
-            pl.Series(name=MACDFIX_SIGNAL_COL, values=signal_values),
-            pl.Series(name=MACDFIX_HIST_COL, values=hist_values),
-        ]
-    )
+    macdfix_expr = pl.col(price_col).map_batches(
+        _macdfix_struct,
+        return_dtype=pl.Struct({
+            MACDFIX_COL: pl.Float64,
+            MACDFIX_SIGNAL_COL: pl.Float64,
+            MACDFIX_HIST_COL: pl.Float64,
+        }),
+    ).alias('__macdfix_struct')
+
+    return data.with_columns(macdfix_expr).unnest('__macdfix_struct')
