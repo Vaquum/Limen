@@ -1,8 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const TRACKED_ADVISORIES = new Set([
-  'https://github.com/advisories/GHSA-h67p-54hq-rp68',
-]);
+const TRACKED_ADVISORIES = new Set([]);
 
 const result = spawnSync('npm', ['audit', '--omit=dev', '--json'], {
   cwd: process.cwd(),
