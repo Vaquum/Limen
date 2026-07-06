@@ -53,7 +53,7 @@ Models consume the subset of keys they need from the standard Limen shape.
 | `LogRegBinary` | binary classification | no | sklearn logistic regression wrapper; manifest wrapper exposes constructor params; solver refits are not bit-reproducible across BLAS builds and thread counts, so Trainer validates with relative tolerance |
 | `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
-| `XGBoostRegressor` | regression | yes | requires `xgboost`; training is bit-reproducible for a fixed `random_state` on a fixed environment (verified byte-identical predictions across processes and thread counts), so Trainer validates with exact-match tolerance |
+| `XGBoostRegressor` | regression | yes | requires `xgboost`; training is bit-reproducible for a fixed `random_state` on a fixed environment (verified byte-identical predictions across processes and thread counts), so Trainer validates with its near-exact deterministic tolerance |
 | `DLinearRegressor` | regression | yes | canonical DLinear semantics; closed-form SVD ridge fit, no seed; requires `scipy` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |
 | `RuleBasedStrategy` | rule-based long/flat | yes | no training step; boolean predicate logic |
