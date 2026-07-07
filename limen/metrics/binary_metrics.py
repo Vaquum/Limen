@@ -31,8 +31,8 @@ def binary_metrics(data: dict, preds: list, probs: list) -> dict:
     auc = (float('nan') if np.unique(y_test).size < _BINARY_CLASS_COUNT
            else round(cast(float, roc_auc_score(y_test, probs)), 3))
 
-    round_results = {'recall': round(cast(float, recall_score(y_test, preds, zero_division=cast(Any, 0.0))), 3),
-                     'precision': round(cast(float, precision_score(y_test, preds, zero_division=cast(Any, 0.0))), 3),
+    round_results = {'recall': round(cast(float, recall_score(y_test, preds, zero_division=cast(Any, 0))), 3),
+                     'precision': round(cast(float, precision_score(y_test, preds, zero_division=cast(Any, 0))), 3),
                      'fpr': fpr,
                      'auc': auc,
                      'accuracy': round(accuracy_score(y_test, preds), 3)}
