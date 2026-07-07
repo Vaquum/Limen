@@ -189,7 +189,7 @@ def _permutation_confusion_metrics(self: Any,
 
         sp = sqrt(sp_num / sp_den) if sp_num > 0 else np.nan
 
-        return (ma - mb) / sp if sp and not np.isnan(sp) else np.nan
+        return float((ma - mb) / sp) if sp and not np.isnan(sp) else np.nan
 
     def _ks(a: np.ndarray, b: np.ndarray) -> float:
 
