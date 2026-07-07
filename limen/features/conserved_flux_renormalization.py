@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import cast
+
 import polars as pl
 import numpy as np
 
@@ -74,7 +77,7 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
         rms_flux = float(np.sqrt(((flux_vec - ideal_f) ** 2).mean()))
         rms_ent  = float(np.sqrt(((ent_vec  - ideal_e) ** 2).mean()))
 
-        ts_ms = int(g['datetime'].min().timestamp() * 1_000)
+        ts_ms = int(cast(datetime, g['datetime'].min()).timestamp() * 1_000)
         bucket = (ts_ms // bucket_ms) * bucket_ms
 
         return pl.DataFrame(
@@ -119,7 +122,7 @@ def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: i
         flux_mean = bins['flux'].mean()
         if flux_mean == 0.0 or flux_mean is None:
             continue
-        rel_std.append(float(bins['flux'].std(ddof=0) / flux_mean))
-        ent.append(float(bins['entropy'].mean()))
+        rel_std.append(float(cast(float, bins['flux'].std(ddof=0)) / cast(float, flux_mean)))
+        ent.append(float(cast(float, bins['entropy'].mean())))
 
     return np.array(rel_std), np.array(ent)

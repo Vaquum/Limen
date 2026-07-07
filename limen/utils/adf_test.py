@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import polars as pl
@@ -48,7 +49,10 @@ def adf_test(series: pl.Series,
     from statsmodels.tsa.stattools import adfuller
 
     try:
-        result = adfuller(values, autolag='AIC')
+        result = cast(
+            tuple[float, float, int, int, dict[str, float], float],
+            adfuller(values, autolag='AIC'),
+        )
     except (ValueError, np.linalg.LinAlgError):
         return _INCONCLUSIVE
 

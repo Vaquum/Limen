@@ -1,3 +1,5 @@
+from typing import cast
+
 import polars as pl
 
 from limen.data import HistoricalData
@@ -35,7 +37,7 @@ def params():
 
 def manifest() -> Manifest:
 
-    return (
+    base = (
         MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
@@ -77,6 +79,9 @@ def manifest() -> Manifest:
             'stoch_k',
         ], lag=1)
         .with_target_label('next_return', NextReturnTarget)
+    )
+    return (
+        cast(MLManifest, base)
         .set_strict_mode(True)
         .with_reference_architecture(xgboost_regressor)
     )

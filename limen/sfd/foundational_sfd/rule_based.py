@@ -1,3 +1,5 @@
+from typing import cast
+
 from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.experiment import RuleBasedManifest
@@ -42,7 +44,7 @@ def params() -> dict:
 
 def manifest() -> Manifest:
 
-    return (RuleBasedManifest()
+    base = (RuleBasedManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -54,6 +56,8 @@ def manifest() -> Manifest:
         .set_split_config(8, 1, 2)
         .add_indicator(wilder_rsi, period='rsi_period', group='momentum')
         .add_indicator(ema, period='ema_period', group='trend')
+    )
+    return (cast(RuleBasedManifest, base)
         .with_strategy(_CONDITIONS, entry='entry')
         .with_reference_architecture(rule_based)
     )

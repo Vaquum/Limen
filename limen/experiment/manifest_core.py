@@ -10,7 +10,7 @@ from datetime import date
 from itertools import pairwise
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
@@ -29,6 +29,8 @@ from limen.experiment.errors import StrictModeError
 from limen.scalers.robust_scaler import RobustScaler
 from limen.scalers.registry import SCALER_REGISTRY
 logger = logging.getLogger(__name__)
+
+_TManifest = TypeVar('_TManifest', bound='Manifest')
 
 ParamValue = Any | Callable[[dict[str, Any]], Any]
 PipelineStep = tuple[Callable[..., pl.DataFrame], dict[str, ParamValue]]
@@ -69,7 +71,7 @@ class PCACompressionConfig:
 
 FittedTransformEntry = tuple[
     list[FittedParamsComputationEntry],
-    Callable[..., pl.LazyFrame],
+    Callable[..., pl.DataFrame],
     dict[str, ParamValue]
 ]
 
@@ -209,10 +211,11 @@ class DataSourceResolver:
         method = config.method
         params = config.params
 
-        if inspect.ismethod(method) or (hasattr(method, '__self__') and method.__self__ is not None):
+        bound_self = getattr(method, '__self__', None)
+        if inspect.ismethod(method) or bound_self is not None:
             result = method(**params)
-            if hasattr(method.__self__, 'data'):
-                return method.__self__.data
+            if bound_self is not None and hasattr(bound_self, 'data'):
+                return bound_self.data
             return result
 
         if inspect.isfunction(method):
@@ -254,20 +257,20 @@ class Manifest:
 
     '''Base manifest with shared data pipeline configuration for Loop experiments.'''
 
-    data_source_config: DataSourceConfig = None
-    test_data_source_config: DataSourceConfig = None
-    pre_split_data_selector: PipelineStep = None
+    data_source_config: DataSourceConfig | None = None
+    test_data_source_config: DataSourceConfig | None = None
+    pre_split_data_selector: PipelineStep | None = None
     split_config: tuple[int, int, int] = (8, 1, 2)
     split_dates: tuple | None = None
     val_predict_guard: bool = True
     test_predict_guard: bool = True
-    bar_formation: PipelineStep = None
+    bar_formation: PipelineStep | None = None
     required_bar_columns: list[str] = field(default_factory=list)
     feature_transforms: list[TransformEntry] = field(default_factory=list)
     target_column: str | None = None
     target_class_config: TargetClassConfig | None = None
 
-    architecture_function: Callable = None
+    architecture_function: Callable | None = None
     architecture_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
     backtest_config: BacktestConfig | None = None
@@ -601,7 +604,7 @@ class Manifest:
         )
         return self
 
-    def with_reference_architecture(self, architecture_function: Callable) -> 'Manifest':
+    def with_reference_architecture(self: _TManifest, architecture_function: Callable) -> _TManifest:
 
         '''
         Configure reference architecture function for training and evaluation.
@@ -838,7 +841,7 @@ class Manifest:
                     isinstance(value, bool)
                     or not isinstance(value, numbers.Real)
                     or not math.isfinite(value)
-                    or not 0 < value <= 1
+                    or not 0 < float(value) <= 1
                 ):
                     raise ValueError(
                         f"Manifest backtest notional_rate must be in (0, 1], got {value!r}"
@@ -877,6 +880,8 @@ class Manifest:
 
         model_kwargs = self.resolve_model_kwargs(round_params)
         self._apply_backtest_cost(data, round_params)
+        if self.architecture_function is None:
+            raise ValueError('Manifest run_model requires a configured architecture_function')
         return self.architecture_function(data, **model_kwargs)
 
 
@@ -885,10 +890,10 @@ class MLManifest(Manifest):
 
     '''Manifest for ML pipelines with scaler, ablation, and calibration support.'''
 
-    scaler: FittedTransformEntry = None
+    scaler: FittedTransformEntry | None = None
     ablation_config: AblationConfig | None = None
     pca_compression_config: PCACompressionConfig | None = None
-    data_dict_extension: Callable = None
+    data_dict_extension: Callable | None = None
     prediction_calibration_config: CalibrationConfig | None = None
     decoder_lookback: int = 1
     strict_mode: bool = False
@@ -1192,6 +1197,8 @@ class MLManifest(Manifest):
         '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
+        if self.architecture_function is None:
+            raise ValueError('MLManifest run_model requires a configured architecture_function')
         if self.prediction_calibration_config is not None:
             use_calibration = round_params.get('use_calibration', True)
             use_threshold = round_params.get('use_threshold', True)
@@ -1599,7 +1606,7 @@ def _apply_sensor_pca(
 
 def _apply_feature_ablation(
         data: pl.DataFrame,
-        manifest: Manifest,
+        manifest: 'MLManifest',
         round_params: dict[str, Any],
         columns_to_drop: list[str] | None,
         pre_transform_columns: frozenset[str],
@@ -1613,6 +1620,8 @@ def _apply_feature_ablation(
     '''
 
     config = manifest.ablation_config
+    if config is None:
+        raise ValueError('_apply_feature_ablation manifest has no ablation_config')
 
     raw_drop_count = round_params.get(config.drop_count_key)
     drop_count = 0 if raw_drop_count is None else raw_drop_count
@@ -1726,6 +1735,8 @@ def _apply_class_based_target(
     '''
 
     config = manifest.target_class_config
+    if config is None:
+        raise ValueError('_apply_class_based_target manifest has no target_class_config')
     target_name = manifest.target_column
     instance_key = f'_target_cls_{target_name}'
 
@@ -1751,7 +1762,7 @@ def _apply_class_based_target(
 
 
 def _apply_scaler(
-        manifest: Manifest,
+        manifest: 'MLManifest',
         data: pl.DataFrame,
         round_params: dict[str, Any],
         all_fitted_params: dict[str, Any],
@@ -2048,6 +2059,8 @@ def _finalize_rule_based_data(
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
 
     config = manifest.strategy
+    if config is None:
+        raise ValueError('_finalize_rule_based_data manifest has no strategy configured')
     predicate_conditions = [c for c in config.conditions if 'type' in c]
     predicate_ids = [c['id'] for c in predicate_conditions]
     predicate_exprs = [

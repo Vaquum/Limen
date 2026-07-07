@@ -35,4 +35,4 @@ def safe_ovr_auc(y_true: np.ndarray, probs: np.ndarray) -> float:
         column_index = _probability_column_index(c, present, probs.shape[1])
         if pos.any() and neg.any() and column_index is not None:
             aucs.append(roc_auc_score(pos, probs[:, column_index]))
-    return float('nan') if not aucs else np.mean(aucs)
+    return float('nan') if not aucs else float(np.mean(aucs))

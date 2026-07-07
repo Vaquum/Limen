@@ -48,7 +48,7 @@ def run_fork(ref: str, name: str | None, start: Path) -> bool:
 
     if name is None:
         default = _default_fork_name(parent_name, manifests_dir)
-        name = click.prompt('Name for the fork', default=default)
+        name = str(click.prompt('Name for the fork', default=default))
 
     if not _NAME_SLUG_RE.match(name):
         click.secho(

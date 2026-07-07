@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Any
 from typing import ClassVar
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -98,7 +99,7 @@ class Cohort:
         experiment_dir = (
             self._resolve_experiment_id(experiment_id)
             if experiment_id is not None
-            else Path(experiment_log_path).expanduser().resolve(strict=False)
+            else Path(cast(str, experiment_log_path)).expanduser().resolve(strict=False)
         )
 
         if not experiment_dir.exists() or not experiment_dir.is_dir():
@@ -369,7 +370,7 @@ class Cohort:
 
         blocking = [b for b in valid_bars if b.reason is not None]
         if blocking:
-            worst = max(blocking, key=lambda b: self._REASON_PRIORITY.get(b.reason or '', -1))
+            worst = max(blocking, key=lambda b: self._REASON_PRIORITY.get(b.reason, -1) if b.reason is not None else -1)
             return BarPrediction(datetime=dt, prediction=None, probability=None, reason=worst.reason)
 
         if self.aggregation_mode == 'probability_weighted':
@@ -388,7 +389,7 @@ class Cohort:
                 'Cohort majority_vote mode requires a numeric prediction from all members.'
             )
         threshold = self._fallback_vote_threshold()
-        votes = np.array([int(float(b.prediction) > threshold) for b in valid_bars])
+        votes = np.array([int(float(cast(float, b.prediction)) > threshold) for b in valid_bars])
         pred = int(np.mean(votes) > self._VOTE_THRESHOLD)
         return BarPrediction(datetime=dt, prediction=pred, probability=None, reason=None)
 
@@ -413,7 +414,7 @@ class Cohort:
 
 
     @staticmethod
-    def _normalize_permutation_id(pid: str) -> str:
+    def _normalize_permutation_id(pid: int | str) -> str:
 
         if not isinstance(pid, str):
             raise ValueError('Cohort permutation_ids entries must be str identifiers.')

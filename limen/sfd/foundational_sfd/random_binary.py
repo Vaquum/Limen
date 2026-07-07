@@ -1,3 +1,5 @@
+from typing import cast
+
 from limen.data import HistoricalData
 from limen.experiment import MLManifest
 from limen.experiment import Manifest
@@ -15,7 +17,7 @@ def params():
 
 
 def manifest() -> Manifest:
-    return (MLManifest()
+    base = (MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
@@ -30,6 +32,8 @@ def manifest() -> Manifest:
             'no_of_trades'
         ])
         .with_target_label('outcome', RandomBinaryTarget)
+    )
+    return (cast(MLManifest, base)
         .set_strict_mode(True)
         .with_reference_architecture(random_binary)
     )

@@ -1,4 +1,5 @@
 import math
+from typing import cast
 
 import polars as pl
 
@@ -165,4 +166,4 @@ class VolNormalizedReturnTarget:
         finite_ratios = [ratio for ratio in ratios if math.isfinite(ratio)]
         if not finite_ratios:
             return None
-        return float(pl.Series(finite_ratios).median())
+        return float(cast(float, pl.Series(finite_ratios).median()))

@@ -48,7 +48,8 @@ def _quantiles(values: pd.Series | np.ndarray | list[float], decimals: int = BPS
     arr = _finite_values(values)
     if arr.size == 0:
         return (np.nan, np.nan, np.nan)
-    return tuple(round(float(np.quantile(arr, q)), decimals) for q in (0.05, 0.50, 0.95))
+    p05, p50, p95 = (round(float(np.quantile(arr, q)), decimals) for q in (0.05, 0.50, 0.95))
+    return (p05, p50, p95)
 
 
 def _mean_bps(values: pd.Series) -> float:

@@ -1,3 +1,7 @@
+from typing import cast
+
+from limen.calibration import CalibratorProtocol
+from limen.calibration import ThresholdOptimizerProtocol
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.data import HistoricalData
@@ -75,7 +79,7 @@ def params() -> dict:
 
 def manifest() -> Manifest:
 
-    return (MLManifest()
+    base = (MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'}
@@ -122,7 +126,9 @@ def manifest() -> Manifest:
                 'confirmation_hours': 'confirmation_hours',
             },
         )
+    )
 
+    return (cast(MLManifest, base)
         .set_scaler_from_params('scaler_type')
         .set_feature_ablation()
         .set_strict_mode(True)
@@ -130,8 +136,8 @@ def manifest() -> Manifest:
         .with_reference_architecture(lightgbm_binary)
 
         .with_calibration()
-        .probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
-        .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric,
+        .probability_calibration(func=cast(CalibratorProtocol, sklearn_probability_calibrator), method='cal_method')
+        .threshold_function(func=cast(ThresholdOptimizerProtocol, grid_threshold_optimizer), metric=balanced_metric,
                             threshold_min='threshold_min',
                             threshold_max='threshold_max',
                             threshold_step='threshold_step')

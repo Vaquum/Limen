@@ -110,7 +110,7 @@ class ParamSpace:
             remaining_index //= size
         return combo
 
-    def generate(self, random_search: bool = True) -> dict:
+    def generate(self, random_search: bool = True) -> dict | None:
 
         '''
         Compute next parameter combination from the parameter space.

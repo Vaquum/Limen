@@ -157,11 +157,14 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     permutations = make_covering_array(params)
     result.sample_permutations_attempted = len(permutations)
 
+    from limen.experiment.manifest_core import MLManifest  # local to avoid circular import
+
     elapsed_times: list[float] = []
-    has_strict_mode = hasattr(manifest, 'strict_mode')
-    if has_strict_mode:
-        saved_strict_mode = manifest.strict_mode
-        manifest.strict_mode = False
+    saved_strict_mode = False
+    ml_manifest = manifest if isinstance(manifest, MLManifest) else None
+    if ml_manifest is not None:
+        saved_strict_mode = ml_manifest.strict_mode
+        ml_manifest.strict_mode = False
 
     log_capture = _LogCapture()
     manifest_logger = logging.getLogger(_MANIFEST_CORE_LOGGER)
@@ -180,8 +183,8 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
                     result.errors.append(_classify_error(exc))
     finally:
         manifest_logger.removeHandler(log_capture)
-        if has_strict_mode:
-            manifest.strict_mode = saved_strict_mode
+        if ml_manifest is not None:
+            ml_manifest.strict_mode = saved_strict_mode
 
     seen: set[str] = set()
     for msg in log_capture.records:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ def _experiment_parameter_correlation(self: Any,
                                    sort_key: str | None = None,
                                    sort_ascending: bool = False,
                                    heads: Sequence[float | int] | None = None,
-                                   method: str = 'spearman',
+                                   method: Literal['pearson', 'kendall', 'spearman'] = 'spearman',
                                    n_boot: int = 300,
                                    min_n: int = 10,
                                    random_state: int = 0) -> pd.DataFrame:
@@ -137,7 +137,7 @@ def _experiment_parameter_correlation(self: Any,
         lo = boot_df.quantile(0.025, axis=1)
         hi = boot_df.quantile(0.975, axis=1)
         median_sign = np.sign(med)
-        sign_stability = np.sign(boot_df).eq(median_sign, axis=0).mean(axis=1)
+        sign_stability = cast(pd.DataFrame, np.sign(boot_df)).eq(median_sign, axis=0).mean(axis=1)
 
         cohort_pct = round(100 * n / total_n)
         realized_pcts.append(cohort_pct)

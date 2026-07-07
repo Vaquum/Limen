@@ -1,4 +1,6 @@
 import re
+from typing import cast
+
 import polars as pl
 
 DEFAULT_SCALING_RULES = {
@@ -130,8 +132,8 @@ class LinearScaler:
             else:
                 continue
 
-            self.means[col] = mean
-            self.stds[col] = std
+            self.means[col] = cast(float, mean)
+            self.stds[col] = cast(float, std)
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 

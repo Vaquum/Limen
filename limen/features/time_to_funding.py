@@ -39,7 +39,10 @@ def time_to_funding(
         raise ValueError('time_to_funding interval_hours must divide 24')
 
     timestamp = pl.col(datetime_col)
-    if data.schema[datetime_col].time_zone is not None:
+    dtype = data.schema[datetime_col]
+    if not isinstance(dtype, pl.Datetime):
+        raise ValueError('time_to_funding datetime_col must be a Datetime column')
+    if dtype.time_zone is not None:
         timestamp = timestamp.dt.convert_time_zone('UTC')
 
     hour_of_day = (
