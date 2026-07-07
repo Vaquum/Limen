@@ -77,7 +77,7 @@ dev = [
   "pyroma>=5,<6",
   "pytest>=8,<10",
   "ruff>=0.8,<1",
-  "scipy-stubs>=1.15,<2",
+  "scipy-stubs>=1.15,<1.16",
   "tomli>=2.0,<3",
   "twine>=6,<7",
 ]

@@ -80,5 +80,5 @@ def test_pyright_gate_config() -> None:
     dev_extra = pyproject['project']['optional-dependencies']['dev']
     assert 'pandas-stubs>=2.3,<2.4' in dev_extra
     assert 'pyright>=1.1.408,<1.1.409' in dev_extra
-    assert 'scipy-stubs>=1.15,<2' in dev_extra
+    assert 'scipy-stubs>=1.15,<1.16' in dev_extra
     assert 'tomli>=2.0,<3' in dev_extra
