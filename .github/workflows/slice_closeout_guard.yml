@@ -1,11 +1,19 @@
 name: Slice Closeout Guard
 
+# Fill-then-verify: a slice issue closed by a merged PR gets its Done
+# Means evidence fields (Merge SHA, Merged PR number, required CI run
+# ids) written by this workflow and the close stands; a close with no
+# merged closing PR and no evidence is reopened with a comment naming
+# what is missing.
+
 on:
   issues:
     types: [closed]
 
 permissions:
   issues: write
+  pull-requests: read
+  checks: read
 
 jobs:
   slice_closeout_guard:
@@ -13,7 +21,99 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(github.event.issue.labels.*.name, 'slice')
     steps:
-      - id: closeout
+      - name: Resolve the closing PR
+        id: closing_pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          gh api graphql \
+            -f query='query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { issue(number: $number) { closedByPullRequestsReferences(first: 10, includeClosedPrs: true) { nodes { number merged mergeCommit { oid } headRefOid } } } } }' \
+            -F owner="${GITHUB_REPOSITORY%/*}" \
+            -F name="${GITHUB_REPOSITORY#*/}" \
+            -F number="$ISSUE_NUMBER" \
+            --jq '[.data.repository.issue.closedByPullRequestsReferences.nodes[] | select(.merged)] | last // empty | "pr_number=\(.number)\nmerge_sha=\(.mergeCommit.oid)\nhead_sha=\(.headRefOid)"' \
+            >> "$GITHUB_OUTPUT"
+      - name: Write closeout evidence from the merged closing PR
+        if: steps.closing_pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ steps.closing_pr.outputs.pr_number }}
+          MERGE_SHA: ${{ steps.closing_pr.outputs.merge_sha }}
+          HEAD_SHA: ${{ steps.closing_pr.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" \
+            --jq '[.[] | select(.type == "required_status_checks")] | .[0].parameters.required_status_checks[].context' \
+            > required_contexts.txt
+          gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/check-runs" \
+            --paginate --jq '.check_runs[] | "\(.name)\t\(.id)"' \
+            > check_runs.txt
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" --jq '.body' > issue_body.txt
+          python - <<'EOF'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          body = Path('issue_body.txt').read_text(encoding='utf-8')
+          required = [c for c in Path('required_contexts.txt').read_text(encoding='utf-8').splitlines() if c]
+          runs = []
+          for raw in Path('check_runs.txt').read_text(encoding='utf-8').splitlines():
+              if not raw:
+                  continue
+              name, run_id = raw.split('\t')
+              if name in required:
+                  runs.append(f'- {name} : {run_id}')
+          if not runs:
+              print('slice_closeout_guard: no required check runs found on the closing PR head commit', file=sys.stderr)
+              sys.exit(1)
+
+          matches = list(re.finditer(
+              r'^##+ Done Means\b.*?^##+ Author Checks\b',
+              body,
+              re.MULTILINE | re.DOTALL,
+          ))
+          if not matches:
+              print('slice_closeout_guard: no parseable Done Means closeout section', file=sys.stderr)
+              sys.exit(1)
+          start, end = matches[-1].span()
+          lines = matches[-1].group(0).split('\n')
+
+          out = []
+          found_sha = found_pr = found_runs = False
+          i = 0
+          while i < len(lines):
+              line = lines[i]
+              if line.startswith('Merge SHA:'):
+                  out.append(f"Merge SHA: {os.environ['MERGE_SHA']}")
+                  found_sha = True
+              elif line.startswith('Merged PR number:'):
+                  out.append(f"Merged PR number: #{os.environ['PR_NUMBER']}")
+                  found_pr = True
+              elif line.startswith('Required CI runs'):
+                  out.append(line)
+                  found_runs = True
+                  i += 1
+                  while i < len(lines) and lines[i].startswith('-'):
+                      i += 1
+                  out.extend(runs)
+                  continue
+              else:
+                  out.append(line)
+              i += 1
+          if not (found_sha and found_pr and found_runs):
+              print('slice_closeout_guard: Done Means section is missing evidence field lines', file=sys.stderr)
+              sys.exit(1)
+
+          Path('new_body.txt').write_text(body[:start] + '\n'.join(out) + body[end:], encoding='utf-8')
+          EOF
+          gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file new_body.txt
+      - name: Detect a close with no merged closing PR and no evidence
+        id: closeout
+        if: steps.closing_pr.outputs.pr_number == ''
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
@@ -49,4 +149,4 @@ jobs:
           MISSING: ${{ steps.closeout.outputs.missing }}
         run: |
           gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "slice_closeout_guard: reopened — closed with $MISSING. A slice is done when its closeout evidence is recorded, not when its PR merges. Nothing dangles."
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "slice_closeout_guard: reopened — closed with $MISSING and no merged closing PR. A slice is done when its closeout evidence is recorded, not when its PR merges. Nothing dangles."

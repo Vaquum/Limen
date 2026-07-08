@@ -1,0 +1,191 @@
+name: pr_checks_slice_on_issue
+
+# Re-run the slice gate on every PR that closes an issue when that
+# issue's state changes, and publish a fresh `pr_checks_slice`
+# check-run on each such PR's head commit.
+#
+# Why: `pr_checks_slice` runs on pull_request activity and caches its
+# verdict. Rules 3-10 depend on mutable issue state (OPEN, slice label,
+# title, body content, Surfaces, Out of Scope, sub-issue graph, Done
+# Means checkboxes). A green PR can become stale if its linked issue is
+# subsequently closed, unlabeled, retitled, body-edited, or
+# scope-edited. Branch protection sees only the latest check-run per
+# name per commit SHA; it does not re-fetch issue state. This workflow
+# closes that gap by reposting `pr_checks_slice` whenever an issue
+# changes, which immediately invalidates or re-validates the PR's
+# required check status.
+#
+# GitHub branch protection aggregates multiple check-runs of the same
+# name on the same SHA by treating the MOST RECENT as authoritative.
+# So posting a failure here immediately blocks merge until either the
+# issue is restored or the PR is updated.
+#
+# Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5844b;
+# adapted for Limen: Python 3.10 (CI parity).
+
+on:
+  issues:
+    types: [edited, labeled, unlabeled, closed, reopened, deleted]
+
+concurrency:
+  # Keyed per issue, so rapid-fire edits collapse.
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  checks: write  # required to POST check-runs
+
+jobs:
+  rerun_slice_gate_for_linked_prs:
+    name: pr_checks_slice_on_issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install PyYAML
+        run: pip install 'pyyaml==6.0.2'
+
+      - name: Find linked PRs
+        id: linked
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Why scan, not GraphQL: when the issue action is `deleted`
+          # the issue node is gone, `repository.issue(number:$num)`
+          # returns null, and `closedByPullRequestsReferences` is
+          # unreachable. A GraphQL-first path silently posts no
+          # check-runs for deleted issues -- the very gap this
+          # workflow exists to close.
+          #
+          # Scanning every open PR's body with the SAME closing-keyword
+          # regex the slice gate uses (rule 1) produces the same set
+          # of linked PRs that rule 1 would recognise, for every event
+          # action including `deleted`.
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          ISSUE_NUM="${{ github.event.issue.number }}"
+
+          gh pr list --repo "$REPO" --state open --limit 1000 \
+            --json number,body,headRefOid > open_prs.json
+
+          python3 - "$ISSUE_NUM" <<'PYEOF' > linked_prs.json
+          import json, re, sys
+          target = int(sys.argv[1])
+          pat = re.compile(
+              r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b',
+              re.IGNORECASE,
+          )
+          with open('open_prs.json', encoding='utf-8') as fh:
+              prs = json.load(fh)
+          linked = []
+          for pr in prs:
+              body = pr.get('body') or ''
+              if any(int(m.group(1)) == target for m in pat.finditer(body)):
+                  linked.append({
+                      'number': pr['number'],
+                      'headRefOid': pr['headRefOid'],
+                  })
+          json.dump(linked, sys.stdout)
+          PYEOF
+
+          echo "linked PRs:"
+          jq -c '.[]' linked_prs.json
+          COUNT=$(jq 'length' linked_prs.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Re-run slice gate per linked PR and post check-run
+        if: steps.linked.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          ISSUE_NUM="${{ github.event.issue.number }}"
+
+          jq -c '.[]' linked_prs.json | while read pr; do
+            PR_NUM=$(echo "$pr" | jq -r .number)
+            HEAD_SHA=$(echo "$pr" | jq -r .headRefOid)
+            echo "::group::re-running slice gate for PR #$PR_NUM @ $HEAD_SHA"
+
+            # Title + body + canonical file count; files come from the
+            # paginated REST endpoint, not `gh pr view --json files`
+            # (which caps at 100 and would silently under-enforce
+            # rules 7 and 8 on large PRs).
+            gh pr view "$PR_NUM" --repo "$REPO" \
+              --json title,body,changedFiles > pr_view.json
+            jq -r '.title' pr_view.json > pr_title.txt
+            jq -r '.body' pr_view.json > pr_body.txt
+            EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
+
+            gh api "repos/$REPO/pulls/$PR_NUM/files" \
+              --paginate --jq '.[].filename' > pr_files.txt
+            ACTUAL_FILES=$(wc -l < pr_files.txt | tr -d ' ')
+
+            if [ "$ACTUAL_FILES" -ne "$EXPECTED_FILES" ]; then
+              # Post a FAILURE check-run immediately rather than
+              # silently proceeding with a truncated file set. This
+              # closes the silent-under-enforcement door even when the
+              # recovery workflow's own prerequisites fail.
+              gh api "repos/$REPO/check-runs" \
+                --method POST \
+                -f "name=pr_checks_slice" \
+                -f "head_sha=$HEAD_SHA" \
+                -f "status=completed" \
+                -f "conclusion=failure" \
+                -f "output[title]=Slice gate rerun ABORTED: file enumeration incomplete" \
+                -f "output[summary]=pr_checks_slice_on_issue got $ACTUAL_FILES files from the paginated API but the PR object reports $EXPECTED_FILES. The rerun refuses to run a scope check on a truncated set." \
+                -f "details_url=https://github.com/$REPO/actions/runs/${{ github.run_id }}"
+              echo "::endgroup::"
+              continue
+            fi
+
+            # Run the slice gate; capture output and exit code.
+            PR_TITLE=$(cat pr_title.txt)
+            set +e
+            GATE_OUT=$(python governance/slice_gate.py \
+              --pr-title "$PR_TITLE" \
+              --pr-body-file pr_body.txt \
+              --pr-files-file pr_files.txt \
+              --template .github/ISSUE_TEMPLATE/slice.yml \
+              --repo "$REPO" 2>&1)
+            GATE_EXIT=$?
+            set -e
+            echo "$GATE_OUT"
+
+            if [ "$GATE_EXIT" -eq 0 ]; then
+              CONCLUSION="success"
+              TITLE_OUT="Slice gate re-passed after issue #$ISSUE_NUM change"
+            else
+              CONCLUSION="failure"
+              TITLE_OUT="Slice gate FAILED after issue #$ISSUE_NUM change"
+            fi
+
+            # Keep output.summary under the 65 KB API limit.
+            SUMMARY=$(printf 'Triggered by issue #%s change.\n\n```\n%s\n```\n' \
+              "$ISSUE_NUM" "$GATE_OUT" | head -c 60000)
+
+            # Post the check-run. Using the same name the pull_request
+            # workflow uses ensures branch protection sees this as the
+            # current status of `pr_checks_slice` on that head SHA.
+            gh api "repos/$REPO/check-runs" \
+              --method POST \
+              -f "name=pr_checks_slice" \
+              -f "head_sha=$HEAD_SHA" \
+              -f "status=completed" \
+              -f "conclusion=$CONCLUSION" \
+              -f "output[title]=$TITLE_OUT" \
+              -f "output[summary]=$SUMMARY" \
+              -f "details_url=https://github.com/$REPO/actions/runs/${{ github.run_id }}"
+            echo "::endgroup::"
+          done
