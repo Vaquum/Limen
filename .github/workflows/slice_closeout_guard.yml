@@ -52,7 +52,7 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/check-runs" \
             --paginate --jq '.check_runs[] | "\(.name)\t\(.id)"' \
             > check_runs.txt
-          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" --jq '.body' > issue_body.txt
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" --jq '.body // ""' > issue_body.txt
           python - <<'EOF'
           import os
           import re
