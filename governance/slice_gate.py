@@ -70,7 +70,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final
+from typing import Final, NoReturn
 
 from _common import CLOSING_KEYWORD_RE
 
@@ -105,6 +105,14 @@ OVERRULED_RE: Final[re.Pattern[str]] = re.compile(r'OVERRULED:\s*\S')
 MAX_CLOSING_REFERENCES: Final[int] = 2
 
 
+def _fail_setup(message: str, cause: BaseException | None = None) -> NoReturn:
+    """Report a setup failure and exit 2: the gate could not run, which
+    is distinct from a rule violation (exit 1). ``raise SystemExit(str)``
+    would exit 1 and blur the two."""
+    print(message, file=sys.stderr)
+    raise SystemExit(2) from cause
+
+
 def extract_significance_blockquotes(template_path: Path) -> list[str]:
     """Extract every full multi-line Significance blockquote from the
     slice template. Each blockquote is returned as a newline-joined
@@ -118,24 +126,24 @@ def extract_significance_blockquotes(template_path: Path) -> list[str]:
     try:
         import yaml  # type: ignore[import-untyped]
     except ImportError as exc:
-        raise SystemExit('slice_gate: PyYAML is required (pip install pyyaml)') from exc
+        _fail_setup('slice_gate: PyYAML is required (pip install pyyaml)', exc)
     try:
         with template_path.open(encoding='utf-8') as fh:
             template = yaml.safe_load(fh)
     except (OSError, yaml.YAMLError) as exc:
-        raise SystemExit(
-            f'slice_gate: cannot parse template {template_path}: {exc}'
-        ) from exc
+        _fail_setup(
+            f'slice_gate: cannot parse template {template_path}: {exc}', exc
+        )
 
     if not isinstance(template, dict):
-        raise SystemExit(
+        _fail_setup(
             f'slice_gate: template {template_path} is not a YAML mapping'
         )
 
     blocks: list[str] = []
     body_items = template.get('body', [])
     if not isinstance(body_items, list):
-        raise SystemExit(
+        _fail_setup(
             f'slice_gate: template {template_path} has no body list'
         )
 
@@ -155,7 +163,7 @@ def extract_significance_blockquotes(template_path: Path) -> list[str]:
             blocks.append(block)
 
     if not blocks:
-        raise SystemExit(
+        _fail_setup(
             f'slice_gate: template {template_path} contains no '
             f'Significance blockquotes; cannot run rule 6'
         )

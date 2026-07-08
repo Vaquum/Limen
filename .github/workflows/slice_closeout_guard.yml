@@ -61,16 +61,20 @@ jobs:
 
           body = Path('issue_body.txt').read_text(encoding='utf-8')
           required = [c for c in Path('required_contexts.txt').read_text(encoding='utf-8').splitlines() if c]
-          runs = []
+          if not required:
+              print('slice_closeout_guard: no required status checks resolved from the main branch rules', file=sys.stderr)
+              sys.exit(1)
+          check_runs = {}
           for raw in Path('check_runs.txt').read_text(encoding='utf-8').splitlines():
               if not raw:
                   continue
               name, run_id = raw.split('\t')
-              if name in required:
-                  runs.append(f'- {name} : {run_id}')
-          if not runs:
-              print('slice_closeout_guard: no required check runs found on the closing PR head commit', file=sys.stderr)
+              check_runs[name] = run_id
+          missing = [c for c in required if c not in check_runs]
+          if missing:
+              print(f"slice_closeout_guard: required check runs missing on the closing PR head commit: {', '.join(missing)}", file=sys.stderr)
               sys.exit(1)
+          runs = [f'- {c} : {check_runs[c]}' for c in required]
 
           matches = list(re.finditer(
               r'^##+ Done Means\b.*?^##+ Author Checks\b',
