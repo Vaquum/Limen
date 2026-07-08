@@ -1,0 +1,49 @@
+name: Slice Closeout Guard
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  slice_closeout_guard:
+    name: Slice Closeout Guard
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'slice')
+    steps:
+      - id: closeout
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import os
+          import re
+
+          matches = list(re.finditer(
+              r'^##+ Done Means\b.*?^##+ Author Checks\b',
+              os.environ['ISSUE_BODY'],
+              re.MULTILINE | re.DOTALL,
+          ))
+          section = matches[-1].group(0) if matches else ''
+          unchecked = '- [ ]' in section
+          sha_missing = re.search(r'Merge SHA:\s*[0-9a-f]{7,40}', section) is None
+          missing = ' and '.join(
+              name
+              for name, dangling in (
+                  ('unchecked Done Means boxes', unchecked),
+                  ('empty Merge SHA', sha_missing),
+              )
+              if dangling
+          )
+          print(f"missing={missing}")
+          EOF
+      - if: steps.closeout.outputs.missing != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          MISSING: ${{ steps.closeout.outputs.missing }}
+        run: |
+          gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "slice_closeout_guard: reopened — closed with $MISSING. A slice is done when its closeout evidence is recorded, not when its PR merges. Nothing dangles."

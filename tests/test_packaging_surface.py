@@ -71,6 +71,17 @@ for name in {MODEL_BACKEND_MODULES!r}:
     subprocess.run([sys.executable, '-c', code], cwd=ROOT, check=True)
 
 
+def test_slice_closeout_guard_and_ratchet_surfaces() -> None:
+    guard = (ROOT / '.github' / 'workflows' / 'slice_closeout_guard.yml').read_text(encoding='utf-8')
+    assert 'issues:' in guard
+    assert 'gh issue reopen' in guard
+    pyright_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_pyright.yml').read_text(encoding='utf-8')
+    assert 'PYRIGHT_WARNING_BASELINE' in pyright_workflow
+    assert '--outputjson' in pyright_workflow
+    slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
+    assert 'slice_closeout_guard' in slice_template
+
+
 def test_pyright_gate_config() -> None:
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     pyright_config = pyproject['tool']['pyright']

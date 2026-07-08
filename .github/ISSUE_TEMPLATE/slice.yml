@@ -352,7 +352,9 @@ body:
       value: |
         > **Significance.** Done Means closes on verifiable evidence, not on a
         > self-assessed claim. Check each item only when the linked evidence
-        > exists. Fill the closeout fields after merge.
+        > exists. Fill the closeout fields after merge. Closing this issue with
+        > an unchecked box above or an empty Merge SHA is reverted automatically
+        > by `slice_closeout_guard`.
 
         - [ ] Capability complete
         - [ ] Proof complete
