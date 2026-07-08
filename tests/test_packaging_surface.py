@@ -81,7 +81,34 @@ def test_slice_closeout_guard_and_ratchet_surfaces() -> None:
     assert '--outputjson' in pyright_workflow
     slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
     assert 'slice_closeout_guard' in slice_template
-    assert 'reverted automatically' in slice_template
+    assert 'is reverted' in slice_template
+
+
+def test_slice_gate_and_closeout_surfaces() -> None:
+    for name in ('__init__.py', '_common.py', 'slice_gate.py'):
+        assert (ROOT / 'governance' / name).is_file(), name
+    gate = (ROOT / 'governance' / 'slice_gate.py').read_text(encoding='utf-8')
+    assert 'rule 9' in gate
+    assert 'rule 10' in gate
+    assert 'OVERRULED' in gate
+    assert 'sub_issues' in gate
+    slice_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice.yml').read_text(encoding='utf-8')
+    assert 'name: pr_checks_slice' in slice_workflow
+    assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in slice_workflow
+    assert 'governance/slice_gate.py' in slice_workflow
+    on_issue_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_on_issue.yml').read_text(encoding='utf-8')
+    assert 'types: [edited, labeled, unlabeled, closed, reopened, deleted]' in on_issue_workflow
+    assert 'name=pr_checks_slice' in on_issue_workflow
+    guard_workflow = (ROOT / '.github' / 'workflows' / 'slice_closeout_guard.yml').read_text(encoding='utf-8')
+    assert 'closing PR' in guard_workflow
+    assert 'gh issue edit' in guard_workflow
+    assert 'gh issue reopen' in guard_workflow
+    slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
+    assert 'OVERRULED: <reason>' in slice_template
+    assert 'rule 10' in slice_template
+    pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
+    assert 'governance' in pyproject['tool']['pyright']['exclude']
+    assert 'governance/*' in pyproject['tool']['check-manifest']['ignore']
 
 
 def test_pyright_gate_config() -> None:

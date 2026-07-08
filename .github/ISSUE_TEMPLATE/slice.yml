@@ -352,16 +352,17 @@ body:
       value: |
         > **Significance.** Done Means closes on verifiable evidence, not on a
         > self-assessed claim. Check each item only when the linked evidence
-        > exists. Fill the closeout fields after merge. Closing this issue with
-        > an unchecked box above or an empty Merge SHA is reverted automatically
-        > by `slice_closeout_guard`.
+        > exists. Every checkbox above must be checked or marked
+        > `OVERRULED: <reason>` before the delivering PR can merge (slice gate
+        > rule 10). The evidence fields below are written automatically by
+        > `slice_closeout_guard` when a merged PR closes this issue; a close
+        > with no merged PR and no evidence is reverted.
 
         - [ ] Capability complete
         - [ ] Proof complete
         - [ ] Guardrails complete
         - [ ] Required gates green
         - [ ] Required docs updated
-        - [ ] Required closeout state and evidence links are recorded in this issue
 
         Merge SHA:
         Merged PR number:

@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "4.4.0"
+version = "4.5.0"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -126,9 +126,12 @@ relative_files = true
 [tool.coverage.report]
 omit = ["tests/*"]
 
+[tool.check-manifest]
+ignore = ["governance/*"]
+
 [tool.pyright]
 include = ["limen"]
-exclude = ["**/__pycache__"]
+exclude = ["**/__pycache__", "governance"]
 typeCheckingMode = "strict"
 pythonVersion = "3.10"
 reportPropertyTypeMismatch = "error"
@@ -229,6 +232,7 @@ ignore = [
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
+"governance/*.py" = ["T201", "S603", "S607", "PLR5501"]
 "tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
 "limen/targets/*.py" = ["ARG002"]
 "limen/cli/**/*.py" = ["S603"]
