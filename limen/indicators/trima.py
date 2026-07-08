@@ -5,7 +5,7 @@ import polars as pl
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
-def _trima_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def trima_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
@@ -149,7 +149,7 @@ def trima(
     frame = data
     trima_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _trima_from_values(
+            trima_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

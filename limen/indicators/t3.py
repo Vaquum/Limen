@@ -5,7 +5,7 @@ import polars as pl
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
-def _t3_from_values(values: np.ndarray, period: int, vfactor: float) -> np.ndarray:
+def t3_from_values(values: np.ndarray, period: int, vfactor: float) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
@@ -146,7 +146,7 @@ def t3(
     frame = data
     t3_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _t3_from_values(
+            t3_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
                 vfactor,

@@ -21,6 +21,8 @@ class RandomBinaryTarget:
                 labels are reproducible across runs given the same data sizes and call order
         '''
 
+        super().__init__()
+
         self.target_name = target_name
         self._rng = np.random.default_rng(random_state)
 

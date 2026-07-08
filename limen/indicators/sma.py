@@ -6,7 +6,7 @@ CMP_N_2 = 2
 SMA_PERIOD_TOTAL = 0.0
 
 
-def _sma_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def sma_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
     lookback = period - 1
@@ -63,7 +63,7 @@ def sma(
     frame = data
     sma_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _sma_from_values(
+            sma_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

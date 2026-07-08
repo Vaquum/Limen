@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def _ema_talib_segment_with_k(
+def ema_talib_segment_with_k(
     values: np.ndarray,
     period: int,
     k: float,
@@ -35,11 +35,11 @@ def _ema_talib_segment_with_k(
     return start_idx, np.asarray(out, dtype=float)
 
 
-def _ema_talib_default_segment(
+def ema_talib_default_segment(
     values: np.ndarray,
     period: int,
     start_idx: int,
     end_idx: int,
 ) -> tuple[int, np.ndarray]:
     k = 2.0 / (period + 1.0)
-    return _ema_talib_segment_with_k(values, period, k, start_idx, end_idx)
+    return ema_talib_segment_with_k(values, period, k, start_idx, end_idx)

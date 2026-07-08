@@ -3,6 +3,7 @@ import polars as pl
 from collections.abc import Sequence
 from datetime import date
 from itertools import accumulate
+from typing import Any
 
 
 def split_sequential(data: pl.DataFrame, ratios: Sequence[int]) -> list[pl.DataFrame]:
@@ -67,9 +68,9 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = N
 
 def split_by_dates(
     data: pl.DataFrame,
-    train_start: date, train_end: date,
-    val_start: date, val_end: date,
-    test_start: date, test_end: date,
+    train_start: date | Any, train_end: date | Any,
+    val_start: date | Any, val_end: date | Any,
+    test_start: date | Any, test_end: date | Any,
 ) -> list[pl.DataFrame]:
 
     '''
@@ -108,8 +109,7 @@ def split_by_dates(
     ):
         if not isinstance(value, date):
             raise TypeError(
-                f'splits {name} must be a date or datetime instance, '
-                f'got {type(value).__name__}: {value!r}'
+                f"splits {name} must be a date or datetime instance, got {type(value).__name__}: {value!r}"
             )
 
     return [

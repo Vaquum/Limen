@@ -44,13 +44,14 @@ def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
 
 _FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
 _FUNC_LIST_EXTRA_KNOWN_KEYS = frozenset({'include_if'})
+_NO_EXTRA_KNOWN_KEYS: frozenset[str] = frozenset()
 
 
 def _check_func_block(block: dict[str, Any],
                       base_path: str,
                       errors: list[YAMLError],
                       warnings: list[YAMLError],
-                      extra_known_keys: frozenset[str] = frozenset()) -> None:
+                      extra_known_keys: frozenset[str] = _NO_EXTRA_KNOWN_KEYS) -> None:
 
     '''Validate func (required, callable) and optional params mapping on a {func, params?} block.'''
 
@@ -160,6 +161,8 @@ class Required:
                  expected_type: type | None = None,
                  suggestion: str | None = None) -> None:
 
+        super().__init__()
+
         self._path = path
         self._type = expected_type
         self._suggestion = suggestion
@@ -196,6 +199,8 @@ class OneOf:
                  choices: set,
                  suggestion: str | None = None) -> None:
 
+        super().__init__()
+
         self._path = path
         self._choices = choices
         self._suggestion = suggestion or f"Use one of: {', '.join(sorted(str(c) for c in choices))}"
@@ -221,6 +226,8 @@ class Resolvable:
     '''Field value must be an importable limen.* path that resolves to a callable or class.'''
 
     def __init__(self, path: str) -> None:
+        super().__init__()
+
         self._path = path
 
     def check(self,
@@ -239,6 +246,8 @@ class NoUnknownKeys:
     '''All keys at path must be in the known set; extras become warnings or errors depending on severity.'''
 
     def __init__(self, path: str, known: set, severity: str = 'warning') -> None:
+
+        super().__init__()
 
         self._path = path
         self._known = known
@@ -270,6 +279,8 @@ class When:
                  condition_value: Any,
                  rules: list[Rule]) -> None:
 
+        super().__init__()
+
         self._condition_path = condition_path
         self._condition_value = condition_value
         self._rules = rules
@@ -290,6 +301,8 @@ class WarnIfPresent:
     '''Emit a warning for each key in keys that exists at path.'''
 
     def __init__(self, path: str, keys: set, message_template: str) -> None:
+
+        super().__init__()
 
         self._path = path
         self._keys = keys
@@ -316,6 +329,8 @@ class SchemaVersion:
     '''schema_version must be a string; warn if it differs from current_version.'''
 
     def __init__(self, current_version: str) -> None:
+        super().__init__()
+
         self._version = current_version
 
     def check(self,
@@ -352,8 +367,7 @@ class DataSource:
 
         if 'test_data_source' in manifest:
             errors.append(YAMLError(
-                message="'test_data_source' is not supported in YAML experiments — "
-                        "use the Python manifest API for programmatic test-mode data sources",
+                message="'test_data_source' is not supported in YAML experiments — use the Python manifest API for programmatic test-mode data sources",
                 path='sfd.manifest.test_data_source',
                 suggestion='Remove test_data_source; date limits are injected from split_dates automatically',
             ))
@@ -401,11 +415,9 @@ class DataSource:
             for reserved in ('start_date_limit', 'end_date_limit'):
                 if reserved in params:
                     errors.append(YAMLError(
-                        message=f"'{reserved}' must not be set in 'data_source.params' — "
-                                f"it is derived automatically from 'split_dates'",
+                        message=f"'{reserved}' must not be set in 'data_source.params' — it is derived automatically from 'split_dates'",
                         path=f'sfd.manifest.data_source.params.{reserved}',
-                        suggestion=f"Remove '{reserved}' from data_source.params and set the "
-                                   f"date window via split_dates instead",
+                        suggestion=f"Remove '{reserved}' from data_source.params and set the date window via split_dates instead",
                     ))
 
 
@@ -414,6 +426,8 @@ class FuncList:
     '''Validate a list of {{func, params}} dicts at a given manifest path.'''
 
     def __init__(self, path: str) -> None:
+        super().__init__()
+
         self._path = path
 
     def check(self,
@@ -451,6 +465,8 @@ class SingleFuncBlock:
     '''When a {func, params?} block is present, validate func is present and resolvable.'''
 
     def __init__(self, path: str) -> None:
+        super().__init__()
+
         self._path = path
 
     def check(self,
@@ -968,6 +984,8 @@ class BlockSpec:
     '''Emit an error for each listed path that is present but not a mapping.'''
 
     def __init__(self, *paths: str) -> None:
+        super().__init__()
+
         self._paths = paths
 
     def check(self,
@@ -989,6 +1007,8 @@ class ParamKeyFields:
     '''Validate that param-key fields within a block are non-empty strings when present.'''
 
     def __init__(self, path: str, *fields: str) -> None:
+        super().__init__()
+
         self._path = path
         self._fields = fields
 
@@ -1114,8 +1134,7 @@ class UelSpec:
                     if total > 0 and value > total:
                         errors.append(YAMLError(
                             message=(
-                                f"'uel.n_permutations' ({value}) cannot exceed "
-                                f"the available parameter space ({total})"
+                                f"'uel.n_permutations' ({value}) cannot exceed the available parameter space ({total})"
                             ),
                             path='uel.n_permutations',
                         ))
@@ -1136,6 +1155,8 @@ class RuleEngine:
     '''Run a list of rules against a yaml_dict, collecting errors and warnings.'''
 
     def __init__(self, rules: list[Rule]) -> None:
+        super().__init__()
+
         self._rules = rules
 
     def run(self,

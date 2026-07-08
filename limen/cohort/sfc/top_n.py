@@ -7,7 +7,7 @@ import pandas as pd
 def select(context: dict[str, Any],
            *,
            column: str,
-           n: int,
+           n: object,
            ascending: bool = False) -> list[int | str]:
     '''Return the top n ids from results.csv ordered by one numeric column.'''
 

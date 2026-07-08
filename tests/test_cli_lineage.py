@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from limen.cli.commands.fork import run_fork
 from limen.cli.commands.lineage import run_lineage
-from limen.yaml.store import _SHA256_PREFIX
+from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import commit_manifest
 
 
@@ -94,5 +94,5 @@ def test_run_lineage_accepts_short_hash() -> None:
     with tempfile.TemporaryDirectory() as d, patch('click.echo'), patch('click.secho'):
         root = Path(d).resolve()
         manifest_id = _make_committed(root)
-        short = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
+        short = manifest_id[len(SHA256_PREFIX):len(SHA256_PREFIX) + 8]
         assert run_lineage(short, root) is True

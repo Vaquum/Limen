@@ -4,12 +4,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from limen.cli.commands.ls import run_ls
-from limen.yaml.config import _STORE_RELATIVE
+from limen.yaml.config import STORE_RELATIVE
 
 
 def _make_project(root: Path) -> Path:
     (root / 'limen.toml').write_text('')
-    store = root / _STORE_RELATIVE
+    store = root / STORE_RELATIVE
     store.mkdir(parents=True)
     return store
 

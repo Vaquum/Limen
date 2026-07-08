@@ -1,7 +1,7 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators._ema import _ema_talib_default_segment
+from limen.indicators._ema import ema_talib_default_segment
 
 
 CMP_N_100000 = 100000
@@ -18,14 +18,14 @@ def _trix_from_values(values: np.ndarray, period: int) -> np.ndarray:
     start_idx = total_lookback
     end_idx = n - 1
 
-    _, temp = _ema_talib_default_segment(values, period, start_idx - total_lookback, end_idx)
+    _, temp = ema_talib_default_segment(values, period, start_idx - total_lookback, end_idx)
     nb_element_to_output = n - 1
 
     nb_element_to_output -= ema_lookback
-    _, temp = _ema_talib_default_segment(temp, period, 0, nb_element_to_output)
+    _, temp = ema_talib_default_segment(temp, period, 0, nb_element_to_output)
 
     nb_element_to_output -= ema_lookback
-    _, temp = _ema_talib_default_segment(temp, period, 0, nb_element_to_output)
+    _, temp = ema_talib_default_segment(temp, period, 0, nb_element_to_output)
 
     nb_element_to_output -= ema_lookback
     roc_vals = np.zeros(nb_element_to_output, dtype=float)

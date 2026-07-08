@@ -1,6 +1,6 @@
 import polars as pl
 
-from limen.indicators._atr import _atr_from_true_range_expr
+from limen.indicators._atr import atr_from_true_range_expr
 
 NATR_PERIOD_MIN = 1
 NATR_PERIOD_MAX = 100000
@@ -43,7 +43,7 @@ def natr(
     ).alias(NATR_TR_COL)
 
     frame = data.with_columns(true_range_expr).with_columns(
-        _atr_from_true_range_expr(NATR_TR_COL, period).alias(NATR_ATR_COL)
+        atr_from_true_range_expr(NATR_TR_COL, period).alias(NATR_ATR_COL)
     )
 
     if period <= 1:

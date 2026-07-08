@@ -2,7 +2,7 @@ from typing import Any
 import pandas as pd
 
 
-def _permutation_prediction_performance(self: Any,
+def permutation_prediction_performance(self: Any,
                                        round_id: int) -> pd.DataFrame:
 
     '''

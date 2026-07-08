@@ -12,6 +12,7 @@ from datetime import timezone
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import polars as pl
 from tqdm import tqdm
 
@@ -74,6 +75,8 @@ class UniversalExperimentLoop:
 
         '''
 
+        super().__init__()
+
         if sfd is None:
             raise ValueError('UniversalExperimentLoop sfd is required')
 
@@ -88,9 +91,7 @@ class UniversalExperimentLoop:
             if data is None:
                 if self.manifest.data_source_config is None:
                     raise ValueError(
-                        'UniversalExperimentLoop No data source configured in manifest. '
-                        'Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) '
-                        'to manifest or pass data explicitly.'
+                        'UniversalExperimentLoop No data source configured in manifest. Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) to manifest or pass data explicitly.'
                     )
 
                 if test_mode and self.manifest.test_data_source_config is not None:
@@ -105,8 +106,7 @@ class UniversalExperimentLoop:
                 self.model = lambda data, round_params: manifest.run_model(data, round_params or {})
             else:
                 raise ValueError(
-                    'UniversalExperimentLoop Manifest without architecture_function is not supported. '
-                    'Use .with_reference_architecture(func) in your manifest.'
+                    'UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.'
                 )
         else:
             if data is None:
@@ -126,6 +126,16 @@ class UniversalExperimentLoop:
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
+        self.round_params: list[dict[str, Any]] = []
+        self.preds: list[Any] = []
+        self.scalers: list[Any] = []
+        self._alignment: list[Any] = []
+        self.experiment_log: pl.DataFrame | None = None
+        self.param_space: ParamSpace | None = None
+        self._log: Log | None = None
+        self.experiment_confusion_metrics: pd.DataFrame | None = None
+        self.experiment_backtest_results: pd.DataFrame | None = None
+        self.experiment_parameter_correlation: Callable[..., pd.DataFrame] | None = None
         self._clear_post_processing_outputs()
 
     def run(self,
@@ -299,7 +309,7 @@ class UniversalExperimentLoop:
                 if retain_round_artifacts and '_scaler' in data_dict:
                     self.scalers.append(data_dict['_scaler'])
 
-            round_results.setdefault('strict_mode_error', None)
+            _: Any = round_results.setdefault('strict_mode_error', None)
             round_results['id'] = i
             round_results['execution_time'] = round(time.time() - start_time, 2)
 
@@ -490,7 +500,7 @@ class UniversalExperimentLoop:
             )
         elif self._experiment_dir:
             self._guard_stale_artifacts()
-            self._initialize_fresh(self._experiment_dir, checkpoint_manager)
+            _ = self._initialize_fresh(self._experiment_dir, checkpoint_manager)
             self._write_metadata(self._experiment_dir)
 
         last_msq_state = msq.get_state()
@@ -610,7 +620,7 @@ class UniversalExperimentLoop:
                 for key, value in context_params.items():
                     round_results[key] = value
 
-            round_results.setdefault('strict_mode_error', None)
+            _: Any = round_results.setdefault('strict_mode_error', None)
 
             results_accumulator.append(round_results)
 
@@ -713,8 +723,7 @@ class UniversalExperimentLoop:
                 )
             if not self._experiment_dir.exists():
                 raise FileNotFoundError(
-                    f"UniversalExperimentLoop Cannot resume: experiment directory "
-                    f"{self._experiment_dir} does not exist."
+                    f"UniversalExperimentLoop Cannot resume: experiment directory {self._experiment_dir} does not exist."
                 )
 
 
@@ -825,11 +834,7 @@ class UniversalExperimentLoop:
             states = checkpoint_data['pruning_strategy_states']
             if len(self._pruning_strategies) != len(states):
                 raise ValueError(
-                    f"UniversalExperimentLoop Pruning strategy count mismatch: checkpoint "
-                    f"has {len(states)} but "
-                    f"{len(self._pruning_strategies)} configured. "
-                    f"Use the same strategies to resume or delete "
-                    f"the checkpoint to start fresh."
+                    f"UniversalExperimentLoop Pruning strategy count mismatch: checkpoint has {len(states)} but {len(self._pruning_strategies)} configured. Use the same strategies to resume or delete the checkpoint to start fresh."
                 )
             for ps, state in zip(self._pruning_strategies, states, strict=True):
                 ps.set_state(state)
@@ -841,10 +846,7 @@ class UniversalExperimentLoop:
 
         if not round_data_path or not round_data_path.exists():
             raise ValueError(
-                f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in "
-                f"{self._experiment_dir}. Checkpoint indicates "
-                f"{start_round} rounds completed but no round "
-                f"data exists."
+                f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no round data exists."
             )
         loaded_rounds = self._load_round_data(
             round_data_path,
@@ -853,28 +855,24 @@ class UniversalExperimentLoop:
         )
         if loaded_rounds < start_round:
             raise ValueError(
-                f"UniversalExperimentLoop Cannot resume: round_data.jsonl has "
-                f"{loaded_rounds} entries but checkpoint "
-                f"indicates {start_round} rounds completed."
+                f"UniversalExperimentLoop Cannot resume: round_data.jsonl has {loaded_rounds} entries but checkpoint indicates {start_round} rounds completed."
             )
 
         if not csv_path.exists():
             raise ValueError(
-                f"UniversalExperimentLoop Cannot resume: results.csv not found in "
-                f"{self._experiment_dir}. Checkpoint indicates "
-                f"{start_round} rounds completed but no results "
-                f"log exists."
+                f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
-        self.experiment_log = pl.read_csv(csv_path, n_rows=start_round)
+        experiment_log = pl.read_csv(csv_path, n_rows=start_round)
+        self.experiment_log = experiment_log
 
-        col = next((c for c in ('_param_hash', '_id') if c in self.experiment_log.columns), None)
+        col = next((c for c in ('_param_hash', '_id') if c in experiment_log.columns), None)
         if col is not None:
             self._search_strategy.rebuild_seen_from_log(
-                self.experiment_log[col].drop_nulls().to_list()
+                experiment_log[col].drop_nulls().to_list()
             )
 
         self._truncate_round_data(round_data_path, start_round)
-        self.experiment_log.write_csv(csv_path)
+        experiment_log.write_csv(csv_path)
 
         return start_round
 
@@ -901,7 +899,7 @@ class UniversalExperimentLoop:
 
         with round_data_path.open('w') as f:
             for line in valid_lines:
-                f.write(line + '\n')
+                _ = f.write(line + '\n')
 
 
     def _flush_results(self,
@@ -941,19 +939,10 @@ class UniversalExperimentLoop:
             missing_for_resume = [f for f in resume_required if f not in existing]
             if not missing_for_resume:
                 raise FileExistsError(
-                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} "
-                    f"already contains artifacts: "
-                    f"{', '.join(existing)}. "
-                    f"Set resume=True to continue or choose a "
-                    f"different experiment_dir."
+                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} already contains artifacts: {', '.join(existing)}. Set resume=True to continue or choose a different experiment_dir."
                 )
             raise FileExistsError(
-                f"UniversalExperimentLoop Experiment directory {self._experiment_dir} "
-                f"contains partial artifacts that resume=True cannot continue: "
-                f"{', '.join(existing)} (missing "
-                f"{', '.join(missing_for_resume)}). The previous run crashed "
-                f"before a complete checkpoint was written. Delete these "
-                f"files or choose a different experiment_dir."
+                f"UniversalExperimentLoop Experiment directory {self._experiment_dir} contains partial artifacts that resume=True cannot continue: {', '.join(existing)} (missing {', '.join(missing_for_resume)}). The previous run crashed before a complete checkpoint was written. Delete these files or choose a different experiment_dir."
             )
 
 
@@ -988,8 +977,7 @@ class UniversalExperimentLoop:
 
         if self._sfd_module_name is None:
             raise ValueError(
-                'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. '
-                'Trainer requires a reimportable SFD module.'
+                'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. Trainer requires a reimportable SFD module.'
             )
 
         metadata = {
@@ -1089,7 +1077,7 @@ class UniversalExperimentLoop:
         }
 
         with round_data_path.open('a') as f:
-            f.write(json.dumps(entry) + '\n')
+            _ = f.write(json.dumps(entry) + '\n')
 
 
     def _load_round_data(self,
@@ -1193,10 +1181,9 @@ class UniversalExperimentLoop:
             self._shutdown_requested = True
 
         try:
-            signal.signal(signal.SIGTERM, _handler)
-            signal.signal(signal.SIGINT, _handler)
+            _ = signal.signal(signal.SIGTERM, _handler)
+            _ = signal.signal(signal.SIGINT, _handler)
         except ValueError:
             logger.warning(
-                'Cannot install signal handlers outside the main thread. '
-                'Graceful shutdown via signals will not be available.'
+                'Cannot install signal handlers outside the main thread. Graceful shutdown via signals will not be available.'
             )

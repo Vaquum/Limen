@@ -21,7 +21,7 @@ def quantile_price_lines(data: pl.DataFrame,
                          density_lookback_hours: int = DEFAULT_DENSITY_LOOKBACK_HOURS,
                          momentum_lookback_hours: int = DEFAULT_MOMENTUM_LOOKBACK_HOURS,
                          height_lookback_hours: int = DEFAULT_HEIGHT_LOOKBACK_HOURS,
-                         include_research_only: bool = True) -> pl.DataFrame:
+                         include_research_only: object = True) -> pl.DataFrame:
 
     '''
     Compute quantile-line context features from internally detected price lines.

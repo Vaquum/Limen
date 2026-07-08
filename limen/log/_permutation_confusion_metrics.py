@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from math import sqrt
 
 
-def _confusion_mean_return_pct(pred: pd.Series | np.ndarray,
+def confusion_mean_return_pct(pred: pd.Series | np.ndarray,
                                actual: pd.Series | np.ndarray,
                                open_px: pd.Series,
                                price_change: pd.Series,
@@ -68,7 +68,7 @@ def _confusion_mean_return_pct(pred: pd.Series | np.ndarray,
     }
 
 
-def _permutation_confusion_metrics(self: Any,
+def permutation_confusion_metrics(self: Any,
                                   x: str,
                                   round_id: int,
                                   *,
@@ -119,7 +119,7 @@ def _permutation_confusion_metrics(self: Any,
     df[pred_col] = df[pred_col].astype(int)
     df[actual_col] = df[actual_col].astype(int)
 
-    mean_return_pct = _confusion_mean_return_pct(
+    mean_return_pct = confusion_mean_return_pct(
         df[pred_col],
         df[actual_col],
         df['open'],

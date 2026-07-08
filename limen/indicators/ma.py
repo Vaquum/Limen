@@ -1,14 +1,14 @@
 import polars as pl
 
-from limen.indicators.dema import _dema_from_values
-from limen.indicators.ema import _ema_from_values
-from limen.indicators.kama import _kama_from_values
-from limen.indicators.mama import _mama_from_values
-from limen.indicators.sma import _sma_from_values
-from limen.indicators.t3 import _t3_from_values
-from limen.indicators.tema import _tema_from_values
-from limen.indicators.trima import _trima_from_values
-from limen.indicators.wma import _wma_from_values
+from limen.indicators.dema import dema_from_values
+from limen.indicators.ema import ema_from_values
+from limen.indicators.kama import kama_from_values
+from limen.indicators.mama import mama_from_values
+from limen.indicators.sma import sma_from_values
+from limen.indicators.t3 import t3_from_values
+from limen.indicators.tema import tema_from_values
+from limen.indicators.trima import trima_from_values
+from limen.indicators.wma import wma_from_values
 
 
 CMP_N_100000 = 100000
@@ -53,7 +53,7 @@ def ma(
     if ma_type == 0:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _sma_from_values(
+                sma_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -63,7 +63,7 @@ def ma(
     elif ma_type == 1:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _ema_from_values(
+                ema_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -73,7 +73,7 @@ def ma(
     elif ma_type == CMP_N_2:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _wma_from_values(
+                wma_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -83,7 +83,7 @@ def ma(
     elif ma_type == CMP_N_3:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _dema_from_values(
+                dema_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -93,7 +93,7 @@ def ma(
     elif ma_type == CMP_N_4:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _tema_from_values(
+                tema_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -103,7 +103,7 @@ def ma(
     elif ma_type == CMP_N_5:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _trima_from_values(
+                trima_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -113,7 +113,7 @@ def ma(
     elif ma_type == CMP_N_6:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _kama_from_values(
+                kama_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )
@@ -123,7 +123,7 @@ def ma(
     elif ma_type == CMP_N_7:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _mama_from_values(
+                mama_from_values(
                     s.to_numpy().astype(float, copy=False),
                     0.5,
                     0.05,
@@ -134,7 +134,7 @@ def ma(
     elif ma_type == CMP_N_8:
         expr = pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _t3_from_values(
+                t3_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                     0.7,

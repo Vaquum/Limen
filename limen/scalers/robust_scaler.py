@@ -20,11 +20,12 @@ class RobustScaler:
 
         '''
 
+        super().__init__()
+
         q_low, q_high = quantile_range
         if not (0 <= q_low < q_high <= 1):
             raise ValueError(
-                f"RobustScaler quantile_range must satisfy 0 <= low < high <= 1, "
-                f"got ({q_low}, {q_high})"
+                f"RobustScaler quantile_range must satisfy 0 <= low < high <= 1, got ({q_low}, {q_high})"
             )
 
         self.medians: dict[str, float] = {}

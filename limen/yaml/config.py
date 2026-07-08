@@ -11,7 +11,7 @@ else:
 
 
 _LIMEN_TOML_NAME = 'limen.toml'
-_STORE_RELATIVE = Path('manifests') / 'committed'
+STORE_RELATIVE = Path('manifests') / 'committed'
 
 
 def find_project_root(start: Path) -> Path | None:
@@ -78,4 +78,4 @@ def get_store_path(start: Path) -> Path:
         raise FileNotFoundError(
             'No limen.toml found. Run limen new <project-name> to create a project.'
         )
-    return root / _STORE_RELATIVE
+    return root / STORE_RELATIVE

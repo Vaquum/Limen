@@ -91,8 +91,7 @@ def _normalize_datetime_literal(
             continue
 
     raise ValueError(
-        f"HistoricalData {field_name} must match one of: YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, "
-        'YYYY-MM-DDTHH:MM:SS.'
+        f"HistoricalData {field_name} must match one of: YYYY-MM-DD, YYYY-MM-DD HH:MM:SS, YYYY-MM-DDTHH:MM:SS."
     )
 
 
@@ -183,9 +182,7 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
         reader = pa_ipc.open_file(mapped)
         if reader.num_record_batches != 1:
             raise ValueError(
-                f'HistoricalData {file_path} is not a single Arrow record batch '
-                f'(num_record_batches={reader.num_record_batches}); '
-                'it cannot be served zero-copy.'
+                f"HistoricalData {file_path} is not a single Arrow record batch (num_record_batches={reader.num_record_batches}); it cannot be served zero-copy."
             )
         batch = reader.get_batch(0)
         # `open_file`/`get_batch` move the file position; rewind so read_buffer
@@ -205,9 +202,7 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
                 end = start + buffer.size
                 if not (low <= start and end <= high):
                     raise ValueError(
-                        f'HistoricalData {file_path} is a compressed Arrow IPC file; it cannot be '
-                        'memory-mapped zero-copy (it would fully decompress into RAM). '
-                        'Re-write it uncompressed to use get_arrow_file.'
+                        f"HistoricalData {file_path} is a compressed Arrow IPC file; it cannot be memory-mapped zero-copy (it would fully decompress into RAM). Re-write it uncompressed to use get_arrow_file."
                     )
 
 
@@ -323,8 +318,8 @@ def _read_remote_bytes_cached(url: str) -> bytes:
         tmp_path = cache_path.with_name(
             f'{cache_path.name}.{os.getpid()}.{uuid4().hex}{_DATASET_CACHE_TMP_SUFFIX}'
         )
-        tmp_path.write_bytes(content)
-        tmp_path.replace(cache_path)
+        _ = tmp_path.write_bytes(content)
+        _ = tmp_path.replace(cache_path)
     except OSError as exc:
         logger.warning(
             'Dataset cache write failed for %s (%s) — proceeding uncached',
@@ -482,8 +477,7 @@ def _read_any_file(
         df = _read_zip_source(resolved_source, has_header=has_header)
     else:
         raise ValueError(
-            f"HistoricalData Unsupported file type for {file_path_or_url}. Supported extensions: "
-            '.parquet, .csv, .zip.'
+            f"HistoricalData Unsupported file type for {file_path_or_url}. Supported extensions: .parquet, .csv, .zip."
         )
 
     df = _validate_columns(df, columns)
@@ -666,14 +660,12 @@ def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
 
     if kline_size < base_interval:
         raise ValueError(
-            f"HistoricalData kline_size={kline_size} is smaller than the source file interval "
-            f"({base_interval} seconds). Sub-base aggregation is not supported."
+            f"HistoricalData kline_size={kline_size} is smaller than the source file interval ({base_interval} seconds). Sub-base aggregation is not supported."
         )
 
     if kline_size % base_interval != 0:
         raise ValueError(
-            f"HistoricalData kline_size={kline_size} must be a multiple of the source file interval "
-            f"({base_interval} seconds)."
+            f"HistoricalData kline_size={kline_size} must be a multiple of the source file interval ({base_interval} seconds)."
         )
 
     canonical_columns = _canonical_spot_kline_columns()
@@ -798,15 +790,12 @@ def _aggregate_spot_dollar_klines(
     if source_dollar_bar_size is not None:
         if dollar_bar_size < source_dollar_bar_size:
             raise ValueError(
-                f"HistoricalData dollar_bar_size={dollar_bar_size} is smaller than the source "
-                f"file dollar bar size ({source_dollar_bar_size}). Sub-base "
-                'aggregation is not supported.'
+                f"HistoricalData dollar_bar_size={dollar_bar_size} is smaller than the source file dollar bar size ({source_dollar_bar_size}). Sub-base aggregation is not supported."
             )
 
         if dollar_bar_size % source_dollar_bar_size != 0:
             raise ValueError(
-                f"HistoricalData dollar_bar_size={dollar_bar_size} must be a multiple of the "
-                f"source file dollar bar size ({source_dollar_bar_size})."
+                f"HistoricalData dollar_bar_size={dollar_bar_size} must be a multiple of the source file dollar bar size ({source_dollar_bar_size})."
             )
 
         if dollar_bar_size == source_dollar_bar_size:
@@ -878,6 +867,8 @@ class HistoricalData:
     )
 
     def __init__(self) -> None:
+        super().__init__()
+
         self.data = pl.DataFrame()
         self.data_columns: list[str] = []
 
@@ -961,8 +952,7 @@ class HistoricalData:
             and row_count_limit is not None
         ):
             raise ValueError(
-                'HistoricalData row_count_limit must be None when both start_date_limit '
-                'and end_date_limit are set.'
+                'HistoricalData row_count_limit must be None when both start_date_limit and end_date_limit are set.'
             )
 
         dataset_repo = _spot_dataset_repo_for_kline_size(
@@ -1030,8 +1020,7 @@ class HistoricalData:
             and row_count_limit is not None
         ):
             raise ValueError(
-                'HistoricalData row_count_limit must be None when both start_date_limit '
-                'and end_date_limit are set.'
+                'HistoricalData row_count_limit must be None when both start_date_limit and end_date_limit are set.'
             )
 
         dataset_repo, source_dollar_bar_size = _spot_dollar_dataset_repo_for_bar_size(
@@ -1115,8 +1104,7 @@ class HistoricalData:
             and row_count_limit is not None
         ):
             raise ValueError(
-                'HistoricalData row_count_limit must be None when both start_date_limit '
-                'and end_date_limit are set.'
+                'HistoricalData row_count_limit must be None when both start_date_limit and end_date_limit are set.'
             )
 
         _validate_arrow_zero_copy(file_path)

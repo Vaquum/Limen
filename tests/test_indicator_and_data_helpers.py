@@ -3,10 +3,10 @@ import numpy as np
 import polars as pl
 import pytest
 
-from limen.indicators._bbands import _stddev_from_var, _stddev_using_precalc_ma
+from limen.indicators._bbands import stddev_from_var, stddev_using_precalc_ma
 from limen.data.utils.random_slice import random_slice
 from limen.data.utils.splits import split_data_to_prep_output, split_random, split_sequential
-from limen.indicators._ema import _ema_talib_default_segment, _ema_talib_segment_with_k
+from limen.indicators._ema import ema_talib_default_segment, ema_talib_segment_with_k
 from limen.indicators.ht_phasor import _ht_phasor_from_values, ht_phasor
 from limen.indicators.ht_sine import _ht_sine_from_values, ht_sine
 from limen.indicators.price_change_pct import price_change_pct
@@ -16,7 +16,7 @@ from limen.utils.data_dict_to_numpy import data_dict_to_numpy
 
 
 def test_ema_segment_returns_empty_when_requested_range_is_before_lookback() -> None:
-    out_beg_idx, values = _ema_talib_segment_with_k(
+    out_beg_idx, values = ema_talib_segment_with_k(
         np.asarray([1.0, 2.0, 3.0, 4.0]),
         period=3,
         k=0.5,
@@ -29,7 +29,7 @@ def test_ema_segment_returns_empty_when_requested_range_is_before_lookback() -> 
 
 
 def test_ema_segment_matches_manual_recursive_values() -> None:
-    out_beg_idx, values = _ema_talib_segment_with_k(
+    out_beg_idx, values = ema_talib_segment_with_k(
         np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
         period=3,
         k=0.5,
@@ -42,14 +42,14 @@ def test_ema_segment_matches_manual_recursive_values() -> None:
 
 
 def test_default_ema_segment_uses_standard_talib_constant() -> None:
-    manual = _ema_talib_segment_with_k(
+    manual = ema_talib_segment_with_k(
         np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
         period=3,
         k=2.0 / 4.0,
         start_idx=2,
         end_idx=4,
     )
-    default = _ema_talib_default_segment(
+    default = ema_talib_default_segment(
         np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
         period=3,
         start_idx=2,
@@ -61,7 +61,7 @@ def test_default_ema_segment_uses_standard_talib_constant() -> None:
 
 
 def test_stddev_from_var_matches_manual_rolling_std_and_returns_empty_before_lookback() -> None:
-    start_idx, empty = _stddev_from_var(
+    start_idx, empty = stddev_from_var(
         np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
         start_idx=0,
         end_idx=1,
@@ -71,7 +71,7 @@ def test_stddev_from_var_matches_manual_rolling_std_and_returns_empty_before_loo
     assert start_idx == 2
     assert empty.size == 0
 
-    start_idx, values = _stddev_from_var(
+    start_idx, values = stddev_from_var(
         np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
         start_idx=0,
         end_idx=4,
@@ -83,7 +83,7 @@ def test_stddev_from_var_matches_manual_rolling_std_and_returns_empty_before_loo
 
 
 def test_stddev_using_precalc_ma_matches_manual_window_std() -> None:
-    values = _stddev_using_precalc_ma(
+    values = stddev_using_precalc_ma(
         np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
         np.asarray([np.nan, np.nan, 2.0, 3.0, 4.0]),
         movavg_beg_idx=2,

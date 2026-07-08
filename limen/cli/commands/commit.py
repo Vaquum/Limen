@@ -5,8 +5,8 @@ import click
 from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.git_utils import git_add_and_commit
 from limen.yaml.config import find_project_root
-from limen.yaml.store import _SHA256_PREFIX
-from limen.yaml.store import _lineage_block
+from limen.yaml.store import SHA256_PREFIX
+from limen.yaml.store import lineage_block
 from limen.yaml.store import commit_manifest
 from limen.yaml.store import is_full_manifest_id
 from limen.yaml.store import manifest_name
@@ -31,8 +31,7 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
     project_root = find_project_root(yaml_path.parent)
     if project_root is None:
         click.secho(
-            '  ✗ No limen project found. '
-            'The YAML file must be inside a Limen project directory (containing limen.toml).',
+            '  ✗ No limen project found. The YAML file must be inside a Limen project directory (containing limen.toml).',
             fg='red',
         )
         return False
@@ -43,14 +42,13 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
         return False
 
     if parent_id is None:
-        lineage_parent = _lineage_block(yaml_dict).get('parent_id')
+        lineage_parent = lineage_block(yaml_dict).get('parent_id')
         if isinstance(lineage_parent, str):
             parent_id = lineage_parent
 
     if parent_id is not None and not is_full_manifest_id(parent_id):
         click.secho(
-            f"  ✗ Invalid parent ID: '{parent_id}'\n"
-            '    Expected sha256:<64-hex-chars>.',
+            f"  ✗ Invalid parent ID: '{parent_id}'\n    Expected sha256:<64-hex-chars>.",
             fg='red',
         )
         return False
@@ -58,14 +56,13 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
     mode = yaml_dict.get('metadata', {}).get('mode', 'development')
     if mode != 'production':
         click.secho(
-            '  ✗ Cannot commit a development-mode manifest.\n'
-            '    Set metadata.mode: production before committing.',
+            '  ✗ Cannot commit a development-mode manifest.\n    Set metadata.mode: production before committing.',
             fg='red',
         )
         return False
 
     manifest_id, already_existed = commit_manifest(yaml_path, project_root, parent_id)
-    short = f'{_SHA256_PREFIX}{short_id(manifest_id)}'
+    short = f'{SHA256_PREFIX}{short_id(manifest_id)}'
 
     if already_existed:
         repair_msg = f'repair: restore index for {short}'
@@ -82,8 +79,7 @@ def run_commit(yaml_path: Path, parent_id: str | None, message: str | None) -> b
 
     if not git_ok:
         click.secho(
-            f"\n  ✓ Stored {manifest_id}\n"
-            '  ⚠ Git commit failed — manifest is stored but not version-controlled.',
+            f"\n  ✓ Stored {manifest_id}\n  ⚠ Git commit failed — manifest is stored but not version-controlled.",
             fg='yellow',
         )
     else:

@@ -150,5 +150,5 @@ def rule_based(data: dict,
         sharpe_std_threshold=sharpe_std_threshold,
         sharpe_degradation_threshold=sharpe_degradation_threshold,
     )
-    model.train(data)
+    _ = model.train(data)
     return model.evaluate(data)

@@ -3,8 +3,8 @@ import polars as pl
 
 def lag_range_cols(data: pl.DataFrame,
         cols: list[str],
-        start: int,
-        end: int) -> pl.DataFrame:
+        start: object,
+        end: object) -> pl.DataFrame:
 
     '''
     Compute multiple lagged versions of multiple columns over a range.
@@ -84,7 +84,7 @@ def lag_columns(data: pl.DataFrame,
 def lag_column(data: pl.DataFrame,
         col: str,
         lag: int,
-        alias: str | None = None) -> pl.DataFrame:
+        alias: object = None) -> pl.DataFrame:
 
     '''
     Compute a lagged version of a column.

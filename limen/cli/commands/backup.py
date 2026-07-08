@@ -68,9 +68,7 @@ def _resolve_backup_remote(project_root: Path) -> str | None:
     backup_remote = config.get('store', {}).get('backup_remote', '')
     if not isinstance(backup_remote, str) or not backup_remote:
         click.secho(
-            '  ✗ No backup remote configured.\n'
-            '    Set backup_remote in limen.toml, e.g. '
-            'backup_remote = "git@github.com:user/my-project.git"',
+            '  ✗ No backup remote configured.\n    Set backup_remote in limen.toml, e.g. backup_remote = "git@github.com:user/my-project.git"',
             fg='red',
         )
         return None
@@ -81,17 +79,12 @@ def _print_failure_hint(error: str, backup_remote: str) -> None:
 
     if _is_https_credential_error(error):
         click.secho(
-            '    HTTPS remote needs credentials — run `gh auth setup-git`, '
-            'configure a git credential helper, or use an SSH URL '
-            '(git@github.com:user/repo.git).',
+            '    HTTPS remote needs credentials — run `gh auth setup-git`, configure a git credential helper, or use an SSH URL (git@github.com:user/repo.git).',
             fg='yellow',
         )
     elif _is_diverged_error(error):
         click.secho(
-            '    The backup remote has history that is not in your project, and '
-            'limen will not force-push.\n'
-            '    Back up to an empty repository, or take manual control:\n'
-            f'      git push {backup_remote} HEAD          # add --force only to overwrite the remote',
+            f"    The backup remote has history that is not in your project, and limen will not force-push.\n    Back up to an empty repository, or take manual control:\n      git push {backup_remote} HEAD          # add --force only to overwrite the remote",
             fg='yellow',
         )
 

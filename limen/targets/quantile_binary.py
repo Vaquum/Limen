@@ -21,6 +21,8 @@ class QuantileBinaryTarget:
             quantile (float): Top-N fraction for positive label (0.3 = top 30%)
         '''
 
+        super().__init__()
+
         self.target_name = target_name
         self.source_column = source_column
         self.cutoff: float = train_data.select(

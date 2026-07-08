@@ -37,6 +37,8 @@ class VolNormalizedReturnTarget:
             min_periods (int): Warmup before volatility values are emitted
         '''
 
+        super().__init__()
+
         if halflife <= 0:
             raise ValueError('VolNormalizedReturnTarget halflife must be positive')
         if min_periods <= 0:
@@ -54,8 +56,7 @@ class VolNormalizedReturnTarget:
         median_ratio = self._median_parkinson_to_close_sigma_ratio(train)
         if median_ratio is not None and not (SIGMA_RATIO_MIN <= median_ratio <= SIGMA_RATIO_MAX):
             raise ValueError(
-                'median Parkinson-to-close volatility ratio '
-                f'{median_ratio:.6f} is outside [{SIGMA_RATIO_MIN}, {SIGMA_RATIO_MAX}]'
+                f"median Parkinson-to-close volatility ratio {median_ratio:.6f} is outside [{SIGMA_RATIO_MIN}, {SIGMA_RATIO_MAX}]"
             )
 
     def transform(self, data: pl.DataFrame) -> pl.DataFrame:

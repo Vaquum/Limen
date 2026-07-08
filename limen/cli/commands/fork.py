@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from limen.yaml.config import find_project_root
-from limen.yaml.store import _SHA256_PREFIX
+from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import fork_manifest
 from limen.yaml.store import manifest_name
 from limen.yaml.store import normalize_manifest_ref
@@ -52,8 +52,7 @@ def run_fork(ref: str, name: str | None, start: Path) -> bool:
 
     if not _NAME_SLUG_RE.match(name):
         click.secho(
-            f"  ✗ '{name}' is not a valid name. "
-            'Use only letters, digits, underscores, or hyphens.',
+            f"  ✗ '{name}' is not a valid name. Use only letters, digits, underscores, or hyphens.",
             fg='red',
         )
         return False
@@ -68,7 +67,7 @@ def run_fork(ref: str, name: str | None, start: Path) -> bool:
         click.secho(f"  ✗ {exc}", fg='red')
         return False
 
-    click.secho(f"  ✓ Forked from {_SHA256_PREFIX}{short_id(parent_id)} → {dest}", fg='green')
+    click.secho(f"  ✓ Forked from {SHA256_PREFIX}{short_id(parent_id)} → {dest}", fg='green')
     click.echo('  Lineage to parent recorded. Next:')
     click.echo(f"    1. Edit {dest} (set metadata.mode: production when ready)")
     click.echo(f"    2. limen commit {dest}")

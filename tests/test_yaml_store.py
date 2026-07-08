@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from limen.yaml.store import _SHA256_PREFIX
+from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import commit_manifest
 from limen.yaml.store import fork_manifest
 from limen.yaml.store import is_full_manifest_id
@@ -48,7 +48,7 @@ def test_commit_stores_file_in_committed_dir() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        hex_hash = manifest_id[len(SHA256_PREFIX):]
         assert (project_root / 'manifests' / 'committed' / f'{hex_hash}.yaml').exists()
 
 
@@ -66,7 +66,7 @@ def test_commit_injects_lineage_section() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        hex_hash = manifest_id[len(SHA256_PREFIX):]
         committed = (project_root / 'manifests' / 'committed' / f'{hex_hash}.yaml').read_text()
         assert 'lineage:' in committed
         assert manifest_id in committed
@@ -139,7 +139,7 @@ def test_resolve_manifest_uri_raises_on_corrupt_manifest_file() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        hex_hash = manifest_id[len(SHA256_PREFIX):]
         committed_path = project_root / 'manifests' / 'committed' / f'{hex_hash}.yaml'
         committed_path.write_text(': invalid: yaml: {{{')
         with pytest.raises(ValueError, match='Cannot read manifest'):
@@ -168,7 +168,7 @@ def test_resolve_manifest_uri_rejects_tampered_lineage() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        hex_hash = manifest_id[len(SHA256_PREFIX):]
         committed_path = project_root / 'manifests' / 'committed' / f'{hex_hash}.yaml'
         tampered = committed_path.read_text().replace(manifest_id, 'sha256:' + 'b' * 64)
         committed_path.write_text(tampered)
@@ -180,7 +180,7 @@ def test_resolve_manifest_uri_accepts_short_hash() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        short = manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
+        short = manifest_id[len(SHA256_PREFIX):len(SHA256_PREFIX) + 8]
         resolved, _ = resolve_manifest_uri(f'manifest://sha256:{short}', project_root)
         assert resolved.exists()
 
@@ -221,7 +221,7 @@ def test_commit_manifest_raises_when_existing_committed_file_is_not_a_dict() -> 
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        hex_hash = manifest_id[len(_SHA256_PREFIX):]
+        hex_hash = manifest_id[len(SHA256_PREFIX):]
         store = project_root / 'manifests' / 'committed'
         (store / f'{hex_hash}.yaml').write_text('- corrupted\n- list\n', encoding='utf-8')
         with pytest.raises(ValueError, match='expected a mapping'):
@@ -235,7 +235,7 @@ def test_commit_manifest_tolerates_scalar_lineage() -> None:
         # validation; committing must degrade gracefully, not raise AttributeError.
         yaml_path.write_text(_SAMPLE_YAML + 'lineage: foo\n')
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        assert manifest_id.startswith(_SHA256_PREFIX)
+        assert manifest_id.startswith(SHA256_PREFIX)
         entry = next(m for m in load_index(project_root)['manifests'] if m['id'] == manifest_id)
         assert entry['parent_id'] is None
 
@@ -259,21 +259,21 @@ def test_update_index_deduplicates_pre_existing_entries() -> None:
 
 
 def test_is_full_manifest_id_accepts_valid_and_rejects_invalid() -> None:
-    valid = _SHA256_PREFIX + 'a' * 64
+    valid = SHA256_PREFIX + 'a' * 64
     assert is_full_manifest_id(valid)
     assert not is_full_manifest_id('a' * 64)
-    assert not is_full_manifest_id(_SHA256_PREFIX + 'a' * 8)
-    assert not is_full_manifest_id(_SHA256_PREFIX + 'z' * 64)
+    assert not is_full_manifest_id(SHA256_PREFIX + 'a' * 8)
+    assert not is_full_manifest_id(SHA256_PREFIX + 'z' * 64)
     assert not is_full_manifest_id(None)
     assert not is_full_manifest_id(123)
 
 
 def test_normalize_manifest_ref_handles_all_forms() -> None:
     hex_ref = 'd3a5d334'
-    assert normalize_manifest_ref(hex_ref) == f'manifest://{_SHA256_PREFIX}{hex_ref}'
-    assert normalize_manifest_ref(f'{_SHA256_PREFIX}{hex_ref}') == f'manifest://{_SHA256_PREFIX}{hex_ref}'
-    assert normalize_manifest_ref(f'manifest://{_SHA256_PREFIX}{hex_ref}') == f'manifest://{_SHA256_PREFIX}{hex_ref}'
-    assert normalize_manifest_ref(f'  {hex_ref}  ') == f'manifest://{_SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(hex_ref) == f'manifest://{SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(f'{SHA256_PREFIX}{hex_ref}') == f'manifest://{SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(f'manifest://{SHA256_PREFIX}{hex_ref}') == f'manifest://{SHA256_PREFIX}{hex_ref}'
+    assert normalize_manifest_ref(f'  {hex_ref}  ') == f'manifest://{SHA256_PREFIX}{hex_ref}'
 
 
 def test_load_index_returns_empty_when_absent() -> None:
@@ -297,7 +297,7 @@ def test_fork_manifest_creates_dev_copy_with_parent_lineage() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        committed = project_root / 'manifests' / 'committed' / f'{manifest_id[len(_SHA256_PREFIX):]}.yaml'
+        committed = project_root / 'manifests' / 'committed' / f'{manifest_id[len(SHA256_PREFIX):]}.yaml'
         dest = project_root / 'manifests' / 'forked.yaml'
 
         parent_id = fork_manifest(committed, dest, 'forked')
@@ -316,7 +316,7 @@ def test_fork_manifest_refuses_to_overwrite() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         manifest_id, _ = commit_manifest(yaml_path, project_root)
-        committed = project_root / 'manifests' / 'committed' / f'{manifest_id[len(_SHA256_PREFIX):]}.yaml'
+        committed = project_root / 'manifests' / 'committed' / f'{manifest_id[len(SHA256_PREFIX):]}.yaml'
         dest = project_root / 'manifests' / 'forked.yaml'
         dest.write_text('existing', encoding='utf-8')
         with pytest.raises(FileExistsError):
@@ -328,7 +328,7 @@ def test_commit_reads_parent_from_forked_lineage() -> None:
     with tempfile.TemporaryDirectory() as d:
         project_root, yaml_path = _make_project(Path(d))
         parent_id, _ = commit_manifest(yaml_path, project_root)
-        committed = project_root / 'manifests' / 'committed' / f'{parent_id[len(_SHA256_PREFIX):]}.yaml'
+        committed = project_root / 'manifests' / 'committed' / f'{parent_id[len(SHA256_PREFIX):]}.yaml'
         fork_dest = project_root / 'manifests' / 'forked.yaml'
         fork_manifest(committed, fork_dest, 'forked')
         # Change a param so the fork is substantively distinct from its parent.

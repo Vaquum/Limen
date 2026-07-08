@@ -117,13 +117,11 @@ class GridStrategy(SearchStrategy):
         saved_seed = state.get('seed')
         if saved_shuffle is not None and saved_shuffle != self._shuffle:
             raise ValueError(
-                f"GridStrategy Checkpoint shuffle={saved_shuffle} does not match "
-                f"current shuffle={self._shuffle}."
+                f"GridStrategy Checkpoint shuffle={saved_shuffle} does not match current shuffle={self._shuffle}."
             )
         if saved_seed is not None and saved_seed != self._seed:
             raise ValueError(
-                f"GridStrategy Checkpoint seed={saved_seed} does not match "
-                f"current seed={self._seed}."
+                f"GridStrategy Checkpoint seed={saved_seed} does not match current seed={self._seed}."
             )
         self._current_index = state['current_index']
         self._generated_count = state['generated_count']

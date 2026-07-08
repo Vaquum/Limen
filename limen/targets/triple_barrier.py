@@ -30,6 +30,8 @@ class TripleBarrierTarget:
             close_col (str): Close price column used for the barrier path
         '''
 
+        super().__init__()
+
         if upper_multiple <= 0:
             raise ValueError('TripleBarrierTarget upper_multiple must be positive')
         if lower_multiple <= 0:

@@ -3,7 +3,7 @@ from typing import Any
 import pandas as pd
 
 
-def _experiment_confusion_metrics(self: Any, x: str) -> pd.DataFrame:
+def experiment_confusion_metrics(self: Any, x: str) -> pd.DataFrame:
 
     '''
     Compute confusion metrics for each round of an experiment.

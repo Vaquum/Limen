@@ -15,10 +15,11 @@ class IdentityTarget:
             target_name (str): Name of an existing target column
         '''
 
+        super().__init__()
+
         if target_name not in train_data.columns:
             raise ValueError(
-                f"Target column '{target_name}' not found in training data. "
-                f"Available columns: {train_data.columns}"
+                f"Target column '{target_name}' not found in training data. Available columns: {train_data.columns}"
             )
         self.target_name = target_name
 
@@ -36,7 +37,6 @@ class IdentityTarget:
 
         if self.target_name not in data.columns:
             raise ValueError(
-                f"Target column '{self.target_name}' not found in split data. "
-                f"Available columns: {data.columns}"
+                f"Target column '{self.target_name}' not found in split data. Available columns: {data.columns}"
             )
         return data

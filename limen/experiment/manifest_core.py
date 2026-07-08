@@ -112,12 +112,13 @@ class CalibrationBuilder:
 
     '''Fluent builder for calibration configuration.'''
 
-    def __init__(self, manifest: 'MLManifest') -> None:
+    def __init__(self, manifest: object) -> None:
+
+        super().__init__()
 
         if not isinstance(manifest, MLManifest):
             raise ValueError(
-                f'CalibrationBuilder requires an MLManifest, got {type(manifest).__name__}. '
-                'Use MLManifest().with_calibration() to configure calibration.'
+                f"CalibrationBuilder requires an MLManifest, got {type(manifest).__name__}. Use MLManifest().with_calibration() to configure calibration."
             )
         self._manifest = manifest
         self._calibration_func: CalibratorProtocol | None = None
@@ -233,9 +234,7 @@ class DataSourceResolver:
                 if hasattr(instance, 'data'):
                     return instance.data
                 raise ValueError(
-                    f"DataSourceResolver Method {method.__qualname__} executed successfully but "
-                    f"instance does not have 'data' attribute. Expected data source "
-                    f"methods to populate instance.data"
+                    f"DataSourceResolver Method {method.__qualname__} executed successfully but instance does not have 'data' attribute. Expected data source methods to populate instance.data"
                 )
             return method(**params)
 
@@ -474,12 +473,12 @@ class Manifest:
 
     def set_split_dates(
         self,
-        train_start: date, train_end: date,
-        val_start: date, val_end: date,
-        test_start: date, test_end: date,
+        train_start: date | Any, train_end: date | Any,
+        val_start: date | Any, val_end: date | Any,
+        test_start: date | Any, test_end: date | Any,
         *,
-        val_predict_guard: bool = True,
-        test_predict_guard: bool = True,
+        val_predict_guard: bool | Any = True,
+        test_predict_guard: bool | Any = True,
     ) -> 'Manifest':
 
         '''
@@ -543,22 +542,19 @@ class Manifest:
         for name, value in bounds:
             if not isinstance(value, date):
                 raise TypeError(
-                    f'Manifest {name} must be a date or datetime instance, '
-                    f'got {type(value).__name__}: {value!r}'
+                    f"Manifest {name} must be a date or datetime instance, got {type(value).__name__}: {value!r}"
                 )
         for (a_name, a), (b_name, b) in pairwise(bounds):
             if a > b:
                 raise ValueError(
-                    f'Manifest {a_name}={a!r} must be <= {b_name}={b!r}; bounds must be '
-                    'in non-decreasing order (gaps between adjacent windows allowed)'
+                    f"Manifest {a_name}={a!r} must be <= {b_name}={b!r}; bounds must be in non-decreasing order (gaps between adjacent windows allowed)"
                 )
 
         for name, flag in (('val_predict_guard', val_predict_guard),
                            ('test_predict_guard', test_predict_guard)):
             if not isinstance(flag, bool):
                 raise TypeError(
-                    f'Manifest {name} must be a bool, '
-                    f'got {type(flag).__name__}: {flag!r}'
+                    f"Manifest {name} must be a bool, got {type(flag).__name__}: {flag!r}"
                 )
 
         self.split_dates = (
@@ -670,9 +666,7 @@ class Manifest:
             unknown = set(ds_overrides) - method_params
             if unknown:
                 raise ValueError(
-                    f"Manifest Unknown data source params: {sorted(unknown)}. "
-                    f"Accepted by {new_manifest.data_source_config.method.__name__}: "
-                    f"{sorted(method_params)}"
+                    f"Manifest Unknown data source params: {sorted(unknown)}. Accepted by {new_manifest.data_source_config.method.__name__}: {sorted(method_params)}"
                 )
             new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
             new_manifest.data_source_config.params.update(ds_overrides)
@@ -729,8 +723,7 @@ class Manifest:
         '''
 
         raise NotImplementedError(
-            f'{type(self).__name__} must implement prepare_data(). '
-            'Use MLManifest for ML pipelines or RuleBasedManifest for rule-based pipelines.'
+            f"{type(self).__name__} must implement prepare_data(). Use MLManifest for ML pipelines or RuleBasedManifest for rule-based pipelines."
         )
 
     def resolve_model_kwargs(self, round_params: dict[str, Any]) -> dict[str, Any]:
@@ -775,8 +768,7 @@ class Manifest:
                 model_kwargs[param_name] = param_obj.default
             else:
                 raise ValueError(
-                    f"Manifest Missing required parameter '{param_name}' for model function. "
-                    'It must be provided in round_params.'
+                    f"Manifest Missing required parameter '{param_name}' for model function. It must be provided in round_params."
                 )
 
         if has_var_keyword:
@@ -833,8 +825,7 @@ class Manifest:
                 and original not in round_params
             ):
                 raise ValueError(
-                    f"Manifest backtest {key} references unknown search-param '{original}'; "
-                    "add it to params() or pass a number"
+                    f"Manifest backtest {key} references unknown search-param '{original}'; add it to params() or pass a number"
                 )
             if key == 'notional_rate':
                 if (
@@ -962,13 +953,10 @@ class MLManifest(Manifest):
             if scaler_type not in SCALER_REGISTRY:
                 if scaler_type == param_name:
                     raise ValueError(
-                        f"round_params['{param_name}'] is required when using "
-                        f"set_scaler_from_params(). "
-                        f"Available types: {sorted(SCALER_REGISTRY)}"
+                        f"round_params['{param_name}'] is required when using set_scaler_from_params(). Available types: {sorted(SCALER_REGISTRY)}"
                     )
                 raise ValueError(
-                    f"MLManifest Unknown scaler type '{scaler_type}'. "
-                    f"Available: {sorted(SCALER_REGISTRY)}"
+                    f"MLManifest Unknown scaler type '{scaler_type}'. Available: {sorted(SCALER_REGISTRY)}"
                 )
             return SCALER_REGISTRY[scaler_type](data, **_static, **dyn)
 
@@ -1007,10 +995,10 @@ class MLManifest(Manifest):
 
 
     def set_pca_compression(self,
-                            enabled_param: str = 'auto_pca',
-                            n_components_param: str = 'pca_k',
-                            scaler_param_name: str = '_scaler',
-                            component_prefix: str = 'pc_') -> 'MLManifest':
+                            enabled_param: str | Any = 'auto_pca',
+                            n_components_param: str | Any = 'pca_k',
+                            scaler_param_name: str | Any = '_scaler',
+                            component_prefix: str | Any = 'pc_') -> 'MLManifest':
 
         '''
         Configure optional PCA compression over the finalized feature surface.
@@ -1110,9 +1098,7 @@ class MLManifest(Manifest):
                     split_name = _SPLIT_NAMES[i] if i < len(_SPLIT_NAMES) else str(i)
                     shortfall = n_raw_cco - len(cco_block)
                     msg = (
-                        f'under-warmed CCO: {split_name} split requires {n_raw_cco} '
-                        f'context rows but only {len(cco_block)} available '
-                        f'(shortfall {shortfall})'
+                        f"under-warmed CCO: {split_name} split requires {n_raw_cco} context rows but only {len(cco_block)} available (shortfall {shortfall})"
                     )
                     if self.strict_mode:
                         raise StrictModeError(msg)
@@ -1213,9 +1199,7 @@ class MLManifest(Manifest):
                 )
                 if not accepts_config:
                     raise ValueError(
-                        'MLManifest Calibration is configured but the architecture function does not '
-                        'accept `prediction_calibration_config`. Add it as a named parameter '
-                        'or use **kwargs.'
+                        'MLManifest Calibration is configured but the architecture function does not accept `prediction_calibration_config`. Add it as a named parameter or use **kwargs.'
                     )
                 resolved = self.prediction_calibration_config.resolve(round_params)
                 config = CalibrationConfig(
@@ -1317,8 +1301,7 @@ class RuleBasedManifest(Manifest):
 
         if self.strategy is None:
             raise ValueError(
-                'RuleBasedManifest.prepare_data() called without a strategy. '
-                'Call with_strategy(conditions, entry=...) before running.'
+                'RuleBasedManifest.prepare_data() called without a strategy. Call with_strategy(conditions, entry=...) before running.'
             )
 
         split_data, all_datetimes, _ = _run_prepare_setup(self, raw_data, round_params)
@@ -1511,8 +1494,7 @@ def _is_group_active(group: str, round_params: dict[str, Any]) -> bool:
 
     if not isinstance(feature_groups, str):
         raise TypeError(
-            f"round_params['feature_groups'] must be a string, "
-            f"got {type(feature_groups).__name__}"
+            f"round_params['feature_groups'] must be a string, got {type(feature_groups).__name__}"
         )
 
     return group in feature_groups.split('|')
@@ -1579,8 +1561,7 @@ def _apply_sensor_pca(
 
     if pca is None or input_feature_names is None or component_cols is None:
         raise ValueError(
-            'PCA was not fitted — fitted_params missing _pca, '
-            '_pca_input_feature_names, or _pca_feature_names'
+            'PCA was not fitted — fitted_params missing _pca, _pca_input_feature_names, or _pca_feature_names'
         )
 
     target_col = manifest.target_column
@@ -1627,8 +1608,7 @@ def _apply_feature_ablation(
     drop_count = 0 if raw_drop_count is None else raw_drop_count
     if not isinstance(drop_count, int) or isinstance(drop_count, bool) or drop_count < 0:
         raise ValueError(
-            f"round_params['{config.drop_count_key}'] must be a non-negative int, "
-            f"got {raw_drop_count!r}"
+            f"round_params['{config.drop_count_key}'] must be a non-negative int, got {raw_drop_count!r}"
         )
 
     raw_seed = round_params.get(config.seed_key)
@@ -1652,8 +1632,7 @@ def _apply_feature_ablation(
 
         if drop_count > len(eligible):
             raise ValueError(
-                f"{config.drop_count_key} ({drop_count}) exceeds "
-                f"eligible feature columns ({len(eligible)})"
+                f"{config.drop_count_key} ({drop_count}) exceeds eligible feature columns ({len(eligible)})"
             )
 
         rng = random.Random(seed)
@@ -1808,23 +1787,17 @@ def _apply_pca_compression(
 
     if config.n_components_param not in round_params:
         raise ValueError(
-            f"round_params['{config.n_components_param}'] is required when "
-            f"round_params['{config.enabled_param}'] is True"
+            f"round_params['{config.n_components_param}'] is required when round_params['{config.enabled_param}'] is True"
         )
 
     scaler = all_fitted_params.get(config.scaler_param_name)
     if scaler is None:
         raise ValueError(
-            'PCA compression could not find a fitted scaler at '
-            f"all_fitted_params['{config.scaler_param_name}']. "
-            'Configure .set_scaler(RobustScaler), or pass a matching '
-            'scaler_param_name to .set_pca_compression().'
+            f"PCA compression could not find a fitted scaler at all_fitted_params['{config.scaler_param_name}']. Configure .set_scaler(RobustScaler), or pass a matching scaler_param_name to .set_pca_compression()."
         )
     if not isinstance(scaler, RobustScaler):
         raise ValueError(
-            'PCA compression requires a fitted RobustScaler at '
-            f"all_fitted_params['{config.scaler_param_name}'], got "
-            f'{type(scaler).__name__}.'
+            f"PCA compression requires a fitted RobustScaler at all_fitted_params['{config.scaler_param_name}'], got {type(scaler).__name__}."
         )
 
     target_col = manifest.target_column
@@ -1839,13 +1812,11 @@ def _apply_pca_compression(
         )
     if k < 1 or k > len(feature_cols):
         raise ValueError(
-            f"round_params['{config.n_components_param}'] must be between 1 "
-            f"and the feature count ({len(feature_cols)}), got {k}"
+            f"round_params['{config.n_components_param}'] must be between 1 and the feature count ({len(feature_cols)}), got {k}"
         )
     if k > split_data[0].height:
         raise ValueError(
-            f"round_params['{config.n_components_param}'] must be no larger than "
-            f'the train row count ({split_data[0].height}), got {k}'
+            f"round_params['{config.n_components_param}'] must be no larger than the train row count ({split_data[0].height}), got {k}"
         )
 
     pca = PCA(n_components=k, svd_solver='full', whiten=False)
@@ -1891,8 +1862,7 @@ def _validate_pca_feature_columns(
         ]
         if non_numeric:
             raise ValueError(
-                f'PCA compression requires numeric feature columns; '
-                f'split {split_idx} has non-numeric columns: {non_numeric}'
+                f"PCA compression requires numeric feature columns; split {split_idx} has non-numeric columns: {non_numeric}"
             )
 
 
@@ -1980,8 +1950,7 @@ def _align_split_columns(split_data: list[pl.DataFrame]) -> list[pl.DataFrame]:
             extra = set(split.columns) - common_cols
             if extra:
                 logger.warning(
-                    'Dropping columns %s from split %d — '
-                    'not present in all splits',
+                    'Dropping columns %s from split %d — not present in all splits',
                     sorted(extra), i,
                 )
                 ordered_cols = [c for c in split.columns if c in common_cols]
@@ -2072,8 +2041,7 @@ def _finalize_rule_based_data(
             collisions = sorted(set(data_dict[split].columns) & set(predicate_ids))
             if collisions:
                 raise ValueError(
-                    f'Rule-based condition ids collide with existing columns in {split!r} split: '
-                    f'{collisions}. Rename the affected conditions.'
+                    f"Rule-based condition ids collide with existing columns in {split!r} split: {collisions}. Rename the affected conditions."
                 )
             data_dict[split] = data_dict[split].with_columns(predicate_exprs)
 

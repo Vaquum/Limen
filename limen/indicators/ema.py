@@ -1,13 +1,13 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators._ema import _ema_talib_default_segment
+from limen.indicators._ema import ema_talib_default_segment
 
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
-def _ema_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def ema_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
     lookback = period - 1
@@ -16,7 +16,7 @@ def _ema_from_values(values: np.ndarray, period: int) -> np.ndarray:
 
     start_idx = lookback
     end_idx = n - 1
-    _, ema_values = _ema_talib_default_segment(values, period, start_idx, end_idx)
+    _, ema_values = ema_talib_default_segment(values, period, start_idx, end_idx)
     out[start_idx:start_idx + len(ema_values)] = ema_values
     return out
 
@@ -46,7 +46,7 @@ def ema(
     frame = data
     ema_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _ema_from_values(
+            ema_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

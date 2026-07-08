@@ -20,8 +20,7 @@ def _fmt(val: Any, params: dict) -> Any:
         return val.format(**params)
     except KeyError as e:
         raise ValueError(
-            f'Template placeholder {e} not found in round_params — '
-            f'available keys: {sorted(params)}'
+            f"Template placeholder {e} not found in round_params — available keys: {sorted(params)}"
         ) from e
 
 
@@ -189,8 +188,7 @@ def sql_expr(expr_string: str, params: dict) -> pl.Expr:
         resolved = expr_string.format(**params)
     except KeyError as e:
         raise ValueError(
-            f'sql_expr missing template parameter {e} — '
-            f'available keys: {sorted(params)}'
+            f"sql_expr missing template parameter {e} — available keys: {sorted(params)}"
         ) from e
     return pl.sql_expr(resolved)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from typing import TYPE_CHECKING
 from typing import Any
 
 
@@ -15,7 +16,25 @@ _LAZY_EXPORTS = {
 }
 
 
-__all__ = list(_LAZY_EXPORTS)
+if TYPE_CHECKING:
+    from limen.sfd.foundational_sfd import dlinear_regressor
+    from limen.sfd.foundational_sfd import lightgbm_binary
+    from limen.sfd.foundational_sfd import logreg_binary
+    from limen.sfd.foundational_sfd import random_binary
+    from limen.sfd.foundational_sfd import rule_based
+    from limen.sfd.foundational_sfd import tabpfn_binary
+    from limen.sfd.foundational_sfd import xgboost_regressor
+
+
+__all__ = [
+    'dlinear_regressor',
+    'lightgbm_binary',
+    'logreg_binary',
+    'random_binary',
+    'rule_based',
+    'tabpfn_binary',
+    'xgboost_regressor',
+]
 
 
 def __getattr__(name: str) -> Any:

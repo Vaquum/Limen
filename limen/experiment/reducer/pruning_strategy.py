@@ -30,6 +30,8 @@ class PruningStrategy(ABC):
 
         '''
 
+        super().__init__()
+
         self._active = active
 
 

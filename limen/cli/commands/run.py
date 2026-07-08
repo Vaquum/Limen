@@ -12,11 +12,13 @@ from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
 
+DEFAULT_RESULTS_BASE: Path = Path('.')
+
 
 def run_experiment(yaml_path: Path,
                    dry_run: bool = False,
                    manifest_id: str | None = None,
-                   results_base: Path = Path('.'),
+                   results_base: Path = DEFAULT_RESULTS_BASE,
                    progress_bar: bool = True) -> bool:
 
     '''
@@ -44,7 +46,7 @@ def run_experiment(yaml_path: Path,
 
     if dry_run:
         try:
-            CompiledSFD(yaml_dict).manifest()
+            _ = CompiledSFD(yaml_dict).manifest()
         except Exception as exc:  # noqa: BLE001
             click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
             return False
@@ -61,7 +63,7 @@ def run_experiment(yaml_path: Path,
     results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
     results_dir.mkdir(parents=True, exist_ok=True)
     yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name
-    shutil.copy2(yaml_path, results_dir / yaml_dest_name)
+    _ = shutil.copy2(yaml_path, results_dir / yaml_dest_name)
 
     search_strategy = build_search_strategy(yaml_dict)
     compiled = CompiledSFD(yaml_dict)
@@ -70,8 +72,7 @@ def run_experiment(yaml_path: Path,
     total_space = math.prod(len(v) for v in _params.values())
     strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
     click.echo(
-        f"Running '{experiment_name}' — "
-        f"{n_permutations:,} of {format_space(total_space)} permutations ({strategy_type})"
+        f"Running '{experiment_name}' — {n_permutations:,} of {format_space(total_space)} permutations ({strategy_type})"
     )
     click.echo(f"  Results → {results_dir}")
 
@@ -113,7 +114,7 @@ def _build_results_dir(uel_cfg: dict[str, Any],
                        experiment_name: str,
                        test_mode: bool,
                        manifest_id: str | None = None,
-                       results_base: Path = Path('.')) -> Path:
+                       results_base: Path = DEFAULT_RESULTS_BASE) -> Path:
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     results_root = results_base / 'results'

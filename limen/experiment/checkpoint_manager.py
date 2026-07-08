@@ -28,6 +28,8 @@ class CheckpointManager:
 
         '''
 
+        super().__init__()
+
         if checkpoint_interval < 1:
             raise ValueError(
                 f"checkpoint_interval must be >= 1, got {checkpoint_interval}"
@@ -168,10 +170,7 @@ class CheckpointManager:
             data = self._read_json(Path(checkpoint_dir) / 'checkpoint.json')
         except FileNotFoundError as e:
             raise ValueError(
-                f"No checkpoint found in '{checkpoint_dir}'. If the "
-                f"directory holds artifacts from a run that crashed before "
-                f"its first checkpoint, delete them and rerun with "
-                f"resume=False."
+                f"No checkpoint found in '{checkpoint_dir}'. If the directory holds artifacts from a run that crashed before its first checkpoint, delete them and rerun with resume=False."
             ) from e
         except json.JSONDecodeError as e:
             raise ValueError(
@@ -180,8 +179,7 @@ class CheckpointManager:
 
         if not isinstance(data, dict):
             raise ValueError(
-                f"Corrupt checkpoint in '{checkpoint_dir}': "
-                f"expected object, got {type(data).__name__}."
+                f"Corrupt checkpoint in '{checkpoint_dir}': expected object, got {type(data).__name__}."
             )
 
         return data
@@ -219,18 +217,13 @@ class CheckpointManager:
         saved_hash = metadata['content_hash']
         if saved_hash != content_hash:
             raise ValueError(
-                f"Content hash mismatch: checkpoint was created with hash "
-                f"'{saved_hash[:16]}...', current is '{content_hash[:16]}...'. "
-                f"Experiment configuration has changed. "
-                f"Delete the checkpoint directory to start fresh."
+                f"Content hash mismatch: checkpoint was created with hash '{saved_hash[:16]}...', current is '{content_hash[:16]}...'. Experiment configuration has changed. Delete the checkpoint directory to start fresh."
             )
 
         saved_strategy = metadata['strategy_type']
         if saved_strategy != strategy_type:
             raise ValueError(
-                f"Strategy type mismatch: checkpoint used '{saved_strategy}', "
-                f"current is '{strategy_type}'. "
-                f"Cannot resume with a different search strategy."
+                f"Strategy type mismatch: checkpoint used '{saved_strategy}', current is '{strategy_type}'. Cannot resume with a different search strategy."
             )
 
         return data
@@ -241,8 +234,7 @@ class CheckpointManager:
 
         if not isinstance(data, dict):
             raise ValueError(
-                f"Invalid checkpoint format in '{checkpoint_dir}': "
-                f"top-level JSON must be an object, got {type(data).__name__}."
+                f"Invalid checkpoint format in '{checkpoint_dir}': top-level JSON must be an object, got {type(data).__name__}."
             )
 
         if 'metadata' not in data:
@@ -267,9 +259,7 @@ class CheckpointManager:
                               ('content_hash', str), ('strategy_type', str)):
             if not isinstance(metadata[key], expected):
                 raise ValueError(
-                    f"Invalid checkpoint format in '{checkpoint_dir}': "
-                    f"metadata key '{key}' must be {expected.__name__}, "
-                    f"got {type(metadata[key]).__name__}."
+                    f"Invalid checkpoint format in '{checkpoint_dir}': metadata key '{key}' must be {expected.__name__}, got {type(metadata[key]).__name__}."
                 )
 
         for key in ('msq_state', 'domain_state'):
@@ -279,8 +269,7 @@ class CheckpointManager:
                 )
             if not isinstance(data[key], dict):
                 raise ValueError(
-                    f"Invalid checkpoint format in '{checkpoint_dir}': "
-                    f"'{key}' must be an object, got {type(data[key]).__name__}."
+                    f"Invalid checkpoint format in '{checkpoint_dir}': '{key}' must be an object, got {type(data[key]).__name__}."
                 )
 
 
@@ -291,7 +280,7 @@ class CheckpointManager:
         try:
             with tmp.open('w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            tmp.replace(path)
+            _ = tmp.replace(path)
         except Exception:
             if tmp.exists():
                 tmp.unlink()

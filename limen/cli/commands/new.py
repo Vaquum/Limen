@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -77,10 +78,7 @@ def _restore_from_backup(project_path: Path, from_remote: str) -> bool:
 
     if not (project_path / 'limen.toml').exists():
         click.secho(
-            f"  ⚠ Restored '{project_name}', but no limen.toml found — "
-            'this may not be a Limen project backup.\n'
-            '    If your backup is on another branch, clone it directly:\n'
-            f'      git clone -b <branch> {from_remote} {project_name}',
+            f"  ⚠ Restored '{project_name}', but no limen.toml found — this may not be a Limen project backup.\n    If your backup is on another branch, clone it directly:\n      git clone -b <branch> {from_remote} {project_name}",
             fg='yellow',
         )
 
@@ -110,7 +108,7 @@ def _clone_template(project_path: Path) -> bool:
         click.secho(f"  ✗ git init failed: {init.stderr.strip()}", fg='red')
         return False
     # Start on 'main' to match GitHub's default branch, so backup/restore line up.
-    run_git(['symbolic-ref', 'HEAD', 'refs/heads/main'], cwd=project_path)
+    _: Any = run_git(['symbolic-ref', 'HEAD', 'refs/heads/main'], cwd=project_path)
     add = run_git(['add', '.'], cwd=project_path)
     if add.returncode != 0:
         shutil.rmtree(project_path)
@@ -139,5 +137,5 @@ def _write_backup_remote(project_path: Path, remote_url: str) -> None:
     if updated == text:
         click.secho('  ⚠ Could not set backup remote — limen.toml format unexpected.', fg='yellow')
         return
-    toml_path.write_text(updated, encoding='utf-8')
+    _ = toml_path.write_text(updated, encoding='utf-8')
     click.echo(f"  Backup remote set to: {remote_url}")

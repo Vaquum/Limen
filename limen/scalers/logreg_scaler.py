@@ -42,6 +42,8 @@ class LogRegScaler:
             x_train (pl.DataFrame): The training data
         '''
 
+        super().__init__()
+
         self.means = {}
         self.stds = {}
 

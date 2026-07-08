@@ -12,12 +12,12 @@ from typing import TypeGuard
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from limen.yaml.config import _STORE_RELATIVE
+from limen.yaml.config import STORE_RELATIVE
 from limen.yaml.config import find_project_root
 
 
-_SHA256_PREFIX = 'sha256:'
-_MANIFEST_URI_SCHEME = 'manifest://'
+SHA256_PREFIX = 'sha256:'
+MANIFEST_URI_SCHEME = 'manifest://'
 _SHA256_HEX_LENGTH = 64
 _YAML_DUMP_WIDTH = 4096
 
@@ -41,7 +41,7 @@ def canonical_manifest_id(yaml_dict: dict[str, Any]) -> str:
 
     data_no_lineage = {k: v for k, v in yaml_dict.items() if k != 'lineage'}
     canonical = json.dumps(data_no_lineage, sort_keys=True, default=str)
-    return f'{_SHA256_PREFIX}{hashlib.sha256(canonical.encode()).hexdigest()}'
+    return f'{SHA256_PREFIX}{hashlib.sha256(canonical.encode()).hexdigest()}'
 
 
 def short_id(manifest_id: str) -> str:
@@ -57,7 +57,7 @@ def short_id(manifest_id: str) -> str:
 
     '''
 
-    return manifest_id[len(_SHA256_PREFIX):len(_SHA256_PREFIX) + 8]
+    return manifest_id[len(SHA256_PREFIX):len(SHA256_PREFIX) + 8]
 
 
 def manifest_name(data: dict[str, Any], fallback: str) -> str:
@@ -102,11 +102,11 @@ def _index_entry(manifest_id: str,
         'name': name,
         'committed_at': committed_at,
         'parent_id': parent_id,
-        'file': f'{manifest_id[len(_SHA256_PREFIX):]}.yaml',
+        'file': f'{manifest_id[len(SHA256_PREFIX):]}.yaml',
     }
 
 
-def _lineage_block(data: dict[str, Any]) -> dict[str, Any]:
+def lineage_block(data: dict[str, Any]) -> dict[str, Any]:
 
     '''Return the lineage mapping, or an empty dict when it is absent or not a mapping.'''
 
@@ -148,14 +148,14 @@ def commit_manifest(yaml_path: Path,
         raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
 
     if parent_id is None:
-        source_parent = _lineage_block(data).get('parent_id')
+        source_parent = lineage_block(data).get('parent_id')
         if isinstance(source_parent, str):
             parent_id = source_parent
 
     manifest_id = canonical_manifest_id(data)
 
-    store_path = project_root / _STORE_RELATIVE
-    dest = store_path / f'{manifest_id[len(_SHA256_PREFIX):]}.yaml'
+    store_path = project_root / STORE_RELATIVE
+    dest = store_path / f'{manifest_id[len(SHA256_PREFIX):]}.yaml'
 
     already_existed = dest.exists()
 
@@ -169,7 +169,7 @@ def commit_manifest(yaml_path: Path,
         stream = StringIO()
         yaml.dump(data, stream)
         store_path.mkdir(parents=True, exist_ok=True)
-        dest.write_text(stream.getvalue(), encoding='utf-8')
+        _ = dest.write_text(stream.getvalue(), encoding='utf-8')
         stored_parent_id = parent_id
     else:
         try:
@@ -179,7 +179,7 @@ def commit_manifest(yaml_path: Path,
         if not isinstance(existing, dict):
             raise ValueError(f"Invalid committed manifest format in '{dest.name}': expected a mapping")
         name = manifest_name(existing, fallback=dest.stem)
-        existing_lineage = _lineage_block(existing)
+        existing_lineage = lineage_block(existing)
         committed_at = existing_lineage.get('committed_at', '')
         stored_parent_id = existing_lineage.get('parent_id')
 
@@ -210,14 +210,14 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
 
     '''
 
-    if not uri.startswith(_MANIFEST_URI_SCHEME):
+    if not uri.startswith(MANIFEST_URI_SCHEME):
         raise ValueError(f"Not a manifest URI: '{uri}'")
 
-    ref = uri[len(_MANIFEST_URI_SCHEME):]
-    if not ref.startswith(_SHA256_PREFIX):
+    ref = uri[len(MANIFEST_URI_SCHEME):]
+    if not ref.startswith(SHA256_PREFIX):
         raise ValueError(f"Manifest URI must use sha256 scheme: '{uri}'")
 
-    hex_hash = ref[len(_SHA256_PREFIX):]
+    hex_hash = ref[len(SHA256_PREFIX):]
 
     if not re.fullmatch(r'[0-9a-f]{1,64}', hex_hash):
         raise ValueError(f"Malformed hash in manifest URI: '{uri}'")
@@ -226,7 +226,7 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
     if project_root is None:
         raise ValueError('No limen project found. Run from inside a project directory.')
 
-    store_path = project_root / _STORE_RELATIVE
+    store_path = project_root / STORE_RELATIVE
 
     if len(hex_hash) == _SHA256_HEX_LENGTH:
         candidate = store_path / f'{hex_hash}.yaml'
@@ -250,12 +250,11 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
         raise ValueError(f"Cannot read manifest '{candidate.name}': {exc}") from exc
     if not isinstance(data, dict):
         raise ValueError(f"Invalid manifest format in '{candidate.name}'")
-    expected_id = f'{_SHA256_PREFIX}{full_hex}'
-    actual_id = _lineage_block(data).get('id')
+    expected_id = f'{SHA256_PREFIX}{full_hex}'
+    actual_id = lineage_block(data).get('id')
     if actual_id != expected_id:
         raise ValueError(
-            f"Integrity check failed: '{candidate.name}' lineage.id "
-            f"does not match expected '{expected_id}'"
+            f"Integrity check failed: '{candidate.name}' lineage.id does not match expected '{expected_id}'"
         )
 
     return candidate, project_root
@@ -274,9 +273,9 @@ def is_full_manifest_id(value: Any) -> TypeGuard[str]:
 
     '''
 
-    if not isinstance(value, str) or not value.startswith(_SHA256_PREFIX):
+    if not isinstance(value, str) or not value.startswith(SHA256_PREFIX):
         return False
-    hex_part = value[len(_SHA256_PREFIX):]
+    hex_part = value[len(SHA256_PREFIX):]
     return len(hex_part) == _SHA256_HEX_LENGTH and all(c in '0123456789abcdef' for c in hex_part)
 
 
@@ -297,11 +296,11 @@ def normalize_manifest_ref(ref: str) -> str:
     '''
 
     ref = ref.strip()
-    if ref.startswith(_MANIFEST_URI_SCHEME):
+    if ref.startswith(MANIFEST_URI_SCHEME):
         return ref
-    if ref.startswith(_SHA256_PREFIX):
-        return f'{_MANIFEST_URI_SCHEME}{ref}'
-    return f'{_MANIFEST_URI_SCHEME}{_SHA256_PREFIX}{ref}'
+    if ref.startswith(SHA256_PREFIX):
+        return f'{MANIFEST_URI_SCHEME}{ref}'
+    return f'{MANIFEST_URI_SCHEME}{SHA256_PREFIX}{ref}'
 
 
 def load_index(project_root: Path) -> dict[str, Any]:
@@ -320,7 +319,7 @@ def load_index(project_root: Path) -> dict[str, Any]:
 
     '''
 
-    index_path = project_root / _STORE_RELATIVE / 'index.json'
+    index_path = project_root / STORE_RELATIVE / 'index.json'
     if not index_path.exists():
         return {'version': 1, 'manifests': []}
     try:
@@ -359,7 +358,7 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
     if dest.exists():
         raise FileExistsError(str(dest))
 
-    parent_id = f'{_SHA256_PREFIX}{committed_path.stem}'
+    parent_id = f'{SHA256_PREFIX}{committed_path.stem}'
 
     yaml = _configured_yaml()
     data = yaml.load(committed_path.read_text(encoding='utf-8'))
@@ -377,7 +376,7 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
     stream = StringIO()
     yaml.dump(data, stream)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(stream.getvalue(), encoding='utf-8')
+    _ = dest.write_text(stream.getvalue(), encoding='utf-8')
 
     return parent_id
 
@@ -402,7 +401,7 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
 
     '''
 
-    store_path = project_root / _STORE_RELATIVE
+    store_path = project_root / STORE_RELATIVE
     warnings_out: list[str] = []
     entries: list[dict[str, Any]] = []
 
@@ -423,7 +422,7 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
             continue
 
         manifest_id = lineage.get('id')
-        expected_id = f'{_SHA256_PREFIX}{path.stem}'
+        expected_id = f'{SHA256_PREFIX}{path.stem}'
         if manifest_id != expected_id:
             warnings_out.append(f"{path.name}: lineage.id does not match filename — skipped")
             continue
@@ -437,7 +436,7 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
 
     store_path.mkdir(parents=True, exist_ok=True)
     index = {'version': 1, 'manifests': entries}
-    (store_path / 'index.json').write_text(json.dumps(index, indent=2), encoding='utf-8')
+    _ = (store_path / 'index.json').write_text(json.dumps(index, indent=2), encoding='utf-8')
 
     return len(entries), warnings_out
 
@@ -463,4 +462,4 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
     kept = [m for m in manifests if not (isinstance(m, dict) and m.get('id') == entry['id'])]
     kept.append(entry)
     index['manifests'] = kept
-    index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')
+    _ = index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')

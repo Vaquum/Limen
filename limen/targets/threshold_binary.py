@@ -21,6 +21,8 @@ class ThresholdBinaryTarget:
             threshold (float): Fixed comparison value; rows above this are labeled 1
         '''
 
+        super().__init__()
+
         self.target_name = target_name
         self.source_column = source_column
         self.threshold = threshold

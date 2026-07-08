@@ -20,13 +20,15 @@ class RankGaussScaler:
 
         '''
 
+        super().__init__()
+
         if n_quantiles < 1:
             raise ValueError(
                 f"RankGaussScaler n_quantiles must be >= 1, got {n_quantiles}"
             )
 
         self._n_quantiles = n_quantiles
-        self._quantiles: dict[str, np.ndarray] = {}
+        self.quantiles: dict[str, np.ndarray] = {}
 
         quantile_points = np.linspace(0, 1, n_quantiles + 1)
 
@@ -42,7 +44,7 @@ class RankGaussScaler:
             if quantiles[0] == quantiles[-1]:
                 continue
 
-            self._quantiles[col] = quantiles
+            self.quantiles[col] = quantiles
 
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -64,7 +66,7 @@ class RankGaussScaler:
         eps = 1.0 / (2 * self._n_quantiles)
         transformed_cols: list[pl.Series] = []
 
-        for col, quantiles in self._quantiles.items():
+        for col, quantiles in self.quantiles.items():
             if col not in df.columns:
                 continue
 
@@ -104,7 +106,7 @@ def inverse_transform(df: pl.DataFrame, scaler: RankGaussScaler) -> pl.DataFrame
 
     restored_cols: list[pl.Series] = []
 
-    for col, quantiles in scaler._quantiles.items():
+    for col, quantiles in scaler.quantiles.items():
         if col not in df.columns:
             continue
 

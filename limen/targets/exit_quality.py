@@ -17,6 +17,8 @@ class ExitQualityTarget:
             target_name (str): Name of the target column to create
         '''
 
+        super().__init__()
+
         self.target_name = target_name
 
     def transform(self,
@@ -45,9 +47,7 @@ class ExitQualityTarget:
         missing = [c for c in _REQUIRED_COLUMNS if c not in data.columns]
         if missing:
             raise ValueError(
-                f"ExitQualityTarget requires user-supplied columns missing "
-                f"from data: {missing}. No Limen indicator or feature produces "
-                f"them; they must be present in the input data."
+                f"ExitQualityTarget requires user-supplied columns missing from data: {missing}. No Limen indicator or feature produces them; they must be present in the input data."
             )
 
         return data.with_columns(
