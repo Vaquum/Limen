@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -76,10 +77,11 @@ def test_slice_closeout_guard_and_ratchet_surfaces() -> None:
     assert 'issues:' in guard
     assert 'gh issue reopen' in guard
     pyright_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_pyright.yml').read_text(encoding='utf-8')
-    assert 'PYRIGHT_WARNING_BASELINE' in pyright_workflow
+    assert re.search(r'PYRIGHT_WARNING_BASELINE: \d+', pyright_workflow) is not None
     assert '--outputjson' in pyright_workflow
     slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
     assert 'slice_closeout_guard' in slice_template
+    assert 'reverted automatically' in slice_template
 
 
 def test_pyright_gate_config() -> None:
