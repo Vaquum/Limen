@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 
 
-def _read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
+def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
 
     '''
     Create cleaned experiment log DataFrame from file.

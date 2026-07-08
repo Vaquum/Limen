@@ -11,7 +11,6 @@ def require_optional(module_name: str, package_name: str, extra_name: str) -> Mo
         missing_root = module_name.partition('.')[0]
         if exc.name == missing_root:
             raise ImportError(
-                f'{package_name} is required for this Limen surface. '
-                f'Install it with `pip install vaquum-limen[{extra_name}]`.'
+                f"{package_name} is required for this Limen surface. Install it with `pip install vaquum-limen[{extra_name}]`."
             ) from exc
         raise

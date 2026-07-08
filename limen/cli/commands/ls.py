@@ -3,8 +3,8 @@ from pathlib import Path
 import click
 
 from limen.yaml.config import find_project_root
-from limen.yaml.store import _MANIFEST_URI_SCHEME
-from limen.yaml.store import _SHA256_PREFIX
+from limen.yaml.store import MANIFEST_URI_SCHEME
+from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import is_full_manifest_id
 from limen.yaml.store import load_index
 from limen.yaml.store import short_id
@@ -51,7 +51,7 @@ def run_ls(start: Path) -> bool:
                 or not isinstance(entry.get('committed_at'), str)):
             click.secho('  ⚠ Skipping malformed entry in index.json.', fg='yellow')
             continue
-        uri = f'{_MANIFEST_URI_SCHEME}{_SHA256_PREFIX}{short_id(entry_id)}'
+        uri = f'{MANIFEST_URI_SCHEME}{SHA256_PREFIX}{short_id(entry_id)}'
         parent_id_val = entry.get('parent_id')
         parent = (f"  parent: {short_id(parent_id_val)}"
                   if is_full_manifest_id(parent_id_val) else '')

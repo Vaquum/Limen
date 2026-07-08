@@ -87,7 +87,7 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
     _apply_calibration(manifest, m)
     _apply_ml_extras(manifest, m)
     _apply_strict_mode(manifest, m)
-    manifest.with_reference_architecture(resolve(m['reference_architecture']))
+    _ = manifest.with_reference_architecture(resolve(m['reference_architecture']))
     return manifest
 
 
@@ -97,18 +97,18 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
     _apply_base(manifest, m)
     _apply_indicators(manifest, m)
     strat = m['strategy']
-    manifest.with_strategy(
+    _ = manifest.with_strategy(
         conditions=[dict(c) for c in strat['conditions']],
         entry=strat['entry'],
     )
-    manifest.with_reference_architecture(resolve(m['reference_architecture']))
+    _ = manifest.with_reference_architecture(resolve(m['reference_architecture']))
     return manifest
 
 
 def _apply_indicators(manifest: Manifest, m: dict[str, Any]) -> None:
 
     for item in m.get('indicators') or []:
-        manifest.add_indicator(
+        _ = manifest.add_indicator(
             resolve(item['func']),
             include_if=item.get('include_if'),
             **_resolve_func_params(dict(item.get('params') or {})),
@@ -130,7 +130,7 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
         params['start_date_limit'] = sd['train_start']
     if 'end_date_limit' in sig_params or accepts_var_keyword:
         params['end_date_limit'] = sd['test_end']
-    manifest.set_data_source(method=method, params=params)
+    _ = manifest.set_data_source(method=method, params=params)
 
     _apply_split(manifest, m)
 
@@ -138,7 +138,7 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
     if cols is not None:
         if not isinstance(cols, list):
             raise ValueError(f"'required_columns' must be a list, got {type(cols).__name__}")
-        manifest.set_required_bar_columns(list(cols))
+        _ = manifest.set_required_bar_columns(list(cols))
 
     _apply_backtest(manifest, m)
 
@@ -149,13 +149,13 @@ def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
     if not backtest:
         return
     kwargs = {key: backtest[key] for key in ('fee_bps', 'slip_bps', 'notional_rate') if key in backtest}
-    manifest.set_backtest_config(**kwargs)
+    _ = manifest.set_backtest_config(**kwargs)
 
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
 
     sd = m['split_dates']
-    manifest.set_split_dates(
+    _ = manifest.set_split_dates(
         date.fromisoformat(sd['train_start']),
         date.fromisoformat(sd['train_end']),
         date.fromisoformat(sd['val_start']),
@@ -171,14 +171,14 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
 
     psds = m.get('pre_split_data_selector')
     if psds is not None:
-        manifest.set_pre_split_data_selector(
+        _ = manifest.set_pre_split_data_selector(
             resolve(psds['func']),
             **_resolve_func_params(dict(psds.get('params') or {})),
         )
 
     bf = m.get('bar_formation')
     if bf is not None:
-        manifest.set_bar_formation(
+        _ = manifest.set_bar_formation(
             resolve(bf['func']),
             **_resolve_func_params(dict(bf.get('params') or {})),
         )
@@ -186,7 +186,7 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
     _apply_indicators(manifest, m)
 
     for item in m.get('features') or []:
-        manifest.add_feature(
+        _ = manifest.add_feature(
             resolve(item['func']),
             include_if=item.get('include_if'),
             **_resolve_func_params(dict(item.get('params') or {})),
@@ -200,21 +200,21 @@ def _apply_scaler(manifest: MLManifest, m: dict[str, Any]) -> None:
         return
     extra_params = dict(scaler.get('params') or {})
     if 'from_params' in scaler:
-        manifest.set_scaler_from_params(param_name=scaler['from_params'], extra_params=extra_params)
+        _ = manifest.set_scaler_from_params(param_name=scaler['from_params'], extra_params=extra_params)
     else:
-        manifest.set_scaler(resolve(scaler['class']), extra_params=extra_params)
+        _ = manifest.set_scaler(resolve(scaler['class']), extra_params=extra_params)
 
 
 def _apply_strict_mode(manifest: MLManifest, m: dict[str, Any]) -> None:
 
     if m.get('strict_mode'):
-        manifest.set_strict_mode(True)
+        _ = manifest.set_strict_mode(True)
 
 
 def _apply_target(manifest: MLManifest, m: dict[str, Any]) -> None:
 
     t = m['target']
-    manifest.with_target_label(
+    _ = manifest.with_target_label(
         target_name=t['name'],
         target_class=resolve(t['class']),
         fit_params=dict(t.get('fit_params') or {}),
@@ -227,7 +227,7 @@ def _apply_feature_ablation(manifest: MLManifest, m: dict[str, Any]) -> None:
     fa = m.get('feature_ablation')
     if fa is None:
         return
-    manifest.set_feature_ablation(
+    _ = manifest.set_feature_ablation(
         drop_count_key=fa.get('drop_count_key', 'feature_drop_count'),
         seed_key=fa.get('seed_key', 'feature_drop_seed'),
     )
@@ -237,7 +237,7 @@ def _apply_pca_compression(manifest: MLManifest, m: dict[str, Any]) -> None:
 
     pca = m.get('pca_compression')
     if pca is not None:
-        manifest.set_pca_compression(**dict(pca))
+        _ = manifest.set_pca_compression(**dict(pca))
 
 
 def _apply_calibration(manifest: MLManifest, m: dict[str, Any]) -> None:
@@ -248,29 +248,29 @@ def _apply_calibration(manifest: MLManifest, m: dict[str, Any]) -> None:
     builder = manifest.with_calibration()
     prob = cal.get('probability_calibration')
     if prob is not None:
-        builder.probability_calibration(
+        _ = builder.probability_calibration(
             func=resolve(prob['func']),
             **_resolve_func_params(dict(prob.get('params') or {})),
         )
     thresh = cal.get('threshold_function')
     if thresh is not None:
-        builder.threshold_function(
+        _ = builder.threshold_function(
             func=resolve(thresh['func']),
             **_resolve_func_params(dict(thresh.get('params') or {})),
         )
     if prob is not None or thresh is not None:
-        builder.done()
+        _ = builder.done()
 
 
 def _apply_ml_extras(manifest: MLManifest, m: dict[str, Any]) -> None:
 
     dde = m.get('data_dict_extension')
     if dde is not None:
-        manifest.add_to_data_dict(resolve(dde['func']))
+        _ = manifest.add_to_data_dict(resolve(dde['func']))
 
     po = m.get('params_override')
     if po is not None:
-        manifest.with_params_override(**dict(po))
+        _ = manifest.with_params_override(**dict(po))
 
     mp = m.get('metrics_params')
     if mp is not None:
@@ -284,6 +284,8 @@ class CompiledSFD:
     '''SFD-compatible object built from a validated YAML experiment dict.'''
 
     def __init__(self, yaml_dict: dict[str, Any]) -> None:
+
+        super().__init__()
 
         self._yaml = yaml_dict
         self._manifest_cache: Manifest | None = None

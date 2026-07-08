@@ -1,13 +1,13 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators.ema import _ema_talib_default_segment
+from limen.indicators.ema import ema_talib_default_segment
 
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
-def _dema_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def dema_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
@@ -19,11 +19,11 @@ def _dema_from_values(values: np.ndarray, period: int) -> np.ndarray:
     start_idx = lookback_total
     end_idx = n - 1
 
-    _, first_ema = _ema_talib_default_segment(values, period, start_idx - lookback_ema, end_idx)
+    _, first_ema = ema_talib_default_segment(values, period, start_idx - lookback_ema, end_idx)
     if first_ema.size == 0:
         return out
 
-    _, second_ema = _ema_talib_default_segment(first_ema, period, 0, len(first_ema) - 1)
+    _, second_ema = ema_talib_default_segment(first_ema, period, 0, len(first_ema) - 1)
     if second_ema.size == 0:
         return out
 
@@ -58,7 +58,7 @@ def dema(
     frame = data
     dema_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _dema_from_values(
+            dema_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

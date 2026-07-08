@@ -2,7 +2,7 @@ import math
 import numpy as np
 import polars as pl
 
-from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
 
 CMP_N_0_01 = 0.01
 CMP_N_0_015 = 0.015
@@ -68,10 +68,10 @@ def _ht_trendmode_from_values(values: np.ndarray) -> np.ndarray:
         smoothed_value = do_price_wma(temp_real)
 
     hilbert_idx = 0
-    detrender_state = _init_hilbert_state()
-    q1_state = _init_hilbert_state()
-    ji_state = _init_hilbert_state()
-    jq_state = _init_hilbert_state()
+    detrender_state = init_hilbert_state()
+    q1_state = init_hilbert_state()
+    ji_state = init_hilbert_state()
+    jq_state = init_hilbert_state()
 
     period = HT_TRENDMODE_PERIOD
     out_idx = 0
@@ -113,28 +113,28 @@ def _ht_trendmode_from_values(values: np.ndarray) -> np.ndarray:
         smooth_price[smooth_price_idx] = smoothed_value
 
         if (today % 2) == 0:
-            detrender = _do_hilbert_transform(
+            detrender = do_hilbert_transform(
                 detrender_state,
                 smoothed_value,
                 adjusted_prev_period,
                 hilbert_idx,
                 True,
             )
-            q1 = _do_hilbert_transform(
+            q1 = do_hilbert_transform(
                 q1_state,
                 detrender,
                 adjusted_prev_period,
                 hilbert_idx,
                 True,
             )
-            ji = _do_hilbert_transform(
+            ji = do_hilbert_transform(
                 ji_state,
                 i1_for_even_prev3,
                 adjusted_prev_period,
                 hilbert_idx,
                 True,
             )
-            jq = _do_hilbert_transform(
+            jq = do_hilbert_transform(
                 jq_state,
                 q1,
                 adjusted_prev_period,
@@ -152,28 +152,28 @@ def _ht_trendmode_from_values(values: np.ndarray) -> np.ndarray:
             i1_for_odd_prev3 = i1_for_odd_prev2
             i1_for_odd_prev2 = detrender
         else:
-            detrender = _do_hilbert_transform(
+            detrender = do_hilbert_transform(
                 detrender_state,
                 smoothed_value,
                 adjusted_prev_period,
                 hilbert_idx,
                 False,
             )
-            q1 = _do_hilbert_transform(
+            q1 = do_hilbert_transform(
                 q1_state,
                 detrender,
                 adjusted_prev_period,
                 hilbert_idx,
                 False,
             )
-            ji = _do_hilbert_transform(
+            ji = do_hilbert_transform(
                 ji_state,
                 i1_for_odd_prev3,
                 adjusted_prev_period,
                 hilbert_idx,
                 False,
             )
-            jq = _do_hilbert_transform(
+            jq = do_hilbert_transform(
                 jq_state,
                 q1,
                 adjusted_prev_period,

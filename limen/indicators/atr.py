@@ -1,6 +1,6 @@
 import polars as pl
 
-from limen.indicators._atr import _atr_from_true_range_expr
+from limen.indicators._atr import atr_from_true_range_expr
 
 ATR_PERIOD_MIN = 1
 ATR_PERIOD_MAX = 100000
@@ -43,5 +43,5 @@ def atr(
     frame = data.with_columns(true_range_expr)
 
     return frame.with_columns(
-        _atr_from_true_range_expr(ATR_TR_COL, period).alias(out_col)
+        atr_from_true_range_expr(ATR_TR_COL, period).alias(out_col)
     ).drop(ATR_TR_COL)

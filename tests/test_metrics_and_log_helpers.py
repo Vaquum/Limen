@@ -13,11 +13,11 @@ from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest.long_flat_strategy import long_flat_strategy
-from limen.log._experiment_backtest_results import _experiment_backtest_results
+from limen.log._experiment_backtest_results import experiment_backtest_results
 from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
-from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
-from limen.log._permutation_confusion_metrics import _permutation_confusion_metrics
-from limen.log._permutation_prediction_performance import _permutation_prediction_performance
+from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
+from limen.log._permutation_confusion_metrics import permutation_confusion_metrics
+from limen.log._permutation_prediction_performance import permutation_prediction_performance
 from limen.metrics.balanced_metric import balanced_metric
 from limen.metrics.binary_metrics import binary_metrics
 from limen.metrics.multiclass_metrics import multiclass_metrics
@@ -210,7 +210,7 @@ class _DummyRegressionBacktestLog:
 
 
 def test_permutation_prediction_performance_preserves_inverse_scaled_features() -> None:
-    perf = _permutation_prediction_performance(_DummyPerfWithInverseScaler(), round_id=0)
+    perf = permutation_prediction_performance(_DummyPerfWithInverseScaler(), round_id=0)
 
     assert perf.columns.tolist() == [
         'restored_feature',
@@ -231,7 +231,7 @@ def test_permutation_prediction_performance_preserves_inverse_scaled_features() 
 def test_permutation_prediction_performance_falls_back_to_single_argument_prep() -> None:
     dummy = _DummyPerfWithoutInverseScaler()
 
-    perf = _permutation_prediction_performance(dummy, round_id=0)
+    perf = permutation_prediction_performance(dummy, round_id=0)
 
     assert dummy.prep_called_without_params is True
     assert perf.columns.tolist() == ['predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change']
@@ -241,7 +241,7 @@ def test_permutation_prediction_performance_falls_back_to_single_argument_prep()
 
 
 def test_permutation_confusion_metrics_adds_mean_return_pct_columns() -> None:
-    result = _permutation_confusion_metrics(
+    result = permutation_confusion_metrics(
         _DummyConfusionMetrics(),
         x='price_change',
         round_id=0,
@@ -257,7 +257,7 @@ def test_permutation_confusion_metrics_adds_mean_return_pct_columns() -> None:
 
 
 def test_permutation_confusion_metrics_uses_positional_alignment_for_returns() -> None:
-    result = _confusion_mean_return_pct(
+    result = confusion_mean_return_pct(
         pd.Series([1, 1, 0, 0, 0]),
         pd.Series([1, 0, 0, 1, 0]),
         pd.Series([100.0, 100.0, 100.0, 100.0, 100.0], index=[10, 11, 12, 13, 14]),
@@ -272,7 +272,7 @@ def test_permutation_confusion_metrics_uses_positional_alignment_for_returns() -
 
 def test_permutation_confusion_metrics_requires_return_columns() -> None:
     with pytest.raises(ValueError, match='column \"price_change\" not found'):
-        _permutation_confusion_metrics(
+        permutation_confusion_metrics(
             _DummyConfusionMetricsMissingPriceChange(),
             x='open',
             round_id=0,
@@ -281,7 +281,7 @@ def test_permutation_confusion_metrics_requires_return_columns() -> None:
 
 
 def test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows() -> None:
-    result = _permutation_confusion_metrics(
+    result = permutation_confusion_metrics(
         _DummyConfusionMetricsOutlierFiltered(),
         x='x_metric',
         round_id=0,
@@ -726,7 +726,7 @@ def test_no_legacy_backtest_column_names() -> None:
 
 
 def test_completed_bar_signal_proves_next_bar_alignment() -> None:
-    perf = _permutation_prediction_performance(_DummyCompletedBarSignal(), round_id=0)
+    perf = permutation_prediction_performance(_DummyCompletedBarSignal(), round_id=0)
 
     same_row = backtest_snapshot(
         perf,
@@ -746,7 +746,7 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
 
 
 def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
-    result = _experiment_backtest_results(
+    result = experiment_backtest_results(
         _DummyRegressionBacktestLog(),
     ).iloc[0]
 

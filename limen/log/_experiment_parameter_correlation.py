@@ -14,7 +14,7 @@ _FRAMEWORK_LOG_COLUMNS = frozenset({
 })
 
 
-def _experiment_parameter_correlation(self: Any,
+def experiment_parameter_correlation(self: Any,
                                    metric: str,
                                    *,
                                    cols_to_drop: list | None = None,

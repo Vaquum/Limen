@@ -1,8 +1,8 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators.rsi import _rsi_from_values
-from limen.indicators.stochf import _stochf_from_arrays
+from limen.indicators.rsi import rsi_from_values
+from limen.indicators.stochf import stochf_from_arrays
 
 
 CMP_N_100000 = 100000
@@ -20,13 +20,13 @@ def _stochrsi_from_values(
     out_fastk = np.full(n, np.nan, dtype=float)
     out_fastd = np.full(n, np.nan, dtype=float)
 
-    rsi_values = _rsi_from_values(values, period)
+    rsi_values = rsi_from_values(values, period)
     lookback_rsi = period
     if n <= lookback_rsi:
         return out_fastk, out_fastd
 
     rsi_buffer = rsi_values[lookback_rsi:]
-    stochf_fastk, stochf_fastd = _stochf_from_arrays(
+    stochf_fastk, stochf_fastd = stochf_from_arrays(
         rsi_buffer,
         rsi_buffer,
         rsi_buffer,

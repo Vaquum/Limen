@@ -56,8 +56,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         actual = _to_numeric_strict(result['actuals'], 'actual')
         if _is_unsupported_multiclass(actual):
             raise ValueError(
-                'snapshot backtest does not support multiclass actuals; '
-                'use binary predictions or directional regression scores'
+                'snapshot backtest does not support multiclass actuals; use binary predictions or directional regression scores'
             )
 
     if _is_binary(pred):
@@ -65,8 +64,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
     if _is_unsupported_multiclass(pred):
         raise ValueError(
-            'snapshot backtest does not support multiclass predictions; '
-            'use binary predictions or directional regression scores'
+            'snapshot backtest does not support multiclass predictions; use binary predictions or directional regression scores'
         )
 
     result['predictions'] = (pred > 0).astype(int)
@@ -74,7 +72,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def _experiment_backtest_results(self: Any) -> pd.DataFrame:
+def experiment_backtest_results(self: Any) -> pd.DataFrame:
 
     '''
     Compute backtest results for each round of an experiment.

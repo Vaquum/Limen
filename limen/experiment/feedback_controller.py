@@ -93,6 +93,8 @@ class FeedbackController:
 
         '''
 
+        super().__init__()
+
         if feedback_interval < 1:
             raise ValueError(
                 f"FeedbackController feedback_interval must be >= 1, got {feedback_interval}"
@@ -327,7 +329,7 @@ class FeedbackController:
         handler = dispatch.get(op)
         if handler is None:
             raise ValueError(f"FeedbackController Unknown intervention op: '{op}'")
-        handler(intervention)
+        _ = handler(intervention)
 
 
     def _write_audit_entry(self,
@@ -359,7 +361,7 @@ class FeedbackController:
 
         try:
             with self._audit_log_path.open('a') as f:
-                f.write(json.dumps(entry) + '\n')
+                _ = f.write(json.dumps(entry) + '\n')
         except OSError as e:
             logger.warning('Failed to write audit log: %s', e)
 

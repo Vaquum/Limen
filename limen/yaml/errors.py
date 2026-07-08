@@ -33,8 +33,7 @@ class ResolutionError(Exception):
         self.path = path
         self.allowed_namespaces = allowed_namespaces
         super().__init__(
-            f"Cannot resolve '{path}'. "
-            f"Allowed namespaces: {', '.join(allowed_namespaces)}"
+            f"Cannot resolve '{path}'. Allowed namespaces: {', '.join(allowed_namespaces)}"
         )
 
 

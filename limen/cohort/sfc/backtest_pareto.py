@@ -6,8 +6,8 @@ import pandas as pd
 
 def select(context: dict[str, Any],
            *,
-           target_count: int = 20,
-           min_signals: int = 1,
+           target_count: object = 20,
+           min_signals: object = 1,
            metric_cols: list[str] | None = None) -> list[int | str]:
     '''Return a backtest-first Pareto front capped by deterministic rank.'''
 

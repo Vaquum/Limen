@@ -5,7 +5,7 @@ import polars as pl
 
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
-from limen.log._experiment_parameter_correlation import _experiment_parameter_correlation
+from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
 
 _CorrelationMethod = Literal['pearson', 'kendall', 'spearman']
 
@@ -14,9 +14,11 @@ logger = logging.getLogger(__name__)
 
 class _CorrelationShim:
 
-    '''Minimal wrapper to satisfy _experiment_parameter_correlation's self.experiment_log interface.'''
+    '''Minimal wrapper to satisfy experiment_parameter_correlation's self.experiment_log interface.'''
 
     def __init__(self, experiment_log: Any) -> None:
+
+        super().__init__()
 
         self.experiment_log = experiment_log
 
@@ -199,7 +201,7 @@ class CorrelationReducer(PruningStrategy):
         pdf = df.select(cols).to_pandas()
         shim = _CorrelationShim(pdf)
 
-        result = _experiment_parameter_correlation(
+        result = experiment_parameter_correlation(
             shim,
             self._metric,
             heads=(1.0,),

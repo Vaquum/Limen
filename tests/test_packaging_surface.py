@@ -90,6 +90,36 @@ def test_pyright_gate_config() -> None:
     assert pyright_config['typeCheckingMode'] == 'strict'
     assert pyright_config['pythonVersion'] == '3.10'
     assert pyright_config['include'] == ['limen']
+    promoted_extras = [
+        'reportCallInDefaultInitializer',
+        'reportImplicitStringConcatenation',
+        'reportImportCycles',
+        'reportMissingSuperCall',
+        'reportUninitializedInstanceVariable',
+        'reportUnusedCallResult',
+    ]
+    for rule in promoted_extras:
+        assert pyright_config[rule] == 'error', rule
+    promoted_strict_defaults = [
+        'reportPrivateUsage',
+        'reportUnnecessaryComparison',
+        'reportUnnecessaryIsInstance',
+        'reportUnsupportedDunderAll',
+        'reportUnusedFunction',
+    ]
+    for rule in promoted_strict_defaults:
+        assert pyright_config.get(rule, 'error') == 'error', rule
+    remaining_downgrades = {k for k, v in pyright_config.items() if v == 'warning'}
+    assert remaining_downgrades == {
+        'reportImplicitOverride',
+        'reportMissingTypeArgument',
+        'reportMissingTypeStubs',
+        'reportUnknownArgumentType',
+        'reportUnknownLambdaType',
+        'reportUnknownMemberType',
+        'reportUnknownParameterType',
+        'reportUnknownVariableType',
+    }
     dev_extra = pyproject['project']['optional-dependencies']['dev']
     assert 'pandas-stubs>=2.3,<2.4' in dev_extra
     assert 'pyright>=1.1.408,<1.1.409' in dev_extra

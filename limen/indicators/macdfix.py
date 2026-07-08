@@ -1,7 +1,7 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators._ema import _ema_talib_default_segment, _ema_talib_segment_with_k
+from limen.indicators._ema import ema_talib_default_segment, ema_talib_segment_with_k
 
 CMP_N_100000 = 100000
 
@@ -35,14 +35,14 @@ def _macdfix_from_values(
     end_idx = n - 1
     ema_start_idx = start_idx - lookback_signal
 
-    _, slow_ema = _ema_talib_segment_with_k(
+    _, slow_ema = ema_talib_segment_with_k(
         values,
         fixed_slow_period,
         fixed_slow_k,
         ema_start_idx,
         end_idx,
     )
-    _, fast_ema = _ema_talib_segment_with_k(
+    _, fast_ema = ema_talib_segment_with_k(
         values,
         fixed_fast_period,
         fixed_fast_k,
@@ -54,7 +54,7 @@ def _macdfix_from_values(
     out_count = n - start_idx
     out_macd[start_idx:] = macd_buffer[lookback_signal:lookback_signal + out_count]
 
-    _, signal_values = _ema_talib_default_segment(macd_buffer, signal_period, 0, len(macd_buffer) - 1)
+    _, signal_values = ema_talib_default_segment(macd_buffer, signal_period, 0, len(macd_buffer) - 1)
     signal_count = len(signal_values)
     out_signal[start_idx:start_idx + signal_count] = signal_values
     out_hist[start_idx:start_idx + signal_count] = out_macd[start_idx:start_idx + signal_count] - signal_values

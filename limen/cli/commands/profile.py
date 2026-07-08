@@ -108,8 +108,7 @@ def _print_runtime_sampling(prof: ProfileResult) -> None:
         t = prof.sample_time_seconds_per_permutation
         click.echo(f"    Per permutation: {t:.3f}s")
         estimated_total = t * prof.total_permutations
-        click.echo(f"    Estimated total: {_format_duration(estimated_total)}  "
-                   f"({format_space(prof.total_permutations)} permutations)")
+        click.echo(f"    Estimated total: {_format_duration(estimated_total)}  ({format_space(prof.total_permutations)} permutations)")
     else:
         click.echo('    Per permutation: —  (no completed runs)')
 

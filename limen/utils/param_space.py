@@ -80,6 +80,8 @@ class ParamSpace:
 
     def __init__(self, params: dict, n_permutations: int, seed: int | None = None) -> None:
 
+        super().__init__()
+
         self.params = params
         self.keys = list(params.keys())
         self._rng = random.Random(seed)

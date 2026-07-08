@@ -1,6 +1,6 @@
 import polars as pl
 
-from limen.indicators.rsi import _rsi_from_values
+from limen.indicators.rsi import rsi_from_values
 
 
 CMP_N_100000 = 100000
@@ -28,7 +28,7 @@ def wilder_rsi(data: pl.DataFrame,
     return data.with_columns(
         pl.col('close').map_batches(
             lambda s: pl.Series(
-                _rsi_from_values(
+                rsi_from_values(
                     s.to_numpy().astype(float, copy=False),
                     period,
                 )

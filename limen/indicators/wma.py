@@ -8,7 +8,7 @@ WMA_PERIOD_SUB = 0.0
 WMA_PERIOD_SUM = 0.0
 
 
-def _wma_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def wma_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
@@ -81,7 +81,7 @@ def wma(
     frame = data
     wma_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _wma_from_values(
+            wma_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

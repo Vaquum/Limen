@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
-from limen.log._permutation_confusion_metrics import _confusion_mean_return_pct
+from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
 
 
 class ReferenceModel(ABC):
@@ -16,6 +16,8 @@ class ReferenceModel(ABC):
     deterministic: bool = False
 
     def __init__(self) -> None:
+
+        super().__init__()
 
         self.model = None
 
@@ -112,7 +114,7 @@ class ReferenceModel(ABC):
 
         price_pd = self._price_data_to_pandas(price_data_for_backtest)
 
-        confusion_return_pct = _confusion_mean_return_pct(
+        confusion_return_pct = confusion_mean_return_pct(
             preds,
             y_test,
             price_pd['open'],

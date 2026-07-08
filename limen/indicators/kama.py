@@ -8,7 +8,7 @@ CMP_N_2 = 2
 _TA_EPSILON = 1e-14
 
 
-def _kama_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def kama_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
@@ -123,7 +123,7 @@ def kama(
     frame = data
     kama_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _kama_from_values(
+            kama_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

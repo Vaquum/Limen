@@ -17,7 +17,7 @@ from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import random_binary as sfd_module
 from limen.experiment.param_search import GridStrategy
 from limen.experiment.param_search import RandomStrategy
-from limen.log._experiment_parameter_correlation import _experiment_parameter_correlation
+from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
 from tests.stubs.stubs import make_msq
 from tests.stubs.stubs import StubPruningStrategy
 
@@ -663,7 +663,7 @@ def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_order
         'label': ['a', 'b', 'c', 'd', 'e'],
     })
 
-    corr = _experiment_parameter_correlation(
+    corr = experiment_parameter_correlation(
         SimpleNamespace(experiment_log=experiment_log),
         'auc',
         heads=(1.0, 0.6),
@@ -706,10 +706,10 @@ def test_experiment_parameter_correlation_validates_metric_and_sort_key_presence
     shim = SimpleNamespace(experiment_log=experiment_log)
 
     with pytest.raises(ValueError, match='metric "loss" not found'):
-        _experiment_parameter_correlation(shim, 'loss')
+        experiment_parameter_correlation(shim, 'loss')
 
     with pytest.raises(ValueError, match='sort_key "missing" not found'):
-        _experiment_parameter_correlation(shim, 'auc', sort_key='missing')
+        experiment_parameter_correlation(shim, 'auc', sort_key='missing')
 
 
 def test_experiment_parameter_correlation_requires_numeric_features_after_cleaning():
@@ -724,7 +724,7 @@ def test_experiment_parameter_correlation_requires_numeric_features_after_cleani
         ValueError,
         match='No numeric features available',
     ):
-        _experiment_parameter_correlation(
+        experiment_parameter_correlation(
             SimpleNamespace(experiment_log=experiment_log),
             'auc',
             min_n=1,
@@ -743,7 +743,7 @@ def test_experiment_parameter_correlation_rejects_logs_without_metric_rows():
         ValueError,
         match='No rows remain after dropping NaNs in the metric column',
     ):
-        _experiment_parameter_correlation(
+        experiment_parameter_correlation(
             SimpleNamespace(experiment_log=experiment_log),
             'auc',
             min_n=1,

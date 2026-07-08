@@ -37,7 +37,7 @@ def _wilder_atr_from_tr_values(tr_values: list[float | None], period: int) -> li
     return out
 
 
-def _atr_from_true_range_expr(tr_col: str, period: int) -> pl.Expr:
+def atr_from_true_range_expr(tr_col: str, period: int) -> pl.Expr:
     return pl.col(tr_col).map_batches(
         lambda s: pl.Series(
             _wilder_atr_from_tr_values(

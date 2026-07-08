@@ -177,7 +177,7 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
                 try:
                     t0 = time.perf_counter()
                     data_dict = manifest.prepare_data(raw_data, round_params)
-                    manifest.run_model(data_dict, round_params)
+                    _: Any = manifest.run_model(data_dict, round_params)
                     elapsed_times.append(time.perf_counter() - t0)
                 except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
                     result.errors.append(_classify_error(exc))
@@ -202,9 +202,7 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     if result.sample_permutations_completed < result.sample_permutations_attempted:
         failed = result.sample_permutations_attempted - result.sample_permutations_completed
         result.warnings.append(
-            f'{failed} of {result.sample_permutations_attempted} sample '
-            f'permutation(s) failed — timing estimate based on '
-            f'{result.sample_permutations_completed} completed run(s).'
+            f"{failed} of {result.sample_permutations_attempted} sample permutation(s) failed — timing estimate based on {result.sample_permutations_completed} completed run(s)."
         )
 
     return result

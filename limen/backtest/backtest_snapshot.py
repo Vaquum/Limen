@@ -64,7 +64,7 @@ def _cvar_tail_bps(returns: pd.Series) -> float:
     return round(float(np.sort(arr)[:tail_count].mean()) * BPS_PER_UNIT, BPS_DECIMALS)
 
 
-def _validate_execution_result(result: ExecutionResult, expected_index: pd.Index) -> ExecutionResult:
+def _validate_execution_result(result: object, expected_index: pd.Index) -> ExecutionResult:
     if not isinstance(result, ExecutionResult):
         raise ValueError('backtest_snapshot strategy must return ExecutionResult(pos, gross, net)')
 

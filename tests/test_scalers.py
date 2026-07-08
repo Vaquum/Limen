@@ -113,7 +113,7 @@ def test_rank_gauss_preserves_datetime():
 
     train = _make_train_data()
     scaler = RankGaussScaler(train)
-    assert 'datetime' not in scaler._quantiles
+    assert 'datetime' not in scaler.quantiles
 
 
 def test_rank_gauss_constant_column():

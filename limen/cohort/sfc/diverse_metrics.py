@@ -9,11 +9,11 @@ from sklearn.preprocessing import StandardScaler
 
 def select(context: dict[str, Any],
            *,
-           target_count: int = 20,
+           target_count: object = 20,
            metric_cols: list[str] | None = None,
            iqr_multiplier: float = 3.0,
-           n_components: int | None = None,
-           n_clusters: int = 8,
+           n_components: object = None,
+           n_clusters: object = 8,
            random_state: int = 42) -> list[int | str]:
     '''
     Return a metric-diverse set of ids using PCA/KMeans medoid selection.

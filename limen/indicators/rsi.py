@@ -8,7 +8,7 @@ CMP_N_2 = 2
 TA_EPSILON = 1e-14
 
 
-def _rsi_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def rsi_from_values(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
     if n <= period:
@@ -78,7 +78,7 @@ def rsi(
     frame = data
     rsi_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _rsi_from_values(
+            rsi_from_values(
                 s.to_numpy().astype(float, copy=False),
                 period,
             )

@@ -30,7 +30,7 @@ def _ma_lookback(period: int, ma_type: int) -> int:
     raise ValueError('stochf ma_type must be between 0 and 8')
 
 
-def _stochf_from_arrays(
+def stochf_from_arrays(
     high: np.ndarray,
     low: np.ndarray,
     close: np.ndarray,
@@ -162,7 +162,7 @@ def stochf(
     high_values = data[high_col].to_numpy().astype(float, copy=False)
     low_values = data[low_col].to_numpy().astype(float, copy=False)
     close_values = data[close_col].to_numpy().astype(float, copy=False)
-    fastk_values, fastd_values = _stochf_from_arrays(
+    fastk_values, fastd_values = stochf_from_arrays(
         high_values,
         low_values,
         close_values,

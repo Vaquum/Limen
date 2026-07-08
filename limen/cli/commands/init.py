@@ -18,8 +18,7 @@ def _resolve_output(output: Path) -> Path:
         if project_root is not None:
             return project_root / 'manifests' / output.name
         click.secho(
-            'Warning: no limen.toml found — creating in current directory. '
-            'Run from inside a Limen project to place files in manifests/ automatically.',
+            'Warning: no limen.toml found — creating in current directory. Run from inside a Limen project to place files in manifests/ automatically.',
             fg='yellow',
         )
     return output
@@ -52,16 +51,14 @@ def run_init(output: Path, template_name: str | None) -> bool:
         template_name = click.prompt('Template', default='logreg_binary')
         if template_name not in available:
             click.secho(
-                f"Template '{template_name}' not found. "
-                f"Available: {', '.join(available)}",
+                f"Template '{template_name}' not found. Available: {', '.join(available)}",
                 fg='red',
             )
             return False
 
     if template_name not in available:
         click.secho(
-            f"Template '{template_name}' not found. "
-            f"Available: {', '.join(available)}",
+            f"Template '{template_name}' not found. Available: {', '.join(available)}",
             fg='red',
         )
         return False
@@ -73,14 +70,13 @@ def run_init(output: Path, template_name: str | None) -> bool:
     experiment_name = output.stem
     if not _NAME_SLUG_RE.match(experiment_name):
         click.secho(
-            f"  ✗ '{experiment_name}' is not a valid experiment name. "
-            f"Use only letters, digits, underscores, or hyphens.",
+            f"  ✗ '{experiment_name}' is not a valid experiment name. Use only letters, digits, underscores, or hyphens.",
             fg='red',
         )
         return False
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(available[template_name], output)
+    _ = shutil.copy2(available[template_name], output)
 
     if not _update_experiment_name(output, experiment_name):
         click.secho(
@@ -119,5 +115,5 @@ def _update_experiment_name(path: Path, name: str) -> bool:
             break
 
     if replaced:
-        path.write_text(''.join(lines), encoding='utf-8')
+        _ = path.write_text(''.join(lines), encoding='utf-8')
     return replaced

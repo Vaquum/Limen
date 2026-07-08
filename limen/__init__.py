@@ -4,6 +4,7 @@ import sys
 from importlib import import_module
 from importlib import metadata
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 
 if sys.version_info >= (3, 11):
@@ -47,6 +48,28 @@ _LAZY_EXPORTS = {
     'transforms': ('limen.transforms', None),
     'utils': ('limen.utils', None),
 }
+
+
+if TYPE_CHECKING:
+    from limen import features
+    from limen import indicators
+    from limen import log
+    from limen import metrics
+    from limen import scalers
+    from limen import sfd
+    from limen import targets
+    from limen import transforms
+    from limen import utils
+    from limen.cohort import Cohort
+    from limen.data import HistoricalData
+    from limen.experiment import Manifest
+    from limen.experiment import MLManifest
+    from limen.experiment import RuleBasedManifest
+    from limen.experiment import UniversalExperimentLoop
+    from limen.inference import ReconstructionError
+    from limen.inference import Sensor
+    from limen.inference import Trainer
+    from limen.log.log import Log
 
 
 __all__ = [

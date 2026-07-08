@@ -1,7 +1,7 @@
 from typing import cast
 
 
-def _init_hilbert_state() -> dict[str, list[float] | float]:
+def init_hilbert_state() -> dict[str, list[float] | float]:
     return {
         'odd': [0.0, 0.0, 0.0],
         'even': [0.0, 0.0, 0.0],
@@ -12,7 +12,7 @@ def _init_hilbert_state() -> dict[str, list[float] | float]:
     }
 
 
-def _do_hilbert_transform(
+def do_hilbert_transform(
     state: dict[str, list[float] | float],
     input_value: float,
     adjusted_prev_period: float,

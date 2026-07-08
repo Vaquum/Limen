@@ -15,6 +15,8 @@ class EmaBreakoutTarget:
             target_name (str): Name of the target column to create
         '''
 
+        super().__init__()
+
         self.target_name = target_name
 
     def transform(self,

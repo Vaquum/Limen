@@ -52,9 +52,7 @@ class RandomStrategy(SearchStrategy):
                 return combo
 
         raise RuntimeError(
-            f"RandomStrategy failed to generate a novel combination "
-            f"after {MAX_DEDUP_RETRIES} retries. "
-            f"Domain may be nearly exhausted ({len(self._seen)} seen)."
+            f"RandomStrategy failed to generate a novel combination after {MAX_DEDUP_RETRIES} retries. Domain may be nearly exhausted ({len(self._seen)} seen)."
         )
 
 

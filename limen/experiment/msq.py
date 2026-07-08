@@ -46,6 +46,8 @@ class MSQ:
 
         '''
 
+        super().__init__()
+
         if strategy.domain is not domain:
             raise ValueError(
                 'MSQ strategy.domain and domain must reference the same ParamDomain'
@@ -93,10 +95,7 @@ class MSQ:
 
         total_filters = len(self._custom_filters) + len(self._named_filters)
         raise FilterExhaustedError(
-            f"MSQ Filters rejected {self._max_filter_retries} "
-            f"consecutive combinations. "
-            f"Active filters: {total_filters}. "
-            f"Consider relaxing filters or removing them."
+            f"MSQ Filters rejected {self._max_filter_retries} consecutive combinations. Active filters: {total_filters}. Consider relaxing filters or removing them."
         )
 
 
@@ -224,7 +223,7 @@ class MSQ:
         if key in self._named_filters:
             self._log_intervention('clear_filter', key=key)
             del self._named_filters[key]
-            self._named_filter_descriptors.pop(key, None)
+            _ = self._named_filter_descriptors.pop(key, None)
 
 
     def trim(self, target_count: int) -> None:
@@ -476,8 +475,7 @@ class MSQ:
                 parts.append(f"{custom_count} custom filter(s)")
             import warnings
             warnings.warn(
-                f"Checkpoint had non-restorable filters ({', '.join(parts)}). "
-                f"Re-register them after resume.",
+                f"Checkpoint had non-restorable filters ({', '.join(parts)}). Re-register them after resume.",
                 stacklevel=2,
             )
 

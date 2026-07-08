@@ -18,7 +18,7 @@ jobs:
       - run: pip install -c requirements/constraints.txt '.[all,dev]'
       - run: pyright --outputjson > pyright_output.json || true
       - env:
-          PYRIGHT_WARNING_BASELINE: 2850
+          PYRIGHT_WARNING_BASELINE: 2495
         run: |
           python - <<'EOF'
           import json

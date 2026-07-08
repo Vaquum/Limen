@@ -4,7 +4,7 @@ from pathlib import Path
 from limen.yaml.config import find_project_root
 from limen.yaml.config import get_store_path
 from limen.yaml.config import read_limen_toml
-from limen.yaml.config import _STORE_RELATIVE
+from limen.yaml.config import STORE_RELATIVE
 
 
 def test_find_project_root_walks_up_from_subdirectory() -> None:
@@ -34,7 +34,7 @@ def test_get_store_path_returns_committed_dir() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d).resolve()
         (root / 'limen.toml').write_text('')
-        assert get_store_path(root) == root / _STORE_RELATIVE
+        assert get_store_path(root) == root / STORE_RELATIVE
 
 
 def test_read_limen_toml_returns_parsed_contents() -> None:

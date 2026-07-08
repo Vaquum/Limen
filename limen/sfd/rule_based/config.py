@@ -57,8 +57,7 @@ def _validate_compound(cond: dict, known_ids: set[str]) -> None:
     operands = cond.get('operands', [])
     if not isinstance(operands, (list, tuple)):
         raise ValueError(
-            f'Compound condition {cond["id"]!r} operands must be a list of id strings, '
-            f'got {type(operands).__name__!r}'
+            f'Compound condition {cond["id"]!r} operands must be a list of id strings, got {type(operands).__name__!r}'
         )
     if not operands:
         raise ValueError(f'Compound condition {cond["id"]!r} has no operands')

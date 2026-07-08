@@ -115,6 +115,8 @@ class LinearScaler:
             default: Fallback scaling rule.
         """
 
+        super().__init__()
+
         self.rules = rules or DEFAULT_SCALING_RULES
         self.default = default
         self.means: dict[str, float] = {}

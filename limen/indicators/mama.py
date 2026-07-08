@@ -2,7 +2,7 @@ import math
 import numpy as np
 import polars as pl
 
-from limen.indicators._hilbert import _do_hilbert_transform, _init_hilbert_state
+from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
 
 CMP_N_0_01 = 0.01
 CMP_N_0_99 = 0.99
@@ -13,7 +13,7 @@ CMP_N_6_0 = 6.0
 MAMA_PERIOD = 0.0
 
 
-def _mama_from_values(
+def mama_from_values(
     values: np.ndarray,
     fast_limit: float,
     slow_limit: float,
@@ -67,10 +67,10 @@ def _mama_from_values(
         smoothed_value = do_price_wma(temp_real)
 
     hilbert_idx = 0
-    detrender_state = _init_hilbert_state()
-    q1_state = _init_hilbert_state()
-    ji_state = _init_hilbert_state()
-    jq_state = _init_hilbert_state()
+    detrender_state = init_hilbert_state()
+    q1_state = init_hilbert_state()
+    ji_state = init_hilbert_state()
+    jq_state = init_hilbert_state()
 
     period = MAMA_PERIOD
     out_idx = 0
@@ -97,28 +97,28 @@ def _mama_from_values(
         smoothed_value = do_price_wma(today_value)
 
         if (today % 2) == 0:
-            detrender = _do_hilbert_transform(
+            detrender = do_hilbert_transform(
                 detrender_state,
                 smoothed_value,
                 adjusted_prev_period,
                 hilbert_idx,
                 True,
             )
-            q1 = _do_hilbert_transform(
+            q1 = do_hilbert_transform(
                 q1_state,
                 detrender,
                 adjusted_prev_period,
                 hilbert_idx,
                 True,
             )
-            ji = _do_hilbert_transform(
+            ji = do_hilbert_transform(
                 ji_state,
                 i1_for_even_prev3,
                 adjusted_prev_period,
                 hilbert_idx,
                 True,
             )
-            jq = _do_hilbert_transform(
+            jq = do_hilbert_transform(
                 jq_state,
                 q1,
                 adjusted_prev_period,
@@ -141,28 +141,28 @@ def _mama_from_values(
             else:
                 temp_real2 = 0.0
         else:
-            detrender = _do_hilbert_transform(
+            detrender = do_hilbert_transform(
                 detrender_state,
                 smoothed_value,
                 adjusted_prev_period,
                 hilbert_idx,
                 False,
             )
-            q1 = _do_hilbert_transform(
+            q1 = do_hilbert_transform(
                 q1_state,
                 detrender,
                 adjusted_prev_period,
                 hilbert_idx,
                 False,
             )
-            ji = _do_hilbert_transform(
+            ji = do_hilbert_transform(
                 ji_state,
                 i1_for_odd_prev3,
                 adjusted_prev_period,
                 hilbert_idx,
                 False,
             )
-            jq = _do_hilbert_transform(
+            jq = do_hilbert_transform(
                 jq_state,
                 q1,
                 adjusted_prev_period,
@@ -253,7 +253,7 @@ def mama(
     return frame.with_columns([
         pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _mama_from_values(
+                mama_from_values(
                     s.to_numpy().astype(float, copy=False),
                     fast_limit,
                     slow_limit,
@@ -263,7 +263,7 @@ def mama(
         ).alias('mama'),
         pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _mama_from_values(
+                mama_from_values(
                     s.to_numpy().astype(float, copy=False),
                     fast_limit,
                     slow_limit,

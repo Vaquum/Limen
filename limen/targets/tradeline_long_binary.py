@@ -35,6 +35,8 @@ class TradelineLongBinaryTarget:
                 or no long lines exist in the training split
         '''
 
+        super().__init__()
+
         if 'close' not in train_data.columns:
             raise ValueError('TradelineLongBinaryTarget train_data must contain a close column')
 
@@ -47,8 +49,7 @@ class TradelineLongBinaryTarget:
 
         if not long_lines:
             raise ValueError(
-                'TradelineLongBinaryTarget found no long price lines in the training split; '
-                'loosen max_duration_hours or min_height_pct'
+                'TradelineLongBinaryTarget found no long price lines in the training split; loosen max_duration_hours or min_height_pct'
             )
 
         heights = np.abs(np.array([line['height_pct'] for line in long_lines]))

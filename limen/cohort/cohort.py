@@ -14,7 +14,7 @@ from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
 from limen.inference.sensor import BarPrediction
 from limen.inference.sensor import PredictionReason
-from limen.yaml.store import _SHA256_PREFIX
+from limen.yaml.store import SHA256_PREFIX
 
 
 class Cohort:
@@ -57,7 +57,7 @@ class Cohort:
                  experiment_log_path: str | None = None,
                  permutation_ids: list[str] | None = None,
                  selector: str | Selector | None = None,
-                 selector_params: dict[str, Any] | None = None) -> None:
+                 selector_params: Any = None) -> None:
         '''
         Construct an inference-only Cohort from one experiment source and selected permutations.
 
@@ -79,6 +79,8 @@ class Cohort:
             None
 
         '''
+
+        super().__init__()
 
         if experiment_id is None and experiment_log_path is None:
             raise ValueError(
@@ -219,8 +221,7 @@ class Cohort:
                     self.manifest_id = member_mid
                 elif self.manifest_id != member_mid:
                     raise ValueError(
-                        f"All cohort members must share the same manifest_id. "
-                        f"Got {member_mid!r}, expected {self.manifest_id!r}."
+                        f"All cohort members must share the same manifest_id. Got {member_mid!r}, expected {self.manifest_id!r}."
                     )
 
         missing = [pid for pid in self.permutation_ids if pid not in by_pid]
@@ -240,7 +241,7 @@ class Cohort:
             },
             sort_keys=True,
         )
-        self.cohort_id = f'{_SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
+        self.cohort_id = f'{SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
 
 
     def __call__(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
@@ -435,7 +436,7 @@ class Cohort:
 
         resolved_selector = cls._resolve_selector(selector)
         try:
-            selected = resolved_selector(context, **selector_params)
+            selected: Any = resolved_selector(context, **selector_params)
         except TypeError as e:
             raise ValueError(
                 f'Cohort selector could not be called with selector_params: {e}'
@@ -447,7 +448,8 @@ class Cohort:
         if not selected:
             raise ValueError('Cohort selector returned no permutation ids.')
 
-        normalized = [cls._normalize_permutation_id(pid) for pid in selected]
+        selected_ids: list[Any] = selected
+        normalized = [cls._normalize_permutation_id(pid) for pid in selected_ids]
         if len(normalized) != len(set(normalized)):
             raise ValueError('Cohort selector returned duplicate permutation ids.')
 

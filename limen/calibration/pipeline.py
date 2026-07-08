@@ -1,9 +1,6 @@
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from limen.experiment.manifest_core import CalibrationConfig
 
 
 class CalibratorProtocol(Protocol):
@@ -29,8 +26,18 @@ class ThresholdOptimizerProtocol(Protocol):
         ...
 
 
+class CalibrationConfigProtocol(Protocol):
+
+    '''Structural type for a resolved calibration configuration.'''
+
+    calibration_func: CalibratorProtocol | None
+    calibration_params: dict[str, Any]
+    threshold_func: ThresholdOptimizerProtocol | None
+    threshold_params: dict[str, Any]
+
+
 def fit_calibrator(model: Any,
-                   config: 'CalibrationConfig',
+                   config: CalibrationConfigProtocol,
                    x_val: np.ndarray,
                    y_val: np.ndarray) -> tuple[Any, float, float | None]:
 
@@ -39,7 +46,7 @@ def fit_calibrator(model: Any,
 
     Args:
         model (Any): Fitted classifier with predict_proba method
-        config (CalibrationConfig): Resolved calibration configuration
+        config (CalibrationConfigProtocol): Resolved calibration configuration
         x_val (np.ndarray): Validation features
         y_val (np.ndarray): Validation labels
 
@@ -61,7 +68,7 @@ def fit_calibrator(model: Any,
 
 
 def apply_calibrated_predict(model: Any,
-                              config: 'CalibrationConfig',
+                              config: CalibrationConfigProtocol,
                               data: dict[str, Any]) -> dict:
 
     '''
@@ -69,7 +76,7 @@ def apply_calibrated_predict(model: Any,
 
     Args:
         model: Fitted classifier with predict_proba method
-        config (CalibrationConfig): Resolved calibration configuration
+        config (CalibrationConfigProtocol): Resolved calibration configuration
         data (dict): Data dictionary with x_val, y_val, x_test keys
 
     Returns:

@@ -15,7 +15,7 @@ def price_lines(data: pl.DataFrame,
                 min_height_pct: float,
                 big_move_lookback_hours: int = DEFAULT_BIG_MOVE_LOOKBACK_HOURS,
                 momentum_lookback_hours: int = DEFAULT_MOMENTUM_LOOKBACK_HOURS,
-                include_research_only: bool = True) -> pl.DataFrame:
+                include_research_only: object = True) -> pl.DataFrame:
 
     '''
     Compute line-based context features from internally detected price lines.

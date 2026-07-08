@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def _stddev_using_precalc_ma(
+def stddev_using_precalc_ma(
     values: np.ndarray,
     movavg: np.ndarray,
     movavg_beg_idx: int,
@@ -41,7 +41,7 @@ def _stddev_using_precalc_ma(
     return out
 
 
-def _stddev_from_var(
+def stddev_from_var(
     values: np.ndarray,
     start_idx: int,
     end_idx: int,

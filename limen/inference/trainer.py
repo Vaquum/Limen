@@ -48,6 +48,8 @@ class Trainer:
 
         '''
 
+        super().__init__()
+
         self._experiment_dir = Path(experiment_dir)
 
         metadata_path = self._experiment_dir / 'metadata.json'
@@ -56,15 +58,13 @@ class Trainer:
                 self._metadata = json.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
-                f"metadata.json not found in {self._experiment_dir}. "
-                f"Only experiments created with experiment_dir support training."
+                f"metadata.json not found in {self._experiment_dir}. Only experiments created with experiment_dir support training."
             ) from None
 
         yaml_reference = self._metadata.get('yaml_reference')
         if yaml_reference is None:
             raise ValueError(
-                'metadata.json missing required key: yaml_reference. '
-                'Trainer requires a YAML-based experiment.'
+                'metadata.json missing required key: yaml_reference. Trainer requires a YAML-based experiment.'
             )
         if not isinstance(yaml_reference, dict):
             raise ValueError(
@@ -77,14 +77,12 @@ class Trainer:
             sfd = CompiledSFD(yaml_reference)
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(
-                'metadata.json key \'yaml_reference\' is not a valid '
-                'YAML SFD reference'
+                "metadata.json key 'yaml_reference' is not a valid YAML SFD reference"
             ) from exc
 
         if not hasattr(sfd, 'manifest') or not hasattr(sfd, 'params'):
             raise ValueError(
-                'yaml_reference does not produce a manifest-based SFD. '
-                'Trainer requires a manifest-based SFD.'
+                'yaml_reference does not produce a manifest-based SFD. Trainer requires a manifest-based SFD.'
             )
 
         try:
@@ -92,8 +90,7 @@ class Trainer:
             params = sfd.params()
         except (KeyError, ResolutionError, TypeError, ValueError) as exc:
             raise ValueError(
-                'metadata.json key \'yaml_reference\' is not a valid '
-                'YAML SFD reference'
+                "metadata.json key 'yaml_reference' is not a valid YAML SFD reference"
             ) from exc
 
         self._param_keys = frozenset(params.keys())
@@ -123,8 +120,7 @@ class Trainer:
             f = round_data_path.open('r')
         except FileNotFoundError:
             raise FileNotFoundError(
-                f"round_data.jsonl not found in {self._experiment_dir}. "
-                f"Cannot load permutation parameters."
+                f"round_data.jsonl not found in {self._experiment_dir}. Cannot load permutation parameters."
             ) from None
 
         with f:
@@ -144,13 +140,11 @@ class Trainer:
                     )
                 if 'round_id' not in entry or 'round_params' not in entry:
                     raise ValueError(
-                        f"Invalid round_data.jsonl line {line_number}: "
-                        "requires round_id and round_params"
+                        f"Invalid round_data.jsonl line {line_number}: requires round_id and round_params"
                     )
                 if not isinstance(entry['round_params'], dict):
                     raise ValueError(
-                        f"Invalid round_data.jsonl line {line_number}: "
-                        "round_params must be an object"
+                        f"Invalid round_data.jsonl line {line_number}: round_params must be an object"
                     )
                 result[str(entry['round_id'])] = entry
 
@@ -286,9 +280,7 @@ class Trainer:
             model = results.pop('_model', None)
             if model is None:
                 raise ValueError(
-                    f"Permutation {pid}: architecture result does not contain '_model'. "
-                    f"Trainer requires a reference architecture that returns the trained "
-                    f"model via result['_model']. Rule-based architectures are not supported."
+                    f"Permutation {pid}: architecture result does not contain '_model'. Trainer requires a reference architecture that returns the trained model via result['_model']. Rule-based architectures are not supported."
                 )
             fitted_params = data_dict.pop('_fitted_params', {})
 
