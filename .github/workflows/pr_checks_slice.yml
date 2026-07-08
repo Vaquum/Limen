@@ -67,7 +67,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --json title,body,changedFiles > pr_view.json
           jq -r '.title' pr_view.json > pr_title.txt
-          jq -r '.body' pr_view.json > pr_body.txt
+          jq -r '.body // ""' pr_view.json > pr_body.txt
           EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
 
           gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/files" \

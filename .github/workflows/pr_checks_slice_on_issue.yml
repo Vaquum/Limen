@@ -147,7 +147,7 @@ jobs:
             gh pr view "$PR_NUM" --repo "$REPO" \
               --json title,body,changedFiles > pr_view.json
             jq -r '.title' pr_view.json > pr_title.txt
-            jq -r '.body' pr_view.json > pr_body.txt
+            jq -r '.body // ""' pr_view.json > pr_body.txt
             EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
 
             gh api "repos/$REPO/pulls/$PR_NUM/files" \
