@@ -16,4 +16,18 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install -c requirements/constraints.txt '.[all,dev]'
-      - run: pyright
+      - run: pyright --outputjson > pyright_output.json || true
+      - env:
+          PYRIGHT_WARNING_BASELINE: 2850
+        run: |
+          python - <<'EOF'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          summary = json.loads(Path('pyright_output.json').read_text())['summary']
+          baseline = int(os.environ['PYRIGHT_WARNING_BASELINE'])
+          print(f"errors={summary['errorCount']} warnings={summary['warningCount']} baseline={baseline}")
+          sys.exit(1 if summary['errorCount'] > 0 or summary['warningCount'] > baseline else 0)
+          EOF
