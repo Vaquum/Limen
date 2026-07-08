@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" \
-            --jq '[.[] | select(.type == "required_status_checks")] | .[0].parameters.required_status_checks[].context' \
+            --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | .[]' \
             > required_contexts.txt
           gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/check-runs" \
             --paginate --jq '.check_runs[] | "\(.name)\t\(.id)"' \

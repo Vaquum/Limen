@@ -74,13 +74,17 @@ from typing import Final
 
 from _common import CLOSING_KEYWORD_RE
 
+# ``##+`` on both the heading and the terminator: issue-form-created
+# bodies render field labels as ``###``, and a terminator that only
+# recognises ``##`` would silently run the section to end-of-body,
+# whitelisting every later bullet for rule 7.
 SURFACES_SECTION_RE: Final[re.Pattern[str]] = re.compile(
-    r'##\s+Surfaces\s*\n(.*?)(?=\n##\s|\Z)',
+    r'##+\s+Surfaces\s*\n(.*?)(?=\n##+\s|\Z)',
     re.DOTALL,
 )
 
 OUT_OF_SCOPE_SECTION_RE: Final[re.Pattern[str]] = re.compile(
-    r'##\s+Out of Scope\s*\n(.*?)(?=\n##\s|\Z)',
+    r'##+\s+Out of Scope\s*\n(.*?)(?=\n##+\s|\Z)',
     re.DOTALL,
 )
 
@@ -464,8 +468,10 @@ def gate(
     # the slice template. Blockquotes are extracted from the template at
     # runtime so the validator and the template cannot drift apart -- if
     # a Significance paragraph changes in the template, the new paragraph
-    # must appear verbatim in every new slice issue's body.
-    issue_body = str(issue.get('body') or '')
+    # must appear verbatim in every new slice issue's body. CRLF is
+    # normalised first: a body saved through the web editor arrives with
+    # \r\n and would otherwise fail every byte-equal substring check.
+    issue_body = str(issue.get('body') or '').replace('\r\n', '\n')
     required_blockquotes = extract_significance_blockquotes(template_path)
     missing_blocks = [b for b in required_blockquotes if b not in issue_body]
     if missing_blocks:

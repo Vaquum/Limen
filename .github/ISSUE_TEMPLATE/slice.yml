@@ -363,7 +363,6 @@ body:
         - [ ] Guardrails complete
         - [ ] Required gates green
         - [ ] Required docs updated
-        - [ ] Required closeout state and evidence links are recorded in this issue
 
         Merge SHA:
         Merged PR number:
