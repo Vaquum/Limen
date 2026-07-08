@@ -36,6 +36,7 @@ jobs:
             --jq '[.data.repository.issue.closedByPullRequestsReferences.nodes[] | select(.merged)] | last // empty | "pr_number=\(.number)\nmerge_sha=\(.mergeCommit.oid)\nhead_sha=\(.headRefOid)"' \
             >> "$GITHUB_OUTPUT"
       - name: Write closeout evidence from the merged closing PR
+        id: writer
         if: steps.closing_pr.outputs.pr_number != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -150,3 +151,12 @@ jobs:
         run: |
           gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "slice_closeout_guard: reopened — closed with $MISSING and no merged closing PR. A slice is done when its closeout evidence is recorded, not when its PR merges. Nothing dangles."
+      - name: Reopen on writer failure
+        if: failure() && steps.writer.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ steps.closing_pr.outputs.pr_number }}
+        run: |
+          gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "slice_closeout_guard: reopened — the closeout writer failed to record evidence for merged PR #$PR_NUMBER (see the failed run log). A close may not rest without evidence. Nothing dangles."

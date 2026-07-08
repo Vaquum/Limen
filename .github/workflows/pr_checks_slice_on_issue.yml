@@ -21,7 +21,9 @@ name: pr_checks_slice_on_issue
 # issue is restored or the PR is updated.
 #
 # Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5844b;
-# adapted for Limen: Python 3.10 (CI parity).
+# adapted for Limen: Python 3.10 (CI parity), and the rerun set extended
+# to sibling slice PRs because rule 9's verdict depends on the parent
+# PRD's other open slices, not only on the issue a PR cites.
 
 on:
   issues:
@@ -72,16 +74,36 @@ jobs:
           # regex the slice gate uses (rule 1) produces the same set
           # of linked PRs that rule 1 would recognise, for every event
           # action including `deleted`.
+          #
+          # The affected set is the changed issue PLUS the slice
+          # sub-issues of its parent PRD: rule 9's verdict for a
+          # sibling's PR flips when this issue closes or reopens (the
+          # sibling becomes, or stops being, the parent's last open
+          # slice), so those PRs' checks are stale too. A deleted
+          # issue's parent is unreachable; its siblings keep their
+          # verdicts until their own next event.
           set -euo pipefail
           REPO="${{ github.repository }}"
           ISSUE_NUM="${{ github.event.issue.number }}"
 
+          AFFECTED="$ISSUE_NUM"
+          PARENT=$(gh api graphql \
+            -f query='query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { issue(number: $number) { parent { number } } } }' \
+            -F owner="${REPO%/*}" -F name="${REPO#*/}" -F number="$ISSUE_NUM" \
+            --jq '.data.repository.issue.parent.number' 2>/dev/null || echo null)
+          if [ -n "$PARENT" ] && [ "$PARENT" != "null" ]; then
+            SIBLINGS=$(gh api "repos/$REPO/issues/$PARENT/sub_issues" --paginate \
+              --jq '.[] | select(any(.labels[]; .name == "slice")) | .number')
+            AFFECTED="$AFFECTED $SIBLINGS"
+          fi
+          echo "affected issues: $AFFECTED"
+
           gh pr list --repo "$REPO" --state open --limit 1000 \
             --json number,body,headRefOid > open_prs.json
 
-          python3 - "$ISSUE_NUM" <<'PYEOF' > linked_prs.json
+          python3 - $AFFECTED <<'PYEOF' > linked_prs.json
           import json, re, sys
-          target = int(sys.argv[1])
+          targets = {int(a) for a in sys.argv[1:]}
           pat = re.compile(
               r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b',
               re.IGNORECASE,
@@ -91,7 +113,7 @@ jobs:
           linked = []
           for pr in prs:
               body = pr.get('body') or ''
-              if any(int(m.group(1)) == target for m in pat.finditer(body)):
+              if any(int(m.group(1)) in targets for m in pat.finditer(body)):
                   linked.append({
                       'number': pr['number'],
                       'headRefOid': pr['headRefOid'],
