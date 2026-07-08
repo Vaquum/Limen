@@ -142,5 +142,7 @@ def ma(
             ),
             return_dtype=pl.Float64,
         )
+    else:
+        raise ValueError(f"ma ma_type must be between 0 and 8, got {ma_type}")
 
     return frame.with_columns(expr.alias(out_col))

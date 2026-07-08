@@ -69,3 +69,16 @@ for name in {MODEL_BACKEND_MODULES!r}:
     assert name not in sys.modules, name
 """
     subprocess.run([sys.executable, '-c', code], cwd=ROOT, check=True)
+
+
+def test_pyright_gate_config() -> None:
+    pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
+    pyright_config = pyproject['tool']['pyright']
+    assert pyright_config['typeCheckingMode'] == 'strict'
+    assert pyright_config['pythonVersion'] == '3.10'
+    assert pyright_config['include'] == ['limen']
+    dev_extra = pyproject['project']['optional-dependencies']['dev']
+    assert 'pandas-stubs>=2.3,<2.4' in dev_extra
+    assert 'pyright>=1.1.408,<1.1.409' in dev_extra
+    assert 'scipy-stubs>=1.15,<1.16' in dev_extra
+    assert 'tomli>=2.0,<3' in dev_extra

@@ -120,7 +120,7 @@ class CheckpointManager:
 
         '''
 
-        checkpoint = {
+        checkpoint: dict[str, Any] = {
             'metadata': {
                 'experiment_round': current_round,
                 'target_permutations': target_permutations,

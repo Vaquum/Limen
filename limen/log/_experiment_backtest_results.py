@@ -25,7 +25,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
     def _is_binary(series: pd.Series) -> bool:
         valid = series.dropna()
-        return valid.empty or valid.isin([0, 1]).all()
+        return bool(valid.empty or valid.isin([0, 1]).all())
 
     def _to_numeric_strict(series: pd.Series, name: str) -> pd.Series:
         numeric = pd.to_numeric(series, errors='coerce')
@@ -47,7 +47,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         integer_like = np.isclose(valid, np.round(valid)).all()
         unique_count = pd.Index(np.round(valid).astype(int)).nunique()
 
-        return integer_like and (valid >= 0).all() and unique_count > BINARY_CLASS_COUNT
+        return bool(integer_like and (valid >= 0).all() and unique_count > BINARY_CLASS_COUNT)
 
     result = df.copy()
     pred = _to_numeric_strict(result['predictions'], 'prediction')

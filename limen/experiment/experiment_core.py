@@ -82,7 +82,8 @@ class UniversalExperimentLoop:
         self.manifest = None
 
         if hasattr(sfd, 'manifest'):
-            self.manifest = sfd.manifest()
+            manifest = sfd.manifest()
+            self.manifest = manifest
 
             if data is None:
                 if self.manifest.data_source_config is None:
@@ -100,8 +101,8 @@ class UniversalExperimentLoop:
                 self.data = data
 
             if getattr(self.manifest, 'architecture_function', None) is not None:
-                self.prep = lambda data, round_params=None: self.manifest.prepare_data(data, round_params or {})
-                self.model = lambda data, round_params: self.manifest.run_model(data, round_params or {})
+                self.prep = lambda data, round_params=None: manifest.prepare_data(data, round_params or {})
+                self.model = lambda data, round_params: manifest.run_model(data, round_params or {})
             else:
                 raise ValueError(
                     'UniversalExperimentLoop Manifest without architecture_function is not supported. '
@@ -209,6 +210,9 @@ class UniversalExperimentLoop:
         if model is not None:
             self.model = model
 
+        if self.prep is None or self.model is None:
+            raise ValueError('UniversalExperimentLoop prep and model functions must be configured')
+
         self.param_space = ParamSpace(params=self.params,
                                       n_permutations=n_permutations)
 
@@ -241,6 +245,8 @@ class UniversalExperimentLoop:
 
             # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
+            if round_params is None:
+                raise ValueError('UniversalExperimentLoop parameter space exhausted before completing all rounds')
 
             # Add context parameters to round_params
             if context_params is not None:
@@ -259,7 +265,7 @@ class UniversalExperimentLoop:
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', i, exc)
-                round_results = {'strict_mode_error': str(exc)}
+                round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
                 round_succeeded = False
 
             # Remove the experiment details from the results
@@ -323,6 +329,8 @@ class UniversalExperimentLoop:
                                 for col in csv_header
                             ])
                         _pending_csv_rows = []
+                    if csv_header is None:
+                        raise ValueError('UniversalExperimentLoop CSV header is missing for append')
                     writer.writerow([
                         '' if (v := round_results.get(col)) is None else v
                         for col in csv_header
@@ -469,8 +477,11 @@ class UniversalExperimentLoop:
         self.experiment_log = None
         self._clear_post_processing_outputs()
 
+        if self.prep is None or self.model is None:
+            raise ValueError('UniversalExperimentLoop prep and model functions must be configured')
+
         start_round = 0
-        if resume and self._experiment_dir.exists():
+        if resume and self._experiment_dir is not None and self._experiment_dir.exists():
             start_round = self._restore_checkpoint_state(
                 msq, domain, feedback_controller, checkpoint_manager,
                 content_hash=content_hash, strategy_type=strategy_type,
@@ -527,6 +538,7 @@ class UniversalExperimentLoop:
             data_dict: dict[str, Any] = {}
 
             round_succeeded = False
+            caught: list[warnings.WarningMessage] = []
             try:
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter('always')
@@ -537,7 +549,7 @@ class UniversalExperimentLoop:
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', current_round, exc)
-                round_results = {'strict_mode_error': str(exc)}
+                round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
             except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
@@ -617,6 +629,8 @@ class UniversalExperimentLoop:
                                 for col in csv_header
                             ])
                         _pending_csv_rows = []
+                    if csv_header is None:
+                        raise ValueError('UniversalExperimentLoop CSV header is missing for append')
                     writer.writerow([
                         '' if (v := round_results.get(col)) is None else v
                         for col in csv_header
@@ -651,7 +665,7 @@ class UniversalExperimentLoop:
                 if interventions and self._experiment_dir:
                     checkpoint_due = True
 
-            if checkpoint_due:
+            if checkpoint_due and self._experiment_dir is not None:
                 self._checkpoint(
                     msq, domain, self._experiment_dir, checkpoint_manager,
                     current_round, n_permutations,
@@ -710,6 +724,9 @@ class UniversalExperimentLoop:
                                n_permutations: int) -> dict[str, Any]:
 
         '''Create MSQ, FeedbackController, CheckpointManager, and file paths.'''
+
+        if self._search_strategy is None:
+            raise ValueError('UniversalExperimentLoop MSQ execution requires a search_strategy')
 
         domain = self._search_strategy.domain
         msq = MSQ(
@@ -788,6 +805,9 @@ class UniversalExperimentLoop:
             int: The round number to resume from
 
         '''
+
+        if self._experiment_dir is None or self._search_strategy is None:
+            raise ValueError('UniversalExperimentLoop checkpoint restore requires experiment_dir and search_strategy')
 
         checkpoint_data = self._resume_from_checkpoint(
             self._experiment_dir, checkpoint_manager,

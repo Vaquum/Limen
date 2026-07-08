@@ -38,7 +38,7 @@ class XGBoostRegressor(ReferenceModel):
 
         has_val = 'x_val' in data and 'y_val' in data and len(data['x_val']) > 0
 
-        fit_kwargs = {'verbose': False}
+        fit_kwargs: dict[str, Any] = {'verbose': False}
         if has_val:
             fit_kwargs['eval_set'] = [(data['x_val'], data['y_val'])]
         else:

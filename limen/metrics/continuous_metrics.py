@@ -20,13 +20,13 @@ def continuous_metrics(data: dict, preds: list) -> dict:
     '''
 
     y_test = np.asarray(data['y_test'])
-    preds = np.asarray(preds)
+    preds_array = np.asarray(preds)
 
-    bias = np.mean(preds - y_test)
-    mae = mean_absolute_error(y_test, preds)
-    rmse = root_mean_squared_error(y_test, preds)
-    r2 = r2_score(y_test, preds)
-    mape = mean_absolute_percentage_error(y_test, preds) * 100
+    bias = np.mean(preds_array - y_test)
+    mae = mean_absolute_error(y_test, preds_array)
+    rmse = root_mean_squared_error(y_test, preds_array)
+    r2 = r2_score(y_test, preds_array)
+    mape = mean_absolute_percentage_error(y_test, preds_array) * 100
 
     return {
         'bias': round(bias, 3),

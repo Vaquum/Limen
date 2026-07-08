@@ -7,6 +7,7 @@ from datetime import timezone
 from io import StringIO
 from pathlib import Path
 from typing import Any
+from typing import TypeGuard
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -260,7 +261,7 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
     return candidate, project_root
 
 
-def is_full_manifest_id(value: Any) -> bool:
+def is_full_manifest_id(value: Any) -> TypeGuard[str]:
 
     '''
     Check whether a value is a well-formed sha256:<64-hex> manifest ID.
@@ -269,7 +270,7 @@ def is_full_manifest_id(value: Any) -> bool:
         value (Any): Candidate manifest ID
 
     Returns:
-        bool: True if value is a full sha256 manifest ID
+        TypeGuard[str]: True if value is a full sha256 manifest ID
 
     '''
 
@@ -428,7 +429,7 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
             continue
 
         entries.append(_index_entry(
-            manifest_id,
+            expected_id,
             manifest_name(data, fallback=path.stem),
             lineage.get('committed_at', ''),
             lineage.get('parent_id'),
@@ -453,10 +454,13 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
     else:
         index = {'version': 1, 'manifests': []}
 
-    if not isinstance(index, dict) or not isinstance(index.get('manifests'), list):
+    manifests = index.get('manifests') if isinstance(index, dict) else None
+    if not isinstance(manifests, list):
         warnings.warn(f"index.json has invalid structure — reinitializing: {index_path}", stacklevel=2)
         index = {'version': 1, 'manifests': []}
+        manifests = []
 
-    index['manifests'] = [m for m in index['manifests'] if not (isinstance(m, dict) and m.get('id') == entry['id'])]
-    index['manifests'].append(entry)
+    kept = [m for m in manifests if not (isinstance(m, dict) and m.get('id') == entry['id'])]
+    kept.append(entry)
+    index['manifests'] = kept
     index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')

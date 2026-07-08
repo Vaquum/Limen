@@ -160,6 +160,9 @@ class FocusReducer(PruningStrategy):
 
         '''Check for improvement or timeout while focus is active.'''
 
+        if self._best_metric is None:
+            raise ValueError('FocusReducer focus is active but no best metric is recorded')
+
         improved = (
             (self._maximize and best_value > self._best_metric)
             or (not self._maximize and best_value < self._best_metric)
@@ -311,7 +314,7 @@ class FocusReducer(PruningStrategy):
             elif isinstance(value, int):
                 range_size = upper - lower + 1
                 if range_size <= self._variation_count:
-                    values = list(range(lower, upper + 1))
+                    values = list(range(int(lower), int(upper) + 1))
                 else:
                     step = (range_size - 1) / (self._variation_count - 1)
                     values = sorted(set(

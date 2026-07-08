@@ -1,3 +1,5 @@
+from typing import cast
+
 from limen.data import HistoricalData
 from limen.experiment import Manifest
 from limen.experiment import MLManifest
@@ -18,7 +20,7 @@ def params():
 
 def manifest() -> Manifest:
 
-    return (
+    base = (
         MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
@@ -32,6 +34,9 @@ def manifest() -> Manifest:
         .add_indicator(window_return, period=1)
         .add_feature(lag_range, col='ret_1', start=0, end='lookback_end')
         .with_target_label('next_return', NextReturnTarget, transform_params={'periods': 'horizon'})
+    )
+    return (
+        cast(MLManifest, base)
         .set_strict_mode(True)
         .with_reference_architecture(dlinear_regressor)
     )

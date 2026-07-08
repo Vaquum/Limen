@@ -1,3 +1,5 @@
+from typing import cast
+
 import polars as pl
 
 
@@ -41,7 +43,7 @@ class RobustScaler:
 
             iqr = q_hi - q_lo
 
-            self.medians[col] = median
+            self.medians[col] = cast(float, median)
             self.iqrs[col] = iqr if iqr != 0 else 1.0
 
 

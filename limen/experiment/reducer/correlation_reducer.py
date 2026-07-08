@@ -1,11 +1,13 @@
 import logging
-from typing import Any
+from typing import Any, Literal
 
 import polars as pl
 
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.log._experiment_parameter_correlation import _experiment_parameter_correlation
+
+_CorrelationMethod = Literal['pearson', 'kendall', 'spearman']
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +103,7 @@ class CorrelationReducer(PruningStrategy):
 
         super().__init__(active=active)
         self._metric = metric
-        self._method = method
+        self._method: _CorrelationMethod = method
         self._min_observations = min_observations
         self._prune_threshold = prune_threshold
         self._sign_stability_threshold = sign_stability_threshold
@@ -226,9 +228,9 @@ class CorrelationReducer(PruningStrategy):
             return []
 
         if self._maximize:
-            worst_value = min(value_means, key=value_means.get)
+            worst_value = min(value_means, key=lambda v: value_means[v])
         else:
-            worst_value = max(value_means, key=value_means.get)
+            worst_value = max(value_means, key=lambda v: value_means[v])
 
         if (param, worst_value) in self._applied:
             return []
@@ -257,9 +259,9 @@ class CorrelationReducer(PruningStrategy):
             return []
 
         if self._maximize:
-            best_value = max(value_means, key=value_means.get)
+            best_value = max(value_means, key=lambda v: value_means[v])
         else:
-            best_value = min(value_means, key=value_means.get)
+            best_value = min(value_means, key=lambda v: value_means[v])
 
         self._suggested.add(param)
         return [{

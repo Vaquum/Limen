@@ -1,3 +1,6 @@
+from typing import cast
+
+
 def _init_hilbert_state() -> dict[str, list[float] | float]:
     return {
         'odd': [0.0, 0.0, 0.0],
@@ -29,9 +32,9 @@ def _do_hilbert_transform(
     arr[hilbert_idx] = hilbert_temp_real
     var += hilbert_temp_real
 
-    prev_val = float(state[prev_side])
+    prev_val = cast(float, state[prev_side])
     var -= prev_val
-    prev_val = 0.5769 * float(state[prev_input_side])
+    prev_val = 0.5769 * cast(float, state[prev_input_side])
     state[prev_side] = prev_val
     var += prev_val
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
+from typing import cast
 
 from limen.yaml.errors import YAMLError
 from limen.yaml.rules import BacktestCostSpec
@@ -19,6 +20,7 @@ from limen.yaml.rules import ParamKeyFields
 from limen.yaml.rules import Required
 from limen.yaml.rules import RequiredColumnsSpec
 from limen.yaml.rules import Resolvable
+from limen.yaml.rules import Rule
 from limen.yaml.rules import RuleEngine
 from limen.yaml.rules import ScalerSpec
 from limen.yaml.rules import SingleFuncBlock
@@ -74,14 +76,14 @@ class ValidationResult:
     mode: str = 'development'
 
 
-_TOP_LEVEL_ENGINE = RuleEngine([
+_TOP_LEVEL_ENGINE = RuleEngine(cast(list[Rule], [
     Required('schema_version', str, suggestion=f'Set schema_version: "{VERSION}"'),
     Required('metadata', dict),
     Required('sfd', dict),
     Required('uel', dict),
-])
+]))
 
-_MAIN_ENGINE = RuleEngine([
+_MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
     SchemaVersion(VERSION),
 
@@ -110,7 +112,7 @@ _MAIN_ENGINE = RuleEngine([
     NoUnknownKeys('sfd.manifest.backtest', BACKTEST_OPTIONAL, severity='error'),
     BacktestCostSpec(),
 
-    When('sfd.manifest.type', 'ml', [
+    When('sfd.manifest.type', 'ml', cast(list[Rule], [
         Required('sfd.manifest.target', dict),
         Required('sfd.manifest.target.name', str),
         Required('sfd.manifest.target.class', str),
@@ -145,9 +147,9 @@ _MAIN_ENGINE = RuleEngine([
             'sfd.manifest',
             MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
         ),
-    ]),
+    ])),
 
-    When('sfd.manifest.type', 'rule_based', [
+    When('sfd.manifest.type', 'rule_based', cast(list[Rule], [
         Required('sfd.manifest.strategy', dict),
         Required('sfd.manifest.strategy.conditions', list),
         Required('sfd.manifest.strategy.entry', str),
@@ -163,7 +165,7 @@ _MAIN_ENGINE = RuleEngine([
             'sfd.manifest',
             MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL,
         ),
-    ]),
+    ])),
 
     SfdParams(),
     CalibrationPresence(),
@@ -176,7 +178,7 @@ _MAIN_ENGINE = RuleEngine([
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
     NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
     UelSpec(),
-])
+]))
 
 
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:

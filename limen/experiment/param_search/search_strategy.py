@@ -6,7 +6,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from collections.abc import Iterator
 from typing import Any
+from typing import cast
 
+from limen.experiment.param_domain import DomainObserver
 from limen.experiment.param_domain import ParamDomain
 
 
@@ -36,7 +38,7 @@ class SearchStrategy(ABC):
         self._seed = seed
         self._generated_count: int = 0  # subclasses must increment in __next__
         self._seen: set[str] = set()
-        self._domain.add_observer(self)
+        self._domain.add_observer(cast(DomainObserver, self))
 
 
     def __iter__(self) -> Iterator[dict[str, Any]]:

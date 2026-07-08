@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 import numpy as np
 from sklearn.metrics import precision_score
 
@@ -23,7 +23,7 @@ def balanced_metric(y_true: Any, y_pred: Any) -> float:
     if np.sum(y_pred) == 0:
         return 0.0
 
-    prec = precision_score(y_true, y_pred, zero_division=0)
+    prec = precision_score(y_true, y_pred, zero_division=cast(Any, 0))
     trade_rate = np.sum(y_pred) / len(y_pred)
 
     return prec * np.sqrt(trade_rate)

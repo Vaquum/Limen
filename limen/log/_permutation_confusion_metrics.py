@@ -5,8 +5,8 @@ from collections.abc import Sequence
 from math import sqrt
 
 
-def _confusion_mean_return_pct(pred: pd.Series,
-                               actual: pd.Series,
+def _confusion_mean_return_pct(pred: pd.Series | np.ndarray,
+                               actual: pd.Series | np.ndarray,
                                open_px: pd.Series,
                                price_change: pd.Series,
                                *,
@@ -15,8 +15,8 @@ def _confusion_mean_return_pct(pred: pd.Series,
     Compute execution-aligned mean return percentage for each confusion quadrant.
 
     Args:
-        pred (pd.Series): Binary predictions
-        actual (pd.Series): Binary actuals
+        pred (pd.Series | np.ndarray): Binary predictions
+        actual (pd.Series | np.ndarray): Binary actuals
         open_px (pd.Series): Open prices for the feature-bar rows
         price_change (pd.Series): Close - open for the feature-bar rows
         execution_lag_bars (int): Number of rows forward to evaluate on
@@ -37,23 +37,23 @@ def _confusion_mean_return_pct(pred: pd.Series,
         open_px = open_px.shift(-execution_lag_bars)
         price_change = price_change.shift(-execution_lag_bars)
 
-    pred = pred.to_numpy()
-    actual = actual.to_numpy()
-    open_px = open_px.to_numpy()
-    price_change = price_change.to_numpy()
+    pred_arr = pred.to_numpy()
+    actual_arr = actual.to_numpy()
+    open_arr = open_px.to_numpy()
+    change_arr = price_change.to_numpy()
 
-    return_pct = (price_change / open_px) * 100.0
+    return_pct = (change_arr / open_arr) * 100.0
     valid = (
-        ~np.isnan(pred) &
-        ~np.isnan(actual) &
-        ~np.isnan(open_px) &
-        ~np.isnan(price_change) &
-        (open_px != 0) &
+        ~np.isnan(pred_arr) &
+        ~np.isnan(actual_arr) &
+        ~np.isnan(open_arr) &
+        ~np.isnan(change_arr) &
+        (open_arr != 0) &
         np.isfinite(return_pct)
     )
 
-    pred = pred[valid].astype(int)
-    actual = actual[valid].astype(int)
+    pred_arr = pred_arr[valid].astype(int)
+    actual_arr = actual_arr[valid].astype(int)
     return_pct = return_pct[valid]
 
     def _mean(mask: np.ndarray) -> float:
@@ -61,10 +61,10 @@ def _confusion_mean_return_pct(pred: pd.Series,
         return round(float(values.mean()), 3) if values.size else np.nan
 
     return {
-        'tp_mean_return_pct': _mean((pred == 1) & (actual == 1)),
-        'fp_mean_return_pct': _mean((pred == 1) & (actual == 0)),
-        'tn_mean_return_pct': _mean((pred == 0) & (actual == 0)),
-        'fn_mean_return_pct': _mean((pred == 0) & (actual == 1)),
+        'tp_mean_return_pct': _mean((pred_arr == 1) & (actual_arr == 1)),
+        'fp_mean_return_pct': _mean((pred_arr == 1) & (actual_arr == 0)),
+        'tn_mean_return_pct': _mean((pred_arr == 0) & (actual_arr == 0)),
+        'fn_mean_return_pct': _mean((pred_arr == 0) & (actual_arr == 1)),
     }
 
 
@@ -189,7 +189,7 @@ def _permutation_confusion_metrics(self: Any,
 
         sp = sqrt(sp_num / sp_den) if sp_num > 0 else np.nan
 
-        return (ma - mb) / sp if sp and not np.isnan(sp) else np.nan
+        return float((ma - mb) / sp) if sp and not np.isnan(sp) else np.nan
 
     def _ks(a: np.ndarray, b: np.ndarray) -> float:
 

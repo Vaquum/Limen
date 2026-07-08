@@ -7,7 +7,7 @@ from typing import Any
 if sys.version_info >= (3, 11):
     import tomllib
 else:
-    import tomli as tomllib  # type: ignore[no-redef]
+    import tomli as tomllib
 
 
 _LIMEN_TOML_NAME = 'limen.toml'
