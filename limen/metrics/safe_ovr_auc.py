@@ -16,7 +16,7 @@ def _probability_column_index(label: object, present: npt.NDArray[Any], n_column
 
 
 def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str],
-                 probs: npt.NDArray[np.floating[Any]]) -> float:
+                 probs: npt.NDArray[np.floating[Any]] | list[list[float]]) -> float:
 
     '''
     Compute one-vs-rest AUC safely handling missing classes.
