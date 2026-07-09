@@ -5,7 +5,7 @@ import numpy.typing as npt
 from sklearn.metrics import roc_auc_score
 
 
-def _probability_column_index(label: object, present: npt.NDArray[np.integer[Any]], n_columns: int) -> int | None:
+def _probability_column_index(label: object, present: npt.NDArray[Any], n_columns: int) -> int | None:
     if n_columns == len(present):
         return int(np.where(present == label)[0][0])
     if isinstance(label, (np.integer, int)) and not isinstance(label, (np.bool_, bool)):
@@ -15,7 +15,7 @@ def _probability_column_index(label: object, present: npt.NDArray[np.integer[Any
     return None
 
 
-def safe_ovr_auc(y_true: npt.NDArray[np.integer[Any]], probs: npt.NDArray[np.float64]) -> float:
+def safe_ovr_auc(y_true: npt.NDArray[Any], probs: npt.NDArray[np.floating[Any]]) -> float:
 
     '''
     Compute one-vs-rest AUC safely handling missing classes.

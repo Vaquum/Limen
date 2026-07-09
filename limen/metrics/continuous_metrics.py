@@ -8,7 +8,7 @@ from sklearn.metrics import mean_absolute_percentage_error, r2_score
 
 
 def continuous_metrics(data: dict[str, Any],
-                       preds: list[float] | npt.NDArray[np.float64]) -> dict[str, Any]:
+                       preds: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
 
     '''
     Compute regression metrics from continuous predictions.

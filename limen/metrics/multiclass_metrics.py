@@ -9,7 +9,7 @@ from limen.metrics.safe_ovr_auc import safe_ovr_auc
 
 def multiclass_metrics(data: dict[str, Any],
                        preds: list[int] | npt.NDArray[np.integer[Any]],
-                       probs: list[float] | npt.NDArray[np.float64],
+                       probs: list[list[float]] | npt.NDArray[np.floating[Any]],
                        average: str = 'macro') -> dict[str, Any]:
 
     '''

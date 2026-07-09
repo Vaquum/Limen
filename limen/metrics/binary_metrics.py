@@ -9,7 +9,7 @@ _BINARY_CLASS_COUNT = 2
 
 def binary_metrics(data: dict[str, Any],
                    preds: list[int] | npt.NDArray[np.integer[Any]],
-                   probs: list[float] | npt.NDArray[np.float64]) -> dict[str, Any]:
+                   probs: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
 
     '''
     Compute binary classification metrics from predictions and probabilities.
