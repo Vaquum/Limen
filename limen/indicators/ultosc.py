@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
@@ -8,9 +9,9 @@ TA_EPSILON = 1e-14
 
 
 def _calc_terms(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
+    close: npt.NDArray[np.float64],
     day: int,
 ) -> tuple[float, float]:
     temp_lt = low[day]
@@ -30,13 +31,13 @@ def _calc_terms(
 
 
 def _ultosc_from_arrays(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
+    close: npt.NDArray[np.float64],
     period1: int,
     period2: int,
     period3: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     n = len(close)
     out = np.full(n, np.nan, dtype=float)
 

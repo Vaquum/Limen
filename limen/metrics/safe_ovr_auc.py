@@ -1,8 +1,11 @@
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 from sklearn.metrics import roc_auc_score
 
 
-def _probability_column_index(label: object, present: np.ndarray, n_columns: int) -> int | None:
+def _probability_column_index(label: object, present: npt.NDArray[Any], n_columns: int) -> int | None:
     if n_columns == len(present):
         return int(np.where(present == label)[0][0])
     if isinstance(label, (np.integer, int)) and not isinstance(label, (np.bool_, bool)):
@@ -12,14 +15,15 @@ def _probability_column_index(label: object, present: np.ndarray, n_columns: int
     return None
 
 
-def safe_ovr_auc(y_true: np.ndarray, probs: np.ndarray) -> float:
+def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str],
+                 probs: npt.NDArray[np.floating[Any]] | list[list[float]]) -> float:
 
     '''
     Compute one-vs-rest AUC safely handling missing classes.
 
     Args:
-        y_true (np.ndarray): True class labels, shape (n_samples,)
-        probs (np.ndarray): Predicted probabilities, shape (n_samples, n_classes)
+        y_true (np.ndarray | list[int] | list[str]): True class labels, shape (n_samples,)
+        probs (np.ndarray | list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
 
     Returns:
         float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made

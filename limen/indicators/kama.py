@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
@@ -8,7 +9,7 @@ CMP_N_2 = 2
 _TA_EPSILON = 1e-14
 
 
-def kama_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def kama_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray[np.float64]:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 

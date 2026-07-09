@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 logger = logging.getLogger(__name__)
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 FRACDIFF_SUFFIX = '_fracdiff'
 
 
-def _get_weights_ffd(d: float, threshold: float = 1e-5) -> np.ndarray:
+def _get_weights_ffd(d: float, threshold: float = 1e-5) -> npt.NDArray[np.float64]:
 
     '''
     Compute Fixed-Width Fractional Differentiation (FFD) weight vector.
@@ -114,7 +115,7 @@ def fractional_diff(data: pl.DataFrame,
     return data
 
 
-def _ffd_convolve(series: pl.Series, weights: np.ndarray) -> pl.Series:
+def _ffd_convolve(series: pl.Series, weights: npt.NDArray[np.float64]) -> pl.Series:
 
     '''
     Apply FFD convolution to a single series.

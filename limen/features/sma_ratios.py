@@ -5,7 +5,7 @@ DEFAULT_SMA_PERIODS = [5, 10, 20, 50]
 EPSILON = 1e-10
 
 
-def sma_ratios(data: pl.DataFrame, periods: list | None = None, price_col: str = 'close') -> pl.DataFrame:
+def sma_ratios(data: pl.DataFrame, periods: list[int] | None = None, price_col: str = 'close') -> pl.DataFrame:
 
     '''
     Compute price to SMA ratios for multiple time periods.

@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.rsi import rsi_from_values
@@ -10,12 +11,12 @@ CMP_N_2 = 2
 CMP_N_8 = 8
 
 def _stochrsi_from_values(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     period: int,
     fastk_period: int,
     fastd_period: int,
     fastd_ma_type: int,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n = len(values)
     out_fastk = np.full(n, np.nan, dtype=float)
     out_fastd = np.full(n, np.nan, dtype=float)

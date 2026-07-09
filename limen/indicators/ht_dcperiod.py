@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
@@ -12,7 +13,7 @@ HT_DCPERIOD_PERIOD = 0.0
 HT_DCPERIOD_SMOOTH_PERIOD = 0.0
 
 
-def _ht_dcperiod_from_values(values: np.ndarray) -> np.ndarray:
+def _ht_dcperiod_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 

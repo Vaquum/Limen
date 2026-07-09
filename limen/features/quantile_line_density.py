@@ -3,8 +3,8 @@ import numpy as np
 
 
 def quantile_line_density(data: pl.DataFrame,
-                          long_lines_q: list[dict],
-                          short_lines_q: list[dict],
+                          long_lines_q: list[dict[str, float]],
+                          short_lines_q: list[dict[str, float]],
                           lookback_hours: int) -> pl.DataFrame:
 
     '''

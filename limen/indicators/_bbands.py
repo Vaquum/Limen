@@ -1,13 +1,14 @@
 import numpy as np
+import numpy.typing as npt
 
 
 def stddev_using_precalc_ma(
-    values: np.ndarray,
-    movavg: np.ndarray,
+    values: npt.NDArray[np.float64],
+    movavg: npt.NDArray[np.float64],
     movavg_beg_idx: int,
     movavg_nb_element: int,
     period: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     out = np.empty(movavg_nb_element, dtype=float)
 
     start_sum = 1 + movavg_beg_idx - period
@@ -42,11 +43,11 @@ def stddev_using_precalc_ma(
 
 
 def stddev_from_var(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     start_idx: int,
     end_idx: int,
     period: int,
-) -> tuple[int, np.ndarray]:
+) -> tuple[int, npt.NDArray[np.float64]]:
     nb_initial = period - 1
     start = max(start_idx, nb_initial)
     if start > end_idx:

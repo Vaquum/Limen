@@ -3,8 +3,8 @@ import numpy as np
 
 
 def active_lines(data: pl.DataFrame,
-                 long_lines: list[dict],
-                 short_lines: list[dict]) -> pl.DataFrame:
+                 long_lines: list[dict[str, float]],
+                 short_lines: list[dict[str, float]]) -> pl.DataFrame:
 
     '''
     Compute active line count per row from provided long and short line spans.

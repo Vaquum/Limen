@@ -3,8 +3,8 @@ import numpy as np
 
 
 def active_quantile_count(data: pl.DataFrame,
-                          long_lines_q: list[dict],
-                          short_lines_q: list[dict]) -> pl.DataFrame:
+                          long_lines_q: list[dict[str, float]],
+                          short_lines_q: list[dict[str, float]]) -> pl.DataFrame:
 
     '''
     Compute count of active quantile-filtered lines per row.

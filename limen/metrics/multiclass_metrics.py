@@ -1,10 +1,16 @@
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from limen.metrics.safe_ovr_auc import safe_ovr_auc
 
 
-def multiclass_metrics(data: dict, preds: list, probs: list, average: str = 'macro') -> dict:
+def multiclass_metrics(data: dict[str, Any],
+                       preds: list[int] | npt.NDArray[np.integer[Any]],
+                       probs: list[list[float]] | npt.NDArray[np.floating[Any]],
+                       average: str = 'macro') -> dict[str, Any]:
 
     '''
     Compute multiclass classification metrics from predictions and probabilities.

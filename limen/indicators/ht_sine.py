@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
@@ -17,7 +18,7 @@ HT_SINE_SMOOTH_PERIOD = 0.0
 _SMOOTH_PRICE_SIZE = 50
 
 
-def _ht_sine_from_values(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _ht_sine_from_values(values: npt.NDArray[np.float64]) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n = len(values)
     out_sine = np.full(n, np.nan, dtype=float)
     out_lead_sine = np.full(n, np.nan, dtype=float)

@@ -3,7 +3,7 @@ import polars as pl
 DEFAULT_MOMENTUM_PERIODS = [12, 24, 48]
 
 
-def momentum_periods(data: pl.DataFrame, periods: list | None = None, price_col: str = 'close') -> pl.DataFrame:
+def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price_col: str = 'close') -> pl.DataFrame:
 
     '''
     Compute momentum over multiple time periods.

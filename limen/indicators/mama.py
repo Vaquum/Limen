@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
@@ -14,10 +15,10 @@ MAMA_PERIOD = 0.0
 
 
 def mama_from_values(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     fast_limit: float,
     slow_limit: float,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n = len(values)
     out_mama = np.full(n, np.nan, dtype=float)
     out_fama = np.full(n, np.nan, dtype=float)

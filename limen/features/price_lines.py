@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.features.active_lines import active_lines
@@ -92,7 +93,7 @@ def price_lines(data: pl.DataFrame,
     ).unnest(STRUCT_COL)
 
 
-def _price_line_columns(close: np.ndarray,
+def _price_line_columns(close: npt.NDArray[np.float64],
                         max_duration_hours: int,
                         min_height_pct: float,
                         big_move_lookback_hours: int,
@@ -151,7 +152,7 @@ def _price_line_columns(close: np.ndarray,
     return frame.drop('close').to_struct(STRUCT_COL)
 
 
-def _end_counts_in_window(lines: list[dict], n_rows: int, window: int) -> np.ndarray:
+def _end_counts_in_window(lines: list[dict[str, float]], n_rows: int, window: int) -> npt.NDArray[np.intp]:
 
     '''
     Compute per-bar counts of line ends inside the trailing window [t-window, t).
@@ -166,7 +167,7 @@ def _end_counts_in_window(lines: list[dict], n_rows: int, window: int) -> np.nda
     '''
 
     if not lines or n_rows == 0:
-        return np.zeros(n_rows, dtype=np.int64)
+        return np.zeros(n_rows, dtype=np.intp)
 
     ends = np.sort(np.array([line['end_idx'] for line in lines]))
     positions = np.arange(n_rows)

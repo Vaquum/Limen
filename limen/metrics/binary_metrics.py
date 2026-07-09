@@ -1,12 +1,15 @@
 from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, confusion_matrix
 
 _BINARY_CLASS_COUNT = 2
 
 
-def binary_metrics(data: dict, preds: list, probs: list) -> dict:
+def binary_metrics(data: dict[str, Any],
+                   preds: list[int] | npt.NDArray[np.integer[Any]],
+                   probs: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
 
     '''
     Compute binary classification metrics from predictions and probabilities.

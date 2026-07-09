@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
@@ -48,7 +49,7 @@ def cusum_filter(
     )
 
 
-def _cusum_events(close: np.ndarray, threshold: float) -> np.ndarray:
+def _cusum_events(close: npt.NDArray[np.float64], threshold: float) -> npt.NDArray[np.int8]:
     n = close.shape[0]
     events = np.zeros(n, dtype=np.int8)
     s_pos = 0.0

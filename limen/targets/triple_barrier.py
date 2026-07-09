@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
@@ -90,7 +91,7 @@ class TripleBarrierTarget:
         if self.close_col not in data.columns:
             raise ValueError(f"TripleBarrierTarget missing column: {self.close_col}")
 
-    def _volatility(self, data: pl.DataFrame) -> np.ndarray:
+    def _volatility(self, data: pl.DataFrame) -> npt.NDArray[np.float64]:
         return (
             data
             .select(
@@ -103,8 +104,8 @@ class TripleBarrierTarget:
         )
 
     def _first_touch(self,
-                     close: np.ndarray,
-                     volatility: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+                     close: npt.NDArray[np.float64],
+                     volatility: npt.NDArray[np.float64]) -> tuple[npt.NDArray[np.int8], npt.NDArray[np.bool_]]:
         n = close.shape[0]
         upper = self.upper_multiple * volatility
         lower = self.lower_multiple * volatility

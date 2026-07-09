@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 CMP_N_100000 = 100000
@@ -8,7 +9,7 @@ WMA_PERIOD_SUB = 0.0
 WMA_PERIOD_SUM = 0.0
 
 
-def wma_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def wma_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray[np.float64]:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 
