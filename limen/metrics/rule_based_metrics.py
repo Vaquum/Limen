@@ -42,7 +42,7 @@ def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]],
     split_bt: dict[str, dict[str, float]] = {}
 
     for split in _SPLITS:
-        pos = np.asarray(positions.get(split, []))
+        pos = np.asarray(positions.get(split, np.array([], dtype=np.int64)))
         results[f'num_trades_{split}'] = _count_entries(pos)
         results[f'position_rate_{split}'] = round(float(pos.mean()), 3) if len(pos) > 0 else 0.0
         bt = backtest_results.get(split, {})

@@ -22,8 +22,8 @@ def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str],
     Compute one-vs-rest AUC safely handling missing classes.
 
     Args:
-        y_true (np.ndarray): True class labels, shape (n_samples,)
-        probs (np.ndarray): Predicted probabilities, shape (n_samples, n_classes)
+        y_true (np.ndarray | list[int] | list[str]): True class labels, shape (n_samples,)
+        probs (np.ndarray | list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
 
     Returns:
         float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
