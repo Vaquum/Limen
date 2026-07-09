@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.features.active_quantile_count import active_quantile_count
@@ -117,7 +118,7 @@ def quantile_price_lines(data: pl.DataFrame,
     ).unnest(STRUCT_COL)
 
 
-def _quantile_line_columns(close: np.ndarray,
+def _quantile_line_columns(close: npt.NDArray[np.float64],
                            max_duration_hours: int,
                            min_height_pct: float,
                            quantile_threshold: float,
@@ -186,8 +187,8 @@ def _quantile_line_columns(close: np.ndarray,
     return frame.drop('close').to_struct(STRUCT_COL)
 
 
-def _end_events(long_lines_q: list[dict],
-                short_lines_q: list[dict]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _end_events(long_lines_q: list[dict[str, float]],
+                short_lines_q: list[dict[str, float]]) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
 
     '''
     Compute end-sorted event arrays from quantile-filtered lines.
@@ -218,10 +219,10 @@ def _end_events(long_lines_q: list[dict],
     return ends[order], heights[order], directions[order]
 
 
-def _windowed_sum(ends: np.ndarray,
-                  values: np.ndarray,
+def _windowed_sum(ends: npt.NDArray[np.int64],
+                  values: npt.NDArray[np.float64],
                   n_rows: int,
-                  window: int) -> np.ndarray:
+                  window: int) -> npt.NDArray[np.float64]:
 
     '''
     Compute per-bar sums of values whose end index falls in [t-window, t].

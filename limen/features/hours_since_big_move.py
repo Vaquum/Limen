@@ -3,8 +3,8 @@ import numpy as np
 
 
 def hours_since_big_move(data: pl.DataFrame,
-                         long_lines: list[dict],
-                         short_lines: list[dict],
+                         long_lines: list[dict[str, float]],
+                         short_lines: list[dict[str, float]],
                          lookback_hours: int) -> pl.DataFrame:
     '''
     Compute hours since the most recent line end capped by lookback_hours.

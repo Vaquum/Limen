@@ -3,6 +3,7 @@ from typing import cast
 
 import polars as pl
 import numpy as np
+import numpy.typing as npt
 
 
 def conserved_flux_renormalization(trades_df: pl.DataFrame,
@@ -101,7 +102,7 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
             .sort('datetime'))
 
 
-def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: int = 6) -> tuple[np.ndarray, np.ndarray]:
+def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: int = 6) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
 
     rel_std, ent = [], []
 

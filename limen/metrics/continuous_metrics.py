@@ -1,10 +1,14 @@
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 
 
-def continuous_metrics(data: dict, preds: list) -> dict:
+def continuous_metrics(data: dict[str, Any],
+                       preds: list[float] | npt.NDArray[np.float64]) -> dict[str, Any]:
 
     '''
     Compute regression metrics from continuous predictions.

@@ -1,4 +1,7 @@
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from scipy.stats import norm
 
@@ -28,7 +31,7 @@ class RankGaussScaler:
             )
 
         self._n_quantiles = n_quantiles
-        self.quantiles: dict[str, np.ndarray] = {}
+        self.quantiles: dict[str, npt.NDArray[np.floating[Any]]] = {}
 
         quantile_points = np.linspace(0, 1, n_quantiles + 1)
 
