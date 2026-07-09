@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 CMP_N_100000 = 100000
@@ -8,11 +9,11 @@ CCI_SCALING = 0.015
 
 
 def _cci_from_arrays(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
+    close: npt.NDArray[np.float64],
     period: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     n = len(close)
     out = np.full(n, np.nan, dtype=float)
     lookback = period - 1

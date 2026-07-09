@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.ma import ma
@@ -31,13 +32,13 @@ def _ma_lookback(period: int, ma_type: int) -> int:
 
 
 def stochf_from_arrays(
-    high: np.ndarray,
-    low: np.ndarray,
-    close: np.ndarray,
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
+    close: npt.NDArray[np.float64],
     fastk_period: int,
     fastd_period: int,
     fastd_ma_type: int,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n = len(close)
     out_fastk = np.full(n, np.nan, dtype=float)
     out_fastd = np.full(n, np.nan, dtype=float)

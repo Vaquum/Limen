@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 CMP_NEG_3E37 = -3e37
@@ -11,7 +12,7 @@ STDDEV_PERIOD_TOTAL2 = 0.0
 _TA_EPSILON = 1e-14
 
 
-def _stddev_from_values(values: np.ndarray, period: int, nb_dev: float) -> np.ndarray:
+def _stddev_from_values(values: npt.NDArray[np.float64], period: int, nb_dev: float) -> npt.NDArray[np.float64]:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 

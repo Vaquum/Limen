@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.ma import ma
@@ -32,12 +33,12 @@ def _ma_lookback(period: int, ma_type: int) -> int:
 
 
 def _ma_talib_segment(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     period: int,
     ma_type: int,
     start_idx: int,
     end_idx: int,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     lookback = _ma_lookback(period, ma_type)
     start = max(start_idx, lookback)
     if start > end_idx:
@@ -58,14 +59,14 @@ def _ma_talib_segment(
 
 
 def _macdext_from_values(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     fast_period: int,
     fast_ma_type: int,
     slow_period: int,
     slow_ma_type: int,
     signal_period: int,
     signal_ma_type: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n = len(values)
     out_macd = np.full(n, np.nan, dtype=float)
     out_signal = np.full(n, np.nan, dtype=float)

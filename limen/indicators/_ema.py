@@ -1,13 +1,14 @@
 import numpy as np
+import numpy.typing as npt
 
 
 def ema_talib_segment_with_k(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     period: int,
     k: float,
     start_idx: int,
     end_idx: int,
-) -> tuple[int, np.ndarray]:
+) -> tuple[int, npt.NDArray[np.float64]]:
     '''
     TA-Lib INT_EMA equivalent for default compatibility.
     Returns (out_beg_idx, output_values).
@@ -36,10 +37,10 @@ def ema_talib_segment_with_k(
 
 
 def ema_talib_default_segment(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     period: int,
     start_idx: int,
     end_idx: int,
-) -> tuple[int, np.ndarray]:
+) -> tuple[int, npt.NDArray[np.float64]]:
     k = 2.0 / (period + 1.0)
     return ema_talib_segment_with_k(values, period, k, start_idx, end_idx)

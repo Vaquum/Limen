@@ -1,11 +1,12 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
-def _midprice_from_arrays(high_values: np.ndarray, low_values: np.ndarray, period: int) -> np.ndarray:
+def _midprice_from_arrays(high_values: npt.NDArray[np.float64], low_values: npt.NDArray[np.float64], period: int) -> npt.NDArray[np.float64]:
     n = len(high_values)
     out = np.full(n, np.nan, dtype=float)
 

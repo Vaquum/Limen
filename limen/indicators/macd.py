@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._ema import ema_talib_default_segment
@@ -12,11 +13,11 @@ MACD_HIST_COL = 'macd_hist'
 
 
 def _macd_from_values(
-    values: np.ndarray,
+    values: npt.NDArray[np.float64],
     fast_period: int,
     slow_period: int,
     signal_period: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     n = len(values)
     out_macd = np.full(n, np.nan, dtype=float)
     out_signal = np.full(n, np.nan, dtype=float)

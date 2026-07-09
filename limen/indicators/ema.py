@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._ema import ema_talib_default_segment
@@ -7,7 +8,7 @@ from limen.indicators._ema import ema_talib_default_segment
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
-def ema_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def ema_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray[np.float64]:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
     lookback = period - 1

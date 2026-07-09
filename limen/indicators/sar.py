@@ -1,15 +1,16 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
 CMP_N_3E37 = 3e37
 
 def _sar_from_arrays(
-    high: np.ndarray,
-    low: np.ndarray,
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
     acceleration: float,
     maximum: float,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     n = len(high)
     out = np.full(n, np.nan, dtype=float)
     if n <= 1:

@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 CMP_NEG_3E37 = -3e37
@@ -9,7 +10,7 @@ VAR_PERIOD_TOTAL1 = 0.0
 VAR_PERIOD_TOTAL2 = 0.0
 
 
-def _var_from_values(values: np.ndarray, period: int) -> np.ndarray:
+def _var_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray[np.float64]:
     n = len(values)
     out = np.full(n, np.nan, dtype=float)
 

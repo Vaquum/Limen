@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 
@@ -6,8 +7,8 @@ CMP_NEG_3E37 = -3e37
 CMP_N_3E37 = 3e37
 
 def _sarext_from_arrays(
-    high: np.ndarray,
-    low: np.ndarray,
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
     start_value: float,
     offset_on_reverse: float,
     acceleration_init_long: float,
@@ -16,7 +17,7 @@ def _sarext_from_arrays(
     acceleration_init_short: float,
     acceleration_short: float,
     acceleration_max_short: float,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     n = len(high)
     out = np.full(n, np.nan, dtype=float)
     if n <= 1:
