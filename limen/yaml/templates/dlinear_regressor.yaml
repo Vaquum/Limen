@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: dlinear_regressor_experiment
-  limen_version: "4.7.0"
+  limen_version: "4.7.1"
   mode: development
   description: DLinear decomposition-linear regressor predicting next-period return
 
