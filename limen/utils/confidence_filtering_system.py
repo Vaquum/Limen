@@ -217,7 +217,8 @@ def confidence_filtering_system(models: list[Any],
         target_confidence (float): Target percentage of predictions to classify as confident
 
     Returns:
-        tuple: Confidence threshold, filtered results, and calibration statistics
+        tuple: Filtered test results, per-row results DataFrame sorted by
+            confidence score, and calibration statistics
     '''
 
     _validate_data_fields(data)

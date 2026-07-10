@@ -8,7 +8,7 @@ MIN_MAX_DURATION_HOURS = 2
 MIN_PRICES = 2
 
 
-def find_price_lines(close: npt.NDArray[np.floating[Any]],
+def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integer[Any]],
                      max_duration_hours: int,
                      min_height_pct: float) -> tuple[list[dict[str, float]], list[dict[str, float]]]:
 
