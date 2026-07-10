@@ -45,7 +45,7 @@ class LightGBMBinary(ReferenceModel):
         self._calibration_threshold: float = 0.5
         self._val_score: float | None = None
 
-    def train(self, data: dict, **params: Any) -> 'LightGBMBinary':
+    def train(self, data: dict[str, Any], **params: Any) -> 'LightGBMBinary':
 
         '''
         Train LightGBM binary classifier on provided data.
@@ -92,7 +92,7 @@ class LightGBMBinary(ReferenceModel):
 
         return self
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute binary predictions from feature data.
@@ -129,7 +129,7 @@ class LightGBMBinary(ReferenceModel):
         probs = self.model.predict_proba(np.asarray(data['x_test']))[:, 1]
         return {'_preds': preds, '_probs': probs}
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate trained model on test data.
@@ -159,7 +159,7 @@ class LightGBMBinary(ReferenceModel):
         return results
 
 
-def lightgbm_binary(data: dict,
+def lightgbm_binary(data: dict[str, Any],
                     objective: str | None = None,
                     boosting_type: str = 'gbdt',
                     num_leaves: int = 31,
@@ -175,7 +175,7 @@ def lightgbm_binary(data: dict,
                     colsample_bytree: float = 1.0,
                     reg_alpha: float = 0.0,
                     reg_lambda: float = 0.0,
-                    class_weight: float | str | dict | None = None,
+                    class_weight: float | str | dict[int, float] | None = None,
                     random_state: int = 42,
                     n_jobs: int | None = None,
                     importance_type: str = 'split',
@@ -183,7 +183,7 @@ def lightgbm_binary(data: dict,
                     deterministic: bool = True,
                     force_row_wise: bool = True,
                     verbosity: int = -1,
-                    prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
+                    prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict[str, Any]:
 
     '''
     Compute LightGBM binary predictions and evaluation metrics.

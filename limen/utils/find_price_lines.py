@@ -1,13 +1,16 @@
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 
 MIN_DURATION_BARS = 1
 MIN_MAX_DURATION_HOURS = 2
 MIN_PRICES = 2
 
 
-def find_price_lines(close: np.ndarray,
+def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integer[Any]],
                      max_duration_hours: int,
-                     min_height_pct: float) -> tuple[list[dict], list[dict]]:
+                     min_height_pct: float) -> tuple[list[dict[str, float]], list[dict[str, float]]]:
 
     '''
     Compute linear price movements (lines) from a close-price series.
@@ -42,8 +45,8 @@ def find_price_lines(close: np.ndarray,
     close = np.asarray(close, dtype=np.float64)
     n_prices = close.shape[0]
 
-    long_lines: list[dict] = []
-    short_lines: list[dict] = []
+    long_lines: list[dict[str, float]] = []
+    short_lines: list[dict[str, float]] = []
 
     if n_prices < MIN_PRICES:
         return long_lines, short_lines
@@ -75,7 +78,7 @@ def find_price_lines(close: np.ndarray,
     durations = np.concatenate(durations_per_duration)
 
     for start, height, duration in zip(starts, heights, durations, strict=True):
-        line = {
+        line: dict[str, float] = {
             'start_idx': int(start),
             'end_idx': int(start + duration),
             'height_pct': float(height),

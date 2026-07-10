@@ -2,6 +2,7 @@ import re
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 
 from limen._optional import require_optional
 from limen.metrics.continuous_metrics import continuous_metrics
@@ -54,7 +55,7 @@ class DLinearRegressor(ReferenceModel):
 
         return [c for _, c in sorted(matches, reverse=True)]
 
-    def _decompose(self, x: np.ndarray, kernel_size: int) -> np.ndarray:
+    def _decompose(self, x: npt.NDArray[np.float64], kernel_size: int) -> npt.NDArray[np.float64]:
 
         '''
         Decompose windows into stacked remainder and trend components.
@@ -73,7 +74,7 @@ class DLinearRegressor(ReferenceModel):
 
         return np.hstack([x - trend, trend])
 
-    def train(self, data: dict, **params: Any) -> 'DLinearRegressor':
+    def train(self, data: dict[str, Any], **params: Any) -> 'DLinearRegressor':
 
         '''
         Fit the DLinear heads in closed form on provided data.
@@ -115,7 +116,7 @@ class DLinearRegressor(ReferenceModel):
 
         return self
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute continuous predictions from feature data.
@@ -134,7 +135,7 @@ class DLinearRegressor(ReferenceModel):
 
         return {'_preds': preds}
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate trained model on test data.
@@ -162,9 +163,9 @@ class DLinearRegressor(ReferenceModel):
         return results
 
 
-def dlinear_regressor(data: dict,
+def dlinear_regressor(data: dict[str, Any],
                       kernel_size: int = DEFAULT_KERNEL_SIZE,
-                      alpha: float = DEFAULT_ALPHA) -> dict:
+                      alpha: float = DEFAULT_ALPHA) -> dict[str, Any]:
 
     '''
     Compute DLinear regression predictions and evaluation metrics.

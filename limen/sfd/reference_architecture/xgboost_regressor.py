@@ -13,7 +13,7 @@ class XGBoostRegressor(ReferenceModel):
 
     deterministic = True
 
-    def train(self, data: dict, **params: Any) -> 'XGBoostRegressor':
+    def train(self, data: dict[str, Any], **params: Any) -> 'XGBoostRegressor':
 
         '''
         Train XGBoost regressor on provided data.
@@ -48,7 +48,7 @@ class XGBoostRegressor(ReferenceModel):
 
         return self
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute continuous predictions from feature data.
@@ -65,7 +65,7 @@ class XGBoostRegressor(ReferenceModel):
         return {'_preds': preds}
 
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate trained model on test data.
@@ -93,7 +93,7 @@ class XGBoostRegressor(ReferenceModel):
         return results
 
 
-def xgboost_regressor(data: dict,
+def xgboost_regressor(data: dict[str, Any],
                   learning_rate: float = 0.01,
                   max_depth: int = 3,
                   n_estimators: int = 500,
@@ -106,7 +106,7 @@ def xgboost_regressor(data: dict,
                   objective: str = 'reg:squarederror',
                   booster: str = 'gbtree',
                   early_stopping_rounds: int | None = 50,
-                  random_state: int = 42) -> dict:
+                  random_state: int = 42) -> dict[str, Any]:
 
     '''
     Compute XGBoost regression predictions and evaluation metrics.

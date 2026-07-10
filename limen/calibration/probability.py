@@ -1,13 +1,14 @@
 from typing import Any
 
-import numpy as np
+import numpy.typing as npt
+import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.frozen import FrozenEstimator
 
 
 def sklearn_probability_calibrator(clf: Any,
-                                    x_val: np.ndarray,
-                                    y_val: np.ndarray,
+                                    x_val: npt.NDArray[Any] | pl.DataFrame,
+                                    y_val: npt.NDArray[Any] | pl.Series,
                                     method: str = 'isotonic') -> Any:
 
     '''
@@ -15,8 +16,8 @@ def sklearn_probability_calibrator(clf: Any,
 
     Args:
         clf: Pre-fitted classifier with predict_proba method
-        x_val (np.ndarray): Validation features for calibration fitting
-        y_val (np.ndarray): Validation labels for calibration fitting
+        x_val (np.ndarray or pl.DataFrame): Validation features for calibration fitting
+        y_val (np.ndarray or pl.Series): Validation labels for calibration fitting
         method (str): Calibration method ('isotonic' or 'sigmoid')
 
     Returns:

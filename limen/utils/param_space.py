@@ -78,7 +78,7 @@ class ParamSpace:
         seed (int | None): Optional seed for reproducible legacy sampling.
     '''
 
-    def __init__(self, params: dict, n_permutations: int, seed: int | None = None) -> None:
+    def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None = None) -> None:
 
         super().__init__()
 
@@ -103,8 +103,8 @@ class ParamSpace:
         self.df_params = pl.DataFrame(combos)
         self.n_permutations = self.df_params.height
 
-    def _index_to_combo(self, index: int) -> dict:
-        combo = {}
+    def _index_to_combo(self, index: int) -> dict[str, Any]:
+        combo: dict[str, Any] = {}
         remaining_index = index
         for i, key in enumerate(self.keys):
             size = self.param_sizes[i]
@@ -112,7 +112,7 @@ class ParamSpace:
             remaining_index //= size
         return combo
 
-    def generate(self, random_search: bool = True) -> dict | None:
+    def generate(self, random_search: bool = True) -> dict[str, Any] | None:
 
         '''
         Compute next parameter combination from the parameter space.
