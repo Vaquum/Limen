@@ -13,7 +13,7 @@ _OPS = {
 }
 
 
-def _fmt(val: Any, params: dict) -> Any:
+def _fmt(val: Any, params: dict[str, Any]) -> Any:
     if not isinstance(val, str):
         return val
     try:
@@ -167,7 +167,7 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=1) >= 1).fill_null(False)
 
 
-def sql_expr(expr_string: str, params: dict) -> pl.Expr:
+def sql_expr(expr_string: str, params: dict[str, Any]) -> pl.Expr:
 
     '''
     Parse a SQL expression string with parameter substitution into a polars expression.
@@ -193,7 +193,7 @@ def sql_expr(expr_string: str, params: dict) -> pl.Expr:
     return pl.sql_expr(resolved)
 
 
-def build_predicate(condition: dict, round_params: dict) -> pl.Expr:
+def build_predicate(condition: dict[str, Any], round_params: dict[str, Any]) -> pl.Expr:
 
     '''
     Route a condition config dict to the appropriate predicate function.

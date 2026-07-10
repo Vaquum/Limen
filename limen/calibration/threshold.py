@@ -1,8 +1,11 @@
 from collections.abc import Callable
 import math
 import numbers
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
+import polars as pl
 
 from limen.metrics.balanced_metric import balanced_metric
 
@@ -27,19 +30,19 @@ def _validate_threshold_grid(threshold_min: float,
         raise ValueError('threshold_min must be less than or equal to threshold_max')
 
 
-def grid_threshold_optimizer(y_val: np.ndarray,
-                              val_proba: np.ndarray,
+def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series,
+                              val_proba: npt.NDArray[np.floating[Any]],
                               threshold_min: float = 0.20,
                               threshold_max: float = 0.70,
                               threshold_step: float = 0.05,
                               default_threshold: float = 0.35,
-                              metric: Callable = balanced_metric) -> tuple[float, float]:
+                              metric: Callable[[Any, Any], float] = balanced_metric) -> tuple[float, float]:
 
     '''
     Find optimal binary classification threshold by sweeping over a bounded range.
 
     Args:
-        y_val (np.ndarray): Ground truth validation labels
+        y_val (np.ndarray or pl.Series): Ground truth validation labels
         val_proba (np.ndarray): Predicted probabilities for positive class on validation set
         threshold_min (float): Minimum threshold to test
         threshold_max (float): Maximum threshold to test

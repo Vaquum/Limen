@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 
 _VALID_OPERATORS = ('and', 'or', 'not')
@@ -12,7 +13,7 @@ _LEAF_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
 }
 
 
-def _validate_leaf(cond: dict) -> None:
+def _validate_leaf(cond: dict[str, Any]) -> None:
     ptype = cond['type']
     if ptype not in _LEAF_REQUIRED_FIELDS:
         raise ValueError(f'Condition {cond["id"]!r} has unknown type {ptype!r}')
@@ -25,7 +26,7 @@ def _validate_leaf(cond: dict) -> None:
         raise ValueError(f'Condition {cond["id"]!r} cannot specify both persistence_n and recency_n')
 
 
-def _detect_cycles(conditions: list[dict]) -> None:
+def _detect_cycles(conditions: list[dict[str, Any]]) -> None:
     adj: dict[str, list[str]] = {
         c['id']: (c.get('operands', []) if 'type' not in c else [])
         for c in conditions
@@ -48,7 +49,7 @@ def _detect_cycles(conditions: list[dict]) -> None:
             _dfs(cond_id)
 
 
-def _validate_compound(cond: dict, known_ids: set[str]) -> None:
+def _validate_compound(cond: dict[str, Any], known_ids: set[str]) -> None:
     operator = cond.get('operator')
     if operator not in _VALID_OPERATORS:
         raise ValueError(
@@ -79,7 +80,7 @@ class RuleBasedConfig:
 
     '''Rule-based strategy configuration: boolean predicate conditions and entry signal id.'''
 
-    conditions: list[dict]
+    conditions: list[dict[str, Any]]
     entry: str
 
     def __post_init__(self) -> None:

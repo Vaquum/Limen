@@ -1,7 +1,7 @@
 import polars as pl
 
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, datetime
 from itertools import accumulate
 from typing import Any
 
@@ -119,7 +119,8 @@ def split_by_dates(
     ]
 
 
-def _compute_alignment(split_data: list, all_datetimes: list) -> dict:
+def _compute_alignment(split_data: list[pl.DataFrame],
+                       all_datetimes: list[datetime] | list[int]) -> dict[str, Any]:
     remaining = (split_data[0]['datetime'].to_list()
                  + split_data[1]['datetime'].to_list()
                  + split_data[2]['datetime'].to_list())
@@ -130,9 +131,9 @@ def _compute_alignment(split_data: list, all_datetimes: list) -> dict:
     }
 
 
-def split_data_to_prep_output(split_data: list,
-                              cols: list,
-                              all_datetimes: list) -> dict:
+def split_data_to_prep_output(split_data: list[pl.DataFrame],
+                              cols: list[str],
+                              all_datetimes: list[datetime] | list[int]) -> dict[str, Any]:
 
     '''
     Compute data preparation output dictionary from split data and column names.
@@ -153,19 +154,20 @@ def split_data_to_prep_output(split_data: list,
     model_cols = [col for col in cols if col != 'datetime']
     model_splits = [split.drop('datetime') for split in split_data]
 
-    data_dict = {'x_train': model_splits[0][model_cols[:-1]],
-                 'y_train': model_splits[0][model_cols[-1]],
-                 'x_val': model_splits[1][model_cols[:-1]],
-                 'y_val': model_splits[1][model_cols[-1]],
-                 'x_test': model_splits[2][model_cols[:-1]],
-                 'y_test': model_splits[2][model_cols[-1]]}
+    data_dict: dict[str, Any] = {'x_train': model_splits[0][model_cols[:-1]],
+                                 'y_train': model_splits[0][model_cols[-1]],
+                                 'x_val': model_splits[1][model_cols[:-1]],
+                                 'y_val': model_splits[1][model_cols[-1]],
+                                 'x_test': model_splits[2][model_cols[:-1]],
+                                 'y_test': model_splits[2][model_cols[-1]]}
 
     data_dict['_alignment'] = alignment
 
     return data_dict
 
 
-def split_data_to_rule_based_prep_output(split_data: list, all_datetimes: list) -> dict:
+def split_data_to_rule_based_prep_output(split_data: list[pl.DataFrame],
+                                         all_datetimes: list[datetime] | list[int]) -> dict[str, Any]:
 
     '''
     Compute data preparation output dictionary for rule-based strategies.

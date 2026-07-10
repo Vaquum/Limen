@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from limen.calibration import CalibratorProtocol
 from limen.calibration import ThresholdOptimizerProtocol
@@ -19,7 +19,7 @@ from limen.sfd.reference_architecture.logreg_binary import logreg_binary
 from limen.targets import QuantileBinaryTarget
 
 
-def params() -> dict:
+def params() -> dict[str, list[Any]]:
 
     return {
         # data prep parameters

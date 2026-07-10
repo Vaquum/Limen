@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from limen.calibration import CalibratorProtocol
 from limen.calibration import ThresholdOptimizerProtocol
@@ -22,7 +22,7 @@ VAL_SPLIT = 20
 TEST_SPLIT = 30
 
 
-def params() -> dict[str, list]:
+def params() -> dict[str, list[Any]]:
 
     return {
         # Target params

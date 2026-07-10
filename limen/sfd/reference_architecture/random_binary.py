@@ -17,7 +17,7 @@ class RandomBinary(ReferenceModel):
         super().__init__()
         self._random_weights = 0.5
 
-    def train(self, data: dict, **params: Any) -> 'RandomBinary':
+    def train(self, data: dict[str, Any], **params: Any) -> 'RandomBinary':
 
         '''
         Store random weights configuration. No actual training.
@@ -35,7 +35,7 @@ class RandomBinary(ReferenceModel):
 
         return self
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute random binary predictions.
@@ -55,7 +55,7 @@ class RandomBinary(ReferenceModel):
         return {'_preds': preds, '_probs': probs}
 
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate random classifier on test data.
@@ -82,8 +82,8 @@ class RandomBinary(ReferenceModel):
         return results
 
 
-def random_binary(data: dict,
-                  random_weights: float = 0.5) -> dict:
+def random_binary(data: dict[str, Any],
+                  random_weights: float = 0.5) -> dict[str, Any]:
 
     '''
     Random binary classifier for testing and demonstration purposes.

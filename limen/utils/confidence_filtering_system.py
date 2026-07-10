@@ -2,6 +2,7 @@ import numbers
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from sklearn.metrics import mean_absolute_error, r2_score
 
@@ -20,7 +21,7 @@ def _validate_target_confidence(target_confidence: float) -> float:
     return float(target_confidence)
 
 
-def _validate_confidence_threshold(confidence_threshold: float) -> float:
+def _validate_confidence_threshold(confidence_threshold: float | np.floating[Any]) -> float:
     if (
         isinstance(confidence_threshold, bool)
         or not isinstance(confidence_threshold, numbers.Real)
@@ -31,7 +32,7 @@ def _validate_confidence_threshold(confidence_threshold: float) -> float:
     return float(confidence_threshold)
 
 
-def _as_1d_finite_numeric(name: str, values: Any) -> np.ndarray:
+def _as_1d_finite_numeric(name: str, values: Any) -> npt.NDArray[np.float64]:
     arr = np.asarray(values)
     if arr.ndim != 1:
         raise ValueError(f'confidence_filtering {name} must be one-dimensional')
@@ -44,11 +45,11 @@ def _as_1d_finite_numeric(name: str, values: Any) -> np.ndarray:
     return arr
 
 
-def _collect_model_predictions(models: list, x: Any, expected_len: int) -> np.ndarray:
+def _collect_model_predictions(models: list[Any], x: Any, expected_len: int) -> npt.NDArray[np.float64]:
     if not models:
         raise ValueError('confidence_filtering requires at least one model')
 
-    predictions = []
+    predictions: list[npt.NDArray[np.float64]] = []
     for index, model in enumerate(models):
         predict = getattr(model, 'predict', None)
         if not callable(predict):
@@ -63,13 +64,16 @@ def _collect_model_predictions(models: list, x: Any, expected_len: int) -> np.nd
     return np.vstack(predictions)
 
 
-def _validate_data_fields(data: dict) -> None:
+def _validate_data_fields(data: dict[str, Any]) -> None:
     missing = [field for field in _REQUIRED_DATA_FIELDS if field not in data]
     if missing:
         raise ValueError(f'confidence_filtering data missing required fields: {missing}')
 
 
-def calibrate_confidence_threshold(models: list, x_val: Any, y_val: Any, target_confidence: float = 0.8) -> tuple:
+def calibrate_confidence_threshold(models: list[Any],
+                                   x_val: Any,
+                                   y_val: Any,
+                                   target_confidence: float = 0.8) -> tuple[np.floating[Any], dict[str, Any]]:
 
     '''
     Compute confidence threshold using validation data.
@@ -137,7 +141,10 @@ def calibrate_confidence_threshold(models: list, x_val: Any, y_val: Any, target_
     return confidence_threshold, calibration_stats
 
 
-def apply_confidence_filtering(models: list, x_test: Any, y_test: Any, confidence_threshold: float) -> dict:
+def apply_confidence_filtering(models: list[Any],
+                               x_test: Any,
+                               y_test: Any,
+                               confidence_threshold: float | np.floating[Any]) -> dict[str, Any]:
 
     '''
     Apply confidence filtering using pre-calibrated threshold.
@@ -197,7 +204,9 @@ def apply_confidence_filtering(models: list, x_test: Any, y_test: Any, confidenc
 
 
 
-def confidence_filtering_system(models: list, data: dict, target_confidence: float = 0.8) -> tuple:
+def confidence_filtering_system(models: list[Any],
+                                data: dict[str, Any],
+                                target_confidence: float = 0.8) -> tuple[dict[str, Any], pl.DataFrame, dict[str, Any]]:
 
     '''
     Compute complete confidence filtering system with validation-based calibration.
@@ -208,7 +217,8 @@ def confidence_filtering_system(models: list, data: dict, target_confidence: flo
         target_confidence (float): Target percentage of predictions to classify as confident
 
     Returns:
-        tuple: Confidence threshold, filtered results, and calibration statistics
+        tuple: Filtered test results, per-row results DataFrame sorted by
+            confidence score, and calibration statistics
     '''
 
     _validate_data_fields(data)
