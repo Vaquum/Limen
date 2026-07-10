@@ -52,7 +52,7 @@ class LogRegBinary(ReferenceModel):
         self._calibration_threshold: float = 0.5
         self._val_score: float | None = None
 
-    def train(self, data: dict, **params: Any) -> 'LogRegBinary':
+    def train(self, data: dict[str, Any], **params: Any) -> 'LogRegBinary':
 
         '''
         Train logistic regression classifier on provided data.
@@ -82,7 +82,7 @@ class LogRegBinary(ReferenceModel):
         return self
 
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute binary predictions from feature data.
@@ -119,7 +119,7 @@ class LogRegBinary(ReferenceModel):
         return {'_preds': preds, '_probs': probs}
 
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate trained model on test data.
@@ -149,7 +149,7 @@ class LogRegBinary(ReferenceModel):
         return results
 
 
-def logreg_binary(data: dict,
+def logreg_binary(data: dict[str, Any],
                   solver: str = 'lbfgs',
                   penalty: str = 'l2',
                   dual: bool = False,
@@ -157,7 +157,7 @@ def logreg_binary(data: dict,
                   C: float = 1.0,
                   fit_intercept: bool = True,
                   intercept_scaling: float = 1,
-                  class_weight: float | str | dict | None = None,
+                  class_weight: float | str | dict[int, float] | None = None,
                   random_state: int = 42,
                   max_iter: int = 100,
                   multi_class: str = 'deprecated',
@@ -165,7 +165,7 @@ def logreg_binary(data: dict,
                   warm_start: bool = False,
                   n_jobs: int | None = None,
                   l1_ratio: float | None = None,
-                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
+                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict[str, Any]:
 
     '''
     Compute logistic regression binary predictions and evaluation metrics.

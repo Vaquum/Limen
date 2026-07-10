@@ -1,6 +1,8 @@
 from typing import Any, Protocol
 
 import numpy as np
+import numpy.typing as npt
+import polars as pl
 
 
 class CalibratorProtocol(Protocol):
@@ -9,8 +11,8 @@ class CalibratorProtocol(Protocol):
 
     def __call__(self,
                  clf: Any,
-                 x_val: np.ndarray,
-                 y_val: np.ndarray,
+                 x_val: npt.NDArray[Any] | pl.DataFrame,
+                 y_val: npt.NDArray[Any] | pl.Series,
                  **params: Any) -> Any:
         ...
 
@@ -20,8 +22,8 @@ class ThresholdOptimizerProtocol(Protocol):
     '''Protocol for threshold optimisation functions.'''
 
     def __call__(self,
-                 y_val: np.ndarray,
-                 val_proba: np.ndarray,
+                 y_val: npt.NDArray[Any] | pl.Series,
+                 val_proba: npt.NDArray[np.floating[Any]],
                  **params: Any) -> tuple[float, float]:
         ...
 
@@ -38,8 +40,8 @@ class CalibrationConfigProtocol(Protocol):
 
 def fit_calibrator(model: Any,
                    config: CalibrationConfigProtocol,
-                   x_val: np.ndarray,
-                   y_val: np.ndarray) -> tuple[Any, float, float | None]:
+                   x_val: npt.NDArray[Any] | pl.DataFrame,
+                   y_val: npt.NDArray[Any] | pl.Series) -> tuple[Any, float, float | None]:
 
     '''
     Fit calibrator on validation data.
@@ -47,8 +49,8 @@ def fit_calibrator(model: Any,
     Args:
         model (Any): Fitted classifier with predict_proba method
         config (CalibrationConfigProtocol): Resolved calibration configuration
-        x_val (np.ndarray): Validation features
-        y_val (np.ndarray): Validation labels
+        x_val (np.ndarray or pl.DataFrame): Validation features
+        y_val (np.ndarray or pl.Series): Validation labels
 
     Returns:
         tuple: (fitted_calibrator, optimal_threshold, val_score)
@@ -69,7 +71,7 @@ def fit_calibrator(model: Any,
 
 def apply_calibrated_predict(model: Any,
                               config: CalibrationConfigProtocol,
-                              data: dict[str, Any]) -> dict:
+                              data: dict[str, Any]) -> dict[str, Any]:
 
     '''
     Apply calibration and threshold optimisation to a fitted model's predictions.

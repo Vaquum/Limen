@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from limen.data import HistoricalData
 from limen.experiment import Manifest
@@ -31,7 +31,7 @@ _CONDITIONS = [
 ]
 
 
-def params() -> dict:
+def params() -> dict[str, list[Any]]:
 
     return {
         'rsi_period': [7, 14, 21],

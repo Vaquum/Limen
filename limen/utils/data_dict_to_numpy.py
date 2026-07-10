@@ -1,4 +1,7 @@
-def data_dict_to_numpy(data: dict, keys: list | None = None) -> dict:
+from typing import Any
+
+
+def data_dict_to_numpy(data: dict[str, Any], keys: list[str] | None = None) -> dict[str, Any]:
 
     '''
     Convert data dictionary entries from polars/pandas to numpy arrays.
@@ -14,7 +17,7 @@ def data_dict_to_numpy(data: dict, keys: list | None = None) -> dict:
     if keys is None:
         keys = ['x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test']
 
-    result = {}
+    result: dict[str, Any] = {}
     for key in keys:
         if key in data:
             val = data[key]

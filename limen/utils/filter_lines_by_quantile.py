@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def filter_lines_by_quantile(lines: list[dict], quantile: float) -> list[dict]:
+def filter_lines_by_quantile(lines: list[dict[str, float]], quantile: float) -> list[dict[str, float]]:
 
     '''
     Compute the subset of lines at or above a height quantile.

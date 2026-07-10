@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from limen.calibration import CalibratorProtocol
 from limen.calibration import ThresholdOptimizerProtocol
@@ -21,7 +21,7 @@ from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.targets import TradelineLongBinaryTarget
 
 
-def params() -> dict:
+def params() -> dict[str, list[Any]]:
 
     return {
         # line geometry

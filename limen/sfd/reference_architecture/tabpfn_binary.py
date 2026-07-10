@@ -29,7 +29,7 @@ class TabPFNBinary(ReferenceModel):
         self._calibration_threshold: float = 0.5
         self._val_score: float | None = None
 
-    def train(self, data: dict, **params: Any) -> 'TabPFNBinary':
+    def train(self, data: dict[str, Any], **params: Any) -> 'TabPFNBinary':
 
         '''
         Train TabPFN classifier on provided data.
@@ -69,7 +69,7 @@ class TabPFNBinary(ReferenceModel):
         return self
 
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute binary predictions with optional calibration and threshold tuning.
@@ -109,7 +109,7 @@ class TabPFNBinary(ReferenceModel):
         return {'_preds': y_pred, '_probs': y_test_proba}
 
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate trained model on test data.
@@ -140,10 +140,10 @@ class TabPFNBinary(ReferenceModel):
         return results
 
 
-def tabpfn_binary(data: dict,
+def tabpfn_binary(data: dict[str, Any],
                   n_ensemble_configurations: int = 4,
                   device: str = 'cpu',
-                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict:
+                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict[str, Any]:
 
     '''
     Compute TabPFN binary classification with optional calibration and threshold tuning.
