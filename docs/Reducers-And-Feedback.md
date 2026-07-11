@@ -195,9 +195,24 @@ Every reducer takes `metric` (the column it reasons over) and `active` (default 
 
 ### `intra_callback`
 
-`intra_callback` receives `(log, msq)` and can call queue methods directly.
+`intra_callback` receives `(log, msq)` and can call queue methods directly. It is supplied through the `UniversalExperimentLoop` constructor — the Python API, not YAML:
 
-Use `ManualReducer` for:
+```python
+def steer_toward_lbfgs(log, msq):
+    msq.keep_is('solver', 'lbfgs')
+    msq.inject_value('C', 7.5)
+```
+
+```python-fragment
+uel = limen.UniversalExperimentLoop(
+    sfd=my_sfd,
+    search_strategy=strategy,
+    intra_callback=steer_toward_lbfgs,
+    feedback_interval=20,
+)
+```
+
+The callback applies interventions directly on the `msq` and the controller records what changed. Use `intra_callback` for:
 
 - arbitrary Python-side control logic
 - direct queue mutation that is too custom for declarative reducer output
