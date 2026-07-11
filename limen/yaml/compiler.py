@@ -9,6 +9,8 @@ from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
@@ -346,3 +348,34 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     if strategy_type == 'random':
         return RandomStrategy(domain, seed=seed)
     raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random' or 'grid'.")
+
+
+def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]:
+
+    '''
+    Build reducer instances from the uel.pruning_strategies block.
+
+    Args:
+        yaml_dict (dict): Parsed and validated YAML experiment dict
+
+    Returns:
+        list[PruningStrategy]: Configured reducers, empty when none are declared
+
+    Raises:
+        ValueError: If a declared type is not a known reducer
+
+    '''
+
+    uel_cfg = yaml_dict.get('uel') or {}
+    specs = uel_cfg.get('pruning_strategies') or []
+    reducers: list[PruningStrategy] = []
+    for spec in specs:
+        reducer_type = spec['type']
+        if reducer_type not in REDUCER_REGISTRY:
+            raise ValueError(
+                f"Unknown pruning strategy type: '{reducer_type}'. "
+                f"Expected one of: {', '.join(sorted(REDUCER_REGISTRY))}."
+            )
+        params = spec.get('params') or {}
+        reducers.append(REDUCER_REGISTRY[reducer_type](**params))
+    return reducers
