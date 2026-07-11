@@ -1278,4 +1278,4 @@ Note: add all new changelog entries to the bottom of this file.
 ## v4.9.1 on 11th of July, 2026
 
 - Add `typing_extensions>=4.12,<5` to `requirements/constraints.txt`, restoring the exact mirror of the supported resolver envelope that `docs/Developer/Packaging.md` documents — the runtime dependency arrived in v4.9.0 with the constraints line outside that slice's scope (#676).
-- Pin the mirror with `test_constraints_mirror_runtime_envelope`: the constraints file's non-empty lines assert set-equal to `[project] dependencies` plus the `all` and `release` extras, so a future dependency change that skips the mirror fails `pr_checks_tests` mechanically (#676).
+- Pin the mirror with `test_constraints_mirror_runtime_envelope`: the constraints file's non-empty lines assert equal as sorted lists — order-insensitive, duplicate-sensitive — to `[project] dependencies` plus the `all` and `release` extras, so a future dependency change that skips the mirror fails `pr_checks_tests` mechanically (#676).
