@@ -50,6 +50,7 @@ from limen.yaml.schema import RULE_BASED_MANIFEST_REQUIRED
 from limen.yaml.schema import SCALER_EXPLICIT_OPTIONAL
 from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
 from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
+from limen.yaml.schema import SEARCH_STRATEGY_OPTIONAL
 from limen.yaml.schema import SEARCH_STRATEGY_REQUIRED
 from limen.yaml.schema import SPLIT_DATES_OPTIONAL
 from limen.yaml.schema import SPLIT_DATES_REQUIRED
@@ -174,7 +175,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
     Required('uel.n_permutations', int),
     OneOf('uel.search_strategy.type', VALID_SEARCH_STRATEGY_TYPES),
-    NoUnknownKeys('uel.search_strategy', SEARCH_STRATEGY_REQUIRED),
+    NoUnknownKeys('uel.search_strategy', SEARCH_STRATEGY_REQUIRED | SEARCH_STRATEGY_OPTIONAL),
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
     NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
     UelSpec(),
