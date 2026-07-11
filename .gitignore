@@ -66,3 +66,7 @@ mcp/
 .ruff_cache/
 .Agent1
 venv-codex
+
+# TabPFN local test-run model downloads
+*.ckpt
+.*.ckpt.lock

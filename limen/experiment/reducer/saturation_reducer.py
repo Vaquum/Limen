@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 import polars as pl
+from typing_extensions import override
 
 from limen.experiment.reducer.filter_types import FILTER_SAMPLE
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
@@ -73,6 +74,7 @@ class SaturationReducer(PruningStrategy):
         self._saturated: set[tuple[str, Any]] = set()
 
 
+    @override
     def analyze_and_intervene(self,
                               log: pl.DataFrame,
                               msq: Any) -> list[dict[str, Any]]:
@@ -154,6 +156,7 @@ class SaturationReducer(PruningStrategy):
         return interventions
 
 
+    @override
     def get_state(self) -> dict[str, Any]:
 
         '''Export state for checkpointing.'''
@@ -163,6 +166,7 @@ class SaturationReducer(PruningStrategy):
         }
 
 
+    @override
     def set_state(self, state: dict[str, Any]) -> None:
 
         '''Restore state from checkpoint.'''

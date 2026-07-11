@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import override
 
 from limen._optional import require_optional
 from limen.metrics.continuous_metrics import continuous_metrics
@@ -74,6 +75,7 @@ class DLinearRegressor(ReferenceModel):
 
         return np.hstack([x - trend, trend])
 
+    @override
     def train(self, data: dict[str, Any], **params: Any) -> 'DLinearRegressor':
 
         '''
@@ -116,6 +118,7 @@ class DLinearRegressor(ReferenceModel):
 
         return self
 
+    @override
     def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
@@ -135,6 +138,7 @@ class DLinearRegressor(ReferenceModel):
 
         return {'_preds': preds}
 
+    @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''

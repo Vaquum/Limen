@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+from typing_extensions import override
 
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
@@ -17,6 +18,7 @@ class RandomBinary(ReferenceModel):
         super().__init__()
         self._random_weights = 0.5
 
+    @override
     def train(self, data: dict[str, Any], **params: Any) -> 'RandomBinary':
 
         '''
@@ -35,6 +37,7 @@ class RandomBinary(ReferenceModel):
 
         return self
 
+    @override
     def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
@@ -55,6 +58,7 @@ class RandomBinary(ReferenceModel):
         return {'_preds': preds, '_probs': probs}
 
 
+    @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''

@@ -9,6 +9,8 @@ from dataclasses import field
 from typing import TYPE_CHECKING
 from typing import Any
 
+from typing_extensions import override
+
 from limen.yaml.schema import COMPLEXITY_HIGH_MAX
 from limen.yaml.schema import COMPLEXITY_LOW_MAX
 from limen.yaml.schema import COMPLEXITY_MEDIUM_MAX
@@ -50,6 +52,7 @@ class _LogCapture(logging.Handler):
         super().__init__(level=logging.WARNING)
         self.records: list[str] = []
 
+    @override
     def emit(self, record: logging.LogRecord) -> None:
 
         self.records.append(record.getMessage())

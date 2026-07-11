@@ -1,6 +1,7 @@
 from typing import Any
 
 import polars as pl
+from typing_extensions import override
 
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
@@ -93,6 +94,7 @@ class SanityReducer(PruningStrategy):
         self._suggested: set[tuple[str, Any, str]] = set()
 
 
+    @override
     def analyze_and_intervene(self,
                               log: pl.DataFrame,
                               msq: Any) -> list[dict[str, Any]]:
@@ -208,6 +210,7 @@ class SanityReducer(PruningStrategy):
         return []
 
 
+    @override
     def get_state(self) -> dict[str, Any]:
 
         '''Export state for checkpointing.'''
@@ -218,6 +221,7 @@ class SanityReducer(PruningStrategy):
         }
 
 
+    @override
     def set_state(self, state: dict[str, Any]) -> None:
 
         '''Restore state from checkpoint.'''

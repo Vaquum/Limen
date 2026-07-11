@@ -1,4 +1,5 @@
 import polars as pl
+from typing_extensions import override
 
 from limen.targets.vol_normalized_return import PARKINSON_SCALE
 from limen.targets.vol_normalized_return import VolNormalizedReturnTarget
@@ -54,6 +55,7 @@ class ForwardVolNormalizedReturnTarget(VolNormalizedReturnTarget):
             min_periods=min_periods,
         )
 
+    @override
     def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
         '''

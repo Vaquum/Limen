@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "4.8.0"
+version = "4.9.0"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -43,6 +43,7 @@ dependencies = [
   "scikit-learn>=1.6,<2",
   "tomli>=2.0,<3; python_version < '3.11'",
   "tqdm>=4.67,<5",
+  "typing_extensions>=4.12,<5",
 ]
 
 [project.scripts]
@@ -137,7 +138,7 @@ pythonVersion = "3.10"
 reportPropertyTypeMismatch = "error"
 reportUnnecessaryTypeIgnoreComment = "error"
 reportCallInDefaultInitializer = "error"
-reportImplicitOverride = "warning"
+reportImplicitOverride = "error"
 reportImplicitStringConcatenation = "error"
 reportImportCycles = "error"
 reportMissingSuperCall = "error"

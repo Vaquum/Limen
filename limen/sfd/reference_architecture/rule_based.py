@@ -5,6 +5,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import polars as pl
+from typing_extensions import override
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.metrics.rule_based_metrics import rule_based_metrics
@@ -25,7 +26,8 @@ class RuleBasedStrategy(ReferenceModel):
         self.sharpe_std_threshold = sharpe_std_threshold
         self.sharpe_degradation_threshold = sharpe_degradation_threshold
 
-    def train(self, data: dict[str, Any], **params: Any) -> 'RuleBasedStrategy':  # noqa: ARG002
+    @override
+    def train(self, data: dict[str, Any], **params: Any) -> 'RuleBasedStrategy':
 
         '''
         No-op training step — rule-based strategies have no learnable parameters.
@@ -40,6 +42,7 @@ class RuleBasedStrategy(ReferenceModel):
 
         return self
 
+    @override
     def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
@@ -55,7 +58,8 @@ class RuleBasedStrategy(ReferenceModel):
         pos = self._apply_logic(data['test'], data['strategy']).fill_null(False).to_numpy().astype(int)
         return {'_preds': pos}
 
-    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:  # noqa: ARG002
+    @override
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate strategy across all splits and return rule-based metrics.

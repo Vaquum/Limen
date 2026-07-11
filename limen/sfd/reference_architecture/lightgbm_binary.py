@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from typing_extensions import override
 
 from limen._optional import require_optional
 from limen.calibration import fit_calibrator
@@ -45,6 +46,7 @@ class LightGBMBinary(ReferenceModel):
         self._calibration_threshold: float = 0.5
         self._val_score: float | None = None
 
+    @override
     def train(self, data: dict[str, Any], **params: Any) -> 'LightGBMBinary':
 
         '''
@@ -92,6 +94,7 @@ class LightGBMBinary(ReferenceModel):
 
         return self
 
+    @override
     def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
@@ -129,6 +132,7 @@ class LightGBMBinary(ReferenceModel):
         probs = self.model.predict_proba(np.asarray(data['x_test']))[:, 1]
         return {'_preds': preds, '_probs': probs}
 
+    @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''

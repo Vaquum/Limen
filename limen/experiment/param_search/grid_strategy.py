@@ -4,6 +4,8 @@ import math
 import random
 from typing import Any
 
+from typing_extensions import override
+
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
@@ -35,6 +37,7 @@ class GridStrategy(SearchStrategy):
 
 
     @property
+    @override
     def is_finite(self) -> bool:
 
         return True
@@ -81,6 +84,7 @@ class GridStrategy(SearchStrategy):
         return combo
 
 
+    @override
     def __next__(self) -> dict[str, Any]:
 
         while self._current_index < self._total:
@@ -94,6 +98,7 @@ class GridStrategy(SearchStrategy):
         raise StopIteration
 
 
+    @override
     def on_domain_changed(
         self, _domain: ParamDomain, _changed_params: list[str],
     ) -> None:
@@ -101,6 +106,7 @@ class GridStrategy(SearchStrategy):
         self._rebuild()
 
 
+    @override
     def get_state(self) -> dict[str, Any]:
 
         return {
@@ -111,6 +117,7 @@ class GridStrategy(SearchStrategy):
         }
 
 
+    @override
     def set_state(self, state: dict[str, Any]) -> None:
 
         saved_shuffle = state.get('shuffle')

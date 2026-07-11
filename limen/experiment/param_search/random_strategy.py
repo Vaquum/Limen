@@ -3,6 +3,8 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from typing_extensions import override
+
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
@@ -36,6 +38,7 @@ class RandomStrategy(SearchStrategy):
         self._cached_values = {k: params[k] for k in self._stable_keys}
 
 
+    @override
     def on_domain_changed(
         self, _domain: ParamDomain, _changed_params: list[str],
     ) -> None:
@@ -43,6 +46,7 @@ class RandomStrategy(SearchStrategy):
         self._refresh_cache()
 
 
+    @override
     def __next__(self) -> dict[str, Any]:
 
         for _ in range(MAX_DEDUP_RETRIES):
@@ -56,6 +60,7 @@ class RandomStrategy(SearchStrategy):
         )
 
 
+    @override
     def get_state(self) -> dict[str, Any]:
 
         return {
@@ -64,6 +69,7 @@ class RandomStrategy(SearchStrategy):
         }
 
 
+    @override
     def set_state(self, state: dict[str, Any]) -> None:
 
         rng_state = state['rng_state']
