@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 import math
 
@@ -103,3 +104,17 @@ def test_xgboost_inline_and_post_backtest_metrics_match() -> None:
         if math.isnan(inline_value) and math.isnan(post_value):
             continue
         assert inline_value == post_value
+
+
+def test_override_prepare_class_training_inline_metrics_chain() -> None:
+    base_manifest = logreg_binary_sfd.manifest()
+    overridden = base_manifest.with_params_override(split_config=(6, 1, 1))
+    sfd = SimpleNamespace(params=logreg_binary_sfd.params, manifest=lambda: overridden)
+
+    uel = _run_uel(sfd_module=sfd, n_permutations=2)
+
+    assert uel.manifest.split_config == (6, 1, 1)
+    assert uel.experiment_log.height > 0
+    for col in ['confusion_tp', 'confusion_fp', 'confusion_tn', 'confusion_fn']:
+        assert col in uel.experiment_log.columns
+    assert 'backtest_pnl_bps_p50' in uel.experiment_log.columns
