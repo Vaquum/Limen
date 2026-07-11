@@ -3,7 +3,7 @@ from typing import TypeGuard
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
+import polars as pl
 
 
 def _is_integral(value: Any) -> TypeGuard[int | np.integer[Any]]:
@@ -60,8 +60,8 @@ def select(context: dict[str, Any],
     results = context.get('results')
     if results is None:
         raise ValueError('backtest_pareto selector requires results.csv data in context["results"]')
-    if not isinstance(results, pd.DataFrame):
-        raise ValueError('backtest_pareto context["results"] must be a pandas DataFrame')
+    if not isinstance(results, pl.DataFrame):
+        raise ValueError('backtest_pareto context["results"] must be a polars DataFrame')
 
     missing = [col for col in ['id', *metric_cols] if col not in results.columns]
     if missing:
@@ -70,7 +70,7 @@ def select(context: dict[str, Any],
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
             raise ValueError('backtest_pareto selector returned a boolean permutation id')
-        if pd.isna(value):
+        if value is None or (isinstance(value, float) and np.isnan(value)):
             raise ValueError('backtest_pareto selector returned a missing permutation id')
         if _is_integral(value):
             return int(value)
@@ -93,24 +93,29 @@ def select(context: dict[str, Any],
         col for col in ('num_trades_test', 'confusion_tp', 'confusion_fp')
         if col in results.columns
     ]
-    work = results[['id', *metric_cols, *guard_cols]].copy()
-    for col in [*metric_cols, *guard_cols]:
-        work[col] = pd.to_numeric(work[col], errors='coerce')
+    work = results.select(['id', *metric_cols, *guard_cols]).with_columns(
+        [pl.col(col).cast(pl.Float64, strict=False) for col in [*metric_cols, *guard_cols]]
+    )
 
-    finite_metrics = cast(npt.NDArray[np.bool_], np.isfinite(work[metric_cols].to_numpy(dtype=float)).all(axis=1))
-    work = work.loc[finite_metrics]
+    finite_metrics = cast(npt.NDArray[np.bool_], np.isfinite(work.select(metric_cols).to_numpy()).all(axis=1))
+    work = work.filter(pl.Series(finite_metrics))
 
     if min_signals > 0 and 'num_trades_test' in work.columns:
-        work = work.loc[work['num_trades_test'] >= min_signals]
+        work = work.filter(pl.col('num_trades_test') >= min_signals)
     elif min_signals > 0 and {'confusion_tp', 'confusion_fp'} <= set(work.columns):
-        signal_count = work['confusion_tp'].fillna(0) + work['confusion_fp'].fillna(0)
-        work = work.loc[signal_count >= min_signals]
+        signal_count = (
+            pl.col('confusion_tp').fill_null(0).fill_nan(0)
+            + pl.col('confusion_fp').fill_null(0).fill_nan(0)
+        )
+        work = work.filter(signal_count >= min_signals)
 
-    work = work.dropna(subset=metric_cols)
-    if work.empty:
+    work = work.filter(
+        pl.all_horizontal([pl.col(col).is_not_null() & pl.col(col).is_not_nan() for col in metric_cols])
+    )
+    if work.is_empty():
         return []
 
-    values = work[metric_cols].to_numpy(dtype=float)
+    values = work.select(metric_cols).to_numpy()
     keep = np.ones(len(values), dtype=bool)
     for idx, row in enumerate(values):
         if not keep[idx]:
@@ -120,25 +125,25 @@ def select(context: dict[str, Any],
         if dominates.any():
             keep[idx] = False
 
-    front = work.loc[keep].copy()
+    front = work.filter(pl.Series(keep))
     parts: list[npt.NDArray[np.float64]] = []
     for col in metric_cols:
-        values = front[col].to_numpy(dtype=float)
-        lo = np.nanmin(values)
-        hi = np.nanmax(values)
+        col_values = front[col].to_numpy()
+        lo = np.nanmin(col_values)
+        hi = np.nanmax(col_values)
         if not np.isfinite(lo) or not np.isfinite(hi):
-            parts.append(np.zeros(len(values), dtype=float))
+            parts.append(np.zeros(len(col_values), dtype=float))
         elif hi == lo:
-            parts.append(np.ones(len(values), dtype=float))
+            parts.append(np.ones(len(col_values), dtype=float))
         else:
-            parts.append((values - lo) / (hi - lo))
+            parts.append((col_values - lo) / (hi - lo))
 
-    front['_selector_score'] = np.vstack(parts).mean(axis=0)
-    front['_id_sort_key'] = front['id'].map(lambda value: str(coerce_id(value)))
-    ranked = front.sort_values(
-        by=['_selector_score', '_id_sort_key'],
-        ascending=[False, True],
-        kind='mergesort',
-    )
+    scores = np.vstack(parts).mean(axis=0)
+    sort_keys = [str(coerce_id(value)) for value in front['id'].to_list()]
+    front = front.with_columns([
+        pl.Series('_selector_score', scores),
+        pl.Series('_id_sort_key', sort_keys),
+    ])
+    ranked = front.sort(['_selector_score', '_id_sort_key'], descending=[True, False])
 
-    return [coerce_id(value) for value in ranked.head(target_count)['id'].tolist()]
+    return [coerce_id(value) for value in ranked.head(target_count)['id'].to_list()]

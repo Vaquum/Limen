@@ -4,7 +4,7 @@ from typing import TypeGuard
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
+import polars as pl
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -116,8 +116,8 @@ def select(context: dict[str, Any],
     results = context.get('results')
     if results is None:
         raise ValueError('diverse_metrics selector requires results.csv data in context["results"]')
-    if not isinstance(results, pd.DataFrame):
-        raise ValueError('diverse_metrics context["results"] must be a pandas DataFrame')
+    if not isinstance(results, pl.DataFrame):
+        raise ValueError('diverse_metrics context["results"] must be a polars DataFrame')
 
     metric_groups = [
         [
@@ -171,7 +171,7 @@ def select(context: dict[str, Any],
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
             raise ValueError('diverse_metrics selector returned a boolean permutation id')
-        if pd.isna(value):
+        if value is None or (isinstance(value, float) and np.isnan(value)):
             raise ValueError('diverse_metrics selector returned a missing permutation id')
         if _is_integral(value):
             return int(value)
@@ -190,30 +190,35 @@ def select(context: dict[str, Any],
             raise ValueError('diverse_metrics selector returned an empty permutation id')
         return coerced
 
-    work = results[['id', *metric_cols]].copy()
-    for col in metric_cols:
-        work[col] = pd.to_numeric(work[col], errors='coerce')
-    work = work.dropna(subset=metric_cols)
-    if work.empty:
+    work = results.select(['id', *metric_cols]).with_columns(
+        [pl.col(col).cast(pl.Float64, strict=False) for col in metric_cols]
+    )
+    work = work.filter(
+        pl.all_horizontal([pl.col(col).is_not_null() & pl.col(col).is_not_nan() for col in metric_cols])
+    )
+    if work.is_empty():
         return []
 
-    filtered = work.copy()
+    filtered = work
     for col in metric_cols:
-        q1 = filtered[col].quantile(0.25)
-        q3 = filtered[col].quantile(0.75)
-        if pd.isna(q1) or pd.isna(q3) or q1 == q3:
+        col_values = filtered[col].to_numpy()
+        if col_values.size == 0:
+            continue
+        q1 = np.quantile(col_values, 0.25)
+        q3 = np.quantile(col_values, 0.75)
+        if np.isnan(q1) or np.isnan(q3) or q1 == q3:
             continue
         iqr = q3 - q1
         lo = q1 - iqr_multiplier * iqr
         hi = q3 + iqr_multiplier * iqr
-        filtered = filtered.loc[(filtered[col] >= lo) & (filtered[col] <= hi)]
-    if not filtered.empty:
+        filtered = filtered.filter((pl.col(col) >= lo) & (pl.col(col) <= hi))
+    if not filtered.is_empty():
         work = filtered
 
     if len(work) <= target_count:
-        return [coerce_id(value) for value in work['id'].tolist()]
+        return [coerce_id(value) for value in work['id'].to_list()]
 
-    values = work[metric_cols].to_numpy(dtype=float)
+    values = work.select(metric_cols).to_numpy()
     n_samples, n_features = values.shape
     actual_clusters = min(n_clusters, n_samples)
     actual_components = (
@@ -247,7 +252,7 @@ def select(context: dict[str, Any],
     if len(selected_positions) < target_count:
         parts: list[npt.NDArray[np.float64]] = []
         for col in metric_cols:
-            col_values = work[col].to_numpy(dtype=float)
+            col_values = work[col].to_numpy()
             lo = np.nanmin(col_values)
             hi = np.nanmax(col_values)
             if not np.isfinite(lo) or not np.isfinite(hi):
@@ -268,5 +273,5 @@ def select(context: dict[str, Any],
     selected_positions = list(dict.fromkeys(selected_positions))[:target_count]
     return [
         coerce_id(value)
-        for value in work.iloc[selected_positions]['id'].tolist()
+        for value in work['id'].gather(selected_positions).to_list()
     ]
