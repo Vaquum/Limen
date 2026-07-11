@@ -48,7 +48,7 @@ class UniversalExperimentLoop:
                  experiment_dir: str | Path | None = None,
                  intra_callback: Callable[[Any, MSQ], None] | None = None,
                  test_mode: bool = False,
-                 yaml_reference: dict | None = None) -> None:
+                 yaml_reference: dict[str, Any] | None = None) -> None:
 
         '''
         Initialize the UniversalExperimentLoop.
@@ -144,10 +144,10 @@ class UniversalExperimentLoop:
             prep_each_round: bool = False,
             random_search: bool = True,
             maintain_details_in_params: bool = False,
-            context_params: dict | None = None,
-            params: Callable | None = None,
-            prep: Callable | None = None,
-            model: Callable | None = None,
+            context_params: dict[str, Any] | None = None,
+            params: Callable[[], dict[str, Any]] | None = None,
+            prep: Callable[..., dict[str, Any]] | None = None,
+            model: Callable[..., dict[str, Any]] | None = None,
             resume: bool = False,
             post_processing: bool = False,
             progress_bar: bool = True) -> None:
@@ -246,7 +246,7 @@ class UniversalExperimentLoop:
                 )
 
         data_dict: dict[str, Any] = {}
-        _pending_csv_rows: list[dict] = []
+        _pending_csv_rows: list[dict[str, Any]] = []
 
         for i in tqdm(range(n_permutations), disable=not progress_bar):
 
@@ -410,7 +410,7 @@ class UniversalExperimentLoop:
                           msq: Any,
                           strategy: Any,
                           feedback_controller: Any,
-                          current_round: int) -> list[dict]:
+                          current_round: int) -> list[dict[str, Any]]:
 
         '''
         Execute a feedback cycle at the current round.
@@ -438,7 +438,7 @@ class UniversalExperimentLoop:
                       *,
                       experiment_name: str,
                       n_permutations: int,
-                      context_params: dict | None,
+                      context_params: dict[str, Any] | None,
                       resume: bool,
                       post_processing: bool = False,
                       progress_bar: bool = True) -> None:
@@ -512,7 +512,7 @@ class UniversalExperimentLoop:
             with csv_path.open('r', newline='') as f:
                 csv_header = next(csv.reader(f), None)
 
-        _pending_csv_rows: list[dict] = []
+        _pending_csv_rows: list[dict[str, Any]] = []
 
         for round_params in tqdm(msq, initial=start_round, desc=experiment_name,
                                  disable=not progress_bar):
@@ -1049,9 +1049,9 @@ class UniversalExperimentLoop:
     def _append_round_data(self,
                            round_data_path: Path,
                            round_id: str,
-                           round_params: dict,
+                           round_params: dict[str, Any],
                            preds: Any,
-                           alignment: dict,
+                           alignment: dict[str, Any],
                            *,
                            round_index: int) -> None:
 

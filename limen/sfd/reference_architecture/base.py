@@ -3,6 +3,7 @@ from abc import abstractmethod
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
@@ -22,7 +23,7 @@ class ReferenceModel(ABC):
         self.model = None
 
     @abstractmethod
-    def train(self, data: dict, **params: Any) -> 'ReferenceModel':
+    def train(self, data: dict[str, Any], **params: Any) -> 'ReferenceModel':
 
         '''
         Train the model on provided data.
@@ -38,7 +39,7 @@ class ReferenceModel(ABC):
         ...
 
     @abstractmethod
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute predictions from feature data.
@@ -55,7 +56,7 @@ class ReferenceModel(ABC):
 
 
     @abstractmethod
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
         Evaluate the trained model and return results.
@@ -74,9 +75,9 @@ class ReferenceModel(ABC):
         return price_data_for_backtest.to_pandas()
 
     def _compute_confusion(self,
-                           preds: np.ndarray,
-                           y_test: np.ndarray,
-                           price_data_for_backtest: Any | None = None) -> dict:
+                           preds: npt.NDArray[np.integer[Any] | np.floating[Any]],
+                           y_test: npt.NDArray[np.integer[Any] | np.floating[Any]],
+                           price_data_for_backtest: Any | None = None) -> dict[str, float]:
 
         '''
         Compute confusion matrix metrics from binary predictions.
@@ -100,7 +101,7 @@ class ReferenceModel(ABC):
         precision = round(tp / (tp + fp), 3) if (tp + fp) > 0 else 0.0
         recall = round(tp / (tp + fn), 3) if (tp + fn) > 0 else 0.0
 
-        results = {
+        results: dict[str, float] = {
             'confusion_tp': tp,
             'confusion_fp': fp,
             'confusion_tn': tn,
@@ -124,14 +125,16 @@ class ReferenceModel(ABC):
 
         return results
 
-    def _cost_kwargs(self, data: dict) -> dict:
+    def _cost_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
         return {
             key: data[f"backtest_{key}"]
             for key in ('fee_bps', 'slip_bps', 'notional_rate')
             if f"backtest_{key}" in data
         }
 
-    def _compute_backtest(self, preds: np.ndarray, data: dict) -> dict:
+    def _compute_backtest(self,
+                          preds: npt.NDArray[np.integer[Any] | np.floating[Any]],
+                          data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Compute backtest metrics if price_data_for_backtest is available.

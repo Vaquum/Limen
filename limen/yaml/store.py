@@ -162,7 +162,7 @@ def commit_manifest(yaml_path: Path,
     if not already_existed:
         name = manifest_name(data, fallback=yaml_path.stem)
         committed_at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-        lineage: dict = {'id': manifest_id, 'committed_at': committed_at}
+        lineage: dict[str, str] = {'id': manifest_id, 'committed_at': committed_at}
         if parent_id is not None:
             lineage['parent_id'] = parent_id
         data['lineage'] = lineage

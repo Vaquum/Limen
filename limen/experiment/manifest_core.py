@@ -7,10 +7,11 @@ import numbers
 import random
 import re
 from datetime import date
+from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
@@ -43,7 +44,7 @@ class TransformEntry:
 
     '''Feature or indicator transform with optional perturbation metadata.'''
 
-    func: Callable
+    func: Callable[..., Any]
     params: dict[str, ParamValue] = field(default_factory=dict)
     group: str | None = None
     include_if: str | None = None
@@ -188,7 +189,7 @@ class DataSourceConfig:
 
     '''Declarative configuration for data fetching in manifests.'''
 
-    method: Callable
+    method: Callable[..., Any]
     params: dict[str, Any] = field(default_factory=dict)
 
 
@@ -260,7 +261,7 @@ class Manifest:
     test_data_source_config: DataSourceConfig | None = None
     pre_split_data_selector: PipelineStep | None = None
     split_config: tuple[int, int, int] = (8, 1, 2)
-    split_dates: tuple | None = None
+    split_dates: tuple[date | Any, date | Any, date | Any, date | Any, date | Any, date | Any] | None = None
     val_predict_guard: bool = True
     test_predict_guard: bool = True
     bar_formation: PipelineStep | None = None
@@ -269,13 +270,13 @@ class Manifest:
     target_column: str | None = None
     target_class_config: TargetClassConfig | None = None
 
-    architecture_function: Callable | None = None
+    architecture_function: Callable[..., dict[str, Any]] | None = None
     architecture_params: dict[str, ParamValue] = field(default_factory=dict)
     metrics_params: dict[str, ParamValue] = field(default_factory=dict)
     backtest_config: BacktestConfig | None = None
 
     def _add_transform(self,
-                       func: Callable,
+                       func: Callable[..., Any],
                        group: str | None = None,
                        include_if: str | None = None,
                        **params: Any) -> 'Manifest':
@@ -291,7 +292,7 @@ class Manifest:
         return self
 
     def set_data_source(self,
-                       method: Callable,
+                       method: Callable[..., Any],
                        params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
@@ -313,7 +314,7 @@ class Manifest:
         return self
 
     def set_test_data_source(self,
-                            method: Callable,
+                            method: Callable[..., Any],
                             params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
@@ -353,7 +354,7 @@ class Manifest:
         return DataSourceResolver.resolve(self.test_data_source_config)
 
     def add_feature(self,
-                    func: Callable,
+                    func: Callable[..., Any],
                     group: str | None = None,
                     include_if: str | None = None,
                     **params: Any) -> 'Manifest':
@@ -375,7 +376,7 @@ class Manifest:
 
 
     def add_indicator(self,
-                      func: Callable,
+                      func: Callable[..., Any],
                       group: str | None = None,
                       include_if: str | None = None,
                       **params: Any) -> 'Manifest':
@@ -395,7 +396,7 @@ class Manifest:
 
         return self._add_transform(func, group=group, include_if=include_if, **params)
 
-    def set_pre_split_data_selector(self, func: Callable, **params: Any) -> 'Manifest':
+    def set_pre_split_data_selector(self, func: Callable[..., pl.DataFrame], **params: Any) -> 'Manifest':
 
         '''
         Set pre-split data selector function and parameters.
@@ -411,7 +412,7 @@ class Manifest:
         self.pre_split_data_selector = (func, params)
         return self
 
-    def set_bar_formation(self, func: Callable, **params: Any) -> 'Manifest':
+    def set_bar_formation(self, func: Callable[..., pl.DataFrame], **params: Any) -> 'Manifest':
 
         '''
         Set bar formation function and parameters.
@@ -600,7 +601,7 @@ class Manifest:
         )
         return self
 
-    def with_reference_architecture(self: _TManifest, architecture_function: Callable) -> _TManifest:
+    def with_reference_architecture(self: _TManifest, architecture_function: Callable[..., dict[str, Any]]) -> _TManifest:
 
         '''
         Configure reference architecture function for training and evaluation.
@@ -713,7 +714,7 @@ class Manifest:
         self,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any]
-    ) -> dict:
+    ) -> dict[str, Any]:
 
         '''
         Interface method — implemented by MLManifest and RuleBasedManifest.
@@ -805,7 +806,7 @@ class Manifest:
 
         return self
 
-    def _apply_backtest_cost(self, data: dict, round_params: dict[str, Any]) -> None:
+    def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
         if self.backtest_config is None:
             return
 
@@ -848,7 +849,7 @@ class Manifest:
                 )
             data[f"backtest_{key}"] = float(value)
 
-    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+    def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Execute model training and evaluation using configured functions.
@@ -884,7 +885,7 @@ class MLManifest(Manifest):
     scaler: FittedTransformEntry | None = None
     ablation_config: AblationConfig | None = None
     pca_compression_config: PCACompressionConfig | None = None
-    data_dict_extension: Callable | None = None
+    data_dict_extension: Callable[..., dict[str, Any]] | None = None
     prediction_calibration_config: CalibrationConfig | None = None
     decoder_lookback: int = 1
     strict_mode: bool = False
@@ -1031,7 +1032,7 @@ class MLManifest(Manifest):
         return self
 
 
-    def add_to_data_dict(self, func: Callable) -> 'MLManifest':
+    def add_to_data_dict(self, func: Callable[..., dict[str, Any]]) -> 'MLManifest':
 
         '''
         Configure data_dict extension function to add custom entries after data preparation.
@@ -1066,7 +1067,7 @@ class MLManifest(Manifest):
         self,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any]
-    ) -> dict:
+    ) -> dict[str, Any]:
 
         '''
         Compute final data dictionary from raw data using the ML pipeline.
@@ -1166,7 +1167,7 @@ class MLManifest(Manifest):
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
-    def run_model(self, data: dict, round_params: dict[str, Any]) -> dict:
+    def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Execute model training and evaluation, injecting resolved calibration config when configured.
@@ -1264,7 +1265,7 @@ class RuleBasedManifest(Manifest):
 
     strategy: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
 
-    def with_strategy(self, conditions: list[dict], entry: str) -> 'RuleBasedManifest':
+    def with_strategy(self, conditions: list[dict[str, Any]], entry: str) -> 'RuleBasedManifest':
 
         '''
         Configure rule-based strategy conditions and entry signal.
@@ -1286,7 +1287,7 @@ class RuleBasedManifest(Manifest):
         self,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any]
-    ) -> dict:
+    ) -> dict[str, Any]:
 
         '''
         Compute final data dictionary from raw data using the rule-based pipeline.
@@ -1419,7 +1420,7 @@ def _process_bars(
         manifest: Manifest,
         data: pl.DataFrame,
         round_params: dict[str, Any]
-) -> tuple[list, pl.DataFrame]:
+) -> tuple[list[datetime] | list[int], pl.DataFrame]:
 
     '''
     Compute bar formation on data and return post-bar datetimes.
@@ -1571,7 +1572,7 @@ def _apply_sensor_pca(
     valid_indices = [i for i, is_null in enumerate(null_mask) if not is_null]
 
     n_rows = len(data)
-    component_arrays: dict[str, list] = {col: [None] * n_rows for col in component_cols}
+    component_arrays: dict[str, list[float | None]] = {col: [None] * n_rows for col in component_cols}
     if valid_indices:
         valid_np = data[valid_indices].select(input_feature_names).to_numpy()
         components = pca.transform(valid_np)
@@ -1889,7 +1890,7 @@ def _run_prepare_setup(
         manifest: Manifest,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any],
-) -> tuple[list[pl.DataFrame], list, pl.DataFrame | None]:
+) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None]:
 
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
@@ -1899,7 +1900,7 @@ def _run_prepare_setup(
     split_data = _resolve_split(manifest, raw_data)
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
-    all_datetimes = [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes]
+    all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes])
     split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
     price_cols = ['datetime', 'open', 'high', 'low', 'close']
@@ -1973,11 +1974,11 @@ def _align_split_columns(split_data: list[pl.DataFrame]) -> list[pl.DataFrame]:
 def _finalize_to_data_dict(
         manifest: 'MLManifest',
         split_data: list[pl.DataFrame],
-        all_datetimes: list,
+        all_datetimes: list[datetime] | list[int],
         fitted_params: dict[str, Any],
         round_params: dict[str, Any],
         price_data_for_backtest: pl.DataFrame | None = None,
-) -> dict:
+) -> dict[str, Any]:
 
     for i, split_df in enumerate(split_data):
         assert 'datetime' in split_df.columns, f"Split {i} missing 'datetime' column"
@@ -2019,9 +2020,9 @@ def _finalize_to_data_dict(
 def _finalize_rule_based_data(
         manifest: RuleBasedManifest,
         split_data: list[pl.DataFrame],
-        all_datetimes: list,
+        all_datetimes: list[datetime] | list[int],
         round_params: dict[str, Any],
-) -> dict:
+) -> dict[str, Any]:
 
     from limen.sfd.rule_based.predicates import build_predicate  # avoid circular import at module level
 

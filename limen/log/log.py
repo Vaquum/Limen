@@ -19,7 +19,7 @@ class Log:
     def __init__(self,
                  uel_object: Any | None = None,
                  file_path: str | None = None,
-                 inverse_scaler: Callable | None = None,
+                 inverse_scaler: Callable[[pl.DataFrame, Any], pl.DataFrame] | None = None,
                  cols_to_multilabel: list[str] | None = None) -> None:
 
         '''

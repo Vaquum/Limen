@@ -1,7 +1,9 @@
 import numbers
 from collections.abc import Callable
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from limen.backtest.long_flat_strategy import ExecutionResult
@@ -39,12 +41,12 @@ BACKTEST_SNAPSHOT_COLUMNS = [
 ]
 
 
-def _finite_values(values: pd.Series | np.ndarray | list[float]) -> np.ndarray:
+def _finite_values(values: pd.Series | npt.NDArray[Any] | list[float]) -> npt.NDArray[np.float64]:
     arr = pd.to_numeric(pd.Series(values), errors='coerce').to_numpy(dtype=float)
     return arr[np.isfinite(arr)]
 
 
-def _quantiles(values: pd.Series | np.ndarray | list[float], decimals: int = BPS_DECIMALS) -> tuple[float, float, float]:
+def _quantiles(values: pd.Series | npt.NDArray[Any] | list[float], decimals: int = BPS_DECIMALS) -> tuple[float, float, float]:
     arr = _finite_values(values)
     if arr.size == 0:
         return (np.nan, np.nan, np.nan)

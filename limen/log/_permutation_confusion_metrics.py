@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
+import numpy.typing as npt
 from typing import Any
 from collections.abc import Sequence
 from math import sqrt
 
 
-def confusion_mean_return_pct(pred: pd.Series | np.ndarray,
-                               actual: pd.Series | np.ndarray,
+def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
+                               actual: pd.Series | npt.NDArray[Any],
                                open_px: pd.Series,
                                price_change: pd.Series,
                                *,
@@ -56,7 +57,7 @@ def confusion_mean_return_pct(pred: pd.Series | np.ndarray,
     actual_arr = actual_arr[valid].astype(int)
     return_pct = return_pct[valid]
 
-    def _mean(mask: np.ndarray) -> float:
+    def _mean(mask: npt.NDArray[np.bool_]) -> float:
         values = return_pct[mask]
         return round(float(values.mean()), 3) if values.size else np.nan
 
@@ -173,7 +174,7 @@ def permutation_confusion_metrics(self: Any,
     pred_pos_mean_x   = ((tp['mean'] * TP + fp['mean'] * FP) / pred_pos_count) if pred_pos_count else np.nan
     pred_pos_median_x = df.loc[pred == 1, x].median() if pred_pos_count else np.nan
 
-    def _cohen_d(a: np.ndarray, b: np.ndarray) -> float:
+    def _cohen_d(a: npt.NDArray[Any], b: npt.NDArray[Any]) -> float:
 
         MIN_SAMPLES_FOR_COHEN_D = 2
         if len(a) < MIN_SAMPLES_FOR_COHEN_D or len(b) < MIN_SAMPLES_FOR_COHEN_D:
@@ -191,7 +192,7 @@ def permutation_confusion_metrics(self: Any,
 
         return float((ma - mb) / sp) if sp and not np.isnan(sp) else np.nan
 
-    def _ks(a: np.ndarray, b: np.ndarray) -> float:
+    def _ks(a: npt.NDArray[Any], b: npt.NDArray[Any]) -> float:
 
         if len(a) == 0 or len(b) == 0:
             return np.nan

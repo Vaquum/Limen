@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "4.7.1"
+version = "4.8.0"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -146,9 +146,7 @@ reportUnusedCallResult = "error"
 reportUnknownMemberType = "warning"
 reportUnknownVariableType = "warning"
 reportUnknownArgumentType = "warning"
-reportUnknownParameterType = "warning"
 reportUnknownLambdaType = "warning"
-reportMissingTypeArgument = "warning"
 reportMissingTypeStubs = "warning"
 
 [tool.pytest.ini_options]

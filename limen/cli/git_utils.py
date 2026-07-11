@@ -22,7 +22,7 @@ def git_executable() -> str:
     return git
 
 
-def run_git(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
+def run_git(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
 
     '''
     Run a git subcommand with captured text output and no exception on failure.

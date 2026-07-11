@@ -128,7 +128,9 @@ def test_pyright_gate_config() -> None:
     for rule in promoted_extras:
         assert pyright_config[rule] == 'error', rule
     promoted_strict_defaults = [
+        'reportMissingTypeArgument',
         'reportPrivateUsage',
+        'reportUnknownParameterType',
         'reportUnnecessaryComparison',
         'reportUnnecessaryIsInstance',
         'reportUnsupportedDunderAll',
@@ -139,12 +141,10 @@ def test_pyright_gate_config() -> None:
     remaining_downgrades = {k for k, v in pyright_config.items() if v == 'warning'}
     assert remaining_downgrades == {
         'reportImplicitOverride',
-        'reportMissingTypeArgument',
         'reportMissingTypeStubs',
         'reportUnknownArgumentType',
         'reportUnknownLambdaType',
         'reportUnknownMemberType',
-        'reportUnknownParameterType',
         'reportUnknownVariableType',
     }
     dev_extra = pyproject['project']['optional-dependencies']['dev']

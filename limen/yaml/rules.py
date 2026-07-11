@@ -196,7 +196,7 @@ class OneOf:
 
     def __init__(self,
                  path: str,
-                 choices: set,
+                 choices: set[str],
                  suggestion: str | None = None) -> None:
 
         super().__init__()
@@ -245,7 +245,7 @@ class NoUnknownKeys:
 
     '''All keys at path must be in the known set; extras become warnings or errors depending on severity.'''
 
-    def __init__(self, path: str, known: set, severity: str = 'warning') -> None:
+    def __init__(self, path: str, known: set[str], severity: str = 'warning') -> None:
 
         super().__init__()
 
@@ -300,7 +300,7 @@ class WarnIfPresent:
 
     '''Emit a warning for each key in keys that exists at path.'''
 
-    def __init__(self, path: str, keys: set, message_template: str) -> None:
+    def __init__(self, path: str, keys: set[str], message_template: str) -> None:
 
         super().__init__()
 

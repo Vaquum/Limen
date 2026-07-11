@@ -334,7 +334,7 @@ class MSQ:
         return None
 
 
-    def distribution(self, param: str | None = None) -> dict:
+    def distribution(self, param: str | None = None) -> dict[Any, int] | dict[str, dict[Any, int]]:
 
         '''
         Return estimated count of pending combinations per value.
@@ -367,7 +367,7 @@ class MSQ:
             count = remaining_from_strategy // n_values
             return dict.fromkeys(self._domain.values_for(param), count)
 
-        result = {}
+        result: dict[str, dict[Any, int]] = {}
         for p in self._domain.keys:
             vals = self._domain.values_for(p)
             count = remaining_from_strategy // len(vals)

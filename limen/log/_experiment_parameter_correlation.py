@@ -17,7 +17,7 @@ _FRAMEWORK_LOG_COLUMNS = frozenset({
 def experiment_parameter_correlation(self: Any,
                                    metric: str,
                                    *,
-                                   cols_to_drop: list | None = None,
+                                   cols_to_drop: list[str] | None = None,
                                    sort_key: str | None = None,
                                    sort_ascending: bool = False,
                                    heads: Sequence[float | int] | None = None,

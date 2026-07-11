@@ -7,6 +7,7 @@ from typing import ClassVar
 from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import polars as pl
 
@@ -396,7 +397,7 @@ class Cohort:
 
 
     @staticmethod
-    def _validate_probability_range(probs: np.ndarray) -> None:
+    def _validate_probability_range(probs: npt.NDArray[np.float64]) -> None:
 
         if not np.isfinite(probs).all():
             raise ValueError(
@@ -483,8 +484,8 @@ class Cohort:
 
     @staticmethod
     def _build_selector_context(experiment_dir: Path,
-                                metadata: dict,
-                                round_entries: dict[str, dict],
+                                metadata: dict[str, Any],
+                                round_entries: dict[str, dict[str, Any]],
                                 available_ids: set[str]) -> dict[str, Any]:
 
         context: dict[str, Any] = {
@@ -501,9 +502,9 @@ class Cohort:
         return context
 
     @staticmethod
-    def _load_round_entries(round_data_path: Path) -> dict[str, dict]:
+    def _load_round_entries(round_data_path: Path) -> dict[str, dict[str, Any]]:
 
-        entries: dict[str, dict] = {}
+        entries: dict[str, dict[str, Any]] = {}
         with round_data_path.open('r') as f:
             for raw_line in f:
                 stripped = raw_line.strip()
@@ -520,8 +521,8 @@ class Cohort:
     @classmethod
     def _resolve_cohort_architecture(cls,
                                      selected_ids: list[str],
-                                     round_entries: dict[str, dict],
-                                     metadata: dict) -> str:
+                                     round_entries: dict[str, dict[str, Any]],
+                                     metadata: dict[str, Any]) -> str:
 
         architecture_ids = {
             cls._extract_architecture_id(round_entries[pid], metadata)
@@ -536,7 +537,7 @@ class Cohort:
         return next(iter(architecture_ids))
 
     @classmethod
-    def _extract_architecture_id(cls, round_entry: dict, metadata: dict) -> str:
+    def _extract_architecture_id(cls, round_entry: dict[str, Any], metadata: dict[str, Any]) -> str:
 
         round_params = round_entry.get('round_params', {})
         for key in (
@@ -562,7 +563,7 @@ class Cohort:
         return 'unknown_architecture'
 
     @staticmethod
-    def _extract_yaml_reference_architecture(metadata: dict) -> str | None:
+    def _extract_yaml_reference_architecture(metadata: dict[str, Any]) -> str | None:
 
         yaml_reference = metadata.get('yaml_reference')
         if not isinstance(yaml_reference, dict):
