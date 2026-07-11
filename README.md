@@ -49,6 +49,7 @@ In the wider Vaquum architecture, Origo sits upstream as the data layer. Nexus, 
 - Built-in indicator and feature library for Bitcoin research
 - Support for both machine learning and rule-based strategy research
 - Bitcoin-native transforms, scaling, and target construction
+- Perturbation-based robustness search across feature groups, scalers, and ablation
 - Split-first train, validation, and test workflows
 - Built-in benchmark, backtest, and parameter diagnostics
 - Decoder cohort construction with pluggable selection
@@ -105,6 +106,7 @@ Limen is research software. Benchmark and backtest outputs are not investment ad
 - Start with the YAML/CLI path in [Command Line Interface](https://docs.vaquum.fi/limen/reference/command-line-interface) and [Experiment Manifest](https://docs.vaquum.fi/limen/guides/experiment-manifest)
 - Use [Universal Experiment Loop](https://docs.vaquum.fi/limen/guides/universal-experiment-loop) for the engine beneath CLI and direct Python integration
 - Define extension research units in [Single-File Decoder](https://docs.vaquum.fi/limen/guides/single-file-decoder) and [Built-In SFDs](https://docs.vaquum.fi/limen/guides/built-in-sfds)
+- Strengthen the research surface with [Perturbation Strategies](https://docs.vaquum.fi/limen/guides/perturbation-strategies) for robustness, [Fractional Differentiation](https://docs.vaquum.fi/limen/guides/fractional-differentiation) for stationary features, and [Triple-Barrier Method](https://docs.vaquum.fi/limen/guides/triple-barrier-method) for path-dependent labels
 - Analyze results in [Log](https://docs.vaquum.fi/limen/guides/log), [Benchmark](https://docs.vaquum.fi/limen/guides/benchmark), and [Backtest](https://docs.vaquum.fi/limen/guides/backtest)
 - Promote finished runs into reusable outputs with [Trainer](https://docs.vaquum.fi/limen/guides/trainer) and [Cohort](https://docs.vaquum.fi/limen/guides/cohort)
 - Contribute through [CONTRIBUTING.md](https://github.com/Vaquum/Limen/blob/main/CONTRIBUTING.md) and [Developer docs](https://docs.vaquum.fi/limen/developer/)
