@@ -17,6 +17,7 @@ from limen.yaml.rules import NoUnknownKeys
 from limen.yaml.rules import OneOf
 from limen.yaml.rules import ParamCoverage
 from limen.yaml.rules import ParamKeyFields
+from limen.yaml.rules import PruningStrategiesSpec
 from limen.yaml.rules import Required
 from limen.yaml.rules import RequiredColumnsSpec
 from limen.yaml.rules import Resolvable
@@ -179,6 +180,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
     NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
     UelSpec(),
+    PruningStrategiesSpec(),
 ]))
 
 

@@ -7,12 +7,15 @@ from typing import Any
 from typing import Protocol
 from typing import cast
 
+from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import YAMLError
 from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
+from limen.yaml.schema import PRUNING_STRATEGY_OPTIONAL
+from limen.yaml.schema import PRUNING_STRATEGY_REQUIRED
 
 _SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
 _SPLIT_DATE_GUARD_KEYS = ('val_predict_guard', 'test_predict_guard')
@@ -599,6 +602,60 @@ class ConditionsList:
                 errors.append(YAMLError(
                     message="Condition must have either 'type' (leaf) or 'operands' (composite)",
                     path=f'sfd.manifest.strategy.conditions[{i}]',
+                ))
+
+
+class PruningStrategiesSpec:
+
+    '''Validate the uel.pruning_strategies list: reducer types and item structure.'''
+
+    def check(self,
+              yaml_dict: dict[str, Any],
+              errors: list[YAMLError],
+              _warnings: list[YAMLError]) -> None:
+
+        uel = yaml_dict.get('uel')
+        if not is_mapping(uel) or 'pruning_strategies' not in uel:
+            return
+
+        specs = uel['pruning_strategies']
+        if not is_list(specs):
+            errors.append(YAMLError(
+                message="'pruning_strategies' must be a list",
+                path='uel.pruning_strategies',
+            ))
+            return
+
+        valid_types = set(REDUCER_REGISTRY)
+        allowed_keys = PRUNING_STRATEGY_REQUIRED | PRUNING_STRATEGY_OPTIONAL
+        for i, spec in enumerate(specs):
+            base = f'uel.pruning_strategies[{i}]'
+            if not is_mapping(spec):
+                errors.append(YAMLError(
+                    message='Each pruning strategy must be a mapping',
+                    path=base,
+                ))
+                continue
+            if 'type' not in spec:
+                errors.append(YAMLError(
+                    message="Missing required field 'type'",
+                    path=f'{base}.type',
+                ))
+            elif spec['type'] not in valid_types:
+                errors.append(YAMLError(
+                    message=f"Unknown pruning strategy type '{spec['type']}'",
+                    path=f'{base}.type',
+                    suggestion=f"Use one of: {', '.join(sorted(valid_types))}",
+                ))
+            for key in sorted(set(spec) - allowed_keys):
+                errors.append(YAMLError(
+                    message=f"Unknown field '{key}'",
+                    path=f'{base}.{key}',
+                ))
+            if 'params' in spec and not is_mapping(spec['params']):
+                errors.append(YAMLError(
+                    message="'params' must be a mapping",
+                    path=f'{base}.params',
                 ))
 
 
