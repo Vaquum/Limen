@@ -84,6 +84,24 @@ uel:
 
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
+### The `uel` Execution Block
+
+The `uel` block configures how the experiment runs. `n_permutations` is required; the rest are optional and fall back to the defaults below.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `n_permutations` | int | required | round budget; rejected if bool, zero, negative, or larger than the parameter space |
+| `search_strategy.type` | `random` or `grid` | `random` | `random` lazily samples the parameter space; `grid` enumerates it exhaustively |
+| `prep_each_round` | bool | `true` | run prep every round; required for manifest-driven SFDs |
+| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
+| `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
+| `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
+| `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
+
+NOTE: `search_strategy.seed` seeds `random` search for reproducible sampling. `grid` search enumerates the full space and ignores a seed.
+
+Reducers and feedback strategies are configured through the Python API, not YAML. `feedback_interval` and `checkpoint_interval` set the cadence, but the pruning strategies themselves are supplied to the engine in Python — see [Reducers And Feedback](Reducers-And-Feedback.md) and [Advanced Search](Advanced-Search.md).
+
 ## Manifest Types
 
 There are two manifest subclasses under the YAML and Python surfaces:
