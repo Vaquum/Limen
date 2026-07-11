@@ -268,6 +268,26 @@ from limen.experiment.reducer import REDUCER_REGISTRY
 | `'sanity'` | `SanityReducer` |
 | `'saturation'` | `SaturationReducer` |
 
+## Configuring reducers in YAML
+
+Reducers can be declared in a YAML experiment under `uel.pruning_strategies`, so a `limen run` gets the same feedback control as the Python API. Each entry names a reducer by its registry key and forwards its constructor arguments under `params`:
+
+```yaml
+uel:
+  n_permutations: 200
+  feedback_interval: 20
+  pruning_strategies:
+    - type: sanity
+      params:
+        metric: auc
+    - type: budget
+      params:
+        max_permutations: 100
+        check_after_pct: 0.25
+```
+
+`feedback_interval` sets how often the reducers run. Each `type` must be one of the [registry keys](#reducer-registry) above, and `params` are the reducer's constructor arguments from [Tuning guidelines](#tuning-guidelines). Unknown types or fields are rejected by `limen validate` before the run starts.
+
 ## Read next
 
 - Continue to [Advanced Search](Advanced-Search.md) for the full artifact-backed run path for this feedback system.

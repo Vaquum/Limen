@@ -95,12 +95,13 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `prep_each_round` | bool | `true` | run prep every round; required for manifest-driven SFDs |
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
+| `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
 | `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
 
 NOTE: `search_strategy.seed` seeds `random` search for reproducible sampling. `grid` search enumerates the full space and ignores a seed.
 
-Reducers and feedback strategies are configured through the Python API, not YAML. `feedback_interval` and `checkpoint_interval` set the cadence, but the pruning strategies themselves are supplied to the engine in Python — see [Reducers And Feedback](Reducers-And-Feedback.md) and [Advanced Search](Advanced-Search.md).
+`pruning_strategies` declares reducers that fire every `feedback_interval` rounds during a run — see [Reducers And Feedback](Reducers-And-Feedback.md) for the reducer catalog, YAML syntax, and tuning.
 
 ## Manifest Types
 
