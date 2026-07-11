@@ -70,7 +70,7 @@ class SearchStrategy(ABC):
 
 
     def update_from_feedback(
-        self, _log: Any, _interventions: list[dict],
+        self, _log: Any, _interventions: list[dict[str, Any]],
     ) -> None:
 
         '''

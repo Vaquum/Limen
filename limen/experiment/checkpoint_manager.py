@@ -54,7 +54,7 @@ class CheckpointManager:
 
 
     @staticmethod
-    def compute_content_hash(content: dict) -> str:
+    def compute_content_hash(content: dict[str, Any]) -> str:
 
         '''
         Compute a SHA-256 hex digest of a dict, serialized with sorted keys for determinism.
@@ -274,7 +274,7 @@ class CheckpointManager:
 
 
     @staticmethod
-    def _write_json(path: Path, data: dict) -> None:
+    def _write_json(path: Path, data: dict[str, Any]) -> None:
 
         tmp = path.with_suffix('.tmp')
         try:
