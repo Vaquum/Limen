@@ -127,6 +127,70 @@ In a live direct run, it detected a wrong-direction parameter and emitted:
 
 It can also emit suggestion-style `keep_is` interventions for low-impact parameters.
 
+## When to use which reducer
+
+The five reducers answer different questions. Pick by the problem you have, not by wanting "more feedback".
+
+| Reducer | Reach for it when | What it does | Reversible |
+|---|---|---|---|
+| `BudgetReducer` | the sweep must finish inside a walltime or permutation cap | trims the remaining queue once, when the budget is projected to overrun | no — a trim is permanent |
+| `SanityReducer` | you want to stop wasting rounds on broken parameter values | hard-removes values whose metric is mostly null; flags zero-metric, timeout, and warning-heavy values as suggestions | removals no; suggestions are advisory |
+| `CorrelationReducer` | you want to prune values that move the metric the wrong way or barely at all | removes wrong-direction values, suggests keeps for low-impact ones | removals no; suggestions advisory |
+| `FocusReducer` | a breakthrough score has appeared and you want to exploit near the winner | narrows each parameter around the best round and injects nearby variations | yes — named filters, snaps back after a timeout |
+| `SaturationReducer` | a value's metric has stopped varying and no longer earns full budget | down-samples saturated values, keeping a monitoring sample | yes — restores a value if it starts varying again |
+
+`SanityReducer` is defensive and safe to run throughout. `BudgetReducer` is a resource cap. The other three change *what* the search explores, so they carry more risk of steering the run — introduce them one at a time and read `audit.jsonl` to see their effect.
+
+Reducers combine, but with no conflict resolution. Within a feedback trigger they run in the order of the list they were constructed in, each analyzing the same pre-trigger `MSQ`; their interventions are dispatched afterwards with last-write-wins at the queue. `FocusReducer` and `SaturationReducer` use namespaced filter keys, so they do not clobber each other, but two exploitation reducers can still fight (e.g. a `BudgetReducer` trim shrinking the queue that a `FocusReducer` is injecting into). See [Feedback cycle order](#feedback-cycle-order) and [One concrete mixed feedback cycle](#one-concrete-mixed-feedback-cycle).
+
+## Tuning guidelines
+
+Every reducer takes `metric` (the column it reasons over) and `active` (default `True`). The knobs below are the ones that change behavior most; each reducer validates its ranges and raises `ValueError` on bad input.
+
+`BudgetReducer` — a resource cap, not a quality judge:
+
+| Parameter | Default | Effect |
+|---|---|---|
+| `max_walltime_hours` | `None` | wall-clock ceiling; the trim target is the smaller of the walltime and permutation projections |
+| `max_permutations` | `None` | hard cap on completed rounds |
+| `check_after_pct` | `0.1` | fraction of budget consumed before a trim is allowed; larger waits for a steadier throughput estimate, smaller reacts earlier on noisier estimates |
+| `trim_strategy` | `'random'` | `'random'` downsamples blindly; `'worst_first'` removes the worst-scoring values first and requires `metric` |
+
+`SanityReducer` — only the null-rate path removes; the rest suggest:
+
+| Parameter | Default | Effect |
+|---|---|---|
+| `nan_threshold` | `0.1` | null/NaN rate above which a value is hard-removed; smaller is stricter |
+| `min_observations` | `1` | trials required before a value can be removed, guarding against tiny samples |
+| `zero_metric_threshold` / `execution_time_threshold` / `warning_threshold` | `None` | opt-in suggestion detectors; each stays off until set |
+
+`CorrelationReducer` — needs enough rounds to be meaningful:
+
+| Parameter | Default | Effect |
+|---|---|---|
+| `min_observations` | `50` | rounds required before it acts; larger is more conservative |
+| `negative_correlation_threshold` | `-0.3` | wrong-direction trigger; nearer `0` prunes more readily, more negative prunes only strong offenders |
+| `prune_threshold` | `0.05` | absolute correlation below this marks a value low-impact (a `keep_is` suggestion) |
+| `sign_stability_threshold` | `0.8` | bootstrap sign agreement required before acting; larger demands higher confidence |
+
+`FocusReducer` — exploitation around a breakthrough:
+
+| Parameter | Default | Effect |
+|---|---|---|
+| `breakthrough_threshold` | required | metric level that activates focus; set near the top of the expected range so it only fires on a real breakthrough |
+| `focus_range_pct` | `0.2` | half-width of the numeric window kept around the winner; larger explores wider, smaller searches tighter |
+| `focus_timeout` | `5` | rounds without improvement before it snaps back to the full domain |
+| `variation_count` | `5` | number of nearby values injected per numeric parameter |
+
+`SaturationReducer` — variance-collapse detection:
+
+| Parameter | Default | Effect |
+|---|---|---|
+| `cv_threshold` | `0.01` | coefficient of variation below which a value is saturated; larger declares saturation sooner |
+| `window_size` | `100` | rolling tail length per value; larger is smoother and slower to react |
+| `min_samples_per_value` | `20` | observations required before the CV is trusted |
+| `retain_fraction` | `0.1` | share of a saturated value's combinations kept for monitoring; nearer `0` prunes harder |
+
 ## Feedback sources beyond reducers
 
 ### `intra_callback`
