@@ -8,6 +8,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
+from limen.yaml.config import is_mapping
 
 
 def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
@@ -39,7 +40,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
     if target_permutations is None:
         return False
 
-    uel_cfg = yaml_reference.get('uel') or {}
+    uel_cfg: dict[str, Any] = yaml_reference.get('uel') or {}
     experiment_name: str = yaml_reference['metadata']['name']
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_reference['metadata'].get('mode', 'development') == 'development'
@@ -96,13 +97,13 @@ def _load_yaml_reference(results_dir: Path) -> dict[str, Any] | None:
         click.secho(f"  ✗ Cannot read metadata.json: {exc}", fg='red')
         return None
 
-    if not isinstance(metadata, dict):
+    if not is_mapping(metadata):
         click.secho("  ✗ metadata.json is not a JSON object.", fg='red')
         return None
 
     yaml_reference = metadata.get('yaml_reference')
 
-    if not isinstance(yaml_reference, dict):
+    if not is_mapping(yaml_reference):
         click.secho(
             "  ✗ metadata.json has no valid 'yaml_reference' — experiment was not started from a YAML file.",
             fg='red',

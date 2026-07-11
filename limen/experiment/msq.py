@@ -468,7 +468,7 @@ class MSQ:
         custom_count = state.get('custom_filters_count', 0)
         non_restorable = custom_count + len(lost_named)
         if non_restorable > 0:
-            parts = []
+            parts: list[str] = []
             if lost_named:
                 parts.append(f"named filters: {sorted(lost_named)}")
             if custom_count:

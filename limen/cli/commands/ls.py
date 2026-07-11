@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 
 from limen.yaml.config import find_project_root
+from limen.yaml.config import is_mapping
 from limen.yaml.store import MANIFEST_URI_SCHEME
 from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import is_full_manifest_id
@@ -43,8 +44,8 @@ def run_ls(start: Path) -> bool:
     _REQUIRED = {'id', 'name', 'committed_at'}
     click.echo(f"Committed manifests ({len(manifests)}):\n")
     for entry in manifests:
-        entry_id = entry.get('id') if isinstance(entry, dict) else None
-        if (not isinstance(entry, dict)
+        entry_id = entry.get('id') if is_mapping(entry) else None
+        if (not is_mapping(entry)
                 or not _REQUIRED.issubset(entry)
                 or not is_full_manifest_id(entry_id)
                 or not isinstance(entry.get('name'), str)

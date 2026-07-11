@@ -2,10 +2,11 @@ import re
 from pathlib import Path
 
 import click
-from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from limen.yaml.config import find_project_root
+from limen.yaml.config import is_mapping
+from limen.yaml.config import round_trip_yaml
 from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import fork_manifest
 from limen.yaml.store import manifest_name
@@ -76,12 +77,12 @@ def run_fork(ref: str, name: str | None, start: Path) -> bool:
 
 def _read_name(path: Path, fallback: str) -> str:
 
-    yaml = YAML()
+    yaml = round_trip_yaml()
     try:
         data = yaml.load(path.read_text(encoding='utf-8'))
     except (OSError, YAMLError):
         return fallback
-    return manifest_name(data, fallback) if isinstance(data, dict) else fallback
+    return manifest_name(data, fallback) if is_mapping(data) else fallback
 
 
 def _default_fork_name(base: str, manifests_dir: Path) -> str:

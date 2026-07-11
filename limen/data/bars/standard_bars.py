@@ -39,7 +39,7 @@ def _standard_bars(data: pl.DataFrame,
     def create_bar_groups(df: pl.DataFrame) -> pl.DataFrame:
         cumsum = 0.0
         bar_group = 0
-        groups = []
+        groups: list[int] = []
 
         for row in df.iter_rows(named=True):
             cumsum += row['threshold_col']

@@ -9,11 +9,14 @@ from pathlib import Path
 from typing import Any
 from typing import TypeGuard
 
-from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from limen.yaml.config import STORE_RELATIVE
+from limen.yaml.config import RoundTripYAML
 from limen.yaml.config import find_project_root
+from limen.yaml.config import is_list
+from limen.yaml.config import is_mapping
+from limen.yaml.config import round_trip_yaml
 
 
 SHA256_PREFIX = 'sha256:'
@@ -75,19 +78,16 @@ def manifest_name(data: dict[str, Any], fallback: str) -> str:
     '''
 
     metadata = data.get('metadata')
-    if isinstance(metadata, dict) and isinstance(metadata.get('name'), str):
+    if is_mapping(metadata) and isinstance(metadata.get('name'), str):
         return metadata['name']
     return fallback
 
 
-def _configured_yaml() -> YAML:
+def _configured_yaml() -> RoundTripYAML:
 
     '''Create a round-trip YAML instance with the store's dump settings.'''
 
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.width = _YAML_DUMP_WIDTH
-    return yaml
+    return round_trip_yaml(preserve_quotes=True, width=_YAML_DUMP_WIDTH)
 
 
 def _index_entry(manifest_id: str,
@@ -111,7 +111,7 @@ def lineage_block(data: dict[str, Any]) -> dict[str, Any]:
     '''Return the lineage mapping, or an empty dict when it is absent or not a mapping.'''
 
     lineage = data.get('lineage')
-    return lineage if isinstance(lineage, dict) else {}
+    return lineage if is_mapping(lineage) else {}
 
 
 def commit_manifest(yaml_path: Path,
@@ -144,7 +144,7 @@ def commit_manifest(yaml_path: Path,
         data = yaml.load(content)
     except YAMLError as exc:
         raise ValueError(f"Cannot parse YAML '{yaml_path.name}': {exc}") from exc
-    if not isinstance(data, dict):
+    if not is_mapping(data):
         raise ValueError(f"Invalid YAML format in '{yaml_path.name}': expected a mapping")
 
     if parent_id is None:
@@ -176,7 +176,7 @@ def commit_manifest(yaml_path: Path,
             existing = yaml.load(dest.read_text(encoding='utf-8'))
         except (OSError, YAMLError) as exc:
             raise ValueError(f"Cannot read committed manifest '{dest.name}': {exc}") from exc
-        if not isinstance(existing, dict):
+        if not is_mapping(existing):
             raise ValueError(f"Invalid committed manifest format in '{dest.name}': expected a mapping")
         name = manifest_name(existing, fallback=dest.stem)
         existing_lineage = lineage_block(existing)
@@ -243,12 +243,12 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
 
     full_hex = candidate.stem
 
-    yaml_obj = YAML()
+    yaml_obj = round_trip_yaml()
     try:
         data = yaml_obj.load(candidate.read_text(encoding='utf-8'))
     except (OSError, YAMLError) as exc:
         raise ValueError(f"Cannot read manifest '{candidate.name}': {exc}") from exc
-    if not isinstance(data, dict):
+    if not is_mapping(data):
         raise ValueError(f"Invalid manifest format in '{candidate.name}'")
     expected_id = f'{SHA256_PREFIX}{full_hex}'
     actual_id = lineage_block(data).get('id')
@@ -326,7 +326,7 @@ def load_index(project_root: Path) -> dict[str, Any]:
         index = json.loads(index_path.read_text(encoding='utf-8'))
     except json.JSONDecodeError as exc:
         raise ValueError(f"index.json is corrupted: {index_path}") from exc
-    if not isinstance(index, dict) or not isinstance(index.get('manifests'), list):
+    if not is_mapping(index) or not isinstance(index.get('manifests'), list):
         raise ValueError(f"index.json has invalid structure: {index_path}")
     return index
 
@@ -362,11 +362,11 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
 
     yaml = _configured_yaml()
     data = yaml.load(committed_path.read_text(encoding='utf-8'))
-    if not isinstance(data, dict):
+    if not is_mapping(data):
         raise ValueError(f"Invalid manifest format in '{committed_path.name}'")
 
     metadata = data.get('metadata')
-    if not isinstance(metadata, dict):
+    if not is_mapping(metadata):
         raise ValueError(f"Committed manifest '{committed_path.name}' has no metadata block")
 
     metadata['name'] = new_name
@@ -405,19 +405,19 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
     warnings_out: list[str] = []
     entries: list[dict[str, Any]] = []
 
-    yaml = YAML()
+    yaml = round_trip_yaml()
     for path in sorted(store_path.glob('*.yaml')):
         try:
             data = yaml.load(path.read_text(encoding='utf-8'))
         except (OSError, YAMLError) as exc:
             warnings_out.append(f"{path.name}: cannot read ({type(exc).__name__}) — skipped")
             continue
-        if not isinstance(data, dict):
+        if not is_mapping(data):
             warnings_out.append(f"{path.name}: not a mapping — skipped")
             continue
 
         lineage = data.get('lineage')
-        if not isinstance(lineage, dict):
+        if not is_mapping(lineage):
             warnings_out.append(f"{path.name}: missing lineage block — skipped")
             continue
 
@@ -444,6 +444,7 @@ def rebuild_index(project_root: Path) -> tuple[int, list[str]]:
 def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
 
     index_path = store_path / 'index.json'
+    index: Any
     if index_path.exists():
         try:
             index = json.loads(index_path.read_text(encoding='utf-8'))
@@ -453,13 +454,16 @@ def _update_index(store_path: Path, entry: dict[str, Any]) -> None:
     else:
         index = {'version': 1, 'manifests': []}
 
-    manifests = index.get('manifests') if isinstance(index, dict) else None
-    if not isinstance(manifests, list):
+    manifests: list[Any]
+    raw_manifests = index.get('manifests') if is_mapping(index) else None
+    if is_list(raw_manifests):
+        manifests = raw_manifests
+    else:
         warnings.warn(f"index.json has invalid structure — reinitializing: {index_path}", stacklevel=2)
         index = {'version': 1, 'manifests': []}
         manifests = []
 
-    kept = [m for m in manifests if not (isinstance(m, dict) and m.get('id') == entry['id'])]
+    kept = [m for m in manifests if not (is_mapping(m) and m.get('id') == entry['id'])]
     kept.append(entry)
     index['manifests'] = kept
     _ = index_path.write_text(json.dumps(index, indent=2), encoding='utf-8')

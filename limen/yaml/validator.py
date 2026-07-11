@@ -71,8 +71,8 @@ class ValidationResult:
     '''Result of a YAML validation pass.'''
 
     valid: bool
-    errors: list[YAMLError] = field(default_factory=list)
-    warnings: list[YAMLError] = field(default_factory=list)
+    errors: list[YAMLError] = field(default_factory=list[YAMLError])
+    warnings: list[YAMLError] = field(default_factory=list[YAMLError])
     mode: str = 'development'
 
 

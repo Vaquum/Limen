@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
 from ruamel.yaml.constructor import DuplicateKeyError
 
+from limen.yaml.config import is_mapping
+from limen.yaml.config import round_trip_yaml
 from limen.yaml.errors import YAMLError
 
 
@@ -21,8 +22,7 @@ def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
     '''
 
     errors: list[YAMLError] = []
-    yaml = YAML()
-    yaml.preserve_quotes = True
+    yaml = round_trip_yaml(preserve_quotes=True)
 
     try:
         if isinstance(source, Path):
@@ -40,7 +40,7 @@ def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
             ))
             return {}, errors
 
-        if not isinstance(result, dict):
+        if not is_mapping(result):
             errors.append(YAMLError(
                 message=f'Expected a YAML mapping at root, got {type(result).__name__}',
                 path='',

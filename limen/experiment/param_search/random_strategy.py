@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 from typing import Any
+from typing import cast
 
 from typing_extensions import override
 
@@ -75,6 +76,7 @@ class RandomStrategy(SearchStrategy):
         rng_state = state['rng_state']
         # JSON serialization converts tuples to lists; restore tuple structure
         if isinstance(rng_state, list):
-            rng_state = (rng_state[0], tuple(rng_state[1]), rng_state[2])
+            rng_list = cast(list[Any], rng_state)
+            rng_state = (rng_list[0], tuple(cast(list[Any], rng_list[1])), rng_list[2])
         self._rng.setstate(rng_state)
         self._generated_count = state['generated_count']

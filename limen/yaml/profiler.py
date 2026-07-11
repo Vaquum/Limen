@@ -37,9 +37,9 @@ class ProfileResult:
     sample_permutations_attempted: int = 0
     sample_permutations_completed: int = 0
     sample_time_seconds_per_permutation: float | None = None
-    warnings: list[str] = field(default_factory=list)
-    errors: list[str] = field(default_factory=list)
-    data_quality_warnings: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list[str])
+    errors: list[str] = field(default_factory=list[str])
+    data_quality_warnings: list[str] = field(default_factory=list[str])
 
 
 _MANIFEST_CORE_LOGGER = 'limen.experiment.manifest_core'
