@@ -8,6 +8,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -220,6 +222,27 @@ def test_python_code_fences_are_parseable() -> None:
                 ast.parse(match.group(1))
             except SyntaxError as exc:
                 failures.append(f'{path.relative_to(ROOT)} fence {index}: {exc.msg}')
+
+    assert checked > 0
+    assert not failures
+
+
+def test_yaml_code_fences_parse() -> None:
+    failures: list[str] = []
+    checked = 0
+    paths = [
+        ROOT / 'README.md',
+        *sorted((ROOT / 'docs').rglob('*.md')),
+        *sorted((ROOT / 'limen').rglob('README.md')),
+    ]
+    for path in paths:
+        text = path.read_text(encoding='utf-8')
+        for index, match in enumerate(re.finditer(r'```yaml\n(.*?)```', text, re.S), start=1):
+            checked += 1
+            try:
+                yaml.safe_load(match.group(1))
+            except yaml.YAMLError as exc:
+                failures.append(f'{path.relative_to(ROOT)} fence {index}: {exc}')
 
     assert checked > 0
     assert not failures
