@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 import numpy as np
 import polars as pl
 from sklearn.decomposition import PCA
+from typing_extensions import override
 
 from limen.calibration.pipeline import CalibratorProtocol
 from limen.calibration.pipeline import ThresholdOptimizerProtocol
@@ -1063,6 +1064,7 @@ class MLManifest(Manifest):
 
         return CalibrationBuilder(self)
 
+    @override
     def prepare_data(
         self,
         raw_data: pl.DataFrame,
@@ -1167,6 +1169,7 @@ class MLManifest(Manifest):
 
         return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
 
+    @override
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
         '''
@@ -1283,6 +1286,7 @@ class RuleBasedManifest(Manifest):
 
         return self
 
+    @override
     def prepare_data(
         self,
         raw_data: pl.DataFrame,

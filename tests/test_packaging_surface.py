@@ -119,6 +119,7 @@ def test_pyright_gate_config() -> None:
     assert pyright_config['include'] == ['limen']
     promoted_extras = [
         'reportCallInDefaultInitializer',
+        'reportImplicitOverride',
         'reportImplicitStringConcatenation',
         'reportImportCycles',
         'reportMissingSuperCall',
@@ -140,13 +141,14 @@ def test_pyright_gate_config() -> None:
         assert pyright_config.get(rule, 'error') == 'error', rule
     remaining_downgrades = {k for k, v in pyright_config.items() if v == 'warning'}
     assert remaining_downgrades == {
-        'reportImplicitOverride',
         'reportMissingTypeStubs',
         'reportUnknownArgumentType',
         'reportUnknownLambdaType',
         'reportUnknownMemberType',
         'reportUnknownVariableType',
     }
+    runtime_deps = pyproject['project']['dependencies']
+    assert 'typing_extensions>=4.12,<5' in runtime_deps
     dev_extra = pyproject['project']['optional-dependencies']['dev']
     assert 'pandas-stubs>=2.3,<2.4' in dev_extra
     assert 'pyright>=1.1.408,<1.1.409' in dev_extra

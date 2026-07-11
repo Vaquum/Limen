@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from typing_extensions import override
 
 from limen._optional import require_optional
 from limen.calibration import fit_calibrator
@@ -29,6 +30,7 @@ class TabPFNBinary(ReferenceModel):
         self._calibration_threshold: float = 0.5
         self._val_score: float | None = None
 
+    @override
     def train(self, data: dict[str, Any], **params: Any) -> 'TabPFNBinary':
 
         '''
@@ -69,6 +71,7 @@ class TabPFNBinary(ReferenceModel):
         return self
 
 
+    @override
     def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
@@ -109,6 +112,7 @@ class TabPFNBinary(ReferenceModel):
         return {'_preds': y_pred, '_probs': y_test_proba}
 
 
+    @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
         '''
