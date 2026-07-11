@@ -154,3 +154,19 @@ def test_pyright_gate_config() -> None:
     assert 'pyright>=1.1.408,<1.1.409' in dev_extra
     assert 'scipy-stubs>=1.15,<1.16' in dev_extra
     assert 'tomli>=2.0,<3' in dev_extra
+
+
+def test_constraints_mirror_runtime_envelope() -> None:
+    pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
+    project = pyproject['project']
+    envelope = [
+        *project['dependencies'],
+        *project['optional-dependencies']['all'],
+        *project['optional-dependencies']['release'],
+    ]
+    constraints_path = ROOT / 'requirements' / 'constraints.txt'
+    constraints = [
+        line for line in constraints_path.read_text(encoding='utf-8').splitlines()
+        if line.strip()
+    ]
+    assert sorted(constraints) == sorted(envelope)
