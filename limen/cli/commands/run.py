@@ -10,6 +10,7 @@ from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
 
 DEFAULT_RESULTS_BASE: Path = Path('.')
@@ -66,6 +67,7 @@ def run_experiment(yaml_path: Path,
     _ = shutil.copy2(yaml_path, results_dir / yaml_dest_name)
 
     search_strategy = build_search_strategy(yaml_dict)
+    pruning_strategies = build_pruning_strategies(yaml_dict)
     compiled = CompiledSFD(yaml_dict)
 
     _params = compiled.params()
@@ -83,6 +85,7 @@ def run_experiment(yaml_path: Path,
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,
+            pruning_strategies=pruning_strategies,
             experiment_dir=results_dir,
             test_mode=test_mode,
             feedback_interval=feedback_interval,
