@@ -1,6 +1,7 @@
 from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 
@@ -65,7 +66,7 @@ def select(context: dict[str, Any],
     for col in [*metric_cols, *guard_cols]:
         work[col] = pd.to_numeric(work[col], errors='coerce')
 
-    finite_metrics = cast(np.ndarray, np.isfinite(work[metric_cols].to_numpy(dtype=float)).all(axis=1))
+    finite_metrics = cast(npt.NDArray[np.bool_], np.isfinite(work[metric_cols].to_numpy(dtype=float)).all(axis=1))
     work = work.loc[finite_metrics]
 
     if min_signals > 0 and 'num_trades_test' in work.columns:

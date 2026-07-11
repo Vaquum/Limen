@@ -1,6 +1,8 @@
 from typing import Any
+from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import polars as pl
 
@@ -23,7 +25,7 @@ class RuleBasedStrategy(ReferenceModel):
         self.sharpe_std_threshold = sharpe_std_threshold
         self.sharpe_degradation_threshold = sharpe_degradation_threshold
 
-    def train(self, data: dict, **params: Any) -> 'RuleBasedStrategy':  # noqa: ARG002
+    def train(self, data: dict[str, Any], **params: Any) -> 'RuleBasedStrategy':  # noqa: ARG002
 
         '''
         No-op training step — rule-based strategies have no learnable parameters.
@@ -38,7 +40,7 @@ class RuleBasedStrategy(ReferenceModel):
 
         return self
 
-    def predict(self, data: dict) -> dict:
+    def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
         '''
         Apply boolean logic tree to test split and return per-bar position signals.
@@ -53,7 +55,7 @@ class RuleBasedStrategy(ReferenceModel):
         pos = self._apply_logic(data['test'], data['strategy']).fill_null(False).to_numpy().astype(int)
         return {'_preds': pos}
 
-    def evaluate(self, data: dict, inline_metrics: bool = True) -> dict:  # noqa: ARG002
+    def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:  # noqa: ARG002
 
         '''
         Evaluate strategy across all splits and return rule-based metrics.
@@ -67,8 +69,8 @@ class RuleBasedStrategy(ReferenceModel):
                 Tier 3 stability metrics, and '_preds' key
         '''
 
-        positions: dict[str, np.ndarray] = {}
-        backtest_results: dict[str, dict] = {}
+        positions: dict[str, npt.NDArray[np.integer[Any]]] = {}
+        backtest_results: dict[str, dict[str, float]] = {}
         strategy = data['strategy']
         cond_index = {c['id']: c for c in strategy['conditions']}
 
@@ -87,11 +89,14 @@ class RuleBasedStrategy(ReferenceModel):
         results['_preds'] = positions['test']
         return results
 
-    def _apply_logic(self, df: pl.DataFrame, strategy: dict) -> pl.Series:
+    def _apply_logic(self, df: pl.DataFrame, strategy: dict[str, Any]) -> pl.Series:
         cond_index = {c['id']: c for c in strategy['conditions']}
         return self._resolve(cond_index[strategy['entry']], cond_index, df)
 
-    def _resolve(self, condition: dict, cond_index: dict, df: pl.DataFrame) -> pl.Series:
+    def _resolve(self,
+                 condition: dict[str, Any],
+                 cond_index: dict[str, dict[str, Any]],
+                 df: pl.DataFrame) -> pl.Series:
         if 'type' in condition:
             return df[condition['id']]
         operator = condition['operator']
@@ -109,7 +114,10 @@ class RuleBasedStrategy(ReferenceModel):
             result = result & s if operator == 'and' else result | s
         return result
 
-    def _backtest_split(self, df: pl.DataFrame, positions: np.ndarray, cost_kwargs: dict) -> dict:
+    def _backtest_split(self,
+                        df: pl.DataFrame,
+                        positions: npt.NDArray[np.integer[Any]],
+                        cost_kwargs: dict[str, Any]) -> dict[str, float]:
         if 'open' not in df.columns or 'close' not in df.columns:
             return {}
         open_arr = df['open'].to_numpy().astype(float)
@@ -127,12 +135,12 @@ class RuleBasedStrategy(ReferenceModel):
         bt_result = backtest_snapshot(bt_input, execution_lag_bars=1, **cost_kwargs)
         if bt_result.empty:
             return {}
-        return bt_result.iloc[0].to_dict()
+        return cast(dict[str, float], bt_result.iloc[0].to_dict())
 
 
-def rule_based(data: dict,
+def rule_based(data: dict[str, Any],
                sharpe_std_threshold: float = 0.5,
-               sharpe_degradation_threshold: float = 0.3) -> dict:
+               sharpe_degradation_threshold: float = 0.3) -> dict[str, Any]:
 
     '''
     Apply a rule-based strategy to the given data and return evaluation metrics.
