@@ -1249,7 +1249,7 @@ class MLManifest(Manifest):
         lazy = _apply_feature_transforms(self, lazy, round_params)
         data = lazy.collect()
 
-        dropped_features: list[Any] = round_params.get('_dropped_features') or []
+        dropped_features: list[str] = round_params.get('_dropped_features') or []
         if dropped_features:
             data = data.drop([c for c in dropped_features if c in data.columns])
 
@@ -1779,9 +1779,9 @@ class _PCATransformer(Protocol):
 
     '''Typed facade over the fitted sklearn PCA surface used for compression.'''
 
-    def fit_transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.float64]: ...
+    def fit_transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.floating[Any]]: ...
 
-    def transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.float64]: ...
+    def transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.floating[Any]]: ...
 
 
 def _pca_transformer(n_components: int) -> _PCATransformer:

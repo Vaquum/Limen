@@ -293,7 +293,7 @@ class FeedbackController:
 
         if not isinstance(interventions, list):
             raise ValueError('FeedbackController Intervention file must contain a JSON array')
-        interventions = cast(list[dict[str, Any]], interventions)
+        interventions = cast(list[Any], interventions)
 
         for item in interventions:
             if 'source' not in item:
