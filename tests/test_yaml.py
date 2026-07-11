@@ -720,6 +720,14 @@ def test_validate_error_for_uel_search_strategy_wrong_type() -> None:
         assert any('search_strategy' in e.path for e in result.errors)
 
 
+def test_validate_no_warning_for_uel_search_strategy_seed() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = {'type': 'random', 'seed': 42}
+    result = validate(yaml_dict)
+    assert result.valid
+    assert not any('seed' in w.message for w in result.warnings)
+
+
 def test_validate_error_for_uel_output_path_wrong_type() -> None:
     for value in [123, None]:
         yaml_dict, _ = parse(_MINIMAL_ML_YAML)
