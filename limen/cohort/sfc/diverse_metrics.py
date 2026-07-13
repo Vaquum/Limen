@@ -171,7 +171,7 @@ def select(context: dict[str, Any],
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
             raise ValueError('diverse_metrics selector returned a boolean permutation id')
-        if value is None or (isinstance(value, float) and np.isnan(value)):
+        if value is None or (_is_floating(value) and np.isnan(float(value))):
             raise ValueError('diverse_metrics selector returned a missing permutation id')
         if _is_integral(value):
             return int(value)
