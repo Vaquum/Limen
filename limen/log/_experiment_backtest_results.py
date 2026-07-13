@@ -86,13 +86,6 @@ def experiment_backtest_results(self: Any) -> pd.DataFrame:
     for i in range(len(self.round_params)):
         perf = _prepare_snapshot_backtest_input(self.permutation_prediction_performance(i))
 
-        result_df = backtest_snapshot(
-            perf,
-            execution_lag_bars=1,
-        )
+        all_rows.append(backtest_snapshot(perf, execution_lag_bars=1))
 
-        all_rows.append(result_df)
-
-    df_all = pd.concat(all_rows, ignore_index=True)
-
-    return df_all
+    return pd.DataFrame.from_records(all_rows)
