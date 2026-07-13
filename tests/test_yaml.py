@@ -1320,6 +1320,26 @@ def test_build_pruning_strategies_raises_for_unknown_type() -> None:
         assert 'bogus' in str(exc)
 
 
+def test_build_pruning_strategies_raises_for_non_mapping_uel() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel'] = ['not', 'a', 'mapping']
+    try:
+        build_pruning_strategies(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert "'uel' must be a mapping" in str(exc)
+
+
+def test_build_search_strategy_raises_for_non_mapping_uel() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel'] = ['not', 'a', 'mapping']
+    try:
+        build_search_strategy(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert "'uel' must be a mapping" in str(exc)
+
+
 def test_all_templates_have_valid_limen_version() -> None:
     for path in sorted(_TEMPLATES_DIR.glob('*.yaml')):
         yaml_dict, errors = parse(path.read_text(encoding='utf-8'))

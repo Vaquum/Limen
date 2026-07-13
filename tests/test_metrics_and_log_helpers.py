@@ -366,6 +366,16 @@ def test_backtest_snapshot_rejects_empty_input() -> None:
         )
 
 
+def test_backtest_snapshot_rejects_unsized_column_values() -> None:
+    with pytest.raises(ValueError, match='must be sized array-likes'):
+        backtest_snapshot({
+            'predictions': 1,
+            'open': [100.0],
+            'close': [101.0],
+            'price_change': [1.0],
+        })
+
+
 def test_backtest_snapshot_rejects_non_binary_predictions() -> None:
     with pytest.raises(ValueError, match='predictions must contain only 0 or 1'):
         backtest_snapshot(
