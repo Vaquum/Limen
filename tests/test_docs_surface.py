@@ -8,7 +8,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib
 
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -232,4 +233,4 @@ def test_python_code_fences_are_parseable() -> None:
 
 
 def test_yaml_code_fences_parse() -> None:
-    _check_code_fences('yaml', yaml.safe_load, yaml.YAMLError)
+    _check_code_fences('yaml', YAML(typ='safe').load, YAMLError)
