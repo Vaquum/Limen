@@ -91,6 +91,10 @@ def long_flat_strategy(predictions: Any,
     close_a = np.asarray(close_px, dtype=float)
     dpx = np.asarray(price_change, dtype=float)
 
+    arrays = (pred, open_a, close_a, dpx)
+    if any(arr.ndim != 1 for arr in arrays) or len({arr.shape[0] for arr in arrays}) != 1:
+        raise ValueError('long_flat_strategy inputs must be equal-length 1D arrays')
+
     tradable = ~np.isnan(open_a) & ~np.isnan(close_a) & ~np.isnan(dpx) & (open_a != 0)
     execution_rows = np.zeros(total_bars, dtype=bool)
     if execution_lag_bars < total_bars:
