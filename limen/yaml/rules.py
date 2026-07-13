@@ -1214,6 +1214,15 @@ class UelSpec:
                     suggestion=suggestion,
                 ))
 
+        strategy = uel.get('search_strategy')
+        if is_mapping(strategy) and strategy.get('seed') is not None:
+            seed = strategy['seed']
+            if not isinstance(seed, int) or isinstance(seed, bool):
+                errors.append(YAMLError(
+                    message=f"'uel.search_strategy.seed' must be an int (got {type(seed).__name__})",
+                    path='uel.search_strategy.seed',
+                ))
+
 
 class RuleEngine:
 
