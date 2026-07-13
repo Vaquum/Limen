@@ -313,6 +313,28 @@ class CompiledSFD:
         return self._manifest_cache
 
 
+def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:
+
+    '''
+    Return the uel block, validating it is a mapping.
+
+    Args:
+        yaml_dict (dict): Parsed YAML experiment dict
+
+    Returns:
+        dict: The uel mapping, empty when absent
+
+    Raises:
+        ValueError: If uel is present but not a mapping
+
+    '''
+
+    uel_cfg: Any = yaml_dict.get('uel') or {}
+    if not is_mapping(uel_cfg):
+        raise ValueError(f"'uel' must be a mapping, got {type(uel_cfg).__name__}")
+    return uel_cfg
+
+
 def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStrategy:
 
     '''
@@ -329,7 +351,7 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
 
     '''
 
-    uel_cfg: dict[str, Any] = yaml_dict.get('uel') or {}
+    uel_cfg = _uel_config(yaml_dict)
     sfd_cfg: dict[str, Any] = yaml_dict.get('sfd') or {}
     strategy_cfg = uel_cfg.get('search_strategy', {})
     if not is_mapping(strategy_cfg):
@@ -366,7 +388,7 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
 
     '''
 
-    uel_cfg: dict[str, Any] = yaml_dict.get('uel') or {}
+    uel_cfg = _uel_config(yaml_dict)
     specs: Any = uel_cfg.get('pruning_strategies') or []
     if not is_list(specs):
         raise ValueError(
