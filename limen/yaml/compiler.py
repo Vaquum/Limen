@@ -370,7 +370,7 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
     specs = uel_cfg.get('pruning_strategies') or []
     reducers: list[PruningStrategy] = []
     for spec in specs:
-        reducer_type = spec['type']
+        reducer_type = spec.get('type')
         if reducer_type not in REDUCER_REGISTRY:
             raise ValueError(
                 f"Unknown pruning strategy type: '{reducer_type}'. "
