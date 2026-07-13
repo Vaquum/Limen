@@ -11,12 +11,11 @@ import numpy.typing as npt
 import pandas as pd
 import polars as pl
 
-from limen.yaml.config import is_mapping
-
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
 from limen.inference.sensor import BarPrediction
 from limen.inference.sensor import PredictionReason
+from limen.yaml.config import is_mapping
 from limen.yaml.store import SHA256_PREFIX
 
 

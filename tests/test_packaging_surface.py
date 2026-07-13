@@ -147,6 +147,8 @@ def test_pyright_gate_config() -> None:
     assert remaining_downgrades == set()
     silenced_rules = {k for k, v in pyright_config.items() if v == 'none'}
     assert silenced_rules == {'reportMissingTypeStubs'}
+    rule_values = {v for k, v in pyright_config.items() if k.startswith('report')}
+    assert rule_values <= {'error', 'none'}
     runtime_deps = pyproject['project']['dependencies']
     assert 'typing_extensions>=4.12,<5' in runtime_deps
     dev_extra = pyproject['project']['optional-dependencies']['dev']

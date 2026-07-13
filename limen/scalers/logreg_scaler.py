@@ -1,6 +1,6 @@
-import polars as pl
-
 from typing import cast
+
+import polars as pl
 
 SCALING_RULES = {
     'open': 'standard',
