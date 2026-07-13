@@ -4,6 +4,7 @@ from typing import Any
 import click
 
 from limen.yaml.config import find_project_root
+from limen.yaml.config import is_mapping
 from limen.yaml.store import SHA256_PREFIX
 from limen.yaml.store import load_index
 from limen.yaml.store import normalize_manifest_ref
@@ -47,9 +48,9 @@ def run_lineage(ref: str, start: Path) -> bool:
         click.secho(f"  ✗ {exc}", fg='red')
         return False
 
-    by_id = {
+    by_id: dict[str, dict[str, Any]] = {
         m['id']: m for m in index['manifests']
-        if isinstance(m, dict) and isinstance(m.get('id'), str)
+        if is_mapping(m) and isinstance(m.get('id'), str)
     }
 
     chain: list[tuple[str, dict[str, Any] | None]] = []

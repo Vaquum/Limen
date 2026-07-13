@@ -11,12 +11,13 @@ from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from sklearn.decomposition import PCA
 from typing_extensions import override
@@ -46,7 +47,7 @@ class TransformEntry:
     '''Feature or indicator transform with optional perturbation metadata.'''
 
     func: Callable[..., Any]
-    params: dict[str, ParamValue] = field(default_factory=dict)
+    params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     group: str | None = None
     include_if: str | None = None
 
@@ -84,8 +85,8 @@ class TargetClassConfig:
     '''Configuration for a class-based target transform.'''
 
     target_class: type
-    fit_params: dict[str, ParamValue] = field(default_factory=dict)
-    transform_params: dict[str, ParamValue] = field(default_factory=dict)
+    fit_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
+    transform_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
 
 
 @dataclass
@@ -94,9 +95,9 @@ class CalibrationConfig:
     '''Stores probability calibration and threshold function references with their params.'''
 
     calibration_func: CalibratorProtocol | None = None
-    calibration_params: dict[str, Any] = field(default_factory=dict)
+    calibration_params: dict[str, Any] = field(default_factory=dict[str, Any])
     threshold_func: ThresholdOptimizerProtocol | None = None
-    threshold_params: dict[str, Any] = field(default_factory=dict)
+    threshold_params: dict[str, Any] = field(default_factory=dict[str, Any])
 
     def resolve(self, round_params: dict[str, Any]) -> 'CalibrationConfig':
 
@@ -191,7 +192,7 @@ class DataSourceConfig:
     '''Declarative configuration for data fetching in manifests.'''
 
     method: Callable[..., Any]
-    params: dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
 class DataSourceResolver:
@@ -266,14 +267,14 @@ class Manifest:
     val_predict_guard: bool = True
     test_predict_guard: bool = True
     bar_formation: PipelineStep | None = None
-    required_bar_columns: list[str] = field(default_factory=list)
-    feature_transforms: list[TransformEntry] = field(default_factory=list)
+    required_bar_columns: list[str] = field(default_factory=list[str])
+    feature_transforms: list[TransformEntry] = field(default_factory=list[TransformEntry])
     target_column: str | None = None
     target_class_config: TargetClassConfig | None = None
 
     architecture_function: Callable[..., dict[str, Any]] | None = None
-    architecture_params: dict[str, ParamValue] = field(default_factory=dict)
-    metrics_params: dict[str, ParamValue] = field(default_factory=dict)
+    architecture_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
+    metrics_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     backtest_config: BacktestConfig | None = None
 
     def _add_transform(self,
@@ -644,14 +645,17 @@ class Manifest:
         if 'split_config' in overrides:
             sc = overrides['split_config']
             _split_len = 3
-            if not (isinstance(sc, tuple) and len(sc) == _split_len
+            if not isinstance(sc, tuple):
+                raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
+            sc = cast(tuple[Any, ...], sc)
+            if not (len(sc) == _split_len
                     and all(isinstance(v, int) and not isinstance(v, bool) for v in sc)):
                 raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
             if any(v < 0 for v in sc):
                 raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
             if sum(sc) == 0:
                 raise ValueError('split_config ratios must not all be zero')
-            new_manifest.split_config = sc
+            new_manifest.split_config = cast(tuple[int, int, int], sc)
             # Ratio override supersedes a previously-pinned date split.
             # Without this, _resolve_split would keep using split_dates and
             # the override would silently no-op (e.g. Trainer.train_sensors
@@ -1245,7 +1249,7 @@ class MLManifest(Manifest):
         lazy = _apply_feature_transforms(self, lazy, round_params)
         data = lazy.collect()
 
-        dropped_features = round_params.get('_dropped_features') or []
+        dropped_features: list[str] = round_params.get('_dropped_features') or []
         if dropped_features:
             data = data.drop([c for c in dropped_features if c in data.columns])
 
@@ -1398,7 +1402,7 @@ def _resolve_params(params: dict[str, Any], round_params: dict[str, Any]) -> dic
         Dict[str, Any]: Resolved parameter dictionary
     '''
 
-    resolved = {}
+    resolved: dict[str, Any] = {}
     for key, value in params.items():
         if isinstance(value, str):
             if value in round_params:
@@ -1516,7 +1520,7 @@ def _check_unexpected_nulls(manifest: 'MLManifest',
     exclude = {'datetime', manifest.target_column}
     feature_cols = [c for c in data.columns if c not in exclude]
     counts = data.select([pl.col(c).null_count().alias(c) for c in feature_cols])
-    null_info = {}
+    null_info: dict[str, list[Any]] = {}
     for col in feature_cols:
         if counts[col][0] > 0:
             null_info[col] = data.filter(pl.col(col).is_null())['datetime'].to_list()
@@ -1771,6 +1775,22 @@ def _apply_scaler(
     return data, all_fitted_params
 
 
+class _PCATransformer(Protocol):
+
+    '''Typed facade over the fitted sklearn PCA surface used for compression.'''
+
+    def fit_transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.floating[Any]]: ...
+
+    def transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.floating[Any]]: ...
+
+
+def _pca_transformer(n_components: int) -> _PCATransformer:
+
+    '''Create a full-SVD sklearn PCA instance behind the typed facade.'''
+
+    return PCA(n_components=n_components, svd_solver='full', whiten=False)
+
+
 def _apply_pca_compression(
         manifest: 'MLManifest',
         split_data: list[pl.DataFrame],
@@ -1824,7 +1844,7 @@ def _apply_pca_compression(
             f"round_params['{config.n_components_param}'] must be no larger than the train row count ({split_data[0].height}), got {k}"
         )
 
-    pca = PCA(n_components=k, svd_solver='full', whiten=False)
+    pca = _pca_transformer(k)
     component_cols = [f'{config.component_prefix}{i}' for i in range(k)]
     train_components = pca.fit_transform(split_data[0].select(feature_cols).to_numpy())
 

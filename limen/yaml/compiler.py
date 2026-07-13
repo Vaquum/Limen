@@ -1,6 +1,7 @@
 import inspect
 from datetime import date
 from typing import Any
+from typing import cast
 
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search.random_strategy import RandomStrategy
@@ -8,6 +9,8 @@ from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.experiment.param_domain import ParamDomain
+from limen.yaml.config import is_list
+from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 from limen.yaml.resolver import resolve
 
@@ -28,7 +31,7 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
 
     '''
 
-    result = {}
+    result: dict[str, Any] = {}
     for k, v in params.items():
         if not isinstance(v, str):
             result[k] = v
@@ -107,11 +110,12 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
 
 def _apply_indicators(manifest: Manifest, m: dict[str, Any]) -> None:
 
-    for item in m.get('indicators') or []:
+    items: list[Any] = m.get('indicators') or []
+    for item in items:
         _ = manifest.add_indicator(
             resolve(item['func']),
             include_if=item.get('include_if'),
-            **_resolve_func_params(dict(item.get('params') or {})),
+            **_resolve_func_params(dict(cast(dict[str, Any], item.get('params') or {}))),
         )
 
 
@@ -136,7 +140,7 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
     cols = m.get('required_columns')
     if cols is not None:
-        if not isinstance(cols, list):
+        if not is_list(cols):
             raise ValueError(f"'required_columns' must be a list, got {type(cols).__name__}")
         _ = manifest.set_required_bar_columns(list(cols))
 
@@ -173,23 +177,24 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
     if psds is not None:
         _ = manifest.set_pre_split_data_selector(
             resolve(psds['func']),
-            **_resolve_func_params(dict(psds.get('params') or {})),
+            **_resolve_func_params(dict(cast(dict[str, Any], psds.get('params') or {}))),
         )
 
     bf = m.get('bar_formation')
     if bf is not None:
         _ = manifest.set_bar_formation(
             resolve(bf['func']),
-            **_resolve_func_params(dict(bf.get('params') or {})),
+            **_resolve_func_params(dict(cast(dict[str, Any], bf.get('params') or {}))),
         )
 
     _apply_indicators(manifest, m)
 
-    for item in m.get('features') or []:
+    items: list[Any] = m.get('features') or []
+    for item in items:
         _ = manifest.add_feature(
             resolve(item['func']),
             include_if=item.get('include_if'),
-            **_resolve_func_params(dict(item.get('params') or {})),
+            **_resolve_func_params(dict(cast(dict[str, Any], item.get('params') or {}))),
         )
 
 
@@ -322,14 +327,15 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
 
     '''
 
-    uel_cfg = yaml_dict.get('uel') or {}
-    sfd_cfg = yaml_dict.get('sfd') or {}
+    uel_cfg: dict[str, Any] = yaml_dict.get('uel') or {}
+    sfd_cfg: dict[str, Any] = yaml_dict.get('sfd') or {}
     strategy_cfg = uel_cfg.get('search_strategy', {})
-    if not isinstance(strategy_cfg, dict):
+    if not is_mapping(strategy_cfg):
         raise ValueError(
             f"'uel.search_strategy' must be a mapping, got {type(strategy_cfg).__name__}"
         )
-    params = {k: list(v) for k, v in (sfd_cfg.get('params') or {}).items()}
+    raw_params: dict[str, Any] = sfd_cfg.get('params') or {}
+    params = {k: list(v) for k, v in raw_params.items()}
     domain = ParamDomain(params)
     strategy_type = strategy_cfg.get('type', 'random')
     seed = strategy_cfg.get('seed')

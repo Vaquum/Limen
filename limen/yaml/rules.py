@@ -5,7 +5,10 @@ from datetime import date
 from itertools import pairwise
 from typing import Any
 from typing import Protocol
+from typing import cast
 
+from limen.yaml.config import is_list
+from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import YAMLError
 from limen.yaml.resolver import is_resolvable
@@ -39,7 +42,8 @@ def _check_callable_path(value: str, path: str, errors: list[YAMLError]) -> None
 
 
 def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
-    return (yaml_dict.get('sfd') or {}).get('manifest') or {}
+    sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+    return sfd.get('manifest') or {}
 
 
 _FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
@@ -77,7 +81,7 @@ def _check_func_block(block: dict[str, Any],
     params = block.get('params')
     if params is None:
         return
-    if not isinstance(params, dict):
+    if not is_mapping(params):
         errors.append(YAMLError(
             message=f"'params' must be a mapping (got {type(params).__name__})",
             path=f'{base_path}.params',
@@ -123,7 +127,7 @@ def get_at(d: dict[str, Any], path: str) -> tuple[bool, Any]:
 
     current: Any = d
     for part in path.split('.'):
-        if not isinstance(current, dict) or part not in current:
+        if not is_mapping(current) or part not in current:
             return False, None
         current = current[part]
     return True, current
@@ -259,7 +263,7 @@ class NoUnknownKeys:
               warnings: list[YAMLError]) -> None:
 
         found, value = get_at(yaml_dict, self._path)
-        if not found or not isinstance(value, dict):
+        if not found or not is_mapping(value):
             return
         for key in value:
             if key not in self._known:
@@ -380,7 +384,7 @@ class DataSource:
             ))
             return
 
-        if not isinstance(src, dict):
+        if not is_mapping(src):
             errors.append(YAMLError(
                 message="'data_source' must be a mapping",
                 path='sfd.manifest.data_source',
@@ -438,12 +442,12 @@ class FuncList:
         found, items = get_at(yaml_dict, self._path)
         if not found or items is None:
             return
-        if not isinstance(items, list):
+        if not is_list(items):
             errors.append(YAMLError(message=f"'{self._path}' must be a list", path=self._path))
             return
 
         for i, item in enumerate(items):
-            if not isinstance(item, dict):
+            if not is_mapping(item):
                 errors.append(YAMLError(
                     message='Each entry must be a mapping with a func key',
                     path=f'{self._path}[{i}]',
@@ -477,7 +481,7 @@ class SingleFuncBlock:
         found, block = get_at(yaml_dict, self._path)
         if not found or block is None:
             return
-        if not isinstance(block, dict):
+        if not is_mapping(block):
             errors.append(YAMLError(message=f"'{self._path}' must be a mapping", path=self._path))
             return
         _check_func_block(block, self._path, errors, warnings)
@@ -496,7 +500,7 @@ class RequiredColumnsSpec:
         cols = manifest.get('required_columns')
         if cols is None:
             return
-        if not isinstance(cols, list):
+        if not is_list(cols):
             errors.append(YAMLError(
                 message=f"'required_columns' must be a list (got {type(cols).__name__})",
                 path='sfd.manifest.required_columns',
@@ -555,16 +559,16 @@ class ConditionsList:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        strategy = ((yaml_dict.get('sfd') or {}).get('manifest') or {}).get('strategy')
-        if not isinstance(strategy, dict):
+        strategy = _get_manifest(yaml_dict).get('strategy')
+        if not is_mapping(strategy):
             return
 
         conditions = strategy.get('conditions')
-        if not isinstance(conditions, list):
+        if not is_list(conditions):
             return
 
         for i, cond in enumerate(conditions):
-            if not isinstance(cond, dict):
+            if not is_mapping(cond):
                 errors.append(YAMLError(
                     message='Each condition must be a mapping',
                     path=f'sfd.manifest.strategy.conditions[{i}]',
@@ -626,7 +630,7 @@ class SplitSpec:
             return
 
         sd = manifest['split_dates']
-        if not isinstance(sd, dict):
+        if not is_mapping(sd):
             errors.append(YAMLError(
                 message="'split_dates' must be a mapping",
                 path='sfd.manifest.split_dates',
@@ -684,7 +688,7 @@ class ScalerSpec:
         scaler = manifest.get('scaler')
         if scaler is None:
             return
-        if not isinstance(scaler, dict):
+        if not is_mapping(scaler):
             errors.append(YAMLError(
                 message=f"'scaler' must be a mapping (got {type(scaler).__name__})",
                 path='sfd.manifest.scaler',
@@ -722,7 +726,8 @@ class SfdParams:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        params = (yaml_dict.get('sfd') or {}).get('params')
+        sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+        params = sfd.get('params')
         if not isinstance(params, dict):
             errors.append(YAMLError(
                 message="'sfd.params' must be a mapping",
@@ -739,7 +744,7 @@ class SfdParams:
             ))
             return
 
-        for key, values in params.items():
+        for key, values in cast(dict[Any, Any], params).items():
             if not isinstance(key, str):
                 errors.append(YAMLError(
                     message=f"Parameter name '{key}' must be a string",
@@ -753,7 +758,7 @@ class SfdParams:
                     path=f'sfd.params.{key}',
                     suggestion="The '_' prefix is reserved for framework metadata. Rename the parameter.",
                 ))
-            if not isinstance(values, list) or len(values) == 0:
+            if not is_list(values) or len(values) == 0:
                 errors.append(YAMLError(
                     message=f"Parameter '{key}' must be a non-empty list of values",
                     path=f'sfd.params.{key}',
@@ -774,7 +779,7 @@ class CalibrationPresence:
         cal = manifest.get('calibration')
         if cal is None:
             return
-        if not isinstance(cal, dict):
+        if not is_mapping(cal):
             errors.append(YAMLError(
                 message=f"'calibration' must be a mapping (got {type(cal).__name__})",
                 path='sfd.manifest.calibration',
@@ -800,19 +805,19 @@ class CalibrationCrossRef:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        sfd = yaml_dict.get('sfd') or {}
-        manifest = (sfd.get('manifest') or {})
+        sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+        manifest: dict[str, Any] = sfd.get('manifest') or {}
         cal = manifest.get('calibration')
-        if not isinstance(cal, dict):
+        if not is_mapping(cal):
             return
 
-        sfd_params = set(sfd.get('params') or {})
+        sfd_params: set[str] = set(sfd.get('params') or {})
 
         for section_name in ('probability_calibration', 'threshold_function'):
             section = cal.get(section_name)
             if section is None:
                 continue
-            if not isinstance(section, dict):
+            if not is_mapping(section):
                 errors.append(YAMLError(
                     message=f"'calibration.{section_name}' must be a mapping (got {type(section).__name__})",
                     path=f'sfd.manifest.calibration.{section_name}',
@@ -836,7 +841,7 @@ class CalibrationCrossRef:
             params = section.get('params')
             if params is None:
                 continue
-            if not isinstance(params, dict):
+            if not is_mapping(params):
                 errors.append(YAMLError(
                     message=f"'calibration.{section_name}.params' must be a mapping (got {type(params).__name__})",
                     path=f'sfd.manifest.calibration.{section_name}.params',
@@ -877,9 +882,10 @@ class ParamCoverage:
               errors: list[YAMLError],
               warnings: list[YAMLError]) -> None:
 
-        sfd = yaml_dict.get('sfd') or {}
-        sfd_params = set((sfd.get('params') or {}).keys())
-        manifest = sfd.get('manifest') or {}
+        sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+        sfd_param_values: dict[str, Any] = sfd.get('params') or {}
+        sfd_params = set(sfd_param_values.keys())
+        manifest: dict[str, Any] = sfd.get('manifest') or {}
         manifest_refs = self._extract_param_refs(manifest)
 
         if not sfd_params and not manifest_refs:
@@ -918,12 +924,13 @@ class ParamCoverage:
             meta_params.add(pca.get('n_components_param') or 'pca_k')
 
         include_if_keys: set[str] = set()
-        for item in (manifest.get('indicators') or []) + (manifest.get('features') or []):
-            if isinstance(item, dict) and isinstance(item.get('include_if'), str):
+        indicator_items: list[Any] = manifest.get('indicators') or []
+        feature_items: list[Any] = manifest.get('features') or []
+        for item in indicator_items + feature_items:
+            if is_mapping(item) and isinstance(item.get('include_if'), str):
                 include_if_keys.add(item['include_if'])
         meta_params.update(include_if_keys)
 
-        sfd_param_values = sfd.get('params') or {}
         for key in sorted(include_if_keys):
             if key not in sfd_params:
                 errors.append(YAMLError(
@@ -932,7 +939,7 @@ class ParamCoverage:
                     suggestion=f"Add '{key}' to sfd.params",
                 ))
             else:
-                values = sfd_param_values.get(key) or []
+                values: list[Any] = sfd_param_values.get(key) or []
                 if not all(isinstance(v, bool) for v in values):
                     errors.append(YAMLError(
                         message=f"'include_if: {key}' — sfd.params['{key}'] must contain only boolean values (true/false)",
@@ -971,10 +978,10 @@ class ParamCoverage:
         if isinstance(obj, str):
             for match in _PARAM_REF_RE.finditer(obj):
                 refs.add(match.group(1))
-        elif isinstance(obj, dict):
+        elif is_mapping(obj):
             for v in obj.values():
                 ParamCoverage._walk_refs(v, refs)
-        elif isinstance(obj, list):
+        elif is_list(obj):
             for item in obj:
                 ParamCoverage._walk_refs(item, refs)
 
@@ -1018,7 +1025,7 @@ class ParamKeyFields:
               _warnings: list[YAMLError]) -> None:
 
         found, block = get_at(yaml_dict, self._path)
-        if not found or not isinstance(block, dict):
+        if not found or not is_mapping(block):
             return
         for field_name in self._fields:
             if field_name not in block:
@@ -1041,13 +1048,13 @@ class BacktestCostSpec:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        sfd = yaml_dict.get('sfd') or {}
-        manifest = sfd.get('manifest') or {}
+        sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+        manifest: dict[str, Any] = sfd.get('manifest') or {}
         backtest = manifest.get('backtest')
-        if not isinstance(backtest, dict):
+        if not is_mapping(backtest):
             return
 
-        sfd_params = set(sfd.get('params') or {})
+        sfd_params: set[str] = set(sfd.get('params') or {})
 
         for key in ('fee_bps', 'slip_bps', 'notional_rate'):
             if key not in backtest:
@@ -1114,7 +1121,7 @@ class UelSpec:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        uel = yaml_dict.get('uel') or {}
+        uel: dict[str, Any] = yaml_dict.get('uel') or {}
         if 'n_permutations' in uel:
             value = uel['n_permutations']
             if not isinstance(value, int) or isinstance(value, bool):
@@ -1128,8 +1135,9 @@ class UelSpec:
                     path='uel.n_permutations',
                 ))
             else:
-                params = (yaml_dict.get('sfd') or {}).get('params') or {}
-                if isinstance(params, dict) and params and all(isinstance(v, list) for v in params.values()):
+                sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+                params = sfd.get('params')
+                if is_mapping(params) and params and all(isinstance(v, list) for v in params.values()):
                     total = math.prod(len(v) for v in params.values())
                     if total > 0 and value > total:
                         errors.append(YAMLError(

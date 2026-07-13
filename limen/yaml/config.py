@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import sys
+from io import StringIO
 from pathlib import Path
 from typing import Any
+from typing import Protocol
+from typing import TypeGuard
+
+from ruamel.yaml import YAML
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -12,6 +17,69 @@ else:
 
 _LIMEN_TOML_NAME = 'limen.toml'
 STORE_RELATIVE = Path('manifests') / 'committed'
+
+
+class RoundTripYAML(Protocol):
+
+    '''Typed facade over a ruamel round-trip YAML instance, mirroring its declared load/dump contract.'''
+
+    def load(self, stream: str) -> Any: ...
+
+    def dump(self, data: dict[str, Any], stream: StringIO) -> None: ...
+
+
+def round_trip_yaml(preserve_quotes: bool = False, width: int | None = None) -> RoundTripYAML:
+
+    '''
+    Create a ruamel round-trip YAML instance behind the typed facade.
+
+    Args:
+        preserve_quotes (bool): Preserve quoting styles on round-trip when True
+        width (int | None): Dump line width, or None for the ruamel default
+
+    Returns:
+        RoundTripYAML: Configured round-trip YAML instance
+
+    '''
+
+    yaml = YAML()
+    if preserve_quotes:
+        yaml.preserve_quotes = True
+    if width is not None:
+        yaml.width = width
+    return yaml
+
+
+def is_mapping(value: Any) -> TypeGuard[dict[str, Any]]:
+
+    '''
+    Check whether a parsed YAML value is a mapping.
+
+    Args:
+        value (Any): Candidate value from a parsed YAML document
+
+    Returns:
+        TypeGuard[dict[str, Any]]: True if value is a dict
+
+    '''
+
+    return isinstance(value, dict)
+
+
+def is_list(value: Any) -> TypeGuard[list[Any]]:
+
+    '''
+    Check whether a parsed YAML value is a list.
+
+    Args:
+        value (Any): Candidate value from a parsed YAML document
+
+    Returns:
+        TypeGuard[list[Any]]: True if value is a list
+
+    '''
+
+    return isinstance(value, list)
 
 
 def find_project_root(start: Path) -> Path | None:

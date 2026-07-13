@@ -76,7 +76,7 @@ class GridStrategy(SearchStrategy):
 
         '''Convert flat index to parameter combination via modular arithmetic.'''
 
-        combo = {}
+        combo: dict[str, Any] = {}
         remaining = index
         for i, key in enumerate(self._keys):
             combo[key] = self._values[i][remaining % self._sizes[i]]

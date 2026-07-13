@@ -6,6 +6,7 @@ from datetime import timezone
 from pathlib import Path
 from collections.abc import Callable
 from typing import Any
+from typing import cast
 
 from limen.experiment.msq import MSQ
 from limen.experiment.reducer.filter_types import FILTER_BUILDERS
@@ -42,6 +43,7 @@ def _apply_set_filter(msq: MSQ, intervention: dict[str, Any]) -> None:
         raise ValueError(
             f"FeedbackController filter_params must be a dict, got {type(filter_params).__name__}"
         )
+    filter_params = cast(dict[str, Any], filter_params)
 
     try:
         condition = FILTER_BUILDERS[filter_type](filter_params)
@@ -291,6 +293,7 @@ class FeedbackController:
 
         if not isinstance(interventions, list):
             raise ValueError('FeedbackController Intervention file must contain a JSON array')
+        interventions = cast(list[Any], interventions)
 
         for item in interventions:
             if 'source' not in item:
@@ -312,7 +315,7 @@ class FeedbackController:
 
         '''
 
-        dispatch = {
+        dispatch: dict[str, Callable[[dict[str, Any]], Any]] = {
             'remove_is': lambda i: msq.remove_is(i['param'], i['value']),
             'remove_ge': lambda i: msq.remove_ge(i['param'], i['threshold']),
             'remove_le': lambda i: msq.remove_le(i['param'], i['threshold']),

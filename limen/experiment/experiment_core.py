@@ -83,6 +83,8 @@ class UniversalExperimentLoop:
         self._sfd_module_name = getattr(sfd, '__name__', None)
         self.params = sfd.params()
         self.manifest = None
+        self.prep: Callable[..., dict[str, Any]] | None = None
+        self.model: Callable[..., dict[str, Any]] | None = None
 
         if hasattr(sfd, 'manifest'):
             manifest = sfd.manifest()
@@ -102,8 +104,16 @@ class UniversalExperimentLoop:
                 self.data = data
 
             if getattr(self.manifest, 'architecture_function', None) is not None:
-                self.prep = lambda data, round_params=None: manifest.prepare_data(data, round_params or {})
-                self.model = lambda data, round_params: manifest.run_model(data, round_params or {})
+                def _manifest_prep(data: Any, round_params: dict[str, Any] | None = None) -> dict[str, Any]:
+                    '''Prepare data through the manifest pipeline.'''
+                    return manifest.prepare_data(data, round_params or {})
+
+                def _manifest_model(data: Any, round_params: dict[str, Any] | None) -> dict[str, Any]:
+                    '''Run the manifest reference architecture.'''
+                    return manifest.run_model(data, round_params or {})
+
+                self.prep = _manifest_prep
+                self.model = _manifest_model
             else:
                 raise ValueError(
                     'UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.'
@@ -115,8 +125,8 @@ class UniversalExperimentLoop:
             self.prep = getattr(sfd, 'prep', None)
             self.model = getattr(sfd, 'model', None)
 
-        self.extras = []
-        self.models = []
+        self.extras: list[Any] = []
+        self.models: list[Any] = []
         self._shutdown_requested: bool = False
         self._pause_requested: bool = False
         self._search_strategy = search_strategy

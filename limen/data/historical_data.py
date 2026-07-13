@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from typing import Final
+from typing import Protocol
 from urllib.parse import urlparse
 from uuid import uuid4
 import logging
@@ -165,6 +166,85 @@ def _slice_arrow_to_date_range(
     )
 
 
+class _ArrowBuffer(Protocol):
+
+    '''Typed facade over the pyarrow Buffer surface used for zero-copy checks.'''
+
+    @property
+    def address(self) -> int: ...
+
+    @property
+    def size(self) -> int: ...
+
+
+class _ArrowMappedFile(Protocol):
+
+    '''Typed facade over the pyarrow MemoryMappedFile surface used for zero-copy checks.'''
+
+    def __enter__(self) -> _ArrowMappedFile: ...
+
+    def __exit__(self, *exc_info: object) -> None: ...
+
+    def seek(self, position: int) -> int: ...
+
+    def size(self) -> int: ...
+
+    def read_buffer(self, nbytes: int) -> _ArrowBuffer: ...
+
+
+class _ArrowColumn(Protocol):
+
+    '''Typed facade over the pyarrow Array surface used for zero-copy checks.'''
+
+    def buffers(self) -> list[_ArrowBuffer | None]: ...
+
+
+class _ArrowBatch(Protocol):
+
+    '''Typed facade over the pyarrow RecordBatch surface used for zero-copy checks.'''
+
+    @property
+    def columns(self) -> list[_ArrowColumn]: ...
+
+
+class _ArrowFileReader(Protocol):
+
+    '''Typed facade over the pyarrow RecordBatchFileReader surface used for zero-copy checks.'''
+
+    @property
+    def num_record_batches(self) -> int: ...
+
+    def get_batch(self, index: int) -> _ArrowBatch: ...
+
+
+class _ArrowModule(Protocol):
+
+    '''Typed facade over the pyarrow module surface used for zero-copy checks.'''
+
+    def memory_map(self, path: str, mode: str) -> _ArrowMappedFile: ...
+
+
+class _ArrowIpcModule(Protocol):
+
+    '''Typed facade over the pyarrow.ipc module surface used for zero-copy checks.'''
+
+    def open_file(self, source: _ArrowMappedFile) -> _ArrowFileReader: ...
+
+
+def _arrow() -> _ArrowModule:
+
+    '''Return the pyarrow module behind its typed facade.'''
+
+    return pa
+
+
+def _arrow_ipc() -> _ArrowIpcModule:
+
+    '''Return the pyarrow.ipc module behind its typed facade.'''
+
+    return pa_ipc
+
+
 def _validate_arrow_zero_copy(file_path: str) -> None:
     '''Raise unless `file_path` is a single-record-batch, uncompressed Arrow IPC
     file that can actually be served zero-copy.
@@ -178,8 +258,8 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
 
     # The context manager releases the file descriptor / mmap handle even on the
     # raise paths (pyarrow's RecordBatchFileReader has no public close()).
-    with pa.memory_map(file_path, 'r') as mapped:
-        reader = pa_ipc.open_file(mapped)
+    with _arrow().memory_map(file_path, 'r') as mapped:
+        reader = _arrow_ipc().open_file(mapped)
         if reader.num_record_batches != 1:
             raise ValueError(
                 f"HistoricalData {file_path} is not a single Arrow record batch (num_record_batches={reader.num_record_batches}); it cannot be served zero-copy."
@@ -187,7 +267,7 @@ def _validate_arrow_zero_copy(file_path: str) -> None:
         batch = reader.get_batch(0)
         # `open_file`/`get_batch` move the file position; rewind so read_buffer
         # spans the whole mapping and yields the true mmap address range.
-        mapped.seek(0)
+        _ = mapped.seek(0)
         whole = mapped.read_buffer(mapped.size())
         low = whole.address
         high = low + whole.size

@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
@@ -182,7 +183,7 @@ class CheckpointManager:
                 f"Corrupt checkpoint in '{checkpoint_dir}': expected object, got {type(data).__name__}."
             )
 
-        return data
+        return cast(dict[str, Any], data)
 
 
     def validate(self,
@@ -236,6 +237,7 @@ class CheckpointManager:
             raise ValueError(
                 f"Invalid checkpoint format in '{checkpoint_dir}': top-level JSON must be an object, got {type(data).__name__}."
             )
+        data = cast(dict[str, Any], data)
 
         if 'metadata' not in data:
             raise ValueError(
@@ -248,6 +250,7 @@ class CheckpointManager:
             raise ValueError(
                 f"Invalid checkpoint format in '{checkpoint_dir}': 'metadata' must be an object."
             )
+        metadata = cast(dict[str, Any], metadata)
 
         for key in ('experiment_round', 'target_permutations', 'content_hash', 'strategy_type'):
             if key not in metadata:
