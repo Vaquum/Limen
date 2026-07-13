@@ -53,7 +53,7 @@ def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integ
 
     starts_per_duration: list[npt.NDArray[np.intp]] = []
     heights_per_duration: list[npt.NDArray[np.float64]] = []
-    durations_per_duration: list[npt.NDArray[Any]] = []
+    durations_per_duration: list[npt.NDArray[np.integer[Any]]] = []
 
     for duration in range(MIN_DURATION_BARS, max_duration_hours):
 
