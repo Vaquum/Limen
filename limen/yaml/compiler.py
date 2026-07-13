@@ -329,7 +329,7 @@ def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:
 
     '''
 
-    uel_cfg: Any = yaml_dict.get('uel') or {}
+    uel_cfg: Any = yaml_dict.get('uel', {})
     if not is_mapping(uel_cfg):
         raise ValueError(f"'uel' must be a mapping, got {type(uel_cfg).__name__}")
     return uel_cfg
@@ -389,7 +389,9 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
     '''
 
     uel_cfg = _uel_config(yaml_dict)
-    specs: Any = uel_cfg.get('pruning_strategies') or []
+    if 'pruning_strategies' not in uel_cfg:
+        return []
+    specs: Any = uel_cfg['pruning_strategies']
     if not is_list(specs):
         raise ValueError(
             f"'uel.pruning_strategies' must be a list, got {type(specs).__name__}"
@@ -406,7 +408,7 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
             raise ValueError(
                 f"Unknown pruning strategy type: '{reducer_type}'. Expected one of: {valid}."
             )
-        params: Any = spec.get('params') or {}
+        params: Any = spec.get('params', {})
         if not is_mapping(params):
             raise ValueError(
                 f"'uel.pruning_strategies' params must be a mapping, got {type(params).__name__}"
