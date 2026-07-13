@@ -687,6 +687,26 @@ def test_long_flat_strategy_rejects_negative_lag() -> None:
         )
 
 
+def test_long_flat_strategy_rejects_non_1d_inputs() -> None:
+    with pytest.raises(ValueError, match='equal-length 1D arrays'):
+        long_flat_strategy(
+            np.array([[1, 0], [0, 1]]),
+            np.array([100.0, 100.0]),
+            np.array([100.0, 100.0]),
+            np.array([0.0, 0.0]),
+        )
+
+
+def test_long_flat_strategy_rejects_mismatched_lengths() -> None:
+    with pytest.raises(ValueError, match='equal-length 1D arrays'):
+        long_flat_strategy(
+            np.array([1, 0, 1]),
+            np.array([100.0, 100.0]),
+            np.array([100.0, 100.0]),
+            np.array([0.0, 0.0]),
+        )
+
+
 def test_backtest_snapshot_notional_rate_scales_returns_not_structure() -> None:
     df = pd.DataFrame({
         'predictions': [1, 1, 0, 0],
