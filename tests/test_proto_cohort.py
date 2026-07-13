@@ -486,6 +486,25 @@ def test_builtin_selector_coerces_object_ids_to_strings():
     assert select_top_n({'results': results}, column='score', n=1) == ['external-1']
 
 
+def test_builtin_selectors_reject_numpy_nan_ids():
+
+    results = pl.DataFrame(
+        {'id': [np.float32(np.nan)], 'm1': [1.0], 'm2': [2.0]},
+        schema_overrides={'id': pl.Object},
+    )
+
+    for run in (
+        lambda: select_top_n({'results': results}, column='m1', n=1),
+        lambda: select_backtest_pareto({'results': results}, metric_cols=['m1', 'm2']),
+        lambda: select_diverse_metrics({'results': results}, metric_cols=['m1', 'm2']),
+    ):
+        try:
+            run()
+            assert False, 'Expected ValueError'
+        except ValueError as e:
+            assert 'missing permutation id' in str(e)
+
+
 def test_backtest_pareto_selector_filters_dominated_and_inactive_rows():
 
     with TemporaryDirectory() as tmpdir:
