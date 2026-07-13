@@ -1,10 +1,28 @@
 import numbers
 from typing import Any
+from typing import Protocol
 
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-from sklearn.metrics import mean_absolute_error, r2_score
+import sklearn.metrics
+
+
+class _SkMetricsModule(Protocol):
+
+    '''Typed facade over the sklearn.metrics surface used for confidence filtering.'''
+
+    def mean_absolute_error(self, y_true: Any, y_pred: Any) -> float: ...
+
+    def r2_score(self, y_true: Any, y_pred: Any) -> float: ...
+
+
+def _sk_metrics() -> _SkMetricsModule:
+
+    '''Return sklearn.metrics behind the typed facade.'''
+
+    return sklearn.metrics
+
 
 
 _REQUIRED_DATA_FIELDS = ('x_val', 'y_val', 'x_test', 'y_test', 'dt_test')
@@ -96,10 +114,10 @@ def calibrate_confidence_threshold(models: list[Any],
     y_val = _as_1d_finite_numeric('y_val', y_val)
     val_preds = _collect_model_predictions(models, x_val, len(y_val))
     val_pred_mean = np.mean(val_preds, axis=0)
-    val_pred_std = np.std(val_preds, axis=0)
+    val_pred_std: npt.NDArray[np.float64] = np.std(val_preds, axis=0)
 
     # Set threshold based on validation data distribution
-    confidence_threshold = np.percentile(val_pred_std, target_confidence * 100)
+    confidence_threshold: np.floating[Any] = np.percentile(val_pred_std, target_confidence * 100)
 
     # Analyze calibration quality
     confident_mask = val_pred_std <= confidence_threshold
@@ -107,21 +125,21 @@ def calibrate_confidence_threshold(models: list[Any],
 
     # Calculate performance on each group
     if np.sum(confident_mask) > 0:
-        confident_mae = mean_absolute_error(y_val[confident_mask], val_pred_mean[confident_mask])
-        confident_r2 = r2_score(y_val[confident_mask], val_pred_mean[confident_mask])
+        confident_mae = _sk_metrics().mean_absolute_error(y_val[confident_mask], val_pred_mean[confident_mask])
+        confident_r2 = _sk_metrics().r2_score(y_val[confident_mask], val_pred_mean[confident_mask])
     else:
         confident_mae, confident_r2 = np.nan, np.nan
 
     if np.sum(uncertain_mask) > 0:
-        uncertain_mae = mean_absolute_error(y_val[uncertain_mask], val_pred_mean[uncertain_mask])
-        uncertain_r2 = r2_score(y_val[uncertain_mask], val_pred_mean[uncertain_mask])
+        uncertain_mae = _sk_metrics().mean_absolute_error(y_val[uncertain_mask], val_pred_mean[uncertain_mask])
+        uncertain_r2 = _sk_metrics().r2_score(y_val[uncertain_mask], val_pred_mean[uncertain_mask])
     else:
         uncertain_mae, uncertain_r2 = np.nan, np.nan
 
-    overall_mae = mean_absolute_error(y_val, val_pred_mean)
-    overall_r2 = r2_score(y_val, val_pred_mean)
+    overall_mae = _sk_metrics().mean_absolute_error(y_val, val_pred_mean)
+    overall_r2 = _sk_metrics().r2_score(y_val, val_pred_mean)
 
-    calibration_stats = {
+    calibration_stats: dict[str, Any] = {
         'threshold': confidence_threshold,
         'confident_pct': np.mean(confident_mask) * 100,
         'val_overall_mae': overall_mae,
@@ -170,18 +188,18 @@ def apply_confidence_filtering(models: list[Any],
     uncertain_mask = ~confident_mask
 
     # Calculate test performance
-    overall_mae = mean_absolute_error(y_test, test_pred_mean)
-    overall_r2 = r2_score(y_test, test_pred_mean)
+    overall_mae = _sk_metrics().mean_absolute_error(y_test, test_pred_mean)
+    overall_r2 = _sk_metrics().r2_score(y_test, test_pred_mean)
 
     if np.sum(confident_mask) > 0:
-        confident_mae = mean_absolute_error(y_test[confident_mask], test_pred_mean[confident_mask])
-        confident_r2 = r2_score(y_test[confident_mask], test_pred_mean[confident_mask])
+        confident_mae = _sk_metrics().mean_absolute_error(y_test[confident_mask], test_pred_mean[confident_mask])
+        confident_r2 = _sk_metrics().r2_score(y_test[confident_mask], test_pred_mean[confident_mask])
     else:
         confident_mae, confident_r2 = np.nan, np.nan
 
     if np.sum(uncertain_mask) > 0:
-        uncertain_mae = mean_absolute_error(y_test[uncertain_mask], test_pred_mean[uncertain_mask])
-        uncertain_r2 = r2_score(y_test[uncertain_mask], test_pred_mean[uncertain_mask])
+        uncertain_mae = _sk_metrics().mean_absolute_error(y_test[uncertain_mask], test_pred_mean[uncertain_mask])
+        uncertain_r2 = _sk_metrics().r2_score(y_test[uncertain_mask], test_pred_mean[uncertain_mask])
     else:
         uncertain_mae, uncertain_r2 = np.nan, np.nan
 

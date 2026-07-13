@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+from typing import cast
 
 
 _VALID_OPERATORS = ('and', 'or', 'not')
@@ -55,11 +56,13 @@ def _validate_compound(cond: dict[str, Any], known_ids: set[str]) -> None:
         raise ValueError(
             f'Condition {cond["id"]!r} has unknown operator {operator!r} — must be one of {_VALID_OPERATORS}'
         )
-    operands = cond.get('operands', [])
+    default_operands: list[Any] = []
+    operands = cond.get('operands', default_operands)
     if not isinstance(operands, (list, tuple)):
         raise ValueError(
             f'Compound condition {cond["id"]!r} operands must be a list of id strings, got {type(operands).__name__!r}'
         )
+    operands = cast('list[Any] | tuple[Any, ...]', operands)
     if not operands:
         raise ValueError(f'Compound condition {cond["id"]!r} has no operands')
     if operator == 'not' and len(operands) != 1:

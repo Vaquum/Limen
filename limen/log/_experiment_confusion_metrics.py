@@ -15,7 +15,7 @@ def experiment_confusion_metrics(self: Any, x: str) -> pd.DataFrame:
         pd.DataFrame: One-row-per-round table with confusion and long-only summary columns (see permutation_confusion_metrics)
     '''
 
-    all_rows = []
+    all_rows: list[pd.DataFrame] = []
 
     for i in range(len(self.round_params)):
 

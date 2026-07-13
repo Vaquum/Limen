@@ -22,7 +22,7 @@ def active_lines(data: pl.DataFrame,
     if n_rows == 0:
         return data.with_columns([pl.lit(0).alias('active_lines')])
 
-    events = []
+    events: list[tuple[float, int]] = []
     for line in long_lines:
         events.append((line['start_idx'], 1))
         events.append((line['end_idx'] + 1, -1))

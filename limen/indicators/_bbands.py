@@ -64,7 +64,7 @@ def stddev_from_var(
         period_total2 += temp * temp
         i += 1
 
-    out = []
+    out: list[float] = []
     while i <= end_idx:
         temp = values[i]
         i += 1

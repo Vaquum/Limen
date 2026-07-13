@@ -161,8 +161,8 @@ def experiment_parameter_correlation(self: Any,
 
     res = pd.concat(blocks, ignore_index=True)
 
-    order = []
-    seen = set()
+    order: list[int] = []
+    seen: set[int] = set()
     for pct in realized_pcts:
         if pct not in seen:
             order.append(pct)

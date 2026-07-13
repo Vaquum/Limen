@@ -271,7 +271,7 @@ class Sensor:
         if manifest.split_dates is None or 'datetime' not in data.columns:
             return [False] * len(data)
         train_start, _, val_start, val_end, test_start, test_end = manifest.split_dates
-        result = []
+        result: list[bool] = []
         for dt in data['datetime'].to_list():
             if dt is None:
                 result.append(False)

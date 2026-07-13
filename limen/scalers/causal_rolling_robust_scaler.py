@@ -99,7 +99,7 @@ class CausalRollingRobustScaler:
         '''
 
         q_low, q_high = self.quantile_range
-        exprs = []
+        exprs: list[pl.Expr] = []
 
         for col in df.columns:
             if col not in self.medians:

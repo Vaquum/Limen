@@ -95,7 +95,7 @@ def fractional_diff(data: pl.DataFrame,
 
     weights = _get_weights_ffd(d, threshold)
 
-    new_cols = []
+    new_cols: list[pl.Expr] = []
     for col in cols:
         if col not in schema_names:
             logger.warning('Column %s not found, skipping fractional diff', col)

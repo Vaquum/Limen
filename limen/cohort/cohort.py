@@ -15,6 +15,7 @@ from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
 from limen.inference.sensor import BarPrediction
 from limen.inference.sensor import PredictionReason
+from limen.yaml.config import is_mapping
 from limen.yaml.store import SHA256_PREFIX
 
 
@@ -136,10 +137,11 @@ class Cohort:
                 round_entries,
                 available_ids,
             )
+            resolved_selector_params = cast(dict[str, Any], selector_params or {})
             selected_ids = self._select_permutation_ids(
                 context,
                 selector,
-                selector_params or {},
+                resolved_selector_params,
             )
         else:
             if not permutation_ids:
@@ -449,7 +451,7 @@ class Cohort:
         if not selected:
             raise ValueError('Cohort selector returned no permutation ids.')
 
-        selected_ids: list[Any] = selected
+        selected_ids = cast(list[Any], selected)
         normalized = [cls._normalize_permutation_id(pid) for pid in selected_ids]
         if len(normalized) != len(set(normalized)):
             raise ValueError('Cohort selector returned duplicate permutation ids.')
@@ -566,15 +568,15 @@ class Cohort:
     def _extract_yaml_reference_architecture(metadata: dict[str, Any]) -> str | None:
 
         yaml_reference = metadata.get('yaml_reference')
-        if not isinstance(yaml_reference, dict):
+        if not is_mapping(yaml_reference):
             return None
 
         sfd_config = yaml_reference.get('sfd')
-        if not isinstance(sfd_config, dict):
+        if not is_mapping(sfd_config):
             return None
 
         manifest_config = sfd_config.get('manifest')
-        if not isinstance(manifest_config, dict):
+        if not is_mapping(manifest_config):
             return None
 
         reference_architecture = manifest_config.get('reference_architecture')

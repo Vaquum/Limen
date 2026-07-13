@@ -22,7 +22,7 @@ def active_quantile_count(data: pl.DataFrame,
     if n_rows == 0:
         return data.with_columns([pl.lit(0).alias('active_quantile_count')])
 
-    events = []
+    events: list[tuple[float, int]] = []
     for line in long_lines_q:
         events.append((line['start_idx'], 1))
         events.append((line['end_idx'] + 1, -1))

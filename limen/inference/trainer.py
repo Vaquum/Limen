@@ -8,6 +8,7 @@ import polars as pl
 from limen.inference.errors import ReconstructionError
 from limen.inference.sensor import Sensor
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ class Trainer:
             raise ValueError(
                 'metadata.json missing required key: yaml_reference. Trainer requires a YAML-based experiment.'
             )
-        if not isinstance(yaml_reference, dict):
+        if not is_mapping(yaml_reference):
             raise ValueError(
                 'metadata.json key \'yaml_reference\' must be an object'
             )
@@ -134,7 +135,7 @@ class Trainer:
                     raise ValueError(
                         f"Malformed JSON in round_data.jsonl line {line_number}"
                     ) from exc
-                if not isinstance(entry, dict):
+                if not is_mapping(entry):
                     raise ValueError(
                         f"Invalid round_data.jsonl line {line_number}: expected object"
                     )

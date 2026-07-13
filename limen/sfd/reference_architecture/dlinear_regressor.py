@@ -106,14 +106,14 @@ class DLinearRegressor(ReferenceModel):
         y = np.asarray(data['y_train'], dtype=np.float64)
 
         z = self._decompose(x, kernel_size)
-        self.z_mean = z.mean(axis=0)
-        self.y_mean = y.mean()
+        self.z_mean: npt.NDArray[np.float64] = z.mean(axis=0)
+        self.y_mean: np.float64 = y.mean()
 
         u, s, vt = np.linalg.svd(z - self.z_mean, full_matrices=False)
         d = np.zeros_like(s)
         kept = s > SINGULAR_VALUE_FLOOR
         d[kept] = s[kept] / (s[kept] * s[kept] + alpha)
-        self.w = vt.T @ (d * (u.T @ (y - self.y_mean)))
+        self.w: npt.NDArray[np.float64] = vt.T @ (d * (u.T @ (y - self.y_mean)))
         self.model = self.w
 
         return self

@@ -1,7 +1,8 @@
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
+import numpy.typing as npt
 from sklearn.linear_model import LogisticRegression
 from typing_extensions import override
 
@@ -11,6 +12,24 @@ from limen.sfd.reference_architecture.base import ReferenceModel
 
 if TYPE_CHECKING:
     from limen.experiment.manifest_core import CalibrationConfig
+
+
+class _BinaryClassifier(Protocol):
+
+    '''Typed facade over the fitted sklearn LogisticRegression surface used here.'''
+
+    def fit(self, X: Any, y: Any) -> Any: ...
+
+    def predict(self, X: Any) -> npt.NDArray[Any]: ...
+
+    def predict_proba(self, X: Any) -> npt.NDArray[np.floating[Any]]: ...
+
+
+def _logistic_regression(params: dict[str, Any]) -> _BinaryClassifier:
+
+    '''Create a sklearn LogisticRegression behind the typed facade.'''
+
+    return LogisticRegression(**params)
 
 
 def _resolve_class_weight(class_weight: Any) -> Any:
@@ -75,8 +94,8 @@ class LogRegBinary(ReferenceModel):
             params['class_weight'] = _resolve_class_weight(params['class_weight'])
 
         params = _drop_removed_sklearn_params(params)
-        self.model = LogisticRegression(**params)
-        self.model.fit(data['x_train'], data['y_train'])
+        self.model = _logistic_regression(params)
+        _ = self.model.fit(data['x_train'], data['y_train'])
         self._fitted_calibrator = None
         self._calibration_threshold = 0.5
         self._val_score = None
