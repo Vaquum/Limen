@@ -26,7 +26,7 @@ def _breakout_lags(data: pl.DataFrame,
 
     df = lag_range(df, short_col, horizon, horizon + lookback - 1)
 
-    rename_dict = {}
+    rename_dict: dict[str, str] = {}
     for lag in range(horizon, horizon + lookback):
         rename_dict[f"{long_col}_lag_{lag}"] = f"long_t-{lag}"
         rename_dict[f"{short_col}_lag_{lag}"] = f"short_t-{lag}"

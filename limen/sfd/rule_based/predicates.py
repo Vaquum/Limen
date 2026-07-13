@@ -1,9 +1,10 @@
+from collections.abc import Callable
 from typing import Any
 
 import polars as pl
 
 
-_OPS = {
+_OPS: dict[str, Callable[[pl.Expr, Any], pl.Expr]] = {
     '<':  lambda a, b: a < b,
     '<=': lambda a, b: a <= b,
     '>':  lambda a, b: a > b,

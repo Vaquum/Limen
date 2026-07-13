@@ -60,7 +60,7 @@ class RobustScaler:
             pl.DataFrame: Transformed data
         '''
 
-        exprs = []
+        exprs: list[pl.Expr] = []
         for col in df.columns:
             if col in self.medians:
                 exprs.append(
@@ -86,7 +86,7 @@ def inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame:
         pl.DataFrame: Data in original scale
     '''
 
-    exprs = []
+    exprs: list[pl.Expr] = []
     for col in df.columns:
         if col in scaler.medians:
             exprs.append(

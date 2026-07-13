@@ -1,8 +1,27 @@
 from dataclasses import dataclass
+from typing import Any
+from typing import Protocol
 from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
+
+
+class _StattoolsModule(Protocol):
+
+    '''Typed facade over the statsmodels stattools surface used for the ADF test.'''
+
+    def adfuller(self, x: npt.NDArray[Any], *, autolag: str) -> Any: ...
+
+
+def _stattools() -> _StattoolsModule:
+
+    '''Return statsmodels.tsa.stattools behind the typed facade.'''
+
+    from statsmodels.tsa import stattools
+
+    return stattools
 
 
 @dataclass
@@ -46,12 +65,10 @@ def adf_test(series: pl.Series,
     if len(values) == 0:
         return _INCONCLUSIVE
 
-    from statsmodels.tsa.stattools import adfuller
-
     try:
         result = cast(
             tuple[float, float, int, int, dict[str, float], float],
-            adfuller(values, autolag='AIC'),
+            _stattools().adfuller(values, autolag='AIC'),
         )
     except (ValueError, np.linalg.LinAlgError):
         return _INCONCLUSIVE

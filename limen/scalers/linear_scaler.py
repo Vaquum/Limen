@@ -149,7 +149,7 @@ class LinearScaler:
             Transformed DataFrame.
         """
 
-        exprs = []
+        exprs: list[pl.Expr] = []
         for col in df.columns:
             rule = get_scaling_rule(col, self.rules, self.default)
 
@@ -181,7 +181,7 @@ def inverse_transform(df: pl.DataFrame, scaler: LinearScaler) -> pl.DataFrame:
         DataFrame in original scale.
     """
 
-    exprs = []
+    exprs: list[pl.Expr] = []
     for col in df.columns:
         rule = get_scaling_rule(col, scaler.rules, scaler.default)
 

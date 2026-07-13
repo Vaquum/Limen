@@ -51,9 +51,9 @@ def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integ
     if n_prices < MIN_PRICES:
         return long_lines, short_lines
 
-    starts_per_duration = []
-    heights_per_duration = []
-    durations_per_duration = []
+    starts_per_duration: list[npt.NDArray[np.intp]] = []
+    heights_per_duration: list[npt.NDArray[np.float64]] = []
+    durations_per_duration: list[npt.NDArray[Any]] = []
 
     for duration in range(MIN_DURATION_BARS, max_duration_hours):
 

@@ -77,7 +77,7 @@ def test_slice_closeout_guard_and_ratchet_surfaces() -> None:
     assert 'issues:' in guard
     assert 'gh issue reopen' in guard
     pyright_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_pyright.yml').read_text(encoding='utf-8')
-    assert re.search(r'PYRIGHT_WARNING_BASELINE: \d+', pyright_workflow) is not None
+    assert re.search(r'PYRIGHT_WARNING_BASELINE: 0\b', pyright_workflow) is not None
     assert '--outputjson' in pyright_workflow
     slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
     assert 'slice_closeout_guard' in slice_template
@@ -131,7 +131,11 @@ def test_pyright_gate_config() -> None:
     promoted_strict_defaults = [
         'reportMissingTypeArgument',
         'reportPrivateUsage',
+        'reportUnknownArgumentType',
+        'reportUnknownLambdaType',
+        'reportUnknownMemberType',
         'reportUnknownParameterType',
+        'reportUnknownVariableType',
         'reportUnnecessaryComparison',
         'reportUnnecessaryIsInstance',
         'reportUnsupportedDunderAll',
@@ -140,13 +144,9 @@ def test_pyright_gate_config() -> None:
     for rule in promoted_strict_defaults:
         assert pyright_config.get(rule, 'error') == 'error', rule
     remaining_downgrades = {k for k, v in pyright_config.items() if v == 'warning'}
-    assert remaining_downgrades == {
-        'reportMissingTypeStubs',
-        'reportUnknownArgumentType',
-        'reportUnknownLambdaType',
-        'reportUnknownMemberType',
-        'reportUnknownVariableType',
-    }
+    assert remaining_downgrades == set()
+    silenced_rules = {k for k, v in pyright_config.items() if v == 'none'}
+    assert silenced_rules == {'reportMissingTypeStubs'}
     runtime_deps = pyproject['project']['dependencies']
     assert 'typing_extensions>=4.12,<5' in runtime_deps
     dev_extra = pyproject['project']['optional-dependencies']['dev']

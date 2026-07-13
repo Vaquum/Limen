@@ -1,10 +1,88 @@
 from typing import Any
+from typing import Protocol
+from typing import TypeGuard
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+
+
+class _FittedScaler(Protocol):
+
+    '''Typed facade over the sklearn StandardScaler surface used for selection.'''
+
+    def fit_transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.floating[Any]]: ...
+
+
+class _Projector(Protocol):
+
+    '''Typed facade over the sklearn PCA surface used for selection.'''
+
+    def fit_transform(self, X: npt.NDArray[Any]) -> npt.NDArray[np.floating[Any]]: ...
+
+
+class _Clusterer(Protocol):
+
+    '''Typed facade over the sklearn KMeans surface used for selection.'''
+
+    @property
+    def cluster_centers_(self) -> npt.NDArray[np.floating[Any]]: ...
+
+    def fit_predict(self, X: npt.NDArray[Any]) -> npt.NDArray[np.integer[Any]]: ...
+
+
+def _standard_scaler() -> _FittedScaler:
+
+    '''Create a sklearn StandardScaler behind the typed facade.'''
+
+    return StandardScaler()
+
+
+def _pca(n_components: int | None, random_state: int) -> _Projector:
+
+    '''Create a sklearn PCA projector behind the typed facade.'''
+
+    return PCA(n_components=n_components, random_state=random_state)
+
+
+def _kmeans(n_clusters: int, random_state: int) -> _Clusterer:
+
+    '''Create a sklearn KMeans clusterer behind the typed facade.'''
+
+    return KMeans(n_clusters=n_clusters, random_state=random_state, n_init='auto')
+
+
+def _is_integral(value: Any) -> TypeGuard[int | np.integer[Any]]:
+
+    '''
+    Check whether a permutation id value is a Python or numpy integer.
+
+    Args:
+        value (Any): Candidate permutation id value
+
+    Returns:
+        TypeGuard[int | np.integer[Any]]: True if value is an integral number
+    '''
+
+    return isinstance(value, (int, np.integer))
+
+
+def _is_floating(value: Any) -> TypeGuard[float | np.floating[Any]]:
+
+    '''
+    Check whether a permutation id value is a Python or numpy float.
+
+    Args:
+        value (Any): Candidate permutation id value
+
+    Returns:
+        TypeGuard[float | np.floating[Any]]: True if value is a floating number
+    '''
+
+    return isinstance(value, (float, np.floating))
 
 
 def select(context: dict[str, Any],
@@ -95,9 +173,9 @@ def select(context: dict[str, Any],
             raise ValueError('diverse_metrics selector returned a boolean permutation id')
         if pd.isna(value):
             raise ValueError('diverse_metrics selector returned a missing permutation id')
-        if isinstance(value, (int, np.integer)):
+        if _is_integral(value):
             return int(value)
-        if isinstance(value, (float, np.floating)) and float(value).is_integer():
+        if _is_floating(value) and float(value).is_integer():
             return int(value)
         if isinstance(value, str):
             stripped = value.strip()
@@ -144,22 +222,15 @@ def select(context: dict[str, Any],
         else min(n_components, n_samples, n_features)
     )
 
-    scaled = StandardScaler().fit_transform(values)
-    projected = PCA(
-        n_components=actual_components,
-        random_state=random_state,
-    ).fit_transform(scaled)
+    scaled = _standard_scaler().fit_transform(values)
+    projected = _pca(actual_components, random_state).fit_transform(scaled)
 
     if actual_clusters == 1:
         center = projected.mean(axis=0)
         distances = np.linalg.norm(projected - center, axis=1)
         selected_positions = [int(np.argmin(distances))]
     else:
-        kmeans = KMeans(
-            n_clusters=actual_clusters,
-            random_state=random_state,
-            n_init='auto',
-        )
+        kmeans = _kmeans(actual_clusters, random_state)
         labels = kmeans.fit_predict(projected)
 
         selected_positions: list[int] = []
@@ -174,7 +245,7 @@ def select(context: dict[str, Any],
             selected_positions.append(int(idxs[int(np.argmin(distances))]))
 
     if len(selected_positions) < target_count:
-        parts = []
+        parts: list[npt.NDArray[np.float64]] = []
         for col in metric_cols:
             col_values = work[col].to_numpy(dtype=float)
             lo = np.nanmin(col_values)

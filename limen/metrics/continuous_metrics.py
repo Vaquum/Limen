@@ -1,10 +1,29 @@
 from typing import Any
+from typing import Protocol
 
 import numpy as np
 import numpy.typing as npt
+import sklearn.metrics
 
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error
-from sklearn.metrics import mean_absolute_percentage_error, r2_score
+
+class _SkMetricsModule(Protocol):
+
+    '''Typed facade over the sklearn.metrics surface used for regression metrics.'''
+
+    def mean_absolute_error(self, y_true: Any, y_pred: Any) -> float: ...
+
+    def root_mean_squared_error(self, y_true: Any, y_pred: Any) -> float: ...
+
+    def mean_absolute_percentage_error(self, y_true: Any, y_pred: Any) -> float: ...
+
+    def r2_score(self, y_true: Any, y_pred: Any) -> float: ...
+
+
+def _sk_metrics() -> _SkMetricsModule:
+
+    '''Return sklearn.metrics behind the typed facade.'''
+
+    return sklearn.metrics
 
 
 def continuous_metrics(data: dict[str, Any],
@@ -27,10 +46,10 @@ def continuous_metrics(data: dict[str, Any],
     preds_array = np.asarray(preds)
 
     bias = np.mean(preds_array - y_test)
-    mae = mean_absolute_error(y_test, preds_array)
-    rmse = root_mean_squared_error(y_test, preds_array)
-    r2 = r2_score(y_test, preds_array)
-    mape = mean_absolute_percentage_error(y_test, preds_array) * 100
+    mae = _sk_metrics().mean_absolute_error(y_test, preds_array)
+    rmse = _sk_metrics().root_mean_squared_error(y_test, preds_array)
+    r2 = _sk_metrics().r2_score(y_test, preds_array)
+    mape = _sk_metrics().mean_absolute_percentage_error(y_test, preds_array) * 100
 
     return {
         'bias': round(bias, 3),

@@ -1,5 +1,7 @@
 import polars as pl
 
+from typing import cast
+
 SCALING_RULES = {
     'open': 'standard',
     'close': 'standard',
@@ -44,8 +46,8 @@ class LogRegScaler:
 
         super().__init__()
 
-        self.means = {}
-        self.stds = {}
+        self.means: dict[str, float] = {}
+        self.stds: dict[str, float] = {}
 
         for col in x_train.columns:
 
@@ -59,8 +61,8 @@ class LogRegScaler:
                 self.stds[col] = x_train.select(pl.col(col).log1p().std(ddof=0)).item()
 
             elif rule == 'standard':
-                self.means[col] = x_train[col].mean()
-                self.stds[col] = x_train[col].std(ddof=0)
+                self.means[col] = cast(float, x_train[col].mean())
+                self.stds[col] = cast(float, x_train[col].std(ddof=0))
 
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
@@ -74,7 +76,7 @@ class LogRegScaler:
             pl.DataFrame: The transformed DataFrame
         '''
 
-        exprs = []
+        exprs: list[pl.Expr] = []
 
         for col in df.columns:
 
@@ -111,7 +113,7 @@ def inverse_transform(df: pl.DataFrame, scaler: LogRegScaler) -> pl.DataFrame:
         pl.DataFrame: The inverse transformed DataFrame
     '''
 
-    exprs = []
+    exprs: list[pl.Expr] = []
 
     for col in df.columns:
 

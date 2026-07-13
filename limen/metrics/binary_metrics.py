@@ -1,10 +1,34 @@
-from typing import Any, cast
+from typing import Any
+from typing import Protocol
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
-from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, confusion_matrix
+import sklearn.metrics
 
 _BINARY_CLASS_COUNT = 2
+
+
+class _SkMetricsModule(Protocol):
+
+    '''Typed facade over the sklearn.metrics surface used for binary metrics.'''
+
+    def roc_auc_score(self, y_true: Any, y_score: Any) -> Any: ...
+
+    def accuracy_score(self, y_true: Any, y_pred: Any) -> float: ...
+
+    def precision_score(self, y_true: Any, y_pred: Any, *, zero_division: Any) -> float: ...
+
+    def recall_score(self, y_true: Any, y_pred: Any, *, zero_division: Any) -> float: ...
+
+    def confusion_matrix(self, y_true: Any, y_pred: Any, *, labels: list[int]) -> npt.NDArray[np.integer[Any]]: ...
+
+
+def _sk_metrics() -> _SkMetricsModule:
+
+    '''Return sklearn.metrics behind the typed facade.'''
+
+    return sklearn.metrics
 
 
 def binary_metrics(data: dict[str, Any],
@@ -29,15 +53,15 @@ def binary_metrics(data: dict[str, Any],
 
     y_test = np.asarray(data['y_test'])
     negatives = int((y_test == 0).sum())
-    false_positives = int(confusion_matrix(y_test, preds, labels=[0, 1])[0, 1])
+    false_positives = int(_sk_metrics().confusion_matrix(y_test, preds, labels=[0, 1])[0, 1])
     fpr = float('nan') if negatives == 0 else round(false_positives / negatives, 3)
     auc = (float('nan') if np.unique(y_test).size < _BINARY_CLASS_COUNT
-           else round(cast(float, roc_auc_score(y_test, probs)), 3))
+           else round(cast(float, _sk_metrics().roc_auc_score(y_test, probs)), 3))
 
-    round_results = {'recall': round(cast(float, recall_score(y_test, preds, zero_division=cast(Any, 0))), 3),
-                     'precision': round(cast(float, precision_score(y_test, preds, zero_division=cast(Any, 0))), 3),
+    round_results = {'recall': round(_sk_metrics().recall_score(y_test, preds, zero_division=0), 3),
+                     'precision': round(_sk_metrics().precision_score(y_test, preds, zero_division=0), 3),
                      'fpr': fpr,
                      'auc': auc,
-                     'accuracy': round(accuracy_score(y_test, preds), 3)}
+                     'accuracy': round(_sk_metrics().accuracy_score(y_test, preds), 3)}
 
     return round_results

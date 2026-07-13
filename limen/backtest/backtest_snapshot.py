@@ -1,6 +1,7 @@
 import numbers
 from collections.abc import Callable
 from typing import Any
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -75,6 +76,7 @@ def _validate_execution_result(result: object, expected_index: pd.Index) -> Exec
         values = getattr(result, field)
         if not isinstance(values, pd.Series):
             raise ValueError(f'backtest_snapshot strategy {field} must be a pd.Series')
+        values = cast('pd.Series[Any]', values)
         if len(values) != len(expected_index) or not values.index.equals(expected_index):
             raise ValueError(
                 f'backtest_snapshot strategy {field} must be a full-window series with the input index'

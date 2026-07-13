@@ -1,9 +1,24 @@
 from typing import Any
+from typing import Protocol
 
 import numpy.typing as npt
 import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.frozen import FrozenEstimator
+
+
+class _Calibrator(Protocol):
+
+    '''Typed facade over the sklearn CalibratedClassifierCV surface used here.'''
+
+    def fit(self, X: Any, y: Any) -> Any: ...
+
+
+def _calibrated_classifier_cv(clf: Any, method: str) -> _Calibrator:
+
+    '''Create a frozen-estimator CalibratedClassifierCV behind the typed facade.'''
+
+    return CalibratedClassifierCV(FrozenEstimator(clf), method=method)
 
 
 def sklearn_probability_calibrator(clf: Any,
@@ -24,4 +39,4 @@ def sklearn_probability_calibrator(clf: Any,
         Any: Fitted calibrated classifier with predict_proba method
     '''
 
-    return CalibratedClassifierCV(FrozenEstimator(clf), method=method).fit(x_val, y_val)
+    return _calibrated_classifier_cv(clf, method).fit(x_val, y_val)

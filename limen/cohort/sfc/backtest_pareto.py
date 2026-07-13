@@ -1,8 +1,39 @@
 from typing import Any, cast
+from typing import TypeGuard
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+
+
+def _is_integral(value: Any) -> TypeGuard[int | np.integer[Any]]:
+
+    '''
+    Check whether a permutation id value is a Python or numpy integer.
+
+    Args:
+        value (Any): Candidate permutation id value
+
+    Returns:
+        TypeGuard[int | np.integer[Any]]: True if value is an integral number
+    '''
+
+    return isinstance(value, (int, np.integer))
+
+
+def _is_floating(value: Any) -> TypeGuard[float | np.floating[Any]]:
+
+    '''
+    Check whether a permutation id value is a Python or numpy float.
+
+    Args:
+        value (Any): Candidate permutation id value
+
+    Returns:
+        TypeGuard[float | np.floating[Any]]: True if value is a floating number
+    '''
+
+    return isinstance(value, (float, np.floating))
 
 
 def select(context: dict[str, Any],
@@ -41,9 +72,9 @@ def select(context: dict[str, Any],
             raise ValueError('backtest_pareto selector returned a boolean permutation id')
         if pd.isna(value):
             raise ValueError('backtest_pareto selector returned a missing permutation id')
-        if isinstance(value, (int, np.integer)):
+        if _is_integral(value):
             return int(value)
-        if isinstance(value, (float, np.floating)) and float(value).is_integer():
+        if _is_floating(value) and float(value).is_integer():
             return int(value)
         if isinstance(value, str):
             stripped = value.strip()
@@ -90,7 +121,7 @@ def select(context: dict[str, Any],
             keep[idx] = False
 
     front = work.loc[keep].copy()
-    parts = []
+    parts: list[npt.NDArray[np.float64]] = []
     for col in metric_cols:
         values = front[col].to_numpy(dtype=float)
         lo = np.nanmin(values)

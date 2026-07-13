@@ -18,6 +18,17 @@ from limen.targets import NextReturnTarget
 from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
 
+def _flow_features(df: pl.DataFrame) -> pl.DataFrame:
+
+    '''Add dollar-volume, order-flow imbalance, and trade-intensity columns.'''
+
+    return df.with_columns([
+        (pl.col('volume') * pl.col('close')).alias('dollar_volume'),
+        (pl.col('maker_ratio') - 0.5).alias('order_flow_imbalance'),
+        (pl.col('no_of_trades') / pl.col('no_of_trades_sma_20')).alias('trade_intensity'),
+    ])
+
+
 def params():
     return {
         'learning_rate': [0.01, 0.02, 0.03],
@@ -60,13 +71,7 @@ def manifest() -> Manifest:
         .add_feature(range_pct)
         .add_feature(volume_ratio, period=20)
         .add_feature(sma_ratios, periods=[10, 50], price_col='close')
-        .add_feature(
-            lambda df: df.with_columns([
-                (pl.col('volume') * pl.col('close')).alias('dollar_volume'),
-                (pl.col('maker_ratio') - 0.5).alias('order_flow_imbalance'),
-                (pl.col('no_of_trades') / pl.col('no_of_trades_sma_20')).alias('trade_intensity'),
-            ])
-        )
+        .add_feature(_flow_features)
         .add_feature(lag_columns, cols=[
             'range_pct',
             'volume_sma_20',
