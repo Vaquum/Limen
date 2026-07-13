@@ -478,9 +478,10 @@ def test_builtin_selector_coerces_object_ids_to_strings():
         def __str__(self):
             return 'external-1'
 
-    results = pl.DataFrame({'score': [1.0]}).with_columns(
-        pl.Series('id', [ExternalId()], dtype=pl.Object)
-    ).select(['id', 'score'])
+    results = pl.DataFrame(
+        {'id': [ExternalId()], 'score': [1.0]},
+        schema_overrides={'id': pl.Object},
+    )
 
     assert select_top_n({'results': results}, column='score', n=1) == ['external-1']
 
@@ -1093,9 +1094,10 @@ def test_top_n_selector_validates_inputs_and_coerces_ids():
     with pytest.raises(ValueError, match='empty permutation id'):
         select_top_n({'results': pl.DataFrame({'id': ['  '], 'm': [1.0]})}, column='m', n=1)
 
-    results = pl.DataFrame({'m': [4.0, 3.0, 2.0, 1.0]}).with_columns(
-        pl.Series('id', [3, 1.0, ' 7 ', 'perm_a'], dtype=pl.Object)
-    ).select(['id', 'm'])
+    results = pl.DataFrame(
+        {'id': [3, 1.0, ' 7 ', 'perm_a'], 'm': [4.0, 3.0, 2.0, 1.0]},
+        schema_overrides={'id': pl.Object},
+    )
     assert select_top_n({'results': results}, column='m', n=4) == [3, 1, 7, 'perm_a']
 
     non_numeric = pl.DataFrame({'id': [1, 2], 'm': ['x', None]})
@@ -1158,9 +1160,10 @@ def test_diverse_metrics_selector_validates_inputs_and_early_paths():
     all_nan = pl.DataFrame({'id': [1, 2], 'm1': [np.nan, np.nan], 'm2': [1.0, 2.0]})
     assert select_diverse_metrics({'results': all_nan}, metric_cols=['m1', 'm2']) == []
 
-    small = pl.DataFrame({'m1': [1.0, 2.0, 3.0], 'm2': [5.0, 5.0, 5.0]}).with_columns(
-        pl.Series('id', ['1', 2, 3.0], dtype=pl.Object)
-    ).select(['id', 'm1', 'm2'])
+    small = pl.DataFrame(
+        {'id': ['1', 2, 3.0], 'm1': [1.0, 2.0, 3.0], 'm2': [5.0, 5.0, 5.0]},
+        schema_overrides={'id': pl.Object},
+    )
     assert select_diverse_metrics({'results': small}, metric_cols=['m1', 'm2'], target_count=5) == [1, 2, 3]
 
 
