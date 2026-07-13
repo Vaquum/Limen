@@ -729,6 +729,15 @@ def test_validate_no_warning_for_uel_search_strategy_seed() -> None:
     assert not any('seed' in w.message for w in result.warnings)
 
 
+def test_validate_error_for_non_int_search_strategy_seed() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    for bad_seed in (True, 'abc', 1.5):
+        yaml_dict['uel']['search_strategy'] = {'type': 'random', 'seed': bad_seed}
+        result = validate(yaml_dict)
+        assert not result.valid
+        assert any('uel.search_strategy.seed' in e.path for e in result.errors)
+
+
 def test_validate_accepts_uel_pruning_strategies() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['uel']['pruning_strategies'] = [
@@ -1322,22 +1331,35 @@ def test_build_pruning_strategies_raises_for_unknown_type() -> None:
 
 def test_build_pruning_strategies_raises_for_non_mapping_params() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    yaml_dict['uel']['pruning_strategies'] = [{'type': 'budget', 'params': ['max_permutations']}]
-    try:
-        build_pruning_strategies(yaml_dict)
-        assert False, 'expected ValueError'
-    except ValueError as exc:
-        assert 'params' in str(exc) and 'mapping' in str(exc)
+    for bad_params in (['max_permutations'], [], 0, None):
+        yaml_dict['uel']['pruning_strategies'] = [{'type': 'budget', 'params': bad_params}]
+        try:
+            build_pruning_strategies(yaml_dict)
+            assert False, 'expected ValueError'
+        except ValueError as exc:
+            assert 'params' in str(exc) and 'mapping' in str(exc)
 
 
 def test_build_pruning_strategies_raises_for_non_mapping_uel() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
-    yaml_dict['uel'] = ['not', 'a', 'mapping']
-    try:
-        build_pruning_strategies(yaml_dict)
-        assert False, 'expected ValueError'
-    except ValueError as exc:
-        assert "'uel' must be a mapping" in str(exc)
+    for bad_uel in (['not', 'a', 'mapping'], [], False, 0):
+        yaml_dict['uel'] = bad_uel
+        try:
+            build_pruning_strategies(yaml_dict)
+            assert False, 'expected ValueError'
+        except ValueError as exc:
+            assert "'uel' must be a mapping" in str(exc)
+
+
+def test_build_pruning_strategies_raises_for_falsy_non_list_block() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    for bad_block in (0, False, None, 'budget'):
+        yaml_dict['uel']['pruning_strategies'] = bad_block
+        try:
+            build_pruning_strategies(yaml_dict)
+            assert False, 'expected ValueError'
+        except ValueError as exc:
+            assert "'uel.pruning_strategies' must be a list" in str(exc)
 
 
 def test_build_search_strategy_raises_for_non_mapping_uel() -> None:
