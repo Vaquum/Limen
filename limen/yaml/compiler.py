@@ -406,6 +406,10 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
             raise ValueError(
                 f"Unknown pruning strategy type: '{reducer_type}'. Expected one of: {valid}."
             )
-        params: dict[str, Any] = spec.get('params') or {}
+        params: Any = spec.get('params') or {}
+        if not is_mapping(params):
+            raise ValueError(
+                f"'uel.pruning_strategies' params must be a mapping, got {type(params).__name__}"
+            )
         reducers.append(REDUCER_REGISTRY[reducer_type](**params))
     return reducers
