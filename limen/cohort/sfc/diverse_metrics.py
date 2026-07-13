@@ -209,8 +209,8 @@ def select(context: dict[str, Any],
         if q1 == q3:
             continue
         iqr = q3 - q1
-        lo = q1 - iqr_multiplier * iqr
-        hi = q3 + iqr_multiplier * iqr
+        lo = float(q1 - iqr_multiplier * iqr)
+        hi = float(q3 + iqr_multiplier * iqr)
         filtered = filtered.filter((pl.col(col) >= lo) & (pl.col(col) <= hi))
     if not filtered.is_empty():
         work = filtered

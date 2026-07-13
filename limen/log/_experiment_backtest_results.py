@@ -81,7 +81,7 @@ def experiment_backtest_results(self: Any) -> pd.DataFrame:
         pd.DataFrame: One-row-per-round table with BACKTEST_SNAPSHOT_COLUMNS
     '''
 
-    all_rows: list[pd.DataFrame] = []
+    all_rows: list[dict[str, float]] = []
 
     for i in range(len(self.round_params)):
         perf = _prepare_snapshot_backtest_input(self.permutation_prediction_performance(i))

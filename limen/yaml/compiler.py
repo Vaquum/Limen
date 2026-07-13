@@ -366,16 +366,24 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
 
     '''
 
-    uel_cfg = yaml_dict.get('uel') or {}
-    specs = uel_cfg.get('pruning_strategies') or []
+    uel_cfg: dict[str, Any] = yaml_dict.get('uel') or {}
+    specs: Any = uel_cfg.get('pruning_strategies') or []
+    if not is_list(specs):
+        raise ValueError(
+            f"'uel.pruning_strategies' must be a list, got {type(specs).__name__}"
+        )
     reducers: list[PruningStrategy] = []
     for spec in specs:
+        if not is_mapping(spec):
+            raise ValueError(
+                f"'uel.pruning_strategies' entries must be mappings, got {type(spec).__name__}"
+            )
         reducer_type = spec.get('type')
         if reducer_type not in REDUCER_REGISTRY:
+            valid = ', '.join(sorted(REDUCER_REGISTRY))
             raise ValueError(
-                f"Unknown pruning strategy type: '{reducer_type}'. "
-                f"Expected one of: {', '.join(sorted(REDUCER_REGISTRY))}."
+                f"Unknown pruning strategy type: '{reducer_type}'. Expected one of: {valid}."
             )
-        params = spec.get('params') or {}
+        params: dict[str, Any] = spec.get('params') or {}
         reducers.append(REDUCER_REGISTRY[reducer_type](**params))
     return reducers
