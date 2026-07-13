@@ -180,6 +180,14 @@ UEL constructs a `Log` instance automatically at the end of a successful run. Th
 - `uel._log.permutation_confusion_metrics('price_change', round_id=0)`
 - `uel.experiment_parameter_correlation('auc')`
 
+### Inline metrics in the round log
+
+The `confusion_*` and `backtest_*` columns in `uel.experiment_log` and `results.csv` are produced **inline** — computed once per round inside the architecture's `evaluate()` while the round runs, not by post-run processing. `evaluate(data, inline_metrics=True)` appends them to the metrics dict the model returns, and UEL merges that dict verbatim into the round row. UEL forwards no flag of its own; on the manifest-driven path the architecture wrapper pins `inline_metrics=True`, so these columns are always present.
+
+This is distinct from the two dedicated post-run frames. `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results` are separate DataFrames built by the `Log` layer during finalization, only when `post_processing=True`. They carry the same values as the inline columns — the per-round `experiment_log['backtest_pnl_bps_p50']` equals the post-run `experiment_backtest_results['pnl_bps_p50']` — but as standalone frames rather than columns on the round log.
+
+The inline confusion and backtest returns are price-gated: confusion counts always appear, but the price-derived `confusion_*_mean_return_pct` and `backtest_*` metrics are computed only when `price_data_for_backtest` is present for the round. See [Reference Architecture](Reference-Architecture.md) for the `evaluate()` contract and the exact keys each mode adds.
+
 ## Standard path versus artifact-backed path
 
 ### Standard path

@@ -4,7 +4,6 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
@@ -71,9 +70,6 @@ class ReferenceModel(ABC):
 
         ...
 
-    def _price_data_to_pandas(self, price_data_for_backtest: Any) -> pd.DataFrame:
-        return price_data_for_backtest.to_pandas()
-
     def _compute_confusion(self,
                            preds: npt.NDArray[np.integer[Any] | np.floating[Any]],
                            y_test: npt.NDArray[np.integer[Any] | np.floating[Any]],
@@ -113,13 +109,14 @@ class ReferenceModel(ABC):
         if price_data_for_backtest is None:
             return results
 
-        price_pd = self._price_data_to_pandas(price_data_for_backtest)
+        open_arr = price_data_for_backtest['open'].to_numpy()
+        close_arr = price_data_for_backtest['close'].to_numpy()
 
         confusion_return_pct = confusion_mean_return_pct(
             preds,
             y_test,
-            price_pd['open'],
-            price_pd['close'] - price_pd['open'],
+            open_arr,
+            close_arr - open_arr,
         )
         results.update({f'confusion_{k}': v for k, v in confusion_return_pct.items()})
 
@@ -150,25 +147,17 @@ class ReferenceModel(ABC):
         if 'price_data_for_backtest' not in data:
             return {}
 
-        price_pd = self._price_data_to_pandas(data['price_data_for_backtest'])
+        price = data['price_data_for_backtest']
+        open_arr = price['open'].to_numpy()
+        close_arr = price['close'].to_numpy()
 
-        bt_input_data = {
+        bt_columns = {
             'predictions': np.asarray(preds).astype(int),
-            'open': price_pd['open'].values,
-            'close': price_pd['close'].values,
-            'price_change': (price_pd['close'] - price_pd['open']).values,
+            'open': open_arr,
+            'close': close_arr,
+            'price_change': close_arr - open_arr,
         }
-        if 'datetime' in price_pd:
-            bt_input_data['datetime'] = price_pd['datetime'].values
 
-        bt_input = pd.DataFrame(bt_input_data)
+        bt_result = backtest_snapshot(bt_columns, execution_lag_bars=1, **self._cost_kwargs(data))
 
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1, **self._cost_kwargs(data))
-
-        if bt_result.empty:
-            return {}
-
-        return {
-            f"backtest_{k}": v
-            for k, v in bt_result.iloc[0].to_dict().items()
-        }
+        return {f"backtest_{k}": v for k, v in bt_result.items()}

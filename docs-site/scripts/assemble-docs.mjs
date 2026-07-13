@@ -154,6 +154,24 @@ const docs = [
     sidebarPosition: 15,
   },
   {
+    source: 'docs/Perturbation-Strategies.md',
+    dest: 'guides/perturbation-strategies.md',
+    slug: '/guides/perturbation-strategies',
+    sidebarPosition: 16,
+  },
+  {
+    source: 'docs/Fractional-Differentiation.md',
+    dest: 'guides/fractional-differentiation.md',
+    slug: '/guides/fractional-differentiation',
+    sidebarPosition: 17,
+  },
+  {
+    source: 'docs/Triple-Barrier-Method.md',
+    dest: 'guides/triple-barrier-method.md',
+    slug: '/guides/triple-barrier-method',
+    sidebarPosition: 18,
+  },
+  {
     source: 'docs/Glossary.md',
     dest: 'reference/glossary.md',
     slug: '/reference/glossary',

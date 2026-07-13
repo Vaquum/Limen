@@ -8,6 +8,9 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib
 
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -204,7 +207,7 @@ def test_docs_audit_public_contract_surfaces() -> None:
     assert 'This guide takes a contributor from a fresh checkout to a benchmarked classifier' in docs_text
 
 
-def test_python_code_fences_are_parseable() -> None:
+def _check_code_fences(lang: str, parse, error_types) -> None:
     failures: list[str] = []
     checked = 0
     paths = [
@@ -214,12 +217,20 @@ def test_python_code_fences_are_parseable() -> None:
     ]
     for path in paths:
         text = path.read_text(encoding='utf-8')
-        for index, match in enumerate(re.finditer(r'```python\n(.*?)```', text, re.S), start=1):
+        for index, match in enumerate(re.finditer(rf'```{lang}\n(.*?)```', text, re.S), start=1):
             checked += 1
             try:
-                ast.parse(match.group(1))
-            except SyntaxError as exc:
-                failures.append(f'{path.relative_to(ROOT)} fence {index}: {exc.msg}')
+                parse(match.group(1))
+            except error_types as exc:
+                failures.append(f'{path.relative_to(ROOT)} fence {index}: {exc}')
 
     assert checked > 0
     assert not failures
+
+
+def test_python_code_fences_are_parseable() -> None:
+    _check_code_fences('python', ast.parse, SyntaxError)
+
+
+def test_yaml_code_fences_parse() -> None:
+    _check_code_fences('yaml', YAML(typ='safe').load, YAMLError)

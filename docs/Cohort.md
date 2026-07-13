@@ -111,7 +111,7 @@ The selector receives:
 - `metadata`
 - `round_entries`
 - `available_permutation_ids`
-- `results` when `results.csv` exists
+- `results` when `results.csv` exists, loaded as a polars DataFrame
 
 The selector must return permutation IDs only. Cohort still owns ID validation,
 architecture consistency, member binding, and prediction aggregation.

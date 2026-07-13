@@ -9,6 +9,8 @@ from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
@@ -311,6 +313,28 @@ class CompiledSFD:
         return self._manifest_cache
 
 
+def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:
+
+    '''
+    Return the uel block, validating it is a mapping.
+
+    Args:
+        yaml_dict (dict): Parsed YAML experiment dict
+
+    Returns:
+        dict: The uel mapping, empty when absent
+
+    Raises:
+        ValueError: If uel is present but not a mapping
+
+    '''
+
+    uel_cfg: Any = yaml_dict.get('uel', {})
+    if not is_mapping(uel_cfg):
+        raise ValueError(f"'uel' must be a mapping, got {type(uel_cfg).__name__}")
+    return uel_cfg
+
+
 def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStrategy:
 
     '''
@@ -327,7 +351,7 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
 
     '''
 
-    uel_cfg: dict[str, Any] = yaml_dict.get('uel') or {}
+    uel_cfg = _uel_config(yaml_dict)
     sfd_cfg: dict[str, Any] = yaml_dict.get('sfd') or {}
     strategy_cfg = uel_cfg.get('search_strategy', {})
     if not is_mapping(strategy_cfg):
@@ -346,3 +370,48 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     if strategy_type == 'random':
         return RandomStrategy(domain, seed=seed)
     raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random' or 'grid'.")
+
+
+def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]:
+
+    '''
+    Build reducer instances from the uel.pruning_strategies block.
+
+    Args:
+        yaml_dict (dict): Parsed and validated YAML experiment dict
+
+    Returns:
+        list[PruningStrategy]: Configured reducers, empty when none are declared
+
+    Raises:
+        ValueError: If a declared type is not a known reducer
+
+    '''
+
+    uel_cfg = _uel_config(yaml_dict)
+    if 'pruning_strategies' not in uel_cfg:
+        return []
+    specs: Any = uel_cfg['pruning_strategies']
+    if not is_list(specs):
+        raise ValueError(
+            f"'uel.pruning_strategies' must be a list, got {type(specs).__name__}"
+        )
+    reducers: list[PruningStrategy] = []
+    for spec in specs:
+        if not is_mapping(spec):
+            raise ValueError(
+                f"'uel.pruning_strategies' entries must be mappings, got {type(spec).__name__}"
+            )
+        reducer_type = spec.get('type')
+        if reducer_type not in REDUCER_REGISTRY:
+            valid = ', '.join(sorted(REDUCER_REGISTRY))
+            raise ValueError(
+                f"Unknown pruning strategy type: '{reducer_type}'. Expected one of: {valid}."
+            )
+        params: Any = spec.get('params', {})
+        if not is_mapping(params):
+            raise ValueError(
+                f"'uel.pruning_strategies' params must be a mapping, got {type(params).__name__}"
+            )
+        reducers.append(REDUCER_REGISTRY[reducer_type](**params))
+    return reducers

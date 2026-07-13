@@ -305,9 +305,9 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
         execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
-    assert result.index.tolist() == BACKTEST_SNAPSHOT_COLUMNS
+    assert list(result) == BACKTEST_SNAPSHOT_COLUMNS
     assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
     assert result['wins_per_bar'] == 0.25
     assert result['pnl_per_bar_bps'] == 250.0
@@ -327,7 +327,7 @@ def test_backtest_snapshot_executes_on_next_bar() -> None:
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert result['wins_per_bar'] == 0.0
     assert result['avg_loss_bps'] == -1000.0
@@ -345,7 +345,7 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert result['edge_bps_p50'] == 1000.0
     assert result['pnl_bps_p50'] == 1000.0
@@ -364,6 +364,16 @@ def test_backtest_snapshot_rejects_empty_input() -> None:
                 'price_change': [],
             })
         )
+
+
+def test_backtest_snapshot_rejects_unsized_column_values() -> None:
+    with pytest.raises(ValueError, match='must be sized array-likes'):
+        backtest_snapshot({
+            'predictions': 1,
+            'open': [100.0],
+            'close': [101.0],
+            'price_change': [1.0],
+        })
 
 
 def test_backtest_snapshot_rejects_non_binary_predictions() -> None:
@@ -425,7 +435,7 @@ def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
         execution_lag_bars=0,
         fee_bps=50.0,
         slip_bps=50.0,
-    ).iloc[0]
+    )
 
     assert result['cost_bps_p50'] == 198.3
     assert result['pnl_bps_p50'] == -198.3
@@ -443,7 +453,7 @@ def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
         execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert result['drawdown_bps_p50'] == -1000.0
 
@@ -458,7 +468,7 @@ def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_ba
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert result['inventory_per_bar'] == 0.0
     assert result['pnl_bps_p50'] == 0.0
@@ -477,7 +487,7 @@ def test_backtest_snapshot_reports_all_bars_population() -> None:
         execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert result['inventory_per_bar'] == 0.5
     assert result['wins_per_bar'] == 0.25
@@ -498,7 +508,7 @@ def test_backtest_snapshot_cvar_floor_5pct_tail() -> None:
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert result['cvar_95_pnl_bps'] == -2079.2
 
@@ -511,7 +521,7 @@ def test_backtest_snapshot_cvar_floor_5pct_tail() -> None:
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert np.isnan(short['cvar_95_pnl_bps'])
 
@@ -526,7 +536,7 @@ def test_backtest_snapshot_edge_case_sentinels() -> None:
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert np.isnan(flat['avg_win_bps'])
     assert np.isnan(flat['avg_loss_bps'])
@@ -544,7 +554,7 @@ def test_backtest_snapshot_edge_case_sentinels() -> None:
         }),
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert np.isnan(no_losers['avg_loss_bps'])
     assert not np.isnan(no_losers['avg_win_bps'])
@@ -560,8 +570,8 @@ def test_backtest_snapshot_scalars_invariant_under_window_doubling() -> None:
     })
     doubled = pd.concat([base, base], ignore_index=True)
 
-    single = backtest_snapshot(base, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0).iloc[0]
-    twice = backtest_snapshot(doubled, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0).iloc[0]
+    single = backtest_snapshot(base, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0)
+    twice = backtest_snapshot(doubled, execution_lag_bars=0, fee_bps=5.0, slip_bps=5.0)
 
     intensive_scalars = [
         'wins_per_bar',
@@ -604,7 +614,7 @@ def test_backtest_snapshot_delegates_to_injected_strategy() -> None:
             'price_change': [0.0, 0.0, 0.0],
         }),
         strategy=constant_long,
-    ).iloc[0]
+    )
 
     assert result['inventory_per_bar'] == 1.0
     assert result['wins_per_bar'] == 1.0
@@ -677,6 +687,26 @@ def test_long_flat_strategy_rejects_negative_lag() -> None:
         )
 
 
+def test_long_flat_strategy_rejects_non_1d_inputs() -> None:
+    with pytest.raises(ValueError, match='equal-length 1D arrays'):
+        long_flat_strategy(
+            np.array([[1, 0], [0, 1]]),
+            np.array([100.0, 100.0]),
+            np.array([100.0, 100.0]),
+            np.array([0.0, 0.0]),
+        )
+
+
+def test_long_flat_strategy_rejects_mismatched_lengths() -> None:
+    with pytest.raises(ValueError, match='equal-length 1D arrays'):
+        long_flat_strategy(
+            np.array([1, 0, 1]),
+            np.array([100.0, 100.0]),
+            np.array([100.0, 100.0]),
+            np.array([0.0, 0.0]),
+        )
+
+
 def test_backtest_snapshot_notional_rate_scales_returns_not_structure() -> None:
     df = pd.DataFrame({
         'predictions': [1, 1, 0, 0],
@@ -684,8 +714,8 @@ def test_backtest_snapshot_notional_rate_scales_returns_not_structure() -> None:
         'close': [110.0, 121.0, 100.0, 100.0],
         'price_change': [10.0, 21.0, 0.0, 0.0],
     })
-    full = backtest_snapshot(df, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0, notional_rate=1.0).iloc[0]
-    half = backtest_snapshot(df, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0, notional_rate=0.5).iloc[0]
+    full = backtest_snapshot(df, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0, notional_rate=1.0)
+    half = backtest_snapshot(df, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0, notional_rate=0.5)
 
     assert half['pnl_per_bar_bps'] == pytest.approx(0.5 * full['pnl_per_bar_bps'])
     assert half['edge_bps_p50'] == pytest.approx(0.5 * full['edge_bps_p50'])
@@ -733,13 +763,13 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
         execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
     next_bar = backtest_snapshot(
         perf,
         execution_lag_bars=1,
         fee_bps=0.0,
         slip_bps=0.0,
-    ).iloc[0]
+    )
 
     assert same_row['pnl_bps_p50'] == 500.0
     assert next_bar['pnl_bps_p50'] == -500.0
@@ -758,7 +788,7 @@ def test_experiment_backtest_results_directionalizes_regression_predictions() ->
             'price_change': [0.0, 10.0, -10.0],
         }),
         execution_lag_bars=1,
-    ).iloc[0]
+    )
 
     assert result['pnl_bps_p50'] == expected['pnl_bps_p50']
 

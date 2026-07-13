@@ -14,6 +14,7 @@ from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer import BudgetReducer
 from limen.sfd.foundational_sfd import random_binary as sfd_module
 from limen.experiment.param_search import GridStrategy
 from limen.experiment.param_search import RandomStrategy
@@ -31,6 +32,7 @@ def _make_uel(strategy_cls=RandomStrategy, test_mode=True, **kwargs):
     uel = UniversalExperimentLoop(
         sfd=sfd_module,
         search_strategy=strategy,
+        pruning_strategies=kwargs.get('pruning_strategies'),
         feedback_interval=kwargs.get('feedback_interval', 100),
         checkpoint_interval=kwargs.get('checkpoint_interval', 1000),
         experiment_dir=kwargs.get('experiment_dir'),
@@ -214,6 +216,48 @@ def test_run_with_msq_feedback_trigger():
         assert 1 not in trigger_rounds
     finally:
         FeedbackController.trigger = original_trigger
+
+
+def test_run_with_msq_real_reducer_trims_run():
+    reducer = BudgetReducer(max_permutations=3, check_after_pct=0.0)
+    uel, _, _ = _make_uel(pruning_strategies=[reducer], feedback_interval=1)
+
+    with TemporaryDirectory() as tmpdir:
+        uel._run_with_msq(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=10,
+            context_params=None,
+            resume=False,
+        )
+
+    completed = uel.experiment_log.shape[0]
+    assert 0 < completed <= 3
+    assert completed < 10
+
+
+def test_run_with_msq_grid_live_feedback_prunes_domain():
+    stub = StubPruningStrategy(
+        interventions=[{'op': 'remove_is', 'param': 'shift', 'value': -1}],
+    )
+    uel, _, _ = _make_uel(
+        strategy_cls=GridStrategy,
+        pruning_strategies=[stub],
+        feedback_interval=2,
+    )
+
+    with TemporaryDirectory() as tmpdir:
+        uel._run_with_msq(
+            experiment_name=str(Path(tmpdir) / 'test'),
+            n_permutations=8,
+            context_params=None,
+            resume=False,
+        )
+
+    shifts = uel.experiment_log['shift'].to_list()
+    assert len(shifts) > 3
+    # first trigger fires at round 2, pruning shift=-1 from later rounds
+    assert -1 in shifts[:3]
+    assert all(shift != -1 for shift in shifts[3:])
 
 
 def test_run_with_msq_checkpoint_trigger():

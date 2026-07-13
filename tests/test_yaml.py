@@ -13,6 +13,7 @@ from limen.metrics.balanced_metric import balanced_metric
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
+from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
 from limen.yaml.errors import GitError
 from limen.yaml.errors import ValidationError
@@ -720,6 +721,58 @@ def test_validate_error_for_uel_search_strategy_wrong_type() -> None:
         assert any('search_strategy' in e.path for e in result.errors)
 
 
+def test_validate_no_warning_for_uel_search_strategy_seed() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['search_strategy'] = {'type': 'random', 'seed': 42}
+    result = validate(yaml_dict)
+    assert result.valid
+    assert not any('seed' in w.message for w in result.warnings)
+
+
+def test_validate_error_for_non_int_search_strategy_seed() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    for bad_seed in (True, 'abc', 1.5):
+        yaml_dict['uel']['search_strategy'] = {'type': 'random', 'seed': bad_seed}
+        result = validate(yaml_dict)
+        assert not result.valid
+        assert any('uel.search_strategy.seed' in e.path for e in result.errors)
+
+
+def test_validate_accepts_uel_pruning_strategies() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['pruning_strategies'] = [
+        {'type': 'budget', 'params': {'max_permutations': 10}},
+        {'type': 'sanity', 'params': {'metric': 'auc'}},
+    ]
+    result = validate(yaml_dict)
+    assert result.valid
+    assert not any('pruning_strategies' in e.path for e in result.errors)
+
+
+def test_validate_error_for_unknown_pruning_strategy_type() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['pruning_strategies'] = [{'type': 'bogus'}]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('bogus' in e.message for e in result.errors)
+
+
+def test_validate_error_for_pruning_strategy_unknown_field() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['pruning_strategies'] = [{'type': 'budget', 'typo': 1}]
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('typo' in e.message for e in result.errors)
+
+
+def test_validate_error_for_pruning_strategies_not_a_list() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['pruning_strategies'] = {'type': 'budget'}
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any('must be a list' in e.message for e in result.errors)
+
+
 def test_validate_error_for_uel_output_path_wrong_type() -> None:
     for value in [123, None]:
         yaml_dict, _ = parse(_MINIMAL_ML_YAML)
@@ -1249,6 +1302,74 @@ def test_build_search_strategy_raises_for_non_mapping_strategy() -> None:
         assert False, 'expected ValueError'
     except ValueError as exc:
         assert 'mapping' in str(exc)
+
+
+def test_build_pruning_strategies_from_yaml() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['pruning_strategies'] = [
+        {'type': 'budget', 'params': {'max_permutations': 10, 'check_after_pct': 0.0}},
+        {'type': 'sanity', 'params': {'metric': 'auc', 'min_observations': 1}},
+    ]
+    reducers = build_pruning_strategies(yaml_dict)
+    assert [type(r).__name__ for r in reducers] == ['BudgetReducer', 'SanityReducer']
+
+
+def test_build_pruning_strategies_empty_when_absent() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    assert build_pruning_strategies(yaml_dict) == []
+
+
+def test_build_pruning_strategies_raises_for_unknown_type() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['pruning_strategies'] = [{'type': 'bogus'}]
+    try:
+        build_pruning_strategies(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert 'bogus' in str(exc)
+
+
+def test_build_pruning_strategies_raises_for_non_mapping_params() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    for bad_params in (['max_permutations'], [], 0, None):
+        yaml_dict['uel']['pruning_strategies'] = [{'type': 'budget', 'params': bad_params}]
+        try:
+            build_pruning_strategies(yaml_dict)
+            assert False, 'expected ValueError'
+        except ValueError as exc:
+            assert 'params' in str(exc) and 'mapping' in str(exc)
+
+
+def test_build_pruning_strategies_raises_for_non_mapping_uel() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    for bad_uel in (['not', 'a', 'mapping'], [], False, 0):
+        yaml_dict['uel'] = bad_uel
+        try:
+            build_pruning_strategies(yaml_dict)
+            assert False, 'expected ValueError'
+        except ValueError as exc:
+            assert "'uel' must be a mapping" in str(exc)
+
+
+def test_build_pruning_strategies_raises_for_falsy_non_list_block() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    for bad_block in (0, False, None, 'budget'):
+        yaml_dict['uel']['pruning_strategies'] = bad_block
+        try:
+            build_pruning_strategies(yaml_dict)
+            assert False, 'expected ValueError'
+        except ValueError as exc:
+            assert "'uel.pruning_strategies' must be a list" in str(exc)
+
+
+def test_build_search_strategy_raises_for_non_mapping_uel() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel'] = ['not', 'a', 'mapping']
+    try:
+        build_search_strategy(yaml_dict)
+        assert False, 'expected ValueError'
+    except ValueError as exc:
+        assert "'uel' must be a mapping" in str(exc)
 
 
 def test_all_templates_have_valid_limen_version() -> None:

@@ -8,7 +8,6 @@ from typing import cast
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS
@@ -499,7 +498,7 @@ class Cohort:
 
         results_path = experiment_dir / 'results.csv'
         if results_path.exists():
-            context['results'] = pd.read_csv(results_path)
+            context['results'] = pl.read_csv(results_path, infer_schema_length=None)
 
         return context
 

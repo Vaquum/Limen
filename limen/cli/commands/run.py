@@ -10,6 +10,7 @@ from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
 
 DEFAULT_RESULTS_BASE: Path = Path('.')
@@ -60,13 +61,18 @@ def run_experiment(yaml_path: Path,
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
 
+    try:
+        search_strategy = build_search_strategy(yaml_dict)
+        pruning_strategies = build_pruning_strategies(yaml_dict)
+        compiled = CompiledSFD(yaml_dict)
+    except Exception as exc:  # noqa: BLE001
+        click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
+        return False
+
     results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
     results_dir.mkdir(parents=True, exist_ok=True)
     yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name
     _ = shutil.copy2(yaml_path, results_dir / yaml_dest_name)
-
-    search_strategy = build_search_strategy(yaml_dict)
-    compiled = CompiledSFD(yaml_dict)
 
     _params = compiled.params()
     total_space = math.prod(len(v) for v in _params.values())
@@ -83,6 +89,7 @@ def run_experiment(yaml_path: Path,
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,
+            pruning_strategies=pruning_strategies,
             experiment_dir=results_dir,
             test_mode=test_mode,
             feedback_interval=feedback_interval,

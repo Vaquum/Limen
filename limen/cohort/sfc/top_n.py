@@ -2,7 +2,7 @@ from typing import Any
 from typing import TypeGuard
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 
 def _is_integral(value: Any) -> TypeGuard[int | np.integer[Any]]:
@@ -48,8 +48,8 @@ def select(context: dict[str, Any],
     results = context.get('results')
     if results is None:
         raise ValueError('top_n selector requires results.csv data in context["results"]')
-    if not isinstance(results, pd.DataFrame):
-        raise ValueError('top_n context["results"] must be a pandas DataFrame')
+    if not isinstance(results, pl.DataFrame):
+        raise ValueError('top_n context["results"] must be a polars DataFrame')
 
     missing = [col for col in ('id', column) if col not in results.columns]
     if missing:
@@ -58,7 +58,7 @@ def select(context: dict[str, Any],
     def coerce_id(value: Any) -> int | str:
         if isinstance(value, (bool, np.bool_)):
             raise ValueError('top_n selector returned a boolean permutation id')
-        if pd.isna(value):
+        if value is None or (_is_floating(value) and np.isnan(float(value))):
             raise ValueError('top_n selector returned a missing permutation id')
         if _is_integral(value):
             return int(value)
@@ -77,17 +77,15 @@ def select(context: dict[str, Any],
             raise ValueError('top_n selector returned an empty permutation id')
         return coerced
 
-    work = results[['id', column]].copy()
-    work[column] = pd.to_numeric(work[column], errors='coerce')
-    work = work.dropna(subset=[column])
-    if work.empty:
+    work = results.select(['id', column]).with_columns(
+        pl.col(column).cast(pl.Float64, strict=False)
+    )
+    work = work.filter(pl.col(column).is_not_null() & pl.col(column).is_not_nan())
+    if work.is_empty():
         return []
 
-    work['_id_sort_key'] = work['id'].map(lambda value: str(coerce_id(value)))
-    ranked = work.sort_values(
-        by=[column, '_id_sort_key'],
-        ascending=[ascending, True],
-        kind='mergesort',
-    )
+    sort_keys = [str(coerce_id(value)) for value in work['id'].to_list()]
+    work = work.with_columns(pl.Series('_id_sort_key', sort_keys))
+    ranked = work.sort([column, '_id_sort_key'], descending=[not ascending, False])
 
-    return [coerce_id(value) for value in ranked.head(n)['id'].tolist()]
+    return [coerce_id(value) for value in ranked.head(n)['id'].to_list()]

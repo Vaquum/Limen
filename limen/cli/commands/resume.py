@@ -7,6 +7,7 @@ import click
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
 from limen.yaml.config import is_mapping
 
@@ -50,6 +51,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
     try:
         compiled = CompiledSFD(yaml_reference)
         search_strategy = build_search_strategy(yaml_reference)
+        pruning_strategies = build_pruning_strategies(yaml_reference)
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Failed to reconstruct experiment: {exc}', fg='red')
         return False
@@ -60,6 +62,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,
+            pruning_strategies=pruning_strategies,
             experiment_dir=results_dir,
             test_mode=test_mode,
             feedback_interval=feedback_interval,

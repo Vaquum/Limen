@@ -1,9 +1,7 @@
 from typing import Any
-from typing import cast
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 import polars as pl
 from typing_extensions import override
 
@@ -126,20 +124,14 @@ class RuleBasedStrategy(ReferenceModel):
             return {}
         open_arr = df['open'].to_numpy().astype(float)
         close_arr = df['close'].to_numpy().astype(float)
-        bt_input_data = {
+        bt_columns = {
             'predictions': positions,
             'open': open_arr,
             'close': close_arr,
             'price_change': close_arr - open_arr,
         }
-        if 'datetime' in df.columns:
-            bt_input_data['datetime'] = df['datetime'].to_numpy()
 
-        bt_input = pd.DataFrame(bt_input_data)
-        bt_result = backtest_snapshot(bt_input, execution_lag_bars=1, **cost_kwargs)
-        if bt_result.empty:
-            return {}
-        return cast(dict[str, float], bt_result.iloc[0].to_dict())
+        return backtest_snapshot(bt_columns, execution_lag_bars=1, **cost_kwargs)
 
 
 def rule_based(data: dict[str, Any],

@@ -1,11 +1,10 @@
 import numbers
 from collections.abc import Callable
+from collections.abc import Mapping
 from typing import Any
-from typing import cast
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest.long_flat_strategy import long_flat_strategy
@@ -42,12 +41,12 @@ BACKTEST_SNAPSHOT_COLUMNS = [
 ]
 
 
-def _finite_values(values: pd.Series | npt.NDArray[Any] | list[float]) -> npt.NDArray[np.float64]:
-    arr = pd.to_numeric(pd.Series(values), errors='coerce').to_numpy(dtype=float)
+def _finite_values(values: Any) -> npt.NDArray[np.float64]:
+    arr = np.asarray(values, dtype=float)
     return arr[np.isfinite(arr)]
 
 
-def _quantiles(values: pd.Series | npt.NDArray[Any] | list[float], decimals: int = BPS_DECIMALS) -> tuple[float, float, float]:
+def _quantiles(values: Any, decimals: int = BPS_DECIMALS) -> tuple[float, float, float]:
     arr = _finite_values(values)
     if arr.size == 0:
         return (np.nan, np.nan, np.nan)
@@ -55,45 +54,43 @@ def _quantiles(values: pd.Series | npt.NDArray[Any] | list[float], decimals: int
     return (p05, p50, p95)
 
 
-def _mean_bps(values: pd.Series) -> float:
-    return round(float(values.mean()) * BPS_PER_UNIT, BPS_DECIMALS)
+def _mean_bps(values: Any) -> float:
+    arr = np.asarray(values, dtype=float)
+    if arr.size == 0:
+        return np.nan
+    return round(float(arr.mean()) * BPS_PER_UNIT, BPS_DECIMALS)
 
 
-def _cvar_tail_bps(returns: pd.Series) -> float:
-    arr = returns.to_numpy(dtype=float)
+def _cvar_tail_bps(returns: Any) -> float:
+    arr = np.asarray(returns, dtype=float)
     if arr.size < CVAR_MIN_BARS:
         return np.nan
     tail_count = int(np.floor(CVAR_TAIL_FRACTION * arr.size))
     return round(float(np.sort(arr)[:tail_count].mean()) * BPS_PER_UNIT, BPS_DECIMALS)
 
 
-def _validate_execution_result(result: object, expected_index: pd.Index) -> ExecutionResult:
+def _validate_execution_result(result: object, expected_len: int) -> ExecutionResult:
     if not isinstance(result, ExecutionResult):
         raise ValueError('backtest_snapshot strategy must return ExecutionResult(pos, gross, net)')
 
-    normalized: dict[str, pd.Series] = {}
+    normalized: dict[str, npt.NDArray[np.float64]] = {}
     for field in ('pos', 'gross', 'net'):
-        values = getattr(result, field)
-        if not isinstance(values, pd.Series):
-            raise ValueError(f'backtest_snapshot strategy {field} must be a pd.Series')
-        values = cast('pd.Series[Any]', values)
-        if len(values) != len(expected_index) or not values.index.equals(expected_index):
-            raise ValueError(
-                f'backtest_snapshot strategy {field} must be a full-window series with the input index'
-            )
         try:
-            numeric = pd.to_numeric(values, errors='raise')
+            arr = np.asarray(getattr(result, field), dtype=float)
         except (TypeError, ValueError) as exc:
             raise ValueError(f'backtest_snapshot strategy {field} must be numeric') from exc
-        arr = numeric.to_numpy(dtype=float)
+        if arr.ndim != 1 or arr.shape[0] != expected_len:
+            raise ValueError(
+                f'backtest_snapshot strategy {field} must be a full-window array matching the input length'
+            )
         if not np.isfinite(arr).all():
             raise ValueError(f'backtest_snapshot strategy {field} must be finite')
-        normalized[field] = pd.Series(arr, index=expected_index, name=values.name)
+        normalized[field] = arr
 
     return ExecutionResult(**normalized)
 
 
-def backtest_snapshot(df: pd.DataFrame,
+def backtest_snapshot(columns: Mapping[str, Any],
                       *,
                       pred_col: str = 'predictions',
                       open_col: str = 'open',
@@ -103,23 +100,24 @@ def backtest_snapshot(df: pd.DataFrame,
                       execution_lag_bars: int = 1,
                       fee_bps: float = 5.0,
                       slip_bps: float = 5.0,
-                      notional_rate: float = 1.0) -> pd.DataFrame:
+                      notional_rate: float = 1.0) -> dict[str, float]:
 
     '''
     Bar-based metric ledger over a strategy's per-bar returns.
 
     Validates the price columns, delegates execution to `strategy` (default
-    long_flat_strategy), and summarizes the returned per-bar series into a one-row,
+    long_flat_strategy), and summarizes the returned per-bar arrays into a one-row,
     purely bar-based ledger: one unit (the bar), one population (every bar in the
     window, with flat bars counted as a real 0), and every column intensive (a rate,
     ratio, or per-bar quantity). No wall-clock time.
 
-    Takes in output of log.permutation_prediction_performance and returns the
-    one-row backtest ledger.
+    Takes the columns of log.permutation_prediction_performance as a mapping of
+    equal-length array-like columns keyed by name (a dict of numpy arrays) and
+    returns the one-row backtest ledger as a dict.
 
     The strategy receives the prediction column and the validated open, close, and
-    price_change series plus execution_lag_bars, fee_bps, and slip_bps, and returns an
-    ExecutionResult of per-bar pos, gross, and net return series. Every column flows
+    price_change arrays plus execution_lag_bars, fee_bps, and slip_bps, and returns an
+    ExecutionResult of per-bar pos, gross, and net return arrays. Every column flows
     from that triple. notional_rate (the deployed fraction of capital) is then applied
     here as a uniform scale on that triple — it commutes with the fill mechanics, so
     strategies never handle it — scaling edge, pnl, and cost and making
@@ -137,25 +135,37 @@ def backtest_snapshot(df: pd.DataFrame,
     and cvar_95_pnl_bps is NaN when there are fewer than CVAR_MIN_BARS bars.
 
     Args:
-        df (pd.DataFrame): Per-round table with the prediction and price columns.
-        pred_col (str): Prediction column name.
-        open_col (str): Open price column name.
-        close_col (str): Close price column name.
-        price_change_col (str): Price-change column name (close minus open).
+        columns (Mapping[str, Any]): Per-round columns with the prediction and price
+            arrays, keyed by name
+        pred_col (str): Prediction column name
+        open_col (str): Open price column name
+        close_col (str): Close price column name
+        price_change_col (str): Price-change column name (close minus open)
         strategy (Callable[..., ExecutionResult]): Execution model mapping the signal
-            and prices to per-bar pos, gross, and net series.
-        execution_lag_bars (int): Bars between a signal row and its execution row.
-        fee_bps (float): Per-fill fee in basis points.
-        slip_bps (float): Per-fill slippage in basis points.
+            and prices to per-bar pos, gross, and net arrays
+        execution_lag_bars (int): Bars between a signal row and its execution row
+        fee_bps (float): Per-fill fee in basis points
+        slip_bps (float): Per-fill slippage in basis points
         notional_rate (float): Fraction of capital deployed while in position, in (0, 1];
-            applied as a uniform scale on the strategy's returned pos, gross, and net.
+            applied as a uniform scale on the strategy's returned pos, gross, and net
 
     Returns:
-        pd.DataFrame: One-row ledger with columns BACKTEST_SNAPSHOT_COLUMNS.
+        dict[str, float]: One-row ledger keyed by BACKTEST_SNAPSHOT_COLUMNS
     '''
 
-    if df.empty:
+    required_cols = (pred_col, open_col, close_col, price_change_col)
+    missing = [col for col in required_cols if col not in columns]
+    if missing:
+        raise ValueError(f"backtest_snapshot columns mapping is missing required keys: {', '.join(missing)}")
+
+    try:
+        lengths = {len(columns[col]) for col in required_cols}
+    except TypeError as exc:
+        raise ValueError('backtest_snapshot columns must be sized array-likes') from exc
+    if lengths == {0}:
         raise ValueError('backtest_snapshot requires at least one row')
+    if len(lengths) != 1:
+        raise ValueError('backtest_snapshot columns must have equal lengths')
 
     if (
         isinstance(notional_rate, bool)
@@ -165,13 +175,13 @@ def backtest_snapshot(df: pd.DataFrame,
         raise ValueError('backtest_snapshot notional_rate must be in (0, 1]')
 
     try:
-        open_px = pd.to_numeric(df[open_col], errors='raise')
-        close_px = pd.to_numeric(df[close_col], errors='raise')
-        dpx = pd.to_numeric(df[price_change_col], errors='raise')
+        open_px = np.asarray(columns[open_col], dtype=float)
+        close_px = np.asarray(columns[close_col], dtype=float)
+        dpx = np.asarray(columns[price_change_col], dtype=float)
     except (TypeError, ValueError) as exc:
         raise ValueError('backtest_snapshot open, close, and price_change must be numeric') from exc
 
-    price_check_mask = open_px.notna() & close_px.notna() & dpx.notna()
+    price_check_mask = ~np.isnan(open_px) & ~np.isnan(close_px) & ~np.isnan(dpx)
     expected_dpx = close_px - open_px
 
     if price_check_mask.any() and not np.isclose(
@@ -182,8 +192,9 @@ def backtest_snapshot(df: pd.DataFrame,
     ).all():
         raise ValueError('backtest_snapshot price_change must equal close - open')
 
+    total_bars = open_px.shape[0]
     result = strategy(
-        df[pred_col],
+        columns[pred_col],
         open_px,
         close_px,
         dpx,
@@ -191,23 +202,24 @@ def backtest_snapshot(df: pd.DataFrame,
         fee_bps=fee_bps,
         slip_bps=slip_bps,
     )
-    result = _validate_execution_result(result, df.index)
+    result = _validate_execution_result(result, total_bars)
 
     gross = result.gross * notional_rate
     net = result.net * notional_rate
     pos = result.pos * notional_rate
-    total_bars = len(df)
 
-    eq_net = (1.0 + net).cumprod()
-    drawdown = (eq_net / eq_net.cummax().clip(lower=1.0)) - 1.0
+    eq_net = np.cumprod(1.0 + net)
+    drawdown = (eq_net / np.clip(np.maximum.accumulate(eq_net), 1.0, None)) - 1.0
+    cost = gross - net
+    wins = net > 0
     in_market = pos > 0
-    entry_mask = in_market & (~in_market.shift(1, fill_value=False))
+    entry_mask = in_market & ~np.concatenate(([False], in_market[:-1]))
 
     data: dict[str, float] = {}
     for prefix, values in [
         ('edge_bps', gross * BPS_PER_UNIT),
         ('pnl_bps', net * BPS_PER_UNIT),
-        ('cost_bps', (gross - net) * BPS_PER_UNIT),
+        ('cost_bps', cost * BPS_PER_UNIT),
         ('drawdown_bps', drawdown * BPS_PER_UNIT),
     ]:
         p5, p50, p95 = _quantiles(values, BPS_DECIMALS)
@@ -215,15 +227,13 @@ def backtest_snapshot(df: pd.DataFrame,
         data[f'{prefix}_p50'] = p50
         data[f'{prefix}_p95'] = p95
 
-    data['wins_per_bar'] = round(float((net > 0).mean()), FRACTION_DECIMALS)
+    data['wins_per_bar'] = round(float(wins.mean()), FRACTION_DECIMALS)
     data['pnl_per_bar_bps'] = _mean_bps(net)
-    data['avg_win_bps'] = _mean_bps(net[net > 0])
+    data['avg_win_bps'] = _mean_bps(net[wins])
     data['avg_loss_bps'] = _mean_bps(net[net < 0])
     data['cvar_95_pnl_bps'] = _cvar_tail_bps(net)
     data['trades_per_bar'] = round(float(entry_mask.sum()) / total_bars, RATE_DECIMALS)
     data['inventory_per_bar'] = round(float(pos.mean()), FRACTION_DECIMALS)
-    data['cost_per_bar_bps'] = _mean_bps(gross - net)
+    data['cost_per_bar_bps'] = _mean_bps(cost)
 
-    data = {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}
-
-    return pd.DataFrame.from_records([data])
+    return {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}

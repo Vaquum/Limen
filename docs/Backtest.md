@@ -21,7 +21,7 @@ Table 1. Backtest is exposed through three paths.
 
 ## Snapshot contract
 
-`backtest_snapshot()` is the ledger path used by `Log.experiment_backtest_results()`. It consumes the per-round table returned by `permutation_prediction_performance()` and returns one summary row.
+`backtest_snapshot()` is the ledger path used by `Log.experiment_backtest_results()`. It consumes the per-round columns returned by `permutation_prediction_performance()` and returns one summary row as a metrics dict keyed by the ledger columns.
 
 ```python
 uel._log.permutation_prediction_performance(round_id=0)
@@ -106,9 +106,9 @@ Table 4. Scalar columns are intensive metrics.
 
 ## Strategy boundary
 
-The execution model is swappable. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar series. The shipped strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
+The execution model is swappable. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar arrays. The shipped strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
 
-A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a finite numeric per-bar series over the full window with the input index. `backtest_snapshot()` rejects malformed custom strategy outputs before computing the ledger.
+A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a finite numeric per-bar array over the full window, aligned positionally to the input length. `backtest_snapshot()` rejects malformed custom strategy outputs before computing the ledger.
 
 ```python
 from limen.backtest.backtest_snapshot import backtest_snapshot
