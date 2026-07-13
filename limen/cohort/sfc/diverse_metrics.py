@@ -206,7 +206,7 @@ def select(context: dict[str, Any],
             continue
         q1 = np.quantile(col_values, 0.25)
         q3 = np.quantile(col_values, 0.75)
-        if np.isnan(q1) or np.isnan(q3) or q1 == q3:
+        if q1 == q3:
             continue
         iqr = q3 - q1
         lo = q1 - iqr_multiplier * iqr

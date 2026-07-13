@@ -98,7 +98,7 @@ def select(context: dict[str, Any],
     )
 
     finite_metrics = cast(npt.NDArray[np.bool_], np.isfinite(work.select(metric_cols).to_numpy()).all(axis=1))
-    work = work.filter(pl.Series(finite_metrics))
+    work = work.filter(finite_metrics)
 
     if min_signals > 0 and 'num_trades_test' in work.columns:
         work = work.filter(pl.col('num_trades_test') >= min_signals)
@@ -109,9 +109,6 @@ def select(context: dict[str, Any],
         )
         work = work.filter(signal_count >= min_signals)
 
-    work = work.filter(
-        pl.all_horizontal([pl.col(col).is_not_null() & pl.col(col).is_not_nan() for col in metric_cols])
-    )
     if work.is_empty():
         return []
 
@@ -125,7 +122,7 @@ def select(context: dict[str, Any],
         if dominates.any():
             keep[idx] = False
 
-    front = work.filter(pl.Series(keep))
+    front = work.filter(keep)
     parts: list[npt.NDArray[np.float64]] = []
     for col in metric_cols:
         col_values = front[col].to_numpy()
