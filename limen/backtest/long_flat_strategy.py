@@ -29,16 +29,11 @@ def _shift(arr: npt.NDArray[Any], periods: int, fill: Any) -> npt.NDArray[Any]:
 
     '''Positional shift matching pandas Series.shift(periods, fill_value=fill).'''
 
-    n = arr.shape[0]
-    out = np.empty(n, dtype=arr.dtype)
-    out[:] = fill
+    out = np.full(arr.shape[0], fill, dtype=arr.dtype)
     if periods > 0:
-        if periods < n:
-            out[periods:] = arr[:n - periods]
+        out[periods:] = arr[:-periods]
     elif periods < 0:
-        gap = -periods
-        if gap < n:
-            out[:n - gap] = arr[gap:]
+        out[:periods] = arr[-periods:]
     else:
         out[:] = arr
     return out
@@ -105,8 +100,9 @@ def long_flat_strategy(predictions: Any,
     eval_mask = execution_rows & tradable
     pos = (pred == 1) & eval_mask
 
-    entry_mask = pos & ~_shift(pos, 1, False)
-    cont_mask = pos & _shift(pos, 1, False)
+    prev_pos = _shift(pos, 1, False)
+    entry_mask = pos & ~prev_pos
+    cont_mask = pos & prev_pos
 
     with np.errstate(divide='ignore', invalid='ignore'):
         r_entry = dpx / open_a

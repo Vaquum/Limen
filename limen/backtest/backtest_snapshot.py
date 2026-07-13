@@ -7,7 +7,6 @@ import numpy as np
 import numpy.typing as npt
 
 from limen.backtest.long_flat_strategy import ExecutionResult
-from limen.backtest.long_flat_strategy import _shift
 from limen.backtest.long_flat_strategy import long_flat_strategy
 
 PRICE_CHANGE_RTOL = 1e-09
@@ -40,10 +39,6 @@ BACKTEST_SNAPSHOT_COLUMNS = [
     'inventory_per_bar',
     'cost_per_bar_bps',
 ]
-
-
-def _n_rows(columns: Mapping[str, Any], col: str) -> int:
-    return len(columns[col]) if col in columns else 0
 
 
 def _finite_values(values: Any) -> npt.NDArray[np.float64]:
@@ -116,9 +111,9 @@ def backtest_snapshot(columns: Mapping[str, Any],
     window, with flat bars counted as a real 0), and every column intensive (a rate,
     ratio, or per-bar quantity). No wall-clock time.
 
-    Takes the columns of log.permutation_prediction_performance (any mapping whose
-    values are array-like — a dict of arrays, a polars DataFrame, or a pandas
-    DataFrame) and returns the one-row backtest ledger as a dict.
+    Takes the columns of log.permutation_prediction_performance as a mapping of
+    equal-length array-like columns keyed by name (a dict of numpy arrays) and
+    returns the one-row backtest ledger as a dict.
 
     The strategy receives the prediction column and the validated open, close, and
     price_change arrays plus execution_lag_bars, fee_bps, and slip_bps, and returns an
@@ -158,8 +153,16 @@ def backtest_snapshot(columns: Mapping[str, Any],
         dict[str, float]: One-row ledger keyed by BACKTEST_SNAPSHOT_COLUMNS
     '''
 
-    if _n_rows(columns, open_col) == 0:
+    required_cols = (pred_col, open_col, close_col, price_change_col)
+    missing = [col for col in required_cols if col not in columns]
+    if missing:
+        raise ValueError(f"backtest_snapshot columns is missing {', '.join(missing)}")
+
+    lengths = {len(columns[col]) for col in required_cols}
+    if lengths == {0}:
         raise ValueError('backtest_snapshot requires at least one row')
+    if len(lengths) != 1:
+        raise ValueError('backtest_snapshot columns must have equal lengths')
 
     if (
         isinstance(notional_rate, bool)
@@ -204,14 +207,16 @@ def backtest_snapshot(columns: Mapping[str, Any],
 
     eq_net = np.cumprod(1.0 + net)
     drawdown = (eq_net / np.clip(np.maximum.accumulate(eq_net), 1.0, None)) - 1.0
+    cost = gross - net
+    wins = net > 0
     in_market = pos > 0
-    entry_mask = in_market & ~_shift(in_market, 1, False)
+    entry_mask = in_market & ~np.concatenate(([False], in_market[:-1]))
 
     data: dict[str, float] = {}
     for prefix, values in [
         ('edge_bps', gross * BPS_PER_UNIT),
         ('pnl_bps', net * BPS_PER_UNIT),
-        ('cost_bps', (gross - net) * BPS_PER_UNIT),
+        ('cost_bps', cost * BPS_PER_UNIT),
         ('drawdown_bps', drawdown * BPS_PER_UNIT),
     ]:
         p5, p50, p95 = _quantiles(values, BPS_DECIMALS)
@@ -219,13 +224,13 @@ def backtest_snapshot(columns: Mapping[str, Any],
         data[f'{prefix}_p50'] = p50
         data[f'{prefix}_p95'] = p95
 
-    data['wins_per_bar'] = round(float((net > 0).mean()), FRACTION_DECIMALS)
+    data['wins_per_bar'] = round(float(wins.mean()), FRACTION_DECIMALS)
     data['pnl_per_bar_bps'] = _mean_bps(net)
-    data['avg_win_bps'] = _mean_bps(net[net > 0])
+    data['avg_win_bps'] = _mean_bps(net[wins])
     data['avg_loss_bps'] = _mean_bps(net[net < 0])
     data['cvar_95_pnl_bps'] = _cvar_tail_bps(net)
     data['trades_per_bar'] = round(float(entry_mask.sum()) / total_bars, RATE_DECIMALS)
     data['inventory_per_bar'] = round(float(pos.mean()), FRACTION_DECIMALS)
-    data['cost_per_bar_bps'] = _mean_bps(gross - net)
+    data['cost_per_bar_bps'] = _mean_bps(cost)
 
-    return {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}
+    return data

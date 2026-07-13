@@ -85,7 +85,11 @@ def experiment_backtest_results(self: Any) -> pd.DataFrame:
 
     for i in range(len(self.round_params)):
         perf = _prepare_snapshot_backtest_input(self.permutation_prediction_performance(i))
+        columns = {
+            col: perf[col].to_numpy()
+            for col in ('predictions', 'open', 'close', 'price_change')
+        }
 
-        all_rows.append(backtest_snapshot(perf, execution_lag_bars=1))
+        all_rows.append(backtest_snapshot(columns, execution_lag_bars=1))
 
     return pd.DataFrame.from_records(all_rows)
