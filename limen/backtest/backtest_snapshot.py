@@ -158,7 +158,10 @@ def backtest_snapshot(columns: Mapping[str, Any],
     if missing:
         raise ValueError(f"backtest_snapshot columns mapping is missing required keys: {', '.join(missing)}")
 
-    lengths = {len(columns[col]) for col in required_cols}
+    try:
+        lengths = {len(columns[col]) for col in required_cols}
+    except TypeError as exc:
+        raise ValueError('backtest_snapshot columns must be sized array-likes') from exc
     if lengths == {0}:
         raise ValueError('backtest_snapshot requires at least one row')
     if len(lengths) != 1:
