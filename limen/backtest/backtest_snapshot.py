@@ -156,7 +156,7 @@ def backtest_snapshot(columns: Mapping[str, Any],
     required_cols = (pred_col, open_col, close_col, price_change_col)
     missing = [col for col in required_cols if col not in columns]
     if missing:
-        raise ValueError(f"backtest_snapshot columns is missing {', '.join(missing)}")
+        raise ValueError(f"backtest_snapshot columns mapping is missing required keys: {', '.join(missing)}")
 
     lengths = {len(columns[col]) for col in required_cols}
     if lengths == {0}:
@@ -233,4 +233,4 @@ def backtest_snapshot(columns: Mapping[str, Any],
     data['inventory_per_bar'] = round(float(pos.mean()), FRACTION_DECIMALS)
     data['cost_per_bar_bps'] = _mean_bps(cost)
 
-    return data
+    return {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}
