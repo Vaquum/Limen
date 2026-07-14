@@ -221,10 +221,12 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 `evaluate()` returns a flat dict with three tiers:
 
 - **Tier 1** — position stats: `num_trades_{split}`, `position_rate_{split}`
-- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns suffixed with `_{split}` (e.g. `pnl_bps_p50_train`, `drawdown_bps_p5_test`)
+- **Tier 2** — per-split backtest: all `backtest_snapshot` output columns plus rule-only `pnl_per_trade_bps`, each suffixed with `_{split}` (e.g. `pnl_bps_p50_train`, `drawdown_bps_p5_test`, `pnl_per_trade_bps_test`)
 - **Tier 3** — cross-split diagnostics: `drawdown_std_bps`, `is_stable`
 
 `is_stable` is `False` until a replacement stability rule is defined against the new decoder-level ledger.
+
+`pnl_per_trade_bps` is intentionally outside the generic 20-column snapshot. `RuleBasedStrategy` derives it from contiguous executed-position segments returned by the shared long-flat strategy, compounds net per-bar returns after costs and notional sizing within each segment, then takes the arithmetic mean. No executed trades yields `NaN`.
 
 **NOTE:** Tier 2 and Tier 3 metrics require `open` and `close` columns in the split DataFrames to run the backtest. When those columns are absent, per-split backtest results are empty and `drawdown_std_bps` is returned as `None` with `is_stable` falling back to `False`.
 

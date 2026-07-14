@@ -109,6 +109,12 @@ Table 4. Scalar columns are intensive metrics.
 | `inventory_per_bar` | Mean deployed notional; `notional_rate` multiplied by the share of bars in market. |
 | `cost_per_bar_bps` | Mean per-bar gross return minus net return. |
 
+### Rule-based mean PnL per trade
+
+`RuleBasedStrategy` adds `pnl_per_trade_bps_{split}` outside the generic snapshot contract; `backtest_snapshot()` itself remains exactly 20 columns. An executed trade is one contiguous segment where the lagged strategy position is above zero. Its return compounds the segment's net per-bar returns after fee, slippage, and `notional_rate`; the metric is the arithmetic mean across executed trades, in basis points. It is `NaN` when no trade executes.
+
+For the bundled dollar-bar crash-reversal sweep, `fee_bps=10.0` and `slip_bps=5.0` mean 15 bps on each entry or exit fill. The mean therefore measures the surviving net edge per completed position path, not a gross signal return.
+
 ## Strategy boundary
 
 The execution model is swappable. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar arrays. The shipped strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
