@@ -240,4 +240,4 @@ def test_governance_hardening_surfaces() -> None:
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.__all__ == ['CLOSING_KEYWORD_RE']
+    assert module.__all__ == ['CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
