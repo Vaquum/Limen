@@ -39,6 +39,8 @@ Every GitHub release carries:
 
 Assets attach only after the PyPI publish succeeds, so a release with assets is a release that shipped.
 
+Recovery from a partial release is asymmetric: when the PyPI publish succeeded but assets are missing, re-run `publish_release_assets` alone; when the PyPI upload itself failed partway, the version is burned — bump past it. Never re-run the full workflow for a version PyPI already serves; the filename guard rejects it by design.
+
 ## Dependency vulnerability gate
 
 `pr_checks_supply` runs `governance/check_dependency_vulnerabilities.py`: pip-audit over `[project.dependencies]`. A finding blocks merge unless `.github/vuln_exceptions.json` carries an entry with `id`, `reason`, and `expiry`; an expired exception fails again. Dependabot (pip and github-actions ecosystems, weekly) proposes the upgrades that keep the gate green.
