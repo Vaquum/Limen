@@ -15,6 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
 ROOT = Path(__file__).resolve().parents[1]
 OPTIONAL_BACKEND_MODULES = ('lightgbm', 'pyarrow', 'scipy', 'statsmodels', 'talib', 'tabpfn', 'xgboost')
 MODEL_BACKEND_MODULES = ('lightgbm', 'tabpfn', 'xgboost')
+BARE_CI_TOOLS = ('build', 'cyclonedx-bom', 'pip-audit')
 
 
 def _project_version() -> str:
@@ -162,17 +163,63 @@ def test_pyright_gate_config() -> None:
 def test_constraints_mirror_runtime_envelope() -> None:
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     project = pyproject['project']
-    envelope = [
-        *project['dependencies'],
-        *project['optional-dependencies']['all'],
-        *project['optional-dependencies']['release'],
+    optional = project['optional-dependencies']
+    ci_tool_pins = [
+        pin for pin in optional['dev']
+        if pin.partition('>=')[0] in BARE_CI_TOOLS
     ]
+    assert sorted(pin.partition('>=')[0] for pin in ci_tool_pins) == sorted(BARE_CI_TOOLS)
+    envelope = {
+        # Constraints files reject extras, so the mirror strips them.
+        re.sub(r'\[[^]]+]', '', entry, count=1)
+        for entry in (
+            *project['dependencies'],
+            *optional['all'],
+            *optional['release'],
+            *optional['test'],
+            *ci_tool_pins,
+        )
+    }
     constraints_path = ROOT / 'requirements' / 'constraints.txt'
     constraints = [
         line for line in constraints_path.read_text(encoding='utf-8').splitlines()
         if line.strip()
     ]
     assert sorted(constraints) == sorted(envelope)
+
+
+def test_supply_chain_surfaces() -> None:
+    workflows = sorted((ROOT / '.github' / 'workflows').glob('*.yml'))
+    assert workflows
+    for workflow in workflows:
+        text = workflow.read_text(encoding='utf-8')
+        assert 'permissions:' in text, workflow.name
+        assert re.search(r'uses:\s*\S+@v\d', text) is None, workflow.name
+        checkouts = text.count('uses: actions/checkout@')
+        persisted = text.count('persist-credentials: false')
+        if workflow.name == 'pr_post_release.yml':
+            assert checkouts == 1
+            assert persisted == 0
+        else:
+            assert checkouts == persisted, workflow.name
+
+    assert (ROOT / '.github' / 'dependabot.yml').is_file()
+    assert (ROOT / '.github' / 'vuln_exceptions.json').is_file()
+    assert (ROOT / 'governance' / 'check_dependency_vulnerabilities.py').is_file()
+
+    supply = (ROOT / '.github' / 'workflows' / 'pr_checks_supply.yml').read_text(encoding='utf-8')
+    assert 'governance/check_dependency_vulnerabilities.py' in supply
+
+    publish = (ROOT / '.github' / 'workflows' / 'pr_publish_pypi.yml').read_text(encoding='utf-8')
+    assert 'Guard PyPI filename availability' in publish
+    assert 'environment: pypi' in publish
+    assert 'gh release upload' in publish
+    assert 'sbom.json' in publish
+    assert 'attach_release_assets' not in publish
+    assert 'skip-existing' not in publish
+
+    release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
+    assert 'TAG_RE' in release_script
 
 
 def test_governance_hardening_surfaces() -> None:

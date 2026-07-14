@@ -301,6 +301,12 @@ const docs = [
     sidebarPosition: 9,
   },
   {
+    source: 'docs/Developer/Release-Policy.md',
+    dest: 'developer/release-policy.md',
+    slug: '/developer/release-policy',
+    sidebarPosition: 10,
+  },
+  {
     source: 'limen/data/README.md',
     dest: 'packages/data.md',
     slug: '/packages/data',

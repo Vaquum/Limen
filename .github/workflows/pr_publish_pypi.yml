@@ -1,5 +1,8 @@
 name: Publish Package to PyPI
 
+permissions:
+  contents: read
+
 on:
   release:
     types: [published]
@@ -25,14 +28,16 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Checkout release commit from workflow run
         if: github.event_name == 'workflow_run'
-        run: git checkout --force "${{ github.event.workflow_run.head_sha }}"
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: git checkout --force "$HEAD_SHA"
 
       - name: Fetch all tags
         run: git fetch --force --tags origin
@@ -40,18 +45,27 @@ jobs:
       - name: Resolve released tag
         id: resolve
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          if [[ "${{ github.event_name }}" == 'release' ]]; then
-            tag_name='${{ github.event.release.tag_name }}'
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == 'release' ]]; then
+            tag_name="$RELEASE_TAG"
           else
-            head_sha='${{ github.event.workflow_run.head_sha }}'
-            tag_name="$(git tag --points-at "$head_sha" | sort -V | tail -n 1)"
+            tag_name="$(git tag --points-at "$HEAD_SHA" | { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -n 1)"
 
             if [[ -z "$tag_name" ]]; then
-              echo "No release tag found on commit $head_sha — skipping publish"
+              echo "No release tag found on commit $HEAD_SHA — skipping publish"
               echo 'tag_name=' >> "$GITHUB_OUTPUT"
               exit 0
             fi
+          fi
+
+          if ! [[ "$tag_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::resolve_release_tag: tag '$tag_name' does not match ^v<major>.<minor>.<patch>$"
+            exit 1
           fi
 
           echo "Resolved tag: $tag_name"
@@ -69,18 +83,64 @@ jobs:
 
     steps:
       - name: Checkout released tag
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
           ref: ${{ needs.resolve_release_tag.outputs.tag_name }}
 
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.10"
 
+      # A filename that ever reached PyPI can never be uploaded again,
+      # even after deletion, and deleted releases vanish from the JSON
+      # API. This guard fails loud on any visible reuse before anything
+      # builds; invisibly burned names are prevented by the v* tag
+      # ruleset plus the never-reuse-a-version rule in
+      # docs/Developer/Release-Policy.md.
+      - name: Guard PyPI filename availability
+        env:
+          TAG_NAME: ${{ needs.resolve_release_tag.outputs.tag_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          match = re.search(r'^version\s*=\s*"([^"]+)"', Path('pyproject.toml').read_text(encoding='utf-8'), re.MULTILINE)
+          if match is None:
+              raise SystemExit('filename guard: could not read version from pyproject.toml')
+          version = match.group(1)
+          tag = os.environ['TAG_NAME']
+          if tag != f'v{version}':
+              raise SystemExit(f'filename guard: tag {tag} does not match pyproject version {version}')
+          try:
+              with urllib.request.urlopen('https://pypi.org/pypi/vaquum-limen/json', timeout=30) as response:
+                  releases = json.load(response)['releases']
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              releases = {}
+          if version in releases:
+              raise SystemExit(f'filename guard: version {version} already has a release entry on PyPI; bump the version instead of reusing it')
+          expected = (f'vaquum_limen-{version}-', f'vaquum_limen-{version}.tar')
+          used = sorted(
+              file['filename']
+              for files in releases.values()
+              for file in files
+              if file['filename'].startswith(expected)
+          )
+          if used:
+              raise SystemExit(f'filename guard: filenames already used on PyPI: {used}; a burned filename can never be reused, bump the version')
+          print(f'filename guard: vaquum_limen-{version} filenames are available on PyPI')
+          PY
+
       - name: Install build tooling
-        run: python -m pip install --upgrade build
+        run: python -m pip install -c requirements/constraints.txt build
 
       - name: Build package distributions
         env:
@@ -88,41 +148,22 @@ jobs:
         run: python -m build
 
       - name: Attest package distributions
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: dist/*
 
       - name: Upload distributions
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: python-package-distributions
           path: dist/
-
-  attach_release_assets:
-    name: Attach Release Assets
-    needs: [resolve_release_tag, build_distribution]
-    if: github.event_name == 'release' && needs.build_distribution.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download distributions
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Upload distributions to GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ needs.resolve_release_tag.outputs.tag_name }}" dist/* --clobber
 
   publish_to_pypi:
     name: Publish Distribution to PyPI
     needs: build_distribution
     if: needs.build_distribution.result == 'success'
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       contents: read
       id-token: write
@@ -136,5 +177,56 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+
+  publish_release_assets:
+    name: Publish Release Assets
+    needs: [resolve_release_tag, publish_to_pypi]
+    if: needs.publish_to_pypi.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout released tag
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          skip-existing: true
+          persist-credentials: false
+          ref: ${{ needs.resolve_release_tag.outputs.tag_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Generate SBOM from the released wheel environment
+        run: |
+          set -euo pipefail
+          python -m pip install -c requirements/constraints.txt cyclonedx-bom
+          python -m pip install -c requirements/constraints.txt "$(ls dist/*.whl)[boosting,data,indicators,stats]"
+          cyclonedx-py environment --output-file sbom.json
+
+      - name: Upload assets and append artifact digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.resolve_release_tag.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG_NAME" dist/* sbom.json --clobber
+          gh release view "$TAG_NAME" --json body --jq .body > release_body.md
+          if ! grep -q '^### Artifact SHA-256' release_body.md; then
+            {
+              echo ''
+              echo '### Artifact SHA-256'
+              echo ''
+              echo '```'
+              sha256sum dist/* sbom.json | sed 's|dist/||'
+              echo '```'
+            } >> release_body.md
+            gh release edit "$TAG_NAME" --notes-file release_body.md
+          fi
