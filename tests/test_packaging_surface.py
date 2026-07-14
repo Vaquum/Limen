@@ -241,3 +241,6 @@ def test_governance_hardening_surfaces() -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.__all__ == ['CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
+    removed_helpers = ('CC_RE', 'TYPING_BUDGET', 'find_python_files', 'resolve_package_dir', 'significant_lines')
+    for name in removed_helpers:
+        assert not hasattr(module, name), name
