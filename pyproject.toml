@@ -54,14 +54,14 @@ data = ["pyarrow>=18,<23"]
 boosting = ["lightgbm>=4.6,<5", "xgboost>=2.1,<4"]
 indicators = ["ta-lib>=0.6,<0.7"]
 stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
-tabpfn = ["tabpfn>=6,<7"]
+tabpfn = ["tabpfn>=6,<9"]
 all = [
   "lightgbm>=4.6,<5",
   "pyarrow>=18,<23",
   "scipy>=1.15,<2",
   "statsmodels>=0.14,<0.15",
   "ta-lib>=0.6,<0.7",
-  "tabpfn>=6,<7",
+  "tabpfn>=6,<9",
   "xgboost>=2.1,<4",
 ]
 test = ["coverage[toml]>=7,<8", "pytest>=8,<10"]
