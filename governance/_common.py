@@ -5,9 +5,9 @@ Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5
 and deliberately trimmed to the surface Limen's gates import: the slice
 gate uses ``CLOSING_KEYWORD_RE``; the dependency vulnerability gate uses
 ``REPO_ROOT`` and ``fail_setup``. The upstream template ships further
-helpers for gates Limen never adopted; carrying them here documented law
-that does not exist in this repo, so the divergence from upstream is
-intentional.
+helpers for gates Limen never adopted; carrying them here meant
+documenting law that does not exist in this repo, so the divergence
+from upstream is intentional.
 """
 from __future__ import annotations
 

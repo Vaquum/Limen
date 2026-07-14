@@ -51,6 +51,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
+          # Pin to main so a workflow_dispatch from another ref still
+          # executes the gate from main's tree, keeping the
+          # main-only execution contract mechanical.
+          ref: main
           persist-credentials: false
 
       - name: Set up Python
