@@ -38,20 +38,26 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-  checks: write  # required to POST check-runs
 
 jobs:
   rerun_slice_gate_for_linked_prs:
     name: pr_checks_slice_on_issue
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      checks: write  # required to POST check-runs
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.10'
 

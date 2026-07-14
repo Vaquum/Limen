@@ -11,14 +11,16 @@ on:
     types: [closed]
 
 permissions:
-  issues: write
-  pull-requests: read
-  checks: read
+  contents: read
 
 jobs:
   slice_closeout_guard:
     name: Slice Closeout Guard
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+      checks: read
     if: contains(github.event.issue.labels.*.name, 'slice')
     steps:
       - name: Resolve the closing PR

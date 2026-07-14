@@ -1,5 +1,8 @@
 name: Ruff Linting
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -11,7 +14,9 @@ jobs:
     name: PR Checks Ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       # Run ruff linting
-      - uses: astral-sh/ruff-action@v3
+      - uses: astral-sh/ruff-action@4919ec5cf1f49eff0871dbcea0da843445b837e6 # v3.6.1
