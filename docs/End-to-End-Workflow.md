@@ -36,7 +36,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_first
-  limen_version: "4.1.10"
+  limen_version: "5.0.0"
   mode: development
   description: First logistic-regression binary classifier
 
@@ -152,7 +152,7 @@ For full benchmark tables, run the same SFD through a UEL-backed Python object w
 
 ## Read next
 
-- [Command Line Interface](Command-Line-Interface.md)
+- [Command-Line Interface](Command-Line-Interface.md)
 - [Experiment Manifest](Experiment-Manifest.md)
 - [Log](Log.md)
 - [Benchmark](Benchmark.md)

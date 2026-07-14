@@ -6,12 +6,18 @@ This page is the Limen-local versioning contract.
 
 Use this page to decide the version bump and apply the result to Limen's local version surfaces.
 
+## Prerequisites
+
+- the approved change scope and its public compatibility impact
+- the current package version, changelog, citation metadata, templates, and release state
+
 Limen-local version surfaces:
 
 | Surface | Role |
 | --- | --- |
 | `pyproject.toml` | canonical package version for builds and releases |
 | `CHANGELOG.md` | human-readable release history |
+| `CITATION.cff` | citation version and release date |
 | git tag `v<version>` | release identity expected by `scripts/create_release.py` |
 | docs and package references | update only when the changed behavior affects documented public surfaces |
 
@@ -20,9 +26,9 @@ Limen-local version surfaces:
 - MAJOR: incompatible public API, CLI, schema, artifact, or package-contract change.
 - MINOR: new compatible public capability.
 - PATCH: compatible fix, docs correction, package metadata correction, dependency/security refresh, or proof-gate change.
-- Keep `pyproject.toml`, template `metadata.limen_version`, changelog entry, release tag, and release notes aligned to the same version.
-- Treat docs-only changes as version-affecting when the published package metadata, README, docs artifacts, or public support/security surface changes.
-- If code behavior changes, update docs and changelog in the same PR when they are part of the public surface.
+- Keep `pyproject.toml`, `CITATION.cff`, template `metadata.limen_version`, changelog entry, release tag, and release notes aligned to the same version.
+- Code changes require a version update and changelog entry in the same PR. Update affected public docs there as well.
+- A docs-only PR may remain version-neutral. Change the version only when the operator intends that PR to create a release candidate.
 
 ## Review notes
 

@@ -9,6 +9,7 @@ const siteRoot = path.resolve(repoRoot, 'docs-site');
 const outRoot = path.resolve(siteRoot, '.generated', 'docs');
 
 const repoBlobBaseUrl = 'https://github.com/Vaquum/Limen/blob/main';
+const repoEditBaseUrl = 'https://github.com/Vaquum/Limen/edit/main';
 const repoTreeBaseUrl = 'https://github.com/Vaquum/Limen/tree/main';
 
 const sectionCategories = [
@@ -46,6 +47,13 @@ const sectionCategories = [
     position: 5,
     slug: '/packages',
     description: 'Module ownership, boundaries, and canonical entry points.',
+  },
+  {
+    dir: 'packages/internals',
+    label: 'Internal packages',
+    position: 99,
+    slug: '/packages/internals',
+    description: 'Nested package boundaries and implementation entry points.',
   },
 ];
 
@@ -233,9 +241,9 @@ const docs = [
   },
   {
     source: 'docs/Command-Line-Interface.md',
-    dest: 'reference/command-line-interface.md',
-    slug: '/reference/command-line-interface',
-    sidebarPosition: 11,
+    dest: 'guides/command-line-interface.md',
+    slug: '/guides/command-line-interface',
+    sidebarPosition: 0,
   },
   {
     source: 'docs/Developer/README.md',
@@ -275,21 +283,21 @@ const docs = [
     sidebarPosition: 6,
   },
   {
+    source: 'docs/Developer/Packaging.md',
+    dest: 'developer/packaging.md',
+    slug: '/developer/packaging',
+    sidebarPosition: 7,
+  },
+  {
     source: 'docs/Semantic-Versioning.md',
     dest: 'developer/semantic-versioning.md',
     slug: '/developer/semantic-versioning',
-    sidebarPosition: 7,
+    sidebarPosition: 8,
   },
   {
     source: 'docs/TechnicalDebt.md',
     dest: 'developer/technical-debt.md',
     slug: '/developer/technical-debt',
-    sidebarPosition: 8,
-  },
-  {
-    source: 'docs/Audit-Closeout.md',
-    dest: 'developer/audit-closeout.md',
-    slug: '/developer/audit-closeout',
     sidebarPosition: 9,
   },
   {
@@ -307,102 +315,172 @@ const docs = [
     sidebarLabel: 'Experiment',
   },
   {
+    source: 'limen/inference/README.md',
+    dest: 'packages/inference.md',
+    slug: '/packages/inference',
+    sidebarPosition: 3,
+    sidebarLabel: 'Inference',
+  },
+  {
     source: 'limen/sfd/README.md',
     dest: 'packages/sfd.md',
     slug: '/packages/sfd',
-    sidebarPosition: 3,
+    sidebarPosition: 4,
     sidebarLabel: 'SFD',
   },
   {
     source: 'limen/indicators/README.md',
     dest: 'packages/indicators.md',
     slug: '/packages/indicators',
-    sidebarPosition: 4,
+    sidebarPosition: 5,
     sidebarLabel: 'Indicators',
   },
   {
     source: 'limen/features/README.md',
     dest: 'packages/features.md',
     slug: '/packages/features',
-    sidebarPosition: 5,
+    sidebarPosition: 6,
     sidebarLabel: 'Features',
   },
   {
     source: 'limen/transforms/README.md',
     dest: 'packages/transforms.md',
     slug: '/packages/transforms',
-    sidebarPosition: 6,
+    sidebarPosition: 7,
     sidebarLabel: 'Transforms',
   },
   {
     source: 'limen/scalers/README.md',
     dest: 'packages/scalers.md',
     slug: '/packages/scalers',
-    sidebarPosition: 7,
+    sidebarPosition: 8,
     sidebarLabel: 'Scalers',
   },
   {
     source: 'limen/metrics/README.md',
     dest: 'packages/metrics.md',
     slug: '/packages/metrics',
-    sidebarPosition: 8,
+    sidebarPosition: 9,
     sidebarLabel: 'Metrics',
   },
   {
     source: 'limen/log/README.md',
     dest: 'packages/log.md',
     slug: '/packages/log',
-    sidebarPosition: 9,
+    sidebarPosition: 10,
     sidebarLabel: 'Log',
   },
   {
     source: 'limen/cohort/README.md',
     dest: 'packages/cohort.md',
     slug: '/packages/cohort',
-    sidebarPosition: 10,
+    sidebarPosition: 11,
     sidebarLabel: 'Cohort',
   },
   {
     source: 'limen/backtest/README.md',
     dest: 'packages/backtest.md',
     slug: '/packages/backtest',
-    sidebarPosition: 11,
+    sidebarPosition: 12,
     sidebarLabel: 'Backtest',
   },
   {
     source: 'limen/utils/README.md',
     dest: 'packages/utils.md',
     slug: '/packages/utils',
-    sidebarPosition: 12,
+    sidebarPosition: 13,
     sidebarLabel: 'Utils',
   },
   {
     source: 'limen/calibration/README.md',
     dest: 'packages/calibration.md',
     slug: '/packages/calibration',
-    sidebarPosition: 13,
+    sidebarPosition: 14,
     sidebarLabel: 'Calibration',
   },
   {
     source: 'limen/cli/README.md',
     dest: 'packages/cli.md',
     slug: '/packages/cli',
-    sidebarPosition: 14,
+    sidebarPosition: 15,
     sidebarLabel: 'CLI',
   },
   {
     source: 'limen/targets/README.md',
     dest: 'packages/targets.md',
     slug: '/packages/targets',
-    sidebarPosition: 15,
+    sidebarPosition: 16,
     sidebarLabel: 'Targets',
   },
   {
     source: 'limen/yaml/README.md',
     dest: 'packages/yaml.md',
     slug: '/packages/yaml',
-    sidebarPosition: 16,
+    sidebarPosition: 17,
     sidebarLabel: 'YAML',
+  },
+  {
+    source: 'limen/cli/commands/README.md',
+    dest: 'packages/internals/cli-commands.md',
+    slug: '/packages/internals/cli-commands',
+    sidebarPosition: 1,
+    sidebarLabel: 'CLI commands',
+  },
+  {
+    source: 'limen/cohort/sfc/README.md',
+    dest: 'packages/internals/cohort-selectors.md',
+    slug: '/packages/internals/cohort-selectors',
+    sidebarPosition: 2,
+    sidebarLabel: 'Cohort selectors',
+  },
+  {
+    source: 'limen/data/bars/README.md',
+    dest: 'packages/internals/data-bars.md',
+    slug: '/packages/internals/data-bars',
+    sidebarPosition: 3,
+    sidebarLabel: 'Data bars',
+  },
+  {
+    source: 'limen/data/utils/README.md',
+    dest: 'packages/internals/data-utils.md',
+    slug: '/packages/internals/data-utils',
+    sidebarPosition: 4,
+    sidebarLabel: 'Data utilities',
+  },
+  {
+    source: 'limen/experiment/param_search/README.md',
+    dest: 'packages/internals/parameter-search.md',
+    slug: '/packages/internals/parameter-search',
+    sidebarPosition: 5,
+    sidebarLabel: 'Parameter search',
+  },
+  {
+    source: 'limen/experiment/reducer/README.md',
+    dest: 'packages/internals/reducers.md',
+    slug: '/packages/internals/reducers',
+    sidebarPosition: 6,
+    sidebarLabel: 'Reducers',
+  },
+  {
+    source: 'limen/sfd/foundational_sfd/README.md',
+    dest: 'packages/internals/foundational-sfds.md',
+    slug: '/packages/internals/foundational-sfds',
+    sidebarPosition: 7,
+    sidebarLabel: 'Foundational SFDs',
+  },
+  {
+    source: 'limen/sfd/reference_architecture/README.md',
+    dest: 'packages/internals/reference-architectures.md',
+    slug: '/packages/internals/reference-architectures',
+    sidebarPosition: 8,
+    sidebarLabel: 'Reference architectures',
+  },
+  {
+    source: 'limen/sfd/rule_based/README.md',
+    dest: 'packages/internals/rule-based.md',
+    slug: '/packages/internals/rule-based',
+    sidebarPosition: 9,
+    sidebarLabel: 'Rule-based SFDs',
   },
 ];
 
@@ -447,7 +525,7 @@ function buildFrontMatter(doc) {
     lines.push('pagination_prev: null');
   }
 
-  lines.push(`custom_edit_url: ${repoBlobBaseUrl}/${doc.source}`);
+  lines.push(`custom_edit_url: ${repoEditBaseUrl}/${doc.source}`);
   lines.push('---', '');
   return lines.join('\n');
 }
@@ -623,7 +701,7 @@ async function writeCategoryFiles() {
       label: category.label,
       position: category.position,
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       link: {
         type: 'generated-index',
         slug: category.slug,

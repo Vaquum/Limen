@@ -1,6 +1,6 @@
 # Trainer
 
-`Trainer` is Limen's promotion layer for finished experiment rounds. It takes a completed artifact-backed experiment directory, reconstructs the manifest and round parameters, validates selected permutations, and retrains them into reusable `Sensor` objects.
+`Trainer` is Limen's reconstruction layer for finished experiment rounds. It takes a completed artifact-backed experiment directory, reconstructs the manifest and round parameters, replays selected permutations, validates their metrics, and wraps the replayed models in reusable `Sensor` objects.
 
 Trainer bridges a selected experiment row and a trained model object for downstream inference.
 
@@ -15,9 +15,9 @@ At minimum, the directory must contain:
 
 Every nonblank `round_data.jsonl` line must be a valid JSON object with `round_id` and object-valued `round_params`. Trainer rejects malformed JSONL instead of skipping corrupt lines, so promotion cannot proceed from a partial artifact view.
 
-If `results.csv` is also present, Trainer validates retrained metrics against matching numeric columns in the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
+If `results.csv` is also present, Trainer validates replayed metrics against matching numeric columns in the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
 
-Metric validation is intersection-based: Trainer compares numeric, non-private metrics returned by retraining only when the same key exists in `results.csv`. Parameter columns, private artifact keys, non-numeric values, and metrics absent from the original log are skipped. A requested permutation ID missing from `results.csv` remains a validation failure.
+Metric validation is intersection-based: Trainer compares numeric, non-private metrics returned by replay only when the same key exists in `results.csv`. Parameter columns, private artifact keys, non-numeric values, and metrics absent from the original log are skipped. A requested permutation ID missing from `results.csv` remains a validation failure.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ from limen.inference import Trainer
 results = pl.read_csv('path/to/experiment/results.csv')
 top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
 
-# 2) retrain selected permutations into Sensor objects
+# 2) replay selected permutations into Sensor objects
 trainer = Trainer('path/to/experiment')
 sensors = trainer.train(top_ids)
 
@@ -49,18 +49,20 @@ bar_pred = sensor.predict(raw_klines)
 In this workflow:
 
 - `Trainer` reconstructs the manifest and round metadata
-- `trainer.train(top_ids)` validates and retrains the selected rounds
+- `trainer.train(top_ids)` replays and validates the selected rounds
 - each returned `Sensor` wraps one trained `ReferenceModel`
 
 ## Why Trainer Exists
 
-Experiment runs normally use train/validation/test splits. Promotion retrains a selected round on all available data before downstream use.
+Trainer deliberately preserves the original manifest's train/validation/test split. That makes its metric comparison meaningful: the replayed round uses the same preparation and evaluation path as the logged round.
 
-Trainer handles that transition cleanly by:
+Trainer handles reconstruction by:
 
 - reconstructing the original experiment logic from `yaml_reference`
 - validating that the pipeline still reproduces the logged round metrics
-- wrapping the validated model in a `Sensor` ready for inference
+- wrapping the validated training-split model in a `Sensor` ready for inference
+
+Trainer does not clone the manifest with `split_config=(1, 0, 0)` and does not fit on all available data. A caller that needs a separate all-data fit must build and validate that workflow explicitly; it will not reproduce the original test metrics.
 
 ## Training and validation
 
@@ -99,7 +101,7 @@ This is why promotion is more reliable for deterministic reference models than f
 
 ## Trainer and the reference-architecture contract
 
-Trainer does not promote arbitrary model objects. It resolves exactly one `ReferenceModel` subclass from the original model module and uses that class for retraining.
+Trainer does not promote arbitrary model objects. The compiled manifest resolves the original `ReferenceModel` path, and Trainer uses the model returned in `result['_model']` after replay.
 
 That means the promotion stack depends on the [Reference Architecture](Reference-Architecture.md) contract:
 
@@ -131,7 +133,7 @@ This method:
 
 - verifies that the requested permutation IDs exist in `round_data.jsonl`
 - validates them against `results.csv` when available
-- retrains them on all data
+- replays them with the original manifest split and round parameters
 - returns `list[Sensor]`
 
 Raises:
@@ -208,7 +210,7 @@ Trainer uses:
 
 - `metadata.json` — reads `yaml_reference` to reconstruct the manifest; `manifest_id` is also read and passed to each Sensor
 - `round_data.jsonl` — loads `round_params` for each permutation
-- `results.csv` — when available, validates retrained metrics against matching numeric columns in the original experiment log
+- `results.csv` — when available, validates replayed metrics against matching numeric columns in the original experiment log
 
 ## Scope note
 
@@ -221,6 +223,6 @@ The operating model is:
 
 ## Read next
 
-- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and retrains.
+- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and replays.
 - Continue to [Cohort](Cohort.md) to bind selected sensors into an ensemble inference surface.
-- Continue to [Command Line Interface](Command-Line-Interface.md) for the YAML run layer that produces result directories.
+- Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run layer that produces result directories.

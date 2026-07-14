@@ -7,10 +7,11 @@
   },
   "scripts": {
     "prepare-docs": "node ./scripts/assemble-docs.mjs",
+    "lint": "markdownlint-cli2 --config ../.markdownlint.json ../README.md ../CHANGELOG.md \"../docs/**/*.md\" \"../limen/**/README.md\"",
     "security:audit": "node ./scripts/audit-security.mjs",
     "start": "npm run prepare-docs && docusaurus start --host 0.0.0.0",
     "build": "npm run prepare-docs && docusaurus build",
-    "check": "npm run prepare-docs && docusaurus build --no-minify",
+    "check": "npm run lint && npm run prepare-docs && docusaurus build --no-minify",
     "serve": "docusaurus serve . --dir build --host 0.0.0.0 --port 3001 --no-open",
     "clear": "docusaurus clear"
   },
@@ -29,5 +30,8 @@
     "serialize-javascript": "7.0.5",
     "uuid": "11.1.1"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "markdownlint-cli2": "^0.18.1"
+  }
 }

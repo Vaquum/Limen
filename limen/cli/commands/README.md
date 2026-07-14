@@ -4,7 +4,7 @@
 
 ## Canonical docs
 
-- [Command Line Interface](../../../docs/Command-Line-Interface.md)
+- [Command-Line Interface](../../../docs/Command-Line-Interface.md)
 
 ## What this package owns
 
@@ -18,7 +18,7 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | `run.py:run_experiment()` | Compile a YAML manifest and run the Universal Experiment Loop | Backs `limen run`; accepts YAML files and `manifest://sha256:` URIs |
 | `resume.py:run_resume()` | Continue a checkpointed artifact-backed run | Backs `limen run --resume` |
 | `validate.py:run_validate()` | Validate a YAML manifest | Backs `limen validate` |
-| `profile.py:run_profile()` | Static permutation profiling | Backs `limen profile`; runtime sampling is skipped for validated CLI YAML |
+| `profile.py:run_profile()` | Parameter-space and runtime profiling | Backs `limen profile`; samples the configured data source with a covering array |
 | `init.py` / `new.py` / `list_templates.py` | Scaffold projects and discover bundled templates | Reads `limen/yaml/templates` |
 | `commit.py` / `ls.py` / `fork.py` / `lineage.py` / `backup.py` / `reindex.py` | Committed manifest storage and lineage | Operate on project-local `manifests/committed` state |
 
@@ -57,5 +57,5 @@ commands/
 
 ## Read next
 
-- [Command Line Interface](../../../docs/Command-Line-Interface.md)
+- [Command-Line Interface](../../../docs/Command-Line-Interface.md)
 - [Experiment Manifest](../../../docs/Experiment-Manifest.md)

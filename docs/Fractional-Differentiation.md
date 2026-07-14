@@ -162,7 +162,7 @@ When `d = 0.0`, the new column is a `Float64` copy of the original. When `d = 1.
 
 NOTE: Because the leading rows are null until the weight window fills, a short split can end up without a valid `_fracdiff` column while a longer split has one. During split alignment the manifest drops the extra column so the feature schema stays consistent across train, validation, and test. See [Experiment Manifest](Experiment-Manifest.md) for the alignment behavior.
 
-## Expected Artefacts
+## Expected Artifacts
 
 After a run, the fractionally differenced column appears in the prepared feature matrix and, if you select it as a model input, in the per-round records written to `round_data.jsonl`. When `d` is swept as a parameter, each `frac_diff_d` value is one row in `results.csv`, so the effect of differencing order on the metrics is visible directly. See [Log](Log.md) for reading those results.
 

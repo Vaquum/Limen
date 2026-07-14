@@ -1,5 +1,10 @@
 # Technical Debt
 
+## Prerequisites
+
+- the current implementation, tests, and issue history for the affected surface
+- evidence that the limitation remains present and materially relevant
+
 Known technical debt in shipped Limen code. Each item includes origin PR, severity, and migration path.
 
 ## Register Rules

@@ -4,6 +4,12 @@ This guide covers how to propose and implement a new foundational SFD in Limen.
 
 Foundational SFDs are Limen's reference-grade experiment templates. They are not one-off research scripts. A foundational SFD should be reusable, reviewable, and analytically justified inside a large Limen scan.
 
+## Prerequisites
+
+- a Limen development environment installed with `python -m pip install -e ".[dev]"`
+- the optional model and data extras required by the proposed SFD
+- an approved capability scope and reproducible benchmark plan
+
 ## What a foundational SFD owns
 
 A foundational SFD packages:
@@ -151,6 +157,6 @@ A foundational SFD contribution includes:
 ## Read next
 
 - [Experiment Manifest](../Experiment-Manifest.md)
-- [Single File Decoder](../Single-File-Decoder.md)
+- [Single-File Decoder](../Single-File-Decoder.md)
 - [Targets](../Targets.md)
 - [Writing Docstrings](Writing-Docstrings.md)

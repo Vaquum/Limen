@@ -11,6 +11,13 @@ This page covers:
 
 For a first experiment, stay on the YAML/CLI path. Advanced search is real and supported, but it is the extension-oriented layer of Limen.
 
+## Prerequisites
+
+- a working SFD and bounded data source
+- an artifact `experiment_dir`
+- a `ParamDomain` and registered `SearchStrategy`
+- explicit proof that adaptive feedback is appropriate for the research design
+
 ## The core pieces
 
 | Piece | What it owns |
@@ -185,6 +192,6 @@ What it does not change:
 ## Read next
 
 - Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for the intervention system that acts on the mutable search queue.
-- Continue to [Command Line Interface](Command-Line-Interface.md) for the normal YAML run loop.
+- Continue to [Command-Line Interface](Command-Line-Interface.md) for the normal YAML run loop.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the broader engine contract around standard and advanced execution.
 - Continue to [Trainer](Trainer.md) for promotion of finished advanced runs into reusable sensors.

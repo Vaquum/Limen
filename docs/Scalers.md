@@ -66,7 +66,7 @@ sorted(SCALER_REGISTRY)
 
 That is the lookup surface `set_scaler_from_params()` uses under the hood.
 
-On live local manifest-prep runs in this repo, `set_scaler_from_params('scaler_type')` correctly resolved:
+`set_scaler_from_params('scaler_type')` resolves registry keys such as:
 
 - `'robust'` to `RobustScaler`
 - `'rank_gauss'` to `RankGaussScaler`
@@ -164,4 +164,4 @@ That contract is what makes the scaler usable from `Manifest.set_scaler()` and c
 
 - [Transforms](Transforms.md) for stateless preprocessing and post-model helpers
 - [Experiment Manifest](Experiment-Manifest.md) for where scaling happens inside the split-first pipeline
-- [Trainer](Trainer.md) for the retraining path that reconstructs manifests and preserves fitted preprocessing behavior
+- [Trainer](Trainer.md) for the replay path that reconstructs manifests and preserves fitted preprocessing behavior

@@ -54,7 +54,7 @@ const config = {
           path: path.resolve(__dirname, '.generated/docs'),
           routeBasePath: '/',
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: `${productDocs.sourceRepoUrl}/tree/main/`,
+          editUrl: `${productDocs.sourceRepoUrl}/edit/main/`,
           remarkPlugins: [remarkMath],
           rehypePlugins: [rehypeKatex],
         },

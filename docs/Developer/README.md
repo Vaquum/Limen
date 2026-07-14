@@ -4,6 +4,11 @@ This page routes Limen contribution work to the matching maintenance path before
 
 For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). Limen release and versioning contracts live in this repository.
 
+## Prerequisites
+
+- a Limen repository checkout
+- the task's authoritative issue and repository workflow instructions
+
 ## Read this first
 
 Before opening or updating a Limen PR:

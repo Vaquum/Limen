@@ -1,4 +1,4 @@
-# Universal experiment loop
+# Universal Experiment Loop
 
 The Universal Experiment Loop (UEL) is Limen's execution engine. The normal operator path reaches it through `limen run`: YAML is validated, compiled into a manifest-backed SFD, executed by UEL, and written to a result directory.
 
@@ -8,6 +8,12 @@ This page covers:
 - what `UniversalExperimentLoop` stores after a direct Python run
 - when to use direct standard UEL versus the artifact-backed path
 - which runtime rules matter for manifest-driven and custom SFDs
+
+## Prerequisites
+
+- a validated YAML manifest for the CLI path, or an SFD plus compatible data for direct Python use
+- `prep_each_round=True` for manifest-driven SFDs
+- an `experiment_dir` and `SearchStrategy` for checkpointed advanced runs
 
 ## Preferred execution path
 
@@ -70,7 +76,7 @@ uel.experiment_backtest_results
 
 Without `post_processing=True`, standard UEL still writes `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset.
 
-On a live local run over that file-backed input with post-processing enabled, that produced:
+Post-processing retains:
 
 - `uel.experiment_log` with one row per round
 - `uel.experiment_confusion_metrics` with one row per round
@@ -147,19 +153,19 @@ If the SFD uses custom `prep()` and `model()`:
 
 ## What UEL stores after a run
 
-Primary attributes are:
+Primary attributes are listed below. `uel.data`, `uel.params`, `uel.experiment_log`, and `uel._log` are available after every successful run. Round artifact collections are retained only when `run(..., post_processing=True)` (or the corresponding advanced-run option) is enabled.
 
 | Attribute | Meaning |
 |---|---|
 | `uel.data` | dataframe used by the run |
 | `uel.params` | parameter space in use |
-| `uel.round_params` | actual parameter values used for each round |
+| `uel.round_params` | actual parameter values retained for each successful round when post-processing is enabled |
 | `uel.experiment_log` | main round-by-round experiment log |
 | `uel.experiment_confusion_metrics` | confusion-style analysis derived from predictions |
 | `uel.experiment_backtest_results` | backtest-style analysis derived from predictions |
-| `uel.preds` | stored test predictions per round |
-| `uel.scalers` | fitted scalers captured from prep or manifest scaling |
-| `uel._alignment` | alignment metadata per round |
+| `uel.preds` | test predictions retained when post-processing is enabled |
+| `uel.scalers` | fitted scalers retained when post-processing is enabled |
+| `uel._alignment` | alignment metadata retained when post-processing is enabled |
 | `uel._log` | internal `Log` object for deeper analysis |
 
 ### Alignment metadata
@@ -261,15 +267,7 @@ uel.run(
 )
 ```
 
-On a live local run in this repo, that advanced run:
-
-- requested `6` permutations
-- finished with `4` rows in `results.csv`
-- wrote `4` entries to `round_data.jsonl`
-- wrote `1` entry to `audit.jsonl`
-- saved a checkpoint after round `3`
-
-That behavior came from a reducer-triggered trim during the feedback cycle, not an early stop.
+The budget reducer can trim the remaining queue during a feedback cycle, so the number of completed rows may be lower than the requested permutation budget. `results.csv` and `round_data.jsonl` track completed rounds; `audit.jsonl` records the intervention; checkpoints follow `checkpoint_interval`.
 
 ## Resume in practice
 
@@ -316,4 +314,4 @@ Resumption belongs to the advanced path. Calling `run(resume=True)` without a se
 
 - Continue to [Log](Log.md) to understand the analysis surfaces built on top of UEL results.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for manifest-driven SFD construction.
-- Continue to [Trainer](Trainer.md) for artifact-backed retraining of finished rounds into sensors.
+- Continue to [Trainer](Trainer.md) for artifact-backed reconstruction of finished rounds into sensors.

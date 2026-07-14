@@ -1,10 +1,16 @@
-# Command Line Interface
+# Command-Line Interface
 
 The Limen CLI is the supported shell surface for YAML-first experiment work. It provides validation, profiling, template scaffolding, committed manifests, resumable runs, and standard result directories without Python orchestration code.
 
 ## Scope
 
 The CLI owns project and manifest operations around declarative YAML experiments. It does not replace the Python API for custom SFD authoring, custom feature code, or direct `UniversalExperimentLoop` integration.
+
+## Prerequisites
+
+- Python 3.10-3.13
+- `pip install "vaquum-limen[data]"` for the bundled first-run templates
+- network access to the configured data source for `profile` and `run`
 
 ## First YAML Run
 
@@ -106,7 +112,7 @@ Copies a bundled YAML template to `output` and updates `metadata.name` to the ou
 
 ### `limen list-templates`
 
-Lists package-data templates under `limen/yaml/templates`. Shipped templates include logreg, LightGBM, TabPFN, XGBoost, and rule-based manifests when present in the installed package. `tabpfn_binary` is listed as a template but requires installing the optional `tabpfn` extra before execution.
+Lists package-data templates under `limen/yaml/templates`. Shipped templates are `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`. `tabpfn_binary` is listed without importing TabPFN but requires the optional `tabpfn` extra before execution.
 
 ### `limen ls`
 

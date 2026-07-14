@@ -228,7 +228,7 @@ The primitives are not equally useful for every model. A rough decision guide:
 - **Tree models** (`lightgbm_binary`, `xgboost_regressor`) are scale-invariant, so scaler-from-params usually adds nothing — leave the scaler out or fixed. Feature-group selection and ablation are the primary robustness levers; `include_if` is useful for gating expensive optional features.
 - **TabPFN** (`tabpfn_binary`) is sensitive to feature count and expects scaled inputs. Keep the input set modest, pin an explicit scaler such as `robust`, and use ablation to confirm the model is not leaning on one fragile column.
 
-## Expected Artefacts
+## Expected Artifacts
 
 After an experiment with perturbations, each round in `results.csv` carries the parameter values that produced it — the active `feature_groups`, the `use_vwap` flag, the `scaler_type`, and (for ablation rounds) the `_dropped_features` list — alongside the standard metrics. That lets you attribute metric differences back to the pipeline choice directly from the log. See [Log](Log.md) for reading and analyzing those results.
 

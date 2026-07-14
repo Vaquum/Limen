@@ -8,6 +8,13 @@ This layer is coordinated by `FeedbackController`, which can collect interventio
 - an in-process `intra_callback`
 - an optional JSON intervention file
 
+## Prerequisites
+
+- the artifact-backed [Advanced Search](Advanced-Search.md) path
+- a positive `feedback_interval`
+- enough completed rounds for the selected reducer's observation threshold
+- review of `audit.jsonl` after every adaptive run
+
 ## Feedback cycle order
 
 Each feedback trigger runs sources in this order:

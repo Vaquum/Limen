@@ -344,7 +344,7 @@ Scores closed trades as high, low, or medium based on `exit_reason` and `exit_ne
 ### `RandomBinaryTarget`
 
 ```python
-RandomBinaryTarget(train_data, target_name)
+RandomBinaryTarget(train_data, target_name, random_state=None)
 ```
 
 Produces uniformly random binary labels. No fitting step. Use as a noise benchmark to verify that a trained model outperforms chance.
@@ -353,7 +353,7 @@ Produces uniformly random binary labels. No fitting step. Use as a noise benchma
 .with_target_label('outcome', RandomBinaryTarget)
 ```
 
-No parameters.
+`random_state` is optional. Pass an integer for reproducible labels across equal split sizes and call order; `None` uses an unseeded generator.
 
 ### `IdentityTarget`
 

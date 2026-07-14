@@ -17,14 +17,14 @@ This page covers indicator selection, naming conventions, and default added colu
 
 ```python
 from limen.data import HistoricalData
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.indicators import atr, ppo, wilder_rsi
 from limen.sfd.reference_architecture import logreg_binary
 
 
 def manifest():
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -219,4 +219,4 @@ Only three patterns expose an extra parameter today.
 
 - [Features](Features.md) for higher-level derived signals built on top of raw bars or indicators
 - [Experiment Manifest](Experiment-Manifest.md) for how to wire indicators into a manifest pipeline
-- [Single File Decoder](Single-File-Decoder.md) for where indicator selection fits inside an SFD
+- [Single-File Decoder](Single-File-Decoder.md) for where indicator selection fits inside an SFD

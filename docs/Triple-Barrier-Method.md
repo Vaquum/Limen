@@ -104,7 +104,7 @@ Literal values like `span: 100` pass through unchanged; the quoted `"{tp_multipl
 
 `span` sets the EWMA window for the volatility estimate and `min_periods` sets the warmup before any volatility — and therefore any label — is emitted. Both consume rows: the target produces `null` labels for the first `min_periods` bars of a split, and the manifest drops them. Size them well below the length of your smallest split, or a short validation or test split can be left with too few labeled rows. See the null-handling notes in [Targets](Targets.md).
 
-## Expected Artefacts
+## Expected Artifacts
 
 The target adds one column, named by the `name` you pass, holding the ternary label (`Int8`, values in `{-1, 0, 1}` or `null`). It appears in the prepared data and flows into the experiment records like any other target. Class balance is worth checking: with symmetric multiples and a short horizon, the `0` (timeout) class can dominate — adjust `max_horizon` and the multiples if the labeled classes are too skewed to learn from.
 

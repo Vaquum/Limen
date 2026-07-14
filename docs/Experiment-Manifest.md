@@ -12,6 +12,12 @@ The default path provides:
 - cleaner collaboration surfaces
 - reproducible experiment definitions and artifact-backed runs
 
+## Prerequisites
+
+- `pip install "vaquum-limen[data]"` for the bundled data-backed templates
+- a YAML file created with `limen init` or a concrete Python `MLManifest`/`RuleBasedManifest`
+- the optional model extra required by the selected reference architecture
+
 ## YAML First Run
 
 ```bash
@@ -33,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "4.0.1"
+  limen_version: "5.0.0"
   mode: development
 
 sfd:
@@ -259,7 +265,7 @@ Behavior rules:
 - `val` and `test` can be zero but not negative
 - the method raises `ValueError` if those constraints are violated
 
-Allowing zeros is important for retraining workflows such as Trainer Pass 2, where `split_config=(1, 0, 0)` means "fit on all available data."
+Allowing zeros supports explicit workflows where validation or test data is intentionally absent. For example, a caller-created clone with `split_config=(1, 0, 0)` fits on all available rows. `Trainer` does not apply that override: it replays the original split so it can compare the original metrics.
 
 ### `set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end, *, val_predict_guard=True, test_predict_guard=True)`
 
@@ -282,9 +288,9 @@ Behavior rules:
 - Every bound must be a `date` or `datetime` instance. Strings, ints, and floats raise `TypeError` at the API boundary.
 - `val_predict_guard` and `test_predict_guard` are keyword-only and default `True`. They control whether the served `Sensor` masks predictions inside the val and test windows. Both `True` masks the full `[train_start, test_end)` envelope — every served prediction is identical to omitting them; setting one to `False` makes that window emit real `0/1` predictions instead of `None`, so a served cohort can be checked against its own test-split backtest. Train is always masked (the model trains on it) and has no flag. Each flag must be a `bool` or `set_split_dates` raises `TypeError`.
 - When `split_dates` is set it takes precedence over `set_split_config` in both `prepare_data` and `compute_test_bars`. The split runs on the raw data (before per-split feature transforms), so transforms can still drop rows inside a slice but cannot move rows across slice boundaries.
-- `with_params_override(split_config=(1, 0, 0))` clears any previously-pinned `split_dates`, so the retraining override (e.g. `Trainer.train_sensors` passing `(1, 0, 0)`) is never silently shadowed by an earlier date pin.
+- `with_params_override(split_config=(1, 0, 0))` clears any previously pinned `split_dates`, so an explicit ratio override is not silently shadowed by an earlier date pin.
 
-Use this when the train / val / test boundaries must land on specific datetimes (e.g. honouring a deployment date), and `set_split_config` when proportions of the row count are the natural way to express the split.
+Use this when the train / val / test boundaries must land on specific datetimes (e.g. honoring a deployment date), and `set_split_config` when proportions of the row count are the natural way to express the split.
 
 In a YAML manifest the same windows and flags live in the `split_dates` block. `val_predict_guard` and `test_predict_guard` are optional and default to `true`; a `train_predict_guard` key (or a non-boolean value for either flag) fails `limen validate`:
 
@@ -452,7 +458,6 @@ round_params = {'use_vwap': False}
 
 The transform is skipped.
 
-
 ### Feature ablation
 
 Use `set_feature_ablation()` to let the manifest randomly drop feature columns after transforms and before scaling.
@@ -476,11 +481,7 @@ Important behavior:
 - protected columns such as `datetime` and the target are not eligible
 - the same seed reproduces the same dropped columns
 
-On a live local prep run in this repo, `feature_drop_count=1` and `feature_drop_seed=42` produced:
-
-```python
-round_params['_dropped_features'] == ['vol_5']
-```
+The selected column depends on the eligible feature set. The exact list is recorded in `round_params['_dropped_features']`.
 
 In artifact-backed runs, that `_dropped_features` payload is stored into `round_data.jsonl`, and [Trainer](Trainer.md) reproduces the same drop set during promotion.
 
@@ -496,7 +497,7 @@ params = {
 }
 ```
 
-On live local manifest-prep runs in this repo, this resolved correctly to:
+The registry resolves:
 
 - `RobustScaler` when `scaler_type='robust'`
 - `RankGaussScaler` when `scaler_type='rank_gauss'`
@@ -507,7 +508,7 @@ Use `with_params_override(split_config=(1, 0, 0))` for a manifest clone with str
 
 Examples:
 
-- `split_config=(1, 0, 0)` for full-data retraining in [Trainer](Trainer.md)
+- `split_config=(1, 0, 0)` for an explicit caller-owned all-data fit
 - `start_date_limit='2025-01-01'` for a controlled data-window variant
 - `row_count_limit=5000` for test or smoke paths
 
@@ -798,7 +799,7 @@ Required model parameters with no defaults must be present in the round params o
 
 ### `with_calibration()`
 
-Opens a `CalibrationBuilder` for configuring probability calibration and threshold optimisation. Call `.done()` to finalize and return to the manifest.
+Opens a `CalibrationBuilder` for configuring probability calibration and threshold optimization. Call `.done()` to finalize and return to the manifest.
 
 ```python-fragment
 from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
@@ -817,7 +818,7 @@ Configure the probability calibration step. `func` receives `(clf, x_val, y_val,
 
 ### `CalibrationBuilder.threshold_function(func, **params)`
 
-Configure the threshold optimisation step. `func` receives `(y_val, val_proba, **params)` and must return `(threshold, score)`. Extra keyword arguments are forwarded the same way.
+Configure the threshold optimization step. `func` receives `(y_val, val_proba, **params)` and must return `(threshold, score)`. Extra keyword arguments are forwarded the same way.
 
 ### `CalibrationBuilder.done()`
 
@@ -847,7 +848,7 @@ Calibration params support the same resolution convention as the rest of the man
                     threshold_min='threshold_min')   # string → round_params lookup
 ```
 
-See [Calibration](Calibration.md) for the full reference including custom calibrators and threshold optimisers.
+See [Calibration](Calibration.md) for the full reference including custom calibrators and threshold optimizers.
 
 ## Feature Ablation
 
@@ -896,7 +897,7 @@ Create a deep-copied manifest with selected overrides.
 manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
-This supports retraining workflows that promote a selected round from train/val/test mode into all-data training.
+This supports caller-owned variants, including an explicit change from train/validation/test mode to all-data training. It is not part of `Trainer.train()`, which preserves the original manifest configuration for metric reconstruction.
 
 Supported override behavior today:
 
@@ -916,7 +917,7 @@ The original manifest remains unchanged.
 
 The manifest ultimately builds Limen's standard `data_dict`.
 
-From a live local preparation pass on the foundational logistic-regression manifest, the resulting keys were:
+The foundational logistic-regression manifest produces:
 
 - `x_train`, `y_train`
 - `x_val`, `y_val`
@@ -1016,18 +1017,18 @@ def params():
 manifest = MLManifest().set_scaler_from_params('scaler_type')
 ```
 
-### Retrain on all data
+### Build an explicit all-data variant
 
 ```python
 manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
-That pattern is central to [Trainer](Trainer.md).
+This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the original split to reproduce logged metrics.
 
 ## Read Next
 
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run a manifest-driven SFD.
-- Continue to [Calibration](Calibration.md) for the full calibration reference including custom calibrators, threshold optimisers, and all four calibration modes.
+- Continue to [Calibration](Calibration.md) for the full calibration reference including custom calibrators, threshold optimizers, and all four calibration modes.
 - Continue to [Historical Data](Historical-Data.md) for data surfaces a manifest can reference.
 - Continue to [Data Bars](Data-Bars.md) if bar formation is part of the experiment design.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.

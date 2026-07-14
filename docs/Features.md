@@ -16,7 +16,7 @@ This page covers feature-helper selection, input requirements, and added columns
 
 ```python
 from limen.data import HistoricalData
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 from limen.features import kline_imbalance, vwap
 from limen.indicators import atr, roc
 from limen.sfd.reference_architecture import logreg_binary
@@ -24,7 +24,7 @@ from limen.sfd.reference_architecture import logreg_binary
 
 def manifest():
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -252,6 +252,7 @@ These helpers need richer data than ordinary OHLCV bars.
 ## Read next
 
 - [Indicators](Indicators.md) for lower-level signal primitives
-- [Transforms](Transforms.md) for target shaping and post-model calibration helpers
+- [Transforms](Transforms.md) for stateless target shaping and cleanup helpers
+- [Calibration](Calibration.md) for post-model probability calibration and threshold optimization
 - [Experiment Manifest](Experiment-Manifest.md) for how features plug into the split-first manifest pipeline
 - [Utilities](Utilities.md) for the exported `adf_test()` helper that `find_min_d` builds on

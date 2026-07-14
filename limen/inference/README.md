@@ -1,6 +1,6 @@
 # `limen.inference`
 
-> Rebuild winning experiment rounds into validated models and run them bar-by-bar at inference time.
+> Replay selected experiment rounds into validated models and run them bar-by-bar at inference time.
 
 ## Canonical docs
 
@@ -8,21 +8,21 @@
 
 ## What this package owns
 
-Owns the retraining-and-inference path: reconstructing a selected permutation from a completed experiment, validating it against the original log, and wrapping it as a live `Sensor`.
+Owns the reconstruction-and-inference path: replaying a selected permutation from a completed experiment, validating it against the original log, and wrapping it as a live `Sensor`.
 Does **not** own experiment search execution (owned by `limen.experiment`) or the reference model implementations it reuses (owned by `limen.sfd.reference_architecture`).
 
 ## Key entry points
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `Trainer` | Retrain selected permutations from a completed YAML experiment | Re-runs `prepare_data()`/`run_model()` and compares metrics to the log |
+| `Trainer` | Replay selected permutations from a completed YAML experiment | Re-runs `prepare_data()`/`run_model()` with the original split and compares metrics to the log |
 | `Sensor` | Inference wrapper around a trained YAML model | Predicts one bar at a time for live use |
 | `BarPrediction` | Result of a single-bar prediction | Carries `prediction`, `probability`, and a `reason` |
 | `ReconstructionError` | Raised when metric validation deviates beyond tolerance | Signals a permutation could not be faithfully rebuilt |
 
 ## Adjacent modules
 
-- `limen.experiment` produces the experiment logs and artifacts `Trainer` reconstructs; it also re-exports `Trainer`/`Sensor` at its package root.
+- `limen.experiment` produces the experiment logs and artifacts `Trainer` reconstructs. It does not re-export inference names; import them from `limen.inference` or top-level `limen`.
 - `limen.sfd.reference_architecture.ReferenceModel` is the model type a `Sensor` wraps.
 - `limen.yaml.compiler.CompiledSFD` supplies the compiled manifest used during reconstruction.
 

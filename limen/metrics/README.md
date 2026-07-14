@@ -18,6 +18,7 @@ Does **not** own model fitting, prediction generation, experiment logging, or ba
 | `binary_metrics` | Binary-classification metrics from predictions and probabilities | Import from `limen.metrics.binary_metrics` for the function form |
 | `multiclass_metrics` | Macro or weighted metrics for multiclass problems | Import from `limen.metrics.multiclass_metrics` |
 | `continuous_metrics` | Regression metrics like MAE, RMSE, and R2 | Import from `limen.metrics.continuous_metrics` |
+| `rule_based_metrics` | Accuracy and prediction-count metrics for rule-based outputs | Exported at the package root |
 | `safe_ovr_auc` | OvR AUC without blowing up on missing-class edge cases | Import from `limen.metrics.safe_ovr_auc` |
 | `balanced_metric` | Single optimization target for balanced binary prediction quality | Exported directly from the package root |
 
@@ -34,6 +35,7 @@ metrics/
 ├── binary_metrics.py
 ├── multiclass_metrics.py
 ├── continuous_metrics.py
+├── rule_based_metrics.py
 ├── safe_ovr_auc.py
 └── balanced_metric.py
 ```

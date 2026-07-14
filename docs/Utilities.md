@@ -29,10 +29,7 @@ ps = ParamSpace(
 )
 ```
 
-On a live local run in this repo, that parameter space had:
-
-- `total_space = 8`
-- `n_permutations = 3`
+This declares a total Cartesian space of `8` combinations and samples `3` permutations.
 
 Then repeated `generate(random_search=False)` calls returned the remaining sampled combinations in order from the internal sampled pool, not from the full original grid.
 
@@ -50,12 +47,7 @@ from limen.utils import data_dict_to_numpy
 arrays = data_dict_to_numpy(data_dict)
 ```
 
-On a live local manifest-prepared `data_dict` in this repo, it converted:
-
-- `x_train` to shape `(3610, 24)`
-- `y_train` to shape `(3610,)`
-- `x_val` to shape `(428, 24)`
-- `x_test` to shape `(884, 24)`
+The first dimension follows each split's row count; feature arrays retain the prepared feature width.
 
 This helper supports sklearn-style or numpy-first model code.
 
@@ -64,6 +56,8 @@ This helper supports sklearn-style or numpy-first model code.
 ## `adf_test`
 
 `adf_test()` runs an Augmented Dickey-Fuller stationarity test and returns an `AdfResult`.
+
+Install the statistical extra first: `pip install "vaquum-limen[stats]"`. The helper imports `statsmodels` lazily, so the rest of `limen.utils` remains available without it.
 
 ```python
 from limen.utils import adf_test

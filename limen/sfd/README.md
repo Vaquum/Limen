@@ -22,6 +22,7 @@ Does **not** own experiment execution, data retrieval, or the lower-level indica
 | `logreg_binary` | Standard manifest-driven binary-classification SFD | Exported at the package root |
 | `random_binary` | Baseline classifier for comparison | Exported at the package root |
 | `xgboost_regressor` | Regression-style SFD | Exported at the package root |
+| `foundational_rule_based` | Rule-based foundational SFD | Exported at the package root |
 | `foundational_sfd` | Full catalog of packaged SFDs | Subpackage with production-oriented SFD modules |
 | `reference_architecture` | Model-function templates without the packaged data pipeline | Starting point for custom SFD work |
 
@@ -37,12 +38,18 @@ Does **not** own experiment execution, data retrieval, or the lower-level indica
 sfd/
 ├── foundational_sfd/          # Packaged SFDs with params + manifest
 │   ├── logreg_binary.py
+│   ├── dlinear_regressor.py
+│   ├── lightgbm_binary.py
 │   ├── random_binary.py
+│   ├── rule_based.py
 │   ├── xgboost_regressor.py
 │   └── tabpfn_binary.py       # Optional
 └── reference_architecture/    # Model-function implementations and templates
     ├── logreg_binary.py
+    ├── dlinear_regressor.py
+    ├── lightgbm_binary.py
     ├── random_binary.py
+    ├── rule_based.py
     ├── xgboost_regressor.py
     └── tabpfn_binary.py
 ```
@@ -50,7 +57,7 @@ sfd/
 ## Things to know
 
 - A foundational SFD owns the experiment shape, while the matching reference architecture owns the model training logic.
-- `tabpfn_binary` is optional and remains unavailable when `tabpfn` is not installed.
+- The lazy `tabpfn_binary` module and symbols are importable without the extra; constructing or training the TabPFN model requires `vaquum-limen[tabpfn]`.
 - The simplest path to a new SFD is to copy an existing foundational SFD, adjust `params()`, and modify the manifest chain.
 - SFD modules are expected to stay cheap and stateless at import and manifest-construction time.
 

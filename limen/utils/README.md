@@ -11,7 +11,7 @@
 
 ## What this package owns
 
-Owns general utilities such as legacy parameter sampling, `data_dict` conversion, confidence filtering, report formatting, and Optuna export helpers.
+Owns general utilities such as legacy parameter sampling, `data_dict` conversion, confidence filtering, stationarity testing, price-line helpers, and report formatting.
 Does **not** own the canonical experiment, feature, metric, or backtest surfaces.
 
 ## Key entry points
@@ -21,7 +21,11 @@ Does **not** own the canonical experiment, feature, metric, or backtest surfaces
 | `ParamSpace` | Legacy basic `UEL.run()` path and need permutation sampling | Advanced runs use `SearchStrategy` and `ParamDomain` instead |
 | `data_dict_to_numpy` | Numpy arrays from the standard Limen `data_dict` | Common inside sklearn-style model functions |
 | `confidence_filtering_system` | Post-prediction filtering based on model agreement | An optional downstream helper, not part of the main UEL contract |
-| Reporting helpers | Formatted text summaries | Utility surface, not a canonical reporting framework |
+| `adf_test` | Augmented Dickey-Fuller stationarity test | Requires the `stats` extra |
+| `AdfResult` | Typed ADF result | Returned by `adf_test` |
+| `find_price_lines`, `filter_lines_by_quantile` | Price-line discovery and filtering | Used by line-based research surfaces |
+| `binary_metrics`, `continuous_metrics`, `safe_ovr_auc` | Metric convenience re-exports | Canonical ownership remains in `limen.metrics` |
+| `format_report_header`, `format_report_section`, `format_report_footer` | Formatted text summaries | Utility surface, not a canonical reporting framework |
 
 ## Adjacent modules
 
@@ -36,6 +40,9 @@ utils/
 ├── param_space.py                 # Legacy permutation sampler
 ├── data_dict_to_numpy.py          # Convert Limen data_dict to numpy arrays
 ├── confidence_filtering_system.py # Confidence-based prediction filtering
+├── adf_test.py                     # Optional statsmodels-backed ADF test
+├── find_price_lines.py             # Price-line discovery
+├── filter_lines_by_quantile.py     # Price-line filtering
 └── reporting.py                   # Text-formatting helpers
 ```
 

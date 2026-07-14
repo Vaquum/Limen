@@ -17,11 +17,11 @@ Does **not** own the parameter domain or the search strategies it steers.
 |-------------|-------------|-------|
 | `REDUCER_REGISTRY` | Name-to-reducer lookup | Resolves reducers named in a manifest |
 | `BudgetReducer` | Cap the remaining permutation budget | Trim via `TRIM_RANDOM` or `TRIM_WORST_FIRST` |
-| `CorrelationReducer` | Drop highly correlated parameter regions | Reduces redundant search |
+| `CorrelationReducer` | Remove wrong-direction numeric values or suggest low-impact keeps | Uses bootstrap correlation and sign stability |
 | `FocusReducer` | Refocus the domain on promising regions | Narrows around strong rounds |
-| `SaturationReducer` | Stop once gains saturate | Early-exit signal |
+| `SaturationReducer` | Down-sample saturated values | Uses reversible named filters |
 | `SanityReducer` | Guard against degenerate configurations | Filters obviously bad combinations |
-| `PruningStrategy` | Base pruning behaviour | Emits `ACTION_SUGGEST`-style actions |
+| `PruningStrategy` | Base pruning behavior | Emits `ACTION_SUGGEST`-style actions |
 
 ## Adjacent modules
 
@@ -45,7 +45,7 @@ reducer/
 
 ## Things to know
 
-- Reducers act by mutating the shared `ParamDomain`; the effect is observed by the active search strategy rather than applied directly to the queue.
+- Reducers inspect the log and `MSQ` but return declarative interventions without mutating either. `FeedbackController` dispatches those interventions to `MSQ`, then notifies the active search strategy.
 - `filter_types.py` defines the `FILTER_*` constants (`FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_EXCLUDE_VALUE`, `FILTER_SAMPLE`) shared across reducers.
 - Reducers are opt-in through the manifest and only run on the advanced search path.
 
