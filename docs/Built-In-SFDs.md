@@ -58,7 +58,7 @@ The bundled YAML template fixes:
 
 The reference candidate (`-575` bps momentum, `-0.5` flow score, `60` minutes) produced sparse executed samples in the fixed window: 129 train, 13 validation, and 14 test trades. Mean compounded net PnL per executed trade was 75.7, 116.1, and 127.1 bps respectively after costs. On the irregular test bars, observed position paths spanned about 61.6–149.7 minutes. These are reproducible backtest observations, not a population guarantee or expected live return.
 
-The transform excludes the final observed row of each UTC day because same-date membership requires the next row. Treat this as one-row availability; the default execution lag adapts the research signal to the backtest but does not make the raw row same-row causal.
+The transform prevents the final observed row of each UTC day from initiating a trigger because same-date membership requires the next row. A position already within its wall-clock hold can remain active on that row. Treat trigger initiation as one-row available; the default execution lag adapts the research signal to the backtest but does not make the raw trigger same-row causal.
 
 ## `logreg_binary`
 

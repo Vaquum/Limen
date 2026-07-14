@@ -130,7 +130,7 @@ For row `t`, the transform:
 4. triggers when momentum is at or below `momentum_threshold_bps` and the robust flow score is above `flow_z_threshold`
 5. holds the trigger active for `hold_minutes` of wall-clock time
 
-The structural core is available only when the next row belongs to the same UTC date. Therefore the last row of each UTC day, including the final row in the input, is excluded. This is a **one-row availability** boundary: the exact research transform is not same-row causal. The built-in backtest's one-bar execution lag is an execution adaptation, not a claim that the raw signal was knowable on row `t`.
+The structural core permits a new trigger only when the next row belongs to the same UTC date. Therefore the last row of each UTC day, including the final row in the input, cannot initiate a trigger. A position initiated earlier may remain active there until its wall-clock hold expires. This is a **one-row availability** boundary: the exact research trigger is not same-row causal. The built-in backtest's one-bar execution lag is an execution adaptation, not a claim that the raw trigger was knowable on row `t`.
 
 The hold is time-based rather than bar-count-based. Dollar bars arrive irregularly, so the physical span represented by a 60-minute hold can exceed 60 minutes between observed execution rows.
 

@@ -1312,5 +1312,5 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.2.0] - 2026-07-14
 
 - Add the `dollar_bar_crash_reversal` feature and foundational rule-based SFD over native `$15M` BTCUSDT dollar bars, with a bundled 80-point exhaustive YAML grid across crash momentum, maker-flow deviation, and 30–120 minute wall-clock holds (#692).
-- Extend `RuleBasedStrategy` with mean compounded net PnL per executed trade in basis points while preserving the generic 20-column snapshot ledger; the shipped sweep fixes costs at 10 bps fee plus 5 bps slippage per side and retains the default one-bar execution lag (#692).
+- Extend `RuleBasedStrategy` with mean compounded net PnL per executed trade and its aligned executed-trade denominator while preserving the generic 20-column snapshot ledger; the shipped sweep fixes costs at 10 bps fee plus 5 bps slippage per side and retains the default one-bar execution lag (#692).
 - Add fixture-backed feature, manifest, YAML, CLI, and backtest regressions plus operator documentation for the signal's one-row availability boundary, causal trailing flow baseline, fixed date splits, and sparse intraday evidence contract (#692).

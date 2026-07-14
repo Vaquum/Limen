@@ -118,6 +118,28 @@ def test_dollar_bar_crash_reversal_validates_frame_contract() -> None:
         )
 
 
+@pytest.mark.parametrize('time_zone', [None, 'Europe/Helsinki'])
+def test_dollar_bar_crash_reversal_requires_utc_datetime(
+    time_zone: str | None,
+) -> None:
+    source = _fixture()
+    datetime_expr = pl.col('datetime').dt.convert_time_zone('Europe/Helsinki')
+    if time_zone is None:
+        datetime_expr = pl.col('datetime').dt.replace_time_zone(None)
+
+    with pytest.raises(TypeError, match='datetime must use the UTC time zone'):
+        _ = _candidate(source.with_columns(datetime_expr.alias('datetime')))
+
+
+def test_dollar_bar_crash_reversal_rejects_internal_column_collisions() -> None:
+    source = _fixture().with_columns(
+        pl.lit(1.0).alias('_dcr_reference_open')
+    )
+
+    with pytest.raises(ValueError, match='reserved internal columns'):
+        _ = _candidate(source)
+
+
 def test_dollar_bar_crash_reversal_requires_one_later_same_day_row() -> None:
     source = _fixture()
     final_index = source.height - 1
@@ -149,6 +171,17 @@ def test_dollar_bar_crash_reversal_requires_one_later_same_day_row() -> None:
     assert isinstance(available, pl.DataFrame)
     assert unavailable[-1, _OUTPUT_COLUMN] == 0
     assert available[-2, _OUTPUT_COLUMN] == 1
+
+
+def test_dollar_bar_crash_reversal_can_carry_a_position_across_daily_tail() -> None:
+    result = dollar_bar_crash_reversal(_fixture(), 1e9, -1e9, 60)
+
+    assert isinstance(result, pl.DataFrame)
+    daily_tails = (
+        pl.col('datetime').dt.date()
+        != pl.col('datetime').shift(-1).dt.date()
+    ).fill_null(True)
+    assert result.filter(daily_tails)[_OUTPUT_COLUMN].sum() > 0
 
 
 def test_dollar_bar_crash_reversal_is_prior_only_before_availability_boundary() -> None:
@@ -261,5 +294,6 @@ def test_dollar_bar_crash_reversal_real_fixture_edge() -> None:
 
     assert featured[_OUTPUT_COLUMN].sum() == 221
     assert metrics['num_trades_test'] == 5
+    assert metrics['num_executed_trades_test'] == 5
     assert metrics['pnl_per_trade_bps_test'] == 148.9
     assert metrics['pnl_per_trade_bps_test'] > 60.0

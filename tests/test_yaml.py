@@ -10,6 +10,7 @@ from limen.experiment.manifest_core import AblationConfig
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.metrics.balanced_metric import balanced_metric
+from limen.sfd.foundational_sfd import dollar_bar_crash_reversal as dollar_bar_crash_reversal_sfd
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
@@ -1484,10 +1485,26 @@ def test_dollar_bar_crash_reversal_template_is_valid_and_compiles() -> None:
 
     sfd = CompiledSFD(yaml_dict)
     manifest = sfd.manifest()
+    python_manifest = dollar_bar_crash_reversal_sfd.manifest()
     assert isinstance(manifest, RuleBasedManifest)
-    assert manifest.required_bar_columns == [
-        'datetime', 'open', 'close', 'liquidity_sum', 'maker_liquidity',
-    ]
+    assert yaml_dict['sfd']['params'] == dollar_bar_crash_reversal_sfd.params()
+    assert manifest.required_bar_columns == python_manifest.required_bar_columns
+    assert manifest.data_source_config == python_manifest.data_source_config
+    assert manifest.split_dates == python_manifest.split_dates
+    assert len(manifest.feature_transforms) == len(python_manifest.feature_transforms) == 1
+    yaml_transform = manifest.feature_transforms[0]
+    python_transform = python_manifest.feature_transforms[0]
+    assert yaml_transform.func is python_transform.func
+    assert {
+        key: value.removeprefix('{').removesuffix('}')
+        for key, value in yaml_transform.params.items()
+    } == python_transform.params
+    assert manifest.strategy == python_manifest.strategy
+    assert manifest.backtest_config == python_manifest.backtest_config
+    assert (
+        manifest.architecture_function
+        is python_manifest.architecture_function
+    )
     assert manifest.data_source_config is not None
     assert manifest.data_source_config.params == {
         'dollar_bar_size': 15_000_000,

@@ -103,9 +103,20 @@ def dollar_bar_crash_reversal(
             'dollar_bar_crash_reversal missing required columns: '
             + ', '.join(missing)
         )
-    if not isinstance(schema['datetime'], pl.Datetime):
+    datetime_dtype = schema['datetime']
+    if not isinstance(datetime_dtype, pl.Datetime):
         raise TypeError(
             'dollar_bar_crash_reversal datetime must be a Datetime column'
+        )
+    if datetime_dtype.time_zone != 'UTC':
+        raise TypeError(
+            'dollar_bar_crash_reversal datetime must use the UTC time zone'
+        )
+    collisions = [column for column in _INTERNAL_COLUMNS if column in schema]
+    if collisions:
+        raise ValueError(
+            'dollar_bar_crash_reversal input uses reserved internal columns: '
+            + ', '.join(collisions)
         )
 
     momentum_threshold = _validate_threshold(
