@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.0.0"
+  limen_version: "5.1.0"
   mode: development
 
 sfd:
