@@ -1,2 +1,12 @@
-# Request @zero-bang to review every pull request.
-* @zero-bang
+# Enforcement surfaces: the files whose content decides merge verdicts.
+# With require_code_owner_review enabled on branch ruleset 5406995, a PR
+# touching these paths cannot merge without an approval from a non-author
+# code owner -- a server-side layer the judged PR's merge ref cannot edit.
+#
+# Deliberately no `*` rule: under require_code_owner_review a global owner
+# would make that owner a required approver for every PR, not just the
+# enforcement surfaces. Ordinary PRs keep the plain one-approval rule.
+
+/governance/ @mikkokotila @zero-bang
+/.github/ @mikkokotila @zero-bang
+/tests/test_packaging_surface.py @mikkokotila @zero-bang

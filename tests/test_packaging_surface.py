@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import importlib.util
 import re
 import subprocess
 import sys
@@ -172,3 +173,24 @@ def test_constraints_mirror_runtime_envelope() -> None:
         if line.strip()
     ]
     assert sorted(constraints) == sorted(envelope)
+
+
+def test_governance_hardening_surfaces() -> None:
+    codeowners_lines = (ROOT / '.github' / 'CODEOWNERS').read_text(encoding='utf-8').splitlines()
+    assert '/governance/ @mikkokotila @zero-bang' in codeowners_lines
+    assert '/.github/ @mikkokotila @zero-bang' in codeowners_lines
+    assert '/tests/test_packaging_surface.py @mikkokotila @zero-bang' in codeowners_lines
+    sweep_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_sweep.yml').read_text(encoding='utf-8')
+    assert sweep_workflow.count('schedule:') == 1
+    assert 'workflow_dispatch:' in sweep_workflow
+    assert 'name=pr_checks_slice' in sweep_workflow
+    assert 'file enumeration incomplete' in sweep_workflow
+    assert 'governance/slice_gate.py' in sweep_workflow
+    common_path = ROOT / 'governance' / '_common.py'
+    assert 'cc_gate' not in common_path.read_text(encoding='utf-8')
+    spec = importlib.util.spec_from_file_location('governance_common', common_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.__all__ == ['CLOSING_KEYWORD_RE']

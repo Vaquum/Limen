@@ -1,0 +1,158 @@
+name: pr_checks_slice_sweep
+
+# Re-run the slice gate for every open PR targeting main on a fixed
+# cadence and repost each PR's `pr_checks_slice` check-run on its head
+# commit.
+#
+# Why: `pr_checks_slice` runs on pull_request activity and caches its
+# verdict; `pr_checks_slice_on_issue` reposts it when a linked issue
+# changes. If that on-issue rerun crashes before posting, a stale green
+# verdict persists until the PR's next own event. This sweep bounds the
+# staleness window: a stale verdict now survives at most one sweep
+# interval. The sweep is a backstop, not a single point of failure --
+# the pull_request-event gate still runs on every PR update.
+#
+# The gate here executes from a checkout of main, never from a PR's
+# merge ref, so a sweep verdict cannot be self-attested by the PR it
+# judges.
+#
+# GitHub branch protection treats the MOST RECENT check-run per name
+# per commit SHA as authoritative, so a failure posted here
+# immediately blocks merge until the issue state or the PR is fixed.
+#
+# Named in Limen's governance hardening slice (S691); the fail-closed
+# rerun contract mirrors pr_checks_slice_on_issue.yml.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # No cancel-in-progress: killing a sweep mid-posting would leave some
+  # PRs reposted and others stale for a full extra interval. A queued
+  # run simply follows.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  checks: write  # required to POST check-runs
+
+jobs:
+  sweep_slice_gate_for_open_prs:
+    name: pr_checks_slice_sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install PyYAML
+        run: pip install 'pyyaml==6.0.2'
+
+      - name: List open PRs targeting main
+        id: open_prs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          gh pr list --repo "$REPO" --base main --state open --limit 1000 \
+            --json number,headRefOid > open_prs.json
+          echo "open PRs targeting main:"
+          jq -c '.[]' open_prs.json
+          COUNT=$(jq 'length' open_prs.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Re-run slice gate per open PR and post check-run
+        if: steps.open_prs.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+
+          jq -c '.[]' open_prs.json | while read pr; do
+            PR_NUM=$(echo "$pr" | jq -r .number)
+            HEAD_SHA=$(echo "$pr" | jq -r .headRefOid)
+            echo "::group::re-running slice gate for PR #$PR_NUM @ $HEAD_SHA"
+
+            # Title + body + canonical file count; files come from the
+            # paginated REST endpoint, not `gh pr view --json files`
+            # (which caps at 100 and would silently under-enforce
+            # rules 7 and 8 on large PRs).
+            gh pr view "$PR_NUM" --repo "$REPO" \
+              --json title,body,changedFiles > pr_view.json
+            jq -r '.title' pr_view.json > pr_title.txt
+            jq -r '.body // ""' pr_view.json > pr_body.txt
+            EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
+
+            gh api "repos/$REPO/pulls/$PR_NUM/files" \
+              --paginate --jq '.[].filename' > pr_files.txt
+            ACTUAL_FILES=$(wc -l < pr_files.txt | tr -d ' ')
+
+            if [ "$ACTUAL_FILES" -ne "$EXPECTED_FILES" ]; then
+              # Post a FAILURE check-run immediately rather than
+              # silently proceeding with a truncated file set -- the
+              # same fail-closed contract as the on-issue rerun.
+              gh api "repos/$REPO/check-runs" \
+                --method POST \
+                -f "name=pr_checks_slice" \
+                -f "head_sha=$HEAD_SHA" \
+                -f "status=completed" \
+                -f "conclusion=failure" \
+                -f "output[title]=Slice gate sweep ABORTED: file enumeration incomplete" \
+                -f "output[summary]=pr_checks_slice_sweep got $ACTUAL_FILES files from the paginated API but the PR object reports $EXPECTED_FILES. The sweep refuses to run a scope check on a truncated set." \
+                -f "details_url=https://github.com/$REPO/actions/runs/${{ github.run_id }}"
+              echo "::endgroup::"
+              continue
+            fi
+
+            # Run the slice gate; capture output and exit code.
+            PR_TITLE=$(cat pr_title.txt)
+            set +e
+            GATE_OUT=$(python governance/slice_gate.py \
+              --pr-title "$PR_TITLE" \
+              --pr-body-file pr_body.txt \
+              --pr-files-file pr_files.txt \
+              --template .github/ISSUE_TEMPLATE/slice.yml \
+              --repo "$REPO" 2>&1)
+            GATE_EXIT=$?
+            set -e
+            echo "$GATE_OUT"
+
+            if [ "$GATE_EXIT" -eq 0 ]; then
+              CONCLUSION="success"
+              TITLE_OUT="Slice gate re-passed by scheduled sweep"
+            else
+              CONCLUSION="failure"
+              TITLE_OUT="Slice gate FAILED in scheduled sweep"
+            fi
+
+            # Keep output.summary under the 65 KB API limit.
+            SUMMARY=$(printf 'Posted by pr_checks_slice_sweep run %s.\n\n```\n%s\n```\n' \
+              "${{ github.run_id }}" "$GATE_OUT" | head -c 60000)
+
+            # Same check-run name as the pull_request workflow, so
+            # branch protection sees this as the current status of
+            # `pr_checks_slice` on that head SHA.
+            gh api "repos/$REPO/check-runs" \
+              --method POST \
+              -f "name=pr_checks_slice" \
+              -f "head_sha=$HEAD_SHA" \
+              -f "status=completed" \
+              -f "conclusion=$CONCLUSION" \
+              -f "output[title]=$TITLE_OUT" \
+              -f "output[summary]=$SUMMARY" \
+              -f "details_url=https://github.com/$REPO/actions/runs/${{ github.run_id }}"
+            echo "::endgroup::"
+          done
