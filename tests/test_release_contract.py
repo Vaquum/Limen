@@ -45,6 +45,11 @@ def test_release_tag_authority_and_traceability() -> None:
     with pytest.raises(ValueError, match='model may not choose identifiers'):
         module.compute_tag('5.1.0rc1', {})
 
+    module.validate_release_prose({'release_name': 'Fire Horse', 'release_notes': '## Summary'})
+    for malformed in ({}, {'release_name': 'x'}, {'release_name': '', 'release_notes': 'y'}, {'release_name': 'x', 'release_notes': 3}):
+        with pytest.raises(ValueError, match='non-empty string release_'):
+            module.validate_release_prose(malformed)
+
     changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
     anchor = module.changelog_anchor(version, changelog)
     assert anchor.startswith(''.join(version.split('.')))

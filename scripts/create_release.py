@@ -120,6 +120,14 @@ def changelog_anchor(version: str, changelog: str) -> str:
     return re.sub(r'[^\w\- ]', '', heading.lower()).strip().replace(' ', '-')
 
 
+def validate_release_prose(release_info: dict[str, str]) -> None:
+    """Require non-empty string release_name and release_notes from the model."""
+    for key in ('release_name', 'release_notes'):
+        value = release_info.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f'create_release model response must carry a non-empty string {key}')
+
+
 def compute_tag(version: str, release_info: dict[str, str]) -> str:
     """Derive the tag from the pyproject version, rejecting model deviation on identifiers."""
     tag = f'v{version}'
@@ -349,8 +357,10 @@ def main() -> None:
         response_text = message.content[0].text
         print(f'\nClaude response received ({len(response_text)} characters)')
 
-        # Parse the response and reject any identifier deviation
+        # Parse the response, require the prose fields, and reject any
+        # identifier deviation
         release_info = parse_claude_response(response_text)
+        validate_release_prose(release_info)
         tag = compute_tag(version, release_info)
 
         notes = release_info['release_notes'] + '\n\n' + build_traceability(

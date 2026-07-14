@@ -54,7 +54,7 @@ jobs:
           if [[ "$EVENT_NAME" == 'release' ]]; then
             tag_name="$RELEASE_TAG"
           else
-            tag_name="$(git tag --points-at "$HEAD_SHA" | sort -V | tail -n 1)"
+            tag_name="$(git tag --points-at "$HEAD_SHA" | { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -n 1)"
 
             if [[ -z "$tag_name" ]]; then
               echo "No release tag found on commit $HEAD_SHA — skipping publish"
