@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 import re
 import subprocess
@@ -109,6 +110,33 @@ def test_slice_gate_and_closeout_surfaces() -> None:
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     assert 'governance' in pyproject['tool']['pyright']['exclude']
     assert 'governance/*' in pyproject['tool']['check-manifest']['ignore']
+
+
+def test_governance_hardening_surfaces() -> None:
+    codeowners = (ROOT / '.github' / 'CODEOWNERS').read_text(encoding='utf-8').splitlines()
+    for path in ('/governance/', '/.github/', '/tests/test_packaging_surface.py'):
+        assert f'{path} @mikkokotila @zero-bang' in codeowners, path
+    # The global `* @zero-bang` rule must not survive: under
+    # require_code_owner_review it would make one owner required on every PR.
+    assert not any(line.strip().startswith('* ') for line in codeowners)
+
+    sweep = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_sweep.yml').read_text(encoding='utf-8')
+    assert re.search(r'^\s*schedule:', sweep, re.MULTILINE) is not None
+    assert 'name=pr_checks_slice' in sweep
+    assert 'governance/slice_gate.py' in sweep
+    # Truncation-refusal marker: the sweep must fail closed rather than
+    # scope-check a truncated changed-file set.
+    assert 'refuses to run a scope check on a truncated set' in sweep
+
+    common = (ROOT / 'governance' / '_common.py').read_text(encoding='utf-8')
+    assert "__all__ = ['CLOSING_KEYWORD_RE']" in common
+    assert 'cc_gate' not in common
+    # The trimmed module defines exactly one public symbol.
+    spec = importlib.util.spec_from_file_location('_limen_common', ROOT / 'governance' / '_common.py')
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.__all__ == ['CLOSING_KEYWORD_RE']
 
 
 def test_pyright_gate_config() -> None:

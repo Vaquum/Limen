@@ -1,2 +1,16 @@
-# Request @zero-bang to review every pull request.
-* @zero-bang
+# Enforcement-surface code owners.
+#
+# With `require_code_owner_review` enabled on the branch ruleset, any PR
+# touching one of the paths below cannot merge without an approval from a
+# non-author code owner. This is a server-side layer the judged PR's merge
+# ref cannot edit away: a PR may neuter `pr_checks_slice.yml` in its own
+# run, but it can no longer merge on that self-attested green.
+#
+# Both @mikkokotila and @zero-bang are named on every rule so either can
+# approve the other's PR (no single-owner deadlock). This replaces the
+# earlier global `* @zero-bang` review-request rule, which under
+# `require_code_owner_review` would have made one owner a required approver
+# for every PR in the repo.
+/governance/ @mikkokotila @zero-bang
+/.github/ @mikkokotila @zero-bang
+/tests/test_packaging_surface.py @mikkokotila @zero-bang
