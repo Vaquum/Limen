@@ -32,21 +32,25 @@ def _public_markdown_paths() -> list[Path]:
     ]
 
 
-def _doc_blocks() -> list[dict[str, str | int]]:
+def _parse_doc_blocks(script: str) -> list[dict[str, str | int]]:
     blocks: list[dict[str, str | int]] = []
-    for match in re.finditer(r"  \{\n(?P<body>.*?)\n  \},", ASSEMBLER.read_text(encoding='utf-8'), re.S):
+    for match in re.finditer(r'\{(?P<body>[^{}]*)}', script, re.S):
         body = match.group('body')
-        source = re.search(r"source: '([^']+)'", body)
-        dest = re.search(r"dest: '([^']+)'", body)
+        source = re.search(r'''\bsource\s*:\s*['"]([^'"]+)['"]''', body)
+        dest = re.search(r'''\bdest\s*:\s*['"]([^'"]+)['"]''', body)
         if source is None or dest is None:
             continue
-        position = re.search(r'sidebarPosition: (\d+)', body)
+        position = re.search(r'\bsidebarPosition\s*:\s*(\d+)', body)
         blocks.append({
             'source': source.group(1),
             'dest': dest.group(1),
             'position': int(position.group(1)) if position else -1,
         })
     return blocks
+
+
+def _doc_blocks() -> list[dict[str, str | int]]:
+    return _parse_doc_blocks(ASSEMBLER.read_text(encoding='utf-8'))
 
 
 def _fences(path: Path, language: str) -> Iterator[tuple[int, str]]:
@@ -103,6 +107,17 @@ def test_documentation_corpus_is_fully_routed_into_the_site() -> None:
         section = str(Path(str(block['dest'])).parent)
         positions.setdefault(section, []).append(position)
     assert all(len(values) == len(set(values)) for values in positions.values())
+
+
+def test_doc_block_parser_ignores_formatting() -> None:
+    script = '''const docs = [
+      { source : "README.md", dest: 'overview/readme.md', sidebarPosition : 1 },
+    ];'''
+    assert _parse_doc_blocks(script) == [{
+        'source': 'README.md',
+        'dest': 'overview/readme.md',
+        'position': 1,
+    }]
 
 
 def test_site_assembly_preserves_authoring_and_navigation_contracts() -> None:
