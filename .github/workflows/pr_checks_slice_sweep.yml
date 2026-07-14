@@ -140,9 +140,13 @@ jobs:
               TITLE_OUT="Slice gate FAILED in scheduled sweep"
             fi
 
-            # Keep output.summary under the 65 KB API limit.
+            # Keep output.summary under the 65 KB API limit. Truncation
+            # uses a parameter expansion, not a pipe: with pipefail, a
+            # `printf | head -c` pipeline dies by SIGPIPE exactly when
+            # output is long enough to truncate, aborting the sweep.
             SUMMARY=$(printf 'Posted by pr_checks_slice_sweep run %s.\n\n```\n%s\n```\n' \
-              "${{ github.run_id }}" "$GATE_OUT" | head -c 60000)
+              "${{ github.run_id }}" "$GATE_OUT")
+            SUMMARY=${SUMMARY:0:60000}
 
             # Same check-run name as the pull_request workflow, so
             # branch protection sees this as the current status of
