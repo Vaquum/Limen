@@ -216,8 +216,10 @@ def test_release_metadata_and_embedded_versions_are_consistent() -> None:
         assert match is not None, line
         releases.append((tuple(map(int, match.groups()[:3])), date.fromisoformat(match.group(4))))
     assert releases
-    assert releases == sorted(releases)
-    assert [released_on for _, released_on in releases] == sorted(released_on for _, released_on in releases)
+    versions = [version for version, _ in releases]
+    assert versions == sorted(versions)
+    # Legacy releases were cut from parallel branches, so their dates do not
+    # always increase with their versions.
     assert '.'.join(map(str, releases[-1][0])) == project_version
     assert releases[-1][1].isoformat() == str(citation['date-released'])
 

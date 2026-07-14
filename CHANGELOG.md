@@ -306,13 +306,13 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Simplify `lightgbm.tradeable_regressor` - remove deadwood, genericize, etc
 
-## [1.16.1] - 2025-08-31
+## [1.16.1] - 2025-09-04
 
 - Use deterministic and stable SQL functions in `get_klines_data()` to minimize
   data mismatch
 - Update datasets for test data
 
-## [1.16.2] - 2025-09-04
+## [1.16.2] - 2025-08-31
 
 - Fix Streamlit explorer launch path by injecting project root into `PYTHONPATH` for the subprocess in `limen.explorer.limen_explorer`, ensuring `limen` is importable when started via tools/Playwright
 
@@ -409,7 +409,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add scaling for all klines data in `transform.linear_transform`
 - Fix padkage dependencies versioning for `numpy`, `scikit-learn` and `pandas` in JupyterLab.
 
-## [1.22.0] - 2025-11-22
+## [1.22.0] - 2025-11-26
 
 - Implement Regime Diversified Opinion Pools (RDOP) system in `limen.regime_diversified_opinion_pools.py`
 - Fix `limen.sfm.reference.xgboost` parameter issue with missing round_params in UniversalExperimentLoop
@@ -418,7 +418,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Add comprehensive RDOP testing suite in `tests.test_regime_diversified_opinion_pools.py`
 - Create documentation `docs/Regime-Diversified-Opinion-Pools.md`
 
-## [1.23.0] - 2025-11-26
+## [1.23.0] - 2025-11-22
 
 - Add `lightgbm.tradeline_directional_conditional` SFM
 - Fix type compatibility in tradeline_multiclass trading metrics
