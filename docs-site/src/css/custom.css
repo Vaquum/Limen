@@ -616,6 +616,13 @@ kbd {
     padding: 24px 16px 64px;
   }
 
+  .theme-doc-markdown table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    width: 100%;
+  }
+
   .table-of-contents {
     border-left: 0;
     padding-left: 0;

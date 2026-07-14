@@ -4,6 +4,11 @@ This page defines Limen's current docstring expectations for public code.
 
 This page applies when a public function, class, or method changes. The goal is code-true guidance that lets future contributors and users answer basic questions without opening the implementation.
 
+## Prerequisites
+
+- the current implementation and tests for the documented callable
+- the Limen development environment for lint and type checks
+
 ## When a docstring is required
 
 Update or add a docstring when a change touches:

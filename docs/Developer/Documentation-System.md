@@ -1,295 +1,199 @@
-# Documentation System Contract
+# Documentation system contract
 
-## Purpose
+This page defines how Limen documentation is owned, written, assembled, and verified. The target is one coherent documentation product, not a collection of individually plausible pages.
 
-This page defines how Limen documentation should be structured, written, built, and improved. It is the operating contract for the docs overhaul and the reference point for every later documentation change.
+## Prerequisites
 
-The goal is not only page-level correctness. The goal is one coherent Limen documentation product.
+- a Limen repository checkout
+- Python development dependencies and Node.js 20 or later for the required verification gates
 
-## What 10/10 Means
+## Quality bar
 
-For Limen, 10/10 docs means the full system is:
+Limen documentation is release-ready only when it is:
 
-- accurate to the code and current Vaquum architecture
-- direct entry path for a new user
-- deep enough for serious research and contributor work
-- coherent across product pages, reference pages, and package READMEs
-- grounded in real runnable workflows and real artefacts
-- ready to power a standalone Limen docs site now and a Vaquum docs portal later
+- correct against current source, exports, templates, workflows, and runtime behavior
+- complete across the maintained public Markdown corpus
+- coherent from product entry through workflows, reference, maintenance, and package boundaries
+- runnable in the dependency environment each example declares
+- consistent in terminology, units, page roles, links, and style
+- mechanically protected by tests, lint, link checking, and the rendered-site build
 
-## Product Docs Model
+## Source ownership
 
-### Current Site Direction
+- [README.md](../../README.md) is the product home and first-success path.
+- [docs/README.md](../README.md) is the public task router.
+- `/docs` owns public concepts, workflows, guides, and reference.
+- `/docs/Developer` owns contributor and maintainer guidance.
+- `README.md` files under `/limen` explain package ownership, boundaries, and entry points; they route to canonical docs rather than duplicating them.
+- `docs-site/scripts/assemble-docs.mjs` is the complete source-to-route map for the hosted site.
 
-Limen should get its own standalone docs site from this repository.
+Author a claim once whenever practical. Secondary pages should summarize and link to the canonical explanation.
 
-- The initial site build target is Docusaurus.
-- The site should be built in this repository.
-- The site should deliver a complete Limen-only docs experience.
-- The site should work as a standalone product site first.
-- The site should later be portable into a broader Vaquum docs system without rewriting the content model.
-- Canonical content should remain owned by repository markdown, not by site-only copies of the docs.
+## Information architecture
 
-### Future Vaquum Docs Direction
+The Docusaurus site presents five top-level sections:
 
-The long-term target is `docs.vaquum.fi` as the Vaquum documentation entry point.
+| Section | Responsibility |
+| --- | --- |
+| Overview | product boundary, system story, and task routing |
+| Guides | end-to-end jobs and operational workflows |
+| Reference | interfaces, schemas, defaults, outputs, and edge cases |
+| Developer | contribution, documentation, release, packaging, and maintenance |
+| Packages | module ownership, public entry points, and nested package boundaries |
 
-- `docs.vaquum.fi` should present all Vaquum product docs: Origo, Limen, Nexus, Praxis, and Veritas.
-- Each product should still feel discrete, self-contained, and product-native.
-- The first Vaquum-wide version should behave like a portal to product docs, not like one merged blob of markdown.
-- The Limen docs system should therefore be designed to plug into a future Vaquum docs shell without losing its own identity.
+Top-level categories are collapsed by default. Nested package READMEs live under a collapsed Internal packages group so full corpus coverage does not flatten the sidebar.
 
-## Canonical Source Rules
+## Narrative spine
 
-Limen documentation should have one ownership model.
+Major pages must agree on this sequence:
 
-- [README.md](../../README.md) is the product home page and first-success entry point.
-- [docs/README.md](../README.md) is the canonical public docs hub.
-- `/docs` is the canonical source for public concepts, workflows, and API/reference pages.
-- `/docs/Developer` is the canonical source for contributor and maintainer process docs.
-- package `README`s under `/limen` are orientation pages for module ownership and boundaries, not the main public reference.
-- examples should be derived from real runnable flows in this repository, not imaginary or hand-waved pseudo-usage.
-- use `python` fences only for snippets that parse as standalone Python; use `python-fragment` for method-chain fragments or partial code that requires surrounding context.
-
-Content should be authored once whenever possible. If the same explanation appears in multiple places, one page should be canonical and the others should route to it.
-
-## Information Architecture
-
-The docs site should be organized into five top-level sections:
-
-- `Overview`
-- `Guides`
-- `Reference`
-- `Developer`
-- `Packages`
-
-The source files can remain in their current repository layout, but the built site should present them through this information architecture.
-
-### Section Responsibilities
-
-- `Overview` explains what Limen is, what it is not, and how the whole system fits together.
-- `Guides` teach workflows and tasks from start to finish.
-- `Reference` documents surfaces, conventions, arguments, outputs, and edge cases.
-- `Developer` documents contribution, release, maintenance, and internal documentation rules.
-- `Packages` explains module ownership, boundaries, entry points, and where to read next.
-
-## Narrative Spine
-
-Every major public page should reinforce the same core Limen story:
-
-1. Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.
-2. Data enters through native Limen data access or external OHLC-style data.
-3. An experiment is defined first as a YAML manifest.
+1. `HistoricalData` or an external compatible frame supplies Bitcoin market data.
+2. Optional data bars, indicators, features, transforms, scalers, and targets define the research surface.
+3. A YAML manifest is the default operator-facing experiment definition.
 4. The CLI validates, profiles, dry-runs, and runs that manifest.
-5. Universal Experiment Loop is the engine beneath CLI execution and the direct API for Python extensions.
-6. Log, benchmark-style analytics, and backtest outputs show what happened and why.
-7. Trainer and Cohort turn finished experiment outputs into reusable downstream artefacts.
-8. Trade decisioning and execution happen outside Limen, downstream in other Vaquum systems.
+5. Universal Experiment Loop is the engine beneath CLI execution and the direct Python extension surface.
+6. Log, benchmark, and backtest surfaces explain experiment outcomes.
+7. Trainer replays selected rounds with their original manifest configuration, validates metrics, and returns Sensors.
+8. Cohort binds selected Sensors into a multi-member inference surface.
+9. Trade decisioning and execution occur outside Limen.
 
-If a page does not help a reader understand its place in that story, it should route clearly to the pages that do.
+## Page contracts
 
-## Register And Writing Rules
+### Product home
 
-All Limen documentation should use the same register:
+- state what Limen is and is not
+- show the minimum runnable install and first experiment
+- name produced files
+- route by reader task
 
-- precise
-- technical
-- concise
-- accessible to an informed new user
-- direct rather than academic
-- product-truthful rather than hype-driven
+### Docs hub
 
-### Writing Rules
-
-- Start with what the thing is and why a reader would use it.
-- Prefer concrete behavior over abstract framing.
-- Keep theory only where it directly improves practical understanding.
-- Explain current surface area honestly; do not imply future behavior as present behavior.
-- Prefer examples that show inputs, outputs, and artefacts.
-- Lead operator-facing workflow docs with YAML manifest and CLI execution before Python internals.
-- Do not use unexplained internal jargon.
-- Do not duplicate large sections of content across pages.
-- End pages with explicit reading routes or next steps when they affect task completion.
-
-## Page Types And Required Blocks
-
-Every page should fit one primary page type.
-
-### Home Page
-
-Purpose: product framing and first success.
-
-Required blocks:
-
-- what Limen is
-- what Limen is not
-- capability summary
-- first successful workflow
-- explicit routes into the rest of the docs
-
-### Docs Hub
-
-Purpose: route readers by task and audience.
-
-Required blocks:
-
-- system overview
-- reading order by user type
-- high-level architecture map
-- explicit routes into guides, reference, developer docs, and package docs
+- route by task and audience
+- show the system sequence
+- link every top-level site section
 
 ### Guide
 
-Purpose: teach a job or workflow from start to finish.
-
-Required blocks:
-
-- what this guide covers
-- prerequisites
-- current scope
-- at least one concrete example
-- expected artefacts or outputs
-- related pages or next steps
+- state the job and current scope
+- declare prerequisites or say that none are required
+- show at least one concrete command or example
+- state expected output, artifact, or observable result
+- link the next task
 
 ### Reference
 
-Purpose: document an interface or surface comprehensively and predictably.
+- state the covered surface
+- document names, signatures, parameters, defaults, and return behavior
+- document edge cases and optional dependencies
+- distinguish public exports from module-only symbols
 
-Required blocks:
+### Developer page
 
-- short intro and scope
-- conventions or naming rules
-- structured entry documentation
-- output columns or return behavior where relevant
-- edge cases or caveats where relevant
-
-### Developer Page
-
-Purpose: guide contributors and maintainers.
-
-Required blocks:
-
-- page purpose
-- required reading or prerequisites
-- process or checklist
-- failure cases or review notes where relevant
-- linked related maintenance pages
+- state purpose and prerequisites
+- give an executable process or checklist
+- name failure and review boundaries
+- link related maintenance surfaces
 
 ### Package README
 
-Purpose: orient readers inside a module without replacing canonical public docs.
+- state what the package owns and does not own
+- list source-true public entry points
+- identify adjacent packages or optional dependencies
+- link canonical public docs
 
-Required blocks:
+## Writing rules
 
-- what the package owns
-- what it does not own
-- key entry points
-- major dependencies or adjacent modules
-- link to canonical public docs
+- Lead with current behavior and reader impact.
+- Prefer exact commands, paths, values, units, and return fields over abstractions.
+- Use American English for shared prose: `artifact`, `behavior`, `optimization`.
+- Use canonical component capitalization: `Single-File Decoder`, `Reference Architecture`, `HistoricalData`, `Universal Experiment Loop`.
+- Use `python` fences only for standalone parseable code. Use `python-fragment` for fluent-chain fragments or partial code.
+- State required extras before the first example that imports an optional dependency.
+- Do not present local measurements as stable API guarantees.
+- Do not describe planned, historical, or external behavior as current Limen behavior.
+- End task-oriented pages with an explicit next route.
 
-## Navigation And Cross-Link Rules
+## Source-backed claims
 
-Navigation should reduce guesswork.
+Use the narrowest authoritative source:
 
-- The home page and docs hub must both provide reading paths by task.
-- Large pages should be indexed near the top.
-- Public workflow pages should link forward through the narrative spine.
-- Package READMEs should link outward to canonical docs rather than trying to become their own mini-sites.
-- Cross-links should prefer the next page a reader should open, not every vaguely related page.
+| Claim | Authority |
+| --- | --- |
+| import or export | package `__init__.py` and an import smoke test |
+| callable arguments/defaults | current function or class signature |
+| YAML field or template | schema/rules/compiler plus bundled template |
+| reducer or scaler name | current registry |
+| result field or artifact | implementation and focused test |
+| package dependency | `pyproject.toml` |
+| release behavior | current workflow and script |
+| hosted route | assembler map and Docusaurus build |
 
-## Terminology Rules
+When prose and source disagree, fix the prose or explicitly route a separate behavior defect. Documentation work must not silently change runtime contracts.
 
-Use one terminology set across the whole docs system.
+## Examples
 
-- Product name: `Limen`
-- Template unit: `SFD` or `Single-File Decoder`
-- Declarative SFD spec: `Manifest`
-- Experiment engine: `Universal Experiment Loop` or `UEL`
-- Cohort selection method: `selector`
-- Reusable trained inference object: `Sensor`
-- Data access class: `HistoricalData`
+Examples must satisfy the level they imply:
 
-### Naming Rules
+- syntax examples parse
+- import examples import in the declared extras environment
+- command examples use current argument order and names
+- runnable workflows complete against a bounded fixture or isolated environment
+- output examples contain only fields the implementation can produce in that mode
 
-- Use `Loop` only when it is part of the actual component name `Universal Experiment Loop`.
-- Do not describe Nexus decision logic as part of Limen.
-- Do not describe Origo, Praxis, or Veritas responsibilities as if they live inside Limen.
-- Keep `Bitcoin-only` language exact and consistent with the actual product boundary.
+Base `Manifest` is an abstract interface whose `prepare_data()` raises `NotImplementedError`; runnable examples must instantiate `MLManifest` or `RuleBasedManifest`.
 
-## Example And Artefact Rules
+## Links and edit paths
 
-Examples should be operationally real.
+- Local links and fragments must resolve in source and in the assembled site.
+- Public links must use the canonical non-broken route shape.
+- Every assembled page receives a `custom_edit_url` targeting its real source under GitHub `/edit/main/`.
+- Repository files not mapped as docs may link to GitHub; maintained documentation must be assembled instead of silently falling back to a blob link.
 
-- Prefer examples that can be run locally in this repository.
-- Prefer examples validated against actual Limen artefacts.
-- When an example depends on warnings, limitations, or approximations, say so explicitly.
-- Show output tables, files, or artefacts where they are important to understanding the workflow.
-- Avoid examples that accidentally teach readers to optimize only for a single metric.
+## Site assembly
 
-## Site Build Rules
+`docs-site/scripts/assemble-docs.mjs`:
 
-These rules should guide the site build implemented in the next slice.
+1. maps every maintained source to one destination and route
+2. writes source-aware front matter
+3. rewrites relative documentation links to assembled destinations
+4. preserves repository links only for non-doc files
+5. creates collapsed category metadata
 
-- Limen should get a standalone docs site built in this repository.
-- The initial implementation should use Docusaurus.
-- The site should support local development and static build.
-- The site should support both standalone deployment and later subpath deployment.
-- The site base URL should be environment-driven so the same content can support both modes.
-- Search should work across the full Limen docs corpus.
-- Broken internal links should fail the build.
-- The site navigation should reflect the five top-level sections in this contract.
+The source inventory test must fail if a maintained Markdown source is added without a route or if the map references a missing source.
 
-## Future Vaquum Portal Contract
+## Required verification
 
-The Limen docs system should expose a minimal product-docs contract that can later be consumed by a Vaquum-wide docs portal.
+From the repository root:
 
-That contract should include:
+```bash
+python -m pytest -q tests/test_docs_surface.py
+python -m tests.run
+```
 
-- product id
-- product name
-- short product tagline
-- current docs version label
-- deployment base path
-- primary navigation sections
-- source repository URL
+From `docs-site`:
 
-This does not mean Limen should wait for a Vaquum-wide shell. Limen should be excellent as a standalone docs product first.
+```bash
+npm ci
+npm run check
+```
 
-## Rewrite Slices
+`npm run check` runs Markdown lint, assembles the corpus, and builds Docusaurus with broken-link failures enabled. The Python docs test owns source-linked semantic inventories, versions, local links and anchors, fence parsing, and abstract-example guards.
 
-The overhaul should be tracked in the following order.
+For a changed first-run path, also prove the documented install in a fresh environment. For layout or navigation changes, inspect the rendered desktop and mobile site before review.
 
-| Slice | Name | Scope | Definition of Done |
-| --- | --- | --- | --- |
-| 1 | Docs System Contract | Define structure, voice, page types, ownership, navigation model, site boundary, and rewrite slices. | This contract exists, is linked from developer docs, and is accepted as the operating manual for later slices. |
-| 2 | Docs-Site Build | Add the site build, docs assembly model, product metadata, local dev/build/check commands, and navigation shell. | The Limen docs site builds locally, renders the current corpus, and enforces link integrity. |
-| 3 | Top-level narrative | Rewrite the product home and docs hub so Limen has one entry story and reading flow. | A new user can enter the docs without guessing what to read next. |
-| 4 | Core Workflow Guides | Rewrite data, bars, SFD, manifest, and UEL pages as one connected workflow layer. | A reader can go from data to running an experiment using only the guide layer. |
-| 5 | Analysis And Outcomes | Rewrite log, benchmark, backtest, trainer, cohort, metrics, and CFR pages. | A reader can understand what Limen produces after a run and how to interpret it. |
-| 6 | Reference Layer | Rewrite indicators, features, transforms, and scalers as coordinated reference pages. | The large reference pages are scannable, consistent, and trusted. |
-| 7 | Developer layer | Rewrite contributor, release, and versioning docs for current practice. | A contributor can follow the maintenance workflow without external tribal knowledge. |
-| 8 | Package README Alignment | Align package READMEs with the same contract and route them to canonical docs. | Package READMEs feel like part of one system rather than isolated notes. |
-| 9 | Final cohesion pass | Sweep the entire corpus for terminology, duplication, examples, links, navigation, and consistency. | The docs read as one coherent product and meet the acceptance bar. |
+## Review checklist
 
-## Acceptance bar for the overhaul
+- Is every changed claim true at the named source?
+- Does the page keep one primary role?
+- Are prerequisites and outputs explicit?
+- Do equivalent terms, units, and examples agree across pages?
+- Is every maintained source assembled exactly once?
+- Do edit links target real source files?
+- Do docs tests, Markdown lint, and the site build pass?
 
-The overhaul should be considered complete when all of the following are true:
+## Read next
 
-- a new user can reach a first meaningful experiment path without guessing
-- a serious user can understand how Limen fits into the broader Vaquum architecture
-- a contributor can find the canonical page for any subsystem quickly
-- examples are grounded in real Limen runs and artefacts
-- large reference pages have explicit navigation and code-true claims
-- the standalone Limen docs site feels complete
-- the same docs system can later plug into a Vaquum-wide docs portal without conceptual rework
-
-## How To Use This Page
-
-Before rewriting any major docs slice:
-
-- confirm the target page type
-- confirm where the page sits in the narrative spine
-- confirm whether the page is canonical or secondary
-- confirm which slice the change belongs to
-
-If a proposed docs change conflicts with this contract, update this page first or explicitly document the exception.
+- [Docs hub](../README.md)
+- [Developer home](README.md)
+- [Writing docstrings](Writing-Docstrings.md)
+- [Packaging](Packaging.md)

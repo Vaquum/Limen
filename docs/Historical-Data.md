@@ -1,15 +1,22 @@
 # Historical Data
 
-`HistoricalData` is Limen's stateful file-backed data surface. It has four public retrieval methods:
+`HistoricalData` is Limen's stateful file-backed data surface. It has five public retrieval methods:
 
 - `get_spot_klines()`
 - `get_spot_dollar_klines()`
 - `get_binance_file()`
 - `get_any_file()`
+- `get_arrow_file()`
 
-All four return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
+All five return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
 
 Install `vaquum-limen[data]` when using Hugging Face parquet datasets or Arrow IPC paths. The base package does not install PyArrow.
+
+## Prerequisites
+
+- Python 3.10-3.13
+- `pip install "vaquum-limen[data]"` for every built-in hosted or Arrow data path on this page
+- network access for Hugging Face or remote URL examples; local files need no network
 
 ## How It Works
 
@@ -32,6 +39,7 @@ assert data is historical.data
 | `get_spot_dollar_klines()` | Hugging Face BTCUSDT dollar-bar parquet datasets | BTCUSDT spot dollar bars as `pl.DataFrame` | event-time experiments |
 | `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
 | `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
+| `get_arrow_file()` | local Arrow IPC file | memory-mapped Arrow contents as `pl.DataFrame` | zero-copy local Arrow reads when buffer layout permits |
 
 ## `get_spot_klines()`
 
@@ -147,10 +155,10 @@ Manifest-driven experiments should use:
 
 ```python
 from limen.data import HistoricalData
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 
 manifest = (
-    Manifest()
+    MLManifest()
     .set_data_source(
         method=HistoricalData.get_spot_klines,
         params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -168,9 +176,10 @@ manifest = (
 - Use `get_spot_dollar_klines()` when market activity, not wall-clock time, should define each row.
 - Use `get_binance_file()` for direct Binance archives.
 - Use `get_any_file()` for local fixtures, URLs, and generic file-backed ingestion.
+- Use `get_arrow_file()` for local Arrow IPC files when memory mapping and zero-copy validation matter.
 
 ## Read Next
 
 - [Data Bars](Data-Bars.md)
-- [Single File Decoder](Single-File-Decoder.md)
+- [Single-File Decoder](Single-File-Decoder.md)
 - [Experiment Manifest](Experiment-Manifest.md)

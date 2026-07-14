@@ -57,14 +57,6 @@ Returns a dictionary with:
 - `auc`
 - `accuracy`
 
-On a live local `LogRegBinary.evaluate(data, inline_metrics=False)` run in this repo, this task-metric layer was exactly:
-
-- `accuracy`
-- `auc`
-- `precision`
-- `recall`
-- `fpr`
-
 Example:
 
 ```python
@@ -74,12 +66,7 @@ results['_preds'] = preds
 
 ### Edge cases
 
-`binary_metrics()` assumes the test fold is suitable for binary metrics. In degenerate folds:
-
-- `auc` can fail if only one class is present in `y_test`
-- `fpr` can become invalid when there are no negative examples
-
-For stable public experiments, make sure the test target is not degenerate.
+`binary_metrics()` handles degenerate binary folds without raising. It returns `NaN` for `auc` when `y_test` contains one class and `NaN` for `fpr` when there are no negative examples. Precision and recall use `zero_division=0`.
 
 ## `multiclass_metrics(data, preds, probs, average='macro')`
 

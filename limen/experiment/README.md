@@ -1,6 +1,6 @@
 # `limen.experiment`
 
-> Define experiments, run parameter search, and promote successful runs into reusable inference objects.
+> Define manifests and run basic or adaptive parameter search.
 
 ## Canonical docs
 
@@ -8,22 +8,19 @@
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
 - [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
-- [Trainer](../../docs/Trainer.md)
 
 ## What this package owns
 
-Owns the Manifest, the Universal Experiment Loop, advanced search infrastructure, checkpointing, and the retraining path that produces `Sensor` objects.
-Does **not** own model architectures, indicators, features, or raw metric helpers.
+Owns `Manifest`, `MLManifest`, `RuleBasedManifest`, the Universal Experiment Loop, parameter-search strategies, mutable search state, reducers, feedback, and checkpointing.
+Does **not** own inference reconstruction (`limen.inference`), model architectures, indicators, features, or metric helpers.
 
 ## Key entry points
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `Manifest` | Declarative experiment pipeline | Exported at the package root |
+| `Manifest`, `MLManifest`, `RuleBasedManifest`, `CalibrationConfig` | Declarative experiment pipelines and calibration configuration | Exported at the package root |
 | `UniversalExperimentLoop` | Run an SFD across parameter permutations | Exported at the package root |
-| `Trainer` | Rebuild winning rounds into reusable inference artifacts | Exported at the package root |
-| `Sensor` | Portable inference object produced by `Trainer` | Exported at the package root |
-| `ReconstructionError` | Handle failed manifest reconstruction during training | Exported at the package root |
+| `GridStrategy`, `RandomStrategy`, `STRATEGY_REGISTRY` | Built-in advanced-search strategy surface | Exported at the package root |
 
 ## Adjacent modules
 
@@ -31,6 +28,7 @@ Does **not** own model architectures, indicators, features, or raw metric helper
 - `limen.data` supplies raw data when a manifest declares a data source.
 - `limen.log` analyzes completed runs.
 - `limen.cohort` builds decoder cohorts on top of finished experiment results.
+- `limen.inference` owns `Trainer`, `Sensor`, and `ReconstructionError`; the top-level `limen` package lazily re-exports those names.
 
 ## Quick orientation
 
@@ -42,13 +40,9 @@ experiment/
 ├── feedback_controller.py   # Mid-run adaptive callbacks
 ├── msq.py                   # Mutable Search Queue
 ├── param_domain.py          # Mutable parameter domain
-├── trainer/
-│   ├── trainer.py           # Trainer
-│   ├── sensor.py            # Sensor
-│   └── errors.py            # ReconstructionError
 ├── reducer/
 │   └── pruning_strategy.py  # Pruning interfaces and implementations
-└── search_strategy.py       # SearchStrategy base class
+└── param_search/            # SearchStrategy, GridStrategy, RandomStrategy
 ```
 
 ## Things to know
@@ -64,4 +58,3 @@ experiment/
 - [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
-- [Trainer](../../docs/Trainer.md)

@@ -1,8 +1,14 @@
-# Single file decoder
+# Single-File Decoder
 
-A Single File Decoder (SFD) is the Python experiment unit beneath Limen's YAML and CLI path. It packages a parameter space together with either a declarative manifest or fully custom preparation and model functions.
+A Single-File Decoder (SFD) is the Python experiment unit beneath Limen's YAML and CLI path. It packages a parameter space together with either a declarative manifest or fully custom preparation and model functions.
 
 `limen run` compiles YAML into a manifest-backed SFD and passes it to `UniversalExperimentLoop`. Direct SFD authoring is the extension path for custom decoders and model code.
+
+## Prerequisites
+
+- familiarity with the [Experiment Manifest](Experiment-Manifest.md) and [Universal Experiment Loop](Universal-Experiment-Loop.md)
+- a parameter space whose values are lists
+- either a concrete manifest or custom `prep()` and `model()` functions
 
 ## Choose the SFD style
 
@@ -152,7 +158,7 @@ Custom `prep()` receives the experiment dataframe and the round-specific paramet
 Defaults:
 
 - keep `datetime` in the dataframe until just before `split_data_to_prep_output()`
-- pass throwaway split lists and column lists to `split_data_to_prep_output()` because it drops `datetime` from the split frames and removes `datetime` from the column list
+- pass split lists and column lists directly to `split_data_to_prep_output()`; it copies both inputs before dropping `datetime`, so caller-owned values are unchanged
 - capture `all_datetimes = data['datetime'].to_list()` before dropping rows when alignment metadata is required
 - make the function deterministic with respect to `round_params`
 
@@ -198,16 +204,13 @@ For example:
 
 This is why [Trainer](Trainer.md) can promote a finished experiment round back into a trained `ReferenceModel`.
 
-On a live local smoke pass in this repo:
-
-- `logreg_binary`, `random_binary`, and `xgboost_regressor` all ran
-- `tabpfn_binary` was unavailable because `tabpfn` was not installed
+Execution checks optional dependencies at the model boundary. Importing the SFD catalog does not require every model extra.
 
 Use [Built-In SFDs](Built-In-SFDs.md) for the current shipped catalog and [Reference Architecture](Reference-Architecture.md) for the model layer underneath it.
 
 ## Read next
 
-- Continue to [Command Line Interface](Command-Line-Interface.md) for the normal YAML run path.
+- Continue to [Command-Line Interface](Command-Line-Interface.md) for the normal YAML run path.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline used by standard SFDs.
 - Continue to [Built-In SFDs](Built-In-SFDs.md) for the shipped foundational decoder catalog.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for direct Python execution.

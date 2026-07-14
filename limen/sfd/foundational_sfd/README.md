@@ -17,11 +17,12 @@ Does **not** own model training logic (owned by the matching `limen.sfd.referenc
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
 | `logreg_binary` | Standard binary-classification SFD | Manifest-driven |
+| `dlinear_regressor` | Linear time-series regression SFD | Manifest-driven |
 | `lightgbm_binary` | Gradient-boosted binary classifier SFD | Manifest-driven |
 | `xgboost_regressor` | Regression-style SFD | Manifest-driven |
 | `random_binary` | Baseline classifier for comparison | Manifest-driven |
 | `rule_based` | Predicate-driven, non-learned SFD | Uses `limen.sfd.rule_based` |
-| `tabpfn_binary` | TabPFN-based SFD | Optional; unavailable when `tabpfn` is not installed |
+| `tabpfn_binary` | TabPFN-based SFD | Module is lazy; model use requires the `tabpfn` extra |
 
 ## Adjacent modules
 
@@ -34,6 +35,7 @@ Does **not** own model training logic (owned by the matching `limen.sfd.referenc
 ```text
 foundational_sfd/
 ├── logreg_binary.py
+├── dlinear_regressor.py
 ├── lightgbm_binary.py
 ├── xgboost_regressor.py
 ├── random_binary.py

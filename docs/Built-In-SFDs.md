@@ -1,12 +1,18 @@
 # Built-in SFDs
 
-Limen ships foundational SFDs under `limen.sfd.foundational_sfd` and matching YAML templates under `limen/yaml/templates`. Ordinary runs should start from the YAML template and CLI; the Python modules are the packaged decoder layer beneath that path.
+Limen ships foundational SFDs under `limen.sfd.foundational_sfd`; most have matching YAML templates under `limen/yaml/templates`. Ordinary runs should start from a YAML template when one exists; the Python modules are the packaged decoder layer beneath that path.
 
 They show the packaged Limen experiment shape because each one combines:
 
 - `params()`
 - `manifest()`
 - a matching reference-architecture model surface
+
+## Prerequisites
+
+- `vaquum-limen[data]` for bundled data sources
+- the matching optional extra for LightGBM/XGBoost, SciPy-backed DLinear, or TabPFN runs
+- the CLI first-run sequence from [Command-Line Interface](Command-Line-Interface.md)
 
 ## The current catalog
 
@@ -17,7 +23,8 @@ They show the packaged Limen experiment shape because each one combines:
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
-| `tabpfn_binary` | binary classification | optional, available only when `tabpfn` is installed |
+| `tabpfn_binary` | binary classification | lazy symbols are always importable; model use requires `tabpfn` |
+| `rule_based` | rule-based long/flat | predicate-driven strategy with no learned model |
 
 ## Foundational SFD versus reference architecture
 
@@ -35,7 +42,7 @@ For the logistic-regression SFD:
 - `limen.sfd.foundational_sfd.logreg_binary` owns the packaged experiment
 - `limen.sfd.reference_architecture.logreg_binary` owns the model implementation
 
-This separation is what lets [Trainer](Trainer.md) reconstruct a finished experiment and retrain the matching `ReferenceModel`.
+This separation is what lets [Trainer](Trainer.md) reconstruct and replay a finished experiment with the matching `ReferenceModel`.
 
 ## `logreg_binary`
 
@@ -123,11 +130,11 @@ It requires `scipy` (the `stats` extra), loaded lazily inside the model.
 
 ## `tabpfn_binary`
 
-`tabpfn_binary` is an optional packaged SFD. It only becomes available when `tabpfn` is installed through the `tabpfn` extra. That dependency is intentionally outside the base install because it is materially larger than the default sklearn/LightGBM path.
+`tabpfn_binary` is an optional packaged SFD. Its lazy module and exported symbols can be imported without TabPFN, but model construction and training require the `tabpfn` extra. That dependency is intentionally outside the base install because it is materially larger than the default sklearn path.
 
-It uses `CalibrationBuilder` with the same probability calibration and threshold optimisation wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.
+It uses `CalibrationBuilder` with the same probability calibration and threshold optimization wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.
 
-That optional status matters at import time and in local documentation examples. In the bundled smoke path, it was unavailable because `tabpfn` was not installed.
+That optional status matters at execution time: discovery and template listing work in the base environment, while a TabPFN run fails until the extra is installed.
 
 ## Running one immediately
 
@@ -154,6 +161,6 @@ Direct Python use is still available when you need to integrate with UEL or cust
 ## Read next
 
 - Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
-- Continue to [Command Line Interface](Command-Line-Interface.md) for the YAML run loop.
+- Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.

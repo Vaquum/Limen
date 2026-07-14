@@ -12,7 +12,7 @@
 This package owns the cohort-level inference surface:
 
 1. `Cohort` for direct multi-member aggregation from one experiment and selected permutations
-2. single-file cohort (`sfc`) strategies for choosing those permutations from experiment artefacts
+2. single-file cohort (`sfc`) strategies for choosing those permutations from experiment artifacts
 
 It does **not** own:
 
@@ -25,6 +25,7 @@ It does **not** own:
 | Entry point                       | Use case | Notes                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `Cohort`                        | Aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
+| `BUILTIN_SELECTORS`             | Map selector names to built-in selector modules | Exported at the package root |
 | `limen.cohort.sfc.all.select`             | Default "use every round" selector | Preserves existing omitted-`permutation_ids` behavior          |
 | `limen.cohort.sfc.top_n.select`           | Results-column ranker | Requires `results.csv`                                         |
 | `limen.cohort.sfc.backtest_pareto.select` | Trading-metric Pareto selection | Uses backtest return/risk columns                              |
@@ -65,7 +66,7 @@ See [Cohort](../../docs/Cohort.md) for full contract and examples.
 
 ## Adjacent modules
 
-- `limen.experiment` provides experiment logs, Trainer, and Sensor reconstruction used by Cohort flows
+- `limen.experiment` owns manifests and parameter search; `limen.inference` owns Trainer and Sensor reconstruction used by Cohort flows
 - `limen.log` provides analysis surfaces commonly used before selector-driven promotion
 - `limen.sfd` and reference architectures define member model output behavior
 

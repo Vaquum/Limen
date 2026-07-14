@@ -9,6 +9,12 @@ In practical Limen terms, CFR turns raw trades into:
 
 CFR provides a compact diagnostic for scale-stable or anomalous trade flow inside each bar.
 
+## Prerequisites
+
+- trade-level `datetime`, `price`, and `quantity` columns
+- enough events for the chosen bar interval and scale set
+- a downstream plan for the synthetic kline and six CFR diagnostic columns
+
 ## Input And Output
 
 ### Input

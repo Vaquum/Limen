@@ -1,9 +1,14 @@
 # Backtest
 
-
 Backtest is Limen's trading-economics ledger. It converts binary prediction output into long-flat per-bar returns after declared fill costs, then reports one row of intensive metrics per evaluated round.
 
 The layer answers one question: did the predictive structure retain economic value under the declared execution contract?
+
+## Prerequisites
+
+- aligned binary predictions and OHLC/price-change columns
+- explicit fee, slippage, notional, and execution-lag assumptions
+- retained round artifacts for post-run experiment-wide analysis
 
 ## Risk boundary
 
@@ -17,7 +22,7 @@ Table 1. Backtest is exposed through three paths.
 |---|---|
 | `uel.experiment_backtest_results` | Experiment-wide table with one row per round. |
 | `uel._log.experiment_backtest_results()` | Log-layer method that builds the experiment-wide table. |
-| `limen.backtest.backtest_snapshot` | Package function for one per-round prediction table. |
+| `limen.backtest.backtest_snapshot.backtest_snapshot` | Module function for one per-round prediction table. |
 
 ## Snapshot contract
 
@@ -127,7 +132,7 @@ Use the experiment-wide table to compare rounds.
 backtest = uel.experiment_backtest_results
 ```
 
-Use the package function to inspect one permutation.
+Use the module function to inspect one permutation.
 
 ```python
 from limen.backtest.backtest_snapshot import backtest_snapshot

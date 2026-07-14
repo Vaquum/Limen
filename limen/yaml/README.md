@@ -5,7 +5,7 @@
 ## Canonical docs
 
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
-- [Command Line Interface](../../docs/Command-Line-Interface.md)
+- [Command-Line Interface](../../docs/Command-Line-Interface.md)
 - [Advanced Search](../../docs/Advanced-Search.md)
 
 ## What this package owns
@@ -15,16 +15,18 @@ Does **not** own Click command routing, UEL execution, model implementations, or
 
 ## Key entry points
 
-| Entry point | Use case | Notes |
-| --- | --- | --- |
-| `parser.py` | Read YAML into structured config | Handles file parsing before validation. |
-| `schema.py` | Authoritative YAML field sets and allowed values | Defines schema version `1.0`, modes, manifest types, output formats, and search strategies. |
-| `validator.py` | Validate structure and supported field names | Used by CLI validation and run paths. |
-| `resolver.py` | Resolve `limen.*` dotted references | Bridges YAML text to Python callables/classes. |
-| `compiler.py` | Compile YAML config into executable Limen objects | Produces manifest and UEL-ready configuration. |
-| `profiler.py` | Permutation and runtime estimates | Powers `limen profile`. |
-| `store.py` | Committed-manifest storage and `manifest://` lookup | Used by `limen commit`, `limen ls`, and `limen run manifest://sha256:`. |
-| `templates/` | Shipped starting YAML files | Used by `limen init` and `limen list-templates`. |
+Package-root exports are grouped by responsibility:
+
+| Surface | Public exports |
+| --- | --- |
+| Parse, validate, resolve | `parse`, `validate`, `ValidationResult`, `resolve` |
+| Compile | `CompiledSFD`, `build_manifest`, `build_search_strategy` |
+| Profile | `profile`, `ProfileResult`, `make_covering_array` |
+| Schema | `VERSION` |
+| Project and store | `find_project_root`, `get_store_path`, `read_limen_toml`, `resolve_manifest_uri` |
+| Errors | `YAMLError`, `ValidationError`, `ResolutionError`, `GitError` |
+
+The package also owns `parser.py`, `schema.py`, `validator.py`, `resolver.py`, `compiler.py`, `profiler.py`, `store.py`, and the shipped `templates/` directory behind those exports.
 
 ## Adjacent modules
 
@@ -59,4 +61,4 @@ yaml/
 ## Read next
 
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
-- [Command Line Interface](../../docs/Command-Line-Interface.md)
+- [Command-Line Interface](../../docs/Command-Line-Interface.md)

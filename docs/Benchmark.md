@@ -4,6 +4,12 @@ In Limen, benchmark is the prediction-quality layer between the raw experiment l
 
 It measures signal activity, positive-class accuracy, and true-positive versus false-positive outcome separation. Benchmark comes before PnL compression so prediction quality remains visible before a trading rule is applied.
 
+## Prerequisites
+
+- a completed experiment log with predictions and targets
+- retained round artifacts (`post_processing=True`) for direct UEL analysis
+- a numeric outcome column such as `price_change` for return-separation fields
+
 ## Risk boundary
 
 Benchmark output is research evidence, not investment advice, trading advice, regulatory approval, or a promise of future performance. Past performance is not predictive, digital-asset trading can result in total loss of capital, and a benchmark table can show statistical structure without proving that a strategy survives live execution, fees, slippage, or portfolio constraints.

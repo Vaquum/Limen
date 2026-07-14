@@ -36,7 +36,7 @@ rule_based/
 - Leaf conditions are validated by type: each of `threshold`, `relative`, `crossover`, `slope`, and `sql_expr` has its own required fields, and a missing field raises `ValueError`.
 - Logical nodes combine leaves with `and`, `or`, and `not`.
 - A condition may specify `persistence_n` **or** `recency_n`, but not both.
-- Predicate values support `{param}`-style formatting, so thresholds can be parameterised from the manifest.
+- Predicate values support `{param}`-style formatting, so thresholds can be parameterized from the manifest.
 
 ## Read next
 

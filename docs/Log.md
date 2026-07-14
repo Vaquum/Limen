@@ -4,6 +4,12 @@
 
 For YAML CLI runs, start from the generated result directory and `results.csv`. For direct Python UEL runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
 
+## Prerequisites
+
+- a completed `results.csv`, or a successful direct UEL run
+- `post_processing=True` when analysis needs retained predictions, scalers, alignment, or the live `uel._log`
+- compatible price columns for price-derived confusion and backtest analysis
+
 ## Two ways to use `Log`
 
 ### UEL-backed `Log`
@@ -88,6 +94,7 @@ perf = uel._log.permutation_prediction_performance(round_id=0)
 
 The resulting table has these columns:
 
+- `datetime` when the reconstructed price frame contains it
 - `predictions`
 - `actuals`
 - `hit`
@@ -96,7 +103,7 @@ The resulting table has these columns:
 - `close`
 - `price_change`
 
-On a live local run in this repo, the table for one round contained 218 test rows with exactly that schema.
+The row count follows the reconstructed test window; it is not a fixed contract.
 
 Use this table for round-level inspection before summary statistics. It is also the direct input to Limen's snapshot backtest.
 
@@ -229,7 +236,7 @@ with columns:
 - `ci_hi`
 - `sign_stability`
 
-This method requires enough rows to support cohort-level interpretation. Tiny runs produce legal output but unstable estimates.
+The default `min_n=10` skips smaller cohorts. If every requested cohort is smaller than `min_n`, or cleaning leaves no usable numeric cohort, the method raises `ValueError` instead of returning an unstable table.
 
 ## Analyzing perturbation impact
 

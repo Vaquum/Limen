@@ -4,6 +4,12 @@ Limen currently supports threshold-based bar formation over existing kline data.
 
 Use bars when time-based candles do not match the studied behavior. Skip bars when fixed-interval klines already match the research rhythm.
 
+## Prerequisites
+
+- a kline-like Polars frame with the columns required by the chosen bar type
+- `vaquum-limen[data]` when the source frame comes from `HistoricalData`
+- a declared research reason for replacing fixed-time rows with activity-threshold rows
+
 ## Current scope
 
 The implemented bar surface today is:
@@ -71,7 +77,7 @@ Bar formation is configured through `Manifest.set_bar_formation()` and is applie
 ```python
 from limen.data import HistoricalData
 from limen.data.utils import compute_data_bars
-from limen.experiment import Manifest
+from limen.experiment import MLManifest
 
 def params():
     return {
@@ -82,7 +88,7 @@ def params():
 
 def manifest():
     return (
-        Manifest()
+        MLManifest()
         .set_data_source(
             method=HistoricalData.get_spot_klines,
             params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
@@ -142,6 +148,6 @@ This keeps train-only fitting and test-only evaluation aligned with the actual p
 
 ## Read next
 
-- Continue to [Single File Decoder](Single-File-Decoder.md) for experiment packaging.
+- Continue to [Single-File Decoder](Single-File-Decoder.md) for experiment packaging.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline that bar formation plugs into.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run the resulting experiment.

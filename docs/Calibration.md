@@ -173,7 +173,7 @@ When calibration is configured, `evaluate()` always includes these two keys so t
 | `optimal_threshold` | `float` or `None` | the threshold chosen by the optimizer (`None` when calibration is off for this round) |
 | `val_score` | `float` or `None` | the metric score at that threshold; `None` when no threshold function ran |
 
-These appear in the experiment log alongside the standard binary metrics and are accessible in `Sensor.results` after promotion.
+These appear in the experiment log alongside the standard binary metrics. `Trainer` validates them during reconstruction; `Sensor` does not expose an experiment-results mapping.
 
 NOTE: `predict()` only includes these keys when calibration is active for the round. `evaluate()` always emits them to ensure every row in the CSV has a consistent schema.
 

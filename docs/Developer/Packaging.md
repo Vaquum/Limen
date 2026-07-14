@@ -2,9 +2,15 @@
 
 This page is the Limen-local packaging contract.
 
+## Prerequisites
+
+- a clean Limen repository checkout
+- `python -m pip install -e ".[dev]"`
+- a supported Python version from 3.10 through 3.13
+
 ## Artifact Policy
 
-The sdist is the complete source, docs, tests, fixtures, helper modules, packaging backend, and workflow source used to rebuild and inspect Limen. The wheel is the install artifact: runtime package files, `py.typed`, YAML templates, and public support/docs metadata are included; tests are intentionally excluded from the wheel.
+The sdist is the source-inspection bundle enumerated by `MANIFEST.in`: package source, public docs, tests and fixtures, selected repository metadata, docs-site sources, workflows, requirements, and scripts. It is not a complete repository snapshot; for example, the `governance/` directory is not included. The wheel is the install artifact: runtime package files, `py.typed`, YAML templates, and public support/docs metadata are included; tests are intentionally excluded.
 
 ## Dependency Policy
 
@@ -22,7 +28,7 @@ SOURCE_DATE_EPOCH=1704067200 python -m build
 
 ## Required Proof
 
-Packaging changes must run `python scripts/package_audit.py`, `python -m build`, `twine check`, `check-wheel-contents`, `check-manifest`, and an install/import smoke test from the built wheel. Release evidence also includes dependency-license and SBOM artifacts, artifact hashes, GitHub build provenance attestations, and uploaded GitHub release assets.
+Packaging changes must run `python scripts/package_audit.py`, `python -m build`, `twine check`, `check-wheel-contents`, `check-manifest`, and an install/import smoke test from the built wheel. The current publish workflow adds GitHub build-provenance attestations and release assets. It does not generate dependency-license reports, an SBOM, or an artifact-hash manifest; create those explicitly when required, including separate license review for the optional `tabpfn` extra.
 
 ## Footprint
 

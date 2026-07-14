@@ -1,4 +1,4 @@
-# Reference architecture
+# Reference Architecture
 
 The reference architecture is Limen's class-based model layer. It sits underneath the foundational SFDs and underneath `Trainer`.
 
@@ -15,12 +15,16 @@ The current public reference-architecture exports are:
 
 - `ReferenceModel`
 - `DLinearRegressor`
+- `LightGBMBinary`
 - `LogRegBinary`
 - `RandomBinary`
+- `RuleBasedStrategy`
 - `XGBoostRegressor`
-- `TabPFNBinary` when `tabpfn` is installed
+- `TabPFNBinary`
 
-Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests.
+Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`.
+
+The function exports are `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## `ReferenceModel`
 
@@ -34,7 +38,7 @@ evaluate(data, inline_metrics=True)
 
 ### Data expectations
 
-In a live local reference-architecture run in this repo, the prepared `data_dict` included:
+Manifest preparation can provide:
 
 - `x_train`, `y_train`
 - `x_val`, `y_val`
@@ -51,7 +55,7 @@ Models consume the subset of keys they need from the standard Limen shape.
 | Class | Task shape | Deterministic | Notes |
 |---|---|---|---|
 | `LogRegBinary` | binary classification | no | sklearn logistic regression wrapper; manifest wrapper exposes constructor params; solver refits are not bit-reproducible across BLAS builds and thread counts, so Trainer validates with relative tolerance |
-| `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
+| `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; accepts `binary`, `cross_entropy`, or `None` as its objective and rejects other objectives before training; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
 | `XGBoostRegressor` | regression | yes | requires `xgboost`; training is bit-reproducible for a fixed `random_state` on a fixed environment (verified byte-identical predictions across processes and thread counts), so Trainer validates with its near-exact deterministic tolerance |
 | `DLinearRegressor` | regression | yes | canonical DLinear semantics; closed-form SVD ridge fit, no seed; requires `scipy` |
@@ -69,10 +73,12 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 | Architecture | Returns probabilities P(1) | Cohort mode | Notes |
 |---|---:|---|---|
 | `LogRegBinary` | yes | probability | `predict()` returns `_probs = predict_proba(x_test)[:, 1]`, which is directly the class-1 probability P(1). |
+| `LightGBMBinary` | yes | probability | `predict()` returns `_probs` from the classifier or fitted calibrator. |
 | `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
-| `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimised before `_preds` are produced. This is compatible with P(1). |
+| `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimized before `_preds` are produced. This is compatible with P(1). |
 | `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
 | `DLinearRegressor` | no | fallback | `predict()` returns only `_preds`. Same regressor caveat as `XGBoostRegressor`. |
+| `RuleBasedStrategy` | no | fallback | `predict()` returns positions as `_preds`; `_probs` is intentionally absent. |
 
 ## `predict()` Versus `evaluate()`
 
@@ -92,15 +98,17 @@ When a `CalibrationConfig` is configured on the manifest and injected into the a
 
 ### `inline_metrics=False`
 
-With `inline_metrics=False`, `evaluate()` returns the task metrics only.
+With `inline_metrics=False`, `evaluate()` omits inline confusion and backtest metrics. The returned dictionary still includes the five task metrics and private or schema-stability fields required by the architecture.
 
-On a live local `LogRegBinary` evaluation in this repo, that plain result included:
+For `LogRegBinary`, the task metrics are:
 
 - `accuracy`
 - `auc`
 - `precision`
 - `recall`
 - `fpr`
+
+`LogRegBinary` also returns `_preds`, `optimal_threshold`, and `val_score`; the last two are `None` when no calibration or threshold step produced them. Other architectures may retain their own private prediction payloads.
 
 ### `inline_metrics=True`
 
@@ -111,7 +119,7 @@ With `inline_metrics=True`, `evaluate()` adds:
 
 When `price_data_for_backtest` is absent, default inline evaluation still returns task metrics and confusion counts; price-derived confusion-return and backtest metrics are skipped.
 
-On that same live local run, `LogRegBinary.evaluate(data, inline_metrics=True)` added keys such as:
+For `LogRegBinary`, inline evaluation can add keys such as:
 
 - `backtest_edge_bps_p50`
 - `backtest_pnl_bps_p50`
@@ -140,7 +148,7 @@ pred = model.predict({'x_test': data['x_test']})
 results = model.evaluate(data, inline_metrics=True)
 ```
 
-This is the same contract that `Trainer` eventually relies on when it promotes finished experiment rounds into `Sensor` objects.
+This is the same contract that `Trainer` replays before it wraps finished experiment rounds in `Sensor` objects.
 
 ## Function Wrappers Versus Classes
 
@@ -160,21 +168,15 @@ The class is the canonical reusable architecture surface. The function wrapper i
 
 ## Trainer Relationship
 
-`Trainer` resolves the `ReferenceModel` subclass from the model module used by the original manifest.
+`Trainer` reconstructs the compiled manifest, reruns `prepare_data()` and `run_model()`, and uses the returned `_model` after metric validation.
 
 The class-based layer matters even when daily work touches foundational SFDs:
 
 - foundational SFDs package the experiment
 - reference architecture owns the model contract
-- `Trainer` promotes selected rounds back into trained class-based models
+- `Trainer` replays selected rounds into validated class-based models
 
-On a live local logreg trainer run in this repo:
-
-- relative-tolerance validation passed with no mismatches
-- `Sensor.predict()` returned `_preds` and `_probs`
-- the promoted sensor produced predictions for `884` test bars
-
-On a live local `random_binary` trainer run, promotion raised `ReconstructionError` because the stochastic rerun did not reproduce the original logged metrics closely enough.
+Deterministic models use near-exact metric tolerance; stochastic models use a wider relative tolerance and can still raise `ReconstructionError` when a replay diverges too far.
 
 ## `DLinearRegressor`
 
@@ -234,13 +236,10 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 - `dlinear_regressor` requires `scipy` (the `stats` extra), loaded lazily inside the model
 - `tabpfn_binary` requires `tabpfn`
 
-In a live local smoke pass in this repo:
-
-- `logreg_binary`, `random_binary`, and `xgboost_regressor` all ran
-- `tabpfn_binary` was unavailable because `tabpfn` was not installed
+Optional dependencies are checked when the relevant model executes, not when the package is imported.
 
 ## Read Next
 
 - Continue to [Built-In SFDs](Built-In-SFDs.md) to see how the shipped foundational SFDs package these model surfaces.
-- Continue to [Trainer](Trainer.md) for the promotion workflow that reconstructs and retrains selected rounds.
+- Continue to [Trainer](Trainer.md) for the reconstruction workflow that replays and validates selected rounds.
 - Continue to [Standard Metrics Library](Standard-Metrics-Library.md) for the low-level metric helpers used inside these model classes.

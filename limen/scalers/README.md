@@ -47,7 +47,7 @@ scalers/
 - Scalers are fit on the training split and then reused on validation and test splits. That fit/apply discipline is part of why this package stays separate from `limen.transforms`.
 - `LinearScaler` uses ordered regex rules. The first matching rule wins.
 - Unrecognized columns fall through to the catch-all `none` rule and stay unchanged.
-- Zero-variance columns are passed through rather than exploding the fit step.
+- Columns assigned `standard` or `log_standard` scaling must have a finite, nonzero training standard deviation. `LinearScaler` and `LogRegScaler` do not guard zero variance; division by zero produces non-finite output.
 
 ## Read next
 

@@ -2,7 +2,7 @@
 
 `Cohort` is Limen's inference-time ensemble surface for combining multiple trained sensors reconstructed from one completed experiment.
 
-`Cohort` moves single-round predictions into a controlled multi-member prediction surface while staying inside Limen artefacts (`metadata.json`, `round_data.jsonl`, Trainer-reconstructed sensors).
+`Cohort` moves single-round predictions into a controlled multi-member prediction surface while staying inside Limen artifacts (`metadata.json`, `round_data.jsonl`, Trainer-reconstructed sensors).
 
 ## What this page covers
 
@@ -11,20 +11,20 @@
 - selector contract and built-in selectors
 - aggregation behavior (probability-weighted vs fallback majority vote)
 - output contracts for `predict(raw_klines)` and `predict_all(raw_klines)`
-- a real end-to-end example from experiment artefacts
+- a real end-to-end example from experiment artifacts
 
 ## Prerequisites
 
 A Cohort requires:
 
 1. a completed YAML CLI result directory
-2. valid experiment artefacts (`metadata.json`, `round_data.jsonl`)
+2. valid experiment artifacts (`metadata.json`, `round_data.jsonl`)
 3. selected permutation IDs, or a selector that chooses them
 4. trained members from `Trainer.train(permutation_ids)`
 
 Read these pages first:
 
-- [Command Line Interface](Command-Line-Interface.md)
+- [Command-Line Interface](Command-Line-Interface.md)
 - [Trainer](Trainer.md)
 
 ## Where Cohort fits in the pipeline
@@ -33,7 +33,7 @@ Pipeline path:
 
 1. run experiment search with `limen run`
 2. identify permutations to promote, manually or with a selector
-3. reconstruct/train those permutations with Trainer
+3. reconstruct and replay those permutations with Trainer
 4. create Cohort from experiment source + permutation IDs or selector
 5. bind trained members via `set_members(sensors)`
 6. infer with:
@@ -282,7 +282,7 @@ experiment_dir = 'experiments/my_exp'
 results = pl.read_csv(f'{experiment_dir}/results.csv')
 top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
 
-# 2) retrain selected permutations
+# 2) replay selected permutations
 trainer = Trainer(experiment_dir)
 sensors = trainer.train(top_ids)
 
@@ -312,7 +312,7 @@ all_preds2 = cohort(raw_klines)  # list[BarPrediction]
 
 ## Failure cases and caveats
 
-- missing experiment artefacts (`metadata.json` / `round_data.jsonl`) raise `FileNotFoundError`
+- missing experiment artifacts (`metadata.json` / `round_data.jsonl`) raise `FileNotFoundError`
 - unresolvable or ambiguous experiment ID resolution raises `ValueError`
 - no bound members at inference raises `RuntimeError`
 - member sensor lists of different lengths raise `ValueError` in `predict_all`
