@@ -52,7 +52,7 @@ limen = "limen.cli.main:cli"
 [project.optional-dependencies]
 data = ["pyarrow>=18,<23"]
 boosting = ["lightgbm>=4.6,<5", "xgboost>=2.1,<4"]
-indicators = ["ta-lib>=0.6,<0.7"]
+indicators = ["ta-lib>=0.6,<0.8"]
 stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
 tabpfn = ["tabpfn>=6,<7"]
 all = [
@@ -60,7 +60,7 @@ all = [
   "pyarrow>=18,<23",
   "scipy>=1.15,<2",
   "statsmodels>=0.14,<0.15",
-  "ta-lib>=0.6,<0.7",
+  "ta-lib>=0.6,<0.8",
   "tabpfn>=6,<7",
   "xgboost>=2.1,<4",
 ]
