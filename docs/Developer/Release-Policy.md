@@ -21,7 +21,7 @@ The publish path is gated as strongly as the merge path. Every control is mechan
 | tag creation | a `v*` tag ruleset restricts creating, updating, and deleting release tags to the GitHub Actions integration; no user account can tag a release |
 | tag shape | `scripts/create_release.py` computes the tag from `pyproject.toml` and validates it against `TAG_RE`; `pr_publish_pypi.yml` re-validates the resolved tag and cross-checks it against the built version |
 | PyPI upload | trusted publishing (OIDC) only, from the `publish_to_pypi` job running in the `pypi` GitHub environment; the PyPI trusted-publisher configuration names that environment |
-| filename availability | a pre-build guard queries PyPI and fails loud, with the burned filenames named, before anything is tagged, built, or uploaded |
+| filename availability | a pre-build guard queries PyPI and fails loud, with the burned filenames named, before anything is built or uploaded |
 
 ## Model authority boundary
 

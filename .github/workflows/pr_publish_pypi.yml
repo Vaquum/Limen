@@ -219,13 +219,13 @@ jobs:
           set -euo pipefail
           gh release upload "$TAG_NAME" dist/* sbom.json --clobber
           gh release view "$TAG_NAME" --json body --jq .body > release_body.md
-          if ! grep -q '^### Artifact SHA-256$' release_body.md; then
+          if ! grep -q '^### Artifact SHA-256' release_body.md; then
             {
               echo ''
               echo '### Artifact SHA-256'
               echo ''
               echo '```'
-              sha256sum dist/* sbom.json
+              sha256sum dist/* sbom.json | sed 's|dist/||'
               echo '```'
             } >> release_body.md
             gh release edit "$TAG_NAME" --notes-file release_body.md

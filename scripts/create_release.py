@@ -31,8 +31,8 @@ DEFAULT_RELEASE_DOCS_URL = (
 RELEASE_DOCS_URL = os.getenv('RELEASE_DOCS_URL', DEFAULT_RELEASE_DOCS_URL)
 REPO_URL: Final[str] = 'https://github.com/Vaquum/Limen'
 TAG_RE: Final[re.Pattern[str]] = re.compile(r'^v\d+\.\d+\.\d+$')
-URL_FETCH_TIMEOUT = 30
-MAX_COMMITS = 100
+URL_FETCH_TIMEOUT: Final[int] = 30
+MAX_COMMITS: Final[int] = 100
 
 
 def read_file(filepath: str) -> str:
@@ -297,6 +297,8 @@ def create_github_release(tag: str, title: str, notes: str) -> None:
 
 def main() -> None:
     """Main function to orchestrate the release creation."""
+    # Imported here so the module imports without the release extra,
+    # which tests/test_release_contract.py requires offline.
     import anthropic
 
     api_key = os.getenv('ANTHROPIC_API_KEY')
