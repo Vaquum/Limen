@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 import re
 import subprocess
@@ -219,3 +220,27 @@ def test_supply_chain_surfaces() -> None:
 
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script
+
+
+def test_governance_hardening_surfaces() -> None:
+    codeowners_lines = (ROOT / '.github' / 'CODEOWNERS').read_text(encoding='utf-8').splitlines()
+    assert '/governance/ @mikkokotila @zero-bang' in codeowners_lines
+    assert '/.github/ @mikkokotila @zero-bang' in codeowners_lines
+    assert '/tests/test_packaging_surface.py @mikkokotila @zero-bang' in codeowners_lines
+    sweep_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_sweep.yml').read_text(encoding='utf-8')
+    assert sweep_workflow.count('schedule:') == 1
+    assert 'workflow_dispatch:' in sweep_workflow
+    assert 'name=pr_checks_slice' in sweep_workflow
+    assert 'file enumeration incomplete' in sweep_workflow
+    assert 'governance/slice_gate.py' in sweep_workflow
+    common_path = ROOT / 'governance' / '_common.py'
+    assert 'cc_gate' not in common_path.read_text(encoding='utf-8')
+    spec = importlib.util.spec_from_file_location('governance_common', common_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.__all__ == ['CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
+    removed_helpers = ('CC_RE', 'TYPING_BUDGET', 'find_python_files', 'resolve_package_dir', 'significant_lines')
+    for name in removed_helpers:
+        assert not hasattr(module, name), name
