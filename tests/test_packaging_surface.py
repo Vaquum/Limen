@@ -220,6 +220,11 @@ def test_supply_chain_surfaces() -> None:
     assert 'attach_release_assets' not in publish
     assert 'skip-existing' not in publish
 
+    tests_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_tests.yml').read_text(encoding='utf-8')
+    assert '"coverage[toml]" hypothesis pytest' in tests_workflow
+    pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
+    assert 'hypothesis>=6,<7' in pyproject['project']['optional-dependencies']['test']
+
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script
     assert "os.getenv('ANTHROPIC_MODEL', 'claude-sonnet-5')" in release_script
