@@ -41,8 +41,9 @@ settings.register_profile(
 settings.load_profile('ci')
 
 _TEMPLATE_PATH = Path(__file__).resolve().parents[1] / 'limen' / 'yaml' / 'templates' / 'logreg_binary.yaml'
-_BASE_MANIFEST, _BASE_ERRORS = parse(_TEMPLATE_PATH.read_text())
-assert not _BASE_ERRORS
+_BASE_MANIFEST, _BASE_ERRORS = parse(_TEMPLATE_PATH)
+if _BASE_ERRORS:
+    raise RuntimeError(f'test_property_contracts baseline template failed to parse: {_BASE_ERRORS}')
 _PARAM_SPACE_TOTAL = math.prod(len(values) for values in _BASE_MANIFEST['sfd']['params'].values())
 
 
