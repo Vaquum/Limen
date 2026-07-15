@@ -37,9 +37,13 @@ body:
     attributes:
       label: Slice Title
       description: |
-        A noun phrase that names the concrete change. "Add X to Y" and "Replace A
-        with B" beat "Harden the X contract" and "Freeze the Y semantics."
-      placeholder: "Add template listing to Limen CLI"
+        A Conventional Commits v1.0.0 subject: `<type>[(scope)][!]: <description>`,
+        lowercase type from feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert.
+        The delivering PR title must byte-equal this title (slice-gate rule 5) and
+        pr_checks_cc validates both, so a non-CC slice title blocks its own PR.
+        Name the concrete change: "feat: add template listing to the CLI" beats
+        "feat: harden the template contract".
+      placeholder: "feat: add template listing to Limen CLI"
     validations:
       required: true
 

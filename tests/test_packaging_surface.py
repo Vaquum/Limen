@@ -236,13 +236,71 @@ def test_governance_hardening_surfaces() -> None:
     assert 'file enumeration incomplete' in sweep_workflow
     assert 'governance/slice_gate.py' in sweep_workflow
     common_path = ROOT / 'governance' / '_common.py'
-    assert 'cc_gate' not in common_path.read_text(encoding='utf-8')
     spec = importlib.util.spec_from_file_location('governance_common', common_path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.__all__ == ['CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
-    removed_helpers = ('CC_RE', 'TYPING_BUDGET', 'find_python_files', 'resolve_package_dir', 'significant_lines')
+    assert module.__all__ == ['CC_RE', 'CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
+    removed_helpers = ('TYPING_BUDGET', 'find_python_files', 'resolve_package_dir', 'significant_lines')
     for name in removed_helpers:
         assert not hasattr(module, name), name
+
+
+def test_cc_gate_surfaces() -> None:
+    gate_path = ROOT / 'governance' / 'cc_gate.py'
+    assert gate_path.is_file()
+    gate = gate_path.read_text(encoding='utf-8')
+    assert 'from _common import CC_RE, CLOSING_KEYWORD_RE' in gate
+    assert "'slice'" in gate
+    cc_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_cc.yml').read_text(encoding='utf-8')
+    assert 'name: pr_checks_cc' in cc_workflow
+    assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in cc_workflow
+    assert 'python governance/cc_gate.py' in cc_workflow
+    assert 'fetch-depth: 0' in cc_workflow
+    spec = importlib.util.spec_from_file_location('governance_common_cc', ROOT / 'governance' / '_common.py')
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.__all__ == ['CC_RE', 'CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
+    slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
+    assert 'Conventional Commits' in slice_template
+    result = subprocess.run(
+        [
+            sys.executable, 'governance/cc_gate.py',
+            '--pr-title', 'feat: x',
+            '--pr-body-file', '/dev/null',
+            '--base-ref', 'HEAD',
+            '--head-ref', 'HEAD',
+            '--repo', 'Vaquum/Limen',
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'CC GATE -- PASS' in result.stdout
+    attribution_code = '''
+import sys
+sys.path.insert(0, 'governance')
+from cc_gate import attribution_hit
+
+for clean in (
+    'feat: add Gemini exchange connector',
+    'fix: reuse the database cursor between batches',
+    'docs: describe artifacts generated with the manifest runner',
+    'ci: adjust copilot_code_review rule parameters',
+):
+    assert attribution_hit(clean) is None, clean
+
+for attributed in (
+    'Generated with Claude Code',
+    'Co-authored-by: Gemini <bot@google.com>',
+    'feat: add Google Gemini client',
+    'chore: llm-generated cleanup',
+):
+    assert attribution_hit(attributed) is not None, attributed
+'''
+    subprocess.run([sys.executable, '-c', attribution_code], cwd=ROOT, check=True)
