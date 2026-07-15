@@ -65,6 +65,8 @@ def test_foundational_sfd():
                     assert log is not None, 'experiment_log is None'
                     assert 'num_trades_test' in log.columns, 'num_trades_test missing from log'
                     assert 'pnl_bps_p50_test' in log.columns, 'pnl_bps_p50_test missing from log'
+                    assert 'num_executed_trades_test' in log.columns, 'num_executed_trades_test missing from log'
+                    assert 'pnl_per_trade_bps_test' in log.columns, 'pnl_per_trade_bps_test missing from log'
                     assert 'is_stable' in log.columns, 'is_stable missing from log'
                     assert uel.experiment_confusion_metrics is None, 'experiment_confusion_metrics should be None for rule-based'
                     assert uel.experiment_backtest_results is None, 'experiment_backtest_results should be None for rule-based'

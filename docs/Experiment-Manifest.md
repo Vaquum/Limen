@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.1.0"
+  limen_version: "5.2.0"
   mode: development
 
 sfd:
@@ -715,6 +715,32 @@ Column names and values can reference round parameters using `{param}` placehold
 ```
 
 These are resolved per round from `round_params`. The corresponding indicator must be added to the manifest so the column is present in the data.
+
+### Direct position transforms
+
+A rule-based transform can emit its complete long/flat position directly. The strategy then needs only one threshold leaf over that output:
+
+```yaml
+indicators:
+  - func: limen.features.dollar_bar_crash_reversal
+    params:
+      momentum_threshold_bps: "{momentum_threshold_bps}"
+      flow_z_threshold: "{flow_z_threshold}"
+      hold_minutes: "{hold_minutes}"
+strategy:
+  conditions:
+    - id: crash_reversal_position
+      type: threshold
+      column: dollar_bar_crash_reversal_position
+      operator: ">"
+      value: 0
+  entry: crash_reversal_position
+backtest:
+  fee_bps: 10.0
+  slip_bps: 5.0
+```
+
+This is the shape used by the bundled `dollar_bar_crash_reversal` template. `RuleBasedStrategy` evaluates the position with the declared costs and reports `pnl_per_trade_bps_{split}` with its `num_executed_trades_{split}` denominator in addition to the generic snapshot metrics.
 
 ### Restrictions
 

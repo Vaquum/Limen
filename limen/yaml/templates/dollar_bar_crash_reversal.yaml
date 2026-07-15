@@ -1,0 +1,66 @@
+schema_version: "1.0"
+
+metadata:
+  name: dollar_bar_crash_reversal
+  limen_version: "5.2.0"
+  mode: development
+  description: Exhaustive dollar-bar crash-reversal sweep with fixed 15 bps per-side costs
+
+sfd:
+  manifest:
+    type: rule_based
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_dollar_klines
+      params:
+        dollar_bar_size: 15000000
+
+    required_columns:
+      - datetime
+      - open
+      - close
+      - liquidity_sum
+      - maker_liquidity
+
+    split_dates:
+      train_start: "2020-02-01"
+      train_end: "2024-01-01"
+      val_start: "2024-01-01"
+      val_end: "2025-01-01"
+      test_start: "2025-01-01"
+      test_end: "2026-07-10"
+
+    indicators:
+      - func: limen.features.dollar_bar_crash_reversal
+        params:
+          momentum_threshold_bps: "{momentum_threshold_bps}"
+          flow_z_threshold: "{flow_z_threshold}"
+          hold_minutes: "{hold_minutes}"
+
+    strategy:
+      conditions:
+        - id: crash_reversal_position
+          name: Crash-reversal position is active
+          type: threshold
+          column: dollar_bar_crash_reversal_position
+          operator: ">"
+          value: 0
+      entry: crash_reversal_position
+
+    backtest:
+      fee_bps: 10.0
+      slip_bps: 5.0
+
+    reference_architecture: limen.sfd.reference_architecture.rule_based.rule_based
+
+  params:
+    momentum_threshold_bps: [-525.0, -550.0, -575.0, -600.0]
+    flow_z_threshold: [-1.0, -0.5, 0.0, 0.5]
+    hold_minutes: [30, 45, 60, 90, 120]
+
+uel:
+  n_permutations: 80
+  search_strategy:
+    type: grid
+  prep_each_round: true
+  output_format: csv
