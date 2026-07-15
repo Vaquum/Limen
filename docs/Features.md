@@ -118,6 +118,22 @@ These helpers translate ordinary OHLCV bars into liquidity, impact, and slippage
 | `order_flow_imbalance` | `order_flow_imbalance` plus `bvc_buy_volume`, `bvc_sell_volume` | Rolling net BVC-classified signed flow as a share of volume; a bar-level order-flow imbalance proxy, not level-2 OFI. |
 | `vpin` | `vpin` plus `bvc_buy_volume`, `bvc_sell_volume` | Volume-synchronized Probability of Informed Trading from the BVC buy/sell imbalance; a flow-toxicity gauge. Feed volume bars for canonical equal-volume buckets. |
 
+### Dollar-bar crash reversal
+
+`dollar_bar_crash_reversal` is the primary signal used by the bundled rule-based SFD of the same name. It requires a UTC-sorted `datetime` plus `open`, `close`, `liquidity_sum`, and `maker_liquidity`, and appends the Int8 column `dollar_bar_crash_reversal_position`.
+
+For row `t`, the transform:
+
+1. finds the latest `open` at or before `t - 4h` by backward as-of join and computes `log(close_t / reference_open) * 10_000`
+2. computes maker flow as `1 - 2 * maker_liquidity / liquidity_sum` only where liquidity is finite and positive
+3. standardizes flow against causal 30-day rolling medians of flow and absolute deviation, both closed on the left with at least 100 observations
+4. triggers when momentum is at or below `momentum_threshold_bps` and the robust flow score is above `flow_z_threshold`
+5. holds the trigger active for `hold_minutes` of wall-clock time
+
+The structural core permits a new trigger only when the next row belongs to the same UTC date. Therefore the last row of each UTC day, including the final row in the input, cannot initiate a trigger. A position initiated earlier may remain active there until its wall-clock hold expires. This is a **one-row availability** boundary: the exact research trigger is not same-row causal. The built-in backtest's one-bar execution lag is an execution adaptation, not a claim that the raw trigger was knowable on row `t`.
+
+The hold is time-based rather than bar-count-based. Dollar bars arrive irregularly, so the physical span represented by a 60-minute hold can exceed 60 minutes between observed execution rows.
+
 ## Realized risk and tail features
 
 These helpers describe the quality of recent movement, not just its level.

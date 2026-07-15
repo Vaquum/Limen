@@ -7,6 +7,10 @@ from typing import Any
 
 _LAZY_EXPORTS = {
     'dlinear_regressor': ('limen.sfd.foundational_sfd.dlinear_regressor', None),
+    'dollar_bar_crash_reversal': (
+        'limen.sfd.foundational_sfd.dollar_bar_crash_reversal',
+        None,
+    ),
     'lightgbm_binary': ('limen.sfd.foundational_sfd.lightgbm_binary', None),
     'logreg_binary': ('limen.sfd.foundational_sfd.logreg_binary', None),
     'random_binary': ('limen.sfd.foundational_sfd.random_binary', None),
@@ -18,6 +22,7 @@ _LAZY_EXPORTS = {
 
 if TYPE_CHECKING:
     from limen.sfd.foundational_sfd import dlinear_regressor
+    from limen.sfd.foundational_sfd import dollar_bar_crash_reversal
     from limen.sfd.foundational_sfd import lightgbm_binary
     from limen.sfd.foundational_sfd import logreg_binary
     from limen.sfd.foundational_sfd import random_binary
@@ -28,6 +33,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     'dlinear_regressor',
+    'dollar_bar_crash_reversal',
     'lightgbm_binary',
     'logreg_binary',
     'random_binary',

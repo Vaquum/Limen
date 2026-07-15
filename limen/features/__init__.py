@@ -18,6 +18,7 @@ from limen.features.cyclical_time_features import cyclical_time_features
 from limen.features.distance_from_ma import distance_from_ma
 from limen.features.distance_from_high import distance_from_high
 from limen.features.distance_from_low import distance_from_low
+from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
 from limen.features.dollar_volume import dollar_volume
 from limen.features.downside_volatility_ratio import downside_volatility_ratio
 from limen.features.fractional_diff import find_min_d
@@ -113,6 +114,7 @@ __all__ = [
     'distance_from_high',
     'distance_from_low',
     'distance_from_ma',
+    'dollar_bar_crash_reversal',
     'dollar_volume',
     'downside_volatility_ratio',
     'find_min_d',

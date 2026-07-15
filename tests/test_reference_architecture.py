@@ -281,6 +281,76 @@ def test_rule_based_evaluate_returns_expected_metrics():
     assert '_probs' not in results
 
 
+def test_rule_based_reports_mean_compounded_net_pnl_per_executed_trade():
+    df = pl.DataFrame({
+        'signal': [1, 1, 0, 1, 0, 0],
+        'open': [50.0, 100.0, 101.0, 50.0, 200.0, 50.0],
+        'close': [50.0, 101.0, 102.0, 50.0, 202.0, 50.0],
+    })
+    data = {
+        'train': df,
+        'val': df,
+        'test': df,
+        'strategy': {
+            'conditions': [
+                {'id': 'signal', 'type': 'threshold', 'column': 'signal', 'operator': '>', 'value': 0},
+            ],
+            'entry': 'signal',
+        },
+        '_alignment': {},
+    }
+
+    costs = RuleBasedStrategy().evaluate({
+        **data,
+        'backtest_fee_bps': 10.0,
+        'backtest_slip_bps': 5.0,
+    })
+    zero_costs = RuleBasedStrategy().evaluate({
+        **data,
+        'backtest_fee_bps': 0.0,
+        'backtest_slip_bps': 0.0,
+    })
+    half_notional = RuleBasedStrategy().evaluate({
+        **data,
+        'backtest_fee_bps': 10.0,
+        'backtest_slip_bps': 5.0,
+        'backtest_notional_rate': 0.5,
+    })
+
+    assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
+    for split in ('train', 'val', 'test'):
+        assert costs[f'num_executed_trades_{split}'] == 2
+        assert costs[f'pnl_per_trade_bps_{split}'] == 119.6
+        assert zero_costs[f'pnl_per_trade_bps_{split}'] == 150.0
+        assert half_notional[f'pnl_per_trade_bps_{split}'] == 59.7
+
+
+def test_rule_based_per_trade_pnl_is_nan_without_an_executed_trade():
+    df = pl.DataFrame({
+        'signal': [0, 0, 1],
+        'open': [100.0, 100.0, 100.0],
+        'close': [100.0, 100.0, 101.0],
+    })
+    data = {
+        'train': df,
+        'val': df,
+        'test': df,
+        'strategy': {
+            'conditions': [
+                {'id': 'signal', 'type': 'threshold', 'column': 'signal', 'operator': '>', 'value': 0},
+            ],
+            'entry': 'signal',
+        },
+        '_alignment': {},
+    }
+
+    results = RuleBasedStrategy().evaluate(data)
+
+    assert results['num_trades_test'] == 1
+    assert results['num_executed_trades_test'] == 0
+    assert np.isnan(results['pnl_per_trade_bps_test'])
+
+
 def test_rule_based_is_stable_respects_thresholds():
     data = _make_rule_based_data()
     results_tight = RuleBasedStrategy(sharpe_std_threshold=0.0).train(data).evaluate(data)

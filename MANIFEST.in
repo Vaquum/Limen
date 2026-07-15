@@ -35,6 +35,7 @@ recursive-include requirements *.txt
 recursive-include scripts *.py
 recursive-include tests *.py *.json
 recursive-include tests/fixtures *.csv *.zip
+recursive-include tests/fixtures *.parquet
 prune examples
 prune docs-site/.docusaurus
 prune docs-site/.generated

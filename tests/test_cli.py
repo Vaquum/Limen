@@ -110,7 +110,15 @@ def test_cli_list_templates_exits_0() -> None:
 def test_cli_list_templates_shows_all_template_names() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ['list-templates'])
-    for name in ('dlinear_regressor', 'lightgbm_binary', 'logreg_binary', 'tabpfn_binary', 'xgboost_regressor', 'rule_based'):
+    for name in (
+        'dlinear_regressor',
+        'dollar_bar_crash_reversal',
+        'lightgbm_binary',
+        'logreg_binary',
+        'rule_based',
+        'tabpfn_binary',
+        'xgboost_regressor',
+    ):
         assert name in result.output
 
 

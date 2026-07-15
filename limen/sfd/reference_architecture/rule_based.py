@@ -6,8 +6,33 @@ import polars as pl
 from typing_extensions import override
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.backtest.long_flat_strategy import ExecutionResult
+from limen.backtest.long_flat_strategy import long_flat_strategy
 from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
+
+BPS_PER_UNIT = 10_000.0
+BPS_DECIMALS = 1
+
+
+def _compounded_trade_pnl_summary(
+    result: ExecutionResult,
+    notional_rate: float,
+) -> tuple[float, int]:
+    in_market = np.asarray(result.pos) > 0
+    if not in_market.any():
+        return float('nan'), 0
+
+    starts = np.flatnonzero(in_market & ~np.concatenate(([False], in_market[:-1])))
+    ends = np.flatnonzero(in_market & ~np.concatenate((in_market[1:], [False])))
+    trade_returns: list[float] = []
+    for start, end in zip(starts, ends, strict=True):
+        compounded = 1.0
+        for bar_return in result.net[start:end + 1]:
+            compounded *= 1.0 + float(bar_return) * notional_rate
+        trade_returns.append(compounded - 1.0)
+    mean_bps = round(float(np.mean(trade_returns)) * BPS_PER_UNIT, BPS_DECIMALS)
+    return mean_bps, len(trade_returns)
 
 
 class RuleBasedStrategy(ReferenceModel):
@@ -131,7 +156,43 @@ class RuleBasedStrategy(ReferenceModel):
             'price_change': close_arr - open_arr,
         }
 
-        return backtest_snapshot(bt_columns, execution_lag_bars=1, **cost_kwargs)
+        execution_result: ExecutionResult | None = None
+
+        def capture_execution_result(predictions: Any,
+                                     open_px: Any,
+                                     close_px: Any,
+                                     price_change: Any,
+                                     *,
+                                     execution_lag_bars: int,
+                                     fee_bps: float,
+                                     slip_bps: float) -> ExecutionResult:
+            nonlocal execution_result
+            execution_result = long_flat_strategy(
+                predictions,
+                open_px,
+                close_px,
+                price_change,
+                execution_lag_bars=execution_lag_bars,
+                fee_bps=fee_bps,
+                slip_bps=slip_bps,
+            )
+            return execution_result
+
+        metrics = backtest_snapshot(
+            bt_columns,
+            strategy=capture_execution_result,
+            execution_lag_bars=1,
+            **cost_kwargs,
+        )
+        if execution_result is None:
+            raise RuntimeError('backtest strategy did not return an execution result')
+        pnl_per_trade_bps, executed_trade_count = _compounded_trade_pnl_summary(
+            execution_result,
+            float(cost_kwargs.get('notional_rate', 1.0)),
+        )
+        metrics['pnl_per_trade_bps'] = pnl_per_trade_bps
+        metrics['num_executed_trades'] = executed_trade_count
+        return metrics
 
 
 def rule_based(data: dict[str, Any],

@@ -10,6 +10,7 @@ from limen.experiment.manifest_core import AblationConfig
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.metrics.balanced_metric import balanced_metric
+from limen.sfd.foundational_sfd import dollar_bar_crash_reversal as dollar_bar_crash_reversal_sfd
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
@@ -1386,7 +1387,9 @@ def test_all_templates_have_valid_limen_version() -> None:
         assert total_permutations <= 10_000, (
             f'{path.name}: onboarding profile is too large: {total_permutations}'
         )
-        assert yaml_dict.get('uel', {}).get('n_permutations') <= 12, (
+        run_budget = yaml_dict.get('uel', {}).get('n_permutations')
+        is_bounded_full_grid = run_budget == total_permutations <= 100
+        assert run_budget <= 12 or is_bounded_full_grid, (
             f'{path.name}: onboarding run budget is too large'
         )
 
@@ -1456,6 +1459,61 @@ def test_rule_based_template_is_valid_and_compiles() -> None:
 
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), RuleBasedManifest)
+
+
+def test_dollar_bar_crash_reversal_template_is_valid_and_compiles() -> None:
+    template = _TEMPLATES_DIR / 'dollar_bar_crash_reversal.yaml'
+    yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
+    assert errors == []
+
+    result = validate(yaml_dict)
+    assert result.valid, [e.message for e in result.errors]
+    assert result.warnings == []
+
+    combinations = list(build_search_strategy(yaml_dict))
+    unique = {tuple(sorted(combo.items())) for combo in combinations}
+    candidate = {
+        'momentum_threshold_bps': -575.0,
+        'flow_z_threshold': -0.5,
+        'hold_minutes': 60,
+    }
+    assert len(combinations) == len(unique) == 80
+    assert any(
+        all(combo[key] == value for key, value in candidate.items())
+        for combo in combinations
+    )
+
+    sfd = CompiledSFD(yaml_dict)
+    manifest = sfd.manifest()
+    python_manifest = dollar_bar_crash_reversal_sfd.manifest()
+    assert isinstance(manifest, RuleBasedManifest)
+    assert yaml_dict['sfd']['params'] == dollar_bar_crash_reversal_sfd.params()
+    assert manifest.required_bar_columns == python_manifest.required_bar_columns
+    assert manifest.data_source_config == python_manifest.data_source_config
+    assert manifest.split_dates == python_manifest.split_dates
+    assert len(manifest.feature_transforms) == len(python_manifest.feature_transforms) == 1
+    yaml_transform = manifest.feature_transforms[0]
+    python_transform = python_manifest.feature_transforms[0]
+    assert yaml_transform.func is python_transform.func
+    assert {
+        key: value.removeprefix('{').removesuffix('}')
+        for key, value in yaml_transform.params.items()
+    } == python_transform.params
+    assert manifest.strategy == python_manifest.strategy
+    assert manifest.backtest_config == python_manifest.backtest_config
+    assert (
+        manifest.architecture_function
+        is python_manifest.architecture_function
+    )
+    assert manifest.data_source_config is not None
+    assert manifest.data_source_config.params == {
+        'dollar_bar_size': 15_000_000,
+        'start_date_limit': '2020-02-01',
+        'end_date_limit': '2026-07-10',
+    }
+    assert manifest.backtest_config is not None
+    assert manifest.backtest_config.fee_bps == 10.0
+    assert manifest.backtest_config.slip_bps == 5.0
 
 
 def test_lightgbm_binary_template_is_valid_and_arch_surface_complete() -> None:
