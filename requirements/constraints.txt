@@ -17,6 +17,7 @@ statsmodels>=0.14,<0.15
 tabpfn>=6,<7
 anthropic>=0.54,<1
 coverage>=7,<8
+hypothesis>=6,<7
 pytest>=8,<10
 build>=1,<2
 cyclonedx-bom>=5,<8
