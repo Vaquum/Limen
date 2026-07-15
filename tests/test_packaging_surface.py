@@ -222,6 +222,10 @@ def test_supply_chain_surfaces() -> None:
 
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script
+    assert "os.getenv('ANTHROPIC_MODEL', 'claude-sonnet-5')" in release_script
+    assert 'OMIT_THINKING_MODEL_PREFIXES' in release_script
+    assert "{'type': 'disabled'}" in release_script
+    assert 'claude-opus' not in release_script
 
 
 def test_governance_hardening_surfaces() -> None:
