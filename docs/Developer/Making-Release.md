@@ -57,7 +57,7 @@ The script:
 
 There is no pause between the preview and publication. Do not run the script merely to preview notes.
 
-After the automated-release run completes, `pr_publish_pypi.yml` resolves and re-validates the released tag, checks out the tag, guards that PyPI has never served the version's filenames, builds the wheel and sdist with fixed `SOURCE_DATE_EPOCH`, creates GitHub build-provenance attestations, and publishes to PyPI through trusted publishing from the `pypi` GitHub environment. After a successful publish it attaches the distributions and a CycloneDX `sbom.json` to the GitHub release and appends their SHA-256 digests to the release body. Its `workflow_run` trigger resolves a tag only when the successful automated-release run's head commit is tagged; the `v*` tag ruleset ensures only that automation can create release tags. [Release Policy](Release-Policy.md) defines these controls.
+After the automated-release run completes, `pr_publish_pypi.yml` resolves and re-validates the released tag, checks out the tag, guards that PyPI has never served the version's filenames, builds the wheel and sdist with fixed `SOURCE_DATE_EPOCH`, creates GitHub build-provenance attestations, and publishes to PyPI through trusted publishing from the `pypi` GitHub environment. After a successful publish it attaches the distributions, a CycloneDX `sbom.json`, and the `provenance.intoto.jsonl` attestation bundle to the GitHub release and appends their SHA-256 digests to the release body. Its `workflow_run` trigger resolves a tag only when the successful automated-release run's head commit is tagged; the `v*` tag ruleset ensures only that automation can create release tags. [Release Policy](Release-Policy.md) defines these controls.
 
 ## Inputs
 
@@ -76,7 +76,7 @@ Optional:
 
 ## Evidence and limitations
 
-The implemented workflows provide the tag, GitHub release, built distributions, GitHub provenance attestations, release assets with a CycloneDX SBOM, SHA-256 digests in the release body, mechanical traceability (merged pull requests, compare link, changelog anchor), and the PyPI publication result. They do not generate a dependency-license report on the release or a maintainer sign-off record. Produce and attach those artifacts explicitly when the release policy requires them; do not infer their existence from a green publish workflow.
+The implemented workflows provide the tag, GitHub release, built distributions, GitHub provenance attestations (also attached as the `provenance.intoto.jsonl` release asset), release assets with a CycloneDX SBOM, SHA-256 digests in the release body, mechanical traceability (merged pull requests, compare link, changelog anchor), and the PyPI publication result. They do not generate a dependency-license report on the release or a maintainer sign-off record. Produce and attach those artifacts explicitly when the release policy requires them; do not infer their existence from a green publish workflow.
 
 If tag creation succeeds but GitHub release creation fails, rerunning with the unchanged version exits because the tag already exists. Repair that partial release deliberately rather than expecting the script to resume it.
 

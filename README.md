@@ -103,6 +103,7 @@ Limen is research software. Benchmark and backtest outputs are not investment ad
 ## Learn more
 
 - Start with the full [documentation hub](https://docs.vaquum.fi/limen/overview/docs-hub)
+- See planned direction in the [Roadmap](https://docs.vaquum.fi/limen/overview/roadmap) and the security posture in the [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md)
 - Start with the YAML/CLI path in [Command-Line Interface](https://docs.vaquum.fi/limen/guides/command-line-interface) and [Experiment Manifest](https://docs.vaquum.fi/limen/guides/experiment-manifest)
 - Use [Universal Experiment Loop](https://docs.vaquum.fi/limen/guides/universal-experiment-loop) for the engine beneath CLI and direct Python integration
 - Define extension research units in [Single-File Decoder](https://docs.vaquum.fi/limen/guides/single-file-decoder) and [Built-In SFDs](https://docs.vaquum.fi/limen/guides/built-in-sfds)

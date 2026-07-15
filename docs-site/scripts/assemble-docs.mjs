@@ -72,6 +72,12 @@ const docs = [
     sidebarPosition: 1,
   },
   {
+    source: 'docs/Roadmap.md',
+    dest: 'overview/roadmap.md',
+    slug: '/overview/roadmap',
+    sidebarPosition: 2,
+  },
+  {
     source: 'docs/Historical-Data.md',
     dest: 'guides/historical-data.md',
     slug: '/guides/historical-data',
@@ -305,6 +311,12 @@ const docs = [
     dest: 'developer/release-policy.md',
     slug: '/developer/release-policy',
     sidebarPosition: 10,
+  },
+  {
+    source: 'docs/Developer/Security-Assurance-Case.md',
+    dest: 'developer/security-assurance-case.md',
+    slug: '/developer/security-assurance-case',
+    sidebarPosition: 11,
   },
   {
     source: 'limen/data/README.md',

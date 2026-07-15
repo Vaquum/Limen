@@ -148,15 +148,30 @@ jobs:
         run: python -m build
 
       - name: Attest package distributions
+        id: attest
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: dist/*
+
+      - name: Stage provenance bundle
+        env:
+          BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          mkdir provenance
+          cp "$BUNDLE_PATH" provenance/provenance.intoto.jsonl
 
       - name: Upload distributions
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: python-package-distributions
           path: dist/
+
+      - name: Upload provenance bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-provenance
+          path: provenance/
 
   publish_to_pypi:
     name: Publish Distribution to PyPI
@@ -204,6 +219,12 @@ jobs:
           name: python-package-distributions
           path: dist/
 
+      - name: Download provenance bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-provenance
+          path: provenance/
+
       - name: Generate SBOM from the released wheel environment
         run: |
           set -euo pipefail
@@ -217,7 +238,7 @@ jobs:
           TAG_NAME: ${{ needs.resolve_release_tag.outputs.tag_name }}
         run: |
           set -euo pipefail
-          gh release upload "$TAG_NAME" dist/* sbom.json --clobber
+          gh release upload "$TAG_NAME" dist/* sbom.json provenance/provenance.intoto.jsonl --clobber
           gh release view "$TAG_NAME" --json body --jq .body > release_body.md
           if ! grep -q '^### Artifact SHA-256' release_body.md; then
             {
@@ -225,7 +246,7 @@ jobs:
               echo '### Artifact SHA-256'
               echo ''
               echo '```'
-              sha256sum dist/* sbom.json | sed 's|dist/||'
+              sha256sum dist/* sbom.json provenance/provenance.intoto.jsonl | sed 's|dist/||;s|provenance/||'
               echo '```'
             } >> release_body.md
             gh release edit "$TAG_NAME" --notes-file release_body.md

@@ -19,6 +19,12 @@ Include:
 - expected impact
 - any logs or proof artifacts that are safe to share privately
 
+Reporters are credited in the release notes and `CHANGELOG.md` entry of the fix unless they request otherwise.
+
+## Verifying Release Artifacts
+
+Every release attaches the wheel, sdist, a CycloneDX `sbom.json`, and a `provenance.intoto.jsonl` attestation bundle, with SHA-256 digests in the release body. Verify a downloaded artifact with `gh attestation verify <artifact> --repo Vaquum/Limen`; the verification contract is documented in [Release Policy](docs/Developer/Release-Policy.md). Report verification mismatches through the private channel above.
+
 ## Scope
 
 Security scope covers repository code, packaging, release artifacts, docs-site deployment configuration, and dependency metadata maintained in this repository.
