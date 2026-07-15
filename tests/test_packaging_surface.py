@@ -226,9 +226,9 @@ def test_supply_chain_surfaces() -> None:
 
 def test_governance_hardening_surfaces() -> None:
     codeowners_lines = (ROOT / '.github' / 'CODEOWNERS').read_text(encoding='utf-8').splitlines()
-    assert '/governance/ @mikkokotila @zero-bang' in codeowners_lines
-    assert '/.github/ @mikkokotila @zero-bang' in codeowners_lines
-    assert '/tests/test_packaging_surface.py @mikkokotila @zero-bang' in codeowners_lines
+    assert '/governance/ @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
+    assert '/.github/ @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
+    assert '/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
     sweep_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_sweep.yml').read_text(encoding='utf-8')
     assert sweep_workflow.count('schedule:') == 1
     assert 'workflow_dispatch:' in sweep_workflow
