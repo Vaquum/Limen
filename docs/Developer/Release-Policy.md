@@ -33,11 +33,24 @@ Every GitHub release carries:
 
 - the wheel and sdist that PyPI serves, attached as release assets
 - `sbom.json` (CycloneDX), generated from the released wheel environment
+- `provenance.intoto.jsonl`, the Sigstore bundle of the build-provenance attestations, attached as a release asset
 - SHA-256 digests of every asset, appended to the release body
-- GitHub build-provenance attestations for the distributions
+- GitHub build-provenance attestations for the distributions, served by the GitHub attestation API
 - a mechanical traceability section: merged pull requests, compare link, changelog anchor
 
 Assets attach only after the PyPI publish succeeds, so a release with assets is a release that shipped.
+
+## Verifying release artifacts
+
+Any consumer can verify that a distribution is exactly what CI built from this repository:
+
+```bash
+gh attestation verify vaquum_limen-*.whl --repo Vaquum/Limen
+gh attestation verify vaquum_limen-*.whl --repo Vaquum/Limen --bundle provenance.intoto.jsonl
+sha256sum vaquum_limen-*.whl
+```
+
+The first command checks the artifact against the attestation the GitHub API serves. The second performs the same check offline against the downloaded `provenance.intoto.jsonl` release asset. The third must reproduce the digest recorded in the release body's `Artifact SHA-256` block. PyPI serves the same files with PEP 740 attestations through its integrity API.
 
 Recovery from a partial release is asymmetric: when the PyPI publish succeeded but assets are missing, re-run `publish_release_assets` alone; when the PyPI upload itself failed partway, the version is burned — bump past it. Never re-run the full workflow for a version PyPI already serves; the filename guard rejects it by design.
 

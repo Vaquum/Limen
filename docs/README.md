@@ -55,6 +55,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 4. Use [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md) for SFD work
 5. Use [Technical Debt](TechnicalDebt.md) when assessing accepted known risk
 6. Use [Making Release](Developer/Making-Release.md) and [Semantic Versioning](Semantic-Versioning.md) for maintenance work
+7. Use [Roadmap](Roadmap.md) for planned direction and [Security Assurance Case](Developer/Security-Assurance-Case.md) for the security posture
 
 ## How Limen flows
 
@@ -70,10 +71,10 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 ## Docs map
 
-- `Overview`: [Product Home](../README.md), [this docs hub](README.md)
+- `Overview`: [Product Home](../README.md), [this docs hub](README.md), [Roadmap](Roadmap.md)
 - `Guides`: [End-to-End Workflow](End-to-End-Workflow.md), [Command-Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Perturbation Strategies](Perturbation-Strategies.md), [Fractional Differentiation](Fractional-Differentiation.md), [Triple-Barrier Method](Triple-Barrier-Method.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
 - `Reference`: [Glossary](Glossary.md), [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
-- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Packaging](Developer/Packaging.md), [Semantic Versioning](Semantic-Versioning.md), and [Technical Debt](TechnicalDebt.md)
+- `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Packaging](Developer/Packaging.md), [Release Policy](Developer/Release-Policy.md), [Security Assurance Case](Developer/Security-Assurance-Case.md), [Semantic Versioning](Semantic-Versioning.md), and [Technical Debt](TechnicalDebt.md)
 - `Packages`: package `README`s under `/limen` for `data`, `experiment`, `inference`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`, plus their nested package references
 
 ## Product boundary

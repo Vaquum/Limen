@@ -128,6 +128,8 @@ def test_site_assembly_preserves_authoring_and_navigation_contracts() -> None:
     assert "source: 'docs/Command-Line-Interface.md'" in script
     assert "dest: 'guides/command-line-interface.md'" in script
     assert "source: 'docs/Developer/Packaging.md'" in script
+    assert "source: 'docs/Roadmap.md'" in script
+    assert "source: 'docs/Developer/Security-Assurance-Case.md'" in script
     assert "dir: 'packages/internals'" in script
 
     guide_sources = [
@@ -362,3 +364,8 @@ def test_public_risk_and_install_contracts_remain_visible() -> None:
         assert 'regulatory approval' in risk_text
         assert 'Past performance is not predictive' in risk_text
         assert 'total loss of capital' in risk_text
+
+    security = _read('SECURITY.md')
+    assert 'credited in the release notes' in security
+    assert 'provenance.intoto.jsonl' in security
+    assert 'gh attestation verify' in security

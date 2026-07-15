@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: rule_based_experiment
-  limen_version: "5.2.1"
+  limen_version: "5.4.0"
   mode: development
   description: Rule-based strategy using RSI oversold and EMA trend filter
 

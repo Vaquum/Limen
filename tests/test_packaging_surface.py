@@ -215,6 +215,8 @@ def test_supply_chain_surfaces() -> None:
     assert 'environment: pypi' in publish
     assert 'gh release upload' in publish
     assert 'sbom.json' in publish
+    assert publish.count('provenance/provenance.intoto.jsonl') == 3
+    assert 'id: attest' in publish
     assert 'attach_release_assets' not in publish
     assert 'skip-existing' not in publish
 
