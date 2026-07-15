@@ -320,7 +320,7 @@ def main() -> None:
         sys.exit(1)
 
     # Get model from environment variable or use default
-    model = os.getenv('ANTHROPIC_MODEL', 'claude-opus-4-6')
+    model = os.getenv('ANTHROPIC_MODEL', 'claude-sonnet-5')
     print(f'Using model: {model}')
 
     print('Creating release with Claude AI...')
@@ -349,6 +349,7 @@ def main() -> None:
         message = client.messages.create(
             model=model,
             max_tokens=4096,
+            thinking={'type': 'disabled'},
             messages=[
                 {'role': 'user', 'content': prompt}
             ]
