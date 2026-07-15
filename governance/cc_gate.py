@@ -35,8 +35,8 @@ where ``<type>`` is one of::
     feat | fix | docs | style | refactor | perf | test | build |
     ci | chore | revert
 
-all lowercase. Optional ``scope`` is parenthesized alphanumeric
-(hyphens, underscores, slashes, dots allowed). Optional ``!`` before
+all lowercase. Optional ``scope`` is parenthesized lowercase
+alphanumeric (hyphens, underscores, slashes, dots allowed). Optional ``!`` before
 the colon marks a breaking change. ``<description>`` must be
 non-empty after the ``:`` plus exactly one space.
 
@@ -154,7 +154,13 @@ def list_commits(base_ref: str, head_ref: str) -> list[dict[str, object]]:
             continue
         parts = line.split('\t', 2)
         if len(parts) != GIT_LOG_FIELD_COUNT:
-            continue
+            # Fail closed: a line this gate cannot parse means commits
+            # could go unchecked, which is a setup failure, not a skip.
+            print(
+                f'cc_gate: unparseable git log line: {line!r}',
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
         sha, parents, subject = parts
         is_merge = len(parents.split()) > 1
         commits.append({
@@ -214,7 +220,11 @@ def fetch_issue(repo: str, number: int) -> dict[str, object]:
 
 
 def find_closing_references(body: str) -> list[int]:
-    return [int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)]
+    # Deduplicated, first-seen order: a body repeating a reference must
+    # not fetch the same issue twice.
+    return list(dict.fromkeys(
+        int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)
+    ))
 
 
 def attribution_hit(text: str) -> str | None:
