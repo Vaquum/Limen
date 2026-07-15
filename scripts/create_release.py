@@ -33,6 +33,7 @@ REPO_URL: Final[str] = 'https://github.com/Vaquum/Limen'
 TAG_RE: Final[re.Pattern[str]] = re.compile(r'^v\d+\.\d+\.\d+$')
 URL_FETCH_TIMEOUT: Final[int] = 30
 MAX_COMMITS: Final[int] = 100
+OMIT_THINKING_MODEL_PREFIXES: Final[tuple[str, ...]] = ('claude-fable', 'claude-mythos')
 
 
 def read_file(filepath: str) -> str:
@@ -346,10 +347,15 @@ def main() -> None:
     client = anthropic.Anthropic(api_key=api_key)
 
     try:
+        thinking = (
+            anthropic.NOT_GIVEN
+            if model.startswith(OMIT_THINKING_MODEL_PREFIXES)
+            else {'type': 'disabled'}
+        )
         message = client.messages.create(
             model=model,
             max_tokens=4096,
-            thinking={'type': 'disabled'},
+            thinking=thinking,
             messages=[
                 {'role': 'user', 'content': prompt}
             ]
