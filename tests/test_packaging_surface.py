@@ -280,3 +280,25 @@ def test_cc_gate_surfaces() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'CC GATE -- PASS' in result.stdout
+    attribution_code = '''
+import sys
+sys.path.insert(0, 'governance')
+from cc_gate import attribution_hit
+
+for clean in (
+    'feat: add Gemini exchange connector',
+    'fix: reuse the database cursor between batches',
+    'docs: describe artifacts generated with the manifest runner',
+    'ci: adjust copilot_code_review rule parameters',
+):
+    assert attribution_hit(clean) is None, clean
+
+for attributed in (
+    'Generated with Claude Code',
+    'Co-authored-by: Gemini <bot@google.com>',
+    'feat: add Google Gemini client',
+    'chore: llm-generated cleanup',
+):
+    assert attribution_hit(attributed) is not None, attributed
+'''
+    subprocess.run([sys.executable, '-c', attribution_code], cwd=ROOT, check=True)

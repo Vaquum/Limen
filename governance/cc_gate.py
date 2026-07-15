@@ -86,11 +86,20 @@ ATTRIBUTION_EXEMPT_RE: Final[re.Pattern[str]] = re.compile(
     r'\b[\w-]+\.md\b|\bcopilot(?:[ -]code)?[ -]review\b',
     re.IGNORECASE,
 )
+# Limen divergence from upstream: the bare tokens ``gemini``, ``cursor``,
+# ``llm``, and unqualified ``generated with`` collide with legitimate
+# domain vocabulary (the Gemini crypto exchange, database cursors,
+# "generated with <tool>") and would hard-fail a required gate on text
+# that names no AI assistant. They are narrowed to AI-qualified forms;
+# every unambiguous marker stays bare. Filed upstream.
 ATTRIBUTION_RE: Final[re.Pattern[str]] = re.compile(
-    r'\bclaude\b|\bcodex\b|\bchatgpt\b|\bgpt-?\d\b|\bcopilot\b|\bcursor\b'
-    r'|\bgemini\b|\banthropic\b|\bopenai\b|\bllm\b|\bai[ -]?assistant\b'
-    r'|generated[ -]with'
-    r'|co-authored-by:\s*.*(?:claude|openai|anthropic|chatgpt|codex|copilot|cursor|gemini)',
+    r'\bclaude\b|\bcodex\b|\bchatgpt\b|\bgpt-?\d\b|\bcopilot\b'
+    r'|\bgoogle[ -]gemini\b|\bgemini[ -](?:pro|ultra|flash|cli|api|code)\b'
+    r'|\bcursor[ -](?:ai|ide|agent|editor)\b'
+    r'|\banthropic\b|\bopenai\b|\bai[ -]?assistant\b'
+    r'|\bllm[ -](?:assist(?:ant|ed)|generated|written|authored)\b'
+    r'|generated[ -]with[ -](?:an?[ -])?(?:claude|chatgpt|codex|copilot|cursor|gemini|gpt|llm|ai)\b'
+    r'|co-authored-by:\s*.*(?:claude|openai|anthropic|chatgpt|codex|copilot|cursor|gemini|gpt|llm)',
     re.IGNORECASE,
 )
 
