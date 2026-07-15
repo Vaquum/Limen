@@ -28,7 +28,7 @@ Specification reference: https://www.conventionalcommits.org/en/v1.0.0/
 
 Accepted format:
 
-    <type>[optional scope]!?: <description>
+    <type>[optional scope][!]: <description>
 
 where ``<type>`` is one of::
 

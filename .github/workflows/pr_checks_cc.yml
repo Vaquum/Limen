@@ -71,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           BASE_REF="origin/${{ github.base_ref }}"
-          git fetch origin "${{ github.base_ref }}" --depth=1000
+          git fetch origin "${{ github.base_ref }}"
           git rev-parse --verify "$BASE_REF" >/dev/null
           HEAD_REF="${{ github.event.pull_request.head.sha }}"
           git rev-parse --verify "$HEAD_REF" >/dev/null
