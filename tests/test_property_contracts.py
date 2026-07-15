@@ -5,7 +5,7 @@ already-contractual surfaces: the YAML manifest validator's fail-loud
 ``uel.n_permutations`` rules, the ``ParamSpace`` cardinality and
 determinism laws, and the sequential splitter's partition invariants.
 The registered profile is deterministic so the required CI gate cannot
-flake: ``derandomize`` replaces random seeds with a fixed derivation and
+flake: random seeds are replaced with a fixed derivation and
 ``deadline=None`` removes wall-clock variance.
 '''
 
