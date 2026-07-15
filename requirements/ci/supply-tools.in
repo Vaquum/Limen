@@ -1,0 +1,5 @@
+# Dependency-vulnerability gate tooling for pr_checks_supply.
+# Regenerate: uv pip compile requirements/ci/supply-tools.in --generate-hashes \
+#   --python-version 3.10 --python-platform linux -o requirements/ci/supply-tools.txt
+pip-audit>=2.9,<3
+tomli>=2.0,<3

@@ -63,7 +63,7 @@ Recovery from a partial release is asymmetric: when the PyPI publish succeeded b
 - every workflow declares least-privilege top-level `permissions:`; write scopes are job-level only
 - every action reference is pinned to a full commit SHA; no mutable tags
 - every checkout sets `persist-credentials: false` except the release tag push
-- CI tool installs are constrained by `requirements/constraints.txt`
+- CI dependency installs verify artifact hashes (`--require-hashes` against the pip-compile-generated sets in `requirements/ci/`); the project itself installs `--no-deps`, and `requirements/constraints.txt` remains the human-readable envelope the sets are compiled from
 - release tag names reach shell steps through `env:` indirection, never inline interpolation
 
 `tests/test_packaging_surface.py::test_supply_chain_surfaces` fails any PR that regresses these invariants; repository settings state is verified by API read and recorded in the delivering slice's closeout.

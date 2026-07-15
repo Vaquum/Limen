@@ -28,8 +28,8 @@ jobs:
 
       - name: Install packaging tools
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -c requirements/constraints.txt -e ".[dev]"
+          python -m pip install --require-hashes -r requirements/ci/dev-env.txt
+          python -m pip install --no-deps -e .
 
       - name: Audit package source contract
         run: python scripts/package_audit.py
@@ -63,7 +63,8 @@ jobs:
 
       - name: Generate dependency reports
         run: |
-          python -m pip install -c requirements/constraints.txt -e ".[boosting,data,indicators,stats]"
+          python -m pip install --require-hashes -r requirements/ci/research-env.txt
+          python -m pip install --no-deps -e .
           pip-licenses --format=json --output-file dependency-licenses.json
           cyclonedx-py environment --output-file sbom.json
 
@@ -99,7 +100,7 @@ jobs:
         env:
           SOURCE_DATE_EPOCH: '1704067200'
         run: |
-          python -m pip install -c requirements/constraints.txt --upgrade pip build
+          python -m pip install --require-hashes -r requirements/ci/build-tools.txt
           python -m build --wheel --outdir dist
 
       - name: Install and smoke test base wheel

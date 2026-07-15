@@ -1,0 +1,4 @@
+# Distribution build tooling for pr_checks_packaging and pr_publish_pypi.
+# Regenerate: uv pip compile requirements/ci/build-tools.in --generate-hashes \
+#   --python-version 3.10 --python-platform linux -o requirements/ci/build-tools.txt
+build>=1,<2

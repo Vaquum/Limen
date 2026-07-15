@@ -1,0 +1,4 @@
+# SBOM generation tooling for pr_publish_pypi.
+# Regenerate: uv pip compile requirements/ci/sbom-tools.in --generate-hashes \
+#   --python-version 3.10 --python-platform linux -o requirements/ci/sbom-tools.txt
+cyclonedx-bom>=5,<8

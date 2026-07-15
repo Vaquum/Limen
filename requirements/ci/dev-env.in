@@ -1,0 +1,5 @@
+# Full development envelope for pr_checks_pyright and the pr_checks_packaging
+# audit job.
+# Regenerate: uv pip compile requirements/ci/dev-env.in --generate-hashes --no-emit-package vaquum-limen \
+#   --python-version 3.10 --python-platform linux -o requirements/ci/dev-env.txt
+.[all,dev]

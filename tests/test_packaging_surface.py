@@ -221,9 +221,21 @@ def test_supply_chain_surfaces() -> None:
     assert 'skip-existing' not in publish
 
     tests_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_tests.yml').read_text(encoding='utf-8')
-    assert '"coverage[toml]" hypothesis pytest' in tests_workflow
+    assert '--require-hashes -r requirements/ci/research-env.txt' in tests_workflow
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     assert 'hypothesis>=6,<7' in pyproject['project']['optional-dependencies']['test']
+    assert 'hypothesis' in (ROOT / 'requirements' / 'ci' / 'research-env.in').read_text(encoding='utf-8')
+
+    for workflow in workflows:
+        text = workflow.read_text(encoding='utf-8')
+        if 'pip install' in text:
+            assert '--require-hashes' in text, workflow.name
+    hashed_sets = sorted((ROOT / 'requirements' / 'ci').glob('*.txt'))
+    assert hashed_sets
+    for hashed in hashed_sets:
+        assert '--hash=sha256' in hashed.read_text(encoding='utf-8'), hashed.name
+    policy = (ROOT / 'docs' / 'Developer' / 'Release-Policy.md').read_text(encoding='utf-8')
+    assert 'require-hashes' in policy
 
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script

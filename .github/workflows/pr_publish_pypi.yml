@@ -140,7 +140,7 @@ jobs:
           PY
 
       - name: Install build tooling
-        run: python -m pip install -c requirements/constraints.txt build
+        run: python -m pip install --require-hashes -r requirements/ci/build-tools.txt
 
       - name: Build package distributions
         env:
@@ -228,8 +228,9 @@ jobs:
       - name: Generate SBOM from the released wheel environment
         run: |
           set -euo pipefail
-          python -m pip install -c requirements/constraints.txt cyclonedx-bom
-          python -m pip install -c requirements/constraints.txt "$(ls dist/*.whl)[boosting,data,indicators,stats]"
+          python -m pip install --require-hashes -r requirements/ci/sbom-tools.txt
+          python -m pip install --require-hashes -r requirements/ci/research-env.txt
+          python -m pip install --no-deps dist/*.whl
           cyclonedx-py environment --output-file sbom.json
 
       - name: Upload assets and append artifact digests

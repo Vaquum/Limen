@@ -28,11 +28,8 @@ jobs:
 
       - name: Install limen package (and deps)
         run: |
-          pip install -c requirements/constraints.txt "coverage[toml]" hypothesis pytest
-          pip install -c requirements/constraints.txt -e ".[boosting,data,indicators,stats]"
-          if [ -f requirements.txt ]; then
-            pip install -c requirements/constraints.txt -r requirements.txt
-          fi
+          pip install --require-hashes -r requirements/ci/research-env.txt
+          pip install --no-deps -e .
 
       - name: Run limen tests with coverage
         env:

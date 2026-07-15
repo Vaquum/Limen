@@ -45,7 +45,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install PyYAML
-        run: pip install 'pyyaml==6.0.2'
+        run: pip install --require-hashes -r requirements/ci/gate-tools.txt
 
       - name: Fetch PR title, body, and changed files
         env:
