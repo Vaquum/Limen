@@ -1,0 +1,9 @@
+# Research runtime plus test tooling for pr_checks_tests and the
+# pr_checks_packaging reproducible-build job.
+# Regenerate: uv pip compile requirements/ci/research-env.in --generate-hashes --no-emit-package vaquum-limen \
+#   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
+#   -o requirements/ci/research-env.txt
+.[boosting,data,indicators,stats]
+coverage[toml]>=7,<8
+hypothesis>=6,<7
+pytest>=8,<10

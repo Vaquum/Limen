@@ -1,0 +1,6 @@
+# Runtime envelope only (no test tooling) for pr_checks_codeql and the
+# pr_publish_pypi SBOM environment, so the SBOM enumerates what ships.
+# Regenerate: uv pip compile requirements/ci/runtime-env.in --generate-hashes --no-emit-package vaquum-limen \
+#   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
+#   -o requirements/ci/runtime-env.txt
+.[boosting,data,indicators,stats]

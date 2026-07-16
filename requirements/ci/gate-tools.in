@@ -1,0 +1,6 @@
+# Slice-gate YAML dependency for pr_checks_slice, pr_checks_slice_on_issue,
+# and pr_checks_slice_sweep.
+# Regenerate: uv pip compile requirements/ci/gate-tools.in --generate-hashes \
+#   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
+#   -o requirements/ci/gate-tools.txt
+pyyaml==6.0.2
