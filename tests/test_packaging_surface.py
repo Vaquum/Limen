@@ -260,7 +260,7 @@ def test_governance_hardening_surfaces() -> None:
     assert '/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
     on_issue = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_on_issue.yml').read_text(encoding='utf-8')
     assert 'actions/runs' in on_issue
-    assert 'actions: write' in on_issue
+    assert on_issue.count('actions: write') == 1
     readiness = (ROOT / '.github' / 'workflows' / 'pr_merge_readiness.yml').read_text(encoding='utf-8')
     assert 'pull_request_review:' in readiness
     assert 'pull_request_review_thread:' in readiness
@@ -274,7 +274,7 @@ def test_governance_hardening_surfaces() -> None:
     assert 'file enumeration incomplete' in sweep_workflow
     assert 'governance/slice_gate.py' in sweep_workflow
     assert 'actions/runs' in sweep_workflow
-    assert 'actions: write' in sweep_workflow
+    assert sweep_workflow.count('actions: write') == 1
     common_path = ROOT / 'governance' / '_common.py'
     spec = importlib.util.spec_from_file_location('governance_common', common_path)
     assert spec is not None

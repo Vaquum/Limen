@@ -37,16 +37,18 @@ concurrency:
 
 permissions:
   contents: read
-  issues: read
-  pull-requests: read
-  checks: write  # required to POST fallback check-runs
-  actions: write  # required to rerun the canonical pr_checks_slice run
 
 jobs:
   sweep_slice_gate_for_open_prs:
     name: pr_checks_slice_sweep
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      checks: write  # required to POST fallback check-runs
+      actions: write  # required to rerun the canonical pr_checks_slice run
 
     steps:
       - name: Checkout
