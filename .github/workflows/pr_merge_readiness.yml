@@ -4,7 +4,10 @@ name: pr_merge_readiness
 # condition together -- each required status check's latest conclusion
 # on the head commit, the review decision, and the count of unresolved
 # review conversations -- so readiness is visible in a single surface
-# instead of being discovered one gate at a time.
+# instead of being discovered one gate at a time. Thread resolution has
+# no Actions trigger of its own (pull_request_review_thread is a webhook
+# event only, not a workflow trigger); inline-comment activity, reviews,
+# pushes, and check-suite completions refresh the comment instead.
 #
 # Informational only: this workflow is not a required check, so it can
 # never deadlock the merge it reports on. Fail-closed: when the
@@ -17,8 +20,8 @@ on:
     types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted, dismissed]
-  pull_request_review_thread:
-    types: [resolved, unresolved]
+  pull_request_review_comment:
+    types: [created, deleted]
   check_suite:
     types: [completed]
 
@@ -131,11 +134,17 @@ jobs:
               UNRESOLVED=0
               CURSOR="null"
               while : ; do
-                PAGE=$(gh api graphql \
-                  -f query='query($owner: String!, $name: String!, $number: Int!, $cursor: String) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { isResolved } } } } }' \
-                  -F owner="${REPO%/*}" -F name="${REPO#*/}" -F number="$PR_NUM" \
-                  $( [ "$CURSOR" != "null" ] && printf -- '-F cursor=%s' "$CURSOR" ) \
-                  --jq '.data.repository.pullRequest.reviewThreads')
+                THREADS_QUERY='query($owner: String!, $name: String!, $number: Int!, $cursor: String) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { isResolved } } } } }'
+                if [ "$CURSOR" = "null" ]; then
+                  PAGE=$(gh api graphql -f query="$THREADS_QUERY" \
+                    -F owner="${REPO%/*}" -F name="${REPO#*/}" -F number="$PR_NUM" \
+                    --jq '.data.repository.pullRequest.reviewThreads')
+                else
+                  PAGE=$(gh api graphql -f query="$THREADS_QUERY" \
+                    -F owner="${REPO%/*}" -F name="${REPO#*/}" -F number="$PR_NUM" \
+                    -F cursor="$CURSOR" \
+                    --jq '.data.repository.pullRequest.reviewThreads')
+                fi
                 COUNT=$(echo "$PAGE" | jq '[.nodes[] | select(.isResolved == false)] | length')
                 UNRESOLVED=$((UNRESOLVED + COUNT))
                 HAS_NEXT=$(echo "$PAGE" | jq -r '.pageInfo.hasNextPage')

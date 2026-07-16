@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: dollar_bar_crash_reversal
-  limen_version: "5.6.0"
+  limen_version: "5.6.1"
   mode: development
   description: Exhaustive dollar-bar crash-reversal sweep with fixed 15 bps per-side costs
 
