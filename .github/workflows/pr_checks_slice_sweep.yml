@@ -39,7 +39,8 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
-  checks: write  # required to POST check-runs
+  checks: write  # required to POST fallback check-runs
+  actions: write  # required to rerun the canonical pr_checks_slice run
 
 jobs:
   sweep_slice_gate_for_open_prs:
@@ -142,6 +143,36 @@ jobs:
             else
               CONCLUSION="failure"
               TITLE_OUT="Slice gate FAILED in scheduled sweep"
+            fi
+
+            # Rerun-first delivery (S724): the pull_request-event run is
+            # the canonical checks-UI entry and a workflow run's
+            # conclusion is immutable unless rerun -- an API-posted
+            # check-run satisfies branch protection but leaves the old
+            # red run visible forever. If the latest completed canonical
+            # run disagrees with the verdict just computed, rerun it so
+            # the UI shows a single truthful entry; fall back to the
+            # check-run POST only when no rerunnable canonical run
+            # exists (fail-closed, unchanged contract).
+            CANONICAL=$(gh api \
+              "repos/$REPO/actions/workflows/pr_checks_slice.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=completed&per_page=1" \
+              --jq '.workflow_runs[0] // empty')
+            if [ -n "$CANONICAL" ]; then
+              RUN_ID=$(echo "$CANONICAL" | jq -r .id)
+              RUN_CONCLUSION=$(echo "$CANONICAL" | jq -r .conclusion)
+              if [ "$RUN_CONCLUSION" = "$CONCLUSION" ]; then
+                echo "canonical run $RUN_ID already $CONCLUSION; nothing to deliver"
+                echo "::endgroup::"
+                continue
+              fi
+              if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
+                echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION)"
+                echo "::endgroup::"
+                continue
+              fi
+              echo "rerun of canonical run $RUN_ID failed; falling back to check-run POST"
+            else
+              echo "no completed canonical run for $HEAD_SHA; falling back to check-run POST"
             fi
 
             # Keep output.summary under the 65 KB API limit. Truncation
