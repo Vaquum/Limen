@@ -1,0 +1,5 @@
+# Coverage combiner for the pr_checks_tests Coverage sub-job.
+# Regenerate: uv pip compile requirements/ci/coverage-tools.in --generate-hashes \
+#   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
+#   -o requirements/ci/coverage-tools.txt
+coverage[toml]>=7,<8

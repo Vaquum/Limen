@@ -227,14 +227,31 @@ def test_supply_chain_surfaces() -> None:
     assert 'hypothesis>=6,<7' in pyproject['project']['optional-dependencies']['test']
     assert 'hypothesis' in (ROOT / 'requirements' / 'ci' / 'research-env.in').read_text(encoding='utf-8')
 
+    unhashed_allowed = ('python -m pip install dist/*.whl',)
     for workflow in workflows:
-        text = workflow.read_text(encoding='utf-8')
-        if 'pip install' in text:
-            assert '--require-hashes' in text, workflow.name
+        for raw_line in workflow.read_text(encoding='utf-8').splitlines():
+            line = raw_line.strip()
+            if 'pip install' not in line:
+                continue
+            if line in unhashed_allowed:
+                continue
+            assert '--require-hashes' in line or '--no-deps' in line, (workflow.name, line)
     hashed_sets = sorted((ROOT / 'requirements' / 'ci').glob('*.txt'))
-    assert hashed_sets
+    assert [hashed.name for hashed in hashed_sets] == [
+        'build-tools.txt',
+        'coverage-tools.txt',
+        'dev-env.txt',
+        'gate-tools.txt',
+        'release-tools.txt',
+        'research-env.txt',
+        'runtime-env.txt',
+        'sbom-tools.txt',
+        'supply-tools.txt',
+    ]
     for hashed in hashed_sets:
         assert '--hash=sha256' in hashed.read_text(encoding='utf-8'), hashed.name
+        assert hashed.with_suffix('.in').is_file(), hashed.name
+        assert '-c requirements/constraints.txt' in hashed.with_suffix('.in').read_text(encoding='utf-8'), hashed.name
     policy = (ROOT / 'docs' / 'Developer' / 'Release-Policy.md').read_text(encoding='utf-8')
     assert 'require-hashes' in policy
 

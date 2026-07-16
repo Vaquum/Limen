@@ -1,4 +1,5 @@
 # Release-notes tooling for pr_post_release (runtime envelope plus the release extra).
 # Regenerate: uv pip compile requirements/ci/release-tools.in --generate-hashes --no-emit-package vaquum-limen \
-#   --python-version 3.10 --python-platform linux -o requirements/ci/release-tools.txt
+#   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
+#   -o requirements/ci/release-tools.txt
 .[release]

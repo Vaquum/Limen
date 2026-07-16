@@ -229,7 +229,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --require-hashes -r requirements/ci/sbom-tools.txt
-          python -m pip install --require-hashes -r requirements/ci/research-env.txt
+          python -m pip install --require-hashes -r requirements/ci/runtime-env.txt
           python -m pip install --no-deps dist/*.whl
           cyclonedx-py environment --output-file sbom.json
 
