@@ -1373,3 +1373,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Fix the merge-readiness workflow so it actually runs: `pull_request_review_thread` is a webhook event, not an Actions trigger, so `pr_merge_readiness.yml` as merged by #728 failed GitHub's startup validation on every event (zero-job workflow-file failure runs) and never posted its comment; the trigger becomes `pull_request_review_comment`, the review-thread pagination call gains explicit cursor branches, and the trigger pin in `test_governance_hardening_surfaces` follows (#730).
 - Correct the released `5.6.0` entry's hashed-set count from seven to nine: the review round added the `coverage-tools` and `runtime-env` profiles after the entry was written (#730).
+
+## [5.6.2] - 2026-07-16
+
+- Lift the pyarrow envelope from `>=18,<23` to `>=23.0.1,<24` in the `data` and `all` extras and the `requirements/constraints.txt` mirror, clearing the three high-severity Dependabot alerts for GHSA-rgxp-2hwp-jwgg (fixed in 23.0.1, outside the old cap); the three pyarrow-bearing hashed sets (`runtime-env`, `research-env`, `dev-env`) regenerate to `pyarrow==23.0.1` with the other six byte-stable, and a fresh Python 3.10 environment ran the full suite under the lifted envelope at the 92% coverage floor before the PR opened (#732).
