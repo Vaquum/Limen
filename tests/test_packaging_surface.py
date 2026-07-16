@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -224,6 +225,25 @@ def test_supply_chain_surfaces() -> None:
     assert '"coverage[toml]" hypothesis pytest' in tests_workflow
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     assert 'hypothesis>=6,<7' in pyproject['project']['optional-dependencies']['test']
+
+    site_package = json.loads((ROOT / 'docs-site' / 'package.json').read_text(encoding='utf-8'))
+    assert site_package['overrides']['js-yaml@^4'] == '^4.2.0'
+    assert site_package['overrides']['markdown-it'] == '^14.2.0'
+    site_lock = json.loads((ROOT / 'docs-site' / 'package-lock.json').read_text(encoding='utf-8'))
+    js_yaml_versions = {
+        tuple(int(part) for part in pkg['version'].split('.')[:3])
+        for key, pkg in site_lock['packages'].items()
+        if key.endswith('node_modules/js-yaml')
+    }
+    assert js_yaml_versions
+    assert all(v >= (3, 15, 0) if v[0] == 3 else v >= (4, 2, 0) for v in js_yaml_versions)
+    markdown_it_versions = {
+        tuple(int(part) for part in pkg['version'].split('.')[:3])
+        for key, pkg in site_lock['packages'].items()
+        if key.endswith('node_modules/markdown-it')
+    }
+    assert markdown_it_versions
+    assert all(v >= (14, 2, 0) for v in markdown_it_versions)
 
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script
