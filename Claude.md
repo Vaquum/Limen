@@ -9,6 +9,7 @@
 -> You never synthentic data, that would be extremely harmful.
 -> You start local validation early, then push the branch and open or update the PR while it runs.
 -> You only declare task done after local and CI gates pass.
+-> PR status reports must state, from a live same-turn fetch: required checks n/n, review decision, unresolved-conversation count — never a bare "green"/"ready". A PR is "mergeable" only when all three hold.
 -> If at any point you feel that requirements are not clear, ask questions.
 -> We want bullet-proof conviction every step of the way.
 -> You stick with minimal highly readable code.
