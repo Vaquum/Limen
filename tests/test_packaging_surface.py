@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -237,6 +238,25 @@ def test_supply_chain_surfaces() -> None:
     policy = (ROOT / 'docs' / 'Developer' / 'Release-Policy.md').read_text(encoding='utf-8')
     assert 'require-hashes' in policy
 
+    site_package = json.loads((ROOT / 'docs-site' / 'package.json').read_text(encoding='utf-8'))
+    assert site_package['overrides']['js-yaml@^4'] == '^4.2.0'
+    assert site_package['overrides']['markdown-it'] == '^14.2.0'
+    site_lock = json.loads((ROOT / 'docs-site' / 'package-lock.json').read_text(encoding='utf-8'))
+    js_yaml_versions = {
+        tuple(int(part) for part in pkg['version'].split('.')[:3])
+        for key, pkg in site_lock['packages'].items()
+        if key.endswith('node_modules/js-yaml')
+    }
+    assert js_yaml_versions
+    assert all(v >= (3, 15, 0) if v[0] == 3 else v >= (4, 2, 0) for v in js_yaml_versions)
+    markdown_it_versions = {
+        tuple(int(part) for part in pkg['version'].split('.')[:3])
+        for key, pkg in site_lock['packages'].items()
+        if key.endswith('node_modules/markdown-it')
+    }
+    assert markdown_it_versions
+    assert all(v >= (14, 2, 0) for v in markdown_it_versions)
+
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script
     assert "os.getenv('ANTHROPIC_MODEL', 'claude-sonnet-5')" in release_script
@@ -250,12 +270,23 @@ def test_governance_hardening_surfaces() -> None:
     assert '/governance/ @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
     assert '/.github/ @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
     assert '/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
+    on_issue = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_on_issue.yml').read_text(encoding='utf-8')
+    assert 'actions/runs' in on_issue
+    assert on_issue.count('actions: write') == 1
+    readiness = (ROOT / '.github' / 'workflows' / 'pr_merge_readiness.yml').read_text(encoding='utf-8')
+    assert 'pull_request_review:' in readiness
+    assert 'pull_request_review_thread:' in readiness
+    assert 'check_suite:' in readiness
+    assert 'pull-requests: write' in readiness
+
     sweep_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_sweep.yml').read_text(encoding='utf-8')
     assert sweep_workflow.count('schedule:') == 1
     assert 'workflow_dispatch:' in sweep_workflow
     assert 'name=pr_checks_slice' in sweep_workflow
     assert 'file enumeration incomplete' in sweep_workflow
     assert 'governance/slice_gate.py' in sweep_workflow
+    assert 'actions/runs' in sweep_workflow
+    assert sweep_workflow.count('actions: write') == 1
     common_path = ROOT / 'governance' / '_common.py'
     spec = importlib.util.spec_from_file_location('governance_common', common_path)
     assert spec is not None
