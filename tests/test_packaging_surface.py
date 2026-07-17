@@ -292,7 +292,7 @@ def test_governance_hardening_surfaces() -> None:
     assert on_issue.count('actions: write') == 1
     readiness = (ROOT / '.github' / 'workflows' / 'pr_merge_readiness.yml').read_text(encoding='utf-8')
     assert 'pull_request_review:' in readiness
-    assert 'pull_request_review_thread:' in readiness
+    assert 'pull_request_review_comment:' in readiness
     assert 'check_suite:' in readiness
     assert 'pull-requests: write' in readiness
 
