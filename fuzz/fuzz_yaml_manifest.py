@@ -6,7 +6,7 @@ with atheris.instrument_imports():
     from limen.yaml import parse
     from limen.yaml import validate
 
-MAX_TEXT_BYTES = 4096
+MAX_TEXT_CHARS = 4096
 
 
 def fuzz_yaml_manifest(data: bytes) -> None:
@@ -28,7 +28,7 @@ def fuzz_yaml_manifest(data: bytes) -> None:
     '''
 
     provider = atheris.FuzzedDataProvider(data)
-    text = provider.ConsumeUnicodeNoSurrogates(MAX_TEXT_BYTES)
+    text = provider.ConsumeUnicodeNoSurrogates(MAX_TEXT_CHARS)
     parsed, errors = parse(text)
 
     if not errors:
