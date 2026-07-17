@@ -226,6 +226,11 @@ def test_supply_chain_surfaces() -> None:
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     assert 'hypothesis>=6,<7' in pyproject['project']['optional-dependencies']['test']
     assert 'hypothesis' in (ROOT / 'requirements' / 'ci' / 'research-env.in').read_text(encoding='utf-8')
+    fuzz_harness = (ROOT / 'fuzz' / 'fuzz_yaml_manifest.py').read_text(encoding='utf-8')
+    assert 'import atheris' in fuzz_harness
+    fuzz_workflow = (ROOT / '.github' / 'workflows' / 'fuzz_smoke.yml').read_text(encoding='utf-8')
+    assert 'schedule:' in fuzz_workflow
+    assert '--require-hashes -r requirements/ci/fuzz-tools.txt' in fuzz_workflow
 
     unhashed_allowed = ('python -m pip install dist/*.whl',)
     for workflow in workflows:
@@ -241,6 +246,7 @@ def test_supply_chain_surfaces() -> None:
         'build-tools.txt',
         'coverage-tools.txt',
         'dev-env.txt',
+        'fuzz-tools.txt',
         'gate-tools.txt',
         'release-tools.txt',
         'research-env.txt',
