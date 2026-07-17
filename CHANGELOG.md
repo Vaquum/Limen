@@ -1377,3 +1377,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.6.2] - 2026-07-16
 
 - Lift the pyarrow envelope from `>=18,<23` to `>=23.0.1,<24` in the `data` and `all` extras and the `requirements/constraints.txt` mirror, clearing the three high-severity Dependabot alerts for GHSA-rgxp-2hwp-jwgg (fixed in 23.0.1, outside the old cap); the three pyarrow-bearing hashed sets (`runtime-env`, `research-env`, `dev-env`) regenerate to `pyarrow==23.0.1` with the other six byte-stable, and a fresh Python 3.10 environment ran the full suite under the lifted envelope at the 92% coverage floor before the PR opened (#732).
+
+## [5.7.0] - 2026-07-17
+
+- Add `fuzz/fuzz_yaml_manifest.py`, a coverage-guided Atheris harness driving `limen.yaml.parse` into `limen.yaml.validate` — both surfaces contractually collect errors without raising, so any uncaught exception under fuzz is a genuine finding — run time-boxed by the new non-required `Fuzz Smoke` workflow on every PR, weekly by schedule, and on manual dispatch; this is also the exact surface OpenSSF Scorecard credits for Python fuzzing (`import atheris`), correcting PRD #717's premise that Hypothesis would score the Fuzzing check (#735).
+- Pin the fuzzing engine in a tenth hashed install set (`requirements/ci/fuzz-tools`), keep the workflow inside the `--require-hashes` invariant, ship the harness in the sdist, and red any PR that drops the harness, its atheris import, the schedule cadence, or the hashed set via `test_supply_chain_surfaces` (#735).

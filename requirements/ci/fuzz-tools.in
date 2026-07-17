@@ -1,0 +1,6 @@
+# Atheris engine for the fuzz smoke harness (fuzz/fuzz_yaml_manifest.py)
+# run by fuzz_smoke.yml.
+# Regenerate: uv pip compile requirements/ci/fuzz-tools.in --generate-hashes \
+#   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
+#   -o requirements/ci/fuzz-tools.txt
+atheris>=2.3,<3

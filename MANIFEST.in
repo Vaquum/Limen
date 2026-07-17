@@ -34,6 +34,7 @@ recursive-include limen/yaml/templates *.yaml
 recursive-include requirements *.txt
 recursive-include requirements *.in
 recursive-include scripts *.py
+recursive-include fuzz *.py
 recursive-include tests *.py *.json
 recursive-include tests/fixtures *.csv *.zip
 recursive-include tests/fixtures *.parquet
