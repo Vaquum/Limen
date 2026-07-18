@@ -24,7 +24,7 @@ from limen.data.utils import split_walk_forward
 MAX_EXAMPLES = 50
 
 settings.register_profile(
-    'ci',
+    'walk_forward_ci',
     settings(
         derandomize=True,
         max_examples=MAX_EXAMPLES,
@@ -32,7 +32,7 @@ settings.register_profile(
         suppress_health_check=[HealthCheck.too_slow],
     ),
 )
-settings.load_profile('ci')
+settings.load_profile('walk_forward_ci')
 
 
 @st.composite
@@ -81,7 +81,6 @@ def _folds_or_reject(geometry: tuple[int, int, int, int, int, bool]) -> list[tup
         assert 'train window is empty' in str(exc)
         assert not anchored
         assume(False)
-        raise
 
 
 def _fold_rows(geometry: tuple[int, int, int, int, int, bool]) -> list[tuple[list[int], list[int]]]:
@@ -119,7 +118,7 @@ def test_embargo_holds(geometry: tuple[int, int, int, int, int, bool]) -> None:
 
 @given(geometry=_geometries())
 def test_fold_partition_laws(geometry: tuple[int, int, int, int, int, bool]) -> None:
-    total, n_folds, test_bars, _, _, anchored = geometry
+    total, n_folds, test_bars, purge_bars, embargo_bars, anchored = geometry
     first_test_start = total - n_folds * test_bars
     fold_rows = _fold_rows(geometry)
 
@@ -133,7 +132,10 @@ def test_fold_partition_laws(geometry: tuple[int, int, int, int, int, bool]) -> 
         if anchored:
             assert train_rows[0] == 0
         else:
-            assert len(train_rows) <= first_test_start
+            assert train_rows[0] >= fold * test_bars
+            assert len(train_rows) <= first_test_start - purge_bars
+            if embargo_bars == 0:
+                assert train_rows == list(range(fold * test_bars, test_start - purge_bars))
 
 
 @given(geometry=_geometries())

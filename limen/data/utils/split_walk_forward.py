@@ -107,7 +107,11 @@ def split_walk_forward(data: pl.DataFrame,
                 f'split_walk_forward fold {fold} train window is empty after purge and embargo'
             )
 
-        train = pl.concat([data.slice(start, end - start) for start, end in segments])
+        if len(segments) == 1:
+            start, end = segments[0]
+            train = data.slice(start, end - start)
+        else:
+            train = pl.concat([data.slice(start, end - start) for start, end in segments])
         test = data.slice(test_start, test_bars)
         folds.append((train, test))
 
