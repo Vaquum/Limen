@@ -4,6 +4,7 @@ from limen.data.utils.splits import split_by_dates
 from limen.data.utils.splits import split_data_to_prep_output
 from limen.data.utils.splits import split_data_to_rule_based_prep_output
 from limen.data.utils.splits import split_sequential
+from limen.data.utils.split_walk_forward import split_walk_forward
 from limen.data.utils.splits import split_random
 from limen.data.utils.random_slice import random_slice
 
@@ -15,4 +16,5 @@ __all__ = [
     'split_data_to_rule_based_prep_output',
     'split_random',
     'split_sequential',
+    'split_walk_forward',
 ]
