@@ -35,7 +35,7 @@ The reference has two layers.
 | Shared documentation system | information architecture, page composition, source-to-route invariants, visual tokens, interaction behavior, quality gates, parity evidence, rollout, and drift control | product names, product claims, product routes, repository coordinates, package inventories, risk wording, or narrative sequence |
 | Product profile | product identity, tagline, repository URL, site origin and base path, source inventory and routes, canonical terminology, product narrative, dependencies, examples, risk boundary, and ownership | shared rendering logic, shared CSS behavior, shared acceptance rules, or duplicated copies of the shared system |
 
-The current Limen implementation is the reference behavior, not yet a reusable package boundary. Product-specific values remain distributed across `product-docs.json`, `docusaurus.config.js`, `assemble-docs.mjs`, `custom.css`, `worker.js`, and `wrangler.jsonc`. Extraction happens only after Limen passes the parity protocol and the remaining gaps in this page are closed.
+The current Limen implementation is the reference behavior, not yet a reusable package boundary. Product-specific values remain distributed across `docs-site/product-docs.json`, `docs-site/docusaurus.config.js`, `docs-site/scripts/assemble-docs.mjs`, `docs-site/src/css/custom.css`, `docs-site/src/worker.js`, and `docs-site/wrangler.jsonc`. Extraction happens only after Limen passes the parity protocol and the remaining gaps in this page are closed.
 
 A shared package or preset is portable only when:
 
@@ -258,7 +258,7 @@ Use the narrowest authoritative source:
 | release behavior | current workflow and script |
 | hosted route | assembler map and Docusaurus build |
 | visual value | `docs-site/src/css/custom.css` |
-| deploy behavior or header | `worker.js`, `wrangler.jsonc`, and a production HTTP response |
+| deploy behavior or header | `docs-site/src/worker.js`, `docs-site/wrangler.jsonc`, and a production HTTP response |
 
 When prose and source disagree, fix the prose or explicitly route a separate behavior defect. Documentation work MUST NOT silently change runtime contracts.
 
@@ -299,7 +299,7 @@ Base `Manifest` is an abstract interface whose `prepare_data()` raises `NotImple
 | `tests/test_docs_surface.py` | source inventory, semantics, links, anchors, examples, versions, exports | shared test framework with Limen assertions |
 | `.github/workflows/pr_checks_docs_site.yml` | dependency install, audit, and required site check | candidate shared CI |
 
-`assemble-docs.mjs`:
+`docs-site/scripts/assemble-docs.mjs`:
 
 1. removes and recreates the generated docs directory
 2. maps every maintained source to one destination and route
@@ -501,7 +501,7 @@ Limen is not yet ready to be published as the shared system because:
 - accessibility is not audited by an automated required gate
 - screenshots are not captured and compared by a reproducible visual-regression gate
 - no performance budget blocks regression
-- product-specific values remain embedded outside `product-docs.json`
+- product-specific values remain embedded outside `docs-site/product-docs.json`
 
 These are implementation slices with their own task types and proof. They MUST be fixed in Limen and revalidated side by side before extraction.
 
