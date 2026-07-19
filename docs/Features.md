@@ -102,6 +102,7 @@ These helpers translate ordinary OHLCV bars into liquidity, impact, and slippage
 |---|---|---|
 | `dollar_volume` | `dollar_volume` | Price-times-volume activity proxy using close and volume. |
 | `amihud_illiquidity` | `amihud_illiquidity` | Absolute return per dollar of volume, a compact price-impact proxy. |
+| `volume_ratio` | `volume_ratio` | Volume relative to its simple-moving-average baseline. |
 | `return_per_dollar_volume` | `return_per_dollar_volume` | Signed return per dollar of volume for directional impact analysis. |
 | `range_per_dollar_volume` | `range_per_dollar_volume` | Bar range scaled by dollar volume. |
 | `illiquidity_shock` | `illiquidity_shock` | Current Amihud-style illiquidity relative to its own trailing mean. |
@@ -183,6 +184,7 @@ These helpers summarize cross-horizon agreement or disagreement on market state.
 |---|---|---|
 | `trend_coherence` | `trend_coherence` | Average sign agreement across short, medium, and long return horizons. |
 | `volatility_term_structure` | `volatility_term_structure` | Average ratio between short, medium, and long rolling volatility estimates. |
+| `sma_ratios` | `price_sma_<period>_ratio` per configured period | Close-to-SMA ratios across multiple horizons. |
 
 ## Breakout and regime features
 
@@ -257,6 +259,36 @@ These helpers need richer data than ordinary OHLCV bars.
 |---|---|---|
 | `kline_imbalance` | `imbalance` | Requires `maker_ratio` and `no_of_trades` from data retrieval or bar formation. |
 | `conserved_flux_renormalization` | synthetic OHLCV plus `value_sum`, `vwap`, `flux_rel_std_mean`, `flux_rel_std_var`, `entropy_mean`, `entropy_var`, `Δflux_rms`, `Δentropy_rms` | Works on trade-level `datetime`, `price`, and `quantity`, then rolls those into kline-aligned diagnostics. |
+
+## Dynamic-target and entry-score features
+
+This family builds volatility-conditioned targets, stops, and regime weights, plus the microstructure entry score they combine with. The helpers compose: `volatility_measure` and `regime_multiplier` feed `dynamic_target` and `dynamic_stop_loss`, the momentum and candle-position helpers feed `entry_score_microstructure`, and `feature_aliases` snapshots the family into `*_feature` columns with nulls filled.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `close_to_extremes` | `close_to_high`, `close_to_low` | Close position relative to bar high and low extremes. |
+| `dynamic_stop_loss` | `dynamic_stop_loss` | Volatility- and regime-conditioned stop-loss level. |
+| `dynamic_target` | `dynamic_target` | Volatility- and regime-conditioned target level. |
+| `ema_alignment` | `ema`, `ema_alignment` | EMA alignment score with power transformation. |
+| `entry_score_microstructure` | `entry_score`, `entry_score_base` | Microstructure timing score from momentum, spread, candle position, and volume spikes. |
+| `feature_aliases` | `dynamic_target_feature`, `entry_score_feature`, `momentum_score_feature`, `regime_high_feature`, `regime_low_feature`, `regime_normal_feature`, `vol_60h_feature`, `vol_percentile_feature` | Null-filled aliases snapshotting the family for model consumption. |
+| `log_returns` | `log_returns` | Logarithmic returns of the close series. |
+| `market_regime` | `market_favorable`, `volatility_ratio`, `returns_temp` | Trend-strength and volume-regime favorability flags. |
+| `micro_momentum` | `micro_momentum` | Short-horizon price momentum. |
+| `momentum_confirmation` | `momentum_score` | Momentum confirmation score from recent price changes. |
+| `momentum_periods` | `momentum_<period>` per configured period | Momentum over multiple horizons. |
+| `momentum_weight` | `momentum_weight` | Momentum-direction weighting factor. |
+| `position_in_candle` | `position_in_candle` | Close position within the bar high-low range. |
+| `position_in_range` | `position_in_range` | Close position within the bar high-low range over a rolling window. |
+| `regime_multiplier` | `regime_multiplier` | Volatility-regime multiplier for dynamic parameter adjustment. |
+| `returns_lags` | `returns_lag_<lag>` per configured lag | Lagged simple returns. |
+| `spread` | `spread` | Price spread as a percentage of close. |
+| `spread_percent` | `spread_percent` | High-low spread as a percentage of close. |
+| `volatility_1h` | `volatility_1h` | Alias of an existing volatility column at the one-hour horizon. |
+| `volatility_measure` | `volatility_measure` | Combined rolling-volatility and ATR-percentage measure. |
+| `volatility_weight` | `volatility_weight`, `returns_temp` | Inverse-volatility weighting factor. |
+| `volume_spike` | `volume_spike` | Volume relative to a rolling-statistics baseline. |
+| `volume_trend` | `volume_trend` | Short-term versus long-term volume average trend. |
 
 ## Choosing between indicators and features
 

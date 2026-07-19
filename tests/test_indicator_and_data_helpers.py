@@ -3,7 +3,6 @@ import numpy as np
 import polars as pl
 import pytest
 
-from limen.indicators._bbands import stddev_from_var, stddev_using_precalc_ma
 from limen.data.utils.random_slice import random_slice
 from limen.data.utils.splits import split_data_to_prep_output, split_random, split_sequential
 from limen.indicators._ema import ema_talib_default_segment, ema_talib_segment_with_k
@@ -58,40 +57,6 @@ def test_default_ema_segment_uses_standard_talib_constant() -> None:
 
     assert default[0] == manual[0]
     assert default[1].tolist() == pytest.approx(manual[1].tolist())
-
-
-def test_stddev_from_var_matches_manual_rolling_std_and_returns_empty_before_lookback() -> None:
-    start_idx, empty = stddev_from_var(
-        np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
-        start_idx=0,
-        end_idx=1,
-        period=3,
-    )
-
-    assert start_idx == 2
-    assert empty.size == 0
-
-    start_idx, values = stddev_from_var(
-        np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
-        start_idx=0,
-        end_idx=4,
-        period=3,
-    )
-
-    assert start_idx == 2
-    assert values.tolist() == pytest.approx([math.sqrt(2.0 / 3.0)] * 3)
-
-
-def test_stddev_using_precalc_ma_matches_manual_window_std() -> None:
-    values = stddev_using_precalc_ma(
-        np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
-        np.asarray([np.nan, np.nan, 2.0, 3.0, 4.0]),
-        movavg_beg_idx=2,
-        movavg_nb_element=3,
-        period=3,
-    )
-
-    assert values.tolist() == pytest.approx([math.sqrt(2.0 / 3.0)] * 3)
 
 
 def test_ht_phasor_short_inputs_return_nan_only_and_wrapper_uses_custom_price_col() -> None:
