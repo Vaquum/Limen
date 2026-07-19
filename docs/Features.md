@@ -184,7 +184,7 @@ These helpers summarize cross-horizon agreement or disagreement on market state.
 |---|---|---|
 | `trend_coherence` | `trend_coherence` | Average sign agreement across short, medium, and long return horizons. |
 | `volatility_term_structure` | `volatility_term_structure` | Average ratio between short, medium, and long rolling volatility estimates. |
-| `sma_ratios` | `price_sma_<period>_ratio` per configured period | Close-to-SMA ratios across multiple horizons. |
+| `sma_ratios` | `<price>_sma_<period>` and `sma_<period>_ratio` per configured period | Price-to-SMA ratios across multiple horizons, keeping the SMA columns. |
 
 ## Breakout and regime features
 
@@ -273,7 +273,7 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 | `entry_score_microstructure` | `entry_score`, `entry_score_base` | Microstructure timing score from momentum, spread, candle position, and volume spikes. |
 | `feature_aliases` | `dynamic_target_feature`, `entry_score_feature`, `momentum_score_feature`, `regime_high_feature`, `regime_low_feature`, `regime_normal_feature`, `vol_60h_feature`, `vol_percentile_feature` | Null-filled aliases snapshotting the family for model consumption. |
 | `log_returns` | `log_returns` | Logarithmic returns of the close series. |
-| `market_regime` | `market_favorable`, `volatility_ratio`, `returns_temp` | Trend-strength and volume-regime favorability flags. |
+| `market_regime` | `sma_20`, `sma_50`, `trend_strength`, `volatility_ratio`, `volume_sma`, `volume_regime`, `market_favorable` | Trend-strength and volume-regime favorability score. |
 | `micro_momentum` | `micro_momentum` | Short-horizon price momentum. |
 | `momentum_confirmation` | `momentum_score` | Momentum confirmation score from recent price changes. |
 | `momentum_periods` | `momentum_<period>` per configured period | Momentum over multiple horizons. |
@@ -286,7 +286,7 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 | `spread_percent` | `spread_percent` | High-low spread as a percentage of close. |
 | `volatility_1h` | `volatility_1h` | Alias of an existing volatility column at the one-hour horizon. |
 | `volatility_measure` | `volatility_measure` | Combined rolling-volatility and ATR-percentage measure. |
-| `volatility_weight` | `volatility_weight`, `returns_temp` | Inverse-volatility weighting factor. |
+| `volatility_weight` | `volatility`, `volatility_weight` | Inverse-volatility weighting factor. |
 | `volume_spike` | `volume_spike` | Volume relative to a rolling-statistics baseline. |
 | `volume_trend` | `volume_trend` | Short-term versus long-term volume average trend. |
 

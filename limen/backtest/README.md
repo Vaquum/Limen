@@ -17,8 +17,10 @@ Does **not** own signal generation, experiment logging, or portfolio bookkeeping
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `backtest_snapshot` | Vectorized evaluation across rounds | Import from `limen.backtest.backtest_snapshot` |
-| `long_flat_strategy` | Default execution model, or a template for a new strategy | Returns an `ExecutionResult`; import from `limen.backtest.long_flat_strategy` |
+| `backtest_snapshot` | Vectorized evaluation across rounds | `from limen.backtest import backtest_snapshot` |
+| `long_flat_strategy` | Default execution model, or a template for a new strategy | Returns an `ExecutionResult`; `from limen.backtest import long_flat_strategy` |
+
+The package root re-exports all three entry points (`backtest_snapshot`, `long_flat_strategy`, `ExecutionResult`); module-path imports keep working.
 
 ## Adjacent modules
 
