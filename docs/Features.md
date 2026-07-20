@@ -282,8 +282,8 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 | `position_in_range` | `position_in_range` | Close position within the bar high-low range over a rolling window. |
 | `regime_multiplier` | `regime_multiplier` | Volatility-regime multiplier for dynamic parameter adjustment. |
 | `returns_lags` | `returns_lag_<lag>` per configured lag | Lagged simple returns. |
-| `spread` | `spread` | Price spread as a percentage of close. |
-| `spread_percent` | `spread_percent` | High-low spread as a percentage of close. |
+| `spread` | `spread` | High-low range normalized by close (same formula as `range_pct`, but stored in a `spread` column). |
+| `spread_percent` | `spread_percent` | High-low range normalized by close, stored as `spread_percent` for microstructure scoring. |
 | `volatility_1h` | `volatility_1h` | Alias of an existing volatility column at the one-hour horizon. |
 | `volatility_measure` | `volatility_measure` | Combined rolling-volatility and ATR-percentage measure. |
 | `volatility_weight` | `volatility`, `volatility_weight` | Inverse-volatility weighting factor. |
