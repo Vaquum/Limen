@@ -1382,3 +1382,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add `fuzz/fuzz_yaml_manifest.py`, a coverage-guided Atheris harness driving `limen.yaml.parse` into `limen.yaml.validate` — both surfaces contractually collect errors without raising, so any uncaught exception under fuzz is a genuine finding — run time-boxed by the new non-required `Fuzz Smoke` workflow on every PR, weekly by schedule, and on manual dispatch; this is also the exact surface OpenSSF Scorecard credits for Python fuzzing (`import atheris`), correcting PRD #717's premise that Hypothesis would score the Fuzzing check (#735).
 - Pin the fuzzing engine in a tenth hashed install set (`requirements/ci/fuzz-tools`), keep the workflow inside the `--require-hashes` invariant, ship the harness in the sdist, and red any PR that drops the harness, its atheris import, the schedule cadence, or the hashed set via `test_supply_chain_surfaces` (#735).
+
+## [5.8.0] - 2026-07-19
+
+- Export the 23-module dynamic-target/entry-score/regime feature family and the production-used `volume_ratio` and `sma_ratios` into `limen.features` with documentation rows in `docs/Features.md`, closing the audit finding that ~18% of the feature library was unreachable through the public namespace (#750).
+- Give `limen.backtest` the explicit `__all__` re-export surface (`backtest_snapshot`, `long_flat_strategy`, `ExecutionResult`) every sibling package already has, and wire it into the export-documentation contract test (#750).
+- Delete the dead `limen/indicators/_bbands.py` helper and its orphan tests — `bbands.py` computes its own rolling standard deviation and no production module imported the helper (#750).

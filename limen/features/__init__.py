@@ -12,15 +12,21 @@ from limen.features.calendar_time_features import calendar_time_features
 from limen.features.close_ma_distance_atr import close_ma_distance_atr
 from limen.features.close_position import close_position
 from limen.features.close_position_rolling import close_position_rolling
+from limen.features.close_to_extremes import close_to_extremes
 from limen.features.conserved_flux_renormalization import conserved_flux_renormalization
 from limen.features.cusum_filter import cusum_filter
 from limen.features.cyclical_time_features import cyclical_time_features
-from limen.features.distance_from_ma import distance_from_ma
 from limen.features.distance_from_high import distance_from_high
 from limen.features.distance_from_low import distance_from_low
+from limen.features.distance_from_ma import distance_from_ma
 from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
 from limen.features.dollar_volume import dollar_volume
 from limen.features.downside_volatility_ratio import downside_volatility_ratio
+from limen.features.dynamic_stop_loss import dynamic_stop_loss
+from limen.features.dynamic_target import dynamic_target
+from limen.features.ema_alignment import ema_alignment
+from limen.features.entry_score_microstructure import entry_score_microstructure
+from limen.features.feature_aliases import feature_aliases
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.features.gap_high import gap_high
@@ -41,14 +47,22 @@ from limen.features.lagged_features import lag_range
 from limen.features.lagged_features import lag_range_cols
 from limen.features.liquidity_drop import liquidity_drop
 from limen.features.liquidity_range import liquidity_range
+from limen.features.log_returns import log_returns
 from limen.features.ma_slope_regime import ma_slope_regime
 from limen.features.maker_liquidity_share import maker_liquidity_share
 from limen.features.maker_volume_ratio import maker_volume_ratio
 from limen.features.maker_volume_share import maker_volume_share
+from limen.features.market_regime import market_regime
+from limen.features.micro_momentum import micro_momentum
+from limen.features.momentum_confirmation import momentum_confirmation
+from limen.features.momentum_periods import momentum_periods
+from limen.features.momentum_weight import momentum_weight
 from limen.features.narrow_range import narrow_range
 from limen.features.order_flow_imbalance import order_flow_imbalance
 from limen.features.parkinson_vol_of_vol import parkinson_vol_of_vol
 from limen.features.parkinson_volatility import parkinson_volatility
+from limen.features.position_in_candle import position_in_candle
+from limen.features.position_in_range import position_in_range
 from limen.features.price_lines import price_lines
 from limen.features.price_range_position import price_range_position
 from limen.features.price_vs_band_regime import price_vs_band_regime
@@ -60,38 +74,50 @@ from limen.features.range_per_dollar_volume import range_per_dollar_volume
 from limen.features.realized_kurtosis import realized_kurtosis
 from limen.features.realized_semivariance import realized_semivariance
 from limen.features.realized_skewness import realized_skewness
+from limen.features.regime_multiplier import regime_multiplier
+from limen.features.rejection_intensity import rejection_intensity
 from limen.features.relative_range_seasonality import relative_range_seasonality
 from limen.features.relative_volatility_seasonality import relative_volatility_seasonality
 from limen.features.relative_volume_seasonality import relative_volume_seasonality
-from limen.features.rejection_intensity import rejection_intensity
 from limen.features.return_autocorrelation import return_autocorrelation
 from limen.features.return_per_dollar_volume import return_per_dollar_volume
 from limen.features.return_volatility_correlation import return_volatility_correlation
+from limen.features.returns_lags import returns_lags
 from limen.features.rogers_satchell_volatility import rogers_satchell_volatility
 from limen.features.rolling_zscore import rolling_zscore
 from limen.features.sma_crossover import sma_crossover
+from limen.features.sma_ratios import sma_ratios
+from limen.features.spread import spread
+from limen.features.spread_percent import spread_percent
 from limen.features.stochastic_k_abs import stochastic_k_abs
-from limen.features.taker_imbalance_ratio import taker_imbalance_ratio
 from limen.features.tail_event_intensity import tail_event_intensity
+from limen.features.taker_imbalance_ratio import taker_imbalance_ratio
 from limen.features.time_to_funding import time_to_funding
 from limen.features.trade_density import trade_density
 from limen.features.trade_imbalance import trade_imbalance
 from limen.features.trade_size_ratio import trade_size_ratio
 from limen.features.trend_coherence import trend_coherence
 from limen.features.trend_strength import trend_strength
-from limen.features.volume_to_range import volume_to_range
-from limen.features.volume_volatility_correlation import volume_volatility_correlation
+from limen.features.volatility_1h import volatility_1h
+from limen.features.volatility_measure import volatility_measure
 from limen.features.volatility_of_volatility import volatility_of_volatility
 from limen.features.volatility_ratio import volatility_ratio
 from limen.features.volatility_spike import volatility_spike
 from limen.features.volatility_term_structure import volatility_term_structure
+from limen.features.volatility_weight import volatility_weight
+from limen.features.volume_ratio import volume_ratio
 from limen.features.volume_regime import volume_regime
+from limen.features.volume_spike import volume_spike
+from limen.features.volume_to_range import volume_to_range
+from limen.features.volume_trend import volume_trend
+from limen.features.volume_volatility_correlation import volume_volatility_correlation
 from limen.features.vpin import vpin
 from limen.features.vwap import vwap
 from limen.features.wick_imbalance import wick_imbalance
 from limen.features.wick_proportion import wick_proportion
 from limen.features.window_return_regime import window_return_regime
 from limen.features.yang_zhang_volatility import yang_zhang_volatility
+
 
 __all__ = [
     'absorption_intensity',
@@ -108,6 +134,7 @@ __all__ = [
     'close_ma_distance_atr',
     'close_position',
     'close_position_rolling',
+    'close_to_extremes',
     'conserved_flux_renormalization',
     'cusum_filter',
     'cyclical_time_features',
@@ -117,6 +144,11 @@ __all__ = [
     'dollar_bar_crash_reversal',
     'dollar_volume',
     'downside_volatility_ratio',
+    'dynamic_stop_loss',
+    'dynamic_target',
+    'ema_alignment',
+    'entry_score_microstructure',
+    'feature_aliases',
     'find_min_d',
     'fractional_diff',
     'gap_high',
@@ -137,14 +169,22 @@ __all__ = [
     'lag_range_cols',
     'liquidity_drop',
     'liquidity_range',
+    'log_returns',
     'ma_slope_regime',
     'maker_liquidity_share',
     'maker_volume_ratio',
     'maker_volume_share',
+    'market_regime',
+    'micro_momentum',
+    'momentum_confirmation',
+    'momentum_periods',
+    'momentum_weight',
     'narrow_range',
     'order_flow_imbalance',
     'parkinson_vol_of_vol',
     'parkinson_volatility',
+    'position_in_candle',
+    'position_in_range',
     'price_lines',
     'price_range_position',
     'price_vs_band_regime',
@@ -156,6 +196,7 @@ __all__ = [
     'realized_kurtosis',
     'realized_semivariance',
     'realized_skewness',
+    'regime_multiplier',
     'rejection_intensity',
     'relative_range_seasonality',
     'relative_volatility_seasonality',
@@ -163,9 +204,13 @@ __all__ = [
     'return_autocorrelation',
     'return_per_dollar_volume',
     'return_volatility_correlation',
+    'returns_lags',
     'rogers_satchell_volatility',
     'rolling_zscore',
     'sma_crossover',
+    'sma_ratios',
+    'spread',
+    'spread_percent',
     'stochastic_k_abs',
     'tail_event_intensity',
     'taker_imbalance_ratio',
@@ -175,12 +220,18 @@ __all__ = [
     'trade_size_ratio',
     'trend_coherence',
     'trend_strength',
+    'volatility_1h',
+    'volatility_measure',
     'volatility_of_volatility',
     'volatility_ratio',
     'volatility_spike',
     'volatility_term_structure',
+    'volatility_weight',
+    'volume_ratio',
     'volume_regime',
+    'volume_spike',
     'volume_to_range',
+    'volume_trend',
     'volume_volatility_correlation',
     'vpin',
     'vwap',

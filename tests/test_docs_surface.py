@@ -272,6 +272,7 @@ def test_package_docs_match_public_exports() -> None:
 
 def test_every_package_root_export_is_documented() -> None:
     package_names = (
+        'backtest',
         'calibration',
         'cli',
         'cohort',
