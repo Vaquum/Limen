@@ -8,5 +8,5 @@ authors:
 repository-code: "https://github.com/Vaquum/Limen"
 url: "https://docs.vaquum.fi/limen/"
 license: MIT
-version: "5.8.0"
-date-released: '2026-07-19'
+version: "5.8.1"
+date-released: '2026-07-21'

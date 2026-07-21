@@ -1388,3 +1388,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Export the 23-module dynamic-target/entry-score/regime feature family and the production-used `volume_ratio` and `sma_ratios` into `limen.features` with documentation rows in `docs/Features.md`, closing the audit finding that ~18% of the feature library was unreachable through the public namespace (#750).
 - Give `limen.backtest` the explicit `__all__` re-export surface (`backtest_snapshot`, `long_flat_strategy`, `ExecutionResult`) every sibling package already has, and wire it into the export-documentation contract test (#750).
 - Delete the dead `limen/indicators/_bbands.py` helper and its orphan tests — `bbands.py` computes its own rolling standard deviation and no production module imported the helper (#750).
+
+## [5.8.1] - 2026-07-21
+
+- Clear the four npm advisories that red the required `PR Checks Docs Site` gate on every branch — `body-parser` GHSA-v422-hmwv-36x6, `brace-expansion` GHSA-3jxr-9vmj-r5cp, `shell-quote` GHSA-395f-4hp3-45gv, and `webpack-dev-server` GHSA-f5vj-f2hx-8m93 + GHSA-m28w-2pqf-7qgj — by extending the `docs-site/package.json` overrides stanza with the advisories' fixed floors (`^1.20.6`, `^1.1.16`, `^1.8.5`, `^5.2.6`) and regenerating the site lockfile; `test_supply_chain_surfaces` gains the four override asserts and resolved-version floor pins so a future lockfile regeneration cannot silently reintroduce them (#753).
