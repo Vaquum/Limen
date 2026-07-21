@@ -151,7 +151,7 @@ class UniversalExperimentLoop:
     def run(self,
             experiment_name: str,
             n_permutations: int = 10000,
-            prep_each_round: bool = False,
+            prep_each_round: bool | None = None,
             random_search: bool = True,
             maintain_details_in_params: bool = False,
             context_params: dict[str, Any] | None = None,
@@ -173,7 +173,7 @@ class UniversalExperimentLoop:
         Args:
             experiment_name (str): The name of the experiment
             n_permutations (int): The number of permutations to run
-            prep_each_round (bool): Whether to use `prep` for each round or just first
+            prep_each_round (bool | None): Whether to use `prep` for each round or just first; None auto-resolves to True for manifest-driven SFDs and False otherwise
             random_search (bool): Whether to use random search or not
             maintain_details_in_params (bool): Whether to maintain experiment details in params
             context_params (dict): The context parameters to use for the experiment
@@ -216,10 +216,13 @@ class UniversalExperimentLoop:
                 raise ValueError(
                     'UniversalExperimentLoop Cannot override prep/model when SFD has manifest.'
                 )
-            if not prep_each_round:
+            if prep_each_round is False:
                 raise ValueError(
                     'UniversalExperimentLoop prep_each_round must be True for manifest-driven SFDs.'
                 )
+
+        if prep_each_round is None:
+            prep_each_round = self.manifest is not None
 
         if params is not None:
             self.params = params()

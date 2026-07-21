@@ -100,7 +100,7 @@ This style is how Limen's foundational SFDs are built.
 
 ### Runtime rules for manifest-driven SFDs
 
-- `limen run` sets `prep_each_round` from YAML; direct `UniversalExperimentLoop.run(prep_each_round=True)` is required
+- `limen run` sets `prep_each_round` from YAML; direct `UniversalExperimentLoop.run()` auto-resolves `prep_each_round` to `True`, and an explicit `prep_each_round=False` is rejected
 - `prep` and `model` cannot be overridden in `run()`
 - when `data=` is omitted, Limen fetches data from the manifest
 

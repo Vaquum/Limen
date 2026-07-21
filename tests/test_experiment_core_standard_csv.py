@@ -258,6 +258,103 @@ def test_standard_run_batches_live_log_without_changing_row_output() -> None:
         experiment_core.STANDARD_RUN_LOG_BATCH_SIZE = original_batch_size
 
 
+class _StandardCsvFakeManifest:
+    data_source_config = object()
+    test_data_source_config = None
+
+    def __init__(self) -> None:
+        self.prepare_calls = 0
+
+    def architecture_function(self, data: dict, **kw: dict) -> dict:
+        return {}
+
+    def prepare_data(self, data: pl.DataFrame, round_params: dict) -> dict:
+        self.prepare_calls += 1
+        return _standard_csv_test_prep(data, round_params)
+
+    def run_model(self, data: dict, round_params: dict) -> dict:
+        return _standard_csv_test_model(data, round_params)
+
+
+def _make_standard_csv_manifest_sfd() -> SimpleNamespace:
+    manifest = _StandardCsvFakeManifest()
+    return SimpleNamespace(
+        params=lambda: {'marker': [0, 1]},
+        manifest=lambda: manifest,
+    )
+
+
+def test_standard_run_manifest_default_auto_resolves_prep_each_round() -> None:
+    sfd = _make_standard_csv_manifest_sfd()
+    manifest = sfd.manifest()
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+        uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+        uel.run(
+            experiment_name=experiment_name,
+            n_permutations=2,
+            random_search=False,
+        )
+
+    assert manifest.prepare_calls == 2
+    assert uel.experiment_log.height == 2
+
+
+def test_standard_run_manifest_explicit_prep_each_round_false_raises() -> None:
+    sfd = _make_standard_csv_manifest_sfd()
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+        uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+
+        with pytest.raises(ValueError, match='prep_each_round must be True for manifest-driven SFDs'):
+            uel.run(
+                experiment_name=experiment_name,
+                n_permutations=1,
+                prep_each_round=False,
+                random_search=False,
+            )
+
+
+def test_standard_run_custom_sfd_default_auto_resolves_prep_first_round_only() -> None:
+    prep_calls = []
+
+    def _counting_prep(data: pl.DataFrame, round_params: dict | None = None) -> dict:
+        prep_calls.append(True)
+        return _standard_csv_test_prep(data, round_params)
+
+    sfd = SimpleNamespace(
+        params=lambda: {'marker': [0, 1]},
+        prep=_counting_prep,
+        model=_standard_csv_test_model,
+    )
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+        uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+        uel.run(
+            experiment_name=experiment_name,
+            n_permutations=2,
+            random_search=False,
+        )
+
+    assert len(prep_calls) == 1
+    assert uel.experiment_log.height == 2
+
+
 def test_standard_run_skips_post_processing_by_default() -> None:
     sfd = SimpleNamespace(
         params=lambda: {'marker': [0]},

@@ -47,7 +47,7 @@ experiment/
 
 ## Things to know
 
-- Manifest-driven SFDs require `prep_each_round=True`.
+- Manifest-driven SFDs run prep every round: `prep_each_round` auto-resolves to `True` at its default, and explicit `False` is rejected.
 - The basic `run()` path uses legacy `ParamSpace`. The advanced path adds `SearchStrategy`, `ParamDomain`, `MSQ`, checkpoints, and feedback hooks.
 - When `experiment_dir` is set, Limen writes all major artifacts under one directory, including checkpoint, audit, round-data, and results files.
 - Results are appended incrementally during a run, so experiment files should be treated as durable artifacts rather than temporary output.
