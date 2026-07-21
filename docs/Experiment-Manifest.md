@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.8.1"
+  limen_version: "5.9.0"
   mode: development
 
 sfd:
@@ -98,7 +98,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 |---|---|---|---|
 | `n_permutations` | int | required | round budget; rejected if bool, zero, negative, or larger than the parameter space |
 | `search_strategy.type` | `random` or `grid` | `random` | `random` lazily samples the parameter space; `grid` enumerates it exhaustively |
-| `prep_each_round` | bool | `true` | run prep every round; required for manifest-driven SFDs |
+| `prep_each_round` | bool | `true` | run prep every round; `false` is rejected for manifest-driven SFDs |
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |

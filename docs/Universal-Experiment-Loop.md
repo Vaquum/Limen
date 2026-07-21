@@ -12,7 +12,7 @@ This page covers:
 ## Prerequisites
 
 - a validated YAML manifest for the CLI path, or an SFD plus compatible data for direct Python use
-- `prep_each_round=True` for manifest-driven SFDs
+- `prep_each_round` at its default (or `True`) for manifest-driven SFDs; explicit `False` is rejected
 - an `experiment_dir` and `SearchStrategy` for checkpointed advanced runs
 
 ## Preferred execution path
@@ -127,7 +127,7 @@ uel.run(
 |---|---|
 | `experiment_name` | run name and CSV path stem; `my_experiment` writes `my_experiment.csv`, or `experiment_dir/my_experiment.csv` when `experiment_dir` is set on the standard path |
 | `n_permutations` | positive integer number of rounds to execute; YAML validation rejects bool, zero, negative, and values larger than the available parameter space |
-| `prep_each_round` | whether prep runs every round; required for manifest-driven SFDs |
+| `prep_each_round` | whether prep runs every round; the default auto-resolves to `True` for manifest-driven SFDs and `False` for custom SFDs, and explicit `False` is rejected for manifest-driven SFDs |
 | `random_search` | random versus deterministic parameter generation on the standard path |
 | `context_params` | extra static keys injected into every round |
 | `params`, `prep`, `model` | optional overrides for the standard path |
@@ -139,7 +139,7 @@ uel.run(
 
 If the SFD uses `manifest()`:
 
-- `prep_each_round=True` is required
+- `prep_each_round` auto-resolves to `True` at its default; explicit `prep_each_round=False` raises
 - `prep=` and `model=` overrides are not allowed
 - `params=` override is allowed
 
@@ -148,7 +148,7 @@ If the SFD uses `manifest()`:
 If the SFD uses custom `prep()` and `model()`:
 
 - `data=` must be provided when UEL is instantiated
-- `prep_each_round` can be `True` or `False`, depending on whether prep depends on round params
+- `prep_each_round` can be `True` or `False` (the default auto-resolves to `False`), depending on whether prep depends on round params
 - `params=`, `prep=`, and `model=` overrides are available on the standard path
 
 ## What UEL stores after a run
@@ -294,9 +294,9 @@ For the full advanced-search contract, continue to [Advanced Search](Advanced-Se
 
 ## Common Errors
 
-### Manifest-driven runs require `prep_each_round=True`
+### Manifest-driven runs reject `prep_each_round=False`
 
-A manifest-driven SFD with `prep_each_round=False` raises `prep_each_round must be True for manifest-driven SFDs`. Set `prep_each_round=True`.
+A manifest-driven SFD with an explicit `prep_each_round=False` raises `prep_each_round must be True for manifest-driven SFDs`. Leave `prep_each_round` at its default to auto-resolve to `True`, or pass `True` explicitly.
 
 ### Manifest-driven runs cannot override `prep` or `model`
 
