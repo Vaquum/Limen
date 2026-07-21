@@ -211,6 +211,11 @@ class UniversalExperimentLoop:
             )
             return
 
+        if prep_each_round is not None and not isinstance(prep_each_round, bool):
+            raise TypeError(
+                'UniversalExperimentLoop prep_each_round must be a bool or None.'
+            )
+
         if self.manifest is not None:
             if prep is not None or model is not None:
                 raise ValueError(
