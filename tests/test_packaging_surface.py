@@ -264,6 +264,10 @@ def test_supply_chain_surfaces() -> None:
     site_package = json.loads((ROOT / 'docs-site' / 'package.json').read_text(encoding='utf-8'))
     assert site_package['overrides']['js-yaml@^4'] == '^4.2.0'
     assert site_package['overrides']['markdown-it'] == '^14.2.0'
+    assert site_package['overrides']['body-parser'] == '^1.20.6'
+    assert site_package['overrides']['brace-expansion'] == '^1.1.16'
+    assert site_package['overrides']['shell-quote'] == '^1.8.5'
+    assert site_package['overrides']['webpack-dev-server'] == '^5.2.6'
     site_lock = json.loads((ROOT / 'docs-site' / 'package-lock.json').read_text(encoding='utf-8'))
     js_yaml_versions = {
         tuple(int(part) for part in pkg['version'].split('.')[:3])
@@ -279,6 +283,20 @@ def test_supply_chain_surfaces() -> None:
     }
     assert markdown_it_versions
     assert all(v >= (14, 2, 0) for v in markdown_it_versions)
+    advisory_floors = {
+        'body-parser': (1, 20, 6),
+        'brace-expansion': (1, 1, 16),
+        'shell-quote': (1, 8, 5),
+        'webpack-dev-server': (5, 2, 6),
+    }
+    for package_name, floor in advisory_floors.items():
+        resolved_versions = {
+            tuple(int(part) for part in pkg['version'].split('.')[:3])
+            for key, pkg in site_lock['packages'].items()
+            if key.endswith(f'node_modules/{package_name}')
+        }
+        assert resolved_versions, package_name
+        assert all(v >= floor for v in resolved_versions), (package_name, resolved_versions)
 
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script
