@@ -30,6 +30,13 @@ from limen.yaml.store import canonical_manifest_id
 
 logger = logging.getLogger(__name__)
 
+
+def _validate_prep_each_round_arg(value: object) -> None:
+    if value is not None and not isinstance(value, bool):
+        raise TypeError(
+            'UniversalExperimentLoop prep_each_round must be a bool or None.'
+        )
+
 STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
 
@@ -211,11 +218,7 @@ class UniversalExperimentLoop:
             )
             return
 
-        prep_each_round_arg: object = prep_each_round
-        if prep_each_round_arg is not None and not isinstance(prep_each_round_arg, bool):
-            raise TypeError(
-                'UniversalExperimentLoop prep_each_round must be a bool or None.'
-            )
+        _validate_prep_each_round_arg(prep_each_round)
 
         if self.manifest is not None:
             if prep is not None or model is not None:
