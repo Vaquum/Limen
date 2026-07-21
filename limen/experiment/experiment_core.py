@@ -211,7 +211,8 @@ class UniversalExperimentLoop:
             )
             return
 
-        if prep_each_round is not None and not isinstance(prep_each_round, bool):
+        prep_each_round_arg: object = prep_each_round
+        if prep_each_round_arg is not None and not isinstance(prep_each_round_arg, bool):
             raise TypeError(
                 'UniversalExperimentLoop prep_each_round must be a bool or None.'
             )
