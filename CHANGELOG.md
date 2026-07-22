@@ -1406,3 +1406,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Restore the explicit `prep_each_round` contract in `UniversalExperimentLoop.run`, reverting the 5.9.0 auto-resolve: the parameter is `bool = False` again and manifest-driven SFDs require an explicit `prep_each_round=True`, failing loud otherwise — implicit inference of a run-defining setting contradicted the explicit, fail-loud design law, and the documented samples now show the argument instead (#756).
 - Keep the 5.9.0 intake hardening, tightened to the restored contract: non-bool `prep_each_round` values (`0`, `None`, `numpy.bool_`) raise `TypeError` before any guard, and the contract tests re-pin the explicit behavior (default raises for manifest-driven SFDs, explicit `True` preps every round, custom-SFD default preps first round only) (#756).
+
+## [5.9.3] - 2026-07-22
+
+- Reconcile API-posted `pr_checks_slice` check-runs at verdict delivery in the on-issue and sweep recovery workflows: an API-posted check-run outranks the workflow-run entries of the same name and only a newer POST supersedes it, so a fallback failure POSTed while the canonical run was still in progress kept PR #757 blocked after the canonical run was rerun green — delivery now classifies check-runs by check suite, POSTs a superseding verdict whenever the latest API-posted check-run disagrees, and falls back to a fail-closed POST only when no surface carries a verdict at all (#760).
+- Truncate the on-issue fallback summary with a parameter expansion instead of the SIGPIPE-prone `printf | head -c` pipe (the sweep's existing form), and pin the reconciliation markers (`check_suite_id`, `LATEST_POSTED`) plus the truncation form in `test_governance_hardening_surfaces` (#760).

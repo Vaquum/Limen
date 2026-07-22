@@ -15,15 +15,23 @@ name: pr_checks_slice_on_issue
 # changes, which immediately invalidates or re-validates the PR's
 # required check status.
 #
-# GitHub branch protection aggregates multiple check-runs of the same
-# name on the same SHA by treating the MOST RECENT as authoritative.
-# So posting a failure here immediately blocks merge until either the
-# issue is restored or the PR is updated.
+# GitHub branch protection does not treat the most recent check-run of
+# a name as authoritative: once an API-posted check-run exists on a
+# head SHA it outranks the workflow-run entries of the same name, and
+# only a newer API-posted check-run supersedes it (observed on PR #757,
+# where a fallback failure POSTed while the canonical run was still in
+# progress kept the merge blocked after the canonical run was rerun
+# green). Posting a failure here therefore blocks merge immediately,
+# and delivery must repost whenever a stale API-posted verdict
+# disagrees with the fresh one -- rerunning the canonical run alone
+# never clears it.
 #
 # Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5844b;
 # adapted for Limen: Python 3.10 (CI parity), and the rerun set extended
 # to sibling slice PRs because rule 9's verdict depends on the parent
-# PRD's other open slices, not only on the issue a PR cites.
+# PRD's other open slices, not only on the issue a PR cites. The
+# API-posted reconciliation is filed upstream as Vaquum/new-repository-template#91 per
+# the no-drift policy.
 
 on:
   issues:
@@ -200,39 +208,69 @@ jobs:
               TITLE_OUT="Slice gate FAILED after issue #$ISSUE_NUM change"
             fi
 
-            # Rerun-first delivery (S724): the pull_request-event run is
-            # the canonical checks-UI entry and a workflow run's
-            # conclusion is immutable unless rerun -- an API-posted
-            # check-run satisfies branch protection but leaves the old
-            # red run visible forever. If the latest completed canonical
-            # run disagrees with the verdict just computed, rerun it so
-            # the UI shows a single truthful entry; fall back to the
-            # check-run POST only when no rerunnable canonical run
-            # exists (fail-closed, unchanged contract).
-            CANONICAL=$(gh api \
-              "repos/$REPO/actions/workflows/pr_checks_slice.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=completed&per_page=1" \
-              --jq '.workflow_runs[0] // empty')
+            # Rerun-first delivery with API-posted reconciliation
+            # (S724, S760): the pull_request-event run is the
+            # canonical checks-UI entry and a workflow run's conclusion
+            # is immutable unless rerun, so a canonical run that
+            # disagrees with the fresh verdict is healed by rerun. An
+            # API-posted check-run is immutable too, and branch
+            # protection keeps honouring it even after a later
+            # canonical run lands the opposite verdict (PR #757), so a
+            # fresh POST of the same name is its only supersession.
+            # Delivery reconciles both surfaces: rerun the canonical
+            # run when it disagrees, POST when the latest API-posted
+            # check-run disagrees, and POST fail-closed when neither
+            # surface carries a verdict at all. Check-runs inside the
+            # check suites of pr_checks_slice.yml's own workflow runs
+            # are job-backed; every other completed check-run of the
+            # name is an API-posted fallback.
+            RUNS=$(gh api \
+              "repos/$REPO/actions/workflows/pr_checks_slice.yml/runs?head_sha=$HEAD_SHA&per_page=100" \
+              --jq '.workflow_runs')
+            SUITES=$(echo "$RUNS" | jq '[.[].check_suite_id]')
+            CANONICAL=$(echo "$RUNS" | jq -c \
+              '[.[] | select(.event == "pull_request" and .status == "completed")][0] // empty')
+            gh api \
+              "repos/$REPO/commits/$HEAD_SHA/check-runs?check_name=pr_checks_slice&per_page=100&filter=all" \
+              --paginate --jq '.check_runs[]' > check_runs.jsonl
+            LATEST_POSTED=$(jq -rs --argjson suites "$SUITES" \
+              '[.[] | select(.status == "completed")
+                    | .check_suite.id as $s | select(($suites | index($s)) == null)]
+               | sort_by(.completed_at) | last | .conclusion // empty' check_runs.jsonl)
+
+            DELIVER=""
+            if [ -n "$LATEST_POSTED" ] && [ "$LATEST_POSTED" != "$CONCLUSION" ]; then
+              DELIVER="latest API-posted check-run is $LATEST_POSTED; superseding"
+            fi
             if [ -n "$CANONICAL" ]; then
               RUN_ID=$(echo "$CANONICAL" | jq -r .id)
               RUN_CONCLUSION=$(echo "$CANONICAL" | jq -r .conclusion)
-              if [ "$RUN_CONCLUSION" = "$CONCLUSION" ]; then
-                echo "canonical run $RUN_ID already $CONCLUSION; nothing to deliver"
-                echo "::endgroup::"
-                continue
+              if [ "$RUN_CONCLUSION" != "$CONCLUSION" ]; then
+                if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
+                  echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION)"
+                else
+                  DELIVER="rerun of canonical run $RUN_ID failed; falling back to check-run POST"
+                fi
+              else
+                echo "canonical run $RUN_ID already $CONCLUSION"
               fi
-              if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
-                echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION)"
-                echo "::endgroup::"
-                continue
-              fi
-              echo "rerun of canonical run $RUN_ID failed; falling back to check-run POST"
-            else
-              echo "no completed canonical run for $HEAD_SHA; falling back to check-run POST"
+            elif [ -z "$LATEST_POSTED" ]; then
+              DELIVER="no completed canonical run and no API-posted check-run for $HEAD_SHA; posting fail-closed"
             fi
+            if [ -z "$DELIVER" ]; then
+              echo "verdict $CONCLUSION already delivered for $HEAD_SHA; nothing to post"
+              echo "::endgroup::"
+              continue
+            fi
+            echo "$DELIVER"
 
-            # Keep output.summary under the 65 KB API limit.
+            # Keep output.summary under the 65 KB API limit. Truncation
+            # uses a parameter expansion, not a pipe: with pipefail, a
+            # `printf | head -c` pipeline dies by SIGPIPE exactly when
+            # output is long enough to truncate, aborting the loop.
             SUMMARY=$(printf 'Triggered by issue #%s change.\n\n```\n%s\n```\n' \
-              "$ISSUE_NUM" "$GATE_OUT" | head -c 60000)
+              "$ISSUE_NUM" "$GATE_OUT")
+            SUMMARY=${SUMMARY:0:60000}
 
             # Post the check-run. Using the same name the pull_request
             # workflow uses ensures branch protection sees this as the

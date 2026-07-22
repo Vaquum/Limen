@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: lightgbm_binary_experiment
-  limen_version: "5.9.2"
+  limen_version: "5.9.3"
   mode: development
   description: LightGBM tradeline long-binary classifier with line-geometry features, train-fitted breakout target, calibration, and swept costs
 
