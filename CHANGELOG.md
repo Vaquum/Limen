@@ -1401,3 +1401,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.9.1] - 2026-07-22
 
 - Clear the two npm advisories published upstream overnight that red the required `PR Checks Docs Site` gate on every branch — `fast-uri` GHSA-4c8g-83qw-93j6 + GHSA-v2hh-gcrm-f6hx and `svgo` GHSA-2p49-hgcm-8545, both high — by extending the `docs-site/package.json` overrides stanza with the advisories' fixed floors (`^3.1.4`, `^3.3.4`) and regenerating the site lockfile; `test_supply_chain_surfaces` gains the two override asserts and resolved-version floor pins, the same guardrail shape as #753's four (#758).
+
+## [5.9.2] - 2026-07-22
+
+- Restore the explicit `prep_each_round` contract in `UniversalExperimentLoop.run`, reverting the 5.9.0 auto-resolve: the parameter is `bool = False` again and manifest-driven SFDs require an explicit `prep_each_round=True`, failing loud otherwise — implicit inference of a run-defining setting contradicted the explicit, fail-loud design law, and the documented samples now show the argument instead (#756).
+- Keep the 5.9.0 intake hardening, tightened to the restored contract: non-bool `prep_each_round` values (`0`, `None`, `numpy.bool_`) raise `TypeError` before any guard, and the contract tests re-pin the explicit behavior (default raises for manifest-driven SFDs, explicit `True` preps every round, custom-SFD default preps first round only) (#756).

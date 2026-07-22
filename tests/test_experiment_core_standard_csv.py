@@ -284,7 +284,26 @@ def _make_standard_csv_manifest_sfd() -> SimpleNamespace:
     )
 
 
-def test_standard_run_manifest_default_auto_resolves_prep_each_round() -> None:
+def test_standard_run_manifest_default_prep_each_round_raises() -> None:
+    sfd = _make_standard_csv_manifest_sfd()
+
+    with TemporaryDirectory() as tmpdir:
+        experiment_name = str(Path(tmpdir) / 'standard_csv')
+
+        uel = UniversalExperimentLoop(
+            data=_make_standard_csv_test_data(),
+            sfd=sfd,
+        )
+
+        with pytest.raises(ValueError, match='prep_each_round must be True for manifest-driven SFDs'):
+            uel.run(
+                experiment_name=experiment_name,
+                n_permutations=2,
+                random_search=False,
+            )
+
+
+def test_standard_run_manifest_explicit_true_preps_every_round() -> None:
     sfd = _make_standard_csv_manifest_sfd()
     manifest = sfd.manifest()
 
@@ -298,6 +317,7 @@ def test_standard_run_manifest_default_auto_resolves_prep_each_round() -> None:
         uel.run(
             experiment_name=experiment_name,
             n_permutations=2,
+            prep_each_round=True,
             random_search=False,
         )
 
@@ -317,7 +337,7 @@ def test_standard_run_non_bool_prep_each_round_raises() -> None:
         )
 
         non_bool_prep_each_round: object = 0
-        with pytest.raises(TypeError, match='prep_each_round must be a bool or None'):
+        with pytest.raises(TypeError, match='prep_each_round must be a bool'):
             uel.run(
                 experiment_name=experiment_name,
                 n_permutations=1,
@@ -346,7 +366,7 @@ def test_standard_run_manifest_explicit_prep_each_round_false_raises() -> None:
             )
 
 
-def test_standard_run_custom_sfd_default_auto_resolves_prep_first_round_only() -> None:
+def test_standard_run_custom_sfd_default_preps_first_round_only() -> None:
     prep_calls = []
 
     def _counting_prep(data: pl.DataFrame, round_params: dict | None = None) -> dict:
