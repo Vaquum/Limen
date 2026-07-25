@@ -318,6 +318,12 @@ def test_governance_hardening_surfaces() -> None:
     on_issue = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_on_issue.yml').read_text(encoding='utf-8')
     assert 'actions/runs' in on_issue
     assert on_issue.count('actions: write') == 1
+    # A stale API-posted check-run outlives a green canonical rerun
+    # (PR #757); delivery must classify check-runs by check suite and
+    # supersede a disagreeing API-posted verdict with a fresh POST.
+    assert 'check_suite_id' in on_issue
+    assert 'LATEST_POSTED' in on_issue
+    assert '"$GATE_OUT" | head -c' not in on_issue
     readiness = (ROOT / '.github' / 'workflows' / 'pr_merge_readiness.yml').read_text(encoding='utf-8')
     assert 'pull_request_review:' in readiness
     assert 'pull_request_review_comment:' in readiness
@@ -332,6 +338,8 @@ def test_governance_hardening_surfaces() -> None:
     assert 'governance/slice_gate.py' in sweep_workflow
     assert 'actions/runs' in sweep_workflow
     assert sweep_workflow.count('actions: write') == 1
+    assert 'check_suite_id' in sweep_workflow
+    assert 'LATEST_POSTED' in sweep_workflow
     common_path = ROOT / 'governance' / '_common.py'
     spec = importlib.util.spec_from_file_location('governance_common', common_path)
     assert spec is not None
