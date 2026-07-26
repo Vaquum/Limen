@@ -2,6 +2,7 @@
   "name": "Protect-Main",
   "target": "branch",
   "enforcement": "active",
+  "bypass_actors": [],
   "conditions": {
     "ref_name": {
       "exclude": [],
@@ -105,8 +106,5 @@
         ]
       }
     }
-  ],
-  "id": 5406995,
-  "source_type": "Repository",
-  "source": "Vaquum/Limen"
+  ]
 }

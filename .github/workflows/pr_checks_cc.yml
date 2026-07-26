@@ -1,14 +1,10 @@
 name: pr_checks_cc
 
 # Mechanical Conventional Commits gate. The deterministic rules (PR title,
-# commit messages, linked slice-issue titles, allowed types, and the AI/LLM
+# commit messages, linked-issue title, allowed types, and the AI/LLM
 # attribution scan) are defined once, in governance/cc_gate.py's module
 # docstring (the single source); this workflow only runs it. No graceful
 # skip, no optional mode, no bypass flag.
-#
-# Adopted from Vaquum/new-repository-template@405b84d341333993fb12593f999e55576cb38d1a;
-# adapted for Limen: Python 3.10 (CI parity), SHA-pinned actions with
-# persist-credentials disabled (v5.1.0 supply-chain law).
 
 on:
   pull_request:
@@ -38,13 +34,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
-          fetch-depth: 0  # need full history for git log base..head
           persist-credentials: false
+          fetch-depth: 0  # need full history for git log base..head
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.10'
 
@@ -68,10 +64,13 @@ jobs:
 
       - name: Resolve base and head refs
         id: refs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           BASE_REF="origin/${{ github.base_ref }}"
-          git fetch origin "${{ github.base_ref }}"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          git -c "http.https://github.com/.extraheader=$AUTH" fetch origin "${{ github.base_ref }}"
           git rev-parse --verify "$BASE_REF" >/dev/null
           HEAD_REF="${{ github.event.pull_request.head.sha }}"
           git rev-parse --verify "$HEAD_REF" >/dev/null

@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "5.9.5"
+version = "5.10.0"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -78,7 +78,7 @@ dev = [
   "pyright>=1.1.408,<1.1.409",
   "pyroma>=5,<6",
   "pytest>=8,<10",
-  "ruff>=0.8,<1",
+  "ruff>=0.15.21,<0.15.22",
   "scipy-stubs>=1.15,<1.16",
   "tomli>=2.0,<3",
   "twine>=6,<7",
@@ -234,7 +234,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
 "governance/*.py" = ["T201", "S603", "S607", "PLR5501", "PLR0911", "PLR2004", "B007", "PTH123"]
-"governance/tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
+"governance/tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607", "S102", "S108"]
 "tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
 "limen/targets/*.py" = ["ARG002"]
 "limen/cli/**/*.py" = ["S603"]
