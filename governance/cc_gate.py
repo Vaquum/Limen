@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """Conventional Commits gate -- hard-fail on any deviation.
 
-Adopted from Vaquum/new-repository-template@405b84d341333993fb12593f999e55576cb38d1a
-(governance/cc_gate.py); adapted for Limen: the linked-issue rule checks
-every closing-referenced issue that carries the ``slice`` label instead
-of upstream's single-reference short-circuit, because under slice-gate
-rule 9 the last slice's PR closes {slice, parent PRD} and the
-short-circuit would skip slice-title validation exactly there. PRD
-titles stay exempt. The divergence is filed upstream
-(Vaquum/new-repository-template#61).
+The linked-issue rule checks every closing-referenced issue rather
+than short-circuiting on a single reference: under slice-gate rule 9
+the last slice's PR closes {slice, parent PRD}, and a single-reference
+short-circuit would skip slice-title validation exactly there. Only
+parent PRDs — issues carrying the ``planning`` label — are exempt,
+because the PRD title format is not a Conventional Commits subject.
 
 This gate enforces the Conventional Commits v1.0.0 specification on:
 
   1. The PR title.
-  2. The title of every slice-labelled issue the PR closes (resolved
-     by the same Closes/Fixes/Resolves #N rule the slice gate uses;
-     reference-count discipline and unresolvable references are the
-     slice gate's concern, not duplicated here).
+  2. The title of every issue the PR closes except ``planning``-labelled
+     parent PRDs (resolved by the same Closes/Fixes/Resolves #N rule
+     the slice gate uses; reference-count discipline and unresolvable
+     references are the slice gate's concern, not duplicated here).
   3. Every non-merge commit message in the PR's commit range
      (``$BASE..$HEAD``).
 
@@ -86,20 +84,23 @@ ATTRIBUTION_EXEMPT_RE: Final[re.Pattern[str]] = re.compile(
     r'\b[\w-]+\.md\b|\bcopilot(?:[ -]code)?[ -]review\b',
     re.IGNORECASE,
 )
-# Limen divergence from upstream: the bare tokens ``gemini``, ``cursor``,
-# ``llm``, and unqualified ``generated with`` collide with legitimate
-# domain vocabulary (the Gemini crypto exchange, database cursors,
-# "generated with <tool>") and would hard-fail a required gate on text
-# that names no AI assistant. They are narrowed to AI-qualified forms;
-# every unambiguous marker stays bare. Filed upstream.
+# The bare tokens ``gemini``, ``cursor``, ``llm``, and unqualified
+# ``generated with`` collide with legitimate domain vocabulary (the
+# Gemini crypto exchange, database cursors, "generated with <tool>")
+# and would hard-fail a required gate on text that names no AI
+# assistant. They are narrowed to AI-qualified forms; every unambiguous
+# marker stays bare. ``api`` and ``code`` are deliberately not Gemini
+# qualifiers — "Gemini API client" is exchange vocabulary — and the
+# co-author alternation is word-bounded so a surname like Hillman
+# cannot match ``llm`` as a substring.
 ATTRIBUTION_RE: Final[re.Pattern[str]] = re.compile(
     r'\bclaude\b|\bcodex\b|\bchatgpt\b|\bgpt-?\d\b|\bcopilot\b'
-    r'|\bgoogle[ -]gemini\b|\bgemini[ -](?:pro|ultra|flash|cli|api|code)\b'
+    r'|\bgoogle[ -]gemini\b|\bgemini[ -](?:pro|ultra|flash|cli)\b'
     r'|\bcursor[ -](?:ai|ide|agent|editor)\b'
     r'|\banthropic\b|\bopenai\b|\bai[ -]?assistant\b'
     r'|\bllm[ -](?:assist(?:ant|ed)|generated|written|authored)\b'
     r'|generated[ -]with[ -](?:an?[ -])?(?:claude|chatgpt|codex|copilot|cursor|gemini|gpt|llm|ai)\b'
-    r'|co-authored-by:\s*.*(?:claude|openai|anthropic|chatgpt|codex|copilot|cursor|gemini|gpt|llm)',
+    r'|co-authored-by:\s*.*\b(?:claude|openai|anthropic|chatgpt|codex|copilot|cursor|gemini|gpt|llm)\b',
     re.IGNORECASE,
 )
 
@@ -294,21 +295,23 @@ def gate(
         if err is not None:
             failures.append(f'commit {sha[:8]} subject {subject!r} {err}.')
 
-    # Rule 3: linked slice-issue titles. Reference-count discipline is
-    # a slice_gate concern; cc_gate checks CC on every closing-referenced
-    # issue that carries the ``slice`` label and exempts the rest (the
-    # parent PRD on rule-9 last-slice PRs, most notably).
+    # Rule 3: linked issue titles. Reference-count discipline is a
+    # slice_gate concern; cc_gate checks CC on every closing-referenced
+    # issue and exempts only ``planning``-labelled parent PRDs — an
+    # exemption scoped to any non-slice label would silently drop the
+    # validation the old single-reference branch applied to every
+    # ordinary issue.
     refs = find_closing_references(pr_body)
     for number in refs:
         issue = fetch_issue(repo, number)
         labels = issue.get('labels')
-        if not isinstance(labels, list) or 'slice' not in labels:
+        if isinstance(labels, list) and 'planning' in labels:
             continue
         issue_title = str(issue.get('title', ''))
         err = check_cc(issue_title)
         if err is not None:
             failures.append(
-                f'linked slice issue #{number} title {issue_title!r} {err}.'
+                f'linked issue #{number} title {issue_title!r} {err}.'
             )
 
     # Rule 4: no AI/LLM attribution in the PR title or any commit message.

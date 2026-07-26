@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Dependency vulnerability gate: declared runtime deps must carry no known CVE.
 
-Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5844b
-(governance/check_dependency_vulnerabilities.py); adapted for Limen:
-Python 3.10 (tomli fallback).
-
 Audits `[project.dependencies]` with pip-audit. A finding blocks merge unless
 it is covered by an active, time-boxed entry in `.github/vuln_exceptions.json`
-(`id` + `reason` + `expiry`); an expired exception no longer covers.
+(`id` + `reason` + `expiry`); an expired exception no longer covers. The
+template ships with no runtime dependencies, so the gate is a vacuous pass
+until a derived repository declares some.
 """
 from __future__ import annotations
 
@@ -16,13 +14,9 @@ import json
 import subprocess
 import sys
 import tempfile
+import tomllib
 from functools import partial
 from pathlib import Path
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
-    import tomli as tomllib
 
 from _common import REPO_ROOT, fail_setup
 
