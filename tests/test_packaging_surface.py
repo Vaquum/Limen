@@ -351,10 +351,18 @@ def test_governance_hardening_surfaces() -> None:
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.__all__ == ['CC_RE', 'CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
-    removed_helpers = ('TYPING_BUDGET', 'find_python_files', 'resolve_package_dir', 'significant_lines')
-    for name in removed_helpers:
-        assert not hasattr(module, name), name
+    shared_helpers = (
+        'CC_RE',
+        'CLOSING_KEYWORD_RE',
+        'REPO_ROOT',
+        'TYPING_BUDGET',
+        'fail_setup',
+        'find_python_files',
+        'resolve_package_dir',
+        'significant_lines',
+    )
+    for name in shared_helpers:
+        assert hasattr(module, name), name
 
 
 def test_cc_gate_surfaces() -> None:
