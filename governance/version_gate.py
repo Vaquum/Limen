@@ -153,8 +153,13 @@ def required_bump_level(pr_title: str) -> str:
     return 'patch'
 
 
+# This repository keeps a Keep-a-Changelog file: `## [X.Y.Z] - YYYY-MM-DD`
+# sections in ASCENDING order, newest last, as `CHANGELOG.md`'s own header
+# instructs. Upstream uses `# vX.Y.Z` newest-first. The rule is identical --
+# the new version must have a dated section carrying real content -- only the
+# surface form and the direction of travel differ.
 _VERSION_HEADER_RE: Final[re.Pattern[str]] = re.compile(
-    r'^#\s+v([0-9A-Za-z.+\-]+)\b'
+    r'^##\s+\[([0-9A-Za-z.+\-]+)\]\s+-\s+\d{4}-\d{2}-\d{2}\s*$'
 )
 
 # Changelog writing conventions, the mechanizable subset: entries are
@@ -174,61 +179,52 @@ _PLACEHOLDER_RE: Final[re.Pattern[str]] = re.compile(
 
 
 def first_version_header(changelog_text: str) -> str | None:
-    """Return the version string from the first `# v<X.Y.Z>` header
-    line in the changelog, or None if no such line exists."""
+    """Return the version string from the newest version header, or None.
+
+    The file is ascending, so the newest section is the last header.
+    """
+    newest: str | None = None
     for raw in changelog_text.splitlines():
         match = _VERSION_HEADER_RE.match(raw)
         if match:
-            return match.group(1)
-    return None
+            newest = match.group(1)
+    return newest
 
 
 def top_section_is_empty(changelog_text: str) -> bool:
-    """True if the first `# v<X.Y.Z>` section is empty -- i.e. there is
-    no non-empty, non-header line between the top version header and
-    the next version header (or end of file).
+    """True if the newest version section carries no content line.
 
-    A header-only entry satisfies the surface form of rule 4 but
-    carries no trail. Rule 6 requires at least one line of content
-    before the next version header.
+    A header-only entry satisfies the surface form of rule 4 but carries no
+    trail. Rule 6 requires at least one line of content. The file is
+    ascending, so the newest section runs from the last header to EOF.
     """
     lines = changelog_text.splitlines()
-    i = 0
-    # Advance to the first version header.
-    while i < len(lines) and not _VERSION_HEADER_RE.match(lines[i]):
-        i += 1
-    if i >= len(lines):
+    last = -1
+    for i, line in enumerate(lines):
+        if _VERSION_HEADER_RE.match(line):
+            last = i
+    if last < 0:
         # No header at all. Rule 4 already flags this; treat as empty
         # for completeness.
         return True
-    # Scan from the line after the header until the next version
-    # header or end of file. Any non-empty non-header line is content.
-    i += 1
-    while i < len(lines):
-        line = lines[i]
-        if _VERSION_HEADER_RE.match(line):
-            return True  # hit next section without finding content
-        if line.strip():
-            return False
-        i += 1
-    return True  # reached EOF without finding content
+    return not any(line.strip() for line in lines[last + 1:])
 
 
 def top_section_lines(changelog_text: str) -> list[str]:
-    """Return the content lines of the first `# v<X.Y.Z>` section: every
-    line between the top version header and the next version header (or
-    end of file). Used to check the new entry's writing conventions
-    without re-litigating older sections."""
+    """Return the content lines of the newest version section.
+
+    The file is ascending, so the newest section runs from the last version
+    header to end of file. Used to check the new entry's writing conventions
+    without re-litigating older sections.
+    """
     lines = changelog_text.splitlines()
-    i = 0
-    while i < len(lines) and not _VERSION_HEADER_RE.match(lines[i]):
-        i += 1
-    out: list[str] = []
-    i += 1
-    while i < len(lines) and not _VERSION_HEADER_RE.match(lines[i]):
-        out.append(lines[i])
-        i += 1
-    return out
+    last = -1
+    for i, line in enumerate(lines):
+        if _VERSION_HEADER_RE.match(line):
+            last = i
+    if last < 0:
+        return []
+    return lines[last + 1:]
 
 
 def gate(

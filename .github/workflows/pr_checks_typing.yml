@@ -61,7 +61,14 @@ jobs:
 
           if git show "$BASE_REV:.github/typing_budget.json" > base_budget.json 2>/dev/null; then
             if git show "$BASE_REV:pyproject.toml" > base_pyproject.toml 2>/dev/null; then
-              mode="$(REPOSITORY_NAME="${{ github.event.repository.name }}" python -c 'import os, tomllib; from pathlib import Path; base = tomllib.loads(Path("base_pyproject.toml").read_text())["project"]["name"]; head = tomllib.loads(Path("pyproject.toml").read_text())["project"]["name"]; repo = os.environ["REPOSITORY_NAME"]; print("bootstrap" if base == "new-repository-template" and head == repo else "compare")')"
+              # This repository was specialised from the template long ago, so the
+              # base ref's [project].name is never "new-repository-template" and the
+              # bootstrap branch is unreachable. Upstream detects it with an inline
+              # `import tomllib`, which is stdlib only from 3.11 and crashes on this
+              # repository's 3.10 floor. Resolved to the constant instead of carrying
+              # dead logic that cannot run. Filed upstream with the other tomllib
+              # breakage (Vaquum/new-repository-template#97).
+              mode="compare"
             else
               mode="compare"
             fi
