@@ -38,6 +38,11 @@ Exit codes:
   0 — all gates pass
   1 — one or more gates failed
   2 — gate itself could not run (missing config, file-system error, etc.)
+
+Limen-local divergence: the ``tomllib`` import is guarded with a ``tomli``
+fallback. Upstream targets Python 3.12 only and imports ``tomllib`` bare;
+this repository's floor is ``>=3.10`` and CI runs 3.10, where ``tomllib``
+is not in the standard library. Filed upstream.
 """
 
 from __future__ import annotations
@@ -47,7 +52,10 @@ import ast
 import json
 import re
 import sys
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 from pathlib import Path
 from typing import Final
 

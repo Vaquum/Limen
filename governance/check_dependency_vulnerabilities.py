@@ -6,6 +6,11 @@ it is covered by an active, time-boxed entry in `.github/vuln_exceptions.json`
 (`id` + `reason` + `expiry`); an expired exception no longer covers. The
 template ships with no runtime dependencies, so the gate is a vacuous pass
 until a derived repository declares some.
+
+Limen-local divergence: the ``tomllib`` import is guarded with a ``tomli``
+fallback. Upstream targets Python 3.12 only and imports ``tomllib`` bare;
+this repository's floor is ``>=3.10`` and CI runs 3.10, where ``tomllib``
+is not in the standard library. Filed upstream.
 """
 from __future__ import annotations
 
@@ -14,7 +19,10 @@ import json
 import subprocess
 import sys
 import tempfile
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 from functools import partial
 from pathlib import Path
 
