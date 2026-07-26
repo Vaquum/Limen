@@ -149,7 +149,18 @@ reportImportCycles = "error"
 reportMissingSuperCall = "error"
 reportUninitializedInstanceVariable = "error"
 reportUnusedCallResult = "error"
-reportMissingTypeStubs = "none"
+reportMissingTypeStubs = "none"  # lightgbm/xgboost/talib/tabpfn ship no stubs
+# Strict already implies these; declared explicitly so the typing gate can
+# verify the posture rather than infer it from typeCheckingMode alone.
+reportExplicitAny = "error"
+reportMissingImports = "error"
+reportUnknownArgumentType = "error"
+reportUnknownMemberType = "error"
+reportUnknownVariableType = "error"
+reportUnknownLambdaType = "error"
+reportUnknownParameterType = "error"
+reportMissingParameterType = "error"
+reportConstantRedefinition = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

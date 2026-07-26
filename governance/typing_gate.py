@@ -273,13 +273,17 @@ def count_any_references_ast(files: list[Path]) -> int:
 #     gate_any_references_ast() below, which resolves every surface
 #     form including module-level assignment aliases.
 #
+#   * reportMissingTypeStubs is NOT required here, unlike upstream. This
+#     package imports ML backends that ship no stubs (lightgbm, xgboost,
+#     talib, tabpfn), so 'error' would report third-party packaging gaps
+#     this repository cannot fix. It stays 'none' in pyproject.toml.
+#
 #   * typeCheckingMode: this must be "strict" so that all of the
 #     strict-default report* rules above are active.
 REQUIRED_PYRIGHT: Final[dict[str, object]] = {
     'typeCheckingMode': 'strict',
     'reportExplicitAny': 'error',
     'reportMissingImports': 'error',
-    'reportMissingTypeStubs': 'error',
     'reportUnknownArgumentType': 'error',
     'reportUnknownMemberType': 'error',
     'reportUnknownVariableType': 'error',
@@ -293,7 +297,7 @@ REQUIRED_PYRIGHT: Final[dict[str, object]] = {
 # The `include` list pyright must analyze. Shrinking this to an empty
 # list or a non-existent path drops filesAnalyzed to zero, trivially
 # passing the error-count ratchet. Gate asserts exact match.
-REQUIRED_PYRIGHT_INCLUDE: Final[list[str]] = ['new_repository_template']
+REQUIRED_PYRIGHT_INCLUDE: Final[list[str]] = ['limen']
 
 FORBIDDEN_VALUES: Final[frozenset[object]] = frozenset(
     {'none', 'warning', 'information', 'info', 'false', False}
