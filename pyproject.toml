@@ -129,7 +129,11 @@ relative_files = true
 omit = ["tests/*"]
 
 [tool.check-manifest]
-ignore = ["governance/*"]
+# The sdist is deliberately not a repository snapshot: governance/ is the
+# enforcement plane, not shippable source (docs/Developer/Packaging.md).
+# check-manifest's globs do not cross '/', so the nested test layer needs its
+# own recursive pattern.
+ignore = ["governance/*", "governance/**"]
 
 [tool.pyright]
 include = ["limen"]
