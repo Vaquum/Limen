@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "5.9.4"
+version = "5.9.5"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -129,7 +129,11 @@ relative_files = true
 omit = ["tests/*"]
 
 [tool.check-manifest]
-ignore = ["governance/*"]
+# The sdist is deliberately not a repository snapshot: governance/ is the
+# enforcement plane, not shippable source (docs/Developer/Packaging.md).
+# check-manifest's globs do not cross '/', so the nested test layer needs its
+# own recursive pattern.
+ignore = ["governance/*", "governance/**"]
 
 [tool.pyright]
 include = ["limen"]
@@ -169,6 +173,7 @@ markers = [
 target-version = "py310"
 line-length = 88
 fix = false
+exclude = ["governance/tests/fixtures"]
 
 [tool.ruff.lint]
 select = [
@@ -228,7 +233,8 @@ ignore = [
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
-"governance/*.py" = ["T201", "S603", "S607", "PLR5501"]
+"governance/*.py" = ["T201", "S603", "S607", "PLR5501", "PLR0911", "PLR2004", "B007", "PTH123"]
+"governance/tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
 "tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
 "limen/targets/*.py" = ["ARG002"]
 "limen/cli/**/*.py" = ["S603"]

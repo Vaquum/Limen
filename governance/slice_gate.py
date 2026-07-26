@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """Slice gate -- mechanical enforcement of the PR <-> slice-issue contract.
 
-Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5844b
-(governance/slice_gate.py) and extended with rule 9 (PRD closure) and
-rule 10 (Done Means checkbox completion); the same extension is filed
-upstream so the two copies do not drift.
-
 This gate blocks a PR that:
 
   1.  Does not cite its slice issue via Closes/Fixes/Resolves #N. The
@@ -88,18 +83,36 @@ OUT_OF_SCOPE_SECTION_RE: Final[re.Pattern[str]] = re.compile(
     re.DOTALL,
 )
 
-# Last-match parsing (finditer()[-1]) mirrors slice_closeout_guard: a body
-# quoting an earlier Done Means heading cannot shadow the real section.
+# Every match is collected and rule 10 requires exactly one section, so
+# an appended duplicate (e.g. an all-checked copy after the real one)
+# cannot shadow the section that actually carries the boxes. The
+# slice_closeout_guard workflow enforces the same exactly-one contract.
 DONE_MEANS_SECTION_RE: Final[re.Pattern[str]] = re.compile(
     r'^##+ Done Means\b.*?^##+ Author Checks\b',
     re.MULTILINE | re.DOTALL,
 )
 
+# GFM renders -, *, and + bullets (with any indent) as task-list
+# checkboxes; matching only ``- [`` would make rule 10 blind to the
+# other forms.
 CHECKBOX_RE: Final[re.Pattern[str]] = re.compile(
-    r'^\s*- \[(?P<mark>[ xX])\]\s*(?P<text>.*)$'
+    r'^\s*[-*+] +\[(?P<mark>[ xX])\]\s*(?P<text>.*)$'
 )
 
-OVERRULED_RE: Final[re.Pattern[str]] = re.compile(r'OVERRULED:\s*\S')
+# Word-bounded so ``NOTOVERRULED:`` does not count, and the literal
+# template placeholder ``OVERRULED: <reason>`` is rejected -- an
+# overrule needs a real reason, not the copy-pasted example.
+OVERRULED_RE: Final[re.Pattern[str]] = re.compile(r'\bOVERRULED:\s*(?!<reason>)\S')
+
+# GitHub also honors closing keywords followed by a qualified
+# ``owner/repo#N`` reference or an issue URL. The gate cannot fold
+# those into the closing set rules 1 and 9 validate, so their presence
+# hard-fails instead of silently widening what a merge will close.
+QUALIFIED_CLOSING_RE: Final[re.Pattern[str]] = re.compile(
+    r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+'
+    r'(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#\d+|https?://\S+/issues/\d+)',
+    re.IGNORECASE,
+)
 
 # The slice issue plus, on the last open slice, its parent PRD (rule 9).
 MAX_CLOSING_REFERENCES: Final[int] = 2
@@ -376,28 +389,34 @@ def _format_issue_set(numbers: set[int]) -> str:
     return '{' + ', '.join(f'#{n}' for n in sorted(numbers)) + '}'
 
 
-def gate(
-    pr_title: str,
-    pr_body: str,
-    pr_files: list[str],
-    template_path: Path,
-    repo: str,
-) -> list[str]:
-    """Run all PR <-> issue checks. Return a list of failure messages
-    (empty list means PASS)."""
-    failures: list[str] = []
+def _qualified_reference_failures(pr_body: str) -> list[str]:
+    """Rule 1's form bound: a closing keyword followed by a qualified
+    ``owner/repo#N`` reference or an issue URL is honored by GitHub on
+    merge but invisible to the bare ``#N`` parser, so the closing set
+    the gate validates would not be the closing set GitHub acts on.
+    Such forms fail loud instead of passing unseen."""
+    hits = [m.group(0) for m in QUALIFIED_CLOSING_RE.finditer(pr_body)]
+    if hits:
+        return [
+            f'PR body contains {len(hits)} qualified or URL closing '
+            f'reference(s) ({", ".join(repr(h) for h in hits)}). GitHub '
+            f'honors these on merge but the gate cannot fold them into '
+            f'the validated closing set; use the bare `Closes #N` form '
+            f'(rule 1).'
+        ]
+    return []
 
-    # Rule 1: the closing set is the slice issue alone, or the slice
-    # issue plus its parent PRD (validated by rule 9). Zero or three
-    # or more references always fail.
-    refs = find_closing_references(pr_body)
+
+def _closing_reference_failures(refs: list[int]) -> list[str]:
+    """Rule 1's count bounds: zero references, or more than the slice
+    plus its parent PRD, fail before any API call."""
     if not refs:
         return [
-            'PR body has no closing reference. The PR must include '
-            'exactly one line matching `Closes #N` (or Fixes/Resolves) '
-            'where N is an OPEN slice-labelled issue, plus one for the '
-            'parent PRD when the slice is its last open slice sub-issue '
-            '(rule 9).'
+            'PR body has no closing reference. The closing set must be '
+            'exactly the slice issue (`Closes #N`, or Fixes/Resolves, '
+            'with N an OPEN slice-labelled issue), plus its parent PRD '
+            'only when the slice is the parent\'s last open slice '
+            'sub-issue (rule 9).'
         ]
     if len(refs) > MAX_CLOSING_REFERENCES:
         return [
@@ -407,46 +426,65 @@ def gate(
             f'the slice is the parent\'s last open slice sub-issue '
             f'(rule 9).'
         ]
+    return []
 
-    # Rules 2 and 2a run per cited number: every reference must resolve
-    # to a real issue, not a pull request.
+
+def _fetch_cited_issues(
+    repo: str,
+    refs: list[int],
+) -> tuple[dict[int, dict[str, object]], list[str]]:
+    """Rules 2 and 2a per cited number: every reference must resolve to
+    a real issue, not a pull request."""
     issues: dict[int, dict[str, object]] = {}
     for number in refs:
         issue_data = fetch_issue(repo, number)
         if issue_data is None:
-            return [
+            return {}, [
                 f'issue #{number} does not exist in {repo}. Every '
                 f'closing reference must point at a real OPEN issue.'
             ]
         if issue_data.get('is_pull_request'):
-            return [
+            return {}, [
                 f'#{number} is a pull request, not an issue. The '
                 f'closing reference must point at an OPEN slice issue '
                 f'filed via the slice template at '
                 f'`.github/ISSUE_TEMPLATE/slice.yml`, not another PR.'
             ]
         issues[number] = issue_data
+    return issues, []
 
-    # Identify the cited slice: with one reference it is that issue
-    # (rule 4 reports a missing slice label); with two, exactly one
-    # must carry the slice label and the other may only be the parent
-    # PRD (rule 9 validates the pairing).
+
+def _identify_cited_slice(
+    refs: list[int],
+    issues: dict[int, dict[str, object]],
+) -> tuple[int | None, list[str]]:
+    """Identify the cited slice: with one reference it is that issue
+    (rule 4 reports a missing slice label); with two, exactly one must
+    carry the slice label and the other may only be the parent PRD
+    (rule 9 validates the pairing)."""
     slice_refs = [n for n in refs if 'slice' in _issue_labels(issues[n])]
     if len(refs) == 1:
-        issue_number = refs[0]
-    elif len(slice_refs) == 1:
-        issue_number = slice_refs[0]
-    else:
-        return [
-            f'closing references '
-            f'({", ".join(f"#{n}" for n in refs)}) contain '
-            f'{len(slice_refs)} slice-labelled issues; exactly one must '
-            f'be the slice, and the other reference may only be its '
-            f'parent PRD (rule 9).'
-        ]
-    issue = issues[issue_number]
+        return refs[0], []
+    if len(slice_refs) == 1:
+        return slice_refs[0], []
+    return None, [
+        f'closing references '
+        f'({", ".join(f"#{n}" for n in refs)}) contain '
+        f'{len(slice_refs)} slice-labelled issues; exactly one must '
+        f'be the slice, and the other reference may only be its '
+        f'parent PRD (rule 9).'
+    ]
 
-    # Rule 3: state OPEN.
+
+def _issue_metadata_failures(
+    issue_number: int,
+    issue: dict[str, object],
+    pr_title: str,
+) -> list[str]:
+    """Rules 3, 4, and 5: the cited slice is OPEN, slice-labelled, and
+    titled byte-identically to the PR."""
+    failures: list[str] = []
+
     state = str(issue.get('state', ''))
     if state.lower() != 'open':
         failures.append(
@@ -454,7 +492,6 @@ def gate(
             f'for a PR to close it.'
         )
 
-    # Rule 4: labels include 'slice'.
     labels = _issue_labels(issue)
     if 'slice' not in labels:
         failures.append(
@@ -463,7 +500,6 @@ def gate(
             f'slice template at `.github/ISSUE_TEMPLATE/slice.yml`.'
         )
 
-    # Rule 5: titles byte-equal.
     issue_title = str(issue.get('title', ''))
     if issue_title != pr_title:
         failures.append(
@@ -472,29 +508,47 @@ def gate(
             f'be byte-identical.'
         )
 
-    # Rule 6: issue body retains every full Significance blockquote from
-    # the slice template. Blockquotes are extracted from the template at
-    # runtime so the validator and the template cannot drift apart -- if
-    # a Significance paragraph changes in the template, the new paragraph
-    # must appear verbatim in every new slice issue's body. CRLF is
-    # normalised first: a body saved through the web editor arrives with
-    # \r\n and would otherwise fail every byte-equal substring check.
-    issue_body = str(issue.get('body') or '').replace('\r\n', '\n')
+    return failures
+
+
+def _blockquote_failures(
+    issue_number: int,
+    issue_body: str,
+    template_path: Path,
+) -> list[str]:
+    """Rule 6: issue body retains every full Significance blockquote
+    from the slice template. Blockquotes are extracted from the template
+    at runtime so the validator and the template cannot drift apart --
+    if a Significance paragraph changes in the template, the new
+    paragraph must appear verbatim in every new slice issue's body."""
     required_blockquotes = extract_significance_blockquotes(template_path)
     missing_blocks = [b for b in required_blockquotes if b not in issue_body]
-    if missing_blocks:
-        # Produce a compact failure message: only the first line of each
-        # missing blockquote (the heading line) + missing count.
-        first_lines = [b.splitlines()[0] for b in missing_blocks]
-        failures.append(
-            f'issue #{issue_number} body is missing {len(missing_blocks)} '
-            f'of {len(required_blockquotes)} full Significance blockquotes '
-            f'from the slice template (byte-equal check). Each blockquote '
-            f'must appear verbatim in the filed issue. Missing blockquote '
-            f'headers: ' + '; '.join(f'{s!r}' for s in first_lines)
-        )
+    if not missing_blocks:
+        return []
+    # Produce a compact failure message: only the first line of each
+    # missing blockquote (the heading line) + missing count.
+    first_lines = [b.splitlines()[0] for b in missing_blocks]
+    return [
+        f'issue #{issue_number} body is missing {len(missing_blocks)} '
+        f'of {len(required_blockquotes)} full Significance blockquotes '
+        f'from the slice template (byte-equal check). Each blockquote '
+        f'must appear verbatim in the filed issue. Missing blockquote '
+        f'headers: ' + '; '.join(f'{s!r}' for s in first_lines)
+    ]
 
-    # Rule 7: PR diff scope is within the issue's Surfaces list.
+
+def _scope_failures(
+    issue_number: int,
+    issue_body: str,
+    pr_files: list[str],
+) -> list[str]:
+    """Rules 7 and 8: the PR diff stays within the issue's Surfaces
+    allow-list and touches nothing in its Out of Scope deny-list. A
+    file that matches BOTH a Surfaces glob and an Out of Scope glob
+    fails rule 8 -- the issue's Out of Scope is the finer-grained
+    block."""
+    failures: list[str] = []
+
     allowed_globs = extract_surfaces_globs(issue_body)
     if not allowed_globs:
         failures.append(
@@ -518,10 +572,6 @@ def gate(
                   f'remove the change from this PR.'
             )
 
-    # Rule 8: PR diff must not touch Out of Scope paths. This is the
-    # deny-list complement to rule 7. A file that matches BOTH a
-    # Surfaces glob and an Out of Scope glob fails this rule -- the
-    # template's Out of Scope is the finer-grained block.
     denied_globs = extract_out_of_scope_globs(issue_body)
     if denied_globs:
         hits = [
@@ -538,9 +588,18 @@ def gate(
                   f'to move the path out of the Out of Scope section.'
             )
 
-    # Rule 9: the closing set must match the PRD-closure contract. The
-    # parent PRD is the slice's native sub-issue parent; siblings are
-    # the parent's other OPEN slice-labelled sub-issues.
+    return failures
+
+
+def _prd_closure_failures(
+    repo: str,
+    issue_number: int,
+    refs: list[int],
+    issues: dict[int, dict[str, object]],
+) -> list[str]:
+    """Rule 9: the closing set must match the PRD-closure contract. The
+    parent PRD is the slice's native sub-issue parent; siblings are the
+    parent's other OPEN slice-labelled sub-issues."""
     parent_number = fetch_parent_issue_number(repo, issue_number)
     if parent_number is None:
         expected = {issue_number}
@@ -565,49 +624,106 @@ def gate(
             )
     closing_set = set(refs)
     if closing_set != expected:
-        failures.append(
+        return [
             f'closing set {_format_issue_set(closing_set)} must be '
             f'exactly {_format_issue_set(expected)} because {reason} '
             f'(rule 9).'
-        )
-    elif parent_number is not None and parent_number in closing_set:
+        ]
+    if parent_number is not None and parent_number in closing_set:
         parent_state = str(issues[parent_number].get('state', ''))
         if parent_state.lower() != 'open':
-            failures.append(
+            return [
                 f'parent PRD #{parent_number} state is {parent_state!r}; '
                 f'must be OPEN for the PR to close it (rule 9).'
-            )
+            ]
+    return []
 
-    # Rule 10: every Done Means checkbox in the cited slice is checked
-    # or explicitly overruled. The post-merge evidence fields (Merge
-    # SHA, Merged PR number, the run-id list) are not checkboxes, so
-    # their pre-merge exemption is structural: only checkbox lines are
-    # inspected. Silence never passes; an overrule needs a reason.
+
+def _done_means_failures(issue_number: int, issue_body: str) -> list[str]:
+    """Rule 10: every Done Means checkbox in the cited slice is checked
+    or explicitly overruled. The post-merge evidence fields (Merge SHA,
+    Merged PR number, the run-id list) are not checkboxes, so their
+    pre-merge exemption is structural: only checkbox lines are
+    inspected. Exactly one Done Means section is required -- an
+    appended duplicate could otherwise shadow the real boxes. Silence
+    never passes; an overrule needs a reason."""
     sections = list(DONE_MEANS_SECTION_RE.finditer(issue_body))
     if not sections:
-        failures.append(
+        return [
             f'issue #{issue_number} body has no parseable Done Means '
             f'section (## Done Means ... ## Author Checks); rule 10 '
             f'cannot verify checkbox completion.'
-        )
-    else:
-        dangling: list[str] = []
-        for line in sections[-1].group(0).splitlines():
-            box = CHECKBOX_RE.match(line)
-            if box is None or box.group('mark') != ' ':
-                continue
-            if OVERRULED_RE.search(box.group('text')):
-                continue
-            dangling.append(box.group('text').strip() or line.strip())
-        if dangling:
-            failures.append(
-                f'issue #{issue_number} Done Means has {len(dangling)} '
-                f'checkbox(es) neither checked nor overruled: '
-                + '; '.join(repr(t) for t in dangling)
-                + '. Every box must be `- [x]` or carry '
-                  '`OVERRULED: <reason>` before merge (rule 10).'
-            )
+        ]
+    if len(sections) > 1:
+        return [
+            f'issue #{issue_number} body has {len(sections)} Done Means '
+            f'sections (## Done Means ... ## Author Checks); exactly one '
+            f'is required so checkbox completion and closeout evidence '
+            f'are unambiguous (rule 10).'
+        ]
+    dangling: list[str] = []
+    for line in sections[-1].group(0).splitlines():
+        box = CHECKBOX_RE.match(line)
+        if box is None or box.group('mark') != ' ':
+            continue
+        if OVERRULED_RE.search(box.group('text')):
+            continue
+        dangling.append(box.group('text').strip() or line.strip())
+    if dangling:
+        return [
+            f'issue #{issue_number} Done Means has {len(dangling)} '
+            f'checkbox(es) neither checked nor overruled: '
+            + '; '.join(repr(t) for t in dangling)
+            + '. Every box must be `- [x]` or carry '
+              '`OVERRULED: <reason>` before merge (rule 10).'
+        ]
+    return []
 
+
+def gate(
+    pr_title: str,
+    pr_body: str,
+    pr_files: list[str],
+    template_path: Path,
+    repo: str,
+) -> list[str]:
+    """Run all PR <-> issue checks. Return a list of failure messages
+    (empty list means PASS)."""
+    form_failures = _qualified_reference_failures(pr_body)
+    if form_failures:
+        return form_failures
+
+    refs = find_closing_references(pr_body)
+
+    count_failures = _closing_reference_failures(refs)
+    if count_failures:
+        return count_failures
+
+    issues, fetch_failures = _fetch_cited_issues(repo, refs)
+    if fetch_failures:
+        return fetch_failures
+
+    issue_number, pairing_failures = _identify_cited_slice(refs, issues)
+    if issue_number is None:
+        return pairing_failures
+    issue = issues[issue_number]
+
+    # CRLF is normalised before the body-content rules: a body saved
+    # through the web editor arrives with \r\n and would otherwise fail
+    # every byte-equal substring check.
+    issue_body = str(issue.get('body') or '').replace('\r\n', '\n')
+
+    metadata_failures = _issue_metadata_failures(issue_number, issue, pr_title)
+    failures: list[str] = list(metadata_failures)
+    failures.extend(_blockquote_failures(issue_number, issue_body, template_path))
+    failures.extend(_scope_failures(issue_number, issue_body, pr_files))
+    # Rule 9's graph lookups are meaningful only for an OPEN,
+    # slice-labelled, correctly-titled citation; when rules 3-5 already
+    # failed, skipping them keeps a plain rule violation from turning
+    # into an exit-2 API failure that would obscure it.
+    if not metadata_failures:
+        failures.extend(_prd_closure_failures(repo, issue_number, refs, issues))
+    failures.extend(_done_means_failures(issue_number, issue_body))
     return failures
 
 
@@ -641,7 +757,7 @@ def main() -> int:
     parser.add_argument(
         '--repo',
         required=True,
-        help='GitHub repository in owner/name form (e.g. Vaquum/Limen).',
+        help='GitHub repository in owner/name form (e.g. Vaquum/new-repository-template).',
     )
     args = parser.parse_args()
 

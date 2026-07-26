@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "package_root": "limen",
+  "excludes": [
+    "__pycache__",
+    "build",
+    "dist"
+  ],
+  "patterns": {
+    "any_annotation": {
+      "pattern": ":\\s*Any\\b",
+      "total": 188
+    },
+    "any_return": {
+      "pattern": "->\\s*Any\\b",
+      "total": 20
+    },
+    "any_import": {
+      "pattern": "from typing import[^\\n]*\\bAny\\b",
+      "total": 81
+    },
+    "cast_any": {
+      "pattern": "cast\\([^)]*\\bAny\\b",
+      "total": 19
+    },
+    "dict_any": {
+      "pattern": "dict\\[[^]]*\\bAny\\b",
+      "total": 503
+    },
+    "list_any": {
+      "pattern": "list\\[\\s*Any\\b",
+      "total": 42
+    },
+    "tuple_any": {
+      "pattern": "tuple\\[[^]]*\\bAny\\b",
+      "total": 26
+    },
+    "type_ignore": {
+      "pattern": "#\\s*type:\\s*ignore",
+      "total": 1
+    },
+    "pyright_ignore": {
+      "pattern": "#\\s*pyright:\\s*ignore",
+      "total": 0
+    },
+    "noqa": {
+      "pattern": "#\\s*noqa",
+      "total": 10
+    }
+  },
+  "any_references": {
+    "total": 879
+  },
+  "pyright_errors": {
+    "total": 0
+  }
+}

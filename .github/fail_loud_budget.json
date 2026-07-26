@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "package_root": "limen",
+  "excludes": [
+    "__pycache__",
+    "build",
+    "dist"
+  ],
+  "categories": {
+    "bare_except": {
+      "total": 0
+    },
+    "empty_pass": {
+      "total": 2
+    },
+    "empty_ellipsis": {
+      "total": 0
+    },
+    "empty_return_none": {
+      "total": 2
+    },
+    "empty_continue_break": {
+      "total": 5
+    },
+    "contextlib_suppress": {
+      "total": 0
+    },
+    "errors_ignore_kwarg": {
+      "total": 2
+    }
+  }
+}
