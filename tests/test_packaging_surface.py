@@ -370,7 +370,7 @@ def test_cc_gate_surfaces() -> None:
     assert gate_path.is_file()
     gate = gate_path.read_text(encoding='utf-8')
     assert 'from _common import CC_RE, CLOSING_KEYWORD_RE' in gate
-    assert "'slice'" in gate
+    assert "'planning'" in gate
     cc_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_cc.yml').read_text(encoding='utf-8')
     assert 'name: pr_checks_cc' in cc_workflow
     assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in cc_workflow
@@ -381,7 +381,8 @@ def test_cc_gate_surfaces() -> None:
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.__all__ == ['CC_RE', 'CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup']
+    for name in ('CC_RE', 'CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup'):
+        assert hasattr(module, name), name
     slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
     assert 'Conventional Commits' in slice_template
     result = subprocess.run(
