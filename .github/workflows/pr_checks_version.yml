@@ -37,6 +37,11 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install gate toolchain
+        # version_gate reads pyproject.toml; tomllib is stdlib only from 3.11,
+        # so the 3.10 floor needs the tomli fallback this set pins.
+        run: python -m pip install --require-hashes -r requirements/ci/gate-tools.txt
+
       - name: Extract PR title from event payload
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
