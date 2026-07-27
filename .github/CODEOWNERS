@@ -1,5 +1,6 @@
-# Enforcement surfaces: the files whose content decides merge verdicts.
-# With require_code_owner_review enabled on branch ruleset 5406995, a PR
+# Code owners for the enforcement surfaces.
+#
+# With require_code_owner_review enabled on the Protect-Main ruleset, a PR
 # touching these paths cannot merge without an approval from a non-author
 # code owner -- a server-side layer the judged PR's merge ref cannot edit.
 #
@@ -9,4 +10,7 @@
 
 /governance/ @mikkokotila @pdey @bit-mis @zero-bang
 /.github/ @mikkokotila @pdey @bit-mis @zero-bang
+/governance.yml @mikkokotila @pdey @bit-mis @zero-bang
+/pyproject.toml @mikkokotila @pdey @bit-mis @zero-bang
+/requirements/ @mikkokotila @pdey @bit-mis @zero-bang
 /tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis @zero-bang

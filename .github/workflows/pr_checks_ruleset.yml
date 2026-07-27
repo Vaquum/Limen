@@ -1,0 +1,70 @@
+name: pr_checks_ruleset
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pr_checks_ruleset:
+    name: pr_checks_ruleset
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.10'
+
+      - name: Set up contract venv
+        run: python -m venv .venv-ruleset
+
+      - name: Install contract dependencies
+        run: .venv-ruleset/bin/python -m pip install --require-hashes -r requirements/ci/dev-env.txt
+
+      - name: Run CI contract tests
+        run: .venv-ruleset/bin/python -m pytest governance/tests/test_cc_gate.py governance/tests/test_ruleset_gate.py governance/tests/test_privileged_ruleset_audit.py governance/tests/test_ci_contract.py governance/tests/test_lint_ci_contract.py governance/tests/test_tests_ci_contract.py -q
+
+      - name: Compare live ruleset to checked-in snapshot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ vars.RULESET_ID }}" ]; then
+            BASE_REV="origin/${{ github.base_ref }}"
+            AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+            git -c "http.https://github.com/.extraheader=$AUTH" fetch origin "${{ github.base_ref }}" --depth=1
+            if git show "$BASE_REV:pyproject.toml" > base_pyproject.toml 2>/dev/null; then
+              # This repository was specialised from the template long ago, so the
+              # base ref's [project].name is never "new-repository-template" and the
+              # bootstrap branch is unreachable. Upstream detects it with an inline
+              # `import tomllib`, which is stdlib only from 3.11 and crashes on this
+              # repository's 3.10 floor. Resolved to the constant instead of carrying
+              # dead logic that cannot run. Filed upstream with the other tomllib
+              # breakage (Vaquum/new-repository-template#97).
+              mode="normal"
+              if [ "$mode" = "template-specialization" ]; then
+                echo "::warning::template specialization PR: live repository ruleset will be applied immediately after the bootstrap PR merges."
+                exit 0
+              fi
+            fi
+            if ! git show "$BASE_REV:.github/rulesets/main.json" >/dev/null 2>&1 \
+              && git diff --name-only "$BASE_REV" HEAD | grep -qx '.github/rulesets/main.json'; then
+              echo "::warning::bootstrap commit: base ref has no ruleset snapshot and repository variable RULESET_ID is not set yet."
+              exit 0
+            fi
+            echo "::error::repository variable RULESET_ID is not set. Configure it to the live Protect-Main ruleset id."
+            exit 2
+          fi
+          python3 governance/ruleset_gate.py \
+            --ruleset-file .github/rulesets/main.json \
+            --repo "${{ github.repository }}" \
+            --ruleset-id "${{ vars.RULESET_ID }}"

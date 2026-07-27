@@ -12,8 +12,8 @@ name: pr_merge_readiness
 # Informational only: this workflow is not a required check, so it can
 # never deadlock the merge it reports on. Fail-closed: when the
 # required-check inventory cannot be established, the comment says so,
-# reports NOT MERGEABLE, and the run fails loud. Downstream of
-# Vaquum/new-repository-template#65.
+# reports NOT MERGEABLE, and the run fails loud. First proven
+# downstream in Vaquum/Limen (its S724 series).
 
 on:
   pull_request:
@@ -25,8 +25,12 @@ on:
   check_suite:
     types: [completed]
 
+# Keyed by PR number for every event that carries one — including
+# check_suite, whose payload lists its PRs — so runs for the same PR
+# serialize instead of racing the read-then-create on the marker
+# comment; the head SHA and run id are last-resort fallbacks only.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.check_suite.head_sha || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || github.event.check_suite.head_sha || github.run_id }}
   cancel-in-progress: true
 
 permissions:

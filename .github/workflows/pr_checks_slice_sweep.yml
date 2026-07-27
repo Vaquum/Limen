@@ -1,8 +1,10 @@
 name: pr_checks_slice_sweep
 
 # Re-run the slice gate for every open PR targeting main on a fixed
-# cadence and repost each PR's `pr_checks_slice` check-run on its head
-# commit.
+# cadence and, when the latest `pr_checks_slice` check-run -- or the
+# latest previously API-posted check-run -- disagrees with the fresh
+# verdict, publish the main-computed verdict as a new check-run on the
+# head commit.
 #
 # Why: `pr_checks_slice` runs on pull_request activity and caches its
 # verdict; `pr_checks_slice_on_issue` reposts it when a linked issue
@@ -14,18 +16,23 @@ name: pr_checks_slice_sweep
 #
 # The gate here executes from a checkout of main, never from a PR's
 # merge ref, so a sweep verdict cannot be self-attested by the PR it
-# judges.
+# judges. For the same reason the sweep never reruns the pull_request
+# workflow: that would re-execute the gate from the judged PR's merge
+# ref and publish whatever it computes — the exact channel this
+# main-only contract closes. The on-issue rerun owns UI healing; the
+# sweep owns authoritative delivery.
 #
 # GitHub branch protection does not treat the most recent check-run
 # per name as authoritative: once an API-posted check-run exists on a
 # head SHA it outranks the workflow-run entries of the same name, and
 # only a newer API-posted check-run supersedes it (observed on
-# PR #757). A failure posted here blocks merge immediately, and a
-# stale API-posted verdict must be reposted -- rerunning the canonical
-# run alone never clears it.
+# Vaquum/Limen PR #757). A failure posted here blocks merge
+# immediately, and a stale API-posted verdict must be reposted -- a
+# green canonical run alone never clears it.
 #
-# Named in Limen's governance hardening slice (S691); the fail-closed
-# rerun contract mirrors pr_checks_slice_on_issue.yml.
+# The fail-closed truncation and file-enumeration contracts mirror
+# pr_checks_slice_on_issue.yml; first proven downstream in Vaquum/Limen
+# (its S691 and S724 series).
 
 on:
   schedule:
@@ -51,12 +58,12 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-      checks: write  # required to POST fallback check-runs
-      actions: write  # required to rerun the canonical pr_checks_slice run
+      checks: write  # required to POST the main-computed check-runs
+      actions: read  # required to classify check-runs by canonical check suite
 
     steps:
       - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
           # Pin to main so a workflow_dispatch from another ref still
           # executes the gate from main's tree, keeping the
@@ -65,7 +72,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.10'
 
@@ -94,7 +101,7 @@ jobs:
           set -euo pipefail
           REPO="${{ github.repository }}"
 
-          jq -c '.[]' open_prs.json | while read pr; do
+          jq -c '.[]' open_prs.json | while IFS= read -r pr; do
             PR_NUM=$(echo "$pr" | jq -r .number)
             HEAD_SHA=$(echo "$pr" | jq -r .headRefOid)
             echo "::group::re-running slice gate for PR #$PR_NUM @ $HEAD_SHA"
@@ -151,28 +158,25 @@ jobs:
               TITLE_OUT="Slice gate FAILED in scheduled sweep"
             fi
 
-            # Rerun-first delivery with API-posted reconciliation
-            # (S724, S760): the pull_request-event run is the
-            # canonical checks-UI entry and a workflow run's conclusion
-            # is immutable unless rerun, so a canonical run that
-            # disagrees with the fresh verdict is healed by rerun. An
-            # API-posted check-run is immutable too, and branch
-            # protection keeps honouring it even after a later
-            # canonical run lands the opposite verdict (PR #757), so a
-            # fresh POST of the same name is its only supersession.
-            # Delivery reconciles both surfaces: rerun the canonical
-            # run when it disagrees, POST when the latest API-posted
-            # check-run disagrees, and POST fail-closed when neither
-            # surface carries a verdict at all. Check-runs inside the
-            # check suites of pr_checks_slice.yml's own workflow runs
-            # are job-backed; every other completed check-run of the
-            # name is an API-posted fallback.
+            # Publish on disagreement; never rerun. The sweep never
+            # reruns the pull_request workflow: that would re-execute
+            # the gate from the judged PR's merge ref and let the PR
+            # self-attest, the exact channel the main-only execution
+            # contract closes. Two verdict surfaces are compared
+            # separately: an API-posted check-run is immutable and
+            # branch protection keeps honouring it even after a later
+            # canonical run lands the opposite verdict (Vaquum/Limen
+            # PR #757), so a disagreeing latest API-posted check-run
+            # always draws a fresh superseding POST; otherwise the
+            # sweep posts only when the latest completed check-run of
+            # the name disagrees with the fresh verdict. Check-runs
+            # inside the check suites of pr_checks_slice.yml's own
+            # workflow runs are job-backed; every other completed
+            # check-run of the name is an API-posted fallback.
             RUNS=$(gh api \
               "repos/$REPO/actions/workflows/pr_checks_slice.yml/runs?head_sha=$HEAD_SHA&per_page=100" \
               --jq '.workflow_runs')
             SUITES=$(echo "$RUNS" | jq '[.[].check_suite_id]')
-            CANONICAL=$(echo "$RUNS" | jq -c \
-              '[.[] | select(.event == "pull_request" and .status == "completed")][0] // empty')
             gh api \
               "repos/$REPO/commits/$HEAD_SHA/check-runs?check_name=pr_checks_slice&per_page=100&filter=all" \
               --paginate --jq '.check_runs[]' > check_runs.jsonl
@@ -180,32 +184,18 @@ jobs:
               '[.[] | select(.status == "completed")
                     | .check_suite.id as $s | select(($suites | index($s)) == null)]
                | sort_by(.completed_at) | last | .conclusion // empty' check_runs.jsonl)
-
-            DELIVER=""
+            LATEST=$(jq -rs \
+              '[.[] | select(.status == "completed")]
+               | sort_by(.completed_at) | last | .conclusion // empty' check_runs.jsonl)
             if [ -n "$LATEST_POSTED" ] && [ "$LATEST_POSTED" != "$CONCLUSION" ]; then
-              DELIVER="latest API-posted check-run is $LATEST_POSTED; superseding"
-            fi
-            if [ -n "$CANONICAL" ]; then
-              RUN_ID=$(echo "$CANONICAL" | jq -r .id)
-              RUN_CONCLUSION=$(echo "$CANONICAL" | jq -r .conclusion)
-              if [ "$RUN_CONCLUSION" != "$CONCLUSION" ]; then
-                if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
-                  echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION)"
-                else
-                  DELIVER="rerun of canonical run $RUN_ID failed; falling back to check-run POST"
-                fi
-              else
-                echo "canonical run $RUN_ID already $CONCLUSION"
-              fi
-            elif [ -z "$LATEST_POSTED" ]; then
-              DELIVER="no completed canonical run and no API-posted check-run for $HEAD_SHA; posting fail-closed"
-            fi
-            if [ -z "$DELIVER" ]; then
-              echo "verdict $CONCLUSION already delivered for $HEAD_SHA; nothing to post"
+              echo "latest API-posted check-run is $LATEST_POSTED; posting superseding check-run"
+            elif [ "$LATEST" != "$CONCLUSION" ]; then
+              echo "latest pr_checks_slice check-run is ${LATEST:-absent}; posting $CONCLUSION"
+            else
+              echo "latest pr_checks_slice check-run already $CONCLUSION; nothing to deliver"
               echo "::endgroup::"
               continue
             fi
-            echo "$DELIVER"
 
             # Keep output.summary under the 65 KB API limit. Truncation
             # uses a parameter expansion, not a pipe: with pipefail, a

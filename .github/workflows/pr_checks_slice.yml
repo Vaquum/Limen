@@ -4,9 +4,6 @@ name: pr_checks_slice
 # once, in governance/slice_gate.py's module docstring (the single source);
 # this workflow only runs it. If any rule is false the gate fails and merge
 # is blocked. There is no graceful skip, no optional mode, and no bypass flag.
-#
-# Adopted from Vaquum/new-repository-template@c4a7a05aa2c7ee487a3e6f66c20ea49a1fc5844b;
-# adapted for Limen: Python 3.10 (CI parity).
 
 on:
   pull_request:
@@ -35,12 +32,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.10'
 
@@ -69,7 +66,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --json title,body,changedFiles > pr_view.json
           jq -r '.title' pr_view.json > pr_title.txt
-          jq -r '.body // ""' pr_view.json > pr_body.txt
+          jq -r '.body' pr_view.json > pr_body.txt
           EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
 
           gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/files" \

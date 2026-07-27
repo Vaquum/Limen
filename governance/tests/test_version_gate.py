@@ -10,7 +10,7 @@ def _pyproject(version: str) -> str:
 
 
 def _changelog(version: str, body: str = '- Change.\n') -> str:
-    return f'# v{version}\n\n{body}\n# v1.2.3\n\n- Previous.\n'
+    return f'## [1.2.3] - 2026-01-01\n\n- Previous.\n\n## [{version}] - 2026-01-02\n\n{body}'
 
 
 def test_gate_accepts_feat_with_minor_bump_and_changelog_content() -> None:
@@ -41,9 +41,9 @@ def test_gate_requires_new_changelog_header_at_top() -> None:
         _pyproject('1.2.3'),
         _pyproject('1.2.4'),
         _changelog('1.2.3'),
-        '# v1.2.3\n\n- Previous.\n\n# v1.2.4\n\n- New but misplaced.\n',
+        '## [1.2.4] - 2026-01-02\n\n- New but misplaced.\n\n## [1.2.3] - 2026-01-01\n\n- Previous.\n',
     )
-    assert any('top version header is `# v1.2.3`' in item for item in failures)
+    assert any('1.2.3' in item for item in failures)
 
 
 def test_gate_rejects_empty_top_changelog_section() -> None:
@@ -52,7 +52,7 @@ def test_gate_rejects_empty_top_changelog_section() -> None:
         _pyproject('1.2.3'),
         _pyproject('1.2.4'),
         _changelog('1.2.3'),
-        '# v1.2.4\n\n# v1.2.3\n\n- Previous.\n',
+        '## [1.2.3] - 2026-01-01\n\n- Previous.\n\n## [1.2.4] - 2026-01-02\n',
     )
     assert any('has no content before the next version header' in item for item in failures)
 

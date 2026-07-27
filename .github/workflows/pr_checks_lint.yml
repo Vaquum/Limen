@@ -1,0 +1,105 @@
+name: pr_checks_lint
+
+# The static lint plane: ruff, module line budgets, dead code, the
+# no-swallowed-violations scan, declared-dependency vulnerabilities, and
+# the budget-raise ratchet.
+#
+# Deliberately NOT here, and deliberately not named in CLAUDE.md law 6:
+#   check_module_docstrings   - this repo ignores D100 by choice; one
+#                               function per file with filename-matching
+#                               names makes a module docstring a
+#                               restatement (#770)
+#   check_docstrings          - withdrawn with #770
+#   check_test_fallbacks      - the flagged pattern is a correct verbose
+#                               pytest.raises, and the gate mis-flags
+#                               try/finally cleanup (#773, filed upstream)
+#   check_test_code_ratio     - a SLOC proxy on a repo already at 93% (#773)
+#   check_file_size_balance   - pending the upstream configurable bound
+#                               (Vaquum/new-repository-template#94)
+#   vulture                   - 17 findings, 17 false positives: every one is
+#                               a parameter name in a Protocol stub or an
+#                               sklearn-shaped signature (X, y_score,
+#                               zero_division, autolag, exc_info, nbytes).
+#                               It catches no defect class this codebase has,
+#                               and a 17-entry whitelist to silence it would
+#                               be the make-work the stance forbids.
+#
+# Coverage is not here either: `PR Checks Coverage` already enforces a 92%
+# floor from the suite's own coverage run, stricter than the upstream floor
+# gate, and duplicating it would mean running the suite twice. Docs-site
+# checks stay in `PR Checks Docs Site`, which is built on this repository's
+# own docs generator rather than the upstream docs-map model.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr_checks_lint:
+    name: pr_checks_lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.10'
+
+      - name: Install gate toolchain and project
+        run: |
+          python -m pip install --require-hashes -r requirements/ci/dev-env.txt
+          python -m pip install --no-deps -e .
+
+      - name: Resolve package root
+        id: package
+        run: |
+          set -euo pipefail
+          package_root="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('.github/typing_budget.json').read_text())
+          root = data.get('package_root')
+          if not isinstance(root, str) or not root:
+              raise SystemExit('typing_budget.json must set package_root')
+          print(root)
+          PY
+          )"
+          if [ ! -d "$package_root" ]; then
+            echo "::error::package root '$package_root' does not exist"
+            exit 1
+          fi
+          echo "package_root=$package_root" >> "$GITHUB_OUTPUT"
+
+      - name: Run ruff lint
+        run: python -m ruff check "${{ steps.package.outputs.package_root }}" governance tests
+
+      - name: Module line-count budget gate
+        run: python governance/check_module_budgets.py
+
+      - name: No-swallowed-violations gate
+        run: python governance/check_no_swallowed_violations.py
+
+      - name: Dependency vulnerability gate
+        run: python governance/check_dependency_vulnerabilities.py
+
+      - name: Budget-raise ratchet gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          git -c "http.https://github.com/.extraheader=$AUTH" fetch origin "$BASE_REF" --depth=1
+          python governance/check_budget_ratchet.py \
+            --base-ref "origin/$BASE_REF" \
+            --pr-number "$PR_NUMBER"

@@ -1,8 +1,5 @@
 name: CodeQL
 
-permissions:
-  contents: read
-
 on:
   push:
     branches: [ main ]
@@ -26,29 +23,35 @@ jobs:
         language: [ 'python' ]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      with:
-        persist-credentials: false
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
 
-    - name: Set up Python
-      uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          # 3.10 to match this repository's floor: `requires-python =
+          # ">=3.10,<3.14"` and `governance.yml` `python_version: "3.10"`.
+          # A mismatch would fail the editable install's requires-python
+          # check, the only resolution left after --no-deps.
+          python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        pip install --require-hashes -r requirements/ci/runtime-env.txt
-        pip install --no-deps -e .
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3.37.0
-      with:
-        languages: ${{ matrix.language }}
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r requirements/ci/runtime-env.txt
+          pip install --require-hashes -r requirements/ci/build-tools.txt
+          pip install --no-build-isolation --no-deps -e .
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3.37.0
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a  # v4.37.1
+        with:
+          languages: ${{ matrix.language }}
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@02c5e83432fe5497fd85b873b6c9f16a8578e1d9 # v3.37.0
-      with:
-        category: "/language:${{matrix.language}}"
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@7188fc363630916deb702c7fdcf4e481b751f97a  # v4.37.1
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a  # v4.37.1
+        with:
+          category: "/language:${{matrix.language}}"

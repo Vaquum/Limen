@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "5.9.5"
+version = "5.10.0"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -78,7 +78,7 @@ dev = [
   "pyright>=1.1.408,<1.1.409",
   "pyroma>=5,<6",
   "pytest>=8,<10",
-  "ruff>=0.8,<1",
+  "ruff>=0.15.21,<0.15.22",
   "scipy-stubs>=1.15,<1.16",
   "tomli>=2.0,<3",
   "twine>=6,<7",
@@ -133,7 +133,9 @@ omit = ["tests/*"]
 # enforcement plane, not shippable source (docs/Developer/Packaging.md).
 # check-manifest's globs do not cross '/', so the nested test layer needs its
 # own recursive pattern.
-ignore = ["governance/*", "governance/**"]
+# governance.yml is the contract anchor for the enforcement plane, not
+# shippable source -- same reason governance/ is excluded.
+ignore = ["governance/*", "governance/**", "governance.yml"]
 
 [tool.pyright]
 include = ["limen"]
@@ -149,7 +151,18 @@ reportImportCycles = "error"
 reportMissingSuperCall = "error"
 reportUninitializedInstanceVariable = "error"
 reportUnusedCallResult = "error"
-reportMissingTypeStubs = "none"
+reportMissingTypeStubs = "none"  # lightgbm/xgboost/talib/tabpfn ship no stubs
+# Strict already implies these; declared explicitly so the typing gate can
+# verify the posture rather than infer it from typeCheckingMode alone.
+reportExplicitAny = "error"
+reportMissingImports = "error"
+reportUnknownArgumentType = "error"
+reportUnknownMemberType = "error"
+reportUnknownVariableType = "error"
+reportUnknownLambdaType = "error"
+reportUnknownParameterType = "error"
+reportMissingParameterType = "error"
+reportConstantRedefinition = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -234,7 +247,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
 "governance/*.py" = ["T201", "S603", "S607", "PLR5501", "PLR0911", "PLR2004", "B007", "PTH123"]
-"governance/tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
+"governance/tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607", "S102", "S108"]
 "tests/**/*.py" = ["S101", "BLE001", "PLR2004", "B011", "ANN", "ARG", "S603", "S607"]
 "limen/targets/*.py" = ["ARG002"]
 "limen/cli/**/*.py" = ["S603"]

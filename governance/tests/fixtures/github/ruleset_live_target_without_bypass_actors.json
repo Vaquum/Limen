@@ -21,66 +21,17 @@
       "type": "pull_request",
       "parameters": {
         "required_approving_review_count": 1,
-        "dismiss_stale_reviews_on_push": false,
+        "dismiss_stale_reviews_on_push": true,
         "required_reviewers": [],
         "require_code_owner_review": true,
+        "dismissal_restriction": {
+          "enabled": false,
+          "allowed_actors": []
+        },
         "require_last_push_approval": true,
         "required_review_thread_resolution": true,
         "allowed_merge_methods": [
           "merge"
-        ],
-        "dismissal_restriction": {
-          "enabled": false,
-          "allowed_actors": []
-        }
-      }
-    },
-    {
-      "type": "required_status_checks",
-      "parameters": {
-        "strict_required_status_checks_policy": true,
-        "do_not_enforce_on_create": false,
-        "required_status_checks": [
-          {
-            "context": "PR Checks CodeQL (python)",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_cc",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_lint",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_ruleset",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_slice",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_fail_loud",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_typing",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_version",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_tests",
-            "integration_id": 15368
-          },
-          {
-            "context": "pr_checks_honesty",
-            "integration_id": 15368
-          }
         ]
       }
     },
@@ -90,6 +41,72 @@
         "review_on_push": true,
         "review_draft_pull_requests": false
       }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "PR Checks CodeQL (python)"
+          },
+          {
+            "context": "pr_checks_cc"
+          },
+          {
+            "context": "pr_checks_lint"
+          },
+          {
+            "context": "pr_checks_ruleset"
+          },
+          {
+            "context": "pr_checks_slice"
+          },
+          {
+            "context": "pr_checks_fail_loud"
+          },
+          {
+            "context": "pr_checks_typing"
+          },
+          {
+            "context": "pr_checks_version"
+          },
+          {
+            "context": "pr_checks_honesty"
+          },
+          {
+            "context": "PR Checks Tests"
+          },
+          {
+            "context": "PR Checks Coverage"
+          },
+          {
+            "context": "PR Checks Runtime"
+          },
+          {
+            "context": "PR Checks Docs Site"
+          },
+          {
+            "context": "PR Checks Packaging"
+          },
+          {
+            "context": "PR Checks Package Install (3.10)"
+          },
+          {
+            "context": "PR Checks Package Install (3.11)"
+          },
+          {
+            "context": "PR Checks Package Install (3.12)"
+          },
+          {
+            "context": "PR Checks Package Install (3.13)"
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "id": 5406995,
+  "source_type": "Repository",
+  "source": "Vaquum/Limen"
 }

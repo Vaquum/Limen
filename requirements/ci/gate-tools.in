@@ -4,3 +4,6 @@
 #   -c requirements/constraints.txt --python-version 3.10 --python-platform linux \
 #   -o requirements/ci/gate-tools.txt
 pyyaml==6.0.2
+# tomllib is stdlib only from 3.11; the gates that read pyproject.toml
+# fall back to tomli on this repository's 3.10 floor.
+tomli==2.4.1

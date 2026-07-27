@@ -79,9 +79,11 @@ def test_slice_closeout_guard_and_ratchet_surfaces() -> None:
     guard = (ROOT / '.github' / 'workflows' / 'slice_closeout_guard.yml').read_text(encoding='utf-8')
     assert 'issues:' in guard
     assert 'gh issue reopen' in guard
-    pyright_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_pyright.yml').read_text(encoding='utf-8')
-    assert re.search(r'PYRIGHT_WARNING_BASELINE: 0\b', pyright_workflow) is not None
-    assert '--outputjson' in pyright_workflow
+    # pyright moved into pr_checks_typing, which additionally ratchets the
+    # escape-hatch budget and the files-analysed count.
+    typing_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_typing.yml').read_text(encoding='utf-8')
+    assert '--outputjson' in typing_workflow
+    assert 'governance/typing_gate.py' in typing_workflow
     slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
     assert 'slice_closeout_guard' in slice_template
     assert 'is reverted' in slice_template
@@ -208,8 +210,9 @@ def test_supply_chain_surfaces() -> None:
     assert (ROOT / '.github' / 'vuln_exceptions.json').is_file()
     assert (ROOT / 'governance' / 'check_dependency_vulnerabilities.py').is_file()
 
-    supply = (ROOT / '.github' / 'workflows' / 'pr_checks_supply.yml').read_text(encoding='utf-8')
-    assert 'governance/check_dependency_vulnerabilities.py' in supply
+    # the dependency-vulnerability gate moved into pr_checks_lint
+    lint = (ROOT / '.github' / 'workflows' / 'pr_checks_lint.yml').read_text(encoding='utf-8')
+    assert 'governance/check_dependency_vulnerabilities.py' in lint
 
     publish = (ROOT / '.github' / 'workflows' / 'pr_publish_pypi.yml').read_text(encoding='utf-8')
     assert 'Guard PyPI filename availability' in publish
@@ -342,7 +345,13 @@ def test_governance_hardening_surfaces() -> None:
     assert 'file enumeration incomplete' in sweep_workflow
     assert 'governance/slice_gate.py' in sweep_workflow
     assert 'actions/runs' in sweep_workflow
-    assert sweep_workflow.count('actions: write') == 1
+    # The sweep no longer reruns the pull_request workflow -- a rerun
+    # re-executes the gate from the judged PR's merge ref, which is
+    # self-attestation. It computes the verdict on main and POSTs a
+    # check-run instead, so it needs `actions: read` to classify runs by
+    # check suite, not `actions: write`.
+    assert sweep_workflow.count('actions: read') == 1
+    assert 'actions: write' not in sweep_workflow
     assert 'check_suite_id' in sweep_workflow
     assert 'LATEST_POSTED' in sweep_workflow
     common_path = ROOT / 'governance' / '_common.py'
