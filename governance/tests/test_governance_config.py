@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import re
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 from pathlib import Path
 from typing import Final
 
