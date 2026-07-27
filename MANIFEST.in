@@ -1,6 +1,6 @@
 include README.md
 include AGENTS.md
-include Claude.md
+include CLAUDE.md
 include Project.md
 include limen_build_backend.py
 include CHANGELOG.md

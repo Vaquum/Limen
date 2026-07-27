@@ -299,6 +299,20 @@ REQUIRED_PYRIGHT: Final[dict[str, object]] = {
 # passing the error-count ratchet. Gate asserts exact match.
 REQUIRED_PYRIGHT_INCLUDE: Final[list[str]] = ['limen']
 
+# Settings this repository is permitted to relax, each for a reason that is
+# not about weakening the gate. Keep this set as small as the facts allow --
+# every entry is a hole, and it exists only where the alternative is reporting
+# a defect the repository cannot fix.
+#
+#   * reportMissingTypeStubs: the ML backends this package imports (lightgbm,
+#     xgboost, talib, tabpfn) ship no type stubs. Under strict this reports a
+#     third-party packaging gap on every import of them, which says nothing
+#     about this codebase's typing discipline. Upstream has no such
+#     dependencies and requires 'error'.
+PERMITTED_WEAKENINGS: Final[frozenset[str]] = frozenset({
+    'reportMissingTypeStubs',
+})
+
 FORBIDDEN_VALUES: Final[frozenset[object]] = frozenset(
     {'none', 'warning', 'information', 'info', 'false', False}
 )
@@ -362,6 +376,8 @@ def gate_pyright_config(config: dict[str, object]) -> list[str]:
 
     for key, value in pyright.items():
         if not isinstance(key, str):
+            continue
+        if key in PERMITTED_WEAKENINGS:
             continue
         if key.startswith('report') and value in FORBIDDEN_VALUES:
             failures.append(

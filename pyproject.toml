@@ -133,7 +133,9 @@ omit = ["tests/*"]
 # enforcement plane, not shippable source (docs/Developer/Packaging.md).
 # check-manifest's globs do not cross '/', so the nested test layer needs its
 # own recursive pattern.
-ignore = ["governance/*", "governance/**"]
+# governance.yml is the contract anchor for the enforcement plane, not
+# shippable source -- same reason governance/ is excluded.
+ignore = ["governance/*", "governance/**", "governance.yml"]
 
 [tool.pyright]
 include = ["limen"]
