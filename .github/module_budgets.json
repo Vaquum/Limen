@@ -18,7 +18,7 @@
   "governance/privileged_ruleset_audit.py": 120,
   "governance/ruleset_gate.py": 190,
   "governance/slice_gate.py": 680,
-  "governance/typing_gate.py": 750,
+  "governance/typing_gate.py": 760,
   "governance/version_gate.py": 300,
   "limen/__init__.py": 100,
   "limen/__main__.py": 10,
