@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -145,7 +146,13 @@ def test_typing_gate_setup_failures_exit_2() -> None:
 
         result = subprocess.run(
             [
-                'python3',
+                # sys.executable, not 'python3': the gate imports tomli on the
+                # 3.10 floor, and only the interpreter running this suite has
+                # the dependencies installed. A bare 'python3' picks up the
+                # system interpreter, where the import fails and the gate exits
+                # 1 on ModuleNotFoundError instead of 2 on the setup failure
+                # this test is actually asserting.
+                sys.executable,
                 'governance/typing_gate.py',
                 '--pyright-json',
                 '/tmp/missing-pyright.json',
