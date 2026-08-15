@@ -50,14 +50,14 @@ dependencies = [
 limen = "limen.cli.main:cli"
 
 [project.optional-dependencies]
-data = ["pyarrow>=23.0.1,<24"]
+data = ["pyarrow>=23.0.1,<26"]
 boosting = ["lightgbm>=4.6,<5", "xgboost>=2.1,<4"]
 indicators = ["ta-lib>=0.6,<0.7"]
 stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
 tabpfn = ["tabpfn>=6,<7"]
 all = [
   "lightgbm>=4.6,<5",
-  "pyarrow>=23.0.1,<24",
+  "pyarrow>=23.0.1,<26",
   "scipy>=1.15,<2",
   "statsmodels>=0.14,<0.15",
   "ta-lib>=0.6,<0.7",
