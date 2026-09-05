@@ -53,13 +53,13 @@ limen = "limen.cli.main:cli"
 data = ["pyarrow>=23.0.1,<24"]
 boosting = ["lightgbm>=4.6,<5", "xgboost>=2.1,<4"]
 indicators = ["ta-lib>=0.6,<0.7"]
-stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
+stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.16"]
 tabpfn = ["tabpfn>=6,<7"]
 all = [
   "lightgbm>=4.6,<5",
   "pyarrow>=23.0.1,<24",
   "scipy>=1.15,<2",
-  "statsmodels>=0.14,<0.15",
+  "statsmodels>=0.14,<0.16",
   "ta-lib>=0.6,<0.7",
   "tabpfn>=6,<7",
   "xgboost>=2.1,<4",
