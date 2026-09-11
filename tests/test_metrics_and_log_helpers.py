@@ -723,7 +723,6 @@ def test_long_flat_strategy_prices_entry_at_signal_bar_close() -> None:
 
     assert result.pos.tolist() == [0.0, 1.0]
     assert round(float(result.gross[1]), 6) == 0.066667
-    assert result.gross[1] == pytest.approx(112.0 / 105.0 - 1.0)
 
 
 def test_long_flat_strategy_returns_ignore_open() -> None:

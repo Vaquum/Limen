@@ -109,7 +109,8 @@ def long_flat_strategy(predictions: Any,
     eval_mask = execution_rows & tradable
     pos = (pred == 1) & eval_mask
 
-    entry_mask = pos & ~_shift(pos, 1, False)
+    prev_pos = _shift(pos, 1, False)
+    entry_mask = pos & ~prev_pos
 
     with np.errstate(divide='ignore', invalid='ignore'):
         r_cont = (close_a / prev_close) - 1.0
