@@ -52,14 +52,14 @@ def long_flat_strategy(predictions: Any,
     Long-only, hold-while-1 execution over pre-aligned close-to-close returns.
 
     Interprets a binary 0/1 signal as an all-in long position filled at the
-    signal bar's close: the signal of row t is filled at the close of row t (the
-    prior close of its execution row), held close-to-close while the signal
-    persists, and exited at the close of the last signalled execution row. Fee
-    and slippage are applied multiplicatively on the entry and exit fills.
+    close of the bar before its execution row (the signal bar's own close under
+    the default lag of 1), held close-to-close while the signal persists, and
+    exited at the close of the last signalled execution row. Fee and slippage
+    are applied multiplicatively on the entry and exit fills.
 
     Predictions are shifted forward by execution_lag_bars onto the execution rows.
     Every held bar's gross return is close_t / close_{t-1} - 1; a flat bar is a
-    real 0. An execution row with no finite, non-zero prior close is non-tradable.
+    real 0. An execution row whose prior close is missing or zero is non-tradable.
 
     Args:
         predictions (Any): Per-bar signal (array-like); must contain only 0 or 1
