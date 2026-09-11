@@ -199,8 +199,13 @@ def test_pr_checks_lint_runs_pinned_ruff_on_tools_and_tests_tools() -> None:
 def test_pr_checks_ruleset_runs_test_lint_ci_contract() -> None:
     workflow = RULESET_WORKFLOW.read_text(encoding='utf-8')
 
-    assert '--require-hashes -r requirements/ci/dev-env.txt' in workflow
+    assert 'run: python -m pip install --require-hashes -r requirements/ci/dev-env.txt' in workflow
     assert 'governance/tests/test_lint_ci_contract.py' in workflow
+    # A fresh venv carries Python 3.10's bundled pip 23.0.1, which under
+    # --require-hashes resolves the cyclonedx-python-lib[validation] extra
+    # past the lock; the gate installs with the runner's interpreter.
+    assert '.venv-ruleset' not in workflow
+    assert 'python -m venv' not in workflow
 
 
 def test_pinned_ruff_fails_on_known_bad_fixture() -> None:
