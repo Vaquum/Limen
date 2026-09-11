@@ -42,7 +42,7 @@ Table 2. The default strategy is a fixed long-flat contract.
 | Same-row execution | `execution_lag_bars=0` executes on the same tradable row and prices the entry at the previous close, before the signal exists; it is a research diagnostic, not a deployable configuration. |
 | Price inputs | `open`, `close`, and `price_change` must be numeric. Missing price rows are non-tradable gaps. `open` and `price_change` are validated and gate tradability but do not price returns. |
 | Price identity | `price_change` must equal `close - open` when all three fields are present. |
-| Entry return | Entry-bar gross return is `close_t / close_{t-1} - 1`: the fill is the signal bar's close, and an execution row with no prior close is non-tradable. |
+| Entry return | Entry-bar gross return is `close_t / close_{t-1} - 1`: the fill is the close of the bar before the execution row (the signal bar's close under the default `execution_lag_bars=1`), and an execution row whose prior close is missing or zero is non-tradable. |
 | Continuation return | Continuation-bar gross return is `close_t / close_{t-1} - 1`. |
 | Fill cost | Fee and slippage are applied multiplicatively on entry and exit fills. |
 | Position size | `notional_rate` is a deployed-capital fraction in `(0, 1]`. It scales per-bar `edge`, `pnl`, and `cost`. |
