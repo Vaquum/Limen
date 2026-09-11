@@ -298,11 +298,10 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 1, 0],
-            'open': [100.0, 100.0, 100.0, 100.0],
-            'close': [120.0, 100.0, 90.0, 100.0],
-            'price_change': [20.0, 0.0, -10.0, 0.0],
+            'open': [100.0, 95.0, 100.0, 110.0],
+            'close': [100.0, 90.0, 100.0, 120.0],
+            'price_change': [0.0, -5.0, 0.0, 10.0],
         }),
-        execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
     )
@@ -321,9 +320,9 @@ def test_backtest_snapshot_executes_on_next_bar() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 0],
-            'open': [100.0, 100.0, 100.0],
-            'close': [110.0, 90.0, 100.0],
-            'price_change': [10.0, -10.0, 0.0],
+            'open': [100.0, 105.0, 100.0],
+            'close': [110.0, 99.0, 100.0],
+            'price_change': [10.0, -6.0, 0.0],
         }),
         fee_bps=0.0,
         slip_bps=0.0,
@@ -427,22 +426,29 @@ def test_backtest_snapshot_rejects_inconsistent_price_change() -> None:
 def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
-            'predictions': [1],
-            'open': [100.0],
-            'close': [100.0],
-            'price_change': [0.0],
+            'predictions': [1, 0],
+            'open': [100.0, 100.0],
+            'close': [100.0, 100.0],
+            'price_change': [0.0, 0.0],
         }),
-        execution_lag_bars=0,
         fee_bps=50.0,
         slip_bps=50.0,
     )
 
-    assert result['cost_bps_p50'] == 198.3
-    assert result['pnl_bps_p50'] == -198.3
-    assert result['cost_per_bar_bps'] == 198.3
+    assert result['avg_loss_bps'] == -198.3
+    assert result['cost_bps_p50'] == 99.1
+    assert result['cost_per_bar_bps'] == 99.1
 
 
 def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
+    def first_bar_loss(predictions, *args, **kwargs) -> ExecutionResult:
+        index = predictions.index
+        return ExecutionResult(
+            pos=pd.Series(1.0, index=index),
+            gross=pd.Series(-0.1, index=index),
+            net=pd.Series(-0.1, index=index),
+        )
+
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1],
@@ -450,9 +456,7 @@ def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
             'close': [90.0],
             'price_change': [-10.0],
         }),
-        execution_lag_bars=0,
-        fee_bps=0.0,
-        slip_bps=0.0,
+        strategy=first_bar_loss,
     )
 
     assert result['drawdown_bps_p50'] == -1000.0
@@ -480,11 +484,10 @@ def test_backtest_snapshot_reports_all_bars_population() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0, 1, 0],
-            'open': [100.0, 100.0, 100.0, 100.0],
-            'close': [120.0, 100.0, 90.0, 100.0],
-            'price_change': [20.0, 0.0, -10.0, 0.0],
+            'open': [100.0, 95.0, 100.0, 110.0],
+            'close': [100.0, 90.0, 100.0, 120.0],
+            'price_change': [0.0, -5.0, 0.0, 10.0],
         }),
-        execution_lag_bars=0,
         fee_bps=0.0,
         slip_bps=0.0,
     )
@@ -548,8 +551,8 @@ def test_backtest_snapshot_edge_case_sentinels() -> None:
     no_losers = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1] * 25,
-            'open': [100.0] * 25,
-            'close': [101.0] * 25,
+            'open': [100.0 + bar for bar in range(25)],
+            'close': [101.0 + bar for bar in range(25)],
             'price_change': [1.0] * 25,
         }),
         fee_bps=0.0,
@@ -707,6 +710,85 @@ def test_long_flat_strategy_rejects_mismatched_lengths() -> None:
         )
 
 
+def test_long_flat_strategy_prices_entry_at_signal_bar_close() -> None:
+    result = long_flat_strategy(
+        [1, 0],
+        [100.0, 110.0],
+        [105.0, 112.0],
+        [5.0, 2.0],
+        execution_lag_bars=1,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    )
+
+    assert result.pos.tolist() == [0.0, 1.0]
+    assert round(float(result.gross[1]), 6) == 0.066667
+    assert result.gross[1] == pytest.approx(112.0 / 105.0 - 1.0)
+
+
+def test_long_flat_strategy_returns_ignore_open() -> None:
+    same_closes = long_flat_strategy(
+        [1, 0], [100.0, 110.0], [105.0, 112.0], [5.0, 2.0],
+        execution_lag_bars=1, fee_bps=0.0, slip_bps=0.0,
+    )
+    other_opens = long_flat_strategy(
+        [1, 0], [100.0, 111.0], [105.0, 112.0], [5.0, 1.0],
+        execution_lag_bars=1, fee_bps=0.0, slip_bps=0.0,
+    )
+
+    assert (same_closes.gross == other_opens.gross).all()
+    assert (same_closes.net == other_opens.net).all()
+
+
+def test_backtest_snapshot_round_trip_matches_close_fill() -> None:
+    result = backtest_snapshot(
+        {
+            'predictions': [1, 0],
+            'open': [100.0, 110.0],
+            'close': [105.0, 112.0],
+            'price_change': [5.0, 2.0],
+        },
+        execution_lag_bars=1,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    )
+
+    assert result['avg_win_bps'] == 666.7
+    assert result['edge_bps_p95'] == 633.3
+    assert result['trades_per_bar'] == 0.5
+
+
+def test_long_flat_strategy_row_without_prior_close_is_not_tradable() -> None:
+    first_row = long_flat_strategy(
+        [1, 1], [100.0, 100.0], [100.0, 110.0], [0.0, 10.0],
+        execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0,
+    )
+
+    assert first_row.pos.tolist() == [0.0, 1.0]
+    assert [round(float(value), 6) for value in first_row.gross] == [0.0, 0.1]
+
+    after_gap = long_flat_strategy(
+        [1, 1, 1, 1],
+        [100.0, np.nan, 100.0, 110.0],
+        [100.0, np.nan, 110.0, 121.0],
+        [0.0, np.nan, 10.0, 11.0],
+        execution_lag_bars=1,
+        fee_bps=0.0,
+        slip_bps=0.0,
+    )
+
+    assert after_gap.pos.tolist() == [0.0, 0.0, 0.0, 1.0]
+    assert after_gap.gross.tolist() == pytest.approx([0.0, 0.0, 0.0, 0.1])
+
+
+def test_long_flat_strategy_signature_unchanged() -> None:
+    assert str(inspect.signature(long_flat_strategy)) == (
+        '(predictions: Any, open_px: Any, close_px: Any, price_change: Any, *, '
+        'execution_lag_bars: int = 1, fee_bps: float = 5.0, slip_bps: float = 5.0) '
+        '-> limen.backtest.long_flat_strategy.ExecutionResult'
+    )
+
+
 def test_backtest_snapshot_notional_rate_scales_returns_not_structure() -> None:
     df = pd.DataFrame({
         'predictions': [1, 1, 0, 0],
@@ -771,8 +853,10 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
         slip_bps=0.0,
     )
 
-    assert same_row['pnl_bps_p50'] == 500.0
-    assert next_bar['pnl_bps_p50'] == -500.0
+    # Same-row pricing books the signal bar's own move from the previous close.
+    assert same_row['pnl_per_bar_bps'] == 555.6
+    # The deployed fill at the signal bar's close then earns the next bar.
+    assert next_bar['pnl_per_bar_bps'] == -909.1
 
 
 def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:

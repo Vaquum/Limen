@@ -49,16 +49,17 @@ def long_flat_strategy(predictions: Any,
                        slip_bps: float = 5.0) -> ExecutionResult:
 
     '''
-    Long-only, hold-while-1 execution over pre-aligned intrabar returns.
+    Long-only, hold-while-1 execution over pre-aligned close-to-close returns.
 
-    Interprets a binary 0/1 signal as an all-in long position: enter at the open
-    of the first signalled bar, ride close-to-close while the signal persists, and
-    exit at the close of the last signalled bar. Fee and slippage are applied
-    multiplicatively on the entry and exit fills.
+    Interprets a binary 0/1 signal as an all-in long position filled at the
+    signal bar's close: the signal of row t is filled at the close of row t (the
+    prior close of its execution row), held close-to-close while the signal
+    persists, and exited at the close of the last signalled execution row. Fee
+    and slippage are applied multiplicatively on the entry and exit fills.
 
     Predictions are shifted forward by execution_lag_bars onto the execution rows.
-    The entry-bar gross return is price_change / open; the continuation-bar gross
-    return is close_t / close_{t-1} - 1; a flat bar is a real 0.
+    Every held bar's gross return is close_t / close_{t-1} - 1; a flat bar is a
+    real 0. An execution row with no finite, non-zero prior close is non-tradable.
 
     Args:
         predictions (Any): Per-bar signal (array-like); must contain only 0 or 1
@@ -95,7 +96,11 @@ def long_flat_strategy(predictions: Any,
     if any(arr.ndim != 1 for arr in arrays) or len({arr.shape[0] for arr in arrays}) != 1:
         raise ValueError('long_flat_strategy inputs must be equal-length 1D arrays')
 
-    tradable = ~np.isnan(open_a) & ~np.isnan(close_a) & ~np.isnan(dpx) & (open_a != 0)
+    prev_close = _shift(close_a, 1, np.nan)
+    tradable = (
+        ~np.isnan(open_a) & ~np.isnan(close_a) & ~np.isnan(dpx)
+        & ~np.isnan(prev_close) & (prev_close != 0)
+    )
     execution_rows = np.zeros(total_bars, dtype=bool)
     if execution_lag_bars < total_bars:
         execution_rows[execution_lag_bars:] = True
@@ -104,15 +109,12 @@ def long_flat_strategy(predictions: Any,
     eval_mask = execution_rows & tradable
     pos = (pred == 1) & eval_mask
 
-    prev_pos = _shift(pos, 1, False)
-    entry_mask = pos & ~prev_pos
-    cont_mask = pos & prev_pos
+    entry_mask = pos & ~_shift(pos, 1, False)
 
     with np.errstate(divide='ignore', invalid='ignore'):
-        r_entry = dpx / open_a
-        r_cont = (close_a / _shift(close_a, 1, np.nan)) - 1.0
+        r_cont = (close_a / prev_close) - 1.0
 
-    gross = np.where(entry_mask, r_entry, 0.0) + np.where(cont_mask, r_cont, 0.0)
+    gross = np.where(pos, r_cont, 0.0)
     gross = np.where(np.isnan(gross), 0.0, gross)
 
     fee = fee_bps / BPS_PER_UNIT

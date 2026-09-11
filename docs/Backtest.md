@@ -39,10 +39,10 @@ Table 2. The default strategy is a fixed long-flat contract.
 | Signal | Direct snapshot predictions must be binary `0` or `1`; invalid and missing values raise. |
 | Position | `prediction == 1` means in market; `prediction == 0` means flat. The default path is long-only. |
 | Execution lag | Completed-bar pipelines execute prediction row `t` on the next execution row by default with `execution_lag_bars=1`. |
-| Same-row execution | `execution_lag_bars=0` executes on the same tradable row; it does not restore the old raw-row denominator behavior. |
+| Same-row execution | `execution_lag_bars=0` executes on the same tradable row and prices the entry at the previous close, before the signal exists; it is a research diagnostic, not a deployable configuration. |
 | Price inputs | `open`, `close`, and `price_change` must be numeric. Missing price rows are non-tradable gaps. |
 | Price identity | `price_change` must equal `close - open` when all three fields are present. |
-| Entry return | Entry-bar gross return is `price_change / open`. |
+| Entry return | Entry-bar gross return is `close_t / close_{t-1} - 1`: the fill is the signal bar's close, and an execution row with no prior close is non-tradable. |
 | Continuation return | Continuation-bar gross return is `close_t / close_{t-1} - 1`. |
 | Fill cost | Fee and slippage are applied multiplicatively on entry and exit fills. |
 | Position size | `notional_rate` is a deployed-capital fraction in `(0, 1]`. It scales per-bar `edge`, `pnl`, and `cost`. |
