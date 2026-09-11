@@ -56,7 +56,7 @@ The bundled YAML template fixes:
 - grid: four momentum thresholds × four flow thresholds × five holds (`30`, `45`, `60`, `90`, `120` minutes), all 80 combinations
 - execution: one-bar lag, 10 bps fee plus 5 bps slippage on each entry and exit fill
 
-The reference candidate (`-575` bps momentum, `-0.5` flow score, `60` minutes) produced sparse executed samples in the fixed window: 129 train, 13 validation, and 14 test trades. Mean compounded net PnL per executed trade was 75.7, 116.1, and 127.1 bps respectively after costs. On the irregular test bars, observed position paths spanned about 61.6–149.7 minutes. These are reproducible backtest observations, not a population guarantee or expected live return.
+The reference candidate (`-575` bps momentum, `-0.5` flow score, `60` minutes) produced sparse executed samples in the fixed window: 129 train, 13 validation, and 14 test trades. Mean compounded net PnL per executed trade was 76.0, 115.7, and 127.4 bps respectively after costs. On the irregular test bars, observed position paths spanned about 61.6–149.7 minutes. These are reproducible backtest observations, not a population guarantee or expected live return.
 
 The transform prevents the final observed row of each UTC day from initiating a trigger because same-date membership requires the next row. A position already within its wall-clock hold can remain active on that row. Treat trigger initiation as one-row available; the default execution lag adapts the research signal to the backtest but does not make the raw trigger same-row causal.
 
