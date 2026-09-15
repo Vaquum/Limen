@@ -284,8 +284,8 @@ def test_rule_based_evaluate_returns_expected_metrics():
 def test_rule_based_reports_mean_compounded_net_pnl_per_executed_trade():
     df = pl.DataFrame({
         'signal': [1, 1, 0, 1, 0, 0],
-        'open': [50.0, 100.0, 101.0, 50.0, 200.0, 50.0],
-        'close': [50.0, 101.0, 102.0, 50.0, 202.0, 50.0],
+        'open': [100.0, 100.5, 101.0, 200.0, 201.0, 50.0],
+        'close': [100.0, 101.0, 102.0, 200.0, 202.0, 50.0],
     })
     data = {
         'train': df,
