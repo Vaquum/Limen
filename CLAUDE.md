@@ -36,7 +36,7 @@ The list is long because this repository ships a package: alongside the governan
 
 9. **The suite completes inside its recorded wall-clock budget** in `tests/runtime_budget.json`, with the slowest tests published to the run summary. *(PR Checks Runtime)*
 
-10. **The documentation site lints, assembles, and builds clean, and its dependencies carry no high-severity advisory.** *(PR Checks Docs Site)*
+10. **The documentation site lints, assembles, and builds clean, and its dependencies carry no untracked advisory.** An advisory with no patched release anywhere in the dependency graph may be tracked in `docs-site/scripts/audit-security.mjs` by its URL, with the date and the release that retires it; a tracked advisory is a dated exception, not a silence. *(PR Checks Docs Site)*
 
 11. **Packaging holds its contract.** The source audit passes, distributions build byte-identically twice under a fixed `SOURCE_DATE_EPOCH`, and `twine check`, `check-wheel-contents`, `check-manifest` and `pyroma` all pass. *(PR Checks Packaging)*
 
