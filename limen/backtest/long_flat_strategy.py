@@ -51,12 +51,12 @@ def long_flat_strategy(predictions: Any,
     '''
     Long-only, hold-while-1 execution over pre-aligned close-to-close returns.
 
-    A binary 0/1 signal, shifted forward by execution_lag_bars, holds an all-in long
-    position from the prior close to the close of the last signalled row, earning
-    close_t / close_{t-1} - 1 per held bar and a real 0 when flat; a row whose prior
-    close is missing or zero is non-tradable. Slippage adjusts the fill prices; fee_bps
-    of the entry notional is paid from cash at entry and fee_bps of the exit proceeds
-    at exit, so each bar's net is the return on equity, the position less the entry fee.
+    A binary 0/1 signal holds a long position from the prior close to the last
+    signalled close, earning close_t / close_{t-1} - 1 per held bar and 0 when flat; a
+    row whose prior close is missing or zero is non-tradable. Slippage adjusts the fill
+    prices; fee_bps of the entry notional is paid from cash at entry and fee_bps of the
+    exit proceeds at exit, and each bar's net is the return on equity: the position,
+    after the exit fee on the exit bar, less the entry fee.
 
     Args:
         predictions (Any): Per-bar signal (array-like); must contain only 0 or 1
@@ -121,9 +121,9 @@ def long_flat_strategy(predictions: Any,
 
     factor = np.where(pos, 1.0 + gross, 1.0)
     factor[entry_mask] /= 1.0 + slip
-    growth = np.cumsum(np.log(factor))
+    cumulative = np.cumprod(factor)
     segment_start = np.maximum.accumulate(np.where(entry_mask, np.arange(total_bars), 0))
-    position = np.exp(growth - _shift(growth, 1, 0.0)[segment_start])
+    position = cumulative / _shift(cumulative, 1, 1.0)[segment_start]
     equity = np.where(pos, position - fee, 1.0)
     equity[exit_mask] = position[exit_mask] * (1.0 - fee) * (1.0 - slip) - fee
     previous_equity = np.where(entry_mask, 1.0, _shift(equity, 1, 1.0))

@@ -44,7 +44,7 @@ Table 2. The default strategy is a fixed long-flat contract.
 | Price identity | `price_change` must equal `close - open` when all three fields are present. |
 | Entry return | Entry-bar gross return is `close_t / close_{t-1} - 1`: the fill is the close of the bar before the execution row (the signal bar's close under the default `execution_lag_bars=1`), and an execution row whose prior close is missing or zero is non-tradable. |
 | Continuation return | Continuation-bar gross return is `close_t / close_{t-1} - 1`. |
-| Fill cost | The entry fee is `fee_bps` of the entry notional, paid from cash at entry; the exit fee is `fee_bps` of the exit proceeds; slippage adjusts the fill prices (`close × (1 + slip)` at entry, `close × (1 − slip)` at exit). Within a trade, equity is the position minus the entry fee, so per-bar net returns are equity returns and the entry fee does not compound with the position. |
+| Fill cost | The entry fee is `fee_bps` of the entry notional, paid from cash at entry; the exit fee is `fee_bps` of the exit proceeds; slippage adjusts the fill prices (`close × (1 + slip)` at entry, `close × (1 − slip)` at exit). Within a trade, equity is the position minus the entry fee (on the exit bar, the proceeds after the exit fee minus the entry fee), so per-bar net returns are equity returns and the entry fee does not compound with the position. |
 | Position size | `notional_rate` is a deployed-capital fraction in `(0, 1]`. It scales per-bar `edge`, `pnl`, and `cost`. |
 | Population | Every bar in the window is counted. A flat bar contributes a real `0`. |
 | Units | Return and cost outputs are basis-point scaled. |
@@ -53,7 +53,7 @@ This contract makes each round comparable because every output column is compute
 
 ## Economic inputs
 
-Fees and slippage default to `5.0` bps each per fill. A one-entry, one-exit path pays `fee_bps` of the entry notional from cash at entry, `fee_bps` of the exit proceeds at exit, and slippage on both fill prices, so a trade with gross return `g` compounds to `(1 + g)(1 − fee)(1 − slip) / (1 + slip) − fee`, which at zero slippage is the deployed `g − fee × (2 + g)`. Because equity within a trade is the position minus the entry fee, `cost_bps` on a continuation bar is the small gap between the position's return and the equity return: slightly negative on an up bar, slightly positive on a down bar.
+Fees and slippage default to `5.0` bps each per fill. A one-entry, one-exit path pays `fee_bps` of the entry notional from cash at entry, `fee_bps` of the exit proceeds at exit, and slippage on both fill prices, so a trade with gross return `g` ends with equity `(1 + g)(1 − fee)(1 − slip) / (1 + slip) − fee` per unit of entry notional, a net return of `g − fee × (2 + g)` at zero slippage, the deployed arithmetic. Because equity within a trade is the position minus the entry fee, `cost_bps` on a held bar that is neither the entry nor the exit is the small gap between the position's return and the equity return: slightly negative on an up bar, slightly positive on a down bar.
 
 Configure the economic inputs on the manifest, not on the model:
 
