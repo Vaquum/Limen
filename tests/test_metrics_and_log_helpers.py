@@ -423,7 +423,7 @@ def test_backtest_snapshot_rejects_inconsistent_price_change() -> None:
         )
 
 
-def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
+def test_backtest_snapshot_charges_fees_on_notional_per_fill() -> None:
     result = backtest_snapshot(
         pd.DataFrame({
             'predictions': [1, 0],
@@ -435,9 +435,9 @@ def test_backtest_snapshot_applies_costs_multiplicatively_per_fill() -> None:
         slip_bps=50.0,
     )
 
-    assert result['avg_loss_bps'] == -198.3
-    assert result['cost_bps_p50'] == 99.1
-    assert result['cost_per_bar_bps'] == 99.1
+    assert result['avg_loss_bps'] == -199.0
+    assert result['cost_bps_p50'] == 99.5
+    assert result['cost_per_bar_bps'] == 99.5
 
 
 def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
@@ -778,6 +778,44 @@ def test_long_flat_strategy_row_without_prior_close_is_not_tradable() -> None:
 
     assert after_gap.pos.tolist() == [0.0, 0.0, 0.0, 1.0]
     assert after_gap.gross.tolist() == pytest.approx([0.0, 0.0, 0.0, 0.1])
+
+
+def test_long_flat_strategy_charges_entry_fee_on_entry_notional() -> None:
+    result = long_flat_strategy(
+        [1, 0], [100.0, 100.0], [100.0, 110.0], [0.0, 10.0],
+        execution_lag_bars=1, fee_bps=10.0, slip_bps=0.0,
+    )
+
+    # The deployed one-bar net is g - fee * (2 + g): 0.1 - 0.001 * 2.1.
+    assert round(float(result.net[1]), 6) == 0.0979
+
+
+def test_long_flat_strategy_multi_bar_trade_compounds_to_fee_on_notional() -> None:
+    result = long_flat_strategy(
+        [1, 1, 0], [100.0, 100.0, 110.0], [100.0, 110.0, 121.0], [0.0, 10.0, 11.0],
+        execution_lag_bars=1, fee_bps=10.0, slip_bps=0.0,
+    )
+
+    assert [round(float(value), 6) for value in result.net] == [0.0, 0.099, 0.09899]
+    assert round(float(np.prod(1.0 + result.net) - 1.0), 6) == 0.20779
+
+
+def test_long_flat_strategy_losing_trade_pays_full_entry_fee() -> None:
+    result = long_flat_strategy(
+        [1, 0], [100.0, 100.0], [100.0, 90.0], [0.0, -10.0],
+        execution_lag_bars=1, fee_bps=10.0, slip_bps=0.0,
+    )
+
+    assert round(float(result.net[1]), 6) == -0.1019
+
+
+def test_long_flat_strategy_slippage_stays_a_fill_price_adjustment() -> None:
+    result = long_flat_strategy(
+        [1, 0], [100.0, 100.0], [100.0, 100.0], [0.0, 0.0],
+        execution_lag_bars=1, fee_bps=0.0, slip_bps=50.0,
+    )
+
+    assert round(float(result.net[1]), 6) == -0.00995
 
 
 def test_long_flat_strategy_signature_unchanged() -> None:
