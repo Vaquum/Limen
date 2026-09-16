@@ -320,9 +320,9 @@ def test_rule_based_reports_mean_compounded_net_pnl_per_executed_trade():
     assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
     for split in ('train', 'val', 'test'):
         assert costs[f'num_executed_trades_{split}'] == 2
-        assert costs[f'pnl_per_trade_bps_{split}'] == 119.6
+        assert costs[f'pnl_per_trade_bps_{split}'] == 119.7
         assert zero_costs[f'pnl_per_trade_bps_{split}'] == 150.0
-        assert half_notional[f'pnl_per_trade_bps_{split}'] == 59.7
+        assert half_notional[f'pnl_per_trade_bps_{split}'] == 59.8
 
 
 def test_rule_based_per_trade_pnl_is_nan_without_an_executed_trade():

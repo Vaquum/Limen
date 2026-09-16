@@ -51,15 +51,12 @@ def long_flat_strategy(predictions: Any,
     '''
     Long-only, hold-while-1 execution over pre-aligned close-to-close returns.
 
-    Interprets a binary 0/1 signal as an all-in long position filled at the
-    close of the bar before its execution row (the signal bar's own close under
-    the default lag of 1), held close-to-close while the signal persists, and
-    exited at the close of the last signalled execution row. Fee and slippage
-    are applied multiplicatively on the entry and exit fills.
-
-    Predictions are shifted forward by execution_lag_bars onto the execution rows.
-    Every held bar's gross return is close_t / close_{t-1} - 1; a flat bar is a
-    real 0. An execution row whose prior close is missing or zero is non-tradable.
+    A binary 0/1 signal holds a long position from the prior close to the last
+    signalled close, earning close_t / close_{t-1} - 1 per held bar and 0 when flat; a
+    row whose prior close is missing or zero is non-tradable. Slippage adjusts the fill
+    prices; fee_bps of the entry notional is paid from cash at entry and fee_bps of the
+    exit proceeds at exit, and each bar's net is the return on equity: the position, or
+    on the exit bar the proceeds after the exit fee, less the entry fee.
 
     Args:
         predictions (Any): Per-bar signal (array-like); must contain only 0 or 1
@@ -120,15 +117,17 @@ def long_flat_strategy(predictions: Any,
 
     fee = fee_bps / BPS_PER_UNIT
     slip = slip_bps / BPS_PER_UNIT
-    entry_mult = (1.0 - fee) / (1.0 + slip)
-    exit_mult = (1.0 - fee) * (1.0 - slip)
-
     exit_mask = pos & ~_shift(pos, -1, False)
-    cost_mult = np.ones(total_bars, dtype=float)
-    cost_mult[entry_mask] *= entry_mult
-    cost_mult[exit_mask] *= exit_mult
 
-    net = ((1.0 + gross) * cost_mult) - 1.0
-    net = np.where(np.isnan(net), 0.0, net)
+    factor = np.where(pos, 1.0 + gross, 1.0)
+    factor[entry_mask] /= 1.0 + slip
+    growth = np.cumsum(np.log(factor))
+    segment_start = np.maximum.accumulate(np.where(entry_mask, np.arange(total_bars), 0))
+    position = np.exp(growth - _shift(growth, 1, 0.0)[segment_start])
+    equity = np.where(pos, position - fee, 1.0)
+    equity[exit_mask] = position[exit_mask] * (1.0 - fee) * (1.0 - slip) - fee
+    previous_equity = np.where(entry_mask, 1.0, _shift(equity, 1, 1.0))
+
+    net = np.where(pos, equity / previous_equity - 1.0, 0.0)
 
     return ExecutionResult(pos=pos.astype(float), gross=gross, net=net)
