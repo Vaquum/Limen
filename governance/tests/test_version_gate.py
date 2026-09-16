@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from governance import version_gate
+from governance._common import REPO_ROOT
 
 
 def _pyproject(version: str) -> str:
@@ -94,3 +95,68 @@ def test_gate_accepts_imperative_changelog_bullet() -> None:
         _changelog('1.2.4', body='- Fix the broken parser path.\n'),
     )
     assert failures == []
+
+
+def test_gate_rejects_version_rewind_without_marker() -> None:
+    failures = version_gate.gate(
+        'ci(version): return to the 5.x line',
+        _pyproject('7.0.0'),
+        _pyproject('5.10.3'),
+        _changelog('7.0.0'),
+        _changelog('5.10.3'),
+    )
+    assert any('version did not move forward' in item for item in failures)
+
+
+def test_gate_accepts_version_rewind_with_marker() -> None:
+    failures = version_gate.gate(
+        'ci(version): return to the 5.x line',
+        _pyproject('7.0.0'),
+        _pyproject('5.10.3'),
+        _changelog('7.0.0'),
+        _changelog('5.10.3'),
+        pr_body='Body.\n\n[version-rewind: neither 6.0.0 nor 7.0.0 changed the public API]\n',
+    )
+    assert failures == []
+
+
+def test_gate_rejects_rewind_marker_without_rewind() -> None:
+    failures = version_gate.gate(
+        'fix: tighten law template',
+        _pyproject('1.2.3'),
+        _pyproject('1.2.4'),
+        _changelog('1.2.3'),
+        _changelog('1.2.4'),
+        pr_body='[version-rewind: idle marker]\n',
+    )
+    assert any('does not go down' in item for item in failures)
+
+
+def test_gate_rejects_major_bump_without_marker() -> None:
+    failures = version_gate.gate(
+        'feat!: replace the public API',
+        _pyproject('1.2.3'),
+        _pyproject('2.0.0'),
+        _changelog('1.2.3'),
+        _changelog('2.0.0'),
+    )
+    assert any('without `[major-release: <reason>]`' in item for item in failures)
+
+
+def test_gate_accepts_major_bump_with_marker() -> None:
+    failures = version_gate.gate(
+        'feat!: replace the public API',
+        _pyproject('1.2.3'),
+        _pyproject('2.0.0'),
+        _changelog('1.2.3'),
+        _changelog('2.0.0'),
+        pr_body='[major-release: the Trainer constructor signature changes]\n',
+    )
+    assert failures == []
+
+
+def test_constitution_names_both_markers() -> None:
+    lines = (REPO_ROOT / 'CLAUDE.md').read_text(encoding='utf-8').splitlines()
+    law = next(line for line in lines if line.startswith('5. '))
+    assert law.count('[version-rewind: <reason>]') == 1
+    assert law.count('[major-release: <reason>]') == 1
