@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Version gate -- every PR must bump version and record a CHANGELOG trail.
 
-Enforces seven rules, all deterministic:
+Enforces nine rules, all deterministic:
 
   1. The head commit's `pyproject.toml` is different from the base's.
   2. `[project].version` at the head is strictly greater than at base
@@ -24,6 +24,14 @@ Enforces seven rules, all deterministic:
      a "TODO:"/"FIXME:"-style note or a stub bullet (`- TBD`, `- ...`).
      Only the top section is checked, so older entries are never
      re-litigated.
+  8. A major bump requires `[major-release: <reason>]` on its own line of
+     the PR body. A major release is reserved for a change to the public
+     API; a behaviour change inside one component is a patch or a minor,
+     whatever its title says.
+  9. `[version-rewind: <reason>]` on its own line of the PR body lets
+     rule 2 accept a head version below the base, to withdraw releases
+     that should never have been cut; rule 5 does not apply to a rewind,
+     and a rewind marker on a PR whose version does not go down fails.
 
 "Whatever is changed must leave a trail" -- rules 1 and 3 enforce that
 every PR edits both artifacts. Rule 5 enforces that the trail records
@@ -38,6 +46,7 @@ Usage:
     --head-pyproject <path>   # pyproject.toml at HEAD
     --base-changelog <path>   # CHANGELOG.md at BASE
     --head-changelog <path>   # CHANGELOG.md at HEAD
+    --pr-body-file <path>     # PR body at HEAD (optional; rules 8 and 9)
 
 Exit codes:
   0 -- all rules pass
@@ -177,6 +186,14 @@ _PLACEHOLDER_RE: Final[re.Pattern[str]] = re.compile(
     re.IGNORECASE,
 )
 
+# PR-body markers, each on its own line, the shape of `[budget-raise: ...]`.
+_MAJOR_RELEASE_RE: Final[re.Pattern[str]] = re.compile(
+    r'^\[major-release:\s*(?P<reason>.+?)\]\s*$', re.MULTILINE
+)
+_VERSION_REWIND_RE: Final[re.Pattern[str]] = re.compile(
+    r'^\[version-rewind:\s*(?P<reason>.+?)\]\s*$', re.MULTILINE
+)
+
 
 def first_version_header(changelog_text: str) -> str | None:
     """Return the version string from the newest version header, or None.
@@ -233,6 +250,7 @@ def gate(
     head_pyproject: str,
     base_changelog: str,
     head_changelog: str,
+    pr_body: str = '',
 ) -> list[str]:
     failures: list[str] = []
 
@@ -251,14 +269,23 @@ def gate(
             f'{head_version!r}. Every PR must bump the version.'
         )
 
-    # Rule 2: head version > base (strictly, by semver).
+    # Rule 2: head version > base (strictly, by semver), unless the PR body
+    # declares a rewind (rule 9).
     base_sv = parse_semver(base_version)
     head_sv = parse_semver(head_version)
     actual = bump_level(base_sv, head_sv)
-    if actual == 'none':
+    rewind = _VERSION_REWIND_RE.search(pr_body) is not None
+    if rewind and not head_sv < base_sv:
+        failures.append(
+            f'PR body carries `[version-rewind: ...]` but the version does not '
+            f'go down ({base_version} -> {head_version}). Remove the marker.'
+        )
+    elif actual == 'none' and not rewind:
         failures.append(
             f'version did not move forward. base={base_version!r}, '
-            f'head={head_version!r}. Every PR must advance the version.'
+            f'head={head_version!r}. Every PR must advance the version; a '
+            f'deliberate rewind needs `[version-rewind: <reason>]` on its own '
+            f'line of the PR body.'
         )
 
     # Rule 3: CHANGELOG differs.
@@ -292,6 +319,16 @@ def gate(
                 f'bump; the actual bump is {actual} ({base_version} -> '
                 f'{head_version}).'
             )
+
+    # Rule 8: a major bump is reserved for a public API change and must be
+    # declared as such in the PR body.
+    if actual == 'major' and _MAJOR_RELEASE_RE.search(pr_body) is None:
+        failures.append(
+            f'major version bump ({base_version} -> {head_version}) without '
+            f'`[major-release: <reason>]` on its own line of the PR body. A '
+            f'major release is reserved for a change to the public API; a '
+            f'behaviour change inside one component is a patch or a minor.'
+        )
 
     # Rule 6: the top version section must carry at least one line of
     # actual content (not just a header followed by blanks or another
@@ -344,12 +381,14 @@ def main() -> int:
     parser.add_argument('--head-pyproject', required=True)
     parser.add_argument('--base-changelog', required=True)
     parser.add_argument('--head-changelog', required=True)
+    parser.add_argument('--pr-body-file')
     args = parser.parse_args()
 
     base_pyproject = _read(args.base_pyproject, 'base-pyproject')
     head_pyproject = _read(args.head_pyproject, 'head-pyproject')
     base_changelog = _read(args.base_changelog, 'base-changelog')
     head_changelog = _read(args.head_changelog, 'head-changelog')
+    pr_body = _read(args.pr_body_file, 'pr-body-file') if args.pr_body_file else ''
 
     failures = gate(
         args.pr_title,
@@ -357,6 +396,7 @@ def main() -> int:
         head_pyproject,
         base_changelog,
         head_changelog,
+        pr_body,
     )
 
     if failures:

@@ -32,7 +32,7 @@ jobs:
         run: python -m pip install --require-hashes -r requirements/ci/dev-env.txt
 
       - name: Run CI contract tests
-        run: python -m pytest governance/tests/test_cc_gate.py governance/tests/test_ruleset_gate.py governance/tests/test_privileged_ruleset_audit.py governance/tests/test_ci_contract.py governance/tests/test_lint_ci_contract.py governance/tests/test_tests_ci_contract.py -q
+        run: python -m pytest governance/tests/test_cc_gate.py governance/tests/test_ruleset_gate.py governance/tests/test_privileged_ruleset_audit.py governance/tests/test_ci_contract.py governance/tests/test_lint_ci_contract.py governance/tests/test_tests_ci_contract.py governance/tests/test_version_gate.py -q
 
       - name: Compare live ruleset to checked-in snapshot
         env:
