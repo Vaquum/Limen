@@ -55,8 +55,8 @@ def long_flat_strategy(predictions: Any,
     signalled close, earning close_t / close_{t-1} - 1 per held bar and 0 when flat; a
     row whose prior close is missing or zero is non-tradable. Slippage adjusts the fill
     prices; fee_bps of the entry notional is paid from cash at entry and fee_bps of the
-    exit proceeds at exit, and each bar's net is the return on equity: the position,
-    after the exit fee on the exit bar, less the entry fee.
+    exit proceeds at exit, and each bar's net is the return on equity: the position, or
+    on the exit bar the proceeds after the exit fee, less the entry fee.
 
     Args:
         predictions (Any): Per-bar signal (array-like); must contain only 0 or 1
