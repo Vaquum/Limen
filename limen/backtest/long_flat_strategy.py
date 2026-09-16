@@ -121,9 +121,9 @@ def long_flat_strategy(predictions: Any,
 
     factor = np.where(pos, 1.0 + gross, 1.0)
     factor[entry_mask] /= 1.0 + slip
-    cumulative = np.cumprod(factor)
+    growth = np.cumsum(np.log(factor))
     segment_start = np.maximum.accumulate(np.where(entry_mask, np.arange(total_bars), 0))
-    position = cumulative / _shift(cumulative, 1, 1.0)[segment_start]
+    position = np.exp(growth - _shift(growth, 1, 0.0)[segment_start])
     equity = np.where(pos, position - fee, 1.0)
     equity[exit_mask] = position[exit_mask] * (1.0 - fee) * (1.0 - slip) - fee
     previous_equity = np.where(entry_mask, 1.0, _shift(equity, 1, 1.0))
