@@ -19,6 +19,7 @@ Does **not** own the experiment shape or manifest (owned by the matching `limen.
 | `LogRegBinary` / `logreg_binary` | Logistic-regression binary model | Class and function forms |
 | `DLinearRegressor` / `dlinear_regressor` | Linear time-series regressor | Class and function forms |
 | `LightGBMBinary` / `lightgbm_binary` | LightGBM binary classifier | Class and function forms |
+| `RidgeRegressor` / `ridge_regressor` | sklearn ridge regressor | Class and function forms |
 | `XGBoostRegressor` / `xgboost_regressor` | XGBoost regressor | Class and function forms |
 | `RandomBinary` / `random_binary` | Baseline random classifier | Class and function forms |
 | `RuleBasedStrategy` / `rule_based` | Predicate-driven, non-learned strategy | Uses `limen.sfd.rule_based` |
@@ -40,6 +41,7 @@ reference_architecture/
 ├── lightgbm_binary.py
 ├── xgboost_regressor.py
 ├── random_binary.py
+├── ridge_regressor.py
 ├── rule_based.py
 └── tabpfn_binary.py      # Optional
 ```

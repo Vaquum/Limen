@@ -7,6 +7,8 @@ from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.sfd.reference_architecture.logreg_binary import logreg_binary
 from limen.sfd.reference_architecture.random_binary import RandomBinary
 from limen.sfd.reference_architecture.random_binary import random_binary
+from limen.sfd.reference_architecture.ridge_regressor import RidgeRegressor
+from limen.sfd.reference_architecture.ridge_regressor import ridge_regressor
 from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
 from limen.sfd.reference_architecture.rule_based import rule_based
 from limen.sfd.reference_architecture.tabpfn_binary import TabPFNBinary
@@ -21,6 +23,7 @@ __all__ = [
     'LogRegBinary',
     'RandomBinary',
     'ReferenceModel',
+    'RidgeRegressor',
     'RuleBasedStrategy',
     'TabPFNBinary',
     'XGBoostRegressor',
@@ -28,6 +31,7 @@ __all__ = [
     'lightgbm_binary',
     'logreg_binary',
     'random_binary',
+    'ridge_regressor',
     'rule_based',
     'tabpfn_binary',
     'xgboost_regressor',

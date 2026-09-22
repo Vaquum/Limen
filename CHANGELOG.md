@@ -1455,3 +1455,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Re-derive the `dollar_bar_crash_reversal` reference-candidate figures in `docs/Built-In-SFDs.md` from a rerun of the bundled template under fees on notional: the executed-trade counts are unchanged at 129, 13, and 14, and the mean net PnL per executed trade moves from 76.0, 115.7, and 127.4 bps to 76.1, 115.9, and 127.5 bps.
 - Renumber the 6.0.0 and 7.0.0 releases as 5.10.2 and 5.10.3 and drop their "Breaking" labels. Neither the signal-bar close fill (#805) nor the fees on notional (#812) touched a public signature, module, manifest key, or CLI surface; each re-prices ledger values inside one component, which is a patch, not a major. The `v6.0.0` and `v7.0.0` tags, GitHub releases, and PyPI uploads are withdrawn so that `pip install vaquum-limen` resolves 5.10.3 (#814).
 - Require `[major-release: <reason>]` on its own line of the PR body for any major version bump, and accept a version below main's only with `[version-rewind: <reason>]`: `governance/version_gate.py` reads the PR body through the new `--pr-body-file`, `pr_checks_version.yml` passes it, `pr_checks_ruleset.yml` runs the gate's tests, and law 5 states both markers with the definition of a major release, a change to the public API (#814; upstream Vaquum/new-repository-template#211).
+
+## [5.11.0] - 2026-09-22
+
+- Add sklearn-backed `RidgeRegressor` and `ridge_regressor` SFD with a YAML template, standard regression and directional metrics, and Trainer/Sensor reconstruction coverage.

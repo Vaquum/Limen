@@ -21,6 +21,7 @@ Does **not** own experiment execution, data retrieval, or the lower-level indica
 |-------------|-------------|-------|
 | `logreg_binary` | Standard manifest-driven binary-classification SFD | Exported at the package root |
 | `random_binary` | Baseline classifier for comparison | Exported at the package root |
+| `ridge_regressor` | Ridge next-return regression SFD | Under `foundational_sfd` |
 | `xgboost_regressor` | Regression-style SFD | Exported at the package root |
 | `foundational_rule_based` | Rule-based foundational SFD | Exported at the package root |
 | `foundational_sfd` | Full catalog of packaged SFDs | Subpackage with production-oriented SFD modules |
@@ -41,6 +42,7 @@ sfd/
 │   ├── dlinear_regressor.py
 │   ├── lightgbm_binary.py
 │   ├── random_binary.py
+│   ├── ridge_regressor.py
 │   ├── rule_based.py
 │   ├── xgboost_regressor.py
 │   └── tabpfn_binary.py       # Optional
@@ -49,6 +51,7 @@ sfd/
     ├── dlinear_regressor.py
     ├── lightgbm_binary.py
     ├── random_binary.py
+    ├── ridge_regressor.py
     ├── rule_based.py
     ├── xgboost_regressor.py
     └── tabpfn_binary.py

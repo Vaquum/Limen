@@ -21,6 +21,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `logreg_binary` | binary classification | canonical manifest-driven logistic-regression reference flow |
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
+| `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
 | `tabpfn_binary` | binary classification | lazy symbols are always importable; model use requires `tabpfn` |
@@ -101,6 +102,21 @@ It combines:
 The matching YAML template is `limen/yaml/templates/lightgbm_binary.yaml` (`limen init my_experiment.yaml --template lightgbm_binary`).
 
 This SFD keeps the line-context family live-safe by setting `include_research_only: false`, which omits `active_lines` and `active_quantile_count`. Those span-count outputs are not live-computable and require explicit research-only opt-in.
+
+## `ridge_regressor`
+
+`ridge_regressor` is a linear, L2-regularized next-return baseline. The Python
+SFD and `limen/yaml/templates/ridge_regressor.yaml` combine one-bar returns,
+lags 1 through 5, a train-fitted `RobustScaler`, `NextReturnTarget(periods=1,
+scale=100.0)`, and `strict_mode=True`. The small starter space varies `alpha`
+and `fit_intercept`; all eight wrapper parameters are declared explicitly.
+
+Start from `limen init ridge.yaml --template ridge_regressor`. The model uses
+scikit-learn, which is already a core dependency. No alternate execution path
+is required: YAML experiments, logged metrics, Trainer reconstruction, and
+Sensor inference use the ordinary Limen interfaces. See
+[Reference Architecture](Reference-Architecture.md#ridgeregressor) for the
+model and solver contract.
 
 ## `random_binary`
 
