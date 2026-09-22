@@ -23,10 +23,13 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / 'limen/yaml/templates/ridge_regressor.yaml'
 
 
+def _load_market_bars(**kwargs):
+    return pl.read_parquet(ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet')
+
+
 @pytest.fixture(scope='module')
 def market_bars():
-    # Retained market observations; no generated inputs or network data.
-    return pl.read_parquet(ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet')
+    return _load_market_bars()
 
 
 @pytest.fixture(scope='module')
@@ -39,7 +42,7 @@ def ridge_data(market_bars):
 @pytest.mark.parametrize('fit_intercept', [True, False])
 @pytest.mark.parametrize('solver', ['auto', 'cholesky', 'svd'])
 def test_ridge_matches_sklearn(ridge_data, alpha, fit_intercept, solver):
-    params = dict(alpha=alpha, fit_intercept=fit_intercept, solver=solver)
+    params = {'alpha': alpha, 'fit_intercept': fit_intercept, 'solver': solver}
     expected = Ridge(**params).fit(ridge_data['x_train'], ridge_data['y_train'])
     actual = RidgeRegressor().train(ridge_data, **params)
     np.testing.assert_allclose(actual.model.coef_, expected.coef_, rtol=1e-12, atol=1e-12)
@@ -63,7 +66,7 @@ def test_ridge_evaluation_contract(ridge_data, inline_metrics, with_price):
     assert preds.shape == (len(data['y_test']),)
     assert np.isfinite(preds).all()
     assert {'bias', 'mae', 'rmse', 'r2', 'mape'} <= result.keys()
-    assert result['mae'] == round(float(np.mean(np.abs(preds - data['y_test']))), 3)
+    assert result['mae'] == round(float(np.mean(np.abs(preds - np.asarray(data['y_test'])))), 3)
     assert '_probs' not in result
     assert any(key.startswith('confusion_') for key in result) == inline_metrics
     assert any(key.startswith('backtest_') for key in result) == (inline_metrics and with_price)
@@ -86,8 +89,10 @@ def test_ridge_evaluation_contract(ridge_data, inline_metrics, with_price):
 
 @pytest.mark.parametrize('solver', ['cholesky', 'svd', 'lsqr'])
 def test_ridge_wrapper_preserves_model_and_native_params(ridge_data, solver):
-    params = dict(alpha=10.0, fit_intercept=False, copy_X=True, max_iter=1000,
-                  tol=1e-6, solver=solver, positive=False, random_state=7)
+    params = {
+        'alpha': 10.0, 'fit_intercept': False, 'copy_X': True, 'max_iter': 1000,
+        'tol': 1e-6, 'solver': solver, 'positive': False, 'random_state': 7,
+    }
     result = ridge_regressor(ridge_data, **params)
     model = result['_model']
     assert isinstance(model, RidgeRegressor)
@@ -168,7 +173,7 @@ def test_ridge_yaml_experiment_reconstructs(tmp_path, monkeypatch, market_bars):
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
 
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(lambda **kwargs: market_bars))
+    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_load_market_bars))
     assert run_experiment(yaml_path, progress_bar=False)
     entries = [json.loads(line) for line in (experiment_dir / 'round_data.jsonl').read_text().splitlines()]
     assert len(entries) == 2

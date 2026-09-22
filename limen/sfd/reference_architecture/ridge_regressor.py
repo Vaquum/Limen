@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Protocol, cast
 
 import numpy as np
@@ -20,7 +21,7 @@ class _RidgeEstimator(Protocol):
 
 
 def _ridge(params: dict[str, object]) -> _RidgeEstimator:
-    return Ridge(**params)
+    return cast(Callable[..., _RidgeEstimator], Ridge)(**params)
 
 
 class RidgeRegressor(ReferenceModel):
@@ -57,7 +58,7 @@ class RidgeRegressor(ReferenceModel):
         results['_preds'] = preds
 
         if inline_metrics:
-            y_test = np.asarray(cast(npt.ArrayLike, data['y_test']))
+            y_test = np.asarray(data['y_test'], dtype=np.float64)
             pred_direction = (preds > 0).astype(int)
             actual_direction = (y_test > 0).astype(int)
             results.update(self._compute_confusion(
