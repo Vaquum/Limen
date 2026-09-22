@@ -1,0 +1,67 @@
+schema_version: "1.0"
+
+metadata:
+  name: ridge_regressor_experiment
+  limen_version: "5.11.0"
+  mode: development
+  description: Ridge regression predicting next-period return
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+
+    split_dates:
+      train_start: "2025-01-01"
+      train_end:   "2025-09-30"
+      val_start:   "2025-10-01"
+      val_end:     "2025-11-30"
+      test_start:  "2025-12-01"
+      test_end:    "2025-12-31"
+
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+
+    features:
+      - func: limen.features.lag_range
+        params:
+          col: ret_1
+          start: 1
+          end: 5
+
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+      transform_params:
+        periods: 1
+        scale: 100.0
+
+    scaler:
+      class: limen.scalers.RobustScaler
+
+    strict_mode: true
+
+    reference_architecture: limen.sfd.reference_architecture.ridge_regressor.ridge_regressor
+
+  params:
+    alpha: [0.1, 1.0, 10.0]
+    fit_intercept: [true, false]
+    copy_X: [true]
+    max_iter: [null]
+    tol: [0.0001]
+    solver: [auto]
+    positive: [false]
+    random_state: [42]
+
+uel:
+  n_permutations: 6
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

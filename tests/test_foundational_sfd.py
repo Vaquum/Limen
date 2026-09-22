@@ -25,6 +25,7 @@ def test_foundational_sfd():
         limen.sfd.foundational_sfd.dlinear_regressor,
         limen.sfd.foundational_sfd.lightgbm_binary,
         limen.sfd.foundational_sfd.random_binary,
+        limen.sfd.foundational_sfd.ridge_regressor,
         limen.sfd.foundational_sfd.xgboost_regressor,
         limen.sfd.foundational_sfd.logreg_binary,
         limen.sfd.foundational_sfd.rule_based,

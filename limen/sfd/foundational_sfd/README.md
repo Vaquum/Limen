@@ -19,6 +19,7 @@ Does **not** own model training logic (owned by the matching `limen.sfd.referenc
 | `logreg_binary` | Standard binary-classification SFD | Manifest-driven |
 | `dlinear_regressor` | Linear time-series regression SFD | Manifest-driven |
 | `lightgbm_binary` | Gradient-boosted binary classifier SFD | Manifest-driven |
+| `ridge_regressor` | Ridge next-return regression SFD | Manifest-driven |
 | `xgboost_regressor` | Regression-style SFD | Manifest-driven |
 | `random_binary` | Baseline classifier for comparison | Manifest-driven |
 | `rule_based` | Predicate-driven, non-learned SFD | Uses `limen.sfd.rule_based` |
@@ -39,6 +40,7 @@ foundational_sfd/
 ├── lightgbm_binary.py
 ├── xgboost_regressor.py
 ├── random_binary.py
+├── ridge_regressor.py
 ├── rule_based.py
 └── tabpfn_binary.py     # Optional
 ```

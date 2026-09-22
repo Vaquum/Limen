@@ -18,13 +18,14 @@ The current public reference-architecture exports are:
 - `LightGBMBinary`
 - `LogRegBinary`
 - `RandomBinary`
+- `RidgeRegressor`
 - `RuleBasedStrategy`
 - `XGBoostRegressor`
 - `TabPFNBinary`
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`.
 
-The function exports are `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## `ReferenceModel`
 
@@ -57,12 +58,35 @@ Models consume the subset of keys they need from the standard Limen shape.
 | `LogRegBinary` | binary classification | no | sklearn logistic regression wrapper; manifest wrapper exposes constructor params; solver refits are not bit-reproducible across BLAS builds and thread counts, so Trainer validates with relative tolerance |
 | `LightGBMBinary` | binary classification | yes | LightGBM classifier exposing the full `LGBMClassifier` surface; accepts `binary`, `cross_entropy`, or `None` as its objective and rejects other objectives before training; early stopping on the validation split; reproducibility pinned via `deterministic`/`force_row_wise`/`random_state` defaults |
 | `RandomBinary` | binary baseline | no | intentionally stochastic |
+| `RidgeRegressor` | regression | no | sklearn Ridge wrapper; conservative flag because stochastic solvers are supported |
 | `XGBoostRegressor` | regression | yes | requires `xgboost`; training is bit-reproducible for a fixed `random_state` on a fixed environment (verified byte-identical predictions across processes and thread counts), so Trainer validates with its near-exact deterministic tolerance |
 | `DLinearRegressor` | regression | yes | canonical DLinear semantics; closed-form SVD ridge fit, no seed; requires `scipy` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |
 | `RuleBasedStrategy` | rule-based long/flat | yes | no training step; boolean predicate logic |
 
 The `deterministic` flag matters because [Trainer](Trainer.md) uses it to choose its validation tolerance.
+
+## `RidgeRegressor`
+
+`RidgeRegressor` delegates fitting and prediction to `sklearn.linear_model.Ridge`.
+It uses `x_train` and `y_train` for fitting; validation and test targets do not
+participate in training. Each `train()` call constructs a fresh estimator.
+The fitted sklearn model remains available as `model.model`.
+
+The function wrapper exposes `alpha`, `fit_intercept`, `copy_X`, `max_iter`,
+`tol`, `solver`, `positive`, and `random_state`. Defaults follow sklearn except
+that the function wrapper seeds stochastic solvers with `random_state=42`.
+`tol` retains sklearn's meaning: it is not a Cholesky pivot cutoff, and it has
+no effect for `cholesky` or `svd`. Backend errors and warnings are not replaced
+with alternate results. See the [sklearn Ridge reference](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html)
+for solver-specific behavior.
+
+`predict({'x_test': features})` returns continuous `_preds`. `evaluate()` uses
+Limen's existing continuous metrics; with `inline_metrics=True`, it also uses
+`preds > 0` and `y_test > 0` for directional confusion metrics and the standard
+long/flat backtest when prices are supplied. Costs and execution remain owned
+by the manifest/backtest layer. The function wrapper returns `_model` for
+normal Trainer reconstruction. Scaling belongs to the manifest, not the model.
 
 ## Probability Support for Cohort
 
@@ -76,6 +100,7 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 | `LightGBMBinary` | yes | probability | `predict()` returns `_probs` from the classifier or fitted calibrator. |
 | `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
 | `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimized before `_preds` are produced. This is compatible with P(1). |
+| `RidgeRegressor` | no | fallback | Continuous `_preds` only; no class probabilities. |
 | `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
 | `DLinearRegressor` | no | fallback | `predict()` returns only `_preds`. Same regressor caveat as `XGBoostRegressor`. |
 | `RuleBasedStrategy` | no | fallback | `predict()` returns positions as `_preds`; `_probs` is intentionally absent. |
