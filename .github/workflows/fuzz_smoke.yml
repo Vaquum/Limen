@@ -1,37 +1,37 @@
-name: Fuzz Smoke
-
+name: AVX-512 flag probe
+on:
+  workflow_dispatch:
 permissions:
   contents: read
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  schedule:
-    - cron: '30 4 * * 1'
-  workflow_dispatch:
-
 jobs:
-  fuzz_smoke:
-    name: Fuzz Smoke
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: actions/setup-python@v5
         with:
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
-        with:
-          python-version: '3.10'
-
-      - name: Install limen package and fuzzing engine
+          python-version: '3.13'
+      - name: Obtain pinned public compiler and native Python dependencies
+        shell: bash
         run: |
-          pip install --require-hashes -r requirements/ci/runtime-env.txt
-          pip install --require-hashes -r requirements/ci/fuzz-tools.txt
-          pip install --no-deps -e .
-
-      - name: Fuzz the manifest surfaces
-        run: python fuzz/fuzz_yaml_manifest.py -max_total_time=60 -max_len=4096 -timeout=30 -rss_limit_mb=2560
+          set -euo pipefail
+          mkdir -p bundle/wheels
+          cd bundle
+          for part in rustc rust-std; do
+            file="${part}-1.89.0-x86_64-unknown-linux-gnu.tar.xz"
+            curl -fL --retry 3 "https://static.rust-lang.org/dist/$file" -o "$file"
+            curl -fL --retry 3 "https://static.rust-lang.org/dist/$file.sha256" -o "$file.sha256"
+            sha256sum -c "$file.sha256"
+          done
+          python -m pip download -d wheels --only-binary=:all: 'polars==1.42.1' 'pyarrow==23.0.1' 'pandas==2.3.3'
+          curl -fL https://api.github.com/repos/Vaquum/Limen/tarball/44eff3b244c80ce8473845bd60b074b3682fe441 -o limen-source.tar.gz
+          tar xzf limen-source.tar.gz
+          python -m pip wheel --no-deps --wheel-dir wheels ./Vaquum-Limen-*
+          sha256sum wheels/* > wheel-sha256.txt
+          lscpu > build-host.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: terasweep-offline-rust-and-limen
+          path: bundle/
+          retention-days: 3
+          compression-level: 0
