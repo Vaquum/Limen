@@ -269,17 +269,15 @@ def test_supply_chain_surfaces() -> None:
     assert site_package['overrides']['js-yaml@^3'] == '^3.15.2'
     assert site_package['overrides']['markdown-it'] == '^14.2.0'
     assert site_package['overrides']['body-parser'] == '^1.20.6'
-    # GHSA-mh99-v99m-4gvg covered every brace-expansion <= 5.0.7 and its
-    # successor advisory covers <= 5.0.8, so the earlier ^1.1.16 floor did
-    # not clear them; 5.0.9 is the first patched release and is pinned
-    # exactly, not as a caret range.
-    assert site_package['overrides']['brace-expansion'] == '5.0.9'
+    assert site_package['overrides']['brace-expansion'] == '5.0.12'
     assert site_package['overrides']['shell-quote'] == '^1.8.5'
     assert site_package['overrides']['webpack-dev-server'] == '^5.2.6'
-    assert site_package['overrides']['fast-uri'] == '^3.1.4'
+    assert site_package['overrides']['fast-uri'] == '^3.1.8'
     assert site_package['overrides']['postcss'] == '^8.5.18'
     assert site_package['overrides']['svgo'] == '^3.3.4'
     assert site_package['overrides']['qs'] == '^6.16.0'
+    assert site_package['overrides']['http-cache-semantics'] == '^4.3.0'
+    assert site_package['overrides']['image-size'] == '^2.0.4'
     site_lock = json.loads((ROOT / 'docs-site' / 'package-lock.json').read_text(encoding='utf-8'))
     js_yaml_versions = {
         tuple(int(part) for part in pkg['version'].split('.')[:3])
@@ -297,12 +295,14 @@ def test_supply_chain_surfaces() -> None:
     assert all(v >= (14, 2, 0) for v in markdown_it_versions)
     advisory_floors = {
         'body-parser': (1, 20, 6),
-        'brace-expansion': (5, 0, 8),
+        'brace-expansion': (5, 0, 12),
         'shell-quote': (1, 8, 5),
         'webpack-dev-server': (5, 2, 6),
-        'fast-uri': (3, 1, 4),
+        'fast-uri': (3, 1, 8),
         'postcss': (8, 5, 18),
         'svgo': (3, 3, 4),
+        'http-cache-semantics': (4, 3, 0),
+        'image-size': (2, 0, 4),
     }
     for package_name, floor in advisory_floors.items():
         resolved_versions = {
