@@ -1,9 +1,9 @@
+from collections.abc import Mapping
+from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, _resolve_backtest_config
 import copy
 import inspect
 import importlib
 import logging
-import math
-import numbers
 import random
 import re
 from datetime import date
@@ -252,6 +252,8 @@ class BacktestConfig:
     fee_bps: float | str = 5.0
     slip_bps: float | str = 5.0
     notional_rate: float | str = 1.0
+    take_profit_bps: float | str | None = None
+    stop_loss_bps: float | str | None = None
 
 
 @dataclass
@@ -788,16 +790,20 @@ class Manifest:
     def set_backtest_config(self,
                             fee_bps: float | str = 5.0,
                             slip_bps: float | str = 5.0,
-                            notional_rate: float | str = 1.0) -> 'Manifest':
+                            notional_rate: float | str = 1.0, *,
+                            take_profit_bps: float | str | None = None,
+                            stop_loss_bps: float | str | None = None) -> 'Manifest':
 
         '''
-        Configure the backtest economics for this manifest.
+        Replace all backtest costs and fixed entry-relative barriers for this manifest.
 
         Args:
             fee_bps (float | str): Per-fill fee in basis points, or a round-param name to sweep
             slip_bps (float | str): Per-fill slippage in basis points, or a round-param name to sweep
             notional_rate (float | str): Fraction of capital deployed while in position
                 (in (0, 1]), or a round-param name to sweep
+            take_profit_bps (float | str | None): Positive gross profit distance or search reference; None disables.
+            stop_loss_bps (float | str | None): Gross loss distance in (0, 10000) or reference; None disables.
 
         Returns:
             Manifest: Self for method chaining
@@ -807,52 +813,23 @@ class Manifest:
             fee_bps=fee_bps,
             slip_bps=slip_bps,
             notional_rate=notional_rate,
+            take_profit_bps=take_profit_bps,
+            stop_loss_bps=stop_loss_bps,
         )
 
         return self
 
-    def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
-        if self.backtest_config is None:
-            return
+    def resolve_backtest_config(self, round_params: Mapping[str, object]) -> dict[str, float | None]:
+        """Resolve all backtest fields; an absent configuration returns an empty mapping."""
+        return _resolve_backtest_config(self.backtest_config, round_params)
 
-        raw = {
-            'fee_bps': self.backtest_config.fee_bps,
-            'slip_bps': self.backtest_config.slip_bps,
-            'notional_rate': self.backtest_config.notional_rate,
-        }
-        resolved = _resolve_params(raw, round_params)
-        for key in ('fee_bps', 'slip_bps', 'notional_rate'):
-            original = raw[key]
-            value = resolved[key]
-            if (
-                isinstance(original, str)
-                and isinstance(value, str)
-                and value == original
-                and original not in round_params
-            ):
-                raise ValueError(
-                    f"Manifest backtest {key} references unknown search-param '{original}'; add it to params() or pass a number"
-                )
-            if key == 'notional_rate':
-                if (
-                    isinstance(value, bool)
-                    or not isinstance(value, numbers.Real)
-                    or not math.isfinite(value)
-                    or not 0 < float(value) <= 1
-                ):
-                    raise ValueError(
-                        f"Manifest backtest notional_rate must be in (0, 1], got {value!r}"
-                    )
-            elif (
-                isinstance(value, bool)
-                or not isinstance(value, numbers.Real)
-                or not math.isfinite(value)
-                or value < 0
-            ):
-                raise ValueError(
-                    f"Manifest backtest {key} must be a non-negative finite number, got {value!r}"
-                )
-            data[f"backtest_{key}"] = float(value)
+    def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
+        resolved = self.resolve_backtest_config(round_params)
+        for key in BACKTEST_KEYS:
+            if key in resolved:
+                data[f'backtest_{key}'] = resolved[key]
+            else:
+                data.pop(f'backtest_{key}', None)
 
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 

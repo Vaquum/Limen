@@ -1459,3 +1459,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.11.0] - 2026-09-22
 
 - Add sklearn-backed `RidgeRegressor` and `ridge_regressor` SFD with a YAML template, standard regression and directional metrics, and Trainer/Sensor reconstruction coverage.
+
+## [5.12.0] - 2026-10-04
+
+- Add independently tunable manifest take-profit and stop-loss barriers to snapshot strategy evaluation.
+- Apply each round's declared fees, slippage and sizing in supported post-run replay, including disabled barriers.

@@ -415,5 +415,10 @@
   "limen/yaml/rules.py": 1010,
   "limen/yaml/schema.py": 70,
   "limen/yaml/store.py": 340,
-  "limen/yaml/validator.py": 190
+  "limen/yaml/validator.py": 190,
+  "limen/backtest/_long_flat_tp_sl.py": 180,
+  "limen/backtest/_snapshot_execution.py": 180,
+  "limen/backtest/_snapshot_ledger.py": 140,
+  "limen/experiment/_resolve_backtest_config.py": 120,
+  "limen/yaml/_backtest_spec.py": 140
 }

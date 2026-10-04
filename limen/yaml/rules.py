@@ -1,3 +1,4 @@
+from limen.yaml._backtest_spec import _check_backtest_spec
 import inspect
 import math
 import re
@@ -1105,59 +1106,7 @@ class BacktestCostSpec:
               errors: list[YAMLError],
               _warnings: list[YAMLError]) -> None:
 
-        sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
-        manifest: dict[str, Any] = sfd.get('manifest') or {}
-        backtest = manifest.get('backtest')
-        if not is_mapping(backtest):
-            return
-
-        sfd_params: set[str] = set(sfd.get('params') or {})
-
-        for key in ('fee_bps', 'slip_bps', 'notional_rate'):
-            if key not in backtest:
-                continue
-            value = backtest[key]
-            path = f'sfd.manifest.backtest.{key}'
-            if isinstance(value, bool):
-                bound, example = ('a number in (0, 1]', '0.1') if key == 'notional_rate' else ('a non-negative number', '5.0')
-                errors.append(YAMLError(
-                    message=f"'backtest.{key}' must be {bound} or a {{param}} reference (got bool)",
-                    path=path,
-                    suggestion=f'Use a number like {key}: {example} or a reference like {key}: "{{my_param}}"',
-                ))
-            elif isinstance(value, (int, float)):
-                if key == 'notional_rate':
-                    if not math.isfinite(value) or not 0 < value <= 1:
-                        errors.append(YAMLError(
-                            message=f"'backtest.notional_rate' must be a number in (0, 1] (got {value})",
-                            path=path,
-                            suggestion='Use a fraction in (0, 1], e.g. notional_rate: 0.1',
-                        ))
-                elif not math.isfinite(value) or value < 0:
-                    errors.append(YAMLError(
-                        message=f"'backtest.{key}' must be a non-negative finite number (got {value})",
-                        path=path,
-                        suggestion=f'Use a non-negative number, e.g. {key}: 5.0',
-                    ))
-            elif isinstance(value, str):
-                ref = _PARAM_REF_RE.fullmatch(value.strip())
-                if ref is None:
-                    errors.append(YAMLError(
-                        message=f"'backtest.{key}' must be a number or a {{param}} reference (got '{value}')",
-                        path=path,
-                        suggestion=f'Reference a search param, e.g. {key}: "{{my_param}}", or use a number',
-                    ))
-                elif ref.group(1) not in sfd_params:
-                    errors.append(YAMLError(
-                        message=f"'backtest.{key}' references '{{{ref.group(1)}}}' which is not in sfd.params",
-                        path=path,
-                        suggestion=f"Add '{ref.group(1)}' to sfd.params",
-                    ))
-            else:
-                errors.append(YAMLError(
-                    message=f"'backtest.{key}' must be a number or a {{param}} reference (got {type(value).__name__})",
-                    path=path,
-                ))
+        _check_backtest_spec(yaml_dict, errors)
 
 
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [

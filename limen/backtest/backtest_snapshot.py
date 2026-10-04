@@ -1,22 +1,13 @@
-import numbers
 from collections.abc import Callable
 from collections.abc import Mapping
 from typing import Any
 
-import numpy as np
-import numpy.typing as npt
 
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest.long_flat_strategy import long_flat_strategy
+from limen.backtest._snapshot_execution import _snapshot_execution
+from limen.backtest._snapshot_ledger import _snapshot_ledger
 
-PRICE_CHANGE_RTOL = 1e-09
-PRICE_CHANGE_ATOL = 1e-12
-BPS_PER_UNIT = 10_000.0
-CVAR_TAIL_FRACTION = 0.05
-CVAR_MIN_BARS = 20
-BPS_DECIMALS = 1
-FRACTION_DECIMALS = 4
-RATE_DECIMALS = 5
 BACKTEST_SNAPSHOT_COLUMNS = [
     'edge_bps_p5',
     'edge_bps_p50',
@@ -41,55 +32,6 @@ BACKTEST_SNAPSHOT_COLUMNS = [
 ]
 
 
-def _finite_values(values: Any) -> npt.NDArray[np.float64]:
-    arr = np.asarray(values, dtype=float)
-    return arr[np.isfinite(arr)]
-
-
-def _quantiles(values: Any, decimals: int = BPS_DECIMALS) -> tuple[float, float, float]:
-    arr = _finite_values(values)
-    if arr.size == 0:
-        return (np.nan, np.nan, np.nan)
-    p05, p50, p95 = (round(float(np.quantile(arr, q)), decimals) for q in (0.05, 0.50, 0.95))
-    return (p05, p50, p95)
-
-
-def _mean_bps(values: Any) -> float:
-    arr = np.asarray(values, dtype=float)
-    if arr.size == 0:
-        return np.nan
-    return round(float(arr.mean()) * BPS_PER_UNIT, BPS_DECIMALS)
-
-
-def _cvar_tail_bps(returns: Any) -> float:
-    arr = np.asarray(returns, dtype=float)
-    if arr.size < CVAR_MIN_BARS:
-        return np.nan
-    tail_count = int(np.floor(CVAR_TAIL_FRACTION * arr.size))
-    return round(float(np.sort(arr)[:tail_count].mean()) * BPS_PER_UNIT, BPS_DECIMALS)
-
-
-def _validate_execution_result(result: object, expected_len: int) -> ExecutionResult:
-    if not isinstance(result, ExecutionResult):
-        raise ValueError('backtest_snapshot strategy must return ExecutionResult(pos, gross, net)')
-
-    normalized: dict[str, npt.NDArray[np.float64]] = {}
-    for field in ('pos', 'gross', 'net'):
-        try:
-            arr = np.asarray(getattr(result, field), dtype=float)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f'backtest_snapshot strategy {field} must be numeric') from exc
-        if arr.ndim != 1 or arr.shape[0] != expected_len:
-            raise ValueError(
-                f'backtest_snapshot strategy {field} must be a full-window array matching the input length'
-            )
-        if not np.isfinite(arr).all():
-            raise ValueError(f'backtest_snapshot strategy {field} must be finite')
-        normalized[field] = arr
-
-    return ExecutionResult(**normalized)
-
-
 def backtest_snapshot(columns: Mapping[str, Any],
                       *,
                       pred_col: str = 'predictions',
@@ -100,7 +42,10 @@ def backtest_snapshot(columns: Mapping[str, Any],
                       execution_lag_bars: int = 1,
                       fee_bps: float = 5.0,
                       slip_bps: float = 5.0,
-                      notional_rate: float = 1.0) -> dict[str, float]:
+                      notional_rate: float = 1.0,
+                      take_profit_bps: float | None = None,
+                      stop_loss_bps: float | None = None,
+                      high_col: str = 'high', low_col: str = 'low') -> dict[str, float]:
 
     '''
     Bar-based metric ledger over a strategy's per-bar returns.
@@ -149,91 +94,42 @@ def backtest_snapshot(columns: Mapping[str, Any],
         notional_rate (float): Fraction of capital deployed while in position, in (0, 1];
             applied as a uniform scale on the strategy's returned pos, gross, and net
 
+        take_profit_bps (float | None): Fixed gross entry-relative profit distance; None disables.
+        stop_loss_bps (float | None): Fixed gross entry-relative loss distance; None disables.
+        high_col (str): High price column required for enabled barriers.
+        low_col (str): Low price column required for enabled barriers.
+
     Returns:
         dict[str, float]: One-row ledger keyed by BACKTEST_SNAPSHOT_COLUMNS
     '''
 
-    required_cols = (pred_col, open_col, close_col, price_change_col)
-    missing = [col for col in required_cols if col not in columns]
-    if missing:
-        raise ValueError(f"backtest_snapshot columns mapping is missing required keys: {', '.join(missing)}")
+    return _snapshot_with_execution(
+        columns, pred_col=pred_col, open_col=open_col, close_col=close_col,
+        price_change_col=price_change_col, strategy=strategy,
+        execution_lag_bars=execution_lag_bars, fee_bps=fee_bps,
+        slip_bps=slip_bps, notional_rate=notional_rate,
+        take_profit_bps=take_profit_bps, stop_loss_bps=stop_loss_bps,
+        high_col=high_col, low_col=low_col,
+    )[0]
 
-    try:
-        lengths = {len(columns[col]) for col in required_cols}
-    except TypeError as exc:
-        raise ValueError('backtest_snapshot columns must be sized array-likes') from exc
-    if lengths == {0}:
-        raise ValueError('backtest_snapshot requires at least one row')
-    if len(lengths) != 1:
-        raise ValueError('backtest_snapshot columns must have equal lengths')
 
-    if (
-        isinstance(notional_rate, bool)
-        or not isinstance(notional_rate, numbers.Real)
-        or not 0 < notional_rate <= 1
-    ):
-        raise ValueError('backtest_snapshot notional_rate must be in (0, 1]')
-
-    try:
-        open_px = np.asarray(columns[open_col], dtype=float)
-        close_px = np.asarray(columns[close_col], dtype=float)
-        dpx = np.asarray(columns[price_change_col], dtype=float)
-    except (TypeError, ValueError) as exc:
-        raise ValueError('backtest_snapshot open, close, and price_change must be numeric') from exc
-
-    price_check_mask = ~np.isnan(open_px) & ~np.isnan(close_px) & ~np.isnan(dpx)
-    expected_dpx = close_px - open_px
-
-    if price_check_mask.any() and not np.isclose(
-        dpx[price_check_mask],
-        expected_dpx[price_check_mask],
-        rtol=PRICE_CHANGE_RTOL,
-        atol=PRICE_CHANGE_ATOL,
-    ).all():
-        raise ValueError('backtest_snapshot price_change must equal close - open')
-
-    total_bars = open_px.shape[0]
-    result = strategy(
-        columns[pred_col],
-        open_px,
-        close_px,
-        dpx,
-        execution_lag_bars=execution_lag_bars,
-        fee_bps=fee_bps,
-        slip_bps=slip_bps,
+def _snapshot_with_execution(
+    columns: Mapping[str, object], *, pred_col: str = 'predictions',
+    open_col: str = 'open', close_col: str = 'close',
+    price_change_col: str = 'price_change',
+    strategy: Callable[..., ExecutionResult] = long_flat_strategy,
+    execution_lag_bars: int = 1, fee_bps: float = 5.0,
+    slip_bps: float = 5.0, notional_rate: float = 1.0,
+    take_profit_bps: float | None = None, stop_loss_bps: float | None = None,
+    high_col: str = 'high', low_col: str = 'low',
+) -> tuple[dict[str, float], ExecutionResult]:
+    result = _snapshot_execution(
+        columns, pred_col=pred_col, open_col=open_col, close_col=close_col,
+        price_change_col=price_change_col, strategy=strategy,
+        execution_lag_bars=execution_lag_bars, fee_bps=fee_bps,
+        slip_bps=slip_bps, notional_rate=notional_rate,
+        take_profit_bps=take_profit_bps, stop_loss_bps=stop_loss_bps,
+        high_col=high_col, low_col=low_col,
     )
-    result = _validate_execution_result(result, total_bars)
-
-    gross = result.gross * notional_rate
-    net = result.net * notional_rate
-    pos = result.pos * notional_rate
-
-    eq_net = np.cumprod(1.0 + net)
-    drawdown = (eq_net / np.clip(np.maximum.accumulate(eq_net), 1.0, None)) - 1.0
-    cost = gross - net
-    wins = net > 0
-    in_market = pos > 0
-    entry_mask = in_market & ~np.concatenate(([False], in_market[:-1]))
-
-    data: dict[str, float] = {}
-    for prefix, values in [
-        ('edge_bps', gross * BPS_PER_UNIT),
-        ('pnl_bps', net * BPS_PER_UNIT),
-        ('cost_bps', cost * BPS_PER_UNIT),
-        ('drawdown_bps', drawdown * BPS_PER_UNIT),
-    ]:
-        p5, p50, p95 = _quantiles(values, BPS_DECIMALS)
-        data[f'{prefix}_p5'] = p5
-        data[f'{prefix}_p50'] = p50
-        data[f'{prefix}_p95'] = p95
-
-    data['wins_per_bar'] = round(float(wins.mean()), FRACTION_DECIMALS)
-    data['pnl_per_bar_bps'] = _mean_bps(net)
-    data['avg_win_bps'] = _mean_bps(net[wins])
-    data['avg_loss_bps'] = _mean_bps(net[net < 0])
-    data['cvar_95_pnl_bps'] = _cvar_tail_bps(net)
-    data['trades_per_bar'] = round(float(entry_mask.sum()) / total_bars, RATE_DECIMALS)
-    data['inventory_per_bar'] = round(float(pos.mean()), FRACTION_DECIMALS)
-    data['cost_per_bar_bps'] = _mean_bps(cost)
-
-    return {col: data[col] for col in BACKTEST_SNAPSHOT_COLUMNS}
+    metrics = _snapshot_ledger(result, notional_rate)
+    return {col: metrics[col] for col in BACKTEST_SNAPSHOT_COLUMNS}, result
