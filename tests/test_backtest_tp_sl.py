@@ -104,8 +104,18 @@ def test_manifest_tp_sl_literal_reference_and_null(market):
         assert not {'take_profit_bps', 'stop_loss_bps'} & signature.parameters.keys()
     bars = market[0].head(1200)
     baseline = ridge_sfd.manifest().prepare_data(bars, {})
+    for factory in (_ml_manifest, _rule_manifest):
+        for config in (None, {}, {'fee_bps': 20.0}, {'take_profit_bps': None, 'stop_loss_bps': None}):
+            ordinary = factory()
+            if config is not None:
+                ordinary.set_backtest_config(**config)
+            data = ordinary.prepare_data(bars, {})
+            assert '_backtest_provenance' not in data
+            assert '_backtest_provenance' not in data['_alignment']
+    assert '_backtest_provenance' not in baseline['_alignment']
     configured = ridge_sfd.manifest().set_backtest_config(take_profit_bps='tp')
     prepared = configured.prepare_data(bars, {'tp': None})
+    assert all(isinstance(split.retained, range) for split in prepared['_backtest_provenance'].splits)
     assert SOURCE_ROW not in prepared['_feature_names']
     for key in ('x_train', 'x_val', 'x_test'):
         assert_frame_equal(prepared[key], baseline[key])
@@ -357,6 +367,8 @@ def test_tp_sl_real_fixture_provenance_boundaries(market):
         return frame.filter(pl.col('datetime') != timestamp)
     for factory in (_ml_manifest, _rule_manifest):
         m = factory().add_indicator(remove_row).set_backtest_config(take_profit_bps='tp')
+        if isinstance(m, MLManifest):
+            m.set_strict_mode(True)
         with pytest.raises(ValueError, match='censored interior'):
             m.prepare_data(small, {'tp': None})
         selected = factory().set_pre_split_data_selector(remove_row).set_backtest_config(take_profit_bps=50.0)

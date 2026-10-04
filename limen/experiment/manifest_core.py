@@ -1651,6 +1651,9 @@ def _apply_feature_transforms(manifest: Manifest, lazy_data: pl.LazyFrame, round
         if not _should_include_transform(entry, round_params):
             continue
         resolved = _resolve_params(entry.params, round_params)
+        if _SOURCE_ROW not in lazy_data.collect_schema():
+            lazy_data = lazy_data.pipe(entry.func, **resolved)
+            continue
         source_data = lazy_data.collect()
         public_data = source_data.drop(_SOURCE_ROW) if _SOURCE_ROW in source_data.columns else source_data
         transformed = public_data.lazy().pipe(entry.func, **resolved).collect()
@@ -1917,7 +1920,7 @@ def _run_prepare_setup(
         manifest: Manifest,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any],
-) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame]]:
+) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None]:
 
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
@@ -1930,7 +1933,7 @@ def _run_prepare_setup(
     all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes])
     split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
-    return _prepare_backtest_data(split_data, all_datetimes)
+    return _prepare_backtest_data(split_data, all_datetimes, configured=_configured_barriers(manifest.backtest_config))
 
 
 def _resolve_split(manifest: 'Manifest', raw_data: pl.DataFrame) -> list[pl.DataFrame]:

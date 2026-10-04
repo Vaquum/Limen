@@ -14,7 +14,7 @@ class _SplitWitness:
     source_fingerprint: str
     source_offset: int
     source_count: int
-    retained: tuple[int, ...]
+    retained: range
     price_fingerprint: str
     error: str | None
 
@@ -56,8 +56,10 @@ def restore_source_rows(before: pl.DataFrame, after: pl.DataFrame) -> pl.DataFra
 
 
 def capture_backtest(
-    sources: list[pl.DataFrame], retained_splits: list[pl.DataFrame], *, ml: bool,
-) -> tuple[list[pl.DataFrame], _BacktestWitness]:
+    sources: list[pl.DataFrame] | None, retained_splits: list[pl.DataFrame], *, ml: bool,
+) -> tuple[list[pl.DataFrame], _BacktestWitness | None]:
+    if sources is None:
+        return retained_splits, None
     witnesses: list[_SplitWitness] = []
     for source, retained in zip(sources, retained_splits, strict=True):
         ids = tuple(cast(list[int], retained[SOURCE_ROW].to_list())) if SOURCE_ROW in retained.columns and not retained[SOURCE_ROW].null_count() else ()
@@ -81,13 +83,15 @@ def capture_backtest(
             error = 'backtest source identity OHLC mismatch'
         witnesses.append(_SplitWitness(
             _price_fingerprint(source) if has_prices else '', offset, source.height,
-            ids, _price_fingerprint(span) if has_prices else '', error,
+            range(min(ids), max(ids) + 1) if ids else range(0), _price_fingerprint(span) if has_prices else '', error,
         ))
     clean = [split.drop(SOURCE_ROW) if SOURCE_ROW in split.columns else split for split in retained_splits]
     return clean, _BacktestWitness(tuple(witnesses), ml)
 
 
-def attach_witness(data: Mapping[str, object], witness: _BacktestWitness) -> None:
+def attach_witness(data: Mapping[str, object], witness: _BacktestWitness | None) -> None:
+    if witness is None:
+        return
     mutable = cast(dict[str, object], data)
     mutable['_backtest_provenance'] = witness
     alignment = mutable.get('_alignment')
@@ -123,10 +127,9 @@ def replay_prices(source: pl.DataFrame, witness: object, count: int) -> pl.DataF
         raise ValueError('backtest provenance requires datetime for replay')
     if _price_fingerprint(source) != split.source_fingerprint or source.height != split.source_count:
         raise ValueError('backtest source identity changed during replay')
-    ids = [row - split.source_offset for row in split.retained]
-    if len(ids) != count:
+    if len(split.retained) != count:
         raise ValueError('backtest source identity prediction length mismatch')
-    prices = source[ids]
+    prices = source.slice(split.retained.start - split.source_offset, count)
     if _price_fingerprint(prices) != split.price_fingerprint:
         raise ValueError('backtest source identity OHLC mismatch during replay')
     return prices
