@@ -1,3 +1,4 @@
+from limen.backtest._snapshot_ledger import snapshot_ledger as _snapshot_ledger
 import numbers
 from collections.abc import Callable, Mapping, Sized
 from typing import cast
@@ -6,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 
 from limen.backtest.long_flat_strategy import ExecutionResult, long_flat_strategy
-from limen.backtest._long_flat_tp_sl import _long_flat_tp_sl, _validate_barrier
+from limen.backtest._long_flat_tp_sl import long_flat_tp_sl as _long_flat_tp_sl, validate_barrier as _validate_barrier
 
 PRICE_CHANGE_RTOL = 1e-09
 PRICE_CHANGE_ATOL = 1e-12
@@ -33,10 +34,10 @@ def _validate_execution_result(result: object, expected_len: int) -> ExecutionRe
     return ExecutionResult(**normalized)
 
 
-def _snapshot_execution(
+def snapshot_execution(
     columns: Mapping[str, object], *, pred_col: str, open_col: str,
     close_col: str, price_change_col: str,
-    strategy: Callable[..., ExecutionResult], execution_lag_bars: int,
+    strategy: Callable[..., ExecutionResult], execution_lag_bars: object,
     fee_bps: float, slip_bps: float, notional_rate: float,
     take_profit_bps: float | None, stop_loss_bps: float | None,
     high_col: str, low_col: str,
@@ -80,9 +81,13 @@ def _snapshot_execution(
     except (TypeError, ValueError) as exc:
         raise ValueError('backtest_snapshot open, close, and price_change must be numeric') from exc
 
+    high = low = None
     if enabled:
-        high = np.asarray(cast(npt.ArrayLike, columns[high_col]), dtype=float)
-        low = np.asarray(cast(npt.ArrayLike, columns[low_col]), dtype=float)
+        try:
+            high = np.asarray(cast(npt.ArrayLike, columns[high_col]), dtype=float)
+            low = np.asarray(cast(npt.ArrayLike, columns[low_col]), dtype=float)
+        except (TypeError, ValueError) as exc:
+            raise ValueError('backtest_snapshot high and low must be numeric') from exc
         arrays = (open_px, close_px, dpx, high, low)
         if any(arr.ndim != 1 for arr in arrays):
             raise ValueError('backtest_snapshot OHLC must be equal-length 1D arrays')
@@ -103,18 +108,43 @@ def _snapshot_execution(
         raise ValueError('backtest_snapshot price_change must equal close - open')
 
     total_bars = open_px.shape[0]
-    executor = _long_flat_tp_sl if enabled else strategy
-    barrier_kwargs = {'high_px': high, 'low_px': low, 'take_profit_bps': take_profit_bps, 'stop_loss_bps': stop_loss_bps} if enabled else {}
-    result = executor(
-        columns[pred_col],
-        open_px,
-        close_px,
-        dpx,
-        execution_lag_bars=execution_lag_bars,
-        fee_bps=fee_bps,
-        slip_bps=slip_bps,
-        **barrier_kwargs,
-    )
+    if high is not None and low is not None:
+        result = _long_flat_tp_sl(
+            cast(npt.ArrayLike, columns[pred_col]), open_px, close_px, dpx,
+            high_px=high, low_px=low, take_profit_bps=take_profit_bps,
+            stop_loss_bps=stop_loss_bps, execution_lag_bars=cast(int, execution_lag_bars),
+            fee_bps=fee_bps, slip_bps=slip_bps,
+        )
+    else:
+        result = strategy(
+            columns[pred_col], open_px, close_px, dpx,
+            execution_lag_bars=cast(int, execution_lag_bars), fee_bps=fee_bps, slip_bps=slip_bps,
+        )
     result = _validate_execution_result(result, total_bars)
 
     return result
+
+
+def snapshot_with_execution(
+    columns: Mapping[str, object], *, pred_col: str = 'predictions',
+    open_col: str = 'open', close_col: str = 'close',
+    price_change_col: str = 'price_change',
+    strategy: Callable[..., ExecutionResult] = long_flat_strategy,
+    execution_lag_bars: int = 1, fee_bps: float = 5.0,
+    slip_bps: float = 5.0, notional_rate: float = 1.0,
+    take_profit_bps: float | None = None, stop_loss_bps: float | None = None,
+    high_col: str = 'high', low_col: str = 'low',
+) -> tuple[dict[str, float], ExecutionResult]:
+    result = snapshot_execution(
+        columns, pred_col=pred_col, open_col=open_col, close_col=close_col,
+        price_change_col=price_change_col, strategy=strategy,
+        execution_lag_bars=execution_lag_bars, fee_bps=fee_bps,
+        slip_bps=slip_bps, notional_rate=notional_rate,
+        take_profit_bps=take_profit_bps, stop_loss_bps=stop_loss_bps,
+        high_col=high_col, low_col=low_col,
+    )
+    metrics = _snapshot_ledger(result, notional_rate)
+    return metrics, result
+
+
+__all__ = ['snapshot_execution', 'snapshot_with_execution']

@@ -1,4 +1,4 @@
-from limen.yaml._backtest_spec import _check_backtest_spec
+from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
 import inspect
 import math
 import re

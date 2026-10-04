@@ -5,8 +5,7 @@ from typing import Any
 
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest.long_flat_strategy import long_flat_strategy
-from limen.backtest._snapshot_execution import _snapshot_execution
-from limen.backtest._snapshot_ledger import _snapshot_ledger
+from limen.backtest._snapshot_execution import snapshot_with_execution as _snapshot_with_execution
 
 BACKTEST_SNAPSHOT_COLUMNS = [
     'edge_bps_p5',
@@ -113,23 +112,6 @@ def backtest_snapshot(columns: Mapping[str, Any],
     )[0]
 
 
-def _snapshot_with_execution(
-    columns: Mapping[str, object], *, pred_col: str = 'predictions',
-    open_col: str = 'open', close_col: str = 'close',
-    price_change_col: str = 'price_change',
-    strategy: Callable[..., ExecutionResult] = long_flat_strategy,
-    execution_lag_bars: int = 1, fee_bps: float = 5.0,
-    slip_bps: float = 5.0, notional_rate: float = 1.0,
-    take_profit_bps: float | None = None, stop_loss_bps: float | None = None,
-    high_col: str = 'high', low_col: str = 'low',
-) -> tuple[dict[str, float], ExecutionResult]:
-    result = _snapshot_execution(
-        columns, pred_col=pred_col, open_col=open_col, close_col=close_col,
-        price_change_col=price_change_col, strategy=strategy,
-        execution_lag_bars=execution_lag_bars, fee_bps=fee_bps,
-        slip_bps=slip_bps, notional_rate=notional_rate,
-        take_profit_bps=take_profit_bps, stop_loss_bps=stop_loss_bps,
-        high_col=high_col, low_col=low_col,
-    )
-    metrics = _snapshot_ledger(result, notional_rate)
-    return {col: metrics[col] for col in BACKTEST_SNAPSHOT_COLUMNS}, result
+
+
+__all__ = ['BACKTEST_SNAPSHOT_COLUMNS', 'backtest_snapshot']

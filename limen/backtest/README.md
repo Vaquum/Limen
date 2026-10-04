@@ -37,7 +37,7 @@ backtest/
 
 ## Things to know
 
-- The package root currently does not re-export the backtest helpers, so import from the module paths directly.
+- Configure tunable fixed TP/SL on the manifest; [Backtest](../../docs/Backtest.md#tunable-take-profit-and-stop-loss) defines exits, OHLC validation, and replay requirements.
 - `backtest_snapshot()` is the standard analysis path for vectorized experiment-sweep evaluation.
 - Snapshot return and cost outputs are basis-point scaled (`*_bps` columns), matching the basis-point fee and slippage inputs.
 

@@ -39,7 +39,7 @@ def _cvar_tail_bps(returns: npt.NDArray[np.float64]) -> float:
     return round(float(np.sort(arr)[:tail_count].mean()) * BPS_PER_UNIT, BPS_DECIMALS)
 
 
-def _snapshot_ledger(result: ExecutionResult, notional_rate: float) -> dict[str, float]:
+def snapshot_ledger(result: ExecutionResult, notional_rate: float) -> dict[str, float]:
     gross = result.gross * notional_rate
     net = result.net * notional_rate
     pos = result.pos * notional_rate
@@ -73,3 +73,6 @@ def _snapshot_ledger(result: ExecutionResult, notional_rate: float) -> dict[str,
     data['cost_per_bar_bps'] = _mean_bps(cost)
 
     return data
+
+
+__all__ = ['snapshot_ledger']

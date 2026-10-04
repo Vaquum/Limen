@@ -9,10 +9,10 @@ from limen.backtest.long_flat_strategy import ExecutionResult, long_flat_strateg
 BPS_PER_UNIT = 10_000.0
 
 
-def _validate_barrier(name: str, value: object) -> float | None:
+def validate_barrier(name: str, value: object) -> float | None:
     if value is None:
         return None
-    if isinstance(value, bool) or not isinstance(value, numbers.Real) or not math.isfinite(value) or value <= 0 or (name == 'stop_loss_bps' and value >= BPS_PER_UNIT):
+    if isinstance(value, bool) or not isinstance(value, numbers.Real) or not math.isfinite(value) or float(value) <= 0 or (name == 'stop_loss_bps' and float(value) >= BPS_PER_UNIT):
         raise ValueError(f'{name} must be finite and positive' + (' and below 10000' if name == 'stop_loss_bps' else '') + f', got {value!r}')
     return float(value)
 
@@ -26,7 +26,7 @@ def _level(entry: float, bps: float | None, name: str) -> float | None:
     return level
 
 
-def _long_flat_tp_sl(
+def long_flat_tp_sl(
     predictions: npt.ArrayLike, open_px: npt.NDArray[np.float64],
     close_px: npt.NDArray[np.float64], price_change: npt.NDArray[np.float64], *,
     high_px: npt.NDArray[np.float64], low_px: npt.NDArray[np.float64],
@@ -73,3 +73,6 @@ def _long_flat_tp_sl(
         price_change + effective_close - close_px,
         execution_lag_bars=execution_lag_bars, fee_bps=fee_bps, slip_bps=slip_bps,
     )
+
+
+__all__ = ['long_flat_tp_sl', 'validate_barrier']

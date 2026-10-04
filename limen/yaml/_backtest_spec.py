@@ -2,7 +2,7 @@ import re
 from collections.abc import Mapping
 from typing import cast
 
-from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, _validate_backtest_value
+from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, validate_backtest_value as _validate_backtest_value
 from limen.yaml.errors import YAMLError
 
 _PARAM_REF_RE = re.compile(r'\{(\w+)\}')
@@ -12,7 +12,7 @@ def _mapping(value: object) -> Mapping[str, object]:
     return cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
 
 
-def _check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]) -> None:
+def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]) -> None:
     sfd = _mapping(yaml_dict.get('sfd'))
     backtest = _mapping(_mapping(sfd.get('manifest')).get('backtest'))
     params = _mapping(sfd.get('params'))
@@ -38,3 +38,6 @@ def _check_value(key: str, value: object, path: str, errors: list[YAMLError]) ->
         _ = _validate_backtest_value(key, value)
     except ValueError as exc:
         errors.append(YAMLError(message=str(exc), path=path))
+
+
+__all__ = ['check_backtest_spec']
