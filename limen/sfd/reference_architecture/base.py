@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.sfd.reference_architecture._backtest_evaluation import compute_backtest as _compute_backtest
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
 
 
@@ -125,7 +125,7 @@ class ReferenceModel(ABC):
     def _cost_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
         return {
             key: data[f"backtest_{key}"]
-            for key in ('fee_bps', 'slip_bps', 'notional_rate')
+            for key in ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
             if f"backtest_{key}" in data
         }
 
@@ -144,20 +144,4 @@ class ReferenceModel(ABC):
             dict: Backtest metrics with 'backtest_' prefix, or empty dict if no price data
         '''
 
-        if 'price_data_for_backtest' not in data:
-            return {}
-
-        price = data['price_data_for_backtest']
-        open_arr = price['open'].to_numpy()
-        close_arr = price['close'].to_numpy()
-
-        bt_columns = {
-            'predictions': np.asarray(preds).astype(int),
-            'open': open_arr,
-            'close': close_arr,
-            'price_change': close_arr - open_arr,
-        }
-
-        bt_result = backtest_snapshot(bt_columns, execution_lag_bars=1, **self._cost_kwargs(data))
-
-        return {f"backtest_{k}": v for k, v in bt_result.items()}
+        return _compute_backtest(preds, data)

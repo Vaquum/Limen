@@ -105,7 +105,7 @@ The resulting table has these columns:
 
 The row count follows the reconstructed test window; it is not a fixed contract.
 
-Use this table for round-level inspection before summary statistics. It is also the direct input to Limen's snapshot backtest.
+Use this table for round-level inspection before summary statistics. It is also a direct input to disabled-barrier snapshots. Configured TP/SL replay reconstructs private high/low columns from verified source identities; this public table remains unchanged.
 
 ## Benchmark surfaces
 
@@ -198,7 +198,9 @@ Intensive scalars:
 
 - `wins_per_bar`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
-Use this table to compare trading economics after benchmark inspection.
+Use this table to compare trading economics after benchmark inspection. Manifest-backed replay resolves each round's fees, slippage, sizing, TP and SL, including null barriers. This corrects older post-run summaries that used default costs/sizing.
+
+Configured replay requires an in-memory manifest-backed run with deterministic preparation and retained provenance. Missing evidence, source changes, interior censorship, and ambiguous ML timestamps raise before evaluation. File-only/resumed configured replay cannot supply this evidence. With disabled barriers, legacy ML duplicate-timestamp reconstruction differences remain outside the parity guarantee. See [Backtest](Backtest.md#tunable-take-profit-and-stop-loss) for configuration, exits, and source requirements.
 
 Post-run snapshot backtests currently support:
 

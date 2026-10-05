@@ -25,7 +25,9 @@ def experiment_confusion_metrics(self: Any, x: str) -> pd.DataFrame:
 
         all_rows.append(result_df)
 
-    df_all = pd.concat(all_rows, ignore_index=True)
+    if not all_rows:
+        raise ValueError('No objects to concatenate')
+    df_all = pd.DataFrame([record for row in all_rows for record in row.to_dict('records')])
 
     return df_all
 

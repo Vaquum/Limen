@@ -2,7 +2,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.log._snapshot_backtest_round import snapshot_backtest_round as _snapshot_backtest_round
 
 
 def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
@@ -84,12 +84,6 @@ def experiment_backtest_results(self: Any) -> pd.DataFrame:
     all_rows: list[dict[str, float]] = []
 
     for i in range(len(self.round_params)):
-        perf = _prepare_snapshot_backtest_input(self.permutation_prediction_performance(i))
-        columns = {
-            col: perf[col].to_numpy()
-            for col in ('predictions', 'open', 'close', 'price_change')
-        }
-
-        all_rows.append(backtest_snapshot(columns, execution_lag_bars=1))
+        all_rows.append(_snapshot_backtest_round(self, i, _prepare_snapshot_backtest_input))
 
     return pd.DataFrame.from_records(all_rows)

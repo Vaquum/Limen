@@ -5,9 +5,8 @@ import numpy.typing as npt
 import polars as pl
 from typing_extensions import override
 
-from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.sfd.reference_architecture._backtest_evaluation import evaluate_prices as _evaluate_prices
 from limen.backtest.long_flat_strategy import ExecutionResult
-from limen.backtest.long_flat_strategy import long_flat_strategy
 from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -96,6 +95,9 @@ class RuleBasedStrategy(ReferenceModel):
                 Tier 3 stability metrics, and '_preds' key
         '''
 
+        from limen.experiment._backtest_provenance import preflight_backtest as _preflight_backtest
+
+        _preflight_backtest(data)
         positions: dict[str, npt.NDArray[np.integer[Any]]] = {}
         backtest_results: dict[str, dict[str, float]] = {}
         strategy = data['strategy']
@@ -145,47 +147,9 @@ class RuleBasedStrategy(ReferenceModel):
                         df: pl.DataFrame,
                         positions: npt.NDArray[np.integer[Any]],
                         cost_kwargs: dict[str, Any]) -> dict[str, float]:
-        if 'open' not in df.columns or 'close' not in df.columns:
-            return {}
-        open_arr = df['open'].to_numpy().astype(float)
-        close_arr = df['close'].to_numpy().astype(float)
-        bt_columns = {
-            'predictions': positions,
-            'open': open_arr,
-            'close': close_arr,
-            'price_change': close_arr - open_arr,
-        }
-
-        execution_result: ExecutionResult | None = None
-
-        def capture_execution_result(predictions: Any,
-                                     open_px: Any,
-                                     close_px: Any,
-                                     price_change: Any,
-                                     *,
-                                     execution_lag_bars: int,
-                                     fee_bps: float,
-                                     slip_bps: float) -> ExecutionResult:
-            nonlocal execution_result
-            execution_result = long_flat_strategy(
-                predictions,
-                open_px,
-                close_px,
-                price_change,
-                execution_lag_bars=execution_lag_bars,
-                fee_bps=fee_bps,
-                slip_bps=slip_bps,
-            )
-            return execution_result
-
-        metrics = backtest_snapshot(
-            bt_columns,
-            strategy=capture_execution_result,
-            execution_lag_bars=1,
-            **cost_kwargs,
-        )
+        metrics, execution_result = _evaluate_prices(df, positions, cost_kwargs)
         if execution_result is None:
-            raise RuntimeError('backtest strategy did not return an execution result')
+            return metrics
         pnl_per_trade_bps, executed_trade_count = _compounded_trade_pnl_summary(
             execution_result,
             float(cost_kwargs.get('notional_rate', 1.0)),

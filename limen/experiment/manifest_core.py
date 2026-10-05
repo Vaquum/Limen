@@ -1,9 +1,11 @@
+from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
+from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
+from collections.abc import Mapping
+from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
 import copy
 import inspect
 import importlib
 import logging
-import math
-import numbers
 import random
 import re
 from datetime import date
@@ -252,6 +254,8 @@ class BacktestConfig:
     fee_bps: float | str = 5.0
     slip_bps: float | str = 5.0
     notional_rate: float | str = 1.0
+    take_profit_bps: float | str | None = None
+    stop_loss_bps: float | str | None = None
 
 
 @dataclass
@@ -788,16 +792,20 @@ class Manifest:
     def set_backtest_config(self,
                             fee_bps: float | str = 5.0,
                             slip_bps: float | str = 5.0,
-                            notional_rate: float | str = 1.0) -> 'Manifest':
+                            notional_rate: float | str = 1.0, *,
+                            take_profit_bps: float | str | None = None,
+                            stop_loss_bps: float | str | None = None) -> 'Manifest':
 
         '''
-        Configure the backtest economics for this manifest.
+        Replace all backtest costs and fixed entry-relative barriers for this manifest.
 
         Args:
             fee_bps (float | str): Per-fill fee in basis points, or a round-param name to sweep
             slip_bps (float | str): Per-fill slippage in basis points, or a round-param name to sweep
             notional_rate (float | str): Fraction of capital deployed while in position
                 (in (0, 1]), or a round-param name to sweep
+            take_profit_bps (float | str | None): Positive gross profit distance or search reference; None disables.
+            stop_loss_bps (float | str | None): Gross loss distance in (0, 10000) or reference; None disables.
 
         Returns:
             Manifest: Self for method chaining
@@ -807,52 +815,28 @@ class Manifest:
             fee_bps=fee_bps,
             slip_bps=slip_bps,
             notional_rate=notional_rate,
+            take_profit_bps=take_profit_bps,
+            stop_loss_bps=stop_loss_bps,
         )
 
         return self
 
-    def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
-        if self.backtest_config is None:
-            return
+    def resolve_backtest_config(self, round_params: Mapping[str, object]) -> dict[str, float | None]:
+        """Resolve all backtest fields; an absent configuration returns an empty mapping."""
+        return _resolve_backtest_config(self.backtest_config, round_params)
 
-        raw = {
-            'fee_bps': self.backtest_config.fee_bps,
-            'slip_bps': self.backtest_config.slip_bps,
-            'notional_rate': self.backtest_config.notional_rate,
-        }
-        resolved = _resolve_params(raw, round_params)
-        for key in ('fee_bps', 'slip_bps', 'notional_rate'):
-            original = raw[key]
-            value = resolved[key]
-            if (
-                isinstance(original, str)
-                and isinstance(value, str)
-                and value == original
-                and original not in round_params
-            ):
-                raise ValueError(
-                    f"Manifest backtest {key} references unknown search-param '{original}'; add it to params() or pass a number"
-                )
-            if key == 'notional_rate':
-                if (
-                    isinstance(value, bool)
-                    or not isinstance(value, numbers.Real)
-                    or not math.isfinite(value)
-                    or not 0 < float(value) <= 1
-                ):
-                    raise ValueError(
-                        f"Manifest backtest notional_rate must be in (0, 1], got {value!r}"
-                    )
-            elif (
-                isinstance(value, bool)
-                or not isinstance(value, numbers.Real)
-                or not math.isfinite(value)
-                or value < 0
-            ):
-                raise ValueError(
-                    f"Manifest backtest {key} must be a non-negative finite number, got {value!r}"
-                )
-            data[f"backtest_{key}"] = float(value)
+    def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
+        if _configured_barriers(self.backtest_config):
+            data['_backtest_configured'] = True
+        else:
+            data.pop('_backtest_configured', None)
+        _preflight_backtest(data)
+        resolved = self.resolve_backtest_config(round_params)
+        for key in BACKTEST_KEYS:
+            if key in resolved:
+                data[f'backtest_{key}'] = resolved[key]
+            else:
+                data.pop(f'backtest_{key}', None)
 
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
@@ -1086,7 +1070,7 @@ class MLManifest(Manifest):
             dict: Final data dictionary ready for model training
         '''
 
-        split_data, all_datetimes, price_data_for_backtest = _run_prepare_setup(self, raw_data, round_params)
+        split_data, all_datetimes, price_data_for_backtest, sources = _run_prepare_setup(self, raw_data, round_params)
 
         all_fitted_params: dict[str, Any] = {}
         columns_to_drop: list[str] | None = None
@@ -1155,6 +1139,9 @@ class MLManifest(Manifest):
 
             cco_block = split.tail(n_raw_cco) if n_raw_cco > 0 else None
 
+        split_data, witness = _capture_backtest(sources, split_data, ml=True)
+        if _configured_barriers(self.backtest_config):
+            _ = _validate_witness(witness)
         split_data = _align_split_columns(split_data)
         split_data, all_fitted_params = _apply_pca_compression(
             self, split_data, round_params, all_fitted_params
@@ -1171,7 +1158,9 @@ class MLManifest(Manifest):
                 maintain_order='left'
             )
 
-        return _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
+        data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
+        _attach_witness(data_dict, witness)
+        return data_dict
 
     @override
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
@@ -1313,7 +1302,7 @@ class RuleBasedManifest(Manifest):
                 'RuleBasedManifest.prepare_data() called without a strategy. Call with_strategy(conditions, entry=...) before running.'
             )
 
-        split_data, all_datetimes, _ = _run_prepare_setup(self, raw_data, round_params)
+        split_data, all_datetimes, _, sources = _run_prepare_setup(self, raw_data, round_params)
 
         all_fitted_params: dict[str, Any] = {}
 
@@ -1332,7 +1321,12 @@ class RuleBasedManifest(Manifest):
 
         split_data = _align_split_columns(split_data)
 
-        return _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
+        split_data, witness = _capture_backtest(sources, split_data, ml=False)
+        if _configured_barriers(self.backtest_config):
+            _ = _validate_witness(witness)
+        data_dict = _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
+        _attach_witness(data_dict, witness)
+        return data_dict
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.DataFrame:
@@ -1657,7 +1651,13 @@ def _apply_feature_transforms(manifest: Manifest, lazy_data: pl.LazyFrame, round
         if not _should_include_transform(entry, round_params):
             continue
         resolved = _resolve_params(entry.params, round_params)
-        lazy_data = lazy_data.pipe(entry.func, **resolved)
+        if _SOURCE_ROW not in lazy_data.collect_schema():
+            lazy_data = lazy_data.pipe(entry.func, **resolved)
+            continue
+        source_data = lazy_data.collect()
+        public_data = source_data.drop(_SOURCE_ROW) if _SOURCE_ROW in source_data.columns else source_data
+        transformed = public_data.lazy().pipe(entry.func, **resolved).collect()
+        lazy_data = _restore_source_rows(source_data, transformed).lazy()
 
     return lazy_data
 
@@ -1722,6 +1722,9 @@ def _apply_class_based_target(
         tuple[pl.DataFrame, dict[str, Any]]: Transformed data and updated fitted params
     '''
 
+    source_data = data
+    if _SOURCE_ROW in data.columns:
+        data = data.drop(_SOURCE_ROW)
     config = manifest.target_class_config
     if config is None:
         raise ValueError('_apply_class_based_target manifest has no target_class_config')
@@ -1746,7 +1749,7 @@ def _apply_class_based_target(
     resolved_transform = _resolve_params(config.transform_params, round_params)
     data = instance.transform(data, **resolved_transform)
 
-    return data, all_fitted_params
+    return _restore_source_rows(source_data, data), all_fitted_params
 
 
 def _apply_scaler(
@@ -1757,6 +1760,9 @@ def _apply_scaler(
         is_training: bool
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
+    source_data = data
+    if _SOURCE_ROW in data.columns:
+        data = data.drop(_SOURCE_ROW)
     if manifest.scaler:
         target_col = manifest.target_column
         target_data = None
@@ -1772,7 +1778,7 @@ def _apply_scaler(
         if target_data is not None:
             data = data.with_columns(target_data)
 
-    return data, all_fitted_params
+    return _restore_source_rows(source_data, data), all_fitted_params
 
 
 class _PCATransformer(Protocol):
@@ -1914,7 +1920,7 @@ def _run_prepare_setup(
         manifest: Manifest,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any],
-) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None]:
+) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None]:
 
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
@@ -1927,12 +1933,7 @@ def _run_prepare_setup(
     all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes])
     split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
-    price_cols = ['datetime', 'open', 'high', 'low', 'close']
-    test_split = split_data[2]
-    available = [c for c in price_cols if c in test_split.columns]
-    price_data_for_backtest = test_split.select(available) if len(available) == len(price_cols) else None
-
-    return split_data, all_datetimes, price_data_for_backtest
+    return _prepare_backtest_data(split_data, all_datetimes, configured=_configured_barriers(manifest.backtest_config))
 
 
 def _resolve_split(manifest: 'Manifest', raw_data: pl.DataFrame) -> list[pl.DataFrame]:
