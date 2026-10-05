@@ -1,6 +1,8 @@
+import hashlib
 import json
 import math
 from pathlib import Path
+from datetime import date
 from tempfile import TemporaryDirectory
 from textwrap import dedent
 from unittest.mock import patch
@@ -185,6 +187,8 @@ _LABEL_CONTROL_YAML = dedent('''\
       output_format: csv
 ''')
 
+_FIXTURE_PATH = Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet'
+_FIXTURE_SHA256 = 'eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a'
 _N_PERMUTATIONS = 10
 _TOP_N = 3
 _INFERENCE_START = '2025-05-29'
@@ -193,13 +197,25 @@ _INFERENCE_END = '2025-05-31'
 
 def test_e2e_label_control_trainer_sensor() -> None:
 
-    with TemporaryDirectory() as tmpdir:
+    assert hashlib.sha256(_FIXTURE_PATH.read_bytes()).hexdigest() == _FIXTURE_SHA256
+    with TemporaryDirectory() as tmpdir, patch(
+        'requests.sessions.Session.request',
+        side_effect=AssertionError('end-to-end proof must use recorded market data'),
+    ):
+        recorded = historical_data.HistoricalData().get_any_file(str(_FIXTURE_PATH))
+        assert recorded.height == 14496
         exp_dir = Path(tmpdir) / 'label_control'
         exp_dir.mkdir()
 
         with TemporaryDirectory() as yaml_dir, patch('click.echo'), patch('click.secho'):
             yaml_path = Path(yaml_dir) / 'label_control.yaml'
             yaml_path.write_text(_LABEL_CONTROL_YAML.replace(
+                'limen.data.HistoricalData.get_spot_klines',
+                'limen.data.HistoricalData.get_any_file',
+            ).replace(
+                'kline_size: 900',
+                f'file_path_or_url: "{_FIXTURE_PATH}"',
+            ).replace(
                 'output_format: csv',
                 f'output_format: csv\n  output_path: "{exp_dir}"',
             ))
@@ -253,10 +269,10 @@ def test_e2e_label_control_trainer_sensor() -> None:
             assert 'feature_drop_seed' in rp
             assert 'auto_pca' in rp
 
-        inference_klines = historical_data.HistoricalData().get_spot_klines(
-            kline_size=900,
-            start_date_limit=_INFERENCE_START,
-            end_date_limit=_INFERENCE_END,
+        inference_klines = recorded.filter(
+            pl.col('datetime').dt.date().is_between(
+                date.fromisoformat(_INFERENCE_START), date.fromisoformat(_INFERENCE_END),
+            )
         )
         assert len(inference_klines) > 50
         kline_dts = inference_klines['datetime'].to_list()

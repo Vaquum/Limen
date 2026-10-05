@@ -1,5 +1,8 @@
+import hashlib
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+import polars as pl
 
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.parser import parse
@@ -10,6 +13,8 @@ from limen.yaml.profiler import make_covering_array
 from limen.yaml.profiler import profile
 
 _TEMPLATES_DIR = Path(__file__).resolve().parents[1] / 'limen' / 'yaml' / 'templates'
+_FIXTURE_PATH = Path(__file__).parent / 'fixtures' / 'spot_1h_20240101_20241231.parquet'
+_FIXTURE_SHA256 = 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72'
 
 
 def test_complexity_rating_low() -> None:
@@ -133,10 +138,19 @@ def test_classify_error_no_false_positive_on_information_in_message() -> None:
 
 
 def test_profile_static_fields_correct_for_logreg_template() -> None:
+    assert hashlib.sha256(_FIXTURE_PATH.read_bytes()).hexdigest() == _FIXTURE_SHA256
+    assert pl.read_parquet(_FIXTURE_PATH).height == 8784
     template = _TEMPLATES_DIR / 'logreg_binary.yaml'
     yaml_dict, _ = parse(template.read_text(encoding='utf-8'))
+    yaml_dict['sfd']['manifest']['data_source'] = {
+        'method': 'limen.data.HistoricalData.get_any_file',
+        'params': {'file_path_or_url': str(_FIXTURE_PATH)},
+    }
     sfd = CompiledSFD(yaml_dict)
-    result = profile(sfd)
+    with patch('requests.sessions.Session.request', side_effect=AssertionError('profile proof must use recorded market data')):
+        result = profile(sfd)
+    assert result.sample_permutations_completed > 0
+    assert result.sample_time_seconds_per_permutation is not None
 
     assert isinstance(result, ProfileResult)
     assert result.total_permutations > 0
@@ -149,8 +163,15 @@ def test_profile_static_fields_correct_for_logreg_template() -> None:
 def test_profile_total_permutations_is_product_of_cardinalities() -> None:
     template = _TEMPLATES_DIR / 'logreg_binary.yaml'
     yaml_dict, _ = parse(template.read_text(encoding='utf-8'))
+    yaml_dict['sfd']['manifest']['data_source'] = {
+        'method': 'limen.data.HistoricalData.get_any_file',
+        'params': {'file_path_or_url': str(_FIXTURE_PATH)},
+    }
     sfd = CompiledSFD(yaml_dict)
-    result = profile(sfd)
+    with patch('requests.sessions.Session.request', side_effect=AssertionError('profile proof must use recorded market data')):
+        result = profile(sfd)
+    assert result.sample_permutations_completed > 0
+    assert result.sample_time_seconds_per_permutation is not None
 
     expected = 1
     for v in result.param_cardinalities.values():

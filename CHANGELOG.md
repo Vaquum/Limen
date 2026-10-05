@@ -1463,3 +1463,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.11.1] - 2026-10-04
 
 - Update docs-site brace-expansion, fast-uri, http-cache-semantics, and image-size to patched releases; retire image-size exceptions and track the unpatched braces advisory with a dated retirement condition.
+
+## [5.11.2] - 2026-10-05
+
+- Use recorded market windows in end-to-end and template-profiler proofs; reject HTTP reads so dataset downloads cannot consume their runtime budget.
