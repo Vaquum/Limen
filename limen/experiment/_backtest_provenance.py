@@ -49,7 +49,10 @@ def restore_source_rows(before: pl.DataFrame, after: pl.DataFrame) -> pl.DataFra
     if before.height != after.height or 'datetime' not in after.columns or not before['datetime'].equals(after['datetime']):
         keys = [col for col in PRICE_COLUMNS if col in before.columns and col in after.columns]
         source = before.select([*keys, SOURCE_ROW])
-        if not keys or source.select(keys).is_duplicated().any():
+        if not keys:
+            return after
+        source = source.join(after.select(keys), on=keys, how='semi')
+        if source.select(keys).is_duplicated().any():
             return after
         return after.join(source, on=keys, how='left', maintain_order='left')
     return after.with_columns(before[SOURCE_ROW])

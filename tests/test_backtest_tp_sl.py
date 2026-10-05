@@ -16,7 +16,7 @@ from limen.backtest.long_flat_strategy import long_flat_strategy
 from limen.cli.commands.run import run_experiment
 from limen.data import HistoricalData
 from limen.experiment import MLManifest, RuleBasedManifest, UniversalExperimentLoop
-from limen.experiment._backtest_provenance import SOURCE_ROW, replay_prices, validate_witness
+from limen.experiment._backtest_provenance import SOURCE_ROW, replay_prices, restore_source_rows, source_splits, validate_witness
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search.random_strategy import RandomStrategy
@@ -383,6 +383,14 @@ def test_tp_sl_real_fixture_provenance_boundaries(market):
             m.add_indicator(lambda frame: frame.filter(pl.col('close') != 79800.0))
         with pytest.raises(ValueError, match='ambiguous alignment'):
             m.prepare_data(duplicate_window, {'tp': None})
+    identified = source_splits([duplicate_window])[0]
+    assert identified.select('datetime', 'open').is_duplicated().any()
+    suffix = duplicate_window.slice(20).select('datetime', 'open')
+    restored = restore_source_rows(identified, suffix)
+    assert restored[SOURCE_ROW].to_list() == list(range(20, len(duplicate_window)))
+    assert_frame_equal(restored.drop(SOURCE_ROW), suffix)
+    ambiguous = restore_source_rows(identified, duplicate_window.slice(18).select('datetime', 'open'))
+    assert SOURCE_ROW not in ambiguous.columns
     rule = _rule_manifest().set_backtest_config(take_profit_bps=50.0)
     data = rule.prepare_data(duplicate_window, {})
     rule.run_model(data, {})
