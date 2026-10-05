@@ -1460,6 +1460,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add sklearn-backed `RidgeRegressor` and `ridge_regressor` SFD with a YAML template, standard regression and directional metrics, and Trainer/Sensor reconstruction coverage.
 
+## [5.11.1] - 2026-10-04
+
+- Update docs-site brace-expansion, fast-uri, http-cache-semantics, and image-size to patched releases; retire image-size exceptions and track the unpatched braces advisory with a dated retirement condition.
+
 ## [5.12.0] - 2026-10-04
 
 - Add independently tunable manifest take-profit and stop-loss barriers to snapshot strategy evaluation.
