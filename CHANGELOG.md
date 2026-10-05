@@ -1464,7 +1464,11 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Update docs-site brace-expansion, fast-uri, http-cache-semantics, and image-size to patched releases; retire image-size exceptions and track the unpatched braces advisory with a dated retirement condition.
 
-## [5.12.0] - 2026-10-04
+## [5.11.2] - 2026-10-05
+
+- Use recorded market windows in end-to-end and template-profiler proofs; reject HTTP reads so dataset downloads cannot consume their runtime budget.
+
+## [5.12.0] - 2026-10-05
 
 - Add independently tunable manifest take-profit and stop-loss barriers to snapshot strategy evaluation.
 - Apply each round's declared fees, slippage and sizing in supported post-run replay, including disabled barriers.
