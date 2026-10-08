@@ -1,6 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -14,6 +14,7 @@ class ReferenceModel(ABC):
     '''Base class for class-based reference architecture models.'''
 
     deterministic: bool = False
+    prediction_mode: ClassVar[Literal['binary', 'target_exposure']] = 'binary'
 
     def __init__(self) -> None:
 
@@ -123,11 +124,14 @@ class ReferenceModel(ABC):
         return results
 
     def _cost_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
-        return {
+        options = {
             key: data[f"backtest_{key}"]
             for key in ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
             if f"backtest_{key}" in data
         }
+        if '_trade_context' in data:
+            options['_trade_context'] = data['_trade_context']
+        return options
 
     def _compute_backtest(self,
                           preds: npt.NDArray[np.integer[Any] | np.floating[Any]],
@@ -144,4 +148,9 @@ class ReferenceModel(ABC):
             dict: Backtest metrics with 'backtest_' prefix, or empty dict if no price data
         '''
 
+        from limen.backtest.trade_contract import TradePolicy
+
+        policy = data.get('_trade_policy')
+        if isinstance(policy, TradePolicy) and policy.prediction_mode != self.prediction_mode:
+            raise ValueError('Model output mode does not match manifest trade policy')
         return _compute_backtest(preds, data)

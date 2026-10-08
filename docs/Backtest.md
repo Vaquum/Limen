@@ -1,6 +1,6 @@
 # Backtest
 
-Backtest is Limen's trading-economics ledger. It converts binary prediction output into long-flat per-bar returns after declared fill costs, then reports one row of intensive metrics per evaluated round.
+Backtest evaluates declared trading economics. The legacy snapshot reports binary long-flat per-bar returns. Configured event execution supports signed exposure, elapsed exits and funding with separate intent, fill and episode ledgers.
 
 The layer evaluates entry signals together with declared costs, sizing, and optional fixed take-profit/stop-loss exits.
 
@@ -245,9 +245,91 @@ Table 7. These concerns sit outside the snapshot contract.
 - Continue to [Log](Log.md) for the post-run workflow that produces backtest inputs.
 - Continue to [Benchmark](Benchmark.md) for the prediction-quality layer that precedes trading-economics inspection.
 
+## Signed exposure, elapsed exits and funding
 
-## Signed exposure execution
+Event execution is selected by explicit product metadata, signed output, elapsed exits, timers, an execution source, funding, or changed event-only sizing/timing options. Unconfigured binary snapshots retain their existing behavior. A model declares `prediction_mode='target_exposure'` explicitly; a custom native architecture returns `_prediction_mode` with `_preds`. Probabilities are not implicitly position sizes.
 
-`limen.backtest.trade_execution` accepts a resolved `TradePolicy` and recorded `TradeInputs`. Positive exposure is long, zero is flat, and negative exposure requires linear perpetual accounting. Size changes use marked current equity with fill costs reserved. An unchanged signal holds quantity; price/equity changes do not create maintenance trades. Resizes retain first-fill time and barrier anchors, and reversal closes before opposite entry. Cash spot cannot borrow or open shorts.
+```python
+from limen.experiment.manifest_core import FundingConfig, ProductConfig
 
-The event ledger separates intent, fill and trade episode. End marking leaves an open trade open. Existing binary snapshot behavior is unchanged.
+manifest.set_backtest_config(
+    prediction_mode='target_exposure',
+    product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT',
+                          quantity_step=0.00001, min_notional=5.0),
+    initial_equity=10000.0,
+    notional_rate='allocation',
+    max_holding_seconds='holding_seconds',
+    take_profit_bps='tp',
+    stop_loss_bps='sl',
+    funding=FundingConfig(preset='binance_btcusdt',
+                          params={'rate': '{funding_rate}'}),
+)
+```
+
+The product names and quantity rules are declarations supplied by the caller. Cash spot uses `kind='cash_spot'` and supports long/flat; linear quote-settled perpetuals support long/flat/short. Perpetual funding does not model spot borrowing. All accounting uses the declared quote currency, with no currency conversion, inverse contracts, liquidation or order-book model.
+
+The YAML equivalents are nested mappings under `sfd.manifest.backtest`:
+
+```yaml
+backtest:
+  prediction_mode: target_exposure
+  product:
+    kind: linear_perpetual
+    instrument: BTCUSDT
+    base_currency: BTC
+    quote_currency: USDT
+    quantity_step: 0.00001
+    min_notional: 5.0
+  initial_equity: 10000.0
+  max_holding_seconds: "{holding_seconds}"
+  funding:
+    preset: binance_btcusdt
+    params:
+      rate: "{funding_rate}"
+```
+
+Each referenced parameter must exist in `sfd.params`. Native numeric fields also accept bare parameter names. Nested adapter/source parameters resolve explicit `{parameter}` references. Unknown keys, nonfinite values, incompatible products and missing required data fail.
+
+### Signal-change sizing
+
+A finite signal `z` lies in `[-1,1]`: positive is long, zero is flat, negative is short. `abs(z) <= flat_threshold` is canonical flat. Requested exposure is `notional_rate * z`, bounded by `max_exposure <= 1`. Only a changed canonical signal creates a sizing intent. `signal_change_bps` defaults to zero; explicit flat and reversal always count. An unchanged signal holds quantity through price, equity and funding changes.
+
+A changed signal sizes against current marked equity after recognized funding, reserving the fee and adverse slippage on its actual quantity delta. Quantity rounds toward zero to `quantity_step`; subminimum openings/resizes record no fill. Full closure permits residual dust. Cash spot cannot borrow. Perpetual fills must meet `initial_margin_fraction`; nonpositive equity or a breached `maintenance_margin_fraction` fails explicitly.
+
+Resizes retain episode ID, first actual fill time and original barrier anchor. Accounting entry basis may change. Full closure ends the episode; reversal closes and costs the old position before sizing the opposite entry. A forced barrier/time exit suppresses re-entry until an explicit flat signal, including through opposite signals.
+
+### Recorded prices and clocks
+
+`max_holding_seconds` measures elapsed UTC time from first fill. Expiry is requested at the first declared signal or timer event reaching that deadline. `timer_interval_seconds` adds checks on the UTC epoch grid with `timer_phase_utc_seconds`; timers make no predictions. Requests remain pending until a recorded admissible price arrives. End marking leaves open episodes open and charges no invented close fee.
+
+Execution observations carry `row_id, start_ns, end_ns, open_available_at_ns, available_at_ns, open, high, low, close`; times are integer UTC nanoseconds. Points have equal start/end and one recorded price. OHLC opens are usable at known starts, close/extrema only at availability. Held barriers process SL before TP, with adverse gaps and interval uncertainty. Whole-interval extrema cannot be applied to inventory entered/resized inside that interval.
+
+Regular raw OHLC may supply a verified source interval (`klines_size` in seconds, or constant `base_interval`). Irregular sources must supply actual interval/availability metadata. Limen does not derive irregular duration from bar count or interpolate prices. Optional `execution_data_source=DataSourceConfig(method, params)` supplies finer recorded observations once per round. Its coverage must span the true split; `max_price_gap_seconds` bounds both interval width and gaps. Second-resolution execution therefore requires recorded data meeting that bound.
+
+Equal-time order is funding on preboundary inventory, held price barriers, elapsed expiry, newly available signals, pending exits, then surviving changed sizing. `execution_lag_seconds` delays signal intents; an earlier open cannot fill a later signal.
+
+### Funding modes
+
+`FundingConfig` chooses an importable versioned adapter, optional preset, tunable JSON `params` and optional `data_source`. Native adapter parameters include `mechanism`, `rate`, `rate_unit` (`decimal` or `bps`), `rate_basis_seconds`, `currency`, `valuation`, `approximation`, settlement interval/UTC phase, and continuous cash-settlement interval/UTC phase. Defaults expand before explicit overrides. Rates already represent payments or quoted accrual; no premium formula or second period conversion is applied.
+
+| Preset | Mechanics |
+|---|---|
+| `binance_btcusdt` | Discrete eight-hour payments; mark valuation in history mode. |
+| `hyperliquid_btc` | Discrete hourly payments; oracle valuation in history mode. |
+| `deribit_btc_usdc` | Continuous eight-hour quoted basis; daily 08:00 UTC cash transfer. |
+
+No-history rates are scenario assumptions with an explicit execution-price proxy, not faithful venue replay. Calibration binds its instrument, recorded window, coverage, calculation and checksum. Caller overrides are independent scenario assumptions. Numerical calibration delivery is pending redistribution rights for the recorded calibration and its derived mean. These presets currently require an explicit rate override or historical source; missing rates fail rather than substituting zero.
+
+Historical funding is optional and authoritative when supplied. An explicit constant rate conflicts with it; preset constants are removed. Discrete history requires unique `event_id`, `settlement_at`, `rate_decimal`, `valuation_price`, plus recorded `schedule_start`, `schedule_end`, `settlement_interval_seconds` and `settlement_phase_utc_seconds`. Schedule intervals are half-open UTC nanoseconds and must cover every required payment, including historical schedule changes. Optional `settlement_slot_ns` preserves actual payment timestamp jitter while identifying its declared schedule slot.
+
+Continuous history requires unique `event_id`, `start`, `end`, `rate_decimal`, `valuation_price`. Declare `history_interpretation='quoted'` with per-row `rate_basis_seconds`, or `'integrated'` for an interval's realized payment. Support intervals must cover the window without gaps/overlap. Integrated history cannot establish exact intrainterval resizing; provide finer evidence or select sampled integration. Datetime timestamps convert to UTC nanoseconds.
+
+Positive funding debits long inventory and credits shorts. Discrete cashflow is `-quantity * valuation_price * rate_decimal`. Continuous accrual integrates that amount over elapsed seconds divided by its quoted basis, partitioned at inventory/rate/valuation events. Recognition changes equity before sizing; cash transfer does not charge it twice. Funding continues until actual closure. Exact history requires recorded valuation; scenario/sampled mode may explicitly use a causal execution-price proxy.
+
+Future settled funding remains private cost evidence. A funding feature requires a separate causal source.
+
+### Ledger and replay
+
+`limen.backtest.trade_execution` accepts resolved `TradePolicy` and bound `TradeInputs`. Its `TradeLedger` separates states, intents, fills, episodes and funding. Returns and drawdown use actual marked equity; costs, funding credits/debits, gross/net PnL, completed/open episodes and mean absolute exposure are separate. Exposure samples use model availability, so shorts cannot cancel longs in an average.
+
+Each round freezes canonical `trade_contract`, SHA-256 digest, source identities/checksums, policy/adapter/preset versions, calibration and event/episode ledger in JSONL. In-memory Log replays unchanged signed predictions and verifies reconstructed bindings before accounting. Configured file-only/resumed Log replay fails explicitly: a contract cannot supply missing prices. Deployment parity remains subject to the linked Praxis/Nexus requests.

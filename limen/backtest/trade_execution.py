@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from itertools import groupby
-from typing import cast
+from typing import Literal, cast
 
 import polars as pl
 
 from limen.backtest.execution_events import execution_events
+from limen.backtest.funding_adapter import FundingAdapter, FundingContext, resolve_adapter
 from limen.backtest.trade_contract import BPS, NANOSECONDS, ExecutionEvent, JsonValue, TradeInputs, TradeLedger, TradePolicy, contract_digest, export_trade_contract, finite_number
 
 _STATE_SCHEMA = {'event_id': pl.String, 'time_ns': pl.Int64, 'cash': pl.Float64, 'accrued_funding': pl.Float64, 'quantity': pl.Float64, 'basis': pl.Float64, 'equity': pl.Float64, 'last_signal': pl.Float64, 'pending_intent_id': pl.String, 'episode_id': pl.String, 'forced_exit_latched': pl.Boolean, 'signal_sample': pl.Boolean}
@@ -17,7 +19,7 @@ _EPISODE_SCHEMA = {'episode_id': pl.String, 'side': pl.Int64, 'first_fill_ns': p
 _FUNDING_SCHEMA = {'event_id': pl.String, 'episode_id': pl.String, 'start_ns': pl.Int64, 'end_ns': pl.Int64, 'quantity': pl.Float64, 'rate_decimal': pl.Float64, 'valuation_price': pl.Float64, 'recognized_delta': pl.Float64, 'cash_delta': pl.Float64, 'currency': pl.String}
 
 
-def _frame(rows: list[dict[str, JsonValue]], schema: dict[str, type[pl.DataType]]) -> pl.DataFrame:
+def _frame(rows: list[dict[str, JsonValue]], schema: Mapping[str, type[pl.DataType]]) -> pl.DataFrame:
     return pl.DataFrame(rows, schema=schema)
 
 
@@ -25,7 +27,7 @@ def _canonical_signal(value: object, policy: TradePolicy) -> float | None:
     if value is None:
         return None
     signal = finite_number(value, 'target exposure')
-    if abs(signal) > 1 or policy.prediction_mode == 'binary' and signal not in (0, 1):
+    if abs(signal) > 1 or (policy.prediction_mode == 'binary' and signal not in (0, 1)):
         raise ValueError('Prediction does not match declared exposure mode/bounds')
     return 0.0 if abs(signal) <= policy.flat_threshold else signal
 
@@ -38,13 +40,12 @@ def _target_quantity(quantity: float, equity: float, price: float, fraction: flo
     for action in (1, -1):
         unit_cost = price * (slip + (1 + action * slip) * fee)
         denominator = price + fraction * unit_cost * action
-        if denominator <= 0:
-            raise ValueError('Post-cost sizing has no positive solution denominator')
-        proposed = fraction * (equity + unit_cost * action * quantity) / denominator
-        if (proposed - quantity) * action >= 0:
-            candidates.append(proposed)
+        if denominator > 0:
+            proposed = fraction * (equity + unit_cost * action * quantity) / denominator
+            if (proposed - quantity) * action >= 0:
+                candidates.append(proposed)
     if not candidates:
-        raise ValueError('No affordable post-cost target quantity')
+        raise ValueError('No affordable post-cost target quantity with a positive solution denominator')
     step = policy.product.quantity_step
     units = math.floor(math.nextafter(abs(candidates[0]) / step, math.inf))
     return math.copysign(units * step, candidates[0])
@@ -64,11 +65,11 @@ class _Account:
     episode: dict[str, JsonValue] | None = None
     pending: dict[str, JsonValue] | None = None
     ready_at_ns: int = 0
-    states: list[dict[str, JsonValue]] = field(default_factory=list)
-    intents: list[dict[str, JsonValue]] = field(default_factory=list)
-    fills: list[dict[str, JsonValue]] = field(default_factory=list)
-    episodes: list[dict[str, JsonValue]] = field(default_factory=list)
-    funding: list[dict[str, JsonValue]] = field(default_factory=list)
+    states: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
+    intents: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
+    fills: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
+    episodes: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
+    funding: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
 
     def equity(self, price: float) -> float:
         marked = self.quantity * price if self.policy.product.kind == 'cash_spot' else self.quantity * (price - self.basis)
@@ -163,6 +164,8 @@ class _Account:
                 self.pending = None
                 self.intent(opposite, event.time_ns, 'signal')
                 self.ready_at_ns = event.time_ns
+            if self.pending is None:
+                raise ValueError('Reconciliation lost its pending intent')
             quantity = _target_quantity(self.quantity, self.equity(price), price, cast(float, self.pending['target']), self.policy)
             self.fill(quantity, price, event)
             self.pending = None
@@ -176,7 +179,7 @@ class _Account:
 
 def _barrier_price(account: _Account, observation: dict[str, object], event: ExecutionEvent) -> tuple[float, str] | None:
     policy = account.policy
-    if account.episode is None or policy.take_profit_bps is None and policy.stop_loss_bps is None:
+    if account.episode is None or (policy.take_profit_bps is None and policy.stop_loss_bps is None):
         return None
     if event.observation_phase == 'close' and account.last_fill_ns is not None and account.last_fill_ns > int(cast(int, observation['start_ns'])):
         raise ValueError('Pre-entry/resize OHLC extrema require finer execution evidence')
@@ -214,21 +217,56 @@ def _metrics(account: _Account, initial: float, states: pl.DataFrame) -> dict[st
     return {'total_return': ending / initial - 1, 'ending_equity': ending, 'max_drawdown': drawdown, 'net_pnl': ending - initial, 'gross_pnl': ending - initial + fees + slip - funding, 'fees': fees, 'slippage': slip, 'funding_pnl': funding, 'completed_trades': float(len(completed)), 'open_trades': float(len(account.episodes) - len(completed)), 'episode_win_rate': sum(cast(float, row['net_pnl']) > 0 for row in completed) / len(completed) if completed else 0.0, 'avg_absolute_exposure': sum(sample_exposures) / samples.height if samples.height else 0.0}
 
 
+def _fund(account: _Account, adapter: FundingAdapter, row: dict[str, object], start: int, end: int, price: float, kind: str) -> None:
+    policy = account.policy.funding
+    if policy is None:
+        raise ValueError('Funding event requires a resolved policy')
+    if kind == 'accrual' and policy.approximation == 'recorded_exact' and policy.params.get('history_interpretation') == 'integrated' and account.last_fill_ns is not None and cast(int, row['start_ns']) < account.last_fill_ns < cast(int, row['end_ns']):
+        raise ValueError('Integrated funding with intrainterval inventory changes requires finer evidence or sampled integration')
+    valuation = price if row['valuation_price'] is None else finite_number(row['valuation_price'], 'funding valuation')
+    context = FundingContext(f'{row["event_id"]}:{start}:{end}', start, end, cast(Literal['payment', 'accrual', 'cash_settlement'], kind), account.accrued_funding, account.quantity, valuation, finite_number(row['rate_decimal'], 'funding rate'), finite_number(row['rate_basis_seconds'], 'rate basis'), policy.mechanism, policy.currency)
+    flow = adapter(context, params=policy.params)
+    if flow.event_id != context.event_id or flow.time_ns != end or flow.currency != policy.currency:
+        raise ValueError('Funding adapter changed event/currency identity')
+    recognized, cash = finite_number(flow.recognized_delta, 'funding recognition'), finite_number(flow.cash_delta, 'funding cash transfer')
+    account.cash += cash
+    account.accrued_funding += recognized - cash
+    account.funding.append({'event_id': flow.event_id, 'episode_id': None if account.episode is None else account.episode['episode_id'], 'start_ns': start, 'end_ns': end, 'quantity': account.quantity, 'rate_decimal': context.rate_decimal, 'valuation_price': valuation, 'recognized_delta': recognized, 'cash_delta': cash, 'currency': flow.currency})
+
+
 def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
-    if policy.funding is not None:
-        raise ValueError('Funding event preparation is required before funded execution')
+    adapter = resolve_adapter(policy.funding) if policy.funding is not None else None
+    if (adapter is not None) != (inputs.funding_events is not None):
+        raise ValueError('Funding policy and normalized events must be supplied together')
+    events = execution_events(inputs, policy)
     binding = contract_digest(export_trade_contract(policy, inputs))
     account = _Account(policy, inputs.initial_equity, binding[:16])
     observations = {str(row['row_id']): cast(dict[str, object], row) for row in inputs.observations.iter_rows(named=True)}
     signals = {str(row['row_id']): row['target'] for row in inputs.signals.iter_rows(named=True)}
+    funding = {str(row['event_id']): cast(dict[str, object], row) for row in inputs.funding_events.iter_rows(named=True)} if inputs.funding_events is not None else {}
+    active: dict[str, object] | None = None
+    previous = inputs.partition_start_ns
     price = 0.0
-    for time_ns, batch in groupby(execution_events(inputs, policy), key=lambda event: event.time_ns):
+    for time_ns, batch in groupby(events, key=lambda event: event.time_ns):
         group = list(batch)
+        if adapter is not None:
+            if active is not None and time_ns > previous:
+                _fund(account, adapter, active, previous, time_ns, price, 'accrual')
+            for event in group:
+                if event.kind == 'funding':
+                    row = funding[str(event.source_row_id)]
+                    if row['kind'] == 'accrual':
+                        if not event.event_id.endswith(':end'):
+                            active = row
+                        elif active is row:
+                            active = None
+                    else:
+                        _fund(account, adapter, row, time_ns, time_ns, price, str(row['kind']))
+        previous = time_ns
         observed = [event for event in group if event.kind == 'observation']
         for event in observed:
             row = observations[str(event.source_row_id)]
             price = float(cast(float, row['open' if event.observation_phase == 'open' else 'close']))
-            _ = account.equity(price)
             barrier = _barrier_price(account, row, event)
             if barrier is not None:
                 reference, reason = barrier
@@ -248,6 +286,8 @@ def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
         account.states[-1]['absolute_exposure'] = abs(account.quantity) * price / account.equity(price)
     schema = {**_STATE_SCHEMA, 'absolute_exposure': pl.Float64}
     states = _frame(account.states, schema)
+    prior = pl.col('equity').shift(1).fill_null(inputs.initial_equity)
+    states = states.with_columns((pl.col('equity') / prior - 1).alias('net_return'))
     return TradeLedger(states, _frame(account.intents, _INTENT_SCHEMA), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, _EPISODE_SCHEMA), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), binding)
 
 

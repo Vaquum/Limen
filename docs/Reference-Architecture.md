@@ -270,3 +270,5 @@ Optional dependencies are checked when the relevant model executes, not when the
 - Continue to [Built-In SFDs](Built-In-SFDs.md) to see how the shipped foundational SFDs package these model surfaces.
 - Continue to [Trainer](Trainer.md) for the reconstruction workflow that replays and validates selected rounds.
 - Continue to [Standard Metrics Library](Standard-Metrics-Library.md) for the low-level metric helpers used inside these model classes.
+
+For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).

@@ -1,3 +1,6 @@
+from limen.backtest.trade_contract import TradePolicy
+from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
+from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
 from collections.abc import Mapping
@@ -13,7 +16,7 @@ from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
     from limen.sfd.rule_based.config import RuleBasedConfig
@@ -244,18 +247,6 @@ class DataSourceResolver:
             return method(**params)
 
         raise ValueError(f"DataSourceResolver Unsupported callable type: {type(method)}")
-
-
-@dataclass
-class BacktestConfig:
-
-    '''Backtest economics: per-fill fee and slippage in basis points, and the deployed notional rate.'''
-
-    fee_bps: float | str = 5.0
-    slip_bps: float | str = 5.0
-    notional_rate: float | str = 1.0
-    take_profit_bps: float | str | None = None
-    stop_loss_bps: float | str | None = None
 
 
 @dataclass
@@ -789,47 +780,38 @@ class Manifest:
         return model_kwargs
 
 
-    def set_backtest_config(self,
-                            fee_bps: float | str = 5.0,
-                            slip_bps: float | str = 5.0,
-                            notional_rate: float | str = 1.0, *,
-                            take_profit_bps: float | str | None = None,
-                            stop_loss_bps: float | str | None = None) -> 'Manifest':
-
-        '''
-        Replace all backtest costs and fixed entry-relative barriers for this manifest.
-
-        Args:
-            fee_bps (float | str): Per-fill fee in basis points, or a round-param name to sweep
-            slip_bps (float | str): Per-fill slippage in basis points, or a round-param name to sweep
-            notional_rate (float | str): Fraction of capital deployed while in position
-                (in (0, 1]), or a round-param name to sweep
-            take_profit_bps (float | str | None): Positive gross profit distance or search reference; None disables.
-            stop_loss_bps (float | str | None): Gross loss distance in (0, 10000) or reference; None disables.
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        self.backtest_config = BacktestConfig(
-            fee_bps=fee_bps,
-            slip_bps=slip_bps,
-            notional_rate=notional_rate,
-            take_profit_bps=take_profit_bps,
-            stop_loss_bps=stop_loss_bps,
-        )
-
+    def set_backtest_config(self, fee_bps: float | str = 5.0, slip_bps: float | str = 5.0,
+                            notional_rate: float | str = 1.0, *, take_profit_bps: float | str | None = None,
+                            stop_loss_bps: float | str | None = None,
+                            prediction_mode: Literal['binary', 'target_exposure'] = 'binary',
+                            product: ProductConfig | None = None, initial_equity: float | str = 10000.0,
+                            max_exposure: float | str = 1.0, signal_change_bps: float | str = 0.0,
+                            flat_threshold: float | str = 0.0, max_holding_seconds: float | str | None = None,
+                            timer_interval_seconds: float | str | None = None, timer_phase_utc_seconds: float | str = 0.0,
+                            execution_lag_seconds: float | str = 0.0, max_price_gap_seconds: float | str | None = None,
+                            execution_data_source: DataSourceConfig | None = None, funding: FundingConfig | None = None) -> 'Manifest':
+        self.backtest_config = BacktestConfig(fee_bps, slip_bps, notional_rate, take_profit_bps, stop_loss_bps,
+            prediction_mode, product, initial_equity, max_exposure, signal_change_bps, flat_threshold,
+            max_holding_seconds, timer_interval_seconds, timer_phase_utc_seconds, execution_lag_seconds,
+            max_price_gap_seconds, execution_data_source, funding)
         return self
+
+    def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None:
+        return _resolve_trade_policy(self.backtest_config, round_params)
 
     def resolve_backtest_config(self, round_params: Mapping[str, object]) -> dict[str, float | None]:
         """Resolve all backtest fields; an absent configuration returns an empty mapping."""
         return _resolve_backtest_config(self.backtest_config, round_params)
 
     def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
-        if _configured_barriers(self.backtest_config):
+        policy = self.resolve_trade_policy(round_params)
+        if policy != data.get('_trade_policy'):
+            raise ValueError('Cached trade preparation does not match this round; refresh preparation')
+        if _configured_barriers(self.backtest_config) and policy is None:
             data['_backtest_configured'] = True
         else:
             data.pop('_backtest_configured', None)
+        data.pop('_trade_ledger', None)
         _preflight_backtest(data)
         resolved = self.resolve_backtest_config(round_params)
         for key in BACKTEST_KEYS:
@@ -863,7 +845,7 @@ class Manifest:
         self._apply_backtest_cost(data, round_params)
         if self.architecture_function is None:
             raise ValueError('Manifest run_model requires a configured architecture_function')
-        return self.architecture_function(data, **model_kwargs)
+        return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
 
 
 @dataclass
@@ -1070,7 +1052,7 @@ class MLManifest(Manifest):
             dict: Final data dictionary ready for model training
         '''
 
-        split_data, all_datetimes, price_data_for_backtest, sources = _run_prepare_setup(self, raw_data, round_params)
+        split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
 
         all_fitted_params: dict[str, Any] = {}
         columns_to_drop: list[str] | None = None
@@ -1140,7 +1122,7 @@ class MLManifest(Manifest):
             cco_block = split.tail(n_raw_cco) if n_raw_cco > 0 else None
 
         split_data, witness = _capture_backtest(sources, split_data, ml=True)
-        if _configured_barriers(self.backtest_config):
+        if _configured_barriers(self.backtest_config) and self.resolve_trade_policy(round_params) is None:
             _ = _validate_witness(witness)
         split_data = _align_split_columns(split_data)
         split_data, all_fitted_params = _apply_pca_compression(
@@ -1160,6 +1142,7 @@ class MLManifest(Manifest):
 
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
         _attach_witness(data_dict, witness)
+        _attach_trade_context(data_dict, trade, split_data)
         return data_dict
 
     @override
@@ -1207,7 +1190,7 @@ class MLManifest(Manifest):
                 )
                 model_kwargs['prediction_calibration_config'] = config
         self._apply_backtest_cost(data, round_params)
-        return self.architecture_function(data, **model_kwargs)
+        return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
 
     def sensor_input_prep(
             self,
@@ -1302,7 +1285,7 @@ class RuleBasedManifest(Manifest):
                 'RuleBasedManifest.prepare_data() called without a strategy. Call with_strategy(conditions, entry=...) before running.'
             )
 
-        split_data, all_datetimes, _, sources = _run_prepare_setup(self, raw_data, round_params)
+        split_data, all_datetimes, _, sources, trade = _run_prepare_setup(self, raw_data, round_params)
 
         all_fitted_params: dict[str, Any] = {}
 
@@ -1322,10 +1305,11 @@ class RuleBasedManifest(Manifest):
         split_data = _align_split_columns(split_data)
 
         split_data, witness = _capture_backtest(sources, split_data, ml=False)
-        if _configured_barriers(self.backtest_config):
+        if _configured_barriers(self.backtest_config) and self.resolve_trade_policy(round_params) is None:
             _ = _validate_witness(witness)
         data_dict = _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         _attach_witness(data_dict, witness)
+        _attach_trade_context(data_dict, trade, split_data)
         return data_dict
 
 
@@ -1920,20 +1904,28 @@ def _run_prepare_setup(
         manifest: Manifest,
         raw_data: pl.DataFrame,
         round_params: dict[str, Any],
-) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None]:
+) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
         resolved = _resolve_params(base_params, round_params)
         raw_data = func(raw_data, **resolved)
 
-    split_data = _resolve_split(manifest, raw_data)
+    raw_splits = _resolve_split(manifest, raw_data)
+    split_data = raw_splits
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
     all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes])
     split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
-    return _prepare_backtest_data(split_data, all_datetimes, configured=_configured_barriers(manifest.backtest_config))
+    policy = manifest.resolve_trade_policy(round_params)
+    trade = None
+    if policy is not None and manifest.backtest_config is not None:
+        interval = manifest.data_source_config.params.get('klines_size') if manifest.data_source_config is not None else None
+        trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval)
+        split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
+    prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
+    return (*prepared, trade)
 
 
 def _resolve_split(manifest: 'Manifest', raw_data: pl.DataFrame) -> list[pl.DataFrame]:

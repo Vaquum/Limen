@@ -41,6 +41,25 @@ def evaluate_prices(
     prices: pl.DataFrame | None, predictions: npt.ArrayLike,
     options: Mapping[str, object], *, configured: bool = False,
 ) -> tuple[dict[str, float], ExecutionResult | None]:
+    from limen.experiment._prepare_trade_context import PreparedTradeContext, select_trade_rows
+    from limen.backtest.execution_events import with_predictions
+    from limen.backtest.trade_execution import trade_execution
+    from limen.backtest.trade_contract import finite_number
+
+    context = options.get('_trade_context')
+    if isinstance(context, PreparedTradeContext):
+        if context.policy.prediction_mode != 'binary':
+            raise ValueError('Rule-based output mode does not match manifest trade policy')
+        if prices is None or 'datetime' not in prices.columns:
+            raise ValueError('Event evaluation requires recorded split identity')
+        for inputs, mapping in zip(context.partitions, context.model_rows, strict=True):
+            if prices.height and prices['datetime'].is_in(mapping['datetime'].implode()).all():
+                selected = select_trade_rows(inputs, mapping, prices)
+                ledger = trade_execution(with_predictions(selected, predictions), context.policy)
+                completed = ledger.episodes.filter(pl.col('closed_at_ns').is_not_null())
+                mean = finite_number((completed['net_pnl'] / completed['entry_equity']).mean(), 'completed episode return') * 10000 if completed.height else float('nan')
+                return {**ledger.metrics, 'pnl_per_trade_bps': mean, 'num_executed_trades': float(completed.height)}, None
+        raise ValueError('Event evaluation does not match a bound split')
     kwargs = execution_options(options)
     enabled = kwargs['take_profit_bps'] is not None or kwargs['stop_loss_bps'] is not None
     if prices is None or 'open' not in prices.columns or 'close' not in prices.columns:
@@ -56,6 +75,18 @@ def evaluate_prices(
 def compute_backtest(predictions: npt.ArrayLike, data: Mapping[str, object]) -> dict[str, float]:
     from limen.experiment._backtest_provenance import preflight_backtest as _preflight_backtest
     from limen.experiment._resolve_backtest_config import BACKTEST_KEYS
+    from limen.backtest.trade_contract import TradeInputs, TradePolicy
+    from limen.backtest.execution_events import with_predictions
+    from limen.backtest.trade_execution import trade_execution
+    from limen.experiment._prepare_trade_context import persist_ledger
+
+    policy, inputs = data.get('_trade_policy'), data.get('_trade_inputs')
+    if policy is not None:
+        if not isinstance(policy, TradePolicy) or not isinstance(inputs, TradeInputs):
+            raise ValueError('Configured trade execution requires its original bound inputs')
+        ledger = trade_execution(with_predictions(inputs, predictions), policy)
+        persist_ledger(data, ledger)
+        return {f'backtest_{key}': value for key, value in ledger.metrics.items()}
 
     options = {key: data[f'backtest_{key}'] for key in BACKTEST_KEYS if f'backtest_{key}' in data}
     price = data.get('price_data_for_backtest')

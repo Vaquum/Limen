@@ -69,6 +69,7 @@ class FundingPolicy:
     valuation: Literal['mark', 'oracle', 'execution_proxy']
     currency: str
     approximation: Literal['scenario', 'sampled', 'recorded_exact']
+    calibration: Mapping[str, JsonValue] | None = None
 
     def __post_init__(self) -> None:
         if not self.adapter_ref or not self.adapter_version or '<locals>' in self.adapter_ref:
@@ -189,8 +190,10 @@ def export_trade_contract(policy: TradePolicy, inputs: TradeInputs) -> dict[str,
     return {
         'rule_version': RULE_VERSION,
         'policy': json_value(policy),
+        'calibration': json_value(policy.funding.calibration) if policy.funding is not None else None,
         'initial_conditions': {'equity': inputs.initial_equity, 'quantity': 0.0, 'currency': policy.product.quote_currency},
         'sources': json_value(inputs.sources),
+        'signal_rows': json_value(inputs.signals.select('row_id', 'available_at_ns').to_dicts()),
         'partition': [inputs.partition_start_ns, inputs.partition_end_ns],
         'rules': {
             'sizing': 'signal_change_post_cost_equity',

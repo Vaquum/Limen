@@ -308,3 +308,5 @@ Use `read_from_file()` to recover or inspect an experiment log outside a live UE
 - Continue to [Benchmark](Benchmark.md) for the prediction-quality layer built on top of `Log`.
 - Continue to [Backtest](Backtest.md) for the trading-economics layer built on top of `permutation_prediction_performance()`.
 - Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable sensors.
+
+For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).

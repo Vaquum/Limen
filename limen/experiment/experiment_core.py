@@ -1081,6 +1081,7 @@ class UniversalExperimentLoop:
             '_round_index': round_index,
             'round_params': round_params,
             'preds': preds.tolist() if hasattr(preds, 'tolist') else list(preds),
+            **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger') if key in alignment},
             'alignment': {
                 'missing_datetimes': [
                     dt.isoformat()
@@ -1142,6 +1143,7 @@ class UniversalExperimentLoop:
                     self.round_params.append(entry['round_params'])
                     self.preds.append(entry['preds'])
                     self._alignment.append({
+                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger') if key in entry},
                         'missing_datetimes': [
                             datetime.fromisoformat(dt)
                             for dt in entry['alignment']['missing_datetimes']

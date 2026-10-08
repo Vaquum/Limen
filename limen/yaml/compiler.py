@@ -19,19 +19,7 @@ from limen.yaml.resolver import resolve
 
 def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
 
-    '''
-    Resolve any string values that are valid limen.* paths to their Python objects.
-
-    limen.* strings are resolved eagerly and raise ResolutionError on failure.
-    Other strings (round_params refs like '{threshold_min}', literals) are passed through unchanged.
-
-    Args:
-        params (dict): Raw params dict from YAML
-
-    Returns:
-        dict: Params with callable paths resolved to Python objects
-
-    '''
+    '''Resolve native callable paths and preserve literal/search references.'''
 
     result: dict[str, Any] = {}
     for k, v in params.items():
@@ -154,7 +142,23 @@ def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
     backtest = m.get('backtest')
     if not backtest:
         return
-    kwargs = {key: backtest[key] for key in ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps') if key in backtest}
+    from limen.experiment.manifest_core import DataSourceConfig, FundingConfig, ProductConfig
+    from limen.experiment._resolve_trade_policy import BACKTEST_FIELDS
+
+    kwargs = {key: backtest[key] for key in BACKTEST_FIELDS if key in backtest}
+    if 'product' in kwargs and kwargs['product'] is not None:
+        kwargs['product'] = ProductConfig(**kwargs['product'])
+    if kwargs.get('execution_data_source') is not None:
+        source = kwargs['execution_data_source']
+        kwargs['execution_data_source'] = DataSourceConfig(resolve(source['method']), source.get('params', {}))
+    if kwargs.get('funding') is not None:
+        funding = dict(kwargs['funding'])
+        if 'adapter' in funding:
+            funding['adapter'] = resolve(funding['adapter'])
+        if funding.get('data_source') is not None:
+            source = funding['data_source']
+            funding['data_source'] = DataSourceConfig(resolve(source['method']), source.get('params', {}))
+        kwargs['funding'] = FundingConfig(**funding)
     _ = manifest.set_backtest_config(**kwargs)
 
 

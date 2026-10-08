@@ -1058,3 +1058,5 @@ This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the or
 - Continue to [Historical Data](Historical-Data.md) for data surfaces a manifest can reference.
 - Continue to [Data Bars](Data-Bars.md) if bar formation is part of the experiment design.
 - Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.
+
+For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
