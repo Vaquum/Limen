@@ -48,6 +48,22 @@ def test_binary_and_return_outputs():
         binary.transform(frame, trade_context=context, ignored=True)
 
 
+def test_candidate_signal_between_recorded_price_points():
+    frame, context = target_case()
+    observations = context.inputs.observations[[0, 2, 4, 7]]
+    binding = source_binding(observations, str(FIXTURE), context.partition_start_ns, context.partition_end_ns, 900000000000, 'recorded sparse open points')
+    inputs = replace(context.inputs, observations=observations, sources=(binding,))
+    context = replace(context, inputs=inputs, contract_digest=contract_digest(export_trade_contract(context.policy, inputs)))
+    target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
+    result = target.transform(frame, trade_context=context)
+    candidate = target.outcomes.rows.row(1, named=True)
+    assert candidate['long_entry_ns'] == observations['available_at_ns'][1]
+    assert candidate['long_exit_ns'] == observations['available_at_ns'][2]
+    assert candidate['long_available'] and candidate['short_available']
+    assert result['outcome'][1] is not None
+    assert result['outcome'][-1] is None
+
+
 def test_split_tail_and_future_isolation():
     frame, context = target_case(count=20)
     target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)

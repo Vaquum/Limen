@@ -50,7 +50,7 @@ def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float
                 exit_index = bisect_left(timeline.prices, min(decisions))
                 if exit_index < len(timeline.prices):
                     end = min(end, timeline.prices[exit_index])
-    first = bisect_left(timeline.available, available)
+    first = max(0, bisect_left(timeline.available, available) - 1)
     last = bisect_right(timeline.starts, end)
     observations = inputs.observations.slice(first, last - first)
     start = max(inputs.partition_start_ns, int(observations['start_ns'][0]))

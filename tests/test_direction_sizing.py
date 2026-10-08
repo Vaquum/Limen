@@ -34,6 +34,17 @@ def native_manifest():
     return manifest
 
 
+@pytest.mark.parametrize('reference', ('{interval}', 'interval'))
+def test_sensor_preparation_resolves_recorded_interval(reference):
+    source = recorded_source()
+    manifest = native_manifest().set_data_source(recorded_source, params={'klines_size': reference})
+    params = {'interval': 900}
+    data = manifest.prepare_data(source, params)
+    prepared, _ = manifest.sensor_input_prep(source, data['_fitted_params'], params)
+    assert prepared.height == source.height
+    assert prepared['__trade_available_at_ns__'].equals(source['datetime'].dt.epoch('ns') + 900000000000, check_names=False)
+
+
 class ConstantComponent:
     def __init__(self, value):
         self.value = value

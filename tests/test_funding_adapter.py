@@ -165,6 +165,23 @@ def test_rule_based_splits_use_event_economics():
     assert result['ending_equity_test'] == pytest.approx(result['backtest_ending_equity'])
 
 
+def test_cached_equity_requires_fresh_preparation():
+    from limen.targets import IdentityTarget
+
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(60)
+    manifest = MLManifest().set_data_source(lambda: source, params={'klines_size': 900})
+    manifest.set_split_config(6, 2, 2).with_target_label('close', IdentityTarget).with_reference_architecture(_sized_native)
+    manifest.set_backtest_config(prediction_mode='target_exposure', product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), initial_equity='{equity}')
+    data = manifest.prepare_data(source, {'equity': 10000})
+    original = manifest.run_model(data, {'equity': 10000})
+    with pytest.raises(ValueError, match='Cached trade preparation'):
+        manifest.run_model(data, {'equity': 20000})
+    refreshed = manifest.prepare_data(source, {'equity': 20000})
+    result = manifest.run_model(refreshed, {'equity': 20000})
+    assert refreshed['_trade_inputs'].initial_equity == 20000
+    assert result['backtest_ending_equity'] == pytest.approx(2 * original['backtest_ending_equity'])
+
+
 def test_new_options_are_resolved_or_rejected():
     assert resolve_trade_policy(BacktestConfig(), {}) is None
     for option in ({'execution_lag_seconds': 1}, {'max_price_gap_seconds': 1}, {'flat_threshold': 0.01}):
