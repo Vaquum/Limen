@@ -100,6 +100,13 @@ def _precision(observations: pl.DataFrame) -> int:
     return int(cast(int, positive.min())) if positive.len() else 1
 
 
+def validate_cached_context(config: BacktestConfig | None, policy: TradePolicy | None, data: Mapping[str, object], params: Mapping[str, object]) -> None:
+    inputs = data.get('_trade_inputs')
+    equity_matches = policy is None or (config is not None and isinstance(inputs, TradeInputs) and inputs.initial_equity == resolve_number(config.initial_equity, params, 'initial equity'))
+    if policy != data.get('_trade_policy') or not equity_matches:
+        raise ValueError('Cached trade preparation does not match this round; refresh preparation')
+
+
 def attach_trade_context(data: Mapping[str, object], context: PreparedTradeContext | None, retained: list[pl.DataFrame]) -> None:
     if context is None:
         return

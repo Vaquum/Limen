@@ -1,8 +1,8 @@
-from limen.backtest.trade_contract import TradeInputs, TradePolicy
+from limen.backtest.trade_contract import TradePolicy
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
+from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
 from collections.abc import Mapping
@@ -808,12 +808,7 @@ class Manifest:
 
     def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
         policy = self.resolve_trade_policy(round_params)
-        if policy != data.get('_trade_policy'):
-            raise ValueError('Cached trade preparation does not match this round; refresh preparation')
-        if policy is not None and self.backtest_config is not None:
-            inputs = data.get('_trade_inputs')
-            if not isinstance(inputs, TradeInputs) or inputs.initial_equity != _resolve_trade_number(self.backtest_config.initial_equity, round_params, 'initial equity'):
-                raise ValueError('Cached trade preparation does not match this round; refresh preparation')
+        _validate_cached_context(self.backtest_config, policy, data, round_params)
         if _configured_barriers(self.backtest_config) and policy is None:
             data['_backtest_configured'] = True
         else:
