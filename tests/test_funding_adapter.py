@@ -201,6 +201,43 @@ def test_regular_execution_source_resolves_its_interval(interval):
     assert result['backtest_open_trades'] == 1
 
 
+@pytest.mark.parametrize('kind', ('execution', 'funding'))
+def test_cached_source_parameters_require_fresh_preparation(kind):
+    from limen.experiment._prepare_trade_context import normalize_observations
+    from limen.targets import IdentityTarget
+
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(120)
+    calls = []
+
+    def execution(limit):
+        calls.append(limit)
+        return normalize_observations(source.head(limit), interval_seconds=900)
+
+    def history(valuation_column):
+        calls.append(valuation_column)
+        starts = source['datetime'].dt.epoch('ns')
+        return pl.DataFrame({'event_id': [f'interval:{index}' for index in range(source.height)], 'start': starts, 'end': starts + 900 * NANOSECONDS, 'rate_decimal': [0.001] * source.height, 'rate_basis_seconds': [3600.0] * source.height, 'valuation_price': source[valuation_column]})
+
+    manifest = MLManifest().set_data_source(lambda: source.head(60), params={'klines_size': 900})
+    manifest.set_split_config(6, 2, 2).with_target_label('close', IdentityTarget).with_reference_architecture(_sized_native)
+    options = {'prediction_mode': 'target_exposure', 'product': ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0)}
+    if kind == 'execution':
+        options['execution_data_source'] = DataSourceConfig(execution, {'limit': '{selection}'})
+        original, changed = 90, 120
+    else:
+        options['funding'] = FundingConfig(data_source=DataSourceConfig(history, {'valuation_column': '{selection}'}), params={'mechanism': 'continuous', 'rate_unit': 'decimal', 'rate_basis_seconds': 3600, 'cash_settlement_interval_seconds': 3600, 'valuation': 'mark', 'currency': 'USDT', 'approximation': 'sampled', 'history_interpretation': 'quoted'})
+        original, changed = 'open', 'close'
+    manifest.set_backtest_config(**options)
+    data = manifest.prepare_data(source.head(60), {'selection': original})
+    manifest.run_model(data, {'selection': original})
+    with pytest.raises(ValueError, match='Cached trade preparation'):
+        manifest.run_model(data, {'selection': changed})
+    assert calls == [original]
+    refreshed = manifest.prepare_data(source.head(60), {'selection': changed})
+    manifest.run_model(refreshed, {'selection': changed})
+    assert calls == [original, changed]
+
+
 def test_history_ids_cannot_collide_with_cash_settlements():
     inputs, policy = _case([0.5, 0.5, 0.0], fee_bps=0, slip_bps=0)
     inputs, policy = _funded(inputs, policy, mechanism='continuous')

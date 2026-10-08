@@ -23,6 +23,12 @@ class PreparedTradeContext:
     policy: TradePolicy
     partitions: tuple[TradeInputs, ...]
     model_rows: tuple[pl.DataFrame, ...]
+    source_settings: tuple[tuple[Callable[..., object], JsonValue] | None, ...]
+
+
+def _source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tuple[tuple[Callable[..., object], JsonValue] | None, ...]:
+    sources = (config.execution_data_source, config.funding.data_source if config.funding is not None else None)
+    return tuple(None if source is None else (source.method, resolve_json(source.params, params)) for source in sources)
 
 
 def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
@@ -95,7 +101,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         validate_observations(partition, policy)
         inputs.append(partition)
         model_rows.append(mapping)
-    return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows))
+    return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows), _source_settings(config, params))
 
 
 def _precision(observations: pl.DataFrame) -> int:
@@ -106,8 +112,10 @@ def _precision(observations: pl.DataFrame) -> int:
 
 def validate_cached_context(config: BacktestConfig | None, policy: TradePolicy | None, data: Mapping[str, object], params: Mapping[str, object]) -> None:
     inputs = data.get('_trade_inputs')
+    context = data.get('_trade_context')
     equity_matches = policy is None or (config is not None and isinstance(inputs, TradeInputs) and inputs.initial_equity == resolve_number(config.initial_equity, params, 'initial equity'))
-    if policy != data.get('_trade_policy') or not equity_matches:
+    sources_match = policy is None or (config is not None and isinstance(context, PreparedTradeContext) and context.source_settings == _source_settings(config, params))
+    if policy != data.get('_trade_policy') or not equity_matches or not sources_match:
         raise ValueError('Cached trade preparation does not match this round; refresh preparation')
 
 
