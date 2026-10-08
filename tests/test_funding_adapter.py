@@ -79,6 +79,23 @@ def test_history_units_valuation_and_coverage():
     assert decimal == 0.0  # no settlement after entry in this recorded window
 
 
+@pytest.mark.parametrize('interpretation', ('quoted', 'integrated'))
+def test_continuous_history_accepts_newest_first(interpretation):
+    inputs, trade = _case([0.5, 0.5, 0.0])
+    _, policy = _funded(inputs, trade, mechanism='continuous')
+    funding = replace(policy.funding, params={key: value for key, value in policy.funding.params.items() if key != 'rate'} | {'history_interpretation': interpretation})
+    times = inputs.observations['available_at_ns'].to_list()
+    # Rates are explicit scenarios; interval boundaries and valuations are recorded.
+    history = pl.DataFrame({'event_id': ['interval:0', 'interval:1'], 'start': times[:-1], 'end': times[1:], 'rate_decimal': [0.001, -0.002], 'rate_basis_seconds': [3600.0, 3600.0], 'valuation_price': inputs.observations['open'][:-1]})
+    expected = prepare_funding(funding, history, times[0], times[-1])
+    actual = prepare_funding(funding, history.reverse(), times[0], times[-1])
+    assert actual.equals(expected)
+    with pytest.raises(ValueError, match=r'gap|cover'):
+        prepare_funding(funding, history.tail(1), times[0], times[-1])
+    with pytest.raises(ValueError, match='overlap'):
+        prepare_funding(funding, history.with_columns(pl.lit(times[0]).alias('start')).reverse(), times[0], times[-1])
+
+
 def test_signed_inventory_intervals_and_schedules():
     for side in (1, -1):
         inputs, policy = _case([side * 0.5, side * 0.5, side * 0.75, 0.0], fee_bps=0.0, slip_bps=0.0)

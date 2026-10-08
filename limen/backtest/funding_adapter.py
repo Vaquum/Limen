@@ -163,7 +163,7 @@ def _valuation(value: object, policy: FundingPolicy) -> float | None:
 
 def _coverage(intervals: list[tuple[int, int]], start: int, end: int) -> None:
     cursor = start
-    for left, right in intervals:
+    for left, right in sorted(intervals):
         if right <= start or left >= end:
             continue
         if right <= left or left > cursor or (left < cursor and cursor != start):
