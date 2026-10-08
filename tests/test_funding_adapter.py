@@ -211,7 +211,8 @@ def test_history_ids_cannot_collide_with_cash_settlements():
     events = prepare_funding(funding, history, start, end)
     assert events['event_id'].n_unique() == events.height
     assert events.filter(pl.col('kind') == 'accrual')['event_id'].to_list() == [f'history:{raw_id}']
-    result = trade_execution(replace(inputs, funding_events=events), replace(policy, funding=funding))
+    binding = source_binding(events, 'declared history ID collision scenario', start, end, 1, 'recorded valuation and scenario rate')
+    result = trade_execution(replace(inputs, funding_events=events, sources=(*inputs.sources, binding)), replace(policy, funding=funding))
     quantity = result.fills['quantity_delta'][0]
     expected = -quantity * history['valuation_price'][0] * 0.001 * (end - start) / NANOSECONDS / 3600
     assert result.metrics['funding_pnl'] == pytest.approx(expected)
