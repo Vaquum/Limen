@@ -1,5 +1,7 @@
 # Trainer
 
+For [direction/sizing models](Reference-Architecture.md#direction-and-sizing), reconstruction checks frozen execution and learning identities before metric tolerance. Sensor retains signed size and actual decision availability. Altered source, factory, seed or execution assumptions require a new experiment.
+
 `Trainer` is Limen's reconstruction layer for finished experiment rounds. It takes a completed artifact-backed experiment directory, reconstructs the manifest and round parameters, replays selected permutations, validates their metrics, and wraps the replayed models in reusable `Sensor` objects.
 
 Trainer bridges a selected experiment row and a trained model object for downstream inference.
