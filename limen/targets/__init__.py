@@ -1,3 +1,4 @@
+from limen.targets.trade_outcome import TradeOutcomeTarget, TradeTargetContext, OutcomeLabels
 from limen.targets.ema_breakout import EmaBreakoutTarget
 from limen.targets.exit_quality import ExitQualityTarget
 from limen.targets.forward_breakout import ForwardBreakoutTarget
@@ -23,10 +24,13 @@ __all__ = [
     'NextBarDownTarget',
     'NextBarUpTarget',
     'NextReturnTarget',
+    'OutcomeLabels',
     'QuantileBinaryTarget',
     'RandomBinaryTarget',
     'RiskRewardRatioTarget',
     'ThresholdBinaryTarget',
+    'TradeOutcomeTarget',
+    'TradeTargetContext',
     'TradelineLongBinaryTarget',
     'TripleBarrierTarget',
     'VolNormalizedReturnTarget',
