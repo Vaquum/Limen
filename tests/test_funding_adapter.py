@@ -30,13 +30,19 @@ def _funded(inputs, policy, *, mechanism='discrete', interval=3600.0, rate=0.001
 
 def test_preset_mechanics_and_rate_override():
     for name, preset in PRESETS.items():
-        assert preset.calibration['status'] == 'redistribution_rights_unverified'
-        assert 'rate' not in preset.params
+        assert preset.calibration['status'] == 'scenario_assumption'
+        assert preset.calibration['window_start_utc'] == '2025-10-08T00:00:00Z'
+        assert preset.calibration['window_end_utc'] == '2026-10-08T00:00:00Z'
+        default = resolve_funding(FundingConfig(preset=name), {})
+        assert default is not None and default.approximation == 'scenario'
+        assert default.params['rate'] == pytest.approx(0.0000035 if name == 'hyperliquid_btc' else 0.000028)
+        assert default.rate_basis_seconds == (3600 if name == 'hyperliquid_btc' else 28800)
+        assert default.calibration == preset.calibration
+        events = prepare_funding(default, None, 0, 86400 * NANOSECONDS)
+        assert events.filter(pl.col('kind') != 'cash_settlement')['rate_decimal'].unique().to_list() == [default.params['rate']]
         policy = resolve_funding(FundingConfig(preset=name, params={'rate': '{scenario_rate}'}), {'scenario_rate': -0.0002})
         assert policy is not None and policy.params['rate'] == -0.0002
         assert policy.calibration == preset.calibration
-        with pytest.raises(ValueError, match='redistribution'):
-            resolve_funding(FundingConfig(preset=name), {})
     with pytest.raises(ValueError, match='Unknown funding parameters'):
         resolve_funding(FundingConfig(preset='binance_btcusdt', params={'typo_rate': 0.1}), {})
 

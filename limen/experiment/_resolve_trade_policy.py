@@ -120,8 +120,6 @@ def resolve_funding(config: FundingConfig | None, params: Mapping[str, object]) 
         if 'valuation' not in overrides:
             defaults['valuation'] = 'oracle' if config.preset == 'hyperliquid_btc' else 'mark'
     defaults.update(overrides)
-    if config.preset is not None and config.data_source is None and 'rate' not in defaults:
-        raise ValueError('Preset calibration publication awaits redistribution rights; provide an explicit rate or historical source')
     adapter = config.adapter
     module = getattr(adapter, '__module__', None)
     name = getattr(adapter, '__qualname__', None)

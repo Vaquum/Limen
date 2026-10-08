@@ -312,13 +312,13 @@ Equal-time order is funding on preboundary inventory, held price barriers, elaps
 
 `FundingConfig` chooses an importable versioned adapter, optional preset, tunable JSON `params` and optional `data_source`. Native adapter parameters include `mechanism`, `rate`, `rate_unit` (`decimal` or `bps`), `rate_basis_seconds`, `currency`, `valuation`, `approximation`, settlement interval/UTC phase, and continuous cash-settlement interval/UTC phase. Defaults expand before explicit overrides. Rates already represent payments or quoted accrual; no premium formula or second period conversion is applied.
 
-| Preset | Mechanics |
-|---|---|
-| `binance_btcusdt` | Discrete eight-hour payments; mark valuation in history mode. |
-| `hyperliquid_btc` | Discrete hourly payments; oracle valuation in history mode. |
-| `deribit_btc_usdc` | Continuous eight-hour quoted basis; daily 08:00 UTC cash transfer. |
+| Preset | Default scenario rate | Mechanics |
+|---|---|---|
+| `binance_btcusdt` | `0.000028` per eight hours | Discrete eight-hour payments; mark valuation in history mode. |
+| `hyperliquid_btc` | `0.0000035` per hour | Discrete hourly payments; oracle valuation in history mode. |
+| `deribit_btc_usdc` | `0.000028` per eight hours | Continuous eight-hour quoted basis; daily 08:00 UTC cash transfer. |
 
-No-history rates are scenario assumptions with an explicit execution-price proxy, not faithful venue replay. Calibration binds its instrument, recorded window, coverage, calculation and checksum. Caller overrides are independent scenario assumptions. Numerical calibration delivery is pending redistribution rights for the recorded calibration and its derived mean. These presets currently require an explicit rate override or historical source; missing rates fail rather than substituting zero.
+No-history presets use a shared BTC scenario assumption with an explicit execution-price proxy. The baseline is dated `2026-10-08`, with the reference window `2025-10-08`–`2026-10-08`; it is not a measured mean for each preset's venue. Rates, periods and settlement phases remain tunable. The resolved preset version and assumption metadata survive export. These constants do not reproduce historical funding variation; use a supplied historical source for that.
 
 Historical funding is optional and authoritative when supplied. An explicit constant rate conflicts with it; preset constants are removed. Discrete history requires unique `event_id`, `settlement_at`, `rate_decimal`, `valuation_price`, plus recorded `schedule_start`, `schedule_end`, `settlement_interval_seconds` and `settlement_phase_utc_seconds`. Schedule intervals are half-open UTC nanoseconds and must cover every required payment, including historical schedule changes. Optional `settlement_slot_ns` preserves actual payment timestamp jitter while identifying its declared schedule slot.
 
