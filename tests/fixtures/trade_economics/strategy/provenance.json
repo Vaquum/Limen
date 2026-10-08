@@ -1,9 +1,0 @@
-{
-  "recorded_sources": [
-    "tests/fixtures/spot_15m_20250101_20250531.parquet",
-    "tests/fixtures/dollar_bar_crash_reversal_15m.parquet"
-  ],
-  "derivation": "Reuse the existing recorded Binance BTCUSDT OHLC and irregular recorded bar-open points. The regular fixture declares 900-second intervals. Equal-price probes select actual equal recorded opens and preserve their timestamps.",
-  "scenario_configuration": "Targets, component constants, fees, slippage, holding limits and funding rates are explicit strategy assumptions. Label perturbations are deliberate causal-isolation probes, never replacement market data.",
-  "proof": ["tests/test_trade_outcome_target.py", "tests/test_direction_sizing.py"]
-}

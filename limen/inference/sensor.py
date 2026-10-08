@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping
-from limen.backtest.trade_contract import JsonValue, contract_digest
-from limen.experiment._prepare_trade_context import validate_inference_contract
 import logging
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -27,8 +25,6 @@ class BarPrediction:
     prediction: int | float | None
     probability: float | None
     reason: PredictionReason | None
-    available_at_ns: int | None = None
-    trade_contract_digest: str | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -37,8 +33,6 @@ logger = logging.getLogger(__name__)
 class Sensor:
 
     '''Inference wrapper around a trained YAML model for live bar-by-bar prediction.'''
-    _trade_contract: Mapping[str, JsonValue] | None = None
-    _trade_digest: str | None = None
 
     def __init__(self,
                  yaml_reference: dict[str, Any],
@@ -46,9 +40,22 @@ class Sensor:
                  fitted_params: dict[str, Any],
                  round_params: dict[str, Any],
                  permutation_id: str | None = None,
-                 manifest_id: str | None = None, *,
-                 trade_contract: Mapping[str, JsonValue] | None = None) -> None:
+                 manifest_id: str | None = None) -> None:
 
+        '''
+        Create a Sensor from a validated trained model.
+
+        Args:
+            yaml_reference (dict): Parsed YAML experiment dict from metadata.json
+            model (ReferenceModel): Validated trained model
+            fitted_params (dict): Fitted scaler/PCA state from the winning round
+            round_params (dict): Full parameter dict from the winning round
+            permutation_id (str | None): Round ID from the experiment log — required
+                for cohort binding via Cohort.set_members
+            manifest_id (str | None): SHA-256 content hash of the YAML manifest,
+                carried from metadata.json for traceability
+
+        '''
 
         super().__init__()
 
@@ -59,21 +66,7 @@ class Sensor:
         self._manifest: Any = None
         self.permutation_id = permutation_id
         self.manifest_id = manifest_id
-        self._trade_contract = copy.deepcopy(dict(trade_contract)) if trade_contract is not None else None
-        self._trade_digest = contract_digest(self._trade_contract) if self._trade_contract is not None else None
-        if self._model.prediction_mode == 'target_exposure' and self._trade_contract is None:
-            raise ValueError('Signed Sensor construction requires its frozen trade contract')
-        if self._trade_contract is not None:
-            validate_inference_contract(self._get_manifest().resolve_trade_policy(self._round_params), self._model.prediction_mode, self._trade_contract, getattr(self._model, 'learning_binding', None))
 
-
-    @property
-    def trade_contract(self) -> Mapping[str, JsonValue] | None:
-        return copy.deepcopy(self._trade_contract)
-
-    @property
-    def prediction_mode(self) -> Literal['binary', 'target_exposure']:
-        return self._model.prediction_mode
 
     @property
     def round_params(self) -> dict[str, Any]:
@@ -95,7 +88,20 @@ class Sensor:
 
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
-        '''Predict the last bar; distinguish unavailable data from flat and report per-bar failures.'''
+        '''
+        Prepare raw klines and return a prediction for the last bar.
+
+        Args:
+            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
+                the manifest data source
+
+        Returns:
+            BarPrediction: Prediction for the last bar. Expected non-prediction
+                conditions (warm-up, inside-training-window, null-features) are
+                returned as BarPrediction with the corresponding reason rather
+                than raised. Unexpected exceptions return reason='sensor-error'.
+
+        '''
 
         manifest = self._get_manifest()
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
@@ -119,7 +125,7 @@ class Sensor:
             if valid_rows < decoder_lookback:
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='warm-up')
 
-            feature_cols = [c for c in data.columns if c not in ('datetime', '__trade_available_at_ns__')]
+            feature_cols = [c for c in data.columns if c != 'datetime']
             last_row = data[-1]
             if any(last_row[c][0] is None for c in feature_cols):
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='null-features')
@@ -131,8 +137,6 @@ class Sensor:
                 prediction=_extract_scalar(pred_result.get('_preds')),
                 probability=_extract_scalar(pred_result.get('_probs')),
                 reason=None,
-                available_at_ns=int(last_row['__trade_available_at_ns__'][0]) if '__trade_available_at_ns__' in last_row.columns else None,
-                trade_contract_digest=self._trade_digest,
             )
         # Live inference must never crash on one bar — any model/scaler/data
         # failure degrades to a sensor-error result.
@@ -177,7 +181,7 @@ class Sensor:
             n_fallback = len(data)
 
             inside_window = self._inside_training_window_mask(data, manifest)
-            feature_cols = [c for c in data.columns if c not in ('datetime', '__trade_available_at_ns__')]
+            feature_cols = [c for c in data.columns if c != 'datetime']
             datetimes = data['datetime'].to_list() if 'datetime' in data.columns else [None] * len(data)
 
             if feature_cols:
@@ -230,8 +234,6 @@ class Sensor:
                         prediction=_extract_scalar(preds[j]),
                         probability=_extract_scalar(probs[j]) if probs is not None else None,
                         reason=None,
-                        available_at_ns=int(data['__trade_available_at_ns__'][idx]) if '__trade_available_at_ns__' in data.columns else None,
-                        trade_contract_digest=self._trade_digest,
                     )
 
             return results  # type: ignore[return-value]

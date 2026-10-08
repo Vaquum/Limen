@@ -50,7 +50,6 @@ manifest.with_target_label(
 | `ExitQualityTarget` | continuous `Float64` | no | n/a | Categorical score for closed trades based on `exit_reason` and `exit_net_return`. |
 | `RandomBinaryTarget` | binary `UInt8` | no | none | Uniformly random labels. Use as a noise benchmark. |
 | `IdentityTarget` | existing column | no | none | Target column already present in the data. Validates the column exists on every split. |
-| `TradeOutcomeTarget` | binary `Int8` or net return `Float64` | no | none | Simulates independent long/short trades under the manifest's execution rules; incomplete outcomes stay null. |
 
 ## Reference
 
@@ -369,25 +368,6 @@ For when the target column is already present in the data. Validates that the co
 ```
 
 No parameters.
-
-## Simulated Trade Outcomes
-
-`TradeOutcomeTarget` requires configured execution economics and a linear perpetual product supporting both sides. The manifest injects `TradeTargetContext` into construction and every transform; callers do not build it during normal manifest use.
-
-```python-fragment
-.with_target_label(
-    'outcome', TradeOutcomeTarget,
-    fit_params={'side': 'long', 'output': 'net_return', 'candidate_exposure': 1.0},
-)
-```
-
-Each feature-valid bar starts independent long and short candidates with fixed candidate exposure. Entry, TP/SL, elapsed exits, costs, rounding and funding use the [shared execution contract](Backtest.md#signed-exposure-elapsed-exits-and-funding). Returns equal completed net PnL divided by pre-entry equity; binary output is strictly positive return. Zero is unprofitable. At least one exit rule is required.
-
-Only observations within the true split can complete a candidate. A completed late trade remains eligible even after an earlier unfinished candidate. An unfinished outcome is null, with a private availability mask and completion timestamp. Those masks select fitting and metric rows; they never remove otherwise valid inference rows. Warm-up rows outside a split receive no outcome.
-
-The long/short returns, masks and exit times live in `_trade_labels: OutcomeLabels`, bound to the execution contracts. They never enter feature selection, scaling, PCA or Sensor inputs. The public target column contains only the requested side/output. Architectures consuming these targets must explicitly support private availability masks; [direction/sizing](Reference-Architecture.md#direction-and-sizing) provides that integration.
-
-Unknown target parameters, mismatched contracts and missing economics fail before fitting.
 
 ## Writing A Custom Target Class
 

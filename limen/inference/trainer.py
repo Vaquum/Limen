@@ -1,9 +1,7 @@
 import json
-from collections.abc import Mapping
-from limen.backtest.trade_contract import JsonValue
 import logging
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import polars as pl
 
@@ -244,6 +242,24 @@ class Trainer:
 
     def train(self, permutation_ids: list[str]) -> list[Sensor]:
 
+        '''
+        Retrain selected permutations and return Sensor instances.
+
+        Re-runs the pipeline and compares metrics against the original experiment
+        log. Raises ReconstructionError on mismatch. The validated model is used
+        directly as the Sensor model.
+
+        Args:
+            permutation_ids (list[str]): Round IDs from experiment_log to retrain
+
+        Returns:
+            list[Sensor]: Sensor instances wrapping validated models
+
+        Raises:
+            ValueError: If any permutation ID is not found in round_data
+            ReconstructionError: If metrics deviate beyond tolerance
+
+        '''
 
         missing = [
             pid for pid in permutation_ids
@@ -260,18 +276,7 @@ class Trainer:
             round_params = dict(self._round_data[pid]['round_params'])
 
             data_dict = self._manifest.prepare_data(self._data, round_params)
-            expected = self._round_data[pid]
-            frozen_contract = expected.get('trade_contract')
-            if frozen_contract is not None and (frozen_contract != data_dict.get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
-                raise ReconstructionError(f'Permutation {pid}: exact trade rules/source/output identity changed')
             results = self._manifest.run_model(data_dict, round_params)
-            binding = expected.get('learning_binding')
-            if binding is not None or '_learning_binding' in data_dict:
-                if not isinstance(binding, Mapping):
-                    raise ReconstructionError(f'Permutation {pid}: missing frozen learning identity')
-                identity = cast(Mapping[str, object], binding)
-                if identity.get('round_id') != pid or identity.get('manifest_id') != self._manifest_id or identity.get('model') != data_dict.get('_learning_binding'):
-                    raise ReconstructionError(f'Permutation {pid}: exact learning/source/factory identity changed')
 
             model = results.pop('_model', None)
             if model is None:
@@ -295,7 +300,6 @@ class Trainer:
                 round_params=round_params,
                 permutation_id=pid,
                 manifest_id=self._manifest_id,
-                trade_contract=cast(Mapping[str, JsonValue] | None, frozen_contract),
             )
             sensors.append(sensor)
 

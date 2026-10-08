@@ -1,6 +1,4 @@
 from limen.backtest.trade_contract import TradePolicy
-from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
@@ -13,7 +11,6 @@ import importlib
 import logging
 import random
 import re
-from functools import partial
 from datetime import date
 from datetime import datetime
 from itertools import pairwise
@@ -1044,11 +1041,18 @@ class MLManifest(Manifest):
         round_params: dict[str, Any]
     ) -> dict[str, Any]:
 
+        '''
+        Compute final data dictionary from raw data using the ML pipeline.
+
+        Args:
+            raw_data (pl.DataFrame): Raw input dataset
+            round_params (Dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Final data dictionary ready for model training
+        '''
 
         split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
-        outcome_target = self.target_class_config is not None and bool(getattr(self.target_class_config.target_class, 'requires_trade_context', False))
-        private_labels: list[OutcomeLabels] = []
-        raw_features: pl.DataFrame | None = None
 
         all_fitted_params: dict[str, Any] = {}
         columns_to_drop: list[str] | None = None
@@ -1082,8 +1086,7 @@ class MLManifest(Manifest):
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
-                    self, data, round_params, all_fitted_params, is_train,
-                    trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
+                    self, data, round_params, all_fitted_params, is_train
                 )
 
             if self.ablation_config is not None:
@@ -1092,16 +1095,13 @@ class MLManifest(Manifest):
                 )
 
             data = data.fill_nan(None)
-            feature_surface = data.drop(self.target_column) if outcome_target and self.target_column is not None else data
-            n_leading = _count_leading_nulls(feature_surface)
+            n_leading = _count_leading_nulls(data)
             data = data.slice(n_leading)
 
             n_cco_feature_rows = max(0, len(cco_block) - n_leading) if (not is_train and cco_block is not None) else 0
 
             _check_unexpected_nulls(self, data, i, 'A')
 
-            if is_train and outcome_target:
-                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
 
             if n_cco_feature_rows > 0:
@@ -1109,8 +1109,7 @@ class MLManifest(Manifest):
 
             _check_unexpected_nulls(self, data, i, 'B')
 
-            subset = [name for name in data.columns if name != self.target_column] if outcome_target else data.columns
-            split_data[i] = data.fill_nan(None).drop_nulls(subset=subset)
+            split_data[i] = data.fill_nan(None).drop_nulls()
 
             if is_train:
                 cco_indicator_rows = n_leading
@@ -1144,15 +1143,24 @@ class MLManifest(Manifest):
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
-        if outcome_target:
-            attach_outcomes(data_dict, private_labels, raw_features, split_data[0],
-                scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
-                deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
         return data_dict
 
     @override
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
+        '''
+        Execute model training and evaluation, injecting resolved calibration config when configured.
+
+        Args:
+            data (dict): Prepared data dictionary
+            round_params (dict[str, Any]): Parameter values for current round
+
+        Returns:
+            dict: Results including predictions, metrics, and optional extras
+
+        NOTE: Calibration injection honours use_calibration and use_threshold round_params flags
+        (both default True). Setting either to False masks that step while keeping the other active.
+        '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
         if self.architecture_function is None:
@@ -1182,7 +1190,6 @@ class MLManifest(Manifest):
                 )
                 model_kwargs['prediction_calibration_config'] = config
         self._apply_backtest_cost(data, round_params)
-        resolve_component_kwargs(self.architecture_function, data, model_kwargs, round_params)
         return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
 
     def sensor_input_prep(
@@ -1209,11 +1216,6 @@ class MLManifest(Manifest):
         '''
 
         _, data = _process_bars(self, raw_klines, round_params)
-        decisions = None
-        if self.resolve_trade_policy(round_params) is not None:
-            interval = self.data_source_config.params.get('klines_size') if self.data_source_config is not None else None
-            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
-            data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
 
         lazy = data.lazy()
         lazy = _apply_feature_transforms(self, lazy, round_params)
@@ -1232,8 +1234,6 @@ class MLManifest(Manifest):
 
         data = _apply_sensor_pca(self, data, round_params, all_fitted_params)
 
-        if decisions is not None:
-            data = data.join(decisions, on='datetime', how='left', maintain_order='left')
         return data, indicator_lookback
 
 
@@ -1689,9 +1689,22 @@ def _apply_class_based_target(
         data: pl.DataFrame,
         round_params: dict[str, Any],
         all_fitted_params: dict[str, Any],
-        is_training: bool, *, trade_context: object = None, labels: list[OutcomeLabels] | None = None
+        is_training: bool
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
+    '''
+    Fit or reuse the configured target class and apply it to the split.
+
+    Args:
+        manifest (Manifest): Manifest holding the target class config
+        data (pl.DataFrame): Split DataFrame to transform
+        round_params (dict[str, Any]): Current round parameters for template resolution
+        all_fitted_params (dict[str, Any]): Shared store for fitted instances across splits
+        is_training (bool): Whether this is the training split; fits the instance if True
+
+    Returns:
+        tuple[pl.DataFrame, dict[str, Any]]: Transformed data and updated fitted params
+    '''
 
     source_data = data
     if _SOURCE_ROW in data.columns:
@@ -1701,14 +1714,9 @@ def _apply_class_based_target(
         raise ValueError('_apply_class_based_target manifest has no target_class_config')
     target_name = manifest.target_column
     instance_key = f'_target_cls_{target_name}'
-    needs_context = bool(getattr(config.target_class, 'requires_trade_context', False))
-    if needs_context and (trade_context is None or 'trade_context' in config.fit_params or 'trade_context' in config.transform_params):
-        raise ValueError('Trade outcome context is reserved and must be supplied by the framework')
 
     if is_training:
         resolved_fit = _resolve_params(config.fit_params, round_params)
-        if needs_context:
-            resolved_fit['trade_context'] = trade_context
         instance = config.target_class(
             train_data=data,
             target_name=target_name,
@@ -1723,14 +1731,7 @@ def _apply_class_based_target(
         instance = all_fitted_params[instance_key]
 
     resolved_transform = _resolve_params(config.transform_params, round_params)
-    if needs_context:
-        resolved_transform['trade_context'] = trade_context
     data = instance.transform(data, **resolved_transform)
-    if needs_context:
-        outcomes = instance.outcomes
-        if not isinstance(outcomes, OutcomeLabels) or labels is None:
-            raise ValueError('Context target must expose private OutcomeLabels')
-        labels.append(outcomes)
 
     return _restore_source_rows(source_data, data), all_fitted_params
 

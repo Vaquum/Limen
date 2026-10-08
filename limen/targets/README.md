@@ -10,8 +10,6 @@
 
 ## What this package owns
 
-`TradeOutcomeTarget` consumes the shared execution contract through an injected `TradeTargetContext` and exposes private `OutcomeLabels`. See [simulated trade outcomes](../../docs/Targets.md#simulated-trade-outcomes) for configuration, completion masks and feature isolation.
-
 Owns train-fitted and transform-time target builders, including binary classification targets, return targets, breakout targets, barrier targets, and identity passthrough targets.
 Does **not** own feature engineering, model fitting, calibration, or execution strategy.
 
