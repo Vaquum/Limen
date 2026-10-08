@@ -182,6 +182,42 @@ def test_cached_equity_requires_fresh_preparation():
     assert result['backtest_ending_equity'] == pytest.approx(2 * original['backtest_ending_equity'])
 
 
+@pytest.mark.parametrize('interval', (900, '{execution_interval}'))
+def test_regular_execution_source_resolves_its_interval(interval):
+    from limen.data.bars.standard_bars import volume_bars
+    from limen.targets import IdentityTarget
+
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(120)
+    manifest = MLManifest().set_data_source(lambda: source, params={'klines_size': 900})
+    manifest.set_split_config(6, 2, 2).with_target_label('close', IdentityTarget).with_reference_architecture(_sized_native)
+    manifest.set_bar_formation(volume_bars, volume_threshold=2 * source['volume'].max())
+    manifest.set_backtest_config(prediction_mode='target_exposure', product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), execution_data_source=DataSourceConfig(lambda klines_size: source, {'klines_size': interval}))
+    data = manifest.prepare_data(source, {'execution_interval': 900})
+    inputs = data['_trade_inputs']
+    assert (inputs.observations['end_ns'] - inputs.observations['start_ns']).unique().to_list() == [900 * NANOSECONDS]
+    assert data['_trade_context'].model_rows[2].height < inputs.observations.height
+    result = manifest.run_model(data, {'execution_interval': 900})
+    assert result['backtest_num_executed_trades'] == 1
+
+
+def test_history_ids_cannot_collide_with_cash_settlements():
+    inputs, policy = _case([0.5, 0.5, 0.0], fee_bps=0, slip_bps=0)
+    inputs, policy = _funded(inputs, policy, mechanism='continuous')
+    funding = policy.funding
+    start, end = inputs.partition_start_ns, inputs.partition_end_ns
+    raw_id = f'settlement:{start}'
+    history = pl.DataFrame({'event_id': [raw_id], 'start': [start], 'end': [end], 'rate_decimal': [0.001], 'rate_basis_seconds': [3600.0], 'valuation_price': [inputs.observations['open'][0]]})
+    funding = replace(funding, params={key: value for key, value in funding.params.items() if key != 'rate'} | {'history_interpretation': 'quoted'})
+    events = prepare_funding(funding, history, start, end)
+    assert events['event_id'].n_unique() == events.height
+    assert events.filter(pl.col('kind') == 'accrual')['event_id'].to_list() == [f'history:{raw_id}']
+    result = trade_execution(replace(inputs, funding_events=events), replace(policy, funding=funding))
+    quantity = result.fills['quantity_delta'][0]
+    expected = -quantity * history['valuation_price'][0] * 0.001 * (end - start) / NANOSECONDS / 3600
+    assert result.metrics['funding_pnl'] == pytest.approx(expected)
+    assert result.metrics['ending_equity'] == pytest.approx(10000 + quantity * (inputs.observations['open'][-1] - inputs.observations['open'][0]) + expected)
+
+
 def test_new_options_are_resolved_or_rejected():
     assert resolve_trade_policy(BacktestConfig(), {}) is None
     for option in ({'execution_lag_seconds': 1}, {'max_price_gap_seconds': 1}, {'flat_threshold': 0.01}):

@@ -135,7 +135,7 @@ def prepare_funding(policy: FundingPolicy, history: pl.DataFrame | None, start: 
             for row, time, slot in zip(history.iter_rows(named=True), times, slots, strict=True):
                 if not 0 <= time - slot < finite_number(row['settlement_interval_seconds'], 'recorded settlement interval') * NANOSECONDS:
                     raise ValueError('Recorded settlement timestamp is outside its declared schedule slot')
-                rows.append({'event_id': str(row['event_id']), 'kind': 'payment', 'time_ns': int(time), 'start_ns': int(time), 'end_ns': int(time), 'rate_decimal': finite_number(row['rate_decimal'], 'realized funding rate'), 'rate_basis_seconds': policy.rate_basis_seconds, 'valuation_price': _valuation(row['valuation_price'], policy)})
+                rows.append({'event_id': f"history:{row['event_id']}", 'kind': 'payment', 'time_ns': int(time), 'start_ns': int(time), 'end_ns': int(time), 'rate_decimal': finite_number(row['rate_decimal'], 'realized funding rate'), 'rate_basis_seconds': policy.rate_basis_seconds, 'valuation_price': _valuation(row['valuation_price'], policy)})
         else:
             begins, ends = _history_ns(history, 'start'), _history_ns(history, 'end')
             _coverage([(int(left), int(right)) for left, right in zip(begins, ends, strict=True)], start, end)
@@ -146,7 +146,7 @@ def prepare_funding(policy: FundingPolicy, history: pl.DataFrame | None, start: 
                 basis = (right - left) / NANOSECONDS if interpretation == 'integrated' else finite_number(row.get('rate_basis_seconds'), 'recorded rate basis')
                 if basis <= 0:
                     raise ValueError('Recorded rate basis must be positive')
-                rows.append({'event_id': str(row['event_id']), 'kind': 'accrual', 'time_ns': int(left), 'start_ns': int(left), 'end_ns': int(right), 'rate_decimal': finite_number(row['rate_decimal'], 'realized funding rate'), 'rate_basis_seconds': basis, 'valuation_price': _valuation(row['valuation_price'], policy)})
+                rows.append({'event_id': f"history:{row['event_id']}", 'kind': 'accrual', 'time_ns': int(left), 'start_ns': int(left), 'end_ns': int(right), 'rate_decimal': finite_number(row['rate_decimal'], 'realized funding rate'), 'rate_basis_seconds': basis, 'valuation_price': _valuation(row['valuation_price'], policy)})
     if policy.mechanism == 'continuous':
         rows.extend({'event_id': f'settlement:{time}', 'kind': 'cash_settlement', 'time_ns': time, 'start_ns': time, 'end_ns': time, 'rate_decimal': 0.0, 'rate_basis_seconds': policy.rate_basis_seconds, 'valuation_price': None} for time in scheduled_times(start, end, params.get('cash_settlement_interval_seconds'), params.get('cash_settlement_phase_utc_seconds', 0.0)))
     return pl.DataFrame(rows, schema=_SCHEMA).sort('time_ns', 'event_id')
