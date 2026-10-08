@@ -1,4 +1,7 @@
-from limen.backtest.trade_contract import TradePolicy
+from limen.backtest.trade_contract import TradePolicy, contract_digest
+from limen.targets.trade_outcome import OutcomeLabels
+from limen.experiment._prepare_trade_context import PreparedFolds, sensor_decisions, target_context
+from limen.experiment._resolve_trade_policy import resolve_json
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
@@ -1053,6 +1056,9 @@ class MLManifest(Manifest):
         '''
 
         split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
+        outcome_target = self.target_class_config is not None and bool(getattr(self.target_class_config.target_class, 'requires_trade_context', False))
+        private_labels: list[OutcomeLabels] = []
+        raw_features: pl.DataFrame | None = None
 
         all_fitted_params: dict[str, Any] = {}
         columns_to_drop: list[str] | None = None
@@ -1086,7 +1092,8 @@ class MLManifest(Manifest):
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
-                    self, data, round_params, all_fitted_params, is_train
+                    self, data, round_params, all_fitted_params, is_train,
+                    trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
                 )
 
             if self.ablation_config is not None:
@@ -1095,13 +1102,16 @@ class MLManifest(Manifest):
                 )
 
             data = data.fill_nan(None)
-            n_leading = _count_leading_nulls(data)
+            feature_surface = data.drop(self.target_column) if outcome_target and self.target_column is not None else data
+            n_leading = _count_leading_nulls(feature_surface)
             data = data.slice(n_leading)
 
             n_cco_feature_rows = max(0, len(cco_block) - n_leading) if (not is_train and cco_block is not None) else 0
 
             _check_unexpected_nulls(self, data, i, 'A')
 
+            if is_train and outcome_target:
+                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
 
             if n_cco_feature_rows > 0:
@@ -1109,7 +1119,8 @@ class MLManifest(Manifest):
 
             _check_unexpected_nulls(self, data, i, 'B')
 
-            split_data[i] = data.fill_nan(None).drop_nulls()
+            subset = [name for name in data.columns if name != self.target_column] if outcome_target else data.columns
+            split_data[i] = data.fill_nan(None).drop_nulls(subset=subset)
 
             if is_train:
                 cco_indicator_rows = n_leading
@@ -1143,6 +1154,12 @@ class MLManifest(Manifest):
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
+        if outcome_target:
+            if trade is None or raw_features is None:
+                raise ValueError('Missing training-only trade outcome preparation')
+            data_dict['_trade_labels'] = OutcomeLabels(pl.concat([labels.rows for labels in private_labels]), contract_digest({'partitions': [labels.contract_digest for labels in private_labels]}))
+            data_dict['_fitted_params'] = {key: value for key, value in all_fitted_params.items() if not key.startswith('_target_cls_')}
+            data_dict['_fold_preparation'] = _prepare_folds(self, raw_features, split_data[0], trade.model_rows[0], dict(round_params))
         return data_dict
 
     @override
@@ -1190,6 +1207,11 @@ class MLManifest(Manifest):
                 )
                 model_kwargs['prediction_calibration_config'] = config
         self._apply_backtest_cost(data, round_params)
+        if '_trade_labels' in data and not getattr(self.architecture_function, 'requires_trade_outcomes', False):
+            raise ValueError('This architecture cannot fit unavailable trade labels; use an architecture with private availability masks')
+        for key in ('direction_params', 'sizing_params'):
+            if key in model_kwargs and model_kwargs[key] is not None:
+                model_kwargs[key] = resolve_json(model_kwargs[key], round_params)
         return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
 
     def sensor_input_prep(
@@ -1216,6 +1238,11 @@ class MLManifest(Manifest):
         '''
 
         _, data = _process_bars(self, raw_klines, round_params)
+        decisions = None
+        if self.resolve_trade_policy(round_params) is not None:
+            interval = self.data_source_config.params.get('klines_size') if self.data_source_config is not None else None
+            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
+            data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
 
         lazy = data.lazy()
         lazy = _apply_feature_transforms(self, lazy, round_params)
@@ -1234,6 +1261,8 @@ class MLManifest(Manifest):
 
         data = _apply_sensor_pca(self, data, round_params, all_fitted_params)
 
+        if decisions is not None:
+            data = data.join(decisions, on='datetime', how='left', maintain_order='left')
         return data, indicator_lookback
 
 
@@ -1689,7 +1718,7 @@ def _apply_class_based_target(
         data: pl.DataFrame,
         round_params: dict[str, Any],
         all_fitted_params: dict[str, Any],
-        is_training: bool
+        is_training: bool, *, trade_context: object = None, labels: list[OutcomeLabels] | None = None
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
     '''
@@ -1714,9 +1743,14 @@ def _apply_class_based_target(
         raise ValueError('_apply_class_based_target manifest has no target_class_config')
     target_name = manifest.target_column
     instance_key = f'_target_cls_{target_name}'
+    needs_context = bool(getattr(config.target_class, 'requires_trade_context', False))
+    if needs_context and (trade_context is None or 'trade_context' in config.fit_params or 'trade_context' in config.transform_params):
+        raise ValueError('Trade outcome context is reserved and must be supplied by the framework')
 
     if is_training:
         resolved_fit = _resolve_params(config.fit_params, round_params)
+        if needs_context:
+            resolved_fit['trade_context'] = trade_context
         instance = config.target_class(
             train_data=data,
             target_name=target_name,
@@ -1731,7 +1765,14 @@ def _apply_class_based_target(
         instance = all_fitted_params[instance_key]
 
     resolved_transform = _resolve_params(config.transform_params, round_params)
+    if needs_context:
+        resolved_transform['trade_context'] = trade_context
     data = instance.transform(data, **resolved_transform)
+    if needs_context:
+        outcomes = instance.outcomes
+        if not isinstance(outcomes, OutcomeLabels) or labels is None:
+            raise ValueError('Context target must expose private OutcomeLabels')
+        labels.append(outcomes)
 
     return _restore_source_rows(source_data, data), all_fitted_params
 
@@ -2069,3 +2110,28 @@ def _finalize_rule_based_data(
     }
 
     return data_dict
+
+
+def _prepare_folds(manifest: MLManifest, raw: pl.DataFrame, retained: pl.DataFrame, identities: pl.DataFrame, params: dict[str, object]) -> PreparedFolds:
+    selected = retained.select('datetime').join(raw, on='datetime', how='left', maintain_order='left')
+    mapping = retained.select('datetime').join(identities, on='datetime', how='left', maintain_order='left')
+    row_ids = tuple(str(value) for value in mapping['row_id'])
+    positions = {identity: index for index, identity in enumerate(row_ids)}
+
+    def transform(train_rows: Sequence[str], predict_rows: Sequence[str]) -> tuple[pl.DataFrame, pl.DataFrame]:
+        train = selected[[positions[row] for row in train_rows]]
+        predict = selected[[positions[row] for row in predict_rows]]
+        fitted: dict[str, object] = {}
+        train, fitted = _apply_scaler(manifest, train, params, fitted, True)
+        context_rows = max((int(getattr(value, 'context_rows', 0)) for value in fitted.values()), default=0)
+        prefix = selected[[positions[row] for row in train_rows]].tail(context_rows)
+        predict, fitted = _apply_scaler(manifest, pl.concat([prefix, predict]), params, fitted, False)
+        predict = predict.slice(prefix.height)
+        transformed, _ = _apply_pca_compression(manifest, [train, predict, predict], params, fitted)
+        features = [name for name in transformed[0].columns if name != 'datetime']
+        if any(transformed[index].select(features).null_count().sum_horizontal()[0] for index in (0, 1)):
+            raise ValueError('Fold preprocessing has unavailable features; provide sufficient causal context')
+        return transformed[0].select(features), transformed[1].select(features)
+
+    deterministic = manifest.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in manifest.feature_transforms)
+    return PreparedFolds(selected.drop('datetime'), row_ids, deterministic, transform)

@@ -195,6 +195,8 @@ class Cohort:
 
         by_pid: dict[str, Any] = {}
         for member in members:
+            if getattr(member, 'prediction_mode', 'binary') == 'target_exposure':
+                raise ValueError('Binary Cohort cannot aggregate target-exposure members; use the signed Sensor directly')
             if not hasattr(member, 'permutation_id'):
                 raise ValueError(
                     'Each cohort member must expose permutation_id for binding.'

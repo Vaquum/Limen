@@ -1,3 +1,4 @@
+from limen.targets.trade_outcome import TradeOutcomeTarget, TradeTargetContext, OutcomeLabels
 from limen.targets.ema_breakout import EmaBreakoutTarget
 from limen.targets.exit_quality import ExitQualityTarget
 from limen.targets.forward_breakout import ForwardBreakoutTarget
@@ -15,6 +16,10 @@ from limen.targets.triple_barrier import TripleBarrierTarget
 from limen.targets.vol_normalized_return import VolNormalizedReturnTarget
 
 __all__ = [
+    'TradeOutcomeTarget',
+    'TradeTargetContext',
+    'OutcomeLabels',
+
     'EmaBreakoutTarget',
     'ExitQualityTarget',
     'ForwardBreakoutTarget',

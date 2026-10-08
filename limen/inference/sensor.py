@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
+from limen.backtest.trade_contract import JsonValue, RULE_VERSION, contract_digest, json_value
+from limen.backtest.funding_adapter import resolve_adapter
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -25,6 +28,8 @@ class BarPrediction:
     prediction: int | float | None
     probability: float | None
     reason: PredictionReason | None
+    available_at_ns: int | None = None
+    trade_contract_digest: str | None = None
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +45,8 @@ class Sensor:
                  fitted_params: dict[str, Any],
                  round_params: dict[str, Any],
                  permutation_id: str | None = None,
-                 manifest_id: str | None = None) -> None:
+                 manifest_id: str | None = None, *,
+                 trade_contract: Mapping[str, JsonValue] | None = None) -> None:
 
         '''
         Create a Sensor from a validated trained model.
@@ -66,7 +72,29 @@ class Sensor:
         self._manifest: Any = None
         self.permutation_id = permutation_id
         self.manifest_id = manifest_id
+        self._trade_contract = copy.deepcopy(dict(trade_contract)) if trade_contract is not None else None
+        self._trade_digest = contract_digest(self._trade_contract) if self._trade_contract is not None else None
+        if self._model.prediction_mode == 'target_exposure' and self._trade_contract is None:
+            raise ValueError('Signed Sensor construction requires its frozen trade contract')
+        if self._trade_contract is not None:
+            manifest = self._get_manifest()
+            policy = manifest.resolve_trade_policy(self._round_params)
+            if policy is None or self._trade_contract.get('rule_version') != RULE_VERSION or json_value(policy) != self._trade_contract.get('policy') or policy.prediction_mode != self._model.prediction_mode:
+                raise ValueError('Sensor rules, funding or output mode differ from the frozen contract')
+            if policy.funding is not None:
+                _ = resolve_adapter(policy.funding)
+            binding = getattr(self._model, 'learning_binding', None)
+            if (self._model.prediction_mode == 'target_exposure' or binding is not None) and (not isinstance(binding, Mapping) or binding.get('trade_contract_digest') != self._trade_digest):
+                raise ValueError('Sensor model does not belong to the frozen trade contract')
 
+
+    @property
+    def trade_contract(self) -> Mapping[str, JsonValue] | None:
+        return copy.deepcopy(self._trade_contract)
+
+    @property
+    def prediction_mode(self) -> Literal['binary', 'target_exposure']:
+        return self._model.prediction_mode
 
     @property
     def round_params(self) -> dict[str, Any]:
@@ -125,7 +153,7 @@ class Sensor:
             if valid_rows < decoder_lookback:
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='warm-up')
 
-            feature_cols = [c for c in data.columns if c != 'datetime']
+            feature_cols = [c for c in data.columns if c not in ('datetime', '__trade_available_at_ns__')]
             last_row = data[-1]
             if any(last_row[c][0] is None for c in feature_cols):
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='null-features')
@@ -137,6 +165,8 @@ class Sensor:
                 prediction=_extract_scalar(pred_result.get('_preds')),
                 probability=_extract_scalar(pred_result.get('_probs')),
                 reason=None,
+                available_at_ns=int(last_row['__trade_available_at_ns__'][0]) if '__trade_available_at_ns__' in last_row.columns else None,
+                trade_contract_digest=self._trade_digest,
             )
         # Live inference must never crash on one bar — any model/scaler/data
         # failure degrades to a sensor-error result.
@@ -181,7 +211,7 @@ class Sensor:
             n_fallback = len(data)
 
             inside_window = self._inside_training_window_mask(data, manifest)
-            feature_cols = [c for c in data.columns if c != 'datetime']
+            feature_cols = [c for c in data.columns if c not in ('datetime', '__trade_available_at_ns__')]
             datetimes = data['datetime'].to_list() if 'datetime' in data.columns else [None] * len(data)
 
             if feature_cols:
@@ -234,6 +264,8 @@ class Sensor:
                         prediction=_extract_scalar(preds[j]),
                         probability=_extract_scalar(probs[j]) if probs is not None else None,
                         reason=None,
+                        available_at_ns=int(data['__trade_available_at_ns__'][idx]) if '__trade_available_at_ns__' in data.columns else None,
+                        trade_contract_digest=self._trade_digest,
                     )
 
             return results  # type: ignore[return-value]

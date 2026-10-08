@@ -1,4 +1,7 @@
 import json
+from collections.abc import Mapping
+from typing import cast
+from limen.backtest.trade_contract import JsonValue
 import logging
 from pathlib import Path
 from typing import Any
@@ -276,7 +279,15 @@ class Trainer:
             round_params = dict(self._round_data[pid]['round_params'])
 
             data_dict = self._manifest.prepare_data(self._data, round_params)
+            expected = self._round_data[pid]
+            frozen_contract = expected.get('trade_contract')
+            if frozen_contract is not None and (frozen_contract != data_dict.get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
+                raise ReconstructionError(f'Permutation {pid}: exact trade rules/source/output identity changed')
             results = self._manifest.run_model(data_dict, round_params)
+            binding = expected.get('learning_binding')
+            if binding is not None or '_learning_binding' in data_dict:
+                if not isinstance(binding, Mapping) or binding.get('round_id') != pid or binding.get('manifest_id') != self._manifest_id or binding.get('model') != data_dict.get('_learning_binding'):
+                    raise ReconstructionError(f'Permutation {pid}: exact learning/source/factory identity changed')
 
             model = results.pop('_model', None)
             if model is None:
@@ -300,6 +311,7 @@ class Trainer:
                 round_params=round_params,
                 permutation_id=pid,
                 manifest_id=self._manifest_id,
+                trade_contract=cast(Mapping[str, JsonValue] | None, frozen_contract),
             )
             sensors.append(sensor)
 

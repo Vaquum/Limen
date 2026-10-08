@@ -431,5 +431,7 @@
   "limen/backtest/funding_adapter.py": 260,
   "limen/backtest/funding_presets.py": 100,
   "limen/experiment/_resolve_trade_policy.py": 240,
-  "limen/experiment/_prepare_trade_context.py": 300
+  "limen/experiment/_prepare_trade_context.py": 300,
+  "limen/targets/trade_outcome.py": 200,
+  "limen/sfd/reference_architecture/direction_sizing.py": 330
 }

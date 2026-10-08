@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import polars as pl
 
@@ -10,6 +10,11 @@ from limen.backtest.execution_events import OBSERVATION_COLUMNS, validate_observ
 from limen.backtest.funding_adapter import prepare_funding
 from limen.backtest.trade_contract import NANOSECONDS, TradeInputs, TradeLedger, TradePolicy, contract_digest, export_trade_contract, json_value, source_binding
 from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig, resolve_json, resolve_number
+
+if TYPE_CHECKING:
+    from limen.sfd.reference_architecture.direction_sizing import FoldFeatures
+    from limen.targets.trade_outcome import TradeTargetContext
+
 
 _METADATA = ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')
 
@@ -155,6 +160,46 @@ def finish_trade_result(data: Mapping[str, object], result: dict[str, object]) -
         result = {key: value for key, value in result.items() if not key.startswith('backtest_')}
         result.update(metrics)
     return result
+
+
+def target_context(context: PreparedTradeContext | None, index: int) -> TradeTargetContext:
+    from limen.targets.trade_outcome import TradeTargetContext
+
+    if context is None:
+        raise ValueError('Trade outcomes require configured execution economics before target fitting')
+    original = context.partitions[index]
+    signals = context.model_rows[index].with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
+    inputs = replace(original, signals=signals)
+    return TradeTargetContext(context.policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(context.policy, inputs)))
+
+
+@dataclass(frozen=True)
+class PreparedFolds:
+    raw_features: pl.DataFrame
+    row_ids: tuple[str, ...]
+    deterministic: bool
+    transform: Callable[[Sequence[str], Sequence[str]], tuple[pl.DataFrame, pl.DataFrame]]
+
+    def fit_transform(self, train_rows: Sequence[str], predict_rows: Sequence[str]) -> FoldFeatures:
+        from limen.sfd.reference_architecture.direction_sizing import FoldFeatures
+
+        train, predict = self.transform(train_rows, predict_rows)
+        if train.height != len(train_rows) or predict.height != len(predict_rows):
+            raise ValueError('Fold preprocessing changed causal feature-valid membership')
+        return FoldFeatures(train, predict)
+
+
+def sensor_decisions(raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:
+    prices = normalize_observations(raw, interval_seconds=interval_seconds)
+    positions = {int(value): index for index, value in enumerate(raw['datetime'].dt.epoch('ns'))}
+    counts = bars['bar_count'].to_list() if 'bar_count' in bars.columns else [1] * bars.height
+    available: list[int] = []
+    for time, count in zip(bars['datetime'].dt.epoch('ns'), counts, strict=True):
+        last = positions[int(time)] + int(count) - 1
+        if last >= prices.height:
+            raise ValueError('Sensor model-bar membership exceeds its recorded source')
+        available.append(int(prices['available_at_ns'][last]))
+    return bars.select('datetime').with_columns(pl.Series('__trade_available_at_ns__', available, dtype=pl.Int64))
 
 
 __all__ = ['PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows']
