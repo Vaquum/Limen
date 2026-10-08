@@ -222,6 +222,8 @@ class PreparedFolds:
 
 def sensor_decisions(raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:
     prices = normalize_observations(raw, interval_seconds=interval_seconds)
+    if (prices['available_at_ns'] < prices['end_ns']).any():
+        raise ValueError('Sensor decisions require source availability at or after interval end')
     positions = {int(value): index for index, value in enumerate(raw['datetime'].dt.epoch('ns'))}
     counts = bars['bar_count'].to_list() if 'bar_count' in bars.columns else [1] * bars.height
     available: list[int] = []

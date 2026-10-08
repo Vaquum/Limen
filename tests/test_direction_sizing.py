@@ -45,6 +45,22 @@ def test_sensor_preparation_resolves_recorded_interval(reference):
     assert prepared['__trade_available_at_ns__'].equals(source['datetime'].dt.epoch('ns') + 900000000000, check_names=False)
 
 
+@pytest.mark.parametrize('availability_delay_ns', (-1, 0, 1))
+def test_sensor_rejects_availability_before_recorded_close(availability_delay_ns):
+    source = recorded_source()
+    manifest = native_manifest()
+    data = manifest.prepare_data(source, {})
+    starts = source['datetime'].dt.epoch('ns')
+    ends = starts + 900_000_000_000
+    timed = source.with_columns(starts.alias('start_ns'), ends.alias('end_ns'), starts.alias('open_available_at_ns'), (ends + availability_delay_ns).alias('available_at_ns'))
+    if availability_delay_ns < 0:
+        with pytest.raises(ValueError, match='source availability at or after interval end'):
+            manifest.sensor_input_prep(timed, data['_fitted_params'], {})
+    else:
+        prepared, _ = manifest.sensor_input_prep(timed, data['_fitted_params'], {})
+        assert prepared['__trade_available_at_ns__'].equals(timed['available_at_ns'], check_names=False)
+
+
 class ConstantComponent:
     def __init__(self, value):
         self.value = value
