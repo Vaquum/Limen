@@ -197,7 +197,8 @@ def test_regular_execution_source_resolves_its_interval(interval):
     assert (inputs.observations['end_ns'] - inputs.observations['start_ns']).unique().to_list() == [900 * NANOSECONDS]
     assert data['_trade_context'].model_rows[2].height < inputs.observations.height
     result = manifest.run_model(data, {'execution_interval': 900})
-    assert result['backtest_num_executed_trades'] == 1
+    assert data['_trade_ledger'].fills.height == 1
+    assert result['backtest_open_trades'] == 1
 
 
 def test_history_ids_cannot_collide_with_cash_settlements():
