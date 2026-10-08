@@ -84,6 +84,41 @@ def test_native_components_and_tunable_parameters():
     assert second['trade_contract_digest'] != first['trade_contract_digest']
 
 
+class ChangingComponent(ConstantComponent):
+    def __init__(self, value):
+        super().__init__(value)
+        self.calls = 0
+
+    def predict(self, x):
+        self.calls += 1
+        return np.full(len(x), self.value if self.calls == 1 else 0, dtype=np.float64)
+
+
+def changing_direction_factory(*, seed):
+    return ChangingComponent(-1)
+
+
+def changing_sizing_factory(*, seed):
+    return ChangingComponent(0.25)
+
+
+changing_direction_factory.deterministic = False
+changing_sizing_factory.deterministic = False
+
+
+def test_evaluation_scores_the_returned_component_predictions():
+    manifest = native_manifest()
+    data = manifest.prepare_data(recorded_source(), {})
+    result = manifest.run_model(data, component_params(direction_factory=changing_direction_factory, sizing_factory=changing_sizing_factory))
+    model = result['_model']
+    assert not model.deterministic
+    assert model.direction_model.calls == model.sizing_model.calls == 1
+    assert np.all(result['_preds'] == -0.25)
+    from limen.sfd.reference_architecture._backtest_evaluation import compute_backtest
+    expected = compute_backtest(np.full(len(data['x_test']), -0.25), data)
+    assert all(result[key] == pytest.approx(value) for key, value in expected.items())
+
+
 class MemoryDirection(ConstantComponent):
     fit_sizes: ClassVar[list[int]] = []
 

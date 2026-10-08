@@ -205,14 +205,17 @@ class DirectionSizingModel(ReferenceModel):
     @override
     def predict(self, data: dict[str, object]) -> dict[str, object]:
         direction, size = self._components(data['x_test'])
+        return {'_preds': self._exposure(direction, size)}
+
+    def _exposure(self, direction: Array, size: Array) -> Array:
         exposure = direction * size
         exposure[np.abs(exposure) <= self.flat_threshold] = 0
-        return {'_preds': exposure}
+        return exposure
 
     @override
     def evaluate(self, data: dict[str, object], inline_metrics: bool = True) -> dict[str, object]:
         direction, size = self._components(data['x_test'])
-        result = self.predict(data)
+        result: dict[str, object] = {'_preds': self._exposure(direction, size)}
         _, expected_direction, expected_size, valid = _labels(data, 2, self.scale, self.maximum)
         result['direction_accuracy'] = int(np.count_nonzero(direction[valid] == expected_direction[valid])) / int(np.count_nonzero(valid)) if valid.any() else None
         result['size_mae'] = float(np.mean(np.abs(size[valid] - expected_size[valid]))) if valid.any() else None
