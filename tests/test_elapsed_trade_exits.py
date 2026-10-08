@@ -155,3 +155,37 @@ def test_delayed_final_close_covers_its_availability_clock():
         ledger = trade_execution(replace(partition, signals=signals), policy)
         assert ledger.fills['time_ns'].to_list() == [partition.partition_end_ns]
         assert ledger.fills['reference_price'][0] == partition.observations['close'][-1]
+
+
+def test_same_clock_flat_replaces_queued_entry_before_trading():
+    inputs, policy = _ticks()
+    start, end = inputs.partition_start_ns, inputs.partition_end_ns
+    observations = inputs.observations[[0, -1]]
+    binding = source_binding(observations, 'recorded sparse tick endpoints', start, end, 1000, 'recorded points')
+    signals = pl.DataFrame({'row_id': ['entry', 'ack', 'new', 'flat'], 'available_at_ns': [start, start + 2 * NANOSECONDS, start + 3 * NANOSECONDS, end], 'target': [0.5, 0.0, -0.5, 0.0]})
+    result = trade_execution(replace(inputs, observations=observations, signals=signals, sources=(binding,)), replace(policy, max_holding_seconds=1, timer_interval_seconds=1, take_profit_bps=0.00001, stop_loss_bps=0.00001, fee_bps=10, slip_bps=5))
+    assert result.fills.height == 2
+    assert result.episodes.height == 1
+    assert result.states['quantity'][-1] == 0
+    assert result.intents.filter(pl.col('target') == -0.5)['status'].to_list() == ['replaced']
+    assert result.metrics['fees'] == pytest.approx(sum(abs(row['quantity_delta']) * row['fill_price'] * 0.001 for row in result.fills.iter_rows(named=True)))
+
+
+@pytest.mark.parametrize('next_bar', (1, 2))
+def test_delayed_old_interval_cannot_apply_pre_entry_barriers(next_bar):
+    from limen.experiment._prepare_trade_context import normalize_observations
+
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(3)
+    prices = normalize_observations(source, interval_seconds=900)[[0, next_bar]]
+    entry = int(prices['start_ns'][1])
+    delayed = entry + 2 * NANOSECONDS
+    end = int(prices['end_ns'][-1]) + 2 * NANOSECONDS
+    prices = prices.with_columns(pl.Series('available_at_ns', [delayed, end]))
+    start = int(prices['start_ns'][0])
+    binding = source_binding(prices, 'recorded bars with declared delivery delay', start, end, 900 * NANOSECONDS, 'recorded OHLC')
+    signals = pl.DataFrame({'row_id': ['entry'], 'available_at_ns': [entry], 'target': [0.5]})
+    _, policy = _case([0.5])
+    result = trade_execution(TradeInputs(10000, start, end, signals, prices, None, (binding,)), replace(policy, take_profit_bps=1, stop_loss_bps=1))
+    assert result.fills['time_ns'][0] == entry
+    assert result.fills['reference_price'][0] == prices['open'][1]
+    assert not result.fills.filter(pl.col('time_ns') == delayed).height

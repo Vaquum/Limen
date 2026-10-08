@@ -161,8 +161,10 @@ class _Account:
                     self.episode = None
                     self.basis = 0.0
 
-    def reconcile(self, price: float, event: ExecutionEvent) -> None:
+    def reconcile(self, price: float, event: ExecutionEvent, *, exits_only: bool = False) -> None:
         while self.pending is not None and event.time_ns >= self.ready_at_ns:
+            if exits_only and self.pending['reason'] == 'signal':
+                break
             target = cast(float, self.pending['target'])
             if target * self.quantity < 0:
                 opposite = target
@@ -188,6 +190,8 @@ class _Account:
 def _barrier_price(account: _Account, observation: dict[str, object], event: ExecutionEvent) -> tuple[float, str] | None:
     policy = account.policy
     if account.episode is None or (policy.take_profit_bps is None and policy.stop_loss_bps is None):
+        return None
+    if event.observation_phase == 'close' and cast(int, account.episode['first_fill_ns']) >= int(cast(int, observation['end_ns'])):
         return None
     if event.observation_phase == 'close' and account.last_fill_ns is not None and account.last_fill_ns > int(cast(int, observation['start_ns'])):
         raise ValueError('Pre-entry/resize OHLC extrema require finer execution evidence')
@@ -281,7 +285,7 @@ def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
             if barrier is not None:
                 reference, reason = barrier
                 account.force_exit(time_ns, reason)
-                account.reconcile(reference, event)
+                account.reconcile(reference, event, exits_only=True)
         declared = any(event.kind in ('signal', 'timer') and not event.event_id.startswith('end:') for event in group)
         if declared and account.episode is not None and policy.max_holding_seconds is not None and time_ns >= cast(int, account.episode['first_fill_ns']) + round(policy.max_holding_seconds * NANOSECONDS):
             account.force_exit(time_ns, 'time_stop')
