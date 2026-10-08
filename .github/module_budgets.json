@@ -424,5 +424,8 @@
   "limen/experiment/_prepare_backtest_data.py": 100,
   "limen/experiment/_backtest_provenance.py": 180,
   "limen/sfd/reference_architecture/_backtest_evaluation.py": 150,
-  "limen/log/_snapshot_backtest_round.py": 180
+  "limen/log/_snapshot_backtest_round.py": 180,
+  "limen/backtest/trade_contract.py": 260,
+  "limen/backtest/execution_events.py": 180,
+  "limen/backtest/trade_execution.py": 450
 }

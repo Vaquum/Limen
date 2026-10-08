@@ -244,3 +244,10 @@ Table 7. These concerns sit outside the snapshot contract.
 - Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable trained sensors.
 - Continue to [Log](Log.md) for the post-run workflow that produces backtest inputs.
 - Continue to [Benchmark](Benchmark.md) for the prediction-quality layer that precedes trading-economics inspection.
+
+
+## Signed exposure execution
+
+`limen.backtest.trade_execution` accepts a resolved `TradePolicy` and recorded `TradeInputs`. Positive exposure is long, zero is flat, and negative exposure requires linear perpetual accounting. Size changes use marked current equity with fill costs reserved. An unchanged signal holds quantity; price/equity changes do not create maintenance trades. Resizes retain first-fill time and barrier anchors, and reversal closes before opposite entry. Cash spot cannot borrow or open shorts.
+
+The event ledger separates intent, fill and trade episode. End marking leaves an open trade open. Existing binary snapshot behavior is unchanged.
