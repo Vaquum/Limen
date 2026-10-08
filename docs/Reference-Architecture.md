@@ -15,6 +15,7 @@ The current public reference-architecture exports are:
 
 - `ReferenceModel`
 - `DLinearRegressor`
+- `DirectionSizingModel`
 - `LightGBMBinary`
 - `LogRegBinary`
 - `RandomBinary`
@@ -25,7 +26,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`.
 
-The function exports are `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `direction_sizing`, `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## `ReferenceModel`
 
@@ -87,6 +88,40 @@ Limen's existing continuous metrics; with `inline_metrics=True`, it also uses
 long/flat backtest when prices are supplied. Costs and execution remain owned
 by the manifest/backtest layer. The function wrapper returns `_model` for
 normal Trainer reconstruction. Scaling belongs to the manifest, not the model.
+
+## Direction And Sizing
+
+`DirectionSizingModel` owns two fitted components and emits one signed exposure in `[-1, 1]`. Its native wrapper is `direction_sizing`; default components are sklearn LogisticRegression for direction and Ridge for magnitude. It requires [private simulated-trade outcomes](Targets.md#simulated-trade-outcomes) and `prediction_mode='target_exposure'`.
+
+```python
+from limen.experiment.manifest_core import MLManifest, ProductConfig
+from limen.sfd.reference_architecture import direction_sizing
+from limen.targets import TradeOutcomeTarget
+
+def sized_trade_manifest(recorded_source):
+    manifest = MLManifest().set_data_source(recorded_source, params={'klines_size': 900})
+    manifest.set_split_config(6, 2, 2)
+    manifest.with_target_label('outcome', TradeOutcomeTarget)
+    manifest.with_reference_architecture(direction_sizing)
+    manifest.set_backtest_config(
+        prediction_mode='target_exposure',
+        product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 0.001, 5),
+        max_holding_seconds='holding_seconds', fee_bps=5, slip_bps=5,
+    )
+    return manifest
+```
+
+The source must return recorded OHLC and UTC datetime with the declared regular interval, or explicit causal interval metadata. Run `prepare_data(recorded_data, params)` and `run_model(prepared, params)` with, for example, `params={'holding_seconds': 3600, 'direction_params': {'C': 0.5}, 'sizing_params': {'alpha': 1.0}, 'seed': 42}`. Funding is optional and independently [tunable](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+
+When both candidates complete, direction is the strictly better positive side. Equal returns and neither side profitable map to flat. Magnitude is the better return divided by positive `return_scale` (default `0.01`), clipped to `max_size` (default `1`). One unavailable side excludes that row from paired fitting/metrics. Predictions still cover every feature-valid inference row.
+
+`direction_params` and `sizing_params` have separate search namespaces. `direction_features` and `sizing_features` select prepared feature names independently. Factories accept `seed` and component kwargs and return estimators with `fit(x, y)`/`predict(x)`. They require importable module-qualified identities and a `deterministic` declaration. Native manifests accept callables; YAML component factory paths use the existing native resolver. Unknown kwargs, invalid subsets, nonfinite predictions and insufficient classes/samples fail explicitly.
+
+Set `conditional_size=True` to add direction to the sizing inputs. Training then uses chronological out-of-fold direction predictions. Each fold refits its own scaler/PCA on earlier feature-valid rows and fits direction only on outcomes completed before the fold begins. The initial fold has no causal predictions and cannot train sizing. Outer validation/test never calibrate this stack. `folds` (default `5`) and `min_train_samples` (default `20`) are tunable. Final direction uses all eligible training outcomes.
+
+`direction_accuracy` and `size_mae` use completed paired test outcomes; inline execution metrics retain the entire inference population. Changed sizing signals target post-cost current equity. Unchanged sizing signals hold quantity, as defined by the shared execution rules.
+
+JSONL binds the architecture, factory source hashes, component params, seed, feature/label sources, outcome mapping and economics to the round and manifest. Trainer reconstructs both components and rejects changed identities before tolerant metric checks. Sensor preserves the exact signed scalar, actual availability and read-only frozen contract. Binary Cohort rejects these members, including a single member. Use Sensor directly; downstream replay/paper/live parity remains a separate integration request.
 
 ## Probability Support for Cohort
 
@@ -270,3 +305,5 @@ Optional dependencies are checked when the relevant model executes, not when the
 - Continue to [Built-In SFDs](Built-In-SFDs.md) to see how the shipped foundational SFDs package these model surfaces.
 - Continue to [Trainer](Trainer.md) for the reconstruction workflow that replays and validates selected rounds.
 - Continue to [Standard Metrics Library](Standard-Metrics-Library.md) for the low-level metric helpers used inside these model classes.
+
+For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).

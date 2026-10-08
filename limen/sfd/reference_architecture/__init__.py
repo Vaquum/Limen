@@ -1,3 +1,4 @@
+from limen.sfd.reference_architecture.direction_sizing import DirectionSizingModel, direction_sizing
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.dlinear_regressor import DLinearRegressor
 from limen.sfd.reference_architecture.dlinear_regressor import dlinear_regressor
@@ -19,6 +20,7 @@ from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
 __all__ = [
     'DLinearRegressor',
+    'DirectionSizingModel',
     'LightGBMBinary',
     'LogRegBinary',
     'RandomBinary',
@@ -27,6 +29,7 @@ __all__ = [
     'RuleBasedStrategy',
     'TabPFNBinary',
     'XGBoostRegressor',
+    'direction_sizing',
     'dlinear_regressor',
     'lightgbm_binary',
     'logreg_binary',

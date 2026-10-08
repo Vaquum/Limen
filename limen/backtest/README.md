@@ -10,8 +10,8 @@
 
 ## What this package owns
 
-Owns Limen's snapshot backtest and the assumptions it encodes.
-Does **not** own signal generation, experiment logging, or portfolio bookkeeping.
+Owns Limen's research execution, inventory/economics ledger and snapshot assumptions.
+Signal generation and operational account management belong to their respective callers.
 
 ## Key entry points
 
@@ -19,8 +19,9 @@ Does **not** own signal generation, experiment logging, or portfolio bookkeeping
 |-------------|-------------|-------|
 | `backtest_snapshot` | Vectorized evaluation across rounds | `from limen.backtest import backtest_snapshot` |
 | `long_flat_strategy` | Default execution model, or a template for a new strategy | Returns an `ExecutionResult`; `from limen.backtest import long_flat_strategy` |
+| `trade_execution` | Signed exposure with actual fill costs and persistent episodes | Accepts `TradeInputs` and `TradePolicy` with a `ProductSpec` |
 
-The package root re-exports all three entry points (`backtest_snapshot`, `long_flat_strategy`, `ExecutionResult`); module-path imports keep working.
+The package root exports `backtest_snapshot`, `long_flat_strategy`, `ExecutionResult`, `trade_execution`, `TradeInputs`, `TradePolicy` and `ProductSpec`.
 
 ## Adjacent modules
 

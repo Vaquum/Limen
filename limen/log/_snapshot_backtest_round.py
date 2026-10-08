@@ -37,6 +37,21 @@ def snapshot_backtest_round(
     from limen.sfd.reference_architecture._backtest_evaluation import execution_options as _execution_options
 
     manifest = cast(_ReplayManifest | None, getattr(log, 'manifest', None))
+    alignment_rows = cast(list[dict[str, object]], getattr(log, '_alignment', []))
+    if round_id < len(alignment_rows) and 'trade_contract' in alignment_rows[round_id]:
+        from limen.backtest.execution_events import with_predictions
+        from limen.backtest.trade_contract import TradeInputs, TradePolicy, contract_digest, export_trade_contract
+        from limen.backtest.trade_execution import trade_execution
+
+        alignment = alignment_rows[round_id]
+        inputs, policy = alignment.get('_trade_inputs'), alignment.get('_trade_policy')
+        if manifest is None or not isinstance(inputs, TradeInputs) or not isinstance(policy, TradePolicy):
+            raise ValueError('File-only/resumed configured Log replay requires original bound source context')
+        fresh = manifest.prepare_data(log.data, dict(log.round_params[round_id]))
+        digest = contract_digest(export_trade_contract(policy, inputs))
+        if digest != alignment.get('trade_contract_digest') or digest != fresh.get('trade_contract_digest'):
+            raise ValueError('Trade rules or source identity changed during replay')
+        return dict(trade_execution(with_predictions(inputs, log.preds[round_id]), policy).metrics)
     resolved = manifest.resolve_backtest_config(log.round_params[round_id]) if manifest is not None else {}
     if manifest is not None and _configured_barriers(manifest.backtest_config):
         alignment = getattr(log, '_alignment', None)

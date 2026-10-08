@@ -1,3 +1,5 @@
+from limen.experiment._resolve_trade_policy import BACKTEST_FIELDS
+
 VERSION = '1.0'
 
 VALID_MODES = {'production', 'development'}
@@ -54,7 +56,7 @@ SCALER_FROM_PARAMS_REQUIRED = {'from_params'}
 
 FEATURE_ABLATION_OPTIONAL = {'drop_count_key', 'seed_key'}
 PCA_COMPRESSION_OPTIONAL = {'enabled_param', 'n_components_param', 'scaler_param_name', 'component_prefix'}
-BACKTEST_OPTIONAL = {'fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps'}
+BACKTEST_OPTIONAL = set(BACKTEST_FIELDS)
 
 CALIBRATION_OPTIONAL = {'probability_calibration', 'threshold_function'}
 CALIBRATION_FUNC_REQUIRED = {'func'}

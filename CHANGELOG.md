@@ -1472,3 +1472,11 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add independently tunable manifest take-profit and stop-loss barriers to snapshot strategy evaluation.
 - Apply each round's declared fees, slippage and sizing in supported post-run replay, including disabled barriers.
+
+## [5.13.0] - 2026-10-08
+
+- Add signed exposure with post-cost signal-change sizing, persistent episodes, elapsed exits, recorded execution clocks, tunable funding adapters and frozen round ledgers.
+
+## [5.14.0] - 2026-10-08
+
+- Add private simulated-trade outcomes and tunable direction/sizing components with causal conditional fitting and signed inference contracts.

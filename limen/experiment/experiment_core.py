@@ -1081,6 +1081,7 @@ class UniversalExperimentLoop:
             '_round_index': round_index,
             'round_params': round_params,
             'preds': preds.tolist() if hasattr(preds, 'tolist') else list(preds),
+            **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding') if key in alignment},
             'alignment': {
                 'missing_datetimes': [
                     dt.isoformat()
@@ -1094,6 +1095,9 @@ class UniversalExperimentLoop:
                 ),
             },
         }
+
+        if 'learning_binding' in alignment:
+            entry['learning_binding'] = {'round_id': round_id, 'manifest_id': canonical_manifest_id(self._yaml_reference) if self._yaml_reference is not None else None, 'model': alignment['learning_binding']}
 
         with round_data_path.open('a') as f:
             _ = f.write(json.dumps(entry) + '\n')
@@ -1142,6 +1146,7 @@ class UniversalExperimentLoop:
                     self.round_params.append(entry['round_params'])
                     self.preds.append(entry['preds'])
                     self._alignment.append({
+                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding') if key in entry},
                         'missing_datetimes': [
                             datetime.fromisoformat(dt)
                             for dt in entry['alignment']['missing_datetimes']

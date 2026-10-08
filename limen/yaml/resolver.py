@@ -5,6 +5,7 @@ from limen.yaml.errors import ResolutionError
 
 
 ALLOWED_NAMESPACES = [
+    'limen.backtest',
     'limen.calibration',
     'limen.data',
     'limen.experiment',
