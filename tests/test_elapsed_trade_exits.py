@@ -97,3 +97,61 @@ def test_adjacent_close_precedes_current_open_and_stale_open_is_unusable():
     late = prices.with_columns(pl.col('available_at_ns').alias('open_available_at_ns'))
     bound = source_binding(late, 'recorded delayed opens', start, end, 900 * NANOSECONDS, 'delayed OHLC availability')
     assert all(event.observation_phase != 'open' for event in execution_events(replace(inputs, observations=late, sources=(bound,)), policy))
+
+
+def test_flat_acknowledgement_retains_target_behind_pending_exit():
+    inputs, policy = _ticks()
+    start, end = inputs.partition_start_ns, inputs.partition_end_ns
+    observations = inputs.observations[[0,-1]]
+    binding = source_binding(observations, 'recorded sparse tick endpoints', start, end, 1000, 'recorded points')
+    signals = pl.DataFrame({'row_id':['entry','ack','new','repeat'], 'available_at_ns':[start,start + 2*NANOSECONDS,start + 3*NANOSECONDS,end], 'target':[0.5,0.0,-0.5,-0.5]})
+    result = trade_execution(replace(inputs, observations=observations, signals=signals, sources=(binding,)), replace(policy, max_holding_seconds=1, timer_interval_seconds=1))
+    assert result.episodes['side'].to_list() == [1,-1]
+    assert result.episodes['closed_at_ns'][0] == end
+    assert result.episodes['first_fill_ns'][1] == end
+    assert result.fills.height == 3
+    assert result.intents.filter(pl.col('reason') == 'time_stop')['status'].to_list() == ['filled']
+    assert result.intents.filter((pl.col('reason') == 'signal') & (pl.col('target') == -0.5))['requested_at_ns'].to_list() == [start + 3*NANOSECONDS]
+
+
+def test_execution_intervals_cross_splits_and_resolve_source_parameters():
+    from limen.experiment._prepare_trade_context import normalize_observations, prepare_trade_context
+    from limen.experiment._resolve_trade_policy import BacktestConfig, ProductConfig, resolve_trade_policy
+    from limen.experiment.manifest_core import DataSourceConfig
+
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(12)
+    original = normalize_observations(source, interval_seconds=900)
+    rows = []
+    for index in range(0,12,2):
+        pair = original.slice(index,2)
+        rows.append({'row_id':f'recorded_pair:{index}', 'start_ns':pair['start_ns'][0], 'end_ns':pair['end_ns'][-1], 'open_available_at_ns':pair['open_available_at_ns'][0], 'available_at_ns':pair['available_at_ns'][-1], 'open':pair['open'][0], 'high':pair['high'].max(), 'low':pair['low'].min(), 'close':pair['close'][-1]})
+    execution = pl.DataFrame(rows)
+    raw = [source.slice(index,3) for index in (1,4,7)]
+    config = BacktestConfig(prediction_mode='target_exposure', product=ProductConfig('linear_perpetual','BTCUSDT','BTC','USDT',1e-9,0), execution_data_source=DataSourceConfig(lambda: execution))
+    policy = resolve_trade_policy(config,{})
+    context = prepare_trade_context(config,policy,raw,raw,{'interval':900},interval_seconds='{interval}')
+    assert context.partitions[0].observations['start_ns'][0] < context.partitions[0].partition_start_ns
+    assert context.partitions[1].observations['end_ns'][-1] > context.partitions[1].partition_end_ns
+    for partition in context.partitions:
+        ledger = trade_execution(replace(partition, signals=partition.signals.with_columns(pl.lit(0.5).alias('target'))), policy)
+        assert ledger.fills.height == 1
+        assert ledger.fills['time_ns'].max() <= partition.partition_end_ns
+
+
+def test_delayed_final_close_covers_its_availability_clock():
+    from limen.experiment._prepare_trade_context import normalize_observations, prepare_trade_context
+    from limen.experiment._resolve_trade_policy import BacktestConfig, ProductConfig, resolve_trade_policy
+
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(6)
+    timing = normalize_observations(source, interval_seconds=900).select('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns').with_columns(pl.col('available_at_ns') + 2 * NANOSECONDS)
+    source = source.hstack(timing)
+    raw = [source.slice(index, 2) for index in (0, 2, 4)]
+    config = BacktestConfig(prediction_mode='target_exposure', product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0))
+    policy = resolve_trade_policy(config, {})
+    context = prepare_trade_context(config, policy, raw, raw, {})
+    for partition in context.partitions:
+        assert partition.partition_end_ns == partition.observations['end_ns'][-1] + 2 * NANOSECONDS
+        signals = partition.signals.with_columns(pl.Series('target', [0.0, 0.5]))
+        ledger = trade_execution(replace(partition, signals=signals), policy)
+        assert ledger.fills['time_ns'].to_list() == [partition.partition_end_ns]
+        assert ledger.fills['reference_price'][0] == partition.observations['close'][-1]

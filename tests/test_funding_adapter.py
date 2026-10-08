@@ -178,3 +178,46 @@ def test_new_options_are_resolved_or_rejected():
     errors = []
     check_backtest_spec({'sfd': {'manifest': {'backtest': {'prediction_mode': 'target_exposure', 'product': {'kind': 'invalid'}, 'max_holding_seconds': '{holding}', 'execution_data_source': {'method': 'fetch', 'ignored': True}}}, 'params': {'holding': [-1, float('inf')]}}}, errors)
     assert len(errors) >= 4
+
+
+@pytest.mark.parametrize('suffix,stale', [('valid:end', False), ('valid', True)])
+def test_continuous_event_identity_and_partition_support(suffix, stale):
+    inputs, policy = _case([0.5, 0.5, 0.0], fee_bps=0.0, slip_bps=0.0)
+    inputs, policy = _funded(inputs, policy, mechanism='continuous')
+    events = inputs.funding_events.with_columns(pl.when(pl.col('kind') == 'accrual').then(pl.lit(suffix)).otherwise(pl.col('event_id')).alias('event_id'))
+    if stale:
+        row = events.filter(pl.col('kind') == 'accrual').row(0, named=True)
+        row.update(event_id='zz:past', time_ns=inputs.partition_start_ns - NANOSECONDS, start_ns=inputs.partition_start_ns - NANOSECONDS, end_ns=inputs.partition_start_ns - 1, rate_decimal=1.0)
+        events = pl.concat([events, pl.DataFrame([row], schema=events.schema)])
+    binding = source_binding(events, 'declared accrual boundary scenario', inputs.partition_start_ns, inputs.partition_end_ns, 1, 'scenario funding support')
+    result = trade_execution(replace(inputs, funding_events=events, sources=(*inputs.sources, binding)), policy)
+    q = result.fills['quantity_delta'][0]
+    prices, times = inputs.observations['open'].to_list(), inputs.observations['available_at_ns'].to_list()
+    expected = -q * 0.001 * sum(price * (right - left) / NANOSECONDS / 3600 for price, left, right in zip(prices, times, times[1:], strict=False))
+    assert result.metrics['funding_pnl'] == pytest.approx(expected)
+    assert result.funding.filter(pl.col('recognized_delta') != 0)['event_id'].str.starts_with(suffix).all()
+
+
+def test_recorded_valuation_cannot_be_replaced_by_execution_proxy():
+    inputs, policy = _case([0.5, 0.0])
+    inputs, policy = _funded(inputs, policy)
+    funding = replace(policy.funding, valuation='mark', approximation='recorded_exact', params={**policy.funding.params, 'valuation':'mark', 'approximation':'recorded_exact'})
+    with pytest.raises(ValueError, match='recorded valuation'):
+        trade_execution(inputs, replace(policy, funding=funding))
+
+
+def test_payment_slot_coverage_survives_boundary_jitter():
+    inputs, policy = _case([0.5, 0.0], fee_bps=0, slip_bps=0)
+    start, end = inputs.partition_start_ns, inputs.partition_end_ns
+    interval = (end - start) / NANOSECONDS
+    # Declared funding scenario clocks; every execution price/time stays recorded.
+    history = pl.DataFrame({'event_id':['first','last'], 'settlement_at':[start + 1, end + 1], 'settlement_slot_ns':[start,end], 'rate_decimal':[0.001,0.001], 'valuation_price':inputs.observations['open'], 'schedule_start':[start,start], 'schedule_end':[end + 1,end + 1], 'settlement_interval_seconds':[interval,interval], 'settlement_phase_utc_seconds':[start / NANOSECONDS,start / NANOSECONDS]})
+    funding = resolve_funding(FundingConfig(preset='binance_btcusdt', data_source=DataSourceConfig(lambda: history)), {})
+    events = prepare_funding(funding, history, start, end)
+    assert events['time_ns'].to_list() == [start + 1,end + 1]
+    binding = source_binding(events, 'declared settlement jitter scenario', start, end, 1, 'scenario funding support')
+    result = trade_execution(replace(inputs, funding_events=events, sources=(*inputs.sources,binding)), replace(policy, funding=funding))
+    assert result.funding['end_ns'].to_list() == [start + 1]
+    assert result.metrics['funding_pnl'] == pytest.approx(-result.fills['quantity_delta'][0] * inputs.observations['open'][0] * 0.001)
+    with pytest.raises(ValueError, match='coverage'):
+        prepare_funding(funding, history.head(1), start, end)
