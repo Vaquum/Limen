@@ -52,6 +52,7 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
 
 
 def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_splits: list[pl.DataFrame], bars: list[pl.DataFrame], params: Mapping[str, object], *, interval_seconds: object = None) -> PreparedTradeContext:
+    interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params, 'recorded source interval')
     execution = _load(config.execution_data_source, params) if config.execution_data_source is not None else None
     history = _load(config.funding.data_source, params) if config.funding is not None and config.funding.data_source is not None else None
     initial = resolve_number(config.initial_equity, params, 'initial equity')
@@ -75,7 +76,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         if mapping['datetime'].is_duplicated().any():
             raise ValueError('Trade model rows require unambiguous source identity')
         start, end = int(raw_prices['start_ns'][0]), int(raw_prices['available_at_ns'][-1])
-        observations = raw_prices if execution is None else normalize_observations(execution).filter(pl.col('start_ns').is_between(start, end) & (pl.col('available_at_ns') <= end))
+        observations = raw_prices if execution is None else normalize_observations(execution).filter((pl.col('start_ns') <= end) & (pl.col('end_ns') >= start))
         funding = prepare_funding(policy.funding, history, start, end) if policy.funding is not None else None
         sources = [source_binding(observations, f'execution:partition:{index}', start, end, _precision(observations), 'causal_recorded_prices')]
         sources.append(source_binding(mapping, f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))

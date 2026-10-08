@@ -129,7 +129,7 @@ def prepare_funding(policy: FundingPolicy, history: pl.DataFrame | None, start: 
                 expected.update(scheduled_times(max(start, left), min(end, right - 1), row['settlement_interval_seconds'], row['settlement_phase_utc_seconds']))
             _coverage(supports, start, end + 1)
             slots = _history_ns(history, 'settlement_slot_ns').to_list() if 'settlement_slot_ns' in history.columns else times
-            actual = {int(slot) for time, slot in zip(times, slots, strict=True) if start <= int(time) <= end}
+            actual = {int(slot) for slot in slots if start <= int(slot) <= end}
             if actual != expected or len(times) != len(set(times)) or len(slots) != len(set(slots)):
                 raise ValueError('Historical funding payment coverage is incomplete or duplicated')
             for row, time, slot in zip(history.iter_rows(named=True), times, slots, strict=True):

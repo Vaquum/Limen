@@ -64,6 +64,7 @@ class _Account:
     last_fill_ns: int | None = None
     episode: dict[str, JsonValue] | None = None
     pending: dict[str, JsonValue] | None = None
+    queued_signal: dict[str, JsonValue] | None = None
     ready_at_ns: int = 0
     states: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
     intents: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
@@ -80,10 +81,15 @@ class _Account:
         return equity
 
     def intent(self, target: float, time_ns: int, reason: str) -> None:
-        if self.pending is not None:
-            self.pending['status'] = 'replaced' if reason == 'signal' else 'cancelled'
         item: dict[str, JsonValue] = {'intent_id': f'{self.prefix}:intent:{len(self.intents)}', 'episode_id': None if self.episode is None else self.episode['episode_id'], 'requested_at_ns': time_ns, 'target': target, 'reason': reason, 'status': 'pending'}
         self.intents.append(item)
+        if reason == 'signal' and self.pending is not None and self.pending['reason'] != 'signal':
+            if self.queued_signal is not None:
+                self.queued_signal['status'] = 'replaced'
+            self.queued_signal = item
+            return
+        if self.pending is not None:
+            self.pending['status'] = 'replaced' if reason == 'signal' else 'cancelled'
         self.pending = item
         self.ready_at_ns = time_ns + (round(self.policy.execution_lag_seconds * NANOSECONDS) if reason == 'signal' else 0)
 
@@ -97,7 +103,7 @@ class _Account:
             self.latched = False
         if changed:
             self.last_signal = signal
-            if not self.latched and (self.pending is None or self.pending['reason'] == 'signal'):
+            if not self.latched:
                 fraction = self.policy.notional_rate * signal
                 if abs(fraction) > self.policy.max_exposure:
                     raise ValueError('Target exceeds resolved maximum exposure')
@@ -156,7 +162,7 @@ class _Account:
                     self.basis = 0.0
 
     def reconcile(self, price: float, event: ExecutionEvent) -> None:
-        if self.pending is not None and event.time_ns >= self.ready_at_ns:
+        while self.pending is not None and event.time_ns >= self.ready_at_ns:
             target = cast(float, self.pending['target'])
             if target * self.quantity < 0:
                 opposite = target
@@ -168,7 +174,9 @@ class _Account:
                 raise ValueError('Reconciliation lost its pending intent')
             quantity = _target_quantity(self.quantity, self.equity(price), price, cast(float, self.pending['target']), self.policy)
             self.fill(quantity, price, event)
-            self.pending = None
+            self.pending, self.queued_signal = self.queued_signal, None
+            if self.pending is not None:
+                self.ready_at_ns = cast(int, self.pending['requested_at_ns']) + round(self.policy.execution_lag_seconds * NANOSECONDS)
 
     def record(self, time_ns: int, price: float, event_id: str, signal_sample: bool) -> None:
         equity = self.equity(price)
@@ -223,6 +231,8 @@ def _fund(account: _Account, adapter: FundingAdapter, row: dict[str, object], st
         raise ValueError('Funding event requires a resolved policy')
     if kind == 'accrual' and policy.approximation == 'recorded_exact' and policy.params.get('history_interpretation') == 'integrated' and account.last_fill_ns is not None and cast(int, row['start_ns']) < account.last_fill_ns < cast(int, row['end_ns']):
         raise ValueError('Integrated funding with intrainterval inventory changes requires finer evidence or sampled integration')
+    if row['valuation_price'] is None and kind != 'cash_settlement' and (policy.valuation != 'execution_proxy' or policy.approximation == 'recorded_exact'):
+        raise ValueError('Funding requires its recorded valuation under the declared valuation policy')
     valuation = price if row['valuation_price'] is None else finite_number(row['valuation_price'], 'funding valuation')
     context = FundingContext(f'{row["event_id"]}:{start}:{end}', start, end, cast(Literal['payment', 'accrual', 'cash_settlement'], kind), account.accrued_funding, account.quantity, valuation, finite_number(row['rate_decimal'], 'funding rate'), finite_number(row['rate_basis_seconds'], 'rate basis'), policy.mechanism, policy.currency)
     flow = adapter(context, params=policy.params)
@@ -256,7 +266,7 @@ def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
                 if event.kind == 'funding':
                     row = funding[str(event.source_row_id)]
                     if row['kind'] == 'accrual':
-                        if not event.event_id.endswith(':end'):
+                        if event.time_ns < cast(int, row['end_ns']):
                             active = row
                         elif active is row:
                             active = None

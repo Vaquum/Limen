@@ -38,7 +38,7 @@ def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
         if policy.max_price_gap_seconds is not None and (end - start > policy.max_price_gap_seconds * NANOSECONDS or (previous_end is not None and start - previous_end > policy.max_price_gap_seconds * NANOSECONDS)):
             raise ValueError('Execution price gap exceeds declared precision')
         previous_end, previous_available = end, available
-    if int(observations['start_ns'][0]) > inputs.partition_start_ns or int(observations['end_ns'][-1]) < inputs.partition_end_ns:
+    if int(observations['start_ns'][0]) > inputs.partition_start_ns or int(observations['available_at_ns'][-1]) < inputs.partition_end_ns:
         raise ValueError('Execution source does not cover the declared partition')
     if not inputs.sources:
         raise ValueError('Execution source binding is required')
@@ -83,6 +83,8 @@ def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[Executio
         if not any(source.checksum == fingerprint for source in inputs.sources):
             raise ValueError('Funding source fingerprint changed')
         for row in inputs.funding_events.iter_rows(named=True):
+            if row['kind'] == 'accrual' and (int(row['end_ns']) <= inputs.partition_start_ns or int(row['start_ns']) >= inputs.partition_end_ns):
+                continue
             time = max(inputs.partition_start_ns, int(row['time_ns'])) if row['kind'] == 'accrual' else int(row['time_ns'])
             events.append(ExecutionEvent(f'funding:{row["event_id"]}', time, 'funding', str(row['event_id']), time))
             if row['kind'] == 'accrual':
