@@ -189,9 +189,7 @@ class _Account:
 
 def _barrier_price(account: _Account, observation: dict[str, object], event: ExecutionEvent) -> tuple[float, str] | None:
     policy = account.policy
-    if account.episode is None or (policy.take_profit_bps is None and policy.stop_loss_bps is None):
-        return None
-    if event.observation_phase == 'close' and cast(int, account.episode['first_fill_ns']) >= int(cast(int, observation['end_ns'])):
+    if account.episode is None or (policy.take_profit_bps is None and policy.stop_loss_bps is None) or (event.observation_phase == 'close' and cast(int, account.episode['first_fill_ns']) >= int(cast(int, observation['end_ns']))):
         return None
     if event.observation_phase == 'close' and account.last_fill_ns is not None and account.last_fill_ns > int(cast(int, observation['start_ns'])):
         raise ValueError('Pre-entry/resize OHLC extrema require finer execution evidence')
