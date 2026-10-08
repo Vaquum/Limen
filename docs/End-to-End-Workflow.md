@@ -1,5 +1,7 @@
 # End-to-End Workflow
 
+For a native direction/sizing model trained from simulated trade outcomes, use the [direction/sizing workflow](Reference-Architecture.md#direction-and-sizing). It preserves signed exposure through experiment export, Trainer and Sensor; downstream execution parity requires the corresponding integration.
+
 This guide takes a contributor from a fresh checkout to a benchmarked classifier using the current YAML-first surface.
 
 ## Prerequisites

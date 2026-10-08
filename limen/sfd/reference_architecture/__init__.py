@@ -19,10 +19,8 @@ from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
 
 __all__ = [
-    'DirectionSizingModel',
-    'direction_sizing',
-
     'DLinearRegressor',
+    'DirectionSizingModel',
     'LightGBMBinary',
     'LogRegBinary',
     'RandomBinary',
@@ -31,6 +29,7 @@ __all__ = [
     'RuleBasedStrategy',
     'TabPFNBinary',
     'XGBoostRegressor',
+    'direction_sizing',
     'dlinear_regressor',
     'lightgbm_binary',
     'logreg_binary',

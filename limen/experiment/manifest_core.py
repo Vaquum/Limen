@@ -1,7 +1,6 @@
-from limen.backtest.trade_contract import TradePolicy, contract_digest
+from limen.backtest.trade_contract import TradePolicy
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import PreparedFolds, sensor_decisions, target_context
-from limen.experiment._resolve_trade_policy import resolve_json
+from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
@@ -14,6 +13,7 @@ import importlib
 import logging
 import random
 import re
+from functools import partial
 from datetime import date
 from datetime import datetime
 from itertools import pairwise
@@ -1044,16 +1044,6 @@ class MLManifest(Manifest):
         round_params: dict[str, Any]
     ) -> dict[str, Any]:
 
-        '''
-        Compute final data dictionary from raw data using the ML pipeline.
-
-        Args:
-            raw_data (pl.DataFrame): Raw input dataset
-            round_params (Dict[str, Any]): Parameter values for current round
-
-        Returns:
-            dict: Final data dictionary ready for model training
-        '''
 
         split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
         outcome_target = self.target_class_config is not None and bool(getattr(self.target_class_config.target_class, 'requires_trade_context', False))
@@ -1155,29 +1145,14 @@ class MLManifest(Manifest):
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
         if outcome_target:
-            if trade is None or raw_features is None:
-                raise ValueError('Missing training-only trade outcome preparation')
-            data_dict['_trade_labels'] = OutcomeLabels(pl.concat([labels.rows for labels in private_labels]), contract_digest({'partitions': [labels.contract_digest for labels in private_labels]}))
-            data_dict['_fitted_params'] = {key: value for key, value in all_fitted_params.items() if not key.startswith('_target_cls_')}
-            data_dict['_fold_preparation'] = _prepare_folds(self, raw_features, split_data[0], trade.model_rows[0], dict(round_params))
+            attach_outcomes(data_dict, private_labels, raw_features, split_data[0],
+                scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
+                deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
         return data_dict
 
     @override
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
-        '''
-        Execute model training and evaluation, injecting resolved calibration config when configured.
-
-        Args:
-            data (dict): Prepared data dictionary
-            round_params (dict[str, Any]): Parameter values for current round
-
-        Returns:
-            dict: Results including predictions, metrics, and optional extras
-
-        NOTE: Calibration injection honours use_calibration and use_threshold round_params flags
-        (both default True). Setting either to False masks that step while keeping the other active.
-        '''
 
         model_kwargs = self.resolve_model_kwargs(round_params)
         if self.architecture_function is None:
@@ -1207,11 +1182,7 @@ class MLManifest(Manifest):
                 )
                 model_kwargs['prediction_calibration_config'] = config
         self._apply_backtest_cost(data, round_params)
-        if '_trade_labels' in data and not getattr(self.architecture_function, 'requires_trade_outcomes', False):
-            raise ValueError('This architecture cannot fit unavailable trade labels; use an architecture with private availability masks')
-        for key in ('direction_params', 'sizing_params'):
-            if key in model_kwargs and model_kwargs[key] is not None:
-                model_kwargs[key] = resolve_json(model_kwargs[key], round_params)
+        resolve_component_kwargs(self.architecture_function, data, model_kwargs, round_params)
         return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
 
     def sensor_input_prep(
@@ -1721,19 +1692,6 @@ def _apply_class_based_target(
         is_training: bool, *, trade_context: object = None, labels: list[OutcomeLabels] | None = None
 ) -> tuple[pl.DataFrame, dict[str, Any]]:
 
-    '''
-    Fit or reuse the configured target class and apply it to the split.
-
-    Args:
-        manifest (Manifest): Manifest holding the target class config
-        data (pl.DataFrame): Split DataFrame to transform
-        round_params (dict[str, Any]): Current round parameters for template resolution
-        all_fitted_params (dict[str, Any]): Shared store for fitted instances across splits
-        is_training (bool): Whether this is the training split; fits the instance if True
-
-    Returns:
-        tuple[pl.DataFrame, dict[str, Any]]: Transformed data and updated fitted params
-    '''
 
     source_data = data
     if _SOURCE_ROW in data.columns:
@@ -2110,28 +2068,3 @@ def _finalize_rule_based_data(
     }
 
     return data_dict
-
-
-def _prepare_folds(manifest: MLManifest, raw: pl.DataFrame, retained: pl.DataFrame, identities: pl.DataFrame, params: dict[str, object]) -> PreparedFolds:
-    selected = retained.select('datetime').join(raw, on='datetime', how='left', maintain_order='left')
-    mapping = retained.select('datetime').join(identities, on='datetime', how='left', maintain_order='left')
-    row_ids = tuple(str(value) for value in mapping['row_id'])
-    positions = {identity: index for index, identity in enumerate(row_ids)}
-
-    def transform(train_rows: Sequence[str], predict_rows: Sequence[str]) -> tuple[pl.DataFrame, pl.DataFrame]:
-        train = selected[[positions[row] for row in train_rows]]
-        predict = selected[[positions[row] for row in predict_rows]]
-        fitted: dict[str, object] = {}
-        train, fitted = _apply_scaler(manifest, train, params, fitted, True)
-        context_rows = max((int(getattr(value, 'context_rows', 0)) for value in fitted.values()), default=0)
-        prefix = selected[[positions[row] for row in train_rows]].tail(context_rows)
-        predict, fitted = _apply_scaler(manifest, pl.concat([prefix, predict]), params, fitted, False)
-        predict = predict.slice(prefix.height)
-        transformed, _ = _apply_pca_compression(manifest, [train, predict, predict], params, fitted)
-        features = [name for name in transformed[0].columns if name != 'datetime']
-        if any(transformed[index].select(features).null_count().sum_horizontal()[0] for index in (0, 1)):
-            raise ValueError('Fold preprocessing has unavailable features; provide sufficient causal context')
-        return transformed[0].select(features), transformed[1].select(features)
-
-    deterministic = manifest.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in manifest.feature_transforms)
-    return PreparedFolds(selected.drop('datetime'), row_ids, deterministic, transform)

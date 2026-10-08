@@ -11,7 +11,7 @@ from tests.test_target_exposure import FIXTURE, _case
 
 
 def target_case(count=8, **params):
-    inputs, policy = _case([1.0] * count, max_holding_seconds=900, **params)
+    inputs, policy = _case([1.0] * count, **{'max_holding_seconds':900, **params})
     frame = pl.read_parquet(FIXTURE).head(count)
     inputs = replace(inputs, signals=inputs.signals.with_columns(frame['datetime']))
     context = TradeTargetContext(policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(policy, inputs)))
@@ -59,23 +59,46 @@ def test_split_tail_and_future_isolation():
     observations = future.observations
     binding = source_binding(observations, str(FIXTURE), context.partition_start_ns, context.partition_end_ns, 1, 'recorded out-of-partition observations')
     extended = replace(context, inputs=replace(context.inputs, observations=observations, sources=(*context.inputs.sources, binding)))
+    extended = replace(extended, contract_digest=contract_digest(export_trade_contract(extended.policy, extended.inputs)))
     assert target.transform(frame, trade_context=extended).equals(original)
     with pytest.raises(ValueError, match='bounds'):
         target.transform(frame, trade_context=replace(context, partition_end_ns=context.partition_end_ns + 1))
+    with pytest.raises(ValueError, match='bound execution contract'):
+        target.transform(frame, trade_context=replace(context, policy=replace(context.policy, fee_bps=1)))
+    frame, context = target_case(count=80, max_holding_seconds=None, take_profit_bps=100)
+    target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
+    target.transform(frame, trade_context=context)
+    available = target.outcomes.rows['long_available'].to_list()
+    assert any(not available[index] and any(available[index+1:]) for index in range(1,len(available)-1))
 
 
 def test_auxiliary_targets_do_not_enter_features():
     from tests.test_direction_sizing import native_manifest, recorded_source
+    from limen.scalers import RobustScaler
+    from limen.indicators import roc
+    from unittest.mock import patch
+    from limen.targets.trade_outcome import _candidate
 
     source = recorded_source()
-    manifest = native_manifest()
-    data = manifest.prepare_data(source, {})
+    manifest = native_manifest().set_scaler(RobustScaler).set_pca_compression()
+    manifest.add_indicator(roc,period=2).add_indicator(roc,period=4).set_feature_ablation()
+    params = {'auto_pca':True, 'pca_k':2, 'feature_drop_count':1, 'feature_drop_seed':42}
+    data = manifest.prepare_data(source, params)
     assert data['x_test'].height == data['_trade_context'].partitions[2].signals.height
     assert data['x_test'].height > data['_trade_labels'].rows.filter(pl.col('row_id').str.starts_with('partition:2:') & pl.col('long_available') & pl.col('short_available')).height
     assert not any(name.startswith(('long_', 'short_')) or name.endswith('_ns') or name == 'outcome' for name in data['x_train'].columns)
-    sensor_data, _ = manifest.sensor_input_prep(source, data['_fitted_params'], {})
+    sensor_data, _ = manifest.sensor_input_prep(source, data['_fitted_params'], params)
     assert not any(name.startswith(('long_', 'short_')) or name == 'outcome' for name in sensor_data.columns)
     assert '__trade_available_at_ns__' in sensor_data.columns
+    def change_labels(*args):
+        result = _candidate(*args)
+        return {**result,'return':None if result['return'] is None else -result['return']}
+
+    with patch('limen.targets.trade_outcome._candidate', side_effect=change_labels):
+        perturbed = manifest.prepare_data(source, params)
+    for split in ('train','val','test'):
+        assert data[f'x_{split}'].equals(perturbed[f'x_{split}'])
+    assert data['_fold_preparation'].raw_features.equals(perturbed['_fold_preparation'].raw_features)
 
 
 def test_zero_is_unprofitable_and_missing_context_fails():

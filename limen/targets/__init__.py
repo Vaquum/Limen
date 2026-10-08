@@ -16,10 +16,6 @@ from limen.targets.triple_barrier import TripleBarrierTarget
 from limen.targets.vol_normalized_return import VolNormalizedReturnTarget
 
 __all__ = [
-    'TradeOutcomeTarget',
-    'TradeTargetContext',
-    'OutcomeLabels',
-
     'EmaBreakoutTarget',
     'ExitQualityTarget',
     'ForwardBreakoutTarget',
@@ -28,10 +24,13 @@ __all__ = [
     'NextBarDownTarget',
     'NextBarUpTarget',
     'NextReturnTarget',
+    'OutcomeLabels',
     'QuantileBinaryTarget',
     'RandomBinaryTarget',
     'RiskRewardRatioTarget',
     'ThresholdBinaryTarget',
+    'TradeOutcomeTarget',
+    'TradeTargetContext',
     'TradelineLongBinaryTarget',
     'TripleBarrierTarget',
     'VolNormalizedReturnTarget',
