@@ -1496,4 +1496,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.15.1] - 2026-10-09
 
+- Reject negative momentum periods and Ichimoku displacement that expose future prices; preserve zero, positive and default settings (#863).
+- Rerun evaluations that passed a negative momentum period or Ichimoku displacement; their features read future prices.
+
+## [5.15.2] - 2026-10-09
+
 - Preserve computed precision in all snapshot backtest ledger columns so sparse returns, costs, and inventory remain distinguishable and rank by their actual values.
