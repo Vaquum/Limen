@@ -31,7 +31,7 @@ ps = ParamSpace(
 
 This declares a total Cartesian space of `8` combinations and samples `3` permutations.
 
-Then repeated `generate(random_search=False)` calls returned the remaining sampled combinations in order from the internal sampled pool, not from the full original grid.
+By default, `generate(random_search=False)` consumes the sampled pool in order. Construct with `sample=False` to select the first `n_permutations` combinations from the declared grid; then `generate(random_search=False)` enumerates that prefix, with the first parameter varying fastest. Standard `UniversalExperimentLoop.run(random_search=False)` selects and consumes this deterministic prefix.
 
 `ParamSpace` uses an instance-local random generator. Pass `seed=` for reproducible legacy sampling; it does not read or mutate Python's module-global random state. Standard `UniversalExperimentLoop` construction does not expose that seed, so instantiate `ParamSpace` directly when you need seeded legacy helper sampling. This legacy helper is outside the artifact-backed `round_params` reproducibility contract.
 

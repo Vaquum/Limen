@@ -76,9 +76,10 @@ class ParamSpace:
             or equal to the total parameter space, all combinations are
             enumerated instead of sampled.
         seed (int | None): Optional seed for reproducible legacy sampling.
+        sample (bool): Sample a subset; False selects the declared grid prefix.
     '''
 
-    def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None = None) -> None:
+    def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None = None, *, sample: bool = True) -> None:
 
         super().__init__()
 
@@ -90,9 +91,11 @@ class ParamSpace:
         for size in self.param_sizes:
             self.total_space *= size
 
-        # Generate n_permutations unique random indices
+        # Select the requested prefix or sample unique indices
         if n_permutations >= self.total_space:
             indices = list(range(self.total_space))
+        elif not sample and n_permutations >= 0:
+            indices = list(range(n_permutations))
         elif self.total_space <= sys.maxsize:
             indices = self._rng.sample(range(self.total_space), n_permutations)
         else:
