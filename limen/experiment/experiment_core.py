@@ -171,29 +171,11 @@ class UniversalExperimentLoop:
             progress_bar: bool = True,
             record_execution: bool = False) -> None:
 
-        '''
-        Run the experiment `n_permutations` times.
+        '''Run up to n_permutations rounds.
 
-        NOTE: When search_strategy was provided to __init__, dispatches to
-        _run_with_msq for MSQ-based execution. Legacy parameters
-        (random_search, maintain_details_in_params, params,
-        prep, model) are ignored in that path.
-
-        Args:
-            experiment_name (str): The name of the experiment
-            n_permutations (int): The number of permutations to run
-            prep_each_round (bool): Whether to use `prep` for each round or just first; manifest-driven SFDs require True
-            random_search (bool): Whether to use random search or not
-            maintain_details_in_params (bool): Whether to maintain experiment details in params
-            context_params (dict): The context parameters to use for the experiment
-            params (Callable | None): Callable that returns the parameters dict
-            prep (Callable | None): Callable to prepare the data
-            model (Callable | None): Callable to run the model
-            resume (bool): Whether to resume from an existing checkpoint
-            post_processing (bool): Whether to compute terminal post-run metrics
-            progress_bar (bool): Whether to render the experiment progress bar
-            record_execution (bool): Persist scaled test snapshot series; requires search_strategy and experiment_dir
-
+        Manifest-driven SFDs require prep_each_round=True. With search_strategy,
+        MSQ ignores random_search, maintain_details_in_params, params, prep and model.
+        Execution recording requires search_strategy and experiment_dir.
         '''
 
         if not isinstance(record_execution, bool):
@@ -471,23 +453,7 @@ class UniversalExperimentLoop:
                       post_processing: bool = False,
                       progress_bar: bool = True) -> None:
 
-        '''
-        Run the experiment using the Mutable-Search-Queue based execution flow.
-
-        NOTE: Called by run() when search_strategy is configured. Sets up
-        MSQ, FeedbackController, and CheckpointManager, then iterates
-        over parameter combinations with feedback and checkpoint triggers.
-        Data is always prepared each round.
-
-        Args:
-            experiment_name (str): The name of the experiment
-            n_permutations (int): Maximum number of combinations to run
-            context_params (dict | None): Static parameters merged into each round
-            resume (bool): Whether to resume from an existing checkpoint
-            post_processing (bool): Whether to compute terminal post-run metrics
-            progress_bar (bool): Whether to render the experiment progress bar
-
-        '''
+        '''Run MSQ with per-round preparation, feedback and checkpoints.'''
 
         self._validate_msq_preconditions(resume=resume)
 
