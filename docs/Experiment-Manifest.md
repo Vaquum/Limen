@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.17.2"
+  limen_version: "5.17.3"
   mode: development
 
 sfd:
@@ -346,7 +346,7 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 ### `set_required_bar_columns(columns)`
 
-Require bar formation to leave the downstream columns declared by the experiment. A missing column raises `AssertionError` under both normal Python and `python -O`.
+Declare the downstream columns that bar preparation must retain. After any configured bar formation completes, or directly for base bars, preparation first reads `datetime`, whether or not it was declared; its absence raises Polars `ColumnNotFoundError`. If that read succeeds, any missing declared column raises `AssertionError` under both normal Python and `python -O`.
 
 ```python-fragment
 .set_required_bar_columns([

@@ -1530,3 +1530,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.17.2] - 2026-10-09
 
 - Retain accepted ML YAML data-source parameter overrides in the compiled manifest instead of discarding the returned clone (#632). Apply these previously ignored overrides when recompiling saved experiment YAML as well.
+
+## [5.17.3] - 2026-10-09
+
+- Clarify post-formation column checks and datetime error precedence in required-bar-column documentation (#888; #882).
