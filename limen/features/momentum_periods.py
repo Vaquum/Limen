@@ -21,10 +21,8 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price
         periods = DEFAULT_MOMENTUM_PERIODS
     if any(period < 0 for period in periods):
         raise ValueError('periods must be non-negative to avoid future prices')
-    momentum_expressions: list[pl.Expr] = []
-    for period in periods:
-        momentum_expressions.append(
-            pl.col(price_col).pct_change(period).alias(f'momentum_{period}')
-        )
+    momentum_expressions = [
+        pl.col(price_col).pct_change(period).alias(f'momentum_{period}') for period in periods
+    ]
 
     return data.with_columns(momentum_expressions)
