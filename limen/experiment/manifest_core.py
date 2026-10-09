@@ -653,7 +653,7 @@ class Manifest:
                 raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
             if sum(sc) == 0:
                 raise ValueError('split_config ratios must not all be zero')
-            new_manifest.set_split_config(*cast(tuple[int, int, int], sc))
+            _ = new_manifest.set_split_config(*cast(tuple[int, int, int], sc))
             # Ratio override supersedes a previously-pinned date split.
             # Without this, _resolve_split would keep using split_dates and
             # the override would silently no-op (e.g. Trainer.train_sensors
