@@ -1488,4 +1488,4 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.14.4] - 2026-10-09
 
-- Resolve searched null holding, timer and price-gap controls as disabled, matching literal None and YAML validation.
+- Resolve searched null holding, timer and price-gap controls as disabled within configured event execution, matching literal None and YAML validation (#867; #860); reject required null trade numbers at the finite-number resolver.

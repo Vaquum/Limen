@@ -302,7 +302,7 @@ Resizes retain episode ID, first actual fill time and original barrier anchor. A
 
 `max_holding_seconds` measures elapsed UTC time from first fill. Expiry is requested at the first declared signal or timer event reaching that deadline. `timer_interval_seconds` adds checks on the UTC epoch grid with `timer_phase_utc_seconds`; timers make no predictions. Requests remain pending until a recorded admissible price arrives. End marking leaves open episodes open and charges no invented close fee.
 
-`max_holding_seconds`, `timer_interval_seconds` and `max_price_gap_seconds` accept `None` to disable the control, including `null` candidates selected through a `{param}` search reference.
+`max_holding_seconds`, `timer_interval_seconds` and `max_price_gap_seconds` accept `None` to disable the control in event execution, including `null` candidates selected through a `{param}` search reference; a reference still requires explicit product metadata, and a null price-gap bound retains recorded interval/availability requirements.
 
 Execution observations carry `row_id, start_ns, end_ns, open_available_at_ns, available_at_ns, open, high, low, close`; times are integer UTC nanoseconds. Points have equal start/end and one recorded price. OHLC opens are usable at known starts, close/extrema only at availability. Held barriers process SL before TP, with adverse gaps and interval uncertainty. Whole-interval extrema cannot be applied to inventory entered/resized inside that interval.
 
