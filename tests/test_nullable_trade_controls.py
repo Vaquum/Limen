@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import polars as pl
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from limen.cli.commands.run import run_experiment
 from limen.data import HistoricalData
@@ -105,7 +105,8 @@ def test_nullable_yaml_search_completes_both_rounds(field, candidates, monkeypat
     }
     config = {'schema_version': '1.0', 'metadata': {'name': 'nullable_search', 'mode': 'development'}, 'sfd': {'manifest': manifest, 'params': {'candidate': candidates}}, 'uel': {'n_permutations': 2, 'search_strategy': {'type': 'grid'}, 'output_format': 'csv'}}
     path = tmp_path / 'search.yaml'
-    path.write_text(yaml.safe_dump(config))
+    with path.open('w') as stream:
+        YAML().dump(config, stream)
     assert run_experiment(path, results_base=tmp_path, progress_bar=False)
     records = [json.loads(line) for line in next(tmp_path.rglob('round_data.jsonl')).read_text().splitlines()]
     assert len(records) == 2
