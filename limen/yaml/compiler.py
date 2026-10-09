@@ -81,6 +81,9 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
     _apply_ml_extras(manifest, m)
     _apply_strict_mode(manifest, m)
     _ = manifest.with_reference_architecture(resolve(m['reference_architecture']))
+    po = m.get('params_override')
+    if po is not None:
+        manifest = cast(MLManifest, manifest.with_params_override(**dict(po)))
     return manifest
 
 
@@ -278,10 +281,6 @@ def _apply_ml_extras(manifest: MLManifest, m: dict[str, Any]) -> None:
     dde = m.get('data_dict_extension')
     if dde is not None:
         _ = manifest.add_to_data_dict(resolve(dde['func']))
-
-    po = m.get('params_override')
-    if po is not None:
-        _ = manifest.with_params_override(**dict(po))
 
     mp = m.get('metrics_params')
     if mp is not None:

@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.17.1"
+  limen_version: "5.17.4"
   mode: development
 
 sfd:
@@ -346,7 +346,7 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 ### `set_required_bar_columns(columns)`
 
-Require bar formation to leave the downstream columns declared by the experiment. A missing column raises `AssertionError` under both normal Python and `python -O`.
+Declare the downstream columns that bar preparation must retain. After any configured bar formation completes, or directly for base bars, preparation first reads `datetime`, whether or not it was declared; its absence raises Polars `ColumnNotFoundError`. If that read succeeds, any missing declared column raises `AssertionError` under both normal Python and `python -O`.
 
 ```python-fragment
 .set_required_bar_columns([
@@ -943,6 +943,8 @@ manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
 The original manifest remains unchanged.
+
+For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Source parameter names are checked during compilation; source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
 
 ## What `prepare_data()` Produces
 

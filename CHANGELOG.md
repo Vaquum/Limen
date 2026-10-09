@@ -1527,7 +1527,15 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add opt-in test probabilities, applied thresholds and actual boosting iteration counts.
 
-## [5.17.1] - 2026-10-09
+## [5.17.2] - 2026-10-09
+
+- Retain accepted ML YAML data-source parameter overrides in the compiled manifest instead of discarding the returned clone (#632). Apply these previously ignored overrides when recompiling saved experiment YAML as well.
+
+## [5.17.3] - 2026-10-09
+
+- Clarify post-formation column checks and datetime error precedence in required-bar-column documentation (#888; #882).
+
+## [5.17.4] - 2026-10-09
 
 - Record each ablation round’s actual dropped features as JSON text in CSV, in-memory logs and parquet, including zero-drop and failed rounds (#871); retain that column through post-processing and new-format resumes.
 - Reject pre-fix ablation CSV resumes or appends missing the column before rewriting artifacts; start a new experiment directory or results file. Decode the result field with `json.loads` for exact feature membership.
