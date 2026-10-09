@@ -309,8 +309,8 @@ def test_tp_sl_real_fixture_fill_costs_and_sizing(market):
         assert result.gross[exit_row] == pytest.approx(X / columns['close'][exit_row-1] - 1)
         scaled, unscaled_result = _snapshot_with_execution(columns, fee_bps=10, slip_bps=5, notional_rate=0.5, **options)
         np.testing.assert_equal(unscaled_result.net, result.net)
-        assert scaled['inventory_per_bar'] == round(result.pos.mean() * 0.5, 4)
-        assert scaled['pnl_per_bar_bps'] == round(result.net.mean() * 0.5 * 10000, 1)
+        assert scaled['inventory_per_bar'] == pytest.approx(result.pos.mean() * 0.5)
+        assert scaled['pnl_per_bar_bps'] == pytest.approx(result.net.mean() * 0.5 * 10000)
         assert scaled['trades_per_bar'] == ledger['trades_per_bar']
 
 

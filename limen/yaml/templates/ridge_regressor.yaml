@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: ridge_regressor_experiment
-  limen_version: "5.15.4"
+  limen_version: "5.15.5"
   mode: development
   description: Ridge regression predicting next-period return
 
