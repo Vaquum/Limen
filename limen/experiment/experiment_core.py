@@ -144,6 +144,7 @@ class UniversalExperimentLoop:
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
         self._record_execution = False
+        self._record_model_outputs = False
         self.round_params: list[dict[str, Any]] = []
         self.preds: list[Any] = []
         self.scalers: list[Any] = []
@@ -169,7 +170,8 @@ class UniversalExperimentLoop:
             resume: bool = False,
             post_processing: bool = False,
             progress_bar: bool = True,
-            record_execution: bool = False) -> None:
+            record_execution: bool = False,
+            record_model_outputs: bool = False) -> None:
 
         '''
         Run the experiment `n_permutations` times.
@@ -193,6 +195,7 @@ class UniversalExperimentLoop:
             post_processing (bool): Whether to compute terminal post-run metrics
             progress_bar (bool): Whether to render the experiment progress bar
             record_execution (bool): Persist scaled test snapshot series; requires search_strategy and experiment_dir
+            record_model_outputs (bool): Persist test probabilities and boosting iteration counts
 
         '''
 
@@ -201,6 +204,11 @@ class UniversalExperimentLoop:
         if record_execution and (self._search_strategy is None or self._experiment_dir is None):
             raise ValueError('record_execution=True requires search_strategy and experiment_dir')
         self._record_execution = record_execution
+        if not isinstance(record_model_outputs, bool):
+            raise ValueError('record_model_outputs must be a bool')
+        if record_model_outputs and (self._search_strategy is None or self._experiment_dir is None):
+            raise ValueError('record_model_outputs=True requires search_strategy and experiment_dir')
+        self._record_model_outputs = record_model_outputs
 
         self.round_params = []
         self.models = []
@@ -582,8 +590,10 @@ class UniversalExperimentLoop:
                     warnings.simplefilter('always')
                     data_dict = self.prep(self.data, round_params=sfd_params)
                     data_dict['_record_execution'] = self._record_execution
+                    data_dict['_record_model_outputs'] = self._record_model_outputs
                     if '_alignment' in data_dict:
                         data_dict['_alignment'].pop('execution', None)
+                        data_dict['_alignment'].pop('model_outputs', None)
                     round_results = self.model(
                         data=data_dict, round_params=sfd_params,
                     )
@@ -857,6 +867,8 @@ class UniversalExperimentLoop:
         metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
         if metadata.get('record_execution', False) != self._record_execution:
             raise ValueError('Cannot resume with a different record_execution setting')
+        if metadata.get('record_model_outputs', False) != self._record_model_outputs:
+            raise ValueError('Cannot resume with a different record_model_outputs setting')
         domain.set_state(checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
 
@@ -1022,6 +1034,8 @@ class UniversalExperimentLoop:
         }
         if self._record_execution:
             metadata['record_execution'] = True
+        if self._record_model_outputs:
+            metadata['record_model_outputs'] = True
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
@@ -1119,6 +1133,8 @@ class UniversalExperimentLoop:
 
         if self._record_execution:
             entry['execution'] = alignment.get('execution')
+        if self._record_model_outputs:
+            entry.update(alignment.get('model_outputs', {'probs': None}))
 
         with round_data_path.open('a') as f:
             _ = f.write(json.dumps(entry) + '\n')

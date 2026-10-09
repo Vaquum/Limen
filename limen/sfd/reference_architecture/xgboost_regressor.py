@@ -86,6 +86,13 @@ class XGBoostRegressor(ReferenceModel):
 
         results = continuous_metrics(data, preds)
         results['_preds'] = preds
+        if data.get('_record_model_outputs'):
+            booster = self.model.get_booster()
+            best = booster.attr('best_iteration')
+            results['best_iteration'] = (
+                int(best) + 1 if best is not None and self.model.booster != 'gblinear'
+                else booster.num_boosted_rounds()
+            )
 
         if inline_metrics:
             y_test = np.asarray(data['y_test'])

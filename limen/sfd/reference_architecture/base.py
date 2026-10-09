@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Mapping
 from typing import Any, ClassVar, Literal
 
 import numpy as np
@@ -132,6 +133,18 @@ class ReferenceModel(ABC):
         if '_trade_context' in data:
             options['_trade_context'] = data['_trade_context']
         return options
+
+    def _record_probabilities(self, data: Mapping[str, object], prediction: Mapping[str, object]) -> None:
+        if data.get('_record_model_outputs'):
+            alignment = data['_alignment']
+            if not isinstance(alignment, dict):
+                raise TypeError('Model output recording requires an alignment mapping')
+            threshold = prediction.get('optimal_threshold')
+            alignment['model_outputs'] = {
+                'probs': np.asarray(prediction['_probs']).tolist(),
+                'optimal_threshold': 0.5 if threshold is None else threshold,
+                'threshold_rule': '>' if threshold is None else '>=',
+            }
 
     def _compute_backtest(self,
                           preds: npt.NDArray[np.integer[Any] | np.floating[Any]],

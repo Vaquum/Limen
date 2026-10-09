@@ -76,6 +76,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
             resume=True,
             progress_bar=progress_bar,
             record_execution=uel_cfg.get('record_execution', False),
+            record_model_outputs=uel_cfg.get('record_model_outputs', False),
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
