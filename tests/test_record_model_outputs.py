@@ -304,6 +304,24 @@ def test_cli_records_and_resumes_independently_of_execution(record_execution, re
     assert sensors[0].predict(recorded_bars).reason is None
 
 
+def test_cli_resume_uses_python_effective_setting(recorded_bars, tmp_path, monkeypatch):
+    config = _config()
+    assert 'record_model_outputs' not in config['uel']
+    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(recorded_source))
+    first = _loop(config, recorded_bars, tmp_path)
+    _stop_after_first(first)
+    _run(first, record_model_outputs=True)
+    result = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    records = _records(tmp_path)
+    assert len(records) == 2
+    for record in records:
+        _assert_predictions(record)
+    metadata = json.loads((tmp_path / 'metadata.json').read_text())
+    assert metadata['record_model_outputs'] is True
+    assert 'record_model_outputs' not in metadata['yaml_reference']['uel']
+
+
 @pytest.mark.parametrize('kind', ('ridge', 'xgboost'))
 def test_architectures_without_probabilities_record_null(kind, recorded_bars, tmp_path):
     loop = _loop(_config(kind), recorded_bars, tmp_path)

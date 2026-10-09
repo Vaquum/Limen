@@ -184,7 +184,7 @@ class UniversalExperimentLoop:
         if record_execution and (self._search_strategy is None or self._experiment_dir is None):
             raise ValueError('record_execution=True requires search_strategy and experiment_dir')
         self._record_execution = record_execution
-        if not isinstance(record_model_outputs, bool):
+        if type(record_model_outputs) is not bool:
             raise TypeError('record_model_outputs must be a bool')
         if record_model_outputs and (self._search_strategy is None or self._experiment_dir is None):
             raise ValueError('record_model_outputs=True requires search_strategy and experiment_dir')
@@ -984,7 +984,7 @@ class UniversalExperimentLoop:
                 'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. Trainer requires a reimportable SFD module.'
             )
 
-        metadata = {
+        metadata: dict[str, object] = {
             'sfd_module': self._sfd_module_name,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
