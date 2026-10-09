@@ -3,18 +3,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from importlib import import_module
+from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.backtest.execution_events import validate_observations, with_predictions
-from limen.backtest.funding_adapter import _coverage
 from limen.backtest.trade_contract import TradeInputs, TradePolicy, finite_number, source_binding
 from limen.backtest.trade_execution import trade_execution
 from limen.calibration._objective_threshold import validate_probabilities
 from limen.calibration.pipeline import CalibrationConfigProtocol
 from limen.calibration.threshold import grid_threshold_optimizer
-from limen.experiment._prepare_trade_context import PreparedTradeContext, _precision
+from limen.experiment._prepare_trade_context import PreparedTradeContext
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 
@@ -44,7 +45,7 @@ class ValidationScorer:
     inputs: TradeInputs
     policy: TradePolicy
 
-    def __call__(self, labels: object, predictions: object) -> float:
+    def __call__(self, _labels: object, predictions: object) -> float:
         ledger = trade_execution(with_predictions(self.inputs, predictions), self.policy)
         return finite_number(ledger.metrics['total_return'], 'objective validation return')
 
@@ -53,7 +54,7 @@ def _row_count(value: object) -> int:
     if isinstance(value, (pl.DataFrame, pl.Series)):
         return len(value)
     if isinstance(value, np.ndarray) and value.ndim:
-        return len(value)
+        return cast(npt.NDArray[np.generic], value).shape[0]
     raise ValueError('Objective requires prepared validation features and labels')
 
 
@@ -69,6 +70,17 @@ def threshold_params(config: CalibrationConfigProtocol, scorer: ValidationScorer
                      objective: ObjectiveConfig) -> dict[str, object]:
     check_calibration(config)
     return {**config.threshold_params, 'metric': scorer, '_objective_maximize': objective.maximize}
+
+
+def _validate_funding_coverage(funding: pl.DataFrame, start: int, end: int) -> None:
+    cursor = start
+    for left, right in funding.filter(pl.col('kind') == 'accrual').select('start_ns', 'end_ns').sort('start_ns').iter_rows():
+        left, right = int(left), int(right)
+        if right <= left or left > cursor or (left < cursor and cursor != start):
+            raise ValueError('Objective funding support has a gap/overlap or invalid interval')
+        cursor = right
+    if cursor < end:
+        raise ValueError('Objective funding support does not cover the partition')
 
 
 def prepare_objective(data: Mapping[str, object], architecture: object,
@@ -88,16 +100,25 @@ def prepare_objective(data: Mapping[str, object], architecture: object,
         raise ValueError('Objective validation row identity is ambiguous')
     start, end = inputs.partition_start_ns, inputs.partition_end_ns
     observations = inputs.observations.filter((pl.col('start_ns') < end) & (pl.col('available_at_ns') <= end))
-    sources = [source_binding(observations, 'objective:validation:execution', start, end, _precision(observations), 'causal_recorded_prices'),
-               source_binding(inputs.signals, 'objective:validation:model', start, end, _precision(observations), 'retained_model_rows')]
+    sources = [source_binding(observations, 'objective:validation:execution', start, end, inputs.sources[0].precision_ns, 'causal_recorded_prices'),
+               source_binding(inputs.signals, 'objective:validation:model', start, end, inputs.sources[1].precision_ns, 'retained_model_rows')]
     funding = inputs.funding_events
     if funding is not None:
         funding = funding.filter(
-            ((pl.col('kind') == 'accrual') & (pl.col('start_ns') < end) & (pl.col('end_ns') > start) & (pl.col('end_ns') <= end))
+            ((pl.col('kind') == 'accrual') & (pl.col('start_ns') < end) & (pl.col('end_ns') > start))
             | ((pl.col('kind') != 'accrual') & (pl.col('time_ns') >= start) & (pl.col('time_ns') <= end))
         )
         if context.policy.funding is not None and context.policy.funding.mechanism == 'continuous':
-            _coverage([(int(left), int(right)) for left, right in funding.filter(pl.col('kind') == 'accrual').select('start_ns', 'end_ns').iter_rows()], start, end)
+            accrual = pl.col('kind') == 'accrual'
+            if context.policy.funding.params.get('history_interpretation') == 'integrated':
+                if funding.filter(accrual & (pl.col('end_ns') > end)).height:
+                    raise ValueError('Objective integrated funding extends into held-out evidence; provide causal quoted support')
+            else:
+                funding = funding.with_columns(*[
+                    pl.when(accrual).then(pl.col(column).clip(start, end)).otherwise(pl.col(column)).alias(column)
+                    for column in ('start_ns', 'end_ns', 'time_ns')
+                ])
+            _validate_funding_coverage(funding, start, end)
         sources.append(source_binding(funding, 'objective:validation:funding', start, end, 1, 'causal_funding_support'))
     selected = replace(inputs, observations=observations, funding_events=funding, sources=tuple(sources))
     validate_observations(selected, context.policy)

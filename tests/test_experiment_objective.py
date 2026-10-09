@@ -10,6 +10,7 @@ from limen.backtest.execution_events import with_predictions
 from limen.backtest.trade_execution import trade_execution
 from limen.calibration import grid_threshold_optimizer
 from limen.experiment import UniversalExperimentLoop
+from limen.experiment.manifest_core import DataSourceConfig
 from limen.experiment.reducer import BudgetReducer, FocusReducer
 from limen.inference import Trainer
 from limen.yaml import CompiledSFD, build_search_strategy
@@ -41,8 +42,10 @@ def objective_config(direction='maximize', *, calibrated=True):
     return config
 
 
-def _prepared(config, bars=None):
+def _prepared(config, bars=None, *, execution_source=None):
     manifest = CompiledSFD(config).manifest()
+    if execution_source is not None:
+        manifest.backtest_config = replace(manifest.backtest_config, execution_data_source=DataSourceConfig(execution_source, {'kline_size': 3600}))
     params = {key: values[0] for key, values in config['sfd']['params'].items()}
     data = manifest.prepare_data(recorded_source() if bars is None else bars, params)
     return manifest, params, data
@@ -105,9 +108,8 @@ def test_objective_scores_the_fitted_decision_rule(use_calibration, use_threshol
 def test_validation_execution_isolates_first_test_bar_and_candidate_state():
     config = objective_config('minimize')
     config['sfd']['manifest']['split_dates']['val_end'] = config['sfd']['manifest']['split_dates']['test_start']
-    config['sfd']['manifest']['backtest']['execution_data_source'] = {'method': 'tests.test_record_model_outputs.recorded_source', 'params': {'kline_size': 3600}}
     bars = recorded_source().with_columns(pl.lit(3600).alias('base_interval'))
-    original, params, first = _prepared(config, bars)
+    original, params, first = _prepared(config, bars, execution_source=recorded_source)
     baseline = original.run_model(first, params)
     context = first['_trade_context']
     validation = context.partitions[1]
