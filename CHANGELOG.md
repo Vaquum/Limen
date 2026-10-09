@@ -1515,6 +1515,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Reject non-positive, boolean and non-integer random_slice row counts before selecting experiment data; preserve positive integer sampling (#632 S028; #693 A1296–A1300).
 
+## [5.15.8] - 2026-10-09
+
+- Enforce declared required bar columns under optimized Python; retain the existing AssertionError and message when bar formation omits a required column (#693 A1052–A1053).
+
 ## [5.16.0] - 2026-10-09
 
 - Add opt-in test-window snapshot execution recording with consistent resume settings.
