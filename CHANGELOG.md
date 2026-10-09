@@ -1485,3 +1485,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Prevent overlap and lost rows in `split_random(seed=None)` while preserving explicit-seed membership and cumulative partition lengths (#861; #693 A1301–A1304).
 - Rerun evaluations that used this helper without a seed; their partitions may share observations.
+
+## [5.15.0] - 2026-10-09
+
+- Enumerate the declared parameter prefix on standard UEL runs with random_search=False instead of drawing a random subset (#470); retain legacy seeded sampling by default and expose compatible ParamSpace(sample=False) construction.
