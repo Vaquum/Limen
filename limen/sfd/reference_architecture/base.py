@@ -139,9 +139,12 @@ class ReferenceModel(ABC):
             alignment = data['_alignment']
             if not isinstance(alignment, dict):
                 raise TypeError('Model output recording requires an alignment mapping')
+            probs = np.asarray(prediction['_probs'], dtype=float)
+            if probs.ndim != 1 or probs.shape != np.asarray(prediction['_preds']).shape or not np.isfinite(probs).all():
+                raise ValueError('Recorded probabilities must be finite and aligned with predictions')
             threshold = prediction.get('optimal_threshold')
             alignment['model_outputs'] = {
-                'probs': np.asarray(prediction['_probs']).tolist(),
+                'probs': probs.tolist(),
                 'optimal_threshold': 0.5 if threshold is None else threshold,
                 'threshold_rule': '>' if threshold is None else '>=',
             }

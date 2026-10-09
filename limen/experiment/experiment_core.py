@@ -205,7 +205,7 @@ class UniversalExperimentLoop:
             raise ValueError('record_execution=True requires search_strategy and experiment_dir')
         self._record_execution = record_execution
         if not isinstance(record_model_outputs, bool):
-            raise ValueError('record_model_outputs must be a bool')
+            raise TypeError('record_model_outputs must be a bool')
         if record_model_outputs and (self._search_strategy is None or self._experiment_dir is None):
             raise ValueError('record_model_outputs=True requires search_strategy and experiment_dir')
         self._record_model_outputs = record_model_outputs
