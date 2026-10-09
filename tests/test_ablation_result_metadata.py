@@ -34,21 +34,20 @@ def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,)):
     if ablation:
         manifest.set_feature_ablation()
     params = {'feature_drop_count': list(counts), 'feature_drop_seed': list(seeds)}
-    sfd = SimpleNamespace(params=lambda: params, manifest=lambda: manifest)
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: params, manifest=lambda: manifest)
     strategy = GridStrategy(ParamDomain(params)) if msq else None
     uel = UniversalExperimentLoop(data=data, sfd=sfd, search_strategy=strategy,
                                  experiment_dir=path, feedback_interval=1, checkpoint_interval=1)
     seen = []
-    original_prep = uel.prep
+    original_model = uel.model
 
-    def capture_prep(data, round_params):
-        result = original_prep(data, round_params)
+    def capture_model(data, round_params):
         dropped = round_params.get('_dropped_features', [])
-        assert not set(dropped).intersection(result['_feature_names'])
+        assert not set(dropped).intersection(data['_feature_names'])
         seen.append(list(dropped))
-        return result
+        return original_model(data, round_params)
 
-    uel.prep = capture_prep
+    uel.model = capture_model
     return uel, seen
 
 
@@ -99,14 +98,15 @@ def test_non_ablation_output_unchanged(tmp_path, msq):
 @pytest.mark.parametrize('msq', (False, True))
 @pytest.mark.parametrize('counts', ((0, 1, 2), (1, 0, 2)))
 def test_ablation_failed_rows_keep_metadata(tmp_path, monkeypatch, msq, counts):
-    monkeypatch.setattr(experiment_core, 'STANDARD_RUN_LOG_BATCH_SIZE', 1)
+    monkeypatch.setattr(experiment_core, 'STANDARD_RUN_LOG_BATCH_SIZE', 3)
     uel, seen = _make_uel(tmp_path, msq, counts)
     original_model = uel.model
 
     def fail_first(data, round_params):
+        result = original_model(data, round_params)
         if len(seen) == 1:
             raise StrictModeError('Recorded ablation round failed after preparation')
-        return original_model(data, round_params)
+        return result
 
     uel.model = fail_first
     _run(uel, 3, post_processing=False)
