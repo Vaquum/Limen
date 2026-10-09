@@ -281,3 +281,27 @@ def test_record_execution_requires_a_writer(missing, recorded_bars, tmp_path):
     with pytest.raises(ValueError, match='record_execution'):
         _run(loop, record_execution=True)
     assert not (tmp_path / 'results.csv').exists()
+
+
+def test_cli_resume_uses_python_recording_setting(recorded_bars, tmp_path, monkeypatch):
+    config = _config()
+    assert 'record_execution' not in config['uel']
+    first = _loop(config, recorded_bars, tmp_path)
+    _stop_after_first(first)
+    _run(first, record_execution=True)
+    before = _records(tmp_path)
+    metadata_path = tmp_path / 'metadata.json'
+    metadata = json.loads(metadata_path.read_text())
+    assert len(before) == 1
+    assert metadata['record_execution'] is True
+    assert metadata['yaml_reference'] == config
+
+    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_recorded_spot_klines))
+    result = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    records = _records(tmp_path)
+    assert len(records) == 2
+    assert records[0] == before[0]
+    assert all(record['execution'] is not None for record in records)
+    assert json.loads(metadata_path.read_text())['yaml_reference'] == config
+    assert 'record_execution' not in config['uel']
