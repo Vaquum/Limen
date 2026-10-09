@@ -52,7 +52,7 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = N
     Args:
         data (pl.DataFrame): Polars DataFrame to split randomly
         ratios (Sequence[int]): Sequence of positive integers defining split proportions
-        seed (int): Seed for random number generator
+        seed (int | None): Random seed; None draws a fresh, disjoint partition each call
 
     Returns:
         List[pl.DataFrame]: Disjoint, randomly shuffled partitions containing every input row
