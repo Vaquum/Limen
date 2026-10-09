@@ -1519,7 +1519,11 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Enforce declared required bar columns under optimized Python; retain the existing AssertionError and message when bar formation omits a required column (#693 A1052–A1053).
 
-## [5.15.9] - 2026-10-09
+## [5.16.0] - 2026-10-09
+
+- Add opt-in test-window snapshot execution recording with consistent resume settings.
+
+## [5.16.1] - 2026-10-09
 
 - Record each ablation round’s actual dropped features as JSON text in CSV, in-memory logs and parquet, including zero-drop and failed rounds (#871); retain that column through post-processing and new-format resumes.
 - Reject pre-fix ablation CSV resumes or appends missing the column before rewriting artifacts; start a new experiment directory or results file. Decode the result field with `json.loads` for exact feature membership.

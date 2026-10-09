@@ -64,6 +64,7 @@ CALIBRATION_FUNC_OPTIONAL = {'params'}
 
 UEL_REQUIRED = {'n_permutations'}
 UEL_OPTIONAL = {
+    'record_execution',
     'search_strategy',
     'pruning_strategies',
     'feedback_interval',
