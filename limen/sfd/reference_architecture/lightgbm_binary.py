@@ -134,17 +134,7 @@ class LightGBMBinary(ReferenceModel):
 
     @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
-
-        '''
-        Evaluate trained model on test data.
-
-        Args:
-            data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
-
-        Returns:
-            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
-        '''
+        '''Evaluate test predictions and preserve configured model output records.'''
 
         pred_result = self.predict(data)
         preds = pred_result['_preds']

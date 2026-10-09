@@ -58,17 +58,7 @@ class ReferenceModel(ABC):
 
     @abstractmethod
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
-
-        '''
-        Evaluate the trained model and return results.
-
-        Args:
-            data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* prefixed keys
-
-        Returns:
-            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
-        '''
+        '''Return test metrics, optionally including confusion and backtest metrics.'''
 
         ...
 

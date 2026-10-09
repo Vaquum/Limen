@@ -977,14 +977,7 @@ class UniversalExperimentLoop:
 
 
     def _write_metadata(self, experiment_dir: Path) -> None:
-
-        '''
-        Write metadata.json to experiment directory.
-
-        Args:
-            experiment_dir (Path): Directory to write metadata into
-
-        '''
+        '''Persist experiment provenance and effective recording settings.'''
 
         if self._sfd_module_name is None:
             raise ValueError(
