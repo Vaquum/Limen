@@ -1,6 +1,6 @@
 from limen.backtest.trade_contract import TradePolicy
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
+from limen.experiment._prepare_trade_context import _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
@@ -1210,7 +1210,7 @@ class MLManifest(Manifest):
         _, data = _process_bars(self, raw_klines, round_params)
         decisions = None
         if self.resolve_trade_policy(round_params) is not None:
-            interval = self.data_source_config.params.get('klines_size') if self.data_source_config is not None else None
+            interval = _source_interval(self.data_source_config)
             interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
             decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
@@ -1920,7 +1920,7 @@ def _run_prepare_setup(
     policy = manifest.resolve_trade_policy(round_params)
     trade = None
     if policy is not None and manifest.backtest_config is not None:
-        interval = manifest.data_source_config.params.get('klines_size') if manifest.data_source_config is not None else None
+        interval = _source_interval(manifest.data_source_config)
         trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval)
         split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
     prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
