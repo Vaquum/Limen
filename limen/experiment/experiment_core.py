@@ -243,7 +243,7 @@ class UniversalExperimentLoop:
             raise ValueError('UniversalExperimentLoop prep and model functions must be configured')
 
         self.param_space = ParamSpace(params=self.params,
-                                      n_permutations=n_permutations)
+                                      n_permutations=n_permutations, sample=random_search)
 
         if self._experiment_dir is not None:
             self._experiment_dir.mkdir(parents=True, exist_ok=True)

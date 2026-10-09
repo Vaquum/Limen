@@ -1486,7 +1486,15 @@ Note: add all new changelog entries to the bottom of this file.
 - Prevent overlap and lost rows in `split_random(seed=None)` while preserving explicit-seed membership and cumulative partition lengths (#861; #693 A1301–A1304).
 - Rerun evaluations that used this helper without a seed; their partitions may share observations.
 
-## [5.14.2] - 2026-10-09
+## [5.14.4] - 2026-10-09
+
+- Resolve searched null holding, timer and price-gap controls as disabled within configured event execution, matching literal None and YAML validation (#867; #860); reject required null trade numbers at the finite-number resolver.
+
+## [5.15.0] - 2026-10-09
+
+- Enumerate the declared parameter prefix on standard UEL runs with random_search=False instead of drawing a random subset (#470); retain legacy seeded sampling by default and expose compatible ParamSpace(sample=False) construction.
+
+## [5.15.1] - 2026-10-09
 
 - Reject negative momentum periods and Ichimoku displacement that expose future prices; preserve zero, positive and default settings (#863).
 - Rerun evaluations that passed a negative momentum period or Ichimoku displacement; their features read future prices.
