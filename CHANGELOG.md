@@ -1490,6 +1490,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Resolve searched null holding, timer and price-gap controls as disabled within configured event execution, matching literal None and YAML validation (#867; #860); reject required null trade numbers at the finite-number resolver.
 
+## [5.15.0] - 2026-10-09
+
+- Enumerate the declared parameter prefix on standard UEL runs with random_search=False instead of drawing a random subset (#470); retain legacy seeded sampling by default and expose compatible ParamSpace(sample=False) construction.
+
 ## [5.15.1] - 2026-10-09
 
 - Reject zero training ratios in manifest split overrides while retaining caller-owned all-data training and existing invalid-input errors (#693 A1324–A1326).
