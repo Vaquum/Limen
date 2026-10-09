@@ -1489,3 +1489,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.14.4] - 2026-10-09
 
 - Resolve searched null holding, timer and price-gap controls as disabled within configured event execution, matching literal None and YAML validation (#867; #860); reject required null trade numbers at the finite-number resolver.
+
+## [5.15.1] - 2026-10-09
+
+- Reject zero training ratios in manifest split overrides while retaining caller-owned all-data training and existing invalid-input errors (#693 A1324–A1326).
