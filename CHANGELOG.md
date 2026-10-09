@@ -1498,3 +1498,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Reject negative momentum periods and Ichimoku displacement that expose future prices; preserve zero, positive and default settings (#863).
 - Rerun evaluations that passed a negative momentum period or Ichimoku displacement; their features read future prices.
+
+## [5.15.2] - 2026-10-09
+
+- Read explicit HistoricalData kline_size intervals in event preparation, sensor timing and bound Python execution sources; prefer non-null kline_size and retain legacy klines_size when it is absent or null (#865; #859).
