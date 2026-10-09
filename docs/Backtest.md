@@ -153,6 +153,8 @@ Each UEL candidate repeats preparation, training, and prediction. Predictions ma
 
 Snapshot backtests produce 20 columns over one population: every bar in the window.
 
+All ledger values retain their computed floating-point precision. Round only for display, after recording and ranking results; small per-bar returns, costs, and deployed inventory remain distinguishable from zero.
+
 Table 4. Distribution columns report `p5`, `p50`, and `p95`.
 
 | prefix | columns | meaning |

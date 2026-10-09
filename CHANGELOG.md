@@ -1493,3 +1493,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.15.0] - 2026-10-09
 
 - Enumerate the declared parameter prefix on standard UEL runs with random_search=False instead of drawing a random subset (#470); retain legacy seeded sampling by default and expose compatible ParamSpace(sample=False) construction.
+
+## [5.15.1] - 2026-10-09
+
+- Preserve computed precision in all snapshot backtest ledger columns so sparse returns, costs, and inventory remain distinguishable and rank by their actual values.

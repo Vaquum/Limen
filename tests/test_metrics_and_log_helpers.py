@@ -309,10 +309,10 @@ def test_backtest_snapshot_emits_metric_ledger_columns() -> None:
     assert list(result) == BACKTEST_SNAPSHOT_COLUMNS
     assert len(BACKTEST_SNAPSHOT_COLUMNS) == 20
     assert result['wins_per_bar'] == 0.25
-    assert result['pnl_per_bar_bps'] == 250.0
-    assert result['avg_win_bps'] == 2000.0
-    assert result['avg_loss_bps'] == -1000.0
-    assert result['drawdown_bps_p50'] == -500.0
+    assert result['pnl_per_bar_bps'] == pytest.approx(250.0)
+    assert result['avg_win_bps'] == pytest.approx(2000.0)
+    assert result['avg_loss_bps'] == pytest.approx(-1000.0)
+    assert result['drawdown_bps_p50'] == pytest.approx(-500.0)
     assert result['trades_per_bar'] == 0.5
 
 
@@ -329,9 +329,9 @@ def test_backtest_snapshot_executes_on_next_bar() -> None:
     )
 
     assert result['wins_per_bar'] == 0.0
-    assert result['avg_loss_bps'] == -1000.0
-    assert result['pnl_per_bar_bps'] == -333.3
-    assert result['drawdown_bps_p50'] == -1000.0
+    assert result['avg_loss_bps'] == pytest.approx(-1000.0)
+    assert result['pnl_per_bar_bps'] == pytest.approx(-1000 / 3)
+    assert result['drawdown_bps_p50'] == pytest.approx(-1000.0)
 
 
 def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> None:
@@ -346,11 +346,11 @@ def test_backtest_snapshot_preserves_shifted_hold_while_one_continuation() -> No
         slip_bps=0.0,
     )
 
-    assert result['edge_bps_p50'] == 1000.0
-    assert result['pnl_bps_p50'] == 1000.0
+    assert result['edge_bps_p50'] == pytest.approx(1000.0)
+    assert result['pnl_bps_p50'] == pytest.approx(1000.0)
     assert result['cost_bps_p50'] == 0.0
-    assert result['inventory_per_bar'] == 0.6667
-    assert result['pnl_per_bar_bps'] == 666.7
+    assert result['inventory_per_bar'] == pytest.approx(2 / 3)
+    assert result['pnl_per_bar_bps'] == pytest.approx(2000 / 3)
 
 
 def test_backtest_snapshot_rejects_empty_input() -> None:
@@ -435,9 +435,9 @@ def test_backtest_snapshot_charges_fees_on_notional_per_fill() -> None:
         slip_bps=50.0,
     )
 
-    assert result['avg_loss_bps'] == -199.0
-    assert result['cost_bps_p50'] == 99.5
-    assert result['cost_per_bar_bps'] == 99.5
+    assert result['avg_loss_bps'] == pytest.approx(-199.0)
+    assert result['cost_bps_p50'] == pytest.approx(99.5)
+    assert result['cost_per_bar_bps'] == pytest.approx(99.5)
 
 
 def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
@@ -459,7 +459,7 @@ def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:
         strategy=first_bar_loss,
     )
 
-    assert result['drawdown_bps_p50'] == -1000.0
+    assert result['drawdown_bps_p50'] == pytest.approx(-1000.0)
 
 
 def test_backtest_snapshot_drops_predictions_without_immediate_next_execution_bar() -> None:
@@ -513,7 +513,7 @@ def test_backtest_snapshot_cvar_floor_5pct_tail() -> None:
         slip_bps=0.0,
     )
 
-    assert result['cvar_95_pnl_bps'] == -2079.2
+    assert result['cvar_95_pnl_bps'] == pytest.approx((80 / 101 - 1) * 10000)
 
     short = backtest_snapshot(
         pd.DataFrame({
@@ -621,9 +621,9 @@ def test_backtest_snapshot_delegates_to_injected_strategy() -> None:
 
     assert result['inventory_per_bar'] == 1.0
     assert result['wins_per_bar'] == 1.0
-    assert result['pnl_per_bar_bps'] == 100.0
-    assert result['edge_bps_p50'] == 100.0
-    assert result['trades_per_bar'] == 0.33333
+    assert result['pnl_per_bar_bps'] == pytest.approx(100.0)
+    assert result['edge_bps_p50'] == pytest.approx(100.0)
+    assert result['trades_per_bar'] == pytest.approx(1 / 3)
 
 
 def test_backtest_snapshot_validates_injected_strategy_output() -> None:
@@ -752,8 +752,8 @@ def test_backtest_snapshot_round_trip_matches_close_fill() -> None:
         slip_bps=0.0,
     )
 
-    assert result['avg_win_bps'] == 666.7
-    assert result['edge_bps_p95'] == 633.3
+    assert result['avg_win_bps'] == pytest.approx((112 / 105 - 1) * 10000)
+    assert result['edge_bps_p95'] == pytest.approx((112 / 105 - 1) * 10000 * 0.95)
     assert result['trades_per_bar'] == 0.5
 
 
@@ -891,9 +891,9 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
     )
 
     # Same-row pricing books the signal bar's own move from the previous close.
-    assert same_row['pnl_per_bar_bps'] == 555.6
+    assert same_row['pnl_per_bar_bps'] == pytest.approx((110 / 90 - 1) * 10000 / 4)
     # The deployed fill at the signal bar's close then earns the next bar.
-    assert next_bar['pnl_per_bar_bps'] == -909.1
+    assert next_bar['pnl_per_bar_bps'] == pytest.approx((90 / 110 - 1) * 10000 / 2)
 
 
 def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
