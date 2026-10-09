@@ -21,6 +21,10 @@ from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _recorded_spot_klines(**kwargs):
+    return pl.read_parquet(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
+
+
 @pytest.fixture(scope='module')
 def recorded_bars():
     return pl.read_parquet(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
@@ -169,7 +173,7 @@ def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypat
     yaml_path = tmp_path / 'experiment.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(lambda **kwargs: recorded_bars))
+    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_recorded_spot_klines))
     original_run = UniversalExperimentLoop.run
 
     def interrupted_run(loop, *args, **kwargs):
