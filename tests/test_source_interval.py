@@ -91,11 +91,11 @@ sfd:
       test_start: "2025-01-03"
       test_end: "2025-01-04"
     target:
-      name: close
-      class: limen.targets.IdentityTarget
-    reference_architecture: limen.sfd.reference_architecture.ridge_regressor
+      name: direction
+      class: limen.targets.NextBarUpTarget
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
     backtest:
-      prediction_mode: target_exposure
+      prediction_mode: binary
       product:
         kind: cash_spot
         instrument: BTCUSDT
@@ -131,7 +131,7 @@ uel:
     assert (inputs.observations['end_ns'] - inputs.observations['start_ns']).unique().to_list() == [execution_interval * NANOSECONDS]
     assert data['_trade_context'].source_settings[0][1]['kline_size'] == execution_interval
     assert inputs.observations.height > inputs.signals.height
-    ledger = trade_execution(with_predictions(inputs, [0.5] * inputs.signals.height), policy)
+    ledger = trade_execution(with_predictions(inputs, [1.0] * inputs.signals.height), policy)
     entered = inputs.signals['available_at_ns'][0]
     closed = entered + execution_interval * NANOSECONDS
     assert ledger.episodes['first_fill_ns'].to_list() == [entered]
