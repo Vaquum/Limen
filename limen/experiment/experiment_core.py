@@ -179,7 +179,7 @@ class UniversalExperimentLoop:
         MSQ ignores random_search, maintain_details_in_params, params, prep and model.
         '''
 
-        if not isinstance(record_execution, bool):
+        if type(record_execution) is not bool:
             raise ValueError('record_execution must be a bool')
         if record_execution and (self._search_strategy is None or self._experiment_dir is None):
             raise ValueError('record_execution=True requires search_strategy and experiment_dir')
@@ -828,7 +828,7 @@ class UniversalExperimentLoop:
             content_hash=content_hash, strategy_type=strategy_type,
         )
         metadata_path = self._experiment_dir / 'metadata.json'
-        metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        metadata: dict[str, object] = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
         if metadata.get('record_execution', False) != self._record_execution:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
