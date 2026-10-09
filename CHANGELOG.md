@@ -1527,6 +1527,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Add opt-in test probabilities, applied thresholds and actual boosting iteration counts.
 
+## [5.17.2] - 2026-10-09
+
+- Retain accepted ML YAML data-source parameter overrides in the compiled manifest instead of discarding the returned clone (#632). Apply these previously ignored overrides when recompiling saved experiment YAML as well.
+
 ## [5.17.3] - 2026-10-09
 
 - Qualify the required-bar-column documentation: preparation enforces declarations after reading datetime, whose absence retains Polars ColumnNotFoundError (#882).

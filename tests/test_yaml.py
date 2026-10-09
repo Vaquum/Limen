@@ -1,8 +1,12 @@
+import copy
 import inspect
 import re
 from datetime import date
 from pathlib import Path
 from textwrap import dedent
+
+import polars as pl
+import pytest
 
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
@@ -974,6 +978,46 @@ def test_build_manifest_data_source_method_is_callable_with_correct_params() -> 
     cfg = manifest.data_source_config
     assert callable(cfg.method)
     assert cfg.params['kline_size'] == 3600
+
+
+@pytest.mark.parametrize('overrides', (None, {}, {'kline_size': 7200}, {'row_count_limit': 5000}))
+def test_yaml_params_override_is_retained_in_compiled_manifest(overrides: dict[str, int] | None) -> None:
+    yaml_dict, errors = parse((_TEMPLATES_DIR / 'logreg_binary.yaml').read_text())
+    assert errors == []
+    baseline = build_manifest(yaml_dict)
+    if overrides is not None:
+        yaml_dict['sfd']['manifest']['params_override'] = overrides
+    original = copy.deepcopy(yaml_dict)
+    result = validate(yaml_dict)
+    assert result.valid, [error.message for error in result.errors]
+    sfd = CompiledSFD(yaml_dict)
+    manifest = sfd.manifest()
+    assert isinstance(manifest, MLManifest)
+    assert manifest.data_source_config is not None
+    assert baseline.data_source_config is not None
+    assert manifest.data_source_config.method == baseline.data_source_config.method
+    assert manifest.data_source_config.params == baseline.data_source_config.params | (overrides or {})
+    excluded = {'data_source_config': None, 'scaler': None}
+    assert vars(manifest) | excluded == vars(baseline) | excluded
+    assert manifest.scaler is not None and baseline.scaler is not None
+    assert manifest.scaler[1:] == baseline.scaler[1:]
+    assert [(name, params) for name, _, params in manifest.scaler[0]] == [(name, params) for name, _, params in baseline.scaler[0]]
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(200).select('close')
+    actual = manifest.scaler[0][0][1](data, scaler_type='robust').transform(data)
+    expected = baseline.scaler[0][0][1](data, scaler_type='robust').transform(data)
+    assert actual.equals(expected)
+    assert yaml_dict == original
+    assert sfd.manifest() is manifest
+
+
+def test_yaml_params_override_keeps_existing_validation() -> None:
+    yaml_dict, errors = parse((_TEMPLATES_DIR / 'logreg_binary.yaml').read_text())
+    assert errors == []
+    yaml_dict['sfd']['manifest']['params_override'] = {'unknown_source_parameter': 1}
+    result = validate(yaml_dict)
+    assert result.valid, [error.message for error in result.errors]
+    with pytest.raises(ValueError, match='Manifest Unknown data source params'):
+        build_manifest(yaml_dict)
 
 
 def test_build_manifest_data_source_date_limits_injected_from_split_dates() -> None:

@@ -944,6 +944,8 @@ manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 
 The original manifest remains unchanged.
 
+For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Source parameter names are checked during compilation; source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
+
 ## What `prepare_data()` Produces
 
 The manifest ultimately builds Limen's standard `data_dict`.
