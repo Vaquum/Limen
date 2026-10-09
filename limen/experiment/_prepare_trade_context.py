@@ -39,6 +39,11 @@ def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     return result
 
 
+def source_interval(source: SourceConfig | None) -> object:
+    value = None if source is None else source.params.get('kline_size')
+    return value if value is not None or source is None else source.params.get('klines_size')
+
+
 def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:
     if set(OBSERVATION_COLUMNS) <= set(data.columns):
         return data.select(OBSERVATION_COLUMNS)
@@ -65,7 +70,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
     interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params, 'recorded source interval')
     execution = None
     if config.execution_data_source is not None:
-        declared_interval = config.execution_data_source.params.get('klines_size')
+        declared_interval = source_interval(config.execution_data_source)
         execution_interval = None if declared_interval is None else resolve_number(declared_interval, params, 'execution source interval')
         execution = normalize_observations(_load(config.execution_data_source, params), interval_seconds=execution_interval)
     history = _load(config.funding.data_source, params) if config.funding is not None and config.funding.data_source is not None else None
@@ -265,7 +270,7 @@ def validate_inference_contract(policy: TradePolicy | None, mode: str, contract:
         raise ValueError('Sensor model does not belong to the frozen trade contract')
 
 
-__all__ = ['PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows']
+__all__ = ['PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows', 'source_interval']
 
 class FoldScaler(Protocol):
     def __call__(self, data: pl.DataFrame, *, all_fitted_params: dict[str, object], is_training: bool) -> tuple[pl.DataFrame, dict[str, object]]: ...

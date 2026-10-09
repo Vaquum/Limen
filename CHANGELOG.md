@@ -1501,4 +1501,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.15.2] - 2026-10-09
 
+- Read explicit HistoricalData kline_size intervals in event preparation, sensor timing and bound Python execution sources; prefer non-null kline_size and retain legacy klines_size when it is absent or null (#865; #859).
+
+## [5.15.3] - 2026-10-09
+
 - Preserve computed precision in all snapshot backtest ledger columns so sparse returns, costs, and inventory remain distinguishable and rank by their actual values.
