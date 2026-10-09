@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.15.2"
+  limen_version: "5.15.3"
   mode: development
 
 sfd:
@@ -928,6 +928,7 @@ This supports caller-owned variants, including an explicit change from train/val
 Supported override behavior today:
 
 - `split_config=(1, 0, 0)` overrides the split ratios
+- split overrides require a positive training ratio; validation and test ratios may be zero
 - other keys are interpreted as data-source parameter overrides and are validated against the configured data-source method signature
 
 Example:
