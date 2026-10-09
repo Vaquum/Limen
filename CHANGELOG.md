@@ -1526,3 +1526,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.17.0] - 2026-10-09
 
 - Add opt-in test probabilities, applied thresholds and actual boosting iteration counts.
+
+## [5.17.3] - 2026-10-09
+
+- Qualify the required-bar-column documentation: preparation enforces declarations after reading datetime, whose absence retains Polars ColumnNotFoundError (#882).
