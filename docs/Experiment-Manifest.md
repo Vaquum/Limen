@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.15.6"
+  limen_version: "5.15.8"
   mode: development
 
 sfd:
@@ -344,7 +344,7 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 ### `set_required_bar_columns(columns)`
 
-Assert that bar formation still leaves the downstream columns required by the experiment.
+Require bar formation to leave the downstream columns declared by the experiment. A missing column raises `AssertionError` under both normal Python and `python -O`.
 
 ```python-fragment
 .set_required_bar_columns([

@@ -1,9 +1,14 @@
+from pathlib import Path
+import subprocess
+import sys
+
 import numpy as np
 import polars as pl
+import pytest
 
 from limen.data import HistoricalData
 from limen.experiment import MLManifest
-from limen.experiment.manifest_core import _resolve_params
+from limen.experiment.manifest_core import _process_bars, _resolve_params
 from limen.scalers.linear_scaler import LinearScaler
 from limen.scalers.robust_scaler import RobustScaler
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
@@ -48,6 +53,44 @@ def test_resolve_params_uses_available_underscore_values() -> None:
     sentinel = object()
     resolved = _resolve_params({'scaler': '_scaler'}, {'_scaler': sentinel})
     assert resolved == {'scaler': sentinel}
+
+
+@pytest.mark.parametrize('optimized', (False, True))
+@pytest.mark.parametrize('formed', (False, True))
+def test_required_bar_columns_are_enforced_without_assertions(optimized: bool, formed: bool) -> None:
+    fixture = Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet'
+    code = f'''
+import polars as pl
+from limen.experiment import MLManifest
+from limen.experiment.manifest_core import _process_bars
+
+data = pl.read_parquet({str(fixture)!r}).head(200)
+manifest = MLManifest().set_required_bar_columns(['close', 'volume'])
+if {formed!r}:
+    manifest.set_bar_formation(lambda df: df.drop('volume'))
+else:
+    data = data.drop('volume')
+try:
+    _process_bars(manifest, data, {{'bar_type': 'formed' if {formed!r} else 'base'}})
+except AssertionError as error:
+    if str(error) != "Required bar column 'volume' not found after bar formation":
+        raise RuntimeError(str(error)) from error
+else:
+    raise RuntimeError('Missing required volume column was accepted')
+'''
+    subprocess.run([sys.executable, *(['-O'] if optimized else []), '-c', code], check=True)
+
+
+@pytest.mark.parametrize('formed', (False, True))
+@pytest.mark.parametrize('required', ([], ['datetime', 'close', 'volume']))
+def test_required_bar_columns_preserve_recorded_bars(formed: bool, required: list[str]) -> None:
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(200)
+    manifest = MLManifest().set_required_bar_columns(required)
+    if formed:
+        manifest.set_bar_formation(lambda df: df)
+    datetimes, bars = _process_bars(manifest, data, {'bar_type': 'formed' if formed else 'base'})
+    assert datetimes == data['datetime'].to_list()
+    assert bars.equals(data)
 
 
 def _make_shifted_target_manifest() -> MLManifest:
