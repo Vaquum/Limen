@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.15.3"
+  limen_version: "5.15.6"
   mode: development
 
 sfd:
@@ -323,6 +323,8 @@ from limen.data.utils import random_slice
 ```
 
 Use this for smaller or controlled slices of the raw dataset before the normal split-first pipeline begins.
+
+`random_slice` requires `rows` to resolve to a positive, non-boolean integer; invalid row counts raise `ValueError` before selecting data.
 
 ### `set_bar_formation(func, **params)`
 
