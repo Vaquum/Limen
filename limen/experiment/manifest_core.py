@@ -634,8 +634,8 @@ class Manifest:
             Manifest: New manifest with overridden parameters
 
         Raises:
-            ValueError: If a key is not 'split_config' and not accepted by the
-                data source method
+            ValueError: If split ratios are invalid or a key is not
+                'split_config' and not accepted by the data source method
         '''
 
         new_manifest = copy.deepcopy(self)
