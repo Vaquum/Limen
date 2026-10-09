@@ -134,6 +134,7 @@ uel.run(
 | `resume` | resume from checkpoint in the advanced path |
 | `post_processing` | compute terminal post-run metrics (`uel._log`, confusion metrics, backtest results) |
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
+| `record_execution` | persist test snapshot series; off by default; requires `search_strategy` and `experiment_dir` |
 
 ### Manifest-driven rules
 
@@ -227,13 +228,37 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 | File | Meaning |
 |---|---|
 | `results.csv` | streaming round log; if a round fails a `strict_mode` null check, a `strict_mode_error` column records the error message and all metric columns for that round are empty |
-| `round_data.jsonl` | round params, predictions, and alignment metadata |
+| `round_data.jsonl` | round params, predictions, alignment metadata, and optional execution |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |
 | `interventions.json` | optional external intervention file polled by the feedback controller when the file exists |
 | `metadata.json` | experiment metadata used by `Trainer` |
 
 This path is what powers checkpointing, resumability, and the [Trainer](Trainer.md) workflow.
+
+### Record execution
+
+Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to `run()` on the artifact-backed path. This is independent of `post_processing`. Each successful round gains `execution` in `round_data.jsonl`: full-precision `pos`, `gross`, and `net` arrays in test-row order, each multiplied once by the resolved `notional_rate`. Positions include execution lag and exits; regressors may backtest directional signals rather than their continuous saved predictions. Rule-based strategies record only test execution.
+
+When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), `execution` is `null`. A flat snapshot has full-length zero arrays. Event execution retains its existing `trade_ledger`.
+
+Read one recorded round and reproduce its snapshot metrics:
+
+```python
+import json
+import numpy as np
+from limen.backtest.long_flat_strategy import ExecutionResult
+from limen.backtest._snapshot_ledger import snapshot_ledger
+
+with open("results/round_data.jsonl") as rows:
+    execution = json.loads(next(rows))["execution"]
+result = ExecutionResult(**{key: np.asarray(value) for key, value in execution.items()})
+metrics = snapshot_ledger(result, 1.0)
+```
+
+These match `backtest_*` columns (`*_test` for rule-based strategies); using the original notional again would scale twice. Calendar comparisons and market-relative analysis still require source prices and row alignment. Three extra arrays increase disk and reader memory in proportion to test bars and rounds; Trainer and Cohort load whole round records.
+
+Python resume must pass the same flag; CLI resume forwards the saved YAML flag. Changing it raises before artifacts are rewritten. Older metadata without the flag means `false`. Existing resume requirements, including complete successful round records through the checkpoint, still apply.
 
 ### Important scope note
 

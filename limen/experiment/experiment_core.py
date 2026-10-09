@@ -143,6 +143,7 @@ class UniversalExperimentLoop:
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
+        self._record_execution = False
         self.round_params: list[dict[str, Any]] = []
         self.preds: list[Any] = []
         self.scalers: list[Any] = []
@@ -167,7 +168,8 @@ class UniversalExperimentLoop:
             model: Callable[..., dict[str, Any]] | None = None,
             resume: bool = False,
             post_processing: bool = False,
-            progress_bar: bool = True) -> None:
+            progress_bar: bool = True,
+            record_execution: bool = False) -> None:
 
         '''
         Run the experiment `n_permutations` times.
@@ -190,8 +192,15 @@ class UniversalExperimentLoop:
             resume (bool): Whether to resume from an existing checkpoint
             post_processing (bool): Whether to compute terminal post-run metrics
             progress_bar (bool): Whether to render the experiment progress bar
+            record_execution (bool): Persist scaled test snapshot series; requires search_strategy and experiment_dir
 
         '''
+
+        if not isinstance(record_execution, bool):
+            raise ValueError('record_execution must be a bool')
+        if record_execution and (self._search_strategy is None or self._experiment_dir is None):
+            raise ValueError('record_execution=True requires search_strategy and experiment_dir')
+        self._record_execution = record_execution
 
         self.round_params = []
         self.models = []
@@ -572,6 +581,9 @@ class UniversalExperimentLoop:
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter('always')
                     data_dict = self.prep(self.data, round_params=sfd_params)
+                    data_dict['_record_execution'] = self._record_execution
+                    if '_alignment' in data_dict:
+                        data_dict['_alignment'].pop('execution', None)
                     round_results = self.model(
                         data=data_dict, round_params=sfd_params,
                     )
@@ -841,6 +853,10 @@ class UniversalExperimentLoop:
             self._experiment_dir, checkpoint_manager,
             content_hash=content_hash, strategy_type=strategy_type,
         )
+        metadata_path = self._experiment_dir / 'metadata.json'
+        metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        if metadata.get('record_execution', False) != self._record_execution:
+            raise ValueError('Cannot resume with a different record_execution setting')
         domain.set_state(checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
 
@@ -1004,6 +1020,8 @@ class UniversalExperimentLoop:
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
         }
+        if self._record_execution:
+            metadata['record_execution'] = True
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
@@ -1098,6 +1116,9 @@ class UniversalExperimentLoop:
 
         if 'learning_binding' in alignment:
             entry['learning_binding'] = {'round_id': round_id, 'manifest_id': canonical_manifest_id(self._yaml_reference) if self._yaml_reference is not None else None, 'model': alignment['learning_binding']}
+
+        if self._record_execution:
+            entry['execution'] = alignment.get('execution')
 
         with round_data_path.open('a') as f:
             _ = f.write(json.dumps(entry) + '\n')

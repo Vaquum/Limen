@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.15.6"
+  limen_version: "5.16.0"
   mode: development
 
 sfd:
@@ -100,6 +100,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `search_strategy.type` | `random` or `grid` | `random` | `random` lazily samples the parameter space; `grid` enumerates it exhaustively |
 | `prep_each_round` | bool | `true` | run prep every round; required for manifest-driven SFDs |
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
+| `record_execution` | bool | `false` | record test snapshot series; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |

@@ -75,6 +75,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
             prep_each_round=prep_each_round,
             resume=True,
             progress_bar=progress_bar,
+            record_execution=uel_cfg.get('record_execution', False),
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
