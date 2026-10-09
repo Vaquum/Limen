@@ -1,6 +1,6 @@
 from limen.backtest.trade_contract import TradePolicy
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
+from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data

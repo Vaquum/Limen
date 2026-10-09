@@ -39,7 +39,7 @@ def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     return result
 
 
-def _source_interval(source: SourceConfig | None) -> object:
+def source_interval(source: SourceConfig | None) -> object:
     return None if source is None else source.params.get('kline_size', source.params.get('klines_size'))
 
 
@@ -69,7 +69,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
     interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params, 'recorded source interval')
     execution = None
     if config.execution_data_source is not None:
-        declared_interval = _source_interval(config.execution_data_source)
+        declared_interval = source_interval(config.execution_data_source)
         execution_interval = None if declared_interval is None else resolve_number(declared_interval, params, 'execution source interval')
         execution = normalize_observations(_load(config.execution_data_source, params), interval_seconds=execution_interval)
     history = _load(config.funding.data_source, params) if config.funding is not None and config.funding.data_source is not None else None
