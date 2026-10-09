@@ -84,7 +84,7 @@ The normal result directory contains:
 | copied YAML manifest | the source manifest copied beside the run outputs; committed manifest URI runs use `manifest.yaml` |
 | `metadata.json` | experiment metadata, including `yaml_reference` for Trainer and resume flows |
 | `results.csv` | streaming round log |
-| `round_data.jsonl` | round params, predictions, and alignment metadata |
+| `round_data.jsonl` | round params, predictions, alignment metadata, and [optional execution](Universal-Experiment-Loop.md#record-execution) |
 | `checkpoint.json` | checkpoint state when checkpointing has run |
 | `audit.jsonl` | feedback-cycle audit trail when feedback has run |
 

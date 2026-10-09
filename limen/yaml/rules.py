@@ -1110,6 +1110,7 @@ class BacktestCostSpec:
 
 
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
+    ('record_execution', bool, None),
     ('search_strategy', dict, 'Use search_strategy:\n  type: random'),
     ('output_path', str, None),
     ('prep_each_round', bool, None),

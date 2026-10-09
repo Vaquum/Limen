@@ -93,8 +93,22 @@ def compute_backtest(predictions: npt.ArrayLike, data: Mapping[str, object]) -> 
     if price is not None and not isinstance(price, pl.DataFrame):
         raise ValueError('price_data_for_backtest must be a DataFrame')
     _preflight_backtest(data)
-    metrics, _ = evaluate_prices(price, predictions, options, configured=bool(data.get('_backtest_configured')))
+    metrics, execution = evaluate_prices(price, predictions, options, configured=bool(data.get('_backtest_configured')))
+    if data.get('_record_execution'):
+        record_execution(data, execution, execution_options(options)['notional_rate'])
     return {f'backtest_{key}': value for key, value in metrics.items()}
 
 
-__all__ = ['compute_backtest', 'evaluate_prices', 'execution_options']
+def record_execution(data: Mapping[str, object], execution: ExecutionResult | None, notional_rate: float) -> None:
+    if not data.get('_record_execution'):
+        return
+    alignment = data.get('_alignment')
+    if not isinstance(alignment, dict):
+        raise ValueError('Execution recording requires test alignment')
+    alignment['execution'] = (
+        {field: (getattr(execution, field) * notional_rate).tolist() for field in ('pos', 'gross', 'net')}
+        if execution is not None else None
+    )
+
+
+__all__ = ['compute_backtest', 'evaluate_prices', 'execution_options', 'record_execution']
