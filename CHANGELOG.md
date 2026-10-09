@@ -1533,4 +1533,4 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.17.3] - 2026-10-09
 
-- Qualify the required-bar-column documentation: preparation enforces declarations after reading datetime, whose absence retains Polars ColumnNotFoundError (#882).
+- Clarify post-formation column checks and datetime error precedence in required-bar-column documentation (#888; #882).

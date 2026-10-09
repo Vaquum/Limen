@@ -346,7 +346,7 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 ### `set_required_bar_columns(columns)`
 
-Declare the downstream columns that bar formation must retain. During bar preparation, a missing declared column other than `datetime` raises `AssertionError` under both normal Python and `python -O`. `datetime` is read before that membership check; if it is missing, Polars raises `ColumnNotFoundError`.
+Declare the downstream columns that bar preparation must retain. After any configured bar formation completes, or directly for base bars, preparation first reads `datetime`, whether or not it was declared; its absence raises Polars `ColumnNotFoundError`. If that read succeeds, any missing declared column raises `AssertionError` under both normal Python and `python -O`.
 
 ```python-fragment
 .set_required_bar_columns([
