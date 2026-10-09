@@ -210,3 +210,30 @@ When a calibrated model is promoted to a `Sensor`, the calibrator is fitted once
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full manifest builder reference.
 - Continue to [Reference Architecture](Reference-Architecture.md) to see how calibration interacts with `predict()` and `evaluate()`.
 - Continue to [Built-In SFDs](Built-In-SFDs.md) to see calibration wired up in the foundational `logreg_binary` and `tabpfn_binary` SFDs.
+
+
+## Shared validation-return objective
+
+The optional `sfd.manifest.objective` declares the measure for threshold search and existing metric-driven reducers:
+
+```yaml
+sfd:
+  manifest:
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+```
+
+Native manifests use `manifest.set_objective(metric="backtest_total_return", direction="maximize")`. Only event-ledger total return and `maximize`/`minimize` are supported. Return is ending equity divided by initial equity minus one, including configured execution costs/funding and the engine's terminal mark; it is not a closed-trade return formula. Binary logreg, LightGBM and TabPFN require an explicit event-execution product. Fee/slippage-only snapshot backtests and custom threshold optimizers are rejected.
+
+[The complete example](examples/logreg_return.yaml) adds an explicit cash-spot product to the logreg configuration and removes the threshold function's classification `metric`. Validate it with `limen validate docs/examples/logreg_return.yaml`. The objective does not enable threshold search on its own: existing calibration/threshold flags still control tuning.
+
+Threshold candidates use validation execution only. All-flat is represented by the finite threshold `2.0` with `>=`, so it remains flat at inference even for probability `1.0`. Exact ties prefer all-flat, then the higher threshold. Candidate execution failures and invalid probabilities/returns raise; there is no economic-mode fallback.
+
+Every successful objective round reports raw `val_backtest_total_return`, including untuned rounds using the fitted model's actual decision rule. `val_score` remains the threshold scorer's score, or null when tuning is off. Held-out `backtest_*` columns retain their test meaning. Candidate scoring cannot replace test execution evidence. Missing causal validation coverage, including separate-source boundary coverage, fails instead of using held-out prices.
+
+YAML binds Correlation, Focus, Sanity, Saturation and worst-first Budget reducers to the validation column; it sets comparison direction where applicable. Explicit matching values are allowed and conflicts fail before execution. Native reducers must be constructed with `metric="val_backtest_total_return"` and matching `maximize`. Random Budget remains metric-free. Automatic ranking means Focus best-row and Budget worst-first ordering; cohort selectors and custom/manual feedback retain their existing interfaces.
+
+Persisted YAML/MSQ experiments save `metadata.json.objective` and reconstruct the same operating point through Trainer/Sensor. Resume accepts the same declaration and rejects changes/addition/removal or a missing validation-score column before rewriting artifacts. Legacy runs keep their existing schemas. Standard runs score without new resume/promotion support; runs without an experiment directory keep their objective results in memory.
+
+These are validation selection scores. Calibration/search reuse validation data, tuned-versus-untuned comparisons are optimistic, and valid all-flat zero returns can tie. They establish no statistical acceptance or causal effect. Scoring cost grows with the existing threshold grid. Existing diagnostic/resource controls remain independent of the objective.

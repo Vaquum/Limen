@@ -14,7 +14,7 @@ from limen.backtest.trade_execution import trade_execution
 from limen.calibration._objective_threshold import validate_probabilities
 from limen.calibration.pipeline import CalibrationConfigProtocol
 from limen.calibration.threshold import grid_threshold_optimizer
-from limen.experiment._prepare_trade_context import PreparedTradeContext
+from limen.experiment._prepare_trade_context import PreparedTradeContext, _precision
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 
@@ -88,8 +88,8 @@ def prepare_objective(data: Mapping[str, object], architecture: object,
         raise ValueError('Objective validation row identity is ambiguous')
     start, end = inputs.partition_start_ns, inputs.partition_end_ns
     observations = inputs.observations.filter((pl.col('start_ns') < end) & (pl.col('available_at_ns') <= end))
-    sources = [source_binding(observations, 'objective:validation:execution', start, end, 1, 'causal_recorded_prices'),
-               source_binding(inputs.signals, 'objective:validation:model', start, end, 1, 'retained_model_rows')]
+    sources = [source_binding(observations, 'objective:validation:execution', start, end, _precision(observations), 'causal_recorded_prices'),
+               source_binding(inputs.signals, 'objective:validation:model', start, end, _precision(observations), 'retained_model_rows')]
     funding = inputs.funding_events
     if funding is not None:
         funding = funding.filter(

@@ -14,6 +14,7 @@ from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
+from limen.yaml._objective_spec import apply_objective, objective_reducer_params, read_objective
 from limen.yaml.resolver import resolve
 
 
@@ -62,8 +63,9 @@ def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
     manifest_type = m['type']
 
     if manifest_type == 'ml':
-        return _build_ml_manifest(m)
+        return apply_objective(_build_ml_manifest(m), yaml_dict)
     if manifest_type == 'rule_based':
+        _ = read_objective(yaml_dict)
         return _build_rule_based_manifest(m)
     raise ValueError(f"Unknown manifest type '{manifest_type}'")
 
@@ -377,19 +379,7 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
 
 def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]:
 
-    '''
-    Build reducer instances from the uel.pruning_strategies block.
-
-    Args:
-        yaml_dict (dict): Parsed and validated YAML experiment dict
-
-    Returns:
-        list[PruningStrategy]: Configured reducers, empty when none are declared
-
-    Raises:
-        ValueError: If a declared type is not a known reducer
-
-    '''
+    '''Build declared reducers, binding the manifest objective when present.'''
 
     uel_cfg = _uel_config(yaml_dict)
     if 'pruning_strategies' not in uel_cfg:
@@ -416,5 +406,7 @@ def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]
             raise ValueError(
                 f"'uel.pruning_strategies' params must be a mapping, got {type(params).__name__}"
             )
+        params = dict(params)
+        params.update(objective_reducer_params(yaml_dict, reducer_type, params))
         reducers.append(REDUCER_REGISTRY[reducer_type](**params))
     return reducers

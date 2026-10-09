@@ -40,19 +40,8 @@ def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series,
                               *, _objective_maximize: bool | None = None) -> tuple[float, float]:
 
     '''
-    Find optimal binary classification threshold by sweeping over a bounded range.
-
-    Args:
-        y_val (np.ndarray or pl.Series): Ground truth validation labels
-        val_proba (np.ndarray): Predicted probabilities for positive class on validation set
-        threshold_min (float): Minimum threshold to test
-        threshold_max (float): Maximum threshold to test
-        threshold_step (float): Step size for threshold sweep
-        default_threshold (float): Fallback threshold if no valid threshold found
-        metric (Callable): Scoring function with signature (y_true, y_pred) -> float
-
-    Returns:
-        tuple[float, float]: (best_threshold, best_score)
+    Legacy selection excludes all-flat predictions and uses the configured fallback.
+    Objective selection includes all-flat and preserves raw scores in either direction.
     '''
 
     _validate_threshold_grid(threshold_min, threshold_max, threshold_step)

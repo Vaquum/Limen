@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
+from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
@@ -179,6 +180,7 @@ class UniversalExperimentLoop:
         MSQ ignores random_search, maintain_details_in_params, params, prep and model.
         '''
 
+        validate_objective_reducers(self.manifest, self._pruning_strategies)
         if type(record_execution) is not bool:
             raise ValueError('record_execution must be a bool')
         if record_execution and (self._search_strategy is None or self._experiment_dir is None):
@@ -262,6 +264,7 @@ class UniversalExperimentLoop:
                 )
             if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in csv_header:
                 raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
+            validate_objective_header(self.manifest, csv_header)
 
         data_dict: dict[str, Any] = {}
         _pending_csv_rows: list[dict[str, Any]] = []
@@ -338,9 +341,10 @@ class UniversalExperimentLoop:
             if getattr(self.manifest, 'ablation_config', None) is not None:
                 round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
+            finalize_objective_result(self.manifest, round_results, round_succeeded)
             results_accumulator.append(dict(round_results))
             if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
-                log_batches.append(pl.DataFrame(results_accumulator))
+                log_batches.append(objective_frame(self.manifest, results_accumulator))
                 results_accumulator = []
 
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
@@ -384,7 +388,7 @@ class UniversalExperimentLoop:
                     ])
 
         if results_accumulator:
-            log_batches.append(pl.DataFrame(results_accumulator))
+            log_batches.append(objective_frame(self.manifest, results_accumulator))
         if log_batches:
             self.experiment_log = pl.concat(
                 log_batches, how='vertical_relaxed',
@@ -516,6 +520,7 @@ class UniversalExperimentLoop:
                 csv_header = next(csv.reader(f), None)
             if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in (csv_header or []):
                 raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
+            validate_objective_header(self.manifest, csv_header)
 
         _pending_csv_rows: list[dict[str, Any]] = []
 
@@ -625,6 +630,7 @@ class UniversalExperimentLoop:
 
             _: Any = round_results.setdefault('strict_mode_error', None)
 
+            finalize_objective_result(self.manifest, round_results, round_succeeded)
             results_accumulator.append(round_results)
 
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
@@ -831,6 +837,7 @@ class UniversalExperimentLoop:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
             raise ValueError('Cannot resume with a different record_model_outputs setting')
+        validate_objective_resume(self.manifest, metadata, csv_path)
         domain.set_state(checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
 
@@ -921,7 +928,7 @@ class UniversalExperimentLoop:
         if not accumulator:
             return
 
-        batch = pl.DataFrame(accumulator)
+        batch = objective_frame(self.manifest, accumulator)
         if self.experiment_log is not None:
             self.experiment_log = pl.concat(
                 [self.experiment_log, batch], how='vertical_relaxed',
@@ -993,6 +1000,7 @@ class UniversalExperimentLoop:
             metadata['record_execution'] = True
         if self._record_model_outputs:
             metadata['record_model_outputs'] = True
+        add_objective_metadata(self.manifest, metadata)
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage

@@ -435,5 +435,7 @@
   "limen/targets/trade_outcome.py": 200,
   "limen/sfd/reference_architecture/direction_sizing.py": 330,
   "limen/experiment/_objective.py": 160,
-  "limen/calibration/_objective_threshold.py": 50
+  "limen/calibration/_objective_threshold.py": 50,
+  "limen/experiment/_objective_run.py": 120,
+  "limen/yaml/_objective_spec.py": 110
 }
