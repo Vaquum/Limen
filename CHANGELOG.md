@@ -1501,4 +1501,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.15.2] - 2026-10-09
 
+- Read explicit HistoricalData kline_size intervals in event preparation, sensor timing and bound Python execution sources; prefer non-null kline_size and retain legacy klines_size when it is absent or null (#865; #859).
+
+## [5.15.3] - 2026-10-09
+
 - Reject zero training ratios in manifest split overrides while retaining caller-owned all-data training and existing invalid-input errors (#693 A1324–A1326).
