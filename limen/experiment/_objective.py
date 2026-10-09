@@ -74,8 +74,8 @@ def threshold_params(config: CalibrationConfigProtocol, scorer: ValidationScorer
 
 def _validate_funding_coverage(funding: pl.DataFrame, start: int, end: int) -> None:
     cursor = start
-    for left, right in funding.filter(pl.col('kind') == 'accrual').select('start_ns', 'end_ns').sort('start_ns').iter_rows():
-        left, right = int(left), int(right)
+    for row in funding.filter(pl.col('kind') == 'accrual').select('start_ns', 'end_ns').sort('start_ns').iter_rows():
+        left, right = int(row[0]), int(row[1])
         if right <= left or left > cursor or (left < cursor and cursor != start):
             raise ValueError('Objective funding support has a gap/overlap or invalid interval')
         cursor = right
