@@ -69,7 +69,7 @@ def test_misplaced_objective_is_an_error(location):
     assert not result.valid
     path = 'objective' if location == 'root' else 'uel.objective'
     assert any(error.path == path for error in result.errors)
-    with pytest.raises(ValueError, match='only at sfd.manifest.objective'):
+    with pytest.raises(ValueError, match=r'only at sfd.manifest.objective'):
         build_manifest(yaml_dict)
 
 

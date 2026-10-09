@@ -203,6 +203,7 @@ def test_existing_objective_selection_ignores_test_metric(direction):
     assert log[COLUMN].n_unique() > 1
     # The probe reorders observed return values; it creates no market fixture.
     changed = log.with_columns(pl.col('backtest_total_return').reverse())
+    assert not changed['backtest_total_return'].equals(log['backtest_total_return'])
     maximize = direction == 'maximize'
     expected = log.sort(COLUMN, descending=maximize)['C'][0]
     worst = log.sort(COLUMN, descending=not maximize)['C'][0]

@@ -138,7 +138,7 @@ def test_objective_column_survives_first_strict_failure(search, tmp_path):
 ))
 def test_native_objective_reducer_conflicts_fail_before_artifacts(reducer, tmp_path):
     loop = _loop(_config(), tmp_path, reducers=[reducer])
-    with pytest.raises(ValueError, match='metric|direction'):
+    with pytest.raises(ValueError, match=r'metric|direction'):
         _run(loop)
     assert _artifact_bytes(tmp_path) == {}
 

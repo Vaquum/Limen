@@ -57,7 +57,7 @@ def apply_objective(manifest: MLManifest, yaml_dict: Mapping[str, object]) -> ML
 
 def _reducer_params(objective: ObjectiveConfig | None, reducer_type: str, params: Mapping[str, object]) -> dict[str, object]:
     bound = dict(params)
-    if objective is None or reducer_type == 'budget' and params.get('trim_strategy', 'random') != 'worst_first':
+    if objective is None or (reducer_type == 'budget' and params.get('trim_strategy', 'random') != 'worst_first'):
         return bound
     if reducer_type not in {'correlation', 'focus', 'sanity', 'saturation', 'budget'}:
         return bound

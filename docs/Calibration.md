@@ -211,7 +211,6 @@ When a calibrated model is promoted to a `Sensor`, the calibrator is fitted once
 - Continue to [Reference Architecture](Reference-Architecture.md) to see how calibration interacts with `predict()` and `evaluate()`.
 - Continue to [Built-In SFDs](Built-In-SFDs.md) to see calibration wired up in the foundational `logreg_binary` and `tabpfn_binary` SFDs.
 
-
 ## Shared validation-return objective
 
 The optional `sfd.manifest.objective` declares the measure for threshold search and existing metric-driven reducers:

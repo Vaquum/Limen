@@ -26,13 +26,14 @@ def validate_objective_reducers(manifest: object, reducers: Sequence[PruningStra
     objective = run_objective(manifest)
     if objective is not None:
         for reducer in reducers:
+            settings = vars(reducer)
             metric_driven = isinstance(reducer, (CorrelationReducer, FocusReducer, SanityReducer, SaturationReducer))
             if isinstance(reducer, BudgetReducer):
-                metric_driven = getattr(reducer, '_trim_strategy') == 'worst_first'
+                metric_driven = settings['_trim_strategy'] == 'worst_first'
             if metric_driven:
-                if getattr(reducer, '_metric') != objective.column:
+                if settings['_metric'] != objective.column:
                     raise ValueError(f'{type(reducer).__name__} metric must be {objective.column} for this objective')
-                if isinstance(reducer, (CorrelationReducer, FocusReducer, BudgetReducer)) and getattr(reducer, '_maximize') != objective.maximize:
+                if isinstance(reducer, (CorrelationReducer, FocusReducer, BudgetReducer)) and settings['_maximize'] != objective.maximize:
                     raise ValueError(f'{type(reducer).__name__} maximize conflicts with objective direction')
 
 
