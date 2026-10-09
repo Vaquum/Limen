@@ -17,7 +17,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
-from limen.experiment._result_params import _result_params
+from limen.experiment._result_params import result_params
 from limen.experiment.errors import StrictModeError
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
@@ -336,7 +336,7 @@ class UniversalExperimentLoop:
             if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
 
-            round_results.update(_result_params(round_params, round_params, self.manifest))
+            round_results.update(result_params(round_params, round_params, self.manifest))
 
             results_accumulator.append(dict(round_results))
             if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
@@ -635,7 +635,7 @@ class UniversalExperimentLoop:
                 self.round_params.append(sfd_params)
             round_results.update(round_params)
             round_results.update(context_params or {})
-            round_results.update(_result_params({}, sfd_params, self.manifest))
+            round_results.update(result_params({}, sfd_params, self.manifest))
 
             _: Any = round_results.setdefault('strict_mode_error', None)
 

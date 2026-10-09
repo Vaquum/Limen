@@ -76,7 +76,7 @@ def test_ablation_rows_round_trip(tmp_path, monkeypatch, msq, counts):
     for log in (Log(file_path=str(tmp_path / 'results.csv')), Log(uel_object=uel), uel._log):
         assert log.experiment_log['_dropped_features'].tolist() == values
         for feature in ('roc', 'vol_5', 'vol', 'sma_10'):
-            membership = log.experiment_log['_dropped_features'].apply(lambda value: feature in json.loads(value))
+            membership = log.experiment_log['_dropped_features'].apply(lambda value, feature=feature: feature in json.loads(value))
             assert membership.tolist() == [feature in dropped for dropped in seen]
     uel.experiment_log.write_parquet(tmp_path / 'results.parquet')
     assert pl.read_parquet(tmp_path / 'results.parquet')['_dropped_features'].to_list() == values
