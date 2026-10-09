@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.15.6"
+  limen_version: "5.15.9"
   mode: development
 
 sfd:
@@ -941,6 +941,8 @@ manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
 The original manifest remains unchanged.
+
+For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest.
 
 ## What `prepare_data()` Produces
 
