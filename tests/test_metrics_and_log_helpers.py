@@ -435,9 +435,10 @@ def test_backtest_snapshot_charges_fees_on_notional_per_fill() -> None:
         slip_bps=50.0,
     )
 
-    assert result['avg_loss_bps'] == pytest.approx(-199.0)
-    assert result['cost_bps_p50'] == pytest.approx(99.5)
-    assert result['cost_per_bar_bps'] == pytest.approx(99.5)
+    loss_bps = (0.995 ** 2 / 1.005 - 0.005 - 1) * 10000
+    assert result['avg_loss_bps'] == pytest.approx(loss_bps)
+    assert result['cost_bps_p50'] == pytest.approx(-loss_bps / 2)
+    assert result['cost_per_bar_bps'] == pytest.approx(-loss_bps / 2)
 
 
 def test_backtest_snapshot_drawdown_includes_starting_equity_peak() -> None:

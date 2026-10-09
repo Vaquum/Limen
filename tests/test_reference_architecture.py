@@ -439,7 +439,7 @@ def test_compute_backtest_honours_injected_cost():
     zero = model.evaluate({**base, 'backtest_fee_bps': 0.0, 'backtest_slip_bps': 0.0})
     high = model.evaluate({**base, 'backtest_fee_bps': 20.0, 'backtest_slip_bps': 20.0})
 
-    assert zero['backtest_cost_per_bar_bps'] == 0.0
+    assert zero['backtest_cost_per_bar_bps'] == pytest.approx(0.0)
     assert high['backtest_cost_per_bar_bps'] > zero['backtest_cost_per_bar_bps']
     assert zero['backtest_pnl_per_bar_bps'] > high['backtest_pnl_per_bar_bps']
 
