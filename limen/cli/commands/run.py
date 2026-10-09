@@ -101,6 +101,7 @@ def run_experiment(yaml_path: Path,
             n_permutations=n_permutations,
             prep_each_round=prep_each_round,
             progress_bar=progress_bar,
+            record_execution=uel_cfg.get('record_execution', False),
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
@@ -132,5 +133,4 @@ def _build_results_dir(uel_cfg: dict[str, Any],
 
     template: str = uel_cfg.get('output_path', '{name}_{datetime}')
     return prefix / template.replace('{name}', experiment_name).replace('{datetime}', timestamp)
-
 

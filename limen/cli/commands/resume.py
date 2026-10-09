@@ -33,9 +33,10 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
 
     click.echo(f"Resuming from {results_dir} ...")
 
-    yaml_reference = _load_yaml_reference(results_dir)
-    if yaml_reference is None:
+    metadata = _load_resume_metadata(results_dir)
+    if metadata is None:
         return False
+    yaml_reference = metadata['yaml_reference']
 
     target_permutations = _load_target_permutations(results_dir)
     if target_permutations is None:
@@ -75,6 +76,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
             prep_each_round=prep_each_round,
             resume=True,
             progress_bar=progress_bar,
+            record_execution=metadata.get('record_execution', False),
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
@@ -84,7 +86,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
     return True
 
 
-def _load_yaml_reference(results_dir: Path) -> dict[str, Any] | None:
+def _load_resume_metadata(results_dir: Path) -> dict[str, Any] | None:
 
     metadata_path = results_dir / 'metadata.json'
     if not metadata_path.exists():
@@ -120,7 +122,7 @@ def _load_yaml_reference(results_dir: Path) -> dict[str, Any] | None:
         )
         return None
 
-    return yaml_reference
+    return metadata
 
 
 def _load_target_permutations(results_dir: Path) -> int | None:

@@ -1519,6 +1519,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Enforce declared required bar columns under optimized Python; retain the existing AssertionError and message when bar formation omits a required column (#693 A1052–A1053).
 
-## [5.15.10] - 2026-10-09
+## [5.16.0] - 2026-10-09
+
+- Add opt-in test-window snapshot execution recording with consistent resume settings.
+
+## [5.16.2] - 2026-10-09
 
 - Retain accepted ML YAML data-source parameter overrides in the compiled manifest instead of discarding the returned clone (#632).

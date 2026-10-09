@@ -6,6 +6,7 @@ import polars as pl
 from typing_extensions import override
 
 from limen.sfd.reference_architecture._backtest_evaluation import evaluate_prices as _evaluate_prices
+from limen.sfd.reference_architecture._backtest_evaluation import record_execution as _record_execution
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
@@ -107,6 +108,8 @@ class RuleBasedStrategy(ReferenceModel):
         for split in ('train', 'val', 'test'):
             pos = self._resolve(cond_index[strategy['entry']], cond_index, data[split]).fill_null(False).to_numpy().astype(int)
             positions[split] = pos
+            if split == 'test' and data.get('_record_execution'):
+                cost_kwargs.update(_record_execution=True, _alignment=data['_alignment'])
             backtest_results[split] = self._backtest_split(data[split], pos, cost_kwargs)
 
         results = rule_based_metrics(
@@ -148,6 +151,7 @@ class RuleBasedStrategy(ReferenceModel):
                         positions: npt.NDArray[np.integer[Any]],
                         cost_kwargs: dict[str, Any]) -> dict[str, float]:
         metrics, execution_result = _evaluate_prices(df, positions, cost_kwargs)
+        _record_execution(cost_kwargs, execution_result, float(cost_kwargs.get('notional_rate', 1.0)))
         if execution_result is None:
             return metrics
         pnl_per_trade_bps, executed_trade_count = _compounded_trade_pnl_summary(
