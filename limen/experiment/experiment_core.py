@@ -808,14 +808,6 @@ class UniversalExperimentLoop:
         Restore experiment state from checkpoint and data files.
 
         Args:
-            msq (MSQ): MSQ instance to restore state into
-            domain (ParamDomain): ParamDomain instance to restore state into
-            feedback_controller (FeedbackController): FeedbackController to restore
-            checkpoint_manager (CheckpointManager): CheckpointManager for loading
-            content_hash (str): Expected content hash for validation
-            strategy_type (str): Expected strategy type for validation
-            csv_path (Path): Path to results CSV
-            round_data_path (Path | None): Path to round_data.jsonl
             retain_round_artifacts (bool): Whether to hydrate round data
                 into instance artifact lists, or only count entries
 

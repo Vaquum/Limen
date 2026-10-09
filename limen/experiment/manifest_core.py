@@ -140,16 +140,7 @@ class CalibrationBuilder:
 
     def probability_calibration(self, func: CalibratorProtocol, **params: Any) -> 'CalibrationBuilder':
 
-        '''
-        Configure the probability calibration function.
-
-        Args:
-            func (Callable): Calibration function with signature (clf, x_val, y_val, **params) -> fitted model
-            **params: Extra keyword arguments forwarded to func; string values matching round_params keys are resolved at runtime
-
-        Returns:
-            CalibrationBuilder: Self for method chaining
-        '''
+        '''Register a calibrator; resolve round-parameter references at runtime.'''
 
         self._calibration_func = func
         self._calibration_params = params
@@ -157,16 +148,7 @@ class CalibrationBuilder:
 
     def threshold_function(self, func: ThresholdOptimizerProtocol, **params: Any) -> 'CalibrationBuilder':
 
-        '''
-        Configure the threshold optimisation function.
-
-        Args:
-            func (Callable): Threshold function with signature (y_val, val_proba, **params) -> tuple[float, float]
-            **params: Extra keyword arguments forwarded to func; string values matching round_params keys are resolved at runtime
-
-        Returns:
-            CalibrationBuilder: Self for method chaining
-        '''
+        '''Register a threshold optimizer; resolve round-parameter references at runtime.'''
 
         self._threshold_func = func
         self._threshold_params = params
@@ -1032,12 +1014,7 @@ class MLManifest(Manifest):
     def with_calibration(self) -> 'CalibrationBuilder':
 
         '''
-        Begin fluent calibration configuration.
-
-        Returns:
-            CalibrationBuilder: Builder for configuring probability calibration and threshold optimisation
-
-        NOTE: Call .probability_calibration(), optionally .threshold_function(), then .done() to finalise.
+        Configure calibration or threshold selection; call done() to finalise.
         '''
 
         return CalibrationBuilder(self)

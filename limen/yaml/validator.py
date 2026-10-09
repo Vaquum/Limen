@@ -190,8 +190,7 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     '''
     Validate a parsed YAML experiment dict.
 
-    Collects all errors without fail-fast. Returns a ValidationResult
-    with valid=True only when no errors are present.
+    Collect errors without fail-fast; validity requires no errors.
 
     Args:
         yaml_dict (dict): Parsed YAML dict from parser.parse()
