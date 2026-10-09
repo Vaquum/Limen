@@ -269,7 +269,7 @@ def validate_inference_contract(policy: TradePolicy | None, mode: str, contract:
         raise ValueError('Sensor model does not belong to the frozen trade contract')
 
 
-__all__ = ['PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows']
+__all__ = ['PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows', 'source_interval']
 
 class FoldScaler(Protocol):
     def __call__(self, data: pl.DataFrame, *, all_fitted_params: dict[str, object], is_training: bool) -> tuple[pl.DataFrame, dict[str, object]]: ...
