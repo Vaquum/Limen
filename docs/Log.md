@@ -242,7 +242,7 @@ The default `min_n=10` skips smaller cohorts. If every requested cohort is small
 
 ## Analyzing perturbation impact
 
-Every key in a round's `round_params` is copied onto that round's result row, so perturbation drivers become columns in `experiment_log` alongside the metrics. A perturbation sweep therefore leaves its own audit trail: `scaler_type`, `feature_groups`, any `use_*` toggle, `feature_drop_count`, `feature_drop_seed`, and the recorded `_dropped_features` list all appear as columns.
+Round parameter values become columns in `experiment_log` alongside the metrics. When ablation is configured, `_dropped_features` is taken from the actual prepared parameters and serialized as JSON text on every row, including `[]` for zero drops; automatic post-processing preserves this column. A perturbation sweep therefore leaves its own audit trail: `scaler_type`, `feature_groups`, any `use_*` toggle, `feature_drop_count`, `feature_drop_seed`, and the JSON-encoded `_dropped_features` list all appear as columns.
 
 Because `experiment_log` is a pandas DataFrame, the simplest analysis is direct filtering and grouping:
 
@@ -251,7 +251,7 @@ robust_only = log.experiment_log[log.experiment_log['scaler_type'] == 'robust']
 by_groups = log.experiment_log.groupby('feature_groups')['auc'].mean()
 ```
 
-`experiment_parameter_correlation` coerces every column to numeric, so string and list columns — `scaler_type`, `feature_groups`, and the list-valued `_dropped_features` — become NaN and drop out. Only numeric perturbation columns survive; boolean `use_*` flags survive because they coerce to `0`/`1` and group naturally.
+`experiment_parameter_correlation` coerces every column to numeric, so string and list columns — `scaler_type`, `feature_groups`, and the JSON-encoded `_dropped_features` — become NaN and drop out. Only numeric perturbation columns survive; boolean `use_*` flags survive because they coerce to `0`/`1` and group naturally.
 
 To bring a categorical perturbation into the correlation, one-hot it when constructing the `Log`:
 
@@ -259,7 +259,7 @@ To bring a categorical perturbation into the correlation, one-hot it when constr
 log = limen.Log(file_path='my_experiment.csv', cols_to_multilabel=['scaler_type'])
 ```
 
-That replaces `scaler_type` with `scaler_type_robust`, `scaler_type_logreg`, … `0`/`1` columns (and casts bool columns to int), which then reach `experiment_parameter_correlation`. It cannot expand the list-valued `_dropped_features`; deriving feature importance from ablation needs a per-feature boolean membership column, covered in [Perturbation Strategies](Perturbation-Strategies.md).
+That replaces `scaler_type` with `scaler_type_robust`, `scaler_type_logreg`, … `0`/`1` columns (and casts bool columns to int), which then reach `experiment_parameter_correlation`. It cannot expand the JSON-encoded `_dropped_features`; deriving feature importance from ablation needs a per-feature boolean membership column, covered in [Perturbation Strategies](Perturbation-Strategies.md).
 
 ## Persisting predictions and complex artifacts
 

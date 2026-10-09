@@ -260,6 +260,8 @@ class UniversalExperimentLoop:
                 raise ValueError(
                     f'UniversalExperimentLoop Existing results CSV has no header: {csv_path}'
                 )
+            if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in csv_header:
+                raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
 
         data_dict: dict[str, Any] = {}
         _pending_csv_rows: list[dict[str, Any]] = []
@@ -332,8 +334,9 @@ class UniversalExperimentLoop:
             if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
 
-            for key in round_params:
-                round_results[key] = round_params[key]
+            round_results.update(round_params)
+            if getattr(self.manifest, 'ablation_config', None) is not None:
+                round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
             results_accumulator.append(dict(round_results))
             if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
@@ -406,7 +409,7 @@ class UniversalExperimentLoop:
         if self.experiment_log is None:
             return
 
-        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
+        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8).exclude('_dropped_features')).columns
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
@@ -511,6 +514,8 @@ class UniversalExperimentLoop:
         if csv_path.exists() and csv_path.stat().st_size > 0:
             with csv_path.open('r', newline='') as f:
                 csv_header = next(csv.reader(f), None)
+            if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in (csv_header or []):
+                raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
 
         _pending_csv_rows: list[dict[str, Any]] = []
 
@@ -537,10 +542,7 @@ class UniversalExperimentLoop:
 
             start_time = time.time()
 
-            sfd_params = {
-                k: v for k, v in round_params.items()
-                if not k.startswith('_')
-            }
+            sfd_params = {k: v for k, v in round_params.items() if not k.startswith('_')}
 
             if context_params is not None:
                 sfd_params.update(context_params)
@@ -613,17 +615,13 @@ class UniversalExperimentLoop:
                 self._alignment.append(data_dict['_alignment'])
 
             round_results['id'] = current_hash
-            round_results['execution_time'] = round(
-                time.time() - start_time, 2,
-            )
+            round_results['execution_time'] = round(time.time() - start_time, 2)
 
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
-            for key, value in round_params.items():
-                round_results[key] = value
-            if context_params is not None:
-                for key, value in context_params.items():
-                    round_results[key] = value
+            round_results.update(round_params | (context_params or {}))
+            if getattr(self.manifest, 'ablation_config', None) is not None:
+                round_results['_dropped_features'] = json.dumps(sfd_params.get('_dropped_features', []))
 
             _: Any = round_results.setdefault('strict_mode_error', None)
 
@@ -874,6 +872,8 @@ class UniversalExperimentLoop:
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
         experiment_log = pl.read_csv(csv_path, n_rows=start_round)
+        if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
+            raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
         self.experiment_log = experiment_log
 
         col = next((c for c in ('_param_hash', '_id') if c in experiment_log.columns), None)
