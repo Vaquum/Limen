@@ -1499,7 +1499,11 @@ Note: add all new changelog entries to the bottom of this file.
 - Reject negative momentum periods and Ichimoku displacement that expose future prices; preserve zero, positive and default settings (#863).
 - Rerun evaluations that passed a negative momentum period or Ichimoku displacement; their features read future prices.
 
-## [5.15.3] - 2026-10-09
+## [5.15.2] - 2026-10-09
+
+- Read explicit HistoricalData kline_size intervals in event preparation, sensor timing and bound Python execution sources; prefer non-null kline_size and retain legacy klines_size when it is absent or null (#865; #859).
+
+## [5.15.4] - 2026-10-09
 
 - Record each ablation round’s actual dropped features as JSON text in CSV, in-memory logs and parquet, including zero-drop and failed rounds (#871); retain that column through post-processing and new-format resumes.
 - Reject pre-fix ablation CSV resumes or appends missing the column before rewriting artifacts; start a new experiment directory or results file. Decode the result field with `json.loads` for exact feature membership.

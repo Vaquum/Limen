@@ -21,7 +21,8 @@ def recorded_source(klines_size=900, limit=120):
     return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(limit)
 
 
-def recorded_yaml_source(**params):
+def recorded_yaml_source(row_count_limit=None, kline_size=60, start_date_limit=None, end_date_limit=None, *, n_rows=None):
+    assert kline_size == 900
     return recorded_source(limit=288)
 
 
@@ -214,7 +215,7 @@ sfd:
     data_source:
       method: limen.data.HistoricalData.get_spot_klines
       params:
-        klines_size: 900
+        kline_size: 900
     split_dates:
       train_start: "2025-01-01"
       train_end: "2025-01-02"
