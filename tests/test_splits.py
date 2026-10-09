@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -7,9 +8,46 @@ import pytest
 from limen.data.utils.splits import split_by_dates
 from limen.data.utils.splits import split_data_to_prep_output
 from limen.data.utils.splits import split_data_to_rule_based_prep_output
+from limen.data.utils.splits import split_random
 from limen.data.utils.splits import split_sequential
 from limen.experiment.manifest_core import MLManifest
 from limen.targets import RandomBinaryTarget
+
+
+@pytest.mark.parametrize('seed', [None, 42])
+@pytest.mark.parametrize('ratios', [(6, 2, 2), (1, 1, 1), (3, 3, 4)])
+def test_split_random_partitions_recorded_rows(seed: int | None, ratios: tuple[int, int, int]) -> None:
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet')
+
+    splits = split_random(data, ratios, seed=seed)
+
+    first_end = int(data.height * ratios[0] / sum(ratios))
+    second_end = int(data.height * sum(ratios[:2]) / sum(ratios))
+    assert [split.height for split in splits] == [first_end, second_end - first_end, data.height - second_end]
+    for index, split in enumerate(splits):
+        for other in splits[index + 1:]:
+            assert set(split['datetime']).isdisjoint(other['datetime'])
+    assert pl.concat(splits).sort('datetime').equals(data.sort('datetime'))
+    if seed is None:
+        second = split_random(data, ratios)
+        assert not splits[0]['datetime'].equals(second[0]['datetime'])
+
+
+@pytest.mark.parametrize('seed', [0, 42])
+@pytest.mark.parametrize('ratios', [(6, 2, 2), (3, 3, 4)])
+def test_split_random_preserves_seeded_membership(seed: int, ratios: tuple[int, int, int]) -> None:
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet')
+    first_end = int(data.height * ratios[0] / sum(ratios))
+    second_end = int(data.height * sum(ratios[:2]) / sum(ratios))
+    bounds = ((0, first_end), (first_end, second_end), (second_end, data.height))
+    previous = [
+        data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start)
+        for start, end in bounds
+    ]
+
+    splits = split_random(data, ratios, seed=seed)
+
+    assert all(actual.equals(expected) for actual, expected in zip(splits, previous, strict=True))
 
 
 def _make_splits() -> tuple[list[pl.DataFrame], list]:
