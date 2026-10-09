@@ -4,6 +4,7 @@ from limen.experiment._prepare_trade_context import source_interval as _source_i
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
+from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
 from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
@@ -18,7 +19,7 @@ from datetime import date
 from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
@@ -862,6 +863,11 @@ class MLManifest(Manifest):
     prediction_calibration_config: CalibrationConfig | None = None
     decoder_lookback: int = 1
     strict_mode: bool = False
+    objective: ObjectiveConfig | None = None
+
+    def set_objective(self, metric: str = 'backtest_total_return', direction: str = 'maximize') -> 'MLManifest':
+        self.objective = ObjectiveConfig(metric, direction)
+        return self
 
     def set_scaler(self,
                    transform_class: Any,
@@ -1182,7 +1188,18 @@ class MLManifest(Manifest):
                 model_kwargs['prediction_calibration_config'] = config
         self._apply_backtest_cost(data, round_params)
         resolve_component_kwargs(self.architecture_function, data, model_kwargs, round_params)
-        return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
+        scorer = None
+        if self.objective is not None:
+            scorer = _prepare_objective(data, self.architecture_function, self.prediction_calibration_config)
+            config = model_kwargs.get('prediction_calibration_config')
+            if config is not None:
+                if not isinstance(config, CalibrationConfig):
+                    raise ValueError('Objective requires a manifest calibration configuration')
+                model_kwargs['prediction_calibration_config'] = replace(config, threshold_params=_objective_threshold_params(config, scorer, self.objective))
+        result = self.architecture_function(data, **model_kwargs)
+        if scorer is not None and self.objective is not None:
+            result[self.objective.column] = _score_objective(data, result, scorer)
+        return _finish_trade_result(data, result)
 
     def sensor_input_prep(
             self,

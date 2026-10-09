@@ -1543,3 +1543,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.17.5] - 2026-10-09
 
 - Bind YAML and native unbound HistoricalData trade execution sources after resolving round parameters.
+
+## [5.18.0] - 2026-10-09
+
+- Add a shared validation-return objective for binary threshold calibration, pruning and reconstruction.

@@ -36,7 +36,8 @@ def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series,
                               threshold_max: float = 0.70,
                               threshold_step: float = 0.05,
                               default_threshold: float = 0.35,
-                              metric: Callable[[Any, Any], float] = balanced_metric) -> tuple[float, float]:
+                              metric: Callable[[Any, Any], float] = balanced_metric,
+                              *, _objective_maximize: bool | None = None) -> tuple[float, float]:
 
     '''
     Find optimal binary classification threshold by sweeping over a bounded range.
@@ -57,6 +58,9 @@ def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series,
     _validate_threshold_grid(threshold_min, threshold_max, threshold_step)
     thresholds = np.arange(threshold_min, threshold_max + threshold_step, threshold_step)
     thresholds = np.minimum(thresholds, threshold_max)
+    if _objective_maximize is not None:
+        from limen.calibration._objective_threshold import select_threshold
+        return select_threshold(y_val, val_proba, thresholds, metric, _objective_maximize)
     preds_matrix = (val_proba[:, None] >= thresholds).astype(np.int8)
     valid_mask = preds_matrix.sum(axis=0) > 0
     if not valid_mask.any():
