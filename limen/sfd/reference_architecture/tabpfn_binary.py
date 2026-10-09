@@ -130,6 +130,7 @@ class TabPFNBinary(ReferenceModel):
         pred_result = self.predict(data)
         preds = pred_result['_preds']
         probs = pred_result['_probs']
+        self._record_probabilities(data, pred_result)
 
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds

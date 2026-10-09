@@ -70,22 +70,19 @@ class XGBoostRegressor(ReferenceModel):
 
     @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
-
-        '''
-        Evaluate trained model on test data.
-
-        Args:
-            data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
-
-        Returns:
-            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
-        '''
+        '''Evaluate test predictions and preserve the configured boosting count.'''
 
         preds = self.predict(data)['_preds']
 
         results = continuous_metrics(data, preds)
         results['_preds'] = preds
+        if data.get('_record_model_outputs'):
+            booster = self.model.get_booster()
+            best = booster.attr('best_iteration')
+            results['best_iteration'] = (
+                int(best) + 1 if best is not None and self.model.booster != 'gblinear'
+                else booster.num_boosted_rounds()
+            )
 
         if inline_metrics:
             y_test = np.asarray(data['y_test'])
