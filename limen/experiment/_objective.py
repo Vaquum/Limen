@@ -99,7 +99,12 @@ def prepare_objective(data: Mapping[str, object], architecture: object,
     if inputs.signals['row_id'].null_count() or inputs.signals['row_id'].is_duplicated().any():
         raise ValueError('Objective validation row identity is ambiguous')
     start, end = inputs.partition_start_ns, inputs.partition_end_ns
-    observations = inputs.observations.filter((pl.col('start_ns') < end) & (pl.col('available_at_ns') <= end))
+    causal_open = ((pl.col('start_ns') != pl.col('end_ns'))
+                   & (pl.col('open_available_at_ns') == pl.col('start_ns'))
+                   & (pl.col('open_available_at_ns') >= start))
+    observations = inputs.observations.filter(
+        (pl.col('start_ns') < end) & ((pl.col('available_at_ns') <= end) | causal_open)
+    )
     sources = [source_binding(observations, 'objective:validation:execution', start, end, inputs.sources[0].precision_ns, 'causal_recorded_prices'),
                source_binding(inputs.signals, 'objective:validation:model', start, end, inputs.sources[1].precision_ns, 'retained_model_rows')]
     funding = inputs.funding_events
