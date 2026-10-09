@@ -1485,3 +1485,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Prevent overlap and lost rows in `split_random(seed=None)` while preserving explicit-seed membership and cumulative partition lengths (#861; #693 A1301–A1304).
 - Rerun evaluations that used this helper without a seed; their partitions may share observations.
+
+## [5.14.2] - 2026-10-09
+
+- Reject negative momentum periods and Ichimoku displacement that expose future prices; preserve zero, positive and default settings (#252).

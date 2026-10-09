@@ -10,7 +10,7 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price
 
     Args:
         data (pl.DataFrame): Dataset with price column
-        periods (list): List of periods for momentum calculation
+        periods (list): Non-negative periods for momentum calculation
         price_col (str): Name of the price column (default: 'close')
 
     Returns:
@@ -19,6 +19,8 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price
 
     if periods is None:
         periods = DEFAULT_MOMENTUM_PERIODS
+    if any(period < 0 for period in periods):
+        raise ValueError('periods must be non-negative to avoid future prices')
     momentum_expressions: list[pl.Expr] = []
     for period in periods:
         momentum_expressions.append(
