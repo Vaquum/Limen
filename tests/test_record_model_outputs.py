@@ -9,7 +9,7 @@ from ruamel.yaml import YAML
 
 from limen.cli.main import cli
 from limen.data import HistoricalData
-from limen.experiment import UniversalExperimentLoop
+from limen.experiment import CalibrationConfig, UniversalExperimentLoop
 from limen.inference import Trainer
 from limen.sfd.reference_architecture import LightGBMBinary, LogRegBinary, TabPFNBinary, XGBoostRegressor
 from limen.sfd.reference_architecture.base import ReferenceModel
@@ -163,19 +163,39 @@ def test_binary_evaluation_records_without_inline_metrics(model_class, calibrate
     np.testing.assert_array_equal(record['probs'], expected)
 
 
-def test_exact_threshold_boundary_preserves_backend_rule(recorded_bars):
+@pytest.mark.parametrize('threshold_path', (False, True))
+def test_exact_threshold_boundary_preserves_backend_rule(threshold_path, recorded_bars):
     manifest = CompiledSFD(_config()).manifest()
     data = manifest.prepare_data(recorded_bars, {'C': 0.1, 'max_iter': 1000})
     model = LogRegBinary().train(data, max_iter=1000)
     model.model.coef_.fill(0)
     model.model.intercept_.fill(0)
+    if threshold_path:
+        model.prediction_calibration_config = CalibrationConfig()
     data['_record_model_outputs'] = True
     result = model.evaluate(data, inline_metrics=False)
     record = {**data['_alignment']['model_outputs'], 'preds': result['_preds']}
     assert np.asarray(record['probs']).min() == np.asarray(record['probs']).max() == 0.5
-    assert record['threshold_rule'] == '>'
+    assert record['threshold_rule'] == ('>=' if threshold_path else '>')
     _assert_predictions(record)
-    assert not np.asarray(result['_preds']).any()
+    assert np.asarray(result['_preds']).all() == threshold_path
+
+
+@pytest.mark.parametrize('fault', ('short', 'nan', 'shape'))
+def test_recorded_probabilities_reject_invalid_arrays(fault, recorded_bars):
+    manifest = CompiledSFD(_config()).manifest()
+    data = manifest.prepare_data(recorded_bars, {'C': 0.1, 'max_iter': 1000})
+    model = LogRegBinary().train(data, max_iter=1000)
+    prediction = model.predict(data)
+    if fault == 'short':
+        prediction['_probs'] = prediction['_probs'][:-1]
+    elif fault == 'nan':
+        prediction['_probs'][0] = np.nan
+    else:
+        prediction['_probs'] = prediction['_probs'][:, None]
+    data['_record_model_outputs'] = True
+    with pytest.raises(ValueError, match='finite and aligned'):
+        model._record_probabilities(data, prediction)
 
 
 @pytest.mark.parametrize(('kind', 'stopping', 'booster'), (('lightgbm', True, None), ('lightgbm', False, None),
