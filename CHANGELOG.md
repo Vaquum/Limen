@@ -2,10 +2,6 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
-## [5.16.0] - 2026-10-09
-
-- Add opt-in test-window snapshot execution recording with consistent resume settings.
-
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -1518,6 +1514,10 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.15.6] - 2026-10-09
 
 - Reject non-positive, boolean and non-integer random_slice row counts before selecting experiment data; preserve positive integer sampling (#632 S028; #693 A1296–A1300).
+
+## [5.16.0] - 2026-10-09
+
+- Add opt-in test-window snapshot execution recording with consistent resume settings.
 
 ## [5.17.0] - 2026-10-09
 
