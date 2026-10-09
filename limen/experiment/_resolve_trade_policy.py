@@ -98,7 +98,13 @@ def resolve_trade_policy(config: BacktestConfig | None, params: Mapping[str, obj
     product_numbers = {key: resolve_number(getattr(product, key), params, key) for key in ('quantity_step', 'min_notional', 'initial_margin_fraction', 'maintenance_margin_fraction')}
     spec = ProductSpec(product.kind, product.instrument, product.base_currency, product.quote_currency, **product_numbers)
     costs = resolve_backtest_config(config, params)
-    numbers = {name: None if getattr(config, name) is None else resolve_number(getattr(config, name), params, name) for name in TRADE_NUMBERS}
+    numbers: dict[str, float | None] = {}
+    for name in TRADE_NUMBERS:
+        value = getattr(config, name)
+        if isinstance(value, str) and value in params:
+            value = params[value]
+        resolved = resolve_json(value, params)
+        numbers[name] = None if resolved is None and name in ('max_holding_seconds', 'timer_interval_seconds', 'max_price_gap_seconds') else finite_number(resolved, name)
     return TradePolicy(spec, prediction_mode=config.prediction_mode, fee_bps=cast(float, costs['fee_bps']), slip_bps=cast(float, costs['slip_bps']), notional_rate=cast(float, costs['notional_rate']), take_profit_bps=costs['take_profit_bps'], stop_loss_bps=costs['stop_loss_bps'], max_exposure=cast(float, numbers['max_exposure']), signal_change_bps=cast(float, numbers['signal_change_bps']), flat_threshold=cast(float, numbers['flat_threshold']), max_holding_seconds=numbers['max_holding_seconds'], timer_interval_seconds=numbers['timer_interval_seconds'], timer_phase_utc_seconds=cast(float, numbers['timer_phase_utc_seconds']), execution_lag_seconds=cast(float, numbers['execution_lag_seconds']), max_price_gap_seconds=numbers['max_price_gap_seconds'], funding=resolve_funding(config.funding, params))
 
 
