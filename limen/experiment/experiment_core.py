@@ -17,7 +17,6 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
-from limen.experiment._result_params import result_params
 from limen.experiment.errors import StrictModeError
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
@@ -264,6 +263,8 @@ class UniversalExperimentLoop:
                 raise ValueError(
                     f'UniversalExperimentLoop Existing results CSV has no header: {csv_path}'
                 )
+            if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in csv_header:
+                raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
 
         data_dict: dict[str, Any] = {}
         _pending_csv_rows: list[dict[str, Any]] = []
@@ -336,7 +337,9 @@ class UniversalExperimentLoop:
             if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
 
-            round_results.update(result_params(round_params, round_params, self.manifest))
+            round_results.update(round_params)
+            if getattr(self.manifest, 'ablation_config', None) is not None:
+                round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
             results_accumulator.append(dict(round_results))
             if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
@@ -530,6 +533,8 @@ class UniversalExperimentLoop:
         if csv_path.exists() and csv_path.stat().st_size > 0:
             with csv_path.open('r', newline='') as f:
                 csv_header = next(csv.reader(f), None)
+            if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in (csv_header or []):
+                raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
 
         _pending_csv_rows: list[dict[str, Any]] = []
 
@@ -556,10 +561,7 @@ class UniversalExperimentLoop:
 
             start_time = time.time()
 
-            sfd_params = {
-                k: v for k, v in round_params.items()
-                if not k.startswith('_')
-            }
+            sfd_params = {k: v for k, v in round_params.items() if not k.startswith('_')}
 
             if context_params is not None:
                 sfd_params.update(context_params)
@@ -627,15 +629,13 @@ class UniversalExperimentLoop:
                 self._alignment.append(data_dict['_alignment'])
 
             round_results['id'] = current_hash
-            round_results['execution_time'] = round(
-                time.time() - start_time, 2,
-            )
+            round_results['execution_time'] = round(time.time() - start_time, 2)
 
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
-            round_results.update(round_params)
-            round_results.update(context_params or {})
-            round_results.update(result_params({}, sfd_params, self.manifest))
+            round_results.update(round_params | (context_params or {}))
+            if getattr(self.manifest, 'ablation_config', None) is not None:
+                round_results['_dropped_features'] = json.dumps(sfd_params.get('_dropped_features', []))
 
             _: Any = round_results.setdefault('strict_mode_error', None)
 

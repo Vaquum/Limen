@@ -22,7 +22,7 @@ def _observed_model(data):
     return {'positive_fraction': float(labels.mean()), '_preds': labels.tolist()}
 
 
-def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,)):
+def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,), feedback_interval=1):
     data = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(500)
     manifest = (MLManifest()
         .set_split_config(3, 1, 1)
@@ -37,7 +37,7 @@ def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,)):
     sfd = SimpleNamespace(__name__=__name__, params=lambda: params, manifest=lambda: manifest)
     strategy = GridStrategy(ParamDomain(params)) if msq else None
     uel = UniversalExperimentLoop(data=data, sfd=sfd, search_strategy=strategy,
-                                 experiment_dir=path, feedback_interval=1, checkpoint_interval=1)
+                                 experiment_dir=path, feedback_interval=feedback_interval, checkpoint_interval=1)
     seen = []
     original_model = uel.model
 
@@ -99,7 +99,7 @@ def test_non_ablation_output_unchanged(tmp_path, msq):
 @pytest.mark.parametrize('counts', ((0, 1, 2), (1, 0, 2)))
 def test_ablation_failed_rows_keep_metadata(tmp_path, monkeypatch, msq, counts):
     monkeypatch.setattr(experiment_core, 'STANDARD_RUN_LOG_BATCH_SIZE', 3)
-    uel, seen = _make_uel(tmp_path, msq, counts)
+    uel, seen = _make_uel(tmp_path, msq, counts, feedback_interval=3)
     original_model = uel.model
 
     def fail_first(data, round_params):
@@ -114,6 +114,26 @@ def test_ablation_failed_rows_keep_metadata(tmp_path, monkeypatch, msq, counts):
     assert rows[0]['strict_mode_error']
     assert [json.loads(row['_dropped_features']) for row in rows] == seen
     assert uel.experiment_log['_dropped_features'].to_list() == [row['_dropped_features'] for row in rows]
+
+
+@pytest.mark.parametrize('msq', (False, True))
+def test_ablation_append_rejects_missing_column(tmp_path, monkeypatch, msq):
+    monkeypatch.chdir(tmp_path)
+    first, _ = _make_uel(None, msq, (0, 1))
+    _run(first, 2, post_processing=False)
+    rows = _csv_rows(tmp_path)
+    for row in rows:
+        del row['_dropped_features']
+    with (tmp_path / 'results.csv').open('w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    original = (tmp_path / 'results.csv').read_bytes()
+    appended, seen = _make_uel(None, msq, (0, 1))
+    with pytest.raises(ValueError, match='Cannot append ablation results without _dropped_features'):
+        _run(appended, 2, post_processing=False)
+    assert (tmp_path / 'results.csv').read_bytes() == original
+    assert seen == []
 
 
 @pytest.mark.parametrize('legacy', (False, True))

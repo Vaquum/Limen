@@ -197,6 +197,8 @@ Ablation drops randomly chosen feature columns so you can measure how much the m
 
 **What gets recorded.** When ablation is configured, every result row records `_dropped_features` as JSON text containing the sorted dropped names, or `[]` when none were dropped. CSV, the in-memory experiment log and parquet use that same encoding, including failed rounds. Successful `round_data.jsonl` records retain the prepared list under `round_params._dropped_features`; zero-drop records omit that key. Decode the result field with `json.loads` for exact membership checks. Experiments without ablation keep their existing columns.
 
+If preparation fails before ablation runs, `[]` means no drop names were recorded; it does not imply successful preparation. Read `strict_mode_error` alongside the field. Keep `_dropped_features` out of explicit `Log(..., cols_to_multilabel=...)` lists.
+
 ### Deriving Feature Importance From Ablation
 
 Because the dropped set is recorded per round, an ablation sweep doubles as a feature-importance probe: if dropping a feature reliably hurts a metric, that feature matters.
@@ -234,7 +236,7 @@ The primitives are not equally useful for every model. A rough decision guide:
 
 After an experiment with perturbations, each round in `results.csv` carries the parameter values that produced it — the active `feature_groups`, the `use_vwap` flag, the `scaler_type`, and (when ablation is configured) the JSON-encoded `_dropped_features` list — alongside the standard metrics. That lets you attribute metric differences back to the pipeline choice directly from the log. See [Log](Log.md) for reading and analyzing those results.
 
-New-format ablation experiments resume with the same JSON column. A pre-fix CSV without `_dropped_features` cannot resume: start a new experiment directory. Historical drop sets are not inferred or rewritten.
+New-format ablation experiments resume with the same JSON column. A pre-fix CSV without `_dropped_features` cannot resume or accept appended ablation rounds: start a new experiment directory for checkpointed MSQ runs, or a fresh `<experiment_name>.csv` for standard and uncheckpointed MSQ runs. Older standard runs may contain Python list representations rather than JSON; use a fresh file for those too. This fix checks column presence, not historical cell formats. Historical drop sets are not inferred or rewritten.
 
 ## Where To Look
 

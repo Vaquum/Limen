@@ -1502,4 +1502,4 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.15.3] - 2026-10-09
 
 - Record each ablation round’s actual dropped features as JSON text in CSV, in-memory logs and parquet, including zero-drop and failed rounds (#871); retain that column through post-processing and new-format resumes.
-- Reject pre-fix ablation CSV resumes missing the column before rewriting artifacts; start a new experiment directory. Decode the result field with `json.loads` for exact feature membership.
+- Reject pre-fix ablation CSV resumes or appends missing the column before rewriting artifacts; start a new experiment directory or results file. Decode the result field with `json.loads` for exact feature membership.
