@@ -1493,3 +1493,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.15.0] - 2026-10-09
 
 - Enumerate the declared parameter prefix on standard UEL runs with random_search=False instead of drawing a random subset (#470); retain legacy seeded sampling by default and expose compatible ParamSpace(sample=False) construction.
+
+## [5.15.1] - 2026-10-09
+
+- Reject negative momentum periods and Ichimoku displacement that expose future prices; preserve zero, positive and default settings (#863).
+- Rerun evaluations that passed a negative momentum period or Ichimoku displacement; their features read future prices.
