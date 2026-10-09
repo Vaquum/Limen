@@ -29,7 +29,7 @@ def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,)):
         .add_indicator(lambda df: df.with_columns(pl.col('close').pct_change().alias('roc')))
         .add_indicator(lambda df: df.with_columns(pl.col('close').rolling_std(5).alias('vol_5')))
         .add_indicator(lambda df: df.with_columns(pl.col('close').rolling_mean(10).alias('sma_10')))
-        .with_target_label('outcome', ThresholdBinaryTarget, source_column='roc', threshold=0.0)
+        .with_target_label('outcome', ThresholdBinaryTarget, params={'source_column': 'roc', 'threshold': 0.0})
         .with_reference_architecture(_observed_model))
     if ablation:
         manifest.set_feature_ablation()
