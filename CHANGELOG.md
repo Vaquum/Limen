@@ -1480,3 +1480,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.14.0] - 2026-10-08
 
 - Add private simulated-trade outcomes and tunable direction/sizing components with causal conditional fitting and signed inference contracts.
+
+## [5.14.1] - 2026-10-09
+
+- Prevent observation overlap and loss in unseeded random data splits.

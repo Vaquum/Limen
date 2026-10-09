@@ -55,15 +55,16 @@ def split_random(data: pl.DataFrame, ratios: Sequence[int], seed: int | None = N
         seed (int): Seed for random number generator
 
     Returns:
-        List[pl.DataFrame]: List of randomly shuffled DataFrames with proportional sizes
+        List[pl.DataFrame]: Disjoint, randomly shuffled partitions containing every input row
     '''
 
     total = data.height
     total_ratio = sum(ratios)
     bounds = [int(total * c / total_ratio) for c in accumulate(ratios)]
     starts = [0, *bounds[:-1]]
+    shuffled = data.sample(fraction=1.0, seed=seed, shuffle=True)
 
-    return [data.sample(fraction=1.0, seed=seed, shuffle=True).slice(start, end - start) for start, end in zip(starts, bounds, strict=True)]
+    return [shuffled.slice(start, end - start) for start, end in zip(starts, bounds, strict=True)]
 
 
 def split_by_dates(
