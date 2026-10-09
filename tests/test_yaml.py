@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 from textwrap import dedent
 
+import polars as pl
 import pytest
 
 from limen.calibration import grid_threshold_optimizer
@@ -996,7 +997,15 @@ def test_yaml_params_override_is_retained_in_compiled_manifest(overrides: dict[s
     assert baseline.data_source_config is not None
     assert manifest.data_source_config.method == baseline.data_source_config.method
     assert manifest.data_source_config.params == baseline.data_source_config.params | (overrides or {})
-    assert vars(manifest) | {'data_source_config': None} == vars(baseline) | {'data_source_config': None}
+    excluded = {'data_source_config': None, 'scaler': None}
+    assert vars(manifest) | excluded == vars(baseline) | excluded
+    assert manifest.scaler is not None and baseline.scaler is not None
+    assert manifest.scaler[1:] == baseline.scaler[1:]
+    assert [(name, params) for name, _, params in manifest.scaler[0]] == [(name, params) for name, _, params in baseline.scaler[0]]
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(200).select('close')
+    actual = manifest.scaler[0][0][1](data, scaler_type='robust').transform(data)
+    expected = baseline.scaler[0][0][1](data, scaler_type='robust').transform(data)
+    assert actual.equals(expected)
     assert yaml_dict == original
     assert sfd.manifest() is manifest
 
