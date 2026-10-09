@@ -201,7 +201,7 @@ def test_random_slice_preserves_recorded_positive_windows(rows: int) -> None:
     start = data['datetime'].to_list().index(result['datetime'][0])
 
     assert result.height == rows
-    assert 50 <= start and start + rows <= 150
+    assert start >= 50 and start + rows <= 150
     assert result.equals(data.slice(start, rows))
     assert result.equals(random_slice(data, rows=rows, seed=42))
 
