@@ -1432,9 +1432,8 @@ def _process_bars(
     # Validate required columns are present after bar formation
     available_cols = list(bar_data.columns)
     for required_col in manifest.required_bar_columns:
-        assert required_col in available_cols, (
-            f"Required bar column '{required_col}' not found after bar formation"
-        )
+        if required_col not in available_cols:
+            raise AssertionError(f"Required bar column '{required_col}' not found after bar formation")
 
     return all_datetimes, bar_data
 
