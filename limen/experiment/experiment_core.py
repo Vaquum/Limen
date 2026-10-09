@@ -17,6 +17,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment.checkpoint_manager import CheckpointManager
+from limen.experiment._result_params import _result_params
 from limen.experiment.errors import StrictModeError
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
@@ -335,8 +336,7 @@ class UniversalExperimentLoop:
             if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
 
-            for key in round_params:
-                round_results[key] = round_params[key]
+            round_results.update(_result_params(round_params, round_params, self.manifest))
 
             results_accumulator.append(dict(round_results))
             if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
@@ -409,7 +409,7 @@ class UniversalExperimentLoop:
         if self.experiment_log is None:
             return
 
-        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8)).columns
+        cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8).exclude('_dropped_features')).columns
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
@@ -633,11 +633,9 @@ class UniversalExperimentLoop:
 
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
-            for key, value in round_params.items():
-                round_results[key] = value
-            if context_params is not None:
-                for key, value in context_params.items():
-                    round_results[key] = value
+            round_results.update(round_params)
+            round_results.update(context_params or {})
+            round_results.update(_result_params({}, sfd_params, self.manifest))
 
             _: Any = round_results.setdefault('strict_mode_error', None)
 
@@ -882,6 +880,8 @@ class UniversalExperimentLoop:
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
         experiment_log = pl.read_csv(csv_path, n_rows=start_round)
+        if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
+            raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
         self.experiment_log = experiment_log
 
         col = next((c for c in ('_param_hash', '_id') if c in experiment_log.columns), None)

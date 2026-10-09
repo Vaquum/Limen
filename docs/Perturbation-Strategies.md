@@ -193,24 +193,26 @@ Ablation drops randomly chosen feature columns so you can measure how much the m
 
 **Cross-split consistency.** The drop set is chosen once on the training split and re-applied identically to validation and test, so every split sees the same feature matrix. When a promoted model runs inference, the recorded drop set is applied again — the sensor sees exactly the features the model was trained on.
 
-**Edge cases.** `feature_drop_count` must be a non-negative int (booleans are rejected); `feature_drop_seed` must be an int. A drop count of `0` is a no-op and records nothing. Requesting more drops than there are eligible columns raises `ValueError`.
+**Edge cases.** `feature_drop_count` must be a non-negative int (booleans are rejected); `feature_drop_seed` must be an int. A drop count of `0` leaves all features intact; its result row records `[]`. Requesting more drops than there are eligible columns raises `ValueError`.
 
-**What gets recorded.** On each round with a non-zero drop count, the sorted list of dropped column names is written into the round parameters under `_dropped_features`. That key flows into `results.csv` as a column and into `round_data.jsonl` as part of the round record, so every round carries an exact account of which features it ran without.
+**What gets recorded.** When ablation is configured, every result row records `_dropped_features` as JSON text containing the sorted dropped names, or `[]` when none were dropped. CSV, the in-memory experiment log and parquet use that same encoding, including failed rounds. Successful `round_data.jsonl` records retain the prepared list under `round_params._dropped_features`; zero-drop records omit that key. Decode the result field with `json.loads` for exact membership checks. Experiments without ablation keep their existing columns.
 
 ### Deriving Feature Importance From Ablation
 
 Because the dropped set is recorded per round, an ablation sweep doubles as a feature-importance probe: if dropping a feature reliably hurts a metric, that feature matters.
 
-`_dropped_features` is stored as a *list*, so it cannot be fed directly to the numeric correlation helper — build a per-feature boolean membership column first, then correlate it with the metric.
+`_dropped_features` contains a JSON-encoded list. Decode it and build a per-feature boolean membership column before using the numeric correlation helper.
 
 ```python-fragment
+import json
+
 # `log` is a Log with an experiment_log DataFrame from a completed ablation sweep.
 candidates = ['roc_14', 'atr_14', 'vwap']
 
 for feature in candidates:
     log.experiment_log[f"dropped_{feature}"] = (
         log.experiment_log['_dropped_features']
-        .apply(lambda dropped: feature in (dropped or []))
+        .apply(lambda dropped: feature in json.loads(dropped))
     )
 
 importance = log.experiment_parameter_correlation(metric='auc')
@@ -230,7 +232,9 @@ The primitives are not equally useful for every model. A rough decision guide:
 
 ## Expected Artifacts
 
-After an experiment with perturbations, each round in `results.csv` carries the parameter values that produced it — the active `feature_groups`, the `use_vwap` flag, the `scaler_type`, and (for ablation rounds) the `_dropped_features` list — alongside the standard metrics. That lets you attribute metric differences back to the pipeline choice directly from the log. See [Log](Log.md) for reading and analyzing those results.
+After an experiment with perturbations, each round in `results.csv` carries the parameter values that produced it — the active `feature_groups`, the `use_vwap` flag, the `scaler_type`, and (when ablation is configured) the JSON-encoded `_dropped_features` list — alongside the standard metrics. That lets you attribute metric differences back to the pipeline choice directly from the log. See [Log](Log.md) for reading and analyzing those results.
+
+New-format ablation experiments resume with the same JSON column. A pre-fix CSV without `_dropped_features` cannot resume: start a new experiment directory. Historical drop sets are not inferred or rewritten.
 
 ## Where To Look
 
