@@ -1526,3 +1526,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.17.0] - 2026-10-09
 
 - Add opt-in test probabilities, applied thresholds and actual boosting iteration counts.
+
+## [5.17.2] - 2026-10-09
+
+- Retain accepted ML YAML data-source parameter overrides in the compiled manifest instead of discarding the returned clone (#632). Apply these previously ignored overrides when recompiling saved experiment YAML as well.
