@@ -1522,3 +1522,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.16.0] - 2026-10-09
 
 - Add opt-in test-window snapshot execution recording with consistent resume settings.
+
+## [5.17.0] - 2026-10-09
+
+- Add opt-in test probabilities, applied thresholds and actual boosting iteration counts.

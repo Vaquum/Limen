@@ -77,6 +77,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
             resume=True,
             progress_bar=progress_bar,
             record_execution=metadata.get('record_execution', False),
+            record_model_outputs=metadata.get('record_model_outputs', False),
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')

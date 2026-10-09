@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Mapping
 from typing import Any, ClassVar, Literal
 
 import numpy as np
@@ -57,17 +58,7 @@ class ReferenceModel(ABC):
 
     @abstractmethod
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
-
-        '''
-        Evaluate the trained model and return results.
-
-        Args:
-            data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* prefixed keys
-
-        Returns:
-            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
-        '''
+        '''Return test metrics, optionally including confusion and backtest metrics.'''
 
         ...
 
@@ -132,6 +123,21 @@ class ReferenceModel(ABC):
         if '_trade_context' in data:
             options['_trade_context'] = data['_trade_context']
         return options
+
+    def _record_probabilities(self, data: Mapping[str, object], prediction: Mapping[str, object]) -> None:
+        if data.get('_record_model_outputs'):
+            alignment = data['_alignment']
+            if not isinstance(alignment, dict):
+                raise TypeError('Model output recording requires an alignment mapping')
+            probs = np.asarray(prediction['_probs'], dtype=float)
+            if probs.ndim != 1 or probs.shape != np.asarray(prediction['_preds']).shape or not np.isfinite(probs).all():
+                raise ValueError('Recorded probabilities must be finite and aligned with predictions')
+            threshold = prediction.get('optimal_threshold')
+            alignment['model_outputs'] = {
+                'probs': probs.tolist(),
+                'optimal_threshold': 0.5 if threshold is None else threshold,
+                'threshold_rule': prediction.get('threshold_rule', '>' if threshold is None else '>='),
+            }
 
     def _compute_backtest(self,
                           preds: npt.NDArray[np.integer[Any] | np.floating[Any]],

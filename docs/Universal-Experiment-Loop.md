@@ -135,6 +135,7 @@ uel.run(
 | `post_processing` | compute terminal post-run metrics (`uel._log`, confusion metrics, backtest results) |
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series; off by default; requires `search_strategy` and `experiment_dir` |
+| `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
 
 ### Manifest-driven rules
 
@@ -259,6 +260,14 @@ metrics = snapshot_ledger(result, 1.0)
 These match `backtest_*` columns (`*_test` for rule-based strategies); using the original notional again would scale twice. Calendar comparisons and market-relative analysis still require source prices and row alignment. Three extra arrays increase disk and reader memory in proportion to test bars and rounds; Trainer and Cohort load whole round records.
 
 Python resume must pass the same flag; CLI resume forwards the saved YAML flag. Changing it raises before artifacts are rewritten. Older metadata without the flag means `false`. Existing resume requirements, including complete successful round records through the checkpoint, still apply.
+
+### Record model outputs
+
+Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl`, in the same order as `preds`, with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
+
+LightGBM and XGBoost add `best_iteration` to `results.csv`: the number of boosting iterations actually used for prediction. LightGBM uses its positive `best_iteration_`, otherwise `n_iter_`. Tree-based XGBoost uses its zero-based best iteration plus one, otherwise the fitted booster's round count. XGBoost `gblinear` uses the final fitted round count because it does not retain an earlier model. Counts are available with early stopping disabled and with `inline_metrics=False`.
+
+The option is independent of `record_execution` and `post_processing`; leaving it off preserves existing outputs. Python resume must pass the same flag; CLI resume uses the effective setting saved in metadata, including Python overrides. Metadata records an enabled setting, and a changed setting rejects resume before artifacts are rewritten. Older metadata without the flag means `false`. Probability arrays increase JSONL storage with test-window length.
 
 ### Important scope note
 
