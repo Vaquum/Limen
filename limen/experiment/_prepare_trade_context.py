@@ -38,8 +38,8 @@ def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     method = source.method
     if isfunction(method) and '.' in method.__qualname__ and '<locals>' not in method.__qualname__ and next(iter(signature(method).parameters), None) == 'self':
         module = import_module('limen.experiment.manifest_core')
-        configure = cast(Callable[[Callable[..., object], dict[str, object]], SourceConfig], getattr(module, 'DataSourceConfig'))
-        resolve = cast(Callable[[SourceConfig], object], getattr(getattr(module, 'DataSourceResolver'), 'resolve'))
+        configure = cast(Callable[[Callable[..., object], dict[str, object]], SourceConfig], vars(module)['DataSourceConfig'])
+        resolve = cast(Callable[[SourceConfig], object], vars(module)['DataSourceResolver'].resolve)
         result = resolve(configure(method, values))
     else:
         result = method(**values)
