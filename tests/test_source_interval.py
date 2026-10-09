@@ -45,6 +45,14 @@ def test_declared_interval_preserves_round_references(recorded_history, key, int
     assert prepared['__trade_available_at_ns__'].equals(recorded_history['datetime'].dt.epoch('ns') + 900 * NANOSECONDS, check_names=False)
 
 
+@pytest.mark.parametrize('params', ({'kline_size': None, 'klines_size': 900}, {'kline_size': 900, 'klines_size': 3600}))
+def test_canonical_interval_retains_legacy_fallback(recorded_history, params):
+    manifest = event_manifest(lambda **kwargs: recorded_history, params)
+    data = manifest.prepare_data(recorded_history, {})
+    prepared, _ = manifest.sensor_input_prep(recorded_history, data['_fitted_params'], {})
+    assert prepared['__trade_available_at_ns__'].equals(recorded_history['datetime'].dt.epoch('ns') + 900 * NANOSECONDS, check_names=False)
+
+
 @pytest.mark.parametrize('interval', (900, '{execution_interval}'))
 def test_historical_execution_source_uses_declared_interval(recorded_history, interval):
     manifest = event_manifest(HistoricalData.get_spot_klines, {'kline_size': 3600})

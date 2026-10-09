@@ -40,7 +40,8 @@ def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
 
 
 def source_interval(source: SourceConfig | None) -> object:
-    return None if source is None else source.params.get('kline_size', source.params.get('klines_size'))
+    value = None if source is None else source.params.get('kline_size')
+    return value if value is not None or source is None else source.params.get('klines_size')
 
 
 def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:

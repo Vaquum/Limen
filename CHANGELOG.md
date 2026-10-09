@@ -1488,4 +1488,4 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.14.3] - 2026-10-09
 
-- Read explicit HistoricalData kline_size intervals in event preparation, sensor timing and execution sources while retaining custom-source klines_size.
+- Read explicit HistoricalData kline_size intervals in event preparation, sensor timing and bound Python execution sources; prefer non-null kline_size and retain legacy klines_size when it is absent or null (#865; #859).
