@@ -1489,3 +1489,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.14.4] - 2026-10-09
 
 - Resolve searched null holding, timer and price-gap controls as disabled within configured event execution, matching literal None and YAML validation (#867; #860); reject required null trade numbers at the finite-number resolver.
+
+## [5.15.0] - 2026-10-09
+
+- Enumerate the declared parameter prefix on standard UEL runs with random_search=False instead of drawing a random subset (#470); retain legacy seeded sampling by default and expose compatible ParamSpace(sample=False) construction.
