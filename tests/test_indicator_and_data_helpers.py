@@ -1,4 +1,6 @@
 import math
+from pathlib import Path
+from typing import cast
 import numpy as np
 import polars as pl
 import pytest
@@ -182,6 +184,26 @@ def test_rsi_sma_is_neutral_when_recent_gains_and_losses_balance() -> None:
     result = rsi_sma(data, period=2)
 
     assert result['rsi_sma_2'].to_list()[2:] == pytest.approx([50.0, 50.0, 50.0])
+
+
+@pytest.mark.parametrize('rows', [0, -1, True, False, 1.5, '3', None, np.bool_(True)])
+def test_random_slice_rejects_invalid_row_counts_on_recorded_data(rows: object) -> None:
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet').head(200)
+
+    with pytest.raises(ValueError, match='random_slice rows must be a positive non-boolean integer'):
+        random_slice(data, rows=cast(int, rows), seed=42)
+
+
+@pytest.mark.parametrize('rows', [1, 7, 100, np.int64(7)])
+def test_random_slice_preserves_recorded_positive_windows(rows: int) -> None:
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet').head(200)
+    result = random_slice(data, rows=rows, seed=42)
+    start = data['datetime'].to_list().index(result['datetime'][0])
+
+    assert result.height == rows
+    assert start >= 50 and start + rows <= 150
+    assert result.equals(data.slice(start, rows))
+    assert result.equals(random_slice(data, rows=rows, seed=42))
 
 
 def test_random_slice_rejects_invalid_safe_range_bounds() -> None:

@@ -1,11 +1,9 @@
 import polars as pl
 import numpy as np
+from typing import cast
 
-def random_slice(df: pl.DataFrame,
-                 rows: int,
-                 *,
-                 safe_range_low: float = 0.25,
-                 safe_range_high: float = 0.75,
+def random_slice(df: pl.DataFrame, rows: int, *,
+                 safe_range_low: float = 0.25, safe_range_high: float = 0.75,
                  seed: int | None = None) -> pl.DataFrame:
 
     '''
@@ -13,7 +11,7 @@ def random_slice(df: pl.DataFrame,
 
     Args:
         df (pl.DataFrame): Input DataFrame to slice from
-        rows (int): Number of rows to include in the slice
+        rows (int): Positive, non-boolean integer number of rows to include
         safe_range_low (float): Lower bound of safe range as fraction of total rows
         safe_range_high (float): Upper bound of safe range as fraction of total rows
         seed (int | None): Random seed for reproducible results
@@ -24,6 +22,8 @@ def random_slice(df: pl.DataFrame,
     # Validate safe range parameters
     if not (0.0 <= safe_range_low < safe_range_high <= 1.0):
         raise ValueError('random_slice safe_range_low must be >= 0.0, safe_range_high must be <= 1.0, and safe_range_low < safe_range_high')
+    if isinstance(rows, bool) or not isinstance(cast(object, rows), (int, np.integer)) or rows <= 0:
+        raise ValueError('random_slice rows must be a positive non-boolean integer')
 
     n = len(df)
     lo = int(n * safe_range_low)

@@ -1,9 +1,24 @@
 import polars as pl
 import numpy as np
 from datetime import datetime, timedelta
+from pathlib import Path
+import pytest
 from limen.experiment import MLManifest
 from limen.data.utils import random_slice
 from limen.targets import IdentityTarget
+
+
+@pytest.mark.parametrize('rows', [0, -1, True])
+def test_pre_split_random_selector_rejects_invalid_resolved_rows(rows: int) -> None:
+    data = pl.read_parquet(Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet').head(200)
+    manifest = (MLManifest()
+        .set_pre_split_data_selector(random_slice, rows='random_slice_size', seed=42)
+        .set_split_config(6, 2, 2)
+        .with_target_label('close', IdentityTarget)
+    )
+
+    with pytest.raises(ValueError, match='random_slice rows must be a positive non-boolean integer'):
+        manifest.prepare_data(data, {'random_slice_size': rows})
 
 
 def test_pre_split_random_selector():
