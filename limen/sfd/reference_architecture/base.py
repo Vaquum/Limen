@@ -136,7 +136,7 @@ class ReferenceModel(ABC):
             alignment['model_outputs'] = {
                 'probs': probs.tolist(),
                 'optimal_threshold': 0.5 if threshold is None else threshold,
-                'threshold_rule': '>' if threshold is None else '>=',
+                'threshold_rule': prediction.get('threshold_rule', '>' if threshold is None else '>='),
             }
 
     def _compute_backtest(self,

@@ -198,6 +198,27 @@ def test_recorded_probabilities_reject_invalid_arrays(fault, recorded_bars):
         model._record_probabilities(data, prediction)
 
 
+@pytest.mark.parametrize('label', (0, 1))
+def test_one_class_lightgbm_preserves_scores_and_replays_native_decision(label, recorded_bars):
+    manifest = CompiledSFD(_config('lightgbm')).manifest()
+    data = manifest.prepare_data(recorded_bars, {})
+    labels = np.asarray(data['y_train'])
+    data['x_train'] = np.asarray(data['x_train'])[labels == label]
+    data['y_train'] = labels[labels == label]
+    model = LightGBMBinary().train(data, n_estimators=20, early_stopping_rounds=None, verbosity=-1, n_jobs=1)
+    native = model.predict(data)
+    off = model.evaluate(data, inline_metrics=False)
+    data['_record_model_outputs'] = True
+    on = model.evaluate(data, inline_metrics=False)
+    record = {**data['_alignment']['model_outputs'], 'preds': on['_preds']}
+    np.testing.assert_array_equal(record['probs'], native['_probs'])
+    np.testing.assert_array_equal(off['_preds'], on['_preds'])
+    assert np.asarray(on['_preds']).all() == bool(label)
+    assert record['optimal_threshold'] == (0.0 if label else 1.0)
+    assert record['threshold_rule'] == ('>=' if label else '>')
+    _assert_predictions(record)
+
+
 @pytest.mark.parametrize(('kind', 'stopping', 'booster'), (('lightgbm', True, None), ('lightgbm', False, None),
                                                         ('xgboost', True, 'gbtree'), ('xgboost', False, 'gbtree'),
                                                         ('xgboost', True, 'gblinear')))
