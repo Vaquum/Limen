@@ -35,6 +35,11 @@ def target_exposure(data):
     return {'_preds': np.full(len(data['x_test']), 0.5), '_prediction_mode': 'target_exposure'}
 
 
+def recorded_yaml_source(klines_size=900, start_date_limit=None, end_date_limit=None):
+    assert klines_size == 900
+    return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(288)
+
+
 @pytest.mark.parametrize('field', OPTIONAL)
 def test_nullable_round_matches_disabled_execution(field):
     source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(120)
@@ -89,11 +94,7 @@ def test_nullable_controls_reject_missing_references(field, reference):
 @pytest.mark.parametrize('field', OPTIONAL)
 @pytest.mark.parametrize('candidates', ([None, 1800], [1800, None]))
 def test_nullable_yaml_search_completes_both_rounds(field, candidates, monkeypatch, tmp_path):
-    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(288)
-    def recorded_source(klines_size=900, start_date_limit=None, end_date_limit=None):
-        assert klines_size == 900
-        return source
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(recorded_source))
+    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(recorded_yaml_source))
     manifest = {
         'type': 'rule_based',
         'data_source': {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {'klines_size': 900}},
