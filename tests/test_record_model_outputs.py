@@ -113,6 +113,24 @@ def test_default_and_false_preserve_outputs(recorded_bars, tmp_path):
     assert 'record_model_outputs' not in json.loads((tmp_path / 'default/metadata.json').read_text())
 
 
+@pytest.mark.parametrize('kind', ('logreg', 'lightgbm', 'random', 'xgboost'))
+def test_enabled_recording_preserves_scalar_metrics(kind, recorded_bars, tmp_path):
+    config = _config(kind)
+    baseline = _loop(config, recorded_bars, tmp_path / 'off')
+    enabled = _loop(config, recorded_bars, tmp_path / 'on')
+    state = np.random.get_state()
+    _run(baseline)
+    np.random.set_state(state)
+    _run(enabled, record_model_outputs=True)
+    additional = ['best_iteration'] if kind in ('lightgbm', 'xgboost') else []
+    assert set(enabled.experiment_log.columns) == set(baseline.experiment_log.columns) | set(additional)
+    assert enabled.experiment_log.drop('execution_time', *additional).equals(baseline.experiment_log.drop('execution_time'))
+    for on, off in zip(_records(tmp_path / 'on'), _records(tmp_path / 'off'), strict=True):
+        for field in ('probs', 'optimal_threshold', 'threshold_rule'):
+            on.pop(field, None)
+        assert on == off
+
+
 @pytest.mark.parametrize(('kind', 'calibrated'), (('logreg', False), ('logreg', True),
                                                ('lightgbm', False), ('lightgbm', True), ('random', False)))
 def test_python_records_original_probabilities(kind, calibrated, recorded_bars, tmp_path, monkeypatch):
@@ -213,6 +231,9 @@ def test_one_class_lightgbm_preserves_scores_and_replays_native_decision(label, 
     record = {**data['_alignment']['model_outputs'], 'preds': on['_preds']}
     np.testing.assert_array_equal(record['probs'], native['_probs'])
     np.testing.assert_array_equal(off['_preds'], on['_preds'])
+    assert {key: value for key, value in on.items() if not key.startswith('_') and key != 'best_iteration'} == {
+        key: value for key, value in off.items() if not key.startswith('_')
+    }
     assert np.asarray(on['_preds']).all() == bool(label)
     assert record['optimal_threshold'] == (0.0 if label else 1.0)
     assert record['threshold_rule'] == ('>=' if label else '>')

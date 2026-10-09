@@ -79,8 +79,6 @@ class RandomBinary(ReferenceModel):
 
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds
-        if data.get('_record_model_outputs'):
-            results['optimal_threshold'] = 0.5
 
         if inline_metrics:
             results.update(self._compute_confusion(preds, data['y_test'], data.get('price_data_for_backtest')))

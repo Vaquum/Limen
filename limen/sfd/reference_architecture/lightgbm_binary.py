@@ -139,11 +139,12 @@ class LightGBMBinary(ReferenceModel):
         pred_result = self.predict(data)
         preds = pred_result['_preds']
         probs = pred_result['_probs']
+        recorded_prediction = pred_result
         if data.get('_record_model_outputs') and self.prediction_calibration_config is None and self.model.n_classes_ == 1:
             positive = self.model.classes_[0] == 1
-            pred_result['optimal_threshold'] = 0.0 if positive else 1.0
-            pred_result['threshold_rule'] = '>=' if positive else '>'
-        self._record_probabilities(data, pred_result)
+            recorded_prediction = {**pred_result, 'optimal_threshold': 0.0 if positive else 1.0,
+                                   'threshold_rule': '>=' if positive else '>'}
+        self._record_probabilities(data, recorded_prediction)
 
         results = binary_metrics(data, preds, probs)
         results['_preds'] = preds
@@ -151,7 +152,6 @@ class LightGBMBinary(ReferenceModel):
         results['optimal_threshold'] = pred_result.get('optimal_threshold')
         results['val_score'] = pred_result.get('val_score')
         if data.get('_record_model_outputs'):
-            results['optimal_threshold'] = pred_result.get('optimal_threshold', 0.5)
             best = self.model.best_iteration_
             results['best_iteration'] = best if best > 0 else self.model.n_iter_
 
