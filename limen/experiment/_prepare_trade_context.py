@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
+from importlib import import_module
 from inspect import isfunction, signature
 from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
@@ -36,9 +37,10 @@ def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     values = cast(dict[str, object], resolve_json(source.params, params))
     method = source.method
     if isfunction(method) and '.' in method.__qualname__ and '<locals>' not in method.__qualname__ and next(iter(signature(method).parameters), None) == 'self':
-        from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver
-
-        result = DataSourceResolver.resolve(DataSourceConfig(method, values))
+        module = import_module('limen.experiment.manifest_core')
+        configure = cast(Callable[[Callable[..., object], dict[str, object]], SourceConfig], getattr(module, 'DataSourceConfig'))
+        resolve = cast(Callable[[SourceConfig], object], getattr(getattr(module, 'DataSourceResolver'), 'resolve'))
+        result = resolve(configure(method, values))
     else:
         result = method(**values)
     if not isinstance(result, pl.DataFrame):
