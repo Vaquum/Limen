@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
+from importlib import import_module
+from inspect import isfunction, signature
 from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 import polars as pl
@@ -33,7 +35,14 @@ def _source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tu
 
 def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     values = cast(dict[str, object], resolve_json(source.params, params))
-    result = source.method(**values)
+    method = source.method
+    if isfunction(method) and '.' in method.__qualname__ and '<locals>' not in method.__qualname__ and next(iter(signature(method).parameters), None) == 'self':
+        module = import_module('limen.experiment.manifest_core')
+        configure = cast(Callable[[Callable[..., object], dict[str, object]], SourceConfig], vars(module)['DataSourceConfig'])
+        resolve = cast(Callable[[SourceConfig], object], vars(module)['DataSourceResolver'].resolve)
+        result = resolve(configure(method, values))
+    else:
+        result = method(**values)
     if not isinstance(result, pl.DataFrame):
         raise ValueError('Trade source must return a Polars DataFrame')
     return result
