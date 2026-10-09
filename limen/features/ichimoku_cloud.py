@@ -17,12 +17,15 @@ def ichimoku_cloud(
         tenkan_period (int): Lookback period for Tenkan-sen
         kijun_period (int): Lookback period for Kijun-sen
         senkou_b_period (int): Lookback period for Senkou Span B
-        displacement (int): Number of periods to shift Senkou spans and Chikou span
+        displacement (int): Non-negative shift for Senkou spans and Chikou span
 
     Returns:
         pl.DataFrame: The input data with new columns:
             'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
     '''
+
+    if displacement < 0:
+        raise ValueError('displacement must be non-negative to avoid future prices')
 
     return (
         data
