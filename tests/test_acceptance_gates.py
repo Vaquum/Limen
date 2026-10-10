@@ -179,6 +179,17 @@ def test_acceptance_block_and_verdicts(acceptance_runs, tmp_path):
     }
 
 
+@pytest.mark.parametrize('key', ('min_deflated_sharpe_probability', 'max_pbo'))
+def test_acceptance_rejects_oversized_integer(key):
+    config = _config()
+    config['sfd']['manifest']['acceptance'] = {key: 10 ** 400}
+    result = validate(config)
+    assert not result.valid
+    assert any('acceptance' in error.path for error in result.errors)
+    with pytest.raises(ValueError, match='acceptance'):
+        Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(**{key: 10 ** 400})
+
+
 def test_report_end_to_end(acceptance_runs):
     expected_keys = {
         'n_trials', 'n_bars', 'n_blocks', 'winner_trial', 'winner_sharpe',

@@ -26,9 +26,15 @@ def read_acceptance(value: object) -> dict[str, float]:
         raise ValueError('acceptance allows only min_deflated_sharpe_probability and max_pbo')
     result: dict[str, float] = {}
     for key, threshold in declaration.items():
-        if isinstance(threshold, bool) or not isinstance(threshold, Real) or not math.isfinite(float(threshold)) or not 0 <= float(threshold) <= 1:
+        if isinstance(threshold, bool) or not isinstance(threshold, Real):
             raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]')
-        result[str(key)] = float(threshold)
+        try:
+            probability = float(threshold)
+        except OverflowError as exc:
+            raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]') from exc
+        if not math.isfinite(probability) or not 0 <= probability <= 1:
+            raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]')
+        result[str(key)] = probability
     return result
 
 
