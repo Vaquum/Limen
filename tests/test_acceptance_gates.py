@@ -226,6 +226,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     assert aligned['pbo'] == _reference_pbo(matrix, 2)
     assert aligned['deflated_sharpe_probability'] == absent['deflated_sharpe_probability']
     assert aligned['errors'] == {}
+    valid_records = copy.deepcopy(records)
     for fold in records[1]['folds']:
         dates = fold['alignment']['test_datetimes']
         start = source_dates.index(dates[0]) - 1
@@ -238,6 +239,17 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     assert shifted['verdicts']['max_pbo'] is None
     assert shifted['errors']['pbo']
     assert shifted['deflated_sharpe_probability'] == aligned['deflated_sharpe_probability']
+    records = valid_records
+    recorded_returns = records[1]['folds'][0]['net_returns']
+    recorded_returns[1] = {'recorded_return': recorded_returns[1]}
+    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    corrupt = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
+    assert corrupt['pbo'] is None
+    assert corrupt['verdicts']['max_pbo'] is None
+    assert 'numeric' in corrupt['errors']['pbo']
+    assert corrupt['deflated_sharpe_probability'] == aligned['deflated_sharpe_probability']
+    assert json.loads((tmp_path / 'acceptance_report.json').read_text()) == corrupt
+    assert 'numeric' in (tmp_path / 'acceptance_report.md').read_text()
 
 
 def test_pbo_timestamp_identity_survives_recorded_dst_transition(tmp_path):

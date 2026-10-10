@@ -94,7 +94,11 @@ def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trial
                 raise ValueError('PBO requires unique increasing test timestamps')
             identities.append(timestamps)
             returns.extend(cast(list[float], net))
-        if not np.array_equal(np.asarray(returns, dtype=np.float64), track):
+        try:
+            recorded = np.asarray(returns, dtype=np.float64)
+        except (TypeError, OverflowError) as exc:
+            raise ValueError('PBO requires numeric recorded fold returns') from exc
+        if not np.array_equal(recorded, track):
             raise ValueError('PBO fold returns differ from trial_returns.parquet')
         if reference is not None and identities != reference:
             raise ValueError('PBO requires identical ordered test timestamps across trials')
