@@ -132,15 +132,30 @@ def stable(captured: dict) -> dict:
             'metadata':{k:v for k,v in captured['metadata'].items() if k not in excluded}}
 
 
-def digest(captured: dict) -> str:
+def scientific(captured: dict) -> dict:
     science = stable(captured)
     # CSV is inherently textual: normalize only numeric cell representations.
-    converted = {'columns':science['columns'],
+    return {'columns':science['columns'],
                  'rows':[canonical(row,in_csv=True) for row in science['rows']],
                  'round_data':canonical(science['round_data']),
                  'metadata':canonical(science['metadata'])}
-    payload=json.dumps(converted,separators=(',',':'),ensure_ascii=False)
+def _hash(value: object) -> str:
+    payload=json.dumps(value,separators=(',',':'),ensure_ascii=False)
     return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def digest(captured: dict) -> str:
+    return _hash(scientific(captured))
+
+
+def component_digests(captured: dict) -> dict[str, str]:
+    science = stable(captured)
+    return {'columns': _hash(science['columns']),
+            **{f'rows/{key}': _hash([canonical(row[key], in_csv=True) for row in science['rows']])
+               for key in science['rows'][0]},
+            **{f'round_data/{key}': _hash([canonical(record[key]) for record in science['round_data']])
+               for key in science['round_data'][0]},
+            **{f'metadata/{key}': _hash(canonical(value)) for key, value in science['metadata'].items()}}
 
 
 def main():
@@ -158,6 +173,7 @@ def main():
                   'threads':{k:os.environ.get(k) for k in
                              ('OMP_NUM_THREADS','OPENBLAS_NUM_THREADS','MKL_NUM_THREADS')},
                   'digest_12dp':digest(result),
+                  'component_digests': component_digests(result),
                   'round_ids':[row['round_id'] for row in result['round_data']],
                   'columns':result['columns'],'row_count':len(result['rows'])}
         dest=args.out/f'{name}.json'

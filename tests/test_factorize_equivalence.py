@@ -26,7 +26,7 @@ from limen.yaml import validate
 from limen.yaml.compiler import build_manifest
 
 from tests.fixtures.factorize.generate import (
-    BASELINE, CASES, MARKET, canonical, digest, execute, manifest,
+    BASELINE, CASES, MARKET, canonical, component_digests, digest, execute, manifest,
 )
 
 GOLDENS = Path(__file__).parent / 'fixtures/factorize'
@@ -91,7 +91,10 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
         on = execute(name, tmp_path / name / 'on', factorize=True)
         # Frozen goldens require the locked Linux/Python 3.10 numerical runtime.
         if sys.platform == 'linux' and sys.version_info[:2] == (3, 10) and np.__version__ == '2.2.6':
-            assert digest(off) == baseline['digest_12dp'], f'{name}: original Limen vs switch-off'
+            differences = {key: (expected, component_digests(off).get(key))
+                           for key, expected in baseline.get('component_digests', {}).items()
+                           if component_digests(off).get(key) != expected}
+            assert digest(off) == baseline['digest_12dp'], f'{name}: original Limen vs switch-off: {differences}'
             assert digest(on) == baseline['digest_12dp'], f'{name}: original Limen vs factorized'
         else:
             assert digest(off) == digest(on), f'{name}: current on/off parity'

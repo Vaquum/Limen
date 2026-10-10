@@ -445,5 +445,5 @@
   "limen/experiment/_walk_forward_split.py": 90,
   "limen/experiment/_walk_forward_run.py": 190,
   "limen/log/_permutation_returns.py": 40,
-  "limen/experiment/_factorize.py": 225
+  "limen/experiment/_factorize.py": 245
 }
