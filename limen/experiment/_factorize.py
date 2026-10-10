@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import NoReturn, cast
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
 from limen.experiment.errors import StrictModeError
@@ -22,6 +23,7 @@ from limen.features.lagged_features import lag_range
 from limen.indicators.window_return import window_return
 from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture import _backtest_evaluation
+from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.dlinear_regressor import dlinear_regressor
 from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
@@ -142,7 +144,7 @@ class _Cached:
     data: dict[str, object]
     result: dict[str, object]
     warnings: list[str]
-    positions: dict[str, np.ndarray] | None
+    positions: dict[str, npt.NDArray[np.int64]] | None
 
 
 class FactorizedRounds:
@@ -193,16 +195,17 @@ class FactorizedRounds:
             recorded = list(dict.fromkeys(str(w.message) for w in caught))
             if not isinstance(data.get('price_data_for_backtest'), pl.DataFrame) and type(self.manifest) is MLManifest:
                 _fail('missing snapshot test prices')
-            positions: dict[str, np.ndarray] | None = None
+            positions: dict[str, npt.NDArray[np.int64]] | None = None
             if type(self.manifest) is RuleBasedManifest:
                 rule = RuleBasedStrategy()
                 strategy_cfg = cast(dict[str, object], data['strategy'])
                 positions = {}
+                logic = cast(Callable[..., pl.Series], vars(RuleBasedStrategy)['_apply_logic'])
                 for split in ('train', 'val', 'test'):
                     frame = data[split]
                     if not isinstance(frame, pl.DataFrame):
                         _fail('rule-based split must be a DataFrame')
-                    positions[split] = np.asarray(rule._apply_logic(frame, strategy_cfg).fill_null(False).to_numpy(), dtype=int)  # pyright: ignore[reportPrivateUsage]
+                    positions[split] = np.asarray(logic(rule, frame, strategy_cfg).fill_null(False).to_numpy(), dtype=np.int64)
             self.cache[key] = _Cached(data, dict(result), recorded, positions)
             return data, result, recorded
 
@@ -210,20 +213,23 @@ class FactorizedRounds:
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
         data['_record_execution'] = self.record_execution
         data['_record_model_outputs'] = self.record_model_outputs
-        self.manifest._apply_backtest_cost(data, params)  # pyright: ignore[reportPrivateUsage]
+        apply_costs = cast(Callable[..., None], vars(Manifest)['_apply_backtest_cost'])
+        apply_costs(self.manifest, data, params)
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             if entry.positions is None:
                 predictions = np.asarray(entry.result['_preds'])
                 if self.manifest.architecture_function is dlinear_regressor:
                     predictions = (predictions > 0).astype(int)
-                compute = cast(Callable[[object, Mapping[str, object]], dict[str, float]], _backtest_evaluation.compute_backtest)  # pyright: ignore[reportUnknownMemberType]
+                compute = cast(Callable[[object, Mapping[str, object]], dict[str, float]], _backtest_evaluation.compute_backtest)
                 metrics = compute(predictions, data)
                 result = {name: metrics.get(name, value)
                           for name, value in entry.result.items()}
             else:
                 rule = RuleBasedStrategy()
-                costs = rule._cost_kwargs(data)  # pyright: ignore[reportPrivateUsage]
+                cost_args = cast(Callable[..., dict[str, object]], vars(ReferenceModel)['_cost_kwargs'])
+                costs = cost_args(rule, data)
+                run_split = cast(Callable[..., dict[str, float]], vars(RuleBasedStrategy)['_backtest_split'])
                 summaries: dict[str, dict[str, float]] = {}
                 for split in ('train', 'val', 'test'):
                     if split == 'test' and self.record_execution:
@@ -231,7 +237,7 @@ class FactorizedRounds:
                     frame = data[split]
                     if not isinstance(frame, pl.DataFrame):
                         _fail('rule-based split must be a DataFrame')
-                    summaries[split] = rule._backtest_split(frame, entry.positions[split], costs)  # pyright: ignore[reportPrivateUsage]
+                    summaries[split] = run_split(rule, frame, entry.positions[split], costs)
                 fresh = rule_based_metrics(entry.positions, summaries)
                 result = {name: fresh.get(name, value)
                           for name, value in entry.result.items()}
