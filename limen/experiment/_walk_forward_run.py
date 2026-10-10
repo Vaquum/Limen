@@ -3,6 +3,7 @@ import json
 import math
 from collections.abc import Callable, Mapping
 from datetime import date
+from itertools import islice
 from numbers import Integral, Real
 from pathlib import Path
 from typing import Protocol, cast
@@ -182,7 +183,7 @@ class WalkForwardRun:
     def restore(self, path: Path, up_to_round: int | None, expected: list[tuple[int, str]] | None = None) -> int:
         entries: list[dict[str, object]] = []
         with path.open() as stream:
-            for line in stream:
+            for line in islice(stream, None if expected is None else len(expected)):
                 entry = cast(dict[str, object], json.loads(line))
                 index = entry.get('_round_index')
                 if not isinstance(index, int) or isinstance(index, bool):
