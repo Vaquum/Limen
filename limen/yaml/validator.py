@@ -4,6 +4,7 @@ from typing import Any
 from typing import cast
 
 from limen.yaml.errors import YAMLError
+from limen.yaml._objective_spec import check_objective_spec
 from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import BlockSpec
 from limen.yaml.rules import CalibrationCrossRef
@@ -189,8 +190,7 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     '''
     Validate a parsed YAML experiment dict.
 
-    Collects all errors without fail-fast. Returns a ValidationResult
-    with valid=True only when no errors are present.
+    Collect errors without fail-fast; validity requires no errors.
 
     Args:
         yaml_dict (dict): Parsed YAML dict from parser.parse()
@@ -207,6 +207,7 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     if errors:
         return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
+    check_objective_spec(yaml_dict, errors)
     _MAIN_ENGINE.run(yaml_dict, errors, warnings)
 
     _, mode = get_at(yaml_dict, 'metadata.mode')

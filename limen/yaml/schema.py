@@ -19,6 +19,7 @@ MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'indicators', 'ba
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {
+    'objective',
     'pre_split_data_selector',
     'bar_formation',
     'features',

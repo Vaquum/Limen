@@ -1,0 +1,147 @@
+schema_version: '1.0'
+
+metadata:
+  name: logreg_return_objective
+  limen_version: 5.18.0
+  mode: development
+  description: Select binary thresholds and prune on validation event-ledger 
+    return
+
+sfd:
+  manifest:
+    type: ml
+
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-09-30'
+      val_start: '2024-10-01'
+      val_end: '2024-11-30'
+      test_start: '2024-12-01'
+      test_end: '2024-12-31'
+
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: '{roc_period}'
+        group: momentum
+    - func: limen.indicators.atr
+      params:
+        period: 14
+        group: volatility
+    - func: limen.indicators.ppo
+      params:
+        group: momentum
+    - func: limen.indicators.wilder_rsi
+      params:
+        group: momentum
+
+    features:
+    - func: limen.features.fractional_diff
+      params:
+        d: '{frac_diff_d}'
+        cols:
+        - close
+    - func: limen.features.vwap
+      params:
+        group: volume
+    - func: limen.features.kline_imbalance
+      params:
+        group: volume
+
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_{roc_period}
+        quantile: '{q}'
+      transform_params:
+        shift: '{shift}'
+
+    scaler:
+      from_params: scaler_type
+
+    feature_ablation:
+      drop_count_key: feature_drop_count
+      seed_key: feature_drop_seed
+
+    strict_mode: true
+
+    reference_architecture: 
+      limen.sfd.reference_architecture.logreg_binary.logreg_binary
+
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: '{cal_method}'
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          threshold_min: '{threshold_min}'
+          threshold_max: '{threshold_max}'
+          threshold_step: '{threshold_step}'
+
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+    backtest:
+      fee_bps: 5.0
+      slip_bps: 5.0
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-09
+        min_notional: 0.0
+  params:
+    # data prep
+    frac_diff_d: [0.0]
+    shift: [-1, -3]
+    q: [0.45, 0.50]
+    roc_period: [1, 12]
+    # view perturbation
+    scaler_type: [robust, rank_gauss]
+    # feature perturbation
+    feature_groups: [all, momentum]
+    feature_drop_count: [0]
+    feature_drop_seed: [42]
+    # calibration
+    use_calibration: [true]
+    use_threshold: [true, false]
+    cal_method: [sigmoid]
+    threshold_min: [0.25]
+    threshold_max: [0.65]
+    threshold_step: [0.05]
+    # classifier
+    solver: [lbfgs, liblinear]
+    penalty: [l2]
+    dual: [false]
+    tol: [0.01]
+    C: [0.1, 1.0]
+    fit_intercept: [true]
+    intercept_scaling: [1.0]
+    class_weight: [0.55]
+    random_state: [42]
+    max_iter: [120]
+    multi_class: [deprecated]
+    verbose: [0]
+    warm_start: [false]
+    n_jobs: [-1]
+    l1_ratio: [null]
+
+uel:
+  n_permutations: 12
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
+  pruning_strategies:
+  - type: correlation
+    params:
+      min_observations: 10
