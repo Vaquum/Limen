@@ -189,18 +189,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
-    '''
-    Validate a parsed YAML experiment dict.
-
-    Collect errors without fail-fast; validity requires no errors.
-
-    Args:
-        yaml_dict (dict): Parsed YAML dict from parser.parse()
-
-    Returns:
-        ValidationResult: Validation outcome with errors and warnings
-
-    '''
+    '''Collect YAML errors and warnings; validity requires no errors.'''
 
     errors: list[YAMLError] = []
     warnings: list[YAMLError] = []
