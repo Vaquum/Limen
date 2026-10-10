@@ -315,3 +315,18 @@ def test_standard_warning_remains_visible_before_model_error(tmp_path):
     assert emitted[0].category is UserWarning
     assert str(emitted[0].message) == 'ConvergenceWarning is mentioned here'
     assert loop.convergence_report is None
+
+
+def test_standard_ignored_convergence_warning_is_recorded_without_emission(tmp_path):
+    loop = _diagnostic_loop(tmp_path, False, ('model',))
+    with warnings.catch_warnings(record=True) as emitted:
+        warnings.simplefilter('always')
+        warnings.simplefilter('ignore', ConvergenceWarning)
+        loop.run('results', n_permutations=1, prep_each_round=True,
+                 random_search=False, progress_bar=False)
+    assert emitted == []
+    assert loop.experiment_log['_convergence_warning'].to_list() == [True]
+    assert loop.convergence_report['rounds'] == loop.convergence_report['observed_rounds'] == 1
+    assert loop.convergence_report['convergence_warning_rounds'] == 1
+    assert loop.convergence_report['convergence_warning_pct'] == 100.0
+    assert json.loads((tmp_path / 'convergence_report.json').read_text()) == loop.convergence_report
