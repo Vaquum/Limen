@@ -1,9 +1,11 @@
 import copy
 import json
 import math
+from datetime import date, timezone
 from itertools import combinations, pairwise
 from pathlib import Path
 from statistics import NormalDist
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import polars as pl
@@ -236,6 +238,51 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     assert shifted['verdicts']['max_pbo'] is None
     assert shifted['errors']['pbo']
     assert shifted['deflated_sharpe_probability'] == aligned['deflated_sharpe_probability']
+
+
+def test_pbo_timestamp_identity_survives_recorded_dst_transition(tmp_path):
+    bars = pl.read_parquet(_FIXTURE).filter(pl.col('datetime').dt.date() <= date(2024, 10, 28)).tail(384)
+    config = _config()
+    config['sfd']['manifest']['split_walk_forward']['test_bars'] = 49
+    loop = _loop(config, bars, tmp_path)
+    _run(loop)
+    artifact = pl.read_parquet(tmp_path / 'trial_returns.parquet')
+    trials = artifact['trial'].unique(maintain_order=True).to_list()
+    matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
+                       for trial in trials])
+    path = tmp_path / 'round_data.jsonl'
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    helsinki = ZoneInfo('Europe/Helsinki')
+    lexical_disorder = False
+    for trial_index, record in enumerate(records):
+        for fold in record['folds']:
+            alignment = fold['alignment']
+            dates = [value for value in bars['datetime']
+                     if alignment['first_test_datetime'] <= value.isoformat() <= alignment['last_test_datetime']
+                     and value.isoformat() not in alignment['missing_datetimes']]
+            assert len(dates) == len(fold['net_returns'])
+            instants = [value.replace(tzinfo=timezone.utc) if value.tzinfo is None
+                        else value.astimezone(timezone.utc) for value in dates]
+            localized = [value.astimezone(helsinki) for value in instants]
+            if any(before.utcoffset() != after.utcoffset() for before, after in pairwise(localized)):
+                lexical_disorder = True
+                assert [value.isoformat() for value in localized] != sorted(value.isoformat() for value in localized)
+            zone = helsinki if trial_index == 0 else timezone.utc
+            alignment['test_datetimes'] = [value.astimezone(zone).isoformat() for value in instants]
+    assert lexical_disorder
+    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    aligned = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
+    assert aligned['pbo'] == _reference_pbo(matrix, 2)
+    assert aligned['errors'] == {}
+    original = records[1]['folds'][0]['alignment']['test_datetimes']
+    for invalid in (original[::-1], [original[0], *original[:-1]]):
+        records[1]['folds'][0]['alignment']['test_datetimes'] = invalid
+        path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+        rejected = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
+        assert rejected['pbo'] is None
+        assert rejected['verdicts']['max_pbo'] is None
+        assert rejected['errors']['pbo']
+        assert rejected['deflated_sharpe_probability'] == aligned['deflated_sharpe_probability']
 
 
 def test_report_end_to_end(acceptance_runs):

@@ -1,6 +1,7 @@
 import json
 import math
 from collections.abc import Mapping
+from datetime import datetime
 from numbers import Real
 from pathlib import Path
 from typing import cast
@@ -68,12 +69,12 @@ def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trial
             if not isinstance(trial, str) or trial in records:
                 raise ValueError('PBO requires unique recorded trial identities')
             records[trial] = record
-    reference: list[list[str]] | None = None
+    reference: list[list[datetime]] | None = None
     for trial, track in zip(trials, values, strict=True):
         folds = records.get(trial, {}).get('folds')
         if not isinstance(folds, list) or not folds:
             raise ValueError('PBO requires recorded folds for every trial')
-        identities: list[list[str]] = []
+        identities: list[list[datetime]] = []
         returns: list[float] = []
         for fold in cast(list[object], folds):
             if not isinstance(fold, Mapping):
@@ -86,7 +87,9 @@ def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trial
                 raise ValueError('PBO requires recorded ordered test timestamps aligned with each fold return')
             if not all(isinstance(value, str) for value in cast(list[object], dates)):
                 raise ValueError('PBO requires recorded ISO test timestamps')
-            timestamps = cast(list[str], dates)
+            timestamps = [datetime.fromisoformat(value) for value in cast(list[str], dates)]
+            if len({value.tzinfo is None for value in timestamps}) != 1:
+                raise ValueError('PBO requires consistently zoned test timestamps')
             if timestamps != sorted(set(timestamps)):
                 raise ValueError('PBO requires unique increasing test timestamps')
             identities.append(timestamps)
