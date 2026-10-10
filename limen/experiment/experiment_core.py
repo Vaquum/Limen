@@ -858,16 +858,6 @@ class UniversalExperimentLoop:
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no round data exists."
             )
-        loaded_rounds = self._load_round_data(
-            round_data_path,
-            up_to_round=start_round,
-            retain_round_artifacts=retain_round_artifacts,
-        )
-        if loaded_rounds < start_round:
-            raise ValueError(
-                f"UniversalExperimentLoop Cannot resume: round_data.jsonl has {loaded_rounds} entries but checkpoint indicates {start_round} rounds completed."
-            )
-
         if not csv_path.exists():
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
@@ -875,6 +865,20 @@ class UniversalExperimentLoop:
         experiment_log = pl.read_csv(csv_path, n_rows=start_round)
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
             raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
+        if self._walk_forward is not None:
+            expected = [(index, str(row['id'])) for index, row in enumerate(experiment_log.iter_rows(named=True)) if row['strict_mode_error'] is None]
+            _ = self._walk_forward.restore(round_data_path, start_round, expected)
+        else:
+            loaded_rounds = self._load_round_data(
+                round_data_path,
+                up_to_round=start_round,
+                retain_round_artifacts=retain_round_artifacts,
+            )
+            if loaded_rounds < start_round:
+                raise ValueError(
+                    f"UniversalExperimentLoop Cannot resume: round_data.jsonl has {loaded_rounds} entries but checkpoint indicates {start_round} rounds completed."
+                )
+
         self.experiment_log = experiment_log
 
         col = next((c for c in ('_param_hash', '_id') if c in experiment_log.columns), None)

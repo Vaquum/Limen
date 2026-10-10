@@ -1907,7 +1907,7 @@ def _resolve_split(
     if manifest.split_walk_forward is not None:
         if manifest.split_dates is not None:
             raise ValueError('Manifest split_walk_forward conflicts with split_dates')
-        return _walk_forward_split(raw_data, manifest.split_walk_forward, getattr(manifest, '_walk_forward_fold'),
+        return _walk_forward_split(raw_data, manifest.split_walk_forward, getattr(manifest, '_walk_forward_fold', None),
                                    manifest.split_config, require_validation=require_validation)
     if manifest.split_dates is not None:
         return split_by_dates(raw_data, *manifest.split_dates)

@@ -14,6 +14,7 @@ from limen.backtest.trade_execution import trade_execution
 from limen.calibration import sklearn_probability_calibrator
 from limen.data.utils import split_walk_forward
 from limen.experiment import Manifest, RuleBasedManifest, UniversalExperimentLoop
+from limen.experiment.errors import StrictModeError
 from limen.experiment.reducer import BudgetReducer
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
@@ -73,7 +74,7 @@ def fold_runs(tmp_path_factory):
             path = tmp_path_factory.mktemp(f'folds_{anchored}_{search}')
             feedback = []
             loop = _loop(config, bars, path, search=search,
-                         callback=lambda log, msq: feedback.append(log.clone()))
+                         callback=lambda log, msq, feedback=feedback: feedback.append(log.clone()))
             _run(loop)
             results.append((loop, config, bars, path, search, feedback))
     return results
@@ -358,6 +359,57 @@ def test_resume_rejects_changed_geometry_and_retains_tracks(tmp_path, monkeypatc
         audits.append(entries)
     assert audits[0] == audits[1]
     assert any(entry['interventions'] for entry in audits[0])
+
+
+def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, monkeypatch):
+    config = _config()
+    config['sfd']['params']['entry_return'] = [0.0, 0.001, 0.002]
+    bars = _bars()
+    original = RuleBasedManifest.run_model
+
+    def fail_first_trial(manifest, data, round_params):
+        if round_params['entry_return'] == 0.0:
+            raise StrictModeError('Recorded walk-forward trial failed')
+        return original(manifest, data, round_params)
+
+    monkeypatch.setattr(RuleBasedManifest, 'run_model', fail_first_trial)
+    full = _loop(config, bars, tmp_path / 'full')
+    _run(full, n_permutations=3)
+    path = tmp_path / 'resume'
+    first = _loop(config, bars, path)
+    calls = 0
+
+    def interrupt_after_success(manifest, data, round_params):
+        nonlocal calls
+        result = fail_first_trial(manifest, data, round_params)
+        calls += 1
+        if calls == 2:
+            first._shutdown_requested = True
+        return result
+
+    with monkeypatch.context() as context:
+        context.setattr(RuleBasedManifest, 'run_model', interrupt_after_success)
+        _run(first, n_permutations=3)
+    assert first.experiment_log.height == 2
+    assert first.experiment_log['strict_mode_error'][0] == 'Recorded walk-forward trial failed'
+    assert first.fold_results.height == 2
+    records = _records(path)
+    assert len(records) == 1 and records[0]['_round_index'] == 1
+    saved_jsonl = (path / 'round_data.jsonl').read_bytes()
+    records[0]['folds'].pop()
+    (path / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
+    before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
+    with pytest.raises(ValueError, match='split_walk_forward'):
+        _run(_loop(config, bars, path), resume=True, n_permutations=3)
+    assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
+    (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+    resumed = _loop(config, bars, path)
+    _run(resumed, resume=True, n_permutations=3)
+    assert resumed.experiment_log.drop('execution_time').equals(full.experiment_log.drop('execution_time'))
+    assert resumed.fold_results.equals(full.fold_results)
+    assert _records(path) == _records(tmp_path / 'full')
+    assert pq.ParquetFile(path / 'trial_returns.parquet').metadata.num_row_groups == 2
+    assert pl.read_parquet(path / 'trial_returns.parquet').equals(pl.read_parquet(tmp_path / 'full/trial_returns.parquet'))
 
 
 @pytest.mark.parametrize('invalid', ('short', 'unsorted', 'duplicate'))

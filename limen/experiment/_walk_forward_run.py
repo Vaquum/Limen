@@ -2,6 +2,7 @@ import copy
 import json
 import math
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import date
 from numbers import Integral, Real
 from pathlib import Path
@@ -115,8 +116,7 @@ class WalkForwardRun:
 
     def _preflight(self, raw: pl.DataFrame, *, require_validation: bool) -> None:
         for fold in range(self.config.n_folds):
-            manifest = copy.deepcopy(self.manifest)
-            setattr(manifest, '_walk_forward_fold', fold)
+            manifest = copy.deepcopy(replace(self.manifest, _walk_forward_fold=fold))
             _ = _resolve_split(manifest, raw, require_validation=require_validation)
 
     @property
@@ -137,8 +137,7 @@ class WalkForwardRun:
             raise ValueError('split_walk_forward requires current prepared source rows')
         records: list[dict[str, object]] = []
         for fold in range(self.config.n_folds):
-            manifest = copy.deepcopy(self.manifest)
-            setattr(manifest, '_walk_forward_fold', fold)
+            manifest = copy.deepcopy(replace(self.manifest, _walk_forward_fold=fold))
             manifest.pre_split_data_selector = None
             prepared = manifest.prepare_data(raw, dict(round_params))
             prepared['_record_execution'] = True
@@ -159,7 +158,7 @@ class WalkForwardRun:
         self.writer.append(str(trial), [_return_track(record['net_returns']) for record in records])
         self.rows.extend({'id': trial, 'fold': record['fold'], **cast(Mapping[str, object], record['results'])} for record in records)
 
-    def restore(self, path: Path, up_to_round: int | None) -> int:
+    def restore(self, path: Path, up_to_round: int | None, expected: list[tuple[int, str]] | None = None) -> int:
         entries: list[dict[str, object]] = []
         with path.open() as stream:
             for line in stream:
@@ -185,6 +184,8 @@ class WalkForwardRun:
                 if not isinstance(entry.get('round_id'), str):
                     raise ValueError('Cannot resume split_walk_forward without recorded trial identity')
                 entries.append(entry)
+        if expected is not None and [(entry['_round_index'], entry['round_id']) for entry in entries] != expected:
+            raise ValueError('Cannot resume split_walk_forward: recorded folds differ from successful trial results')
         for entry in entries:
             self._accept_records(entry['round_id'], cast(list[dict[str, object]], entry['folds']))
         return len(entries)
