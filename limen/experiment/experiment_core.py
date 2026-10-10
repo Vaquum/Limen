@@ -288,19 +288,15 @@ class UniversalExperimentLoop:
 
         for i in tqdm(range(n_permutations), disable=not progress_bar):
 
-            # Start counting execution_time
             start_time = time.time()
 
-            # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
             if round_params is None:
                 raise ValueError('UniversalExperimentLoop parameter space exhausted before completing all rounds')
 
-            # Add context parameters to round_params
             if context_params is not None:
                 round_params.update(context_params)
 
-            # Add experiment details to round_params
             if maintain_details_in_params is True:
                 round_params['_experiment_details'] = {
                     'current_index': i,
