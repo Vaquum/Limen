@@ -1266,6 +1266,8 @@ class RuleBasedManifest(Manifest):
             split_data[i] = data.fill_nan(None).drop_nulls()
 
         split_data = _align_split_columns(split_data)
+        if self.split_walk_forward is not None:
+            _validate_fold_splits(split_data, require_validation=_requires_fold_validation(self, round_params))
 
         split_data, witness = _capture_backtest(sources, split_data, ml=False)
         if _configured_barriers(self.backtest_config) and self.resolve_trade_policy(round_params) is None:
@@ -1905,7 +1907,7 @@ def _resolve_split(
     if manifest.split_walk_forward is not None:
         if manifest.split_dates is not None:
             raise ValueError('Manifest split_walk_forward conflicts with split_dates')
-        return _walk_forward_split(raw_data, manifest.split_walk_forward, manifest._walk_forward_fold,
+        return _walk_forward_split(raw_data, manifest.split_walk_forward, getattr(manifest, '_walk_forward_fold'),
                                    manifest.split_config, require_validation=require_validation)
     if manifest.split_dates is not None:
         return split_by_dates(raw_data, *manifest.split_dates)

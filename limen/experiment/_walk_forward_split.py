@@ -49,7 +49,7 @@ def read_walk_forward_config(value: object) -> WalkForwardConfig:
     return WalkForwardConfig(
         n_folds=cast(int, config['n_folds']), test_bars=cast(int, config['test_bars']),
         purge_bars=cast(int, config['purge_bars']), embargo_bars=cast(int, config['embargo_bars']),
-        anchored=cast(bool, config['anchored']),
+        anchored=config['anchored'],
     )
 
 

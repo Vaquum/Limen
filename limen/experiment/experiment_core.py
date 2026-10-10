@@ -16,6 +16,7 @@ import pandas as pd
 import polars as pl
 from tqdm import tqdm
 
+from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
@@ -58,30 +59,7 @@ class UniversalExperimentLoop:
                  test_mode: bool = False,
                  yaml_reference: dict[str, Any] | None = None) -> None:
 
-        '''
-        Initialize the UniversalExperimentLoop.
-
-        NOTE: Automatically detects SFD structure and configures prep/model.
-        Manifest-based SFDs auto-generate prep/model from manifest.
-        If manifest has data_source_config and no data provided, auto-fetches data.
-        Custom SFDs using custom functions approach require explicit data parameter.
-        When experiment_dir is provided, all experiment artifacts are stored
-        under that directory: checkpoint.json, audit.jsonl, round_data.jsonl,
-        interventions.json, and results.csv.
-
-        Args:
-            data (pl.DataFrame, optional): The data to use for the experiment
-            sfd (SingleFileDecoder, optional): The single file decoder to use for the experiment
-            search_strategy (SearchStrategy | None): Search strategy for MSQ-based execution
-            pruning_strategies (list[PruningStrategy] | None): Reducers for feedback-driven pruning
-            feedback_interval (int): Trigger feedback every N rounds
-            checkpoint_interval (int): Save checkpoint every N rounds
-            experiment_dir (str | Path | None): Directory for all experiment artifacts
-            intra_callback (Callable | None): Python callback receiving (log, msq)
-            test_mode (bool): When True and data is None, fetch from test_data_source_config instead of production
-            yaml_reference (dict | None): Parsed YAML experiment dict — stored in metadata.json for reproducibility
-
-        '''
+        '''Configure the manifest or custom SFD and optional MSQ persistence.'''
 
         super().__init__()
 
@@ -144,6 +122,7 @@ class UniversalExperimentLoop:
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
+        self._walk_forward: WalkForwardRun | None = None
         self._record_execution = False
         self._record_model_outputs = False
         self.round_params: list[dict[str, Any]] = []
@@ -158,7 +137,33 @@ class UniversalExperimentLoop:
         self.experiment_parameter_correlation: Callable[..., pd.DataFrame] | None = None
         self._clear_post_processing_outputs()
 
-    def run(self,
+    @property
+    def fold_results(self) -> pl.DataFrame:
+        return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
+
+    def run(self, experiment_name: str, n_permutations: int = 10000,
+            prep_each_round: bool = False, random_search: bool = True,
+            maintain_details_in_params: bool = False,
+            context_params: dict[str, object] | None = None,
+            params: Callable[[], dict[str, object]] | None = None,
+            prep: Callable[..., dict[str, object]] | None = None,
+            model: Callable[..., dict[str, object]] | None = None,
+            resume: bool = False, post_processing: bool = False,
+            progress_bar: bool = True, record_execution: bool = False,
+            record_model_outputs: bool = False) -> None:
+        original_prep, original_model = self.prep, self.model
+        self._walk_forward = None
+        try:
+            self._run(experiment_name, n_permutations, prep_each_round,
+                      random_search, maintain_details_in_params, context_params,
+                      params, prep, model, resume, post_processing, progress_bar,
+                      record_execution, record_model_outputs)
+        finally:
+            if self._walk_forward is not None:
+                self._walk_forward.finish()
+                self.prep, self.model = original_prep, original_model
+
+    def _run(self,
             experiment_name: str,
             n_permutations: int = 10000,
             prep_each_round: bool = False,
@@ -200,6 +205,15 @@ class UniversalExperimentLoop:
         self._alignment = []
         self.experiment_log = None
         self._clear_post_processing_outputs()
+
+        if getattr(self.manifest, 'split_walk_forward', None) is not None:
+            self._walk_forward = WalkForwardRun(
+                self.manifest, self.data,
+                self._experiment_dir or Path(experiment_name).parent,
+            )
+            if not resume and self._walk_forward.writer.path.exists():
+                raise FileExistsError('split_walk_forward return track already exists; resume or choose a fresh output directory')
+            self.prep, self.model = self._walk_forward.prepare, self._walk_forward.evaluate
 
         if resume and self._search_strategy is None:
             raise ValueError(
@@ -292,6 +306,9 @@ class UniversalExperimentLoop:
             try:
                 if prep_each_round is True or i == 0:
                     data_dict = self.prep(self.data, round_params=round_params)
+                if self._walk_forward is not None:
+                    data_dict['_record_execution'] = self._record_execution
+                    data_dict['_record_model_outputs'] = self._record_model_outputs
                 round_results = self.model(data=data_dict, round_params=round_params)
                 round_succeeded = True
             except StrictModeError as exc:
@@ -342,6 +359,8 @@ class UniversalExperimentLoop:
                 round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
             finalize_objective_result(self.manifest, round_results, round_succeeded)
+            if self._walk_forward is not None and round_succeeded:
+                self._walk_forward.accept(round_results['id'], data_dict)
             results_accumulator.append(dict(round_results))
             if len(results_accumulator) >= STANDARD_RUN_LOG_BATCH_SIZE:
                 log_batches.append(objective_frame(self.manifest, results_accumulator))
@@ -417,6 +436,11 @@ class UniversalExperimentLoop:
 
         self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
+        if self._walk_forward is not None:
+            self.experiment_backtest_results = self._log.experiment_backtest_results()
+            self.experiment_parameter_correlation = self._log.experiment_parameter_correlation
+            return
+
         is_rule_based = isinstance(self.manifest, RuleBasedManifest)
         self.experiment_confusion_metrics = (
             None if is_rule_based
@@ -435,22 +459,7 @@ class UniversalExperimentLoop:
                           feedback_controller: Any,
                           current_round: int) -> list[dict[str, Any]]:
 
-        '''
-        Execute a feedback cycle at the current round.
-
-        Passes the polars experiment log directly to FeedbackController,
-        avoiding the overhead of constructing a full Log object.
-
-        Args:
-            msq (Any): The mutable search queue
-            strategy (Any): The current search strategy
-            feedback_controller (Any): The feedback controller
-            current_round (int): Current round number
-
-        Returns:
-            list[dict]: Interventions applied during this trigger
-
-        '''
+        '''Execute a feedback cycle at the current round.'''
 
         return feedback_controller.trigger(
             self.experiment_log, msq, strategy, current_round,
@@ -631,6 +640,8 @@ class UniversalExperimentLoop:
             _: Any = round_results.setdefault('strict_mode_error', None)
 
             finalize_objective_result(self.manifest, round_results, round_succeeded)
+            if self._walk_forward is not None and round_succeeded:
+                self._walk_forward.accept(round_results['id'], data_dict)
             results_accumulator.append(round_results)
 
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
@@ -804,17 +815,7 @@ class UniversalExperimentLoop:
                                    round_data_path: Path | None,
                                    retain_round_artifacts: bool) -> int:
 
-        '''
-        Restore experiment state from checkpoint and data files.
-
-        Args:
-            retain_round_artifacts (bool): Whether to hydrate round data
-                into instance artifact lists, or only count entries
-
-        Returns:
-            int: The round number to resume from
-
-        '''
+        '''Restore experiment state from checkpoint and data files.'''
 
         if self._experiment_dir is None or self._search_strategy is None:
             raise ValueError('UniversalExperimentLoop checkpoint restore requires experiment_dir and search_strategy')
@@ -830,6 +831,7 @@ class UniversalExperimentLoop:
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
             raise ValueError('Cannot resume with a different record_model_outputs setting')
         validate_objective_resume(self.manifest, metadata, csv_path)
+        validate_walk_forward_resume(self.manifest, metadata)
         domain.set_state(checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
 
@@ -960,17 +962,7 @@ class UniversalExperimentLoop:
                           checkpoint_dir: Path,
                           checkpoint_manager: CheckpointManager) -> Path:
 
-        '''
-        Create a fresh checkpoint directory.
-
-        Args:
-            checkpoint_dir (Path): Path to create
-            checkpoint_manager (CheckpointManager): CheckpointManager instance
-
-        Returns:
-            Path: Created directory path
-
-        '''
+        '''Create a fresh checkpoint directory.'''
 
         return checkpoint_manager.initialize_fresh(checkpoint_dir)
 
@@ -993,6 +985,9 @@ class UniversalExperimentLoop:
         if self._record_model_outputs:
             metadata['record_model_outputs'] = True
         add_objective_metadata(self.manifest, metadata)
+        if self._walk_forward is not None:
+            metadata['split_walk_forward'] = self._walk_forward.config.as_dict()
+            metadata['walk_forward_validation_ratio'] = list(self.manifest.split_config[:2])
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
@@ -1024,22 +1019,7 @@ class UniversalExperimentLoop:
                     feedback_controller: FeedbackController | None = None,
                     pruning_strategies: list[PruningStrategy] | None = None) -> None:
 
-        '''
-        Save a checkpoint at the current experiment state.
-
-        Args:
-            msq (MSQ): MSQ instance to checkpoint
-            domain (ParamDomain): ParamDomain instance to checkpoint
-            checkpoint_dir (Path): Directory to write checkpoint files
-            checkpoint_manager (CheckpointManager): CheckpointManager instance
-            current_round (int): Current round number
-            target_permutations (int): Total rounds planned
-            strategy_type (str): Class name of the search strategy
-            content_hash (str): SHA-256 digest of the experiment content
-            feedback_controller (FeedbackController | None): FeedbackController to checkpoint
-            pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
-
-        '''
+        '''Save a checkpoint at the current experiment state.'''
 
         checkpoint_manager.save(
             checkpoint_dir,
@@ -1064,6 +1044,12 @@ class UniversalExperimentLoop:
                            round_index: int) -> None:
 
         '''Append one round's data to the JSONL file.'''
+
+        if self._walk_forward is not None:
+            with round_data_path.open('a') as f:
+                _ = f.write(json.dumps({'round_id': round_id, '_round_index': round_index,
+                                       'round_params': round_params, 'folds': alignment['folds']}) + '\n')
+            return
 
         entry = {
             'round_id': round_id,
@@ -1103,23 +1089,13 @@ class UniversalExperimentLoop:
                          *,
                          retain_round_artifacts: bool = True) -> int:
 
-        '''
-        Load accumulated round data from JSONL into instance lists.
-
-        Args:
-            round_data_path (Path): Path to the round_data.jsonl file
-            up_to_round (int | None): If set, only load entries with
-                round_id < up_to_round (for crash recovery consistency)
-            retain_round_artifacts (bool): Whether to hydrate entries into
-                instance artifact lists, or only validate/count them
-
-        Returns:
-            int: The number of round data entries loaded or counted
-
-        '''
+        '''Load accumulated round data from JSONL into instance lists.'''
 
         if not round_data_path.exists():
             return 0
+
+        if self._walk_forward is not None:
+            return self._walk_forward.restore(round_data_path, up_to_round)
 
         loaded_rounds = 0
         with round_data_path.open('r') as f:

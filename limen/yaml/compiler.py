@@ -44,21 +44,7 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
 
 def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
 
-    '''
-    Build a Manifest from a validated YAML experiment dict.
-
-    Branches on sfd.manifest.type to instantiate MLManifest or RuleBasedManifest.
-
-    Args:
-        yaml_dict (dict): Validated YAML dict from validator.validate()
-
-    Returns:
-        Manifest: Configured MLManifest or RuleBasedManifest
-
-    Raises:
-        ValueError: If manifest type is unknown or required fields are missing
-
-    '''
+    '''Build the declared ML or rule-based manifest.'''
 
     m = yaml_dict['sfd']['manifest']
     manifest_type = m['type']

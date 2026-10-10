@@ -1560,6 +1560,4 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.21.0] - 2026-10-10
 
-### Added
-
 - Run manifest-backed sweeps across purged walk-forward folds with fresh fitting and validation in each fold; retain fold metrics and per-trial net-return tracks (#739).
