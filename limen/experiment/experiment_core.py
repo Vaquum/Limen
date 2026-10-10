@@ -179,11 +179,8 @@ class UniversalExperimentLoop:
             record_execution: bool = False,
             record_model_outputs: bool = False) -> None:
 
-        '''Run up to n_permutations rounds.
-
-        Manifest-driven SFDs require prep_each_round=True. With search_strategy,
-        MSQ ignores random_search, maintain_details_in_params, params, prep and model.
-        '''
+        '''Run rounds; manifest-driven preparation requires prep_each_round=True.
+        MSQ owns sampling, parameters and execution.'''
 
         validate_objective_reducers(self.manifest, self._pruning_strategies)
         if type(record_execution) is not bool:

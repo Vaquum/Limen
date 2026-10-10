@@ -23,9 +23,7 @@ class _ArrowFrame(Protocol):
 
 class TrialReturnsWriter:
     def __init__(self, directory: Path) -> None:
-        super().__init__()
-        self.path = directory / 'trial_returns.parquet'
-        self.temporary = directory / 'trial_returns.parquet.tmp'
+        self.path, self.temporary = directory / 'trial_returns.parquet', directory / 'trial_returns.parquet.tmp'
         self.writer: _ParquetWriter | None = None
 
     def append(self, trial: str, tracks: list[list[float]]) -> None:
