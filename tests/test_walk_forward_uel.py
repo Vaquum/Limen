@@ -454,6 +454,12 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
         records = _records(path)
         assert len(records) == 1 and records[0]['_round_index'] == 1
         saved_jsonl = (path / 'round_data.jsonl').read_bytes()
+        (path / 'round_data.jsonl').write_bytes(saved_jsonl[:len(saved_jsonl) // 2])
+        before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
+        with pytest.raises(json.JSONDecodeError):
+            _run(_loop(config, bars, path), resume=True, n_permutations=3)
+        assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
+        (path / 'round_data.jsonl').write_bytes(saved_jsonl)
         records[0]['folds'].pop()
         (path / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
         before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
@@ -474,6 +480,9 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
         assert first.fold_results.is_empty()
         assert not (path / 'round_data.jsonl').exists()
         assert not (path / 'trial_returns.parquet').exists()
+    next_record = (tmp_path / 'full/round_data.jsonl').read_bytes().splitlines()[int(stop_after_success)]
+    with (path / 'round_data.jsonl').open('ab') as stream:
+        _ = stream.write(next_record[:len(next_record) // 2])
     resumed = _loop(config, bars, path)
     _run(resumed, resume=True, n_permutations=3)
     assert set(resumed.experiment_log.columns) == set(full.experiment_log.columns)
