@@ -313,6 +313,7 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
+            caught: list[warnings.WarningMessage] = []
             try:
                 with convergence_warnings() as caught:
                     if prep_each_round is True or i == 0:
@@ -327,7 +328,6 @@ class UniversalExperimentLoop:
                 round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
                 round_succeeded = False
 
-            # Remove the experiment details from the results
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
 
@@ -646,13 +646,13 @@ class UniversalExperimentLoop:
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
             round_results.update(round_params | (context_params or {}))
-            round_results['_convergence_warning'] = convergence_warning(caught, round_succeeded)
             if getattr(self.manifest, 'ablation_config', None) is not None:
                 round_results['_dropped_features'] = json.dumps(sfd_params.get('_dropped_features', []))
 
             _: Any = round_results.setdefault('strict_mode_error', None)
 
             finalize_objective_result(self.manifest, round_results, round_succeeded)
+            round_results['_convergence_warning'] = convergence_warning(caught, round_succeeded)
             if self._walk_forward is not None and round_succeeded:
                 self._walk_forward.accept(round_results['id'], data_dict)
             results_accumulator.append(round_results)

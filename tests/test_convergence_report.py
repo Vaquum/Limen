@@ -330,3 +330,15 @@ def test_standard_ignored_convergence_warning_is_recorded_without_emission(tmp_p
     assert loop.convergence_report['convergence_warning_rounds'] == 1
     assert loop.convergence_report['convergence_warning_pct'] == 100.0
     assert json.loads((tmp_path / 'convergence_report.json').read_text()) == loop.convergence_report
+
+def test_standard_module_ignore_filter_is_preserved(tmp_path):
+    loop = _diagnostic_loop(tmp_path, False, ('model',))
+    with warnings.catch_warnings(record=True) as emitted:
+        warnings.simplefilter('error')
+        warnings.filterwarnings('ignore', category=ConvergenceWarning,
+                                module=r'^limen\.experiment\.experiment_core$')
+        loop.run('results', n_permutations=1, prep_each_round=True,
+                 random_search=False, progress_bar=False)
+    assert emitted == []
+    assert loop.experiment_log['_convergence_warning'].to_list() == [True]
+    assert loop.convergence_report['convergence_warning_pct'] == 100.0

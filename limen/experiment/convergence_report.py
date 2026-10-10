@@ -1,4 +1,5 @@
 import csv
+import sys
 import tempfile
 import warnings
 from collections.abc import Iterator, Sequence
@@ -9,7 +10,7 @@ from typing import cast
 import polars as pl
 from sklearn.exceptions import ConvergenceWarning
 
-__all__ = ['convergence_report', 'convergence_header', 'convergence_warning', 'convergence_warnings']
+__all__ = ['convergence_header', 'convergence_report', 'convergence_warning', 'convergence_warnings']
 
 
 def convergence_header(path: Path, header: list[str]) -> list[str]:
@@ -34,12 +35,15 @@ def convergence_warnings() -> Iterator[list[warnings.WarningMessage]]:
     caught: list[warnings.WarningMessage] = []
     try:
         with warnings.catch_warnings(record=True) as caught:
-            warnings.filters[:] = [(action if action == 'error' else 'always', message, category, module, line)
+            warnings.filters = [(action if action == 'error' else 'always', message, category, module, line)
                                   for action, message, category, module, line in warnings.filters]
             yield caught
     finally:
         for warning in caught:
-            warnings.warn_explicit(warning.message, warning.category, warning.filename, warning.lineno)
+            module = next((module for module in sys.modules.copy().values() if getattr(module, '__file__', None) == warning.filename), None)
+            warnings.warn_explicit(warning.message, warning.category, warning.filename, warning.lineno,
+                                   module=module.__name__ if module else None,
+                                   registry=vars(module).setdefault('__warningregistry__', {}) if module else None)
 
 
 def convergence_warning(caught: Sequence[warnings.WarningMessage], succeeded: bool) -> bool | None:
