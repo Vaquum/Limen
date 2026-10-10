@@ -366,11 +366,11 @@ class UniversalExperimentLoop:
                 self.round_params.append(round_params)
 
             round_results.update(round_params)
-            round_results['_convergence_warning'] = convergence_warning(self._convergence_caught[warning_start:], round_succeeded)
             if getattr(self.manifest, 'ablation_config', None) is not None:
                 round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
             finalize_objective_result(self.manifest, round_results, round_succeeded)
+            round_results['_convergence_warning'] = convergence_warning(self._convergence_caught[warning_start:], round_succeeded)
             if self._walk_forward is not None and round_succeeded:
                 self._walk_forward.accept(round_results['id'], data_dict)
             results_accumulator.append(dict(round_results))
