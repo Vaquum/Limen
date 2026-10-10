@@ -4,8 +4,6 @@ from typing import cast
 
 import polars as pl
 
-from limen.data.utils import split_walk_forward
-
 __all__ = ['WalkForwardConfig', 'read_walk_forward_config', 'resolve_walk_forward_split', 'validate_fold_splits']
 
 
@@ -66,6 +64,8 @@ def resolve_walk_forward_split(
     raw_data: pl.DataFrame, config: WalkForwardConfig, fold: int | None,
     ratios: tuple[int, int, int], *, require_validation: bool,
 ) -> list[pl.DataFrame]:
+    from limen.data.utils import split_walk_forward
+
     if not isinstance(fold, int) or isinstance(fold, bool) or not 0 <= fold < config.n_folds:
         raise ValueError('split_walk_forward requires a valid fold selected by the experiment loop')
     if 'datetime' not in raw_data.columns:
