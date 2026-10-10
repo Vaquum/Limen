@@ -8,6 +8,7 @@ import json
 import math
 import sys
 import warnings
+import weakref
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,6 +17,7 @@ import polars as pl
 import pytest
 
 from limen.experiment import UniversalExperimentLoop
+from limen.experiment._factorize import FactorizedRounds
 from limen.experiment.errors import StrictModeError
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.grid_strategy import GridStrategy
@@ -173,9 +175,10 @@ def test_artifacts_and_replay_identical(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize('case', [
     'no_axes', 'model_overlap', 'feature_braced', 'feature_bare', 'feature_template',
+    'feature_format', 'feature_conversion', 'feature_access', 'feature_nested_format',
     'random', 'pruning', 'callback', 'unsafe_lightgbm_later', 'scaler',
     'calibration', 'feature_groups', 'pre_split', 'event', 'unknown_arch',
-    'no_strategy', 'walk_forward', 'selector_group', 'source_reference', 'unsafe_seed_later',
+    'no_strategy', 'walk_forward', 'selector_group', 'source_reference', 'unsafe_seed_later', 'event_axis',
 ])
 def test_unsafe_and_nondeterministic_paths_fail_before_writes(
     case: str, tmp_path: Path,
@@ -192,6 +195,8 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
     elif case.startswith('feature_'):
         m['features'][0]['params']['end'] = {
             'feature_braced': '{fee}', 'feature_bare': 'fee', 'feature_template': 'col_{fee}',
+            'feature_format': '{fee:.1f}', 'feature_conversion': '{fee!s}',
+            'feature_access': '{fee.real}', 'feature_nested_format': '{alpha:{fee}}',
         }.get(case, '{lookback_end}')
         if case == 'feature_groups':
             m['backtest']['fee_bps'] = '{feature_groups}'
@@ -221,6 +226,9 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
         pass
     elif case == 'event':
         m['backtest']['prediction_mode'] = 'target_exposure'
+    elif case == 'event_axis':
+        p['fee'] = [1., 2.]
+        m['backtest']['max_exposure'] = '{fee}'
     elif case == 'unknown_arch':
         m['reference_architecture'] = 'limen.sfd.reference_architecture.ridge_regressor.ridge_regressor'
     elif case == 'no_strategy':
@@ -245,6 +253,45 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
         loop.run(case, n_permutations=2, prep_each_round=True, factorize=True, progress_bar=False)
     for file in ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl'):
         assert not (tmp_path / case / file).exists()
+
+
+@pytest.mark.parametrize('context', [{'deterministic': False}, {'n_jobs': 8}, {'random_state': None}, {'fee': 9.}])
+def test_context_overrides_fail_before_writes(tmp_path: Path, context: dict) -> None:
+    loop = _loop('binary_costs', tmp_path)
+    with pytest.raises(ValueError, match='factorize requires'):
+        loop.run('context', n_permutations=8, context_params=context,
+                 prep_each_round=True, factorize=True, progress_bar=False)
+    assert not (tmp_path / 'metadata.json').exists()
+
+
+@pytest.mark.parametrize('op', [{'op': 'inject', 'combo': {'deterministic': False}},
+                              {'op': 'inject_value', 'param': 'n_jobs', 'value': 8}])
+def test_interventions_fail_before_writes(tmp_path: Path, op: dict) -> None:
+    (tmp_path / 'interventions.json').write_text(json.dumps([op]))
+    loop = _loop('binary_costs', tmp_path)
+    with pytest.raises(ValueError, match='interventions'):
+        loop.run('interventions', n_permutations=8, prep_each_round=True,
+                 factorize=True, progress_bar=False)
+    assert not (tmp_path / 'metadata.json').exists()
+
+
+def test_cache_releases_fitted_model_and_rejects_new_candidates(tmp_path: Path) -> None:
+    loop = _loop('binary_costs', tmp_path)
+    domain = manifest('binary_costs')['sfd']['params']
+    rounds = FactorizedRounds(manifest=loop.manifest, strategy=GridStrategy(ParamDomain(domain)),
+                              domain=domain, pruning=False, callback=False, context=None,
+                              prep=loop.prep, model=loop.model, data=loop.data,
+                              record_execution=True, record_model_outputs=True)
+    params = {key: values[0] for key, values in domain.items()}
+    data, result, _ = rounds.evaluate(params)
+    fitted = weakref.ref(result['_model'])
+    del data, result
+    assert fitted() is None
+    domain['deterministic'].append(False)
+    with pytest.raises(ValueError, match='outside the preflight domain'):
+        rounds.evaluate({**params, 'deterministic': False})
+    with pytest.raises(ValueError, match='outside the preflight domain'):
+        rounds.evaluate({**params, 'deterministic': 1})
 
 
 def test_resume_and_disabled_mode_parity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

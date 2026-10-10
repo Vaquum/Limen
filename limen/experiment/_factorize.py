@@ -9,6 +9,8 @@ import re
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
+from string import Formatter
 from typing import NoReturn, cast
 
 import numpy as np
@@ -32,7 +34,7 @@ from limen.targets.quantile_binary import QuantileBinaryTarget
 
 _BACKTEST_FIELDS = ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
 _RESERVED = frozenset(('bar_type', 'feature_groups', 'use_calibration', 'use_threshold'))
-_REFERENCES = re.compile(r'\{([a-zA-Z_][a-zA-Z_0-9]*)\}')
+_FIELD_ROOT = re.compile(r'^[a-zA-Z_][a-zA-Z_0-9]*')
 _FEATURES = frozenset((window_return, lag_range, dollar_bar_crash_reversal))
 _ML_FEATURES = frozenset((window_return, lag_range))
 
@@ -44,7 +46,10 @@ def _fail(reason: str) -> NoReturn:
 def _references(value: object, name: str) -> bool:
     """Cover bare, braced and formatted manifest parameter consumers."""
     if isinstance(value, str):
-        return value == name or name in _REFERENCES.findall(value)
+        return value == name or any(
+            (field is not None and (root := _FIELD_ROOT.match(field)) is not None and root[0] == name)
+            or _references(spec, name) for _, field, spec, _ in Formatter().parse(value)
+        )
     if isinstance(value, Mapping):
         return any(_references(v, name) for v in cast(Mapping[object, object], value).values())
     if isinstance(value, (list, tuple)):
@@ -153,7 +158,8 @@ class FactorizedRounds:
     def __init__(self, *, manifest: Manifest, strategy: object, domain: Mapping[str, list[object]],
                  pruning: bool, callback: bool, context: Mapping[str, object] | None,
                  prep: Callable[..., dict[str, object]], model: Callable[..., dict[str, object]],
-                 data: pl.DataFrame, record_execution: bool, record_model_outputs: bool) -> None:
+                 data: pl.DataFrame, record_execution: bool, record_model_outputs: bool,
+                 intervention_path: Path | None = None) -> None:
         super().__init__()
         if type(strategy) is not GridStrategy:
             _fail('unshuffled GridStrategy is required')
@@ -165,14 +171,24 @@ class FactorizedRounds:
         self.axes = _axes(manifest, domain)
         if context and self.axes.intersection(context):
             _fail('context overrides a backtest-only parameter')
-        _check_manifest(manifest, domain, self.axes)
+        self.domain = {key: list(values) for key, values in domain.items()} | {key: [value] for key, value in (context or {}).items()}
+        _check_manifest(manifest, self.domain, self.axes)
+        self.intervention_path = intervention_path
+        self._check_interventions()
         self.manifest = manifest
         self.data = data
         self.prep, self.model = prep, model
         self.record_execution, self.record_model_outputs = record_execution, record_model_outputs
         self.cache: dict[str, _Cached] = {}
 
+    def _check_interventions(self) -> None:
+        if self.intervention_path is not None and self.intervention_path.exists():
+            _fail('interventions are not supported')
+
     def evaluate(self, params: dict[str, object]) -> tuple[dict[str, object], dict[str, object], list[str]]:
+        self._check_interventions()
+        if set(params) != set(self.domain) or any(not any(type(value) is type(admitted) and value == admitted for admitted in self.domain[key]) for key, value in params.items()):
+            _fail('candidate is outside the preflight domain')
         key = json.dumps({k: v for k, v in params.items() if k not in self.axes}, sort_keys=True, default=str)
         entry = self.cache.get(key)
         if entry is None:
@@ -206,7 +222,12 @@ class FactorizedRounds:
                     if not isinstance(frame, pl.DataFrame):
                         _fail('rule-based split must be a DataFrame')
                     positions[split] = np.asarray(logic(rule, frame, strategy_cfg).fill_null(False).to_numpy(), dtype=np.int64)
-            self.cache[key] = _Cached(data, dict(result), recorded, positions)
+            evidence = {name: data[name] for name in ('_alignment', '_backtest_provenance', 'price_data_for_backtest') if name in data}
+            if positions is not None:
+                for split in positions:
+                    frame = cast(pl.DataFrame, data[split])
+                    evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
+            self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions)
             return data, result, recorded
 
         data = dict(entry.data)
@@ -221,7 +242,7 @@ class FactorizedRounds:
                 predictions = np.asarray(entry.result['_preds'])
                 if self.manifest.architecture_function is dlinear_regressor:
                     predictions = (predictions > 0).astype(int)
-                compute = cast(Callable[[object, Mapping[str, object]], dict[str, float]], _backtest_evaluation.compute_backtest)
+                compute = cast(Callable[[object, Mapping[str, object]], dict[str, float]], vars(_backtest_evaluation)['compute_backtest'])
                 metrics = compute(predictions, data)
                 result = {name: metrics.get(name, value)
                           for name, value in entry.result.items()}
@@ -238,7 +259,8 @@ class FactorizedRounds:
                     if not isinstance(frame, pl.DataFrame):
                         _fail('rule-based split must be a DataFrame')
                     summaries[split] = run_split(rule, frame, entry.positions[split], costs)
-                fresh = rule_based_metrics(entry.positions, summaries)
+                summarize = cast(Callable[..., dict[str, object]], rule_based_metrics)
+                fresh = summarize(entry.positions, summaries)
                 result = {name: fresh.get(name, value)
                           for name, value in entry.result.items()}
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))

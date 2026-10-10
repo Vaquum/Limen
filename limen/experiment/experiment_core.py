@@ -521,6 +521,7 @@ class UniversalExperimentLoop:
                 pruning=bool(self._pruning_strategies), callback=self._intra_callback is not None,
                 context=context_params, prep=self.prep, model=self.model, data=self.data,
                 record_execution=self._record_execution, record_model_outputs=self._record_model_outputs,
+                intervention_path=self._experiment_dir / 'interventions.json' if self._experiment_dir else None,
             )
 
         start_round = 0
