@@ -42,7 +42,7 @@ def convergence_warnings() -> Iterator[list[warnings.WarningMessage]]:
         for warning in caught:
             module = next((module for module in sys.modules.copy().values() if getattr(module, '__file__', None) == warning.filename), None)
             warnings.warn_explicit(warning.message, warning.category, warning.filename, warning.lineno,
-                                   module=module.__name__ if module else None,
+                                   module=module.__name__ if module else warning.filename,
                                    registry=vars(module).setdefault('__warningregistry__', {}) if module else None)
 
 

@@ -7,6 +7,7 @@ import signal
 import time
 import warnings
 from collections.abc import Callable
+from contextlib import nullcontext
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -133,6 +134,7 @@ class UniversalExperimentLoop:
         self._alignment: list[Any] = []
         self.experiment_log: pl.DataFrame | None = None
         self.convergence_report: dict[str, object] | None = None
+        self._convergence_caught: list[warnings.WarningMessage] = []
         self.param_space: ParamSpace | None = None
         self._log: Log | None = None
         self.experiment_confusion_metrics: pd.DataFrame | None = None
@@ -158,11 +160,13 @@ class UniversalExperimentLoop:
         self._walk_forward = None
         self.convergence_report = None
         try:
-            self._run(experiment_name, n_permutations, prep_each_round,
-                      random_search, maintain_details_in_params, context_params,
-                      params, prep, model, resume, post_processing, progress_bar,
-                      record_execution, record_model_outputs)
+            with convergence_warnings() if self._search_strategy is None else nullcontext(self._convergence_caught) as self._convergence_caught:
+                self._run(experiment_name, n_permutations, prep_each_round,
+                          random_search, maintain_details_in_params, context_params,
+                          params, prep, model, resume, post_processing, progress_bar,
+                          record_execution, record_model_outputs)
         finally:
+            self._convergence_caught = []
             if self._walk_forward is not None:
                 self._walk_forward.finish()
                 self.prep, self.model = original_prep, original_model
@@ -170,13 +174,10 @@ class UniversalExperimentLoop:
             _ = acceptance_report(self._walk_forward.writer.path.parent,
                                   acceptance=self._walk_forward.manifest.acceptance)
         parameter_columns = self._search_strategy.domain.keys if self._search_strategy is not None else list(self.params)
-        self.convergence_report = convergence_report(self.experiment_log if self.experiment_log is not None else pl.DataFrame(),
-            parameter_columns=list(dict.fromkeys([*parameter_columns, *(context_params or {})])))
+        self.convergence_report = convergence_report(self.experiment_log if self.experiment_log is not None else pl.DataFrame(), parameter_columns=list(dict.fromkeys([*parameter_columns, *(context_params or {})])))
         if self._experiment_dir is not None:
-            with (self._experiment_dir / 'convergence_report.json').open('w') as output:
-                json.dump(self.convergence_report, output, indent=2, allow_nan=False)
-        logger.info('Convergence-warning percentage: %s; observed=%s; unavailable=%s', self.convergence_report['convergence_warning_pct'],
-                    self.convergence_report['observed_rounds'], self.convergence_report['unavailable_rounds'])
+            _ = (self._experiment_dir / 'convergence_report.json').write_text(json.dumps(self.convergence_report, indent=2, allow_nan=False))
+        logger.info('Convergence-warning percentage: %s; observed=%s; unavailable=%s', self.convergence_report['convergence_warning_pct'], self.convergence_report['observed_rounds'], self.convergence_report['unavailable_rounds'])
 
     def _run(self,
             experiment_name: str,
@@ -313,15 +314,14 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
-            caught: list[warnings.WarningMessage] = []
+            warning_start = len(self._convergence_caught)
             try:
-                with convergence_warnings() as caught:
-                    if prep_each_round is True or i == 0:
-                        data_dict = self.prep(self.data, round_params=round_params)
-                    if self._walk_forward is not None:
-                        data_dict['_record_execution'] = self._record_execution
-                        data_dict['_record_model_outputs'] = self._record_model_outputs
-                    round_results = self.model(data=data_dict, round_params=round_params)
+                if prep_each_round is True or i == 0:
+                    data_dict = self.prep(self.data, round_params=round_params)
+                if self._walk_forward is not None:
+                    data_dict['_record_execution'] = self._record_execution
+                    data_dict['_record_model_outputs'] = self._record_model_outputs
+                round_results = self.model(data=data_dict, round_params=round_params)
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', i, exc)
@@ -366,7 +366,7 @@ class UniversalExperimentLoop:
                 self.round_params.append(round_params)
 
             round_results.update(round_params)
-            round_results['_convergence_warning'] = convergence_warning(caught, round_succeeded)
+            round_results['_convergence_warning'] = convergence_warning(self._convergence_caught[warning_start:], round_succeeded)
             if getattr(self.manifest, 'ablation_config', None) is not None:
                 round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
@@ -421,9 +421,7 @@ class UniversalExperimentLoop:
         if results_accumulator:
             log_batches.append(objective_frame(self.manifest, results_accumulator))
         if log_batches:
-            self.experiment_log = pl.concat(
-                log_batches, how='vertical_relaxed',
-            )
+            self.experiment_log = pl.concat(log_batches, how='vertical_relaxed')
 
         if post_processing:
             self._finalize()
@@ -542,6 +540,8 @@ class UniversalExperimentLoop:
             if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in (csv_header or []):
                 raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
             validate_objective_header(self.manifest, csv_header)
+            if csv_header is not None:
+                csv_header = convergence_header(csv_path, csv_header)
 
         _pending_csv_rows: list[dict[str, Any]] = []
 
@@ -870,7 +870,7 @@ class UniversalExperimentLoop:
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
-        experiment_log = pl.read_csv(csv_path, n_rows=start_round)
+        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean})
         if '_convergence_warning' not in experiment_log.columns or experiment_log['_convergence_warning'].null_count() == experiment_log.height:
             experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:

@@ -342,3 +342,58 @@ def test_standard_module_ignore_filter_is_preserved(tmp_path):
     assert emitted == []
     assert loop.experiment_log['_convergence_warning'].to_list() == [True]
     assert loop.convergence_report['convergence_warning_pct'] == 100.0
+
+
+@pytest.mark.parametrize('action', ('default', 'once'))
+def test_standard_warning_filter_deduplicates_across_rounds(tmp_path, action):
+    loop = _diagnostic_loop(tmp_path, False, ('ordinary', 'model'))
+
+    def repeated_warning(data, round_params):
+        for _ in range(2):
+            warnings.warn('Repeated recorded convergence diagnostic', ConvergenceWarning, stacklevel=2)
+        return {'positive_fraction': float(data['y_test'].mean()),
+                '_preds': data['y_test'].to_list()}
+
+    loop.model = repeated_warning
+    with warnings.catch_warnings(record=True) as emitted:
+        warnings.simplefilter('always')
+        warnings.simplefilter(action, ConvergenceWarning)
+        loop.run('results', n_permutations=2, prep_each_round=True,
+                 random_search=False, progress_bar=False)
+    assert len(emitted) == 1
+    assert emitted[0].category is ConvergenceWarning
+    assert loop.experiment_log['_convergence_warning'].to_list() == [True, True]
+    assert loop.convergence_report['rounds'] == loop.convergence_report['observed_rounds'] == 2
+    assert loop.convergence_report['convergence_warning_rounds'] == 2
+    assert loop.convergence_report['convergence_warning_pct'] == 100.0
+
+
+@pytest.mark.parametrize('msq', (False, True))
+def test_legacy_evidence_after_csv_inference_window(tmp_path, fitted_runs, msq):
+    rows = fitted_runs[int(msq)][0].experiment_log
+    legacy = pl.concat([rows.head(1)] * 101).with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
+    path = tmp_path / 'results.csv'
+    pl.concat([legacy, rows]).write_csv(path)
+    loaded = pl.read_csv(path, schema_overrides={'_convergence_warning': pl.Boolean})
+    report = convergence_report(loaded, parameter_columns=['max_iter'])
+    assert report['rounds'] == 103
+    assert report['unavailable_rounds'] == 101
+    assert report['observed_rounds'] == 2
+    assert report['convergence_warning_rounds'] == 1
+    assert report['convergence_warning_pct'] == 50.0
+
+
+def test_legacy_msq_append_persists_new_evidence(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    path = tmp_path / 'results.csv'
+    first = _diagnostic_loop(None, True, ('ordinary', 'model'))
+    _run(first, 2)
+    saved = pl.read_csv(path).drop('_convergence_warning')
+    saved.write_csv(path)
+    second = _diagnostic_loop(None, True, ('ordinary', 'model'))
+    _run(second, 2)
+    recorded = pl.read_csv(path)
+    assert recorded.height == 4
+    assert recorded['_convergence_warning'].to_list() == [None, None, False, True]
+    assert recorded.drop('_convergence_warning').head(2).equals(saved)
+    assert second.convergence_report['convergence_warning_pct'] == 50.0
