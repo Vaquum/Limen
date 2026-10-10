@@ -164,8 +164,8 @@ class UniversalExperimentLoop:
                 self._walk_forward.finish()
                 self.prep, self.model = original_prep, original_model
         if self._walk_forward is not None:
-            acceptance_report(self._walk_forward.writer.path.parent,
-                              acceptance=self._walk_forward.manifest.acceptance)
+            _ = acceptance_report(self._walk_forward.writer.path.parent,
+                                  acceptance=self._walk_forward.manifest.acceptance)
 
     def _run(self,
             experiment_name: str,
