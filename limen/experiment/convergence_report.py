@@ -37,7 +37,7 @@ def convergence_warnings() -> Iterator[list[warnings.WarningMessage]]:
         with warnings.catch_warnings(record=True) as caught:
             warnings.filters = [(action if action == 'error' else 'always', message, category, module, line)
                                   for action, message, category, module, line in warnings.filters]
-            warnings.simplefilter('error' if warnings.defaultaction == 'error' else 'always', append=True)
+            warnings.simplefilter('error' if vars(warnings)['defaultaction'] == 'error' else 'always', append=True)
             yield caught
     finally:
         for warning in caught:
