@@ -344,7 +344,7 @@ def test_standard_module_ignore_filter_is_preserved(tmp_path):
     assert loop.convergence_report['convergence_warning_pct'] == 100.0
 
 
-@pytest.mark.parametrize('action', ('default', 'once'))
+@pytest.mark.parametrize('action', ('default', 'once', 'implicit'))
 def test_standard_warning_filter_deduplicates_across_rounds(tmp_path, action):
     loop = _diagnostic_loop(tmp_path, False, ('ordinary', 'model'))
 
@@ -356,8 +356,11 @@ def test_standard_warning_filter_deduplicates_across_rounds(tmp_path, action):
 
     loop.model = repeated_warning
     with warnings.catch_warnings(record=True) as emitted:
-        warnings.simplefilter('always')
-        warnings.simplefilter(action, ConvergenceWarning)
+        if action == 'implicit':
+            warnings.resetwarnings()
+        else:
+            warnings.simplefilter('always')
+            warnings.simplefilter(action, ConvergenceWarning)
         loop.run('results', n_permutations=2, prep_each_round=True,
                  random_search=False, progress_bar=False)
     assert len(emitted) == 1
