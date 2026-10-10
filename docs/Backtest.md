@@ -147,7 +147,7 @@ Direct snapshots are positional and accept time-free arrays. The caller owns com
 
 Shipped `ReferenceModel` architectures and built-in rule-based entry strategies apply manifest exits. Custom architectures must integrate the backtest configuration themselves; constructors with `**kwargs` may still receive TP/SL search keys. This stage adds fixed barriers; rule-based SFD exit logic is deferred. Sensor continues to emit entry predictions and does not execute these research exits.
 
-Each UEL candidate repeats preparation, training, and prediction. Predictions match across an exit-only sweep only when entry parameters, inputs, preparation, and model behavior are deterministic. A frozen-prediction grid is deferred.
+By default each UEL candidate repeats preparation, training, and prediction. Eligible deterministic snapshot grids can opt into `uel.factorize: true` to reuse signal work across independent economics-only axes. The existing snapshot executor still evaluates every economic combination separately; unsupported/ambiguous cases reject, and default runs remain unchanged.
 
 ## Output ledger
 

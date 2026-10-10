@@ -138,6 +138,11 @@ uel.run(
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
+| `factorize` | opt-in reuse of deterministic signal preparation, fitting and prediction across independent snapshot economics in the artifact-backed grid path; default `false` |
+
+### Factorized snapshot grids
+
+Set `uel.factorize: true` in YAML or `run(..., factorize=True)`. The existing grid still emits one ordinary result row per full parameter combination, with the same backtest executor and numeric results; only redundant signal work is reused. The switch is supported for unshuffled grids with independent backtest-only axes, built-in deterministic DLinear, deterministic single-thread LightGBM, or shipped rule-based snapshot architectures and supported fixed preprocessing. Ambiguous dependencies, stochastic settings, callbacks, pruning, event execution, calibration, walk-forward and custom architectures fail explicitly before UEL artifact writes. The cache lives for one sweep invocation; Log post-processing and resumed invocations retain their ordinary reconstruction work. CLI resume reads the effective enabled setting from metadata. The switch changes canonical manifest identity because the YAML changes; it never changes full-permutation round IDs.
 
 ### Manifest-driven rules
 

@@ -126,6 +126,7 @@ class UniversalExperimentLoop:
         self._walk_forward: WalkForwardRun | None = None
         self._record_execution = False
         self._record_model_outputs = False
+        self._factorize = False
         self.round_params: list[dict[str, Any]] = []
         self.preds: list[Any] = []
         self.scalers: list[Any] = []
@@ -151,14 +152,14 @@ class UniversalExperimentLoop:
             model: Callable[..., dict[str, object]] | None = None,
             resume: bool = False, post_processing: bool = False,
             progress_bar: bool = True, record_execution: bool = False,
-            record_model_outputs: bool = False) -> None:
+            record_model_outputs: bool = False, factorize: bool = False) -> None:
         original_prep, original_model = self.prep, self.model
         self._walk_forward = None
         try:
             self._run(experiment_name, n_permutations, prep_each_round,
                       random_search, maintain_details_in_params, context_params,
                       params, prep, model, resume, post_processing, progress_bar,
-                      record_execution, record_model_outputs)
+                      record_execution, record_model_outputs, factorize)
         finally:
             if self._walk_forward is not None:
                 self._walk_forward.finish()
@@ -181,7 +182,7 @@ class UniversalExperimentLoop:
             post_processing: bool = False,
             progress_bar: bool = True,
             record_execution: bool = False,
-            record_model_outputs: bool = False) -> None:
+            record_model_outputs: bool = False, factorize: bool = False) -> None:
 
         '''Run rounds; manifest-driven preparation requires prep_each_round=True.
         MSQ owns sampling, parameters and execution.'''
@@ -197,6 +198,11 @@ class UniversalExperimentLoop:
         if record_model_outputs and (self._search_strategy is None or self._experiment_dir is None):
             raise ValueError('record_model_outputs=True requires search_strategy and experiment_dir')
         self._record_model_outputs = record_model_outputs
+        if type(factorize) is not bool:
+            raise ValueError('factorize must be a bool')
+        if factorize and self._search_strategy is None:
+            raise ValueError('factorize requires a search_strategy')
+        self._factorize = factorize
 
         self.round_params = []
         self.models = []
@@ -505,6 +511,18 @@ class UniversalExperimentLoop:
         if self.prep is None or self.model is None:
             raise ValueError('UniversalExperimentLoop prep and model functions must be configured')
 
+        factorized = None
+        if self._factorize:
+            if not isinstance(self.manifest, Manifest):
+                raise ValueError('factorize requires a manifest')
+            from limen.experiment._factorize import FactorizedRounds
+            factorized = FactorizedRounds(
+                manifest=self.manifest, strategy=self._search_strategy, domain=domain.params,
+                pruning=bool(self._pruning_strategies), callback=self._intra_callback is not None,
+                context=context_params, prep=self.prep, model=self.model, data=self.data,
+                record_execution=self._record_execution, record_model_outputs=self._record_model_outputs,
+            )
+
         start_round = 0
         if resume and self._experiment_dir is not None and self._experiment_dir.exists():
             start_round = self._restore_checkpoint_state(
@@ -564,18 +582,22 @@ class UniversalExperimentLoop:
 
             round_succeeded = False
             caught: list[warnings.WarningMessage] = []
+            replayed_warnings: list[str] = []
             try:
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter('always')
-                    data_dict = self.prep(self.data, round_params=sfd_params)
-                    data_dict['_record_execution'] = self._record_execution
-                    data_dict['_record_model_outputs'] = self._record_model_outputs
-                    if '_alignment' in data_dict:
-                        for key in ('execution', 'market', 'model_outputs'):
-                            data_dict['_alignment'].pop(key, None)
-                    round_results = self.model(
-                        data=data_dict, round_params=sfd_params,
-                    )
+                    if factorized is not None:
+                        data_dict, round_results, replayed_warnings = factorized.evaluate(sfd_params)
+                    else:
+                        data_dict = self.prep(self.data, round_params=sfd_params)
+                        data_dict['_record_execution'] = self._record_execution
+                        data_dict['_record_model_outputs'] = self._record_model_outputs
+                        if '_alignment' in data_dict:
+                            for key in ('execution', 'market', 'model_outputs'):
+                                data_dict['_alignment'].pop(key, None)
+                        round_results = self.model(
+                            data=data_dict, round_params=sfd_params,
+                        )
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', current_round, exc)
@@ -600,8 +622,7 @@ class UniversalExperimentLoop:
                 raise
 
             round_results['_warnings'] = (
-                json.dumps(list(dict.fromkeys(str(w.message) for w in caught)))
-                if caught else '[]'
+                json.dumps(list(dict.fromkeys([*replayed_warnings, *(str(w.message) for w in caught)])))
             )
 
             if 'extras' in round_results:
@@ -832,6 +853,8 @@ class UniversalExperimentLoop:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
             raise ValueError('Cannot resume with a different record_model_outputs setting')
+        if metadata.get('factorize', False) != self._factorize:
+            raise ValueError('Cannot resume with a different factorize setting')
         validate_objective_resume(self.manifest, metadata, csv_path)
         validate_walk_forward_resume(self.manifest, metadata)
         domain.set_state(checkpoint_data['domain_state'])
@@ -996,6 +1019,8 @@ class UniversalExperimentLoop:
             metadata['record_execution'] = True
         if self._record_model_outputs:
             metadata['record_model_outputs'] = True
+        if self._factorize:
+            metadata['factorize'] = True
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
             metadata['split_walk_forward'] = self._walk_forward.config.as_dict()

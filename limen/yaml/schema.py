@@ -67,6 +67,7 @@ UEL_REQUIRED = {'n_permutations'}
 UEL_OPTIONAL = {
     'record_execution',
     'record_model_outputs',
+    'factorize',
     'search_strategy',
     'pruning_strategies',
     'feedback_interval',

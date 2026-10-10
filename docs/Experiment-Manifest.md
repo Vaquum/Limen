@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.22.0"
+  limen_version: "5.22.1"
   mode: development
 
 sfd:
@@ -102,6 +102,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
+| `factorize` | bool | `false` | reuse deterministic snapshot signal work across independent backtest-only grid axes; see [UEL](Universal-Experiment-Loop.md) |
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
@@ -384,7 +385,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.22.0"
+  limen_version: "5.22.1"
   mode: development
 sfd:
   manifest:
@@ -441,7 +442,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.22.0"
+  limen_version: "5.22.1"
   mode: development
 sfd:
   manifest:
