@@ -540,8 +540,7 @@ class UniversalExperimentLoop:
             if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in (csv_header or []):
                 raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
             validate_objective_header(self.manifest, csv_header)
-            if csv_header is not None:
-                csv_header = convergence_header(csv_path, csv_header)
+            csv_header = convergence_header(csv_path, csv_header) if csv_header is not None else None
 
         _pending_csv_rows: list[dict[str, Any]] = []
 
