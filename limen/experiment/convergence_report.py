@@ -1,35 +1,49 @@
 import csv
 import tempfile
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 from typing import cast
 
 import polars as pl
 from sklearn.exceptions import ConvergenceWarning
 
-__all__ = ['convergence_report']
+__all__ = ['convergence_report', 'convergence_header', 'convergence_warning', 'convergence_warnings']
 
 
-def _convergence_header(path: Path, header: list[str]) -> list[str]:
+def convergence_header(path: Path, header: list[str]) -> list[str]:
+    """Extend older result headers without inferring past warning evidence."""
     if '_convergence_warning' in header:
         return header
     updated = [*header, '_convergence_warning']
     with path.open(newline='') as source, tempfile.NamedTemporaryFile('w', dir=path.parent, newline='', delete=False) as output:
         reader = csv.reader(source)
-        next(reader)
+        _ = next(reader)
         writer = csv.writer(output)
         writer.writerow(updated)
         for row in reader:
             writer.writerow([*row, ''])
-    Path(output.name).replace(path)
+    _ = Path(output.name).replace(path)
     return updated
 
 
-def _convergence_warning(caught: Sequence[warnings.WarningMessage], succeeded: bool, *, replay: bool = False) -> bool | None:
-    if replay:
+@contextmanager
+def convergence_warnings() -> Iterator[list[warnings.WarningMessage]]:
+    """Observe filtered warnings while preserving errors and external display."""
+    caught: list[warnings.WarningMessage] = []
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.filters[:] = [(action if action == 'error' else 'always', message, category, module, line)
+                                  for action, message, category, module, line in warnings.filters]
+            yield caught
+    finally:
         for warning in caught:
             warnings.warn_explicit(warning.message, warning.category, warning.filename, warning.lineno)
+
+
+def convergence_warning(caught: Sequence[warnings.WarningMessage], succeeded: bool) -> bool | None:
+    """Record category evidence only for completed rounds."""
     return any(issubclass(warning.category, ConvergenceWarning) for warning in caught) if succeeded else None
 
 
@@ -40,7 +54,7 @@ def convergence_report(results: pl.DataFrame, *, parameter_columns: Sequence[str
         raise ValueError(f'Convergence report requires declared parameter columns: {missing}')
     evidence = '_convergence_warning'
     if evidence in results.columns:
-        if results.height and results.schema[evidence] not in (pl.Boolean, pl.Null) and results[evidence].null_count() != results.height:
+        if results.height and results.schema[evidence] != pl.Boolean and results[evidence].null_count() != results.height:
             raise ValueError('_convergence_warning must contain Boolean or null evidence')
         observed = results.filter(pl.col(evidence).is_not_null())
     else:

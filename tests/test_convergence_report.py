@@ -167,8 +167,8 @@ def test_in_memory_convergence_summary(tmp_path, monkeypatch, caplog):
     assert any('convergence' in record.getMessage().lower() for record in caplog.records)
 
 
-@pytest.mark.parametrize('legacy', (False, True))
-def test_resume_preserves_observed_and_unavailable_evidence(tmp_path, legacy):
+@pytest.mark.parametrize('evidence_mode', ('current', 'missing', 'null'))
+def test_resume_preserves_observed_and_unavailable_evidence(tmp_path, evidence_mode):
     cases = ('ordinary', 'model', 'prep')
     first = _diagnostic_loop(tmp_path, True, cases)
     original = first.model
@@ -185,8 +185,11 @@ def test_resume_preserves_observed_and_unavailable_evidence(tmp_path, legacy):
     _run(first, 3)
     saved = pl.read_csv(tmp_path / 'results.csv')
     assert saved.height == 2
-    if legacy:
+    legacy = evidence_mode != 'current'
+    if evidence_mode == 'missing':
         saved.drop('_convergence_warning').write_csv(tmp_path / 'results.csv')
+    elif evidence_mode == 'null':
+        saved.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning')).write_csv(tmp_path / 'results.csv')
     resumed = _diagnostic_loop(tmp_path, True, cases)
     _run(resumed, 3, resume=True)
     rows = resumed.experiment_log
@@ -202,3 +205,113 @@ def test_resume_preserves_observed_and_unavailable_evidence(tmp_path, legacy):
     assert rows['_convergence_warning'].to_list() == expected
     assert pl.read_csv(tmp_path / 'results.csv')['_convergence_warning'].to_list() == expected
     assert json.loads((tmp_path / 'convergence_report.json').read_text()) == report
+
+@pytest.mark.parametrize('msq', (False, True))
+def test_walk_forward_warning_in_one_fold_is_one_round(tmp_path, monkeypatch, msq):
+    from limen.experiment import RuleBasedManifest
+    from tests.test_walk_forward_uel import _bars, _config as fold_config, _loop
+
+    seen = []
+    original = RuleBasedManifest.run_model
+
+    def warning_in_last_fold(self, data, round_params):
+        fold = vars(self)['_walk_forward_fold']
+        seen.append((round_params['entry_return'], fold))
+        if fold == 1 and round_params['entry_return'] == 0.0:
+            for _ in range(2):
+                warnings.warn('Recorded fold convergence diagnostic', ConvergenceWarning, stacklevel=2)
+        return original(self, data, round_params)
+
+    monkeypatch.setattr(RuleBasedManifest, 'run_model', warning_in_last_fold)
+    loop = _loop(fold_config(), _bars(), tmp_path, search=msq)
+    _run(loop, 2)
+    assert sorted(seen) == [(0.0, 0), (0.0, 1), (0.001, 0), (0.001, 1)]
+    assert loop.fold_results.height == 4
+    rows = loop.experiment_log.sort('entry_return')
+    assert rows['_convergence_warning'].to_list() == [True, False]
+    report = loop.convergence_report
+    assert report['rounds'] == report['observed_rounds'] == 2
+    assert report['convergence_warning_rounds'] == 1
+    assert report['convergence_warning_pct'] == 50.0
+    assert report['parameter_patterns'] == [
+        {'parameter': 'entry_return', 'value': '0.0', 'observed_rounds': 1,
+         'convergence_warning_rounds': 1, 'convergence_warning_pct': 100.0},
+    ]
+    assert json.loads((tmp_path / 'convergence_report.json').read_text()) == report
+    if msq:
+        messages = rows['_warnings'].to_list()
+        assert json.loads(messages[0]) == ['Recorded fold convergence diagnostic']
+        assert json.loads(messages[1]) == []
+
+
+def test_legacy_standard_append_preserves_rows_and_unavailable_evidence(tmp_path):
+    import csv
+
+    note = 'recorded, "quoted"\nsecond line'
+    first = _diagnostic_loop(tmp_path, False, ('ordinary', 'model'))
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter('always')
+        first.run('results', n_permutations=2, prep_each_round=True,
+                  random_search=False, progress_bar=False, context_params={'note': note})
+    path = tmp_path / 'results.csv'
+    with path.open(newline='') as source:
+        old_rows = list(csv.DictReader(source))
+    for row in old_rows:
+        del row['_convergence_warning']
+    with path.open('w', newline='') as target:
+        writer = csv.DictWriter(target, fieldnames=list(old_rows[0]))
+        writer.writeheader()
+        writer.writerows(old_rows)
+    next_run = _diagnostic_loop(tmp_path, False, ('ordinary', 'model'))
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter('always')
+        next_run.run('results', n_permutations=2, prep_each_round=True,
+                     random_search=False, progress_bar=False, context_params={'note': note})
+    with path.open(newline='') as source:
+        combined = list(csv.DictReader(source))
+    assert len(combined) == 4
+    for old, preserved in zip(old_rows, combined[:2], strict=True):
+        assert {key: preserved[key] for key in old} == old
+        assert preserved['_convergence_warning'] == ''
+        assert preserved['note'] == note
+    evidence = pl.read_csv(path)['_convergence_warning'].to_list()
+    assert evidence == [None, None, False, True]
+    assert next_run.convergence_report['rounds'] == next_run.convergence_report['observed_rounds'] == 2
+    assert next_run.convergence_report['convergence_warning_pct'] == 50.0
+    complete = convergence_report(pl.read_csv(path), parameter_columns=['warning_case'])
+    assert complete['rounds'] == 4
+    assert complete['observed_rounds'] == complete['unavailable_rounds'] == 2
+    assert complete['convergence_warning_pct'] == 50.0
+
+
+@pytest.mark.parametrize('category,case', ((UserWarning, 'ordinary'), (ConvergenceWarning, 'model')))
+def test_standard_warning_error_filter_still_aborts(tmp_path, category, case):
+    loop = _diagnostic_loop(tmp_path, False, (case,))
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', category)
+        with pytest.raises(category):
+            loop.run('results', n_permutations=1, prep_each_round=True,
+                     random_search=False, progress_bar=False)
+    assert loop.convergence_report is None
+    assert not (tmp_path / 'results.csv').exists()
+    assert not (tmp_path / 'convergence_report.json').exists()
+
+
+def test_standard_warning_remains_visible_before_model_error(tmp_path):
+    loop = _diagnostic_loop(tmp_path, False, ('ordinary',))
+    original = loop.model
+
+    def fail_after_warning(data, round_params):
+        _ = original(data, round_params)
+        raise ValueError('Recorded model failure')
+
+    loop.model = fail_after_warning
+    with warnings.catch_warnings(record=True) as emitted:
+        warnings.simplefilter('always')
+        with pytest.raises(ValueError, match='Recorded model failure'):
+            loop.run('results', n_permutations=1, prep_each_round=True,
+                     random_search=False, progress_bar=False)
+    assert len(emitted) == 1
+    assert emitted[0].category is UserWarning
+    assert str(emitted[0].message) == 'ConvergenceWarning is mentioned here'
+    assert loop.convergence_report is None
