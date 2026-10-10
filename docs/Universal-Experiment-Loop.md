@@ -28,6 +28,8 @@ limen run logreg-first.yaml
 
 `limen run` constructs UEL with a compiled SFD, a concrete search strategy, an `experiment_dir`, and the parsed YAML stored as `yaml_reference` in `metadata.json`. The result directory contains the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
 
+For trials evaluated across successive test windows, see [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps). Each trial runs all configured folds before its aggregate result enters the existing feedback loop.
+
 ## Direct Python execution modes
 
 Direct UEL integration currently has two execution modes.

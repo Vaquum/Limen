@@ -2,6 +2,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.log._snapshot_backtest_round import snapshot_backtest_round as _snapshot_backtest_round
 
 
@@ -74,12 +75,18 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
 def experiment_backtest_results(self: Any) -> pd.DataFrame:
 
-    '''
-    Compute backtest results for each round of an experiment.
+    '''Return round backtests, or captured fold backtests for walk-forward.'''
 
-    Returns:
-        pd.DataFrame: One-row-per-round table with BACKTEST_SNAPSHOT_COLUMNS
-    '''
+    folds = getattr(self, 'fold_results', None)
+    if folds is not None and not folds.is_empty():
+        metrics = {f'backtest_{key}': key for key in BACKTEST_SNAPSHOT_COLUMNS}
+        if not set(metrics).issubset(folds.columns):
+            metrics = {f'{key}_test': key for key in BACKTEST_SNAPSHOT_COLUMNS}
+        if not set(metrics).issubset(folds.columns):
+            if 'backtest_total_return' not in folds.columns:
+                raise ValueError('Walk-forward fold results lack captured snapshot metrics')
+            metrics = {key: key.removeprefix('backtest_') for key in folds.columns if key.startswith('backtest_')}
+        return folds.select('id', 'fold', *metrics).rename(metrics).to_pandas()
 
     all_rows: list[dict[str, float]] = []
 

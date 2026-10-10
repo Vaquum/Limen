@@ -15,7 +15,7 @@ METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags', 'limen_versi
 SFD_REQUIRED = {'manifest', 'params'}
 
 MANIFEST_REQUIRED = {'type', 'data_source', 'reference_architecture'}
-MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'indicators', 'backtest'}
+MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'split_walk_forward', 'indicators', 'backtest'}
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {

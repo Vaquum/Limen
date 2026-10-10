@@ -6,6 +6,7 @@ from typing import cast
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search.random_strategy import RandomStrategy
 from limen.experiment.manifest_core import MLManifest
+from limen.experiment._walk_forward_split import read_walk_forward_config
 from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.experiment.param_domain import ParamDomain
@@ -43,21 +44,7 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
 
 def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
 
-    '''
-    Build a Manifest from a validated YAML experiment dict.
-
-    Branches on sfd.manifest.type to instantiate MLManifest or RuleBasedManifest.
-
-    Args:
-        yaml_dict (dict): Validated YAML dict from validator.validate()
-
-    Returns:
-        Manifest: Configured MLManifest or RuleBasedManifest
-
-    Raises:
-        ValueError: If manifest type is unknown or required fields are missing
-
-    '''
+    '''Build the declared ML or rule-based manifest.'''
 
     m = yaml_dict['sfd']['manifest']
     manifest_type = m['type']
@@ -118,16 +105,16 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
     ds = m['data_source']
     params = dict(ds.get('params') or {})
-    sd = m['split_dates']
+    sd = m.get('split_dates')
     method = resolve(ds['method'])
     sig = inspect.signature(method)
     sig_params = sig.parameters
     accepts_var_keyword = any(
         p.kind == inspect.Parameter.VAR_KEYWORD for p in sig_params.values()
     )
-    if 'start_date_limit' in sig_params or accepts_var_keyword:
+    if sd is not None and ('start_date_limit' in sig_params or accepts_var_keyword):
         params['start_date_limit'] = sd['train_start']
-    if 'end_date_limit' in sig_params or accepts_var_keyword:
+    if sd is not None and ('end_date_limit' in sig_params or accepts_var_keyword):
         params['end_date_limit'] = sd['test_end']
     _ = manifest.set_data_source(method=method, params=params)
 
@@ -169,6 +156,15 @@ def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:
 
+    if 'split_walk_forward' in m:
+        if 'split_dates' in m:
+            raise ValueError('split_walk_forward conflicts with split_dates')
+        config = read_walk_forward_config(m['split_walk_forward'])
+        _ = manifest.set_split_walk_forward(
+            n_folds=config.n_folds, test_bars=config.test_bars,
+            purge_bars=config.purge_bars, embargo_bars=config.embargo_bars, anchored=config.anchored,
+        )
+        return
     sd = m['split_dates']
     _ = manifest.set_split_dates(
         date.fromisoformat(sd['train_start']),

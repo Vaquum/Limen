@@ -438,5 +438,8 @@
   "limen/experiment/_objective.py": 160,
   "limen/calibration/_objective_threshold.py": 50,
   "limen/experiment/_objective_run.py": 120,
-  "limen/yaml/_objective_spec.py": 110
+  "limen/yaml/_objective_spec.py": 110,
+  "limen/experiment/_walk_forward_split.py": 90,
+  "limen/experiment/_walk_forward_run.py": 190,
+  "limen/log/_permutation_returns.py": 40
 }

@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.20.0"
+  limen_version: "5.21.0"
   mode: development
 
 sfd:
@@ -307,6 +307,106 @@ split_dates:
   val_predict_guard:  false   # val window emits real predictions
   test_predict_guard: false   # test window emits real predictions
 ```
+
+### Walk-forward sweeps
+
+Use `sfd.manifest.split_walk_forward` instead of `split_dates` to evaluate every parameter trial across successive test windows:
+
+```yaml
+split_walk_forward:
+  n_folds: 3
+  test_bars: 168
+  purge_bars: 1
+  embargo_bars: 1
+  anchored: true
+```
+
+The native equivalent is:
+
+```python-fragment
+.set_split_walk_forward(
+    n_folds=3,
+    test_bars=168,
+    purge_bars=1,
+    embargo_bars=1,
+    anchored=True,
+)
+```
+
+All five fields are required. `n_folds` must be at least `2`, `test_bars` at least `1`, and `purge_bars` and `embargo_bars` nonnegative integers; booleans are not integers here. `anchored` must be a boolean. The declaration cannot coexist with `split_dates` and cannot contain parameter references or extra fields. Data-source date limits belong in `data_source.params`; they are not derived from fold positions.
+
+The final `n_folds * test_bars` source rows form consecutive test windows. Each fold's preceding training pool excludes the `purge_bars` rows immediately before its test window and the `embargo_bars` rows after earlier test windows. Anchored pools start at the beginning of the source; rolling pools keep the first fold's positional span before embargo removal.
+
+The existing train-to-validation ratio divides each pre-test pool; the default is `8:1`. A further `purge_bars` gap separates model training from validation. Choose a purge at least as long as the target's forward label horizon. Insufficient rows fail before fitting.
+
+Both ML and rule-based manifests support walk-forward sweeps. Each fold prepares its own partitions and fits its configured target, scaler and model afresh. Probability calibration, threshold selection and the validation-return objective use only that fold's validation partition; their existing configuration and flags still control whether tuning runs. Test execution uses the fold's fitted model and retained test-row order. No fitted state carries from one fold to another.
+
+One trial consumes one permutation and reaches feedback only after its folds finish. Its numeric result values are the arithmetic means of finite fold values; these are the values existing reducers see. The individual fold results and test net-return track retain the evidence behind that aggregate. A mean of fold total returns is not a compounded return for the stitched test period.
+
+`uel.fold_results` keeps the individual result rows with trial `id` and `fold` identity. The aggregate `optimal_threshold` is null: each fold has its own fitted threshold, retained in its result. Post-run `Log` backtest rows remain per fold rather than treating the concatenated test windows as one continuous position path. Prediction and confusion replay that assumes one test set rejects walk-forward trials.
+
+On the artifact-backed path, the existing `round_data.jsonl` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
+
+Every fold starts execution independently. Snapshot net returns are the existing notional-scaled `execution.net` values. Event execution samples its recorded equity at retained test-bar endpoints, including the terminal mark in the final value; each return is current equity divided by prior equity minus one, starting from the policy's initial equity. The return track is captured for walk-forward trials even when `record_execution` is off; that flag retains its existing optional JSONL fields. Existing snapshot metrics and their columns remain unchanged.
+
+Resume rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. This adds no fold-specific Trainer promotion or Sensor reconstruction contract. Existing no-walk-forward runs retain their artifact and resume behavior.
+
+These folds provide recorded out-of-sample evaluations. They add no statistical acceptance test or guarantee against selection optimism from validation tuning or sweep selection. Omitting `split_walk_forward` preserves the existing single-split path.
+
+Save this example as `walk-forward.yaml` in a repository checkout. It uses the recorded hourly BTCUSDT fixture and runs two logistic-regression trials across three one-week test windows:
+
+```yaml
+schema_version: "1.0"
+metadata:
+  name: recorded_walk_forward
+  limen_version: "5.21.0"
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: tests/fixtures/spot_1h_20240101_20241231.parquet
+    split_walk_forward:
+      n_folds: 3
+      test_bars: 168
+      purge_bars: 1
+      embargo_bars: 1
+      anchored: true
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: ret_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+    backtest:
+      fee_bps: 5.0
+      slip_bps: 5.0
+      notional_rate: 1.0
+  params:
+    C: [0.1, 1.0]
+    solver: [lbfgs]
+    random_state: [42]
+    max_iter: [200]
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  prep_each_round: true
+  output_format: parquet
+```
+
+Run `limen validate walk-forward.yaml`, then `limen run walk-forward.yaml`. Local fixture paths resolve from the working directory. For a hosted `HistoricalData.get_spot_klines` source, set its explicit `start_date_limit` and `end_date_limit` in `data_source.params` to fix the fetched window.
 
 ### `set_pre_split_data_selector(func, **params)`
 

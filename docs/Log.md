@@ -4,6 +4,8 @@
 
 For YAML CLI runs, start from the generated result directory and `results.csv`. For direct Python UEL runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
 
+In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.csv` contains trial aggregates. Use the recorded fold results and per-trial net-return track to inspect the individual test windows behind those means.
+
 ## Prerequisites
 
 - a completed `results.csv`, or a successful direct UEL run

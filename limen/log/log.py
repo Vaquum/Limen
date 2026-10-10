@@ -12,7 +12,7 @@ class Log:
     from limen.log._experiment_confusion_metrics import experiment_confusion_metrics
     from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
     from limen.log._permutation_confusion_metrics import permutation_confusion_metrics
-    from limen.log._permutation_prediction_performance import permutation_prediction_performance
+    from limen.log._permutation_prediction_performance import permutation_prediction_performance as _permutation_prediction_performance
 
     from limen.log._read_from_file import read_from_file
 
@@ -22,17 +22,11 @@ class Log:
                  inverse_scaler: Callable[[pl.DataFrame, Any], pl.DataFrame] | None = None,
                  cols_to_multilabel: list[str] | None = None) -> None:
 
-        '''
-        Create Log object state from a UEL object or a log file.
-
-        Args:
-            uel_object (object, optional): Source UEL object
-            file_path (str, optional): Path to the log file
-            inverse_scaler (Callable, optional): Inverse scaler function
-            cols_to_multilabel (list[str], optional): Columns to convert to multilabel
-        '''
+        '''Read experiment results from a live loop or a log file.'''
 
         super().__init__()
+
+        self.fold_results = pl.DataFrame()
 
         if uel_object is not None:
 
@@ -43,6 +37,7 @@ class Log:
             self.round_params = uel_object.round_params
             self.preds = uel_object.preds
             self._alignment = uel_object._alignment
+            self.fold_results = getattr(uel_object, 'fold_results', pl.DataFrame()).clone()
 
             if hasattr(uel_object, 'manifest'):
                 self.manifest = uel_object.manifest
@@ -75,6 +70,12 @@ class Log:
             self.inverse_scaler = None
 
 
+    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+        if not self.fold_results.is_empty():
+            raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
+        return self._permutation_prediction_performance(round_id)
+
+
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
 
         '''
@@ -86,6 +87,9 @@ class Log:
         Returns:
             pl.DataFrame: Dataset filtered down to the permutation test window
         '''
+
+        if not self.fold_results.is_empty():
+            raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
 
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
