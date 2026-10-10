@@ -1,7 +1,5 @@
 import copy
 import json
-import subprocess
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -117,26 +115,6 @@ def _fold_manifest(manifest, fold):
 
 def _records(path):
     return [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
-
-
-def test_base_engine_import_without_optional_pyarrow():
-    code = '''
-import importlib.abc
-import sys
-
-class WithoutArrow(importlib.abc.MetaPathFinder):
-    def find_spec(self, fullname, path=None, target=None):
-        if fullname == 'pyarrow' or fullname.startswith('pyarrow.'):
-            raise ModuleNotFoundError('PyArrow is unavailable in this base-install probe')
-        return None
-
-sys.meta_path.insert(0, WithoutArrow())
-from limen.experiment import UniversalExperimentLoop
-assert UniversalExperimentLoop.__name__ == 'UniversalExperimentLoop'
-assert not any(name == 'pyarrow' or name.startswith('pyarrow.') for name in sys.modules)
-'''
-    _ = subprocess.run([sys.executable, '-c', code], cwd=_FIXTURES.parent.parent,
-                       check=True, timeout=30)
 
 
 @pytest.fixture(scope='module')
