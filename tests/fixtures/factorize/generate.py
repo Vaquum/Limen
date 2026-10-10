@@ -94,14 +94,7 @@ def execute(case: str, directory: Path, factorize: bool | None = None) -> dict:
             'round_data':[json.loads(s) for s in (output/'round_data.jsonl').read_text().splitlines()],
             'metadata':json.loads((output/'metadata.json').read_text())}
 
-def canonical(value: object, *, in_csv: bool = False) -> object:  # noqa: PLR0911
-    """Strict types and null positions; decimal-normalize floats only."""
-    if value is None:
-        return ['null']
-    if type(value) is bool:
-        return ['bool', value]
-    if type(value) is int:
-        return ['int', value]
+def _scalar(value: float | str, in_csv: bool) -> object:
     if type(value) is float:
         if math.isnan(value):
             return ['nan']
@@ -117,6 +110,19 @@ def canonical(value: object, *, in_csv: bool = False) -> object:  # noqa: PLR091
             except ValueError:
                 pass
         return ['str', value]
+    raise TypeError(type(value).__name__)
+
+
+def canonical(value: object, *, in_csv: bool = False) -> object:
+    """Strict types and null positions; decimal-normalize floats only."""
+    if value is None:
+        return ['null']
+    if type(value) is bool:
+        return ['bool', value]
+    if type(value) is int:
+        return ['int', value]
+    if isinstance(value, (float, str)):
+        return _scalar(value, in_csv)
     if isinstance(value, (tuple, list)):
         return [canonical(x, in_csv=in_csv) for x in value]
     if isinstance(value, dict):

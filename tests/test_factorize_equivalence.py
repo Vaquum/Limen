@@ -89,16 +89,18 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
         assert baseline['market_sha256'] == hashlib.sha256(MARKET.read_bytes()).hexdigest()
         off = execute(name, tmp_path / name / 'off')
         on = execute(name, tmp_path / name / 'on', factorize=True)
+        off_digest, on_digest = digest(off), digest(on)
         # Frozen goldens require the locked Linux/Python 3.10 numerical runtime.
         if sys.platform == 'linux' and sys.version_info[:2] == (3, 10) and np.__version__ == '2.2.6':
-            actual = component_digests(off)
-            differences = {key: (expected, actual.get(key))
-                           for key, expected in baseline['component_digests'].items()
-                           if actual.get(key) != expected}
-            assert digest(off) == baseline['digest_12dp'], f'{name}: original Limen vs switch-off: {differences}'
-            assert digest(on) == baseline['digest_12dp'], f'{name}: original Limen vs factorized'
+            if off_digest != baseline['digest_12dp']:
+                actual = component_digests(off)
+                differences = {key: (expected, actual.get(key))
+                               for key, expected in baseline['component_digests'].items()
+                               if actual.get(key) != expected}
+                pytest.fail(f'{name}: original Limen vs switch-off: {differences}')
+            assert on_digest == baseline['digest_12dp'], f'{name}: original Limen vs factorized'
         else:
-            assert digest(off) == digest(on), f'{name}: current on/off parity'
+            assert off_digest == on_digest, f'{name}: current on/off parity'
         assert off['columns'] == on['columns'] == baseline['columns']
         assert len(off['rows']) == len(on['rows']) == baseline['row_count']
         assert [r['round_id'] for r in on['round_data']] == baseline['round_ids']
@@ -125,7 +127,7 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
 
     altered = copy.deepcopy(off)
     altered['rows'][0][col] = '123.123456789124'
-    assert digest(altered) != digest(off)
+    assert digest(altered) != off_digest
     assert canonical(1.000000000001) != canonical(1.000000000002)
     assert canonical(-0.0) != canonical(0.0)
     assert canonical(float('nan')) != canonical(None)
