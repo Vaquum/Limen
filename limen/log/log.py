@@ -22,15 +22,7 @@ class Log:
                  inverse_scaler: Callable[[pl.DataFrame, Any], pl.DataFrame] | None = None,
                  cols_to_multilabel: list[str] | None = None) -> None:
 
-        '''
-        Create Log object state from a UEL object or a log file.
-
-        Args:
-            uel_object (object, optional): Source UEL object
-            file_path (str, optional): Path to the log file
-            inverse_scaler (Callable, optional): Inverse scaler function
-            cols_to_multilabel (list[str], optional): Columns to convert to multilabel
-        '''
+        '''Read experiment results from a live loop or a log file.'''
 
         super().__init__()
 

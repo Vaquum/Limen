@@ -75,12 +75,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
 def experiment_backtest_results(self: Any) -> pd.DataFrame:
 
-    '''
-    Compute backtest results for each round of an experiment.
-
-    Returns:
-        pd.DataFrame: One-row-per-round table, or captured per-fold rows for walk-forward
-    '''
+    '''Return round backtests, or captured fold backtests for walk-forward.'''
 
     folds = getattr(self, 'fold_results', None)
     if folds is not None and not folds.is_empty():
