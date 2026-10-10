@@ -95,8 +95,8 @@ def _records(path):
 
 def _market_returns(columns):
     returns = []
-    for row, (open_px, close_px) in enumerate(zip(columns['open'], columns['close'], strict=True)):
-        open_px, close_px = float(open_px), float(close_px)
+    for row, (raw_open, raw_close) in enumerate(zip(columns['open'], columns['close'], strict=True)):
+        open_px, close_px = float(raw_open), float(raw_close)
         previous = float(columns['close'][row - 1]) if row else float('nan')
         if any(math.isnan(float(value)) for value in (open_px, close_px, close_px - open_px, previous)) or previous == 0:
             returns.append(None)
