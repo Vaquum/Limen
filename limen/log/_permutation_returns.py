@@ -13,6 +13,14 @@ class _ParquetWriter(Protocol):
     def close(self) -> None: ...
 
 
+class _ArrowTable(Protocol):
+    schema: object
+
+
+class _ArrowFrame(Protocol):
+    def to_arrow(self) -> _ArrowTable: ...
+
+
 class TrialReturnsWriter:
     def __init__(self, directory: Path) -> None:
         super().__init__()
@@ -30,11 +38,11 @@ class TrialReturnsWriter:
             {'trial': [trial] * len(values), 'bar': list(range(len(values))), 'net_return': values},
             schema={'trial': pl.String, 'bar': pl.Int64, 'net_return': pl.Float64},
         )
-        table = cast(Callable[[], object], getattr(frame, 'to_arrow'))()
+        table = cast(_ArrowFrame, frame).to_arrow()
         if self.writer is None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            create_writer = cast(Callable[[Path, object], _ParquetWriter], getattr(pq, 'ParquetWriter'))
-            self.writer = create_writer(self.temporary, getattr(table, 'schema'))
+            create_writer = cast(Callable[[Path, object], _ParquetWriter], pq.ParquetWriter)
+            self.writer = create_writer(self.temporary, table.schema)
         self.writer.write_table(table, row_group_size=len(values))
 
     def finish(self) -> None:

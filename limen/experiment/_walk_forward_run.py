@@ -23,9 +23,9 @@ class _SplitResolver(Protocol):
     def __call__(self, manifest: Manifest, raw_data: pl.DataFrame, *, require_validation: bool = False) -> list[pl.DataFrame]: ...
 
 
-_resolve_split = cast(_SplitResolver, getattr(_manifest_core, '_resolve_split'))
-_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], getattr(_manifest_core, '_resolve_params'))
-_requires_fold_validation = cast(Callable[[Manifest, Mapping[str, object]], bool], getattr(_manifest_core, '_requires_fold_validation'))
+_resolve_split = cast(_SplitResolver, vars(_manifest_core)['_resolve_split'])
+_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(_manifest_core)['_resolve_params'])
+_requires_fold_validation = cast(Callable[[Manifest, Mapping[str, object]], bool], vars(_manifest_core)['_requires_fold_validation'])
 
 
 def validate_walk_forward_resume(manifest: Manifest | None, metadata: Mapping[str, object]) -> None:
@@ -128,7 +128,7 @@ class WalkForwardRun:
     def _preflight(self, raw: pl.DataFrame, *, require_validation: bool) -> None:
         for fold in range(self.config.n_folds):
             manifest = copy.deepcopy(self.manifest)
-            setattr(manifest, '_walk_forward_fold', fold)
+            vars(manifest)['_walk_forward_fold'] = fold
             _ = _resolve_split(manifest, raw, require_validation=require_validation)
 
     @property
@@ -150,7 +150,7 @@ class WalkForwardRun:
         records: list[dict[str, object]] = []
         for fold in range(self.config.n_folds):
             manifest = copy.deepcopy(self.manifest)
-            setattr(manifest, '_walk_forward_fold', fold)
+            vars(manifest)['_walk_forward_fold'] = fold
             manifest.pre_split_data_selector = None
             prepared = manifest.prepare_data(raw, dict(round_params))
             prepared['_record_execution'] = True

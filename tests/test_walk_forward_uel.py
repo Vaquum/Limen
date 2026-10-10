@@ -476,7 +476,8 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
         assert not (path / 'trial_returns.parquet').exists()
     resumed = _loop(config, bars, path)
     _run(resumed, resume=True, n_permutations=3)
-    assert resumed.experiment_log.drop('execution_time').equals(full.experiment_log.drop('execution_time'))
+    assert set(resumed.experiment_log.columns) == set(full.experiment_log.columns)
+    assert resumed.experiment_log.select(full.experiment_log.columns).drop('execution_time').equals(full.experiment_log.drop('execution_time'))
     assert resumed.fold_results.equals(full.fold_results)
     assert pl.read_csv(path / 'results.csv').drop('execution_time').equals(pl.read_csv(tmp_path / 'full/results.csv').drop('execution_time'))
     assert _records(path) == _records(tmp_path / 'full')
@@ -494,7 +495,7 @@ def test_native_resume_rejects_added_or_removed_walk_forward(tmp_path, saved_wal
         manifest = compiled.manifest()
         if not enabled:
             manifest.split_walk_forward = None
-        sfd = SimpleNamespace(params=compiled.params, manifest=lambda: manifest)
+        sfd = SimpleNamespace(__name__=__name__, params=compiled.params, manifest=lambda: manifest)
         return UniversalExperimentLoop(
             sfd=sfd, data=bars, experiment_dir=tmp_path,
             search_strategy=build_search_strategy(config), checkpoint_interval=1,
