@@ -171,6 +171,7 @@ def test_acceptance_block_and_verdicts(acceptance_runs, tmp_path):
     assert not report['verdicts']['min_deflated_sharpe_probability']
     assert loop.experiment_log.height == 2
     (tmp_path / 'trial_returns.parquet').write_bytes((path / 'trial_returns.parquet').read_bytes())
+    (tmp_path / 'round_data.jsonl').write_bytes((path / 'round_data.jsonl').read_bytes())
     permissive = acceptance_report(tmp_path, acceptance={
         'min_deflated_sharpe_probability': 0.0, 'max_pbo': 1.0,
     })
@@ -188,6 +189,53 @@ def test_acceptance_rejects_oversized_integer(key):
     assert any('acceptance' in error.path for error in result.errors)
     with pytest.raises(ValueError, match='acceptance'):
         Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(**{key: 10 ** 400})
+
+
+def test_pbo_requires_recorded_synchronous_dates(tmp_path):
+    bars = _bars()
+    loop = _loop(_config(), bars, tmp_path)
+    _run(loop)
+    artifact = pl.read_parquet(tmp_path / 'trial_returns.parquet')
+    trials = artifact['trial'].unique(maintain_order=True).to_list()
+    matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
+                       for trial in trials])
+    path = tmp_path / 'round_data.jsonl'
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    for record in records:
+        for fold in record['folds']:
+            fold['alignment'].pop('test_datetimes', None)
+    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    absent = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
+    assert absent['pbo'] is None
+    assert absent['verdicts']['max_pbo'] is None
+    assert absent['errors']['pbo']
+    assert isinstance(absent['deflated_sharpe_probability'], float)
+    source_dates = [value.isoformat() for value in bars['datetime']]
+    for record in records:
+        for fold in record['folds']:
+            alignment = fold['alignment']
+            dates = [value for value in source_dates
+                     if alignment['first_test_datetime'] <= value <= alignment['last_test_datetime']
+                     and value not in alignment['missing_datetimes']]
+            assert len(dates) == len(fold['net_returns'])
+            alignment['test_datetimes'] = dates
+    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    aligned = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
+    assert aligned['pbo'] == _reference_pbo(matrix, 2)
+    assert aligned['deflated_sharpe_probability'] == absent['deflated_sharpe_probability']
+    assert aligned['errors'] == {}
+    for fold in records[1]['folds']:
+        dates = fold['alignment']['test_datetimes']
+        start = source_dates.index(dates[0]) - 1
+        adjacent = source_dates[start:start + len(dates)]
+        assert len(adjacent) == len(dates) and adjacent != dates
+        fold['alignment']['test_datetimes'] = adjacent
+    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    shifted = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
+    assert shifted['pbo'] is None
+    assert shifted['verdicts']['max_pbo'] is None
+    assert shifted['errors']['pbo']
+    assert shifted['deflated_sharpe_probability'] == aligned['deflated_sharpe_probability']
 
 
 def test_report_end_to_end(acceptance_runs):

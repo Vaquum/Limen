@@ -53,7 +53,52 @@ def _matrix(frame: pl.DataFrame, trials: list[str]) -> npt.NDArray[np.float64]:
     return values
 
 
-def _score(values: npt.NDArray[np.float64], trials: list[str], report: dict[str, object], errors: dict[str, str]) -> None:
+def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trials: list[str]) -> None:
+    path = directory / 'round_data.jsonl'
+    if not path.exists():
+        raise ValueError('PBO requires recorded ordered test timestamps for every trial')
+    records: dict[str, Mapping[str, object]] = {}
+    with path.open() as stream:
+        for line in stream:
+            entry = cast(object, json.loads(line))
+            if not isinstance(entry, Mapping):
+                raise ValueError('PBO requires recorded fold evidence')
+            record = cast(Mapping[str, object], entry)
+            trial = record.get('round_id')
+            if not isinstance(trial, str) or trial in records:
+                raise ValueError('PBO requires unique recorded trial identities')
+            records[trial] = record
+    reference: list[list[str]] | None = None
+    for trial, track in zip(trials, values, strict=True):
+        folds = records.get(trial, {}).get('folds')
+        if not isinstance(folds, list) or not folds:
+            raise ValueError('PBO requires recorded folds for every trial')
+        identities: list[list[str]] = []
+        returns: list[float] = []
+        for fold in cast(list[object], folds):
+            if not isinstance(fold, Mapping):
+                raise ValueError('PBO requires recorded fold evidence')
+            evidence = cast(Mapping[str, object], fold)
+            alignment = evidence.get('alignment')
+            dates = cast(Mapping[str, object], alignment).get('test_datetimes') if isinstance(alignment, Mapping) else None
+            net = evidence.get('net_returns')
+            if not isinstance(dates, list) or not isinstance(net, list) or not dates or len(dates) != len(net):
+                raise ValueError('PBO requires recorded ordered test timestamps aligned with each fold return')
+            if not all(isinstance(value, str) for value in cast(list[object], dates)):
+                raise ValueError('PBO requires recorded ISO test timestamps')
+            timestamps = cast(list[str], dates)
+            if timestamps != sorted(set(timestamps)):
+                raise ValueError('PBO requires unique increasing test timestamps')
+            identities.append(timestamps)
+            returns.extend(cast(list[float], net))
+        if not np.array_equal(np.asarray(returns, dtype=np.float64), track):
+            raise ValueError('PBO fold returns differ from trial_returns.parquet')
+        if reference is not None and identities != reference:
+            raise ValueError('PBO requires identical ordered test timestamps across trials')
+        reference = identities
+
+
+def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], report: dict[str, object], errors: dict[str, str]) -> None:
     try:
         if values.shape[1] < _MINIMUM_DSR_BARS:
             raise ValueError('DSR requires at least four recorded returns per trial')
@@ -71,6 +116,7 @@ def _score(values: npt.NDArray[np.float64], trials: list[str], report: dict[str,
     except (ValueError, FloatingPointError) as exc:
         errors['deflated_sharpe_probability'] = str(exc)
     try:
+        _require_synchronous(directory, values, trials)
         report['pbo'] = probability_of_backtest_overfitting(values, n_blocks=_BLOCKS)
     except (ValueError, FloatingPointError) as exc:
         errors['pbo'] = str(exc)
@@ -95,7 +141,7 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
     try:
         values = _matrix(frame, trials)
         report['n_bars'] = values.shape[1]
-        _score(values, trials, report, errors)
+        _score(directory, values, trials, report, errors)
     except ValueError as exc:
         errors['returns'] = str(exc)
     verdicts: dict[str, bool | None] = {}
