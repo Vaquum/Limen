@@ -1,7 +1,7 @@
 import copy
 import json
 import math
-from itertools import combinations
+from itertools import combinations, pairwise
 from pathlib import Path
 from statistics import NormalDist
 
@@ -68,7 +68,7 @@ def test_deflated_sharpe_laws():
     probabilities = [deflated_sharpe_ratio(track, n_trials=count, trial_sharpe_variance=variance)
                      for count in (1, 2, 4, 16)]
     assert all(0.0 <= value <= 1.0 for value in probabilities)
-    assert all(before >= after for before, after in zip(probabilities, probabilities[1:], strict=False))
+    assert all(before >= after for before, after in pairwise(probabilities))
     for count, observed in zip((1, 2, 4, 16), probabilities, strict=True):
         assert observed == pytest.approx(_reference_dsr(track, count, variance), abs=1e-14)
     assert deflated_sharpe_ratio(track, n_trials=4, trial_sharpe_variance=0.0) == pytest.approx(

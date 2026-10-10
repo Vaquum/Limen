@@ -10,6 +10,7 @@ _MINIMUM_TRIALS = 2
 _MINIMUM_BLOCKS = 2
 _MINIMUM_BLOCK_BARS = 2
 _MATRIX_DIMENSIONS = 2
+_MEDIAN_RANK = 0.5
 
 
 def _sharpe_ratios(values: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
@@ -53,5 +54,5 @@ def probability_of_backtest_overfitting(
         selected_score = out_of_sample[winner]
         rank = (float(np.count_nonzero(out_of_sample < selected_score))
                 + (float(np.count_nonzero(out_of_sample == selected_score)) + 1) / 2)
-        overfit += rank / (n_trials + 1) <= 0.5
+        overfit += rank / (n_trials + 1) <= _MEDIAN_RANK
     return overfit / comb(n_blocks, n_blocks // 2)

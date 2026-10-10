@@ -15,6 +15,7 @@ __all__ = ['acceptance_report', 'read_acceptance']
 
 _THRESHOLDS = {'min_deflated_sharpe_probability', 'max_pbo'}
 _BLOCKS = 2
+_MINIMUM_DSR_BARS = 4
 
 
 def read_acceptance(value: object) -> dict[str, float]:
@@ -48,7 +49,7 @@ def _matrix(frame: pl.DataFrame, trials: list[str]) -> npt.NDArray[np.float64]:
 
 def _score(values: npt.NDArray[np.float64], trials: list[str], report: dict[str, object], errors: dict[str, str]) -> None:
     try:
-        if values.shape[1] < 4:
+        if values.shape[1] < _MINIMUM_DSR_BARS:
             raise ValueError('DSR requires at least four recorded returns per trial')
         with np.errstate(over='raise', invalid='raise', divide='raise'):
             spread = np.std(values, axis=1, ddof=1)
