@@ -273,7 +273,7 @@ Ordinal halves use `k = n // 2`, H1 rows `[0:k)` and H2 rows `[k:n)`; an odd mid
 
 Recording adds four arrays in total, including one full-precision market array per round. Serialized size and decoded-object overhead vary with the returns, test-window length and round count; Trainer and Cohort load whole round records.
 
-Python resume must pass the same flag; CLI resume forwards the saved YAML flag. Changing it raises before artifacts are rewritten. Older metadata without the flag means `false`. Earlier execution-only records remain unchanged when resumed; readers must treat a missing `market` as unavailable, while new snapshot records include it. No artifact migration is performed. Existing resume requirements, including complete successful round records through the checkpoint, still apply.
+Python resume must pass the same flag; CLI resume uses the effective setting saved in metadata, including Python overrides. Changing it raises before artifacts are rewritten. Older metadata without the flag means `false`. Earlier execution-only records remain unchanged when resumed; readers must treat a missing `market` as unavailable, while new snapshot records include it. No artifact migration is performed. Existing resume requirements, including complete successful round records through the checkpoint, still apply.
 
 ### Record model outputs
 
