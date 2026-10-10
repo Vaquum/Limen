@@ -1,4 +1,5 @@
 from limen.backtest.trade_contract import TradePolicy
+from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
@@ -245,6 +246,8 @@ class Manifest:
     pre_split_data_selector: PipelineStep | None = None
     split_config: tuple[int, int, int] = (8, 1, 2)
     split_dates: tuple[date | Any, date | Any, date | Any, date | Any, date | Any, date | Any] | None = None
+    split_walk_forward: WalkForwardConfig | None = None
+    _walk_forward_fold: int | None = field(default=None, repr=False)
     val_predict_guard: bool = True
     test_predict_guard: bool = True
     bar_formation: PipelineStep | None = None
@@ -455,6 +458,16 @@ class Manifest:
 
         return self
 
+    def set_split_walk_forward(
+        self: _TManifest, *, n_folds: int, test_bars: int,
+        purge_bars: int, embargo_bars: int, anchored: bool,
+    ) -> _TManifest:
+        if self.split_dates is not None:
+            raise ValueError('Manifest split_walk_forward conflicts with split_dates')
+        self.split_walk_forward = WalkForwardConfig(n_folds, test_bars, purge_bars, embargo_bars, anchored)
+        self._walk_forward_fold = None
+        return self
+
     def set_split_dates(
         self,
         train_start: date | Any, train_end: date | Any,
@@ -465,58 +478,10 @@ class Manifest:
         test_predict_guard: bool | Any = True,
     ) -> 'Manifest':
 
-        '''
-        Pin train, val, and test windows to absolute `datetime` bounds.
+        '''Pin half-open date windows; guards mask validation/test Sensor predictions.'''
 
-        When set, takes precedence over `set_split_config` ratios in
-        `prepare_data` and `compute_test_bars`: the split runs on the
-        raw data (in `_run_prepare_setup`, before the per-split feature
-        transforms) and each row's slice assignment is fixed by which
-        window its `datetime` falls into. Subsequent per-split feature
-        engineering can trim rows independently within each slice but
-        cannot move rows between slices, so the train / val / test
-        datetime bounds are honoured exactly. `with_params_override(
-        split_config=...)` clears `split_dates` so the ratio override
-        path remains usable.
-
-        Use when the boundaries between train, val, and test must be
-        specific dates (e.g. honouring a deployment date) rather than
-        proportions of the raw row count. Use `set_split_config` for
-        the ratio-based split when an absolute date is not required.
-
-        Windows are half-open `[start, end)`. Ordering must satisfy
-        `train_start <= train_end <= val_start <= val_end <= test_start <= test_end`;
-        gaps between adjacent windows are allowed and any rows that fall
-        into those gaps are intentionally excluded from all three splits.
-
-        `val_predict_guard` and `test_predict_guard` (keyword-only, default
-        `True`) control whether the served `Sensor` masks predictions inside
-        the val and test windows. Both `True` masks the full
-        `[train_start, test_end)` envelope, so every served prediction is
-        identical to omitting the flags; setting one to `False` makes that
-        window emit real predictions instead of `None`. Train is always
-        masked and has no flag — the model trains on it.
-
-        Args:
-            train_start (date | datetime): Train window start (inclusive)
-            train_end   (date | datetime): Train window end (exclusive)
-            val_start   (date | datetime): Val window start (inclusive)
-            val_end     (date | datetime): Val window end (exclusive)
-            test_start  (date | datetime): Test window start (inclusive)
-            test_end    (date | datetime): Test window end (exclusive)
-            val_predict_guard (bool): When True (default) the served Sensor
-                masks predictions inside the val window; False serves them
-            test_predict_guard (bool): When True (default) the served Sensor
-                masks predictions inside the test window; False serves them
-
-        Returns:
-            Manifest: Self for method chaining
-
-        Raises:
-            TypeError: If any bound is not a `date` or `datetime` instance,
-                or either predict-guard flag is not a `bool`
-            ValueError: If the six bounds are not in non-decreasing order
-        '''
+        if self.split_walk_forward is not None:
+            raise ValueError('Manifest split_dates conflicts with split_walk_forward')
 
         bounds = [
             ('train_start', train_start), ('train_end', train_end),
@@ -685,7 +650,9 @@ class Manifest:
         # (3x O(N) filters vs the legacy O(1) slice, with two thirds discarded).
         # The Log system calls this per round; the waste compounds. Take the
         # one slice we actually need.
-        if self.split_dates is not None:
+        if self.split_walk_forward is not None:
+            test_split = _resolve_split(self, raw_data)[2]
+        elif self.split_dates is not None:
             *_, test_start, test_end = self.split_dates
             test_split = raw_data.filter(
                 (pl.col('datetime') >= test_start) & (pl.col('datetime') < test_end)
@@ -1123,6 +1090,8 @@ class MLManifest(Manifest):
                 maintain_order='left'
             )
 
+        if self.split_walk_forward is not None:
+            _validate_fold_splits(split_data, require_validation=_requires_fold_validation(self, round_params))
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
@@ -1903,7 +1872,7 @@ def _run_prepare_setup(
         resolved = _resolve_params(base_params, round_params)
         raw_data = func(raw_data, **resolved)
 
-    raw_splits = _resolve_split(manifest, raw_data)
+    raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
     split_data = raw_splits
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
@@ -1920,22 +1889,24 @@ def _run_prepare_setup(
     return (*prepared, trade)
 
 
-def _resolve_split(manifest: 'Manifest', raw_data: pl.DataFrame) -> list[pl.DataFrame]:
+def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:
+    if not isinstance(manifest, MLManifest):
+        return False
+    config = manifest.prediction_calibration_config
+    return manifest.objective is not None or (config is not None and (
+        (config.calibration_func is not None and bool(round_params.get('use_calibration', True)))
+        or (config.threshold_func is not None and bool(round_params.get('use_threshold', True)))
+    ))
 
-    '''
-    Pick between the date-based and ratio-based splitters.
 
-    When `manifest.split_dates` is set (via `set_split_dates`), it takes
-    precedence: the split filters `raw_data` by datetime windows so
-    each row's slice assignment is fixed by its datetime value before
-    the per-split feature transforms run. Otherwise the existing
-    ratio split (`split_sequential` over `manifest.split_config`)
-    applies. The output is the same `[train, val, test]` list shape
-    in either case, so every downstream invariant (per-split feature
-    atomicity, one-way scaler fit, column alignment,
-    `_compute_alignment` reading `split_data[2]`) operates identically.
-    '''
-
+def _resolve_split(
+    manifest: Manifest, raw_data: pl.DataFrame, *, require_validation: bool = False,
+) -> list[pl.DataFrame]:
+    if manifest.split_walk_forward is not None:
+        if manifest.split_dates is not None:
+            raise ValueError('Manifest split_walk_forward conflicts with split_dates')
+        return _walk_forward_split(raw_data, manifest.split_walk_forward, manifest._walk_forward_fold,
+                                   manifest.split_config, require_validation=require_validation)
     if manifest.split_dates is not None:
         return split_by_dates(raw_data, *manifest.split_dates)
     return split_sequential(raw_data, manifest.split_config)

@@ -2,7 +2,7 @@ schema_version: '1.0'
 
 metadata:
   name: logreg_return_objective
-  limen_version: 5.20.0
+  limen_version: 5.21.0
   mode: development
   description: Select binary thresholds and prune on validation event-ledger 
     return

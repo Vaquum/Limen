@@ -1,4 +1,5 @@
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
+from limen.experiment._walk_forward_split import read_walk_forward_config
 import inspect
 import math
 import re
@@ -364,7 +365,7 @@ class SchemaVersion:
 
 class DataSource:
 
-    '''Validate data_source block, reject test_data_source, and forbid reserved date-limit params.'''
+    '''Validate the source; date limits belong to split_dates or walk-forward source params.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -419,7 +420,7 @@ class DataSource:
             ))
             return
 
-        if isinstance(params, dict):
+        if isinstance(params, dict) and 'split_walk_forward' not in manifest:
             for reserved in ('start_date_limit', 'end_date_limit'):
                 if reserved in params:
                     errors.append(YAMLError(
@@ -662,7 +663,7 @@ class PruningStrategiesSpec:
 
 class SplitSpec:
 
-    '''split_dates (absolute date windows) is required; split_config (ratio) is not supported in YAML.'''
+    '''Require exactly one absolute-date or walk-forward split declaration.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -679,9 +680,21 @@ class SplitSpec:
             ))
             return
 
+        if 'split_walk_forward' in manifest:
+            if 'split_dates' in manifest:
+                errors.append(YAMLError(
+                    message="'split_walk_forward' conflicts with 'split_dates'",
+                    path='sfd.manifest.split_walk_forward',
+                ))
+            try:
+                _ = read_walk_forward_config(manifest['split_walk_forward'])
+            except ValueError as exc:
+                errors.append(YAMLError(message=str(exc), path='sfd.manifest.split_walk_forward'))
+            return
+
         if 'split_dates' not in manifest:
             errors.append(YAMLError(
-                message="'split_dates' is required",
+                message="'split_dates' or 'split_walk_forward' is required",
                 path='sfd.manifest',
                 suggestion='Add split_dates: {train_start: YYYY-MM-DD, train_end: YYYY-MM-DD, val_start: YYYY-MM-DD, val_end: YYYY-MM-DD, test_start: YYYY-MM-DD, test_end: YYYY-MM-DD}',
             ))
