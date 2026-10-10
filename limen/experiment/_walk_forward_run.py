@@ -1,22 +1,31 @@
 import copy
 import json
 import math
-from collections.abc import Mapping
-from dataclasses import replace
+from collections.abc import Callable, Mapping
 from datetime import date
 from numbers import Integral, Real
 from pathlib import Path
-from typing import cast
+from typing import Protocol, cast
 
 import numpy as np
 import polars as pl
 
 from limen.backtest.trade_contract import TradeInputs, TradeLedger
-from limen.experiment.manifest_core import Manifest, MLManifest, _requires_fold_validation, _resolve_params, _resolve_split
+from limen.experiment import manifest_core as _manifest_core
+from limen.experiment.manifest_core import Manifest, MLManifest
 from limen.experiment._walk_forward_split import WalkForwardConfig, read_walk_forward_config
 from limen.log._permutation_returns import TrialReturnsWriter
 
 __all__ = ['WalkForwardRun', 'validate_walk_forward_resume']
+
+
+class _SplitResolver(Protocol):
+    def __call__(self, manifest: Manifest, raw_data: pl.DataFrame, *, require_validation: bool = False) -> list[pl.DataFrame]: ...
+
+
+_resolve_split = cast(_SplitResolver, getattr(_manifest_core, '_resolve_split'))
+_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], getattr(_manifest_core, '_resolve_params'))
+_requires_fold_validation = cast(Callable[[Manifest, Mapping[str, object]], bool], getattr(_manifest_core, '_requires_fold_validation'))
 
 
 def validate_walk_forward_resume(manifest: Manifest | None, metadata: Mapping[str, object]) -> None:
@@ -35,7 +44,7 @@ def _return_track(value: object) -> list[float]:
     if not isinstance(value, list) or not value:
         raise ValueError('split_walk_forward requires a non-empty execution return track')
     values = cast(list[object], value)
-    if not all(isinstance(item, Real) and not isinstance(item, bool) and math.isfinite(float(item)) for item in values):
+    if not all(not isinstance(item, bool) and isinstance(item, Real) and math.isfinite(float(item)) for item in values):
         raise ValueError('split_walk_forward requires finite numeric execution returns')
     return [float(cast(Real, item)) for item in values]
 
@@ -67,7 +76,7 @@ def _iso_date(value: object) -> str:
 def _fold_record(fold: int, data: Mapping[str, object], result: Mapping[str, object], *, record_execution: bool, record_outputs: bool) -> dict[str, object]:
     alignment = cast(Mapping[str, object], data['_alignment'])
     scalars = {
-        key: int(value) if isinstance(value, Integral) and not isinstance(value, bool) else float(value) if isinstance(value, Real) and not isinstance(value, bool) else value
+        key: value if isinstance(value, bool) else int(value) if isinstance(value, Integral) else float(value) if isinstance(value, Real) else value
         for key, value in result.items() if not key.startswith('_') and key not in ('models', 'extras')
     }
     missing = cast(list[object], alignment.get('missing_datetimes', []))
@@ -95,7 +104,7 @@ def _average(records: list[dict[str, object]]) -> dict[str, object]:
         values = [row.get(key) for row in rows]
         if key == 'optimal_threshold':
             result[key] = None
-        elif all(isinstance(value, Real) and not isinstance(value, bool) for value in values):
+        elif all(not isinstance(value, bool) and isinstance(value, Real) for value in values):
             finite = [float(cast(Real, value)) for value in values if math.isfinite(float(cast(Real, value)))]
             result[key] = float(np.mean(finite)) if finite else float('nan')
         elif all(value == values[0] for value in values):
@@ -107,16 +116,19 @@ def _average(records: list[dict[str, object]]) -> dict[str, object]:
 
 class WalkForwardRun:
     def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path) -> None:
+        super().__init__()
         if not isinstance(manifest.split_walk_forward, WalkForwardConfig):
             raise ValueError('split_walk_forward requires its manifest configuration')
         self.manifest, self.raw, self.config = manifest, raw, manifest.split_walk_forward
-        self._preflight(raw, require_validation=isinstance(manifest, MLManifest) and manifest.objective is not None)
+        if manifest.pre_split_data_selector is None:
+            self._preflight(raw, require_validation=isinstance(manifest, MLManifest) and manifest.objective is not None)
         self.writer = TrialReturnsWriter(directory)
         self.rows: list[dict[str, object]] = []
 
     def _preflight(self, raw: pl.DataFrame, *, require_validation: bool) -> None:
         for fold in range(self.config.n_folds):
-            manifest = copy.deepcopy(replace(self.manifest, _walk_forward_fold=fold))
+            manifest = copy.deepcopy(self.manifest)
+            setattr(manifest, '_walk_forward_fold', fold)
             _ = _resolve_split(manifest, raw, require_validation=require_validation)
 
     @property
@@ -137,7 +149,8 @@ class WalkForwardRun:
             raise ValueError('split_walk_forward requires current prepared source rows')
         records: list[dict[str, object]] = []
         for fold in range(self.config.n_folds):
-            manifest = copy.deepcopy(replace(self.manifest, _walk_forward_fold=fold))
+            manifest = copy.deepcopy(self.manifest)
+            setattr(manifest, '_walk_forward_fold', fold)
             manifest.pre_split_data_selector = None
             prepared = manifest.prepare_data(raw, dict(round_params))
             prepared['_record_execution'] = True
@@ -169,7 +182,7 @@ class WalkForwardRun:
                 if up_to_round is not None and index >= up_to_round:
                     break
                 records = entry.get('folds')
-                if not isinstance(records, list) or len(records) != self.config.n_folds:
+                if not isinstance(records, list) or len(cast(list[object], records)) != self.config.n_folds:
                     raise ValueError('Cannot resume split_walk_forward without complete recorded folds')
                 for fold, raw_record in enumerate(cast(list[object], records)):
                     if not isinstance(raw_record, dict):
@@ -179,7 +192,7 @@ class WalkForwardRun:
                         raise ValueError('Cannot resume split_walk_forward with incomplete fold evidence')
                     values = _return_track(record.get('net_returns'))
                     predictions = record.get('preds')
-                    if not isinstance(predictions, list) or len(predictions) != len(values) or not isinstance(record.get('alignment'), dict):
+                    if not isinstance(predictions, list) or len(cast(list[object], predictions)) != len(values) or not isinstance(record.get('alignment'), dict):
                         raise ValueError('Cannot resume split_walk_forward with incomplete aligned predictions')
                 if not isinstance(entry.get('round_id'), str):
                     raise ValueError('Cannot resume split_walk_forward without recorded trial identity')

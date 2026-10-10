@@ -27,7 +27,7 @@ from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
-from limen.experiment.manifest_core import RuleBasedManifest
+from limen.experiment.manifest_core import Manifest, RuleBasedManifest
 from limen.yaml.store import canonical_manifest_id
 
 logger = logging.getLogger(__name__)
@@ -207,6 +207,8 @@ class UniversalExperimentLoop:
         self._clear_post_processing_outputs()
 
         if getattr(self.manifest, 'split_walk_forward', None) is not None:
+            if not isinstance(self.manifest, Manifest):
+                raise ValueError('split_walk_forward requires a Manifest')
             self._walk_forward = WalkForwardRun(
                 self.manifest, self.data,
                 self._experiment_dir or Path(experiment_name).parent,
@@ -991,7 +993,7 @@ class UniversalExperimentLoop:
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
             metadata['split_walk_forward'] = self._walk_forward.config.as_dict()
-            metadata['walk_forward_validation_ratio'] = list(self.manifest.split_config[:2])
+            metadata['walk_forward_validation_ratio'] = list(self._walk_forward.manifest.split_config[:2])
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
