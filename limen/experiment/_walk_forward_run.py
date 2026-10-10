@@ -9,9 +9,9 @@ from typing import Protocol, cast
 
 import numpy as np
 import polars as pl
+import limen.experiment.manifest_core as _manifest_core
 
 from limen.backtest.trade_contract import TradeInputs, TradeLedger
-from limen.experiment import manifest_core as _manifest_core
 from limen.experiment.manifest_core import Manifest, MLManifest
 from limen.experiment._walk_forward_split import WalkForwardConfig, read_walk_forward_config
 from limen.log._permutation_returns import TrialReturnsWriter
@@ -24,7 +24,7 @@ class _SplitResolver(Protocol):
 
 
 _resolve_split = cast(_SplitResolver, vars(_manifest_core)['_resolve_split'])
-_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(_manifest_core)['_resolve_params'])
+_resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(_manifest_core)['_resolve_params'])
 _requires_fold_validation = cast(Callable[[Manifest, Mapping[str, object]], bool], vars(_manifest_core)['_requires_fold_validation'])
 
 
