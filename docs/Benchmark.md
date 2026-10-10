@@ -18,7 +18,7 @@ Benchmark output is research evidence, not investment advice, trading advice, re
 
 Benchmark analytics are built on top of `Log`.
 
-The confusion tables diagnose prediction quality. Walk-forward sweeps additionally retain test return tracks and produce the selection report described below. The report assesses the evaluated sweep; it provides no leaderboard or independent evidence of future performance.
+The confusion tables diagnose prediction quality; this is not an independent public benchmark suite and does not publish a leaderboard. Walk-forward sweeps additionally retain test return tracks and produce the selection report described below. The report assesses the evaluated sweep, without providing independent evidence of future performance.
 
 The main surfaces are:
 
@@ -102,7 +102,7 @@ Limen exposes both layers so one score does not hide either prediction quality o
 
 ## Walk-forward selection report
 
-[Walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps) fit each fold independently, purge rows before validation and test, and exclude embargoed rows from later training pools. Choose the purge to cover the target's forward label horizon. Each successful trial retains its test net-return track in `trial_returns.parquet`.
+[Manifest-backed walk-forward validation](Experiment-Manifest.md#walk-forward-sweeps) fits each fold independently, purges rows before validation and test, and excludes embargoed rows from later training pools. Choose the purge to cover the target's forward label horizon. Each successful trial retains its test net-return track in `trial_returns.parquet`.
 
 At sweep conclusion, Limen reads that artifact and writes `acceptance_report.json` and `acceptance_report.md` beside it. Without the artifact, no report is written. The report computes two statistics over the recorded per-trial out-of-sample return matrix:
 
@@ -111,13 +111,13 @@ At sweep conclusion, Limen reads that artifact and writes `acceptance_report.jso
 
 The report's winner has the highest full-track per-bar Sharpe; exact ties prefer persisted trial order. The successful track count and the sample variance of trial Sharpes supply DSR's deflation inputs. PBO requires identical recorded test timestamps in each fold across trials; missing or different row evidence makes it unavailable. Its PBO uses two contiguous equal blocks and evaluates both balanced combinations, so a finite report PBO can only be `0`, `0.5` or `1`. This is a minimal CSCV assessment with limited resolution; the public PBO function accepts other valid even block counts.
 
-The Sharpe units are per bar, with no annualization. The report uses net returns already recorded by execution; it adds no position replay or new cost assumptions. Optional [acceptance thresholds](Experiment-Manifest.md#acceptance-thresholds) produce verdicts in the report. A failed threshold verdict records a research result and never aborts the run. Without thresholds, the report still contains the statistics. Degenerate or unavailable statistics are reported as `null` with an explanation; any declared verdict using them is also `null`.
+The Sharpe units are per bar, with no annualization. The report uses net returns already recorded by execution; it adds no position replay or new cost assumptions. Optional [acceptance thresholds](Experiment-Manifest.md#acceptance-thresholds) define statistical acceptance gates whose verdicts appear in the report. A failed threshold verdict records a research result and never aborts the run. Without thresholds, the report still contains the statistics. Degenerate or unavailable statistics are reported as `null` with an explanation; any declared verdict using them is also `null`.
 
 The public metrics are `limen.metrics.deflated_sharpe_ratio(returns, n_trials=..., trial_sharpe_variance=...)` and `limen.metrics.probability_of_backtest_overfitting(returns_matrix, n_blocks=...)`; the matrix has one row per trial and one column per bar. Sharpe uses the arithmetic mean divided by sample standard deviation (`ddof=1`). DSR requires at least four finite returns with positive variance. Its skewness and Pearson kurtosis use centered returns standardized by population standard deviation; excess kurtosis is Pearson kurtosis minus three. The supplied trial-Sharpe variance must be finite and nonnegative. One trial or zero trial-Sharpe variance sets the comparison benchmark to zero.
 
 PBO requires at least two trials, an even block count of at least two, exact divisibility of the track length, and at least two bars per block. Every trial must have positive finite variance in every compared half. In-sample ties select the first input trial. Out-of-sample ties use average ascending ranks divided by `n_trials + 1`; relative ranks at or below `0.5` count toward PBO. Degenerate inputs raise rather than producing a hollow probability.
 
-These statistics reuse the sweep's test observations to assess selection. They are not a second untouched holdout. The trial count includes successfully recorded tracks in this artifact; it omits failed trials and earlier unrecorded searches and estimates no effective independent trial count. Purging and embargo depend on the declared geometry and cannot repair a feature that already reads future data. DSR's trial-count approximation and moment correction do not establish independence, stationarity or a calibrated forecast of live success. CSCV redistributes recorded blocks and is not a new chronological walk-forward evaluation. Correlated trials, serial dependence and changing market regimes limit interpretation; passing verdicts establish neither causal validity nor future profitability.
+These statistics reuse the sweep's test observations to assess selection. They are not a second untouched holdout. The trial count includes successfully recorded tracks in this artifact; it omits failed trials and earlier unrecorded searches and estimates no effective independent trial count. Purging and embargo depend on the declared geometry and cannot repair a feature that already reads future data. DSR's trial-count approximation and moment correction do not establish independence, stationarity or a calibrated forecast of live success. CSCV redistributes recorded blocks and is not a new chronological walk-forward evaluation. Correlated trials, serial dependence and changing market regimes limit interpretation. The report provides no formal research falsification proof; passing verdicts establish neither causal validity nor future profitability.
 
 ## Choosing `x`
 
