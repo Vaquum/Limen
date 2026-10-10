@@ -35,7 +35,6 @@ def split_walk_forward(data: pl.DataFrame,
     excludes ``embargo_bars`` rows following every earlier test window.
     Anchored trains start at row zero; rolling candidate trains retain
     the first fold's width before embargo removal.
-    Invalid ranges or empty folds raise ``ValueError``.
     """
     if n_folds < 1:
         raise ValueError(f'split_walk_forward n_folds must be at least 1, got {n_folds}')
