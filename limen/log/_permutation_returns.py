@@ -23,6 +23,7 @@ class _ArrowFrame(Protocol):
 
 class TrialReturnsWriter:
     def __init__(self, directory: Path) -> None:
+        super().__init__()
         self.path, self.temporary = directory / 'trial_returns.parquet', directory / 'trial_returns.parquet.tmp'
         self.writer: _ParquetWriter | None = None
 
@@ -39,8 +40,7 @@ class TrialReturnsWriter:
         table = cast(_ArrowFrame, frame).to_arrow()
         if self.writer is None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            create_writer = cast(Callable[[Path, object], _ParquetWriter], pq.ParquetWriter)
-            self.writer = create_writer(self.temporary, table.schema)
+            self.writer = cast(Callable[[Path, object], _ParquetWriter], pq.ParquetWriter)(self.temporary, table.schema)
         self.writer.write_table(table, row_group_size=len(values))
 
     def finish(self) -> None:
