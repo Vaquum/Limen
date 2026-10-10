@@ -151,7 +151,7 @@ class RuleBasedStrategy(ReferenceModel):
                         positions: npt.NDArray[np.integer[Any]],
                         cost_kwargs: dict[str, Any]) -> dict[str, float]:
         metrics, execution_result = _evaluate_prices(df, positions, cost_kwargs)
-        _record_execution(cost_kwargs, execution_result, float(cost_kwargs.get('notional_rate', 1.0)))
+        _record_execution(cost_kwargs, execution_result, float(cost_kwargs.get('notional_rate', 1.0)), df)
         if execution_result is None:
             return metrics
         pnl_per_trade_bps, executed_trade_count = _compounded_trade_pnl_summary(

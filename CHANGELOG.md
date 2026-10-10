@@ -1551,3 +1551,9 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.19.0] - 2026-10-10
 
 - Add a pure positional walk-forward splitter with label-horizon purging, post-test embargo and anchored or fixed-span training windows.
+
+## [5.20.0] - 2026-10-10
+
+### Added
+
+- Record unscaled test-row market returns beside snapshot execution under `record_execution`, preserving legacy resume and execution replay.

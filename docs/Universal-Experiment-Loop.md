@@ -134,7 +134,7 @@ uel.run(
 | `resume` | resume from checkpoint in the advanced path |
 | `post_processing` | compute terminal post-run metrics (`uel._log`, confusion metrics, backtest results) |
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
-| `record_execution` | persist test snapshot series; off by default; requires `search_strategy` and `experiment_dir` |
+| `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
 
 ### Manifest-driven rules
@@ -229,7 +229,7 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 | File | Meaning |
 |---|---|
 | `results.csv` | streaming round log; if a round fails a `strict_mode` null check, a `strict_mode_error` column records the error message and all metric columns for that round are empty |
-| `round_data.jsonl` | round params, predictions, alignment metadata, and optional execution |
+| `round_data.jsonl` | round params, predictions, alignment metadata, and optional execution and market returns |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |
 | `interventions.json` | optional external intervention file polled by the feedback controller when the file exists |
@@ -241,9 +241,11 @@ This path is what powers checkpointing, resumability, and the [Trainer](Trainer.
 
 Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to `run()` on the artifact-backed path. This is independent of `post_processing`. Each successful round gains `execution` in `round_data.jsonl`: full-precision `pos`, `gross`, and `net` arrays in test-row order, each multiplied once by the resolved `notional_rate`. Positions include execution lag and exits; regressors may backtest directional signals rather than their continuous saved predictions. Rule-based strategies record only test execution.
 
-When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), `execution` is `null`. A flat snapshot has full-length zero arrays. Event execution retains its existing `trade_ledger`.
+The same flag records the sibling `market: {"ret": [...]}`: unscaled returns from the original aligned test prices, in the same order and length as `execution.pos`. Each value is `close[i] / close[i-1] - 1` since the previous retained test row; row gaps can therefore span several source bars. The first value is JSON `null`, since the evaluated window supplies no predecessor. A value is also `null` when the original open, close, close-minus-open or previous close is NaN, the previous close is zero, or the computed return is nonfinite. This uses price tradability, independently of signals, execution lag, costs, notional and TP/SL settings; it is not a finite-positive-price mask.
 
-Read one recorded round and reproduce its snapshot metrics:
+When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), both `execution` and `market` are `null`. A flat snapshot has full-length zero execution arrays and still records market returns. Event execution retains its existing `trade_ledger`. With recording off, neither field is added.
+
+Read a new-format snapshot record with available market returns and reproduce its snapshot metrics:
 
 ```python
 import json
@@ -252,14 +254,26 @@ from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest._snapshot_ledger import snapshot_ledger
 
 with open("results/round_data.jsonl") as rows:
-    execution = json.loads(next(rows))["execution"]
+    record = json.loads(next(rows))
+execution = record["execution"]
 result = ExecutionResult(**{key: np.asarray(value) for key, value in execution.items()})
 metrics = snapshot_ledger(result, 1.0)
+
+ret = np.asarray(record["market"]["ret"], dtype=float)  # JSON null becomes NaN
+valid = np.isfinite(ret) & np.isfinite(result.pos) & np.isfinite(result.gross)
+timing_per_row = (
+    result.gross[valid].mean()
+    - result.pos[valid].mean() * ret[valid].mean()
+)
 ```
 
-These match `backtest_*` columns (`*_test` for rule-based strategies); using the original notional again would scale twice. Calendar comparisons and market-relative analysis still require source prices and row alignment. Three extra arrays increase disk and reader memory in proportion to test bars and rounds; Trainer and Cohort load whole round records.
+The replayed metrics match `backtest_*` columns (`*_test` for rule-based strategies); using the original notional again would scale twice. For the shipped snapshot strategy without TP/SL, `gross[i] == execution.pos[i] * market.ret[i]` on available market rows. TP/SL uses fill-based exit returns, so a residual against original market closes includes exit effects. The reading example computes arithmetic timing per row over one common, nonempty finite population using gross returns; it adds no Limen metric. Net returns include costs, and compounded market return is a separate quantity.
 
-Python resume must pass the same flag; CLI resume forwards the saved YAML flag. Changing it raises before artifacts are rewritten. Older metadata without the flag means `false`. Existing resume requirements, including complete successful round records through the checkpoint, still apply.
+Ordinal halves use `k = n // 2`, H1 rows `[0:k)` and H2 rows `[k:n)`; an odd middle row belongs to H2. For `n >= 2` with valid prices and no interior nulls, compounding available returns gives H1 `close[k-1] / close[0] - 1` and H2 `close[n-1] / close[k-1] - 1`. H2 includes the move across the boundary. Skipping interior nulls does not guarantee those endpoint identities. Window lengths and split dates can differ between rounds; calendar comparisons still require row identity and alignment.
+
+Recording adds four arrays in total, including one full-precision market array per round. Serialized size and decoded-object overhead vary with the returns, test-window length and round count; Trainer and Cohort load whole round records.
+
+Python resume must pass the same flag; CLI resume uses the effective setting saved in metadata, including Python overrides. Changing it raises before artifacts are rewritten. Older metadata without the flag means `false`. Earlier execution-only records remain unchanged when resumed; readers must treat a missing `market` as unavailable, while new snapshot records include it. No artifact migration is performed. Existing resume requirements, including complete successful round records through the checkpoint, still apply.
 
 ### Record model outputs
 
