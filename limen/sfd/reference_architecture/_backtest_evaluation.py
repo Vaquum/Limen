@@ -95,11 +95,11 @@ def compute_backtest(predictions: npt.ArrayLike, data: Mapping[str, object]) -> 
     _preflight_backtest(data)
     metrics, execution = evaluate_prices(price, predictions, options, configured=bool(data.get('_backtest_configured')))
     if data.get('_record_execution'):
-        record_execution(data, execution, execution_options(options)['notional_rate'])
+        record_execution(data, execution, execution_options(options)['notional_rate'], price)
     return {f'backtest_{key}': value for key, value in metrics.items()}
 
 
-def record_execution(data: Mapping[str, object], execution: ExecutionResult | None, notional_rate: float) -> None:
+def record_execution(data: Mapping[str, object], execution: ExecutionResult | None, notional_rate: float, prices: pl.DataFrame | None) -> None:
     if not data.get('_record_execution'):
         return
     alignment = data.get('_alignment')
@@ -109,6 +109,23 @@ def record_execution(data: Mapping[str, object], execution: ExecutionResult | No
         {field: (getattr(execution, field) * notional_rate).tolist() for field in ('pos', 'gross', 'net')}
         if execution is not None else None
     )
+    alignment['market'] = None
+    if execution is not None:
+        if prices is None:
+            raise ValueError('Market recording requires original aligned prices')
+        open_px = np.asarray(prices['open'].to_numpy(), dtype=float)
+        close_px = np.asarray(prices['close'].to_numpy(), dtype=float)
+        previous_close = np.concatenate(([np.nan], close_px[:-1]))
+        with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+            price_change = close_px - open_px
+            returns = close_px / previous_close - 1.0
+        valid = (
+            ~np.isnan(open_px) & ~np.isnan(close_px) & ~np.isnan(price_change)
+            & ~np.isnan(previous_close) & (previous_close != 0) & np.isfinite(returns)
+        )
+        alignment['market'] = {
+            'ret': [float(value) if usable else None for value, usable in zip(returns, valid, strict=True)],
+        }
 
 
 __all__ = ['compute_backtest', 'evaluate_prices', 'execution_options', 'record_execution']

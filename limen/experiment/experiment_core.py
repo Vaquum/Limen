@@ -563,8 +563,8 @@ class UniversalExperimentLoop:
                     data_dict['_record_execution'] = self._record_execution
                     data_dict['_record_model_outputs'] = self._record_model_outputs
                     if '_alignment' in data_dict:
-                        data_dict['_alignment'].pop('execution', None)
-                        data_dict['_alignment'].pop('model_outputs', None)
+                        for key in ('execution', 'market', 'model_outputs'):
+                            data_dict['_alignment'].pop(key, None)
                     round_results = self.model(
                         data=data_dict, round_params=sfd_params,
                     )
@@ -1089,7 +1089,7 @@ class UniversalExperimentLoop:
             entry['learning_binding'] = {'round_id': round_id, 'manifest_id': canonical_manifest_id(self._yaml_reference) if self._yaml_reference is not None else None, 'model': alignment['learning_binding']}
 
         if self._record_execution:
-            entry['execution'] = alignment.get('execution')
+            entry.update(execution=alignment.get('execution'), market=alignment.get('market'))
         if self._record_model_outputs:
             entry.update(alignment.get('model_outputs', {'probs': None}))
 
