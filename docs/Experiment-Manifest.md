@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.21.0"
+  limen_version: "5.22.0"
   mode: development
 
 sfd:
@@ -351,7 +351,32 @@ Every fold starts execution independently. Snapshot net returns are the existing
 
 Resume rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. This adds no fold-specific Trainer promotion or Sensor reconstruction contract. Existing no-walk-forward runs retain their artifact and resume behavior.
 
-These folds provide recorded out-of-sample evaluations. They add no statistical acceptance test or guarantee against selection optimism from validation tuning or sweep selection. Omitting `split_walk_forward` preserves the existing single-split path.
+These folds provide recorded out-of-sample evaluations. The selection report below assesses the recorded sweep; its statistics provide no guarantee against selection optimism or future loss. Omitting `split_walk_forward` preserves the existing single-split path.
+
+### Acceptance thresholds
+
+Walk-forward runs with `trial_returns.parquet` produce `acceptance_report.json` and `acceptance_report.md` beside that artifact. To add threshold verdicts, declare `sfd.manifest.acceptance`:
+
+```yaml
+acceptance:
+  min_deflated_sharpe_probability: 0.95
+  max_pbo: 0.20
+```
+
+The native equivalent, after `set_split_walk_forward(...)`, is:
+
+```python-fragment
+.set_acceptance(
+    min_deflated_sharpe_probability=0.95,
+    max_pbo=0.20,
+)
+```
+
+Either threshold may be omitted; the block must contain at least one. Values must be finite literal numbers in `[0, 1]`, with no booleans, parameter references or extra fields. An acceptance declaration requires `split_walk_forward`.
+
+The report selects the highest per-bar Sharpe among successfully recorded trial tracks; exact ties prefer the first persisted trial. DSR uses that successful trial count and the sample variance (`ddof=1`) of their Sharpes. PBO uses two contiguous equal blocks, with no discarded tail. There must be at least two trials, an even track length and at least two bars per block. This minimal CSCV report evaluates only two balanced combinations, so its PBO resolution is limited.
+
+The JSON fields are `n_trials`, `n_bars`, `n_blocks`, `winner_trial`, `winner_sharpe`, `trial_sharpe_variance`, `deflated_sharpe_probability`, `pbo`, `thresholds`, `verdicts` and `errors`. A DSR verdict passes at or above its minimum; a PBO verdict passes at or below its maximum. Without an acceptance block, `verdicts` is empty and the statistics are still reported. A failed verdict is `false` and never aborts the run. An unavailable statistic is `null` with an explanation in `errors`; its declared verdict is also `null`, rather than a pass. See [Benchmark](Benchmark.md#walk-forward-selection-report) for the metric definitions, direct-function input errors and interpretation limits.
 
 Save this example as `walk-forward.yaml` in a repository checkout. It uses the recorded hourly BTCUSDT fixture and runs two logistic-regression trials across three one-week test windows:
 
@@ -359,7 +384,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.21.0"
+  limen_version: "5.22.0"
   mode: development
 sfd:
   manifest:
@@ -407,6 +432,62 @@ uel:
 ```
 
 Run `limen validate walk-forward.yaml`, then `limen run walk-forward.yaml`. Local fixture paths resolve from the working directory. For a hosted `HistoricalData.get_spot_klines` source, set its explicit `start_date_limit` and `end_date_limit` in `data_source.params` to fix the fetched window.
+
+### Recorded acceptance example
+
+Save this as `acceptance.yaml` in the repository checkout. It runs two rule-based trials against the recorded fixture, with two test folds. Their retained tracks have 96 bars, forming two equal CSCV blocks. The thresholds below are declared research criteria; they do not predict which verdicts will pass.
+
+```yaml
+schema_version: "1.0"
+metadata:
+  name: recorded_acceptance
+  limen_version: "5.22.0"
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: tests/fixtures/spot_1h_20240101_20241231.parquet
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 49
+      purge_bars: 4
+      embargo_bars: 3
+      anchored: true
+    acceptance:
+      min_deflated_sharpe_probability: 0.95
+      max_pbo: 0.20
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+    strategy:
+      conditions:
+        - id: entry
+          name: positive_return
+          type: threshold
+          column: ret_1
+          operator: ">"
+          value: "{entry_return}"
+      entry: entry
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+  params:
+    entry_return: [0.0, 0.001]
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  prep_each_round: true
+  output_format: parquet
+```
+
+Run `limen validate acceptance.yaml`, then `limen run acceptance.yaml`. Read the JSON or Markdown report beside `trial_returns.parquet`; failed verdicts leave the run's results available for inspection.
 
 ### `set_pre_split_data_selector(func, **params)`
 

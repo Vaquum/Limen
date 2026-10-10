@@ -247,6 +247,7 @@ class Manifest:
     split_config: tuple[int, int, int] = (8, 1, 2)
     split_dates: tuple[date | Any, date | Any, date | Any, date | Any, date | Any, date | Any] | None = None
     split_walk_forward: WalkForwardConfig | None = None
+    acceptance: dict[str, float] | None = None
     _walk_forward_fold: int | None = field(default=None, repr=False)
     val_predict_guard: bool = True
     test_predict_guard: bool = True
@@ -466,6 +467,19 @@ class Manifest:
             raise ValueError('Manifest split_walk_forward conflicts with split_dates')
         self.split_walk_forward = WalkForwardConfig(n_folds, test_bars, purge_bars, embargo_bars, anchored)
         self._walk_forward_fold = None
+        return self
+
+    def set_acceptance(
+        self: _TManifest, *, min_deflated_sharpe_probability: float | None = None,
+        max_pbo: float | None = None,
+    ) -> _TManifest:
+        from limen.experiment.acceptance_report import read_acceptance
+
+        if self.split_walk_forward is None:
+            raise ValueError('acceptance requires split_walk_forward')
+        self.acceptance = read_acceptance({key: value for key, value in {
+            'min_deflated_sharpe_probability': min_deflated_sharpe_probability, 'max_pbo': max_pbo,
+        }.items() if value is not None})
         return self
 
     def set_split_dates(
