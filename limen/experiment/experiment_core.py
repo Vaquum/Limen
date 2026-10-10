@@ -1154,12 +1154,6 @@ class UniversalExperimentLoop:
         '''
         Validate and load state from an existing checkpoint directory.
 
-        Args:
-            checkpoint_dir (Path): Directory containing checkpoint files
-            checkpoint_manager (CheckpointManager): CheckpointManager instance
-            strategy_type (str): Expected strategy class name for validation
-            content_hash (str): Expected SHA-256 digest for validation
-
         Returns:
             dict: Keys 'metadata', 'msq_state', 'domain_state', and
                 optionally 'feedback_controller_state', 'pruning_strategy_states'
