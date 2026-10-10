@@ -26,7 +26,7 @@ def read_acceptance(value: object) -> dict[str, float]:
         raise ValueError('acceptance allows only min_deflated_sharpe_probability and max_pbo')
     result: dict[str, float] = {}
     for key, threshold in declaration.items():
-        if isinstance(threshold, bool) or not isinstance(threshold, Real) or not math.isfinite(float(threshold)) or not 0 <= threshold <= 1:
+        if isinstance(threshold, bool) or not isinstance(threshold, Real) or not math.isfinite(float(threshold)) or not 0 <= float(threshold) <= 1:
             raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]')
         result[str(key)] = float(threshold)
     return result
@@ -103,7 +103,10 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
              f'Recorded successful trials: {len(trials)}. CSCV blocks: {_BLOCKS}.', '',
              'Per-bar Sharpe; the reported winner has the largest Sharpe. Exact ties keep recorded trial order.',
              'These statistics describe the recorded sweep; they do not establish independence or future performance.', '']
-    lines.extend(f'- {key}: {report[key]}' for key in ('winner_trial', 'winner_sharpe', 'deflated_sharpe_probability', 'pbo'))
+    lines.extend(f'- {label}: {report[key]}' for key, label in (
+        ('winner_trial', 'Winner trial'), ('winner_sharpe', 'Per-bar Sharpe'),
+        ('deflated_sharpe_probability', 'Deflated Sharpe probability'), ('pbo', 'PBO'),
+    ))
     lines.extend(f'- {key} ({thresholds[key]}): {"unavailable" if passed is None else "pass" if passed else "fail"}' for key, passed in verdicts.items())
     lines.extend(f'- {key} unavailable: {reason}' for key, reason in errors.items())
     _ = (directory / 'acceptance_report.md').write_text('\n'.join(lines) + '\n')
