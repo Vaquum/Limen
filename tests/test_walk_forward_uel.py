@@ -503,7 +503,8 @@ def test_native_resume_rejects_added_or_removed_walk_forward(tmp_path, saved_wal
 
     saved = native_loop(saved_walk_forward)
     assert saved._yaml_reference is None
-    _run(saved, n_permutations=1)
+    _run(saved, n_permutations=2)
+    assert (tmp_path / 'checkpoint.json').exists()
     before = {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()}
     with pytest.raises(ValueError, match='split_walk_forward'):
         _run(native_loop(not saved_walk_forward), resume=True, n_permutations=2)
