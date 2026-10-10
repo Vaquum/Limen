@@ -82,7 +82,7 @@ def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trial
             alignment = evidence.get('alignment')
             dates = cast(Mapping[str, object], alignment).get('test_datetimes') if isinstance(alignment, Mapping) else None
             net = evidence.get('net_returns')
-            if not isinstance(dates, list) or not isinstance(net, list) or not dates or len(dates) != len(net):
+            if not isinstance(dates, list) or not isinstance(net, list) or not dates or len(cast(list[object], dates)) != len(cast(list[object], net)):
                 raise ValueError('PBO requires recorded ordered test timestamps aligned with each fold return')
             if not all(isinstance(value, str) for value in cast(list[object], dates)):
                 raise ValueError('PBO requires recorded ISO test timestamps')
