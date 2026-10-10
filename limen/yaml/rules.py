@@ -661,6 +661,25 @@ class PruningStrategiesSpec:
                 ))
 
 
+class AcceptanceSpec:
+    def check(self, yaml_dict: dict[str, object], errors: list[YAMLError], _warnings: list[YAMLError]) -> None:
+        from limen.experiment.acceptance_report import read_acceptance
+
+        for path in ('acceptance', 'uel.acceptance'):
+            found, _ = get_at(yaml_dict, path)
+            if found:
+                errors.append(YAMLError(message='Declare acceptance under sfd.manifest', path=path))
+        found, value = get_at(yaml_dict, 'sfd.manifest.acceptance')
+        if found:
+            configured, _ = get_at(yaml_dict, 'sfd.manifest.split_walk_forward')
+            if not configured:
+                errors.append(YAMLError(message='acceptance requires split_walk_forward', path='sfd.manifest.acceptance'))
+            try:
+                _ = read_acceptance(value)
+            except ValueError as exc:
+                errors.append(YAMLError(message=str(exc), path='sfd.manifest.acceptance'))
+
+
 class SplitSpec:
 
     '''Require exactly one absolute-date or walk-forward split declaration.'''

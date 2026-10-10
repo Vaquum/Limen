@@ -86,6 +86,7 @@ def _fold_record(fold: int, data: Mapping[str, object], result: Mapping[str, obj
         'net_returns': _net_returns(data), 'optimal_threshold': scalars.get('optimal_threshold'),
         'alignment': {
             'missing_datetimes': [_iso_date(value) for value in missing],
+            'test_datetimes': [_iso_date(value) for value in cast(list[object], alignment['test_datetimes'])],
             'first_test_datetime': _iso_date(alignment['first_test_datetime']),
             'last_test_datetime': _iso_date(alignment['last_test_datetime']),
         },

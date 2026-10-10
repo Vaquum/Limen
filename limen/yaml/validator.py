@@ -6,6 +6,7 @@ from typing import cast
 from limen.yaml.errors import YAMLError
 from limen.yaml._objective_spec import check_objective_spec
 from limen.yaml.rules import BacktestCostSpec
+from limen.yaml.rules import AcceptanceSpec
 from limen.yaml.rules import BlockSpec
 from limen.yaml.rules import CalibrationCrossRef
 from limen.yaml.rules import CalibrationPresence
@@ -105,6 +106,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
     NoUnknownKeys('sfd.manifest.data_source', DATA_SOURCE_REQUIRED | DATA_SOURCE_OPTIONAL),
 
     SplitSpec(),
+    AcceptanceSpec(),
     RequiredColumnsSpec(),
     NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED | SPLIT_DATES_OPTIONAL, severity='error'),
 
@@ -148,7 +150,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
                       CALIBRATION_FUNC_REQUIRED | CALIBRATION_FUNC_OPTIONAL),
         NoUnknownKeys(
             'sfd.manifest',
-            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
+            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL | {'acceptance'},
         ),
     ])),
 
@@ -166,7 +168,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
         ),
         NoUnknownKeys(
             'sfd.manifest',
-            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL,
+            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL | {'acceptance'},
         ),
     ])),
 
@@ -187,18 +189,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
-    '''
-    Validate a parsed YAML experiment dict.
-
-    Collect errors without fail-fast; validity requires no errors.
-
-    Args:
-        yaml_dict (dict): Parsed YAML dict from parser.parse()
-
-    Returns:
-        ValidationResult: Validation outcome with errors and warnings
-
-    '''
+    '''Collect YAML errors and warnings; validity requires no errors.'''
 
     errors: list[YAMLError] = []
     warnings: list[YAMLError] = []

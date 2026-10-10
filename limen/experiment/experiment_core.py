@@ -17,6 +17,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
+from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
@@ -162,6 +163,9 @@ class UniversalExperimentLoop:
             if self._walk_forward is not None:
                 self._walk_forward.finish()
                 self.prep, self.model = original_prep, original_model
+        if self._walk_forward is not None:
+            _ = acceptance_report(self._walk_forward.writer.path.parent,
+                                  acceptance=self._walk_forward.manifest.acceptance)
 
     def _run(self,
             experiment_name: str,
@@ -284,19 +288,15 @@ class UniversalExperimentLoop:
 
         for i in tqdm(range(n_permutations), disable=not progress_bar):
 
-            # Start counting execution_time
             start_time = time.time()
 
-            # Generate the parameter values for the current round
             round_params = self.param_space.generate(random_search=random_search)
             if round_params is None:
                 raise ValueError('UniversalExperimentLoop parameter space exhausted before completing all rounds')
 
-            # Add context parameters to round_params
             if context_params is not None:
                 round_params.update(context_params)
 
-            # Add experiment details to round_params
             if maintain_details_in_params is True:
                 round_params['_experiment_details'] = {
                     'current_index': i,
@@ -1153,12 +1153,6 @@ class UniversalExperimentLoop:
 
         '''
         Validate and load state from an existing checkpoint directory.
-
-        Args:
-            checkpoint_dir (Path): Directory containing checkpoint files
-            checkpoint_manager (CheckpointManager): CheckpointManager instance
-            strategy_type (str): Expected strategy class name for validation
-            content_hash (str): Expected SHA-256 digest for validation
 
         Returns:
             dict: Keys 'metadata', 'msq_state', 'domain_state', and
