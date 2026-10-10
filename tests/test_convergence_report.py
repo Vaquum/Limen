@@ -368,19 +368,36 @@ def test_standard_warning_filter_deduplicates_across_rounds(tmp_path, action):
     assert loop.convergence_report['convergence_warning_pct'] == 100.0
 
 
-@pytest.mark.parametrize('msq', (False, True))
-def test_legacy_evidence_after_csv_inference_window(tmp_path, fitted_runs, msq):
-    rows = fitted_runs[int(msq)][0].experiment_log
-    legacy = pl.concat([rows.head(1)] * 101).with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
+def test_legacy_evidence_after_csv_inference_window(tmp_path):
+    cases = ('ordinary', *(f'legacy_{index}' for index in range(100)), 'model', 'prep', 'final')
+    first = _diagnostic_loop(tmp_path, True, cases)
+    original = first.model
+    completed = 0
+
+    def stop_before_final(data, round_params):
+        nonlocal completed
+        result = original(data, round_params)
+        completed += 1
+        if completed == 103:
+            first._shutdown_requested = True
+        return result
+
+    first.model = stop_before_final
+    _run(first, 104)
     path = tmp_path / 'results.csv'
-    pl.concat([legacy, rows]).write_csv(path)
-    loaded = pl.read_csv(path, schema_overrides={'_convergence_warning': pl.Boolean})
-    report = convergence_report(loaded, parameter_columns=['max_iter'])
-    assert report['rounds'] == 103
+    saved = pl.read_csv(path).with_row_index('row')
+    saved.with_columns(pl.when(pl.col('row') < 101).then(None)
+                       .otherwise(pl.col('_convergence_warning')).alias('_convergence_warning')) \
+         .drop('row').write_csv(path)
+    resumed = _diagnostic_loop(tmp_path, True, cases)
+    _run(resumed, 104, resume=True)
+    report = resumed.convergence_report
+    assert report['rounds'] == 104
     assert report['unavailable_rounds'] == 101
-    assert report['observed_rounds'] == 2
-    assert report['convergence_warning_rounds'] == 1
-    assert report['convergence_warning_pct'] == 50.0
+    assert report['observed_rounds'] == 3
+    assert report['convergence_warning_rounds'] == 2
+    assert report['convergence_warning_pct'] == pytest.approx(200 / 3)
+    assert json.loads((tmp_path / 'convergence_report.json').read_text()) == report
 
 
 def test_legacy_msq_append_persists_new_evidence(tmp_path, monkeypatch):
