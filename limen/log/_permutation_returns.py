@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Protocol, cast
 
 import polars as pl
-import pyarrow.parquet as pq
 
 __all__ = ['TrialReturnsWriter']
 
@@ -22,6 +21,8 @@ class TrialReturnsWriter:
         self.writer: _ParquetWriter | None = None
 
     def append(self, trial: str, tracks: list[list[float]]) -> None:
+        import pyarrow.parquet as pq
+
         values = [value for track in tracks for value in track]
         if not values or not all(math.isfinite(value) for value in values):
             raise ValueError('split_walk_forward requires a non-empty finite execution return track')

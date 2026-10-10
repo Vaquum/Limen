@@ -1,6 +1,7 @@
 import copy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import polars as pl
@@ -414,7 +415,8 @@ def test_resume_rejects_changed_geometry_and_retains_tracks(tmp_path, monkeypatc
     assert any(entry['interventions'] for entry in audits[0])
 
 
-def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, monkeypatch):
+@pytest.mark.parametrize('stop_after_success', (False, True))
+def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, monkeypatch, stop_after_success):
     config = _config()
     config['sfd']['params']['entry_return'] = [0.0, 0.001, 0.002]
     bars = _bars()
@@ -432,37 +434,112 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
     first = _loop(config, bars, path)
     calls = 0
 
-    def interrupt_after_success(manifest, data, round_params):
+    def interrupt_trial(manifest, data, round_params):
         nonlocal calls
+        if not stop_after_success and round_params['entry_return'] == 0.0:
+            first._shutdown_requested = True
         result = fail_first_trial(manifest, data, round_params)
         calls += 1
-        if calls == 2:
+        if stop_after_success and calls == 2:
             first._shutdown_requested = True
         return result
 
     with monkeypatch.context() as context:
-        context.setattr(RuleBasedManifest, 'run_model', interrupt_after_success)
+        context.setattr(RuleBasedManifest, 'run_model', interrupt_trial)
         _run(first, n_permutations=3)
-    assert first.experiment_log.height == 2
+    assert first.experiment_log.height == (2 if stop_after_success else 1)
     assert first.experiment_log['strict_mode_error'][0] == 'Recorded walk-forward trial failed'
-    assert first.fold_results.height == 2
-    records = _records(path)
-    assert len(records) == 1 and records[0]['_round_index'] == 1
-    saved_jsonl = (path / 'round_data.jsonl').read_bytes()
-    records[0]['folds'].pop()
-    (path / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
-    before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
-    with pytest.raises(ValueError, match='split_walk_forward'):
-        _run(_loop(config, bars, path), resume=True, n_permutations=3)
-    assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
-    (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+    if stop_after_success:
+        assert first.fold_results.height == 2
+        records = _records(path)
+        assert len(records) == 1 and records[0]['_round_index'] == 1
+        saved_jsonl = (path / 'round_data.jsonl').read_bytes()
+        records[0]['folds'].pop()
+        (path / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
+        before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
+        with pytest.raises(ValueError, match='split_walk_forward'):
+            _run(_loop(config, bars, path), resume=True, n_permutations=3)
+        assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
+        (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+        saved_csv = (path / 'results.csv').read_bytes()
+        (path / 'results.csv').write_text(saved_csv.decode().splitlines()[0] + '\n')
+        (path / 'round_data.jsonl').write_text('')
+        before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
+        with pytest.raises(ValueError, match='split_walk_forward'):
+            _run(_loop(config, bars, path), resume=True, n_permutations=3)
+        assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
+        (path / 'results.csv').write_bytes(saved_csv)
+        (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+    else:
+        assert first.fold_results.is_empty()
+        assert not (path / 'round_data.jsonl').exists()
+        assert not (path / 'trial_returns.parquet').exists()
     resumed = _loop(config, bars, path)
     _run(resumed, resume=True, n_permutations=3)
     assert resumed.experiment_log.drop('execution_time').equals(full.experiment_log.drop('execution_time'))
     assert resumed.fold_results.equals(full.fold_results)
+    assert pl.read_csv(path / 'results.csv').drop('execution_time').equals(pl.read_csv(tmp_path / 'full/results.csv').drop('execution_time'))
     assert _records(path) == _records(tmp_path / 'full')
     assert pq.ParquetFile(path / 'trial_returns.parquet').metadata.num_row_groups == 2
     assert pl.read_parquet(path / 'trial_returns.parquet').equals(pl.read_parquet(tmp_path / 'full/trial_returns.parquet'))
+
+
+@pytest.mark.parametrize('saved_walk_forward', (False, True))
+def test_native_resume_rejects_added_or_removed_walk_forward(tmp_path, saved_walk_forward):
+    config = _config()
+    bars = _bars()
+
+    def native_loop(enabled):
+        compiled = CompiledSFD(config)
+        manifest = compiled.manifest()
+        if not enabled:
+            manifest.split_walk_forward = None
+        sfd = SimpleNamespace(params=compiled.params, manifest=lambda: manifest)
+        return UniversalExperimentLoop(
+            sfd=sfd, data=bars, experiment_dir=tmp_path,
+            search_strategy=build_search_strategy(config), checkpoint_interval=1,
+        )
+
+    saved = native_loop(saved_walk_forward)
+    assert saved._yaml_reference is None
+    _run(saved, n_permutations=1)
+    before = {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()}
+    with pytest.raises(ValueError, match='split_walk_forward'):
+        _run(native_loop(not saved_walk_forward), resume=True, n_permutations=2)
+    assert {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()} == before
+
+
+@pytest.mark.parametrize(('period', 'partition'), ((384, 'fit'), (48, 'test')))
+def test_rule_based_rejects_empty_partitions_after_indicators(period, partition):
+    manifest = CompiledSFD(_config()).manifest()
+    manifest.feature_transforms[0].params['period'] = period
+    manifest._walk_forward_fold = 0
+    with pytest.raises(ValueError, match=f'split_walk_forward fold has no {partition} rows'):
+        manifest.prepare_data(_bars(), {'entry_return': 0.0})
+
+
+@pytest.mark.parametrize('invalid', ('unsorted', 'duplicate'))
+def test_source_selector_runs_before_fold_geometry(tmp_path, invalid):
+    bars = _bars()
+    source = bars.reverse() if invalid == 'unsorted' else pl.concat([bars, bars.tail(1)])
+    loop = _loop(_config(), source, tmp_path)
+    selected = []
+
+    def select_recorded_rows(raw):
+        selected.append(raw)
+        return raw.unique(subset='datetime', maintain_order=True).sort('datetime')
+
+    loop.manifest.set_pre_split_data_selector(select_recorded_rows)
+    _run(loop, n_permutations=1)
+    assert len(selected) == 1 and selected[0].equals(source)
+    assert loop.experiment_log.height == 1 and loop.fold_results.height == 2
+    assert pq.ParquetFile(tmp_path / 'trial_returns.parquet').metadata.num_row_groups == 1
+    for fold in range(2):
+        manifest = _fold_manifest(loop.manifest, fold)
+        manifest.pre_split_data_selector = None
+        expected = manifest.run_model(manifest.prepare_data(bars, {'entry_return': 0.0}), {'entry_return': 0.0})
+        row = loop.fold_results.filter(pl.col('fold') == fold).row(0, named=True)
+        assert row['pnl_per_bar_bps_test'] == expected['pnl_per_bar_bps_test']
 
 
 @pytest.mark.parametrize('invalid', ('short', 'unsorted', 'duplicate'))

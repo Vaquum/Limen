@@ -171,6 +171,14 @@ class WalkForwardRun:
         self.writer.append(str(trial), [_return_track(record['net_returns']) for record in records])
         self.rows.extend({'id': trial, 'fold': record['fold'], **cast(Mapping[str, object], record['results'])} for record in records)
 
+    def complete_failed_header(self, path: Path, columns: list[str], keys: list[str]) -> list[str]:
+        if len(self.rows) == self.config.n_folds and set(keys) - set(columns):
+            header = list(dict.fromkeys([*keys, *columns]))
+            previous = pl.read_csv(path)
+            previous.select(pl.col(key) if key in columns else pl.lit(None).alias(key) for key in header).write_csv(path)
+            return header
+        return columns
+
     def restore(self, path: Path, up_to_round: int | None, expected: list[tuple[int, str]] | None = None) -> int:
         entries: list[dict[str, object]] = []
         with path.open() as stream:

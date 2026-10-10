@@ -646,6 +646,9 @@ class UniversalExperimentLoop:
                 self._walk_forward.accept(round_results['id'], data_dict)
             results_accumulator.append(round_results)
 
+            if self._walk_forward is not None and round_succeeded and csv_header:
+                csv_header = self._walk_forward.complete_failed_header(csv_path, csv_header, list(round_results))
+
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             if write_header and not round_succeeded:
                 _pending_csv_rows.append(dict(round_results))
@@ -856,7 +859,7 @@ class UniversalExperimentLoop:
         )
         logger.info('Resuming from round %d', start_round)
 
-        if not round_data_path or not round_data_path.exists():
+        if not round_data_path or (not round_data_path.exists() and self._walk_forward is None):
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no round data exists."
             )
@@ -868,8 +871,11 @@ class UniversalExperimentLoop:
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
             raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
         if self._walk_forward is not None:
+            if experiment_log.height != start_round:
+                raise ValueError('Cannot resume split_walk_forward without every completed trial result')
             expected = [(index, str(row['id'])) for index, row in enumerate(experiment_log.iter_rows(named=True)) if row['strict_mode_error'] is None]
-            _ = self._walk_forward.restore(round_data_path, start_round, expected)
+            if expected or round_data_path.exists():
+                _ = self._walk_forward.restore(round_data_path, start_round, expected)
         else:
             loaded_rounds = self._load_round_data(
                 round_data_path,
@@ -889,7 +895,8 @@ class UniversalExperimentLoop:
                 experiment_log[col].drop_nulls().to_list()
             )
 
-        self._truncate_round_data(round_data_path, start_round)
+        if round_data_path.exists():
+            self._truncate_round_data(round_data_path, start_round)
         experiment_log.write_csv(csv_path)
 
         return start_round
@@ -931,7 +938,7 @@ class UniversalExperimentLoop:
         batch = objective_frame(self.manifest, accumulator)
         if self.experiment_log is not None:
             self.experiment_log = pl.concat(
-                [self.experiment_log, batch], how='vertical_relaxed',
+                [self.experiment_log, batch], how='diagonal_relaxed' if self._walk_forward is not None else 'vertical_relaxed',
             )
         else:
             self.experiment_log = batch
