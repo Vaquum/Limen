@@ -68,6 +68,7 @@
   "limen/data/utils/splits.py": 150,
   "limen/experiment/__init__.py": 20,
   "limen/experiment/acceptance_report.py": 160,
+  "limen/experiment/convergence_report.py": 100,
   "limen/experiment/checkpoint_manager.py": 220,
   "limen/experiment/errors.py": 10,
   "limen/experiment/experiment_core.py": 990,

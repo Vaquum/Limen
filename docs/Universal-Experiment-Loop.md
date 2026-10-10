@@ -78,6 +78,8 @@ uel.experiment_backtest_results
 
 Without `post_processing=True`, standard UEL still writes `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset.
 
+The [convergence warning report](#convergence-warning-report) is available after run conclusion independently of `post_processing`.
+
 Post-processing retains:
 
 - `uel.experiment_log` with one row per round
@@ -165,6 +167,7 @@ Primary attributes are listed below. `uel.data`, `uel.params`, `uel.experiment_l
 | `uel.params` | parameter space in use |
 | `uel.round_params` | actual parameter values retained for each successful round when post-processing is enabled |
 | `uel.experiment_log` | main round-by-round experiment log |
+| `uel.convergence_report` | recorded convergence warning counts, rates and parameter-value summaries after run conclusion |
 | `uel.experiment_confusion_metrics` | confusion-style analysis derived from predictions |
 | `uel.experiment_backtest_results` | backtest-style analysis derived from predictions |
 | `uel.preds` | test predictions retained when post-processing is enabled |
@@ -181,6 +184,27 @@ Each entry in `uel._alignment` includes:
 - `last_test_datetime`
 
 This is what lets downstream analysis stay aligned with the actual test window seen by a round.
+
+### Convergence warning report
+
+After a completed standard, MSQ or walk-forward run, read:
+
+```python
+report = uel.convergence_report
+report["convergence_warning_rounds"]
+report["observed_rounds"]
+report["convergence_warning_pct"]
+```
+
+This dictionary reports explicitly recorded `ConvergenceWarning` categories, including subclasses. Warning message text is not used to infer convergence problems. A recorded absence of that warning means no warning was observed; it does not prove the model converged.
+
+`convergence_warning_pct` is 100 times `convergence_warning_rounds` divided by `observed_rounds`: finished rounds with available diagnostics. Missing diagnostics, older records without the category observation, and strict-mode failed rounds are unavailable and excluded from that denominator. `rounds` and `unavailable_rounds` list the total and unavailable counts separately. With no observed rounds, the percentage is `None` in memory and JSON `null`.
+
+For walk-forward runs, each trial counts once: a warning in any observed fold makes the trial warning-bearing. A trial can be recorded without a warning only when every fold has available diagnostics and none records one; otherwise its observation is unavailable.
+
+`parameter_patterns` lists each parameter value associated with at least one recorded warning. Each entry carries `parameter`, a display string `value`, `observed_rounds`, `convergence_warning_rounds` and `convergence_warning_pct`. Its denominator includes every observed round with that value, including those without warnings. These are marginal descriptive frequencies, not evidence that a parameter caused a warning; combinations can be confounded and groups can overlap across parameters.
+
+UEL computes this report even with `post_processing=False`. With `experiment_dir` configured, it writes `convergence_report.json` there. Otherwise it retains the dictionary in memory. Both paths log the overall counts and rate at run conclusion.
 
 ### Deeper post-run analysis
 
@@ -236,6 +260,7 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 | `audit.jsonl` | feedback-controller audit trail |
 | `interventions.json` | optional external intervention file polled by the feedback controller when the file exists |
 | `metadata.json` | experiment metadata used by `Trainer` |
+| `convergence_report.json` | convergence warning report written at run conclusion, independently of post-processing |
 
 This path is what powers checkpointing, resumability, and the [Trainer](Trainer.md) workflow.
 

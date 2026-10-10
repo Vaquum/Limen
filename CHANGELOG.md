@@ -1565,3 +1565,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.22.0] - 2026-10-10
 
 - Report walk-forward sweep selection with deflated Sharpe probability, CSCV backtest-overfitting probability and optional acceptance thresholds (#740).
+
+## [5.23.0] - 2026-10-10
+
+- Summarise recorded convergence warnings by observed round and parameter value at UEL run conclusion; persist the report when an experiment directory is configured (#211).

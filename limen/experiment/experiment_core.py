@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.acceptance_report import acceptance_report
+from limen.experiment.convergence_report import convergence_report, _convergence_warning, _convergence_header
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
@@ -131,6 +132,7 @@ class UniversalExperimentLoop:
         self.scalers: list[Any] = []
         self._alignment: list[Any] = []
         self.experiment_log: pl.DataFrame | None = None
+        self.convergence_report: dict[str, object] | None = None
         self.param_space: ParamSpace | None = None
         self._log: Log | None = None
         self.experiment_confusion_metrics: pd.DataFrame | None = None
@@ -154,6 +156,7 @@ class UniversalExperimentLoop:
             record_model_outputs: bool = False) -> None:
         original_prep, original_model = self.prep, self.model
         self._walk_forward = None
+        self.convergence_report = None
         try:
             self._run(experiment_name, n_permutations, prep_each_round,
                       random_search, maintain_details_in_params, context_params,
@@ -166,6 +169,17 @@ class UniversalExperimentLoop:
         if self._walk_forward is not None:
             _ = acceptance_report(self._walk_forward.writer.path.parent,
                                   acceptance=self._walk_forward.manifest.acceptance)
+        parameter_columns = self._search_strategy.domain.keys if self._search_strategy is not None else list(self.params)
+        self.convergence_report = convergence_report(
+            self.experiment_log if self.experiment_log is not None else pl.DataFrame(),
+            parameter_columns=list(dict.fromkeys([*parameter_columns, *(context_params or {})])),
+        )
+        if self._experiment_dir is not None:
+            with (self._experiment_dir / 'convergence_report.json').open('w') as output:
+                json.dump(self.convergence_report, output, indent=2, allow_nan=False)
+        logger.info('Convergence-warning percentage: %s; observed=%s; unavailable=%s',
+                    self.convergence_report['convergence_warning_pct'], self.convergence_report['observed_rounds'],
+                    self.convergence_report['unavailable_rounds'])
 
     def _run(self,
             experiment_name: str,
@@ -282,6 +296,7 @@ class UniversalExperimentLoop:
             if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in csv_header:
                 raise ValueError('UniversalExperimentLoop Cannot append ablation results without _dropped_features; start a new results file.')
             validate_objective_header(self.manifest, csv_header)
+            csv_header = _convergence_header(csv_path, csv_header)
 
         data_dict: dict[str, Any] = {}
         _pending_csv_rows: list[dict[str, Any]] = []
@@ -302,13 +317,15 @@ class UniversalExperimentLoop:
                     'current_index': i,
                 }
 
+            caught: list[warnings.WarningMessage] = []
             try:
-                if prep_each_round is True or i == 0:
-                    data_dict = self.prep(self.data, round_params=round_params)
-                if self._walk_forward is not None:
-                    data_dict['_record_execution'] = self._record_execution
-                    data_dict['_record_model_outputs'] = self._record_model_outputs
-                round_results = self.model(data=data_dict, round_params=round_params)
+                with warnings.catch_warnings(record=True) as caught:
+                    if prep_each_round is True or i == 0:
+                        data_dict = self.prep(self.data, round_params=round_params)
+                    if self._walk_forward is not None:
+                        data_dict['_record_execution'] = self._record_execution
+                        data_dict['_record_model_outputs'] = self._record_model_outputs
+                    round_results = self.model(data=data_dict, round_params=round_params)
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', i, exc)
@@ -354,6 +371,7 @@ class UniversalExperimentLoop:
                 self.round_params.append(round_params)
 
             round_results.update(round_params)
+            round_results['_convergence_warning'] = _convergence_warning(caught, round_succeeded, replay=True)
             if getattr(self.manifest, 'ablation_config', None) is not None:
                 round_results['_dropped_features'] = json.dumps(round_params.get('_dropped_features', []))
 
@@ -633,6 +651,7 @@ class UniversalExperimentLoop:
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
             round_results.update(round_params | (context_params or {}))
+            round_results['_convergence_warning'] = _convergence_warning(caught, round_succeeded)
             if getattr(self.manifest, 'ablation_config', None) is not None:
                 round_results['_dropped_features'] = json.dumps(sfd_params.get('_dropped_features', []))
 
@@ -782,16 +801,8 @@ class UniversalExperimentLoop:
             checkpoint_interval=self._checkpoint_interval,
         )
 
-        csv_path = (
-            self._experiment_dir / 'results.csv'
-            if self._experiment_dir
-            else Path(f"{experiment_name}.csv")
-        )
-        round_data_path = (
-            self._experiment_dir / 'round_data.jsonl'
-            if self._experiment_dir
-            else None
-        )
+        csv_path = self._experiment_dir / 'results.csv' if self._experiment_dir else Path(f"{experiment_name}.csv")
+        round_data_path = self._experiment_dir / 'round_data.jsonl' if self._experiment_dir else None
 
         return {
             'domain': domain,
@@ -865,6 +876,8 @@ class UniversalExperimentLoop:
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
         experiment_log = pl.read_csv(csv_path, n_rows=start_round)
+        if '_convergence_warning' not in experiment_log.columns:
+            experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
             raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
         if self._walk_forward is not None:
@@ -1151,17 +1164,7 @@ class UniversalExperimentLoop:
                                  strategy_type: str,
                                  content_hash: str) -> dict[str, Any]:
 
-        '''
-        Validate and load state from an existing checkpoint directory.
-
-        Returns:
-            dict: Keys 'metadata', 'msq_state', 'domain_state', and
-                optionally 'feedback_controller_state', 'pruning_strategy_states'
-
-        Raises:
-            ValueError: If validation fails
-
-        '''
+        '''Validate and load the existing checkpoint state.'''
 
         return checkpoint_manager.validate(
             checkpoint_dir,
