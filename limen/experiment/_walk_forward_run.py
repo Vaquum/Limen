@@ -11,7 +11,7 @@ import numpy as np
 import polars as pl
 
 from limen.backtest.trade_contract import TradeInputs, TradeLedger
-from limen.experiment.manifest_core import Manifest, _requires_fold_validation, _resolve_params, _resolve_split
+from limen.experiment.manifest_core import Manifest, MLManifest, _requires_fold_validation, _resolve_params, _resolve_split
 from limen.experiment._walk_forward_split import WalkForwardConfig, read_walk_forward_config
 from limen.log._permutation_returns import TrialReturnsWriter
 
@@ -71,7 +71,7 @@ def _fold_record(fold: int, data: Mapping[str, object], result: Mapping[str, obj
     }
     missing = cast(list[object], alignment.get('missing_datetimes', []))
     record: dict[str, object] = {
-        'fold': fold, 'results': scalars, 'preds': np.asarray(result['_preds']).tolist(),
+        'fold': fold, 'results': scalars, 'preds': np.asarray(result['_preds'], dtype=object).tolist(),
         'net_returns': _net_returns(data), 'optimal_threshold': scalars.get('optimal_threshold'),
         'alignment': {
             'missing_datetimes': [_iso_date(value) for value in missing],
@@ -109,7 +109,7 @@ class WalkForwardRun:
         if not isinstance(manifest.split_walk_forward, WalkForwardConfig):
             raise ValueError('split_walk_forward requires its manifest configuration')
         self.manifest, self.raw, self.config = manifest, raw, manifest.split_walk_forward
-        self._preflight(raw, require_validation=False)
+        self._preflight(raw, require_validation=isinstance(manifest, MLManifest) and manifest.objective is not None)
         self.writer = TrialReturnsWriter(directory)
         self.rows: list[dict[str, object]] = []
 
@@ -176,9 +176,12 @@ class WalkForwardRun:
                     if not isinstance(raw_record, dict):
                         raise ValueError('Cannot resume split_walk_forward with invalid fold evidence')
                     record = cast(dict[str, object], raw_record)
-                    if record.get('fold') != fold or not isinstance(record.get('results'), dict) or not record.get('results'):
+                    if type(record.get('fold')) is not int or record.get('fold') != fold or not isinstance(record.get('results'), dict) or not record.get('results'):
                         raise ValueError('Cannot resume split_walk_forward with incomplete fold evidence')
-                    _ = _return_track(record.get('net_returns'))
+                    values = _return_track(record.get('net_returns'))
+                    predictions = record.get('preds')
+                    if not isinstance(predictions, list) or len(predictions) != len(values) or not isinstance(record.get('alignment'), dict):
+                        raise ValueError('Cannot resume split_walk_forward with incomplete aligned predictions')
                 if not isinstance(entry.get('round_id'), str):
                     raise ValueError('Cannot resume split_walk_forward without recorded trial identity')
                 entries.append(entry)
