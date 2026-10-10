@@ -137,7 +137,7 @@ def test_one_signal_generation_per_unique_signal_key(tmp_path: Path, monkeypatch
                            ('interleaved', 4), ('rule_based', 1)):
         loop = _loop(name, tmp_path / name)
         counts = {'prep': 0, 'model': 0}
-        orig_prep, orig_model = loop.prep, loop.model
+        orig_prep, orig_model = type(loop.manifest).prepare_data, type(loop.manifest).run_model
         assert orig_prep and orig_model
 
         def prep(*args: object, _counts: dict = counts, _fn: object = orig_prep,
@@ -150,9 +150,11 @@ def test_one_signal_generation_per_unique_signal_key(tmp_path: Path, monkeypatch
             _counts['model'] += 1
             return _fn(*args, **kwargs)
 
-        loop.prep, loop.model = prep, model
-        loop.run(name, n_permutations=manifest(name)['uel']['n_permutations'],
-                 prep_each_round=True, factorize=True, progress_bar=False)
+        with monkeypatch.context() as instrumentation:
+            instrumentation.setattr(type(loop.manifest), 'prepare_data', prep)
+            instrumentation.setattr(type(loop.manifest), 'run_model', model)
+            loop.run(name, n_permutations=manifest(name)['uel']['n_permutations'],
+                     prep_each_round=True, factorize=True, progress_bar=False)
         assert counts == {'prep': expected, 'model': expected}, (name, counts)
 
 
@@ -284,7 +286,7 @@ def test_cache_releases_fitted_model_and_rejects_new_candidates(tmp_path: Path) 
     domain = manifest('binary_costs')['sfd']['params']
     rounds = FactorizedRounds(manifest=loop.manifest, strategy=GridStrategy(ParamDomain(domain)),
                               domain=domain, pruning=False, callback=False, context=None,
-                              prep=loop.prep, model=loop.model, data=loop.data,
+                              prep=loop.manifest.prepare_data, model=loop.manifest.run_model, data=loop.data,
                               record_execution=True, record_model_outputs=True)
     params = {key: values[0] for key, values in domain.items()}
     data, result, _ = rounds.evaluate(params)
@@ -296,6 +298,26 @@ def test_cache_releases_fitted_model_and_rejects_new_candidates(tmp_path: Path) 
         rounds.evaluate({**params, 'deterministic': False})
     with pytest.raises(ValueError, match='outside the preflight domain'):
         rounds.evaluate({**params, 'deterministic': 1})
+
+
+@pytest.mark.parametrize('override', ['prep', 'model', 'manifest_prepare', 'manifest_model'])
+def test_overridden_pipeline_fails_before_writes(tmp_path: Path, override: str) -> None:
+    loop = _loop('directional_barriers', tmp_path)
+    if override.startswith('manifest_'):
+        owner, name = loop.manifest, {'manifest_prepare': 'prepare_data', 'manifest_model': 'run_model'}[override]
+    else:
+        owner, name = loop, override
+    original = getattr(owner, name)
+
+    def dependent(*args: object, **kwargs: object) -> dict:
+        params = kwargs['round_params']
+        return original(*args, **{**kwargs, 'round_params': {**params, 'alpha': params['fee']}})
+
+    setattr(owner, name, dependent)
+    with pytest.raises(ValueError, match='factorize requires'):
+        loop.run('override', n_permutations=8, prep_each_round=True,
+                 factorize=True, progress_bar=False)
+    assert not (tmp_path / 'metadata.json').exists()
 
 
 def test_resume_and_disabled_mode_parity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -344,7 +366,7 @@ def test_resume_and_disabled_mode_parity(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 
-def test_failed_round_warning_parity(tmp_path: Path) -> None:
+def test_failed_round_warning_parity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     output = []
     for mode in (False, True):
         root = tmp_path / str(mode)
@@ -354,9 +376,10 @@ def test_failed_round_warning_parity(tmp_path: Path) -> None:
             warnings.warn('signal-preparation-warning', RuntimeWarning, stacklevel=2)
             raise StrictModeError('synthetic strict failure')
 
-        loop.prep = fail_prep
-        loop.run('fail', n_permutations=8, prep_each_round=True,
-                 factorize=mode, progress_bar=False)
+        with monkeypatch.context() as instrumentation:
+            instrumentation.setattr(type(loop.manifest), 'prepare_data', fail_prep)
+            loop.run('fail', n_permutations=8, prep_each_round=True,
+                     factorize=mode, progress_bar=False)
         with (root / 'results.csv').open(newline='') as stream:
             output.append(list(csv.DictReader(stream)))
     assert all(row['_warnings'] == '["signal-preparation-warning"]' for row in output[0])

@@ -105,8 +105,6 @@ def _check_manifest(manifest: Manifest, domain: Mapping[str, list[object]], axes
         _fail('dynamic preparation, walk-forward or metrics')
     if any(entry.include_if is not None or entry.group is not None for entry in manifest.feature_transforms):
         _fail('dynamic feature selection')
-    if manifest.resolve_trade_policy({key: values[0] for key, values in domain.items()}) is not None:
-        _fail('event execution')
 
     if function is None:
         _fail('missing architecture')
@@ -168,6 +166,8 @@ class FactorizedRounds:
             _fail('unshuffled GridStrategy is required')
         if pruning or callback:
             _fail('pruning and callbacks are not supported')
+        if prep != manifest.prepare_data or model != manifest.run_model or any(name in vars(manifest) for name in ('prepare_data', 'run_model')):
+            _fail('overridden manifest pipeline')
         self.axes = _axes(manifest, domain)
         if context and self.axes.intersection(context):
             _fail('context overrides a backtest-only parameter')

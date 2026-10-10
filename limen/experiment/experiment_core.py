@@ -112,6 +112,7 @@ class UniversalExperimentLoop:
             self.prep = getattr(sfd, 'prep', None)
             self.model = getattr(sfd, 'model', None)
 
+        self._manifest_functions = (self.prep, self.model)
         self.extras: list[Any] = []
         self.models: list[Any] = []
         self._shutdown_requested: bool = False
@@ -515,11 +516,13 @@ class UniversalExperimentLoop:
         if self._factorize:
             if not isinstance(self.manifest, Manifest):
                 raise ValueError('factorize requires a manifest')
+            if (self.prep, self.model) != self._manifest_functions:
+                raise ValueError('factorize requires the original manifest prep and model')
             from limen.experiment._factorize import FactorizedRounds
             factorized = FactorizedRounds(
                 manifest=self.manifest, strategy=self._search_strategy, domain=domain.params,
                 pruning=bool(self._pruning_strategies), callback=self._intra_callback is not None,
-                context=context_params, prep=self.prep, model=self.model, data=self.data,
+                context=context_params, prep=self.manifest.prepare_data, model=self.manifest.run_model, data=self.data,
                 record_execution=self._record_execution, record_model_outputs=self._record_model_outputs,
                 intervention_path=self._experiment_dir / 'interventions.json' if self._experiment_dir else None,
             )
