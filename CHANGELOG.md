@@ -1547,3 +1547,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.18.0] - 2026-10-09
 
 - Add a shared validation-return objective for binary threshold calibration, pruning and reconstruction.
+
+## [5.19.0] - 2026-10-10
+
+- Add a pure positional walk-forward splitter with label-horizon purging, post-test embargo and anchored or fixed-span training windows.

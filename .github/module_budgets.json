@@ -64,6 +64,7 @@
   "limen/data/utils/__init__.py": 20,
   "limen/data/utils/compute_data_bars.py": 30,
   "limen/data/utils/random_slice.py": 30,
+  "limen/data/utils/split_walk_forward.py": 60,
   "limen/data/utils/splits.py": 150,
   "limen/experiment/__init__.py": 20,
   "limen/experiment/checkpoint_manager.py": 220,
