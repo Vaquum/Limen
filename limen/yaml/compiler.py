@@ -119,6 +119,8 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
     _ = manifest.set_data_source(method=method, params=params)
 
     _apply_split(manifest, m)
+    if 'acceptance' in m:
+        _ = manifest.set_acceptance(**m['acceptance'])
 
     cols = m.get('required_columns')
     if cols is not None:

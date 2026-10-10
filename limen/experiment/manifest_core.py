@@ -1992,6 +1992,8 @@ def _finalize_to_data_dict(
     cols = list(split_data[0].columns)
 
     data_dict = split_data_to_prep_output(split_data, cols, all_datetimes)
+    if manifest.split_walk_forward is not None:
+        data_dict['_alignment']['test_datetimes'] = split_data[2]['datetime'].to_list()
 
     for param_name, param_value in fitted_params.items():
         data_dict[param_name] = param_value
@@ -2023,6 +2025,8 @@ def _finalize_rule_based_data(
     from limen.sfd.rule_based.predicates import build_predicate  # avoid circular import at module level
 
     data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
+    if manifest.split_walk_forward is not None:
+        data_dict['_alignment']['test_datetimes'] = split_data[2]['datetime'].to_list()
 
     config = manifest.strategy
     if config is None:

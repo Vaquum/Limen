@@ -17,6 +17,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
+from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
@@ -162,6 +163,9 @@ class UniversalExperimentLoop:
             if self._walk_forward is not None:
                 self._walk_forward.finish()
                 self.prep, self.model = original_prep, original_model
+        if self._walk_forward is not None:
+            acceptance_report(self._walk_forward.writer.path.parent,
+                              acceptance=self._walk_forward.manifest.acceptance)
 
     def _run(self,
             experiment_name: str,

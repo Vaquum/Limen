@@ -12,6 +12,7 @@ import polars as pl
 import pytest
 
 from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfitting
+from limen.data.utils import split_walk_forward
 from limen.experiment import Manifest
 from limen.experiment.acceptance_report import acceptance_report
 from limen.yaml import CompiledSFD, parse, validate
@@ -308,6 +309,14 @@ def test_report_end_to_end(acceptance_runs):
         assert set(report) == expected_keys
         artifact = pl.read_parquet(path / 'trial_returns.parquet')
         trials = artifact['trial'].unique(maintain_order=True).to_list()
+        folds = split_walk_forward(pl.read_parquet(_FIXTURE), **config['sfd']['manifest']['split_walk_forward'])
+        expected_dates = [[value.isoformat() for value in test['datetime'].slice(1)] for _, test in folds]
+        records = [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
+        assert [record['round_id'] for record in records] == trials
+        for record in records:
+            for nested, dates in zip(record['folds'], expected_dates, strict=True):
+                assert nested['alignment']['test_datetimes'] == dates
+                assert len(nested['preds']) == len(nested['net_returns']) == len(dates)
         matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
                            for trial in trials])
         sharpes = matrix.mean(axis=1) / matrix.std(axis=1, ddof=1)

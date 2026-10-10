@@ -5,6 +5,7 @@
 ## Canonical docs
 
 - [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
+- [Walk-forward selection methodology](../../docs/Benchmark.md#walk-forward-selection-report)
 
 ## What this package owns
 
@@ -21,6 +22,8 @@ Does **not** own model fitting, prediction generation, experiment logging, or ba
 | `rule_based_metrics` | Accuracy and prediction-count metrics for rule-based outputs | Exported at the package root |
 | `safe_ovr_auc` | OvR AUC without blowing up on missing-class edge cases | Import from `limen.metrics.safe_ovr_auc` |
 | `balanced_metric` | Single optimization target for balanced binary prediction quality | Exported directly from the package root |
+| `deflated_sharpe_ratio` | Per-bar Sharpe probability corrected for trial selection and return moments | Exported at the package root; see the canonical selection methodology |
+| `probability_of_backtest_overfitting` | CSCV probability from a synchronous trial-by-bar return matrix | Exported at the package root; see the canonical selection methodology |
 
 ## Adjacent modules
 
