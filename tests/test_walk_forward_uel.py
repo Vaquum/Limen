@@ -485,6 +485,51 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
     assert pl.read_parquet(path / 'trial_returns.parquet').equals(pl.read_parquet(tmp_path / 'full/trial_returns.parquet'))
 
 
+@pytest.mark.parametrize('saved_round_data', (False, True))
+def test_resume_clears_returns_beyond_failure_only_checkpoint(tmp_path, monkeypatch, saved_round_data):
+    config = _config()
+    config['sfd']['params']['entry_return'] = [0.0, 0.001, 0.002]
+    bars = _bars()
+    first = _loop(config, bars, tmp_path)
+    original = RuleBasedManifest.run_model
+
+    def fail_first_trial(manifest, data, round_params):
+        if round_params['entry_return'] == 0.0:
+            first._shutdown_requested = True
+            raise StrictModeError('Recorded walk-forward trial failed')
+        return original(manifest, data, round_params)
+
+    monkeypatch.setattr(RuleBasedManifest, 'run_model', fail_first_trial)
+    _run(first, n_permutations=3)
+    checkpoint = (tmp_path / 'checkpoint.json').read_bytes()
+    assert first.experiment_log.height == 1 and first.fold_results.is_empty()
+    _run(_loop(config, bars, tmp_path), resume=True, n_permutations=3)
+    assert pq.ParquetFile(tmp_path / 'trial_returns.parquet').metadata.num_row_groups == 2
+    (tmp_path / 'checkpoint.json').write_bytes(checkpoint)
+    if not saved_round_data:
+        (tmp_path / 'round_data.jsonl').unlink()
+
+    changed = copy.deepcopy(config)
+    changed['sfd']['manifest']['split_walk_forward']['embargo_bars'] += 1
+    before = {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()}
+    with pytest.raises(ValueError, match='split_walk_forward'):
+        _run(_loop(changed, bars, tmp_path), resume=True, n_permutations=3)
+    assert {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()} == before
+
+    def fail_remaining_trials(manifest, data, round_params):
+        raise StrictModeError('Recorded walk-forward trial failed')
+
+    monkeypatch.setattr(RuleBasedManifest, 'run_model', fail_remaining_trials)
+    resumed = _loop(config, bars, tmp_path)
+    _run(resumed, resume=True, n_permutations=3)
+    assert resumed.experiment_log.height == 3 and resumed.fold_results.is_empty()
+    assert resumed.experiment_log['strict_mode_error'].null_count() == 0
+    assert not (tmp_path / 'trial_returns.parquet').exists()
+    assert not (tmp_path / 'trial_returns.parquet.tmp').exists()
+    assert not (tmp_path / 'round_data.jsonl').exists() or not _records(tmp_path)
+    assert pl.read_csv(tmp_path / 'results.csv')['strict_mode_error'].null_count() == 0
+
+
 @pytest.mark.parametrize('saved_walk_forward', (False, True))
 def test_native_resume_rejects_added_or_removed_walk_forward(tmp_path, saved_walk_forward):
     config = _config()

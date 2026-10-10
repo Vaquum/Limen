@@ -50,3 +50,7 @@ class TrialReturnsWriter:
             self.writer.close()
             self.writer = None
             _ = self.temporary.replace(self.path)
+
+    def clear(self) -> None:
+        self.path.unlink(missing_ok=True)
+        self.temporary.unlink(missing_ok=True)

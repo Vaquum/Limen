@@ -876,6 +876,8 @@ class UniversalExperimentLoop:
             expected = [(index, str(row['id'])) for index, row in enumerate(experiment_log.iter_rows(named=True)) if row['strict_mode_error'] is None]
             if expected or round_data_path.exists():
                 _ = self._walk_forward.restore(round_data_path, start_round, expected)
+            if not expected:
+                self._walk_forward.writer.clear()
         else:
             loaded_rounds = self._load_round_data(
                 round_data_path,
