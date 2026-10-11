@@ -139,6 +139,7 @@ payload = {
 
 Paths and selection/binding order do not enter the hash. It identifies selected
 artifact lineage, not distinct learned models or code/dependency semantics.
+`cohort_id` is a cohort binding identity, not a code-signing attestation.
 
 ### Compatibility
 
