@@ -83,8 +83,12 @@ def _evidence(record: Mapping[str, object], *, event: bool, snapshot: bool, exec
         if contract_digest(cast(dict[str, JsonValue], json_value(contract))) != record.get('trade_contract_digest'):
             raise ValueError('Cannot resume parallel run with mismatched trade contract evidence')
         ledger = _mapping(record.get('trade_ledger'), 'trade ledger')
-        if any(not isinstance(ledger.get(key), list) for key in ('states', 'intents', 'fills', 'episodes', 'funding')) or not ledger['states']:
-            raise ValueError('Cannot resume parallel run without complete trade ledger evidence')
+        for key in ('states', 'intents', 'fills', 'episodes', 'funding'):
+            rows = ledger.get(key)
+            if not isinstance(rows, list) or (key == 'states' and not rows):
+                raise ValueError('Cannot resume parallel run without complete trade ledger evidence')
+            for row in cast(list[object], rows):
+                _ = _mapping(row, f'trade ledger {key} row')
     if execution:
         if 'execution' not in record or 'market' not in record:
             raise ValueError('Cannot resume parallel run without recorded execution/market evidence')

@@ -585,7 +585,7 @@ def test_parallel_freezes_declared_execution_source_independently():
 
 def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_campaigns, tmp_path):
     config, _, source, _ = parallel_campaigns['grid']
-    for name in ('policy', 'missing', 'corrupt', 'duplicate', 'missing_params', 'empty_params', 'changed_params', 'changed_csv_params', 'missing_ledger', 'null_ledger'):
+    for name in ('policy', 'missing', 'corrupt', 'duplicate', 'missing_params', 'empty_params', 'changed_params', 'changed_csv_params', 'missing_ledger', 'null_ledger', 'null_state'):
         directory = tmp_path / name
         shutil.copytree(source, directory)
         if name == 'missing':
@@ -600,7 +600,7 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
         elif name == 'changed_csv_params':
             frame = pl.read_csv(directory / 'results.csv')
             frame.with_columns(pl.when(pl.col('_round_index') == 0).then(pl.col('C') * 2).otherwise(pl.col('C')).alias('C')).write_csv(directory / 'results.csv')
-        elif name in ('missing_params', 'empty_params', 'changed_params', 'missing_ledger', 'null_ledger'):
+        elif name in ('missing_params', 'empty_params', 'changed_params', 'missing_ledger', 'null_ledger', 'null_state'):
             saved = records(directory)
             if name == 'missing_params':
                 saved[0].pop('round_params')
@@ -610,6 +610,8 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
                 saved[0]['round_params']['C'] *= 2
             elif name == 'missing_ledger':
                 saved[0].pop('trade_ledger')
+            elif name == 'null_state':
+                saved[0]['trade_ledger']['states'] = [None]
             else:
                 saved[0]['trade_ledger'] = None
             (directory / 'round_data.jsonl').write_text('\n'.join(json.dumps(row) for row in saved) + '\n')
