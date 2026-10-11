@@ -35,6 +35,8 @@ def admit_parallel(host: UniversalExperimentLoop, workers: int, prep_each_round:
         return
     if not isinstance(prep_each_round, bool):
         raise TypeError('prep_each_round must be a bool')
+    if not prep_each_round:
+        raise ValueError('Parallel rounds require prep_each_round=True')
     if host._compiled_yaml is None or not isinstance(host.manifest, Manifest) or host._search_strategy is None:
         raise ValueError('Parallel rounds require compiled YAML and an MSQ search strategy')
     if post_processing or factorize or (host.prep, host.model) != host._manifest_functions:
@@ -46,7 +48,8 @@ def admit_parallel(host: UniversalExperimentLoop, workers: int, prep_each_round:
 
 
 def _reap(pool: ProcessPoolExecutor) -> None:
-    processes = tuple(cast(dict[int, BaseProcess], getattr(pool, '_processes')).values())
+    active = cast(dict[int, BaseProcess] | None, getattr(pool, '_processes'))
+    processes = tuple(active.values()) if active is not None else ()
     for process in processes:
         if process.is_alive():
             process.terminate()

@@ -286,7 +286,7 @@ def test_parallel_workers_native_rejects_before_artifacts(tmp_path, workers):
     assert not (tmp_path / 'invalid').exists()
 
 
-@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'architecture', 'context'))
+@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'architecture', 'context', 'prepare_once'))
 def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
     config = parallel_config()
     if case in ('n_jobs', 'null_jobs', 'negative_jobs'):
@@ -301,7 +301,7 @@ def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
         loop.model = lambda data, round_params: {}
     options = {'factorize': True} if case == 'factorize' else {'post_processing': True} if case == 'post_processing' else {'context_params': {'n_jobs': 2}} if case == 'context' else {}
     with pytest.raises((ValueError, TypeError), match=r'parallel|workers|n_jobs|MSQ|compiled|factorize|post_processing'):
-        loop.run('invalid_parallel', workers=4, prep_each_round=True, progress_bar=False, **options)
+        loop.run('invalid_parallel', workers=4, prep_each_round=case != 'prepare_once', progress_bar=False, **options)
     assert not path.exists()
 
 
