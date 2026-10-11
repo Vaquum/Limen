@@ -11,7 +11,7 @@ from typing import cast
 import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
-from limen.experiment._objective_run import finalize_objective_result, validate_objective_resume
+from limen.experiment._objective_run import finalize_objective_result, run_objective, validate_objective_resume
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
@@ -195,7 +195,11 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 returns = _values(fold.get('net_returns'), 'fold returns')
                 _ = _values(fold.get('preds'), 'fold predictions', len(returns))
                 _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
-    log = pl.read_csv(csv_path, n_rows=start, schema_overrides={'_convergence_warning': pl.Boolean}).head(start)
+    overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
+    objective = run_objective(manifest)
+    if objective is not None:
+        overrides[objective.column] = pl.Float64
+    log = pl.read_csv(csv_path, n_rows=start, schema_overrides=overrides).head(start)
     if '_convergence_warning' not in log.columns:
         log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
     for index, row in enumerate(log.iter_rows(named=True)):
@@ -215,7 +219,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
             _ = forward.restore(round_data_path, start, expected)
         else:
             forward.writer.clear()
-    attributes['experiment_log'] = log
+    attributes['experiment_log'] = log if start else None
     _ = round_data_path.write_text(''.join(line + '\n' for line in lines))
     log.write_csv(csv_path)
     if audit_path.exists():

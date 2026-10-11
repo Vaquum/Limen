@@ -140,7 +140,7 @@ def freeze_sources(manifest: Manifest, learning: pl.DataFrame) -> FrozenRoundSou
         else:
             if not isinstance(source, DataSourceConfig):
                 raise ValueError('Parallel rounds require reconstructable declared sources')
-            frame = learning if source == manifest.data_source_config else DataSourceResolver.resolve(source)
+            frame = DataSourceResolver.resolve(source)
             frames.append(frame.clone())
     return FrozenRoundSources(learning.clone(), frames[0], frames[1])
 

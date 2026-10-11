@@ -106,16 +106,22 @@ def _overlap(intervals):
 
 
 def _campaign(config, directory, workers):
+    import polars as pl
+
     from limen.experiment import UniversalExperimentLoop
     from limen.yaml import CompiledSFD, build_search_strategy
+    from tests.test_parallel_rounds import FIXTURE
 
     markers = directory.parent / f'{directory.name}_timing'
     markers.mkdir()
     _TimedPool.destination = markers
     with _MemorySampler() as memory:
         started = time.monotonic()
+        data = pl.read_parquet(FIXTURE)
+        interval = (data['datetime'][1] - data['datetime'][0]).total_seconds()
+        data = data.with_columns(pl.lit(interval).alias('base_interval'))
         loop = UniversalExperimentLoop(
-            sfd=CompiledSFD(config), experiment_dir=directory,
+            sfd=CompiledSFD(config), data=data, experiment_dir=directory,
             yaml_reference=config, search_strategy=build_search_strategy(config),
             feedback_interval=1000, checkpoint_interval=1000,
         )

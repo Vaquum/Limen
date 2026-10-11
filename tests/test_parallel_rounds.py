@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -26,6 +27,7 @@ from limen.backtest.trade_contract import json_value
 from limen.backtest.trade_execution import trade_execution
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
+from limen.experiment._parallel_worker import freeze_sources
 from limen.experiment.manifest_core import MLManifest
 from limen.inference import Trainer
 from limen.yaml import CompiledSFD, build_search_strategy, validate
@@ -33,11 +35,17 @@ from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
 from tests.test_experiment_objective import objective_config
 from tests.test_record_model_outputs import _config as output_config
-from tests.test_record_model_outputs import recorded_source
+from tests.test_record_model_outputs import recorded_source as _recorded_source
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
 _TRANSIENT = {'execution_time'}
+
+
+def recorded_source(**kwargs):
+    data = _recorded_source(**kwargs)
+    interval = (data['datetime'][1] - data['datetime'][0]).total_seconds()
+    return data.with_columns(pl.lit(interval).alias('base_interval'))
 
 
 def parallel_config(*, strategy='grid', objective=False, walk_forward=False):
@@ -374,7 +382,8 @@ def _subprocess_campaign(config_path, output, marker_directory, mode):
 
 @pytest.mark.parametrize('phase', ('zero', 'outstanding', 'final', 'group'))
 def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns, phase):
-    config = parallel_config(walk_forward=True)
+    campaign = 'grid' if phase == 'zero' else 'folds'
+    config = parallel_campaigns[campaign][0]
     config_path = tmp_path / 'campaign.yaml'
     _write_yaml(config, config_path)
     directory, markers = tmp_path / 'stopped', tmp_path / 'markers'
@@ -402,8 +411,11 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
     prefix = checkpoint['metadata']['experiment_round'] + 1
     assert prefix == (3 if phase == 'final' else 0)
     assert assert_artifacts(directory).height == prefix
-    run_loop(config, directory, resume=True)
-    assert_runs_equal(directory, parallel_campaigns['folds'][2])
+    resumed = run_loop(config, directory, resume=True)
+    if phase == 'zero':
+        assert resumed.experiment_log.schema['val_backtest_total_return'] == pl.Float64
+        assert resumed.experiment_log['val_backtest_total_return'].is_finite().all()
+    assert_runs_equal(directory, parallel_campaigns[campaign][2])
 
 
 def test_parallel_yaml_imports_first_in_fresh_process():
@@ -415,14 +427,24 @@ def test_parallel_yaml_imports_first_in_fresh_process():
 
 @pytest.mark.parametrize('mode', ('strict', 'all_strict', 'fatal', 'dead'))
 def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
-    config = parallel_config()
+    config = parallel_config(objective=mode == 'all_strict')
     config['uel'].pop('pruning_strategies')
-    config['uel']['n_permutations'] = 4
+    config['uel']['n_permutations'] = 5 if mode == 'all_strict' else 4
     directory = tmp_path / 'failure'
     with controlled_pool(tmp_path / 'markers', mode):
         if mode in ('fatal', 'dead'):
             with pytest.raises(RuntimeError, match=r'worker|process|fatal|terminated'):
                 run_loop(config, directory, workers=4)
+        elif mode == 'all_strict':
+            def stop_strict_prefix(log, msq):
+                assert log.schema['val_backtest_total_return'] == pl.Float64
+                if log.height == 3:
+                    loop._shutdown_requested = True
+
+            loop = make_loop(config, directory, callback=stop_strict_prefix)
+            loop.run(config['metadata']['name'], n_permutations=5,
+                     prep_each_round=True, progress_bar=False, workers=4,
+                     record_execution=True, record_model_outputs=True)
         else:
             run_loop(config, directory, workers=4)
     frame = assert_artifacts(directory)
@@ -432,11 +454,38 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         assert frame['strict_mode_error'].is_not_null().to_list() == [True, False, True, False]
         assert [row['_round_index'] for row in records(directory)] == [1, 3]
     elif mode == 'all_strict':
-        assert frame.height == 4 and frame['strict_mode_error'].null_count() == 0
+        assert frame.height == 3 and frame['strict_mode_error'].null_count() == 0
         assert records(directory) == []
+        feedback_heights = []
+
+        def numeric_feedback(log, msq):
+            assert log.schema['val_backtest_total_return'] == pl.Float64
+            assert log['val_backtest_total_return'].drop_nulls().is_finite().all()
+            feedback_heights.append(log.height)
+
+        resumed = run_loop(config, directory, resume=True, callback=numeric_feedback)
+        assert feedback_heights == [5]
+        scores = resumed.experiment_log['val_backtest_total_return']
+        assert scores.dtype == pl.Float64 and scores.null_count() == 3
+        assert scores.drop_nulls().is_finite().all()
+        assert [row['_round_index'] for row in records(directory)] == [3, 4]
     else:
         run_loop(config, directory, resume=True)
         assert assert_artifacts(directory).height == 4
+
+
+def test_parallel_freezes_declared_execution_source_independently():
+    manifest = CompiledSFD(parallel_config(objective=True)).manifest()
+    source = manifest.data_source_config
+    manifest.backtest_config = replace(manifest.backtest_config, execution_data_source=source)
+    learning = recorded_source()
+    declared = pl.read_parquet(FIXTURE)
+    assert declared.height > learning.height
+    with patch('limen.experiment._parallel_worker.DataSourceResolver.resolve', return_value=declared) as resolve:
+        frozen = freeze_sources(manifest, learning)
+    resolve.assert_called_once_with(source)
+    assert_frame_equal(frozen.learning, learning)
+    assert_frame_equal(frozen.execution, declared)
 
 
 def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_campaigns, tmp_path):
