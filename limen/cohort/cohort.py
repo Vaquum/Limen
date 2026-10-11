@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 from typing import ClassVar
@@ -12,6 +13,7 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
+from limen.cohort._round_sources import RoundSources
 from limen.inference.sensor import BarPrediction
 from limen.inference.sensor import PredictionReason
 from limen.yaml.config import is_mapping
@@ -21,11 +23,7 @@ from limen.yaml.store import SHA256_PREFIX
 class Cohort:
 
     '''
-    Construct a decoder cohort from a completed experiment and selected permutations.
-
-    This initial constructor implementation focuses on source resolution and
-    permutation_id validation. Prediction and aggregation behavior are added
-    separately.
+    Combine explicitly selected, reconstructed sensors for inference.
     '''
 
     _PROBABILITY_CAPABLE_HINTS = (
@@ -51,6 +49,8 @@ class Cohort:
     }
 
     _logger = logging.getLogger(__name__)
+    member_ids: list[tuple[str | None, str]]
+    architecture_id: str
 
     def __init__(self,
                  *,
@@ -58,30 +58,36 @@ class Cohort:
                  experiment_log_path: str | None = None,
                  permutation_ids: list[str] | None = None,
                  selector: str | Selector | None = None,
-                 selector_params: Any = None) -> None:
-        '''
-        Construct an inference-only Cohort from one experiment source and selected permutations.
-
-        Args:
-            experiment_id (str | None): Experiment identifier used to resolve one
-                experiment directory containing decoder permutations.
-            experiment_log_path (str | None): Explicit path to an experiment
-                directory used to reconstruct selected decoders.
-            permutation_ids (list[str] | None): Specific permutation IDs to
-                include. If omitted, all available permutations in the resolved
-                experiment are selected.
-            selector (str | Selector | None): Built-in selector name or callable
-                using the `select(context, **params) -> list[str]`
-                contract. Defaults to `all` when permutation_ids is omitted.
-            selector_params (dict[str, Any] | None): Keyword arguments passed to
-                the selector callable.
-
-        Returns:
-            None
-
-        '''
+                 selector_params: Any = None,
+                 rounds: list[tuple[str | Path, str]] | None = None) -> None:
+        '''Select named rounds across sources, or use the existing single-source selectors.'''
 
         super().__init__()
+
+        self._round_sources: RoundSources[Cohort] | None = None
+        if rounds is not None:
+            if any(arg is not None for arg in (experiment_id, experiment_log_path, permutation_ids, selector, selector_params)):
+                raise ValueError('Cohort rounds conflicts with single-source or selector arguments.')
+            selected: RoundSources[Cohort] = RoundSources(
+                rounds, lambda path, ids: type(self)(experiment_log_path=str(path), permutation_ids=ids),
+                self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id)
+            source = next(iter(selected.sources.values()))
+            single = len(selected.sources) == 1
+            self.experiment_dir = source.experiment_dir if single else None
+            self.experiment_id = source.experiment_id if single else None
+            self.available_permutation_ids = source.available_permutation_ids if single else None
+            self.permutation_ids = source.permutation_ids if single else None
+            self.metadata = source.metadata if single else None
+            self.manifest_id = selected.manifest_id
+            self.architecture_id = selected.architecture_id
+            self.supports_probabilities = source.supports_probabilities
+            self.aggregation_mode = source.aggregation_mode
+            self.member_ids = [(mid, pid) for mid, pid in selected.member_ids]
+            self.source_metadata = selected.source_metadata
+            self.cohort_id = None
+            self._members = []
+            self._round_sources = selected
+            return
 
         if experiment_id is None and experiment_log_path is None:
             raise ValueError(
@@ -182,11 +188,23 @@ class Cohort:
         self.manifest_id: str | None = metadata.get('manifest_id')
         self.cohort_id: str | None = None
         self._members: list[Any] = []
+        self.member_ids = [(self.manifest_id, pid) for pid in selected_ids]
+        self.source_metadata = {experiment_dir: metadata}
 
     def set_members(self, members: list[Any]) -> None:
 
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
+
+        if self._round_sources is not None:
+            bound = self._round_sources.bind(members)
+            payload = json.dumps(self._round_sources.identity(self.aggregation_mode), sort_keys=True)
+            self._members = bound
+            self.cohort_id = f'{SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
+            return
+
+        assert self.permutation_ids is not None
+        assert self.metadata is not None
 
         if len(members) != len(self.permutation_ids):
             raise ValueError(
@@ -261,20 +279,7 @@ class Cohort:
 
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
-        '''
-        Run all member sensors on raw klines and return one aggregated prediction for the last bar.
-
-        Args:
-            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
-                the manifest data source
-
-        Returns:
-            BarPrediction: Aggregated prediction for the last bar
-
-        Raises:
-            RuntimeError: If no members have been bound via set_members()
-
-        '''
+        '''Return the aggregate for the members' aligned last bar.'''
 
         self._assert_members()
         member_bars = [m.predict(raw_klines) for m in self._members]
@@ -283,21 +288,7 @@ class Cohort:
 
     def predict_all(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
 
-        '''
-        Run all member sensors on raw klines and return one aggregated prediction per bar.
-
-        Args:
-            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
-                the manifest data source
-
-        Returns:
-            list[BarPrediction]: One aggregated entry per bar in the post-bar-formation data
-
-        Raises:
-            RuntimeError: If no members have been bound via set_members()
-            ValueError: If member sensors return different-length prediction lists
-
-        '''
+        '''Aggregate aligned member predictions for every formed bar.'''
 
         self._assert_members()
 
@@ -338,31 +329,25 @@ class Cohort:
 
     def _aggregate_bar_predictions(self, member_bars: list[BarPrediction]) -> BarPrediction:
 
-        '''
-        Aggregate per-member BarPredictions into one cohort-level BarPrediction.
-
-        Args:
-            member_bars (list[BarPrediction]): One prediction per bound member,
-                all sharing the same datetime
-
-        Returns:
-            BarPrediction: Aggregated prediction for the bar
-
-        Raises:
-            ValueError: If member_bars is empty, or if any member has a None
-                probability in probability_weighted mode, or a None prediction
-                in majority_vote mode
-
-        '''
+        '''Aggregate aligned member outputs using existing blocking and error rules.'''
 
         if not member_bars:
             raise ValueError('Cohort member_bars must be a non-empty list.')
 
-        dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
-
         valid_bars = [b for b in member_bars if b.reason != 'sensor-error']
+        dt = next((b.datetime for b in valid_bars if b.datetime is not None), None)
         if not valid_bars:
+            dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
             return BarPrediction(datetime=dt, prediction=None, probability=None, reason='sensor-error')
+
+        for i, bar in enumerate(member_bars):
+            if bar.reason == 'sensor-error':
+                continue
+            member_id = self.member_ids[i] if i < len(self.member_ids) else i
+            if bar.reason is None and bar.datetime is None:
+                raise ValueError(f'Cohort member {member_id}: actionable prediction requires a timestamp.')
+            if bar.datetime is not None and bar.datetime != dt:
+                raise ValueError(f'Cohort member {member_id}: prediction timestamps do not align.')
 
         if len(valid_bars) < len(member_bars):
             n_errors = len(member_bars) - len(valid_bars)
@@ -538,9 +523,9 @@ class Cohort:
         return next(iter(architecture_ids))
 
     @classmethod
-    def _extract_architecture_id(cls, round_entry: dict[str, Any], metadata: dict[str, Any]) -> str:
+    def _extract_architecture_id(cls, round_entry: Mapping[str, object], metadata: Mapping[str, object]) -> str:
 
-        round_params = round_entry.get('round_params', {})
+        round_params = cast(Mapping[str, object], round_entry.get('round_params', {}))
         for key in (
             'architecture',
             'model_architecture',
@@ -564,7 +549,7 @@ class Cohort:
         return 'unknown_architecture'
 
     @staticmethod
-    def _extract_yaml_reference_architecture(metadata: dict[str, Any]) -> str | None:
+    def _extract_yaml_reference_architecture(metadata: Mapping[str, object]) -> str | None:
 
         yaml_reference = metadata.get('yaml_reference')
         if not is_mapping(yaml_reference):
