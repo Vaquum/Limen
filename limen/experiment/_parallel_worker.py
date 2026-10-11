@@ -12,7 +12,6 @@ from importlib import import_module
 from inspect import isfunction
 from pathlib import Path
 from string import Formatter
-from types import FunctionType
 from typing import Callable, Protocol, cast
 
 import polars as pl
@@ -63,7 +62,7 @@ class _ThreadLimits(Protocol):
 
 def _shape(value: object) -> object:
     if isfunction(value):
-        function = cast(FunctionType, value)
+        function = value
         if function.__module__ == 'limen.experiment.manifest_core' and function.__qualname__ in _SCALER_FACTORIES:
             return (function.__code__, _shape(function.__defaults__),
                     _shape(tuple(cell.cell_contents for cell in function.__closure__ or ())))
@@ -118,7 +117,7 @@ def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
     devices = effective.get('device_type', effective.get('device', ['cpu']))
     if any(value != 'cpu' for value in devices):
         raise ValueError('Parallel rounds require the CPU backend')
-    sources = [manifest.data_source_config]
+    sources: list[object] = [manifest.data_source_config]
     config = manifest.backtest_config
     if config is not None:
         sources.extend((config.execution_data_source, config.funding.data_source if config.funding is not None else None))
@@ -141,8 +140,6 @@ def freeze_sources(manifest: Manifest, learning: pl.DataFrame) -> FrozenRoundSou
             if not isinstance(source, DataSourceConfig):
                 raise ValueError('Parallel rounds require reconstructable declared sources')
             frame = learning if source == manifest.data_source_config else DataSourceResolver.resolve(source)
-            if not isinstance(frame, pl.DataFrame):
-                raise ValueError('Parallel sources must return Polars DataFrames')
             frames.append(frame.clone())
     return FrozenRoundSources(learning.clone(), frames[0], frames[1])
 
@@ -195,6 +192,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
     started = time.perf_counter_ns()
     params = {key: value for key, value in round_params.items() if not key.startswith('_')}
     alignment: dict[str, object] = {}
+    results: dict[str, object] = {}
     succeeded = False
     caught: list[warnings.WarningMessage] = []
     limit = cast(Callable[..., _ThreadLimits], vars(import_module('threadpoolctl'))['threadpool_limits'])

@@ -6,7 +6,7 @@ import math
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import polars as pl
 
@@ -15,13 +15,11 @@ from limen.experiment._objective_run import finalize_objective_result, validate_
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
+from limen.experiment.manifest_core import Manifest
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
-
-if TYPE_CHECKING:
-    from limen.experiment.experiment_core import UniversalExperimentLoop
 
 __all__ = ['restore_parallel']
 
@@ -85,10 +83,11 @@ def _evidence(record: Mapping[str, object], *, execution: bool, outputs: bool) -
             raise ValueError('Cannot resume parallel run with inconsistent recorded predictions')
 
 
-def restore_parallel(host: UniversalExperimentLoop, msq: MSQ, domain: ParamDomain,
+def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                      feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                      *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path) -> int:
     attributes = cast(dict[str, object], vars(host))
+    manifest = cast(Manifest | None, getattr(host, 'manifest'))
     directory = attributes.get('_experiment_dir')
     strategy = attributes.get('_search_strategy')
     if not isinstance(directory, Path) or not isinstance(strategy, SearchStrategy):
@@ -99,14 +98,14 @@ def restore_parallel(host: UniversalExperimentLoop, msq: MSQ, domain: ParamDomai
     for key in ('record_execution', 'record_model_outputs', 'factorize'):
         if metadata.get(key, False) != attributes[f'_{key}']:
             raise ValueError(f'Cannot resume with a different {key} setting')
-    validate_objective_resume(host.manifest, metadata, csv_path)
-    validate_walk_forward_resume(host.manifest, metadata)
+    validate_objective_resume(manifest, metadata, csv_path)
+    validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
     saved = _mapping(checkpoint['metadata'], 'checkpoint metadata')
     frontier = saved['experiment_round']
-    if type(frontier) is not int or cast(int, frontier) < -1:
+    if type(frontier) is not int or frontier < -1:
         raise ValueError('Cannot resume parallel run with invalid terminal frontier')
-    start = cast(int, frontier) + 1
+    start = frontier + 1
     msq_state = _mapping(checkpoint['msq_state'], 'MSQ state')
     if type(msq_state.get('yielded_count')) is not int or msq_state['yielded_count'] != start:
         raise ValueError('Parallel checkpoint draw state differs from its terminal frontier')
@@ -120,7 +119,7 @@ def restore_parallel(host: UniversalExperimentLoop, msq: MSQ, domain: ParamDomai
         raise ValueError('Cannot resume parallel run without a contiguous terminal CSV prefix')
     if any(row.get('_id', row['id']) != row['id'] for row in rows):
         raise ValueError('Cannot resume parallel run with mismatched CSV occurrence identity')
-    if getattr(host.manifest, 'ablation_config', None) is not None and '_dropped_features' not in header:
+    if getattr(manifest, 'ablation_config', None) is not None and '_dropped_features' not in header:
         raise ValueError('Cannot resume ablation results without _dropped_features')
     expected = [(index, str(row['id'])) for index, row in enumerate(rows) if not row['strict_mode_error']]
     committed: list[dict[str, object]] = []
@@ -158,7 +157,7 @@ def restore_parallel(host: UniversalExperimentLoop, msq: MSQ, domain: ParamDomai
     if '_convergence_warning' not in log.columns:
         log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
     for index, row in enumerate(log.iter_rows(named=True)):
-        finalize_objective_result(host.manifest, row, not rows[index]['strict_mode_error'])
+        finalize_objective_result(manifest, row, not rows[index]['strict_mode_error'])
     domain.set_state(_mapping(checkpoint['domain_state'], 'domain state'))
     msq.set_state(msq_state)
     if 'feedback_controller_state' in checkpoint:
@@ -175,7 +174,7 @@ def restore_parallel(host: UniversalExperimentLoop, msq: MSQ, domain: ParamDomai
             _ = forward.restore(round_data_path, start, expected)
         else:
             forward.writer.clear()
-    host.experiment_log = log
+    setattr(host, 'experiment_log', log)
     _ = round_data_path.write_text(''.join(line + '\n' for line in lines))
     log.write_csv(csv_path)
     return start

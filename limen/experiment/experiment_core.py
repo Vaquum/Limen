@@ -129,8 +129,8 @@ class UniversalExperimentLoop:
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
         from limen.yaml.compiler import CompiledSFD
-        self._compiled_yaml = copy.deepcopy(sfd._yaml) if type(sfd) is CompiledSFD else None
-        self._workers = 1
+        self._compiled_yaml = cast(dict[str, object], copy.deepcopy(getattr(sfd, '_yaml'))) if type(sfd) is CompiledSFD else None
+        self._workers: int = 1
         self._parallel_sources: FrozenRoundSources | None = None
         self._walk_forward: WalkForwardRun | None = None
         self._record_execution = False
@@ -174,8 +174,8 @@ class UniversalExperimentLoop:
             workers: int | None = None) -> None:
         original_prep, original_model = self.prep, self.model
         metadata_path = self._experiment_dir / 'metadata.json' if self._experiment_dir is not None else None
-        metadata = json.loads(metadata_path.read_text()) if resume and metadata_path is not None and metadata_path.exists() else {}
-        effective_workers = metadata.get('workers', 1) if workers is None else workers
+        metadata: dict[str, object] = json.loads(metadata_path.read_text()) if resume and metadata_path is not None and metadata_path.exists() else {}
+        effective_workers = cast(int, metadata.get('workers', 1)) if workers is None else workers
         if resume and (effective_workers != metadata.get('workers', 1) or metadata.get('worker_native_threads', 1) != 1):
             raise ValueError('Cannot resume with a different worker or native-thread policy')
         self.check_parallel_admission(effective_workers, prep_each_round, post_processing=post_processing,
