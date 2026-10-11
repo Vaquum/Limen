@@ -15,6 +15,7 @@ from types import SimpleNamespace
 import numpy as np
 import polars as pl
 import pytest
+from sklearn.exceptions import ConvergenceWarning
 
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment._factorize import FactorizedRounds
@@ -30,6 +31,14 @@ from tests.fixtures.factorize.generate import (
 )
 
 GOLDENS = Path(__file__).parent / 'fixtures/factorize'
+
+
+def _original_surface(captured: dict) -> dict:
+    # Main added this evidence column after the immutable source snapshot.
+    return {**captured,
+            'columns': [key for key in captured['columns'] if key != '_convergence_warning'],
+            'rows': [{key: value for key, value in row.items() if key != '_convergence_warning'}
+                     for row in captured['rows']]}
 
 
 def _loop(case: str, directory: Path, *, settings: dict | None = None, **kwargs: object) -> UniversalExperimentLoop:
@@ -89,11 +98,11 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
         assert baseline['market_sha256'] == hashlib.sha256(MARKET.read_bytes()).hexdigest()
         off = execute(name, tmp_path / name / 'off')
         on = execute(name, tmp_path / name / 'on', factorize=True)
-        off_digest, on_digest = digest(off), digest(on)
+        off_digest, on_digest = digest(_original_surface(off)), digest(_original_surface(on))
         # Frozen goldens require the locked Linux/Python 3.10 numerical runtime.
         if sys.platform == 'linux' and sys.version_info[:2] == (3, 10) and np.__version__ == '2.2.6':
             if off_digest != baseline['digest_12dp']:
-                actual = component_digests(off)
+                actual = component_digests(_original_surface(off))
                 differences = {key: (expected, actual.get(key))
                                for key, expected in baseline['component_digests'].items()
                                if actual.get(key) != expected}
@@ -101,7 +110,9 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
             assert on_digest == baseline['digest_12dp'], f'{name}: original Limen vs factorized'
         else:
             assert off_digest == on_digest, f'{name}: current on/off parity'
-        assert off['columns'] == on['columns'] == baseline['columns']
+        assert off['columns'] == on['columns']
+        assert _original_surface(off)['columns'] == baseline['columns']
+        assert all(row['_convergence_warning'] == 'False' for row in on['rows'])
         assert len(off['rows']) == len(on['rows']) == baseline['row_count']
         assert [r['round_id'] for r in on['round_data']] == baseline['round_ids']
         assert [{k:v for k,v in row.items() if k != 'execution_time'} for row in off['rows']] == [
@@ -127,7 +138,7 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
 
     altered = copy.deepcopy(off)
     altered['rows'][0][col] = '123.123456789124'
-    assert digest(altered) != off_digest
+    assert digest(_original_surface(altered)) != off_digest
     assert canonical(1.000000000001) != canonical(1.000000000002)
     assert canonical(-0.0) != canonical(0.0)
     assert canonical(float('nan')) != canonical(None)
@@ -291,7 +302,7 @@ def test_cache_releases_fitted_model_and_rejects_new_candidates(tmp_path: Path) 
                               prep=loop.manifest.prepare_data, model=loop.manifest.run_model, data=loop.data,
                               record_execution=True, record_model_outputs=True)
     params = {key: values[0] for key, values in domain.items()}
-    data, result, _ = rounds.evaluate(params)
+    data, result, _, _ = rounds.evaluate(params)
     fitted = weakref.ref(result['_model'])
     del data, result
     assert fitted() is None
@@ -387,3 +398,23 @@ def test_failed_round_warning_parity(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert all(row['_warnings'] == '["signal-preparation-warning"]' for row in output[0])
     assert [{k:v for k,v in row.items() if k != 'execution_time'} for row in output[0]] == [
         {k:v for k,v in row.items() if k != 'execution_time'} for row in output[1]]
+
+
+def test_cached_convergence_evidence_matches_ordinary_rounds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    reports = []
+    for enabled in (False, True):
+        loop = _loop('directional_barriers', tmp_path / str(enabled))
+        owner = type(loop.manifest)
+        original = owner.run_model
+
+        def model(*args: object, **kwargs: object) -> dict:
+            warnings.warn('Recorded signal convergence evidence', ConvergenceWarning, stacklevel=2)
+            return original(*args, **kwargs)
+
+        with monkeypatch.context() as instrumentation:
+            instrumentation.setattr(owner, 'run_model', model)
+            loop.run('convergence', n_permutations=8, prep_each_round=True,
+                     factorize=enabled, progress_bar=False)
+        assert loop.experiment_log['_convergence_warning'].to_list() == [True] * 8
+        reports.append(loop.convergence_report)
+    assert reports[0] == reports[1]

@@ -18,6 +18,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.experiment.errors import StrictModeError
+from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
@@ -148,6 +149,7 @@ class _Cached:
     result: dict[str, object]
     warnings: list[str]
     positions: dict[str, npt.NDArray[np.int64]] | None
+    convergence: bool
 
 
 class FactorizedRounds:
@@ -185,7 +187,7 @@ class FactorizedRounds:
         if self.intervention_path is not None and self.intervention_path.exists():
             _fail('interventions are not supported')
 
-    def evaluate(self, params: dict[str, object]) -> tuple[dict[str, object], dict[str, object], list[str]]:
+    def evaluate(self, params: dict[str, object]) -> tuple[dict[str, object], dict[str, object], list[str], bool]:
         self._check_interventions()
         if set(params) != set(self.domain) or any(not any(type(value) is type(admitted) and value == admitted for admitted in self.domain[key]) for key, value in params.items()):
             _fail('candidate is outside the preflight domain')
@@ -227,8 +229,9 @@ class FactorizedRounds:
                 for split in positions:
                     frame = cast(pl.DataFrame, data[split])
                     evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
-            self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions)
-            return data, result, recorded
+            converged_warning = bool(convergence_warning(caught, True))
+            self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions, converged_warning)
+            return data, result, recorded, converged_warning
 
         data = dict(entry.data)
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
@@ -264,4 +267,4 @@ class FactorizedRounds:
                 result = {name: fresh.get(name, value)
                           for name, value in entry.result.items()}
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))
-        return data, result, recorded
+        return data, result, recorded, entry.convergence or bool(convergence_warning(caught, True))

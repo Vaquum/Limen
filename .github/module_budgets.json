@@ -68,6 +68,7 @@
   "limen/data/utils/splits.py": 150,
   "limen/experiment/__init__.py": 20,
   "limen/experiment/acceptance_report.py": 160,
+  "limen/experiment/convergence_report.py": 100,
   "limen/experiment/checkpoint_manager.py": 220,
   "limen/experiment/errors.py": 10,
   "limen/experiment/experiment_core.py": 1020,
@@ -445,5 +446,5 @@
   "limen/experiment/_walk_forward_split.py": 90,
   "limen/experiment/_walk_forward_run.py": 190,
   "limen/log/_permutation_returns.py": 40,
-  "limen/experiment/_factorize.py": 245
+  "limen/experiment/_factorize.py": 250
 }
