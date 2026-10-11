@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import logging
 import multiprocessing
 from collections import deque
@@ -29,9 +30,16 @@ from limen.experiment.reducer.pruning_strategy import PruningStrategy
 logger = logging.getLogger(__name__)
 
 
-def admit_parallel(host: object, workers: int, prep_each_round: object,
-                   *, post_processing: bool, factorize: bool,
-                   context_params: dict[str, object] | None) -> None:
+def configuration(sfd: object, yaml_reference: dict[str, object] | None) -> tuple[dict[str, object] | None, dict[str, object] | None, int, FrozenRoundSources | None]:
+    from limen.yaml.compiler import CompiledSFD
+
+    compiled = cast(dict[str, object], copy.deepcopy(vars(sfd)['_yaml'])) if type(sfd) is CompiledSFD else None
+    return copy.deepcopy(yaml_reference), compiled, 1, None
+
+
+def admit_parallel(host: object, workers: int, prep_each_round: bool,
+                   *, post_processing: bool = False, factorize: bool = False,
+                   context_params: dict[str, object] | None = None) -> None:
     attributes = cast(dict[str, object], vars(host))
     if type(workers) is not int or workers < 1:
         raise ValueError('workers must be a positive integer')
@@ -50,6 +58,45 @@ def admit_parallel(host: object, workers: int, prep_each_round: object,
     if attributes['_parallel_sources'] is None:
         attributes['_parallel_sources'] = freeze_sources(manifest, cast(pl.DataFrame, attributes['data']))
     attributes['_yaml_reference'] = copy.deepcopy(reference)
+
+
+_RoundFunction = Callable[..., dict[str, object]]
+
+
+def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: bool,
+              post_processing: bool, factorize: bool, context_params: dict[str, object] | None,
+              overrides: tuple[object, object, object]) -> tuple[_RoundFunction | None, _RoundFunction | None]:
+    attributes = cast(dict[str, object], vars(host))
+    directory = cast(Path | None, attributes['_experiment_dir'])
+    path = directory / 'metadata.json' if directory is not None else None
+    metadata: dict[str, object] = json.loads(path.read_text()) if resume and path is not None and path.exists() else {}
+    effective = cast(int, metadata.get('workers', 1)) if workers is None else workers
+    if resume and (effective != metadata.get('workers', 1) or metadata.get('worker_native_threads', 1) != 1):
+        raise ValueError('Cannot resume with a different worker or native-thread policy')
+    if type(effective) is int and effective > 1 and any(value is not None for value in overrides):
+        raise ValueError('Parallel rounds reject parameter, preparation and model overrides')
+    admit_parallel(host, effective, prep_each_round, post_processing=post_processing,
+                   factorize=factorize, context_params=context_params)
+    attributes.update(_workers=effective, _shutdown_requested=False)
+    return cast(_RoundFunction | None, attributes['prep']), cast(_RoundFunction | None, attributes['model'])
+
+
+def worker_metadata(workers: int, metadata: dict[str, object]) -> dict[str, object]:
+    if workers > 1:
+        metadata.update(workers=workers, worker_native_threads=1)
+    return metadata
+
+
+def dispatch(host: object, components: dict[str, object], n_permutations: int,
+             context_params: dict[str, object] | None, resume: bool, progress_bar: bool) -> bool:
+    if cast(dict[str, object], vars(host))['_workers'] == 1:
+        return False
+    run_parallel(host, cast(MSQ, components['msq']), cast(ParamDomain, components['domain']),
+                 cast(FeedbackController, components['feedback_controller']), cast(CheckpointManager, components['checkpoint_manager']),
+                 content_hash=cast(str, components['content_hash']), strategy_type=cast(str, components['strategy_type']),
+                 csv_path=cast(Path, components['csv_path']), round_data_path=cast(Path | None, components['round_data_path']),
+                 n_permutations=n_permutations, context_params=context_params, resume=resume, progress_bar=progress_bar)
+    return True
 
 
 def _reap(pool: ProcessPoolExecutor) -> None:

@@ -309,7 +309,7 @@ def test_parallel_workers_native_rejects_before_artifacts(tmp_path, workers):
     assert not (tmp_path / 'invalid').exists()
 
 
-@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'architecture', 'context', 'prepare_once'))
+@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'architecture', 'context', 'prepare_once', 'params_override', 'prep_override', 'model_override'))
 def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
     config = parallel_config()
     if case in ('n_jobs', 'null_jobs', 'negative_jobs'):
@@ -323,9 +323,24 @@ def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
     if case == 'custom':
         loop.model = lambda data, round_params: {}
     options = {'factorize': True} if case == 'factorize' else {'post_processing': True} if case == 'post_processing' else {'context_params': {'n_jobs': 2}} if case == 'context' else {}
+    if case.endswith('_override'):
+        options = {case.removesuffix('_override'): lambda: {}}
     with pytest.raises((ValueError, TypeError), match=r'(?i)parallel|workers|n_jobs|MSQ|compiled|factorize|post_processing|prep_each_round|preparation'):
         loop.run('invalid_parallel', workers=4, prep_each_round=case != 'prepare_once', progress_bar=False, **options)
     assert not path.exists()
+    assert loop._parallel_sources is None
+    if case.endswith('_override'):
+        loop.data = recorded_source().slice(12, 900)
+
+        def observe_fresh_sources(*args, **kwargs):
+            assert_frame_equal(loop._parallel_sources.learning, loop.data)
+            raise RuntimeError('recorded fresh-source control boundary')
+
+        with patch.object(loop, '_run', side_effect=observe_fresh_sources):
+            with pytest.raises(RuntimeError, match='recorded fresh-source control boundary'):
+                loop.run('fresh_admission', workers=4, prep_each_round=True, progress_bar=False)
+        assert not path.exists()
+        assert loop._parallel_sources is None
 
 
 def test_parallel_cli_rejects_bad_workers_without_output(tmp_path):

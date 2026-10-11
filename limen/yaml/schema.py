@@ -65,8 +65,7 @@ CALIBRATION_FUNC_OPTIONAL = {'params'}
 
 UEL_REQUIRED = {'n_permutations'}
 UEL_OPTIONAL = {
-    'workers',
-    'record_execution',
+    'workers', 'record_execution',
     'record_model_outputs',
     'factorize',
     'search_strategy',

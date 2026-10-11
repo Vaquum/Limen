@@ -12,7 +12,6 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 from typing import Any
-from typing import cast
 
 import pandas as pd
 import polars as pl
@@ -33,7 +32,7 @@ from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 from limen.experiment.manifest_core import Manifest, RuleBasedManifest
 from limen.yaml.store import canonical_manifest_id
-from limen.experiment._parallel_worker import FrozenRoundSources
+import limen.experiment._parallel_rounds as _parallel
 
 logger = logging.getLogger(__name__)
 
@@ -127,11 +126,7 @@ class UniversalExperimentLoop:
         self._checkpoint_interval = checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
-        self._yaml_reference = copy.deepcopy(yaml_reference)
-        from limen.yaml.compiler import CompiledSFD
-        self._compiled_yaml = cast(dict[str, object], copy.deepcopy(vars(sfd)['_yaml'])) if type(sfd) is CompiledSFD else None
-        self._workers: int = 1
-        self._parallel_sources: FrozenRoundSources | None = None
+        self._yaml_reference, self._compiled_yaml, self._workers, self._parallel_sources = _parallel.configuration(sfd, yaml_reference)
         self._walk_forward: WalkForwardRun | None = None
         self._record_execution = False
         self._record_model_outputs = False
@@ -154,36 +149,16 @@ class UniversalExperimentLoop:
     def fold_results(self) -> pl.DataFrame:
         return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
 
-    def check_parallel_admission(self, workers: int, prep_each_round: bool,
-                                 *, post_processing: bool = False, factorize: bool = False,
-                                 context_params: dict[str, object] | None = None) -> None:
-        from limen.experiment._parallel_rounds import admit_parallel
-        admit_parallel(self, workers, prep_each_round, post_processing=post_processing,
-                       factorize=factorize, context_params=context_params)
+    check_parallel_admission = _parallel.admit_parallel
 
     def run(self, experiment_name: str, n_permutations: int = 10000,
-            prep_each_round: bool = False, random_search: bool = True,
-            maintain_details_in_params: bool = False,
-            context_params: dict[str, object] | None = None,
-            params: Callable[[], dict[str, object]] | None = None,
-            prep: Callable[..., dict[str, object]] | None = None,
-            model: Callable[..., dict[str, object]] | None = None,
+            prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
+            context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
+            prep: Callable[..., dict[str, object]] | None = None, model: Callable[..., dict[str, object]] | None = None,
             resume: bool = False, post_processing: bool = False,
             progress_bar: bool = True, record_execution: bool = False,
-            record_model_outputs: bool = False, factorize: bool = False,
-            workers: int | None = None) -> None:
-        original_prep, original_model = self.prep, self.model
-        metadata_path = self._experiment_dir / 'metadata.json' if self._experiment_dir is not None else None
-        metadata: dict[str, object] = json.loads(metadata_path.read_text()) if resume and metadata_path is not None and metadata_path.exists() else {}
-        effective_workers = cast(int, metadata.get('workers', 1)) if workers is None else workers
-        if resume and (effective_workers != metadata.get('workers', 1) or metadata.get('worker_native_threads', 1) != 1):
-            raise ValueError('Cannot resume with a different worker or native-thread policy')
-        self.check_parallel_admission(effective_workers, prep_each_round, post_processing=post_processing,
-                                     factorize=factorize, context_params=context_params)
-        if effective_workers > 1 and any(value is not None for value in (params, prep, model)):
-            raise ValueError('Parallel rounds reject parameter, preparation and model overrides')
-        self._workers = effective_workers
-        self._shutdown_requested = False
+            record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None) -> None:
+        original_prep, original_model = _parallel.begin_run(self, workers, prep_each_round, resume, post_processing, factorize, context_params, (params, prep, model))
         self._walk_forward = None
         self.convergence_report = None
         try:
@@ -193,8 +168,7 @@ class UniversalExperimentLoop:
                           params, prep, model, resume, post_processing, progress_bar,
                           record_execution, record_model_outputs, factorize)
         finally:
-            self._parallel_sources = None
-            self._convergence_caught = []
+            self._parallel_sources, self._convergence_caught = None, []
             if self._walk_forward is not None:
                 self._walk_forward.finish()
                 self.prep, self.model = original_prep, original_model
@@ -535,13 +509,7 @@ class UniversalExperimentLoop:
         csv_path = components['csv_path']
         round_data_path = components['round_data_path']
 
-        if self._workers > 1:
-            from limen.experiment._parallel_rounds import run_parallel
-            run_parallel(self, cast(MSQ, msq), cast(ParamDomain, domain),
-                         cast(FeedbackController, feedback_controller), cast(CheckpointManager, checkpoint_manager),
-                         content_hash=content_hash, strategy_type=strategy_type, csv_path=csv_path,
-                         round_data_path=round_data_path, n_permutations=n_permutations,
-                         context_params=context_params, resume=resume, progress_bar=progress_bar)
+        if _parallel.dispatch(self, components, n_permutations, context_params, resume, progress_bar):
             return
 
         self._register_shutdown_handler()
@@ -1057,19 +1025,17 @@ class UniversalExperimentLoop:
                 'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. Trainer requires a reimportable SFD module.'
             )
 
-        metadata: dict[str, object] = {
+        metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
             'sfd_module': self._sfd_module_name,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
-        }
+        })
         if self._record_execution:
             metadata['record_execution'] = True
         if self._record_model_outputs:
             metadata['record_model_outputs'] = True
         if self._factorize:
             metadata['factorize'] = True
-        if self._workers > 1:
-            metadata.update(workers=self._workers, worker_native_threads=1)
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
             metadata['split_walk_forward'] = self._walk_forward.config.as_dict()

@@ -184,8 +184,7 @@ def profile_cmd(yaml_file: Path) -> None:
               help='Resume from a checkpoint directory instead of starting fresh.')
 @click.option('--no-progress-bar', is_flag=True, default=False,
               help='Disable the experiment progress bar.')
-@click.option('--workers', type=click.IntRange(min=1), default=None,
-              help='Concurrent rounds; overrides YAML, or uses saved settings with --resume.')
+@click.option('--workers', type=click.IntRange(min=1), default=None, help='Concurrent rounds; overrides YAML, or uses saved settings with --resume.')
 def run(target: str | None, dry_run: bool, resume: Path | None,
         no_progress_bar: bool, workers: int | None) -> None:
 
