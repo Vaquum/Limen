@@ -112,7 +112,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         pool = ProcessPoolExecutor(max_workers=workers,
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
-                                   initargs=(reference, sources, attributes['_record_execution'], attributes['_record_model_outputs']))
+                                   initargs=(reference, sources, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs'])))
         exhausted = False
         try:
             while not attributes['_shutdown_requested']:
