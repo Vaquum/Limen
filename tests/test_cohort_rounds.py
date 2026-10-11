@@ -157,12 +157,21 @@ def test_rounds_recorded_source_replay_and_aggregation(cohort_campaigns):
     # Votes use each selected member once, including unequal counts per source.
     cohort.aggregation_mode = 'majority_vote'
     votes = [member.predict_all(raw) for member in members]
-    for index, observed in enumerate(cohort.predict_all(raw)):
+    actual = cohort.predict_all(raw)
+    assert actual == cohort(raw)
+    for index, observed in enumerate(actual):
         row = [bars[index] for bars in votes]
         if all(bar.reason is None for bar in row):
             expected = sum(int(bar.prediction > 0.5) for bar in row) / len(row)
             assert observed.prediction == int(expected > 0.5)
             assert observed.probability is None
+    last = [member.predict(raw) for member in members]
+    prediction = cohort.predict(raw)
+    expected = sum(int(bar.prediction > 0.5) for bar in last) / len(last)
+    assert prediction.datetime == last[0].datetime
+    assert prediction.reason is None
+    assert prediction.prediction == int(expected > 0.5)
+    assert prediction.probability is None
     narrowed_members = [first.sensors[0], descendant.sensors[0]]
     narrowed = _bound([(first.directory, first.ids[0]), (descendant.directory, descendant.ids[0])], narrowed_members)
     _assert_probability_oracle(narrowed, narrowed_members, raw)
