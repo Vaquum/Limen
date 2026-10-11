@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 from typing import ClassVar
@@ -12,7 +13,7 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
-from limen.cohort._round_sources import _RoundSources
+from limen.cohort._round_sources import RoundSources
 from limen.inference.sensor import BarPrediction
 from limen.inference.sensor import PredictionReason
 from limen.yaml.config import is_mapping
@@ -49,6 +50,7 @@ class Cohort:
 
     _logger = logging.getLogger(__name__)
     member_ids: list[tuple[str | None, str]]
+    architecture_id: str
 
     def __init__(self,
                  *,
@@ -62,11 +64,13 @@ class Cohort:
 
         super().__init__()
 
-        self._round_sources: _RoundSources | None = None
+        self._round_sources: RoundSources[Cohort] | None = None
         if rounds is not None:
             if any(arg is not None for arg in (experiment_id, experiment_log_path, permutation_ids, selector, selector_params)):
                 raise ValueError('Cohort rounds conflicts with single-source or selector arguments.')
-            selected = _RoundSources(rounds, type(self))
+            selected: RoundSources[Cohort] = RoundSources(
+                rounds, lambda path, ids: type(self)(experiment_log_path=str(path), permutation_ids=ids),
+                self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id)
             source = next(iter(selected.sources.values()))
             single = len(selected.sources) == 1
             self.experiment_dir = source.experiment_dir if single else None
@@ -200,6 +204,7 @@ class Cohort:
             return
 
         assert self.permutation_ids is not None
+        assert self.metadata is not None
 
         if len(members) != len(self.permutation_ids):
             raise ValueError(
@@ -283,21 +288,7 @@ class Cohort:
 
     def predict_all(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
 
-        '''
-        Run all member sensors on raw klines and return one aggregated prediction per bar.
-
-        Args:
-            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
-                the manifest data source
-
-        Returns:
-            list[BarPrediction]: One aggregated entry per bar in the post-bar-formation data
-
-        Raises:
-            RuntimeError: If no members have been bound via set_members()
-            ValueError: If member sensors return different-length prediction lists
-
-        '''
+        '''Aggregate aligned member predictions for every formed bar.'''
 
         self._assert_members()
 
@@ -532,9 +523,9 @@ class Cohort:
         return next(iter(architecture_ids))
 
     @classmethod
-    def _extract_architecture_id(cls, round_entry: dict[str, Any], metadata: dict[str, Any]) -> str:
+    def _extract_architecture_id(cls, round_entry: Mapping[str, object], metadata: Mapping[str, object]) -> str:
 
-        round_params = round_entry.get('round_params', {})
+        round_params = cast(Mapping[str, object], round_entry.get('round_params', {}))
         for key in (
             'architecture',
             'model_architecture',
@@ -558,7 +549,7 @@ class Cohort:
         return 'unknown_architecture'
 
     @staticmethod
-    def _extract_yaml_reference_architecture(metadata: dict[str, Any]) -> str | None:
+    def _extract_yaml_reference_architecture(metadata: Mapping[str, object]) -> str | None:
 
         yaml_reference = metadata.get('yaml_reference')
         if not is_mapping(yaml_reference):

@@ -1,37 +1,58 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import Generic, Protocol, TypeVar, cast
 
-from limen.experiment.manifest_core import _resolve_params
+from limen.experiment import manifest_core
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
 
-if TYPE_CHECKING:
-    from limen.cohort.cohort import Cohort
+__all__ = ['RoundSources']
+
+_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
 
 
-class _RoundSources:
-    def __init__(self, rounds: list[tuple[str | Path, str]], source_type: type[Cohort]) -> None:
+class RoundSource(Protocol):
+    @property
+    def metadata(self) -> Mapping[str, object] | None: ...
+
+    @property
+    def manifest_id(self) -> str | None: ...
+
+    @property
+    def architecture_id(self) -> str: ...
+
+
+Source = TypeVar('Source', bound=RoundSource)
+
+
+class RoundSources(Generic[Source]):
+    def __init__(self, rounds: list[tuple[str | Path, str]],
+                 source_factory: Callable[[Path, list[str]], Source],
+                 load_entries: Callable[[Path], Mapping[str, Mapping[str, object]]],
+                 architecture: Callable[[Mapping[str, object], Mapping[str, object]], str],
+                 normalize_id: Callable[[int | str], str]) -> None:
+        super().__init__()
         if not rounds:
             raise ValueError('Cohort rounds must be a non-empty list.')
         grouped: dict[Path, list[str]] = {}
-        normalized = []
+        normalized: list[tuple[Path, str]] = []
         for directory, raw_pid in rounds:
             path = Path(directory).expanduser().resolve()
-            pid = source_type._normalize_permutation_id(raw_pid)
+            pid = normalize_id(raw_pid)
             grouped.setdefault(path, []).append(pid)
             normalized.append((path, pid))
 
-        self.sources: dict[Path, Cohort] = {}
-        self.member_sources: dict[tuple[str, str], Cohort] = {}
+        self.sources: dict[Path, Source] = {}
+        self.member_sources: dict[tuple[str, str], Source] = {}
         self.source_metadata: dict[Path, Mapping[str, object]] = {}
-        signatures = []
-        architectures = set()
+        self._architecture = architecture
+        signatures: list[object] = []
+        architectures: set[str] = set()
         for path, ids in grouped.items():
             try:
-                source = source_type(experiment_log_path=str(path), permutation_ids=ids)
+                source = source_factory(path, ids)
             except ValueError as exc:
                 raise ValueError(f'Cohort source {path}: {exc}') from exc
             metadata = source.metadata
@@ -48,12 +69,14 @@ class _RoundSources:
                 raise ValueError(f'Cohort source {path}: data source is required.')
             source_signature = (data_source.method, {k: v for k, v in data_source.params.items()
                                                     if k not in ('start_date_limit', 'end_date_limit')})
-            entries = source._load_round_entries(path / 'round_data.jsonl')
+            entries = load_entries(path / 'round_data.jsonl')
             for pid in ids:
                 key = (source.manifest_id, pid)
                 if key in self.member_sources:
                     raise ValueError(f'Cohort duplicate member {key} in source {path}.')
                 params = entries[pid]['round_params']
+                if not is_mapping(params):
+                    raise ValueError(f'Cohort member {key} in source {path}: round_params are required.')
                 bar_type = params.get('bar_type', 'base')
                 formation = None
                 if manifest.bar_formation and bar_type != 'base':
@@ -97,7 +120,7 @@ class _RoundSources:
             params = getattr(member, 'round_params', None)
             if not is_mapping(params):
                 raise ValueError(f'Cohort member {key}: round_params are required for architecture binding.')
-            if source._extract_architecture_id({'round_params': params}, source.metadata).strip().lower() != self.architecture_id.strip().lower():
+            if self._architecture({'round_params': params}, source.metadata).strip().lower() != self.architecture_id.strip().lower():
                 raise ValueError(f'Cohort member {key}: bound architecture must match its source.')
             bound[key] = member
         missing = [key for key in self.member_ids if key not in bound]
