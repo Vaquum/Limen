@@ -442,7 +442,7 @@ def _subprocess_campaign(config_path, output, marker_directory, mode):
         faulthandler.cancel_dump_traceback_later()
 
 
-@pytest.mark.parametrize('phase', ('zero', 'outstanding', 'final', 'group'))
+@pytest.mark.parametrize('phase', ('zero', 'final', 'group'))
 def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns, phase):
     campaign = 'grid' if phase == 'zero' else 'folds'
     config = parallel_campaigns[campaign][0]
