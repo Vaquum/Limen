@@ -3,8 +3,10 @@ from __future__ import annotations
 import csv
 import json
 import math
+from ast import literal_eval
 from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import cast
 
@@ -28,6 +30,25 @@ def _mapping(value: object, name: str) -> dict[str, object]:
     if not isinstance(value, dict):
         raise ValueError(f'Cannot resume parallel run without valid {name}')
     return cast(dict[str, object], value)
+
+
+def _parameter_matches(cell: str | None, value: object) -> bool:
+    if cell is None:
+        return False
+    if value is None:
+        return cell == ''
+    if type(value) is bool:
+        return cell.lower() == str(value).lower()
+    try:
+        if type(value) is int:
+            return Decimal(cell) == value
+        if type(value) is float:
+            return float(cell) == value
+        if isinstance(value, (list, dict)):
+            return json.loads(json.dumps(literal_eval(cell))) == value
+    except (ValueError, SyntaxError, InvalidOperation) as exc:
+        raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
+    return cell == str(value)
 
 
 def _values(value: object, name: str, length: int | None = None, *, nullable: bool = False) -> list[object]:
@@ -174,6 +195,9 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         parameters = _mapping(entry.get('round_params'), 'round parameters')
         if not parameter_keys <= parameters.keys():
             raise ValueError('Cannot resume parallel run without all recorded search parameters')
+        row = rows[cast(int, entry['_round_index'])]
+        if any(not _parameter_matches(row.get(key), value) for key, value in parameters.items() if not key.startswith('_')):
+            raise ValueError('Cannot resume parallel run with mismatched CSV/JSONL round parameters')
         if ablation is not None and forward is None:
             raw_count = parameters.get(ablation.drop_count_key)
             count = 0 if raw_count is None else raw_count
