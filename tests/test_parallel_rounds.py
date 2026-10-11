@@ -223,7 +223,7 @@ def parallel_campaigns(tmp_path_factory):
         config = parallel_config(**options)
         prefixes = []
 
-        def boundary(log, msq):
+        def boundary(log, msq, prefixes=prefixes):
             assert msq.yielded_count == log.height
             prefixes.append(log['_round_index'].to_list())
 
@@ -315,7 +315,7 @@ def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
     if case == 'custom':
         loop.model = lambda data, round_params: {}
     options = {'factorize': True} if case == 'factorize' else {'post_processing': True} if case == 'post_processing' else {'context_params': {'n_jobs': 2}} if case == 'context' else {}
-    with pytest.raises((ValueError, TypeError), match=r'parallel|workers|n_jobs|MSQ|compiled|factorize|post_processing'):
+    with pytest.raises((ValueError, TypeError), match=r'(?i)parallel|workers|n_jobs|MSQ|compiled|factorize|post_processing|prep_each_round|preparation'):
         loop.run('invalid_parallel', workers=4, prep_each_round=case != 'prepare_once', progress_bar=False, **options)
     assert not path.exists()
 
@@ -429,7 +429,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
 
 def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_campaigns, tmp_path):
     config, _, source, _ = parallel_campaigns['grid']
-    for name in ('policy', 'missing', 'corrupt', 'duplicate'):
+    for name in ('policy', 'missing', 'corrupt', 'duplicate', 'missing_params', 'empty_params', 'missing_ledger', 'null_ledger'):
         directory = tmp_path / name
         shutil.copytree(source, directory)
         if name == 'missing':
@@ -441,10 +441,55 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
         elif name == 'duplicate':
             frame = pl.read_csv(directory / 'results.csv')
             frame.with_columns(pl.when(pl.col('_round_index') == 1).then(0).otherwise(pl.col('_round_index')).alias('_round_index')).write_csv(directory / 'results.csv')
+        elif name in ('missing_params', 'empty_params', 'missing_ledger', 'null_ledger'):
+            saved = records(directory)
+            if name == 'missing_params':
+                saved[0].pop('round_params')
+            elif name == 'empty_params':
+                saved[0]['round_params'] = {}
+            elif name == 'missing_ledger':
+                saved[0].pop('trade_ledger')
+            else:
+                saved[0]['trade_ledger'] = None
+            (directory / 'round_data.jsonl').write_text('\n'.join(json.dumps(row) for row in saved) + '\n')
         before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
-        with pytest.raises(ValueError, match=r'worker|policy|round|evidence|record|prefix|occurrence|identity'):
+        with pytest.raises(ValueError, match=r'worker|policy|round|evidence|record|prefix|occurrence|identity|ledger'):
             run_loop(config, directory, workers=2 if name == 'policy' else None, resume=True)
         assert {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()} == before
+
+
+def test_parallel_resume_rejects_null_snapshot_execution(parallel_campaigns, tmp_path):
+    config, _, source, _ = parallel_campaigns['random']
+    for field in ('execution', 'market'):
+        directory = tmp_path / field
+        shutil.copytree(source, directory)
+        saved = records(directory)
+        assert saved[0][field] is not None
+        saved[0][field] = None
+        (directory / 'round_data.jsonl').write_text('\n'.join(json.dumps(row) for row in saved) + '\n')
+        before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
+        with pytest.raises(ValueError, match=r'execution|market|record|evidence'):
+            run_loop(config, directory, resume=True)
+        assert {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()} == before
+
+
+def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
+    config = parallel_config()
+    config['uel'].pop('pruning_strategies')
+
+    def remove_recorded_parameter(log, msq):
+        if log.height == 3:
+            msq.remove_custom(lambda params: params['C'] == 3.0)
+
+    serial, parallel = tmp_path / 'serial', tmp_path / 'parallel'
+    run_loop(config, serial, workers=1, callback=remove_recorded_parameter)
+    run_loop(config, parallel, workers=4, callback=remove_recorded_parameter)
+    left, right = assert_artifacts(parallel), assert_artifacts(serial)
+    columns = [name for name in right.columns if name not in _TRANSIENT]
+    assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
+                       rel_tol=1e-10, abs_tol=1e-12)
+    _assert_same(records(parallel), records(serial))
+    assert pl.read_csv(parallel / 'results.csv')['C'].to_list() == [0.1, 0.3, 0.5, 1.0, 5.0, 10.0]
 
 
 def test_parallel_serial_omitted_matches_explicit_one(tmp_path):

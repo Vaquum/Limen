@@ -15,7 +15,7 @@ from limen.experiment._objective_run import finalize_objective_result, validate_
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
-from limen.experiment.manifest_core import Manifest
+from limen.experiment.manifest_core import AblationConfig, Manifest
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.search_strategy import SearchStrategy
@@ -40,7 +40,7 @@ def _values(value: object, name: str, length: int | None = None, *, nullable: bo
     return values
 
 
-def _evidence(record: Mapping[str, object], *, execution: bool, outputs: bool) -> None:
+def _evidence(record: Mapping[str, object], *, event: bool, snapshot: bool, execution: bool, outputs: bool) -> None:
     predictions = _values(record.get('preds'), 'predictions')
     if not predictions or any(value not in (0, 1) for value in predictions):
         raise ValueError('Cannot resume parallel run without binary predictions')
@@ -57,6 +57,8 @@ def _evidence(record: Mapping[str, object], *, execution: bool, outputs: bool) -
         if not isinstance(value, str):
             raise ValueError('Cannot resume parallel run with malformed missing datetimes')
         _ = datetime.fromisoformat(value)
+    if event and 'trade_contract' not in record:
+        raise ValueError('Cannot resume parallel event execution without its trade contract/ledger evidence')
     if 'trade_contract' in record:
         contract = _mapping(record['trade_contract'], 'trade contract')
         if contract_digest(cast(dict[str, JsonValue], json_value(contract))) != record.get('trade_contract_digest'):
@@ -67,6 +69,8 @@ def _evidence(record: Mapping[str, object], *, execution: bool, outputs: bool) -
     if execution:
         if 'execution' not in record or 'market' not in record:
             raise ValueError('Cannot resume parallel run without recorded execution/market evidence')
+        if snapshot and record['execution'] is None:
+            raise ValueError('Cannot resume configured snapshot execution without its recorded ledger/market evidence')
         if record['execution'] is not None:
             ledger = _mapping(record['execution'], 'execution')
             for key in ('pos', 'gross', 'net'):
@@ -83,11 +87,31 @@ def _evidence(record: Mapping[str, object], *, execution: bool, outputs: bool) -
             raise ValueError('Cannot resume parallel run with inconsistent recorded predictions')
 
 
+def _audit_prefix(path: Path, frontier: int, count: int, controller: FeedbackController) -> list[str]:
+    lines: list[str] = []
+    previous = -1
+    if count and not path.exists():
+        raise ValueError('Cannot resume parallel run without committed feedback audit evidence')
+    if path.exists():
+        with path.open() as stream:
+            for number in range(count):
+                line = stream.readline()
+                if not line:
+                    raise ValueError('Cannot resume parallel run without complete feedback audit evidence')
+                entry = _mapping(json.loads(line), 'feedback audit')
+                index = entry.get('round')
+                if type(index) is not int or not previous < index <= frontier or not controller.should_trigger(index) or type(entry.get('trigger_number')) is not int or entry['trigger_number'] != number:
+                    raise ValueError('Parallel feedback audit differs from its committed checkpoint prefix')
+                previous = index
+                lines.append(line.rstrip('\n'))
+    return lines
+
+
 def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                      feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                      *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path) -> int:
     attributes = cast(dict[str, object], vars(host))
-    manifest = cast(Manifest | None, getattr(host, 'manifest'))
+    manifest = cast(Manifest | None, attributes['manifest'])
     directory = attributes.get('_experiment_dir')
     strategy = attributes.get('_search_strategy')
     if not isinstance(directory, Path) or not isinstance(strategy, SearchStrategy):
@@ -109,6 +133,12 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     msq_state = _mapping(checkpoint['msq_state'], 'MSQ state')
     if type(msq_state.get('yielded_count')) is not int or msq_state['yielded_count'] != start:
         raise ValueError('Parallel checkpoint draw state differs from its terminal frontier')
+    feedback_state = _mapping(checkpoint.get('feedback_controller_state'), 'feedback state')
+    trigger_count = feedback_state.get('trigger_count')
+    if type(trigger_count) is not int or trigger_count < 0:
+        raise ValueError('Cannot resume parallel run with invalid feedback trigger count')
+    audit_path = directory / 'audit.jsonl'
+    audit_lines = _audit_prefix(audit_path, frontier, trigger_count, feedback_controller)
     with csv_path.open(newline='') as stream:
         reader = csv.DictReader(stream)
         header = reader.fieldnames
@@ -119,7 +149,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         raise ValueError('Cannot resume parallel run without a contiguous terminal CSV prefix')
     if any(row.get('_id', row['id']) != row['id'] for row in rows):
         raise ValueError('Cannot resume parallel run with mismatched CSV occurrence identity')
-    if getattr(manifest, 'ablation_config', None) is not None and '_dropped_features' not in header:
+    ablation = cast(AblationConfig | None, getattr(manifest, 'ablation_config', None))
+    if ablation is not None and '_dropped_features' not in header:
         raise ValueError('Cannot resume ablation results without _dropped_features')
     expected = [(index, str(row['id'])) for index, row in enumerate(rows) if not row['strict_mode_error']]
     committed: list[dict[str, object]] = []
@@ -138,10 +169,21 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 committed.append(entry)
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
+    parameter_keys = _mapping(attributes.get('params'), 'search parameters').keys()
     for entry in committed:
-        _ = _mapping(entry.get('round_params'), 'round parameters')
+        parameters = _mapping(entry.get('round_params'), 'round parameters')
+        if not parameter_keys <= parameters.keys():
+            raise ValueError('Cannot resume parallel run without all recorded search parameters')
+        if ablation is not None and forward is None:
+            raw_count = parameters.get(ablation.drop_count_key)
+            count = 0 if raw_count is None else raw_count
+            dropped = parameters.get('_dropped_features', [])
+            if type(count) is not int or count < 0 or not isinstance(dropped, list) or len(cast(list[object], dropped)) != count or any(not isinstance(value, str) for value in cast(list[object], dropped)) or json.loads(rows[cast(int, entry['_round_index'])]['_dropped_features']) != dropped:
+                raise ValueError('Cannot resume parallel ablation without matching dropped-feature evidence')
+        event = manifest is not None and manifest.resolve_trade_policy(parameters) is not None
+        snapshot = not event and any(name.startswith('backtest_') for name in header)
         if forward is None:
-            _evidence(entry, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
+            _evidence(entry, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
         else:
             folds = entry.get('folds')
             if not isinstance(folds, list) or len(cast(list[object], folds)) != forward.config.n_folds:
@@ -152,7 +194,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                     raise ValueError('Cannot resume parallel walk-forward with invalid fold identity/results')
                 returns = _values(fold.get('net_returns'), 'fold returns')
                 _ = _values(fold.get('preds'), 'fold predictions', len(returns))
-                _evidence(fold, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
+                _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
     log = pl.read_csv(csv_path, n_rows=start, schema_overrides={'_convergence_warning': pl.Boolean}).head(start)
     if '_convergence_warning' not in log.columns:
         log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
@@ -160,8 +202,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         finalize_objective_result(manifest, row, not rows[index]['strict_mode_error'])
     domain.set_state(_mapping(checkpoint['domain_state'], 'domain state'))
     msq.set_state(msq_state)
-    if 'feedback_controller_state' in checkpoint:
-        feedback_controller.set_state(_mapping(checkpoint['feedback_controller_state'], 'feedback state'))
+    feedback_controller.set_state(feedback_state)
     pruning = cast(list[PruningStrategy], attributes['_pruning_strategies'])
     states = checkpoint.get('pruning_strategy_states', [])
     if not isinstance(states, list) or len(cast(list[object], states)) != len(pruning):
@@ -174,7 +215,9 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
             _ = forward.restore(round_data_path, start, expected)
         else:
             forward.writer.clear()
-    setattr(host, 'experiment_log', log)
+    attributes['experiment_log'] = log
     _ = round_data_path.write_text(''.join(line + '\n' for line in lines))
     log.write_csv(csv_path)
+    if audit_path.exists():
+        _ = audit_path.write_text(''.join(line + '\n' for line in audit_lines))
     return start

@@ -4,10 +4,11 @@ import copy
 import logging
 import multiprocessing
 from collections import deque
-from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError
+from collections.abc import Callable
+from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError as FutureTimeoutError
 from multiprocessing.process import BaseProcess
 from pathlib import Path
-from typing import Protocol, cast
+from typing import cast
 
 import polars as pl
 from tqdm import tqdm
@@ -24,42 +25,13 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 
 
-class _Host(Protocol):
-    _compiled_yaml: dict[str, object] | None
-    _search_strategy: SearchStrategy | None
-    _manifest_functions: tuple[object, object]
-    _parallel_sources: FrozenRoundSources | None
-    _yaml_reference: dict[str, object] | None
-    _experiment_dir: Path | None
-    _pruning_strategies: list[PruningStrategy]
-    _workers: int
-    _record_execution: bool
-    _record_model_outputs: bool
-    _shutdown_requested: bool
-    manifest: Manifest | None
-    data: pl.DataFrame
-    prep: object
-    model: object
-
-    def _register_shutdown_handler(self) -> None: ...
-    def _guard_stale_artifacts(self) -> None: ...
-    def _initialize_fresh(self, directory: Path, manager: CheckpointManager) -> Path: ...
-    def _write_metadata(self, directory: Path) -> None: ...
-    def _checkpoint(self, msq: MSQ, domain: ParamDomain, directory: Path,
-                    manager: CheckpointManager, current: int, permutations: int,
-                    *, strategy_type: str, content_hash: str,
-                    feedback_controller: FeedbackController,
-                    pruning_strategies: list[PruningStrategy]) -> None: ...
-    def _trigger_feedback(self, msq: MSQ, strategy: SearchStrategy,
-                          controller: FeedbackController, current: int) -> list[dict[str, object]]: ...
-
 logger = logging.getLogger(__name__)
 
 
 def admit_parallel(host: object, workers: int, prep_each_round: object,
                    *, post_processing: bool, factorize: bool,
                    context_params: dict[str, object] | None) -> None:
-    host = cast(_Host, host)
+    attributes = cast(dict[str, object], vars(host))
     if type(workers) is not int or workers < 1:
         raise ValueError('workers must be a positive integer')
     if workers == 1:
@@ -68,18 +40,19 @@ def admit_parallel(host: object, workers: int, prep_each_round: object,
         raise TypeError('prep_each_round must be a bool')
     if not prep_each_round:
         raise ValueError('Parallel rounds require prep_each_round=True')
-    if host._compiled_yaml is None or not isinstance(host.manifest, Manifest) or host._search_strategy is None:
+    reference, manifest, strategy = attributes['_compiled_yaml'], attributes['manifest'], attributes['_search_strategy']
+    if reference is None or not isinstance(manifest, Manifest) or not isinstance(strategy, SearchStrategy):
         raise ValueError('Parallel rounds require compiled YAML and an MSQ search strategy')
-    if post_processing or factorize or (host.prep, host.model) != host._manifest_functions:
+    if post_processing or factorize or (attributes['prep'], attributes['model']) != attributes['_manifest_functions']:
         raise ValueError('Parallel rounds reject post_processing, factorize and overridden prep/model')
-    validate_parallel(host.manifest, host._compiled_yaml, host._search_strategy.domain.params, context_params)
-    if host._parallel_sources is None:
-        host._parallel_sources = freeze_sources(host.manifest, host.data)
-    host._yaml_reference = copy.deepcopy(host._compiled_yaml)
+    validate_parallel(manifest, cast(dict[str, object], reference), strategy.domain.params, context_params)
+    if attributes['_parallel_sources'] is None:
+        attributes['_parallel_sources'] = freeze_sources(manifest, cast(pl.DataFrame, attributes['data']))
+    attributes['_yaml_reference'] = copy.deepcopy(reference)
 
 
 def _reap(pool: ProcessPoolExecutor) -> None:
-    active = cast(dict[int, BaseProcess] | None, getattr(pool, '_processes'))
+    active = cast(dict[int, BaseProcess] | None, vars(pool)['_processes'])
     processes = tuple(active.values()) if active is not None else ()
     for process in processes:
         if process.is_alive():
@@ -94,11 +67,17 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                  round_data_path: Path | None, n_permutations: int,
                  context_params: dict[str, object] | None, resume: bool,
                  progress_bar: bool) -> None:
-    host = cast(_Host, host)
-    sources, reference = host._parallel_sources, host._compiled_yaml
-    if sources is None or reference is None or host._search_strategy is None:
+    attributes = cast(dict[str, object], vars(host))
+    sources = cast(FrozenRoundSources | None, attributes['_parallel_sources'])
+    reference = cast(dict[str, object] | None, attributes['_compiled_yaml'])
+    strategy = cast(SearchStrategy | None, attributes['_search_strategy'])
+    directory = cast(Path | None, attributes['_experiment_dir'])
+    workers = cast(int, attributes['_workers'])
+    checkpoint_call = cast(Callable[..., None], getattr(host, '_checkpoint', None))
+    feedback_call = cast(Callable[[MSQ, SearchStrategy, FeedbackController, int], list[dict[str, object]]], getattr(host, '_trigger_feedback', None))
+    if sources is None or reference is None or strategy is None:
         raise ValueError('Parallel rounds require admitted frozen inputs and compiled YAML')
-    host._register_shutdown_handler()
+    cast(Callable[[], None], getattr(host, '_register_shutdown_handler', None))()
     start = 0
     if resume:
         if round_data_path is None:
@@ -106,22 +85,22 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         start = restore_parallel(host, msq, domain, feedback_controller, checkpoint_manager,
                                  content_hash=content_hash, strategy_type=strategy_type,
                                  csv_path=csv_path, round_data_path=round_data_path)
-    elif host._experiment_dir is not None:
-        host._guard_stale_artifacts()
-        _ = host._initialize_fresh(host._experiment_dir, checkpoint_manager)
-        host._write_metadata(host._experiment_dir)
+    elif directory is not None:
+        cast(Callable[[], None], getattr(host, '_guard_stale_artifacts', None))()
+        _ = cast(Callable[[Path, CheckpointManager], Path], getattr(host, '_initialize_fresh', None))(directory, checkpoint_manager)
+        cast(Callable[[Path], None], getattr(host, '_write_metadata', None))(directory)
     writer = ParallelCommit(host, csv_path, round_data_path)
     committed = copy.deepcopy(msq.get_state())
     last = start - 1
 
     def checkpoint(*, rewind: bool = False) -> None:
-        if host._experiment_dir is not None:
+        if directory is not None:
             if rewind:
                 msq.set_state(committed)
-            host._checkpoint(msq, domain, host._experiment_dir, checkpoint_manager,
-                             last, n_permutations, strategy_type=strategy_type,
-                             content_hash=content_hash, feedback_controller=feedback_controller,
-                             pruning_strategies=host._pruning_strategies)
+            checkpoint_call(msq, domain, directory, checkpoint_manager,
+                            last, n_permutations, strategy_type=strategy_type,
+                            content_hash=content_hash, feedback_controller=feedback_controller,
+                            pruning_strategies=cast(list[PruningStrategy], attributes['_pruning_strategies']))
 
     def barrier(index: int) -> bool:
         return feedback_controller.should_trigger(index) or checkpoint_manager.should_checkpoint(index)
@@ -130,14 +109,14 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
     pending: deque[tuple[dict[str, object], Future[RoundPayload], dict[str, object]]] = deque()
     with startup_limits(), tqdm(initial=start, total=n_permutations,
                                 disable=not progress_bar) as progress:
-        pool = ProcessPoolExecutor(max_workers=host._workers,
+        pool = ProcessPoolExecutor(max_workers=workers,
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
-                                   initargs=(reference, sources, host._record_execution, host._record_model_outputs))
+                                   initargs=(reference, sources, attributes['_record_execution'], attributes['_record_model_outputs']))
         exhausted = False
         try:
-            while not host._shutdown_requested:
-                while len(pending) < host._workers and not exhausted and not host._shutdown_requested:
+            while not attributes['_shutdown_requested']:
+                while len(pending) < workers and not exhausted and not attributes['_shutdown_requested']:
                     if pending and barrier(cast(int, pending[-1][0]['_round_index'])):
                         break
                     try:
@@ -148,17 +127,17 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                     task = parameters | (context_params or {})
                     pending.append((task, pool.submit(_evaluate_round, task),
                                     cast(dict[str, object], copy.deepcopy(msq.get_state()))))
-                if not pending or host._shutdown_requested:
+                if not pending or attributes['_shutdown_requested']:
                     break
                 parameters, future, drawn_state = pending[0]
                 try:
                     payload = future.result(timeout=0.1)
-                except TimeoutError:
+                except FutureTimeoutError:
                     logger.debug('Waiting for parallel round %s', parameters['_round_index'])
                     continue
                 except Exception as exc:
                     raise RuntimeError(f"Parallel worker failed for round {parameters['_round_index']} ({parameters['_id']}): {exc}") from exc
-                if host._shutdown_requested:
+                if attributes['_shutdown_requested']:
                     break
                 writer.commit(parameters, payload)
                 last = cast(int, parameters['_round_index'])
@@ -169,8 +148,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 if feedback_controller.should_trigger(last):
                     if pending:
                         raise RuntimeError('Parallel feedback crossed an uncommitted round')
-                    interventions = host._trigger_feedback(msq, host._search_strategy,
-                                                          feedback_controller, last)
+                    interventions = feedback_call(msq, strategy, feedback_controller, last)
                     committed = cast(dict[str, object], copy.deepcopy(msq.get_state()))
                     due = due or bool(interventions)
                     exhausted = False
@@ -182,7 +160,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
             try:
                 checkpoint(rewind=msq.yielded_count != last + 1)
             finally:
-                if pending or host._shutdown_requested:
+                if pending or attributes['_shutdown_requested']:
                     for _, future, _ in pending:
                         _ = future.cancel()
                     _reap(pool)

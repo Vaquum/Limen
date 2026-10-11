@@ -129,7 +129,7 @@ class UniversalExperimentLoop:
         self._intra_callback = intra_callback
         self._yaml_reference = copy.deepcopy(yaml_reference)
         from limen.yaml.compiler import CompiledSFD
-        self._compiled_yaml = cast(dict[str, object], copy.deepcopy(getattr(sfd, '_yaml'))) if type(sfd) is CompiledSFD else None
+        self._compiled_yaml = cast(dict[str, object], copy.deepcopy(vars(sfd)['_yaml'])) if type(sfd) is CompiledSFD else None
         self._workers: int = 1
         self._parallel_sources: FrozenRoundSources | None = None
         self._walk_forward: WalkForwardRun | None = None

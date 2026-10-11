@@ -29,10 +29,14 @@ class ParallelCommit:
                  round_data_path: Path | None) -> None:
         super().__init__()
         self.host, self.csv_path, self.round_data_path = host, csv_path, round_data_path
-        self.manifest = cast(Manifest | None, getattr(host, 'manifest'))
-        self.params = cast(dict[str, object], getattr(host, 'params'))
-        self.walk_forward = cast(WalkForwardRun | None, getattr(host, '_walk_forward'))
-        self.append_round_data = cast(_AppendRoundData, getattr(host, '_append_round_data'))
+        attributes = cast(dict[str, object], vars(host))
+        self.manifest = cast(Manifest | None, attributes['manifest'])
+        self.params = cast(dict[str, object], attributes['params'])
+        self.walk_forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
+        append_round_data = getattr(host, '_append_round_data', None)
+        if not callable(append_round_data):
+            raise TypeError('Parallel host requires the round-data writer')
+        self.append_round_data = cast(_AppendRoundData, append_round_data)
         self._has_success = False
         if csv_path.exists():
             with csv_path.open(newline='') as stream:
@@ -97,6 +101,7 @@ class ParallelCommit:
             self.append_round_data(self.round_data_path, identity, payload.parameters,
                                    predictions, payload.alignment, round_index=index)
         batch = objective_frame(self.manifest, [row])
-        existing = cast(pl.DataFrame | None, getattr(self.host, 'experiment_log'))
-        setattr(self.host, 'experiment_log', batch if existing is None else pl.concat([existing, batch], how='diagonal_relaxed'))
+        attributes = cast(dict[str, object], vars(self.host))
+        existing = cast(pl.DataFrame | None, attributes['experiment_log'])
+        attributes['experiment_log'] = batch if existing is None else pl.concat([existing, batch], how='diagonal_relaxed')
         self._has_success = self._has_success or payload.succeeded

@@ -5,14 +5,14 @@ import signal
 import time
 import traceback
 import warnings
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, is_dataclass
 from importlib import import_module
 from inspect import isfunction
 from pathlib import Path
 from string import Formatter
-from typing import Callable, Protocol, cast
+from typing import Protocol, cast
 
 import polars as pl
 
@@ -22,7 +22,6 @@ from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver,
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.sfd.reference_architecture.logreg_binary import logreg_binary
-from limen.yaml.compiler import build_manifest
 
 __all__ = ['FrozenRoundSources', 'RoundPayload', 'evaluate_round', 'freeze_sources',
            'startup_limits', 'validate_parallel', 'worker_init']
@@ -101,6 +100,8 @@ def _static_source(value: object, domain: Mapping[str, list[object]]) -> None:
 
 def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
                       domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> None:
+    from limen.yaml.compiler import build_manifest
+
     if type(manifest) is not MLManifest or manifest.architecture_function not in (logreg_binary, lightgbm_binary):
         raise ValueError('Parallel rounds require compiled CPU logreg_binary or lightgbm_binary')
     rebuilt = build_manifest(dict(yaml_reference))
@@ -148,7 +149,7 @@ def freeze_sources(manifest: Manifest, learning: pl.DataFrame) -> FrozenRoundSou
 def startup_limits() -> Iterator[None]:
     previous = {key: os.environ.get(key) for key in _THREAD_ENV}
     try:
-        os.environ.update({key: '1' for key in _THREAD_ENV})
+        os.environ.update(dict.fromkeys(_THREAD_ENV, '1'))
         yield
     finally:
         for key, value in previous.items():
@@ -174,6 +175,8 @@ def _native_pools() -> list[dict[str, object]]:
 
 def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
                 record_execution: bool, record_model_outputs: bool) -> None:
+    from limen.yaml.compiler import build_manifest
+
     global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
     if any(os.environ.get(key) != '1' for key in _THREAD_ENV):
@@ -187,6 +190,8 @@ def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
 
 
 def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
+    from limen.yaml.compiler import build_manifest
+
     if _worker_yaml is None or _worker_sources is None:
         raise RuntimeError('Parallel worker initializer has not completed')
     started = time.perf_counter_ns()
