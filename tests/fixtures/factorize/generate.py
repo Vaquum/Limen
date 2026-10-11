@@ -12,19 +12,15 @@ import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+import polars as pl
+from ruamel.yaml import YAML
+from limen.cli.commands.run import run_experiment
+from limen.data import HistoricalData
 
 NUMERICAL_ENV = {
     'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1',
     'NPY_DISABLE_CPU_FEATURES': 'SSSE3,SSE41,POPCNT,SSE42,AVX,F16C,FMA3,AVX2,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR',
 }
-if __name__ == '__main__' and platform.system() == 'Linux' and platform.machine() == 'x86_64':
-    # NumPy reads CPU dispatch and BLAS thread settings on first import.
-    os.environ.update(NUMERICAL_ENV)
-
-import polars as pl
-from ruamel.yaml import YAML
-from limen.cli.commands.run import run_experiment
-from limen.data import HistoricalData
 
 ROOT = Path(__file__).resolve().parents[3]
 MARKET = ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet'
@@ -182,6 +178,12 @@ def pinned_captures(directory: Path) -> dict:
 
 
 def main():
+    # Restart before numerical imports when recording a baseline directly.
+    if platform.system() == 'Linux' and platform.machine() == 'x86_64' and any(
+        os.environ.get(key) != value for key, value in NUMERICAL_ENV.items()
+    ):
+        os.execve(sys.executable, [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
+                  {**os.environ, **NUMERICAL_ENV})
     ap=argparse.ArgumentParser()
     ap.add_argument('--out',type=Path,default=Path(__file__).parent)
     ap.add_argument('--capture', action='store_true')
