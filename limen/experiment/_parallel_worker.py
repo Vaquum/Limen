@@ -179,6 +179,7 @@ def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
 
     global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
+    _ = signal.signal(signal.SIGTERM, signal.SIG_IGN)
     if any(os.environ.get(key) != '1' for key in _THREAD_ENV):
         raise ValueError('Parallel worker startup limits were not applied before imports')
     manifest = build_manifest(yaml_reference)

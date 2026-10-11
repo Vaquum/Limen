@@ -372,22 +372,27 @@ def _subprocess_campaign(config_path, output, marker_directory, mode):
         run_loop(config, Path(output), workers=4)
 
 
-@pytest.mark.parametrize('phase', ('zero', 'outstanding', 'final'))
+@pytest.mark.parametrize('phase', ('zero', 'outstanding', 'final', 'group'))
 def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns, phase):
     config = parallel_config(walk_forward=True)
     config_path = tmp_path / 'campaign.yaml'
     _write_yaml(config, config_path)
     directory, markers = tmp_path / 'stopped', tmp_path / 'markers'
+    mode = 'outstanding' if phase == 'group' else phase
     command = [sys.executable, '-m', 'tests.test_parallel_rounds', str(config_path),
-               str(directory), str(markers), f'stop_{phase}']
+               str(directory), str(markers), f'stop_{mode}']
     output = tmp_path / 'process.log'
     with output.open('w') as stream:
-        process = subprocess.Popen(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
+                                   stderr=subprocess.STDOUT, start_new_session=True)
         try:
             _wait_for(markers / ('3.start' if phase == 'final' else '0.start'), process)
-            if phase == 'outstanding':
+            if phase in ('outstanding', 'group'):
                 _wait_for(markers / '1.done', process)
-            process.send_signal(signal.SIGTERM)
+            if phase == 'group':
+                os.killpg(process.pid, signal.SIGTERM)
+            else:
+                process.send_signal(signal.SIGTERM)
             assert process.wait(timeout=20) == 0, output.read_text()
         finally:
             if process.poll() is None:
@@ -399,6 +404,13 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
     assert assert_artifacts(directory).height == prefix
     run_loop(config, directory, resume=True)
     assert_runs_equal(directory, parallel_campaigns['folds'][2])
+
+
+def test_parallel_yaml_imports_first_in_fresh_process():
+    code = "from limen.yaml import CompiledSFD; from limen.cli.main import cli; assert CompiledSFD.__name__ == 'CompiledSFD'; assert cli.name == 'cli'"
+    process = subprocess.run([sys.executable, '-c', code], cwd=ROOT,
+                             capture_output=True, text=True, timeout=20, check=False)
+    assert process.returncode == 0, process.stderr
 
 
 @pytest.mark.parametrize('mode', ('strict', 'all_strict', 'fatal', 'dead'))

@@ -56,7 +56,7 @@ def _reap(pool: ProcessPoolExecutor) -> None:
     processes = tuple(active.values()) if active is not None else ()
     for process in processes:
         if process.is_alive():
-            process.terminate()
+            process.kill()
     for process in processes:
         process.join()
 
@@ -136,6 +136,8 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                     logger.debug('Waiting for parallel round %s', parameters['_round_index'])
                     continue
                 except Exception as exc:
+                    if attributes['_shutdown_requested']:
+                        break
                     raise RuntimeError(f"Parallel worker failed for round {parameters['_round_index']} ({parameters['_id']}): {exc}") from exc
                 if attributes['_shutdown_requested']:
                     break

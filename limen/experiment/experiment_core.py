@@ -193,6 +193,7 @@ class UniversalExperimentLoop:
                           params, prep, model, resume, post_processing, progress_bar,
                           record_execution, record_model_outputs, factorize)
         finally:
+            self._parallel_sources = None
             self._convergence_caught = []
             if self._walk_forward is not None:
                 self._walk_forward.finish()
