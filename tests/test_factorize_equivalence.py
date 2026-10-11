@@ -276,13 +276,14 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
 
 @pytest.mark.parametrize('axis', ['fée', '费用', 'fee-rate'])
 def test_formatted_non_identifier_axes_fail_before_writes(tmp_path: Path, axis: str) -> None:
-    cfg = manifest('directional_barriers')
+    cfg = manifest('binary_costs')
     params = cfg['sfd']['params']
     params[axis] = params.pop('fee')
+    params['slip'], params['size'] = [2.], [1.]
     spec = cfg['sfd']['manifest']
     spec['backtest']['fee_bps'] = '{' + axis + '}'
     spec['indicators'] = [{'func': 'limen.indicators.window_return', 'params': {'period': n}}
-                          for n in (3, 10)]
+                          for n in (1, 3, 12)]
     spec['features'][0]['params']['col'] = 'ret_{' + axis + ':.0f}'
     compiled = build_manifest(cfg)
     sfd = SimpleNamespace(__name__='limen.sfd.fixture', params=lambda: params, manifest=lambda: compiled)
@@ -300,7 +301,7 @@ def test_formatted_non_identifier_axes_fail_before_writes(tmp_path: Path, axis: 
         else:
             loop.run('unicode', n_permutations=2, prep_each_round=True, progress_bar=False)
             assert loop.experiment_log.height == 2
-            assert loop.experiment_log['strict_mode_error'].to_list() == [False, False]
+            assert loop.experiment_log['strict_mode_error'].to_list() == [None, None]
 
 
 @pytest.mark.parametrize('context', [{'deterministic': False}, {'n_jobs': 8}, {'random_state': None}, {'fee': 9.}])
