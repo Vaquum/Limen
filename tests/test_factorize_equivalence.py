@@ -407,9 +407,9 @@ def test_cached_convergence_evidence_matches_ordinary_rounds(tmp_path: Path, mon
         owner = type(loop.manifest)
         original = owner.run_model
 
-        def model(*args: object, **kwargs: object) -> dict:
+        def model(*args: object, _fn: object = original, **kwargs: object) -> dict:
             warnings.warn('Recorded signal convergence evidence', ConvergenceWarning, stacklevel=2)
-            return original(*args, **kwargs)
+            return _fn(*args, **kwargs)
 
         with monkeypatch.context() as instrumentation:
             instrumentation.setattr(owner, 'run_model', model)
