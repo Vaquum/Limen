@@ -169,6 +169,15 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                                    initargs=(reference, sources, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs'])))
         exhausted = False
         try:
+            launch = cast(Callable[[], None], getattr(pool, '_launch_processes', None))
+            if os.name == 'posix':
+                previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM))
+                try:
+                    launch()
+                finally:
+                    _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+            else:
+                launch()
             while not attributes['_shutdown_requested']:
                 while len(pending) < workers and not exhausted and not attributes['_shutdown_requested']:
                     if pending and barrier(cast(int, pending[-1][0]['_round_index'])):
@@ -179,14 +188,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                         exhausted = True
                         break
                     task = parameters | (context_params or {})
-                    if os.name == 'posix':
-                        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM))
-                        try:
-                            future = pool.submit(_evaluate_round, task)
-                        finally:
-                            _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
-                    else:
-                        future = pool.submit(_evaluate_round, task)
+                    future = pool.submit(_evaluate_round, task)
                     pending.append((task, future,
                                     cast(dict[str, object], copy.deepcopy(msq.get_state()))))
                 if not pending or attributes['_shutdown_requested']:
@@ -225,7 +227,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
             try:
                 checkpoint(rewind=msq.yielded_count != last + 1)
             finally:
-                if pending or attributes['_shutdown_requested']:
+                if pending or attributes['_shutdown_requested'] or vars(pool)['_executor_manager_thread'] is None:
                     for _, future, _ in pending:
                         _ = future.cancel()
                     _reap(pool)

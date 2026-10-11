@@ -497,25 +497,54 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
     config['uel'].pop('pruning_strategies')
     config['uel']['n_permutations'] = 5 if mode == 'all_strict' else 4
     directory = tmp_path / 'failure'
-    with controlled_pool(tmp_path / 'markers', mode):
-        if mode in ('fatal', 'dead'):
-            with pytest.raises(RuntimeError, match=r'worker|process|fatal|terminated'):
-                run_loop(config, directory, workers=4)
-        elif mode == 'all_strict':
-            def stop_strict_prefix(log, msq):
-                assert log.schema['val_backtest_total_return'] == pl.Float64
-                if log.height == 3:
-                    loop._shutdown_requested = True
+    if mode in ('fatal', 'dead'):
+        config_path = tmp_path / 'campaign.yaml'
+        _write_yaml(config, config_path)
+        output = tmp_path / 'process.log'
+        command = [sys.executable, '-m', 'tests.test_parallel_rounds', str(config_path),
+                   str(directory), str(tmp_path / 'markers'), mode]
+        with output.open('w') as stream:
+            process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
+                                       stderr=subprocess.STDOUT, start_new_session=True)
+            try:
+                try:
+                    returncode = process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    pytest.fail(f'{mode} worker shutdown exceeded 20 seconds:\n{output.read_text()}')
+                failure_output = output.read_text()
+                assert returncode != 0, failure_output
+                assert 'Traceback (most recent call last)' in failure_output, failure_output
+                assert 'Parallel worker' in failure_output, failure_output
+                expected = 'recorded fatal worker control' if mode == 'fatal' else 'terminated abruptly'
+                assert expected in failure_output, failure_output
+            finally:
+                if process.poll() is None:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=10)
+    else:
+        with controlled_pool(tmp_path / 'markers', mode):
+            if mode == 'all_strict':
+                def stop_strict_prefix(log, msq):
+                    assert log.schema['val_backtest_total_return'] == pl.Float64
+                    if log.height == 3:
+                        loop._shutdown_requested = True
 
-            loop = make_loop(config, directory, callback=stop_strict_prefix)
-            loop.run(config['metadata']['name'], n_permutations=5,
-                     prep_each_round=True, progress_bar=False, workers=4,
-                     record_execution=True, record_model_outputs=True)
-        else:
-            run_loop(config, directory, workers=4)
+                loop = make_loop(config, directory, callback=stop_strict_prefix)
+                loop.run(config['metadata']['name'], n_permutations=5,
+                         prep_each_round=True, progress_bar=False, workers=4,
+                         record_execution=True, record_model_outputs=True)
+            else:
+                run_loop(config, directory, workers=4)
     frame = assert_artifacts(directory)
     checkpoint = json.loads((directory / 'checkpoint.json').read_text())
     assert checkpoint['metadata']['experiment_round'] + 1 == frame.height
+    if mode in ('fatal', 'dead'):
+        assert frame.height in (0, 1)
+        if mode == 'fatal':
+            assert frame.height == 1
+        strategy = build_search_strategy(config)
+        identities = [next(strategy)['_id'] for _ in range(2)]
+        assert f'round {frame.height} ({identities[frame.height]})' in failure_output, failure_output
     if mode == 'strict':
         assert frame['strict_mode_error'].is_not_null().to_list() == [True, False, True, False]
         assert [row['_round_index'] for row in records(directory)] == [1, 3]
