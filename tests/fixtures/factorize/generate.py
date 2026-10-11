@@ -182,8 +182,9 @@ def main():
     if platform.system() == 'Linux' and platform.machine() == 'x86_64' and any(
         os.environ.get(key) != value for key, value in NUMERICAL_ENV.items()
     ):
-        os.execve(sys.executable, [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
-                  {**os.environ, **NUMERICAL_ENV})
+        subprocess.run([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
+                       env={**os.environ, **NUMERICAL_ENV}, check=True)
+        return
     ap=argparse.ArgumentParser()
     ap.add_argument('--out',type=Path,default=Path(__file__).parent)
     ap.add_argument('--capture', action='store_true')
