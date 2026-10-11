@@ -184,7 +184,10 @@ def _controlled_round(function, params, marker_directory, mode):
     index = params['_round_index']
     (directory / f'{index}.start').write_text(str(time.monotonic()))
     if mode == 'reorder' and index == 0:
-        time.sleep(1.0)
+        deadline = time.monotonic() + 40
+        while not (directory / '1.done').exists():
+            assert time.monotonic() < deadline, 'timed out waiting for round 1 completion'
+            time.sleep(0.025)
     if mode in ('stop_zero', 'stop_outstanding') and (index == 0 or mode == 'stop_zero'):
         time.sleep(15)
     if mode == 'stop_final' and index == 3:

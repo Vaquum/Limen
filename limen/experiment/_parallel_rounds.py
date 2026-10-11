@@ -4,6 +4,8 @@ import copy
 import json
 import logging
 import multiprocessing
+import os
+import signal
 from collections import deque
 from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError as FutureTimeoutError
@@ -177,7 +179,13 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                         exhausted = True
                         break
                     task = parameters | (context_params or {})
-                    pending.append((task, pool.submit(_evaluate_round, task),
+                    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM)) if os.name == 'posix' else None
+                    try:
+                        future = pool.submit(_evaluate_round, task)
+                    finally:
+                        if previous_mask is not None:
+                            _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                    pending.append((task, future,
                                     cast(dict[str, object], copy.deepcopy(msq.get_state()))))
                 if not pending or attributes['_shutdown_requested']:
                     break
