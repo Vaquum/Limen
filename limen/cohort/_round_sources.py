@@ -10,7 +10,7 @@ from limen.yaml.config import is_mapping
 
 __all__ = ['RoundSources']
 
-_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
+_resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
 
 
 class RoundSource(Protocol):
