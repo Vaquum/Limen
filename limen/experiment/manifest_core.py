@@ -1899,7 +1899,8 @@ def _run_prepare_setup(
     trade = None
     if policy is not None and manifest.backtest_config is not None:
         interval = _source_interval(manifest.data_source_config)
-        trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval)
+        trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval,
+                                       frozen_sources=cast(tuple[pl.DataFrame | None, pl.DataFrame | None] | None, getattr(manifest, '_frozen_trade_sources', None)))
         split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
     prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
     return (*prepared, trade)

@@ -1580,3 +1580,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Bind explicitly selected rounds from several experiment directories into one inference-only Cohort; preserve per-source reconstruction, qualified member identities and equal member weights (#906).
 - Reject mismatched participating prediction timestamps in both Cohort constructors while preserving compatible legacy identities and predictions.
+
+## [5.25.0] - 2026-10-11
+
+- Run compiled CPU classification rounds in isolated spawned workers within one MSQ experiment; preserve ordered artifacts, feedback boundaries and consistent prefix recovery (#905).
+- Add YAML/CLI worker selection and unchanged-policy resume; retain serial execution by default and reject unsupported parallel configurations before output creation.

@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.24.0"
+  limen_version: "5.25.0"
   mode: development
 
 sfd:
@@ -97,6 +97,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `n_permutations` | int | required | round budget; rejected if bool, zero, negative, or larger than the parameter space |
+| `workers` | int | `1` | maximum concurrent isolated round evaluations; positive non-boolean integer; see [parallel rounds](#parallel-rounds) |
 | `search_strategy.type` | `random` or `grid` | `random` | `random` lazily samples the parameter space; `grid` enumerates it exhaustively |
 | `prep_each_round` | bool | `true` | run prep every round; required for manifest-driven SFDs |
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
@@ -111,6 +112,72 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 NOTE: `search_strategy.seed` seeds `random` search for reproducible sampling. `grid` search enumerates the full space and ignores a seed.
 
 `pruning_strategies` declares reducers that fire every `feedback_interval` rounds during a run — see [Reducers And Feedback](Reducers-And-Feedback.md) for the reducer catalog, YAML syntax, and tuning.
+
+### Parallel rounds
+
+Set `uel.workers: 4` or run `limen run experiment.yaml --workers 4` to evaluate
+up to four rounds inside one experiment. Omitted workers and `workers: 1` use
+the existing serial path. The CLI option overrides YAML; it changes execution
+resources without rewriting the source YAML, `yaml_reference` or manifest hash.
+Different YAML documents retain their different content-based manifest IDs.
+
+Parallel admission requires an MSQ search, a YAML-compiled manifest, per-round
+preparation, CPU `logreg_binary` or `lightgbm_binary`, and `post_processing=False`.
+Set the model search parameter `n_jobs: [1]`: every effective value, including
+defaults and context overrides, must be exactly 1. LightGBM's null default is
+rejected, rather than silently overriding a searched parameter. Workers use one
+native thread each for BLAS/OpenMP and Polars; the parent environment is restored.
+The run records `workers` and `worker_native_threads` separately in metadata.
+Serial runs retain their existing metadata schema and native thread behavior.
+
+Existing calibration, validation-return objectives, recording and walk-forward
+remain usable on this path. Walk-forward folds run sequentially within each
+worker's round. Parallel mode rejects custom/native SFD callables, overridden
+prep/model functions, other backends, non-MSQ execution, retained live
+post-processing and `factorize=True` before output creation. These combinations
+remain available with one worker. There is no implicit serial fallback.
+
+The parent freezes the learning, execution and funding observations once.
+Parameter-dependent secondary sources and pipelines that cannot be reconstructed
+and frozen are rejected. Spawned workers rebuild their isolated mutable manifest
+from the unchanged YAML reference and consume those fixed observations. The
+native entry point is `UniversalExperimentLoop.run(workers=N)` with that compiled
+manifest; call it inside the normal `if __name__ == '__main__':` process guard.
+
+Only the coordinator draws search occurrences, handles feedback and writes
+artifacts. `_round_index`, together with recorded parameter identity, identifies
+an occurrence even when an intervention injects a repeated parameter set. The
+entire dispatched-but-uncommitted window is bounded by workers, including
+completed results waiting for an earlier occurrence. CSV, JSONL, audit,
+walk-forward tracks and final Parquet retain logical occurrence order.
+
+The coordinator drains each feedback and periodic checkpoint boundary before
+drawing later rounds. The first feedback trigger remains zero-based index
+`feedback_interval`, after `feedback_interval + 1` terminal attempts; strict
+failures count as attempts. Callbacks and intervention handling keep their existing
+interfaces in the parent. Metric-driven feedback can match serial execution for
+identical inputs and diagnostics. Walltime/throughput controls and externally
+timed interventions retain their behavior; their decisions can differ when
+elapsed times or file arrival times differ.
+
+On the first SIGTERM/SIGINT, the coordinator stops admission, finishes any active
+artifact write, saves its highest contiguous terminal prefix and matching search
+state, then terminates and reaps uncommitted workers. Resume re-evaluates that
+suffix from the same occurrence indices and parameters. Parallel runs save an
+empty-prefix checkpoint before dispatch and a final checkpoint on graceful stop
+or completion. A subsequent signal may force termination. SIGKILL or power loss
+inside an artifact write has no additional recovery guarantee.
+
+`limen run --resume RESULTS_DIR` reuses saved workers and thread policy; old
+metadata without these fields resumes serially. An explicit changed policy is
+rejected before truncation or rewriting. Committed CSV occurrences must join to
+their successful JSONL/fold/recording evidence before resume rewrites anything.
+Strict failures retain one CSV row and no successful prediction/fold evidence.
+Malformed or missing committed evidence fails loudly. Other model/worker failures
+remain fatal, preserving the valid prefix and reporting identity and traceback.
+Stopped/resumed equality requires unchanged source observations, deterministic
+model settings and equivalent feedback inputs; concurrency does not establish
+new RNG or statistical guarantees.
 
 ## Manifest Types
 
@@ -385,7 +452,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.24.0"
+  limen_version: "5.25.0"
   mode: development
 sfd:
   manifest:
@@ -442,7 +509,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.24.0"
+  limen_version: "5.25.0"
   mode: development
 sfd:
   manifest:

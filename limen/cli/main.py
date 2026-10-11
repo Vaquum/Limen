@@ -184,8 +184,10 @@ def profile_cmd(yaml_file: Path) -> None:
               help='Resume from a checkpoint directory instead of starting fresh.')
 @click.option('--no-progress-bar', is_flag=True, default=False,
               help='Disable the experiment progress bar.')
+@click.option('--workers', type=click.IntRange(min=1), default=None,
+              help='Concurrent rounds; overrides YAML, or uses saved settings with --resume.')
 def run(target: str | None, dry_run: bool, resume: Path | None,
-        no_progress_bar: bool) -> None:
+        no_progress_bar: bool, workers: int | None) -> None:
 
     '''
     Validate, compile, and run a YAML experiment file.
@@ -234,7 +236,7 @@ def run(target: str | None, dry_run: bool, resume: Path | None,
             raise SystemExit(1)
         from limen.cli.commands.resume import run_resume
 
-        ok = run_resume(resume, progress_bar=not no_progress_bar)
+        ok = run_resume(resume, progress_bar=not no_progress_bar, workers=workers)
     elif target is not None:
         from limen.cli.commands.run import run_experiment
 
@@ -242,7 +244,7 @@ def run(target: str | None, dry_run: bool, resume: Path | None,
         if yaml_path is None:
             raise SystemExit(1)
         ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id,
-                            results_base=results_base, progress_bar=not no_progress_bar)
+                            results_base=results_base, progress_bar=not no_progress_bar, workers=workers)
     else:
         click.secho('Provide a YAML file or --resume <results-dir>.', fg='red')
         raise SystemExit(1)

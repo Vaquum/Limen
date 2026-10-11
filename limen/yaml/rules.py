@@ -1142,6 +1142,7 @@ class BacktestCostSpec:
 
 
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
+    ('workers', int, None),
     ('record_execution', bool, None),
     ('record_model_outputs', bool, None),
     ('factorize', bool, None),
@@ -1196,6 +1197,11 @@ class UelSpec:
                     message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
                     path=f'uel.{field}',
                     suggestion=suggestion,
+                ))
+            elif field == 'workers' and value <= 0:
+                errors.append(YAMLError(
+                    message="'uel.workers' must be a positive integer",
+                    path='uel.workers',
                 ))
 
         strategy = uel.get('search_strategy')

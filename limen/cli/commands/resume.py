@@ -12,22 +12,12 @@ from limen.yaml.compiler import build_search_strategy
 from limen.yaml.config import is_mapping
 
 
-def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
+def run_resume(results_dir: Path, progress_bar: bool = True,
+               workers: int | None = None) -> bool:
 
     '''
-    Resume an experiment from a checkpoint directory.
-
-    Reads yaml_reference from metadata.json to reconstruct the SFD and search
-    strategy. Reads target_permutations from checkpoint.json to continue to
-    the original round target.
-
-    Args:
-        results_dir (Path): Path to the experiment results directory containing
-            metadata.json and checkpoint.json
-        progress_bar (bool): Whether to render the experiment progress bar
-
-    Returns:
-        bool: True on success, False on failure
+    Reconstruct the saved manifest/search and continue to its checkpoint target.
+    Omitted workers reuses saved resources; legacy metadata means one worker.
 
     '''
 
@@ -37,6 +27,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
     if metadata is None:
         return False
     yaml_reference = metadata['yaml_reference']
+    effective_workers = metadata.get('workers', 1) if workers is None else workers
 
     target_permutations = _load_target_permutations(results_dir)
     if target_permutations is None:
@@ -79,6 +70,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True) -> bool:
             record_execution=metadata.get('record_execution', False),
             record_model_outputs=metadata.get('record_model_outputs', False),
             factorize=metadata.get('factorize', False),
+            workers=effective_workers,
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')

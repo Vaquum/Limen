@@ -156,7 +156,7 @@ def _runtime_slowest_tests_limit() -> int:
 def _pytest_args(argv: list[str]) -> list[str]:
     if argv:
         return argv
-    # Default discovery includes test_acceptance_gates.py.
+    # Default discovery includes test_acceptance_gates.py and test_parallel_rounds.py.
     return ['tests']
 
 

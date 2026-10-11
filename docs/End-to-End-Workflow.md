@@ -38,7 +38,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_first
-  limen_version: "5.24.0"
+  limen_version: "5.25.0"
   mode: development
   description: First logistic-regression binary classifier
 
@@ -123,6 +123,13 @@ limen run logreg-first.yaml
 ```
 
 `validate` checks schema and reference resolution. `profile` samples the real data path and estimates runtime. `--dry-run` compiles without executing permutations. `run` trains the classifier and writes the result directory.
+
+For parallel CPU classification rounds, set every model `n_jobs` value to `1`
+and run `limen run logreg-first.yaml --workers 4`. YAML `uel.workers` supplies the
+default; the CLI overrides it. Resume with `limen run --resume RESULTS_DIR` to
+reuse the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
+for admission, feedback ordering and stop/recovery limits. The example above has
+one permutation; a larger search is needed to occupy several workers.
 
 ## Review outputs
 

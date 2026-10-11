@@ -20,22 +20,12 @@ def run_experiment(yaml_path: Path,
                    dry_run: bool = False,
                    manifest_id: str | None = None,
                    results_base: Path = DEFAULT_RESULTS_BASE,
-                   progress_bar: bool = True) -> bool:
+                   progress_bar: bool = True,
+                   workers: int | None = None) -> bool:
 
     '''
-    Validate, compile, and execute a YAML experiment file.
-
-    Args:
-        yaml_path (Path): Path to the YAML experiment file
-        dry_run (bool): When True, validate only — do not execute
-        manifest_id (str | None): Full hex hash when running from a committed manifest URI.
-            Changes results directory layout and YAML copy filename
-        results_base (Path): Base directory for results output. Defaults to cwd.
-            Pass the project root when running a committed manifest URI.
-        progress_bar (bool): Whether to render the experiment progress bar
-
-    Returns:
-        bool: True on success, False on validation failure
+    Validate and run YAML, with CLI workers taking precedence over YAML.
+    Committed manifests retain their hash-based output layout and source YAML.
 
     '''
 
@@ -60,16 +50,31 @@ def run_experiment(yaml_path: Path,
     n_permutations: int = uel_cfg.get('n_permutations', 10000)
     prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
     test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
+    effective_workers = uel_cfg.get('workers', 1) if workers is None else workers
+    feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
+    checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
+    results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
 
     try:
         search_strategy = build_search_strategy(yaml_dict)
         pruning_strategies = build_pruning_strategies(yaml_dict)
         compiled = CompiledSFD(yaml_dict)
+        uel = UniversalExperimentLoop(
+            sfd=compiled,
+            search_strategy=search_strategy,
+            pruning_strategies=pruning_strategies,
+            experiment_dir=results_dir,
+            test_mode=test_mode,
+            feedback_interval=feedback_interval,
+            checkpoint_interval=checkpoint_interval,
+            yaml_reference=dict(yaml_dict),
+        )
+        uel.check_parallel_admission(effective_workers, prep_each_round,
+                                     factorize=uel_cfg.get('factorize', False))
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
         return False
 
-    results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
     results_dir.mkdir(parents=True, exist_ok=True)
     yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name
     _ = shutil.copy2(yaml_path, results_dir / yaml_dest_name)
@@ -82,20 +87,7 @@ def run_experiment(yaml_path: Path,
     )
     click.echo(f"  Results → {results_dir}")
 
-    feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
-    checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
-
     try:
-        uel = UniversalExperimentLoop(
-            sfd=compiled,
-            search_strategy=search_strategy,
-            pruning_strategies=pruning_strategies,
-            experiment_dir=results_dir,
-            test_mode=test_mode,
-            feedback_interval=feedback_interval,
-            checkpoint_interval=checkpoint_interval,
-            yaml_reference=dict(yaml_dict),
-        )
         uel.run(
             experiment_name=experiment_name,
             n_permutations=n_permutations,
@@ -104,6 +96,7 @@ def run_experiment(yaml_path: Path,
             record_execution=uel_cfg.get('record_execution', False),
             record_model_outputs=uel_cfg.get('record_model_outputs', False),
             factorize=uel_cfg.get('factorize', False),
+            workers=effective_workers,
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
