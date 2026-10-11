@@ -111,7 +111,7 @@ class _BarMember:
     def predict(self, raw_klines) -> BarPrediction:
 
         return BarPrediction(
-            datetime=None,
+            datetime=datetime(2025, 1, 23),
             prediction=self._prediction,
             probability=self._probability,
             reason=self._reason,
@@ -121,7 +121,7 @@ class _BarMember:
 
         n = len(raw_klines) if hasattr(raw_klines, '__len__') else self._n_bars
         return [
-            BarPrediction(datetime=None, prediction=self._prediction,
+            BarPrediction(datetime=datetime(2025, 1, 23), prediction=self._prediction,
                           probability=self._probability, reason=self._reason)
             for _ in range(n)
         ]

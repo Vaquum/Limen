@@ -1575,3 +1575,8 @@ Note: add all new changelog entries to the bottom of this file.
 - Pin frozen parity captures to fresh workers with fixed numerical threads and CPU dispatch.
 
 - Add opt-in `uel.factorize` for deterministic snapshot grid research; reuse signal preparation and prediction while preserving per-round economics, metrics and artifacts (#909).
+
+## [5.24.0] - 2026-10-11
+
+- Bind explicitly selected rounds from several experiment directories into one inference-only Cohort; preserve per-source reconstruction, qualified member identities and equal member weights (#906).
+- Reject mismatched participating prediction timestamps in both Cohort constructors while preserving compatible legacy identities and predictions.

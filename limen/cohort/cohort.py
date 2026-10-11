@@ -12,6 +12,7 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS
 from limen.cohort.sfc import Selector
+from limen.cohort._round_sources import _RoundSources
 from limen.inference.sensor import BarPrediction
 from limen.inference.sensor import PredictionReason
 from limen.yaml.config import is_mapping
@@ -21,11 +22,7 @@ from limen.yaml.store import SHA256_PREFIX
 class Cohort:
 
     '''
-    Construct a decoder cohort from a completed experiment and selected permutations.
-
-    This initial constructor implementation focuses on source resolution and
-    permutation_id validation. Prediction and aggregation behavior are added
-    separately.
+    Combine explicitly selected, reconstructed sensors for inference.
     '''
 
     _PROBABILITY_CAPABLE_HINTS = (
@@ -51,6 +48,7 @@ class Cohort:
     }
 
     _logger = logging.getLogger(__name__)
+    member_ids: list[tuple[str | None, str]]
 
     def __init__(self,
                  *,
@@ -58,7 +56,8 @@ class Cohort:
                  experiment_log_path: str | None = None,
                  permutation_ids: list[str] | None = None,
                  selector: str | Selector | None = None,
-                 selector_params: Any = None) -> None:
+                 selector_params: Any = None,
+                 rounds: list[tuple[str | Path, str]] | None = None) -> None:
         '''
         Construct an inference-only Cohort from one experiment source and selected permutations.
 
@@ -82,6 +81,29 @@ class Cohort:
         '''
 
         super().__init__()
+
+        self._round_sources: _RoundSources | None = None
+        if rounds is not None:
+            if any(arg is not None for arg in (experiment_id, experiment_log_path, permutation_ids, selector, selector_params)):
+                raise ValueError('Cohort rounds conflicts with single-source or selector arguments.')
+            selected = _RoundSources(rounds, type(self))
+            source = next(iter(selected.sources.values()))
+            single = len(selected.sources) == 1
+            self.experiment_dir = source.experiment_dir if single else None
+            self.experiment_id = source.experiment_id if single else None
+            self.available_permutation_ids = source.available_permutation_ids if single else None
+            self.permutation_ids = source.permutation_ids if single else None
+            self.metadata = source.metadata if single else None
+            self.manifest_id = selected.manifest_id
+            self.architecture_id = selected.architecture_id
+            self.supports_probabilities = source.supports_probabilities
+            self.aggregation_mode = source.aggregation_mode
+            self.member_ids = [(mid, pid) for mid, pid in selected.member_ids]
+            self.source_metadata = selected.source_metadata
+            self.cohort_id = None
+            self._members = []
+            self._round_sources = selected
+            return
 
         if experiment_id is None and experiment_log_path is None:
             raise ValueError(
@@ -182,11 +204,22 @@ class Cohort:
         self.manifest_id: str | None = metadata.get('manifest_id')
         self.cohort_id: str | None = None
         self._members: list[Any] = []
+        self.member_ids = [(self.manifest_id, pid) for pid in selected_ids]
+        self.source_metadata = {experiment_dir: metadata}
 
     def set_members(self, members: list[Any]) -> None:
 
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
+
+        if self._round_sources is not None:
+            bound = self._round_sources.bind(members)
+            payload = json.dumps(self._round_sources.identity(self.aggregation_mode), sort_keys=True)
+            self._members = bound
+            self.cohort_id = f'{SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
+            return
+
+        assert self.permutation_ids is not None
 
         if len(members) != len(self.permutation_ids):
             raise ValueError(
@@ -358,11 +391,20 @@ class Cohort:
         if not member_bars:
             raise ValueError('Cohort member_bars must be a non-empty list.')
 
-        dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
-
         valid_bars = [b for b in member_bars if b.reason != 'sensor-error']
+        dt = next((b.datetime for b in valid_bars if b.datetime is not None), None)
         if not valid_bars:
+            dt = next((b.datetime for b in member_bars if b.datetime is not None), None)
             return BarPrediction(datetime=dt, prediction=None, probability=None, reason='sensor-error')
+
+        for i, bar in enumerate(member_bars):
+            if bar.reason == 'sensor-error':
+                continue
+            member_id = self.member_ids[i] if i < len(self.member_ids) else i
+            if bar.reason is None and bar.datetime is None:
+                raise ValueError(f'Cohort member {member_id}: actionable prediction requires a timestamp.')
+            if bar.datetime is not None and bar.datetime != dt:
+                raise ValueError(f'Cohort member {member_id}: prediction timestamps do not align.')
 
         if len(valid_bars) < len(member_bars):
             n_errors = len(member_bars) - len(valid_bars)

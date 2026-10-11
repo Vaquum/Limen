@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
+
+from limen.experiment.manifest_core import _resolve_params
+from limen.yaml.compiler import CompiledSFD
+from limen.yaml.config import is_mapping
+
+if TYPE_CHECKING:
+    from limen.cohort.cohort import Cohort
+
+
+class _RoundSources:
+    def __init__(self, rounds: list[tuple[str | Path, str]], source_type: type[Cohort]) -> None:
+        if not rounds:
+            raise ValueError('Cohort rounds must be a non-empty list.')
+        grouped: dict[Path, list[str]] = {}
+        normalized = []
+        for directory, raw_pid in rounds:
+            path = Path(directory).expanduser().resolve()
+            pid = source_type._normalize_permutation_id(raw_pid)
+            grouped.setdefault(path, []).append(pid)
+            normalized.append((path, pid))
+
+        self.sources: dict[Path, Cohort] = {}
+        self.member_sources: dict[tuple[str, str], Cohort] = {}
+        self.source_metadata: dict[Path, Mapping[str, object]] = {}
+        signatures = []
+        architectures = set()
+        for path, ids in grouped.items():
+            try:
+                source = source_type(experiment_log_path=str(path), permutation_ids=ids)
+            except ValueError as exc:
+                raise ValueError(f'Cohort source {path}: {exc}') from exc
+            metadata = source.metadata
+            if metadata is None or not isinstance(source.manifest_id, str) or not source.manifest_id.strip():
+                raise ValueError(f'Cohort source {path}: a known manifest_id is required.')
+            yaml_reference = metadata.get('yaml_reference')
+            if not is_mapping(yaml_reference):
+                raise ValueError(f'Cohort source {path}: yaml_reference is required for compatibility checks.')
+            manifest = CompiledSFD(yaml_reference).manifest()
+            if manifest.split_walk_forward is not None:
+                raise ValueError(f'Cohort source {path}: walk-forward rounds cannot be promoted.')
+            data_source = manifest.data_source_config
+            if data_source is None:
+                raise ValueError(f'Cohort source {path}: data source is required.')
+            source_signature = (data_source.method, {k: v for k, v in data_source.params.items()
+                                                    if k not in ('start_date_limit', 'end_date_limit')})
+            entries = source._load_round_entries(path / 'round_data.jsonl')
+            for pid in ids:
+                key = (source.manifest_id, pid)
+                if key in self.member_sources:
+                    raise ValueError(f'Cohort duplicate member {key} in source {path}.')
+                params = entries[pid]['round_params']
+                bar_type = params.get('bar_type', 'base')
+                formation = None
+                if manifest.bar_formation and bar_type != 'base':
+                    func, base_params = manifest.bar_formation
+                    formation = (func, _resolve_params(base_params, params))
+                signature = (source_signature, bar_type, formation)
+                if signatures and signature != signatures[0]:
+                    raise ValueError(f'Cohort member {key} in source {path}: incompatible data source or effective bar formation.')
+                signatures.append(signature)
+                self.member_sources[key] = source
+            architectures.add(source.architecture_id)
+            if len(architectures) != 1:
+                raise ValueError(f'Cohort source {path}: all members must share the same architecture.')
+            self.sources[path] = source
+            self.source_metadata[path] = metadata
+
+        self.member_ids = [(cast(str, self.sources[path].manifest_id), pid) for path, pid in normalized]
+        self.architecture_id = next(iter(architectures))
+        manifest_ids = {mid for mid, _ in self.member_ids}
+        self.manifest_id = next(iter(manifest_ids)) if len(manifest_ids) == 1 else None
+
+    def bind(self, members: list[object]) -> list[object]:
+        if len(members) != len(self.member_ids):
+            raise ValueError('Cohort member count must match selected rounds count.')
+        bound: dict[tuple[str, str], object] = {}
+        for member in members:
+            mid = getattr(member, 'manifest_id', None)
+            pid = getattr(member, 'permutation_id', None)
+            if not isinstance(mid, str) or not isinstance(pid, str):
+                raise ValueError(f'Cohort member {(mid, pid)}: manifest_id and permutation_id are required.')
+            pid = pid.strip()
+            key = (mid, pid)
+            if key not in self.member_sources:
+                raise ValueError(f'Cohort unknown or wrong-source member {key}.')
+            if key in bound:
+                raise ValueError(f'Cohort duplicate bound member {key}.')
+            if getattr(member, 'prediction_mode', 'binary') == 'target_exposure':
+                raise ValueError(f'Binary Cohort cannot aggregate target-exposure member {key}.')
+            source = self.member_sources[key]
+            assert source.metadata is not None
+            params = getattr(member, 'round_params', None)
+            if not is_mapping(params):
+                raise ValueError(f'Cohort member {key}: round_params are required for architecture binding.')
+            if source._extract_architecture_id({'round_params': params}, source.metadata).strip().lower() != self.architecture_id.strip().lower():
+                raise ValueError(f'Cohort member {key}: bound architecture must match its source.')
+            bound[key] = member
+        missing = [key for key in self.member_ids if key not in bound]
+        if missing:
+            raise ValueError(f'Cohort missing bound members: {missing}.')
+        return [bound[key] for key in self.member_ids]
+
+    def identity(self, aggregation_mode: str) -> dict[str, object]:
+        payload: dict[str, object] = {'architecture_id': self.architecture_id, 'aggregation_mode': aggregation_mode}
+        if self.manifest_id is None:
+            payload['rounds'] = sorted(self.member_ids)
+        else:
+            payload.update(manifest_id=self.manifest_id, permutation_ids=sorted(pid for _, pid in self.member_ids))
+        return payload

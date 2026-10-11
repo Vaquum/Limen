@@ -1,8 +1,6 @@
 # Cohort
 
-`Cohort` is Limen's inference-time ensemble surface for combining multiple trained sensors reconstructed from one completed experiment.
-
-`Cohort` moves single-round predictions into a controlled multi-member prediction surface while staying inside Limen artifacts (`metadata.json`, `round_data.jsonl`, Trainer-reconstructed sensors).
+`Cohort` combines trained Sensors reconstructed from completed experiment artifacts. Select rounds from one experiment with the existing constructor/selectors, or explicitly select rounds across directories with `rounds`. Each Sensor retains its own fitted state and inference guards.
 
 ## What this page covers
 
@@ -17,10 +15,10 @@
 
 A Cohort requires:
 
-1. a completed YAML CLI result directory
+1. completed ordinary experiment result directories
 2. valid experiment artifacts (`metadata.json`, `round_data.jsonl`)
-3. selected permutation IDs, or a selector that chooses them
-4. trained members from `Trainer.train(permutation_ids)`
+3. selected permutation IDs, qualified by directory when using several sources
+4. members reconstructed separately with each source's `Trainer.train(permutation_ids)`
 
 Read these pages first:
 
@@ -34,7 +32,7 @@ Pipeline path:
 1. run experiment search with `limen run`
 2. identify permutations to promote, manually or with a selector
 3. reconstruct and replay those permutations with Trainer
-4. create Cohort from experiment source + permutation IDs or selector
+4. create Cohort from a single source + permutation IDs/selector, or explicit `(directory, permutation_id)` pairs
 5. bind trained members via `set_members(sensors)`
 6. infer with:
    - `predict(raw_klines)` → one `BarPrediction` for the last bar
@@ -61,7 +59,7 @@ cohort = Cohort(
 
 ### Experiment source rules
 
-Exactly one source is required:
+For the existing single-source form, exactly one source is required:
 
 - `experiment_id`
 - `experiment_log_path`
@@ -76,22 +74,100 @@ Providing none or both raises `ValueError`.
 - unknown IDs raise `ValueError`
 - `permutation_ids` and `selector` are mutually exclusive
 
-### Cohort identity fields
+### Explicit rounds from several experiments
 
-After construction and before `set_members()`:
+```python
+selected_rounds = [(directory_a, round_a), (directory_b, round_b)]
+cohort = Cohort(rounds=selected_rounds)
+sensors_a = Trainer(directory_a, data=recorded).train([round_a])
+sensors_b = Trainer(directory_b, data=recorded).train([round_b])
+cohort.set_members(sensors_a + sensors_b)
+```
 
-- `cohort.manifest_id` — SHA-256 hash of the YAML manifest, read from `metadata.json`
-- `cohort.cohort_id` — `None` until `set_members()` is called
+`rounds` must be non-empty and is mutually exclusive with `experiment_id`,
+`experiment_log_path`, `permutation_ids`, `selector` and `selector_params`.
+Directories are resolved before lookup. Each requested ID must exist in its
+named directory, whose metadata must have a known `manifest_id`. Each source
+uses its own Trainer, YAML, fitted preprocessing and replay validation;
+reconstruction failures remain visible rather than dropping selected members.
+Supplying the same recorded DataFrame to each Trainer avoids repeated fetching;
+Cohort adds no shared training or data cache.
 
-After `set_members()`:
+The canonical member key is `(manifest_id, permutation_id)`. Duplicate keys
+reject, including aliases of a directory or repeated runs of one manifest.
+Directories sharing a manifest may contribute distinct rounds. The same bare
+round ID under different manifests is allowed and counted once per selected
+member. Explicitly selecting equivalent models gives that prediction more
+weight; Cohort does not detect or deduplicate equivalent models.
 
-- `cohort.cohort_id` — `'sha256:<hex>'` derived from `manifest_id`, `architecture_id`, `aggregation_mode`, and the sorted set of `permutation_ids`
+### Provenance and identity
 
-`cohort_id` is a cohort binding identity, not a code-signing attestation. Thresholds and model choices encoded into a round are represented through the selected permutation IDs and manifest lineage; Python implementation semantics and external dependency behavior are outside the cohort hash.
+`member_ids` preserves the selected order of qualified pairs. `source_metadata`
+maps resolved directory paths to their own metadata. The new form's existing
+provenance attributes depend on its number of resolved directories:
+
+| Attribute | One directory | Several directories |
+|---|---|---|
+| `experiment_dir`, `metadata`, `available_permutation_ids`, `permutation_ids` | describe that directory | `None` |
+| `experiment_id` | the existing explicit-path value (`None`) | `None` |
+| `manifest_id` | the source manifest ID | the sole distinct manifest ID, otherwise `None` |
+
+Existing single-source constructor attributes keep their meanings.
+`cohort_id` remains `None` until complete successful `set_members()` binding.
+The hash uses `json.dumps(payload, sort_keys=True)` and SHA-256, prefixed by
+`sha256:`. One distinct manifest uses the exact legacy payload, even with the
+new constructor or distinct rounds spread across several directories:
+
+```python
+payload = {
+    'aggregation_mode': cohort.aggregation_mode,
+    'architecture_id': cohort.architecture_id,
+    'manifest_id': cohort.manifest_id,
+    'permutation_ids': sorted(pid for _, pid in cohort.member_ids),
+}
+```
+
+Several distinct manifests use:
+
+```python
+payload = {
+    'aggregation_mode': cohort.aggregation_mode,
+    'architecture_id': cohort.architecture_id,
+    'rounds': [list(pair) for pair in sorted(cohort.member_ids)],
+}
+```
+
+Paths and selection/binding order do not enter the hash. It identifies selected
+artifact lineage, not distinct learned models or code/dependency semantics.
+
+### Compatibility
+
+The `rounds` form requires one architecture, the same configured source method
+and identity-defining parameters (including instrument/file and base cadence),
+and the same effective selected-round bar type and applied formation function
+and arguments. Only `start_date_limit` and `end_date_limit` are excluded from
+source comparison; different split windows, seeds and narrowed parameter
+domains can remain compatible. Whole manifests are not compared.
+
+Both constructors check actual participating, non-error timestamps at each
+batch position and at the last bar returned by `predict`. Healthy output
+lengths must agree. Mismatched timestamps or an actionable prediction
+(`reason=None`) without a timestamp reject with the affected member identified;
+bars are never truncated, intersected, interpolated or relabelled. Existing
+blocked/unavailable outputs may have `datetime=None`, including empty-input
+warm-up. Compatible legacy predictions and IDs remain unchanged.
+
+Each Sensor keeps its own splits and guards. Any participating blocked member
+still blocks the aggregate bar; different windows can leave no usable
+predictions. Target, calibration and cost settings may differ. This does not
+certify equivalent target meaning or comparable cross-run research metrics.
+The aggregate is inference-only: `trade_contract_digest` and `available_at_ns`
+remain `None`. Ordinary persisted rounds are supported; walk-forward fold
+promotion and signed target-exposure aggregation are outside this interface.
 
 ## Selector contract
 
-Selectors choose Cohort members before any training or inference work starts.
+Selectors choose members from one experiment before training or inference. Their context and bare-ID return contract are unchanged; they cannot be combined with `rounds`.
 
 Minimum contract:
 
@@ -195,20 +271,20 @@ sensors = trainer.train(top_ids)
 cohort.set_members(sensors)
 ```
 
-Each member must expose `permutation_id` for binding. `set_members()` validates that:
-
-- all `permutation_ids` are covered exactly once
-- member `permutation_id` values match the cohort's selected IDs
-- all members share the same architecture
-
-After a successful `set_members()` call, `cohort.cohort_id` is populated.
+Each member must expose `permutation_id`. In the `rounds` form, its
+`manifest_id` must also match the selected source-qualified key. Binding covers
+every selected member exactly once and checks architecture against that
+member's own source metadata. Wrong-source, duplicate or incomplete binding
+rejects; signed target-exposure Sensors remain unsupported. Only complete
+successful binding populates `cohort.cohort_id`.
 
 ## Aggregation modes
 
 Aggregation mode is selected at construction based on architecture capability hints.
-For YAML CLI runs, Cohort reads `metadata.json["yaml_reference"]` to recover the
-manifest `reference_architecture`; this keeps `sfd_module: yaml:<name>` bundles
-compatible with Trainer-reconstructed sensors.
+For YAML CLI runs, Cohort reads each source's `metadata.json["yaml_reference"]`
+to recover `reference_architecture`; this keeps `sfd_module: yaml:<name>` bundles
+compatible with Trainer-reconstructed Sensors. Weight is equal per selected
+member, not per experiment, including unequal source membership.
 
 ### 1) `probability_weighted`
 
@@ -269,53 +345,108 @@ for bar in all_preds:
 
 Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per bar. Replay loops use this form for every bar in a window.
 
-## Real end-to-end example
+## Recorded end-to-end example
+
+Run from the repository root with Limen installed. This creates two small
+ordinary sweeps over the committed recorded 15-minute fixture, selects two
+members from one source and one from the other, reconstructs each against its
+own artifacts, then predicts recorded January 8 bars. Temporary artifacts are
+removed when the example exits.
 
 ```python
+from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 import polars as pl
+import yaml
+
+from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
+from limen.data import HistoricalData
 from limen.inference import Trainer
 
-experiment_dir = 'experiments/my_exp'
+fixture = Path('tests/fixtures/spot_15m_20250101_20250531.parquet').resolve()
+recorded = HistoricalData().get_any_file(str(fixture))
+config = yaml.safe_load("""
+schema_version: "1.0"
+metadata:
+  name: cohort_recorded
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params: {}
+    split_dates:
+      train_start: "2025-01-01"
+      train_end: "2025-01-04"
+      val_start: "2025-01-04"
+      val_end: "2025-01-05"
+      test_start: "2025-01-05"
+      test_end: "2025-01-06"
+    indicators:
+      - func: limen.indicators.roc
+        params: {period: 1, group: momentum}
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params: {source_column: roc_1, quantile: 0.5}
+      transform_params: {shift: -1}
+    scaler: {from_params: scaler_type}
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type: [logreg]
+    C: [0.1, 1.0, 10.0]
+    random_state: [42]
+    max_iter: [100]
+uel:
+  n_permutations: 3
+  search_strategy: {type: grid, seed: 42}
+  output_format: csv
+""")
+config['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(fixture)
 
-# 1) identify top permutations from results
-results = pl.read_csv(f'{experiment_dir}/results.csv')
-top_ids = results.sort('accuracy', descending=True).head(3)['id'].to_list()
+with TemporaryDirectory() as temporary:
+    root = Path(temporary)
+    selected = []
+    members = []
+    for seed, count in [(42, 2), (43, 1)]:
+        directory = root / f'run_{seed}'
+        config['metadata']['name'] = f'cohort_recorded_{seed}'
+        config['uel']['search_strategy']['seed'] = seed
+        config['uel']['output_path'] = str(directory)
+        yaml_path = root / f'run_{seed}.yaml'
+        yaml_path.write_text(yaml.safe_dump(config))
+        assert run_experiment(yaml_path, progress_bar=False)
+        ids = sorted(pl.read_csv(directory / 'results.csv')['id'].to_list())[:count]
+        selected.extend((directory, pid) for pid in ids)
+        members.extend(Trainer(directory, data=recorded).train(ids))
 
-# 2) replay selected permutations
-trainer = Trainer(experiment_dir)
-sensors = trainer.train(top_ids)
-
-# 3) build and bind cohort
-cohort = Cohort(
-    experiment_log_path=experiment_dir,
-    permutation_ids=top_ids,
-)
-cohort.set_members(sensors)
-
-print(cohort.cohort_id.startswith('sha256:'))
-print(cohort.manifest_id.startswith('sha256:'))
-
-# 4a) predict last bar
-bar_pred = cohort.predict(raw_klines)
-if bar_pred.reason is None:
-    print(bar_pred.prediction, bar_pred.probability)
-
-# 4b) predict all bars
-all_preds = cohort.predict_all(raw_klines)
-valid = [p for p in all_preds if p.reason is None]
-print(f'{len(valid)} valid bars out of {len(all_preds)}')
-
-# 4c) callable alias, same as predict_all
-all_preds2 = cohort(raw_klines)  # list[BarPrediction]
+    cohort = Cohort(rounds=selected)
+    cohort.set_members(members)
+    inference = recorded.filter(pl.col('datetime').dt.date() == date(2025, 1, 8))
+    last = cohort.predict(inference)
+    batch = cohort.predict_all(inference)
+    assert cohort(inference) == batch
+    print(cohort.cohort_id)
+    print(cohort.member_ids)
+    print(last.datetime, last.reason, last.prediction, last.probability)
 ```
+
+The selected list is caller-owned; changing a grid seed does not imply distinct
+models or non-overlapping rounds. Selectors may still choose IDs independently
+within each directory before assembling that list. For a parent/narrowed
+experiment line, use the same per-source reconstruction and binding workflow;
+source/bar compatibility and every member's guards still apply.
 
 ## Failure cases and caveats
 
 - missing experiment artifacts (`metadata.json` / `round_data.jsonl`) raise `FileNotFoundError`
 - unresolvable or ambiguous experiment ID resolution raises `ValueError`
 - no bound members at inference raises `RuntimeError`
-- member sensor lists of different lengths raise `ValueError` in `predict_all`
+- healthy member lists of different lengths or participating timestamp mismatches raise `ValueError`
 - when a member returns `sensor-error` for a bar, it is excluded from aggregation for that bar; only when all members return `sensor-error` does the cohort return `reason='sensor-error'`
 - architecture capability detection is currently hint-based; validate behavior for the target architecture set
 - selectors that depend on `results.csv` raise if the required columns are missing
