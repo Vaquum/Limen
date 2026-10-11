@@ -1,3 +1,4 @@
+import faulthandler
 import io
 import json
 import os
@@ -17,6 +18,7 @@ import pytest
 from click.testing import CliRunner
 from polars.testing import assert_frame_equal
 from ruamel.yaml import YAML
+from threadpoolctl import threadpool_info, threadpool_limits
 
 from limen.cli.main import cli
 from limen.cli.commands.run import run_experiment
@@ -27,7 +29,7 @@ from limen.backtest.trade_contract import json_value
 from limen.backtest.trade_execution import trade_execution
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
-from limen.experiment._parallel_worker import freeze_sources
+from limen.experiment._parallel_worker import freeze_sources, startup_limits
 from limen.experiment.manifest_core import MLManifest
 from limen.inference import Trainer
 from limen.yaml import CompiledSFD, build_search_strategy, validate
@@ -105,13 +107,14 @@ def make_loop(config, directory, *, callback=None):
 
 def run_loop(config, directory, *, workers=None, resume=False, callback=None):
     loop = make_loop(config, directory, callback=callback)
-    loop.run(
-        config['metadata']['name'],
-        n_permutations=config['uel']['n_permutations'],
-        prep_each_round=True, progress_bar=False,
-        record_execution=True, record_model_outputs=True,
-        workers=workers, resume=resume,
-    )
+    with threadpool_limits(limits=1):
+        loop.run(
+            config['metadata']['name'],
+            n_permutations=config['uel']['n_permutations'],
+            prep_each_round=True, progress_bar=False,
+            record_execution=True, record_model_outputs=True,
+            workers=workers, resume=resume,
+        )
     return loop
 
 
@@ -219,16 +222,46 @@ def controlled_pool(directory, mode):
     return patch('limen.experiment._parallel_rounds.ProcessPoolExecutor', _ControlledPool)
 
 
+def _serial_round_proof(config_path, destination):
+    configs = YAML(typ='safe').load(Path(config_path).read_text())
+    root = Path(destination)
+    for name, config in configs.items():
+        prefixes = []
+        pools = []
+
+        def boundary(log, msq, prefixes=prefixes, pools=pools):
+            assert msq.yielded_count == log.height
+            assert pl.thread_pool_size() == 1
+            actual = threadpool_info()
+            assert actual and all(pool['num_threads'] == 1 for pool in actual)
+            pools.extend(actual)
+            prefixes.append(log['_round_index'].to_list())
+
+        run_loop(config, root / f'{name}_serial', workers=1, callback=boundary)
+        assert prefixes and pools
+        (root / f'{name}_serial.json').write_text(json.dumps({
+            'prefixes': prefixes, 'native_pools': pools, 'polars_threads': pl.thread_pool_size(),
+        }))
+
+
 @pytest.fixture(scope='module')
 def parallel_campaigns(tmp_path_factory):
     root = tmp_path_factory.mktemp('parallel_recorded')
     campaigns = {}
-    for name, options in (
+    configs = {name: parallel_config(**options) for name, options in (
         ('grid', {'objective': True}),
         ('random', {'strategy': 'random'}),
         ('folds', {'walk_forward': True}),
-    ):
-        config = parallel_config(**options)
+    )}
+    serial_config = root / 'serial_campaigns.yaml'
+    _write_yaml(configs, serial_config)
+    with startup_limits():
+        subprocess.run([
+            sys.executable, '-c',
+            'from tests.test_parallel_rounds import _serial_round_proof\nimport sys\n_serial_round_proof(*sys.argv[1:])',
+            str(serial_config), str(root),
+        ], cwd=ROOT, check=True, timeout=40)
+    for name, config in configs.items():
         prefixes = []
 
         def boundary(log, msq, prefixes=prefixes):
@@ -236,14 +269,14 @@ def parallel_campaigns(tmp_path_factory):
             prefixes.append(log['_round_index'].to_list())
 
         serial = root / f'{name}_serial'
-        run_loop(config, serial, workers=1, callback=boundary)
         parallel = root / f'{name}_parallel'
         markers = root / f'{name}_markers'
-        serial_prefixes = prefixes.copy()
-        prefixes.clear()
+        serial_proof = json.loads((root / f'{name}_serial.json').read_text())
+        assert serial_proof['polars_threads'] == 1
+        assert all(pool['num_threads'] == 1 for pool in serial_proof['native_pools'])
         with controlled_pool(markers, 'reorder'):
             run_loop(config, parallel, workers=4, callback=boundary)
-        assert prefixes == serial_prefixes
+        assert prefixes == serial_proof['prefixes']
         campaigns[name] = (config, serial, parallel, markers)
     return campaigns
 
@@ -391,8 +424,12 @@ def _wait_for(path, process, *, timeout=40):
 
 def _subprocess_campaign(config_path, output, marker_directory, mode):
     config = YAML(typ='safe').load(Path(config_path).read_text())
-    with controlled_pool(Path(marker_directory), mode):
-        run_loop(config, Path(output), workers=4)
+    faulthandler.dump_traceback_later(10)
+    try:
+        with controlled_pool(Path(marker_directory), mode):
+            run_loop(config, Path(output), workers=4)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
 
 
 @pytest.mark.parametrize('phase', ('zero', 'outstanding', 'final', 'group'))
@@ -417,7 +454,11 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
                 os.killpg(process.pid, signal.SIGTERM)
             else:
                 process.send_signal(signal.SIGTERM)
-            assert process.wait(timeout=20) == 0, output.read_text()
+            try:
+                returncode = process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                pytest.fail(f'SIGTERM shutdown exceeded 20 seconds:\n{output.read_text()}')
+            assert returncode == 0, output.read_text()
         finally:
             if process.poll() is None:
                 process.kill()

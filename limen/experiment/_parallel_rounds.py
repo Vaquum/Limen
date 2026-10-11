@@ -8,6 +8,7 @@ from collections import deque
 from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError as FutureTimeoutError
 from concurrent.futures.process import BrokenProcessPool
+from multiprocessing.connection import Connection
 from multiprocessing.process import BaseProcess
 from pathlib import Path
 from typing import cast
@@ -100,6 +101,9 @@ def dispatch(host: object, components: dict[str, object], n_permutations: int,
 
 
 def _reap(pool: ProcessPoolExecutor) -> None:
+    cast(Callable[[], None], getattr(vars(pool)['_call_queue'], 'cancel_join_thread', None))()
+    # Let an interrupted result read reach EOF after the child writers die.
+    cast(Connection, vars(vars(pool)['_result_queue'])['_writer']).close()
     active = cast(dict[int, BaseProcess] | None, vars(pool)['_processes'])
     processes = tuple(active.values()) if active is not None else ()
     for process in processes:
