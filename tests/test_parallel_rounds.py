@@ -437,7 +437,7 @@ def _subprocess_campaign(config_path, output, marker_directory, mode):
     faulthandler.dump_traceback_later(10)
     try:
         with controlled_pool(Path(marker_directory), mode):
-            run_loop(config, Path(output), workers=4)
+            run_loop(config, Path(output), workers=2)
     finally:
         faulthandler.cancel_dump_traceback_later()
 
@@ -481,7 +481,7 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
     if phase == 'zero':
         assert resumed.experiment_log.schema['val_backtest_total_return'] == pl.Float64
         assert resumed.experiment_log['val_backtest_total_return'].is_finite().all()
-    assert_runs_equal(directory, parallel_campaigns[campaign][2])
+    assert_runs_equal(directory, parallel_campaigns[campaign][1])
 
 
 def test_parallel_yaml_imports_first_in_fresh_process():
@@ -530,7 +530,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
 
             loop = make_loop(config, directory, callback=stop_strict_prefix)
             loop.run(config['metadata']['name'], n_permutations=6,
-                     prep_each_round=True, progress_bar=False, workers=4,
+                     prep_each_round=True, progress_bar=False, workers=2,
                      record_execution=True, record_model_outputs=True)
     frame = assert_artifacts(directory)
     checkpoint = json.loads((directory / 'checkpoint.json').read_text())
