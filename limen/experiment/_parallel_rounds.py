@@ -6,6 +6,7 @@ import multiprocessing
 from collections import deque
 from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError as FutureTimeoutError
+from concurrent.futures.process import BrokenProcessPool
 from multiprocessing.process import BaseProcess
 from pathlib import Path
 from typing import cast
@@ -138,7 +139,8 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 except Exception as exc:
                     if attributes['_shutdown_requested']:
                         break
-                    raise RuntimeError(f"Parallel worker failed for round {parameters['_round_index']} ({parameters['_id']}): {exc}") from exc
+                    failure = 'Parallel worker process or initializer failed while awaiting' if isinstance(exc, BrokenProcessPool) else 'Parallel worker failed for'
+                    raise RuntimeError(f"{failure} round {parameters['_round_index']} ({parameters['_id']}): {exc}") from exc
                 if attributes['_shutdown_requested']:
                     break
                 writer.commit(parameters, payload)
