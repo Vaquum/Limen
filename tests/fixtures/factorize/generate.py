@@ -7,9 +7,20 @@ import json
 import math
 import os
 import platform
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+
+NUMERICAL_ENV = {
+    'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1',
+    'NPY_DISABLE_CPU_FEATURES': 'SSSE3,SSE41,POPCNT,SSE42,AVX,F16C,FMA3,AVX2,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR',
+}
+if __name__ == '__main__' and platform.system() == 'Linux' and platform.machine() == 'x86_64':
+    # NumPy reads CPU dispatch and BLAS thread settings on first import.
+    os.environ.update(NUMERICAL_ENV)
+
 import polars as pl
 from ruamel.yaml import YAML
 from limen.cli.commands.run import run_experiment
@@ -164,12 +175,24 @@ def component_digests(captured: dict) -> dict[str, str]:
             **{f'metadata/{key}': _hash(canonical(value)) for key, value in science['metadata'].items()}}
 
 
+def pinned_captures(directory: Path) -> dict:
+    subprocess.run([sys.executable, str(Path(__file__).resolve()), '--capture', '--out', str(directory)],
+                   env={**os.environ, **NUMERICAL_ENV}, check=True)
+    return {name: json.loads((directory / f'{name}.json').read_text()) for name in CASES}
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument('--out',type=Path,default=Path(__file__).parent)
+    ap.add_argument('--capture', action='store_true')
     args=ap.parse_args()
     args.out.mkdir(parents=True,exist_ok=True)
     for name in CASES:
+        if args.capture:
+            captured = {mode: execute(name, args.out / name / mode, factorize=enabled)
+                        for mode, enabled in (('off', None), ('on', True))}
+            (args.out / f'{name}.json').write_text(json.dumps(captured))
+            continue
         with tempfile.TemporaryDirectory() as temp:
             result=execute(name,Path(temp))
         evidence={'source_sha':BASELINE,'case':name,
@@ -177,7 +200,7 @@ def main():
                   'python':platform.python_version(),'platform':platform.platform(),
                   'lock_file':'requirements/ci/research-env.txt',
                   'threads':{k:os.environ.get(k) for k in
-                             ('OMP_NUM_THREADS','OPENBLAS_NUM_THREADS','MKL_NUM_THREADS')},
+                             NUMERICAL_ENV},
                   'digest_12dp':digest(result),
                   'component_digests': component_digests(result),
                   'round_ids':[row['round_id'] for row in result['round_data']],

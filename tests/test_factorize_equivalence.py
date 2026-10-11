@@ -27,7 +27,7 @@ from limen.yaml import validate
 from limen.yaml.compiler import build_manifest
 
 from tests.fixtures.factorize.generate import (
-    BASELINE, CASES, MARKET, canonical, component_digests, digest, execute, manifest,
+    BASELINE, CASES, MARKET, canonical, component_digests, digest, execute, manifest, pinned_captures,
 )
 
 GOLDENS = Path(__file__).parent / 'fixtures/factorize'
@@ -92,15 +92,17 @@ def test_cli_manifest_switch(tmp_path: Path) -> None:
 
 
 def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path: Path) -> None:
+    locked = sys.platform == 'linux' and sys.version_info[:2] == (3, 10) and np.__version__ == '2.2.6'
+    captures = pinned_captures(tmp_path / 'pinned') if locked else {}
     for name in CASES:
         baseline = json.loads((GOLDENS / f'{name}.json').read_text())
         assert baseline['source_sha'] == BASELINE
         assert baseline['market_sha256'] == hashlib.sha256(MARKET.read_bytes()).hexdigest()
-        off = execute(name, tmp_path / name / 'off')
-        on = execute(name, tmp_path / name / 'on', factorize=True)
+        off = captures[name]['off'] if locked else execute(name, tmp_path / name / 'off')
+        on = captures[name]['on'] if locked else execute(name, tmp_path / name / 'on', factorize=True)
         off_digest, on_digest = digest(_original_surface(off)), digest(_original_surface(on))
         # Frozen goldens require the locked Linux/Python 3.10 numerical runtime.
-        if sys.platform == 'linux' and sys.version_info[:2] == (3, 10) and np.__version__ == '2.2.6':
+        if locked:
             if off_digest != baseline['digest_12dp']:
                 actual = component_digests(_original_surface(off))
                 differences = {key: (expected, actual.get(key))
