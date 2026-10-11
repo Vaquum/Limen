@@ -199,7 +199,7 @@ def _controlled_round(function, params, marker_directory, mode):
     original = MLManifest.run_model
 
     def controlled(manifest, data, round_params):
-        if mode == 'all_strict' or (mode == 'strict' and index in (0, 2)):
+        if mode == 'strict' and (index < 3 or index == 4):
             raise StrictModeError(f'recorded control failure {index}')
         if mode == 'fatal' and index == 1:
             raise RuntimeError('recorded fatal worker control')
@@ -471,7 +471,7 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
             assert returncode == 0, output.read_text()
         finally:
             if process.poll() is None:
-                process.kill()
+                os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=10)
     checkpoint = json.loads((directory / 'checkpoint.json').read_text())
     prefix = checkpoint['metadata']['experiment_round'] + 1
@@ -491,11 +491,11 @@ def test_parallel_yaml_imports_first_in_fresh_process():
     assert process.returncode == 0, process.stderr
 
 
-@pytest.mark.parametrize('mode', ('strict', 'all_strict', 'fatal', 'dead'))
+@pytest.mark.parametrize('mode', ('strict', 'fatal', 'dead'))
 def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
-    config = parallel_config(objective=mode == 'all_strict')
+    config = parallel_config(objective=mode == 'strict')
     config['uel'].pop('pruning_strategies')
-    config['uel']['n_permutations'] = 5 if mode == 'all_strict' else 4
+    config['uel']['n_permutations'] = 6 if mode == 'strict' else 4
     directory = tmp_path / 'failure'
     if mode in ('fatal', 'dead'):
         config_path = tmp_path / 'campaign.yaml'
@@ -523,18 +523,15 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
                     process.wait(timeout=10)
     else:
         with controlled_pool(tmp_path / 'markers', mode):
-            if mode == 'all_strict':
-                def stop_strict_prefix(log, msq):
-                    assert log.schema['val_backtest_total_return'] == pl.Float64
-                    if log.height == 3:
-                        loop._shutdown_requested = True
+            def stop_strict_prefix(log, msq):
+                assert log.schema['val_backtest_total_return'] == pl.Float64
+                if log.height == 3:
+                    loop._shutdown_requested = True
 
-                loop = make_loop(config, directory, callback=stop_strict_prefix)
-                loop.run(config['metadata']['name'], n_permutations=5,
-                         prep_each_round=True, progress_bar=False, workers=4,
-                         record_execution=True, record_model_outputs=True)
-            else:
-                run_loop(config, directory, workers=4)
+            loop = make_loop(config, directory, callback=stop_strict_prefix)
+            loop.run(config['metadata']['name'], n_permutations=6,
+                     prep_each_round=True, progress_bar=False, workers=4,
+                     record_execution=True, record_model_outputs=True)
     frame = assert_artifacts(directory)
     checkpoint = json.loads((directory / 'checkpoint.json').read_text())
     assert checkpoint['metadata']['experiment_round'] + 1 == frame.height
@@ -546,9 +543,6 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         identities = [next(strategy)['_id'] for _ in range(2)]
         assert f'round {frame.height} ({identities[frame.height]})' in failure_output, failure_output
     if mode == 'strict':
-        assert frame['strict_mode_error'].is_not_null().to_list() == [True, False, True, False]
-        assert [row['_round_index'] for row in records(directory)] == [1, 3]
-    elif mode == 'all_strict':
         assert frame.height == 3 and frame['strict_mode_error'].null_count() == 0
         assert records(directory) == []
         feedback_heights = []
@@ -558,12 +552,18 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             assert log['val_backtest_total_return'].drop_nulls().is_finite().all()
             feedback_heights.append(log.height)
 
-        resumed = run_loop(config, directory, resume=True, callback=numeric_feedback)
+        with controlled_pool(tmp_path / 'resume_markers', mode):
+            resumed = run_loop(config, directory, resume=True, callback=numeric_feedback)
         assert feedback_heights == [5]
+        completed = assert_artifacts(directory)
+        assert completed.height == 6
+        assert completed['strict_mode_error'].is_not_null().to_list() == [True, True, True, False, True, False]
         scores = resumed.experiment_log['val_backtest_total_return']
-        assert scores.dtype == pl.Float64 and scores.null_count() == 3
+        assert scores.dtype == pl.Float64 and scores.null_count() == 4
+        assert len(scores.drop_nulls()) == 2
         assert scores.drop_nulls().is_finite().all()
-        assert [row['_round_index'] for row in records(directory)] == [3, 4]
+        assert [row['_round_index'] for row in records(directory)] == [3, 5]
+        assert json.loads((directory / 'checkpoint.json').read_text())['metadata']['experiment_round'] == 5
     else:
         run_loop(config, directory, resume=True)
         assert assert_artifacts(directory).height == 4
