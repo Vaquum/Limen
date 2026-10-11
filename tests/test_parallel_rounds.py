@@ -20,6 +20,7 @@ from polars.testing import assert_frame_equal
 from ruamel.yaml import YAML
 from threadpoolctl import threadpool_info, threadpool_limits
 
+from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.cli.main import cli
 from limen.cli.commands.run import run_experiment
 from limen.cli.commands.resume import run_resume
@@ -32,7 +33,6 @@ from limen.experiment.errors import StrictModeError
 from limen.experiment._parallel_worker import freeze_sources, startup_limits
 from limen.experiment.manifest_core import MLManifest
 from limen.inference import Trainer
-from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
 from tests.test_experiment_objective import objective_config
@@ -433,6 +433,8 @@ def _wait_for(path, process, *, timeout=40):
 
 
 def _subprocess_campaign(config_path, output, marker_directory, mode):
+    assert CompiledSFD.__name__ == 'CompiledSFD'
+    assert cli.name == 'cli'
     config = YAML(typ='safe').load(Path(config_path).read_text())
     faulthandler.dump_traceback_later(10)
     try:
@@ -482,13 +484,6 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
         assert resumed.experiment_log.schema['val_backtest_total_return'] == pl.Float64
         assert resumed.experiment_log['val_backtest_total_return'].is_finite().all()
     assert_runs_equal(directory, parallel_campaigns[campaign][1])
-
-
-def test_parallel_yaml_imports_first_in_fresh_process():
-    code = "from limen.yaml import CompiledSFD; from limen.cli.main import cli; assert CompiledSFD.__name__ == 'CompiledSFD'; assert cli.name == 'cli'"
-    process = subprocess.run([sys.executable, '-c', code], cwd=ROOT,
-                             capture_output=True, text=True, timeout=20, check=False)
-    assert process.returncode == 0, process.stderr
 
 
 @pytest.mark.parametrize('mode', ('strict', 'fatal', 'dead'))
