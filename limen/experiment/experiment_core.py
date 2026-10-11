@@ -1,4 +1,3 @@
-import copy
 import csv
 import importlib.metadata
 import json

@@ -46,7 +46,7 @@ def admit_parallel(host: object, workers: int, prep_each_round: bool,
         raise ValueError('workers must be a positive integer')
     if workers == 1:
         return
-    if not isinstance(prep_each_round, bool):
+    if type(prep_each_round) is not bool:
         raise TypeError('prep_each_round must be a bool')
     if not prep_each_round:
         raise ValueError('Parallel rounds require prep_each_round=True')
