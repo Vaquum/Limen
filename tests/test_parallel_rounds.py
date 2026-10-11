@@ -369,9 +369,8 @@ def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
             assert_frame_equal(loop._parallel_sources.learning, loop.data)
             raise RuntimeError('recorded fresh-source control boundary')
 
-        with patch.object(loop, '_run', side_effect=observe_fresh_sources):
-            with pytest.raises(RuntimeError, match='recorded fresh-source control boundary'):
-                loop.run('fresh_admission', workers=4, prep_each_round=True, progress_bar=False)
+        with patch.object(loop, '_run', side_effect=observe_fresh_sources), pytest.raises(RuntimeError, match='recorded fresh-source control boundary'):
+            loop.run('fresh_admission', workers=4, prep_each_round=True, progress_bar=False)
         assert not path.exists()
         assert loop._parallel_sources is None
 
