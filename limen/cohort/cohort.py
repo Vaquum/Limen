@@ -274,20 +274,7 @@ class Cohort:
 
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
-        '''
-        Run all member sensors on raw klines and return one aggregated prediction for the last bar.
-
-        Args:
-            raw_klines (pl.DataFrame): Raw klines from live feed, same schema as
-                the manifest data source
-
-        Returns:
-            BarPrediction: Aggregated prediction for the last bar
-
-        Raises:
-            RuntimeError: If no members have been bound via set_members()
-
-        '''
+        '''Return the aggregate for the members' aligned last bar.'''
 
         self._assert_members()
         member_bars = [m.predict(raw_klines) for m in self._members]
