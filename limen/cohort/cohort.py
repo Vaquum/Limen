@@ -58,27 +58,7 @@ class Cohort:
                  selector: str | Selector | None = None,
                  selector_params: Any = None,
                  rounds: list[tuple[str | Path, str]] | None = None) -> None:
-        '''
-        Construct an inference-only Cohort from one experiment source and selected permutations.
-
-        Args:
-            experiment_id (str | None): Experiment identifier used to resolve one
-                experiment directory containing decoder permutations.
-            experiment_log_path (str | None): Explicit path to an experiment
-                directory used to reconstruct selected decoders.
-            permutation_ids (list[str] | None): Specific permutation IDs to
-                include. If omitted, all available permutations in the resolved
-                experiment are selected.
-            selector (str | Selector | None): Built-in selector name or callable
-                using the `select(context, **params) -> list[str]`
-                contract. Defaults to `all` when permutation_ids is omitted.
-            selector_params (dict[str, Any] | None): Keyword arguments passed to
-                the selector callable.
-
-        Returns:
-            None
-
-        '''
+        '''Select named rounds across sources, or use the existing single-source selectors.'''
 
         super().__init__()
 
@@ -371,22 +351,7 @@ class Cohort:
 
     def _aggregate_bar_predictions(self, member_bars: list[BarPrediction]) -> BarPrediction:
 
-        '''
-        Aggregate per-member BarPredictions into one cohort-level BarPrediction.
-
-        Args:
-            member_bars (list[BarPrediction]): One prediction per bound member,
-                all sharing the same datetime
-
-        Returns:
-            BarPrediction: Aggregated prediction for the bar
-
-        Raises:
-            ValueError: If member_bars is empty, or if any member has a None
-                probability in probability_weighted mode, or a None prediction
-                in majority_vote mode
-
-        '''
+        '''Aggregate aligned member outputs using existing blocking and error rules.'''
 
         if not member_bars:
             raise ValueError('Cohort member_bars must be a non-empty list.')

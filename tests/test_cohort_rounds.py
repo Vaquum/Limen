@@ -235,7 +235,7 @@ def test_rounds_reject_invalid_sources_and_binding(cohort_campaigns, tmp_path):
     alias = tmp_path / 'alias'
     alias.symlink_to(first.directory, target_is_directory=True)
     for path in (first.directory, alias):
-        with pytest.raises(ValueError, match='duplicate|unique|repeated'):
+        with pytest.raises(ValueError, match=r'duplicate|unique|repeated'):
             Cohort(rounds=[selection[0], (path, first.ids[0])])
     absent = next(pid for pid in first.ids if pid not in descendant.ids)
     with pytest.raises(ValueError, match=absent):
@@ -274,7 +274,7 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
         Cohort(rounds=[(first.directory, first.ids[0]), (architecture, second.ids[0])])
     walk_forward = _copy_campaign(second, tmp_path / 'walk_forward')
     _edit_metadata(walk_forward, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(split_walk_forward={'n_folds': 2, 'test_bars': 24, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}))
-    with pytest.raises(ValueError, match='walk.forward|fold'):
+    with pytest.raises(ValueError, match=r'walk.forward|fold'):
         Cohort(rounds=[(walk_forward, second.ids[0])])
     bars = _copy_campaign(second, tmp_path / 'bars')
     _edit_metadata(bars, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(bar_formation={'func': 'limen.data.bars.volume_bars', 'params': {'volume_threshold': '{C}'}}))
@@ -338,7 +338,7 @@ def test_rounds_alignment_and_inference_policies(cohort_campaigns):
     for transform in (shifted, lambda bar: replace(bar, datetime=None) if bar.reason is None else bar):
         cohort = _bound(selection, [members[0], _OutputFault(members[1], transform)])
         for method in (cohort.predict, cohort.predict_all):
-            with pytest.raises(ValueError, match='timestamp|datetime'):
+            with pytest.raises(ValueError, match=r'timestamp|datetime'):
                 method(raw)
     cohort = _bound(selection, members)
     assert cohort.predict(raw.head(0)).reason == 'warm-up'
@@ -359,7 +359,7 @@ def test_rounds_alignment_and_inference_policies(cohort_campaigns):
             assert all(bar.reason == 'sensor-error' for bar in cohort.predict_all(raw))
     signed = _OutputFault(members[1], lambda bar: bar)
     signed.prediction_mode = 'target_exposure'
-    with pytest.raises(ValueError, match='target.exposure'):
+    with pytest.raises(ValueError, match=r'target.exposure'):
         Cohort(rounds=selection).set_members([members[0], signed])
     opposite = replace(members[1].predict(raw), probability=1.0 - members[0].predict(raw).probability)
     with patch.object(members[1], 'predict', return_value=opposite):
@@ -367,5 +367,5 @@ def test_rounds_alignment_and_inference_policies(cohort_campaigns):
         assert cohort.predict(raw).prediction == 0
     for invalid_probability in (float('nan'), -0.1, 1.1):
         invalid = _OutputFault(members[1], lambda bar, value=invalid_probability: replace(bar, probability=value) if bar.reason is None else bar)
-        with pytest.raises(ValueError, match='finite|within'):
+        with pytest.raises(ValueError, match=r'finite|within'):
             _bound(selection, [members[0], invalid]).predict(raw)
