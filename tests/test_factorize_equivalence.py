@@ -274,6 +274,35 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
         assert not (tmp_path / case / file).exists()
 
 
+@pytest.mark.parametrize('axis', ['fée', '费用', 'fee-rate'])
+def test_formatted_non_identifier_axes_fail_before_writes(tmp_path: Path, axis: str) -> None:
+    cfg = manifest('directional_barriers')
+    params = cfg['sfd']['params']
+    params[axis] = params.pop('fee')
+    spec = cfg['sfd']['manifest']
+    spec['backtest']['fee_bps'] = '{' + axis + '}'
+    spec['indicators'] = [{'func': 'limen.indicators.window_return', 'params': {'period': n}}
+                          for n in (3, 10)]
+    spec['features'][0]['params']['col'] = 'ret_{' + axis + ':.0f}'
+    compiled = build_manifest(cfg)
+    sfd = SimpleNamespace(__name__='limen.sfd.fixture', params=lambda: params, manifest=lambda: compiled)
+    for enabled in (False, True):
+        directory = tmp_path / str(enabled)
+        loop = UniversalExperimentLoop(sfd=sfd, data=pl.read_parquet(MARKET),
+                                       search_strategy=GridStrategy(ParamDomain(params)),
+                                       experiment_dir=directory)
+        if enabled:
+            with pytest.raises(ValueError, match='also consumed by the manifest'):
+                loop.run('unicode', n_permutations=2, prep_each_round=True,
+                         factorize=True, progress_bar=False)
+            for file in ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl'):
+                assert not (directory / file).exists()
+        else:
+            loop.run('unicode', n_permutations=2, prep_each_round=True, progress_bar=False)
+            assert loop.experiment_log.height == 2
+            assert loop.experiment_log['strict_mode_error'].to_list() == [False, False]
+
+
 @pytest.mark.parametrize('context', [{'deterministic': False}, {'n_jobs': 8}, {'random_state': None}, {'fee': 9.}])
 def test_context_overrides_fail_before_writes(tmp_path: Path, context: dict) -> None:
     loop = _loop('binary_costs', tmp_path)

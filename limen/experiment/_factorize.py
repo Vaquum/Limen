@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import inspect
 import json
-import re
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -35,7 +34,6 @@ from limen.targets.quantile_binary import QuantileBinaryTarget
 
 _BACKTEST_FIELDS = ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
 _RESERVED = frozenset(('bar_type', 'feature_groups', 'use_calibration', 'use_threshold'))
-_FIELD_ROOT = re.compile(r'^[a-zA-Z_][a-zA-Z_0-9]*')
 _FEATURES = frozenset((window_return, lag_range, dollar_bar_crash_reversal))
 _ML_FEATURES = frozenset((window_return, lag_range))
 
@@ -48,7 +46,7 @@ def _references(value: object, name: str) -> bool:
     """Cover bare, braced and formatted manifest parameter consumers."""
     if isinstance(value, str):
         return value == name or any(
-            (field is not None and (root := _FIELD_ROOT.match(field)) is not None and root[0] == name)
+            (field is not None and field.split('.', 1)[0].split('[', 1)[0] == name)
             or _references(spec, name) for _, field, spec, _ in Formatter().parse(value)
         )
     if isinstance(value, Mapping):
