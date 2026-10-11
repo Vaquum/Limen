@@ -33,9 +33,7 @@ def _mapping(value: object, name: str) -> dict[str, object]:
 
 
 def _parameter_matches(cell: str | None, value: object) -> bool:
-    if cell is None:
-        return False
-    if value is None:
+    if cell is None or value is None:
         return cell == ''
     if type(value) is bool:
         return cell.lower() == str(value).lower()
