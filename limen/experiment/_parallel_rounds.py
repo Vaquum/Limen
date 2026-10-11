@@ -179,10 +179,12 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                         raise RuntimeError('Parallel checkpoint crossed an uncommitted round')
                     checkpoint()
         finally:
-            checkpoint(rewind=msq.yielded_count != last + 1)
-            if pending or host._shutdown_requested:
-                for _, future, _ in pending:
-                    _ = future.cancel()
-                _reap(pool)
-            pool.shutdown(wait=True, cancel_futures=True)
+            try:
+                checkpoint(rewind=msq.yielded_count != last + 1)
+            finally:
+                if pending or host._shutdown_requested:
+                    for _, future, _ in pending:
+                        _ = future.cancel()
+                    _reap(pool)
+                pool.shutdown(wait=True, cancel_futures=True)
     logger.info('Parallel experiment committed %d terminal rounds', last + 1)
