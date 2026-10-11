@@ -121,6 +121,7 @@ def run_parallel(host: UniversalExperimentLoop, msq: MSQ, domain: ParamDomain,
                 try:
                     payload = future.result(timeout=0.1)
                 except TimeoutError:
+                    logger.debug('Waiting for parallel round %s', parameters['_round_index'])
                     continue
                 except Exception as exc:
                     raise RuntimeError(f"Parallel worker failed for round {parameters['_round_index']} ({parameters['_id']}): {exc}") from exc

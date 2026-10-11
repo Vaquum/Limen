@@ -21,6 +21,9 @@ from limen.cli.main import cli
 from limen.cli.commands.run import run_experiment
 from limen.cli.commands.resume import run_resume
 from limen.cohort import Cohort
+from limen.backtest.execution_events import with_predictions
+from limen.backtest.trade_contract import json_value
+from limen.backtest.trade_execution import trade_execution
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import MLManifest
@@ -142,8 +145,11 @@ def assert_artifacts(directory):
             assert len(row['preds']) == len(row['probs'])
             expected = np.asarray(row['probs']) >= row['optimal_threshold'] if row['threshold_rule'] == '>=' else np.asarray(row['probs']) > row['optimal_threshold']
             np.testing.assert_array_equal(expected, row['preds'])
-            assert row['execution'] is not None
-            assert row['market'] is not None
+            if 'trade_ledger' in row:
+                assert row['trade_ledger']['states']
+            else:
+                assert row['execution'] is not None
+                assert row['market'] is not None
     return frame
 
 
@@ -249,8 +255,17 @@ def test_recorded_parallel_round_parity_and_order(parallel_campaigns, name):
     assert metadata['manifest_id'] == json.loads((serial / 'metadata.json').read_text())['manifest_id']
     if name == 'grid':
         assert assert_artifacts(parallel)['val_backtest_total_return'].null_count() == 0
-        assert records(parallel)[0]['optimal_threshold'] == 2.0
-        assert records(parallel)[0]['threshold_rule'] == '>='
+        record = records(parallel)[0]
+        assert record['optimal_threshold'] == 2.0
+        assert record['threshold_rule'] == '>='
+        manifest = CompiledSFD(config).manifest()
+        prepared = manifest.prepare_data(recorded_source(), record['round_params'])
+        context = prepared['_trade_context']
+        ledger = trade_execution(with_predictions(context.partitions[2], record['preds']), context.policy)
+        _assert_same(record['trade_ledger'], json_value({key: getattr(ledger, key).to_dicts() for key in ('states', 'intents', 'fills', 'episodes', 'funding')}))
+        saved_metrics = pl.read_csv(parallel / 'results.csv').row(0, named=True)
+        for key, value in ledger.metrics.items():
+            assert saved_metrics[f'backtest_{key}'] == pytest.approx(value)
     if name == 'folds':
         assert_frame_equal(pl.read_parquet(parallel / 'trial_returns.parquet'),
                            pl.read_parquet(serial / 'trial_returns.parquet'))
