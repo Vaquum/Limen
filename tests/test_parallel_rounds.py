@@ -80,7 +80,7 @@ def parallel_config(*, strategy='grid', objective=False, walk_forward=False):
         config['uel']['pruning_strategies'] = [{
             'type': 'budget',
             'params': {'max_permutations': 5, 'trim_strategy': 'worst_first',
-                       'metric': 'accuracy', 'check_after_pct': 0.0},
+                       'metric': 'auc', 'maximize': True, 'check_after_pct': 0.0},
         }]
     if walk_forward:
         manifest.pop('split_dates')
@@ -167,16 +167,18 @@ def assert_artifacts(directory):
 def assert_runs_equal(actual, expected):
     left, right = assert_artifacts(actual), assert_artifacts(expected)
     assert set(left.columns) == set(right.columns)
-    columns = [name for name in right.columns if name not in _TRANSIENT]
-    assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
-                       rel_tol=1e-10, abs_tol=1e-12)
-    _assert_same(records(actual), records(expected))
+    assert_frame_equal(left.select('id', '_round_index'),
+                       right.select('id', '_round_index'))
     left_audit, right_audit = records(actual, 'audit.jsonl'), records(expected, 'audit.jsonl')
     for row in [*left_audit, *right_audit]:
         row.pop('timestamp', None)
     _assert_same(left_audit, right_audit)
     assert [row['round'] for row in left_audit] == [row['round'] for row in right_audit]
     assert all(row['msq_state_after']['yielded_count'] == row['round'] + 1 for row in left_audit)
+    columns = [name for name in right.columns if name not in _TRANSIENT]
+    assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
+                       rel_tol=1e-10, abs_tol=1e-12)
+    _assert_same(records(actual), records(expected))
 
 
 def _controlled_round(function, params, marker_directory, mode):
@@ -232,8 +234,11 @@ def _serial_round_proof(config_path, destination):
         prefixes = []
         pools = []
 
-        def boundary(log, msq, prefixes=prefixes, pools=pools):
+        def boundary(log, msq, prefixes=prefixes, pools=pools, name=name):
             assert msq.yielded_count == log.height
+            if name == 'random' and log.height == 3:
+                scores = log.group_by('C').agg(pl.col('auc').mean())['auc']
+                assert scores.eq(scores.min()).sum() == 1
             assert pl.thread_pool_size() == 1
             actual = threadpool_info()
             assert actual and all(pool['num_threads'] == 1 for pool in actual)
@@ -267,8 +272,11 @@ def parallel_campaigns(tmp_path_factory):
     for name, config in configs.items():
         prefixes = []
 
-        def boundary(log, msq, prefixes=prefixes):
+        def boundary(log, msq, prefixes=prefixes, name=name):
             assert msq.yielded_count == log.height
+            if name == 'random' and log.height == 3:
+                scores = log.group_by('C').agg(pl.col('auc').mean())['auc']
+                assert scores.eq(scores.min()).sum() == 1
             prefixes.append(log['_round_index'].to_list())
 
         serial = root / f'{name}_serial'

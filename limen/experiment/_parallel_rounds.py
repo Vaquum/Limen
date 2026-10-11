@@ -179,12 +179,14 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                         exhausted = True
                         break
                     task = parameters | (context_params or {})
-                    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM)) if os.name == 'posix' else None
-                    try:
-                        future = pool.submit(_evaluate_round, task)
-                    finally:
-                        if previous_mask is not None:
+                    if os.name == 'posix':
+                        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM))
+                        try:
+                            future = pool.submit(_evaluate_round, task)
+                        finally:
                             _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                    else:
+                        future = pool.submit(_evaluate_round, task)
                     pending.append((task, future,
                                     cast(dict[str, object], copy.deepcopy(msq.get_state()))))
                 if not pending or attributes['_shutdown_requested']:
