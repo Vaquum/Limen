@@ -103,6 +103,7 @@ def run_experiment(yaml_path: Path,
             progress_bar=progress_bar,
             record_execution=uel_cfg.get('record_execution', False),
             record_model_outputs=uel_cfg.get('record_model_outputs', False),
+            factorize=uel_cfg.get('factorize', False),
         )
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')

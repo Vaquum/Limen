@@ -1569,3 +1569,9 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.23.0] - 2026-10-11
 
 - Summarise recorded convergence warnings by observed round and parameter value at UEL run conclusion; persist the report when an experiment directory is configured (#211).
+
+## [5.23.1] - 2026-10-11
+
+- Pin frozen parity captures to fresh workers with fixed numerical threads and CPU dispatch.
+
+- Add opt-in `uel.factorize` for deterministic snapshot grid research; reuse signal preparation and prediction while preserving per-round economics, metrics and artifacts (#909).
