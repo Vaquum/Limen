@@ -602,6 +602,12 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             with pytest.raises(ValueError, match=r'failed|parameter|occurrence|record'):
                 run_loop(config, rejected, resume=True, context_params=None if name.endswith('_without_argument') else context_params)
             assert {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()} == before
+        rejected = tmp_path / 'omitted_context'
+        shutil.copytree(directory, rejected)
+        before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
+        with pytest.raises(ValueError, match='context parameter declaration'):
+            run_loop(config, rejected, resume=True)
+        assert {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()} == before
         feedback_heights = []
 
         def numeric_feedback(log, msq):

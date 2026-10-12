@@ -16,13 +16,20 @@ from limen.experiment._parallel_worker import RoundPayload
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.experiment.manifest_core import Manifest
 
-__all__ = ['ParallelCommit', 'failed_parameters']
+__all__ = ['ParallelCommit', 'context_parameter_keys', 'failed_parameters']
 
 
 class _AppendRoundData(Protocol):
     def __call__(self, path: Path, identity: str, parameters: dict[str, object],
                  predictions: object, alignment: dict[str, object],
                  *, round_index: int) -> None: ...
+
+
+def context_parameter_keys(metadata: Mapping[str, object]) -> list[str]:
+    keys = metadata.get('context_parameter_keys')
+    if not isinstance(keys, list) or any(not isinstance(key, str) or key.startswith('_') for key in cast(list[object], keys)) or len(set(cast(list[str], keys))) != len(cast(list[str], keys)):
+        raise ValueError('Cannot resume parallel run without valid context parameter keys')
+    return cast(list[str], keys)
 
 
 def failed_parameters(checkpoint: Mapping[str, object],

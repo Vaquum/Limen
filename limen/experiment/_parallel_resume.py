@@ -14,7 +14,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
 from limen.experiment._objective_run import finalize_objective_result, run_objective, validate_objective_resume
-from limen.experiment._parallel_commit import failed_parameters
+from limen.experiment._parallel_commit import context_parameter_keys, failed_parameters
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
@@ -134,7 +134,7 @@ def _audit_prefix(path: Path, frontier: int, count: int, controller: FeedbackCon
 def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                      feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                      *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path,
-                     failed_round_params: list[dict[str, object]],
+                     failed_round_params: list[dict[str, object]], n_permutations: int,
                      context_params: Mapping[str, object] | None = None) -> int:
     attributes = cast(dict[str, object], vars(host))
     manifest = cast(Manifest | None, attributes['manifest'])
@@ -148,8 +148,6 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     for key in ('record_execution', 'record_model_outputs', 'factorize'):
         if metadata.get(key, False) != attributes[f'_{key}']:
             raise ValueError(f'Cannot resume with a different {key} setting')
-    if not isinstance(context_keys := metadata.get('context_parameter_keys'), list) or any(not isinstance(key, str) or key.startswith('_') for key in cast(list[object], context_keys)) or len(set(cast(list[str], context_keys))) != len(cast(list[str], context_keys)):
-        raise ValueError('Cannot resume parallel run without valid context parameter keys')
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
@@ -157,6 +155,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     if type(frontier) is not int or frontier < -1:
         raise ValueError('Cannot resume parallel run with invalid terminal frontier')
     start = frontier + 1
+    if set(context_keys := context_parameter_keys(metadata)) != {key for key in (context_params or {}) if not key.startswith('_')} and start < n_permutations:
+        raise ValueError('Cannot resume unfinished parallel run with a different context parameter declaration')
     msq_state = _mapping(checkpoint['msq_state'], 'MSQ state')
     if type(msq_state.get('yielded_count')) is not int or msq_state['yielded_count'] != start:
         raise ValueError('Parallel checkpoint draw state differs from its terminal frontier')
@@ -197,7 +197,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     failed = failed_parameters(checkpoint, rows)
-    parameter_keys = {key for key in (*_mapping(attributes.get('params'), 'search parameters'), *(context_params or {}), *cast(list[str], context_keys)) if not key.startswith('_')}
+    parameter_keys = {key for key in (*_mapping(attributes.get('params'), 'search parameters'), *(context_params or {}), *context_keys) if not key.startswith('_')}
     parameter_keys.update(key for entry in [*committed, *failed] for key in _mapping(entry.get('round_params'), 'round parameters') if not key.startswith('_'))
     recorded_parameters: dict[int, dict[str, object]] = {}
     for entry in [*committed, *failed]:

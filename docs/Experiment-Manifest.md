@@ -177,6 +177,9 @@ The checkpoint retains their typed effective parameters; resume reconstructs
 successful parameters from JSONL, preserving empty strings, nulls and overrides.
 Parallel metadata declares `context_parameter_keys`; resume requires those keys
 in every committed parameter record before restoring typed values.
+Continuing an unfinished native run requires its original public `context_params`
+keys; omission or a changed declaration fails before artifacts are rewritten.
+A completed run may restore its recorded values without supplying those keys.
 Malformed or missing committed evidence fails loudly. Other model/worker failures
 remain fatal, preserving the valid prefix and reporting identity and traceback.
 Stopped/resumed equality requires unchanged source observations, deterministic
